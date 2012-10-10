@@ -1,0 +1,4 @@
+<h1>Shows#index</h1>
+<% @shows.each do |show| %>
+<h2><%= link_to show.name, show_path(show.slug) %></h2>
+<% end %>
