@@ -1,5 +1,3 @@
 <h1><%= @show.name %></h1>
 <p><%= @show.description %></p>
-<div id="ticketslist" class="xtsprodates"></div>
-<script src="http://www.xtspro.com/book/book.js"></script>
-<script>XTSPRO.insert_dates("BT", 420, "#ticketslist");</script>
+<%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
