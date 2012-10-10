@@ -1,6 +1,8 @@
 ChaosRails::Application.routes.draw do
   match 'show/:slug' => 'shows#show', :as => :show
   match 'shows/' => 'shows#index'
+  
+  match 'about/' => 'static#about'
 
   # The priority is based upon order of creation:
   # first created -> highest priority.
