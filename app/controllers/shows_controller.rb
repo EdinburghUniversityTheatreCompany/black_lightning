@@ -5,6 +5,7 @@ class ShowsController < ApplicationController
 
   def show
     @show = Show.where(:slug => params[:slug]).first
+    @title = @show.name
     respond_to do |format|
       format.html
     end
