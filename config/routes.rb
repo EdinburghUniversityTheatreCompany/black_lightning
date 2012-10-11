@@ -1,5 +1,7 @@
 ChaosRails::Application.routes.draw do
   
+  devise_for :users
+
   resources :shows
   
   match 'about/' => 'static#about'
