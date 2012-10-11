@@ -1,6 +1,6 @@
 ChaosRails::Application.routes.draw do
-  match 'show/:slug' => 'shows#show', :as => :show
-  match 'shows/' => 'shows#index'
+  
+  resources :shows
   
   match 'about/' => 'static#about'
 
