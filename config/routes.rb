@@ -5,6 +5,10 @@ ChaosRails::Application.routes.draw do
   resources :shows
   
   match 'about/' => 'static#about'
+  
+  namespace :admin do
+    resources :shows
+  end
 
   # The priority is based upon order of creation:
   # first created -> highest priority.
