@@ -5,3 +5,4 @@
 <% if @shows.count == 0 %>
 <p>There are currently no shows in the database.</p>
 <% end %>
+<%= will_paginate(@shows) %>
