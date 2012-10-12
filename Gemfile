@@ -25,6 +25,7 @@ gem 'jquery-rails'
 gem 'simple_form'
 gem 'devise'
 gem 'cancan'
+gem 'role_model'
 
 gem 'will_paginate', '~> 3.0'
 
