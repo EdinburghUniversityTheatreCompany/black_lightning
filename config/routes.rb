@@ -2,7 +2,7 @@ ChaosRails::Application.routes.draw do
   
   devise_for :users
 
-  resources :shows
+  resources :shows, :only => [:index, :show]
   
   match 'about/' => 'static#about'
   
