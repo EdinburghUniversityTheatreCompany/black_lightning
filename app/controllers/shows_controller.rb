@@ -1,5 +1,4 @@
 class ShowsController < ApplicationController
-  skip_authorization_check
   def index
     @shows = Show.paginate(:page => params[:page], :per_page => 5)
   end
