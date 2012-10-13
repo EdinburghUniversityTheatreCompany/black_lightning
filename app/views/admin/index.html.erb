@@ -1,2 +1,6 @@
-<h1>Admin#index</h1>
-<p>Find me in app/views/admin/index.html.erb</p>
+<h1>Admin Dashboard</h1>
+
+<ul class="nav nav-list">
+  <li><%= link_to 'Shows', admin_shows_path %></li>
+  <li><%= link_to 'News', admin_news_index_path %></li>
+</ul>

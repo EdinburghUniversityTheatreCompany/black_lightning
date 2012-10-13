@@ -7,19 +7,18 @@
 
 <p>
   <b>Body:</b>
-  <%= @news.body %>
 </p>
+<%= simple_format @news.body %>
 
 <p>
-  <b>Publish Date:</b>
+  <b>Publish Date:</b><br />
   <%= @news.publish_date %>
 </p>
 
 <p>
-  <b>Show Public:</b>
+  <b>Show Public:</b><br />
   <%= @news.show_public %>
 </p>
 
 
-<%= link_to 'Edit', edit_admin_news_path(@news) %> |
-<%= link_to 'Back', admin_news_index_path %>
+<%= link_to 'Edit', edit_admin_news_path(@news), :class => 'btn' %>
