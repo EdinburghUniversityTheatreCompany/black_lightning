@@ -34,7 +34,7 @@ class Admin::ShowsController < ApplicationController
     @show = Show.find(params[:id])
     respond_to do |format|
       if @show.update_attributes(params[:show])
-        format.html { redirect_to @show, notice: 'Show was successfully updated.' }
+        format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
       else
         format.html { render action: "edit" }
       end
