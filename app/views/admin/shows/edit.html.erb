@@ -1,5 +1,5 @@
 <h1>Edit <%= @show.name %></h1>
-<%= simple_form_for @show, :url => admin_show_path(@show) do |f| %>
+<%= simple_form_for @show, :url => admin_show_path(@show.id) do |f| %>
 	<%= f.input :name %>
 	<%= f.input :tagline %>
 	<%= f.input :slug %>

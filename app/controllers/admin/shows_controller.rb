@@ -31,7 +31,7 @@ class Admin::ShowsController < ApplicationController
   end
   
   def update
-    @show = Show.find_by_slug(params[:id])
+    @show = Show.find(params[:id])
     respond_to do |format|
       if @show.update_attributes(params[:show])
         format.html { redirect_to @show, notice: 'Show was successfully updated.' }
