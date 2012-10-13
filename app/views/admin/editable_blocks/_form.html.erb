@@ -4,7 +4,9 @@
   
   <div class="form-inputs">
 
+    <% if not @admin_editable_block.persisted? then %>
     <%= f.input :name %>
+    <% end %>
 
     <ul class="nav nav-tabs">
       <li><a href="#input_field" data-toggle="tab">Input</a></li>

@@ -13,7 +13,7 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     resources :shows
     resources :news
-    resources :editable_blocks
+    resources :editable_blocks, :except => [:show]
   end
 
   # The priority is based upon order of creation:
