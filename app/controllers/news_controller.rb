@@ -3,7 +3,7 @@ class NewsController < ApplicationController
   # GET /news.json
   def index
     # TODO: This will need updating when members are implemented
-    @news = News.where(:show_public => true).all(:conditions => ["publish_date < ?", Date.current])
+    @news = News.where(:show_public => true).all(:conditions => ["publish_date <= ?", Date.current])
 
     respond_to do |format|
       format.html # index.html.erb
