@@ -1,5 +1,7 @@
 ChaosRails::Application.routes.draw do
   
+  namespace :admin do resources :editable_blocks end
+
   devise_for :users
 
   resources :shows, :only => [:index, :show]
@@ -11,6 +13,7 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     resources :shows
     resources :news
+    resources :editable_blocks
   end
 
   # The priority is based upon order of creation:
