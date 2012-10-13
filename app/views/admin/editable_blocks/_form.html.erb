@@ -1,14 +1,26 @@
 <%= simple_form_for(@admin_editable_block) do |f| %>
   <%= f.error_notification %>
 
+  
   <div class="form-inputs">
 
     <%= f.input :name %>
 
-    <%= f.input :content %>
-
+    <ul class="nav nav-tabs">
+      <li><a href="#input_field" data-toggle="tab">Input</a></li>
+      <li><a href="#preview" data-toggle="tab">Preview</a></li>
+    </ul>
+        
+    <div class="tab-content">
+        <div id="input_field" class="tab-pane active">
+            <%= f.input :content, :input_html => {:class => "md field span12", :rows => "10"} %>
+        </div>
+        <div id="preview" class="tab-pane"> </div>
+        </div>
+    </div>
+    
   </div>
-
+  
   <div class="form-actions">
     <%= f.button :submit %>
   </div>
