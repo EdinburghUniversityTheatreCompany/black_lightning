@@ -6,6 +6,7 @@
         <h2><%= link_to news.title, news %></h2>
         <time datetime="<%= news.updated_at.strftime("%FT%T%:z") %>"><%= l news.updated_at, :format => :long %></time>
     </header>
-    <p><%= simple_format news.body %></p>
+    <p><%= simple_format generate_preview news.body %></p>
+    <p><%= link_to 'View Full Article', news %></p>
 </article>
 <% end %>
