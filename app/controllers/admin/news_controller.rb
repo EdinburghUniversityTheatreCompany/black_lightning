@@ -1,4 +1,7 @@
-class Admin::NewsController < ApplicationController
+class Admin::NewsController < AdminController
+
+  load_and_authorize_resource
+
   # GET /admin/news
   # GET /admin/news.json
   def index
