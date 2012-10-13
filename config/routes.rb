@@ -3,11 +3,13 @@ ChaosRails::Application.routes.draw do
   devise_for :users
 
   resources :shows, :only => [:index, :show]
+  resources :news, :only => [:index, :show]
   
   match 'about/' => 'static#about'
   
   namespace :admin do
     resources :shows
+    resources :news
   end
 
   # The priority is based upon order of creation:

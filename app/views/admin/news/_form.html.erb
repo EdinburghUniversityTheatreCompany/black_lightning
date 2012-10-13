@@ -1,0 +1,21 @@
+<%= simple_form_for [:admin, @news] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :title %>
+
+    <%= f.input :body %>
+
+    <%= f.input :slug %>
+
+    <%= f.input :publish_date %>
+
+    <%= f.input :show_public %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit %>
+  </div>
+<% end %>

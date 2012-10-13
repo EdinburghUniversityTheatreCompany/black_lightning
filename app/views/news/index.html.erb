@@ -1,0 +1,11 @@
+﻿<h1>Bedlam News</h1>
+
+<% @news.each do |news| %>
+<article>
+    <header>
+        <h2><%= link_to news.title, news %></h2>
+        <time datetime="<%= news.updated_at.strftime("%FT%T%:z") %>"><%= l news.updated_at, :format => :long %></time>
+    </header>
+    <p><%= simple_format news.body %></p>
+</article>
+<% end %>
