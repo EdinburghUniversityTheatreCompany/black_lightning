@@ -1,4 +1,5 @@
 class Show < ActiveRecord::Base
+  resourcify
   def to_param
     slug
   end
