@@ -8,7 +8,7 @@ class Admin::ShowsController < ApplicationController
   end
   
   def show
-    @show = Show.find_by_slug(params[:id])
+    @show = Show.find(params[:id])
   end
   
   def new
@@ -27,7 +27,7 @@ class Admin::ShowsController < ApplicationController
   end
   
   def edit
-    @show = Show.find_by_slug(params[:id])
+    @show = Show.find(params[:id])
   end
   
   def update

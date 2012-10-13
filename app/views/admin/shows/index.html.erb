@@ -1,0 +1,17 @@
+<table class="table">
+	<tbody>
+		<tr>
+			<th>Name</th>
+			<th>Slug</th>
+			<th></th>
+		</tr>
+		<% @shows.each do |show| %>
+		<tr>
+			<td><%= link_to show.name, admin_show_path(show.id) %></td>
+			<td><%= show.slug %></td>
+			<td><%= link_to 'Edit', edit_admin_show_path(show.id)%></td>
+		</tr>
+		<% end %>
+	</tbody>
+</table>
+			
