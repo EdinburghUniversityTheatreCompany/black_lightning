@@ -6,6 +6,7 @@ ChaosRails::Application.routes.draw do
   
   match 'about/' => 'static#about'
   
+  match 'admin/' => 'admin#index'
   namespace :admin do
     resources :shows
   end

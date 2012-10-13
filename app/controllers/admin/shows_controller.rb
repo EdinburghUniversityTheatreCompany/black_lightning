@@ -1,8 +1,7 @@
-class Admin::ShowsController < ApplicationController
-  before_filter :authenticate_user!
-  before_filter :authorize_backend!
+class Admin::ShowsController < AdminController
+
   load_and_authorize_resource
-  layout "admin"
+
   def index
     @shows = Show.all
   end
