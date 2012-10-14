@@ -13,17 +13,6 @@ class Admin::EditableBlocksController < AdminController
     end
   end
 
-  # GET /admin/editable_blocks/1
-  # GET /admin/editable_blocks/1.json
-  def show
-    @admin_editable_block = Admin::EditableBlock.find(params[:id])
-
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json { render json: @admin_editable_block }
-    end
-  end
-
   # GET /admin/editable_blocks/new
   # GET /admin/editable_blocks/new.json
   def new
@@ -47,11 +36,11 @@ class Admin::EditableBlocksController < AdminController
 
     respond_to do |format|
       if @admin_editable_block.save
-        format.html { redirect_to @admin_editable_block, notice: 'Editable block was successfully created.' }
-        format.json { render json: @admin_editable_block, status: :created, location: @admin_editable_block }
+        format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully created.' }
+        format.json { render json: admin_editable_blocks_url, status: :created, location: @admin_editable_block }
       else
         format.html { render action: "new" }
-        format.json { render json: @admin_editable_block.errors, status: :unprocessable_entity }
+        format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -63,11 +52,11 @@ class Admin::EditableBlocksController < AdminController
 
     respond_to do |format|
       if @admin_editable_block.update_attributes(params[:admin_editable_block])
-        format.html { redirect_to @admin_editable_block, notice: 'Editable block was successfully updated.' }
+        format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully updated.' }
         format.json { head :no_content }
       else
         format.html { render action: "edit" }
-        format.json { render json: @admin_editable_block.errors, status: :unprocessable_entity }
+        format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end
   end
