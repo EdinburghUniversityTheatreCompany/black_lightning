@@ -1,9 +1,8 @@
-<h1>Listing admin_editable_blocks</h1>
+<h1>Editable Blocks</h1>
 
-<table>
+<table class="table">
   <tr>
     <th>Name</th>
-    <th>Content</th>
     <th></th>
     <th></th>
     <th></th>
@@ -12,8 +11,6 @@
 <% @admin_editable_blocks.each do |admin_editable_block| %>
   <tr>
     <td><%= admin_editable_block.name %></td>
-    <td><%= admin_editable_block.content %></td>
-    <td><%= link_to 'Show', admin_editable_block %></td>
     <td><%= link_to 'Edit', edit_admin_editable_block_path(admin_editable_block) %></td>
     <td><%= link_to 'Destroy', admin_editable_block, method: :delete, data: { confirm: 'Are you sure?' } %></td>
   </tr>
@@ -22,4 +19,4 @@
 
 <br />
 
-<%= link_to 'New Editable block', new_admin_editable_block_path %>
+<%= link_to 'New Editable block', new_admin_editable_block_path, :class => 'btn' %>

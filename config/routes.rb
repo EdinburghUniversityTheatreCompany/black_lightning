@@ -1,7 +1,5 @@
 ChaosRails::Application.routes.draw do
   
-  namespace :admin do resources :editable_blocks end
-
   devise_for :users
 
   resources :shows, :only => [:index, :show]
@@ -13,8 +11,10 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     resources :shows
     resources :news
-    resources :editable_blocks
+    resources :editable_blocks, :except => [:show]
   end
+  
+  get "/admin/help/markdown"
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

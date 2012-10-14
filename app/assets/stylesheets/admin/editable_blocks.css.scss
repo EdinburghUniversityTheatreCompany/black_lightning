@@ -1,3 +1,27 @@
 // Place all the styles related to the admin/editable_blocks controller here.
 // They will automatically be included in application.css.
 // You can use Sass (SCSS) here: http://sass-lang.com/
+
+.tab-container .nav-tabs {
+    margin-bottom: 0px;
+}
+
+.tab-container .tab-content {
+    padding-top:   20px;
+    border-left:   1px solid #DDD;
+    border-right:  1px solid #DDD;
+    border-bottom: 1px solid #DDD;
+}
+
+.tab-container .tab-content .tab-pane {
+    margin: 10px;
+}
+
+.tab-container .tab-content .tab-pane textarea {
+                 width: 100%;
+                 /* the neat box model activated below causes padding to be included in the box */
+    -webkit-box-sizing: border-box;
+       -moz-box-sizing: border-box;
+         -o-box-sizing: border-box;
+            box-sizing: border-box;
+}
