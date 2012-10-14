@@ -7,7 +7,7 @@ jQuery ->
     $('#preview').html(markdown.toHTML($('.md').val()));
     submit = $("input[type='submit']");
     submit.removeClass "disabled"
-    submit.attr "href", submit.data "href"
+    submit[0].disabled = false;
     submit.attr "title", ""
     return
   
@@ -15,8 +15,7 @@ jQuery ->
     submit = $("input[type='submit']");
     submit.addClass "disabled"
     href = submit.attr("href")
-    submit.data "href", href
-    submit.attr "href", "#"
+    submit[0].disabled = true;
     submit.attr "title", "You must preview Markdown before saving"
   
   return
