@@ -28,9 +28,8 @@ class Admin::UsersController < AdminController
   
   def update
     @user = User.find(params[:id])
-    if params[:user][:password].blank?
-      params[:user][:password] = @user.password
-    end
+    params[:user].delete(:password) if params[:user][:password].blank?
+    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
     respond_to do |format|
       if @user.update_attributes(params[:user])
         format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
