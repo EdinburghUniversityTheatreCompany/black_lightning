@@ -12,6 +12,7 @@ ChaosRails::Application.routes.draw do
     resources :shows
     resources :news
     resources :editable_blocks, :except => [:show]
+    resources :users
   end
   
   get "/admin/help/markdown"

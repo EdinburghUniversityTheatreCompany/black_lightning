@@ -1,0 +1,12 @@
+<%= simple_form_for [:admin, @user], :html => {:class => "form-horizontal"} do |f| %>
+<div class="form-inputs">
+	<%= f.input :email %>
+	<%= f.input :first_name %>
+	<%= f.input :last_name %>
+	<%= f.input :password unless @user.email == nil %>
+	<%= f.input :password_confirmation unless @user.email == nil %>
+</div>
+<div class="form-actions">
+	<%= f.button :submit %>
+</div>
+<% end %>
