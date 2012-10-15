@@ -5,7 +5,7 @@ class NewsController < ApplicationController
   # GET /news
   # GET /news.json
   def index
-    @news = @news.all(:conditions => ["publish_date <= ?", Date.current])
+    @news = @news.all(:conditions => ["publish_date <= ?", Date.current], :order => "publish_date DESC")
 
     respond_to do |format|
       format.html # index.html.erb
