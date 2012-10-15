@@ -9,11 +9,15 @@
 		<tr>
 			<td><%= link_to show.name, admin_show_path(show.id) %></td>
 			<td><%= show.slug %></td>
-			<% if can? :edit, Show %><td><%= link_to 'Edit', edit_admin_show_path(show.id)%></td><% end %>
+			
+            <% if can? :edit, show %>
+            <td><%= link_to 'Edit', edit_admin_show_path(show.id)%></td>
+            <% end %>
 		</tr>
 		<% end %>
 	</tbody>
 </table>
+
 <% if can? :create, Show %>
 <%= link_to 'Add Show', new_admin_show_path, :class => "btn" %>
 <% end %>
