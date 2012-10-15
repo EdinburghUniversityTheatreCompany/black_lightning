@@ -1,2 +1,13 @@
-<h1>Admin::User#show</h1>
-<p>Find me in app/views/admin/user/show.html.erb</p>
+<h1><%= @user.name %></h1>
+<table class="table table-bordered">
+	<tbody>
+		<tr>
+			<th>Email</th>
+			<td><%= @user.email %></td>
+		</tr>
+		<tr>
+			<th>Roles</th>
+			<td><%= @user.roles.collect {|role| role.name.capitalize }.join(', ') %></td>
+		</tr>
+	</tbody>
+</table>
