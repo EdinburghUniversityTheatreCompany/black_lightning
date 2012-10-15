@@ -1,8 +1,19 @@
 <h1>Admin Dashboard</h1>
 
 <ul class="nav nav-list">
+  <% if can? :read, Show %>
   <li><%= link_to 'Shows', admin_shows_path %></li>
+  <% end %>
+  
+  <% if can? :read, News %>
   <li><%= link_to 'News', admin_news_index_path %></li>
+  <% end %>
+  
+  <% if can? :read, Admin::EditableBlock %>
   <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
+  <% end %>
+  
+  <% if can? :read, User %>
   <li><%= link_to 'Users', admin_users_path %></li>
+  <% end %>
 </ul>

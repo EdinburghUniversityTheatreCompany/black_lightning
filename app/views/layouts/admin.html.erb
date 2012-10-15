@@ -11,10 +11,21 @@
 		<div class="navbar-inner">
 			<%= link_to 'Bedlam Theatre Admin', admin_path, :class => "brand"%>
 			<ul class="nav">
-				<li><%= link_to 'Shows', admin_shows_path %></li>
+				<% if can? :read, Show %>
+                <li><%= link_to 'Shows', admin_shows_path %></li>
+                <% end %>
+              
+                <% if can? :read, News %>
                 <li><%= link_to 'News', admin_news_index_path %></li>
-                <li><%= link_to 'Editable Blocks', admin_editable_blocks_path %></li>
+                <% end %>
+              
+                <% if can? :read, Admin::EditableBlock %>
+                <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
+                <% end %>
+              
+                <% if can? :read, User %>
                 <li><%= link_to 'Users', admin_users_path %></li>
+                <% end %>
             </ul>
             <ul class="nav pull-right">
 				<li><%= link_to "Main Site", root_path %></li>
