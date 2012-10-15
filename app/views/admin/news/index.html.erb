@@ -14,7 +14,7 @@
   <tr>
     <td><%= news.title %></td>
     <td><%= news.publish_date %></td>
-    <td><%= news.show_public %></td>
+    <td><%= news.show_public ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
     <td><%= link_to 'Show', admin_news_path(news) %></td>
     
     <td>
