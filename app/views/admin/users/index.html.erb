@@ -5,14 +5,29 @@
 			<th>Email</th>
 			<th>Name</th>
 			<th></th>
+            <th></th>
 		</tr>
 		<% @users.each do |user| %>
 		<tr>
 			<td><%= user.email %></td>
 			<td><%= "#{user.first_name} #{user.last_name}" %></td>
-			<td><%= link_to 'Edit', edit_admin_user_path(user) %></td>
+            
+            <td>
+            <% if can? :edit, user %>
+			<%= link_to 'Edit', edit_admin_user_path(user) %>
+            <% end %>
+            </td>
+            
+            <td>
+            <% if can? :delete, user %>
+            <%= link_to 'Destroy', admin_user_path(user), method: :delete, data: { confirm: 'Are you sure?' } %>
+            <% end %>
+            </td>
 		</tr>
 		<% end %>
 	</tbody>
 </table>
+
+<% if can? :create, User %>
 <%= link_to 'New user', new_admin_user_path, :class => "btn" %>
+<% end %>

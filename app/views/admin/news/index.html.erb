@@ -16,12 +16,24 @@
     <td><%= news.publish_date %></td>
     <td><%= news.show_public %></td>
     <td><%= link_to 'Show', admin_news_path(news) %></td>
-    <td><%= link_to 'Edit', edit_admin_news_path(news) %></td>
-    <td><%= link_to 'Destroy', admin_news_path(news), method: :delete, data: { confirm: 'Are you sure?' } %></td>
+    
+    <td>
+    <% if can? :edit, news %>
+    <%= link_to 'Edit', edit_admin_news_path(news) %>
+    <% end %>
+    </td>
+    
+    <td>
+    <% if can? :delete, news %>
+    <%= link_to 'Destroy', admin_news_path(news), method: :delete, data: { confirm: 'Are you sure?' } %>
+    <% end %>
+    </td>
   </tr>
 <% end %>
 </table>
 
 <br />
 
+<% if can? :create, News %>
 <%= link_to 'New News', new_admin_news_path, :class => 'btn' %>
+<% end %>

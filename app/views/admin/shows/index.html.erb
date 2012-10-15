@@ -3,17 +3,23 @@
 		<tr>
 			<th>Name</th>
 			<th>Slug</th>
-			<% if can? :edit, Show %><th></th><% end %>
+			<th></th>
 		</tr>
 		<% @shows.each do |show| %>
 		<tr>
 			<td><%= link_to show.name, admin_show_path(show.id) %></td>
 			<td><%= show.slug %></td>
-			<% if can? :edit, Show %><td><%= link_to 'Edit', edit_admin_show_path(show.id)%></td><% end %>
+			
+            <td>
+            <% if can? :edit, show %>
+            <%= link_to 'Edit', edit_admin_show_path(show.id)%>
+            <% end %>
+            </td>
 		</tr>
 		<% end %>
 	</tbody>
 </table>
+
 <% if can? :create, Show %>
 <%= link_to 'Add Show', new_admin_show_path, :class => "btn" %>
 <% end %>

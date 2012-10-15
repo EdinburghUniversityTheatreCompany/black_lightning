@@ -5,18 +5,29 @@
     <th>Name</th>
     <th></th>
     <th></th>
-    <th></th>
   </tr>
 
 <% @admin_editable_blocks.each do |admin_editable_block| %>
   <tr>
     <td><%= admin_editable_block.name %></td>
-    <td><%= link_to 'Edit', edit_admin_editable_block_path(admin_editable_block) %></td>
-    <td><%= link_to 'Destroy', admin_editable_block, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+    
+    <td>
+    <% if can? :edit, admin_editable_block %>
+    <%= link_to 'Edit', edit_admin_editable_block_path(admin_editable_block) %>
+    <% end %>
+    </td>
+    
+    <td>
+    <% if can? :delete, admin_editable_block %>
+    <%= link_to 'Destroy', admin_editable_block, method: :delete, data: { confirm: 'Are you sure?' } %>
+    <% end %>
+    </td>
   </tr>
 <% end %>
 </table>
 
 <br />
 
+<% if can? :create, Admin::EditableBlock %>
 <%= link_to 'New Editable block', new_admin_editable_block_path, :class => 'btn' %>
+<% end %>
