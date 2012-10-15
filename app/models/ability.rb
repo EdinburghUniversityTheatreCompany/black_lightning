@@ -13,6 +13,7 @@ class Ability
         can :read, :all
       end
       
+      can :manage, User, :id => user.id
       can :access, :backend if user.has_role? :member
     else
       
