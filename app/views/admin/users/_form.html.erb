@@ -1,8 +1,12 @@
-<%= simple_form_for [:admin, @user], :class => "form-horizontal" do |f| %>
+<%= simple_form_for [:admin, @user], :html => {:class => "form-horizontal"} do |f| %>
+<div class="form-inputs">
 	<%= f.input :email %>
 	<%= f.input :first_name %>
 	<%= f.input :last_name %>
-	<%= f.input :password %>
-	<%= f.input :password_confirmation %>
+	<%= f.input :password if @user == User.new %>
+	<%= f.input :password_confirmation if @user == User.new %>
+</div>
+<div class="form-actions">
 	<%= f.button :submit %>
+</div>
 <% end %>
