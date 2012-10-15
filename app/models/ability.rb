@@ -11,6 +11,7 @@ class Ability
         can :manage, :all
       else
         can :read, :all
+        cannot :read, Admin::EditableBlock
       end
       
       can :manage, User, :id => user.id

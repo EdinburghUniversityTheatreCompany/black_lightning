@@ -1,6 +1,6 @@
 class Admin::EditableBlocksController < AdminController
 
-  #TODO: Fix this... load_and_authorize_resource
+  load_and_authorize_resource :class => Admin::EditableBlock
 
   # GET /admin/editable_blocks
   # GET /admin/editable_blocks.json
