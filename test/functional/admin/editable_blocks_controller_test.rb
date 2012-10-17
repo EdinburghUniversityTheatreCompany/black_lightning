@@ -3,6 +3,9 @@ require 'test_helper'
 class Admin::EditableBlocksControllerTest < ActionController::TestCase
   setup do
     @admin_editable_block = admin_editable_blocks(:one)
+    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
+    @user.add_role :admin
+    sign_in @user
   end
 
   test "should get index" do
@@ -21,12 +24,7 @@ class Admin::EditableBlocksControllerTest < ActionController::TestCase
       post :create, admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }
     end
 
-    assert_redirected_to admin_editable_block_path(assigns(:admin_editable_block))
-  end
-
-  test "should show admin_editable_block" do
-    get :show, id: @admin_editable_block
-    assert_response :success
+    assert_redirected_to admin_editable_blocks_path
   end
 
   test "should get edit" do
@@ -36,7 +34,7 @@ class Admin::EditableBlocksControllerTest < ActionController::TestCase
 
   test "should update admin_editable_block" do
     put :update, id: @admin_editable_block, admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }
-    assert_redirected_to admin_editable_block_path(assigns(:admin_editable_block))
+    assert_redirected_to admin_editable_blocks_path
   end
 
   test "should destroy admin_editable_block" do

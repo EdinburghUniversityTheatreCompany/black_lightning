@@ -1,13 +1,21 @@
 require 'test_helper'
 
-class Admin::UserControllerTest < ActionController::TestCase
+class Admin::UsersControllerTest < ActionController::TestCase
+  setup do
+    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
+    @user.add_role :admin
+    sign_in @user
+    
+    @user = users(:one)
+  end
+  
   test "should get index" do
     get :index
     assert_response :success
   end
 
   test "should get show" do
-    get :show
+    get :show, id: @user
     assert_response :success
   end
 
@@ -17,7 +25,7 @@ class Admin::UserControllerTest < ActionController::TestCase
   end
 
   test "should get edit" do
-    get :edit
+    get :edit, id: @user
     assert_response :success
   end
 
