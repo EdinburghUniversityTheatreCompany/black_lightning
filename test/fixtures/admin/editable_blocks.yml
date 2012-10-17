@@ -1,9 +1,5 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
-  name: MyString
-  content: MyString
-
-two:
-  name: MyString
-  content: MyString
+  name: home_content
+  content: "Welcome to Project BlackLightning \n ==========================="
