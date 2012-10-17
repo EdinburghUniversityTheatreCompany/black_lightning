@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121013191206) do
+ActiveRecord::Schema.define(:version => 20121017154554) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -24,7 +24,7 @@ ActiveRecord::Schema.define(:version => 20121013191206) do
     t.string   "title"
     t.text     "body"
     t.string   "slug"
-    t.date     "publish_date"
+    t.datetime "publish_date"
     t.boolean  "show_public"
     t.datetime "created_at",   :null => false
     t.datetime "updated_at",   :null => false
