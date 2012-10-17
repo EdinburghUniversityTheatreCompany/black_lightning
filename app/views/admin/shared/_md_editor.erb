@@ -1,0 +1,17 @@
+<div class="tab-container">
+    <ul class="nav nav-tabs">
+      <li class="active"><a href="#input_field" data-toggle="tab">Input</a></li>
+      <li><a href="#preview" data-toggle="tab">Preview</a></li>
+    </ul>
+        
+    <div class="tab-content">
+        <div id="input_field" class="tab-pane active">
+            <%= f.input field, :input_html => {:class => "md field", :rows => "10"} %>
+            
+            <p>Note: Text entered above will be rendered using <%= link_to 'Markdown', admin_help_markdown_path %>.</p>
+        </div>
+        
+        <div id="preview" class="tab-pane"> </div>
+        </div>
+    </div>
+</div>
