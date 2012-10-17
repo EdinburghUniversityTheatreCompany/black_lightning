@@ -5,12 +5,14 @@
         <h2><%= @news.title %></h2>
         <time datetime="<%= @news.publish_date.strftime("%FT%T%:z") %>"><%= l @news.publish_date, :format => :long %></time>
     </header>
-    <p><%= simple_format @news.body %></p>
+    <p><%= render_markdown @news.body %></p>
+    
     <% if @news.publish_date != @news.updated_at %>
     <p>Last updated: 
     <%= l @news.updated_at, :format => :long %>
     </p>
     <% end %>
+
 </article>
 
 <%= link_to 'Back', news_index_path %>

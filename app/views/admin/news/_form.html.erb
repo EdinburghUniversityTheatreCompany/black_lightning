@@ -5,7 +5,7 @@
 
     <%= f.input :title %>
 
-    <%= f.input :body %>
+    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :body } %>
 
     <%= f.input :slug %>
 
