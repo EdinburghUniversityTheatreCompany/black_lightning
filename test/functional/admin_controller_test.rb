@@ -1,9 +1,13 @@
 require 'test_helper'
 
 class AdminControllerTest < ActionController::TestCase
-  test "unauthorised user should not get index" do
+  test "should get index" do
+    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
+    @user.add_role :admin
+    sign_in @user
+    
     get :index
-    assert_response '403'
+    assert_response :success
   end
 
 end
