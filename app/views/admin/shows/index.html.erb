@@ -9,12 +9,12 @@
 		</tr>
 		<% @shows.each do |show| %>
 		<tr>
-			<td><%= link_to show.name, admin_show_path(show.id) %></td>
+			<td><%= link_to show.name, admin_show_path(show) %></td>
 			<td><%= show.slug %></td>
 			
             <td>
             <% if can? :edit, show %>
-            <%= link_to 'Edit', edit_admin_show_path(show.id)%>
+            <%= link_to 'Edit', edit_admin_show_path(show)%>
             <% end %>
             </td>
 		</tr>
