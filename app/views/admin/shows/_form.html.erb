@@ -12,6 +12,8 @@
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
 	
     <%= f.input :xts_id %>
+    
+    <%= f.input :image %>
 	
     <%= f.input :is_public if current_user.has_role? :committee %>
 
