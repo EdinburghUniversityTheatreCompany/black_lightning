@@ -22,6 +22,11 @@
 		<tr>
 			<th>Public?</th>
 			<td><%= {true => "Yes", false => "No", nil => "No"}[@show.is_public] %>
+        </tr>
+        <tr>
+            <th>Image</th>
+            <td><%= image_tag @show.image.url(:medium) %></td>
+        </tr>
 	</tbody>
 </table>
 <%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn'%>

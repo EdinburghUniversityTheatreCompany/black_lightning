@@ -10,11 +10,16 @@
 # Ignore the default SQLite database.
 /db/*.sqlite3
 /config/database.yml
+
+#Ignore specific development environment - required for imageMagick path amoung others.
 /config/environments/development.rb
 
 # Ignore all logfiles and tempfiles.
 /log/*.log
 /tmp
+
+#Ignore paperclip image store:
+/public/system
 
 # Ignore Mac created DS_Store files
 .DS_Store
