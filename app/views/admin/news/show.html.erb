@@ -22,5 +22,10 @@
   <%= @news.show_public %>
 </p>
 
+<p>
+  <b>Image</b><br />
+  <%= image_tag @news.image.url(:medium) %>
+</p>
+
 
 <%= link_to 'Edit', edit_admin_news_path(@news), :class => 'btn' %>
