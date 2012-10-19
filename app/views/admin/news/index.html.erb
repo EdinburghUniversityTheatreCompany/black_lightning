@@ -9,15 +9,13 @@
     <th>Show public</th>
     <th></th>
     <th></th>
-    <th></th>
   </tr>
 
 <% @news.each do |news| %>
   <tr>
-    <td><%= news.title %></td>
+    <td><%= link_to news.title, admin_news_path(news) %></td>
     <td><%= news.publish_date %></td>
     <td><%= news.show_public ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
-    <td><%= link_to 'Show', admin_news_path(news) %></td>
     
     <td>
     <% if can? :edit, news %>
