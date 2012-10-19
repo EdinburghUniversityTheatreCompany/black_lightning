@@ -11,7 +11,7 @@
 		</tr>
 		<tr>
 			<th>Description</th>
-			<td><%= @show.description.html_safe %></td>
+			<td><%= render_markdown @show.description %></td>
 		</tr>
 		<tr>
 			<th>XTS Pro ID</th>

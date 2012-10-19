@@ -1,0 +1,30 @@
+<%= simple_form_for [:admin, @show] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :name %>
+	
+    <%= f.input :tagline %>
+	
+    <%= f.input :slug %>
+	
+    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
+	
+    <%= f.input :xts_id %>
+	
+    <%= f.input :is_public if current_user.has_role? :committee %>
+
+  </div>
+  
+  <script>
+	$('#show_name').keyup(function() {
+		var slug = jQuery.trim($('#show_name').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
+		$('#show_slug').val(slug);
+	});
+  </script>
+
+  <div class="form-actions">
+    <%= f.button :submit %>
+  </div>
+<% end %>

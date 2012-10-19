@@ -1,8 +1,11 @@
 <h1>Current Shows</h1>
+
 <% @shows.each do |show| %>
 <h2><%= link_to show.name, show_path(show) %></h2>
 <% end %>
+
 <% if @shows.count == 0 %>
 <p>There are currently no shows in the database.</p>
 <% end %>
+
 <%= will_paginate(@shows) %>

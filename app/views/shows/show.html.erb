@@ -1,3 +1,7 @@
+<header>
 <h1><%= @show.name %></h1>
-<p><%= @show.description %></p>
+<p><%= @show.tagline %></p>
+</header>
+
+<%= render_markdown @show.description %>
 <%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>

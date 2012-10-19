@@ -1,17 +1,3 @@
 <h1>New Show</h1>
-<%= simple_form_for @show, :url => admin_shows_path() do |f| %>
-	<%= f.input :name %>
-	<%= f.input :tagline %>
-	<%= f.input :slug %>
-	<%= f.input :description %>
-	<%= f.input :xts_id %>
-	<%= f.input :is_public if current_user.has_role? :committee %>
-	<%= f.button :submit %>
-<% end %>
 
-<script>
-	$('#show_name').keyup(function() {
-		var slug = jQuery.trim($('#show_name').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
-		$('#show_slug').val(slug);
-	});
-</script>
+<%= render 'form' %>
