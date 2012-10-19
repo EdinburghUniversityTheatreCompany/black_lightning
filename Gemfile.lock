@@ -33,6 +33,7 @@ GEM
     bcrypt-ruby (3.0.1-x86-mingw32)
     builder (3.0.3)
     cancan (1.6.8)
+    cocaine (0.4.2)
     coffee-rails (3.2.2)
       coffee-script (>= 2.2.0)
       railties (~> 3.2.0)
@@ -64,6 +65,12 @@ GEM
     mysql2 (0.3.11)
     mysql2 (0.3.11-x86-mingw32)
     orm_adapter (0.4.0)
+    paperclip (3.3.0)
+      activemodel (>= 3.0.0)
+      activerecord (>= 3.0.0)
+      activesupport (>= 3.0.0)
+      cocaine (~> 0.4.0)
+      mime-types
     polyglot (0.3.3)
     rack (1.4.1)
     rack-cache (1.2)
@@ -127,6 +134,7 @@ DEPENDENCIES
   devise
   jquery-rails
   mysql2
+  paperclip
   rails (= 3.2.8)
   redcarpet
   rolify

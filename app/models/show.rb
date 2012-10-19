@@ -6,5 +6,6 @@ class Show < ActiveRecord::Base
   
   validates :slug, :presence => true, :uniqueness => true
 
-  attr_accessible :description, :name, :slug, :tagline, :xts_id, :is_public
+  has_attached_file :image, :styles => { :medium => "x300>", :thumb => "x100>" }
+  attr_accessible :description, :name, :slug, :tagline, :xts_id, :is_public, :image
 end
