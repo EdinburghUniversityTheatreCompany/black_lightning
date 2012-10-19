@@ -25,6 +25,7 @@
   </script>
 
   <div class="form-actions">
-    <%= f.button :submit %>
+    <%= f.button :submit, :class => 'btn-primary' %>
+    <%= link_to 'Cancel', admin_shows_path, :class => "btn" %>
   </div>
 <% end %>
