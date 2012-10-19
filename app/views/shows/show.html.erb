@@ -3,5 +3,7 @@
 <p><%= @show.tagline %></p>
 </header>
 
+<%= image_tag @show.image.url(:medium) %>
+
 <%= render_markdown @show.description %>
 <%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>

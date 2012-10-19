@@ -1,7 +1,9 @@
 <h1>Current Shows</h1>
 
 <% @shows.each do |show| %>
-<h2><%= link_to show.name, show_path(show) %></h2>
+<% image = "" %>
+<% image = image_tag show.image.url(:thumb) if  show.image?%>
+<h2><%= link_to image + show.name, show_path(show) %></h2>
 <% end %>
 
 <% if @shows.count == 0 %>
