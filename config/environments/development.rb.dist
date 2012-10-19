@@ -1,4 +1,7 @@
 ChaosRails::Application.configure do
+  #PaperClip imagemagick location:
+  Paperclip.options[:command_path] = "C:\Program Files (x86)\ImageMagick-6.7.9-Q16"
+  
   # Settings specified here will take precedence over those in config/application.rb
 
   # In the development environment your application's code is reloaded on
