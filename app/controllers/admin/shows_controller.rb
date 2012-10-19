@@ -1,13 +1,13 @@
 class Admin::ShowsController < AdminController
 
-  load_and_authorize_resource
+  load_and_authorize_resource :find_by => :slug
 
   def index
     @shows = Show.all
   end
   
   def show
-    @show = Show.find(params[:id])
+    @show = Show.find_by_slug(params[:id])
   end
   
   def new
@@ -26,11 +26,11 @@ class Admin::ShowsController < AdminController
   end
   
   def edit
-    @show = Show.find(params[:id])
+    @show = Show.find_by_slug(params[:id])
   end
   
   def update
-    @show = Show.find(params[:id])
+    @show = Show.find_by_slug(params[:id])
     respond_to do |format|
       if @show.update_attributes(params[:show])
         format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }

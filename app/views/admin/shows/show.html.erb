@@ -24,4 +24,4 @@
 			<td><%= {true => "Yes", false => "No", nil => "No"}[@show.is_public] %>
 	</tbody>
 </table>
-<%= link_to 'Edit', edit_admin_show_path(@show.id), class: 'btn'%>
+<%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn'%>
