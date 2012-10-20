@@ -1,0 +1,7 @@
+<div class="job">
+    <%= f.input :name %>
+            
+    <%= f.input :user_id, :collection => User.all.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
+
+    <%= link_to_remove_association "remove job", f %>
+</div>
