@@ -1,4 +1,7 @@
 class Admin::StaffingsController < AdminController
+  
+  load_and_authorize_resource :class => Admin::Staffing
+  
   # GET /admin/staffings
   # GET /admin/staffings.json
   def index
@@ -24,6 +27,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/new
   # GET /admin/staffings/new.json
   def new
+    @users = User.accessible_by(current_ability, :manage) 
     @admin_staffing = Admin::Staffing.new
 
     respond_to do |format|
@@ -34,6 +38,7 @@ class Admin::StaffingsController < AdminController
 
   # GET /admin/staffings/1/edit
   def edit
+    @users = User.accessible_by(current_ability, :manage) 
     @admin_staffing = Admin::Staffing.find(params[:id])
   end
 
