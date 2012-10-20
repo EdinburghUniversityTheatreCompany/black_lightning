@@ -1,35 +1,18 @@
-<%= simple_form_for(@admin_staffing) do |f| %>
+<%= simple_nested_form_for(@admin_staffing) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
       
-      <%= f.input :show_title %>
+    <%= f.input :show_title %>
+    
+    <%= f.input :date %>
      
-      <%= f.input :date %>
-     
-      <div class="jobs">
-        
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Job</th>
-                <th>User</th>
-              </tr>
-            </thead>
-            <tbody>
-              <%= f.simple_fields_for :staffing_jobs do |j| %>      
-                <tr>
-                  <td>
-                    <%= j.input_field :name, :as => :value_only %>
-                  </td>
-                  <td>
-                    <%= j.input_field :user_id, :collection => User.all.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-      </div>
+    <div class="well form-horizontal">
+    <h3>Jobs</h3>
+    <%= f.simple_fields_for :staffing_jobs %>
+    </div>
+    
+    <%= f.link_to_add "Add Job", :staffing_jobs, :class => "btn" %>
   </div>
 
   <div class="form-actions">

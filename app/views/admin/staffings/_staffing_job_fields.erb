@@ -1,7 +1,5 @@
-<div class="job">
-    <%= f.input :name %>
-            
-    <%= f.input :user_id, :collection => User.all.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
-
-    <%= link_to_remove_association "remove job", f %>
-</div>
+<div class="job control-group">
+    <%= f.input_field :name %>
+    <%= f.input_field :user_id, :collection => User.all.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
+    <%= f.link_to_remove "Remove", :class => "btn btn-danger" %>
+</tr>
