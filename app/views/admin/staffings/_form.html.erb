@@ -2,17 +2,33 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-     
-      <%= f.input :date%>
-     
+      
       <%= f.input :show_title %>
      
+      <%= f.input :date %>
+     
       <div class="jobs">
-        <%= f.simple_fields_for :staffing_jobs do |j| %>
-          <%= j.input :name %>
-            
-          <%= j.input :user_id, :collection => User.all.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
-        <% end %>
+        
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>User</th>
+              </tr>
+            </thead>
+            <tbody>
+              <%= f.simple_fields_for :staffing_jobs do |j| %>      
+                <tr>
+                  <td>
+                    <%= j.input_field :name, :as => :value_only %>
+                  </td>
+                  <td>
+                    <%= j.input_field :user_id, :collection => User.all.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
       </div>
   </div>
 
