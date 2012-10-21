@@ -1,21 +1,34 @@
-<h1>Listing admin_staffings</h1>
+<h1>Listing Staffing Positions</h1>
 
-<table>
-  <tr>
-    <th></th>
-    <th></th>
-    <th></th>
-  </tr>
-
-<% @admin_staffings.each do |admin_staffing| %>
-  <tr>
-    <td><%= link_to 'Show', admin_staffing %></td>
-    <td><%= link_to 'Edit', edit_admin_staffing_path(admin_staffing) %></td>
-    <td><%= link_to 'Destroy', admin_staffing, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-  </tr>
+<div class="accordion" id="shows_accordion">
+<% @admin_staffings.each do |show_title, staffings| %>
+  <% div_name = show_title.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion">
+        <%= show_title %>
+      </a>
+    </div>
+    <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
+      <table class="table">
+        <tr>
+          <th>Date</th>
+          <th></th>
+          <th></th>
+        </tr>
+        <% for staffing in staffings %>
+        <tr>
+          <td><%= link_to (l staffing.date, :format => :short), edit_admin_staffing_path(staffing) %></td>
+          <td><%= link_to 'View', staffing %></td>
+          <td><%= link_to 'Destroy', staffing, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+        </tr>
+        <% end %>
+      </table>
+    </div>
+  </div>
 <% end %>
-</table>
+</div>
 
 <br />
 
-<%= link_to 'New Staffing', new_admin_staffing_path %>
+<%= link_to 'Add Staffing', new_admin_staffing_path, :class => "btn" %>

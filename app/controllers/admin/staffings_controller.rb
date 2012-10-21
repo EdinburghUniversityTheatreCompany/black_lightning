@@ -6,6 +6,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings.json
   def index
     @admin_staffings = Admin::Staffing.all
+    @admin_staffings = @admin_staffings.group_by { |s| s.show_title }
 
     respond_to do |format|
       format.html # index.html.erb
