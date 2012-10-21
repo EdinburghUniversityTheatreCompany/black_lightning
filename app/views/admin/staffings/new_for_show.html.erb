@@ -1,0 +1,17 @@
+<h1>Create Staffing for Show</h1>
+
+<%= form_tag({:controller => "staffings", :action => "create_for_show"}, :method => "put") do %>
+  <div class="form-fields">
+    <div class="control-group">
+      <%= label_tag :show_title, "Show Title:" %>
+      <div class="controls">
+        <%= text_field_tag :show_title %>
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="form-actions">
+    <%= submit_tag "Create", :class => "btn btn-primary" %>
+  </div>
+<% end %>

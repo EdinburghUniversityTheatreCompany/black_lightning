@@ -58,6 +58,13 @@ class Admin::StaffingsController < AdminController
       end
     end
   end
+  
+  def new_for_show
+  end
+  
+  def create_for_show
+    
+  end
 
   # PUT /admin/staffings/1
   # PUT /admin/staffings/1.json
