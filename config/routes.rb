@@ -15,7 +15,13 @@ ChaosRails::Application.routes.draw do
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
-    resources :staffings
+    
+    resources :staffings do
+      collection do
+        get 'new_for_show'
+        put 'create_for_show'
+      end
+    end
   end
   
   get "/admin/help/markdown"

@@ -58,7 +58,32 @@ class Admin::StaffingsController < AdminController
       end
     end
   end
+  
+  def new_for_show
+    @users = User.accessible_by(current_ability, :manage) 
+    @admin_staffing = Admin::Staffing.new
+  end
+  
+  def create_for_show
+    admin_staffing = Admin::Staffing.new(params[:admin_staffing])
+    
+    dates = params[:dates]
+    
+    dates.each_value do |date|
+      staffing = admin_staffing.dup
 
+      staffing.date = DateTime.civil(date[:year].to_i, date[:month].to_i, date[:day].to_i, date[:hour].to_i, date[:minute].to_i)
+      staffing.staffing_jobs = admin_staffing.staffing_jobs.dup
+      
+      if not staffing.save
+        redirect_to redirect_to admin_staffings_url, notice: 'There were errors creating the staffing.'
+        return
+      end
+    end
+    
+    redirect_to admin_staffings_url, notice: 'Staffing was successfully created.'
+  end
+  
   # PUT /admin/staffings/1
   # PUT /admin/staffings/1.json
   def update
