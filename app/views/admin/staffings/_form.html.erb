@@ -10,11 +10,12 @@
     <div class="well form-horizontal">
     <h3>Jobs</h3>
     <%= f.simple_fields_for :staffing_jobs %>
-    </div>
+
     
     <% if can? :write, @staffing %>
     <%= f.link_to_add "Add Job", :staffing_jobs, :class => "btn" %>
     <% end %>
+    </div>
   </div>
 
   <div class="form-actions">
