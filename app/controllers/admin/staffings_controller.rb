@@ -66,18 +66,24 @@ class Admin::StaffingsController < AdminController
   
   def create_for_show
     admin_staffing = Admin::Staffing.new(params[:admin_staffing])
+    admin_staffing_jobs = admin_staffing.staffing_jobs
     
     dates = params[:dates]
     
     dates.each_value do |date|
       staffing = admin_staffing.dup
-
+      
       staffing.date = DateTime.civil(date[:year].to_i, date[:month].to_i, date[:day].to_i, date[:hour].to_i, date[:minute].to_i)
-      staffing.staffing_jobs = admin_staffing.staffing_jobs.dup
       
       if not staffing.save
         redirect_to redirect_to admin_staffings_url, notice: 'There were errors creating the staffing.'
         return
+      end
+      
+      admin_staffing_jobs.each do |staffing_job|
+        new_staffing_job = staffing_job.dup
+        new_staffing_job.staffing_id = staffing.id
+        new_staffing_job.save
       end
     end
     
