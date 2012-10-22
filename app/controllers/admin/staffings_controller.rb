@@ -100,6 +100,27 @@ class Admin::StaffingsController < AdminController
     end
   end
 
+  def sign_up_for
+    @job = Admin::StaffingJob.find(params[:id])
+
+    @job.user = current_user
+
+    respond_to do |format|
+      if current_user.mobile_number == nil # you MUST have a phone number in your profile to be able to sign up for staffing
+        format.html { redirect_to edit_admin_user_path(current_user, notice: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary.") }
+        format.json { head :no_content}
+      elsif @admin_staffing.update_attributes(params[:admin_staffing])
+        format.html { redirect_to admin_path, notice: "Thank you for choosing to staff #{@job.staffings.show_title} - #{@job.name}, on #{(l staffing.date, :format => :short)}." }
+        format.json { head :no_content }
+      else
+        format.html { render action: "edit" }
+        format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+
+
+
   # DELETE /admin/staffings/1
   # DELETE /admin/staffings/1.json
   def destroy
