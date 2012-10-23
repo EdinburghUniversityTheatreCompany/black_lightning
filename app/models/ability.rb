@@ -25,7 +25,7 @@ class Ability
         can :access, :backend
       
         can :read, :all
-        can :update, Admin::StaffingJob
+        can :sign_up_for, Admin::StaffingJob
         
         cannot :read, Admin::EditableBlock
       end

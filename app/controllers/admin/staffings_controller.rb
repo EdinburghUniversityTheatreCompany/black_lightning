@@ -1,6 +1,6 @@
 class Admin::StaffingsController < AdminController
   
-  load_and_authorize_resource :class => Admin::Staffing
+  load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up]
   
   # GET /admin/staffings
   # GET /admin/staffings.json
@@ -106,20 +106,31 @@ class Admin::StaffingsController < AdminController
     end
   end
 
-  def sign_up_for
-    @job = Admin::StaffingJob.find(params[:id])
+  def show_sign_up
+    authorize! :sign_up_for, Admin::StaffingJob
+    @admin_staffing = Admin::Staffing.find(params[:id])
+  end
+  
+  def sign_up
+    authorize! :sign_up_for, Admin::StaffingJob
+    @job = Admin::StaffingJob.find(params[:job_id])
 
     @job.user = current_user
 
     respond_to do |format|
-      if current_user.mobile_number == nil # you MUST have a phone number in your profile to be able to sign up for staffing
+      if current_user.phone_number == nil # you MUST have a phone number in your profile to be able to sign up for staffing
         format.html { redirect_to edit_admin_user_path(current_user, notice: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary.") }
         format.json { head :no_content}
-      elsif @admin_staffing.update_attributes(params[:admin_staffing])
-        format.html { redirect_to admin_path, notice: "Thank you for choosing to staff #{@job.staffings.show_title} - #{@job.name}, on #{(l staffing.date, :format => :short)}." }
+      elsif @job.save
+        
+        logger.debug "-------------"
+        logger.debug @job.staffing
+        logger.debug "-------------"
+        
+        format.html { redirect_to admin_staffings_path, notice: "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}." }
         format.json { head :no_content }
       else
-        format.html { render action: "edit" }
+        format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end

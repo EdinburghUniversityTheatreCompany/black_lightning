@@ -11,10 +11,7 @@
     <h3>Jobs</h3>
     <%= f.simple_fields_for :staffing_jobs %>
 
-    
-    <% if can? :write, @staffing %>
     <%= f.link_to_add "Add Job", :staffing_jobs, :class => "btn" %>
-    <% end %>
     </div>
   </div>
 

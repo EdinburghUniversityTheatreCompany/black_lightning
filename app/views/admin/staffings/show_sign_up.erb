@@ -1,0 +1,24 @@
+<h1>Sign up for Staffing</h1>
+
+<p id="notice"><%= notice %></p>
+
+<%= @admin_staffing.show_title %>
+<%= @admin_staffing.date %>
+     
+<div class="well form-horizontal">
+    <h3>Jobs</h3>
+    <% @admin_staffing.staffing_jobs.each do |staffing_job| %>
+    <div>
+      <%= staffing_job.name %>
+      
+      <% u = staffing_job.user %>
+      <% if u then %>
+        <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+      <% else %>
+        <%= link_to 'Sign Up', admin_staffing_sign_up_path(staffing_job), :class => "btn", :method => :put %>
+      <% end %>
+    </div>
+    <% end %>
+</div>
+
+<%= link_to 'Back', admin_staffings_path, :class => "btn" %>

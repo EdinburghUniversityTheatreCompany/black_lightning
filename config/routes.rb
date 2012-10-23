@@ -22,6 +22,9 @@ ChaosRails::Application.routes.draw do
         put 'create_for_show'
       end
     end
+    
+    match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
+    match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
   end
   
   get "/admin/help/markdown"

@@ -1,5 +1,7 @@
 <h1>Listing Staffing Positions</h1>
 
+<p id="notice"><%= notice %></p>
+
 <div class="accordion" id="shows_accordion">
 <% @admin_staffings.each do |show_title, staffings| %>
   <% div_name = show_title.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
