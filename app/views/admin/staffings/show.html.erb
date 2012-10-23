@@ -1,3 +1,34 @@
 
-<%= link_to 'Edit', edit_admin_staffing_path(@admin_staffing) %> |
-<%= link_to 'Back', admin_staffings_path %>
+<table class="table table-bordered">
+  <thead>
+    <th>Job</th>
+    <th>Name</th>
+    <th>Phone Number</th>
+  </thead>
+  <tbody>
+    <% @admin_staffing.staffing_jobs.each do |staffing_job| %>
+      <tr>
+        <td><%= staffing_job.name %></td>
+        
+        <% u = staffing_job.user %>
+        <% if u then %>
+          <td><%= "#{u.first_name} #{u.last_name}".presence || u.email %></td>
+          <td><%= u.phone_number %></td>
+        <% else %>
+          <td></td>
+          <td></td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if can? :sign_up, @admin_staffing %>
+<%= link_to 'Sign Up', admin_staffing_show_sign_up_path(@admin_staffing), :class => "btn btn-primary" %>
+<% end %>
+
+<% if can? :edit, @admin_staffing %>
+<%= link_to 'Edit', edit_admin_staffing_path(@admin_staffing), :class => "btn" %>
+<% end %>
+
+<%= link_to 'Back', admin_staffings_path, :class => "btn" %>
