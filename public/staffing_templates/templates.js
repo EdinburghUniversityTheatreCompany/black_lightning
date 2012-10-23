@@ -1,12 +1,28 @@
 (function () {
+  "use strict";
+    
   var selected_template = null;
+
+  function loadTemplate() {
+    //TODO: This feels dirty - there must be a better way:
+    $.each(selected_template.jobs, function (index, job) {      
+      var setValue = function (e) {
+        e.field.find('[name$="[name]"]').val(job);
+      };
+      
+      $(document).one('nested:fieldAdded', setValue);
+      $('a[data-association="staffing_jobs"].add_nested_fields').click();
+    });
+    
+    $('#template_modal').modal('hide');
+  }
 
   function getTemplate() {
     var templateName = $('#template_list').val();
     
     $('#template_load').off('click', loadTemplate);
     
-    if (templateName == "") {
+    if (templateName === "") {
       $('#template_summary').empty();
       selected_template = null;
       
@@ -33,20 +49,6 @@
     );
   }
 
-  function loadTemplate() {
-    //TODO: This feels dirty - there must be a better way:
-    $.each(selected_template.jobs, function (index, job) {      
-      var setValue = function (e) {
-        e.field.find('[name$="[name]"]').val(job);
-      };
-      
-      $(document).one('nested:fieldAdded', setValue);
-      $('a[data-association="staffing_jobs"].add_nested_fields').click();
-    });
-    
-    $('#template_modal').modal('hide');
-  }
-
   $(function () {
     $.getJSON(
       '/staffing_templates/templates.json',
@@ -59,4 +61,4 @@
     
     $('#template_list').change(getTemplate);
   });
-})();
+}());
