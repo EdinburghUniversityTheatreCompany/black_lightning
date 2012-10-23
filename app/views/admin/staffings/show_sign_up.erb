@@ -1,24 +1,28 @@
 <h1>Sign up for Staffing</h1>
 
-<p id="notice"><%= notice %></p>
+<h2><%= @admin_staffing.show_title %></h2>
+<b><%= l @admin_staffing.date, :format => :long %></b>
 
-<%= @admin_staffing.show_title %>
-<%= @admin_staffing.date %>
+<p id="notice"><%= notice %></p>
      
-<div class="well form-horizontal">
+<form class="well form-horizontal">
     <h3>Jobs</h3>
     <% @admin_staffing.staffing_jobs.each do |staffing_job| %>
-    <div>
-      <%= staffing_job.name %>
-      
-      <% u = staffing_job.user %>
-      <% if u then %>
-        <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-      <% else %>
-        <%= link_to 'Sign Up', admin_staffing_sign_up_path(staffing_job), :class => "btn", :method => :put %>
-      <% end %>
-    </div>
+      <div class="control-group">
+        <div class="control-label">
+          <%= staffing_job.name %>
+        </div>
+        
+        <div class="controls">
+          <% u = staffing_job.user %>
+          <% if u then %>
+            <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+          <% else %>
+            <%= link_to 'Sign Up', admin_staffing_sign_up_path(staffing_job), :class => "btn", :method => :put %>
+          <% end %>
+        </div>
+      </div>
     <% end %>
-</div>
+</form>
 
 <%= link_to 'Back', admin_staffings_path, :class => "btn" %>
