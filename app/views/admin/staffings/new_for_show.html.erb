@@ -43,7 +43,7 @@
 
   <div class="form-actions">
     <%= f.button :submit, :class => 'btn-primary' %>
-    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Launch demo modal</a>
+    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
     <%= link_to 'Cancel', admin_staffings_path, :class => "btn" %>
   </div>
 <% end %>
@@ -58,11 +58,13 @@
       <select id="template_list">
         <option></option>
       </select>
+      <div id="template_summary">
+      </div>
     </form>
   </div>
   <div class="modal-footer">
     <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-    <button class="btn btn-primary">Save changes</button>
+    <button id="template_load" class="btn btn-primary disabled">Load template</button>
   </div>
 </div>
 
