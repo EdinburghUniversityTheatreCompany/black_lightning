@@ -122,11 +122,6 @@ class Admin::StaffingsController < AdminController
         format.html { redirect_to edit_admin_user_path(current_user, notice: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary.") }
         format.json { head :no_content}
       elsif @job.save
-        
-        logger.debug "-------------"
-        logger.debug @job.staffing
-        logger.debug "-------------"
-        
         format.html { redirect_to admin_staffings_path, notice: "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}." }
         format.json { head :no_content }
       else
