@@ -39,10 +39,12 @@
 		</div>
 	</div>
 	<div class="container">
+        <% if notice then %>
         <p id="notice" class="alert alert-info">
           <%= notice %>
           <button type="button" class="close" data-dismiss="alert">&times;</button>
         </p>
+        <% end %>
     
 		<%= yield %>
 	</div>
