@@ -3,7 +3,21 @@
 
   <div class="form-inputs">
       
-    <%= f.input :show_title %>
+    <%= f.input :show_title, :input_html => { :autocomplete => "off" } %>
+    
+    <script type="text/javascript">
+      $('#admin_staffing_show_title').typeahead({
+        source: function (query, process) {
+          $.getJSON('/shows.json', function (data) {
+            var names = $.map(data, function (n) {
+              return n.name
+            });
+            
+            process(names);
+          });
+        }
+      });
+    </script>
     
     <div id="dates_container" class="well form-horizontal">
       <h3>Dates</h3>
