@@ -1,0 +1,22 @@
+#login_form {
+  padding-top: 50px;
+}
+
+#login_form > div {
+  text-align: center;
+  
+  border: solid black 1px;
+  border-radius: 5px;
+}
+
+#login_form .checkbox {
+  width: 100%;
+}
+
+#login_form .checkbox > input {
+  width: 100%;
+}
+
+button[type="submit"] {
+  border-radius: 20px;
+}
