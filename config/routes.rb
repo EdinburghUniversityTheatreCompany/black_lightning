@@ -16,6 +16,8 @@ ChaosRails::Application.routes.draw do
     resources :editable_blocks, :except => [:show]
     resources :users
     
+    match 'access_denied' => 'admin#access_denied'
+    
     resources :staffings do
       collection do
         get 'new_for_show'
