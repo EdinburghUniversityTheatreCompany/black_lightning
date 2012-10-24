@@ -5,9 +5,10 @@
   <% div_name = show_title.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
   <div class="accordion-group">
     <div class="accordion-heading">
-      <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion">
+      <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" style="display: inline-block;">
         <%= show_title %>
       </a>
+      <%= "#{Admin::Staffing.joins(:staffing_jobs).where(['user_id is not null']).count} of #{Admin::Staffing.joins(:staffing_jobs).count} filled" %>
     </div>
     <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
       <table class="table">
