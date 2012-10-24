@@ -4,11 +4,23 @@
 <% @admin_staffings.each do |show_title, staffings| %>
   <% div_name = show_title.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
   <div class="accordion-group">
-    <div class="accordion-heading">
+    <% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['user_id is not null']).count %>
+    <% total_positions = Admin::Staffing.joins(:staffing_jobs).count %>
+    
+    <% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
+    
+    <div class="accordion-heading" style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
       <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" style="display: inline-block;">
         <%= show_title %>
       </a>
-      <%= "#{Admin::Staffing.joins(:staffing_jobs).where(['user_id is not null']).count} of #{Admin::Staffing.joins(:staffing_jobs).count} filled" %>
+      
+      <% if show_warning %>
+        <i class="icon-exclamation-sign"></i>
+      <% else %>
+        <i class="icon-ok-sign"></i>
+      <% end %>
+    
+      <%= "#{filled_positions} of #{total_positions} filled" %>
     </div>
     <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
       <table class="table">
