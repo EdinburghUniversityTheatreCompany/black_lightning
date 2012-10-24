@@ -15,6 +15,8 @@ class Ability
       end
       
       can :manage, User, :id => user.id
+      cannot :assign_roles, User if not user.has_role? :admin
+      
       can :access, :backend if user.has_role? :member
     else
       
