@@ -1,0 +1,19 @@
+<% if not cookies['allow_cookies'] %>
+  <div id="cookie_notice">
+    <p>
+      We would like to use cookies to find out more about how you use the site and allow you to log in if required.
+    <p>
+    <a id="accept_cookies_btn">Accept Cookies</a>
+    
+    <script type="text/javascript">
+      $(function () {
+        $('#accept_cookies_btn').click(function () {
+          var expirationdate = new Date((new Date).getTime() + 1000 * 60 * 60 * 24 * 365 * 10);
+          document.cookie="allow_cookies=true"
+                        + ";expires=" + expirationdate.toGMTString();
+          $('#cookie_notice').slideUp();
+        });
+      });
+    </script>
+  </div>
+<% end %>

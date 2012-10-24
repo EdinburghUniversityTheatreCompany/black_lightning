@@ -10,7 +10,11 @@
 </head>
 <body>
 
+<%= render :partial => "shared/cookie_notice" %>
+
 <%= yield %>
+
+<%= render :partial => "shared/google_analytics" %>
 
 </body>
 </html>
