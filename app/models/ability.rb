@@ -10,6 +10,7 @@ class Ability
     
       #All users can manage themselves.
       can :manage, User, :id => user.id
+      cannot :assign_roles, User
     
       #########################
       # COMMITTEE PERMISSIONS #
@@ -38,9 +39,7 @@ class Ability
       if user.has_role? :admin
         can :manage, :all
       end
-      
-      
-      
+
     else
       
       can :read, News, :show_public => true

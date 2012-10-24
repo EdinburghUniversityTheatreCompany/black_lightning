@@ -1,9 +1,15 @@
+body {
+  background-color: #dddddd;
+}
+
 #login_form {
   padding-top: 50px;
 }
 
 #login_form > div {
   text-align: center;
+  
+  background-color: #ffffff;
   
   border: solid black 1px;
   border-radius: 5px;

@@ -6,7 +6,10 @@
 	<%= f.input :phone_number %>
 	<%= f.input :password %>
 	<%= f.input :password_confirmation %>
-	<%= f.association :roles, :as => :check_boxes %>
+    
+    <% if can? :assign_roles, @user %>
+	  <%= f.association :roles, :as => :check_boxes %>
+    <% end %>
 </div>
 <div class="form-actions">
 	<%= f.button :submit %>
