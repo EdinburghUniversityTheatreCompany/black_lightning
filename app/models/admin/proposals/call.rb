@@ -4,5 +4,5 @@ class Admin::Proposals::Call < ActiveRecord::Base
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
   
   accepts_nested_attributes_for :questions
-  attr_accessible :deadline, :name, :open, :questions
+  attr_accessible :deadline, :name, :open, :questions, :questions_attributes
 end

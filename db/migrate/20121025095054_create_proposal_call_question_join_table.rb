@@ -1,12 +1,12 @@
 class CreateProposalCallQuestionJoinTable < ActiveRecord::Migration
   def up
-    create_table :admin_proposals_calls_questions, :id => false do |t|
-      t.integer :proposals_call_id
-      t.integer :proposals_question_id
+    create_table :calls_questions, :id => false do |t|
+      t.integer :call_id
+      t.integer :question_id
     end
   end
 
   def down
-    drop_table :admin_proposals_calls_questions
+    drop_table :calls_questions
   end
 end

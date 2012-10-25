@@ -34,11 +34,6 @@ ActiveRecord::Schema.define(:version => 20121025095054) do
     t.datetime "updated_at", :null => false
   end
 
-  create_table "admin_proposals_calls_questions", :id => false, :force => true do |t|
-    t.integer "proposals_call_id"
-    t.integer "proposals_question_id"
-  end
-
   create_table "admin_proposals_proposals", :force => true do |t|
     t.string   "show_title"
     t.integer  "cast_male"
@@ -79,6 +74,11 @@ ActiveRecord::Schema.define(:version => 20121025095054) do
     t.string   "show_title"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
+  end
+
+  create_table "calls_questions", :id => false, :force => true do |t|
+    t.integer "call_id"
+    t.integer "question_id"
   end
 
   create_table "news", :force => true do |t|
