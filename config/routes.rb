@@ -7,6 +7,8 @@ ChaosRails::Application.routes.draw do
   resources :shows, :only => [:index, :show]
   resources :news, :only => [:index, :show]
   
+  match 'access_denied' => 'static#access_denied'
+  
   match 'about/' => 'static#about'
   
   match 'admin/' => 'admin#index'
@@ -15,8 +17,6 @@ ChaosRails::Application.routes.draw do
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
-    
-    match 'access_denied' => 'admin#access_denied'
     
     resources :staffings do
       collection do
