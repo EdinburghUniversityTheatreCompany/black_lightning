@@ -1,21 +1,19 @@
-<h1>Listing admin_proposals_calls</h1>
+<h1>Listing Proposal Calls</h1>
 
-<table>
+<table class="table">
   <tr>
     <th>Deadline</th>
     <th>Name</th>
     <th>Open</th>
     <th></th>
     <th></th>
-    <th></th>
   </tr>
 
 <% @admin_proposals_calls.each do |admin_proposals_call| %>
   <tr>
-    <td><%= admin_proposals_call.deadline %></td>
-    <td><%= admin_proposals_call.name %></td>
-    <td><%= admin_proposals_call.open %></td>
-    <td><%= link_to 'Show', admin_proposals_call %></td>
+    <td><%= link_to admin_proposals_call.name, admin_proposals_call_proposals_path(admin_proposals_call), :title => "View Proposals" %></td>
+    <td><%= l admin_proposals_call.deadline, :format => :long %></td>
+    <td><%= admin_proposals_call.open ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
     <td><%= link_to 'Edit', edit_admin_proposals_call_path(admin_proposals_call) %></td>
     <td><%= link_to 'Destroy', admin_proposals_call, method: :delete, data: { confirm: 'Are you sure?' } %></td>
   </tr>
@@ -24,4 +22,4 @@
 
 <br />
 
-<%= link_to 'New Call', new_admin_proposals_call_path %>
+<%= link_to 'New Call', new_admin_proposals_call_path, :class => "btn" %>

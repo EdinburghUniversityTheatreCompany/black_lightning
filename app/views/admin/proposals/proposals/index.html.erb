@@ -1,19 +1,16 @@
-<h1>Listing proposals</h1>
+<h1>Listing Proposals for <%= @call.name %></h1>
 
-<table>
+<table class="table">
   <tr>
     <th>Show title</th>
     
-    <th></th>
     <th></th>
     <th></th>
   </tr>
 
 <% @proposals.each do |proposal| %>
   <tr>
-    <td><%= proposal.show_title %></td>
-    
-    <td><%= link_to 'Show',  admin_proposals_call_proposal_path(@call, proposal) %></td>
+    <td><%= link_to proposal.show_title,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %></td>
     <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>
     <td><%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %></td>
   </tr>
@@ -22,4 +19,5 @@
 
 <br />
 
-<%= link_to 'New Proposal', new_admin_proposals_call_proposal_path %>
+<%= link_to 'New Proposal', new_admin_proposals_call_proposal_path, :class => "btn btn-primary" %>
+<%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>
