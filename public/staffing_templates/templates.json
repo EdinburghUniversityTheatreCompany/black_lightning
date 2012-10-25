@@ -1,0 +1,10 @@
+{
+    "templates": {
+        "mainterm": {
+            "name": "Mainterm"
+        },
+        "lunchtime": {
+            "name": "Lunchtime"
+        }
+    }
+}

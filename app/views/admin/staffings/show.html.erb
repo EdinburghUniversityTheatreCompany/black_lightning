@@ -1,0 +1,43 @@
+
+<table class="table table-bordered">
+  <thead>
+    <th>Job</th>
+    <th>Name</th>
+    
+    <% if current_user.has_role? :committee %>
+      <th>Phone Number</th>
+    <% end %>
+  </thead>
+  <tbody>
+    <% @admin_staffing.staffing_jobs.each do |staffing_job| %>
+      <tr>
+        <td><%= staffing_job.name %></td>
+        
+        <% u = staffing_job.user %>
+        <% if u then %>
+          <td><%= "#{u.first_name} #{u.last_name}".presence || u.email %></td>
+          
+          <% if current_user.has_role? :committee %>
+            <td><%= u.phone_number %></td>
+          <% end %>
+        <% else %>
+          <td></td>
+          
+          <% if current_user.has_role? :committee %>
+            <td></td>
+          <% end %>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if can? :sign_up, @admin_staffing %>
+<%= link_to 'Sign Up', admin_staffing_show_sign_up_path(@admin_staffing), :class => "btn btn-primary" %>
+<% end %>
+
+<% if can? :edit, @admin_staffing %>
+<%= link_to 'Edit', edit_admin_staffing_path(@admin_staffing), :class => "btn" %>
+<% end %>
+
+<%= link_to 'Back', admin_staffings_path, :class => "btn" %>
