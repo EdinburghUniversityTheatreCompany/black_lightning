@@ -1,0 +1,43 @@
+<%= simple_form_for(@admin_proposals_proposal) do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :show_title %>
+
+    <%= f.input :cast_male %>
+
+    <%= f.input :cast_female %>
+
+    <%= f.input :running_time %>
+
+    <%= f.input :publicity_text %>
+
+    <%= f.input :proposal_text %>
+
+    <%= f.input :budget_royalties %>
+
+    <%= f.input :budget_publiciy %>
+
+    <%= f.input :budget_tech %>
+
+    <%= f.input :budget_set %>
+
+    <%= f.input :budget_costume %>
+
+    <%= f.input :budget_props %>
+
+    <%= f.input :budget_admin %>
+
+    <%= f.input :budget_contingency %>
+
+    <%= f.input :budget_eutc %>
+
+    <%= f.input :budget_other_sources %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit %>
+  </div>
+<% end %>

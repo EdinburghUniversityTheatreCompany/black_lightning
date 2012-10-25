@@ -1,0 +1,20 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <b>Deadline:</b>
+  <%= @admin_proposals_call.deadline %>
+</p>
+
+<p>
+  <b>Name:</b>
+  <%= @admin_proposals_call.name %>
+</p>
+
+<p>
+  <b>Open:</b>
+  <%= @admin_proposals_call.open %>
+</p>
+
+
+<%= link_to 'Edit', edit_admin_proposals_call_path(@admin_proposals_call) %> |
+<%= link_to 'Back', admin_proposals_calls_path %>
