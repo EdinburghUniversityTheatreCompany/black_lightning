@@ -1,0 +1,90 @@
+﻿<%= simple_nested_form_for(@admin_staffing, :url => {:action => 'create_for_show'}, :method => 'put') do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+      
+    <%= f.input :show_title, :input_html => { :autocomplete => "off" } %>
+    
+    <script type="text/javascript">
+      $('#admin_staffing_show_title').typeahead({
+        source: function (query, process) {
+          $.getJSON('/shows.json', function (data) {
+            var names = $.map(data, function (n) {
+              return n.name
+            });
+            
+            process(names);
+          });
+        }
+      });
+    </script>
+    
+    <div id="dates_container" class="well form-horizontal">
+      <h3>Dates</h3>
+      <script type="text/javascript">
+        $(function () {
+          var counter = 0;
+          $('#add_date').click(function () {
+            var item = $('#date_blueprint').clone();
+            $(item).show();
+            //TODO: This feels like a bit of a cheat - could probably be improved.
+            item.find('select[name*="day"]').attr('name', 'dates[' + counter + '][day]');
+            item.find('select[name*="month"]').attr('name', 'dates[' + counter + '][month]');
+            item.find('select[name*="year"]').attr('name', 'dates[' + counter + '][year]');
+            item.find('select[name*="hour"]').attr('name', 'dates[' + counter + '][hour]');
+            item.find('select[name*="minute"]').attr('name', 'dates[' + counter + '][minute]');
+            item.find('a').click(function () {
+              $(item).remove();
+            });
+            counter ++;
+            
+            $('#add_date').before(item);
+          });
+        });
+      </script>
+      <a id="add_date" class="btn">Add Date</a>
+    </div>
+     
+    <div class="well form-horizontal">
+      <h3>Jobs</h3>
+      <%= f.simple_fields_for :staffing_jobs %>
+      
+      <% if can? :write, @staffing %>
+      <%= f.link_to_add "Add Job", :staffing_jobs, :class => "btn" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => 'btn-primary' %>
+    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
+    <%= link_to 'Cancel', admin_staffings_path, :class => "btn" %>
+  </div>
+<% end %>
+
+<div class="modal hide" id="template_modal" tabindex="-1" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h3 id="template_modal_header">Select Staffing from Template</h3>
+  </div>
+  <div class="modal-body">
+    <form id="template_selector">
+      <select id="template_list">
+        <option></option>
+      </select>
+      <div id="template_summary">
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button id="template_load" class="btn btn-primary disabled">Load template</button>
+  </div>
+</div>
+
+<div id="date_blueprint" style="display: none" class="control-group datetime">
+  <%= select_datetime %>
+  <a class="btn btn-danger">Remove</a>
+</div>
+
+<script type="text/javascript" src="/staffing_templates/templates.js"></script>

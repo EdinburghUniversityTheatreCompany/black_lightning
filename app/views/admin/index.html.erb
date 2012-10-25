@@ -11,6 +11,10 @@
   <li><%= link_to 'News', admin_news_index_path %></li>
   <% end %>
   
+  <% if can? :read, Admin::Staffing %>
+  <li><%= link_to 'Staffing', admin_staffings_path %></li>
+  <% end %>
+  
   <% if can? :read, Admin::EditableBlock %>
   <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
   <% end %>

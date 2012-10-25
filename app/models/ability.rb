@@ -7,17 +7,39 @@ class Ability
     #   user ||= User.new # guest user (not logged in)
     
     if user then
-      if user.has_role? :admin
-        can :manage, :all
-      else
+    
+      #All users can manage themselves.
+      can :manage, User, :id => user.id
+      cannot :assign_roles, User
+    
+      #########################
+      # COMMITTEE PERMISSIONS #
+      #########################
+      if user.has_role? :committee
+        can :manage, Admin::Staffing
+      end
+      
+      ######################
+      # MEMBER PERMISSIONS #
+      ######################
+      if user.has_role? :member
+        can :access, :backend
+      
         can :read, :all
+        can :sign_up_for, Admin::StaffingJob
+        
         cannot :read, Admin::EditableBlock
       end
       
-      can :manage, User, :id => user.id
-      cannot :assign_roles, User if not user.has_role? :admin
-      
-      can :access, :backend if user.has_role? :member
+      #####################
+      # ADMIN PERMISSIONS #
+      ##############################################
+      # (Leave at the bottom to ensure precedence) #
+      ##############################################
+      if user.has_role? :admin
+        can :manage, :all
+      end
+
     else
       
       can :read, News, :show_public => true

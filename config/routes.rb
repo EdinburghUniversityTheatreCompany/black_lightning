@@ -1,9 +1,13 @@
 ChaosRails::Application.routes.draw do
   
+  namespace :admin do resources :staffing_jobs end
+
   devise_for :users
 
   resources :shows, :only => [:index, :show]
   resources :news, :only => [:index, :show]
+  
+  match 'access_denied' => 'static#access_denied'
   
   match 'about/' => 'static#about'
   
@@ -13,6 +17,16 @@ ChaosRails::Application.routes.draw do
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
+    
+    resources :staffings do
+      collection do
+        get 'new_for_show'
+        put 'create_for_show'
+      end
+    end
+    
+    match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
+    match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
   end
   
   get "/admin/help/markdown"
