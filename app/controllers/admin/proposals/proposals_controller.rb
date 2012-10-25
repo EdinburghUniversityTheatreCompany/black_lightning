@@ -24,17 +24,22 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/new
   # GET /admin/proposals/proposals/new.json
   def new
-    @admin_proposals_proposal = Admin::Proposals::Proposal.new
+    @call = Admin::Proposals::Call.find(params[:call_id])
+    @proposal = Admin::Proposals::Proposal.new
+    
+    logger.debug @call
+    logger.debug @proposal
 
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json: @admin_proposals_proposal }
+      format.json { render json: @proposal }
     end
   end
 
   # GET /admin/proposals/proposals/1/edit
   def edit
-    @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = Admin::Proposals::Call.find(params[:call_id])
+    @proposal = Admin::Proposals::Proposal.find(params[:id])
   end
 
   # POST /admin/proposals/proposals

@@ -21,7 +21,7 @@ ActiveRecord::Schema.define(:version => 20121025095054) do
   end
 
   create_table "admin_proposals_answers", :force => true do |t|
-    t.string   "answer"
+    t.text     "answer"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
@@ -39,8 +39,8 @@ ActiveRecord::Schema.define(:version => 20121025095054) do
     t.integer  "cast_male"
     t.integer  "cast_female"
     t.time     "running_time"
-    t.string   "publicity_text"
-    t.string   "proposal_text"
+    t.text     "publicity_text"
+    t.text     "proposal_text"
     t.decimal  "budget_royalties",     :precision => 10, :scale => 0
     t.decimal  "budget_publiciy",      :precision => 10, :scale => 0
     t.decimal  "budget_tech",          :precision => 10, :scale => 0
@@ -56,7 +56,7 @@ ActiveRecord::Schema.define(:version => 20121025095054) do
   end
 
   create_table "admin_proposals_questions", :force => true do |t|
-    t.string   "question_text"
+    t.text     "question_text"
     t.datetime "created_at",    :null => false
     t.datetime "updated_at",    :null => false
   end

@@ -1,7 +1,14 @@
-<%= simple_form_for(@admin_proposals_proposal) do |f| %>
+<%= simple_form_for([@call, @proposal], :url => admin_proposals_call_proposals_path) do |f| %>
   <%= f.error_notification %>
-
+  
   <div class="form-inputs">
+  
+    <div class="control-group">
+      <label>Proposal Call</label>
+      <div class="controls">
+        <%= @call.name %>
+      </div>
+    </div>
 
     <%= f.input :show_title %>
 

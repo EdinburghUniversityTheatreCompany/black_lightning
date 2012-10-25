@@ -5,8 +5,8 @@ class CreateAdminProposalsProposals < ActiveRecord::Migration
       t.integer :cast_male
       t.integer :cast_female
       t.time :running_time
-      t.string :publicity_text
-      t.string :proposal_text
+      t.text :publicity_text
+      t.text :proposal_text
       t.decimal :budget_royalties
       t.decimal :budget_publiciy
       t.decimal :budget_tech

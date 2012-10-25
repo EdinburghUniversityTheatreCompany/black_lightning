@@ -29,8 +29,9 @@ ChaosRails::Application.routes.draw do
     match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
     
     namespace :proposals do
-      resources :proposals
-      resources :calls
+      resources :calls do
+        resources :proposals
+      end
     end
   end
   
