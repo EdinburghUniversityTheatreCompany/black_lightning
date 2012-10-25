@@ -17,6 +17,7 @@ class Ability
       #########################
       if user.has_role? :committee
         can :manage, Admin::Staffing
+        can :manage, Admin::Proposals::Call
       end
       
       ######################
@@ -27,6 +28,11 @@ class Ability
       
         can :read, :all
         can :sign_up_for, Admin::StaffingJob
+        
+        can :create, Admin::Proposals::Proposal
+        can :manage, Admin::Proposals::Proposal do |proposal|
+          proposal.users.include? user
+        end
         
         cannot :read, Admin::EditableBlock
       end

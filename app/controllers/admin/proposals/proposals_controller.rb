@@ -14,6 +14,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1
   # GET /admin/proposals/proposals/1.json
   def show
+    @call = Admin::Proposals::Call.find(params[:call_id])
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
 
     respond_to do |format|

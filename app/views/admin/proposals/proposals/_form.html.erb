@@ -52,6 +52,8 @@
   </div>
 
   <div class="form-actions">
-    <%= f.button :submit %>
+    <%= f.button :submit, :class => "btn-primary" %>
+    
+    <%= link_to 'Back', admin_proposals_call_proposals_path(@call), :class => "btn" %>
   </div>
 <% end %>

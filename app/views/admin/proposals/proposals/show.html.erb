@@ -93,4 +93,6 @@
   </p>
 <% end %>
 
-<%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@admin_proposals_proposal), :class => "btn" %>
+<% if can? :edit, @admin_proposals_proposal %>
+<%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
+<% end %>
