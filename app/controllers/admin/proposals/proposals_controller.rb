@@ -1,4 +1,4 @@
-class Admin::Proposals::ProposalsController < ApplicationController
+class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals
   # GET /admin/proposals/proposals.json
   def index

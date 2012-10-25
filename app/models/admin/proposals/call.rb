@@ -1,5 +1,5 @@
 class Admin::Proposals::Call < ActiveRecord::Base
-  has_many_and_belongs_to :questions, :class_name => "Admin::Proposals::Question"
+  has_and_belongs_to_many :questions, :class_name => "Admin::Proposals::Question"
   
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
   

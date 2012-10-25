@@ -11,11 +11,72 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121019184814) do
+ActiveRecord::Schema.define(:version => 20121025095054) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
     t.text     "content"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_proposals_answers", :force => true do |t|
+    t.string   "answer"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_proposals_calls", :force => true do |t|
+    t.datetime "deadline"
+    t.string   "name"
+    t.boolean  "open"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_proposals_calls_questions", :id => false, :force => true do |t|
+    t.integer "proposals_call_id"
+    t.integer "proposals_question_id"
+  end
+
+  create_table "admin_proposals_proposals", :force => true do |t|
+    t.string   "show_title"
+    t.integer  "cast_male"
+    t.integer  "cast_female"
+    t.time     "running_time"
+    t.string   "publicity_text"
+    t.string   "proposal_text"
+    t.decimal  "budget_royalties",     :precision => 10, :scale => 0
+    t.decimal  "budget_publiciy",      :precision => 10, :scale => 0
+    t.decimal  "budget_tech",          :precision => 10, :scale => 0
+    t.decimal  "budget_set",           :precision => 10, :scale => 0
+    t.decimal  "budget_costume",       :precision => 10, :scale => 0
+    t.decimal  "budget_props",         :precision => 10, :scale => 0
+    t.decimal  "budget_admin",         :precision => 10, :scale => 0
+    t.decimal  "budget_contingency",   :precision => 10, :scale => 0
+    t.decimal  "budget_eutc",          :precision => 10, :scale => 0
+    t.decimal  "budget_other_sources", :precision => 10, :scale => 0
+    t.datetime "created_at",                                          :null => false
+    t.datetime "updated_at",                                          :null => false
+  end
+
+  create_table "admin_proposals_questions", :force => true do |t|
+    t.string   "question_text"
+    t.datetime "created_at",    :null => false
+    t.datetime "updated_at",    :null => false
+  end
+
+  create_table "admin_staffing_jobs", :force => true do |t|
+    t.string   "name"
+    t.integer  "staffing_id"
+    t.integer  "user_id"
+    t.datetime "created_at",  :null => false
+    t.datetime "updated_at",  :null => false
+  end
+
+  create_table "admin_staffings", :force => true do |t|
+    t.datetime "date"
+    t.string   "show_title"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
@@ -75,6 +136,7 @@ ActiveRecord::Schema.define(:version => 20121019184814) do
     t.string   "last_name"
     t.datetime "created_at",                             :null => false
     t.datetime "updated_at",                             :null => false
+    t.string   "phone_number"
   end
 
   add_index "users", ["email"], :name => "index_users_on_email", :unique => true
