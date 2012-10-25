@@ -30,6 +30,8 @@
   <%= @admin_proposals_proposal.proposal_text %>
 </p>
 
+<h3>Budget</h3>
+
 <p>
   <b>Budget royalties:</b>
   <%= @admin_proposals_proposal.budget_royalties %>
@@ -80,6 +82,16 @@
   <%= @admin_proposals_proposal.budget_other_sources %>
 </p>
 
+<h3>Team</h3>
+
+<% @admin_proposals_proposal.team_members.each do |team_member| %>
+  <p>
+  <b><%= team_member.position %></b>
+  
+  <% u = team_member.user %>
+  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+  </p>
+<% end %>
 
 <%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@admin_proposals_proposal) %> |
 <%= link_to 'Back', admin_proposals_call_proposals_path %>

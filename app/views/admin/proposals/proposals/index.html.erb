@@ -1,49 +1,21 @@
-<h1>Listing admin_proposals_proposals</h1>
+<h1>Listing proposals</h1>
 
 <table>
   <tr>
     <th>Show title</th>
-    <th>Cast male</th>
-    <th>Cast female</th>
-    <th>Running time</th>
-    <th>Publicity text</th>
-    <th>Proposal text</th>
-    <th>Budget royalties</th>
-    <th>Budget publiciy</th>
-    <th>Budget tech</th>
-    <th>Budget set</th>
-    <th>Budget costume</th>
-    <th>Budget props</th>
-    <th>Budget admin</th>
-    <th>Budget contingency</th>
-    <th>Budget eutc</th>
-    <th>Budget other sources</th>
+    
     <th></th>
     <th></th>
     <th></th>
   </tr>
 
-<% @admin_proposals_proposals.each do |admin_proposals_proposal| %>
+<% @proposals.each do |proposal| %>
   <tr>
-    <td><%= admin_proposals_proposal.show_title %></td>
-    <td><%= admin_proposals_proposal.cast_male %></td>
-    <td><%= admin_proposals_proposal.cast_female %></td>
-    <td><%= admin_proposals_proposal.running_time %></td>
-    <td><%= admin_proposals_proposal.publicity_text %></td>
-    <td><%= admin_proposals_proposal.proposal_text %></td>
-    <td><%= admin_proposals_proposal.budget_royalties %></td>
-    <td><%= admin_proposals_proposal.budget_publiciy %></td>
-    <td><%= admin_proposals_proposal.budget_tech %></td>
-    <td><%= admin_proposals_proposal.budget_set %></td>
-    <td><%= admin_proposals_proposal.budget_costume %></td>
-    <td><%= admin_proposals_proposal.budget_props %></td>
-    <td><%= admin_proposals_proposal.budget_admin %></td>
-    <td><%= admin_proposals_proposal.budget_contingency %></td>
-    <td><%= admin_proposals_proposal.budget_eutc %></td>
-    <td><%= admin_proposals_proposal.budget_other_sources %></td>
-    <td><%= link_to 'Show', admin_proposals_proposal %></td>
-    <td><%= link_to 'Edit', edit_admin_proposals_proposal_path(admin_proposals_proposal) %></td>
-    <td><%= link_to 'Destroy', admin_proposals_proposal, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+    <td><%= proposal.show_title %></td>
+    
+    <td><%= link_to 'Show',  admin_proposals_call_proposal_path(@call, proposal) %></td>
+    <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>
+    <td><%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %></td>
   </tr>
 <% end %>
 </table>

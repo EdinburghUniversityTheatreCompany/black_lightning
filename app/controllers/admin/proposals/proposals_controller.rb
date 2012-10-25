@@ -2,7 +2,8 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals
   # GET /admin/proposals/proposals.json
   def index
-    @admin_proposals_proposals = Admin::Proposals::Proposal.all
+    @call = Admin::Proposals::Call.find(params[:call_id])
+    @proposals = Admin::Proposals::Proposal.all
 
     respond_to do |format|
       format.html # index.html.erb
@@ -26,6 +27,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def new
     @call = Admin::Proposals::Call.find(params[:call_id])
     @proposal = Admin::Proposals::Proposal.new
+    @users = User.all
     
     logger.debug @call
     logger.debug @proposal
@@ -40,20 +42,22 @@ class Admin::Proposals::ProposalsController < AdminController
   def edit
     @call = Admin::Proposals::Call.find(params[:call_id])
     @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @users = User.all
   end
 
   # POST /admin/proposals/proposals
   # POST /admin/proposals/proposals.json
   def create
-    @admin_proposals_proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
+    @call = Admin::Proposals::Call.find(params[:call_id])
+    @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
 
     respond_to do |format|
-      if @admin_proposals_proposal.save
-        format.html { redirect_to @admin_proposals_proposal, notice: 'Proposal was successfully created.' }
-        format.json { render json: @admin_proposals_proposal, status: :created, location: @admin_proposals_proposal }
+      if @proposal.save
+        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
+        format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
       else
         format.html { render action: "new" }
-        format.json { render json: @admin_proposals_proposal.errors, status: :unprocessable_entity }
+        format.json { render json: @proposal.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -81,7 +85,7 @@ class Admin::Proposals::ProposalsController < AdminController
     @admin_proposals_proposal.destroy
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_proposals_url }
+      format.html { redirect_to admin_proposals_call_proposals_url }
       format.json { head :no_content }
     end
   end
