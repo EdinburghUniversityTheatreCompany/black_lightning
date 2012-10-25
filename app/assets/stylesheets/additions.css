@@ -1,0 +1,49 @@
+#logo {
+	height: 100px;
+}
+	
+.header {
+	padding-top: 30px;
+	margin-bottom: 20px;
+}
+	
+body {
+	background-image: url('cream_dust.png');
+	background-repeat: repeat;
+}
+	
+.bottom {
+	background-image: url('grid.png');
+	background-repeat: repeat;
+	width: 100%;
+}
+	
+#side {
+	border-left: 1px solid #D1D1D1;
+	padding: 10px 0 20px 10px;
+}
+	
+.content {
+	margin-top: 20px;
+}
+
+#nav {
+	width: 100%;
+	float: left;
+	margin-top: 30px;
+	margin-left: 20px;
+	padding: 0;
+	list-style: none; 
+}
+#nav li {
+	float: left; 
+	display: block;
+	padding: 8px 25px;
+}
+
+#nav a {
+	text-decoration: none;
+	font-weight: bold;
+	font-size: 20px;
+	color: #dc143c;
+}
