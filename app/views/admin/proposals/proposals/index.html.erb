@@ -1,5 +1,15 @@
 <h1>Listing Proposals for <%= @call.name %></h1>
 
+<p>
+  <b>Deadline:</b>
+  <%= l @call.deadline, :format => :long %>
+</p>
+
+<p>
+  <b>Open:</b>
+  <%= @call.open ? "&#10004;".html_safe : "&#10008;".html_safe %>
+</p>
+
 <table class="table">
   <tr>
     <th>Show title</th>
