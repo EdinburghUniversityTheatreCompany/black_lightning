@@ -3,7 +3,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals.json
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-    @proposals = Admin::Proposals::Proposal.all
+    @proposals = @call.proposals
 
     respond_to do |format|
       format.html # index.html.erb
@@ -14,8 +14,8 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1
   # GET /admin/proposals/proposals/1.json
   def show
-    @call = Admin::Proposals::Call.find(params[:call_id])
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = @admin_proposals_proposal.call
 
     respond_to do |format|
       format.html # show.html.erb
@@ -30,8 +30,7 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.new
     @users = User.all
     
-    logger.debug @call
-    logger.debug @proposal
+    @proposal.call = @call
 
     respond_to do |format|
       format.html # new.html.erb
@@ -41,8 +40,8 @@ class Admin::Proposals::ProposalsController < AdminController
 
   # GET /admin/proposals/proposals/1/edit
   def edit
-    @call = Admin::Proposals::Call.find(params[:call_id])
     @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = @proposal.call
     @users = User.all
   end
 
@@ -51,6 +50,8 @@ class Admin::Proposals::ProposalsController < AdminController
   def create
     @call = Admin::Proposals::Call.find(params[:call_id])
     @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
+    
+    @proposal.call = @call
 
     respond_to do |format|
       if @proposal.save
