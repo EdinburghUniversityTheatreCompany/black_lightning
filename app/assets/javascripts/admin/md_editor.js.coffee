@@ -3,7 +3,7 @@
 # You can use CoffeeScript in this file: http://jashkenas.github.com/coffee-script/
   
 jQuery ->
-  jQuery("a[href=\"#preview\"]").on "shown", (e) ->
+  jQuery("a[href$=\"#preview\"]").on "shown", (e) ->
     $('#preview').html(markdown.toHTML($('.md').val()));
     submit = $("input[type='submit']");
     submit.removeClass "disabled"
