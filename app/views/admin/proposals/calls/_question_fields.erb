@@ -2,7 +2,7 @@
     <%= f.label :question_text %> 
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :question_text } %>
     
-    <%= f.input :response_type %>
+    <%= f.input :response_type, :collection => ['Text', 'String', 'Integer'] %>
 
     <%= f.link_to_remove "Remove Question", :class => "btn btn-danger" %>
     

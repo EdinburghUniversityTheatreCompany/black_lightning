@@ -5,7 +5,15 @@
     <%= f.input_field :question_id, :value => f.object.question.id, :as => :hidden %>
     
     <div class="controls">
-      <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :answer } %>
+      <% case f.object.question.response_type %>
+      <% when "Text" %>
+        <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :answer } %>
+      <% when "Integer" %>
+        <%= f.input_field :answer, :as => :integer %>
+      <% else %>
+        <%= f.input_field :answer, :as => :string %>
+      <% end %>
     </div>
     
+    <hr />
 </div>

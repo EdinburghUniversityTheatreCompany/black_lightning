@@ -20,6 +20,15 @@ class Admin::Proposals::ProposalsController < AdminController
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @admin_proposals_proposal.call
 
+    @call.questions.each do |question|
+      if not @proposal.questions.all.include? question then
+        answer = Admin::Proposals::Answer.new
+        answer.question = question
+        @proposal.answers.push(answer)
+      end
+    end
+    @proposal.save
+    
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @admin_proposals_proposal }
@@ -35,7 +44,7 @@ class Admin::Proposals::ProposalsController < AdminController
     
     @proposal.call = @call
     
-    @proposal.questions.each do |question|
+    @call.questions.each do |question|
       answer = Admin::Proposals::Answer.new
       answer.question = question
       @proposal.answers.push(answer)
@@ -52,6 +61,15 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
     @users = User.all
+    
+    @call.questions.each do |question|
+      if not @proposal.questions.all.include? question then
+        answer = Admin::Proposals::Answer.new
+        answer.question = question
+        @proposal.answers.push(answer)
+      end
+    end
+    @proposal.save
   end
 
   # POST /admin/proposals/proposals

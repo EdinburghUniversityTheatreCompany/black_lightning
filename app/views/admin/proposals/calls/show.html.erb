@@ -19,14 +19,16 @@
 
 <% @admin_proposals_call.questions.each do |question| %>
   <p>
+    <b>Question:</b>
+    <%= question.question_text %>
+  </p>
+  
+  <p>
     <b>Type:</b>
     <%= question.response_type %>
   </p>
   
-  <p>
-    <b>Question:</b>
-    <%= question.question_text %>
-  </p>
+  <hr />
 <% end %>
 
 <%= link_to 'View Proposals', admin_proposals_call_proposals_path(@admin_proposals_call), :class => "btn btn-primary" %>
