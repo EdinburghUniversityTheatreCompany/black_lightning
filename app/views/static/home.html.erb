@@ -1,1 +1,47 @@
-﻿<%= display_block("home_content") %>
+﻿<div class="row">
+	<div class="span8">
+		<div id="showSlider" class="carousel slide">
+			<div class="carousel-inner">
+				<div class="active item">
+					<a href="#"><img src="http://placekitten.com/g/960/500" /></a>
+					<div class="carousel-caption">
+						<a href="#"><h4>Show name</h4></a>
+						<p>Show tagline</p>
+					</div>
+				</div>
+				<div class="item">
+					<img src="http://placekitten.com/g/960/500" />
+				</div>
+				<div class="item">
+					<img src="http://placekitten.com/g/960/500" />
+				</div>
+			</div>
+		</div>
+				
+		<div class="row content">
+			<% @news.first(2).each do |news| %>
+			<div class="span4">
+				<div>
+					<%= image_tag news.image.url(:medium) %>
+					<h4><%= news.title %></h4>
+					<p><%= render_markdown (truncate(news.body, length: 80)) %> <%= link_to 'Read More', news_path(news) %></p>
+				</div>
+			</div>
+			<% end %>
+		</div>
+	</div>
+	<div class="span4">
+		<h3>What's On</h3>
+		<ul>
+			<li>This</li>
+			<li>That</li>
+			<li>The other</li>
+		</ul>
+		<h3>Newsletter</h3>
+		<p>Sign up to receive information about Bedlam Theatre and our shows.</p>
+		<form class="form-inline">
+			<input type="text" class="input-medium" /><button type="submit" class="btn">Sign up</button>
+		</form>
+	</div>
+</div>
+

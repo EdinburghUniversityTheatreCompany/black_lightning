@@ -7,6 +7,7 @@ class StaticController < ApplicationController
   end
   
   def home
+    @news = News.all(:conditions => ["publish_date <= ? AND show_public = ?", Date.current, true], :order => "publish_date DESC")
   end
   
   def about
