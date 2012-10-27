@@ -7,12 +7,12 @@
 
 <p>
   <b>Publicity text:</b>
-  <%= @admin_proposals_proposal.publicity_text %>
+  <%= render_markdown @admin_proposals_proposal.publicity_text %>
 </p>
 
 <p>
   <b>Proposal text:</b>
-  <%= @admin_proposals_proposal.proposal_text %>
+  <%= render_markdown @admin_proposals_proposal.proposal_text %>
 </p>
 
 <h3>Team</h3>
