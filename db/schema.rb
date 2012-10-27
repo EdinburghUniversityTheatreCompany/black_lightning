@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121026153723) do
+ActiveRecord::Schema.define(:version => 20121025182941) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -35,25 +35,12 @@ ActiveRecord::Schema.define(:version => 20121026153723) do
   end
 
   create_table "admin_proposals_proposals", :force => true do |t|
+    t.integer  "call_id"
     t.string   "show_title"
-    t.integer  "cast_male"
-    t.integer  "cast_female"
-    t.time     "running_time"
     t.text     "publicity_text"
     t.text     "proposal_text"
-    t.decimal  "budget_royalties",     :precision => 10, :scale => 0
-    t.decimal  "budget_publiciy",      :precision => 10, :scale => 0
-    t.decimal  "budget_tech",          :precision => 10, :scale => 0
-    t.decimal  "budget_set",           :precision => 10, :scale => 0
-    t.decimal  "budget_costume",       :precision => 10, :scale => 0
-    t.decimal  "budget_props",         :precision => 10, :scale => 0
-    t.decimal  "budget_admin",         :precision => 10, :scale => 0
-    t.decimal  "budget_contingency",   :precision => 10, :scale => 0
-    t.decimal  "budget_eutc",          :precision => 10, :scale => 0
-    t.decimal  "budget_other_sources", :precision => 10, :scale => 0
-    t.datetime "created_at",                                          :null => false
-    t.datetime "updated_at",                                          :null => false
-    t.integer  "call_id"
+    t.datetime "created_at",     :null => false
+    t.datetime "updated_at",     :null => false
   end
 
   create_table "admin_proposals_questions", :force => true do |t|
