@@ -1,4 +1,7 @@
 class Admin::Proposals::CallsController < AdminController
+
+  load_and_authorize_resource :class => Admin::Proposals::Call
+
   # GET /admin/proposals/calls
   # GET /admin/proposals/calls.json
   def index

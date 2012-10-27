@@ -18,7 +18,7 @@
     <th></th>
     <% end %>
     
-    <% if can? :delete, Admin::Proposals::Proposal %>
+    <% if can? :destroy, Admin::Proposals::Proposal %>
     <th></th>
     <% end %>
   </tr>
@@ -31,7 +31,7 @@
     <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>
     <% end %>
     
-    <% if can? :delete, proposal %>
+    <% if can? :destroy, proposal %>
     <td><%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %></td>
     <% end %>
   </tr>
