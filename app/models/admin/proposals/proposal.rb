@@ -1,6 +1,7 @@
 class Admin::Proposals::Proposal < ActiveRecord::Base
   belongs_to :call, :class_name => "Admin::Proposals::Call"
   
+  has_many :questions, :through => :call
   has_many :answers, :class_name => "Admin::Proposals::Answer"
   has_many :team_members
   has_many :users, :through => :team_members

@@ -34,6 +34,12 @@ class Admin::Proposals::ProposalsController < AdminController
     @users = User.all
     
     @proposal.call = @call
+    
+    @proposal.questions.each do |question|
+      answer = Admin::Proposals::Answer.new
+      answer.question = question
+      @proposal.answers.push(answer)
+    end
 
     respond_to do |format|
       format.html # new.html.erb

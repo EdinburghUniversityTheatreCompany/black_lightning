@@ -26,6 +26,15 @@
   </p>
 <% end %>
 
+<h3>Questions</h3>
+
+<% @admin_proposals_proposal.answers.each do |answer| %>
+  <p>
+    <b><%= answer.question.question_text %></b><br />
+    <%= answer.answer %>
+  </p>
+<% end %>
+
 <% if can? :edit, @admin_proposals_proposal %>
 <%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
 <% end %>

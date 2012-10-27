@@ -1,0 +1,11 @@
+<div class="question control-group">
+    
+    <label><%= f.object.question.question_text %></label>
+    
+    <%= f.input_field :question_id, :value => f.object.question.id, :as => :hidden %>
+    
+    <div class="controls">
+      <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :answer } %>
+    </div>
+    
+</div>
