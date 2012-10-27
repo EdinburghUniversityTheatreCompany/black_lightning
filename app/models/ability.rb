@@ -12,13 +12,6 @@ class Ability
       can :manage, User, :id => user.id
       cannot :assign_roles, User
     
-      #########################
-      # COMMITTEE PERMISSIONS #
-      #########################
-      if user.has_role? :committee
-        can :manage, Admin::Staffing
-      end
-      
       ######################
       # MEMBER PERMISSIONS #
       ######################
@@ -28,7 +21,20 @@ class Ability
         can :read, :all
         can :sign_up_for, Admin::StaffingJob
         
+        can :create, Admin::Proposals::Proposal
+        can :manage, Admin::Proposals::Proposal do |proposal|
+          (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
+        end
+        
         cannot :read, Admin::EditableBlock
+      end
+      
+      #########################
+      # COMMITTEE PERMISSIONS #
+      #########################
+      if user.has_role? :committee
+        can :manage, Admin::Staffing
+        can :manage, Admin::Proposals::Call
       end
       
       #####################

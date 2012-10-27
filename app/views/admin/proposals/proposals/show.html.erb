@@ -1,0 +1,40 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <b>Show title:</b>
+  <%= @admin_proposals_proposal.show_title %>
+</p>
+
+<p>
+  <b>Publicity text:</b>
+  <%= @admin_proposals_proposal.publicity_text %>
+</p>
+
+<p>
+  <b>Proposal text:</b>
+  <%= @admin_proposals_proposal.proposal_text %>
+</p>
+
+<h3>Team</h3>
+
+<% @admin_proposals_proposal.team_members.each do |team_member| %>
+  <p>
+  <b><%= team_member.position %></b>
+  
+  <% u = team_member.user %>
+  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+  </p>
+<% end %>
+
+<h3>Questions</h3>
+
+<% @admin_proposals_proposal.answers.each do |answer| %>
+  <p>
+    <b><%= answer.question.question_text %></b><br />
+    <%= answer.answer.presence || "This question has not been answered" %>
+  </p>
+<% end %>
+
+<% if can? :edit, @admin_proposals_proposal %>
+<%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
+<% end %>
