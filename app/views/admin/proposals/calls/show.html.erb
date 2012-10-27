@@ -15,6 +15,20 @@
   <%= @admin_proposals_call.open %>
 </p>
 
+<h3>Questions</h3>
+
+<% @admin_proposals_call.questions.each do |question| %>
+  <p>
+    <b>Type:</b>
+    <%= question.response_type %>
+  </p>
+  
+  <p>
+    <b>Question:</b>
+    <%= question.question_text %>
+  </p>
+<% end %>
+
 <%= link_to 'View Proposals', admin_proposals_call_proposals_path(@admin_proposals_call), :class => "btn btn-primary" %>
 <%= link_to 'Edit', edit_admin_proposals_call_path(@admin_proposals_call), :class => "btn" %>
 <%= link_to 'Back', admin_proposals_calls_path, :class => "btn"  %>

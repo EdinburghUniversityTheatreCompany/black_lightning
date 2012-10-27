@@ -3,5 +3,5 @@ class Admin::Proposals::Question < ActiveRecord::Base
   
   has_many :answers, :class_name => "Admin::Proposals::Answer"
   
-  attr_accessible :question_text
+  attr_accessible :question_text, :response_type
 end

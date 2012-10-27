@@ -1,6 +1,10 @@
 <div class="question control-group">
     <%= f.label :question_text %> 
-    <%= f.input_field :question_text %>
+    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :question_text } %>
+    
+    <%= f.input :response_type %>
 
-    <%= f.link_to_remove "Remove", :class => "btn btn-danger" %>
+    <%= f.link_to_remove "Remove Question", :class => "btn btn-danger" %>
+    
+    <hr />
 </div>

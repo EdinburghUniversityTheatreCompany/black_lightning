@@ -21,9 +21,11 @@ ActiveRecord::Schema.define(:version => 20121025182941) do
   end
 
   create_table "admin_proposals_answers", :force => true do |t|
+    t.integer  "question_id"
+    t.integer  "proposal_id"
     t.text     "answer"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
+    t.datetime "created_at",  :null => false
+    t.datetime "updated_at",  :null => false
   end
 
   create_table "admin_proposals_calls", :force => true do |t|
@@ -45,6 +47,7 @@ ActiveRecord::Schema.define(:version => 20121025182941) do
 
   create_table "admin_proposals_questions", :force => true do |t|
     t.text     "question_text"
+    t.string   "response_type"
     t.datetime "created_at",    :null => false
     t.datetime "updated_at",    :null => false
   end

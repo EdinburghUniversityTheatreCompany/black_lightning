@@ -11,11 +11,4 @@ jQuery ->
     submit.attr "title", ""
     return
   
-  if jQuery(".md").length > 0
-    submit = $("input[type='submit']");
-    submit.addClass "disabled"
-    href = submit.attr("href")
-    submit[0].disabled = true;
-    submit.attr "title", "You must preview Markdown before saving"
-  
   return

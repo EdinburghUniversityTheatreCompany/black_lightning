@@ -23,7 +23,7 @@ class Ability
         
         can :create, Admin::Proposals::Proposal
         can :manage, Admin::Proposals::Proposal do |proposal|
-          (proposal.users.include? user) && (proposal.call.deadline > Time.now)
+          (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
         end
         
         cannot :read, Admin::EditableBlock
