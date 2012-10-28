@@ -9,12 +9,22 @@
     </li>
     <ul class="nav nav-list">
       <li><%= link_to 'View Shows', admin_shows_path %></li>
+      
+      <% if can? :create, Show %>
       <li><%= link_to 'Add Show', new_admin_show_path %></li>
+      <% end %>
     </ul>
   <% end %>
   
   <% if can? :read, News %>
     <li><%= link_to 'News', admin_news_index_path %></li>
+    <ul class="nav nav-list">
+      <li><%= link_to 'View News', admin_news_index_path %></li>
+      
+      <% if can? :create, News %>
+      <li><%= link_to 'Add News', new_admin_news_path %></li>
+      <% end %>
+    </ul>
   <% end %>
   
   <% if can? :read, Admin::Staffing %>
