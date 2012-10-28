@@ -6,6 +6,7 @@ ChaosRails::Application.routes.draw do
 
   resources :shows, :only => [:index, :show]
   resources :news, :only => [:index, :show]
+  resources :attachments, :only => [:show]
   
   match 'access_denied' => 'static#access_denied'
   
@@ -13,6 +14,9 @@ ChaosRails::Application.routes.draw do
   
   match 'admin/' => 'admin#index'
   namespace :admin do
+    #The resources pages:
+    match 'resources/branding' => 'resources#branding'
+    
     resources :shows
     resources :news
     resources :editable_blocks, :except => [:show]
