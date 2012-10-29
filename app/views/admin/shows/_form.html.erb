@@ -9,6 +9,10 @@
 	
     <%= f.input :slug %>
 	
+	<%= f.input :start_date %>
+	
+	<%= f.input :end_date %>
+	
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
 	
     <%= f.input :xts_id %>

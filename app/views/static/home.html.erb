@@ -2,13 +2,15 @@
 	<div class="span8">
 		<div id="showSlider" class="carousel slide">
 			<div class="carousel-inner">
+				<% @shows.each do |show| %>
 				<div class="active item">
-					<a href="#"><img src="http://placekitten.com/g/960/500" /></a>
+					<%= link_to (image_tag show.image.url).html_safe, show_path(show) %>
 					<div class="carousel-caption">
-						<a href="#"><h4>Show name</h4></a>
-						<p>Show tagline</p>
+						<%= link_to "<h4>#{show.name}</h4>".html_safe, show_path(show) %>
+						<p><%= show.tagline %> <span class="show-date">–<%= l show.start_date, :format => :short %></p>
 					</div>
 				</div>
+				<% end %>
 				<div class="item">
 					<img src="http://placekitten.com/g/960/500" />
 				</div>
