@@ -50,7 +50,8 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if @admin_staffing.save
-        format.html { redirect_to edit_admin_staffing_path(@admin_staffing), notice: 'Staffing was successfully created.' }
+        flash[:success] = 'Staffing was successfully created.'
+        format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
         format.json { render json: @admin_staffing, status: :created, location: @admin_staffing }
       else
         format.html { render action: "new" }
@@ -76,7 +77,7 @@ class Admin::StaffingsController < AdminController
       staffing.date = DateTime.civil(date[:year].to_i, date[:month].to_i, date[:day].to_i, date[:hour].to_i, date[:minute].to_i)
       
       if not staffing.save
-        redirect_to redirect_to admin_staffings_url, notice: 'There were errors creating the staffing.'
+        redirect_to redirect_to admin_staffings_url, alert: 'There were errors creating the staffing.'
         return
       end
       
@@ -87,7 +88,8 @@ class Admin::StaffingsController < AdminController
       end
     end
     
-    redirect_to admin_staffings_url, notice: 'Staffing was successfully created.'
+    flash[:success] = 'Staffing was successfully created.'
+    redirect_to admin_staffings_url
   end
   
   # PUT /admin/staffings/1
@@ -97,7 +99,8 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if @admin_staffing.update_attributes(params[:admin_staffing])
-        format.html { redirect_to edit_admin_staffing_path(@admin_staffing), notice: 'Staffing was successfully updated.' }
+        flash[:success] = 'Staffing was successfully updated.'
+        format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }
       else
         format.html { render action: "edit" }
@@ -119,10 +122,11 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if current_user.phone_number == nil # you MUST have a phone number in your profile to be able to sign up for staffing
-        format.html { redirect_to edit_admin_user_path(current_user, notice: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary.") }
+        format.html { redirect_to edit_admin_user_path(current_user), alert: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary." }
         format.json { head :no_content}
       elsif @job.save
-        format.html { redirect_to admin_staffings_path, notice: "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}." }
+        flash[:success] =  "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}."
+        format.html { redirect_to admin_staffings_path }
         format.json { head :no_content }
       else
         format.html

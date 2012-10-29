@@ -18,6 +18,21 @@
       </p>
     
       <hr />
+      
+      <% flash.each do |key, msg| %>
+      <% case key                       %>
+      <% when :alert                    %>
+      <%   alertclass = "alert-error"   %>
+      <% when :success                  %>
+      <%   alertclass = "alert-success" %>
+      <% when :notice                   %>
+      <%   alertclass = "alert-info"    %>
+      <% end %>
+      <p id="<%= key %>" class="alert <%= alertclass %>">
+        <%= msg %>
+      </p>
+      <hr />
+      <% end %>
 
       <%= simple_form_for(resource, :as => resource_name, :url => session_path(resource_name) ) do |f| %>
         <div class="form-inputs">
