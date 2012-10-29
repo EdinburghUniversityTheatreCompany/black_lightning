@@ -1,6 +1,4 @@
 ChaosRails::Application.routes.draw do
-  
-  namespace :admin do resources :staffing_jobs end
 
   devise_for :users
 
