@@ -1,5 +1,3 @@
-<p id="notice"><%= notice %></p>
-
 <p>
   <b>Show title:</b>
   <%= @admin_proposals_proposal.show_title %>
@@ -8,6 +6,21 @@
 <% if @admin_proposals_proposal.late %>
   <div class="alert alert-error">
     This proposal has been marked late.
+  </div>
+<% end %>
+
+<% case @admin_proposals_proposal.approved %>
+<% when true %>
+  <div class="alert alert-success">
+    This proposal has been approved by committee.
+  </div>
+<% when false %>
+  <div class="alert alert-error">
+    This proposal has been rejected by committee.
+  </div>
+<% else %>
+  <div class="alert alert-info">
+    This proposal is still waiting for approval by committee.
   </div>
 <% end %>
 
@@ -43,4 +56,11 @@
 
 <% if can? :edit, @admin_proposals_proposal %>
 <%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
+<% end %>
+
+<% if can? :approve, @admin_proposals_proposal %>
+<br />
+<br />
+<%= link_to 'Approve', approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-success" %>
+<%= link_to 'Reject', reject_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-danger" %>
 <% end %>

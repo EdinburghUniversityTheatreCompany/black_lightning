@@ -27,7 +27,15 @@
   <tr>
     <td>
       <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %>
-      <% if proposal.late %><span class="label label-important pull-right">Late</span><% end %>
+      <% case proposal.approved %>
+      <% when true %>
+        <span class="label label-success pull-right">Approved</span>
+      <% when false %>
+        <span class="label label-important pull-right">Rejected</span>
+      <% else %>
+        <span class="label label-info pull-right">Waiting for approval</span>
+      <% end %>
+      <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
     </td>
     
     <% if can? :edit, proposal %>

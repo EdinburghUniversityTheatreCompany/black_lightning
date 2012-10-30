@@ -143,4 +143,32 @@ class Admin::Proposals::ProposalsController < AdminController
       format.json { head :no_content }
     end
   end
+  
+  def approve
+    @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = @proposal.call
+    
+    @proposal.approved = true
+    @proposal.save
+    
+    respond_to do |format|
+      flash[:success] = "#{@proposal.show_title} has been marked as approved"
+      format.html { redirect_to admin_proposals_call_proposals_path(@call)}
+      format.json { head :no_content }
+    end
+  end
+  
+  def reject
+    @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = @proposal.call
+    
+    @proposal.approved = false
+    @proposal.save
+    
+    respond_to do |format|
+      flash[:success] = "#{@proposal.show_title} has been marked as rejected"
+      format.html { redirect_to admin_proposals_call_proposals_path(@call)}
+      format.json { head :no_content }
+    end
+  end
 end

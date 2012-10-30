@@ -6,6 +6,9 @@ class Ability
     #
     #   user ||= User.new # guest user (not logged in)
     
+    #If you can approve something, you can also reject it
+    alias_action :reject, :to => :approve
+    
     if user then
     
       #All users can manage themselves.

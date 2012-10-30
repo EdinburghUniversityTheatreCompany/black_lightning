@@ -32,7 +32,12 @@ ChaosRails::Application.routes.draw do
     
     namespace :proposals do
       resources :calls do
-        resources :proposals
+        resources :proposals do
+          member do
+            put 'approve'
+            put 'reject'
+          end
+        end
       end
     end
   end

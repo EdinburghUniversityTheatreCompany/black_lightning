@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121030214324) do
+ActiveRecord::Schema.define(:version => 20121030220252) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -44,6 +44,7 @@ ActiveRecord::Schema.define(:version => 20121030214324) do
     t.datetime "created_at",     :null => false
     t.datetime "updated_at",     :null => false
     t.boolean  "late"
+    t.boolean  "approved"
   end
 
   create_table "admin_proposals_questions", :force => true do |t|
