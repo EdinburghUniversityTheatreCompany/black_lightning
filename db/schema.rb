@@ -75,6 +75,17 @@ ActiveRecord::Schema.define(:version => 20121025182941) do
     t.datetime "updated_at", :null => false
   end
 
+  create_table "attachments", :force => true do |t|
+    t.integer  "editable_block_id"
+    t.string   "name"
+    t.string   "file_file_name"
+    t.string   "file_content_type"
+    t.integer  "file_file_size"
+    t.datetime "file_updated_at"
+    t.datetime "created_at",        :null => false
+    t.datetime "updated_at",        :null => false
+  end
+
   create_table "calls_questions", :id => false, :force => true do |t|
     t.integer "call_id"
     t.integer "question_id"
