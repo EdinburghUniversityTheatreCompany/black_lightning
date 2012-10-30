@@ -1,5 +1,6 @@
 ChaosRails::Application.routes.draw do
   
+
   namespace :admin do resources :staffing_jobs end
 
   devise_for :users
@@ -17,6 +18,8 @@ ChaosRails::Application.routes.draw do
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
+    
+    resources :techie_families
     
     resources :staffings do
       collection do

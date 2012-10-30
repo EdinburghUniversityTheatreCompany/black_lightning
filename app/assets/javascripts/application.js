@@ -13,4 +13,7 @@
 //= require jquery
 //= require jquery_ujs
 //= require jquery_nested_form
+//= require raphael-min
+//= require dracula_graffle
+//= require dracula_graph
 //= require_tree .
