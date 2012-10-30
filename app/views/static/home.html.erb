@@ -7,7 +7,7 @@
 					<%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
 					<div class="carousel-caption">
 						<%= link_to "<h4>#{show.name}</h4>".html_safe, show_path(show) %>
-						<p><%= show.tagline %> <span class="show-date">–<%= l show.start_date, :format => :short %></p>
+						<p><%= show.tagline %> <span class="show-date">–<%=	l show.start_date, :format => :short %><%= " – #{l show.end_date, :format => :short}" unless show.start_date == show.end_date%></p>
 					</div>
 				</div>
 				<% end %>
