@@ -39,6 +39,13 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/new.json
   def new
     @call = Admin::Proposals::Call.find(params[:call_id])
+    
+    if not @call.open then
+      flash[:alert] = "Sorry. #{@call.name} isn't open yet. You cannot add a proposal for a closed call."
+      redirect_to admin_proposals_calls_path
+      return
+    end
+    
     @proposal = Admin::Proposals::Proposal.new
     @users = User.all
     
@@ -59,7 +66,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1/edit
   def edit
     @proposal = Admin::Proposals::Proposal.find(params[:id])
-    @call = @proposal.call
+    @call = @proposal.call    
     @users = User.all
     
     @call.questions.each do |question|
@@ -76,6 +83,13 @@ class Admin::Proposals::ProposalsController < AdminController
   # POST /admin/proposals/proposals.json
   def create
     @call = Admin::Proposals::Call.find(params[:call_id])
+    
+    if not @call.open then
+      flash[:alert] = "Sorry. #{@call.name} isn't open yet. You cannot add a proposal for a closed call."
+      redirect_to admin_proposals_calls_path
+      return
+    end
+    
     @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
     
     @proposal.call = @call

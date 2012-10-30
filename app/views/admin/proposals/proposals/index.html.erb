@@ -40,7 +40,7 @@
 
 <br />
 
-<% if can? :create, Admin::Proposals::Proposal %>
+<% if can? :create, Admin::Proposals::Proposal and @call.open %>
 <%= link_to 'New Proposal', new_admin_proposals_call_proposal_path, :class => "btn btn-primary" %>
 <% end %>
 
