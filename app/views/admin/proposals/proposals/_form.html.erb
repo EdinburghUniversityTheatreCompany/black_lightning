@@ -8,6 +8,10 @@
     <p>
       <b>Proposal for: <%= @call.name %></b>
     </p>
+    
+    <% if can? :change_late, @proposal and Time.now > @call.deadline %>
+      <%= f.input :late %>
+    <% end %>
 
     <%= f.input :show_title %>
 

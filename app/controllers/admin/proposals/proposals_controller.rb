@@ -51,6 +51,11 @@ class Admin::Proposals::ProposalsController < AdminController
     
     @proposal.call = @call
     
+    #Set a proposal as late if created after the call deadline:
+    if Time.now > @call.deadline then
+      @proposal.late = true
+    end
+    
     @call.questions.each do |question|
       answer = Admin::Proposals::Answer.new
       answer.question = question
@@ -93,6 +98,11 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
     
     @proposal.call = @call
+    
+    #Set a proposal as late if created after the call deadline:
+    if Time.now > @call.deadline then
+      @proposal.late = true
+    end
 
     respond_to do |format|
       if @proposal.save
@@ -110,7 +120,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def update
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @admin_proposals_proposal.call
-
+    
     respond_to do |format|
       if @admin_proposals_proposal.update_attributes(params[:admin_proposals_proposal])
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), notice: 'Proposal was successfully updated.' }

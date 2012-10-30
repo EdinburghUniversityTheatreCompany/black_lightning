@@ -7,5 +7,5 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   has_many :users, :through => :team_members
   
   accepts_nested_attributes_for :answers, :team_members
-  attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes
+  attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late
 end

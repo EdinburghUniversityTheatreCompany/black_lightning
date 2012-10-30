@@ -25,7 +25,10 @@
 
 <% @proposals.each do |proposal| %>
   <tr>
-    <td><%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %></td>
+    <td>
+      <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %>
+      <% if proposal.late %><span class="label label-important pull-right">Late</span><% end %>
+    </td>
     
     <% if can? :edit, proposal %>
     <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>

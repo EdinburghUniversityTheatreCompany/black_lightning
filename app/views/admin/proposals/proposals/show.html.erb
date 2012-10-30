@@ -5,6 +5,12 @@
   <%= @admin_proposals_proposal.show_title %>
 </p>
 
+<% if @admin_proposals_proposal.late %>
+  <div class="alert alert-error">
+    This proposal has been marked late.
+  </div>
+<% end %>
+
 <p>
   <b>Publicity text:</b>
   <%= render_markdown @admin_proposals_proposal.publicity_text %>
