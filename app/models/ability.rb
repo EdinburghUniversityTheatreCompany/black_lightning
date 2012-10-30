@@ -17,6 +17,7 @@ class Ability
       #########################
       if user.has_role? :committee
         can :manage, Admin::Staffing
+        can :make_public, Show
       end
       
       ######################

@@ -19,7 +19,7 @@
     
     <%= f.input :image %>
 	
-    <%= f.input :is_public if current_user.has_role? :committee %>
+    <%= f.input :is_public if can? :make_public, @show %>
 
   </div>
   
