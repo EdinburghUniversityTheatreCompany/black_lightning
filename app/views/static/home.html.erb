@@ -3,7 +3,7 @@
 		<div id="showSlider" class="carousel slide">
 			<div class="carousel-inner">
 				<% @shows.each do |show| %>
-				<div class="active item">
+				<div class="<%= "active" if show == @shows.first %> item">
 					<%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
 					<div class="carousel-caption">
 						<%= link_to "<h4>#{show.name}</h4>".html_safe, show_path(show) %>
@@ -11,13 +11,10 @@
 					</div>
 				</div>
 				<% end %>
-				<div class="item">
-					<img src="http://placekitten.com/g/960/500" />
-				</div>
-				<div class="item">
-					<img src="http://placekitten.com/g/960/500" />
-				</div>
 			</div>
+            <!-- Carousel nav -->
+            <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
+            <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
 		</div>
 				
 		<div class="row content">
