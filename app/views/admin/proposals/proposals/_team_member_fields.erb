@@ -1,5 +1,5 @@
 <div class="team_member control-group">
-    <%= f.input_field :position, :data => { :provide => "typeahead", :source => ['Director', 'Producer', 'Technical Manager', 'Stage Manager'] } %> 
+    <%= f.input_field :position, :data => { :provide => "typeahead", :source => ['Director', 'Producer', 'Technical Manager', 'Stage Manager', 'Assistant to Mr B. Hussey'] } %> 
     
     <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
 
