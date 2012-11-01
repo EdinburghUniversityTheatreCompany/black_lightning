@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121030012134) do
+ActiveRecord::Schema.define(:version => 20121101143108) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -43,6 +43,9 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.text     "proposal_text"
     t.datetime "created_at",     :null => false
     t.datetime "updated_at",     :null => false
+    t.boolean  "late"
+    t.boolean  "approved"
+    t.boolean  "successful"
   end
 
   create_table "admin_proposals_questions", :force => true do |t|
@@ -75,12 +78,6 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.datetime "updated_at", :null => false
   end
 
-  create_table "children_techies", :force => true do |t|
-    t.integer  "techie_id"
-    t.integer  "child_id"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
-
   create_table "attachments", :force => true do |t|
     t.integer  "editable_block_id"
     t.string   "name"
@@ -95,6 +92,13 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
   create_table "calls_questions", :id => false, :force => true do |t|
     t.integer "call_id"
     t.integer "question_id"
+  end
+
+  create_table "children_techies", :force => true do |t|
+    t.integer  "techie_id"
+    t.integer  "child_id"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
   end
 
   create_table "news", :force => true do |t|
