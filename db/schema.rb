@@ -11,13 +11,53 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121030012134) do
+ActiveRecord::Schema.define(:version => 20121028185810) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
     t.text     "content"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_proposals_answers", :force => true do |t|
+    t.integer  "question_id"
+    t.integer  "proposal_id"
+    t.text     "answer"
+    t.datetime "created_at",  :null => false
+    t.datetime "updated_at",  :null => false
+  end
+
+  create_table "admin_proposals_calls", :force => true do |t|
+    t.datetime "deadline"
+    t.string   "name"
+    t.boolean  "open"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_proposals_proposals", :force => true do |t|
+    t.integer  "call_id"
+    t.string   "show_title"
+    t.text     "publicity_text"
+    t.text     "proposal_text"
+    t.datetime "created_at",     :null => false
+    t.datetime "updated_at",     :null => false
+  end
+
+  create_table "admin_proposals_questions", :force => true do |t|
+    t.text     "question_text"
+    t.string   "response_type"
+    t.datetime "created_at",    :null => false
+    t.datetime "updated_at",    :null => false
+  end
+
+  create_table "admin_proposals_team_members", :force => true do |t|
+    t.string   "position"
+    t.integer  "user_id"
+    t.integer  "proposal_id"
+    t.datetime "created_at",  :null => false
+    t.datetime "updated_at",  :null => false
   end
 
   create_table "admin_staffing_jobs", :force => true do |t|
@@ -35,11 +75,28 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.datetime "updated_at", :null => false
   end
 
+
   create_table "children_techies", :force => true do |t|
     t.integer  "techie_id"
     t.integer  "child_id"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
+  end
+  
+  create_table "attachments", :force => true do |t|
+    t.integer  "editable_block_id"
+    t.string   "name"
+    t.string   "file_file_name"
+    t.string   "file_content_type"
+    t.integer  "file_file_size"
+    t.datetime "file_updated_at"
+    t.datetime "created_at",        :null => false
+    t.datetime "updated_at",        :null => false
+  end
+
+  create_table "calls_questions", :id => false, :force => true do |t|
+    t.integer "call_id"
+    t.integer "question_id"
   end
 
   create_table "news", :force => true do |t|
