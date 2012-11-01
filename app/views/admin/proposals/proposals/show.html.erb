@@ -1,7 +1,13 @@
-<p>
-  <b>Show title:</b>
-  <%= @admin_proposals_proposal.show_title %>
-</p>
+<% case @admin_proposals_proposal.successful %>
+<% when true %>
+  <div class="alert alert-success">
+    This proposal was successful.
+  </div>
+<% when false %>
+  <div class="alert alert-error">
+    This proposal was unsuccessful.
+  </div>
+<% end %>
 
 <% if @admin_proposals_proposal.late %>
   <div class="alert alert-error">
@@ -23,6 +29,11 @@
     This proposal is waiting for approval by committee.
   </div>
 <% end %>
+
+<p>
+  <b>Show title:</b>
+  <%= @admin_proposals_proposal.show_title %>
+</p>
 
 <p>
   <b>Publicity text:</b>

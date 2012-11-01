@@ -10,7 +10,11 @@
     </p>
     
     <% if can? :change_late, @proposal and Time.now > @call.deadline %>
-      <%= f.input :late %>
+      <%= f.input :late, :as => :select, :blank => true %>
+    <% end %>
+    
+    <% if can? :approve, @proposal and @proposal.approved %>
+      <%= f.input :successful, :as => :select, :blank => true %>
     <% end %>
 
     <%= f.input :show_title %>

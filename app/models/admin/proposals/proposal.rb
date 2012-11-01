@@ -15,5 +15,5 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   # A proposal still waiting for approval should have approved set to NULL       #
   ################################################################################
   
-  attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved
+  attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
 end

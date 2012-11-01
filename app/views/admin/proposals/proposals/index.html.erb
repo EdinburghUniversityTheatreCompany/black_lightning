@@ -26,7 +26,14 @@
 <% @proposals.each do |proposal| %>
   <tr>
     <td>
-      <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %>
+      <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %>.
+      <% case proposal.successful %>
+      <% when true%>
+        <span style="margin-left: 5px;" class="label label-success pull-right">Successful</span>
+      <% when false %>
+        <span style="margin-left: 5px;" class="label label-important pull-right">Unsuccessful</span>
+      <% end %>
+        
       <% case proposal.approved %>
       <% when true %>
         <span class="label label-success pull-right">Approved</span>
@@ -35,6 +42,7 @@
       <% else %>
         <span class="label label-info pull-right">Waiting for approval</span>
       <% end %>
+      
       <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
     </td>
     
