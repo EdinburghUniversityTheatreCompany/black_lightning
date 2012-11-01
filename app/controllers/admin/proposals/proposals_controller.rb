@@ -11,7 +11,11 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals.json
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-    @proposals = Admin::Proposals::Proposal.where(:call_id => @call.id).joins(:users).where('approved = true or user_id = ?', current_user.id)
+    @proposals = Admin::Proposals::Proposal.where(:call_id => @call.id)
+    
+    if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
+      @proposals = @proposals.joins(:users).where('approved = true or user_id = ?', current_user.id)
+    end
 
     respond_to do |format|
       format.html # index.html.erb
