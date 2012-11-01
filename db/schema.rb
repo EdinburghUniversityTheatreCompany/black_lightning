@@ -75,13 +75,13 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.datetime "updated_at", :null => false
   end
 
-<<<<<<< HEAD
   create_table "children_techies", :force => true do |t|
     t.integer  "techie_id"
     t.integer  "child_id"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
-=======
+  end
+    
   create_table "attachments", :force => true do |t|
     t.integer  "editable_block_id"
     t.string   "name"
@@ -96,7 +96,6 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
   create_table "calls_questions", :id => false, :force => true do |t|
     t.integer "call_id"
     t.integer "question_id"
->>>>>>> Added attachments to editable blocks and a example resources page to admin
   end
 
   create_table "news", :force => true do |t|
