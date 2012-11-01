@@ -1,0 +1,66 @@
+<h1>Listing Proposals for <%= @call.name %></h1>
+
+<p>
+  <b>Deadline:</b>
+  <%= l @call.deadline, :format => :long %>
+</p>
+
+<p>
+  <b>Open:</b>
+  <%= @call.open ? "&#10004;".html_safe : "&#10008;".html_safe %>
+</p>
+
+<table class="table">
+  <tr>
+    <th>Show title</th>
+    
+    <% if can? :edit, Admin::Proposals::Proposal %>
+    <th></th>
+    <% end %>
+    
+    <% if can? :destroy, Admin::Proposals::Proposal %>
+    <th></th>
+    <% end %>
+  </tr>
+
+<% @proposals.each do |proposal| %>
+  <tr>
+    <td>
+      <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %>.
+      <% case proposal.successful %>
+      <% when true%>
+        <span style="margin-left: 5px;" class="label label-success pull-right">Successful</span>
+      <% when false %>
+        <span style="margin-left: 5px;" class="label label-important pull-right">Unsuccessful</span>
+      <% end %>
+        
+      <% case proposal.approved %>
+      <% when true %>
+        <span class="label label-success pull-right">Approved</span>
+      <% when false %>
+        <span class="label label-important pull-right">Rejected</span>
+      <% else %>
+        <span class="label label-info pull-right">Waiting for approval</span>
+      <% end %>
+      
+      <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
+    </td>
+    
+    <% if can? :edit, proposal %>
+    <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>
+    <% end %>
+    
+    <% if can? :destroy, proposal %>
+    <td><%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %></td>
+    <% end %>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<% if can? :create, Admin::Proposals::Proposal and @call.open %>
+<%= link_to 'New Proposal', new_admin_proposals_call_proposal_path, :class => "btn btn-primary" %>
+<% end %>
+
+<%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>

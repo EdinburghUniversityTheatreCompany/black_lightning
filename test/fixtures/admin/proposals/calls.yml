@@ -1,0 +1,11 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
+
+one:
+  deadline: 2012-10-25 10:38:14
+  name: MyString
+  open: false
+
+two:
+  deadline: 2012-10-25 10:38:14
+  name: MyString
+  open: false

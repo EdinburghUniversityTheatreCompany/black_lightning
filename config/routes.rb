@@ -29,6 +29,17 @@ ChaosRails::Application.routes.draw do
     
     match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
     match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
+    
+    namespace :proposals do
+      resources :calls do
+        resources :proposals do
+          member do
+            put 'approve'
+            put 'reject'
+          end
+        end
+      end
+    end
   end
   
   get "/admin/help/markdown"

@@ -3,6 +3,10 @@
 <h1>Admin Dashboard</h1>
 
 <ul class="nav nav-list">
+  <% if can? :read, Admin::Proposals::Call %>
+  <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
+  <% end %>
+
   <% if can? :read, Show %>
     <li>
       <%= link_to 'Shows', admin_shows_path %>

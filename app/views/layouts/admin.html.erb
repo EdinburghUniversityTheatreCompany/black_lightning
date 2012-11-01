@@ -11,6 +11,10 @@
 		<div class="navbar-inner">
 			<%= link_to 'Bedlam Theatre Admin', admin_path, :class => "brand"%>
 			<ul class="nav">
+                <% if can? :read, Admin::Proposals::Call %>
+                <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
+                <% end %>
+            
 				<% if can? :read, Show %>
                 <li><%= link_to 'Shows', admin_shows_path %></li>
                 <% end %>

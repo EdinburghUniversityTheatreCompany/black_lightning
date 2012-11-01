@@ -1,17 +1,22 @@
 <div class="tab-container">
+    
+    <% require 'securerandom' %>
+    <% id = SecureRandom.uuid %>
+    
     <ul class="nav nav-tabs">
-      <li class="active"><a href="#input_field" data-toggle="tab">Input</a></li>
-      <li><a href="#preview" data-toggle="tab">Preview</a></li>
+      <li class="active"><a href="#<%= id %>_input_field" data-toggle="tab">Input</a></li>
+      <li><a href="#<%= id %>_preview" data-toggle="tab">Preview</a></li>
     </ul>
         
     <div class="tab-content">
-        <div id="input_field" class="tab-pane active">
-            <%= f.input field, :input_html => {:class => "md field", :rows => "10"} %>
+        <div id="<%= id %>_input_field" class="tab-pane active">
+            <% rows ||= "10" %>
+            <%= f.input field, :input_html => {:class => "md field", :rows => rows} %>
             
-            <p>Note: Text entered above will be rendered using <%= link_to 'Markdown', admin_help_markdown_path, :target => '_blank' %>.</p>
+            <small>Note: Text entered above will be rendered using <%= link_to 'Markdown', admin_help_markdown_path, :target => '_blank' %>.</small>
         </div>
         
-        <div id="preview" class="tab-pane">
+        <div id="<%= id %>_preview" class="tab-pane">
         </div>
     </div>
 </div>
