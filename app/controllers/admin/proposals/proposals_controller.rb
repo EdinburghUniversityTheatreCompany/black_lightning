@@ -1,12 +1,17 @@
 class Admin::Proposals::ProposalsController < AdminController
 
-  load_and_authorize_resource :class => Admin::Proposals::Proposal
+  authorize_resource :class => "Admin::Proposals::Proposal"
+
+  # IMPORTANT
+  # Due to the complex nature of proposal permissions, each action may need to be authorized
+  # in the controller method using the authorize! method.
+  # Failure to correctly do so will cause bad things to happen (kittens may die).
 
   # GET /admin/proposals/proposals
   # GET /admin/proposals/proposals.json
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-    @proposals = @call.proposals
+    @proposals = Admin::Proposals::Proposal.where(:call_id => @call.id).joins(:users).where('approved = true or user_id = ?', current_user.id)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -19,15 +24,17 @@ class Admin::Proposals::ProposalsController < AdminController
   def show
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @admin_proposals_proposal.call
+    
+    authorize!(:read, @admin_proposals_proposal)
 
     @call.questions.each do |question|
-      if not @proposal.questions.all.include? question then
+      if not @admin_proposals_proposal.questions.all.include? question then
         answer = Admin::Proposals::Answer.new
         answer.question = question
-        @proposal.answers.push(answer)
+        @admin_proposals_proposal.answers.push(answer)
       end
     end
-    @proposal.save
+    @admin_proposals_proposal.save
     
     respond_to do |format|
       format.html # show.html.erb
@@ -73,6 +80,8 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call    
     @users = User.all
+    
+    authorize!(:edit, @proposal)
     
     @call.questions.each do |question|
       if not @proposal.questions.all.include? question then
@@ -121,6 +130,8 @@ class Admin::Proposals::ProposalsController < AdminController
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @admin_proposals_proposal.call
     
+    authorize!(:edit, @admin_proposals_proposal)
+    
     respond_to do |format|
       if @admin_proposals_proposal.update_attributes(params[:admin_proposals_proposal])
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), notice: 'Proposal was successfully updated.' }
@@ -150,6 +161,8 @@ class Admin::Proposals::ProposalsController < AdminController
     
     @proposal.approved = true
     @proposal.save
+    
+    authorize!(:approve, @proposal)
     
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as approved"

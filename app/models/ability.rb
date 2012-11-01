@@ -24,8 +24,16 @@ class Ability
         can :read, :all
         can :sign_up_for, Admin::StaffingJob
         
+        ##
+        # Note - due the complex
+        ###
+        cannot :read, Admin::Proposals::Proposal
+        can :read, Admin::Proposals::Proposal do |proposal|
+          (proposal.users.include? user) || (proposal.approved)
+        end
+        
         can :create, Admin::Proposals::Proposal
-        can :manage, Admin::Proposals::Proposal do |proposal|
+        can :edit, Admin::Proposals::Proposal do |proposal|
           (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
         end
         
