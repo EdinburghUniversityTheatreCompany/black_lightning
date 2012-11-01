@@ -21,8 +21,8 @@
 			<% @news.first(2).each do |news| %>
 			<div class="span4">
 				<div>
-					<%= image_tag news.image.url(:medium) %>
-					<h4><%= news.title %></h4>
+					<%= link_to (image_tag news.image.url(:medium)), news_path(news) %>
+					<h4><%= link_to news.title, news_path(news) %></h4>
 					<p><%= render_markdown (truncate(news.body, length: 80)) %> <%= link_to 'Read More', news_path(news) %></p>
 				</div>
 			</div>
@@ -32,9 +32,9 @@
 	<div class="span4">
 		<h3>What's On</h3>
 		<ul>
-			<li>This</li>
-			<li>That</li>
-			<li>The other</li>
+          <% @shows.each do |show| %>
+			<li><%= link_to show.name, show_path(show) %></li>
+          <% end %>
 		</ul>
 		<h3>Newsletter</h3>
 		<p>Sign up to receive information about Bedlam Theatre and our shows.</p>
