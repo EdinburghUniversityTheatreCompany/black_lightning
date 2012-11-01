@@ -8,7 +8,7 @@ class StaticController < ApplicationController
   
   def home
     @news = News.all(:conditions => ["publish_date <= ? AND show_public = ?", Date.current, true], :order => "publish_date DESC")
-    @shows = Show.all(:conditions => ["end_date >= ? AND is_public = ?", Date.current, true], :order => "start_date ASC")
+    @shows = Show.all(:conditions => ["end_date >= ? AND is_public = ?", Date.current, true], :order => "start_date ASC", :limit => 5)
   end
   
   def about
