@@ -4,7 +4,7 @@ class Show < ActiveRecord::Base
     slug
   end
   
-  validates :name, :tagline, :description, :presence => true
+  validates :name, :description, :presence => true
   validates :slug, :presence => true, :uniqueness => true
 
   has_attached_file :image, :styles => { :medium => "x300>", :thumb => "x100>", :slideshow => "960x500#" }
