@@ -25,5 +25,5 @@ News.create([
     ])
     
 Admin::EditableBlock.create([
-    {name:"home_content", content: "Welcome to Project BlackLightning \n ==========================="}
+    {name:"About Content", content: "Welcome to Project BlackLightning \n------------------------\n \n This is the about page."}
     ])

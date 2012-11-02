@@ -3,6 +3,10 @@ require 'test_helper'
 class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   setup do
     @admin_proposals_proposal = admin_proposals_proposals(:one)
+    
+    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
+    @user.add_role :admin
+    sign_in @user
   end
 
   test "should get index" do
@@ -18,7 +22,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test "should create admin_proposals_proposal" do
     assert_difference('Admin::Proposals::Proposal.count') do
-      post :create, admin_proposals_proposal: { budget_admin: @admin_proposals_proposal.budget_admin, budget_contingency: @admin_proposals_proposal.budget_contingency, budget_costume: @admin_proposals_proposal.budget_costume, budget_eutc: @admin_proposals_proposal.budget_eutc, budget_other_sources: @admin_proposals_proposal.budget_other_sources, budget_props: @admin_proposals_proposal.budget_props, budget_publiciy: @admin_proposals_proposal.budget_publiciy, budget_royalties: @admin_proposals_proposal.budget_royalties, budget_set: @admin_proposals_proposal.budget_set, budget_tech: @admin_proposals_proposal.budget_tech, cast_female: @admin_proposals_proposal.cast_female, cast_male: @admin_proposals_proposal.cast_male, proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, running_time: @admin_proposals_proposal.running_time, show_title: @admin_proposals_proposal.show_title }
+      post :create, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title }
     end
 
     assert_redirected_to admin_proposals_proposal_path(assigns(:admin_proposals_proposal))
@@ -35,7 +39,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test "should update admin_proposals_proposal" do
-    put :update, id: @admin_proposals_proposal, admin_proposals_proposal: { budget_admin: @admin_proposals_proposal.budget_admin, budget_contingency: @admin_proposals_proposal.budget_contingency, budget_costume: @admin_proposals_proposal.budget_costume, budget_eutc: @admin_proposals_proposal.budget_eutc, budget_other_sources: @admin_proposals_proposal.budget_other_sources, budget_props: @admin_proposals_proposal.budget_props, budget_publiciy: @admin_proposals_proposal.budget_publiciy, budget_royalties: @admin_proposals_proposal.budget_royalties, budget_set: @admin_proposals_proposal.budget_set, budget_tech: @admin_proposals_proposal.budget_tech, cast_female: @admin_proposals_proposal.cast_female, cast_male: @admin_proposals_proposal.cast_male, proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, running_time: @admin_proposals_proposal.running_time, show_title: @admin_proposals_proposal.show_title }
+    put :update, id: @admin_proposals_proposal, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title }
     assert_redirected_to admin_proposals_proposal_path(assigns(:admin_proposals_proposal))
   end
 
