@@ -3,5 +3,7 @@ class Admin::Proposals::Question < ActiveRecord::Base
   
   has_many :answers, :class_name => "Admin::Proposals::Answer"
   
+  validates :question_text, :presence => true
+  
   attr_accessible :question_text, :response_type
 end
