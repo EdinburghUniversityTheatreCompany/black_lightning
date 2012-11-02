@@ -112,6 +112,9 @@ class Admin::Proposals::ProposalsController < AdminController
     
     @proposal.call = @call
     
+    #This is required so that the new action can be rendered should the save fail.
+    @users = User.all
+    
     #Set a proposal as late if created after the call deadline:
     if Time.now > @call.deadline then
       @proposal.late = true
