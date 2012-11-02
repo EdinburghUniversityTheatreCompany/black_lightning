@@ -3,12 +3,9 @@
 # You can use CoffeeScript in this file: http://jashkenas.github.com/coffee-script/
   
 jQuery ->
-  jQuery("a[href$=\"#preview\"]").on "shown", (e) ->
-    $('#preview').html(markdown.toHTML($('.md').val()));
-    submit = $("input[type='submit']");
-    submit.removeClass "disabled"
-    submit[0].disabled = false;
-    submit.attr "title", ""
+  jQuery("a[href$=\"preview\"]").on "shown", (e) ->
+    id = $(e.currentTarget).data('preview-id');
+    $('#' + id + '_preview').html(markdown.toHTML($('.md').val()));
     return
   
   return
