@@ -5,7 +5,7 @@ class NewsController < ApplicationController
   # GET /news
   # GET /news.json
   def index
-    @news = @news.all(:conditions => ["publish_date <= ?", Date.current], :order => "publish_date DESC")
+    @news = @news.paginate(:page => params[:page], :per_page => 5).all(:conditions => ["publish_date <= ?", Date.current], :order => "publish_date DESC")
 
     respond_to do |format|
       format.html # index.html.erb
