@@ -1,4 +1,4 @@
-<%= simple_form_for(@admin_editable_block) do |f| %>
+<%= simple_nested_form_for @admin_editable_block, :html => {:multipart => true} do |f| %>
   <%= f.error_notification %>
 
   
@@ -9,6 +9,21 @@
     <% end %>
 
     <%= render "admin/shared/md_editor", { :f => f, :field => :content }  %>
+    
+    <br />
+    
+    <div class="well form-horizontal">
+      <%= f.simple_fields_for :attachments %>
+    
+      <%= f.link_to_add "Add Attachment", :attachments, :class => "btn" %>
+      
+      <br />
+      
+      <small>
+        You will need to link to these resources in the page above. <br />
+        Use <code>[the link text](/attachments/myattachmentname)</code>
+      </small>
+    </div>
     
   </div>
   
