@@ -47,3 +47,28 @@ body {
 	font-size: 20px;
 	color: #dc143c;
 }
+
+.xtsprodates{margin-top:20px;}.xtsprodates a{text-decoration:none;}
+.xtsprodates a:hover{text-decoration:underline;}
+.xtsprodates .director{width:160px;height:90px;background-color:#de6b4f;float:right;position:relative;}.xtsprodates .director .arrow{position:absolute;width:160px;height:31px;bottom:0px;background-color:white;background-image:url(../img/orange-down-arrow.png);}
+.xtsprodates .date{clear:both;margin-bottom:10px;background-color:#EEE;}.xtsprodates .date .time{display:block;float:right;padding:5px 10px;width:140px;text-align:right;background-color:#8ba674;font-weight:bold;color:white;}.xtsprodates .date .time .booknow{float:left;text-transform:uppercase;font-size:0.7em;padding-top:3px;display:none;}
+.xtsprodates .date .time:hover{text-decoration:none;}.xtsprodates .date .time:hover .booknow{display:block;}
+.xtsprodates .date .time.preview{background-color:#9c446d;}
+.xtsprodates .date .time.twoforone{background-color:#de6b4f;}
+.xtsprodates .date .time.soldout{background-color:#555;}
+.xtsprodates .date .datedate{padding:5px;}
+.xtsprodates form.bookingform{margin:0;padding:0 5px 20px 5px;}.xtsprodates form.bookingform .tickettyperow{height:40px;}.xtsprodates form.bookingform .tickettyperow div{float:left;padding-top:6px;height:34px;text-align:right;}
+.xtsprodates form.bookingform .tickettyperow b{color:#C21C28;}
+.xtsprodates form.bookingform .tickettyperow .typename{width:200px;height:32px;padding-top:8px;padding-right:6px;font-size:13px;}
+.xtsprodates form.bookingform .tickettyperow .pricefield{width:60px;font-size:9px;padding-top:8px;height:32px;}.xtsprodates form.bookingform .tickettyperow .pricefield .price{font-weight:bold;font-size:14px;}
+.xtsprodates form.bookingform .tickettyperow .quantity{width:70px;padding-right:10px;padding-top:5px;height:35px;}
+.xtsprodates form.bookingform .tickettyperow .quantity select {width: 70px;}
+.xtsprodates form.bookingform .tickettyperow .subtotal{width:70px;font-size:16px;padding-right:10px;padding-top:6px;height:34px;}
+.xtsprodates form.bookingform .tickettyperow .subtotal.total{font-weight:bold;}
+.xtsprodates form.bookingform .tickettyperow .bookingfeefield{width:330px;padding-left:10px;padding-right:0px;font-size:11px;}
+.xtsprodates form.bookingform .tickettyperow .totallabel{width:330px;padding-left:10px;padding-right:0px;font-size:16px;}
+.xtsprodates form.bookingform .totalrow{border-top:1px dashed black;}
+.xtsprodates form.bookingform .tickettyperow.description{font-size:11px;color:#666;padding-left:100px;padding-right:100px;text-align:middle;height:auto;line-height:1.1em;}
+.xtsprodates form.bookingform .continue{width:400px;padding-left:13px;text-align:right;}
+.xtsprodates form.bookingform .attrib{text-align:right;font-size:12px;line-height:15px;padding-top:10px;padding-right:3px;}
+.suggestion.twoforone{color:white;font-weight:bold;background-color:#DE6B4F;padding:10px;}
