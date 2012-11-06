@@ -1,5 +1,5 @@
 <div style="text-align: center;">
 <%= image_tag "HAL9000.png"%>
-<h1>I'm sorry <%= current_user.first_name %>, I can't let you do that.</h1>
+<h1>I'm sorry <%= current_user.present? ? current_user.first_name : "" %>, I can't let you do that.</h1>
 <p><%= notice %></p>
 </div>
