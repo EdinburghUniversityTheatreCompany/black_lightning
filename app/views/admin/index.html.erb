@@ -48,7 +48,7 @@
     <li><%= link_to 'Branding', admin_resources_branding_path %></li>
   </ul>
   
-  <% if can? :manage, Jobs %>
-    <li><%= link_to 'Jobs', admin_jobs_path %></li>
+  <% if can? :manage, :jobs %>
+    <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
   <% end %>
 </ul>

@@ -34,10 +34,6 @@
                 <% if can? :read, User %>
                 <li><%= link_to 'Users', admin_users_path %></li>
                 <% end %>
-                
-                <% if can? :manage, Jobs %>
-                <li><%= link_to 'Jobs', admin_jobs_path %></li>
-                <% end %>
             </ul>
             <ul class="nav pull-right">
                 <li><p class="navbar-text"><%= "Welcome #{current_user.first_name.presence || current_user.email}" %></p></li>
