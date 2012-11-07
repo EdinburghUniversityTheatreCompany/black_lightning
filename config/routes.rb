@@ -40,11 +40,6 @@ ChaosRails::Application.routes.draw do
         end
       end
     end
-    
-    constraints CanAccessJobs do
-      match "/jobs" => DelayedJobWeb, :anchor => false
-    end
-    
   end
   
   get "/admin/help/markdown"
