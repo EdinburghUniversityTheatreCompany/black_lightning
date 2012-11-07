@@ -4,9 +4,9 @@ class StaffingMailer < ActionMailer::Base
   def staffing_reminder(staffing)
     @staffing = staffing
 
-    staffing.users.each do |user| 
-      @user = user
-      mail(:to => user.email, :subject => "Bedlam Theatre Staffing")
+    staffing.staffing_jobs.each do |job| 
+      @user = job.user
+      mail(:to => @user.email, :subject => "Bedlam Theatre Staffing")
     end
   end
 end
