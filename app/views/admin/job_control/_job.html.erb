@@ -33,10 +33,6 @@
           <dt>Last Error</dt>
           <dd>
             <div class="backtrace">
-              <pre><%= job.last_error[0..100] + '...' %></pre>
-            </div>
-            <a :href => '#', :class => 'backtrace'>Toggle full message</a>
-            <div class="backtrace full hide">
               <pre><%= job.last_error %></pre>
             </div>
           </dd>
