@@ -3,6 +3,9 @@ class Admin::Proposals::Call < ActiveRecord::Base
   
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
   
-  accepts_nested_attributes_for :questions
+  accepts_nested_attributes_for :questions, :reject_if => :all_blank, :allow_destroy => true
+  
+  validates :deadline, :name, :presence => true
+  
   attr_accessible :deadline, :name, :open, :questions, :questions_attributes
 end
