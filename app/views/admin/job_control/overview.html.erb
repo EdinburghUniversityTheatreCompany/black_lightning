@@ -2,7 +2,7 @@
   Overview
 </h1>
 <p class="sub">
-  The list below shows an overview of the jobs in the delayed_job queue.
+  The list below shows an overview of the jobs in jobs queue.
 </p>
 <table class="table">
   <tr>
@@ -11,25 +11,25 @@
   </tr>
   <tr>
     <td class="status">
-      <a>Enqueued Jobs</a>
+      Enqueued Jobs
     </td>
     <td><%= delayed_job.count %></td>
   </tr>
   <tr>
     <td class="status">
-      <a>Working Jobs</a>
+      <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
     </td>
     <td><%= delayed_jobs(:working).count %></td>
   </tr>
   <tr>
     <td class="status">
-      <a>Pending Jobs</a>
+      <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
     </td>
     <td><%= delayed_jobs(:pending).count %></td>
   </tr>
   <tr class="<%= delayed_jobs(:failed).count > 0 ? 'failure' : '' %>">
     <td class="status">
-      <a>Failed Jobs</a>
+      <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
     </td>
     <td><%= delayed_jobs(:failed).count %></td>
   </tr>
