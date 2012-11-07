@@ -4,7 +4,7 @@
     
     <%= f.input_field :question_id, :value => f.object.question.id, :as => :hidden %>
     
-    <div class="controls">
+    <div>
       <% case f.object.question.response_type %>
       <% when "Text" %>
         <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :answer } %>
