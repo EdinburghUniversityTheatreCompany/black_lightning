@@ -8,6 +8,9 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   
   accepts_nested_attributes_for :answers, :team_members
   
+  validates :show_title, :proposal_text, :publicity_text, :presence => true
+  validates :team_members, :presence => { :message => "You must add at least one team member" }
+  
   ################################################################################
   # NOTE                                                                         #
   #                                                                              #
