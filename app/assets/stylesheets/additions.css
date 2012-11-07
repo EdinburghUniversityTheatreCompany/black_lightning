@@ -12,12 +12,6 @@ body {
 	background-repeat: repeat;
 }
 	
-.bottom {
-	background-image: url('grid.png');
-	background-repeat: repeat;
-	width: 100%;
-}
-	
 #side {
 	border-left: 1px solid #D1D1D1;
 	padding: 10px 0 20px 10px;
