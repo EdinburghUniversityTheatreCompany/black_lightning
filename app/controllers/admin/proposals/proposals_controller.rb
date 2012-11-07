@@ -191,4 +191,17 @@ class Admin::Proposals::ProposalsController < AdminController
       format.json { head :no_content }
     end
   end
+  
+  def convert
+    @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = @proposal.call
+    
+    @proposal.convert_to_show
+    
+    respond_to do |format|
+      flash[:notice] = "#{@proposal.show_title} is queued to be converted."
+      format.html { redirect_to admin_proposals_call_proposals_path(@call)}
+      format.json { head :no_content }
+    end
+  end
 end

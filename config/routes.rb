@@ -36,6 +36,7 @@ ChaosRails::Application.routes.draw do
           member do
             put 'approve'
             put 'reject'
+            put 'convert'
           end
         end
       end

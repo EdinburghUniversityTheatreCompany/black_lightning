@@ -22,7 +22,11 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   
   def convert_to_show
     puts self.show_title
-     
+    
+    if not self.approved == true then
+      abort("This proposal has not been approved")
+    end
+    
     @show = Show.new()
     @show.name = self.show_title
     @show.description = self.publicity_text
