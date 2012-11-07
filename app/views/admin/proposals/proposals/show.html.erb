@@ -1,0 +1,77 @@
+<% case @admin_proposals_proposal.successful %>
+<% when true %>
+  <div class="alert alert-success">
+    This proposal was successful.
+  </div>
+<% when false %>
+  <div class="alert alert-error">
+    This proposal was unsuccessful.
+  </div>
+<% end %>
+
+<% if @admin_proposals_proposal.late %>
+  <div class="alert alert-error">
+    This proposal has been marked late.
+  </div>
+<% end %>
+
+<% case @admin_proposals_proposal.approved %>
+<% when true %>
+  <div class="alert alert-success">
+    This proposal has been approved by committee.
+  </div>
+<% when false %>
+  <div class="alert alert-error">
+    This proposal has been rejected by committee.
+  </div>
+<% else %>
+  <div class="alert alert-info">
+    This proposal is waiting for approval by committee.
+  </div>
+<% end %>
+
+<p>
+  <b>Show title:</b>
+  <%= @admin_proposals_proposal.show_title %>
+</p>
+
+<p>
+  <b>Publicity text:</b>
+  <%= render_markdown @admin_proposals_proposal.publicity_text %>
+</p>
+
+<p>
+  <b>Proposal text:</b>
+  <%= render_markdown @admin_proposals_proposal.proposal_text %>
+</p>
+
+<h3>Team</h3>
+
+<% @admin_proposals_proposal.team_members.each do |team_member| %>
+  <p>
+  <b><%= team_member.position %></b>
+  
+  <% u = team_member.user %>
+  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+  </p>
+<% end %>
+
+<h3>Questions</h3>
+
+<% @admin_proposals_proposal.answers.each do |answer| %>
+  <p>
+    <b><%= answer.question.question_text %></b><br />
+    <%= answer.answer.presence || "This question has not been answered" %>
+  </p>
+<% end %>
+
+<% if can? :edit, @admin_proposals_proposal %>
+<%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
+<% end %>
+
+<% if can? :approve, @admin_proposals_proposal %>
+<br />
+<br />
+<%= link_to 'Approve', approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-success" %>
+<%= link_to 'Reject', reject_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-danger" %>
+<% end %>

@@ -6,19 +6,15 @@ class Ability
     #
     #   user ||= User.new # guest user (not logged in)
     
+    #If you can approve something, you can also reject it
+    alias_action :reject, :to => :approve
+    
     if user then
     
       #All users can manage themselves.
       can :manage, User, :id => user.id
       cannot :assign_roles, User
     
-      #########################
-      # COMMITTEE PERMISSIONS #
-      #########################
-      if user.has_role? :committee
-        can :manage, Admin::Staffing
-      end
-      
       ######################
       # MEMBER PERMISSIONS #
       ######################
@@ -28,7 +24,29 @@ class Ability
         can :read, :all
         can :sign_up_for, Admin::StaffingJob
         
+        ##
+        # Note - due the complex
+        ###
+        cannot :read, Admin::Proposals::Proposal
+        can :read, Admin::Proposals::Proposal do |proposal|
+          (proposal.users.include? user) || (proposal.approved)
+        end
+        
+        can :create, Admin::Proposals::Proposal
+        can :edit, Admin::Proposals::Proposal do |proposal|
+          (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
+        end
+        
         cannot :read, Admin::EditableBlock
+      end
+      
+      #########################
+      # COMMITTEE PERMISSIONS #
+      #########################
+      if user.has_role? :committee
+        can :manage, Admin::Staffing
+        can :manage, Admin::Proposals::Call
+        can :make_public, Show
       end
       
       #####################

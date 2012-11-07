@@ -1,14 +1,26 @@
-﻿<h1>Bedlam News</h1>
-
-<% @news.each do |news| %>
-<% image = "" #This will need changing to a default image. %>
-<% image = image_tag news.image.url(:thumb) if news.image?%>
-<article>
-    <header>
-        <h2><%= link_to image + news.title, news %></h2>
-        <time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, :format => :long %></time>
-    </header>
-    <p><%= raw generate_preview render_markdown news.body %></p>
-    <p><%= link_to 'View Full Article', news %></p>
-</article>
-<% end %>
+﻿<div class="row">
+  <h1>Bedlam News</h1>
+  <hr />
+  
+  <% @news.each do |news| %>
+  <div class="row">
+    <article>
+      <header class="offset2">
+          <h2><%= link_to news.title, news %></h2>
+      </header>
+      <div class="span2">
+        <%= link_to (image_tag news.image.url(:thumb)), news %>
+      </div>
+      <div class="span10">
+        <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, :format => :long %></time></p>
+        <p><%= raw generate_preview render_markdown news.body %></p>
+        <p><%= link_to 'View Full Article', news %></p>
+      </div>
+    </article>
+  </div>
+  <hr />
+  <% end %>
+  
+  <%= will_paginate(@news) %>
+  
+</div>

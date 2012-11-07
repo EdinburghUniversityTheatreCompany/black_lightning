@@ -1,13 +1,25 @@
-<h1>Current Shows</h1>
-
-<% @shows.each do |show| %>
-<% image = "" %>
-<% image = image_tag show.image.url(:thumb) if  show.image?%>
-<h2><%= link_to image + show.name, show_path(show) %></h2>
-<% end %>
-
-<% if @shows.count == 0 %>
-<p>There are currently no shows in the database.</p>
-<% end %>
-
-<%= will_paginate(@shows) %>
+<div class="row">
+  <h1>Bedlam Shows</h1>
+  <hr />
+  
+  <% @shows.each do |show| %>
+  <div class="row">
+    <article>
+      <div class="span2">
+        <%= link_to (image_tag show.image.url(:thumb)), show %>
+      </div>
+      <div class="span10">
+        <header>
+          <h2><%= link_to show.name, show %></h2>
+        </header>
+        <p><%= show.tagline %></p>
+        <p><%= link_to 'View Full Article', show %></p>
+      </div>
+    </article>
+  </div>
+  <hr />
+  <% end %>
+  
+  <%= will_paginate(@shows) %>
+  
+</div>

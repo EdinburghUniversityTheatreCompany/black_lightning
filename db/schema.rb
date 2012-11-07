@@ -11,13 +11,18 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
+<<<<<<< HEAD
 ActiveRecord::Schema.define(:version => 20121030012134) do
+=======
+ActiveRecord::Schema.define(:version => 20121106183335) do
+>>>>>>> master
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
     t.text     "content"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
+    t.boolean  "admin_page"
   end
 
   create_table "admin_proposals_answers", :force => true do |t|
@@ -43,6 +48,9 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.text     "proposal_text"
     t.datetime "created_at",     :null => false
     t.datetime "updated_at",     :null => false
+    t.boolean  "late"
+    t.boolean  "approved"
+    t.boolean  "successful"
   end
 
   create_table "admin_proposals_questions", :force => true do |t|
@@ -98,6 +106,29 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.integer "question_id"
   end
 
+  create_table "children_techies", :force => true do |t|
+    t.integer  "techie_id"
+    t.integer  "child_id"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "delayed_jobs", :force => true do |t|
+    t.integer  "priority",   :default => 0
+    t.integer  "attempts",   :default => 0
+    t.text     "handler"
+    t.text     "last_error"
+    t.datetime "run_at"
+    t.datetime "locked_at"
+    t.datetime "failed_at"
+    t.string   "locked_by"
+    t.string   "queue"
+    t.datetime "created_at",                :null => false
+    t.datetime "updated_at",                :null => false
+  end
+
+  add_index "delayed_jobs", ["priority", "run_at"], :name => "delayed_jobs_priority"
+
   create_table "news", :force => true do |t|
     t.string   "title"
     t.text     "body"
@@ -136,6 +167,14 @@ ActiveRecord::Schema.define(:version => 20121030012134) do
     t.string   "image_content_type"
     t.integer  "image_file_size"
     t.datetime "image_updated_at"
+    t.date     "start_date"
+    t.date     "end_date"
+  end
+
+  create_table "techies", :force => true do |t|
+    t.string   "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
   end
 
   create_table "techies", :force => true do |t|
