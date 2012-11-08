@@ -31,6 +31,7 @@ gem 'will_paginate', '~> 3.0'
 gem 'redcarpet'
 gem 'paperclip'
 gem 'nested_form'
+gem 'twitter'
 
 gem 'delayed_job_active_record'
 
