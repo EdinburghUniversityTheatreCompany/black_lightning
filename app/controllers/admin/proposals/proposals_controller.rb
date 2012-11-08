@@ -122,6 +122,8 @@ class Admin::Proposals::ProposalsController < AdminController
 
     respond_to do |format|
       if @proposal.save
+        ProposalsMailer.delay.new_proposal(@proposal, current_user)
+      
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
         format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
       else
