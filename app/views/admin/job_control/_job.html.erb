@@ -1,0 +1,66 @@
+<div class="accordion-group">
+  <div class="accordion-heading">
+    <div class="accordion-toggle clearfix">
+      <a data-toggle="collapse" data-parent="#jobs_accordion" href="#job_<%= job.id %>">
+        Job #<%= job.id %>
+      </a>
+      <span class="pull-right">
+        <%= link_to 'Retry', admin_jobs_path(:action => "retry", :id => job.id), :class => "btn btn-small" %>
+        <%= link_to 'Remove', admin_jobs_path(:action => "remove", :id => job.id), :class => "btn btn-small btn-danger" %>
+      </span>
+    </div>
+  </div>
+  <div id="job_<%= job.id %>" class="accordion-body collapse">
+    <div class="accordion-inner">   
+      <dl>
+        <dt>Priority</dt>
+        <dd><%= job.priority %></dd>
+        
+        <dt>Attempts</dt>
+        <dd><%= job.attempts %></dd>
+        
+        <% if job.respond_to?(:queue) && job.queue %>
+          <dt>Queue</dt>
+          <dd><%= job.queue %></dd>
+        <% end %>
+        
+        <dt>Handler</dt>
+        <dd>
+          <pre><%= job.handler %></pre>
+        </dd>
+        
+        <% if job.last_error %>
+          <dt>Last Error</dt>
+          <dd>
+            <div class="backtrace">
+              <pre><%= job.last_error %></pre>
+            </div>
+          </dd>
+        <% end %>
+
+        <% if job.run_at %>
+          <dt>Run At</dt>
+          <dd class="time"><%= l job.run_at %></dd>
+        <% end %>
+
+        <% if job.locked_at %>
+          <dt>Locked At</dt>
+          <dd class="time"><%= l job.locked_at %></dd>
+        <% end %>
+
+        <% if job.locked_by %>
+          <dt>Locked By</dt>
+          <dd><%= job.locked_by %></dd>
+        <% end %>
+
+        <% if job.failed_at %>
+          <dt>Failed At</dt>
+          <dd class="time"><%= l job.failed_at %></dd>
+        <% end %>
+
+        <dt>Created At</dt>
+        <dd class="time"><%= l job.created_at %></dd>
+      </dl>
+    </div>
+  </div>
+</div>

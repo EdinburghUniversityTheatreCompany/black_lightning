@@ -36,10 +36,13 @@ ChaosRails::Application.routes.draw do
           member do
             put 'approve'
             put 'reject'
+            put 'convert'
           end
         end
       end
     end
+
+    match 'jobs/:action' => 'job_control', :as => "jobs"
   end
   
   get "/admin/help/markdown"

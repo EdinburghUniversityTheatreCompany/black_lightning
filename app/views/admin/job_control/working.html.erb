@@ -1,0 +1,11 @@
+<h1>
+  Working
+</h1>
+<p class="sub">
+  The list below contains jobs currently being processed.
+</p>
+<div class="accordion" id="jobs_enqueued">
+  <% delayed_jobs(:working).each do |job| %>
+    <%= render :partial => 'job', :locals => {:job => job} %>
+  <% end %>
+</div>
