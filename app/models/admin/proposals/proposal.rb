@@ -41,6 +41,9 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
       end
       abort("Couldn't save the new show")
     end
+    
+    puts "Adding Team Members"
+    @show.team_members << self.team_members.collect { |team_member| team_member.dup }
       
     if not self.save then
       puts "Couldn't set the 'successful' flag on the proposal. This will need to be done manually"
