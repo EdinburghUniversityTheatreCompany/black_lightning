@@ -12,10 +12,13 @@ class Admin::ShowsController < AdminController
   
   def new
     @show = Show.new
+    @users = User.all
   end
   
   def create
     @show = Show.new(params[:show])
+    @users = User.all
+    
     respond_to do |format|
       if @show.save
         format.html {redirect_to admin_show_url(@show), notice: 'Show was successfully created.'}
@@ -27,10 +30,13 @@ class Admin::ShowsController < AdminController
   
   def edit
     @show = Show.find_by_slug(params[:id])
+    @users = User.all
   end
   
   def update
     @show = Show.find_by_slug(params[:id])
+    @users = User.all
+    
     respond_to do |format|
       if @show.update_attributes(params[:show])
         format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }

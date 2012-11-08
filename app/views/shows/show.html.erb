@@ -6,4 +6,16 @@
 <%= image_tag @show.image.url(:medium) %>
 
 <%= render_markdown @show.description %>
+
+<h3>Team</h3>
+
+<% @show.team_members.each do |team_member| %>
+  <p>
+  <b><%= team_member.position %></b>
+  
+  <% u = team_member.user %>
+  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+  </p>
+<% end %>
+
 <%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
