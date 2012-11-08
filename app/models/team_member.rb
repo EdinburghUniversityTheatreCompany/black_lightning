@@ -1,5 +1,5 @@
-class Admin::Proposals::TeamMember < ActiveRecord::Base
-  belongs_to :proposal
+class TeamMember < ActiveRecord::Base
+  belongs_to :teamwork, :polymorphic => true
   belongs_to :user
   
   validates :position, :presence => true

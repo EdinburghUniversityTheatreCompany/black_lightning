@@ -3,7 +3,7 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   
   has_many :questions, :through => :answers
   has_many :answers, :class_name => "Admin::Proposals::Answer"
-  has_many :team_members
+  has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
   has_many :users, :through => :team_members
   
   accepts_nested_attributes_for :answers, :team_members

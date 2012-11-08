@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121106183335) do
+ActiveRecord::Schema.define(:version => 20121108093801) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -56,14 +56,6 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "updated_at",    :null => false
   end
 
-  create_table "admin_proposals_team_members", :force => true do |t|
-    t.string   "position"
-    t.integer  "user_id"
-    t.integer  "proposal_id"
-    t.datetime "created_at",  :null => false
-    t.datetime "updated_at",  :null => false
-  end
-
   create_table "admin_staffing_jobs", :force => true do |t|
     t.string   "name"
     t.integer  "staffing_id"
@@ -75,8 +67,9 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
   create_table "admin_staffings", :force => true do |t|
     t.datetime "date"
     t.string   "show_title"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+    t.integer  "reminder_job_id"
   end
 
   create_table "attachments", :force => true do |t|
@@ -158,6 +151,15 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "image_updated_at"
     t.date     "start_date"
     t.date     "end_date"
+  end
+
+  create_table "team_members", :force => true do |t|
+    t.string   "position"
+    t.integer  "user_id"
+    t.integer  "teamwork_id"
+    t.datetime "created_at",    :null => false
+    t.datetime "updated_at",    :null => false
+    t.string   "teamwork_type"
   end
 
   create_table "techies", :force => true do |t|
