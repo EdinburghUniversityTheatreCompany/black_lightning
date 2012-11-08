@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121106183335) do
+ActiveRecord::Schema.define(:version => 20121107171059) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -75,8 +75,9 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
   create_table "admin_staffings", :force => true do |t|
     t.datetime "date"
     t.string   "show_title"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+    t.integer  "reminder_job_id"
   end
 
   create_table "attachments", :force => true do |t|

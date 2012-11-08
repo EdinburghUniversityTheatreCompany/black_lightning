@@ -19,4 +19,32 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   ################################################################################
   
   attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
+  
+  def convert_to_show
+    puts self.show_title
+     
+    @show = Show.new()
+    @show.name = self.show_title
+    @show.description = self.publicity_text
+    
+    @show.slug = @show.name.gsub(/\s+/,'-').gsub(/[^a-zA-Z0-9\-]/,'').downcase.gsub(/\-{2,}/,'-')
+     
+    self.successful = true
+      
+    if not @show.save then
+      @show.errors.full_messages.each do |error|
+        puts error
+      end
+      abort("Couldn't save the new show")
+    end
+      
+    if not self.save then
+      puts "Couldn't set the 'successful' flag on the proposal. This will need to be done manually"
+    end
+      
+    puts "Created Show:"
+    puts "Name: #{@show.name}"
+    puts "Slug: #{@show.slug}"
+  end
+  handle_asynchronously :convert_to_show
 end

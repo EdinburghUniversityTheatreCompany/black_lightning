@@ -69,7 +69,7 @@
 <%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
 <% end %>
 
-<% if can? :approve, @admin_proposals_proposal %>
+<% if (can? :approve, @admin_proposals_proposal) && (@admin_proposals_proposal.approved.nil?) %>
 <br />
 <br />
 <%= link_to 'Approve', approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-success" %>

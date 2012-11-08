@@ -1,0 +1,11 @@
+<h1>
+  Failed
+</h1>
+<p class="sub">
+  The list below contains all jobs that have an error message.
+</p>
+<div class="accordion" id="jobs_enqueued">
+  <% delayed_jobs(:failed).each do |job| %>
+    <%= render :partial => 'job', :locals => {:job => job} %>
+  <% end %>
+</div>
