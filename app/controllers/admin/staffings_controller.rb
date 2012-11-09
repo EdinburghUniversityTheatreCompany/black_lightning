@@ -85,11 +85,7 @@ class Admin::StaffingsController < AdminController
         return
       end
 
-      admin_staffing_jobs.each do |staffing_job|
-        new_staffing_job = staffing_job.dup
-        new_staffing_job.staffing_id = staffing.id
-        new_staffing_job.save
-      end
+      staffing.staffing_jobs << admin_staffing_jobs.collect { |job| job.dup }
     end
 
     flash[:success] = 'Staffing was successfully created.'
