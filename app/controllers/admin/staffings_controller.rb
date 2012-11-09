@@ -56,7 +56,7 @@ class Admin::StaffingsController < AdminController
         format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
         format.json { render json: @admin_staffing, status: :created, location: @admin_staffing }
       else
-        format.html { render action: "new" }
+        format.html { render "new" }
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end
@@ -113,7 +113,7 @@ class Admin::StaffingsController < AdminController
         format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end

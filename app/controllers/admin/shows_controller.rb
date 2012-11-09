@@ -23,7 +23,7 @@ class Admin::ShowsController < AdminController
       if @show.save
         format.html {redirect_to admin_show_url(@show), notice: 'Show was successfully created.'}
       else
-        format.html {render action: "new"}
+        format.html {render "new"}
       end
     end
   end
@@ -41,7 +41,7 @@ class Admin::ShowsController < AdminController
       if @show.update_attributes(params[:show])
         format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
       end
     end
   end

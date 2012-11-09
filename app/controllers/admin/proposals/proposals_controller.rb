@@ -125,7 +125,7 @@ class Admin::Proposals::ProposalsController < AdminController
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
         format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
       else
-        format.html { render action: "new" }
+        format.html { render "new" }
         format.json { render json: @proposal.errors, status: :unprocessable_entity }
       end
     end
@@ -144,7 +144,7 @@ class Admin::Proposals::ProposalsController < AdminController
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), notice: 'Proposal was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
         format.json { render json: @admin_proposals_proposal.errors, status: :unprocessable_entity }
       end
     end

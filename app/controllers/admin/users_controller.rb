@@ -18,7 +18,7 @@ class Admin::UsersController < AdminController
       if @user.save
         format.html {redirect_to admin_user_url(@user)}
       else
-        format.html {render action: "new"}
+        format.html {render "new"}
       end
     end
   end
@@ -35,7 +35,7 @@ class Admin::UsersController < AdminController
       if @user.update_attributes(params[:user])
         format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
       end
     end
   end
