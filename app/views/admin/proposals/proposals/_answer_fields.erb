@@ -1,9 +1,9 @@
 <div class="question control-group fields">
-    
+
     <label><%= f.object.question.question_text %></label>
-    
+
     <%= f.input_field :question_id, :value => f.object.question.id, :as => :hidden %>
-    
+
     <div>
       <% case f.object.question.response_type %>
       <% when "Text" %>
@@ -14,6 +14,6 @@
         <%= f.input_field :answer, :as => :string %>
       <% end %>
     </div>
-    
+
     <hr />
 </div>

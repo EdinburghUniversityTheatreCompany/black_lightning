@@ -7,7 +7,7 @@ module WillPaginate
 
     class BootstrapLinkRenderer < LinkRenderer
       protected
-      
+
       def html_container(html)
         tag :div, tag(:ul, html), container_attributes
       end

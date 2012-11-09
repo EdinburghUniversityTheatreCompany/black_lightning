@@ -12,13 +12,13 @@
 <% @admin_editable_blocks.each do |admin_editable_block| %>
   <tr>
     <td><%= admin_editable_block.name %></td>
-    
+
     <td>
     <% if can? :edit, admin_editable_block %>
     <%= link_to 'Edit', edit_admin_editable_block_path(admin_editable_block) %>
     <% end %>
     </td>
-    
+
     <td>
     <% if can? :delete, admin_editable_block %>
     <%= link_to 'Destroy', admin_editable_block, method: :delete, data: { confirm: 'Are you sure?' } %>

@@ -50,7 +50,7 @@
 <% @admin_proposals_proposal.team_members.each do |team_member| %>
   <p>
   <b><%= team_member.position %></b>
-  
+
   <% u = team_member.user %>
   <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
   </p>

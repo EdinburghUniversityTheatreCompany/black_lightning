@@ -3,12 +3,12 @@ class Show < ActiveRecord::Base
   def to_param
     slug
   end
-  
+
   has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
   has_many :users, :through => :team_members
-  
+
   accepts_nested_attributes_for :team_members
-  
+
   validates :name, :description, :presence => true
   validates :slug, :presence => true, :uniqueness => true
 

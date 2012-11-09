@@ -1,6 +1,6 @@
 #with thanks to http://techoctave.com/c7/posts/32-create-an-rss-feed-in-rails
 
-xml.instruct! :xml, :version => "1.0" 
+xml.instruct! :xml, :version => "1.0"
 xml.rss :version => "2.0" do
   xml.channel do
     xml.title "Bedlam Theatre"

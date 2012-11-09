@@ -6,7 +6,7 @@
 	<%= f.input :phone_number %>
 	<%= f.input :password %>
 	<%= f.input :password_confirmation %>
-    
+
     <% if can? :assign_roles, @user %>
 	  <%= f.association :roles, :as => :check_boxes %>
     <% end %>

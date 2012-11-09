@@ -5,31 +5,31 @@ ChaosRails::Application.routes.draw do
   resources :shows, :only => [:index, :show]
   resources :news, :only => [:index, :show]
   resources :attachments, :only => [:show]
-  
+
   match 'access_denied' => 'static#access_denied'
-  
+
   match 'about/' => 'static#about'
-  
+
   match 'admin/' => 'admin#index'
   namespace :admin do
     #The resources pages:
     match 'resources/branding' => 'resources#branding'
-    
+
     resources :shows
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
-    
+
     resources :staffings do
       collection do
         get 'new_for_show'
         put 'create_for_show'
       end
     end
-    
+
     match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
     match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
-    
+
     namespace :proposals do
       resources :calls do
         resources :proposals do
@@ -44,7 +44,7 @@ ChaosRails::Application.routes.draw do
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
   end
-  
+
   get "/admin/help/markdown"
 
   # The priority is based upon order of creation:
