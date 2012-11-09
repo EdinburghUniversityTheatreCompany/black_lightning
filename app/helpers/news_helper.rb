@@ -5,7 +5,7 @@ module NewsHelper
         begin
             #FIXME: This pattern will only work if content ends in a newline.
             /.{,140}.+?<\/p>/m.match(content)[0]
-        rescue Exception
+        rescue
             "There was an error rendering a preview for this news item."
         end
     end
