@@ -11,6 +11,7 @@
  *= require_self
  *= require admin/md_editor.css.scss
  *= require admin/bootstrap.min.css
+ *= require admin/jquery.gridster.min.css
  */
  
 div.datetime select {
@@ -19,4 +20,21 @@ div.datetime select {
 
 .container {
     padding-bottom:10px;
+}
+
+.gridster ul {
+    list-style: none;
+}
+
+.gridster li {
+    border: 1px solid #dddddd;
+    border-radius: 5px;
+    background-color: #FFFFFF;
+    padding: 5px;
+}
+
+.gridster .preview-holder {
+    border: none!important;
+    border-radius: 0!important;
+    background: #0000FF!important;
 }
