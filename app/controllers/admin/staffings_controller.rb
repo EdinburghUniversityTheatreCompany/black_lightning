@@ -1,7 +1,7 @@
 class Admin::StaffingsController < AdminController
-  
+
   load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up]
-  
+
   # GET /admin/staffings
   # GET /admin/staffings.json
   def index
@@ -28,7 +28,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/new
   # GET /admin/staffings/new.json
   def new
-    @users = User.accessible_by(current_ability, :manage) 
+    @users = User.accessible_by(current_ability, :manage)
     @admin_staffing = Admin::Staffing.new
 
     respond_to do |format|
@@ -39,7 +39,7 @@ class Admin::StaffingsController < AdminController
 
   # GET /admin/staffings/1/edit
   def edit
-    @users = User.accessible_by(current_ability, :manage) 
+    @users = User.accessible_by(current_ability, :manage)
     @admin_staffing = Admin::Staffing.find(params[:id])
   end
 
@@ -47,7 +47,7 @@ class Admin::StaffingsController < AdminController
   # POST /admin/staffings.json
   def create
     @admin_staffing = Admin::Staffing.new(params[:admin_staffing])
-    
+
     @admin_staffing.reminder_job = ::StaffingMailer.delay({:run_at => @admin_staffing.date.advance(:hours => -2)}).staffing_reminder(@admin_staffing)
 
     respond_to do |format|
@@ -61,41 +61,41 @@ class Admin::StaffingsController < AdminController
       end
     end
   end
-  
+
   def new_for_show
-    @users = User.accessible_by(current_ability, :manage) 
+    @users = User.accessible_by(current_ability, :manage)
     @admin_staffing = Admin::Staffing.new
   end
-  
+
   def create_for_show
     admin_staffing = Admin::Staffing.new(params[:admin_staffing])
     admin_staffing_jobs = admin_staffing.staffing_jobs
-    
+
     dates = params[:dates]
-    
+
     dates.each_value do |date|
       staffing = admin_staffing.dup
-      
+
       staffing.date = DateTime.civil(date[:year].to_i, date[:month].to_i, date[:day].to_i, date[:hour].to_i, date[:minute].to_i)
-      
+
       staffing.reminder_job = ::StaffingMailer.delay({:run_at => staffing.date.advance(:hours => -2)}).staffing_reminder(staffing)
 
       if not staffing.save
         redirect_to redirect_to admin_staffings_url, alert: 'There were errors creating the staffing.'
         return
       end
-      
+
       admin_staffing_jobs.each do |staffing_job|
         new_staffing_job = staffing_job.dup
         new_staffing_job.staffing_id = staffing.id
         new_staffing_job.save
       end
     end
-    
+
     flash[:success] = 'Staffing was successfully created.'
     redirect_to admin_staffings_url
   end
-  
+
   # PUT /admin/staffings/1
   # PUT /admin/staffings/1.json
   def update
@@ -103,8 +103,8 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if @admin_staffing.update_attributes(params[:admin_staffing])
-        reminder_job = @admin_staffing.reminder_job 
-    
+        reminder_job = @admin_staffing.reminder_job
+
         if reminder_job.presence then
           reminder_job.run_at = @admin_staffing.date.advance(:hours => -2)
           reminder_job.save
@@ -112,7 +112,7 @@ class Admin::StaffingsController < AdminController
           @admin_staffing.reminder_job = ::StaffingMailer.delay({:run_at => @admin_staffing.date.advance(:hours => -2)}).staffing_reminder(@admin_staffing)
           @admin_staffing.save
         end
-      
+
         flash[:success] = 'Staffing was successfully updated.'
         format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }
@@ -127,7 +127,7 @@ class Admin::StaffingsController < AdminController
     authorize! :sign_up_for, Admin::StaffingJob
     @admin_staffing = Admin::Staffing.find(params[:id])
   end
-  
+
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
     @job = Admin::StaffingJob.find(params[:job_id])

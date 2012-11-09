@@ -5,14 +5,14 @@
   <%= stylesheet_link_tag    "application", :media => "all" %>
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
-  
+
   <%= yield :head %>
 </head>
 <body>
   <div class="container">
   	<!-- START HEADER SECTION -->
 	<div class="row header">
-			
+
 		<div class="row">
 			<div class="span4">
 				<%= link_to image_tag('BedlamLogoBW.png', :id => "logo", :style => "border: 2px solid black;"), root_path%>

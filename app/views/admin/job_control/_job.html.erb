@@ -11,24 +11,24 @@
     </div>
   </div>
   <div id="job_<%= job.id %>" class="accordion-body collapse">
-    <div class="accordion-inner">   
+    <div class="accordion-inner">
       <dl>
         <dt>Priority</dt>
         <dd><%= job.priority %></dd>
-        
+
         <dt>Attempts</dt>
         <dd><%= job.attempts %></dd>
-        
+
         <% if job.respond_to?(:queue) && job.queue %>
           <dt>Queue</dt>
           <dd><%= job.queue %></dd>
         <% end %>
-        
+
         <dt>Handler</dt>
         <dd>
           <pre><%= job.handler %></pre>
         </dd>
-        
+
         <% if job.last_error %>
           <dt>Last Error</dt>
           <dd>

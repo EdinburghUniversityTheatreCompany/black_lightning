@@ -16,13 +16,13 @@
     <td><%= link_to news.title, admin_news_path(news) %></td>
     <td><%= news.publish_date %></td>
     <td><%= news.show_public ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
-    
+
     <td>
     <% if can? :edit, news %>
     <%= link_to 'Edit', edit_admin_news_path(news) %>
     <% end %>
     </td>
-    
+
     <td>
     <% if can? :delete, news %>
     <%= link_to 'Destroy', admin_news_path(news), method: :delete, data: { confirm: 'Are you sure?' } %>

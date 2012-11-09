@@ -24,41 +24,41 @@
     </li>
     <ul class="nav nav-list">
       <li><%= link_to 'View Shows', admin_shows_path %></li>
-      
+
       <% if can? :create, Show %>
       <li><%= link_to 'Add Show', new_admin_show_path %></li>
       <% end %>
     </ul>
   <% end %>
-  
+
   <% if can? :read, News %>
     <li><%= link_to 'News', admin_news_index_path %></li>
     <ul class="nav nav-list">
       <li><%= link_to 'View News', admin_news_index_path %></li>
-      
+
       <% if can? :create, News %>
       <li><%= link_to 'Add News', new_admin_news_path %></li>
       <% end %>
     </ul>
   <% end %>
-  
+
   <% if can? :read, Admin::Staffing %>
     <li><%= link_to 'Staffing', admin_staffings_path %></li>
   <% end %>
-  
+
   <% if can? :read, Admin::EditableBlock %>
     <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
   <% end %>
-  
+
   <% if can? :read, User %>
     <li><%= link_to 'Users', admin_users_path %></li>
   <% end %>
-  
+
   <li>Resources</li>
   <ul class="nav nav-list">
     <li><%= link_to 'Branding', admin_resources_branding_path %></li>
   </ul>
-  
+
   <% if can? :manage, :jobs %>
     <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
   <% end %>

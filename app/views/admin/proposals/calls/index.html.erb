@@ -5,11 +5,11 @@
     <th>Name</th>
     <th>Deadline</th>
     <th>Open</th>
-    
+
     <% if can? :edit, Admin::Proposals::Call %>
     <th></th>
     <% end %>
-    
+
     <% if can? :delete, Admin::Proposals::Call %>
     <th></th>
     <% end %>
@@ -20,11 +20,11 @@
     <td><%= link_to admin_proposals_call.name, admin_proposals_call_proposals_path(admin_proposals_call), :title => "View Proposals" %></td>
     <td><%= l admin_proposals_call.deadline, :format => :long %></td>
     <td><%= admin_proposals_call.open ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
-    
+
     <% if can? :edit, admin_proposals_call %>
     <td><%= link_to 'Edit', edit_admin_proposals_call_path(admin_proposals_call) %></td>
     <% end %>
-    
+
     <% if can? :delete, admin_proposals_call %>
     <td><%= link_to 'Destroy', admin_proposals_call, method: :delete, data: { confirm: 'Are you sure?' } %></td>
     <% end %>

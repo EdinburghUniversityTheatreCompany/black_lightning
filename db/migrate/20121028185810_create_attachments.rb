@@ -4,7 +4,7 @@ class CreateAttachments < ActiveRecord::Migration
       t.integer    :editable_block_id
       t.string     :name
       t.attachment :file
-      
+
       t.timestamps
     end
   end

@@ -14,23 +14,23 @@
                 <% if can? :read, Admin::Proposals::Call %>
                 <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
                 <% end %>
-            
+
 				<% if can? :read, Show %>
                 <li><%= link_to 'Shows', admin_shows_path %></li>
                 <% end %>
-              
+
                 <% if can? :read, News %>
                 <li><%= link_to 'News', admin_news_index_path %></li>
                 <% end %>
-  
+
                 <% if can? :read, Admin::Staffing %>
                 <li><%= link_to 'Staffing', admin_staffings_path %></li>
                 <% end %>
-              
+
                 <% if can? :read, Admin::EditableBlock %>
                 <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
                 <% end %>
-              
+
                 <% if can? :read, User %>
                 <li><%= link_to 'Users', admin_users_path %></li>
                 <% end %>
@@ -61,7 +61,7 @@
         <button type="button" class="close" data-dismiss="alert">&times;</button>
       </p>
     <% end %>
-    
+
 		<%= yield %>
 	</div>
 </body>

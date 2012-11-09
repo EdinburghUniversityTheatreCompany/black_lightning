@@ -1,10 +1,10 @@
 <div class="question control-group fields">
 
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :question_text, :rows => 2 } %>
-    
+
     <%= f.input :response_type, :collection => ['Text', 'String', 'Integer'] %>
 
     <%= f.link_to_remove "Remove Question", :class => "btn btn-danger" %>
-    
+
     <hr />
 </div>

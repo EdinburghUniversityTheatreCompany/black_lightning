@@ -2,7 +2,7 @@
 
 class ActionView::Template
   module Handlers
-    class Markdown      
+    class Markdown
       def call(template)
         "Redcarpet::Markdown.new(Redcarpet::Render::HTML).render(#{template.source.inspect})"
       end
