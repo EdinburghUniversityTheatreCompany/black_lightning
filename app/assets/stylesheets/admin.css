@@ -31,7 +31,7 @@ div.datetime select {
     padding-bottom:10px;
 }
 
-.gridster ul {
+.gridster > ul {
     list-style: none;
 }
 
@@ -44,6 +44,5 @@ div.datetime select {
 
 .gridster .preview-holder {
     border: none!important;
-    border-radius: 0!important;
-    background: #0000FF!important;
+    background: #000000!important;
 }
