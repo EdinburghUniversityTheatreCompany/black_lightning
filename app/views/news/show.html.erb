@@ -5,13 +5,13 @@
         <h2><%= @news.title %></h2>
         <time datetime="<%= @news.publish_date.strftime("%FT%T%:z") %>"><%= l @news.publish_date, :format => :long %></time>
     </header>
-    
+
     <%= image_tag @news.image.url(:medium) %>
-    
+
     <p><%= render_markdown @news.body %></p>
-    
+
     <% if @news.publish_date != @news.updated_at %>
-    <p>Last updated: 
+    <p>Last updated:
     <%= l @news.updated_at, :format => :long %>
     </p>
     <% end %>

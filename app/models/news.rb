@@ -3,7 +3,7 @@ class News < ActiveRecord::Base
   def to_param
     "#{id}-#{slug}"
   end
-  
+
   validates :title, :presence => true
   validates :publish_date, :presence => true
   validates :slug, :presence => true, :uniqueness => true

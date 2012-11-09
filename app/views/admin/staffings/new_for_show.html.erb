@@ -2,9 +2,9 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-      
+
     <%= f.input :show_title, :input_html => { :autocomplete => "off" } %>
-    
+
     <script type="text/javascript">
       $('#admin_staffing_show_title').typeahead({
         source: function (query, process) {
@@ -12,13 +12,13 @@
             var names = $.map(data, function (n) {
               return n.name
             });
-            
+
             process(names);
           });
         }
       });
     </script>
-    
+
     <div id="dates_container" class="well form-horizontal">
       <h3>Dates</h3>
       <script type="text/javascript">
@@ -37,18 +37,18 @@
               $(item).remove();
             });
             counter ++;
-            
+
             $('#add_date').before(item);
           });
         });
       </script>
       <a id="add_date" class="btn">Add Date</a>
     </div>
-     
+
     <div class="well form-horizontal">
       <h3>Jobs</h3>
       <%= f.simple_fields_for :staffing_jobs %>
-      
+
       <% if can? :write, @staffing %>
       <%= f.link_to_add "Add Job", :staffing_jobs, :class => "btn" %>
       </div>

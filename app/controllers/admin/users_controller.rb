@@ -11,14 +11,14 @@ class Admin::UsersController < AdminController
   def new
     @user = User.new
   end
-  
+
   def create
     @user = User.new(params[:user])
     respond_to do |format|
       if @user.save
         format.html {redirect_to admin_user_url(@user)}
       else
-        format.html {render action: "new"}
+        format.html {render "new"}
       end
     end
   end
@@ -26,7 +26,7 @@ class Admin::UsersController < AdminController
   def edit
     @user = User.find(params[:id])
   end
-  
+
   def update
     @user = User.find(params[:id])
     params[:user].delete(:password) if params[:user][:password].blank?
@@ -35,11 +35,11 @@ class Admin::UsersController < AdminController
       if @user.update_attributes(params[:user])
         format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
       end
     end
   end
-  
+
   def destroy
     @user = User.find(params[:id])
     @user.destroy

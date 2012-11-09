@@ -39,7 +39,7 @@ class Admin::EditableBlocksController < AdminController
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully created.' }
         format.json { render json: admin_editable_blocks_url, status: :created, location: @admin_editable_block }
       else
-        format.html { render action: "new" }
+        format.html { render "new" }
         format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end
@@ -55,7 +55,7 @@ class Admin::EditableBlocksController < AdminController
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
         format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end

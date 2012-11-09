@@ -6,6 +6,6 @@
 </p>
 <div class="accordion" id="jobs_enqueued">
   <% delayed_jobs(:working).each do |job| %>
-    <%= render :partial => 'job', :locals => {:job => job} %>
+    <%= render 'job', :job => job %>
   <% end %>
 </div>

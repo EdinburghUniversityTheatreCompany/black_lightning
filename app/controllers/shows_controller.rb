@@ -1,7 +1,7 @@
 class ShowsController < ApplicationController
   def index
     @shows = Show.paginate(:page => params[:page], :per_page => 5).all(:conditions => ["end_date >= ? AND is_public = ?", Date.current, true], :order => "start_date ASC")
-    
+
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @shows }

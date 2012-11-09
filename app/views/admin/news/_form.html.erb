@@ -12,11 +12,11 @@
     <%= f.input :publish_date %>
 
     <%= f.input :show_public %>
-    
+
     <%= f.input :image %>
 
   </div>
-  
+
   <script>
 	$('#news_title').keyup(function() {
 		var slug = jQuery.trim($('#news_title').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');

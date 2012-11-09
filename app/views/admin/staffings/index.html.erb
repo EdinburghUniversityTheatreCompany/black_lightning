@@ -6,20 +6,20 @@
   <div class="accordion-group">
     <% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ? and user_id is not null', show_title]).count %>
     <% total_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ?', show_title]).count %>
-    
+
     <% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
-    
+
     <div class="accordion-heading" style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
       <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" data-parent="#accordion" style="display: inline-block;">
         <%= show_title %>
       </a>
-      
+
       <% if show_warning %>
         <i class="icon-exclamation-sign"></i>
       <% else %>
         <i class="icon-ok-sign"></i>
       <% end %>
-    
+
       <%= "#{filled_positions} of #{total_positions} filled" %>
     </div>
     <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
@@ -27,13 +27,13 @@
         <tr>
           <th>Date</th>
           <th></th>
-          
+
           <th></th>
-          
+
           <% if can? :edit, Admin::Staffing %>
           <th></th>
           <% end %>
-          
+
           <% if can? :delete, Admin::Staffing %>
           <th></th>
           <% end %>
@@ -41,15 +41,15 @@
         <% for staffing in staffings %>
         <tr>
           <td><%= link_to (l staffing.date, :format => :short), admin_staffing_show_sign_up_path(staffing), :title => "Click to sign up on this date" %></td>
-          
+
           <td><%= "#{Admin::StaffingJob.count(:all, :conditions => ['user_id is not null and staffing_id = ?', staffing.id])} of #{staffing.staffing_jobs.count} filled" %></td>
-          
+
           <td><%= link_to 'View', staffing %></td>
-          
+
           <% if can? :edit, staffing %>
           <td><%= link_to 'Edit', edit_admin_staffing_path(staffing) %></td>
           <% end %>
-          
+
           <% if can? :delete, staffing %>
           <td><%= link_to 'Destroy', staffing, method: :delete, data: { confirm: 'Are you sure?' } %></td>
           <% end %>

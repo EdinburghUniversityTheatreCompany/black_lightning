@@ -61,13 +61,13 @@
     <h3><%= link_to 'Editable Blocks', admin_editable_blocks_path %></h3>
   </li>
   <% end %>
-  
+
   <% if can? :read, User %>
   <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
     <h3><%= link_to 'Users', admin_users_path %></h3>
   </li>
   <% end %>
-  
+
   <% if can? :manage, :jobs %>
   <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
     <h3><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></h3>
