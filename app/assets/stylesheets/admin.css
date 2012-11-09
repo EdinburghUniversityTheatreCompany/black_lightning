@@ -17,6 +17,15 @@ div.datetime select {
     width: 107.5px;
 }
 
+.dashboard h3 > a {
+    color: #333;
+    border-bottom: 1px #333 dotted;
+}
+
+.dashboard h3 > a:hover {
+    text-decoration: none;
+}
+
 .container {
     padding-bottom:10px;
 }

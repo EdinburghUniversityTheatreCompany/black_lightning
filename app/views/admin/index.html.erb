@@ -2,79 +2,102 @@
 
 <h1>Admin Dashboard</h1>
 
-<% if can? :manage, :jobs %>
-  <% if ::Delayed::Job.where('last_error is not null').count > 0 then %>
-    <div class="alert alert-error">
-      <strong>Stop. This is important</strong>
-      <p>
-        A DelayedJob has failed. Please review <li><%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
-      </p>
-    </div>
-  <% end %>
-<% end %>
-
-<div class="row">
-  <div class="span4">
-    <h3><%= link_to 'News', admin_news_index_path %></h3>
-    
-    <% ::News.all.first(5).each do |news| %>
-      <p><%= link_to news.title, admin_news_path(news) %></p>
-    <% end %>
-    
-    <% if can? :create, News %>
-      <%= link_to 'Add News', new_admin_news_path, :class => "btn btn-small" %>
-    <% end %>
-  </div>
-
-  <div class="offset4 span4">
-    <h3>Resources</h3>
-    <p><%= link_to 'Branding', admin_resources_branding_path %></p>
-  </div>
-</div>
-
-<div class="row">
-  
-  <div class="span4">
-    <h3><%= link_to 'Shows', admin_shows_path %></h3>
-    
-    <% ::Show.all.first(5).each do |show| %>
-      <p><%= link_to show.name, admin_show_path(show) %></p>
-    <% end %>    
-    
-    <% if can? :create, Show %>
-      <%= link_to 'Add Show', new_admin_show_path, :class => "btn btn-small" %>
-    <% end %>
-  </div>
-  
-  <div class="span4">
-    <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
-  </div>
-  
-  <div class="span4">
-    <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
-    
-    <% ::Admin::Staffing.all.each do |staffing| %>
-      <p><%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %></p>
-    <% end %>
-  </div>
-</div>
-
-<div class="row">
-  <% if can? :read, Admin::EditableBlock %>
-  <div class="span4">
-    <h3><%= link_to 'Editable Blocks', admin_editable_blocks_path %></h3>
-  </div>
-  <% end %>
-  
-  <% if can? :read, User %>
-  <div class="span4">
-    <h3><%= link_to 'Users', admin_users_path %></h3>
-  </div>
-  <% end %>
-  
+<div class="dashboard">
   <% if can? :manage, :jobs %>
-  <div class="span4">
-    <h3><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></h3>
-  </div>
+    <% if delayed_jobs(:failed).count > 0 then %>
+      <div class="alert alert-error">
+        <strong>Stop. This is important</strong>
+        <p>
+          A DelayedJob has failed. Please review <li><%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
+        </p>
+      </div>
+    <% end %>
   <% end %>
+
+  <div class="row">
+    <div class="span4">
+      <h3><%= link_to 'News', admin_news_index_path %></h3>
+      
+      <% ::News.all.first(5).each do |news| %>
+        <p><%= link_to news.title, admin_news_path(news) %></p>
+      <% end %>
+      
+      <% if can? :create, News %>
+        <%= link_to 'Add News', new_admin_news_path, :class => "btn btn-small" %>
+      <% end %>
+    </div>
+
+    <div class="offset4 span4">
+      <h3>Resources</h3>
+      <p><%= link_to 'Branding', admin_resources_branding_path %></p>
+    </div>
+  </div>
+
+  <div class="row">
+    
+    <div class="span4">
+      <h3><%= link_to 'Shows', admin_shows_path %></h3>
+      
+      <% ::Show.all.first(5).each do |show| %>
+        <p><%= link_to show.name, admin_show_path(show) %></p>
+      <% end %>    
+      
+      <% if can? :create, Show %>
+        <%= link_to 'Add Show', new_admin_show_path, :class => "btn btn-small" %>
+      <% end %>
+    </div>
+    
+    <div class="span4">
+      <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
+    </div>
+    
+    <div class="span4">
+      <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
+      
+      <% ::Admin::Staffing.all.each do |staffing| %>
+        <p><%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %></p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="row">
+    <% if can? :read, Admin::EditableBlock %>
+    <div class="span4">
+      <h3><%= link_to 'Editable Blocks', admin_editable_blocks_path %></h3>
+    </div>
+    <% end %>
+    
+    <% if can? :read, User %>
+    <div class="span4">
+      <h3><%= link_to 'Users', admin_users_path %></h3>
+    </div>
+    <% end %>
+    
+    <% if can? :manage, :jobs %>
+    <div class="span4">
+      <h3><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></h3>
+      <dl>
+        <dt>
+          Enqueued Jobs
+        </dt>
+        <dd><%= delayed_job.count %></dd>
+      
+        <dt>
+          <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
+        </dt>
+        <dd><%= delayed_jobs(:working).count %></d>
+      
+        <dt>
+          <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
+        </dt>
+        <dd><%= delayed_jobs(:pending).count %></d>
+      
+        <dt>
+          <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
+        </dt>
+        <dd><%= delayed_jobs(:failed).count %></dd>
+      </tr>
+    </div>
+    <% end %>
+  </div>
 </div>
