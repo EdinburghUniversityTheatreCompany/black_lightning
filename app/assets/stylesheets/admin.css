@@ -14,35 +14,15 @@
  *= require admin/jquery.gridster.min.css
  */
  
+body {
+	background-image: url('cream_dust.png');
+	background-repeat: repeat;
+}
+ 
 div.datetime select {
     width: 107.5px;
 }
 
-.dashboard h3 > a {
-    color: #333;
-    border-bottom: 1px #333 dotted;
-}
-
-.dashboard h3 > a:hover {
-    text-decoration: none;
-}
-
 .container {
     padding-bottom:10px;
-}
-
-.gridster > ul {
-    list-style: none;
-}
-
-.gridster li {
-    border: 1px solid #dddddd;
-    border-radius: 5px;
-    background-color: #FFFFFF;
-    padding: 5px;
-}
-
-.gridster .preview-holder {
-    border: none!important;
-    background: #000000!important;
 }

@@ -1,6 +1,10 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag    "admin/dashboard", :media => "all" %>
+<% end %>
+
 <% @title = 'Dashboard' %>
 
-<h1>Admin Dashboard</h1>
+<h1>Bedlam Dashboard</h1>
 
 <div class="dashboard">
   <% if can? :manage, :jobs %>
@@ -32,10 +36,6 @@
     <h3><%= link_to 'Shows', admin_shows_path %></h3>
     <% ::Show.all.first(5).each do |show| %>
       <p><%= link_to show.name, admin_show_path(show) %></p>
-    <% end %>
-    
-    <% if can? :create, Show %>
-      <%= link_to 'Add Show', new_admin_show_path, :class => "btn btn-small" %>
     <% end %>
   </li>
   
@@ -100,7 +100,7 @@
 
 <script type="text/javascript">
   $(".gridster ul").gridster({
-        widget_margins: [10, 10],
+        widget_margins: [20, 20],
         widget_base_dimensions: [260, 260]
     });
 </script>
