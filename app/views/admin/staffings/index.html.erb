@@ -42,7 +42,7 @@
         <tr>
           <td><%= link_to (l staffing.date, :format => :short), admin_staffing_show_sign_up_path(staffing), :title => "Click to sign up on this date" %></td>
 
-          <td><%= "#{Admin::StaffingJob.count(:all, :conditions => ['user_id is not null and staffing_id = ?', staffing.id])} of #{staffing.staffing_jobs.count} filled" %></td>
+          <td><%= "#{staffing.filled_jobs} of #{staffing.staffing_jobs.count} filled" %></td>
 
           <td><%= link_to 'View', staffing %></td>
 

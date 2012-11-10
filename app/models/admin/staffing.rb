@@ -9,4 +9,8 @@ class Admin::Staffing < ActiveRecord::Base
    validates :show_title, :date, :presence => true
 
    attr_accessible :show_title, :date, :staffing_jobs, :staffing_jobs_attributes
+   
+   def filled_jobs
+     self.staffing_jobs.where(['user_id is not null']).count
+   end 
 end
