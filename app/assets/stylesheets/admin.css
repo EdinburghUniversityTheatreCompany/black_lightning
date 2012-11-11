@@ -10,8 +10,8 @@
  *
  *= require_self
  *= require admin/md_editor.css.scss
- *= require admin/bootstrap.min.css
  *= require admin/jquery.gridster.min.css
+ *= require admin/admin.css.scss
  */
  
 body {

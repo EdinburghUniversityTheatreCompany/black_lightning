@@ -31,6 +31,7 @@ GEM
     arel (3.0.2)
     bcrypt-ruby (3.0.1)
     bcrypt-ruby (3.0.1-x86-mingw32)
+    bootstrap-sass (2.1.0.1)
     builder (3.0.4)
     cancan (1.6.8)
     cocaine (0.4.2)
@@ -135,6 +136,7 @@ PLATFORMS
   x86-mingw32
 
 DEPENDENCIES
+  bootstrap-sass
   cancan
   coffee-rails (~> 3.2.1)
   delayed_job_active_record
