@@ -22,47 +22,51 @@
 <ul>
   <li data-row="1" data-col="1" data-sizex="1" data-sizey="2">
     <h3><%= link_to 'News', admin_news_index_path %></h3>
-    
-    <% ::News.all.first(5).each do |news| %>
+
+    <% ::News.all.first(4).each do |news| %>
+      <hr />
       <p><%= link_to news.title, admin_news_path(news) %></p>
+      <p><%= render_markdown (truncate(news.body, length: 80)) %></p>
     <% end %>
-    
+
+    <hr />
+
     <% if can? :create, News %>
       <%= link_to 'Add News', new_admin_news_path, :class => "btn btn-small" %>
     <% end %>
   </li>
-  
+
   <li data-row="1" data-col="2" data-sizex="1" data-sizey="1">
     <h3><%= link_to 'Shows', admin_shows_path %></h3>
     <% ::Show.all.first(5).each do |show| %>
       <p><%= link_to show.name, admin_show_path(show) %></p>
     <% end %>
   </li>
-  
+
   <li data-row="1" data-col="3" data-sizex="1" data-sizey="1">
     <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
     <% ::Admin::Proposals::Call.open.each do |show| %>
       <p><%= link_to show.name, admin_show_path(show) %></p>
     <% end %>
-    
+
     <% if ::Admin::Proposals::Call.open.empty? %>
       <p>There are no open proposal calls.</p>
     <% end %>
   </li>
-  
+
   <li data-row="2" data-col="2" data-sizex="1" data-sizey="1">
     <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
-    
+
     <% ::Admin::Staffing.all.each do |staffing| %>
       <p><%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %></p>
     <% end %>
   </li>
-  
+
   <li data-row="2" data-col="3" data-sizex="1" data-sizey="1">
     <h3>Resources</h3>
     <p><%= link_to 'Branding', admin_resources_branding_path %></p>
   </li>
-  
+
   <% if can? :read, Admin::EditableBlock %>
   <li data-row="3" data-col="1" data-sizex="1" data-sizey="1">
     <h3><%= link_to 'Editable Blocks', admin_editable_blocks_path %></h3>
@@ -83,17 +87,17 @@
         Enqueued Jobs
       </dt>
       <dd><%= delayed_job.count %></dd>
-    
+
       <dt>
         <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
       </dt>
       <dd><%= delayed_jobs(:working).count %></d>
-    
+
       <dt>
         <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
       </dt>
       <dd><%= delayed_jobs(:pending).count %></d>
-    
+
       <dt>
         <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
       </dt>
@@ -101,7 +105,7 @@
     </dl>
   </li>
   <% end %>
-  
+
 </ul>
 </div>
 
