@@ -1,6 +1,5 @@
 class Admin::Proposals::Call < ActiveRecord::Base
   has_and_belongs_to_many :questions, :class_name => "Admin::Proposals::Question", :before_remove => :answers_cleanup
-
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
   
   scope :open, :conditions => { :open => true }
