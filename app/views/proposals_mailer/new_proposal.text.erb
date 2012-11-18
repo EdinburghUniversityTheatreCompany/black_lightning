@@ -1,0 +1,11 @@
+Dear <%= @user.first_name %>,
+
+You have been added as <%= @team_member.position %> to the proposal "<%= @proposal.show_title %>".
+
+The proposal was submitted by <%= @creator.first_name + " " + @creator.last_name %>
+
+You can view the proposal by visiting <%= admin_proposals_call_proposal_url(@proposal.call, @proposal, :host => "localhost:3000") %>.
+
+Regards,
+
+The Bedlam Theatre Team
