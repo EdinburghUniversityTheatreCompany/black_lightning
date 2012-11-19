@@ -5,3 +5,9 @@
 require File.expand_path('../config/application', __FILE__)
 
 ChaosRails::Application.load_tasks
+
+require 'rake/dsl_definition'
+require 'rubygems'
+
+gem 'ci_reporter'
+require 'ci/reporter/rake/minitest'
