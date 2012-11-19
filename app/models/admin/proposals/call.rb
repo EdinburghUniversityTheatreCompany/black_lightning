@@ -1,7 +1,8 @@
 class Admin::Proposals::Call < ActiveRecord::Base
   has_and_belongs_to_many :questions, :class_name => "Admin::Proposals::Question", :before_remove => :answers_cleanup
-
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
+  
+  scope :open, :conditions => { :open => true }
 
   accepts_nested_attributes_for :questions, :reject_if => :all_blank, :allow_destroy => true
 
