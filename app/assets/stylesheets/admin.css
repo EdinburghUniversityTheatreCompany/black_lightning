@@ -10,8 +10,14 @@
  *
  *= require_self
  *= require admin/md_editor.css.scss
+ *= require admin/jquery.gridster.min.css
  *= require admin/admin.css.scss
  */
+ 
+body {
+	background-image: url('cream_dust.png');
+	background-repeat: repeat;
+}
  
 div.datetime select {
     width: 107.5px;

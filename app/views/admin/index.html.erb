@@ -1,65 +1,117 @@
-<% @title = 'Dashboard' %>
-
-<h1>Admin Dashboard</h1>
-
-<% if can? :manage, :jobs %>
-  <% if ::Delayed::Job.where('last_error is not null').count > 0 then %>
-    <div class="alert alert-error">
-      <strong>Stop. This is important</strong>
-      <p>
-        A DelayedJob has failed. Please review <li><%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
-      </p>
-    </div>
-  <% end %>
+<% content_for :head do %>
+  <%= stylesheet_link_tag    "admin/dashboard", :media => "all" %>
 <% end %>
 
-<ul class="nav nav-list">
-  <% if can? :read, Admin::Proposals::Call %>
-  <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
+<% @title = 'Dashboard' %>
+
+<h1>Bedlam Dashboard</h1>
+
+<div class="dashboard">
+  <% if can? :manage, :jobs %>
+    <% if delayed_jobs(:failed).count > 0 then %>
+      <div class="alert alert-error">
+        <strong>Stop. This is important</strong>
+        <p>
+          A DelayedJob has failed. Please review <li><%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
+        </p>
+      </div>
+    <% end %>
   <% end %>
 
-  <% if can? :read, Show %>
-    <li>
-      <%= link_to 'Shows', admin_shows_path %>
-    </li>
-    <ul class="nav nav-list">
-      <li><%= link_to 'View Shows', admin_shows_path %></li>
+<div class="gridster">
+<ul>
+  <li data-row="1" data-col="1" data-sizex="1" data-sizey="2">
+    <h3><%= link_to 'News', admin_news_index_path %></h3>
 
-      <% if can? :create, Show %>
-      <li><%= link_to 'Add Show', new_admin_show_path %></li>
-      <% end %>
-    </ul>
-  <% end %>
+    <% ::News.all.first(4).each do |news| %>
+      <hr />
+      <p><%= link_to news.title, admin_news_path(news) %></p>
+      <p><%= render_markdown (truncate(news.body, length: 80)) %></p>
+    <% end %>
 
-  <% if can? :read, News %>
-    <li><%= link_to 'News', admin_news_index_path %></li>
-    <ul class="nav nav-list">
-      <li><%= link_to 'View News', admin_news_index_path %></li>
+    <hr />
 
-      <% if can? :create, News %>
-      <li><%= link_to 'Add News', new_admin_news_path %></li>
-      <% end %>
-    </ul>
-  <% end %>
+    <% if can? :create, News %>
+      <%= link_to 'Add News', new_admin_news_path, :class => "btn btn-small" %>
+    <% end %>
+  </li>
 
-  <% if can? :read, Admin::Staffing %>
-    <li><%= link_to 'Staffing', admin_staffings_path %></li>
-  <% end %>
+  <li data-row="1" data-col="2" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Shows', admin_shows_path %></h3>
+    <% ::Show.all.first(5).each do |show| %>
+      <p><%= link_to show.name, admin_show_path(show) %></p>
+    <% end %>
+  </li>
+
+  <li data-row="1" data-col="3" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
+    <% ::Admin::Proposals::Call.open.each do |show| %>
+      <p><%= link_to show.name, admin_show_path(show) %></p>
+    <% end %>
+
+    <% if ::Admin::Proposals::Call.open.empty? %>
+      <p>There are no open proposal calls.</p>
+    <% end %>
+  </li>
+
+  <li data-row="2" data-col="2" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
+
+    <% ::Admin::Staffing.future.limit(8).each do |staffing| %>
+      <p>
+        <%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
+        
+        <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
+        <% if remaining_positions > 0 %>
+        <span class="badge badge-important pull-right" title="Remaining positions"><%= remaining_positions %></span>
+        <% end %>
+      </p>
+    <% end %>
+  </li>
+
+  <li data-row="2" data-col="3" data-sizex="1" data-sizey="1">
+    <h3>Resources</h3>
+    <p><%= link_to 'Branding', admin_resources_branding_path %></p>
+  </li>
 
   <% if can? :read, Admin::EditableBlock %>
-    <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
+  <li data-row="3" data-col="1" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Editable Blocks', admin_editable_blocks_path %></h3>
+  </li>
   <% end %>
 
   <% if can? :read, User %>
-    <li><%= link_to 'Users', admin_users_path %></li>
+  <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Users', admin_users_path %></h3>
+  </li>
   <% end %>
-
-  <li>Resources</li>
-  <ul class="nav nav-list">
-    <li><%= link_to 'Branding', admin_resources_branding_path %></li>
-  </ul>
 
   <% if can? :manage, :jobs %>
-    <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
+  <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></h3>
+    <dl>
+      <dt>
+        Enqueued Jobs
+      </dt>
+      <dd><%= delayed_job.count %></dd>
+
+      <dt>
+        <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
+      </dt>
+      <dd><%= delayed_jobs(:working).count %></d>
+
+      <dt>
+        <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
+      </dt>
+      <dd><%= delayed_jobs(:pending).count %></d>
+
+      <dt>
+        <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
+      </dt>
+      <dd><%= delayed_jobs(:failed).count %></dd>
+    </dl>
+  </li>
   <% end %>
+
 </ul>
+</div>
