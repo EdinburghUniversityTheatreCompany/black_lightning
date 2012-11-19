@@ -1,5 +1,5 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
-  name: home_content
-  content: "Welcome to Project BlackLightning\n==========================="
+  name: "About Content"
+  content: "Welcome to Project BlackLightning\n------------------------"

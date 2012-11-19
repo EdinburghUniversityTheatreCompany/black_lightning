@@ -8,7 +8,7 @@ class Admin::Proposals::Call < ActiveRecord::Base
   validates :deadline, :name, :presence => true
 
   attr_accessible :deadline, :name, :open, :questions, :questions_attributes
-  
+
   #Removes answers to questions that have been removed
   def answers_cleanup(question)
     self.proposals.each do |proposal|
