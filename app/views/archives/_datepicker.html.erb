@@ -1,4 +1,4 @@
-<form class="form-inline">
+<form class="form-inline" method="post" action="<%= archives_set_date_path %>">
   <select name="start_month">
     <option value="01">January</option>
     <option value="02">February</option>
@@ -30,4 +30,6 @@
     <option value="12">December</option>
   </select>
   <input type="text" name="end_year" placeholder="Year">
+  
+  <input type="submit" class="btn" value="Set" >
 </form>
