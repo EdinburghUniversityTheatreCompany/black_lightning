@@ -56,7 +56,7 @@
   </p>
 <% end %>
 
-<%= yield %>
+<%= content_for?(:content) ? yield(:content) : yield %>
 
 <%= render :partial => "shared/google_analytics" %>
 </div>

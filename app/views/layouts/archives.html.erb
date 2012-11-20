@@ -1,0 +1,11 @@
+<% content_for :content do %>
+  
+  <h1>Bedlem Archives</h1>
+  
+  <%= render :partial => 'datepicker' %>
+
+  <%= yield %>
+
+<% end %>
+
+<%= render :template => 'layouts/application' %>

@@ -44,6 +44,11 @@ ChaosRails::Application.routes.draw do
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
   end
+  
+  match 'archives/' => 'archives#index'
+  namespace :archives do
+    resources :shows, :only => [:index, :show]
+  end
 
   get "/admin/help/markdown"
 
