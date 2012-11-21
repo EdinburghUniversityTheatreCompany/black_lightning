@@ -41,6 +41,21 @@
 	</div>
 <%= render :partial => "shared/cookie_notice" %>
 
+<% flash.each do |key, msg| %>
+  <% case key                       %>
+  <% when :alert                    %>
+  <%   alertclass = "alert-error"   %>
+  <% when :success                  %>
+  <%   alertclass = "alert-success" %>
+  <% when :notice                   %>
+  <%   alertclass = "alert-info"    %>
+  <% end %>
+  <p id="<%= key %>" class="alert <%= alertclass %>">
+    <%= msg %>
+    <button type="button" class="close" data-dismiss="alert">&times;</button>
+  </p>
+<% end %>
+
 <%= yield %>
 
 <%= render :partial => "shared/google_analytics" %>
