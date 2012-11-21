@@ -13,8 +13,10 @@
 				<% end %>
 			</div>
             <!-- Carousel nav -->
-            <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
-            <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
+            <% if @shows.count > 1 then %>
+                <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
+                <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
+            <% end %>
 		</div>
 				
 		<div class="row content">
