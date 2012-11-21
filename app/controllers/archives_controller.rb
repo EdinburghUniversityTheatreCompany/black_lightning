@@ -22,8 +22,13 @@ class ArchivesController < ApplicationController
         return
       end
       
-      @search_start_date = ::Date.new(Integer(params[:start_year]), Integer(params[:start_month]), 1)
-      @search_end_date = ::Date.new(Integer(params[:end_year]), Integer(params[:end_month]), 1)
+      start_yr = Integer(params[:start_year])
+      start_mnth = Integer(params[:start_month])
+      end_yr = Integer(params[:end_year])
+      end_mnth = Integer(params[:end_month])
+      
+      @search_start_date = ::Date.new(start_yr, start_mnth, 1)
+      @search_end_date = ::Date.new(end_yr, end_mnth, Time.days_in_month(end_mnth))
     end
   end
 end
