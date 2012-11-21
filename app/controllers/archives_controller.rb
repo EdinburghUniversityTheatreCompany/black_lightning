@@ -4,7 +4,11 @@ class ArchivesController < ApplicationController
   before_filter :check_select_date, :except => [:set_date]
   
   def set_date
-    redirect_to archives_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year])
+    if params[:target]
+      redirect_to send('archives_' + params[:target] + '_index_path', params[:start_month], params[:start_year], params[:end_month], params[:end_year])
+    else
+      redirect_to archives_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year])
+    end
   end
   
   def index

@@ -46,7 +46,7 @@ ChaosRails::Application.routes.draw do
   end
   
   match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
-  match 'archives/set_date' => 'archives#set_date', :via => :post, :as => "archives_set_date"
+  match 'archives/(:target/)set_date' => 'archives#set_date', :via => :post
   namespace :archives do
     match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
   end
