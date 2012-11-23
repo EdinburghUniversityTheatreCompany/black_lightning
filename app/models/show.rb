@@ -11,7 +11,8 @@ class Show < ActiveRecord::Base
 
   accepts_nested_attributes_for :team_members
 
-  validates :name, :description, :tagline, :start_date, :end_date, :presence => true
+  #Do not validate start_date, end_date or tag_line, as these will cause the proposal to show conversion to fail.
+  validates :name, :description, :presence => true
   validates :slug, :presence => true, :uniqueness => true
 
   has_attached_file :image, :styles => { :medium => "x300>", :thumb => "x100>", :slideshow => "960x500#" }
