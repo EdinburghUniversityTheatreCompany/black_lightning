@@ -44,6 +44,12 @@ ChaosRails::Application.routes.draw do
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
   end
+  
+  match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
+  match 'archives(/:target)/set_date' => 'archives#set_date', :via => :post
+  namespace :archives do
+    match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
+  end
 
   get "/admin/help/markdown"
 
