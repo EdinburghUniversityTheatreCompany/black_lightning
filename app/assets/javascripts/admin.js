@@ -28,11 +28,14 @@
   
   $(function () {
     var existing_pos = JSON.parse(readCookie('dashboard_pos'));
-    $.each(existing_pos, function(i, item) {
-      var dashboard_item = $(".gridster ul").children().eq(i);
-      dashboard_item.attr('data-row', item.row);
-      dashboard_item.attr('data-col', item.col);
-    });
+    if (existing_pos) {
+      //Load from cookie
+      $.each(existing_pos, function(i, item) {
+        var dashboard_item = $(".gridster ul").children().eq(i);
+        dashboard_item.attr('data-row', item.row);
+        dashboard_item.attr('data-col', item.col);
+      });
+    }
     
     grid = $(".gridster ul").gridster({
       widget_margins: [20, 20],
