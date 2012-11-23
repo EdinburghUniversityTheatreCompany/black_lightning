@@ -16,7 +16,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
   end
 
   test "should get show" do
-    get :show, id: @user
+    get :show, id: @news
     assert_response :success
   end
 
@@ -37,7 +37,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
   end
 
   test "should get edit" do
-    get :edit, id: @user
+    get :edit, id: @news
     assert_response :success
   end
 
