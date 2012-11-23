@@ -1,11 +1,13 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
+  id:   1
   deadline: 2012-10-25 10:38:14
-  name: MyString
-  open: false
+  name: Test1
+  open: true
 
 two:
+  id:   2
   deadline: 2012-10-25 10:38:14
-  name: MyString
+  name: Test2
   open: false

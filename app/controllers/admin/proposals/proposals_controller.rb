@@ -136,18 +136,21 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1
   # PUT /admin/proposals/proposals/1.json
   def update
-    @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
-    @call = @admin_proposals_proposal.call
+    @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @call = @proposal.call
+    
+    #This is required so that the edit action can be rendered should the update fail.
+    @users = User.all
 
-    authorize!(:edit, @admin_proposals_proposal)
+    authorize!(:edit, @proposal)
 
     respond_to do |format|
-      if @admin_proposals_proposal.update_attributes(params[:admin_proposals_proposal])
-        format.html { redirect_to admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), notice: 'Proposal was successfully updated.' }
+      if @proposal.update_attributes(params[:admin_proposals_proposal])
+        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully updated.' }
         format.json { head :no_content }
       else
         format.html { render "edit" }
-        format.json { render json: @admin_proposals_proposal.errors, status: :unprocessable_entity }
+        format.json { render json: @proposal.errors, status: :unprocessable_entity }
       end
     end
   end
