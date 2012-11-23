@@ -6,10 +6,10 @@ class Admin::NewsControllerTest < ActionController::TestCase
     @user = User.find_by_email('admin@bedlamtheatre.co.uk')
     @user.add_role :admin
     sign_in @user
-    
+
     @user = users(:one)
   end
-  
+
   test "should get index" do
     get :index
     assert_response :success
@@ -24,11 +24,11 @@ class Admin::NewsControllerTest < ActionController::TestCase
     get :new
     assert_response :success
   end
-  
+
   test "should create news" do
     #Remove the existing entry:
     News.find(@news).destroy
-  
+
     assert_difference('News.count') do
       post :create, news: { title: @news.title, body: @news.body, slug: @news.slug, publish_date: @news.publish_date, show_public: @news.show_public }
     end

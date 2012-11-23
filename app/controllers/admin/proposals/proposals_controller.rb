@@ -138,7 +138,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def update
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
-    
+
     #This is required so that the edit action can be rendered should the update fail.
     @users = User.all
 

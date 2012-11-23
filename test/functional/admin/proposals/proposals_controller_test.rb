@@ -3,7 +3,7 @@ require 'test_helper'
 class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   setup do
     @admin_proposals_proposal = admin_proposals_proposals(:one)
-    
+
     @user = User.find_by_email('admin@bedlamtheatre.co.uk')
     @user.add_role :admin
     sign_in @user
@@ -26,7 +26,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
       team_member = TeamMember.new()
       team_member.user = team_user
       team_member.position = 'Director'
-        
+
       post :create, :call_id => 1, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title, :team_members_attributes => { '0' => { 'position' => 'Director', 'user_id' => 1} } }
     end
 
@@ -45,7 +45,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test "should update admin_proposals_proposal" do
     team_user = User.find_by_email('test@bedlamtheatre.co.uk')
-    
+
     put :update, :call_id => 1, id: @admin_proposals_proposal, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title, :team_members_attributes => { '0' => { 'position' => 'Director', 'user_id' => 1} } }
     assert_redirected_to admin_proposals_call_proposal_path(1, assigns(:proposal))
   end

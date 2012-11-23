@@ -21,7 +21,7 @@ class Show < ActiveRecord::Base
     if not self.start_date.presence then
       return
     end
-  
+
     date = I18n.l(self.start_date, :format => :short)
 
     if self.end_date then
