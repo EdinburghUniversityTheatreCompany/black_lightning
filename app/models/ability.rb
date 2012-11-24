@@ -14,6 +14,7 @@ class Ability
       #All users can manage themselves.
       can :manage, User, :id => user.id
       cannot :assign_roles, User
+      cannot :read, User
 
       ######################
       # MEMBER PERMISSIONS #
@@ -38,6 +39,7 @@ class Ability
         end
 
         cannot :read, Admin::EditableBlock
+        cannot :read, User
       end
 
       #########################
