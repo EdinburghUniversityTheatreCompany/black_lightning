@@ -53,7 +53,7 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if @admin_staffing.save
         flash[:success] = 'Staffing was successfully created.'
-        format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
+        format.html { redirect_to admin_staffing_path(@admin_staffing) }
         format.json { render json: @admin_staffing, status: :created, location: @admin_staffing }
       else
         format.html { render "new" }
@@ -110,7 +110,7 @@ class Admin::StaffingsController < AdminController
         end
 
         flash[:success] = 'Staffing was successfully updated.'
-        format.html { redirect_to edit_admin_staffing_path(@admin_staffing) }
+        format.html { redirect_to admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }
       else
         format.html { render "edit" }

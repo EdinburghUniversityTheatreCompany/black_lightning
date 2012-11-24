@@ -1,11 +1,13 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
+  call_id: 1
   show_title: MyString
   publicity_text: MyString
   proposal_text: MyString
 
 two:
+  call_id: 2
   show_title: MyString
   publicity_text: MyString
   proposal_text: MyString
