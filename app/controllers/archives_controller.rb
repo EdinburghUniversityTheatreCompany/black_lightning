@@ -18,7 +18,8 @@ class ArchivesController < ApplicationController
   def check_select_date
     unless request.env['PATH_INFO'] == archives_index_path
       unless params[:start_month] && params[:start_year] && params[:end_month] && params[:end_year]
-        redirect_to archives_index_path(01, 1.years.ago.year, 12, Date.today.year)
+        controller = params[:controller].gsub(/archives\//, '')
+        redirect_to send('archives_' + controller + '_index_path', 01, 1.years.ago.year, 12, Date.today.year)
         return
       end
       
