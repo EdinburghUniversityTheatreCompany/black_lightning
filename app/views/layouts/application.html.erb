@@ -42,6 +42,7 @@
 	</div>
 <%= render :partial => "shared/cookie_notice" %>
 
+<% if @hide_alert != true %>
 <% flash.each do |key, msg| %>
   <% case key                       %>
   <% when :alert                    %>
@@ -55,6 +56,7 @@
     <%= msg %>
     <button type="button" class="close" data-dismiss="alert">&times;</button>
   </p>
+<% end %>
 <% end %>
 
 <%= content_for?(:content) ? yield(:content) : yield %>

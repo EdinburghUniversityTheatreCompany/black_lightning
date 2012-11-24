@@ -1,4 +1,4 @@
-<% if not cookies['allow_cookies'] %>
+<% if (not cookies['allow_cookies']) && (@hide_cookie_notice != true) %>
   <div id="cookie_notice" class="alert">
     <p>
       We would like to use cookies to find out more about how you use the site and allow you to log in if required.
