@@ -29,7 +29,7 @@ class Ability
         ###
         cannot :read, Admin::Proposals::Proposal
         can :read, Admin::Proposals::Proposal do |proposal|
-          (proposal.users.include? user) || (proposal.approved)
+          (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
         end
 
         can :create, Admin::Proposals::Proposal

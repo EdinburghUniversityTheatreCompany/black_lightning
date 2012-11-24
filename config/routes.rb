@@ -32,6 +32,10 @@ ChaosRails::Application.routes.draw do
 
     namespace :proposals do
       resources :calls do
+        member do
+          put 'archive'
+        end
+        
         resources :proposals do
           member do
             put 'approve'
@@ -49,6 +53,7 @@ ChaosRails::Application.routes.draw do
   match 'archives(/:target)/set_date' => 'archives#set_date', :via => :post
   namespace :archives do
     match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
+    match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
   end
 
   get "/admin/help/markdown"
