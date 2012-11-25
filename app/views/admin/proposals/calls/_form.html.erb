@@ -1,3 +1,7 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/proposals/call_templates.js" %>
+<% end %>
+
 <%= simple_nested_form_for(@admin_proposals_call) do |f| %>
   <%= f.error_notification %>
 
@@ -20,6 +24,27 @@
 
   <div class="form-actions">
     <%= f.button :submit, :class => "btn-primary" %>
+    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
     <%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>
   </div>
 <% end %>
+
+<div class="modal hide" id="template_modal" tabindex="-1" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+    <h3 id="template_modal_header">Select Staffing from Template</h3>
+  </div>
+  <div class="modal-body">
+    <form id="template_selector">
+      <select id="template_list">
+        <option></option>
+      </select>
+      <div id="template_summary">
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+    <button id="template_load" class="btn btn-primary disabled">Load template</button>
+  </div>
+</div>

@@ -20,6 +20,8 @@ class User < ActiveRecord::Base
   end
 
   def unify_numbers
+    return if not self.phone_number
+
     self.phone_number = phone_number.gsub(/\s/, '')
 
     if self.phone_number[0] == '0' then

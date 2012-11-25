@@ -1,5 +1,7 @@
 ChaosRails::Application.routes.draw do
 
+  namespace :admin do  namespace :proposals do resources :call_question_templates end end
+
   devise_for :users
 
   resources :shows, :only => [:index, :show]

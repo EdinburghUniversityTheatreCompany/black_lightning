@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121125184944) do
+ActiveRecord::Schema.define(:version => 20121125190936) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -32,6 +32,12 @@ ActiveRecord::Schema.define(:version => 20121125184944) do
 
   add_index "admin_proposals_answers", ["proposal_id"], :name => "index_admin_proposals_answers_on_proposal_id"
   add_index "admin_proposals_answers", ["question_id"], :name => "index_admin_proposals_answers_on_question_id"
+
+  create_table "admin_proposals_call_question_templates", :force => true do |t|
+    t.string   "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
 
   create_table "admin_proposals_calls", :force => true do |t|
     t.datetime "deadline"
@@ -96,6 +102,11 @@ ActiveRecord::Schema.define(:version => 20121125184944) do
   end
 
   add_index "attachments", ["editable_block_id"], :name => "index_attachments_on_editable_block_id"
+
+  create_table "call_question_templates_questions", :id => false, :force => true do |t|
+    t.integer "call_question_template_id"
+    t.integer "question_id"
+  end
 
   create_table "calls_questions", :id => false, :force => true do |t|
     t.integer "call_id"
