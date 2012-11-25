@@ -50,6 +50,9 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    match '/reports/' => 'reports#index', :as => 'reports'
+    match '/reports/:action', :controller => 'reports'
+
     match 'jobs/:action' => 'job_control', :as => "jobs"
   end
 

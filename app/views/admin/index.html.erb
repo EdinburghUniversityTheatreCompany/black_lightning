@@ -113,5 +113,14 @@
   </li>
   <% end %>
 
+  <% if can? :read, :reports %>
+  <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
+    <h3><%= link_to 'Reports', admin_reports_path %></h3>
+    <% list_reports.each do |report| %>
+      <%= link_to report, '/admin/reports/' + report %>
+    <% end %>
+  </li>
+  <% end %>
+
 </ul>
 </div>
