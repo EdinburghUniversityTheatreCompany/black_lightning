@@ -2,31 +2,11 @@
 
 <h1>Editable Blocks</h1>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
-    <th></th>
-    <th></th>
-  </tr>
-
-<% @admin_editable_blocks.each do |admin_editable_block| %>
-  <tr>
-    <td><%= admin_editable_block.name %></td>
-
-    <td>
-    <% if can? :edit, admin_editable_block %>
-    <%= link_to 'Edit', edit_admin_editable_block_path(admin_editable_block) %>
-    <% end %>
-    </td>
-
-    <td>
-    <% if can? :delete, admin_editable_block %>
-    <%= link_to 'Destroy', admin_editable_block, method: :delete, data: { confirm: 'Are you sure?' } %>
-    <% end %>
-    </td>
-  </tr>
+<div class="accordion" id="ediable_block_accordion">
+<% @admin_editable_blocks.each do |group, editable_blocks| %>
+  <%= render 'editable_block', :group => group, :editable_blocks => editable_blocks %>
 <% end %>
-</table>
+</div>
 
 <br />
 

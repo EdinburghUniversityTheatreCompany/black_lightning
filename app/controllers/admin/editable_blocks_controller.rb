@@ -5,7 +5,7 @@ class Admin::EditableBlocksController < AdminController
   # GET /admin/editable_blocks
   # GET /admin/editable_blocks.json
   def index
-    @admin_editable_blocks = Admin::EditableBlock.all
+    @admin_editable_blocks = Admin::EditableBlock.all.group_by { |e| e.group }
 
     respond_to do |format|
       format.html # index.html.erb
