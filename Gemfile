@@ -34,6 +34,7 @@ gem 'paperclip'
 gem 'nested_form'
 
 gem 'delayed_job_active_record'
+gem 'axlsx'
 
 gem 'ci_reporter', :group => :test
 gem 'simplecov', :group => :test

@@ -35,7 +35,7 @@ ChaosRails::Application.routes.draw do
         member do
           put 'archive'
         end
-        
+
         resources :proposals do
           member do
             put 'approve'
@@ -45,6 +45,9 @@ ChaosRails::Application.routes.draw do
         end
       end
     end
+
+    match '/reports/' => 'reports#index', :as => 'reports'
+    match '/reports/:action', :controller => 'reports'
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
   end
