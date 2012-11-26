@@ -87,14 +87,8 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
     t.datetime "updated_at",      :null => false
     t.integer  "reminder_job_id"
   end
-  add_index "admin_staffings", ["reminder_job_id"], :name => "index_admin_staffings_on_reminder_job_id"
 
-  create_table "children_techies", :force => true do |t|
-    t.integer  "techie_id"
-    t.integer  "child_id"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
-  end
+  add_index "admin_staffings", ["reminder_job_id"], :name => "index_admin_staffings_on_reminder_job_id"
 
   create_table "attachments", :force => true do |t|
     t.integer  "editable_block_id"
@@ -196,12 +190,6 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
   add_index "team_members", ["teamwork_id"], :name => "index_team_members_on_teamwork_id"
   add_index "team_members", ["teamwork_type"], :name => "index_team_members_on_teamwork_type"
   add_index "team_members", ["user_id"], :name => "index_team_members_on_user_id"
-
-  create_table "techies", :force => true do |t|
-    t.string   "name"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
-  end
 
   create_table "techies", :force => true do |t|
     t.string   "name"
