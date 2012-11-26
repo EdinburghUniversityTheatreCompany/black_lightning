@@ -22,7 +22,7 @@ ChaosRails::Application.routes.draw do
     resources :editable_blocks, :except => [:show]
     resources :users
 
-    resources :techie_families
+    resources :techie_families, :only => [:index]
 
     resources :staffings do
       collection do

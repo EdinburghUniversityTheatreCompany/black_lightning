@@ -13,7 +13,7 @@
     <% if can? :archive, Admin::Proposals::Call %>
     <th></th>
     <% end %>
-    
+
     <% if can? :delete, Admin::Proposals::Call %>
     <th></th>
     <% end %>
@@ -28,11 +28,11 @@
     <% if can? :edit, admin_proposals_call %>
     <td><%= link_to 'Edit', edit_admin_proposals_call_path(admin_proposals_call) %></td>
     <% end %>
-    
+
     <% if can? :archive, admin_proposals_call %>
     <td><%= link_to 'Archive', archive_admin_proposals_call_path(admin_proposals_call), method: :put %></td>
     <% end %>
-    
+
     <% if can? :delete, admin_proposals_call %>
     <td><%= link_to 'Destroy', admin_proposals_call, method: :delete, data: { confirm: 'Are you sure?' } %></td>
     <% end %>

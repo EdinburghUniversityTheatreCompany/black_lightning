@@ -16,12 +16,12 @@ class Admin::Proposals::Call < ActiveRecord::Base
       proposal.answers.where(:question_id => question.id).destroy_all
     end
   end
-  
+
   def archive
     self.open = false
-    
+
     self.archived = true
-    
+
     self.save
   end
 end

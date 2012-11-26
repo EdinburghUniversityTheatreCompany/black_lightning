@@ -119,6 +119,7 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
+  add_index "children_techies", ["techie_id"], :name => "index_children_techies"
 
   create_table "delayed_jobs", :force => true do |t|
     t.integer  "priority",   :default => 0
