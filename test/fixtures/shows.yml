@@ -4,15 +4,18 @@ one:
   name: "Accidental Death of an Anarchist"
   slug: "accidental-death-of-an-anarchist"
   tagline: "A play by Dario Fo"
+  description: "Test"
   
 two:
   name: "City of Cake"
   slug: "city-of-cake"
   tagline: "Cake! CAKE! THIS SHOW HAS CAKE!"
+  description: "Test"
   xts_id: 419
   
 three:
   name: "Spring Awakening"
   slug: 'spring-awakening'
   tagline: "Performances as Teviot Debating Hall"
+  description: "Test"
   xts_id: 423

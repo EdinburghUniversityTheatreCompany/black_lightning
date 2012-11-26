@@ -1,3 +1,6 @@
+<% @hide_alert = true %>
+<% @hide_cookie_notice = true %>
+
 <% content_for :head do %>
   <%= stylesheet_link_tag "admin", :media => "all" %>
   <%= stylesheet_link_tag "login", :media => "all" %>
@@ -7,9 +10,9 @@
   <div id="login_form" class="row">
     <div class="span4 offset4">
       <h2>Sign in</h2>
-      
+
       <hr />
-      
+
       <% flash.each do |key, msg| %>
       <% case key                       %>
       <% when :alert                    %>

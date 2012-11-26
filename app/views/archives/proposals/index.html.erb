@@ -1,0 +1,45 @@
+<div class="row">
+  <h1>Proposals</h1>
+  <hr />
+
+  <div class="accordion" id="calls_accordion">
+  <% @proposals.each do |call, proposals| %>
+    <% div_name = "call_" + call.id.to_s + "_proposals" %>
+    <div class="accordion-group">
+      <div class="accordion-heading">
+        <div class="accordion-toggle">
+            <a href="#<%= div_name %>" data-toggle="collapse" style="display: inline-block;">
+              <%= call.name %>
+            </a>
+            <span class="pull-right">Deadline: <%= l call.deadline, :format => :short %></span>
+        </div>
+      </div>
+      <div id="<%= div_name %>" class="accordion-body collapse">
+        <% proposals.each do |proposal| %>
+          <div style="margin: 3px 15px;">
+            <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(call, proposal), :title => "View Proposal" %>
+            
+            <% case proposal.successful %>
+            <% when true%>
+              <span style="margin-left: 5px;" class="label label-success pull-right">Successful</span>
+            <% when false %>
+              <span style="margin-left: 5px;" class="label label-important pull-right">Unsuccessful</span>
+            <% end %>
+
+            <% case proposal.approved %>
+            <% when true %>
+              <span class="label label-success pull-right">Approved</span>
+            <% when false %>
+              <span class="label label-important pull-right">Rejected</span>
+            <% else %>
+              <span class="label label-info pull-right">Waiting for approval</span>
+            <% end %>
+
+            <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
+        </div>
+      </div>
+    </div>
+  <% end %>
+<% end %>
+
+</div>

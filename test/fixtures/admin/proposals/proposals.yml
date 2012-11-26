@@ -1,37 +1,15 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
-  show_title: MyString
-  cast_male: 1
-  cast_female: 1
-  running_time: 2012-10-25 10:44:04
+  id: 1
+  call_id: 1
+  show_title: Test Proposal
   publicity_text: MyString
   proposal_text: MyString
-  budget_royalties: 9.99
-  budget_publiciy: 9.99
-  budget_tech: 9.99
-  budget_set: 9.99
-  budget_costume: 9.99
-  budget_props: 9.99
-  budget_admin: 9.99
-  budget_contingency: 9.99
-  budget_eutc: 9.99
-  budget_other_sources: 9.99
+  approved: true
 
 two:
+  call_id: 2
   show_title: MyString
-  cast_male: 1
-  cast_female: 1
-  running_time: 2012-10-25 10:44:04
   publicity_text: MyString
   proposal_text: MyString
-  budget_royalties: 9.99
-  budget_publiciy: 9.99
-  budget_tech: 9.99
-  budget_set: 9.99
-  budget_costume: 9.99
-  budget_props: 9.99
-  budget_admin: 9.99
-  budget_contingency: 9.99
-  budget_eutc: 9.99
-  budget_other_sources: 9.99

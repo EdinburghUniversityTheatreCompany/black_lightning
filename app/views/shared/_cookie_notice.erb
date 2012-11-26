@@ -1,10 +1,10 @@
-<% if not cookies['allow_cookies'] %>
+<% if (not cookies['allow_cookies']) && (@hide_cookie_notice != true) %>
   <div id="cookie_notice" class="alert">
     <p>
       We would like to use cookies to find out more about how you use the site and allow you to log in if required.
       <a id="accept_cookies_btn" class="btn btn-mini pull-right">Accept Cookies</a>
-    <p>
-    
+    </p>
+
     <script type="text/javascript">
       $(function () {
         $('#accept_cookies_btn').click(function () {

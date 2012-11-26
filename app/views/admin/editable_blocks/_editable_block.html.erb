@@ -1,0 +1,36 @@
+<% group = group.presence ? group : 'Miscellaneous' %>
+<% div_name = "editable_blocks_" + group.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
+  <div class="accordion-group">
+    <div class="accordion-heading">
+      <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
+        <%= group %>
+      </a>
+    </div>
+    <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
+      <table class="table">
+        <tr>
+          <th>Name</th>
+          <th></th>
+          <th></th>
+        </tr>
+
+      <% editable_blocks.each do |editable_block| %>
+        <tr>
+          <td><%= editable_block.name %></td>
+
+          <td>
+          <% if can? :edit, editable_block %>
+          <%= link_to 'Edit', edit_admin_editable_block_path(editable_block) %>
+          <% end %>
+          </td>
+
+          <td>
+          <% if can? :delete, editable_block %>
+          <%= link_to 'Destroy', editable_block, method: :delete, data: { confirm: 'Are you sure?' } %>
+          <% end %>
+          </td>
+        </tr>
+      <% end %>
+      </table>
+    </div>
+  </div>

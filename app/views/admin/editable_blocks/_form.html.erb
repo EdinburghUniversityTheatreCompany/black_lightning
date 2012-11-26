@@ -1,32 +1,34 @@
 <%= simple_nested_form_for @admin_editable_block, :html => {:multipart => true} do |f| %>
   <%= f.error_notification %>
 
-  
+
   <div class="form-inputs">
 
     <% if not @admin_editable_block.persisted? then %>
     <%= f.input :name %>
     <% end %>
 
+    <%= f.input :group %>
+
     <%= render "admin/shared/md_editor", { :f => f, :field => :content }  %>
-    
+
     <br />
-    
+
     <div class="well form-horizontal">
       <%= f.simple_fields_for :attachments %>
-    
+
       <%= f.link_to_add "Add Attachment", :attachments, :class => "btn" %>
-      
+
       <br />
-      
+
       <small>
         You will need to link to these resources in the page above. <br />
         Use <code>[the link text](/attachments/myattachmentname)</code>
       </small>
     </div>
-    
+
   </div>
-  
+
   <div class="form-actions">
     <%= f.button :submit, :class => 'btn-primary' %>
     <%= link_to 'Cancel', admin_editable_blocks_path, :class => "btn" %>

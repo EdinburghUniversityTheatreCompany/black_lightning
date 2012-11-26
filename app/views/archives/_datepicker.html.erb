@@ -1,0 +1,35 @@
+<form class="form-inline" method="post" action="<%= '/' + params[:controller] + '/set_date' %>">
+  <select name="start_month" class="span2">
+    <option value="01" <%= 'selected' if params[:start_month] == '01' %> >January</option>
+    <option value="02" <%= 'selected' if params[:start_month] == '02' %> >February</option>
+    <option value="03" <%= 'selected' if params[:start_month] == '03' %> >March</option>
+    <option value="04" <%= 'selected' if params[:start_month] == '04' %> >April</option>
+    <option value="05" <%= 'selected' if params[:start_month] == '05' %> >May</option>
+    <option value="06" <%= 'selected' if params[:start_month] == '06' %> >June</option>
+    <option value="07" <%= 'selected' if params[:start_month] == '07' %> >July</option>
+    <option value="08" <%= 'selected' if params[:start_month] == '08' %> >August</option>
+    <option value="09" <%= 'selected' if params[:start_month] == '09' %> >September</option>
+    <option value="10" <%= 'selected' if params[:start_month] == '10' %> >October</option>
+    <option value="11" <%= 'selected' if params[:start_month] == '11' %> >November</option>
+    <option value="12" <%= 'selected' if params[:start_month] == '12' %> >December</option>
+  </select>
+  <input type="text" name="start_year" placeholder="Year" class="span2" value="<%= params[:start_year] %>">
+  -
+  <select name="end_month" class="span2">
+    <option value="01" <%= 'selected' if params[:end_month] == '01' %> >January</option>
+    <option value="02" <%= 'selected' if params[:end_month] == '02' %> >February</option>
+    <option value="03" <%= 'selected' if params[:end_month] == '03' %> >March</option>
+    <option value="04" <%= 'selected' if params[:end_month] == '04' %> >April</option>
+    <option value="05" <%= 'selected' if params[:end_month] == '05' %> >May</option>
+    <option value="06" <%= 'selected' if params[:end_month] == '06' %> >June</option>
+    <option value="07" <%= 'selected' if params[:end_month] == '07' %> >July</option>
+    <option value="08" <%= 'selected' if params[:end_month] == '08' %> >August</option>
+    <option value="09" <%= 'selected' if params[:end_month] == '09' %> >September</option>
+    <option value="10" <%= 'selected' if params[:end_month] == '10' %> >October</option>
+    <option value="11" <%= 'selected' if params[:end_month] == '11' %> >November</option>
+    <option value="12" <%= 'selected' if params[:end_month] == '12' %> >December</option>
+  </select>
+  <input type="text" name="end_year" placeholder="Year" class="span2" value="<%= params[:end_year] %>">
+
+  <input type="submit" class="btn" value="Set" >
+</form>

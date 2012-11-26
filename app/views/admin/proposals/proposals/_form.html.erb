@@ -2,17 +2,17 @@
 
 <%= simple_nested_form_for([@call, @proposal], :url => url) do |f| %>
   <%= f.error_notification %>
-  
+
   <div class="form-inputs">
-  
+
     <p>
       <b>Proposal for: <%= @call.name %></b>
     </p>
-    
+
     <% if can? :change_late, @proposal and Time.now > @call.deadline %>
       <%= f.input :late, :as => :select, :blank => true %>
     <% end %>
-    
+
     <% if can? :approve, @proposal and @proposal.approved %>
       <%= f.input :successful, :as => :select, :blank => true %>
     <% end %>
@@ -22,25 +22,28 @@
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :publicity_text } %>
 
     <br />
-    
+
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :proposal_text } %>
 
-    <div class="form-horizontal"
+    <div class="form-horizontal">
+
       <h3>Team</h3>
-    
+
+      <% if f.object.errors[:team_members].present? then %>
       <p id="team_errors" class="alert alert-error">
           <%= f.error :team_members %>
       </p>
-    
+      <% end %>
+
       <%= f.simple_fields_for :team_members %>
 
       <%= f.link_to_add "Add Team Member", :team_members, :class => "btn" %>
-      
+
     </div>
-    
+
     <div class="form-horizontal">
       <h3>Questions</h3>
-    
+
       <%= f.simple_fields_for :answers %>
     </div>
 
@@ -48,7 +51,7 @@
 
   <div class="form-actions">
     <%= f.button :submit, :class => "btn-primary" %>
-    
+
     <%= link_to 'Back', admin_proposals_call_proposals_path(@call), :class => "btn" %>
   </div>
 <% end %>

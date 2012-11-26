@@ -1,7 +1,7 @@
 <div id="canvas" style="width: 940px; height: 2000px;"></div>
 <script>
 var g = new Graph();
- 
+
 var render = function(r, n) {
         /* the Raphael set is obligatory, containing all you want to display */
         var set = r.set().push(
@@ -10,22 +10,22 @@ var render = function(r, n) {
             r.text(n.point[0], n.point[1] + 10, (n.label || n.id)));
         return set;
     };
-	
+
 /* add a simple node */
 <% @techies.each do |tech| %>
 g.addNode("<%= tech.name %>", {render:render});
 <% end %>
- 
+
 <% @techies.each do |tech| %>
 	<% tech.children.each do |child| %>
 	g.addEdge("<%= tech.name %>", "<%= child.name %>", {directed: true});
 	<% end %>
 <% end %>
- 
+
 /* layout the graph using the Spring layout implementation */
 var layouter = new Graph.Layout.Spring(g);
 layouter.layout();
- 
+
 /* draw the graph using the RaphaelJS draw implementation */
 var renderer = new Graph.Renderer.Raphael('canvas', g, 940, 1500);
 renderer.draw();

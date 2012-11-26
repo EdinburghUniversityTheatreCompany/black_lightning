@@ -13,11 +13,11 @@
 <table class="table">
   <tr>
     <th>Show title</th>
-    
+
     <% if can? :edit, Admin::Proposals::Proposal %>
     <th></th>
     <% end %>
-    
+
     <% if can? :destroy, Admin::Proposals::Proposal %>
     <th></th>
     <% end %>
@@ -33,7 +33,7 @@
       <% when false %>
         <span style="margin-left: 5px;" class="label label-important pull-right">Unsuccessful</span>
       <% end %>
-        
+
       <% case proposal.approved %>
       <% when true %>
         <span class="label label-success pull-right">Approved</span>
@@ -42,14 +42,14 @@
       <% else %>
         <span class="label label-info pull-right">Waiting for approval</span>
       <% end %>
-      
+
       <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
     </td>
-    
+
     <% if can? :edit, proposal %>
     <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>
     <% end %>
-    
+
     <% if can? :destroy, proposal %>
     <td><%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %></td>
     <% end %>

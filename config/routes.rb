@@ -1,49 +1,65 @@
 ChaosRails::Application.routes.draw do
 
+  namespace :admin do  namespace :proposals do resources :call_question_templates end end
+
   devise_for :users
 
   resources :shows, :only => [:index, :show]
   resources :news, :only => [:index, :show]
   resources :attachments, :only => [:show]
-  
+
   match 'access_denied' => 'static#access_denied'
-  
+
   match 'about/' => 'static#about'
-  
+
   match 'admin/' => 'admin#index'
   namespace :admin do
     #The resources pages:
     match 'resources/branding' => 'resources#branding'
-    
+
     resources :shows
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
-    
+
     resources :techie_families
-    
+
     resources :staffings do
       collection do
         get 'new_for_show'
         put 'create_for_show'
       end
     end
-    
+
     match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
     match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
-    
+
     namespace :proposals do
       resources :calls do
+        member do
+          put 'archive'
+        end
+
         resources :proposals do
           member do
             put 'approve'
             put 'reject'
+            put 'convert'
           end
         end
       end
     end
+
+    match 'jobs/:action' => 'job_control', :as => "jobs"
   end
-  
+
+  match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
+  match 'archives(/:target)/set_date' => 'archives#set_date', :via => :post
+  namespace :archives do
+    match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
+    match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
+  end
+
   get "/admin/help/markdown"
 
   # The priority is based upon order of creation:

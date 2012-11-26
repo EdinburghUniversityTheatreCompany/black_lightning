@@ -1,7 +1,10 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
-  question_text: MyString
-
+  question_text: What is your name?
+  
 two:
-  question_text: MyString
+  question_text: What is your quest?
+
+three:
+  question_text: What is the air-speed velocity of an unladen swallow?

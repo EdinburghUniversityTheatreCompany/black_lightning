@@ -5,7 +5,7 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls
   # GET /admin/proposals/calls.json
   def index
-    @admin_proposals_calls = Admin::Proposals::Call.all
+    @admin_proposals_calls = Admin::Proposals::Call.where( :archived => [nil,false] )
 
     respond_to do |format|
       format.html # index.html.erb
@@ -50,7 +50,7 @@ class Admin::Proposals::CallsController < AdminController
         format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully created.' }
         format.json { render json: @admin_proposals_call, status: :created, location: @admin_proposals_call }
       else
-        format.html { render action: "new" }
+        format.html { render "new" }
         format.json { render json: @admin_proposals_call.errors, status: :unprocessable_entity }
       end
     end
@@ -66,7 +66,7 @@ class Admin::Proposals::CallsController < AdminController
         format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render action: "edit" }
+        format.html { render "edit" }
         format.json { render json: @admin_proposals_call.errors, status: :unprocessable_entity }
       end
     end
@@ -78,6 +78,16 @@ class Admin::Proposals::CallsController < AdminController
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
     @admin_proposals_call.destroy
 
+    respond_to do |format|
+      format.html { redirect_to admin_proposals_calls_url }
+      format.json { head :no_content }
+    end
+  end
+  
+  def archive
+    @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
+    @admin_proposals_call.archive
+  
     respond_to do |format|
       format.html { redirect_to admin_proposals_calls_url }
       format.json { head :no_content }

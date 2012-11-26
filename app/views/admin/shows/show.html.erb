@@ -27,6 +27,19 @@
             <th>Image</th>
             <td><%= image_tag @show.image.url(:medium) %></td>
         </tr>
+        <tr>
+            <th>Team</th>
+            <td>
+                <% @show.team_members.each do |team_member| %>
+                  <p>
+                  <b><%= team_member.position %></b>
+
+                  <% u = team_member.user %>
+                  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+                  </p>
+                <% end %>
+            </td>
+        </tr>
 	</tbody>
 </table>
 <%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn'%>

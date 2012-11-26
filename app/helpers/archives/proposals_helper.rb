@@ -1,0 +1,2 @@
+module Archives::ProposalsHelper
+end

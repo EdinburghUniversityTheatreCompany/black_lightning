@@ -1,7 +1,7 @@
 <div class="row">
   <h1>Bedlam Shows</h1>
   <hr />
-  
+
   <% @shows.each do |show| %>
   <div class="row">
     <article>
@@ -12,14 +12,18 @@
         <header>
           <h2><%= link_to show.name, show %></h2>
         </header>
-        <p><%= show.tagline %></p>
-        <p><%= link_to 'View Full Article', show %></p>
+        <p>
+            <%= show.tagline %>
+            <br />
+            <span class="show-date"><%= show.date_range %></span>
+        </p>
+        <p><%= link_to 'View Details', show %></p>
       </div>
     </article>
   </div>
   <hr />
   <% end %>
-  
+
   <%= will_paginate(@shows) %>
-  
+
 </div>

@@ -1,0 +1,8 @@
+
+
+<div>
+  <%= link_to edit_admin_editable_block_path(@editable_block), :class => "btn pull-right" do %>
+    <i class="icon-pencil"></i> Edit
+  <% end %>
+  <%= render_markdown(@editable_block.content) %>
+</div>

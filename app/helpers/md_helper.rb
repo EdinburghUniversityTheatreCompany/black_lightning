@@ -4,7 +4,7 @@ module MdHelper
         if md == nil then
           return ""
         end
-    
+
         require 'redcarpet'
         renderer = Redcarpet::Render::HTML.new
         redcarpet = Redcarpet::Markdown.new(renderer, {})

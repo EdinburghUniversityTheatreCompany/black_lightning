@@ -1,7 +1,7 @@
 ﻿<div class="row">
   <h1>Bedlam News</h1>
   <hr />
-  
+
   <% @news.each do |news| %>
   <div class="row">
     <article>
@@ -20,7 +20,7 @@
   </div>
   <hr />
   <% end %>
-  
+
   <%= will_paginate(@news) %>
-  
+
 </div>

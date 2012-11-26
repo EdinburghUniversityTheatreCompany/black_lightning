@@ -3,6 +3,10 @@ require 'test_helper'
 class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   setup do
     @admin_proposals_call = admin_proposals_calls(:one)
+    
+    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
+    @user.add_role :admin
+    sign_in @user
   end
 
   test "should get index" do

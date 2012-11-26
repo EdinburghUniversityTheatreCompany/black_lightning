@@ -11,11 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-<<<<<<< HEAD
-ActiveRecord::Schema.define(:version => 20121030012134) do
-=======
-ActiveRecord::Schema.define(:version => 20121106183335) do
->>>>>>> master
+ActiveRecord::Schema.define(:version => 20121125190936) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -23,6 +19,7 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
     t.boolean  "admin_page"
+    t.string   "group"
   end
 
   create_table "admin_proposals_answers", :force => true do |t|
@@ -33,12 +30,22 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "updated_at",  :null => false
   end
 
+  add_index "admin_proposals_answers", ["proposal_id"], :name => "index_admin_proposals_answers_on_proposal_id"
+  add_index "admin_proposals_answers", ["question_id"], :name => "index_admin_proposals_answers_on_question_id"
+
+  create_table "admin_proposals_call_question_templates", :force => true do |t|
+    t.string   "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
   create_table "admin_proposals_calls", :force => true do |t|
     t.datetime "deadline"
     t.string   "name"
     t.boolean  "open"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
+    t.boolean  "archived"
   end
 
   create_table "admin_proposals_proposals", :force => true do |t|
@@ -53,19 +60,13 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.boolean  "successful"
   end
 
+  add_index "admin_proposals_proposals", ["call_id"], :name => "index_admin_proposals_proposals_on_call_id"
+
   create_table "admin_proposals_questions", :force => true do |t|
     t.text     "question_text"
     t.string   "response_type"
     t.datetime "created_at",    :null => false
     t.datetime "updated_at",    :null => false
-  end
-
-  create_table "admin_proposals_team_members", :force => true do |t|
-    t.string   "position"
-    t.integer  "user_id"
-    t.integer  "proposal_id"
-    t.datetime "created_at",  :null => false
-    t.datetime "updated_at",  :null => false
   end
 
   create_table "admin_staffing_jobs", :force => true do |t|
@@ -76,12 +77,17 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "updated_at",  :null => false
   end
 
+  add_index "admin_staffing_jobs", ["staffing_id"], :name => "index_admin_staffing_jobs_on_staffing_id"
+  add_index "admin_staffing_jobs", ["user_id"], :name => "index_admin_staffing_jobs_on_user_id"
+
   create_table "admin_staffings", :force => true do |t|
     t.datetime "date"
     t.string   "show_title"
-    t.datetime "created_at", :null => false
-    t.datetime "updated_at", :null => false
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+    t.integer  "reminder_job_id"
   end
+  add_index "admin_staffings", ["reminder_job_id"], :name => "index_admin_staffings_on_reminder_job_id"
 
   create_table "children_techies", :force => true do |t|
     t.integer  "techie_id"
@@ -89,7 +95,7 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
-    
+
   create_table "attachments", :force => true do |t|
     t.integer  "editable_block_id"
     t.string   "name"
@@ -99,6 +105,13 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.datetime "file_updated_at"
     t.datetime "created_at",        :null => false
     t.datetime "updated_at",        :null => false
+  end
+
+  add_index "attachments", ["editable_block_id"], :name => "index_attachments_on_editable_block_id"
+
+  create_table "call_question_templates_questions", :id => false, :force => true do |t|
+    t.integer "call_question_template_id"
+    t.integer "question_id"
   end
 
   create_table "calls_questions", :id => false, :force => true do |t|
@@ -170,6 +183,19 @@ ActiveRecord::Schema.define(:version => 20121106183335) do
     t.date     "start_date"
     t.date     "end_date"
   end
+
+  create_table "team_members", :force => true do |t|
+    t.string   "position"
+    t.integer  "user_id"
+    t.integer  "teamwork_id"
+    t.datetime "created_at",    :null => false
+    t.datetime "updated_at",    :null => false
+    t.string   "teamwork_type"
+  end
+
+  add_index "team_members", ["teamwork_id"], :name => "index_team_members_on_teamwork_id"
+  add_index "team_members", ["teamwork_type"], :name => "index_team_members_on_teamwork_type"
+  add_index "team_members", ["user_id"], :name => "index_team_members_on_user_id"
 
   create_table "techies", :force => true do |t|
     t.string   "name"

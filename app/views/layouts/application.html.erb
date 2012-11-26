@@ -5,14 +5,14 @@
   <%= stylesheet_link_tag    "application", :media => "all" %>
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
-  
+
   <%= yield :head %>
 </head>
 <body>
   <div class="container">
   	<!-- START HEADER SECTION -->
 	<div class="row header">
-			
+
 		<div class="row">
 			<div class="span4">
 				<%= link_to image_tag('BedlamLogoBW.png', :id => "logo", :style => "border: 2px solid black;"), root_path%>
@@ -22,6 +22,7 @@
 					<div class="row pull-right">
 						<a href="#" class="btn">Press</a>
 						<a href="#" class="btn">Sponsors</a>
+                        <%= link_to "Archives", archives_index_path, :class => "btn" %>
 						<%= link_to "Members", admin_path, :class => "btn" %>
 						<a href="#" class="btn">Newsletter</a>
 					</div>
@@ -41,7 +42,24 @@
 	</div>
 <%= render :partial => "shared/cookie_notice" %>
 
-<%= yield %>
+<% if @hide_alert != true %>
+<% flash.each do |key, msg| %>
+  <% case key                       %>
+  <% when :alert                    %>
+  <%   alertclass = "alert-error"   %>
+  <% when :success                  %>
+  <%   alertclass = "alert-success" %>
+  <% when :notice                   %>
+  <%   alertclass = "alert-info"    %>
+  <% end %>
+  <p id="<%= key %>" class="alert <%= alertclass %>">
+    <%= msg %>
+    <button type="button" class="close" data-dismiss="alert">&times;</button>
+  </p>
+<% end %>
+<% end %>
+
+<%= content_for?(:content) ? yield(:content) : yield %>
 
 <%= render :partial => "shared/google_analytics" %>
 </div>
