@@ -1,22 +1,49 @@
+/* From bootstrap-century */
+body,
+input,
+button,
+select,
+textarea {
+    font-family: Century Gothic;
+}
+
+a {
+  color: #dc143c;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #dc143c;
+  text-decoration: underline;
+}
+
+h1,h2,h3,h4,h5,h6 {
+  line-height: 1;
+  line-height: 20px;
+  color: #dc143c;
+}
+
+/* Custom Changes */
+
 #logo {
 	height: 130px;
 }
-	
+
 .header {
 	padding-top: 30px;
 	margin-bottom: 20px;
 }
-	
+
 body {
 	background-image: url('cream_dust.png');
 	background-repeat: repeat;
 }
-	
+
 #side {
 	border-left: 1px solid #D1D1D1;
 	padding: 10px 0 20px 10px;
 }
-	
+
 .content {
 	margin-top: 20px;
 }
@@ -27,10 +54,10 @@ body {
 	margin-top: 60px;
 	margin-left: 20px;
 	padding: 0;
-	list-style: none; 
+	list-style: none;
 }
 #nav li {
-	float: left; 
+	float: left;
 	display: block;
 	padding: 8px 25px;
 }
