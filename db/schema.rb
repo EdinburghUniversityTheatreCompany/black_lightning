@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121125190936) do
+ActiveRecord::Schema.define(:version => 20121127144207) do
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -119,7 +119,6 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
-  add_index "children_techies", ["techie_id"], :name => "index_children_techies"
 
   create_table "delayed_jobs", :force => true do |t|
     t.integer  "priority",   :default => 0
@@ -149,6 +148,18 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
     t.string   "image_content_type"
     t.integer  "image_file_size"
     t.datetime "image_updated_at"
+  end
+
+  create_table "pictures", :force => true do |t|
+    t.text     "description"
+    t.integer  "gallery_id"
+    t.string   "gallery_type"
+    t.string   "image_file_name"
+    t.string   "image_content_type"
+    t.integer  "image_file_size"
+    t.datetime "image_updated_at"
+    t.datetime "created_at",         :null => false
+    t.datetime "updated_at",         :null => false
   end
 
   create_table "roles", :force => true do |t|
