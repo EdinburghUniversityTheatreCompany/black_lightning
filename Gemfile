@@ -34,6 +34,7 @@ gem 'redcarpet'
 gem 'paperclip'
 gem 'nested_form'
 gem 'twitter'
+gem 'twilio-ruby'
 
 gem 'delayed_job_active_record'
 
