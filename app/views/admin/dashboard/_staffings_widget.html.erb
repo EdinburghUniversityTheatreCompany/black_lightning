@@ -10,3 +10,7 @@
     <% end %>
   </p>
 <% end %>
+
+<% if ::Admin::Staffing.future.count == 0 then %>
+  <p>There are no upcoming staffing slots.</p>
+<% end %>
