@@ -71,6 +71,12 @@ body {
 	color: #dc143c;
 }
 
+/* font-awesome alignment */
+.alert [class^="icon-"] {
+  line-height: 17px;
+  margin-right: 2px;
+}
+
 .xtsprodates{margin-top:20px;}.xtsprodates a{text-decoration:none;}
 .xtsprodates a:hover{text-decoration:underline;}
 .xtsprodates .director{width:160px;height:90px;background-color:#de6b4f;float:right;position:relative;}.xtsprodates .director .arrow{position:absolute;width:160px;height:31px;bottom:0px;background-color:white;background-image:url(../img/orange-down-arrow.png);}

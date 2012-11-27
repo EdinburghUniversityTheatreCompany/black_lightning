@@ -22,6 +22,7 @@ end
 
 gem 'jquery-rails'
 gem 'bootstrap-sass'
+gem 'font-awesome-rails'
 
 gem 'simple_form'
 gem 'devise'
