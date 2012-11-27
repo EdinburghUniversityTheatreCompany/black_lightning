@@ -41,6 +41,10 @@ body {
 	background-repeat: repeat;
 }
 
+h3 {
+    font-size: 20px;
+}
+
 #side {
 	border-left: 1px solid #D1D1D1;
 	padding: 10px 0 20px 10px;
