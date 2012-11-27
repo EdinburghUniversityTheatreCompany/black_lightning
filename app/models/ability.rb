@@ -41,6 +41,7 @@ class Ability
         cannot :read, Admin::EditableBlock
         cannot :read, User
         cannot :read, :jobs
+        cannot :read, Admin::Proposals::CallQuestionTemplate
       end
 
       #########################

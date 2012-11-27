@@ -1,4 +1,7 @@
 class Admin::Proposals::CallQuestionTemplatesController < AdminController
+
+  load_and_authorize_resource :class => Admin::Proposals::CallQuestionTemplate
+
   # GET /admin/proposals/call_question_templates
   # GET /admin/proposals/call_question_templates.json
   def index
