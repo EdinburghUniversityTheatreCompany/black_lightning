@@ -1,7 +1,11 @@
-<div class="picture control-group fields">
-    <%= f.input :description, :input_html => { :rows => 3 } %>
+<div class="picture control-group fields span4">
+    <%= image_tag f.object.image.url(:thumb), :class => "thumbnail" %>
+
+    <br />
 
     <%= f.input :image %>
+
+    <%= f.input :description, :input_html => { :rows => 3 } %>
 
     <%= f.link_to_remove "Remove", :class => "btn btn-danger" %>
 </div>

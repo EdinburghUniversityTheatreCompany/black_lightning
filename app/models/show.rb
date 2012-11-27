@@ -12,7 +12,7 @@ class Show < ActiveRecord::Base
   has_many :pictures, :as => :gallery
 
   accepts_nested_attributes_for :team_members
-  accepts_nested_attributes_for :pictures
+  accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
 
   #Do not validate start_date, end_date or tag_line, as these will cause the proposal to show conversion to fail.
   validates :name, :description, :presence => true

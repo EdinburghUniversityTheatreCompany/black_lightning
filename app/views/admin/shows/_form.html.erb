@@ -37,7 +37,7 @@
 
     </div>
 
-    <div>
+    <div class="gallery-form">
 
       <h3>Gallery</h3>
 
@@ -48,6 +48,8 @@
       <% end %>
 
       <%= f.simple_fields_for :pictures %>
+
+      <br />
 
       <%= f.link_to_add "Add Photo", :pictures, :class => "btn" %>
 
