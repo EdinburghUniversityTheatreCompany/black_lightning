@@ -7,6 +7,7 @@
 <h1>Bedlam Dashboard</h1>
 
 <div class="dashboard">
+
   <% if can? :manage, :jobs %>
     <% if delayed_jobs(:failed).count > 0 then %>
       <div class="alert alert-error">
@@ -21,95 +22,40 @@
 <div class="gridster">
 <ul>
   <li data-row="1" data-col="1" data-sizex="1" data-sizey="2">
-    <h3><%= link_to 'News', admin_news_index_path %></h3>
-
-    <% ::News.all.first(4).each do |news| %>
-      <hr />
-      <p><%= link_to news.title, admin_news_path(news) %></p>
-      <p><%= render_markdown (truncate(news.body, length: 80)) %></p>
-    <% end %>
-
-    <hr />
-
-    <% if can? :create, News %>
-      <%= link_to 'Add News', new_admin_news_path, :class => "btn btn-small" %>
-    <% end %>
+    <%= dashboard_widget('news') %>
   </li>
 
   <li data-row="1" data-col="2" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Shows', admin_shows_path %></h3>
-    <% ::Show.future.first(5).each do |show| %>
-      <p><%= link_to show.name, admin_show_path(show) %></p>
-    <% end %>
+    <%= dashboard_widget('shows') %>
   </li>
 
   <li data-row="1" data-col="3" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
-    <% ::Admin::Proposals::Call.open.each do |show| %>
-      <p><%= link_to show.name, admin_show_path(show) %></p>
-    <% end %>
-
-    <% if ::Admin::Proposals::Call.open.empty? %>
-      <p>There are no open proposal calls.</p>
-    <% end %>
+    <%= dashboard_widget('proposals') %>
   </li>
 
   <li data-row="2" data-col="2" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
-
-    <% ::Admin::Staffing.future.limit(8).each do |staffing| %>
-      <p>
-        <%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
-
-        <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
-        <% if remaining_positions > 0 %>
-        <span class="badge badge-important pull-right" title="Remaining positions"><%= remaining_positions %></span>
-        <% end %>
-      </p>
-    <% end %>
+    <%= dashboard_widget('staffings') %>
   </li>
 
   <li data-row="2" data-col="3" data-sizex="1" data-sizey="1">
-    <h3>Resources</h3>
-    <p><%= link_to 'Branding', admin_resources_branding_path %></p>
+    <%= dashboard_widget('resources') %>
   </li>
 
   <% if can? :read, Admin::EditableBlock %>
   <li data-row="3" data-col="1" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Editable Blocks', admin_editable_blocks_path %></h3>
+    <%= dashboard_widget('editable_blocks') %>
   </li>
   <% end %>
 
   <% if can? :read, User %>
   <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Users', admin_users_path %></h3>
+    <%= dashboard_widget('users') %>
   </li>
   <% end %>
 
   <% if can? :manage, :jobs %>
   <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></h3>
-    <dl>
-      <dt>
-        Enqueued Jobs
-      </dt>
-      <dd><%= delayed_job.count %></dd>
-
-      <dt>
-        <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
-      </dt>
-      <dd><%= delayed_jobs(:working).count %></d>
-
-      <dt>
-        <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
-      </dt>
-      <dd><%= delayed_jobs(:pending).count %></d>
-
-      <dt>
-        <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
-      </dt>
-      <dd><%= delayed_jobs(:failed).count %></dd>
-    </dl>
+    <%= dashboard_widget('delayed_jobs') %>
   </li>
   <% end %>
 

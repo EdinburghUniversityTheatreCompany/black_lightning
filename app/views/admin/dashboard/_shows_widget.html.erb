@@ -1,0 +1,4 @@
+<h3><%= link_to 'Shows', admin_shows_path %></h3>
+<% ::Show.future.first(5).each do |show| %>
+  <p><%= link_to show.name, admin_show_path(show) %></p>
+<% end %>
