@@ -1,24 +1,47 @@
 ﻿<div class="row">
 	<div class="span8">
 		<div id="showSlider" class="carousel slide">
+
 			<div class="carousel-inner">
+
 				<% @shows.each do |show| %>
-				<div class="<%= "active" if show == @shows.first %> item">
-					<%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
-					<div class="carousel-caption">
-						<%= link_to "<h4>#{show.name}</h4>".html_safe, show_path(show) %>
-						<p><%= show.tagline %> – <span class="show-date"><%= show.date_range %></span></p>
-					</div>
-				</div>
+
+          <div class="<%= "active" if show == @shows.first %> item">
+            <%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
+            <div class="carousel-caption">
+              <%= link_to "<h4>#{show.name}</h4>".html_safe, show_path(show) %>
+              <p><%= show.tagline %> – <span class="show-date"><%= show.date_range %></span></p>
+            </div>
+          </div>
+
 				<% end %>
+
+        <% if @shows.count == 0 then %>
+          <%# between 1st July and 1st September, advertise Bedlam Fringe %>
+          <% year = Date.today.year %>
+          <% if (Date.new(year, 7, 01)..Date.new(year, 9, 01)).include_with_range? Date.today then %>
+            <a href="http://www.bedlamfringe.co.uk">
+              <img src="/images/fringe.png" />
+            </a>
+            <div class="carousel-caption">
+              <p>
+                During the Edinburgh Festival Fringe, details of shows can be found on the Bedlam Fringe website.
+              </p>
+            </div>
+          <% else %>
+            <img src="/images/no-shows.png" />
+          <% end %>
+        <% end %>
+
 			</div>
+
             <!-- Carousel nav -->
             <% if @shows.count > 1 then %>
                 <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
                 <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
             <% end %>
 		</div>
-				
+
 		<div class="row content">
 			<% @news.first(2).each do |news| %>
 			<div class="span4">
