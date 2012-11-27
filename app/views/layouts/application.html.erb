@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bedlam Theatre<%= " | #{@title}" unless @title == nil%></title>
+  <title><%= "#{@title} | " unless @title == nil%>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", :media => "all" %>
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
