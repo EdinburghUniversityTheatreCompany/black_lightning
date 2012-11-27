@@ -55,7 +55,7 @@ module ChaosRails
 
     # Enable the asset pipeline
     config.assets.enabled = true
-    config.assets.precompile += ['admin.css', 'login.css']
+    config.assets.precompile += ['admin.css', 'login.css', 'jquery.lightbox-0.5.js', 'admin/dashboard.css', ]
 
     # Version of your assets, change this if you want to expire all your assets
     config.assets.version = '1.0'
