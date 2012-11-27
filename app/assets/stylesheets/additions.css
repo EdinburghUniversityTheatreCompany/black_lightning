@@ -1,22 +1,26 @@
 #logo {
 	height: 130px;
 }
-	
+
 .header {
 	padding-top: 30px;
 	margin-bottom: 20px;
 }
-	
+
 body {
 	background-image: url('cream_dust.png');
 	background-repeat: repeat;
 }
-	
+
+h3 {
+    font-size: 20px;
+}
+
 #side {
 	border-left: 1px solid #D1D1D1;
 	padding: 10px 0 20px 10px;
 }
-	
+
 .content {
 	margin-top: 20px;
 }
@@ -27,10 +31,10 @@ body {
 	margin-top: 60px;
 	margin-left: 20px;
 	padding: 0;
-	list-style: none; 
+	list-style: none;
 }
 #nav li {
-	float: left; 
+	float: left;
 	display: block;
 	padding: 8px 25px;
 }
