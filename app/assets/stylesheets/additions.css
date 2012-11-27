@@ -1,10 +1,12 @@
+@import url(http://fonts.googleapis.com/css?family=Asap);
+
 /* From bootstrap-century */
 body,
 input,
 button,
 select,
 textarea {
-    font-family: Century Gothic;
+    font-family: Asap;
 }
 
 a {
@@ -22,6 +24,7 @@ h1,h2,h3,h4,h5,h6 {
   line-height: 20px;
   color: #dc143c;
 }
+/* end from bootstrap-century */
 
 /* Custom Changes */
 
