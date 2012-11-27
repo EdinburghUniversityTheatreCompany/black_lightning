@@ -62,6 +62,9 @@ ChaosRails::Application.routes.draw do
 
   get "/admin/help/markdown"
 
+  # ERROR PAGES
+  match '/404' => 'static#render_404'
+
   # The priority is based upon order of creation:
   # first created -> highest priority.
 

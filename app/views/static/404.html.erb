@@ -1,0 +1,15 @@
+<% @hide_cookie_notice = true %>
+<% @hide_alert = true %>
+
+<div style="text-align: center;">
+<p style="margin-top:20px;">
+  <b style="font-size: large; color: #dc143c;"><%= current_user.present? ? "#{current_user.first_name}, t" : "T" %>his isn't the page you are looking for.</b>
+</p>
+<p><%= notice %></p>
+<p>
+  If you think you have been sent here by mistake, please contact the Bedlam IT manager.
+</p>
+<p>
+  HAL is Watching.
+</p>
+</div>
