@@ -4,7 +4,8 @@
 
   <% @news.each do |news| %>
   <article class="media">
-    <%= link_to (image_tag news.image.url(:thumb), :class => "media-object"), news, :class => "pull-left" %>
+    <% image = image_tag news.image.url(:thumb), :class => "media-object" %>
+    <%= link_to image, news, :class => "pull-left thumbnail" %>
     <div class="media-body">
       <header class="media-heading">
           <h4 class="media-heading"><%= link_to news.title, news %></h4>

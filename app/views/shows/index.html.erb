@@ -4,7 +4,8 @@
 
   <% @shows.each do |show| %>
   <article class="media">
-    <%= link_to (image_tag show.image.url(:thumb), :class => "media-object"), show, :class => "pull-left" %>
+    <% image = image_tag show.image.url(:thumb), :class => "media-object" %>
+    <%= link_to image, show, :class => "pull-left thumbnail" %>
     <div class="media-body">
       <header class="media-heading">
         <h4 class="media-heading"><%= link_to show.name, show %></h4>
