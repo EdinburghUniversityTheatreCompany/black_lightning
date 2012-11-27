@@ -3,13 +3,12 @@
   <hr />
 
   <% @shows.each do |show| %>
+  <!--
   <div class="row">
-    <article>
-      <div class="span2">
-        <%= link_to (image_tag show.image.url(:thumb)), show %>
-      </div>
-      <div class="span10">
-        <header>
+    <article class="media">
+      <%= link_to (image_tag show.image.url(:thumb), :class => "media-object"), show, :class => "pull-left" %>
+      <div class="media-body">
+        <header class="media-heading">
           <h2><%= link_to show.name, show %></h2>
         </header>
         <p>
@@ -21,7 +20,24 @@
       </div>
     </article>
   </div>
+  -->
+
+  <article class="media">
+    <%= link_to (image_tag show.image.url(:thumb), :class => "media-object"), show, :class => "pull-left" %>
+    <div class="media-body">
+      <header class="media-heading">
+        <h4 class="media-heading"><%= link_to show.name, show %></h4>
+      </header>
+      <p>
+        <%= show.tagline %>
+        <br />
+        <span class="show-date"><%= show.date_range %></span>
+      </p>
+      <p><%= link_to 'View Details', show %></p>
+    </div>
+  </article>
   <hr />
+
   <% end %>
 
   <%= will_paginate(@shows) %>
