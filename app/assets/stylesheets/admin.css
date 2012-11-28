@@ -13,6 +13,7 @@
  *= require admin/jquery.gridster.min.css
  *= require admin/admin.css.scss
  *= require admin/gallery_form.css.scss
+ *= require font-awesome
  */
 
 body {
@@ -26,4 +27,15 @@ div.datetime select {
 
 .container {
     padding-bottom:10px;
+}
+
+[class*=" icon-"] {
+    background-image: none;
+}
+
+
+/* font-awesome alignment */
+.alert [class^="icon-"] {
+  line-height: 17px;
+  margin-right: 2px;
 }
