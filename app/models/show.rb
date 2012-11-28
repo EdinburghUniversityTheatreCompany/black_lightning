@@ -18,8 +18,13 @@ class Show < ActiveRecord::Base
   validates :name, :description, :presence => true
   validates :slug, :presence => true, :uniqueness => true
 
-  has_attached_file :image, :styles => { :medium => "x300>", :thumb => "x100>", :slideshow => "960x500#" }
+  has_attached_file :image, :styles => { :medium => "x300>", :thumb => "x100>", :slideshow => "960x500#" }, :default_url => :default_image
   attr_accessible :description, :name, :slug, :tagline, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes
+
+  def default_image
+    number = self.id.modulo(5)
+    return "/images/generic_shows/:style/#{number}.png"
+  end
 
   def date_range
     if not self.start_date.presence then
