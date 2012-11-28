@@ -1,7 +1,5 @@
 class Admin::Questionnaires::QuestionnairesController < AdminController
 
-  authorize_resource :class => "Admin::Questionnaires::Questionnaire"
-
   # IMPORTANT
   # Due to the complex nature of questionnaire permissions, each action may need to be authorized
   # in the controller method using the authorize! method.
@@ -11,6 +9,10 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaires.json
   def index
     @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.all
+
+    if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
+      @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.joins(:users).where('user_id = ?', current_user.id)
+    end
 
     respond_to do |format|
       format.html # index.html.erb
@@ -74,7 +76,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def answer
     @questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
-    authorize!(:answer, @admin_questionnaires_questionnaire)
+    authorize!(:answer, @questionnaire)
 
     @questionnaire.questions.each do |question|
       if question.answers.where(:answerable_id => @questionnaire.id, :answerable_type => "Admin::Questionnaires::Questionnaire").count == 0 then

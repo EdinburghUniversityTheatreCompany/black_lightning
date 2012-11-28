@@ -1,6 +1,6 @@
 <h1>Answering Questionnaire for <%= @questionnaire.show.name %></h1>
 
-<%= simple_nested_form_for([@questionnaire], :url => admin_questionnaires_questionnaire_url) do |f| %>
+<%= simple_nested_form_for(@questionnaire, :url => admin_questionnaires_questionnaire_url) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">

@@ -43,5 +43,10 @@
 	</tbody>
 </table>
 <%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn'%>
-<br />
-<%= link_to 'Create Questionnaire', create_questionnaire_admin_show_path(@show), :method => :put, :class => 'btn'%>
+
+<% questionnaire = Admin::Questionnaires::Questionnaire.where(:show_id => @show.id) %>
+<% if questionnaire.count == 0 then %>
+  <%= link_to 'Create Questionnaire', create_questionnaire_admin_show_path(@show), :method => :put, :class => 'btn'%>
+<% else %>
+  <%= link_to 'View Questionnaire', admin_questionnaires_questionnaire_path(questionnaire.first), :class => 'btn'%>
+<% end %>
