@@ -11,14 +11,15 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121128094153) do
+ActiveRecord::Schema.define(:version => 20121128100200) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
     t.integer  "answerable_id"
     t.text     "answer"
-    t.datetime "created_at",    :null => false
-    t.datetime "updated_at",    :null => false
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+    t.string   "answerable_type"
   end
 
   add_index "admin_answers", ["answerable_id"], :name => "index_admin_proposals_answers_on_proposal_id"
@@ -62,6 +63,18 @@ ActiveRecord::Schema.define(:version => 20121128094153) do
 
   add_index "admin_proposals_proposals", ["call_id"], :name => "index_admin_proposals_proposals_on_call_id"
 
+  create_table "admin_questionnaires_questionnaire_templates", :force => true do |t|
+    t.integer  "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_questionnaires_questionnaires", :force => true do |t|
+    t.integer  "show_id"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
   create_table "admin_questions", :force => true do |t|
     t.text     "question_text"
     t.string   "response_type"
@@ -69,7 +82,6 @@ ActiveRecord::Schema.define(:version => 20121128094153) do
     t.datetime "updated_at",        :null => false
     t.integer  "questionable_id"
     t.string   "questionable_type"
-    t.string   "answerable_type"
   end
 
   create_table "admin_staffing_jobs", :force => true do |t|

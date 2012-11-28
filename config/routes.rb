@@ -17,7 +17,12 @@ ChaosRails::Application.routes.draw do
     #The resources pages:
     match 'resources/branding' => 'resources#branding'
 
-    resources :shows
+    resources :shows do
+      member do
+        put 'create_questionnaire'
+      end
+    end
+
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
@@ -48,6 +53,17 @@ ChaosRails::Application.routes.draw do
           end
         end
       end
+    end
+
+    namespace :questionnaires do
+      resources :questionnaires, :except => [:new, :create] do
+        member do
+          get  'answer' => 'questionnaires#answer'
+          post 'answer' => 'questionnaires#set_answers'
+        end
+      end
+
+      resources :questionnaire_templates
     end
 
     match 'jobs/:action' => 'job_control', :as => "jobs"

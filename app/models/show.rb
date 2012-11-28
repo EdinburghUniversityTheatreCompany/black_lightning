@@ -33,4 +33,11 @@ class Show < ActiveRecord::Base
         date << I18n.l(self.end_date, :format => :short)
     end
   end
+
+  def create_questionnaire
+    questionnaire = Admin::Questionnaires::Questionnaire.new
+    questionnaire.show = self
+    questionnaire.save
+  end
+  handle_asynchronously :create_questionnaire
 end

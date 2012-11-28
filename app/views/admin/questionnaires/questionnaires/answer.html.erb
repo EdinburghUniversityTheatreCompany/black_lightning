@@ -1,0 +1,19 @@
+<h1>Answering Questionnaire for <%= @questionnaire.show.name %></h1>
+
+<%= simple_nested_form_for([@questionnaire], :url => admin_questionnaires_questionnaire_url) do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <h3>Questions</h3>
+
+    <%= f.simple_fields_for :answers %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn-primary" %>
+
+    <%= link_to 'Back', admin_questionnaires_questionnaires_path, :class => "btn" %>
+  </div>
+<% end %>

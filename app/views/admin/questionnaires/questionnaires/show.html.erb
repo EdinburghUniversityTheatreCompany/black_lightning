@@ -1,0 +1,27 @@
+<p id="notice"><%= notice %></p>
+
+<h3>Questionnaire for <%= @admin_questionnaires_questionnaire.show.name %></h3>
+
+<% @admin_questionnaires_questionnaire.questions.each do |question| %>
+  <div>
+    <p>
+      <b>Question:</b>
+    </p>
+    <%= render_markdown question.question_text %>
+  </div>
+
+  <div>
+    <p>
+      <b>Response:</b>
+    </p>
+    <% question.answers.each do |answer| %>
+      <%= render_markdown answer.answer %>
+    <% end %>
+  </div>
+
+  <hr />
+<% end %>
+
+<%= link_to 'Answer Questionnaire', answer_admin_questionnaires_questionnaire_path(@admin_questionnaires_questionnaire), :class => "btn btn-primary" %>
+<%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(@admin_questionnaires_questionnaire), :class => "btn" %>
+<%= link_to 'Back', admin_questionnaires_questionnaires_path, :class => "btn"  %>
