@@ -3,11 +3,13 @@
   <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
 <% end %>
 
+<% if @show.end_date %>
 <% if @show.end_date < Date.today %>
   <p class="alert alert-info">
     <i class="icon-info-sign icon-large"></i>
     This show finished on <%= l @show.end_date, :format => :long %> and is kept for archiving purposes only.
   </p>
+<% end %>
 <% end %>
 
 <header>
