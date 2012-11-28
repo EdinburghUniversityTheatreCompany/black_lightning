@@ -25,17 +25,18 @@ class Ability
         can :read, :all
         can :sign_up_for, Admin::StaffingJob
 
-        ##
-        # Note - due the complex
-        ###
         cannot :read, Admin::Proposals::Proposal
         can :read, Admin::Proposals::Proposal do |proposal|
           (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
         end
 
-        can :create, Admin::Proposals::Proposal
-        can :edit, Admin::Proposals::Proposal do |proposal|
-          (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
+        cannot :read, Admin::Questionnaires::Questionnaire
+        can :read, Admin::Questionnaires::Questionnaire do |questionnaire|
+          (questionnaire.users.include? user)
+        end
+
+        can :answer, Admin::Questionnaires::Questionnaire do |questionnaire|
+          (questionnaire.users.include? user)
         end
 
         cannot :read, Admin::EditableBlock

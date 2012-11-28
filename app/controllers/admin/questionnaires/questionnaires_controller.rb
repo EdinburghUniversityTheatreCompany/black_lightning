@@ -1,6 +1,11 @@
 class Admin::Questionnaires::QuestionnairesController < AdminController
 
-  load_and_authorize_resource :class => Admin::Questionnaires::Questionnaire
+  authorize_resource :class => "Admin::Questionnaires::Questionnaire"
+
+  # IMPORTANT
+  # Due to the complex nature of questionnaire permissions, each action may need to be authorized
+  # in the controller method using the authorize! method.
+  # Failure to correctly do so will cause bad things to happen (kittens may die).
 
   # GET /admin/questionnaires/questionnaires
   # GET /admin/questionnaires/questionnaires.json
@@ -18,6 +23,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def show
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
+    authorize!(:read, @admin_questionnaires_questionnaire)
+
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @admin_questionnaires_questionnaire }
@@ -27,28 +34,16 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaires/1/edit
   def edit
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
-  end
 
-  # POST /admin/questionnaires/questionnaires
-  # POST /admin/questionnaires/questionnaires.json
-  def create
-    @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.new(params[:admin_questionnaires_questionnaire])
-
-    respond_to do |format|
-      if @admin_questionnaires_questionnaire.save
-        format.html { redirect_to @admin_questionnaires_questionnaire, notice: 'Questionnaire was successfully created.' }
-        format.json { render json: @admin_questionnaires_questionnaire, status: :created, location: @admin_questionnaires_questionnaire }
-      else
-        format.html { render "new" }
-        format.json { render json: @admin_questionnaires_questionnaire.errors, status: :unprocessable_entity }
-      end
-    end
+    authorize!(:edit, @admin_questionnaires_questionnaire)
   end
 
   # PUT /admin/questionnaires/questionnaires/1
   # PUT /admin/questionnaires/questionnaires/1.json
   def update
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
+
+    authorize!(:edit, @admin_questionnaires_questionnaire)
 
     respond_to do |format|
       if @admin_questionnaires_questionnaire.update_attributes(params[:admin_questionnaires_questionnaire])
@@ -65,6 +60,9 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # DELETE /admin/questionnaires/questionnaires/1.json
   def destroy
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
+
+    authorize!(:destroy, @admin_questionnaires_questionnaire)
+
     @admin_questionnaires_questionnaire.destroy
 
     respond_to do |format|
@@ -75,6 +73,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
 
   def answer
     @questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
+
+    authorize!(:answer, @admin_questionnaires_questionnaire)
 
     @questionnaire.questions.each do |question|
       if question.answers.where(:answerable_id => @questionnaire.id, :answerable_type => "Admin::Questionnaires::Questionnaire").count == 0 then
