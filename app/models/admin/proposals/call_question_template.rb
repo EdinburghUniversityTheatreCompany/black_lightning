@@ -1,5 +1,5 @@
 class Admin::Proposals::CallQuestionTemplate < ActiveRecord::Base
-  has_and_belongs_to_many :questions, :class_name => "Admin::Proposals::Question"
+  has_many :questions, :as => :questionable
 
   accepts_nested_attributes_for :questions, :reject_if => :all_blank, :allow_destroy => true
 

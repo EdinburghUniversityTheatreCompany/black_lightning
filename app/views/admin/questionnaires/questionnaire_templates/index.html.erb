@@ -1,0 +1,35 @@
+<h1>Listing Proposal Call Question Templates</h1>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+
+    <% if can? :edit, Admin::Proposals::CallQuestionTemplate %>
+    <th></th>
+    <% end %>
+
+    <% if can? :delete, Admin::Proposals::CallQuestionTemplate %>
+    <th></th>
+    <% end %>
+  </tr>
+
+<% @templates.each do |template| %>
+  <tr>
+    <td><%= template.name %></td>
+
+    <% if can? :edit, template %>
+    <td><%= link_to 'Edit', edit_admin_proposals_call_question_template_path(template) %></td>
+    <% end %>
+
+    <% if can? :delete, template %>
+    <td><%= link_to 'Destroy', template, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+    <% end %>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<% if can? :create, Admin::Proposals::CallQuestionTemplate %>
+<%= link_to 'New Template', new_admin_proposals_call_question_template_path, :class => "btn" %>
+<% end %>

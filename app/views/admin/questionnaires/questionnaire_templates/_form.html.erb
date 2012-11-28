@@ -1,0 +1,21 @@
+<%= simple_nested_form_for(@template) do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :name %>
+
+    <div class="well">
+      <h3>Questions</h3>
+      <%= f.simple_fields_for :questions %>
+
+      <%= f.link_to_add "Add Question", :questions, :class => "btn" %>
+    </div>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn-primary", :value => "Create Template" %>
+    <%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>
+  </div>
+<% end %>

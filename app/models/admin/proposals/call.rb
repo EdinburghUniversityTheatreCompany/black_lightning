@@ -1,5 +1,5 @@
 class Admin::Proposals::Call < ActiveRecord::Base
-  has_and_belongs_to_many :questions, :class_name => "Admin::Proposals::Question", :before_remove => :answers_cleanup
+  has_many :questions, :as => :questionable, :dependent => :destroy
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
 
   scope :open, :conditions => { :open => true }
@@ -10,18 +10,11 @@ class Admin::Proposals::Call < ActiveRecord::Base
 
   attr_accessible :deadline, :name, :open, :archived, :questions, :questions_attributes
 
-  #Removes answers to questions that have been removed
-  def answers_cleanup(question)
-    self.proposals.each do |proposal|
-      proposal.answers.where(:question_id => question.id).destroy_all
-    end
-  end
-  
   def archive
     self.open = false
-    
+
     self.archived = true
-    
+
     self.save
   end
 end

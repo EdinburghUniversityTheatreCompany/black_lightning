@@ -1,0 +1,22 @@
+<h3><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></h3>
+<dl>
+  <dt>
+    Enqueued Jobs
+  </dt>
+  <dd><%= delayed_job.count %></dd>
+
+  <dt>
+    <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
+  </dt>
+  <dd><%= delayed_jobs(:working).count %></d>
+
+  <dt>
+    <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
+  </dt>
+  <dd><%= delayed_jobs(:pending).count %></d>
+
+  <dt>
+    <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
+  </dt>
+  <dd><%= delayed_jobs(:failed).count %></dd>
+</dl>

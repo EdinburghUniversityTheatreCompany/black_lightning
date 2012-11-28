@@ -1,2 +1,0 @@
-module Archives::ShowsHelper
-end

@@ -12,17 +12,30 @@
  *= require admin/md_editor.css.scss
  *= require admin/jquery.gridster.min.css
  *= require admin/admin.css.scss
+ *= require admin/gallery_form.css.scss
+ *= require font-awesome
  */
- 
+
 body {
 	background-image: url('cream_dust.png');
 	background-repeat: repeat;
 }
- 
+
 div.datetime select {
     width: 107.5px;
 }
 
 .container {
     padding-bottom:10px;
+}
+
+[class*=" icon-"] {
+    background-image: none;
+}
+
+
+/* font-awesome alignment */
+.alert [class^="icon-"] {
+  line-height: 17px;
+  margin-right: 2px;
 }

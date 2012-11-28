@@ -55,4 +55,14 @@ class Admin::ShowsController < AdminController
       format.json { head :no_content }
     end
   end
+
+  def create_questionnaire
+    @show = Show.find_by_slug(params[:id])
+    @show.create_questionnaire
+
+    respond_to do |format|
+      format.html { redirect_to admin_show_url(@show), notice: 'Questionnaire will be created.' }
+      format.html { render :no_content }
+    end
+  end
 end

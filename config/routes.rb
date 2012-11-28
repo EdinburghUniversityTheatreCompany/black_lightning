@@ -17,12 +17,17 @@ ChaosRails::Application.routes.draw do
     #The resources pages:
     match 'resources/branding' => 'resources#branding'
 
-    resources :shows
+    resources :shows do
+      member do
+        put 'create_questionnaire'
+      end
+    end
+
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
 
-    resources :techie_families
+    resources :techie_families, :only => [:index]
 
     resources :staffings do
       collection do
@@ -50,6 +55,17 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    namespace :questionnaires do
+      resources :questionnaires, :except => [:new, :create] do
+        member do
+          get  'answer' => 'questionnaires#answer'
+          post 'answer' => 'questionnaires#set_answers'
+        end
+      end
+
+      resources :questionnaire_templates
+    end
+
     match '/reports/' => 'reports#index', :as => 'reports'
     match '/reports/:action', :controller => 'reports'
 
@@ -57,13 +73,16 @@ ChaosRails::Application.routes.draw do
   end
 
   match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
-  match 'archives(/:target)/set_date' => 'archives#set_date', :via => :post
+  match 'archives(/:target)/set_date' => 'archives#set_date', :via => :get
   namespace :archives do
     match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
     match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
   end
 
   get "/admin/help/markdown"
+
+  # ERROR PAGES
+  match '/404' => 'static#render_404'
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

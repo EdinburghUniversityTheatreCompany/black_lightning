@@ -6,7 +6,7 @@
 
 <ul>
   <li><%= link_to 'Shows', archives_shows_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year]) %></li>
-  
+
   <li>
   <% if current_user then %>
     <%= link_to 'Proposals', archives_proposals_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year]) %>

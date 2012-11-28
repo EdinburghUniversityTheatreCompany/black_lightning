@@ -11,7 +11,19 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121125190936) do
+ActiveRecord::Schema.define(:version => 20121128100200) do
+
+  create_table "admin_answers", :force => true do |t|
+    t.integer  "question_id"
+    t.integer  "answerable_id"
+    t.text     "answer"
+    t.datetime "created_at",      :null => false
+    t.datetime "updated_at",      :null => false
+    t.string   "answerable_type"
+  end
+
+  add_index "admin_answers", ["answerable_id"], :name => "index_admin_proposals_answers_on_proposal_id"
+  add_index "admin_answers", ["question_id"], :name => "index_admin_proposals_answers_on_question_id"
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -21,17 +33,6 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
     t.boolean  "admin_page"
     t.string   "group"
   end
-
-  create_table "admin_proposals_answers", :force => true do |t|
-    t.integer  "question_id"
-    t.integer  "proposal_id"
-    t.text     "answer"
-    t.datetime "created_at",  :null => false
-    t.datetime "updated_at",  :null => false
-  end
-
-  add_index "admin_proposals_answers", ["proposal_id"], :name => "index_admin_proposals_answers_on_proposal_id"
-  add_index "admin_proposals_answers", ["question_id"], :name => "index_admin_proposals_answers_on_question_id"
 
   create_table "admin_proposals_call_question_templates", :force => true do |t|
     t.string   "name"
@@ -62,11 +63,25 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
 
   add_index "admin_proposals_proposals", ["call_id"], :name => "index_admin_proposals_proposals_on_call_id"
 
-  create_table "admin_proposals_questions", :force => true do |t|
+  create_table "admin_questionnaires_questionnaire_templates", :force => true do |t|
+    t.integer  "name"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_questionnaires_questionnaires", :force => true do |t|
+    t.integer  "show_id"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "admin_questions", :force => true do |t|
     t.text     "question_text"
     t.string   "response_type"
-    t.datetime "created_at",    :null => false
-    t.datetime "updated_at",    :null => false
+    t.datetime "created_at",        :null => false
+    t.datetime "updated_at",        :null => false
+    t.integer  "questionable_id"
+    t.string   "questionable_type"
   end
 
   create_table "admin_staffing_jobs", :force => true do |t|
@@ -103,16 +118,6 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
 
   add_index "attachments", ["editable_block_id"], :name => "index_attachments_on_editable_block_id"
 
-  create_table "call_question_templates_questions", :id => false, :force => true do |t|
-    t.integer "call_question_template_id"
-    t.integer "question_id"
-  end
-
-  create_table "calls_questions", :id => false, :force => true do |t|
-    t.integer "call_id"
-    t.integer "question_id"
-  end
-
   create_table "children_techies", :force => true do |t|
     t.integer  "techie_id"
     t.integer  "child_id"
@@ -148,6 +153,18 @@ ActiveRecord::Schema.define(:version => 20121125190936) do
     t.string   "image_content_type"
     t.integer  "image_file_size"
     t.datetime "image_updated_at"
+  end
+
+  create_table "pictures", :force => true do |t|
+    t.text     "description"
+    t.integer  "gallery_id"
+    t.string   "gallery_type"
+    t.string   "image_file_name"
+    t.string   "image_content_type"
+    t.integer  "image_file_size"
+    t.datetime "image_updated_at"
+    t.datetime "created_at",         :null => false
+    t.datetime "updated_at",         :null => false
   end
 
   create_table "roles", :force => true do |t|

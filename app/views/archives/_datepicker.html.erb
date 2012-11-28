@@ -1,4 +1,4 @@
-<form class="form-inline" method="post" action="<%= '/' + params[:controller] + '/set_date' %>">
+<form class="form-inline" method="get" action="<%= '/' + params[:controller] + '/set_date' %>">
   <select name="start_month" class="span2">
     <option value="01" <%= 'selected' if params[:start_month] == '01' %> >January</option>
     <option value="02" <%= 'selected' if params[:start_month] == '02' %> >February</option>

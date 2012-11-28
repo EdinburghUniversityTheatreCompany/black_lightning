@@ -83,11 +83,11 @@ class Admin::Proposals::CallsController < AdminController
       format.json { head :no_content }
     end
   end
-  
+
   def archive
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
     @admin_proposals_call.archive
-  
+
     respond_to do |format|
       format.html { redirect_to admin_proposals_calls_url }
       format.json { head :no_content }

@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bedlam Theatre<%= " | #{@title}" unless @title == nil%></title>
+  <title><%= "#{@title} | " unless @title == nil%>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", :media => "all" %>
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
 
   <%= yield :head %>
+
+  <meta name="description" content="The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh." />
 </head>
 <body>
   <div class="container">
@@ -44,15 +46,19 @@
 
 <% if @hide_alert != true %>
 <% flash.each do |key, msg| %>
-  <% case key                       %>
-  <% when :alert                    %>
-  <%   alertclass = "alert-error"   %>
-  <% when :success                  %>
-  <%   alertclass = "alert-success" %>
-  <% when :notice                   %>
-  <%   alertclass = "alert-info"    %>
+  <% case key                               %>
+  <% when :alert                            %>
+  <%   alertclass = "alert-error"           %>
+  <%   icon       = "icon-exclamation-sign" %>
+  <% when :success                          %>
+  <%   alertclass = "alert-success"         %>
+  <%   icon       = "icon-ok"               %>
+  <% when :notice                           %>
+  <%   alertclass = "alert-info"            %>
+  <%   icon       = "icon-info-sign"        %>
   <% end %>
   <p id="<%= key %>" class="alert <%= alertclass %>">
+    <i class="<%= icon %> icon-large"></i>
     <%= msg %>
     <button type="button" class="close" data-dismiss="alert">&times;</button>
   </p>

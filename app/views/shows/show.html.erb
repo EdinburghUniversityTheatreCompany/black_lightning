@@ -1,3 +1,15 @@
+﻿<% content_for :head do %>
+  <%= javascript_include_tag "jquery.lightbox-0.5" %>
+  <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
+<% end %>
+
+<% if @show.end_date < Date.today %>
+  <p class="alert alert-info">
+    <i class="icon-info-sign icon-large"></i>
+    This show finished on <%= l @show.end_date, :format => :long %> and is kept for archiving purposes only.
+  </p>
+<% end %>
+
 <header>
 <h1><%= @show.name %></h1>
 <p><%= @show.tagline %></p>
@@ -20,3 +32,28 @@
 <% end %>
 
 <%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
+
+<% if @show.pictures.count > 0 then %>
+  <h3>Gallery</h3>
+
+  <ul class="gallery thumbnails">
+    <% @show.pictures.each do |picture| %>
+      <li class="span2">
+      <% img = image_tag picture.image.url(:thumb) %>
+      <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>
+      </li>
+    <% end %>
+  </ul>
+
+  <script type="text/javascript">
+  $(function() {
+    $('.gallery a').lightBox({
+      imageLoading:  '/images/lightbox-ico-loading.gif',
+      imageBtnClose: '/images/lightbox-btn-close.gif',
+      imageBtnPrev:  '/images/lightbox-btn-prev.gif',
+      imageBtnNext:  '/images/lightbox-btn-next.gif',
+      imageBlank:    '/images/lightbox-blank.gif'
+    });
+  });
+  </script>
+<% end %>

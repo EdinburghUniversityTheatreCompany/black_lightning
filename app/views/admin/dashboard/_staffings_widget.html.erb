@@ -1,0 +1,16 @@
+<h3><%= link_to 'Staffing', admin_staffings_path %></h3>
+
+<% ::Admin::Staffing.future.limit(8).each do |staffing| %>
+  <p>
+    <%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
+
+    <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
+    <% if remaining_positions > 0 %>
+    <span class="badge badge-important pull-right" title="Remaining positions"><%= remaining_positions %></span>
+    <% end %>
+  </p>
+<% end %>
+
+<% if ::Admin::Staffing.future.count == 0 then %>
+  <p>There are no upcoming staffing slots.</p>
+<% end %>

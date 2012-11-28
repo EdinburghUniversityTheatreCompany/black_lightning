@@ -33,7 +33,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     @call.questions.each do |question|
       if not @admin_proposals_proposal.questions.all.include? question then
-        answer = Admin::Proposals::Answer.new
+        answer = Admin::Answer.new
         answer.question = question
         @admin_proposals_proposal.answers.push(answer)
       end
@@ -68,7 +68,7 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     @call.questions.each do |question|
-      answer = Admin::Proposals::Answer.new
+      answer = Admin::Answer.new
       answer.question = question
       @proposal.answers.push(answer)
     end
@@ -89,7 +89,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     @call.questions.each do |question|
       if not @proposal.questions.all.include? question then
-        answer = Admin::Proposals::Answer.new
+        answer = Admin::Answer.new
         answer.question = question
         @proposal.answers.push(answer)
       end

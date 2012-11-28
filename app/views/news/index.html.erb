@@ -3,21 +3,18 @@
   <hr />
 
   <% @news.each do |news| %>
-  <div class="row">
-    <article>
-      <header class="offset2">
-          <h2><%= link_to news.title, news %></h2>
+  <article class="media">
+    <% image = image_tag news.image.url(:thumb), :class => "media-object" %>
+    <%= link_to image, news, :class => "pull-left thumbnail" %>
+    <div class="media-body">
+      <header class="media-heading">
+          <h4 class="media-heading"><%= link_to news.title, news %></h4>
       </header>
-      <div class="span2">
-        <%= link_to (image_tag news.image.url(:thumb)), news %>
-      </div>
-      <div class="span10">
-        <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, :format => :long %></time></p>
-        <p><%= raw generate_preview render_markdown news.body %></p>
-        <p><%= link_to 'View Full Article', news %></p>
-      </div>
-    </article>
-  </div>
+      <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, :format => :long %></time></p>
+      <p><%= raw generate_preview render_markdown news.body %></p>
+      <p><%= link_to 'View Full Article', news %></p>
+    </div>
+  </article>
   <hr />
   <% end %>
 
