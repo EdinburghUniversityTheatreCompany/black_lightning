@@ -3,22 +3,32 @@
   <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
 <% end %>
 
+<% if @show.end_date %>
 <% if @show.end_date < Date.today %>
   <p class="alert alert-info">
     <i class="icon-info-sign icon-large"></i>
     This show finished on <%= l @show.end_date, :format => :long %> and is kept for archiving purposes only.
   </p>
 <% end %>
+<% end %>
 
-<header>
-<h1><%= @show.name %></h1>
-<p><%= @show.tagline %></p>
-<p><%= @show.date_range %></p>
-</header>
-
-<%= image_tag @show.image.url(:medium) %>
+<div class="carousel">
+  <!-- Carousel items -->
+  <div class="carousel-inner">
+    <div class="active item">
+      <%= image_tag @show.image.url(:slideshow) %>
+      <div class="carousel-caption">
+        <h1><%= @show.name %></h1>
+        <p><%= @show.tagline %></p>
+        <p><%= @show.date_range %></p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <%= render_markdown @show.description %>
+
+<hr />
 
 <h3>Team</h3>
 

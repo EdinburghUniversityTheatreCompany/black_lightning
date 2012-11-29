@@ -20,13 +20,13 @@ class Admin::JobControlController < AdminController
 
   def remove
     authorize! :delete, :jobs
-    delayed_job.find(params[:id]).delete
+    Delayed::Job.find(params[:id]).delete
     redirect_to :back
   end
 
   def retry
     authorize! :manage, :jobs
-    job = delayed_job.find(params[:id])
+    job = Delayed::Job.find(params[:id])
     job.update_attributes(:run_at => Time.now, :failed_at => nil)
     redirect_to :back
   end
