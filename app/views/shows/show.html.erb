@@ -1,4 +1,4 @@
-﻿<% content_for :head do %>
+<% content_for :head do %>
   <%= javascript_include_tag "jquery.lightbox-0.5" %>
   <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
 <% end %>
@@ -12,45 +12,56 @@
 <% end %>
 <% end %>
 
-<div class="carousel">
-  <!-- Carousel items -->
-  <div class="carousel-inner">
-    <div class="active item">
-      <%= image_tag @show.image.url(:slideshow) %>
-      <div class="carousel-caption">
-        <h1><%= @show.name %></h1>
-        <p><%= @show.tagline %></p>
-        <p><%= @show.date_range %></p>
+<div class="row" style="position: relative;">
+  <div class="span9">
+    <div class="carousel">
+      <!-- Carousel items -->
+      <div class="carousel-inner">
+        <div class="active item">
+          <%= image_tag @show.image.url(:slideshow) %>
+          <div class="carousel-caption">
+            <h1><%= @show.name %></h1>
+            <p><%= @show.tagline %></p>
+          </div>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <div class="span3 show-info-box">
+    <div class="well">
+      <% if @show.venue then %>
+        <h4>Venue</h4>
+        <p>
+          <%= link_to @show.venue.name, @show.venue %>
+        </p>
+      <% end %>
+
+      <h4>Dates</h4>
+      <p>
+        <p><%= @show.date_range %></p>
+      </p>
+
+      <% unless @show.team_members.count == 0 %>
+        <h4>Team</h4>
+        <% @show.team_members.each do |team_member| %>
+          <p>
+          <b><%= team_member.position %></b>
+
+          <% u = team_member.user %>
+          <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+          </p>
+        <% end %>
+      <% end %>
     </div>
   </div>
 </div>
 
 <%= render_markdown @show.description %>
 
-<% if @show.venue then %>
-<p>
-  <b>Venue:</b><br />
-  <%= link_to @show.venue.name, @show.venue %>
-</p>
-<% end %>
-
-<hr />
-
-<h3>Team</h3>
-
-<% @show.team_members.each do |team_member| %>
-  <p>
-  <b><%= team_member.position %></b>
-
-  <% u = team_member.user %>
-  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-  </p>
-<% end %>
-
-<%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
-
 <% if @show.pictures.count > 0 then %>
+  <hr />
+
   <h3>Gallery</h3>
 
   <ul class="gallery thumbnails">
