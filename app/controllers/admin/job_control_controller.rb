@@ -26,8 +26,13 @@ class Admin::JobControlController < AdminController
 
   def retry
     authorize! :manage, :jobs
+
     job = Delayed::Job.find(params[:id])
-    job.update_attributes(:run_at => Time.now, :failed_at => nil)
+    job.attempts = 0
+    job.run_at = Time.now
+    job.failed_at = nil
+    job.save
+
     redirect_to :back
   end
 
