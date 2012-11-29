@@ -126,12 +126,9 @@ class Admin::StaffingsController < AdminController
 
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
-    @job = Admin::StaffingJob.find(params[:job_id])
+    @job = Admin::StaffingJob.find(params[:id])
 
     @job.user = current_user
-
-    @admin_staffing.reminder_job.run_at = @admin_staffing.date.advance(:hours => -2)
-    @admin_staffing.reminder_job.save
 
     respond_to do |format|
       if current_user.phone_number.blank? # you MUST have a phone number in your profile to be able to sign up for staffing
