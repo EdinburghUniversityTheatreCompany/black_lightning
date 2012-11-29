@@ -54,7 +54,7 @@
       '/staffing_templates/templates.json',
       function (data) {
         $.each(data.templates, function (index, template) {
-          $('#template_list').append('<option>' + template.name + '</option>');
+          $('#template_list').append('<option value="' + index + '">' + template.name + '</option>');
         });
       }
     );
