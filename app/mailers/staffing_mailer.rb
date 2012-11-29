@@ -4,7 +4,7 @@ class StaffingMailer < ActionMailer::Base
   def staffing_reminder(staffing)
     @staffing = staffing
 # set up a client to talk to the Twilio REST API
-    client = Twilio::REST::Client.new ChaosRails::Application.config.twilio_account_sid, ChaosRails::Application.config.twilio_auth_token
+    client = ::Twilio::REST::Client.new ChaosRails::Application.config.twilio_account_sid, ChaosRails::Application.config.twilio_auth_token
 
     staffing.staffing_jobs.each do |job|
       @user = job.user
