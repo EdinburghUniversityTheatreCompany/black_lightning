@@ -6,8 +6,9 @@ class Show < ActiveRecord::Base
 
   default_scope order("start_date ASC")
 
-  scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true]).order("start_date ASC")
-  scope :future, where(["end_date >= ?", Date.current]).order("start_date ASC")
+  scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true])
+  scope :future, where(["end_date >= ?", Date.current])
+  scope :last_show, where(["end_date <= ? AND is_public = ?", Date.current, true]).first
 
   has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
   has_many :users, :through => :team_members

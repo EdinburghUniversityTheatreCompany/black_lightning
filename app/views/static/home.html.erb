@@ -63,10 +63,15 @@
         <p><small><%= tweet.text %></small></p>
       <% end %>
     </div>
+
     <h3>Newsletter</h3>
     <p>Sign up to receive information about Bedlam Theatre and our shows.</p>
     <form class="form-inline">
       <input type="text" class="input-medium" /><button type="submit" class="btn">Sign up</button>
     </form>
+
+    <h3><%= link_to "Last Show - #{Show.last.name}", Show.last %></h3>
+    <% image = image_tag Show.last.image.url(:thumb) %>
+    <%= link_to image, Show.last, :class => "thumbnail", :style => "display:inline-block" %>
   </div>
 </div>
