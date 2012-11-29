@@ -12,15 +12,23 @@
 <% end %>
 <% end %>
 
-<header>
-<h1><%= @show.name %></h1>
-<p><%= @show.tagline %></p>
-<p><%= @show.date_range %></p>
-</header>
-
-<%= image_tag @show.image.url(:medium) %>
+<div class="carousel">
+  <!-- Carousel items -->
+  <div class="carousel-inner">
+    <div class="active item">
+      <%= image_tag @show.image.url(:slideshow) %>
+      <div class="carousel-caption">
+        <h1><%= @show.name %></h1>
+        <p><%= @show.tagline %></p>
+        <p><%= @show.date_range %></p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <%= render_markdown @show.description %>
+
+<hr />
 
 <h3>Team</h3>
 
