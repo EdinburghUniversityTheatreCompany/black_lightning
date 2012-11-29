@@ -1,60 +1,48 @@
-﻿<% content_for :head do %>
+<% content_for :head do %>
   <%= javascript_include_tag "jquery.lightbox-0.5" %>
   <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
-<% end %>
-
-<% if @show.end_date %>
-<% if @show.end_date < Date.today %>
-  <p class="alert alert-info">
-    <i class="icon-info-sign icon-large"></i>
-    This show finished on <%= l @show.end_date, :format => :long %> and is kept for archiving purposes only.
-  </p>
-<% end %>
 <% end %>
 
 <div class="carousel">
   <!-- Carousel items -->
   <div class="carousel-inner">
     <div class="active item">
-      <%= image_tag @show.image.url(:slideshow) %>
+      <%= image_tag @venue.image.url(:slidevenue) %>
       <div class="carousel-caption">
-        <h1><%= @show.name %></h1>
-        <p><%= @show.tagline %></p>
-        <p><%= @show.date_range %></p>
+        <h1><%= @venue.name %></h1>
+        <p><%= @venue.tagline %></p>
       </div>
     </div>
   </div>
 </div>
 
-<%= render_markdown @show.description %>
-
-<% if @show.venue then %>
-<p>
-  <b>Venue:</b><br />
-  <%= link_to @show.venue.name, @show.venue %>
-</p>
-<% end %>
+<%= render_markdown @venue.description %>
 
 <hr />
 
-<h3>Team</h3>
+<% if @venue.shows.current.count > 0 then %>
+  <h3>Shows at <%= @venue.name %></h3>
 
-<% @show.team_members.each do |team_member| %>
-  <p>
-  <b><%= team_member.position %></b>
+  <div class="row">
+  <% @venue.shows.first(2).each do |show| %>
+    <div class="span4">
+      <div>
+        <%= link_to (image_tag show.image.url(:medium)), show_path(show) %>
+        <h4><%= link_to show.name, show_path(show) %></h4>
+        <p><%= show.tagline %> <%= link_to 'Read More', show_path(show) %></p>
+      </div>
+    </div>
+    <% end %>
+  </div>
 
-  <% u = team_member.user %>
-  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-  </p>
+  <hr />
 <% end %>
 
-<%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
-
-<% if @show.pictures.count > 0 then %>
+<% if @venue.pictures.count > 0 then %>
   <h3>Gallery</h3>
 
   <ul class="gallery thumbnails">
-    <% @show.pictures.each do |picture| %>
+    <% @venue.pictures.each do |picture| %>
       <li class="span2">
       <% img = image_tag picture.image.url(:thumb) %>
       <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>

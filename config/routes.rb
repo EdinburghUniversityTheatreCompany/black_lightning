@@ -4,8 +4,9 @@ ChaosRails::Application.routes.draw do
 
   devise_for :users
 
-  resources :shows, :only => [:index, :show]
-  resources :news, :only => [:index, :show]
+  resources :shows,       :only => [:index, :show]
+  resources :news,        :only => [:index, :show]
+  resources :venues,      :only => [:index, :show]
   resources :attachments, :only => [:show]
 
   match 'access_denied' => 'static#access_denied'
@@ -23,6 +24,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    resources :venues
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users

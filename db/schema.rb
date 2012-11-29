@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121128100200) do
+ActiveRecord::Schema.define(:version => 20121129144841) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -193,6 +193,7 @@ ActiveRecord::Schema.define(:version => 20121128100200) do
     t.datetime "image_updated_at"
     t.date     "start_date"
     t.date     "end_date"
+    t.integer  "venue_id"
   end
 
   create_table "team_members", :force => true do |t|
@@ -241,5 +242,18 @@ ActiveRecord::Schema.define(:version => 20121128100200) do
   end
 
   add_index "users_roles", ["user_id", "role_id"], :name => "index_users_roles_on_user_id_and_role_id"
+
+  create_table "venues", :force => true do |t|
+    t.string   "name"
+    t.string   "tagline"
+    t.text     "description"
+    t.string   "location"
+    t.string   "image_file_name"
+    t.string   "image_content_type"
+    t.integer  "image_file_size"
+    t.datetime "image_updated_at"
+    t.datetime "created_at",         :null => false
+    t.datetime "updated_at",         :null => false
+  end
 
 end

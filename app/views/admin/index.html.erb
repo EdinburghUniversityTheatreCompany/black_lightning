@@ -41,20 +41,26 @@
     <%= dashboard_widget('resources') %>
   </li>
 
-  <% if can? :read, Admin::EditableBlock %>
+  <% if can? :manage, Venue %>
   <li data-row="3" data-col="1" data-sizex="1" data-sizey="1">
+    <%= dashboard_widget('venues') %>
+  </li>
+  <% end %>
+
+  <% if can? :read, Admin::EditableBlock %>
+  <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
     <%= dashboard_widget('editable_blocks') %>
   </li>
   <% end %>
 
   <% if can? :read, User %>
-  <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
+  <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
     <%= dashboard_widget('users') %>
   </li>
   <% end %>
 
   <% if can? :manage, :jobs %>
-  <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
+  <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
     <%= dashboard_widget('delayed_jobs') %>
   </li>
   <% end %>

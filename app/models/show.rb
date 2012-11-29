@@ -11,6 +11,8 @@ class Show < ActiveRecord::Base
   has_many :users, :through => :team_members
   has_many :pictures, :as => :gallery
 
+  belongs_to :venue
+
   accepts_nested_attributes_for :team_members
   accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
 
@@ -19,7 +21,7 @@ class Show < ActiveRecord::Base
   validates :slug, :presence => true, :uniqueness => true
 
   has_attached_file :image, :styles => { :medium => "x300>", :thumb => "150x100", :slideshow => "960x500#" }, :default_url => :default_image
-  attr_accessible :description, :name, :slug, :tagline, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes
+  attr_accessible :description, :name, :slug, :tagline, :venue, :venue_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes
 
   def default_image
     number = self.id.modulo(5)
