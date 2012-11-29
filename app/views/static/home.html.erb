@@ -57,7 +57,7 @@
 
   <!-- SIDEBAR -->
   <div class="span4">
-    <h3>@BedlamTheatre</h3>
+    <h3><%= link_to '@BedlamTheatre', 'https://twitter.com/bedlamtheatre' %></h3>
     <div>
       <% twitter_timeline.each do |tweet| %>
         <p><small><%= tweet.text %></small></p>
