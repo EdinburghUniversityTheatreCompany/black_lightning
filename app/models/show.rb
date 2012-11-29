@@ -4,6 +4,8 @@ class Show < ActiveRecord::Base
     slug
   end
 
+  default_scope order("start_date ASC")
+
   scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true]).order("start_date ASC")
   scope :future, where(["end_date >= ?", Date.current]).order("start_date ASC")
 
