@@ -12,62 +12,64 @@
 </head>
 <body>
   <div class="container">
-  	<!-- START HEADER SECTION -->
-	<div class="row header">
+    <!-- START HEADER SECTION -->
+    <div class="row header">
+      <div class="row">
+        <div class="span4">
+          <%= link_to image_tag('BedlamLogoBW.png', :id => "logo", :style => "border: 2px solid black;"), root_path%>
+        </div>
+        <div class="span8">
+          <div class="row">
+            <div class="row pull-right">
+              <a href="#" class="btn">Press</a>
+              <a href="#" class="btn">Sponsors</a>
+                          <%= link_to "Archives", archives_index_path, :class => "btn" %>
+              <%= link_to "Members", admin_path, :class => "btn" %>
+              <a href="#" class="btn">Newsletter</a>
+            </div>
+            <div class="row">
+              <ul id="nav">
+                <li><%= link_to 'Shows', shows_path %></li>
+                <li><%= link_to 'News', news_index_path %></li>
+                <li><%= link_to 'About', about_path %></li>
+                <li><a href="#">Get Involved</a></li>
+                <li><a href="#">Contact</a></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- END HEADER -->
 
-		<div class="row">
-			<div class="span4">
-				<%= link_to image_tag('BedlamLogoBW.png', :id => "logo", :style => "border: 2px solid black;"), root_path%>
-			</div>
-			<div class="span8">
-				<div class="row">
-					<div class="row pull-right">
-						<a href="#" class="btn">Press</a>
-						<a href="#" class="btn">Sponsors</a>
-                        <%= link_to "Archives", archives_index_path, :class => "btn" %>
-						<%= link_to "Members", admin_path, :class => "btn" %>
-						<a href="#" class="btn">Newsletter</a>
-					</div>
-					<div class="row">
-						<ul id="nav">
-							<li><%= link_to 'Shows', shows_path %></li>
-							<li><%= link_to 'News', news_index_path %></li>
-							<li><%= link_to 'About', about_path %></li>
-							<li><a href="#">Get Involved</a></li>
-							<li><a href="#">Contact</a></li>
-						</ul>
-					</div>
-				</div>
-			</div>
-		</div>
+    <%= render :partial => "shared/cookie_notice" %>
 
-	</div>
-<%= render :partial => "shared/cookie_notice" %>
+    <div class="alert-container">
+      <% if @hide_alert != true %>
+        <% flash.each do |key, msg| %>
+          <% case key                               %>
+          <% when :alert                            %>
+          <%   alertclass = "alert-error"           %>
+          <%   icon       = "icon-exclamation-sign" %>
+          <% when :success                          %>
+          <%   alertclass = "alert-success"         %>
+          <%   icon       = "icon-ok"               %>
+          <% when :notice                           %>
+          <%   alertclass = "alert-info"            %>
+          <%   icon       = "icon-info-sign"        %>
+          <% end %>
+          <p id="<%= key %>" class="alert <%= alertclass %>">
+            <i class="<%= icon %> icon-large"></i>
+            <%= msg %>
+            <button type="button" class="close" data-dismiss="alert">&times;</button>
+          </p>
+        <% end %>
+      <% end %>
+    </div>
 
-<% if @hide_alert != true %>
-<% flash.each do |key, msg| %>
-  <% case key                               %>
-  <% when :alert                            %>
-  <%   alertclass = "alert-error"           %>
-  <%   icon       = "icon-exclamation-sign" %>
-  <% when :success                          %>
-  <%   alertclass = "alert-success"         %>
-  <%   icon       = "icon-ok"               %>
-  <% when :notice                           %>
-  <%   alertclass = "alert-info"            %>
-  <%   icon       = "icon-info-sign"        %>
-  <% end %>
-  <p id="<%= key %>" class="alert <%= alertclass %>">
-    <i class="<%= icon %> icon-large"></i>
-    <%= msg %>
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-  </p>
-<% end %>
-<% end %>
+    <%= content_for?(:content) ? yield(:content) : yield -%>
 
-<%= content_for?(:content) ? yield(:content) : yield %>
-
-<%= render :partial => "shared/google_analytics" %>
-</div>
+    <%= render :partial => "shared/google_analytics" %>
+  </div>
 </body>
 </html>

@@ -1,10 +1,10 @@
 ﻿<div class="row">
-	<div class="span8">
-		<div id="showSlider" class="carousel slide">
+  <div class="span8">
+    <div id="showSlider" class="carousel slide">
 
-			<div class="carousel-inner">
+      <div class="carousel-inner">
 
-				<% @shows.each do |show| %>
+        <% @shows.each do |show| %>
 
           <div class="<%= "active" if show == @shows.first %> item">
             <%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
@@ -14,7 +14,7 @@
             </div>
           </div>
 
-				<% end %>
+        <% end %>
 
         <% if @shows.count == 0 then %>
           <%# between 1st July and 1st September, advertise Bedlam Fringe %>
@@ -33,45 +33,44 @@
           <% end %>
         <% end %>
 
-			</div>
+      </div>
 
             <!-- Carousel nav -->
             <% if @shows.count > 1 then %>
                 <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
                 <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
             <% end %>
-		</div>
+    </div>
 
-		<div class="row content">
-			<% @news.first(2).each do |news| %>
-			<div class="span4">
-				<div>
-					<%= link_to (image_tag news.image.url(:medium)), news_path(news) %>
-					<h4><%= link_to news.title, news_path(news) %></h4>
-					<p><%= render_markdown (truncate(news.body, length: 80)) %> <%= link_to 'Read More', news_path(news) %></p>
-				</div>
-			</div>
-			<% end %>
-		</div>
-	</div>
-	<div class="span4">
-		<h3>What's On</h3>
-		<ul>
+    <div class="row content">
+      <% @news.first(2).each do |news| %>
+      <div class="span4">
+        <div>
+          <%= link_to (image_tag news.image.url(:medium)), news_path(news) %>
+          <h4><%= link_to news.title, news_path(news) %></h4>
+          <p><%= render_markdown (truncate(news.body, length: 80)) %> <%= link_to 'Read More', news_path(news) %></p>
+        </div>
+      </div>
+      <% end %>
+    </div>
+  </div>
+  <div class="span4">
+    <h3>What's On</h3>
+    <ul>
           <% @shows.each do |show| %>
-			<li><%= link_to show.name, show_path(show) %></li>
+      <li><%= link_to show.name, show_path(show) %></li>
           <% end %>
-		</ul>
+    </ul>
         <h3>@BedlamTheatre</h3>
         <div>
           <% twitter_timeline.each do |tweet| %>
             <p><small><%= tweet.text %></small></p>
           <% end %>
         </div>
-		<h3>Newsletter</h3>
-		<p>Sign up to receive information about Bedlam Theatre and our shows.</p>
-		<form class="form-inline">
-			<input type="text" class="input-medium" /><button type="submit" class="btn">Sign up</button>
-		</form>
-	</div>
+    <h3>Newsletter</h3>
+    <p>Sign up to receive information about Bedlam Theatre and our shows.</p>
+    <form class="form-inline">
+      <input type="text" class="input-medium" /><button type="submit" class="btn">Sign up</button>
+    </form>
+  </div>
 </div>
-
