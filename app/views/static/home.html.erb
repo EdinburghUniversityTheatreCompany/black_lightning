@@ -35,11 +35,11 @@
 
       </div>
 
-            <!-- Carousel nav -->
-            <% if @shows.count > 1 then %>
-                <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
-                <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
-            <% end %>
+      <!-- Carousel nav -->
+      <% if @shows.count > 1 then %>
+          <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
+          <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
+      <% end %>
     </div>
 
     <div class="row content">
@@ -54,19 +54,15 @@
       <% end %>
     </div>
   </div>
+
+  <!-- SIDEBAR -->
   <div class="span4">
-    <h3>What's On</h3>
-    <ul>
-          <% @shows.each do |show| %>
-      <li><%= link_to show.name, show_path(show) %></li>
-          <% end %>
-    </ul>
-        <h3>@BedlamTheatre</h3>
-        <div>
-          <% twitter_timeline.each do |tweet| %>
-            <p><small><%= tweet.text %></small></p>
-          <% end %>
-        </div>
+    <h3>@BedlamTheatre</h3>
+    <div>
+      <% twitter_timeline.each do |tweet| %>
+        <p><small><%= tweet.text %></small></p>
+      <% end %>
+    </div>
     <h3>Newsletter</h3>
     <p>Sign up to receive information about Bedlam Theatre and our shows.</p>
     <form class="form-inline">
