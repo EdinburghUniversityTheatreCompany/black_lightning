@@ -39,7 +39,7 @@
 
       <h4>Dates</h4>
       <p>
-        <p><%= @show.date_range %></p>
+        <%= @show.date_range %>
       </p>
 
       <% unless @show.team_members.count == 0 %>
@@ -58,6 +58,11 @@
 </div>
 
 <%= render_markdown @show.description %>
+
+<hr />
+
+<h4>Tickets</h4>
+<%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
 
 <% if @show.pictures.count > 0 then %>
   <hr />
