@@ -8,7 +8,9 @@ class Show < ActiveRecord::Base
 
   scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true])
   scope :future, where(["end_date >= ?", Date.current])
-  scope :last_show, where(["end_date <= ? AND is_public = ?", Date.current, true]).first
+  def self.last_show
+    return self.where(["end_date <= ? AND is_public = ?", Date.current, true]).first
+  end
 
   has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
   has_many :users, :through => :team_members
