@@ -70,8 +70,9 @@
       <input type="text" class="input-medium" /><button type="submit" class="btn">Sign up</button>
     </form>
 
-    <h3><%= link_to "Last Show - #{Show.last.name}", Show.last %></h3>
-    <% image = image_tag Show.last.image.url(:thumb) %>
+    <h3><%= link_to "Archives", archives_index_path %></h3>
+    <%= link_to Show.last.name, Show.last %>
+    <% image = image_tag Show.last.image.url(:medium) %>
     <%= link_to image, Show.last, :class => "thumbnail", :style => "display:inline-block" %>
   </div>
 </div>
