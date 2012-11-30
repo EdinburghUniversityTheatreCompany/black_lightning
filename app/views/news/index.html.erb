@@ -1,5 +1,6 @@
 <div class="row">
   <h1>Bedlam News</h1>
+
   <hr />
 
   <% @news.each do |news| %>
@@ -19,5 +20,8 @@
   <% end %>
 
   <%= will_paginate(@news) %>
+
+  <% rss_icon = 'RSS Feed: <i class="icon-rss"></i>' %>
+  <%= link_to rss_icon.html_safe, news_index_path(:format=>:rss) %>
 
 </div>
