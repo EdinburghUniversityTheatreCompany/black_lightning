@@ -17,3 +17,4 @@
 //= require dracula_graffle
 //= require dracula_graph
 //= require bootstrap
+//= require alerts

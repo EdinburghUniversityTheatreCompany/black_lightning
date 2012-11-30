@@ -13,6 +13,8 @@
 //= require admin/jquery.gridster.min
 //= require admin/markdown
 //= require admin/md_editor
+//= require admin/staffings
+//= require alerts
 
 (function () {
   var grid

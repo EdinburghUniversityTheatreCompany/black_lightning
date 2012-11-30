@@ -33,7 +33,7 @@
 </table>
 
 <% if can? :sign_up, @admin_staffing %>
-<%= link_to 'Sign Up', admin_staffing_show_sign_up_path(@admin_staffing), :class => "btn btn-primary" %>
+<%= link_to 'Sign Up', show_sign_up_admin_staffing_path(@admin_staffing), :class => "btn btn-primary" %>
 <% end %>
 
 <% if can? :edit, @admin_staffing %>

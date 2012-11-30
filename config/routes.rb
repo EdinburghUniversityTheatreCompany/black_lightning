@@ -32,13 +32,16 @@ ChaosRails::Application.routes.draw do
     resources :techie_families, :only => [:index]
 
     resources :staffings do
+      member do
+        get 'show_sign_up'
+      end
+
       collection do
         get 'new_for_show'
         put 'create_for_show'
       end
     end
 
-    match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
     match '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
 
     namespace :proposals do

@@ -20,7 +20,7 @@
           <% if u then %>
             <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
           <% else %>
-            <%= link_to 'Sign Up', admin_staffing_sign_up_path(staffing_job), :class => "btn", :method => :put %>
+            <%= link_to 'Sign Up', admin_staffing_sign_up_path(staffing_job), :class => "btn staffing-sign-up", :data => { :job_id => staffing_job.id }, :method => :put %>
           <% end %>
         </td>
       </tr>
