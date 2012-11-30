@@ -133,7 +133,7 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if current_user.phone_number.blank? # you MUST have a phone number in your profile to be able to sign up for staffing
         format.html { redirect_to edit_admin_user_path(current_user), alert: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary." }
-        format.json { head :no_content}
+        format.json { render :json => { :error => "no_number "}}
       elsif @job.save
         format.html {
           flash[:success] =  "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}."

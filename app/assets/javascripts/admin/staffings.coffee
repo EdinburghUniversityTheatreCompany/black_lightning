@@ -1,6 +1,9 @@
 jQuery ->
+  tried_ajax = false;
   $(".staffing-sign-up").click (e) ->
-    e.preventDefault()
+    return if tried_ajax;
+
+    e.preventDefault();
 
     button = $(e.target);
     job_id = button.attr("data-job-id");
@@ -10,6 +13,12 @@ jQuery ->
       url: "/admin/staffings/job/" + job_id + "/sign_up.json"
       type: "PUT"
       success: (data) ->
+        #if there was an error, just do the default action and try that way.
+        if data.error
+          tried_ajax = true
+          button.click()
+          return
+
         message = "Thank you for choosing to staff " + data.staffing.show_title + " - " + data.name + ", on " + data.staffing.date + ".";
         showAlert "success", message;
 
@@ -20,7 +29,7 @@ jQuery ->
 
         return;
       error: (jqXHR, textStatus, errorThrown) ->
-        showAlert "alert", "Error signing up for staffing: " + errorThrown;
-        button.show();
-        return;
+        tried_ajax = true
+        button.click()
+        return
     return false
