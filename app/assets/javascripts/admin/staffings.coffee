@@ -11,7 +11,7 @@ jQuery ->
       type: "PUT"
       success: (data) ->
         message = "Thank you for choosing to staff " + data.staffing.show_title + " - " + data.name + ", on " + data.staffing.date + ".";
-        showAlert("success", message);
+        showAlert "success", message;
 
         name = $("<span>" + data.user.first_name + " " + data.user.last_name + "</span>");
         name.hide();
@@ -20,7 +20,7 @@ jQuery ->
 
         return;
       error: (jqXHR, textStatus, errorThrown) ->
-        showAlert ("alert", "Error signing up for staffing: " + errorThrown);
+        showAlert "alert", "Error signing up for staffing: " + errorThrown;
         button.show();
         return;
     return false
