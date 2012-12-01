@@ -81,7 +81,7 @@ h3 {
   margin-right: 2px;
 }
 
-[class*=" icon-"] {
+[class^="icon-"], [class*=" icon-"] {
     background-image: none;
 }
 
