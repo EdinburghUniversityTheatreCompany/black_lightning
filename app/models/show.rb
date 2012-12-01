@@ -29,7 +29,7 @@ class Show < ActiveRecord::Base
   attr_accessible :description, :name, :slug, :tagline, :venue, :venue_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes
 
   def default_image
-    number = self.id.modulo(5)
+    number = self.id.modulo(4)
     return "/images/generic_shows/:style/#{number}.png"
   end
 
