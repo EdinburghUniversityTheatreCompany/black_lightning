@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <%# for facebook image previews to work properly: %>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
+
   <title><%= "#{@title} | " unless @title == nil%>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", :media => "all" %>
   <%= javascript_include_tag "application" %>
@@ -8,7 +11,7 @@
 
   <%= yield :head %>
 
-  <meta name="description" content="The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh." />
+  <%= meta_tags.html_safe %>
 </head>
 <body>
   <div class="container">
