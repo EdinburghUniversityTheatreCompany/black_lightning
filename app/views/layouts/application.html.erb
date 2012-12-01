@@ -42,9 +42,9 @@
     </div>
     <!-- END HEADER -->
 
-    <%= render :partial => "shared/ie_notice" %>
+    <%= render "shared/ie_notice" %>
 
-    <%= render :partial => "shared/cookie_notice" %>
+    <%= render "shared/cookie_notice" %>
 
     <div class="alert-container">
       <% if @hide_alert != true %>
@@ -71,7 +71,9 @@
 
     <%= content_for?(:content) ? yield(:content) : yield %>
 
-    <%= render :partial => "shared/google_analytics" %>
+    <%= render "shared/google_analytics" %>
   </div>
+
+  <%= render "shared/footer" %>
 </body>
 </html>
