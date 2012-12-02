@@ -1,8 +1,7 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <%# for facebook image previews to work properly: %>
-  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
+<%# Include the opengraph namespaces: %>
+<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
 
   <title><%= "#{@title} | " unless @title == nil%>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", :media => "all" %>
