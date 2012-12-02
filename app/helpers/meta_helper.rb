@@ -51,10 +51,10 @@ module MetaHelper
 
       if content.kind_of?(Array) then
         content.each do |item|
-          @tags << "<meta #{type}='#{name}' content='#{ERB::Util.html_escape item}'>"
+          @tags << "<meta #{type}='#{name}' content='#{ERB::Util.html_escape item}' />"
         end
       else
-        @tags << "<meta #{type}='#{name}' content='#{ERB::Util.html_escape content}'>"
+        @tags << "<meta #{type}='#{name}' content='#{ERB::Util.html_escape content}' />"
       end
     end
 
