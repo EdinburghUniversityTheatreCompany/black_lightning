@@ -27,6 +27,11 @@
 # Ignore Mac created DS_Store files
 .DS_Store
 
+#Ignore generated documentation
+/doc/app
+
+#Ignore coverage reports
 /coverage
 
+#Ignore the version file
 version

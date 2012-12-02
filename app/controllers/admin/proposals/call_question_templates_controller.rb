@@ -1,9 +1,16 @@
+##
+# Controller for Admin::Proposals::CallQuestionTemplate. More details can be found there.
+##
+
 class Admin::Proposals::CallQuestionTemplatesController < AdminController
 
   load_and_authorize_resource :class => Admin::Proposals::CallQuestionTemplate
 
+  ##
   # GET /admin/proposals/call_question_templates
+  #
   # GET /admin/proposals/call_question_templates.json
+  ##
   def index
     @templates = Admin::Proposals::CallQuestionTemplate.all
 
@@ -13,8 +20,11 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/call_question_templates/1
+  #
   # GET /admin/proposals/call_question_templates/1.json
+  ##
   def show
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
 
@@ -24,8 +34,11 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/call_question_templates/new
+  #
   # GET /admin/proposals/call_question_templates/new.json
+  ##
   def new
     @template = Admin::Proposals::CallQuestionTemplate.new
 
@@ -35,13 +48,18 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/call_question_templates/1/edit
+  ##
   def edit
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
   end
 
+  ##
   # POST /admin/proposals/call_question_templates
+  #
   # POST /admin/proposals/call_question_templates.json
+  ##
   def create
     @template = Admin::Proposals::CallQuestionTemplate.new(params[:admin_proposals_call_question_template])
 
@@ -56,8 +74,11 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     end
   end
 
+  ##
   # PUT /admin/proposals/call_question_templates/1
+  #
   # PUT /admin/proposals/call_question_templates/1.json
+  ##
   def update
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
 
@@ -72,8 +93,11 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/proposals/call_question_templates/1
+  #
   # DELETE /admin/proposals/call_question_templates/1.json
+  ##
   def destroy
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
     @template.destroy

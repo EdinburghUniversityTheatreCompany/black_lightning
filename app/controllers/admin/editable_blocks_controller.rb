@@ -1,9 +1,16 @@
+##
+# Controller for Admin::EditableBlock. More details can be found there.
+##
+
 class Admin::EditableBlocksController < AdminController
 
   load_and_authorize_resource :class => Admin::EditableBlock
 
+  ##
   # GET /admin/editable_blocks
+  #
   # GET /admin/editable_blocks.json
+  ##
   def index
     @admin_editable_blocks = Admin::EditableBlock.all.group_by { |e| e.group }
 
@@ -13,8 +20,11 @@ class Admin::EditableBlocksController < AdminController
     end
   end
 
+  ##
   # GET /admin/editable_blocks/new
+  #
   # GET /admin/editable_blocks/new.json
+  ##
   def new
     @admin_editable_block = Admin::EditableBlock.new
 
@@ -24,13 +34,18 @@ class Admin::EditableBlocksController < AdminController
     end
   end
 
+  ##
   # GET /admin/editable_blocks/1/edit
+  ##
   def edit
     @admin_editable_block = Admin::EditableBlock.find(params[:id])
   end
 
+  ##
   # POST /admin/editable_blocks
+  #
   # POST /admin/editable_blocks.json
+  ##
   def create
     @admin_editable_block = Admin::EditableBlock.new(params[:admin_editable_block])
 
@@ -45,8 +60,11 @@ class Admin::EditableBlocksController < AdminController
     end
   end
 
+  ##
   # PUT /admin/editable_blocks/1
+  #
   # PUT /admin/editable_blocks/1.json
+  ##
   def update
     @admin_editable_block = Admin::EditableBlock.find(params[:id])
 
@@ -61,8 +79,11 @@ class Admin::EditableBlocksController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/editable_blocks/1
+  #
   # DELETE /admin/editable_blocks/1.json
+  ##
   def destroy
     @admin_editable_block = Admin::EditableBlock.find(params[:id])
     @admin_editable_block.destroy

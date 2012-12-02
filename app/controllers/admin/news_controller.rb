@@ -1,9 +1,16 @@
+##
+# Admin controller for News. More details can be found there.
+##
+
 class Admin::NewsController < AdminController
 
   load_and_authorize_resource
 
+  ##
   # GET /admin/news
+  #
   # GET /admin/news.json
+  ##
   def index
     @news = News.all
 
@@ -13,8 +20,11 @@ class Admin::NewsController < AdminController
     end
   end
 
+  ##
   # GET /admin/news/1
+  #
   # GET /admin/news/1.json
+  ##
   def show
     @news = News.find(params[:id])
 
@@ -24,8 +34,11 @@ class Admin::NewsController < AdminController
     end
   end
 
+  ##
   # GET /admin/news/new
+  #
   # GET /admin/news/new.json
+  ##
   def new
     @news = News.new
 
@@ -35,13 +48,18 @@ class Admin::NewsController < AdminController
     end
   end
 
+  ##
   # GET /admin/news/1/edit
+  ##
   def edit
     @news = News.find(params[:id])
   end
 
+  ##
   # POST /admin/news
+  #
   # POST /admin/news.json
+  ##
   def create
     @news = News.new(params[:news])
 
@@ -56,8 +74,11 @@ class Admin::NewsController < AdminController
     end
   end
 
+  ##
   # PUT /admin/news/1
+  #
   # PUT /admin/news/1.json
+  ##
   def update
     @news = News.find(params[:id])
 
@@ -72,8 +93,11 @@ class Admin::NewsController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/news/1
+  #
   # DELETE /admin/news/1.json
+  ##
   def destroy
     @news = News.find(params[:id])
     @news.destroy
