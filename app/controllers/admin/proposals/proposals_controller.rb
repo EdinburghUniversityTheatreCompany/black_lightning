@@ -174,10 +174,10 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
 
+    authorize!(:approve, @proposal)
+
     @proposal.approved = true
     @proposal.save
-
-    authorize!(:approve, @proposal)
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as approved"
