@@ -72,6 +72,8 @@ ChaosRails::Application.routes.draw do
     end
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
+
+    get "/help/:action" => 'help', :as => "help"
   end
 
   match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
@@ -80,8 +82,6 @@ ChaosRails::Application.routes.draw do
     match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
     match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
   end
-
-  get "/admin/help/markdown"
 
   # ERROR PAGES
   match '/404' => 'static#render_404'

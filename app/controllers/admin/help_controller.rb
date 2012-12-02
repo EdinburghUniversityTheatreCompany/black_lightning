@@ -11,4 +11,10 @@ class Admin::HelpController < AdminController
   ##
   def markdown
   end
+
+  ##
+  # GET /admin/help/venue_location
+  ##
+  def venue_location
+  end
 end
