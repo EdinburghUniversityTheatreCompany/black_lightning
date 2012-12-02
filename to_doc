@@ -1,392 +1,340 @@
-100644 blob d95a56e9176157009f0711d828be248e4f1085b6	.gitignore
-100644 blob a72ba01b638bdf55e53b589f7e658ab7af1bcaca	Gemfile
-100644 blob 0ba9b5aee63ffaab6fb55aaf1d583ffae5cc47fa	Gemfile.lock
-100644 blob dfa870f3dfd5c54f3bb074975a3887f7ba69b14a	README.rdoc
-100644 blob 311b4c3fd00765c600040c492d89663a739f53db	Rakefile
-100644 blob f3bb422810e58ef64eac1636120699c1d48ada4c	app/assets/images/BedlamLogoBW.png
-100644 blob f0afd956305bb24552a797f46876fc33ec596d3b	app/assets/images/HAL9000.png
-100644 blob b25acabb8ede3e7aa3a9eb19e7c01d20d52278d7	app/assets/images/cream_dust.png
-100644 blob 013a03ca259899826f85baeae2804e0064717a19	app/assets/images/medium/missing.png
-100644 blob d5edc04e65f555e3ba4dcdaad39dc352e75b575e	app/assets/images/rails.png
-100644 blob f5aa0f993a6e891ede86106d70a883ecb8d49b1e	app/assets/javascripts/Curry-1.0.1.js
-100644 blob 78d37af7f4960878bc4cff69ebec63497bd9456d	app/assets/javascripts/admin.js
-100644 blob d3f79663a8dc5eae4dfa45b8781a8ce76a2c9fdf	app/assets/javascripts/admin/jquery.gridster.min.js
-100644 blob 5c6f0cac6aaefb97ead7cbfa55b3576ac6f25e89	app/assets/javascripts/admin/markdown.js
-100644 blob 8f652e0bfdb26f60f05a0f476086939c015bf359	app/assets/javascripts/admin/md_editor.js.coffee
-100644 blob 392786d0c3aee739e6ab85852740d870b7ad6569	app/assets/javascripts/admin/proposals/call_templates.js
-100644 blob d7fc3ccbf869423abd31385652ec421bf8de214d	app/assets/javascripts/admin/questionnaires/questionnaire_templates.js
-100644 blob b470e8e63f1d7eb0bbf7c5465ecd3b438c7c40e8	app/assets/javascripts/admin/staffings.coffee
-100644 blob c9548752a44cd1144f417abdcc8f50f0f0359e8e	app/assets/javascripts/alerts.js
-100644 blob 77fd6bc62dea9b98cc588feb116fe9d92f43a74d	app/assets/javascripts/application.js
-100644 blob 0fbb0857fc8244ca55cdbde1295cd8fa9874a193	app/assets/javascripts/dracula_algorithms.js
-100644 blob ddf171d433537806a042251f534f4585de2661c4	app/assets/javascripts/dracula_graffle.js
-100644 blob f3e43e1b72167d399d508419cd845b0b0c44e0fa	app/assets/javascripts/dracula_graph.js
-100644 blob 21cd3b057f0f8aba6282a47a1bd176dd947e1145	app/assets/javascripts/jquery.lightbox-0.5.js
-100644 blob 8718b5bc74968bf33a712acef5ea4f3fe59a3e82	app/assets/javascripts/raphael-min.js
-100644 blob ce8ce8b578ea214b599c059f58d3b4c349f358db	app/assets/javascripts/seedrandom.js
-100644 blob 761567942fc20b22ba68ce6b5f46652cf63c48c0	app/assets/javascripts/venues.js.coffee
-100644 blob 29fe9ec7ac00e8317518b1223af70b3f0cdfa56a	app/assets/stylesheets/additions.css
-100644 blob 26afa23d645d3424a1681bdb4cd4185ac165c6a1	app/assets/stylesheets/admin.css
-100644 blob 624e8f69a0354bf00505b8b58a078a0f820da6b3	app/assets/stylesheets/admin/admin.css.scss
-100644 blob 25c3e4f2462ac31dfbb345b6b0371064e2456319	app/assets/stylesheets/admin/dashboard.css.scss
-100644 blob 57943c8a97a39b91bf3e2bf6bcd4df8795e14b7e	app/assets/stylesheets/admin/gallery_form.css.scss
-100644 blob f11001c81ec31f39ec3c4747b35103f35ffbd529	app/assets/stylesheets/admin/jquery.gridster.min.css
-100644 blob 93916971e24317dae8a809994e6d890daf787329	app/assets/stylesheets/admin/md_editor.css.scss
-100644 blob d7693fb0659af837b471e4ad28ff8a7621331512	app/assets/stylesheets/admin/techie_families.css.scss
-100644 blob 61273b9bee6bde58c5f4da5152f11264c9e63b40	app/assets/stylesheets/application.css
-100644 blob 690c5745c5a6de64ff5596e1342df3747353e0fc	app/assets/stylesheets/bootstrap-century.css
-100644 blob fc2e531b9105cfc467d5c9585c290822b23648b0	app/assets/stylesheets/jquery.lightbox-0.5.css
-100644 blob 1e3942d6a3a703aff4945d3e55a711eb02ef2577	app/assets/stylesheets/login.css
-100644 blob 6ec6a8ff521e9fa12e5cf6d751db2e24d231bc60	app/assets/stylesheets/scaffolds.css.scss
-100644 blob a818d0447ebcec0d2a182e513bd6be26c72250ca	app/assets/stylesheets/show.css.scss
-100644 blob fc949c92476e7fe91d814d74fd2b3aeaeb3ebb11	app/assets/stylesheets/venues.css.scss
-100644 blob 420547bfa48720f6ef04f0291b642e8ea8724e2d	app/controllers/admin/editable_blocks_controller.rb
-100644 blob 662947ec66614ebf94b34cdd1ca6e175c8eeac40	app/controllers/admin/help_controller.rb
-100644 blob d6c97b066a4a1e7a576e2f0e27fcb0376e74d1b0	app/controllers/admin/job_control_controller.rb
-100644 blob c42a48b7bfee061e9c030102190b82935a1e8016	app/controllers/admin/news_controller.rb
-100644 blob 78ee4a0de41eaa852d5bf3245e2faa008f68c59d	app/controllers/admin/proposals/call_question_templates_controller.rb
-100644 blob c9044214dffb95fd494cdeca1445db6988335fbd	app/controllers/admin/proposals/calls_controller.rb
-100644 blob 07ce6926f91e9d7e5b1b15ff1a3d274cedf14c3e	app/controllers/admin/proposals/proposals_controller.rb
-100644 blob dc32e3d244771c56702475924640e48b39a4e2e1	app/controllers/admin/questionnaires/questionnaire_templates_controller.rb
-100644 blob 691dc1fd8e45a440a96d17d5e61cfb951fe20e60	app/controllers/admin/questionnaires/questionnaires_controller.rb
-100644 blob 04b6713358f69fd266ae5824a16efca337c2d05d	app/controllers/admin/resources_controller.rb
-100644 blob d08d3b730dc260521001cf9f4a24bb58b95f2e16	app/controllers/admin/shows_controller.rb
-100644 blob 442c99219e3f938a36c1e761b243ca6f0b5d1863	app/controllers/admin/staffings_controller.rb
-100644 blob ce0ab3a0bbbf8efabae32398b3ddbe52e9cceeb8	app/controllers/admin/techie_families_controller.rb
-100644 blob 21a3655de05b573080d6c7038a4a1244efd7b592	app/controllers/admin/users_controller.rb
-100644 blob e2cbda7a46fa81f30ac468fb82d37acda694c393	app/controllers/admin/venues_controller.rb
-100644 blob d90f5f45ba6e59055efbcf9d6cc0e47c522df56e	app/controllers/admin_controller.rb
-100644 blob 3a541ce147b4676fba598545d1ba91a6eb0ed691	app/controllers/application_controller.rb
-100644 blob 4ee12c47c4b3c6a9926997a9b1e09e9dcda2e705	app/controllers/archives/proposals_controller.rb
-100644 blob 3f20f7253cf9d088701343823a379e7fad65108e	app/controllers/archives/shows_controller.rb
-100644 blob 9f7301a286bbd2f2d18f9b6b85fa45689c7c3664	app/controllers/archives_controller.rb
-100644 blob ea5d8856a5f1944563346d1c8ea335586d6cc7b4	app/controllers/attachments_controller.rb
-100644 blob 4994f83d951d4b64a002bb25de59b709ebfaa310	app/controllers/news_controller.rb
-100644 blob 437cea3f15caa7edcb0d96e904ed39225eb4ba8f	app/controllers/shows_controller.rb
-100644 blob e3516d711e442045e2518122255951fdfd244211	app/controllers/static_controller.rb
-100644 blob 86445727854841d9b57de3d184588be550290b79	app/controllers/venues_controller.rb
-100644 blob 50ae940ab20bece7c6322bfef7cbdc1873307e11	app/helpers/admin/dashboard_helper.rb
-100644 blob c0b88ab98290ba9fc639b348c8fa402f009db68b	app/helpers/admin/job_control_helper.rb
-100644 blob de6be7945c6a59798eb0ace177df38b05e98c2f0	app/helpers/application_helper.rb
-100644 blob 4b39ce7a0f7800a365a0128cdb05f85ceba7ae43	app/helpers/editable_block_helper.rb
-100644 blob dd4e3e94889ab33020ca8b2eee08d2b23caed673	app/helpers/md_helper.rb
-100644 blob 6a79f81811845bff4447540e1d432f14eea232c1	app/helpers/meta_helper.rb
-100644 blob 38d1f977f0c5a3a45da4f911f08e32ff087b81f0	app/helpers/news_helper.rb
-100644 blob 24250042643dc29c5dd914db5ebd9dea387e5472	app/helpers/shows_helper.rb
-100644 blob 5f9fd4685add3b1a297c3ad6ca070f50664f687c	app/helpers/twitter_helper.rb
-100644 blob 5eb02cb31137657cdb913bfe3665f6bc198351ec	app/helpers/venues_helper.rb
-100644 blob 43999e55da5cc8890af65b86c418456f64ce503c	app/helpers/version_helper.rb
-100644 blob a591534e0c5f66f65c85c087d86620801d8a8aa7	app/inputs/value_only_input.rb
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	app/mailers/.gitkeep
-100644 blob 9e52f5cdd77b09651bc6d373512d9258d78197f5	app/mailers/proposals_mailer.rb
-100644 blob d1a7a1e77fb0c099680db1efc6e8b129142db864	app/mailers/staffing_mailer.rb
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	app/models/.gitkeep
-100644 blob b894ba417edf5b7d27458cf42bf16b052458c893	app/models/ability.rb
-100644 blob a38e3f48463732edd0bc5a0c361d86bd77436340	app/models/admin.rb
-100644 blob caad6e414ee5270f55627974f09aee2f893da64e	app/models/admin/answer.rb
-100644 blob ccb300ee97e32303509af5f2660d0b6a33d7b5df	app/models/admin/editable_block.rb
-100644 blob 16350b3b0f2364149813fb38cd9e92636eb22b32	app/models/admin/proposals.rb
-100644 blob 44d03f75e616363389c272cd1242b736d791d7bf	app/models/admin/proposals/call.rb
-100644 blob b956a6b3205b1cb8ad49a7f96dedf3fe68f6e41c	app/models/admin/proposals/call_question_template.rb
-100644 blob 497fd820c9ac5f03b756fb896d3d4d0837339877	app/models/admin/proposals/proposal.rb
-100644 blob 1e3d0a3b4a45a8d258660a5ee41f88998d154652	app/models/admin/question.rb
-100644 blob af02971564513723084a24ecd57061d92876102e	app/models/admin/questionnaires.rb
-100644 blob 63682c58b4ce652ecc7ab4e3386bb16ff94defef	app/models/admin/questionnaires/questionnaire.rb
-100644 blob f44bd9c66c4e53e9eb15b8d663ec16fc9fcc9749	app/models/admin/questionnaires/questionnaire_template.rb
-100644 blob a5d9064dbfd8003957906b616dbf552d5d459e76	app/models/admin/staffing.rb
-100644 blob bc915390786d745616e76c9336d3c163b9c903f9	app/models/admin/staffing_job.rb
-100644 blob 55eb8b61d6fef0512aeec74dec5d6bda263847ea	app/models/attachment.rb
-100644 blob 0fd5104bbc9766660a796d37cac974e10942cb7b	app/models/news.rb
-100644 blob 73f03745646ab22262c6f1591539fe08fb75ed2b	app/models/picture.rb
-100644 blob ce3605cc414cd35cfdad3fad573680788f3324bc	app/models/role.rb
-100644 blob 501490f9a940b0e52778637ee389bd745b833388	app/models/show.rb
-100644 blob 7c1273c5f57db0760253629254feb01ae1e5890a	app/models/team_member.rb
-100644 blob 99a68da873e77bab1c52285eee869f496546517a	app/models/techie.rb
-100644 blob 092018eed48b32c24d5abc9fdfd881044b712d3f	app/models/user.rb
-100644 blob ca82af90f5c1258ad96e41fdbe25b820fb444f55	app/models/venue.rb
-100644 blob ae58d2ea7c57c0c2226f1ed447f37fc32a4cbff8	app/views/admin/dashboard/_delayed_jobs_widget.html.erb
-100644 blob 96c706ca610f7eec13287830b31e3fefe9ea00d5	app/views/admin/dashboard/_editable_blocks_widget.html.erb
-100644 blob 17b32f7e694df4c2fec02e1520a8abbdca8ed2ff	app/views/admin/dashboard/_news_widget.html.erb
-100644 blob 364c222659ff79d1d038f03f65395648a9d2e4c8	app/views/admin/dashboard/_proposals_widget.html.erb
-100644 blob cd72593eb45cd0aec715229aa4cb225c186e934f	app/views/admin/dashboard/_resources_widget.html.erb
-100644 blob 172b4533c590798aef4a025b29c1654c501baee7	app/views/admin/dashboard/_shows_widget.html.erb
-100644 blob f2e38438e47c8cceba5b891c64153512447692c2	app/views/admin/dashboard/_staffings_widget.html.erb
-100644 blob dd471a469d20359704ea84c2bd144560f10511a9	app/views/admin/dashboard/_users_widget.html.erb
-100644 blob 2a4ff830d92aff4e10bfd6dc0148c773cee8fa25	app/views/admin/dashboard/_venues_widget.html.erb
-100644 blob 2473618d6b5c50c397c6fcc08b8ca1e9d70a61cb	app/views/admin/editable_blocks/_attachment_fields.erb
-100644 blob 86afd1a2ee7fcf7fff19e21591709c5c8112f1ca	app/views/admin/editable_blocks/_editable_block.html.erb
-100644 blob e8fe19138dab4df3e819b9925f4eead5c3d8f58a	app/views/admin/editable_blocks/_form.html.erb
-100644 blob cc81393a9d7be0a9c17a42ca5029a6f84af1fa73	app/views/admin/editable_blocks/edit.html.erb
-100644 blob 669dae1e416a6ecc5752765a2ad4b7da21c98374	app/views/admin/editable_blocks/index.html.erb
-100644 blob 568dacf781262653222d9ef9d1b2e80fa34fa906	app/views/admin/editable_blocks/new.html.erb
-100644 blob 95c2b0b3fd85319d7c5e19a1bf0daa79b9ae9872	app/views/admin/help/markdown.html.md
-100644 blob 4818d90c64b11c8b76a650542bb80835be79be9e	app/views/admin/index.html.erb
-100644 blob 9f2752f1ac9baf8e667f93694d9d468715962632	app/views/admin/job_control/_job.html.erb
-100644 blob 12d7bd8f73153bb6ce608eaa6bfa5a7c56fdcbda	app/views/admin/job_control/failed.html.erb
-100644 blob d099396f699763eac1f3b34c3b50fd11cefea773	app/views/admin/job_control/overview.html.erb
-100644 blob 50a984f26060ac33f74d84b08a2c6e6fe0914cb0	app/views/admin/job_control/pending.html.erb
-100644 blob 096694b943bc551166749e316685be5423d2eff9	app/views/admin/job_control/working.html.erb
-100644 blob be46b9fb133aea6d83a44c223b54ac75dd92edbc	app/views/admin/news/_form.html.erb
-100644 blob 3ef52264507b008b026966156c2f6e8e9b88585f	app/views/admin/news/edit.html.erb
-100644 blob 7b0a415e4bd834e58b643daafc7ccf5732fce676	app/views/admin/news/index.html.erb
-100644 blob a6802e2fcaeb37ca1d9ad740a5be59662c4e7b70	app/views/admin/news/new.html.erb
-100644 blob 3e35dc98026517c2fc126662fc0a9a8651900929	app/views/admin/news/show.html.erb
-100644 blob 83112a1a5974f3fa95adb32dde15b99f2516e06d	app/views/admin/proposals/call_question_templates/_form.html.erb
-100644 blob efafba4ace0c19bcde239c083207a18ffe27bd45	app/views/admin/proposals/call_question_templates/_question_fields.erb
-100644 blob 5c968fc35bed4f4a3349e814f699a49e0a767b86	app/views/admin/proposals/call_question_templates/edit.html.erb
-100644 blob f6decfbeaf454e6d7f01f0ecc647e4de8379e10f	app/views/admin/proposals/call_question_templates/index.html.erb
-100644 blob 797e4699c11d61a6f058db3eafc43f0b0c687fc8	app/views/admin/proposals/call_question_templates/new.html.erb
-100644 blob b311f09c6718893c4b81d641ee3f4e63a62f7297	app/views/admin/proposals/call_question_templates/show.html.erb
-100644 blob 904887cf240d27179b14b19c0a0b01af6a1d7265	app/views/admin/proposals/calls/_form.html.erb
-100644 blob efafba4ace0c19bcde239c083207a18ffe27bd45	app/views/admin/proposals/calls/_question_fields.erb
-100644 blob 1556b181dbe1737b991c9d62bb680e2a8e5337c0	app/views/admin/proposals/calls/edit.html.erb
-100644 blob cce67d7438af703f7aa449319cc9b0526488f929	app/views/admin/proposals/calls/index.html.erb
-100644 blob 2b1754fed05091029c59537c9337fe0fac7c42fb	app/views/admin/proposals/calls/new.html.erb
-100644 blob ceb19d4a39475e59e47f2224e9e3c36c60e4a1e5	app/views/admin/proposals/calls/show.html.erb
-100644 blob a2153bad1d4d4d076a5593a0be3ea540d86d19bd	app/views/admin/proposals/proposals/_answer_fields.erb
-100644 blob 643d6c80eb5f5cd608da32fbe5fecc15c2747bc6	app/views/admin/proposals/proposals/_form.html.erb
-100644 blob cb07ce07cb0ff2dff5d0b47280f02732bac6442b	app/views/admin/proposals/proposals/_team_member_fields.erb
-100644 blob dc3fb8248a3e80aeaf6efb926983db1b676023d5	app/views/admin/proposals/proposals/edit.html.erb
-100644 blob d63dfd29260bbe8e4b5674d5ac11b6fdb0cbc945	app/views/admin/proposals/proposals/index.html.erb
-100644 blob 2ebe1cb94f6ed24434fa50e7158ea3980f5cd99e	app/views/admin/proposals/proposals/new.html.erb
-100644 blob 11fc2c1423fd512e4edb46d283ab61a8903f1ca7	app/views/admin/proposals/proposals/show.html.erb
-100644 blob 83112a1a5974f3fa95adb32dde15b99f2516e06d	app/views/admin/questionnaires/questionnaire_templates/_form.html.erb
-100644 blob efafba4ace0c19bcde239c083207a18ffe27bd45	app/views/admin/questionnaires/questionnaire_templates/_question_fields.erb
-100644 blob 5c968fc35bed4f4a3349e814f699a49e0a767b86	app/views/admin/questionnaires/questionnaire_templates/edit.html.erb
-100644 blob f6decfbeaf454e6d7f01f0ecc647e4de8379e10f	app/views/admin/questionnaires/questionnaire_templates/index.html.erb
-100644 blob 797e4699c11d61a6f058db3eafc43f0b0c687fc8	app/views/admin/questionnaires/questionnaire_templates/new.html.erb
-100644 blob b311f09c6718893c4b81d641ee3f4e63a62f7297	app/views/admin/questionnaires/questionnaire_templates/show.html.erb
-100644 blob a2153bad1d4d4d076a5593a0be3ea540d86d19bd	app/views/admin/questionnaires/questionnaires/_answer_fields.erb
-100644 blob f3e63e98b2315c248f1e05abac894e85f2943e84	app/views/admin/questionnaires/questionnaires/_form.html.erb
-100644 blob efafba4ace0c19bcde239c083207a18ffe27bd45	app/views/admin/questionnaires/questionnaires/_question_fields.erb
-100644 blob d9e6874452258c3593e1de20669ed407f1ea5368	app/views/admin/questionnaires/questionnaires/answer.html.erb
-100644 blob 44b688db9b39b9e51e7d3f08090cae3afeae2cb2	app/views/admin/questionnaires/questionnaires/edit.html.erb
-100644 blob 747f0cbb568727442f601eb73f776a9ae3d0e9d3	app/views/admin/questionnaires/questionnaires/index.html.erb
-100644 blob 8effee6a6b2936492c4160fd15e260404f6f3384	app/views/admin/questionnaires/questionnaires/show.html.erb
-100644 blob 2df1ea024eb6696b4a9321e690c40ca4e6c0494a	app/views/admin/resources/branding.erb
-100644 blob 491c8705c5516694ed057fb94bcc553d6f2c9ff3	app/views/admin/shared/_md_editor.erb
-100644 blob 2ac07c4a9a84c15cc115b63fa7aa1d2e91b14f93	app/views/admin/shows/_form.html.erb
-100644 blob 0ca087ae0dc0a7b52d236c8474c8f4f37fbe4f61	app/views/admin/shows/_picture_fields.erb
-100644 blob cb07ce07cb0ff2dff5d0b47280f02732bac6442b	app/views/admin/shows/_team_member_fields.erb
-100644 blob 5e55bc64fe12ce67e5d6f9c10c46afe7ccd08857	app/views/admin/shows/edit.html.erb
-100644 blob 686753c9ca66c4b0c7bdbce4c001bf4ecaa2f0ee	app/views/admin/shows/index.html.erb
-100644 blob 4cc4b5ddf9adb30416c5e83ca4f9d05e45e3c684	app/views/admin/shows/new.html.erb
-100644 blob e872d9f621cedc9e825b1efeeec0b3b6a82d5c02	app/views/admin/shows/show.html.erb
-100644 blob 9187cacf1cd03edd0f4491a14d17f193bceb4ded	app/views/admin/staffings/_form.html.erb
-100644 blob efccf42293e341f397ef3dcfdc42eba491349bf0	app/views/admin/staffings/_staffing.html.erb
-100644 blob ba9459d967310fc17f74085dbb91787e12ef2219	app/views/admin/staffings/_staffing_job_fields.erb
-100644 blob 3af8e66a55b2bb3954d97bd8e2ae59da85945891	app/views/admin/staffings/edit.html.erb
-100644 blob d4eb2458c8c145392ac45ea609c1ac2e220c0eef	app/views/admin/staffings/index.html.erb
-100644 blob 17a29910bb718c908e140341105cc33cab4eaae8	app/views/admin/staffings/new.html.erb
-100644 blob 53fe5315850f06019c98c70149966b249413fe0c	app/views/admin/staffings/new_for_show.html.erb
-100644 blob ef399334aeb84bb6c68684f14cbd1892d9409761	app/views/admin/staffings/show.html.erb
-100644 blob 86a900ac732649d643f596915caade5d3d4bfa3c	app/views/admin/staffings/show_sign_up.erb
-100644 blob 6b6448c8a3ea9ee6703fffe2a36da1ce4b3e348e	app/views/admin/techie_families/index.html.erb
-100644 blob 63e46238747048a98bb2d1122d0546ae2620c2b5	app/views/admin/users/_form.html.erb
-100644 blob 5d830d723f2b46ac6afbc11f80cd2ffd4d131c23	app/views/admin/users/edit.html.erb
-100644 blob 0df3dbcea7569ac2a571f319e4ee13962868714c	app/views/admin/users/index.html.erb
-100644 blob 791de697e28999343573934f9c3c8401f77eecf9	app/views/admin/users/new.html.erb
-100644 blob 175e6449d03cb56b643d030c17a95b28a590807f	app/views/admin/users/show.html.erb
-100644 blob 28f351bad4ff90a7ef61fd4811cf9c7cc186d52d	app/views/admin/venues/_form.html.erb
-100644 blob 0ca087ae0dc0a7b52d236c8474c8f4f37fbe4f61	app/views/admin/venues/_picture_fields.erb
-100644 blob b8cb1dbd74e289143f7baec78ac0421f0e62a389	app/views/admin/venues/edit.html.erb
-100644 blob ee3adb160653bca43bfa03e28684a6c2c2983309	app/views/admin/venues/index.html.erb
-100644 blob 17ee045d8ddea32cd9919214e99cd1f0234fc2c0	app/views/admin/venues/new.html.erb
-100644 blob fe1888d3b3719f7bf40ffa9b595b3958700157b0	app/views/admin/venues/show.html.erb
-100644 blob a2b58583546c56201f4d0531b2bb73defc7a526f	app/views/archives/_datepicker.html.erb
-100644 blob fe1414d2693f94f9571ac2db400b7181665bd374	app/views/archives/index.html.erb
-100644 blob b86b2d0920040b27bffe32fbd87fa2b060a864e8	app/views/archives/proposals/index.html.erb
-100644 blob c488db7119c432e51576554b21fe55fd322412b6	app/views/devise/confirmations/new.html.erb
-100644 blob a5c4585e8d57daa2da8298c3d6d1293fb805658a	app/views/devise/mailer/confirmation_instructions.html.erb
-100644 blob ae9e888abb980c3b96de69146df789041290aaf7	app/views/devise/mailer/reset_password_instructions.html.erb
-100644 blob 2263c2195223597f2cd69527fe3f2491e547f30f	app/views/devise/mailer/unlock_instructions.html.erb
-100644 blob 149520c5d83ac2929542dbd06754d94241b55736	app/views/devise/passwords/edit.html.erb
-100644 blob de33627752d2cb545d8e41dd67eda0a96d0aa29c	app/views/devise/passwords/new.html.erb
-100644 blob 6a9a4b390c57b52b4df26c92a6a92697ab3c4b9b	app/views/devise/registrations/edit.html.erb
-100644 blob 2665b08174a71718088c3b5b017f35f2a070fd20	app/views/devise/registrations/new.html.erb
-100644 blob 5c28c41cedf1a7b24c824d8f5d97137fb2da0141	app/views/devise/sessions/new.html.erb
-100644 blob eab783a4c92139721eea5eb82549a6c4594b4d0e	app/views/devise/shared/_links.erb
-100644 blob 9cce4c3d556fd33df152c83b78840670ba2e57d1	app/views/devise/unlocks/new.html.erb
-100644 blob 5cda4797fef88d6d84ca6b1af7f2790a38d83646	app/views/layouts/admin.html.erb
-100644 blob 4f72051ca65f95ea02227a1b82c871b4202439cd	app/views/layouts/application.html.erb
-100644 blob df82d497e24823785066d244f62aa9d232ad1a09	app/views/layouts/archives.html.erb
-100644 blob 21a78f40c2d01ba02e0f72272d0e5f55a6f26ac6	app/views/news/index.html.erb
-100644 blob bf5310d1bee213ae9a1371bf65c8865c886fbc1a	app/views/news/index.rss.builder
-100644 blob 0bf8c80cd33c1edbb4e8895fbc738f99b83fe56f	app/views/news/show.html.erb
-100644 blob a73e6cab2a34f8b35352472babbe4db5082b2791	app/views/proposals_mailer/new_proposal.html.erb
-100644 blob 328a33438da3477f2a1d6d761d06c403447c2e93	app/views/proposals_mailer/new_proposal.text.erb
-100644 blob 3a1f234ea80435220097af6b011c4d8ac574331d	app/views/shared/_cookie_notice.erb
-100644 blob b12f11a53db298b401d653e0a7289dd325fc72ff	app/views/shared/_editable_block_editor.html.erb
-100644 blob e94ff63cec34c8f28d146726bac1cfcddc697907	app/views/shared/_footer.html.erb
-100644 blob 737e3c3c61767908a2e8b881df3cc4f678247d9f	app/views/shared/_google_analytics.erb
-100644 blob b69846c5868ffc28473ccd25fcac21016c495755	app/views/shared/_ie_notice.html.erb
-100644 blob d4e07621d1966bcaf63ccae04a681846d9973716	app/views/shows/index.html.erb
-100644 blob 5c6d4f81a3cac72e416a7365338b1ec25f163d42	app/views/shows/show.html.erb
-100644 blob 617b440784980ae683f2f6864adea26b3374ee81	app/views/staffing_mailer/staffing_reminder.html.erb
-100644 blob ca73848248eb23e5e5ea39e1028a19573e763635	app/views/staffing_mailer/staffing_reminder.text.erb
-100644 blob 8955d0e06157f8cc5daf0ccc10c30687521f67ad	app/views/static/404.html.erb
-100644 blob da9cf1266796ef53a4c333b32af48cbbc26721fb	app/views/static/README.txt
-100644 blob 2e88494e7ec7f9d96874c9ad95774bf5609e5d4c	app/views/static/about.html.erb
-100644 blob 0e6d1587a954ac929be2e8b640c03c7421b464c8	app/views/static/access_denied.html.erb
-100644 blob 272f30bc47e7be44d16d8cdb4149670251085706	app/views/static/home.html.erb
-100644 blob 1ce5786d6aa2171ccac8431cf313015973af6ef6	app/views/venues/index.html.erb
-100644 blob cd8d755a9901b6dcebf35dd3997909e0aa1ff2f1	app/views/venues/show.html.erb
-100644 blob 983c049ece719c55186af0491ed430a341c69952	config.ru
-100644 blob ccf273d860f42c6074d02d42ae75e2efbd752b38	config/application.rb
-100644 blob 4489e58688ca642d8e0e9489f6896f49f9b89da6	config/boot.rb
-100644 blob 5f9dcb9dbd31ae751c048e55413542773cd228fc	config/database.yml.dist
-100644 blob 8efd06de2994510d380c3724f2493230aff6820d	config/environment.rb
-100644 blob 5d010d10fa0b5c73f2c6441a3ea50112cdebfcbc	config/environments/development.rb.dist
-100644 blob b9871495bddfe5e26537e5003874bd781064a5cb	config/environments/production.rb
-100644 blob 3b374f9e40f68bc5afb3074c22206fe6381d3fc1	config/environments/test.rb
-100644 blob 59385cdf379bd06a8d2326dcd4de6d5cd5d3f5b0	config/initializers/backtrace_silencers.rb
-100644 blob 3d21193041740d4ac3d1c39b392ae3167422bad2	config/initializers/cookie_killer.rb
-100644 blob 173f1b97a5eb89b76375bad1ed0bdad2bfdc7476	config/initializers/delayed_job.rb
-100644 blob 27756cb704930e0bf46238f746b1cb388f504c38	config/initializers/devise.rb
-100644 blob 5d8d9be237b28d4ebdad9cec9510764ab88154e6	config/initializers/inflections.rb
-100644 blob 72aca7e441e1855f8c7a7ac1f1cbe5d42cd1235b	config/initializers/mime_types.rb
-100644 blob 00351714e97c143261ab24cd2b0e929cbb50189a	config/initializers/quiet_assets.rb
-100644 blob 204a1c90ad6ced034939dcb1bb01845b7328f102	config/initializers/redcarpet.rb
-100644 blob 1309f28fe388509800b876fe7fd3b085daa9d8f0	config/initializers/rolify.rb
-100644 blob 7c188b1cd086bbb65f90ebc69959f2174c2c6b86	config/initializers/secret_token.rb
-100644 blob a667bfa04c232bf21d990bf4cb223a059558bbc3	config/initializers/session_store.rb
-100644 blob a9c3852951f5c766b93de63d38c4a80348305a23	config/initializers/simple_form.rb
-100644 blob 7636a9d6aaac88bb180531c9dbdea599a2c76966	config/initializers/will_paginate.rb
-100644 blob 999df20181e5571fb6a74259eead0899b7ad18a1	config/initializers/wrap_parameters.rb
-100644 blob 3492a5266f1d5510e64b8a635d7748443bc86640	config/locales/devise.en.yml
-100644 blob 1e28369067e75a50b0ce0cf94330d7848e39c8f8	config/locales/en.yml
-100644 blob 0df11fe0f32d653ab1b9a11fa591f3a1d0bcbe1d	config/locales/simple_form.en.yml
-100644 blob 276d6596cfa48ecfa4c0bcd39891869e01c4d4f1	config/routes.rb
-100644 blob 36e2c734b01cfa119977a309c743cc2665234291	db/migrate/20121010131311_create_shows.rb
-100644 blob 1d7efc1b21a787dc589eac66b4aaffc103cfe726	db/migrate/20121011231009_devise_create_users.rb
-100644 blob 999c94a3eea812746ca5b85a17569f041307302e	db/migrate/20121013133755_rolify_create_roles.rb
-100644 blob 96788ffedafc4cb8f76ff29daa4f771c32638ef7	db/migrate/20121013140702_create_news.rb
-100644 blob bfcfa1e888623f1ff108a5921bd17d6248fcd693	db/migrate/20121013143608_add_is_public_to_shows.rb
-100644 blob 9300f6256ce00f3f72f9cf3b4936dfaa96e84b56	db/migrate/20121013191206_create_admin_editable_blocks.rb
-100644 blob bca5dfc2bdb869f828b95b6ac8f0b8f8a9b1b5a3	db/migrate/20121017154554_change_news_publish_date_to_datetime.rb
-100644 blob 68f2c83389af5a015b7ebfe09d3fbf3f22120df3	db/migrate/20121019170105_add_image_column_to_shows.rb
-100644 blob 41ca4729bb80d15712ca79279987f59677ff9e37	db/migrate/20121019184814_add_attachment_image_to_news.rb
-100644 blob bc8b87934dadb69c2e73c78d3ad7be8231eff96a	db/migrate/20121019200626_create_admin_staffings.rb
-100644 blob 0c9049bba2f720a6270205e0bf97b9563c2089b9	db/migrate/20121019200956_create_admin_staffing_jobs.rb
-100644 blob fc719b272f4144652d87900079e3e0dad253d913	db/migrate/20121021232500_add_phone_number_to_users.rb
-100644 blob 3de18de8b62a3c521f69b235b46e0d7fb8fa8860	db/migrate/20121025093814_create_admin_proposals_calls.rb
-100644 blob 9aac1392234b8c4286754323a0a9a70e08a8ff02	db/migrate/20121025093924_create_admin_proposals_questions.rb
-100644 blob 80a4ed4bfc7c1c2e381fdfbb5e69f0c866c795fb	db/migrate/20121025094403_create_admin_proposals_proposals.rb
-100644 blob 2acea25ccb6220d692a64a261218c5fbf27db854	db/migrate/20121025094605_create_admin_proposals_answers.rb
-100644 blob ace3ba2b0502fd3f1d408013277511a6509d4f59	db/migrate/20121025095054_create_proposal_call_question_join_table.rb
-100644 blob 213967d033902e6a0b7190cd08211647ebda8d53	db/migrate/20121025182941_create_admin_proposals_team_members.rb
-100644 blob ad24f47a2e1e2187d6a75f65403322c8ae029208	db/migrate/20121028185810_create_attachments.rb
-100644 blob 30fe43a57f1757613d8ae3e81ed6ff95b4c54320	db/migrate/20121029144402_add_performance_dates_to_shows.rb
-100644 blob 65f1d0bff88854451b36daa9ed6d8b16631fb79f	db/migrate/20121030011812_create_techies.rb
-100644 blob ee1b762c7dccf29931f37c19531dae33675e453a	db/migrate/20121030012134_add_techie_children_table.rb
-100644 blob 23bd5045b91d8d8d096c59d6f4e9741ed36e565b	db/migrate/20121030214324_add_late_to_proposals.rb
-100644 blob e6a2bc5f882dc2a64850baaee84038d03d532cf9	db/migrate/20121030220252_add_approved_to_proposals.rb
-100644 blob 56440390512b56b08a57e3ddd4b57fb19fac90d4	db/migrate/20121101143108_add_successful_to_proposals.rb
-100644 blob e7841608cce6a1f9740ba33805abba7e85db150f	db/migrate/20121106103208_create_delayed_jobs.rb
-100644 blob 81896c7a52381a3fbf67d978eb7c94ca08658ee9	db/migrate/20121106183335_add_admin_page_to_editable_block.rb
-100644 blob 7e994bea17d2f4b833e90c44baf7aabfadfe8d9f	db/migrate/20121107171059_add_reminder_job_to_staffing.rb
-100644 blob 78e95ed209a1fdbe69b55a1b7f7a7f9a9fd556ef	db/migrate/20121108093318_rename_admin_proposals_team_members_to_team_members.rb
-100644 blob b11e42696f6c0f400789584449d0fb6fcc082a1b	db/migrate/20121108093801_add_teamwork_columns_to_team_members.rb
-100644 blob 134eb2b11398fa2e3cbc588a4baef115246133d6	db/migrate/20121109200442_add_index_to_foreign_keys.rb
-100644 blob 8882d7a23ec31a9b92443c272aeab49cb5b3ffba	db/migrate/20121124105804_add_archived_to_proposal_call.rb
-100644 blob 2fda07df92a14aa4f64995b444f87311802ee7d0	db/migrate/20121125184944_add_group_to_editable_block.rb
-100644 blob b3e13b2ffaa3add7e82735aba38ab3212cb48fd8	db/migrate/20121125190936_create_admin_proposals_call_question_templates.rb
-100644 blob e907694bd2d0a1bdf8869aa97b162f13e10de30c	db/migrate/20121127144207_add_galleries.rb
-100644 blob 5169c26b809fccdf748eeee59a1ff51953a2d517	db/migrate/20121128093113_change_questions_to_polymorphic.rb
-100644 blob 3037e356dc9222295808343b3a10eac0bd6623e7	db/migrate/20121128094153_change_answers_to_polymorphic.rb
-100644 blob 4899213c25c018e54e285797cd44b0c945f2d68d	db/migrate/20121128100200_create_questionnaires.rb
-100644 blob 8182f6c8a15de29905454bdf34136635d908367f	db/migrate/20121129144841_create_venues.rb
-100644 blob aa7103e2fee3d878dba091de9ceee72ac06ca623	db/schema.rb
-100644 blob f496b24e5a6bc68dffb7bf7bdb5cadc2701af2ca	db/seeds.rb
-100644 blob fe41f5cc24d667635c46a533fd09bf7bb514e032	doc/README_FOR_APP
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	lib/assets/.gitkeep
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	lib/tasks/.gitkeep
-100644 blob 201a069e2cfc5ad5b24c815cb34d582dbd532cd4	lib/templates/erb/scaffold/_form.html.erb
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	log/.gitkeep
-100644 blob 7ef71f68a710f8f6308b38acc3f1a668b2a77614	public/401.html
-100644 blob 83660ab1878ba9adc6477ed910333e32bb6b46ce	public/422.html
-100644 blob f3648a0dbc9f021131677c88383f1cc9b15ea22e	public/500.html
-100644 blob 46ccc6e4bcc24fe03fc542eff9d6a444f93cc455	public/favicon.ico
-100644 blob 5d6eafd182af7092bcab069424fb6b29217402b8	public/images/bedlam.png
-100644 blob f4de02e640319a2a186e51340ef50be10a88d960	public/images/fringe.png
-100644 blob baa562735b6f14d88c6d9fdba92ebd8cba45bbef	public/images/generic_shows/medium/0.png
-100644 blob 011794fab9011ac4adac2369e4ecf808a9664537	public/images/generic_shows/medium/1.png
-100644 blob 50cd3755a8e0b276a41ccbb1f498c85e28235b66	public/images/generic_shows/medium/2.png
-100644 blob 5953e7175a17d03d5ce7281bf2c0a256e9c3943d	public/images/generic_shows/medium/3.png
-100644 blob d5f8c6b021c29f1b2b05a42632768f2a25b44e2a	public/images/generic_shows/slideshow/0.png
-100644 blob b61dbec996a284082431b7e7bd1df4e37ebcab7e	public/images/generic_shows/slideshow/1.png
-100644 blob e0b07b86bc22143df47984ca50a2c877138b5fce	public/images/generic_shows/slideshow/2.png
-100644 blob e3fd6776023136aa96d58a67d3ad1b9a38f90726	public/images/generic_shows/slideshow/3.png
-100644 blob b0857913bb22aac193060def2a0787ceec8105c7	public/images/generic_shows/thumb/0.png
-100644 blob 87a22e854c192501dfe7a8895fd20a7653d7cfd5	public/images/generic_shows/thumb/1.png
-100644 blob b2800363204ce7187ad4d1cd743c4e350808b0b3	public/images/generic_shows/thumb/2.png
-100644 blob c6b1ad8a2640d19b11732c014d26feee507de7cd	public/images/generic_shows/thumb/3.png
-100644 blob 1d11fa9ada9e93505b3d736acb204083f45d5fbf	public/images/lightbox-blank.gif
-100644 blob 33bcf517a35b72135b6a5b97bac72425762b8343	public/images/lightbox-btn-close.gif
-100644 blob a0d4fcf84a784f2cf44c33084145dde5df294ccf	public/images/lightbox-btn-next.gif
-100644 blob 040ee5992f7fdb9b51907cb4ba1c5570b1b5482a	public/images/lightbox-btn-prev.gif
-100644 blob 4f1429c06cb2ffd2910b038d06b01a4b3ee00a21	public/images/lightbox-ico-loading.gif
-100644 blob 013a03ca259899826f85baeae2804e0064717a19	public/images/medium/missing.png
-100644 blob 3e33641fdfab05c503ca09a3f8838ff7593a6b65	public/images/no-shows.png
-100644 blob 6b280c1f128f020be67558db9290f2714186a16f	public/images/thumb/missing.png
-100644 blob 085187fa58b1631e955f5d514d895a7721466797	public/robots.txt
-100644 blob 1116fed1723e95d2d540de9c3040a56b2c8a759d	public/staffing_templates/README.md
-100644 blob dde8ee55df99679e09b51982d377256ae8260235	public/staffing_templates/lunchtime.json
-100644 blob dde8ee55df99679e09b51982d377256ae8260235	public/staffing_templates/mainterm.json
-100644 blob 684f07ca83d1faa9fbfa619bbd88dc7b75da4574	public/staffing_templates/templates.js
-100644 blob e85957e6a30d15baa50cdbb5a5f4307e120d5244	public/staffing_templates/templates.json
-100644 blob edf195985f692057c67e71d2f8b493ee3078a0d6	script/delayed_job
-100755 blob f8da2cffd4de029d658fe2f7b9ec88f28dc34a9a	script/rails
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	test/fixtures/.gitkeep
-100644 blob 70d027556a9f13fc373033e9d726739fd7199436	test/fixtures/admin/answers.yml
-100644 blob 43f4e29b7e9fa3bd5b450afc9b9d89c169530d3b	test/fixtures/admin/editable_blocks.yml
-100644 blob 03093db4645348d2312fa61ca1d82d6ee681e3a3	test/fixtures/admin/proposals/call_question_templates.yml
-100644 blob fcae52ec749670c41fbcc7f8d23d1633411397e5	test/fixtures/admin/proposals/calls.yml
-100644 blob bf3c70a3ec23890bd2b611b3c768af6dafa7d85a	test/fixtures/admin/proposals/proposals.yml
-100644 blob 4870f1ba249691b33310dd1363488510f1daf33b	test/fixtures/admin/questions.yml
-100644 blob c63aac0b609053819f6a98ff19cbdfa0e9d7e227	test/fixtures/admin/staffing_jobs.yml
-100644 blob 97603d9c6a0d7f055edaf53cc47892546d4ddad2	test/fixtures/admin/staffings.yml
-100644 blob c63aac0b609053819f6a98ff19cbdfa0e9d7e227	test/fixtures/attachments.yml
-100644 blob 49eef24f5766e69cfdfb37942369babfba4e0816	test/fixtures/news.yml
-100644 blob c63aac0b609053819f6a98ff19cbdfa0e9d7e227	test/fixtures/pictures.yml
-100644 blob 4473e2d1fe4ab91db2d64269735adccd57af7105	test/fixtures/shows.yml
-100644 blob fdca585c6e3716483df61536e1f8d1bcb360a2c3	test/fixtures/techies.yml
-100644 blob c29b7ac481881bbb770549fdc95470b4de1c5531	test/fixtures/users.yml
-100644 blob d529fc174ae2a40080ba62ebdd4276c593556381	test/fixtures/venues.yml
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	test/functional/.gitkeep
-100644 blob cbbf7d0c2f3bf7ab3e5cb8097f46fd2ad987d8d8	test/functional/admin/editable_blocks_controller_test.rb
-100644 blob 6edffb2e610426af0c029d26e417ec38e3697c47	test/functional/admin/help_controller_test.rb
-100644 blob e6990fa096ca1d1f5a30dfd398daf2514b9297f8	test/functional/admin/job_control_controller_test.rb
-100644 blob 79c31327a31793f9d10bf928a8f358e376c5b629	test/functional/admin/news_controller_test.rb
-100644 blob 8d17b826e033bcae4920aa518546ae6ae5058d56	test/functional/admin/proposals/call_question_templates_controller_test.rb
-100644 blob 4efda1fa3a6592a650ecd4a7ccfbc7fc02701741	test/functional/admin/proposals/calls_controller_test.rb
-100644 blob 1d9f420019e704285f3aaaf206ff93b4902d0292	test/functional/admin/proposals/proposals_controller_test.rb
-100644 blob 7e19534c69400255745054d1955c94248cac907a	test/functional/admin/shows_controller_test.rb
-100644 blob 04fdf6096c050047348777d3b7649bed421dbfdc	test/functional/admin/staffings_controller_test.rb
-100644 blob 2069b64c4d50578c6229e46677cec65d1161d81a	test/functional/admin/techie_families_controller_test.rb
-100644 blob a1d19e0e0cd143b0e44f3df58c7d876ff8af4820	test/functional/admin/users_controller_test.rb
-100644 blob 5a94cf75e6828c05f87d281ccf33dafdc56be03f	test/functional/admin/venues_controller_test.rb
-100644 blob ccf0abef4f12a642277a685ce76726b7e90c5b6b	test/functional/admin_controller_test.rb
-100644 blob 087f6b343e57c4f20cdcf3265257cf6e47df9f16	test/functional/archives/proposals_controller_test.rb
-100644 blob 9f0a59da81b213affc0d6d41822761e575524136	test/functional/archives/shows_controller_test.rb
-100644 blob e578b977204c965749a71855dd13518a135493e5	test/functional/news_controller_test.rb
-100644 blob 30a8e5a1716acebb426aa004e87600c4dfd07407	test/functional/proposals_mailer_test.rb
-100644 blob 1b1ef2e4ad20288ea6d007f5856c7dab0bb373d5	test/functional/shows_controller_test.rb
-100644 blob f8ca98c8c4d62839915ea2b84e28769a049f4535	test/functional/staffing_mailer_test.rb
-100644 blob 5bed12404dc7ef0c5e42254315ebe6347f2f8c4c	test/functional/static_controller_test.rb
-100644 blob 8223210e3993b4579604f5a86a283fe82e3d4738	test/functional/venues_controller_test.rb
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	test/integration/.gitkeep
-100644 blob 3fea27b91670e04c83a15269790a44b41b7d9ce1	test/performance/browsing_test.rb
-100644 blob 7e9282d31c596cdd92329f254503f6227c1f7ec0	test/test_helper.rb
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	test/unit/.gitkeep
-100644 blob d48e99a59694eb005668418969303583d1cc7c51	test/unit/admin/proposals/call_test.rb
-100644 blob e7a1aa14a9c998436146ad966ca305b3f694e53b	test/unit/admin/proposals/proposal_test.rb
-100644 blob 3ddeca8dd8bd41d763d812a77a85cb4e6412804f	test/unit/helpers/admin/techie_families_helper_test.rb
-100644 blob cd9cd52b832d70ebcc064ed8aaa09125e5b27746	test/unit/helpers/venues_helper_test.rb
-100644 blob 59e7bb4020224da3c79ad11cf2b451c574eeaf2d	test/unit/picture_test.rb
-100644 blob fafcd2a04fc85cae43f550e0d5de78ecea352d54	test/unit/proposals_mailer_test.rb
-100644 blob 14d34652bd4d8c199541d70f9258e8519a97698c	test/unit/techie_test.rb
-100644 blob bf495c65733907006e0ba29b50e678e52faf405e	test/unit/venue_test.rb
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	vendor/assets/javascripts/.gitkeep
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	vendor/assets/stylesheets/.gitkeep
-100644 blob e69de29bb2d1d6434b8b29ae775ad8c2e48c5391	vendor/plugins/.gitkeep
+app/controllers/admin/questionnaires/questionnaire_templates_controller.rb
+app/controllers/admin/questionnaires/questionnaires_controller.rb
+app/controllers/admin/resources_controller.rb
+app/controllers/admin/shows_controller.rb
+app/controllers/admin/staffings_controller.rb
+app/controllers/admin/techie_families_controller.rb
+app/controllers/admin/users_controller.rb
+app/controllers/admin/venues_controller.rb
+app/controllers/admin_controller.rb
+app/controllers/application_controller.rb
+app/controllers/archives/proposals_controller.rb
+app/controllers/archives/shows_controller.rb
+app/controllers/archives_controller.rb
+app/controllers/attachments_controller.rb
+app/controllers/news_controller.rb
+app/controllers/shows_controller.rb
+app/controllers/static_controller.rb
+app/controllers/venues_controller.rb
+app/helpers/admin/dashboard_helper.rb
+app/helpers/admin/job_control_helper.rb
+app/helpers/application_helper.rb
+app/helpers/editable_block_helper.rb
+app/helpers/md_helper.rb
+app/helpers/news_helper.rb
+app/helpers/shows_helper.rb
+app/helpers/twitter_helper.rb
+app/helpers/venues_helper.rb
+app/helpers/version_helper.rb
+app/inputs/value_only_input.rb
+app/mailers/.gitkeep
+app/mailers/proposals_mailer.rb
+app/mailers/staffing_mailer.rb
+app/models/.gitkeep
+app/models/admin.rb
+app/models/admin/answer.rb
+app/models/admin/editable_block.rb
+app/models/admin/proposals.rb
+app/models/admin/proposals/call.rb
+app/models/admin/proposals/call_question_template.rb
+app/models/admin/proposals/proposal.rb
+app/models/admin/question.rb
+app/models/admin/questionnaires.rb
+app/models/admin/questionnaires/questionnaire.rb
+app/models/admin/questionnaires/questionnaire_template.rb
+app/models/admin/staffing.rb
+app/models/admin/staffing_job.rb
+app/models/news.rb
+app/models/picture.rb
+app/models/role.rb
+app/models/show.rb
+app/models/team_member.rb
+app/models/techie.rb
+app/models/user.rb
+app/models/venue.rb
+app/views/admin/dashboard/_delayed_jobs_widget.html.erb
+app/views/admin/dashboard/_editable_blocks_widget.html.erb
+app/views/admin/dashboard/_news_widget.html.erb
+app/views/admin/dashboard/_proposals_widget.html.erb
+app/views/admin/dashboard/_resources_widget.html.erb
+app/views/admin/dashboard/_shows_widget.html.erb
+app/views/admin/dashboard/_staffings_widget.html.erb
+app/views/admin/dashboard/_users_widget.html.erb
+app/views/admin/dashboard/_venues_widget.html.erb
+app/views/admin/editable_blocks/_attachment_fields.erb
+app/views/admin/editable_blocks/_editable_block.html.erb
+app/views/admin/editable_blocks/_form.html.erb
+app/views/admin/editable_blocks/edit.html.erb
+app/views/admin/editable_blocks/index.html.erb
+app/views/admin/editable_blocks/new.html.erb
+app/views/admin/help/markdown.html.md
+app/views/admin/index.html.erb
+app/views/admin/job_control/_job.html.erb
+app/views/admin/job_control/failed.html.erb
+app/views/admin/job_control/overview.html.erb
+app/views/admin/job_control/pending.html.erb
+app/views/admin/job_control/working.html.erb
+app/views/admin/news/_form.html.erb
+app/views/admin/news/edit.html.erb
+app/views/admin/news/index.html.erb
+app/views/admin/news/new.html.erb
+app/views/admin/news/show.html.erb
+app/views/admin/proposals/call_question_templates/_form.html.erb
+app/views/admin/proposals/call_question_templates/_question_fields.erb
+app/views/admin/proposals/call_question_templates/edit.html.erb
+app/views/admin/proposals/call_question_templates/index.html.erb
+app/views/admin/proposals/call_question_templates/new.html.erb
+app/views/admin/proposals/call_question_templates/show.html.erb
+app/views/admin/proposals/calls/_form.html.erb
+app/views/admin/proposals/calls/_question_fields.erb
+app/views/admin/proposals/calls/edit.html.erb
+app/views/admin/proposals/calls/index.html.erb
+app/views/admin/proposals/calls/new.html.erb
+app/views/admin/proposals/calls/show.html.erb
+app/views/admin/proposals/proposals/_answer_fields.erb
+app/views/admin/proposals/proposals/_form.html.erb
+app/views/admin/proposals/proposals/_team_member_fields.erb
+app/views/admin/proposals/proposals/edit.html.erb
+app/views/admin/proposals/proposals/index.html.erb
+app/views/admin/proposals/proposals/new.html.erb
+app/views/admin/proposals/proposals/show.html.erb
+app/views/admin/questionnaires/questionnaire_templates/_form.html.erb
+app/views/admin/questionnaires/questionnaire_templates/_question_fields.erb
+app/views/admin/questionnaires/questionnaire_templates/edit.html.erb
+app/views/admin/questionnaires/questionnaire_templates/index.html.erb
+app/views/admin/questionnaires/questionnaire_templates/new.html.erb
+app/views/admin/questionnaires/questionnaire_templates/show.html.erb
+app/views/admin/questionnaires/questionnaires/_answer_fields.erb
+app/views/admin/questionnaires/questionnaires/_form.html.erb
+app/views/admin/questionnaires/questionnaires/_question_fields.erb
+app/views/admin/questionnaires/questionnaires/answer.html.erb
+app/views/admin/questionnaires/questionnaires/edit.html.erb
+app/views/admin/questionnaires/questionnaires/index.html.erb
+app/views/admin/questionnaires/questionnaires/show.html.erb
+app/views/admin/resources/branding.erb
+app/views/admin/shared/_md_editor.erb
+app/views/admin/shows/_form.html.erb
+app/views/admin/shows/_picture_fields.erb
+app/views/admin/shows/_team_member_fields.erb
+app/views/admin/shows/edit.html.erb
+app/views/admin/shows/index.html.erb
+app/views/admin/shows/new.html.erb
+app/views/admin/shows/show.html.erb
+app/views/admin/staffings/_form.html.erb
+app/views/admin/staffings/_staffing.html.erb
+app/views/admin/staffings/_staffing_job_fields.erb
+app/views/admin/staffings/edit.html.erb
+app/views/admin/staffings/index.html.erb
+app/views/admin/staffings/new.html.erb
+app/views/admin/staffings/new_for_show.html.erb
+app/views/admin/staffings/show.html.erb
+app/views/admin/staffings/show_sign_up.erb
+app/views/admin/techie_families/index.html.erb
+app/views/admin/users/_form.html.erb
+app/views/admin/users/edit.html.erb
+app/views/admin/users/index.html.erb
+app/views/admin/users/new.html.erb
+app/views/admin/users/show.html.erb
+app/views/admin/venues/_form.html.erb
+app/views/admin/venues/_picture_fields.erb
+app/views/admin/venues/edit.html.erb
+app/views/admin/venues/index.html.erb
+app/views/admin/venues/new.html.erb
+app/views/admin/venues/show.html.erb
+app/views/archives/_datepicker.html.erb
+app/views/archives/index.html.erb
+app/views/archives/proposals/index.html.erb
+app/views/devise/confirmations/new.html.erb
+app/views/devise/mailer/confirmation_instructions.html.erb
+app/views/devise/mailer/reset_password_instructions.html.erb
+app/views/devise/mailer/unlock_instructions.html.erb
+app/views/devise/passwords/edit.html.erb
+app/views/devise/passwords/new.html.erb
+app/views/devise/registrations/edit.html.erb
+app/views/devise/registrations/new.html.erb
+app/views/devise/sessions/new.html.erb
+app/views/devise/shared/_links.erb
+app/views/devise/unlocks/new.html.erb
+app/views/layouts/admin.html.erb
+app/views/layouts/application.html.erb
+app/views/layouts/archives.html.erb
+app/views/news/index.html.erb
+app/views/news/index.rss.builder
+app/views/news/show.html.erb
+app/views/proposals_mailer/new_proposal.html.erb
+app/views/proposals_mailer/new_proposal.text.erb
+app/views/shared/_cookie_notice.erb
+app/views/shared/_editable_block_editor.html.erb
+app/views/shared/_footer.html.erb
+app/views/shared/_google_analytics.erb
+app/views/shared/_ie_notice.html.erb
+app/views/shows/index.html.erb
+app/views/shows/show.html.erb
+app/views/staffing_mailer/staffing_reminder.html.erb
+app/views/staffing_mailer/staffing_reminder.text.erb
+app/views/static/404.html.erb
+app/views/static/README.txt
+app/views/static/about.html.erb
+app/views/static/access_denied.html.erb
+app/views/static/home.html.erb
+app/views/venues/index.html.erb
+app/views/venues/show.html.erb
+config.ru
+config/application.rb
+config/boot.rb
+config/database.yml.dist
+config/environment.rb
+config/environments/development.rb.dist
+config/environments/production.rb
+config/environments/test.rb
+config/initializers/backtrace_silencers.rb
+config/initializers/cookie_killer.rb
+config/initializers/delayed_job.rb
+config/initializers/devise.rb
+config/initializers/inflections.rb
+config/initializers/mime_types.rb
+config/initializers/quiet_assets.rb
+config/initializers/redcarpet.rb
+config/initializers/rolify.rb
+config/initializers/secret_token.rb
+config/initializers/session_store.rb
+config/initializers/simple_form.rb
+config/initializers/will_paginate.rb
+config/initializers/wrap_parameters.rb
+config/locales/devise.en.yml
+config/locales/en.yml
+config/locales/simple_form.en.yml
+config/routes.rb
+db/migrate/20121010131311_create_shows.rb
+db/migrate/20121011231009_devise_create_users.rb
+db/migrate/20121013133755_rolify_create_roles.rb
+db/migrate/20121013140702_create_news.rb
+db/migrate/20121013143608_add_is_public_to_shows.rb
+db/migrate/20121013191206_create_admin_editable_blocks.rb
+db/migrate/20121017154554_change_news_publish_date_to_datetime.rb
+db/migrate/20121019170105_add_image_column_to_shows.rb
+db/migrate/20121019184814_add_attachment_image_to_news.rb
+db/migrate/20121019200626_create_admin_staffings.rb
+db/migrate/20121019200956_create_admin_staffing_jobs.rb
+db/migrate/20121021232500_add_phone_number_to_users.rb
+db/migrate/20121025093814_create_admin_proposals_calls.rb
+db/migrate/20121025093924_create_admin_proposals_questions.rb
+db/migrate/20121025094403_create_admin_proposals_proposals.rb
+db/migrate/20121025094605_create_admin_proposals_answers.rb
+db/migrate/20121025095054_create_proposal_call_question_join_table.rb
+db/migrate/20121025182941_create_admin_proposals_team_members.rb
+db/migrate/20121028185810_create_attachments.rb
+db/migrate/20121029144402_add_performance_dates_to_shows.rb
+db/migrate/20121030011812_create_techies.rb
+db/migrate/20121030012134_add_techie_children_table.rb
+db/migrate/20121030214324_add_late_to_proposals.rb
+db/migrate/20121030220252_add_approved_to_proposals.rb
+db/migrate/20121101143108_add_successful_to_proposals.rb
+db/migrate/20121106103208_create_delayed_jobs.rb
+db/migrate/20121106183335_add_admin_page_to_editable_block.rb
+db/migrate/20121107171059_add_reminder_job_to_staffing.rb
+db/migrate/20121108093318_rename_admin_proposals_team_members_to_team_members.rb
+db/migrate/20121108093801_add_teamwork_columns_to_team_members.rb
+db/migrate/20121109200442_add_index_to_foreign_keys.rb
+db/migrate/20121124105804_add_archived_to_proposal_call.rb
+db/migrate/20121125184944_add_group_to_editable_block.rb
+db/migrate/20121125190936_create_admin_proposals_call_question_templates.rb
+db/migrate/20121127144207_add_galleries.rb
+db/migrate/20121128093113_change_questions_to_polymorphic.rb
+db/migrate/20121128094153_change_answers_to_polymorphic.rb
+db/migrate/20121128100200_create_questionnaires.rb
+db/migrate/20121129144841_create_venues.rb
+db/schema.rb
+db/seeds.rb
+doc/README_FOR_APP
+lib/assets/.gitkeep
+lib/tasks/.gitkeep
+lib/templates/erb/scaffold/_form.html.erb
+log/.gitkeep
+public/401.html
+public/422.html
+public/500.html
+public/favicon.ico
+public/images/bedlam.png
+public/images/fringe.png
+public/images/generic_shows/medium/0.png
+public/images/generic_shows/medium/1.png
+public/images/generic_shows/medium/2.png
+public/images/generic_shows/medium/3.png
+public/images/generic_shows/slideshow/0.png
+public/images/generic_shows/slideshow/1.png
+public/images/generic_shows/slideshow/2.png
+public/images/generic_shows/slideshow/3.png
+public/images/generic_shows/thumb/0.png
+public/images/generic_shows/thumb/1.png
+public/images/generic_shows/thumb/2.png
+public/images/generic_shows/thumb/3.png
+public/images/lightbox-blank.gif
+public/images/lightbox-btn-close.gif
+public/images/lightbox-btn-next.gif
+public/images/lightbox-btn-prev.gif
+public/images/lightbox-ico-loading.gif
+public/images/medium/missing.png
+public/images/no-shows.png
+public/images/thumb/missing.png
+public/robots.txt
+public/staffing_templates/README.md
+public/staffing_templates/lunchtime.json
+public/staffing_templates/mainterm.json
+public/staffing_templates/templates.js
+public/staffing_templates/templates.json
+script/delayed_job
+script/rails
+test/fixtures/.gitkeep
+test/fixtures/admin/answers.yml
+test/fixtures/admin/editable_blocks.yml
+test/fixtures/admin/proposals/call_question_templates.yml
+test/fixtures/admin/proposals/calls.yml
+test/fixtures/admin/proposals/proposals.yml
+test/fixtures/admin/questions.yml
+test/fixtures/admin/staffing_jobs.yml
+test/fixtures/admin/staffings.yml
+test/fixtures/attachments.yml
+test/fixtures/news.yml
+test/fixtures/pictures.yml
+test/fixtures/shows.yml
+test/fixtures/techies.yml
+test/fixtures/users.yml
+test/fixtures/venues.yml
+test/functional/.gitkeep
+test/functional/admin/editable_blocks_controller_test.rb
+test/functional/admin/help_controller_test.rb
+test/functional/admin/job_control_controller_test.rb
+test/functional/admin/news_controller_test.rb
+test/functional/admin/proposals/call_question_templates_controller_test.rb
+test/functional/admin/proposals/calls_controller_test.rb
+test/functional/admin/proposals/proposals_controller_test.rb
+test/functional/admin/shows_controller_test.rb
+test/functional/admin/staffings_controller_test.rb
+test/functional/admin/techie_families_controller_test.rb
+test/functional/admin/users_controller_test.rb
+test/functional/admin/venues_controller_test.rb
+test/functional/admin_controller_test.rb
+test/functional/archives/proposals_controller_test.rb
+test/functional/archives/shows_controller_test.rb
+test/functional/news_controller_test.rb
+test/functional/proposals_mailer_test.rb
+test/functional/shows_controller_test.rb
+test/functional/staffing_mailer_test.rb
+test/functional/static_controller_test.rb
+test/functional/venues_controller_test.rb
+test/integration/.gitkeep
+test/performance/browsing_test.rb
+test/test_helper.rb
+test/unit/.gitkeep
+test/unit/admin/proposals/call_test.rb
+test/unit/admin/proposals/proposal_test.rb
+test/unit/helpers/admin/techie_families_helper_test.rb
+test/unit/helpers/venues_helper_test.rb
+test/unit/picture_test.rb
+test/unit/proposals_mailer_test.rb
+test/unit/techie_test.rb
+test/unit/venue_test.rb
+vendor/assets/javascripts/.gitkeep
+vendor/assets/stylesheets/.gitkeep
+vendor/plugins/.gitkeep
