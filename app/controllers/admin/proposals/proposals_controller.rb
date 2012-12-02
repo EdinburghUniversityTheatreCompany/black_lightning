@@ -190,6 +190,8 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
 
+    authorize!(:reject, @proposal)
+
     @proposal.approved = false
     @proposal.save
 
