@@ -1,4 +1,0 @@
-app/assets/javascripts/admin/proposals/call_templates.js:7::	    //TODO: This feels dirty - there must be a better way:
-app/assets/javascripts/admin/questionnaires/questionnaire_templates.js:7::	    //TODO: This feels dirty - there must be a better way:
-app/models/attachment.rb:4::	# TODO: Possibly should be moved to Admin namespace?
-app/views/admin/staffings/new_for_show.html.erb:29::	            //TODO: This feels like a bit of a cheat - could probably be improved.

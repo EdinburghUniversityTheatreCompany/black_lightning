@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: admin_editable_blocks
+#
+#  id         :integer          not null, primary key
+#  name       :string(255)
+#  content    :text
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  admin_page :boolean
+#  group      :string(255)
+#
+
 class Admin::EditableBlock < ActiveRecord::Base
   resourcify
 

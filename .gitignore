@@ -29,6 +29,7 @@
 
 #Ignore generated documentation
 /doc/app
+/doc/TODO
 
 #Ignore coverage reports
 /coverage

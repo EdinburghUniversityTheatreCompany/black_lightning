@@ -38,9 +38,11 @@ gem 'twilio-ruby'
 
 gem 'delayed_job_active_record'
 
-gem 'ci_reporter', :group => :test
-gem 'simplecov', :group => :test
-gem 'simplecov-rcov', :group => :test
+group :test do
+  gem 'ci_reporter'
+  gem 'simplecov'
+  gem 'simplecov-rcov'
+end
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'

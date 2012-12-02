@@ -1,6 +1,9 @@
 Welcome to the BlackLightning Documentation.
 
-Please run "rake doc:app" to ensure that what you are seeing is consistent with what is written in the code files.
+Please run <tt>rake doc:app</tt> to ensure that what you are seeing is consistent with what is written in the code files.
+
+You could also run the annotate gem (not in gemfile) to update the database schema information included in the
+documentation (you will need to re-run <tt>rake doc:app</tt> after).
 
 Within the documentation lies useful information. Use it as you will.
 

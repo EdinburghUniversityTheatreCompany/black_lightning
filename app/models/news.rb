@@ -1,5 +1,28 @@
+##
+# == Schema Information
+#
+# Table name: news
+#
+#  id                 :integer          not null, primary key
+#  title              :string(255)
+#  body               :text
+#  slug               :string(255)
+#  publish_date       :datetime
+#  show_public        :boolean
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  image_file_name    :string(255)
+#  image_content_type :string(255)
+#  image_file_size    :integer
+#  image_updated_at   :datetime
+##
+
 class News < ActiveRecord::Base
   resourcify
+
+  ##
+  # Use the format id-slug for urls. e.g. /news/1-mynews
+  ##
   def to_param
     "#{id}-#{slug}"
   end
