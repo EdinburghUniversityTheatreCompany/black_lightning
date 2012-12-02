@@ -159,6 +159,9 @@ class Admin::Proposals::ProposalsController < AdminController
   # DELETE /admin/proposals/proposals/1.json
   def destroy
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
+
+    authorize!(:destory, @proposal)
+
     @admin_proposals_proposal.destroy
 
     respond_to do |format|
