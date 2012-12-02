@@ -1,3 +1,12 @@
+##
+# Defines attachments for Admin::EditableBlock.
+#
+#--
+# TODO: Possibly should be moved to Admin namespace?
+#++
+#
+# Uses paperclip to store the file. See AttachmentController for fetching of attachments.
+#
 # == Schema Information
 #
 # Table name: attachments
@@ -11,16 +20,6 @@
 #  file_updated_at   :datetime
 #  created_at        :datetime         not null
 #  updated_at        :datetime         not null
-#
-
-##
-# Defines attachments for Admin::EditableBlock.
-#
-#--
-# TODO: Possibly should be moved to Admin namespace?
-#++
-#
-# Uses paperclip to store the file. See AttachmentController for fetching of attachments.
 ##
 
 class Attachment < ActiveRecord::Base

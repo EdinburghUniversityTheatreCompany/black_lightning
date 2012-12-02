@@ -1,3 +1,11 @@
+##
+# Represents a picture in the polymorphic association <tt>gallery</tt>
+#
+# == Paperclip
+# Images are stored as:
+# * thumb   (150x100)
+# * display (700x700)
+#
 # == Schema Information
 #
 # Table name: pictures
@@ -12,7 +20,7 @@
 #  image_updated_at   :datetime
 #  created_at         :datetime         not null
 #  updated_at         :datetime         not null
-#
+##
 
 class Picture < ActiveRecord::Base
   belongs_to :gallery, :polymorphic => true
