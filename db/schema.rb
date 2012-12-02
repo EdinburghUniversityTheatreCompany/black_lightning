@@ -22,8 +22,8 @@ ActiveRecord::Schema.define(:version => 20121129144841) do
     t.string   "answerable_type"
   end
 
-  add_index "admin_answers", ["answerable_id"], :name => "index_admin_proposals_answers_on_proposal_id"
-  add_index "admin_answers", ["question_id"], :name => "index_admin_proposals_answers_on_question_id"
+  add_index "admin_answers", ["answerable_id", "answerable_type"], :name => "index_admin_answers_on_proposal_id"
+  add_index "admin_answers", ["question_id"], :name => "index_admin_answers_on_question_id"
 
   create_table "admin_editable_blocks", :force => true do |t|
     t.string   "name"
@@ -75,6 +75,8 @@ ActiveRecord::Schema.define(:version => 20121129144841) do
     t.datetime "updated_at", :null => false
   end
 
+  add_index "admin_questionnaires_questionnaires", ["show_id"], :name => "index_admin_questionnaires_questionnaires_on_show_id"
+
   create_table "admin_questions", :force => true do |t|
     t.text     "question_text"
     t.string   "response_type"
@@ -83,6 +85,8 @@ ActiveRecord::Schema.define(:version => 20121129144841) do
     t.integer  "questionable_id"
     t.string   "questionable_type"
   end
+
+  add_index "admin_questions", ["questionable_id", "questionable_type"], :name => "index_admin_questions_on_questionable_id"
 
   create_table "admin_staffing_jobs", :force => true do |t|
     t.string   "name"
@@ -167,6 +171,8 @@ ActiveRecord::Schema.define(:version => 20121129144841) do
     t.datetime "updated_at",         :null => false
   end
 
+  add_index "pictures", ["gallery_id", "gallery_type"], :name => "index_pictures_on_gallery_id"
+
   create_table "roles", :force => true do |t|
     t.string   "name"
     t.integer  "resource_id"
@@ -196,6 +202,8 @@ ActiveRecord::Schema.define(:version => 20121129144841) do
     t.integer  "venue_id"
   end
 
+  add_index "shows", ["venue_id"], :name => "index_shows_on_venue_id"
+
   create_table "team_members", :force => true do |t|
     t.string   "position"
     t.integer  "user_id"
@@ -214,6 +222,8 @@ ActiveRecord::Schema.define(:version => 20121129144841) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
+
+  add_index "children_techies", ["techie_id"], :name => "index_children_techies_on_techie_id"
 
   create_table "users", :force => true do |t|
     t.string   "email",                  :default => "", :null => false
