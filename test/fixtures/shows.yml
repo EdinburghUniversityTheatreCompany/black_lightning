@@ -27,14 +27,20 @@ one:
   slug: "accidental-death-of-an-anarchist"
   tagline: "A play by Dario Fo"
   description: "Test"
-  
+  start_date: <%= 5.days.ago.to_s(:db) %>
+  end_date:   <%= 3.days.ago.to_s(:db) %>
+  is_public: true
+
 two:
   name: "City of Cake"
   slug: "city-of-cake"
   tagline: "Cake! CAKE! THIS SHOW HAS CAKE!"
   description: "Test"
   xts_id: 419
-  
+  start_date: <%= 5.days.from_now.to_s(:db) %>
+  end_date:   <%= 5.days.from_now.to_s(:db) %>
+  is_public: true
+
 three:
   name: "Spring Awakening"
   slug: 'spring-awakening'
