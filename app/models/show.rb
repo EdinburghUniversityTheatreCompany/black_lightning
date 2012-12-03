@@ -61,7 +61,7 @@ class Show < ActiveRecord::Base
   validates :slug, :presence => true, :uniqueness => true
 
   # Paperclip #
-  has_attached_file :image, :styles => { :medium => "x300>", :thumb => "192x100#", :slideshow => "960x500#" }, :default_url => :default_image
+  has_attached_file :image, :styles => { :medium => "576x300#", :thumb => "192x100#", :slideshow => "960x500#" }, :default_url => :default_image
 
   # Accessible Attributes #
   attr_accessible :description, :name, :slug, :tagline, :venue, :venue_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes

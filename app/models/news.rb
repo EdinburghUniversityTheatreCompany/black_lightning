@@ -40,6 +40,6 @@ class News < ActiveRecord::Base
 
   scope :current, where(["publish_date <= ?", Time.current]).order("publish_date DESC")
 
-  has_attached_file :image, :styles => { :medium => "x300>", :thumb => "192x100#" }
+  has_attached_file :image, :styles => { :medium => "576x300#", :thumb => "192x100#" }
   attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
 end
