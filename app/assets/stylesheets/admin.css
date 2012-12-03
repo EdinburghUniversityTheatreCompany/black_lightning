@@ -33,6 +33,18 @@ div.datetime select {
     background-image: none;
 }
 
+.footer {
+    text-align: center;
+    line-height: normal;
+    font-size: x-small;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.footer a{
+    color: #333333;
+    text-decoration: underline;
+}
 
 /* font-awesome alignment */
 .alert [class^="icon-"] {
