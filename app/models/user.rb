@@ -28,14 +28,15 @@ class User < ActiveRecord::Base
   # :lockable, :timeoutable and :omniauthable
   devise :database_authenticatable, :recoverable, :rememberable, :trackable
 
-  #set our own validations
-  validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
+  # set our own validations
+
+  # Don't validate the password presence, so we can set it randomly for new users.
+  # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
   validates :email, :presence => true
   validates :phone_number, :allow_blank => true, :format => { :with => /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})$/, :message => "Please enter a valid mobile number" }
 
   # Setup accessible (or protected) attributes for your model
   attr_accessible :email, :password, :password_confirmation, :remember_me, :first_name, :last_name, :role_ids, :phone_number
-  # attr_accessible :title, :body
 
   def name
   	"#{self.first_name} #{self.last_name}"
@@ -49,5 +50,28 @@ class User < ActiveRecord::Base
     if self.phone_number[0] == '0' then
       self.phone_number[0] = '+44'
     end
+  end
+
+  def self.create_user(params)
+    user = User.new(params)
+
+    reset_password = false
+
+    if not user.password then
+      password_length = 6
+      password = Devise.friendly_token.first(password_length)
+
+      user.password = password
+      user.reset_password_token = User.reset_password_token
+      user.reset_password_sent_at = Time.now.utc
+
+      reset_password = true
+    end
+
+    user.save
+
+    UsersMailer.delay.welcome_email(user, reset_password)
+
+    return user
   end
 end
