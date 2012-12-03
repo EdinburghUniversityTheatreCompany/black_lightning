@@ -8,12 +8,18 @@ addHandlers = ->
     input = undefined
     id = $(e.currentTarget).data("preview-id")
     input = $("#" + id + "_input_field textarea")
+
+    $("#" + id + "_preview").html('<b>Please Wait</b>');
+
     $.ajax({
       type: 'POST',
       url: '/markdown/preview',
       data: input.val(),
       success: (data) ->
-        $("#" + id + "_preview").html(data);
+        preview = $("#" + id + "_preview")
+        preview.hide();
+        preview.html(data);
+        preview.slideDown();
         return
     });
 
