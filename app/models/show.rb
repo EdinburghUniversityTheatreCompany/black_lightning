@@ -93,10 +93,12 @@ class Show < ActiveRecord::Base
 
     date = I18n.l(self.start_date, :format => :short)
 
-    if self.end_date then
+    if self.end_date and not self.start_date == self.end_date then
         date << " - "
         date << I18n.l(self.end_date, :format => :short)
     end
+
+    return date
   end
 
   ##
