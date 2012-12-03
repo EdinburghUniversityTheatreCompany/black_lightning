@@ -5,9 +5,6 @@ class StaticController < ApplicationController
     @shows = Show.current(:limit => 5)
   end
 
-  def about
-  end
-
   def access_denied
     respond_to do |format|
       format.html { render :status => 403 }

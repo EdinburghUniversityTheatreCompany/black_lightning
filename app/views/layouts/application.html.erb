@@ -24,19 +24,19 @@
         <div class="span8">
           <div class="row">
             <div class="row pull-right">
-              <a href="#" class="btn">Press</a>
-              <a href="#" class="btn">Sponsors</a>
-                          <%= link_to "Archives", archives_index_path, :class => "btn" %>
-              <%= link_to "Members", admin_path, :class => "btn" %>
+              <%= link_to 'Press',    static_path('press'),    :class => "btn" %>
+              <%= link_to 'Sponsors', static_path('sponsors'), :class => "btn" %>
+              <%= link_to 'Archives', archives_index_path,     :class => "btn" %>
+              <%= link_to 'Members',  admin_path,              :class => "btn" %>
               <a href="#" class="btn">Newsletter</a>
             </div>
             <div class="row">
               <ul id="nav">
                 <li><%= link_to 'Shows', shows_path %></li>
                 <li><%= link_to 'News', news_index_path %></li>
-                <li><%= link_to 'About', about_path %></li>
-                <li><a href="#">Get Involved</a></li>
-                <li><a href="#">Contact</a></li>
+                <li><%= link_to 'About', static_path('about') %></li>
+                <li><%= link_to 'Get Involved', static_path('getinvolved') %></li>
+                <li><%= link_to 'Contact', static_path('contact') %></li>
               </ul>
             </div>
           </div>

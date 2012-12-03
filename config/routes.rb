@@ -9,10 +9,6 @@ ChaosRails::Application.routes.draw do
   resources :venues,      :only => [:index, :show]
   resources :attachments, :only => [:show]
 
-  match 'access_denied' => 'static#access_denied'
-
-  match 'about/' => 'static#about'
-
   match 'admin/' => 'admin#index'
   namespace :admin do
     #The resources pages:
@@ -83,8 +79,14 @@ ChaosRails::Application.routes.draw do
     match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
   end
 
+  match '*action' => 'static', :as => :static
+
+  #match 'access_denied' => 'static#access_denied'
+
+  #match 'about/' => 'static#about'
+
   # ERROR PAGES
-  match '/404' => 'static#render_404'
+  #match '/404' => 'static#render_404'
 
   # The priority is based upon order of creation:
   # first created -> highest priority.
