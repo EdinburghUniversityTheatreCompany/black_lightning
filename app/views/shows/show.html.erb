@@ -45,14 +45,16 @@
 
         <% unless @show.team_members.count == 0 %>
           <h4>Team</h4>
+          <dl>
           <% @show.team_members.each do |team_member| %>
-            <p>
-            <b><%= team_member.position %></b>
+            <dt><%= team_member.position %></dt>
 
+            <dd>
             <% u = team_member.user %>
             <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-            </p>
+            </dd>
           <% end %>
+          </dl>
         <% end %>
       </div>
     </div>
@@ -66,10 +68,12 @@
 
 <%= render_markdown @show.description %>
 
-<hr />
+<% if @show.xts_id == 0 then %>
+  <hr />
 
-<h4>Tickets</h4>
-<%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
+  <h4>Tickets</h4>
+  <%= xts_widget(@show.xts_id)%>
+<% end %>
 
 <% if @show.pictures.count > 0 then %>
   <hr />
