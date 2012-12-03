@@ -7,4 +7,4 @@ en:
       short: ! '%H:%M %d/%m/%y'
   date:
     formats:
-      short: ! '%y %B'
+      short: ! '%d %B'
