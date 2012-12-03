@@ -11,7 +11,6 @@
 // GO AFTER THE REQUIRES BELOW.
 //
 //= require admin/jquery.gridster.min
-//= require admin/markdown
 //= require admin/md_editor
 //= require admin/staffings
 //= require alerts

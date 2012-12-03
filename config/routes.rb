@@ -79,6 +79,8 @@ ChaosRails::Application.routes.draw do
     match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
   end
 
+  post 'markdown/preview' => 'markdown#preview'
+
   match '*action' => 'static', :as => :static
 
   #match 'access_denied' => 'static#access_denied'

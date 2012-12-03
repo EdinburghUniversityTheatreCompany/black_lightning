@@ -8,7 +8,14 @@ addHandlers = ->
     input = undefined
     id = $(e.currentTarget).data("preview-id")
     input = $("#" + id + "_input_field textarea")
-    $("#" + id + "_preview").html markdown.toHTML(input.val())
+    $.ajax({
+      type: 'POST',
+      url: '/markdown/preview',
+      data: input.val(),
+      success: (data) ->
+        $("#" + id + "_preview").html(data);
+        return
+    });
 
 
 jQuery ->
