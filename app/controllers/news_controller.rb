@@ -5,7 +5,7 @@ class NewsController < ApplicationController
   # GET /news
   # GET /news.json
   def index
-    @news = @news.paginate(:page => params[:page], :per_page => 5).current
+    @news = News.paginate(:page => params[:page], :per_page => 5).public
 
     respond_to do |format|
       format.html # index.html.erb
