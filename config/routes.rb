@@ -84,11 +84,13 @@ ChaosRails::Application.routes.draw do
 
   post 'markdown/preview' => 'markdown#preview'
 
+  match 'about' => 'about#index', :as => :about_index
+  match 'about/:action' => 'about', :as => :about
+
+  match 'getinvolved' => 'get_involved#index', :as => :get_involved_index
+  match 'getinvolved/:action' => 'get_involved', :as => :get_involved
+
   match '*action' => 'static', :as => :static
-
-  #match 'access_denied' => 'static#access_denied'
-
-  #match 'about/' => 'static#about'
 
   # ERROR PAGES
   #match '/404' => 'static#render_404'

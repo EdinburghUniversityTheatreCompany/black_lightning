@@ -1,0 +1,18 @@
+<% content_for :content do %>
+  <div class="row">
+    <div class="span3">
+      <ul class="nav nav-list well">
+        <li><%= link_to 'EUTC', about_path('eutc') %></li>
+        <li><%= link_to 'History', about_path('history') %></li>
+        <li><%= link_to 'Environmental', about_path('environmental') %></li>
+        <li><%= link_to 'Youth Project', about_path('youth_project') %></li>
+        <li><%= link_to 'Ticketing', about_path('ticketing') %></li>
+      </ul>
+    </div>
+    <div class="span9">
+      <%= yield %>
+    </div>
+  </div>
+<% end %>
+
+<%= render :template => 'layouts/application' %>
