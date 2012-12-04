@@ -1,0 +1,74 @@
+<%= form_tag(admin_permissions_path, :method => :post) do %>
+
+<table class="table table-hover">
+  <colgroup>
+    <col span="1" style="border-right: 1px solid #dddddd;">
+    <col span="4">
+    <col span="1" style="border-right: 1px solid #dddddd;">
+    <col span="4">
+    <col span="1" style="border-right: 1px solid #dddddd;">
+  </colgroup>
+  <thead>
+    <tr>
+      <th></th>
+      <% @roles.each do |role| %>
+        <th colspan=5><%= role.name %></th>
+      <% end %>
+    </tr>
+    <tr>
+      <th></th>
+      <% @roles.each do |role| %>
+        <th title="Read"  >R</th>
+        <th title="Create">C</th>
+        <th title="Edit"  >E</th>
+        <th title="Delete">D</th>
+        <th title="Manage">M</th>
+      <% end %>
+    </tr>
+  </thead>
+  <tbody>
+    <% @models.each do |model| %>
+      <tr>
+        <td><%= model.name %></td>
+
+        <% @roles.each do |role| %>
+          <% if ["Admin::Proposals::Proposal", "Admin::Questionnaires::Questionnaire"].include? model.name then %>
+            <td colspan="5">Hard coded</td>
+          <% else %>
+            <% permission = role.permissions.where({ :subject_class => model.name }) %>
+            <%= render 'permission_grid', :role => role, :model => model, :permission => permission %>
+          <% end %>
+        <% end %>
+      </tr>
+    <% end %>
+    <tr>
+        <td>Misc</td>
+
+        <% @roles.each do |role| %>
+          <td colspan="5">
+            <% permission = role.permissions.where({ :subject_class => "backend" }) %>
+            <% if permission %>
+              <% action_permission = permission.where(:action => "access") %>
+              <% checked = action_permission.count > 0 %>
+            <% end %>
+
+            <%= label_tag("[#{role.name}][backend]access", "Access Backend") %>
+            <%= check_box_tag "[#{role.name}][backend]access", "access", checked, :title => "Access Backend" %>
+
+            <% permission = role.permissions.where({ :subject_class => "Admin::StaffingJob" }) %>
+            <% if permission %>
+              <% action_permission = permission.where(:action => "sign_up_for") %>
+              <% checked = action_permission.count > 0 %>
+            <% end %>
+
+            <%= label_tag("[#{role.name}][Admin::StaffingJob]sign_up_for", "Sign Up For Staffing") %>
+            <%= check_box_tag "[#{role.name}][Admin::StaffingJob]sign_up_for", "sign_up_for", checked, :title => "Access Backend" %>
+          </td>
+        <% end %>
+      </tr>
+  </tbody>
+</table>
+
+<%= submit_tag("Update") %>
+
+<% end %>

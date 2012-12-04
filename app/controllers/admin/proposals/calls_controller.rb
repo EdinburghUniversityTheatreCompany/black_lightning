@@ -1,9 +1,16 @@
+##
+# Controller for Admin::Propsosals::Call. More details can be found there.
+##
+
 class Admin::Proposals::CallsController < AdminController
 
   load_and_authorize_resource :class => Admin::Proposals::Call
 
+  ##
   # GET /admin/proposals/calls
+  #
   # GET /admin/proposals/calls.json
+  ##
   def index
     @admin_proposals_calls = Admin::Proposals::Call.where( :archived => [nil,false] )
 
@@ -13,8 +20,11 @@ class Admin::Proposals::CallsController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/calls/1
+  #
   # GET /admin/proposals/calls/1.json
+  ##
   def show
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
 
@@ -24,8 +34,11 @@ class Admin::Proposals::CallsController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/calls/new
+  #
   # GET /admin/proposals/calls/new.json
+  ##
   def new
     @admin_proposals_call = Admin::Proposals::Call.new
 
@@ -35,13 +48,18 @@ class Admin::Proposals::CallsController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/calls/1/edit
+  ##
   def edit
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
   end
 
+  ##
   # POST /admin/proposals/calls
+  #
   # POST /admin/proposals/calls.json
+  ##
   def create
     @admin_proposals_call = Admin::Proposals::Call.new(params[:admin_proposals_call])
 
@@ -56,8 +74,11 @@ class Admin::Proposals::CallsController < AdminController
     end
   end
 
+  ##
   # PUT /admin/proposals/calls/1
+  #
   # PUT /admin/proposals/calls/1.json
+  ##
   def update
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
 
@@ -72,8 +93,11 @@ class Admin::Proposals::CallsController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/proposals/calls/1
+  #
   # DELETE /admin/proposals/calls/1.json
+  ##
   def destroy
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
     @admin_proposals_call.destroy
@@ -84,6 +108,9 @@ class Admin::Proposals::CallsController < AdminController
     end
   end
 
+  ##
+  # PUT /admin/proposals/call/1/archive
+  ##
   def archive
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
     @admin_proposals_call.archive

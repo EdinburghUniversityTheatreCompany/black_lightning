@@ -1,4 +1,4 @@
-<div class="tab-container">
+<div class="tab-container md-editor">
 
     <% require 'securerandom' %>
     <% id = SecureRandom.uuid %>
@@ -13,7 +13,7 @@
             <% rows ||= "10" %>
             <%= f.input field, :input_html => {:class => "md field", :rows => rows} %>
 
-            <small>Note: Text entered above will be rendered using <%= link_to 'Markdown', admin_help_markdown_path, :target => '_blank' %>.</small>
+            <small>Note: Text entered above will be rendered using <%= link_to 'Markdown', admin_help_path(:markdown), :target => '_blank' %>.</small>
         </div>
 
         <div id="<%= id %>_preview" class="tab-pane">

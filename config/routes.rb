@@ -4,13 +4,10 @@ ChaosRails::Application.routes.draw do
 
   devise_for :users
 
-  resources :shows, :only => [:index, :show]
-  resources :news, :only => [:index, :show]
+  resources :shows,       :only => [:index, :show]
+  resources :news,        :only => [:index, :show]
+  resources :venues,      :only => [:index, :show]
   resources :attachments, :only => [:show]
-
-  match 'access_denied' => 'static#access_denied'
-
-  match 'about/' => 'static#about'
 
   match 'admin/' => 'admin#index'
   namespace :admin do
@@ -23,21 +20,28 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    resources :venues
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
+    resources :roles
+    get '/permissions/grid' => 'permissions#grid', :as => :permissions
+    post '/permissions/grid' => 'permissions#update_grid', :as => :permissions
 
     resources :techie_families, :only => [:index]
 
     resources :staffings do
+      member do
+        get 'show_sign_up'
+      end
+
       collection do
         get 'new_for_show'
         put 'create_for_show'
       end
     end
 
-    match '/staffings/:id/show_sign_up' => 'staffings#show_sign_up', :via => :get, :as => :staffing_show_sign_up
-    match '/staffings/:job_id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
+    match '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
 
     namespace :proposals do
       resources :calls do
@@ -70,6 +74,8 @@ ChaosRails::Application.routes.draw do
     match '/reports/:action', :controller => 'reports'
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
+
+    get "/help/:action" => 'help', :as => "help"
   end
 
   match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
@@ -79,10 +85,20 @@ ChaosRails::Application.routes.draw do
     match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
   end
 
-  get "/admin/help/markdown"
+  post 'markdown/preview' => 'markdown#preview'
+
+  post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
+
+  match 'about' => 'about#index', :as => :about_index
+  match 'about/:action' => 'about', :as => :about
+
+  match 'getinvolved' => 'get_involved#index', :as => :get_involved_index
+  match 'getinvolved/:action' => 'get_involved', :as => :get_involved
+
+  match '*action' => 'static', :as => :static
 
   # ERROR PAGES
-  match '/404' => 'static#render_404'
+  #match '/404' => 'static#render_404'
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

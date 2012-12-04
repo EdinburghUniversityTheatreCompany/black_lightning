@@ -9,11 +9,12 @@
  * compiled file, but it's generally better to create a new file per style scope.
  *
  *= require_self
+ *= require 'bootstrap-extensions'
+ *= require font-awesome
  *= require admin/md_editor.css.scss
  *= require admin/jquery.gridster.min.css
- *= require admin/admin.css.scss
  *= require admin/gallery_form.css.scss
- *= require font-awesome
+ *= require admin/permissions.css.scss
  */
 
 body {
@@ -33,6 +34,18 @@ div.datetime select {
     background-image: none;
 }
 
+.footer {
+    text-align: center;
+    line-height: normal;
+    font-size: x-small;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.footer a{
+    color: #333333;
+    text-decoration: underline;
+}
 
 /* font-awesome alignment */
 .alert [class^="icon-"] {

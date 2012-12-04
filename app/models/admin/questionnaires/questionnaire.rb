@@ -1,3 +1,13 @@
+# == Schema Information
+#
+# Table name: admin_questionnaires_questionnaires
+#
+#  id         :integer          not null, primary key
+#  show_id    :integer
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+
 class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
 
   belongs_to :show

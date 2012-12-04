@@ -1,0 +1,12 @@
+
+/* The show-info-box styles. Remember that the parent row must have position:relative applied to it. */
+.show-info-box {
+  position: absolute;
+  right: 0px;
+  bottom: 60px;
+  top: 0px;
+}
+
+.show-info-box .well {
+  height: 100%;
+}

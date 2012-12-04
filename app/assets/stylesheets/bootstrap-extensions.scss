@@ -1,0 +1,21 @@
+@import "bootstrap";
+
+.float-left {
+  @extend .pull-left;
+
+  margin-top: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+.float-right {
+  @extend .pull-right;
+
+  margin-top: 10px;
+  margin-left: 10px;
+  margin-bottom: 10px;
+}
+
+img.float-left, img.float-right {
+  @extend .img-polaroid;
+}

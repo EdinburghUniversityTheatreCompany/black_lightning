@@ -126,21 +126,20 @@ class Admin::StaffingsController < AdminController
 
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
-    @job = Admin::StaffingJob.find(params[:job_id])
+    @job = Admin::StaffingJob.find(params[:id])
 
     @job.user = current_user
-
-    @admin_staffing.reminder_job.run_at = @admin_staffing.date.advance(:hours => -2)
-    @admin_staffing.reminder_job.save
 
     respond_to do |format|
       if current_user.phone_number.blank? # you MUST have a phone number in your profile to be able to sign up for staffing
         format.html { redirect_to edit_admin_user_path(current_user), alert: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary." }
-        format.json { head :no_content}
+        format.json { render :json => { :error => "no_number "}}
       elsif @job.save
-        flash[:success] =  "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}."
-        format.html { redirect_to admin_staffings_path }
-        format.json { head :no_content }
+        format.html {
+          flash[:success] =  "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}."
+          redirect_to admin_staffings_path
+        }
+        format.json { render :json => @job.to_json(:include => { :user => {}, :staffing => {} }) }
       else
         format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

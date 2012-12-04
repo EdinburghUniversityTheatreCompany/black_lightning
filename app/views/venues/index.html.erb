@@ -1,0 +1,25 @@
+<div class="row">
+  <h1>Venues</h1>
+  <hr />
+
+  <% @venues.each do |venue| %>
+  <article class="media">
+    <% image = image_tag venue.image.url(:thumb), :class => "media-object" %>
+    <%= link_to image, venue, :class => "pull-left thumbnail" %>
+    <div class="media-body">
+      <header class="media-heading">
+        <h4 class="media-heading"><%= link_to venue.name, venue %></h4>
+      </header>
+      <p>
+        <%= venue.tagline %>
+      </p>
+      <p><%= link_to 'View Details', venue %></p>
+    </div>
+  </article>
+  <hr />
+
+  <% end %>
+
+  <%= will_paginate(@venues) %>
+
+</div>

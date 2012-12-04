@@ -1,0 +1,40 @@
+<%= simple_nested_form_for [:admin, @venue] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :name %>
+
+    <%= f.input :tagline %>
+
+    <%= render "admin/shared/md_editor", :f => f, :field => :description %>
+
+    <%= f.input :location, :label => "Location - " + link_to('About Setting Locations', admin_help_path(:venue_location)), :target => '_blank' %>
+
+    <%= f.input :image %>
+
+  </div>
+
+  <div class="gallery-form">
+
+    <h3>Gallery</h3>
+
+    <% if f.object.errors[:pictures].present? then %>
+    <p id="picture_errors" class="alert alert-error">
+        <%= f.error :pictures %>
+    </p>
+    <% end %>
+
+    <%= f.simple_fields_for :pictures %>
+
+    <br />
+
+    <%= f.link_to_add "Add Photo", :pictures, :class => "btn" %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn btn-primary" %>
+    <%= link_to 'Back', admin_venues_path, :class => "btn" %>
+  </div>
+<% end %>

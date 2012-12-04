@@ -13,7 +13,7 @@
       <div class="alert alert-error">
         <strong>Stop. This is important</strong>
         <p>
-          A DelayedJob has failed. Please review <li><%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
+          A DelayedJob has failed. Please review <%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
         </p>
       </div>
     <% end %>
@@ -41,27 +41,45 @@
     <%= dashboard_widget('resources') %>
   </li>
 
-  <% if can? :read, Admin::EditableBlock %>
+  <% if can? :manage, Venue %>
   <li data-row="3" data-col="1" data-sizex="1" data-sizey="1">
+    <%= dashboard_widget('venues') %>
+  </li>
+  <% end %>
+
+  <% if can? :read, Admin::EditableBlock %>
+  <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
     <%= dashboard_widget('editable_blocks') %>
   </li>
   <% end %>
 
-  <% if can? :read, User %>
-  <li data-row="3" data-col="2" data-sizex="1" data-sizey="1">
-    <%= dashboard_widget('users') %>
-  </li>
-  <% end %>
-
-  <% if can? :manage, :jobs %>
+  <% if can? :manage, Delayed::Backend::ActiveRecord::Job %>
   <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
     <%= dashboard_widget('delayed_jobs') %>
   </li>
   <% end %>
 
-  <% if can? :read, :reports %>
+  <% if can? :read, User %>
   <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
-    <h3><%= link_to 'Reports', admin_reports_path %></h3>
+    <%= dashboard_widget('users') %>
+  </li>
+  <% end %>
+
+  <% if can? :read, Role %>
+  <li data-row="4" data-col="2" data-sizex="1" data-sizey="1">
+    <%= dashboard_widget('roles') %>
+  </li>
+  <% end %>
+
+  <% if can? :read, Admin::Permission %>
+  <li data-row="4" data-col="3" data-sizex="1" data-sizey="1">
+    <%= dashboard_widget('permissions') %>
+  </li>
+  <% end %>
+
+  <% if can? :read, :reports %>
+  <li data-row="5" data-col="1" data-sizex="1" data-sizey="1">
+  <h3><%= link_to 'Reports', admin_reports_path %></h3>
     <% list_reports.each do |report| %>
       <%= link_to report, '/admin/reports/' + report %>
     <% end %>

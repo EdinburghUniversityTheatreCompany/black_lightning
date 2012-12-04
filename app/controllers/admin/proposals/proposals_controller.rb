@@ -1,14 +1,23 @@
+##
+# Controller for Admin::Proposals::Proposal. More details can be found there.
+# ---
+# *IMPORTANT*
+#
+# Due to the complex nature of proposal permissions, each action may need to be authorized
+# in the controller method using the authorize! method.
+#
+# Failure to correctly do so will cause bad things to happen (kittens may die).
+##
+
 class Admin::Proposals::ProposalsController < AdminController
 
   authorize_resource :class => "Admin::Proposals::Proposal"
 
-  # IMPORTANT
-  # Due to the complex nature of proposal permissions, each action may need to be authorized
-  # in the controller method using the authorize! method.
-  # Failure to correctly do so will cause bad things to happen (kittens may die).
-
+  ##
   # GET /admin/proposals/proposals
+  #
   # GET /admin/proposals/proposals.json
+  ##
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
     @proposals = Admin::Proposals::Proposal.where(:call_id => @call.id)
@@ -23,8 +32,11 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/proposals/1
+  #
   # GET /admin/proposals/proposals/1.json
+  ##
   def show
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @admin_proposals_proposal.call
@@ -46,8 +58,15 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/proposals/new
+  #
   # GET /admin/proposals/proposals/new.json
+  # ---
+  # Note that proposals created after the call's deadline will be marked as late here.
+  #
+  # It is also important that an Admin::Answer for each Admin::Question is created here.
+  ##
   def new
     @call = Admin::Proposals::Call.find(params[:call_id])
 
@@ -67,6 +86,7 @@ class Admin::Proposals::ProposalsController < AdminController
       @proposal.late = true
     end
 
+    # Create an Admin::Answer for each question
     @call.questions.each do |question|
       answer = Admin::Answer.new
       answer.question = question
@@ -79,7 +99,11 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
   # GET /admin/proposals/proposals/1/edit
+  # ---
+  # Don't forget to re-read the call's Admin::Question s from here. Questions may have been created, so will need Admin::Answer s
+  ##
   def edit
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
@@ -97,8 +121,11 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal.save
   end
 
+  ##
   # POST /admin/proposals/proposals
+  #
   # POST /admin/proposals/proposals.json
+  ##
   def create
     @call = Admin::Proposals::Call.find(params[:call_id])
 
@@ -122,6 +149,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     respond_to do |format|
       if @proposal.save
+        #Send the new proposal mail. See ProposalsMailer for more details.
         ProposalsMailer.delay.new_proposal(@proposal, current_user)
 
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
@@ -133,8 +161,11 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
   # PUT /admin/proposals/proposals/1
+  #
   # PUT /admin/proposals/proposals/1.json
+  ##
   def update
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
@@ -155,10 +186,16 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/proposals/proposals/1
+  #
   # DELETE /admin/proposals/proposals/1.json
+  ##
   def destroy
     @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
+
+    authorize!(:destory, @proposal)
+
     @admin_proposals_proposal.destroy
 
     respond_to do |format|
@@ -167,14 +204,19 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
+  # PUT /admin/proposals/proposals/1/approve
+  #
+  # PUT /admin/proposals/proposals/1/approve.json
+  ##
   def approve
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
 
+    authorize!(:approve, @proposal)
+
     @proposal.approved = true
     @proposal.save
-
-    authorize!(:approve, @proposal)
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as approved"
@@ -183,9 +225,16 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
+  # PUT /admin/proposals/proposals/1/reject
+  #
+  # PUT /admin/proposals/proposals/1/reject.json
+  ##
   def reject
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
+
+    authorize!(:reject, @proposal)
 
     @proposal.approved = false
     @proposal.save
@@ -197,6 +246,11 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
+  ##
+  # PUT /admin/proposals/proposals/1/convert
+  #
+  # PUT /admin/proposals/proposals/1/convert.json
+  ##
   def convert
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call

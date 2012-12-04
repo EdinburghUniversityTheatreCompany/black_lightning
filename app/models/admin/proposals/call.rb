@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: admin_proposals_calls
+#
+#  id         :integer          not null, primary key
+#  deadline   :datetime
+#  name       :string(255)
+#  open       :boolean
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  archived   :boolean
+#
+
 class Admin::Proposals::Call < ActiveRecord::Base
   has_many :questions, :as => :questionable, :dependent => :destroy
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"

@@ -1,0 +1,30 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <b>Name:</b>
+  <%= @venue.name %>
+</p>
+
+<p>
+  <b>Tagline:</b>
+  <%= @venue.tagline %>
+</p>
+
+<p>
+  <b>Description:</b>
+  <%= @venue.description %>
+</p>
+
+<p>
+  <b>Location:</b>
+  <%= @venue.location %>
+</p>
+
+<p>
+  <b>Image:</b>
+  <%= image_tag @venue.image.url(:thumb) %>
+</p>
+
+
+<%= link_to 'Edit', edit_admin_venue_path(@venue), :class => "btn" %>
+<%= link_to 'Back', admin_venues_path, :class => "btn" %>

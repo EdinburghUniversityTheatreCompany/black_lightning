@@ -13,9 +13,11 @@ class Admin::UsersController < AdminController
   end
 
   def create
-    @user = User.new(params[:user])
+    params[:user].delete(:password) if params[:user][:password].blank?
+    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
+
     respond_to do |format|
-      if @user.save
+      if @user = User.create_user(params[:user])
         format.html {redirect_to admin_user_url(@user)}
       else
         format.html {render "new"}
@@ -29,8 +31,10 @@ class Admin::UsersController < AdminController
 
   def update
     @user = User.find(params[:id])
+
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
+
     respond_to do |format|
       if @user.update_attributes(params[:user])
         if can? :read, User then
@@ -49,7 +53,7 @@ class Admin::UsersController < AdminController
     @user.destroy
 
     respond_to do |format|
-      format.html {redirect_to admin_user_url}
+      format.html {redirect_to admin_users_path}
     end
   end
 end

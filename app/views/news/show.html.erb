@@ -6,13 +6,16 @@
         <time datetime="<%= @news.publish_date.strftime("%FT%T%:z") %>"><%= l @news.publish_date, :format => :long %></time>
     </header>
 
-    <%= image_tag @news.image.url(:medium) %>
+    <%= image_tag @news.image.url(:medium), :class => "float-right span3" %>
 
     <p><%= render_markdown @news.body %></p>
 
     <% if @news.publish_date != @news.updated_at %>
-    <p>Last updated:
-    <%= l @news.updated_at, :format => :long %>
+    <p>
+      <small>
+        Last updated:
+        <%= l @news.updated_at, :format => :long %>
+      </small>
     </p>
     <% end %>
 

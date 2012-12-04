@@ -5,3 +5,6 @@ en:
   time:
     formats:
       short: ! '%H:%M %d/%m/%y'
+  date:
+    formats:
+      short: ! '%d %B'

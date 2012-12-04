@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  </head>
+  <body>
+    <p>
+      Dear <%= @user.first_name.presence || @user.email  %>,
+    </p>
+    <p>
+      An account has been created for you for the Bedlam Theatre website.
+    </p>
+
+    <% if @reset_password then %>
+      <p>
+        To sign in, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %>
+      </p>
+    <% else %>
+      <p>
+        Click <%= link_to 'here to sign in', new_user_session_url %>
+      </p>
+    <% end %>
+
+    <p>
+      Regards,
+    </p>
+    <p>
+      The Bedlam Theatre Team
+    </p>
+  </body>
+</html>

@@ -32,7 +32,7 @@ h1,h2,h3,h4,h5,h6 {
 }
 
 .header {
-	padding-top: 30px;
+	padding-top: 10px;
 	margin-bottom: 20px;
 }
 
@@ -75,13 +75,26 @@ h3 {
 	color: #dc143c;
 }
 
+.footer {
+    text-align: center;
+    line-height: normal;
+    font-size: x-small;
+    width: 100%;
+    padding: 10px 0;
+}
+
+.footer a{
+    color: #333333;
+    text-decoration: underline;
+}
+
 /* font-awesome alignment */
 .alert [class^="icon-"] {
   line-height: 17px;
   margin-right: 2px;
 }
 
-[class*=" icon-"] {
+[class^="icon-"], [class*=" icon-"] {
     background-image: none;
 }
 

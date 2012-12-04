@@ -1,3 +1,15 @@
+# == Schema Information
+#
+# Table name: admin_staffings
+#
+#  id              :integer          not null, primary key
+#  date            :datetime
+#  show_title      :string(255)
+#  created_at      :datetime         not null
+#  updated_at      :datetime         not null
+#  reminder_job_id :integer
+#
+
 class Admin::Staffing < ActiveRecord::Base
    default_scope order("date ASC")
 

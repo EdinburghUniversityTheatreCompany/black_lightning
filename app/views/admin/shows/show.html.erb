@@ -15,6 +15,14 @@
 			<th>Description</th>
 			<td><%= render_markdown @show.description %></td>
 		</tr>
+        <tr>
+            <th>Dates</th>
+            <td><%= @show.date_range %></td>
+        </tr>
+        <tr>
+            <th>Venue</th>
+            <td><%= @show.venue.name if @show.venue %></td>
+        </tr>
 		<tr>
 			<th>XTS Pro ID</th>
 			<td><%= @show.xts_id %></td>

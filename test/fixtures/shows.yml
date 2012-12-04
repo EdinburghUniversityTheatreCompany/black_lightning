@@ -1,3 +1,25 @@
+# == Schema Information
+#
+# Table name: shows
+#
+#  id                 :integer          not null, primary key
+#  name               :string(255)
+#  tagline            :string(255)
+#  slug               :string(255)
+#  description        :text
+#  xts_id             :integer
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  is_public          :boolean
+#  image_file_name    :string(255)
+#  image_content_type :string(255)
+#  image_file_size    :integer
+#  image_updated_at   :datetime
+#  start_date         :date
+#  end_date           :date
+#  venue_id           :integer
+#
+
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
@@ -5,14 +27,20 @@ one:
   slug: "accidental-death-of-an-anarchist"
   tagline: "A play by Dario Fo"
   description: "Test"
-  
+  start_date: <%= 5.days.ago.to_s(:db) %>
+  end_date:   <%= 3.days.ago.to_s(:db) %>
+  is_public: true
+
 two:
   name: "City of Cake"
   slug: "city-of-cake"
   tagline: "Cake! CAKE! THIS SHOW HAS CAKE!"
   description: "Test"
   xts_id: 419
-  
+  start_date: <%= 5.days.from_now.to_s(:db) %>
+  end_date:   <%= 5.days.from_now.to_s(:db) %>
+  is_public: true
+
 three:
   name: "Spring Awakening"
   slug: 'spring-awakening'

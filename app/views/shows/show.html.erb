@@ -1,39 +1,83 @@
-﻿<% content_for :head do %>
+<% content_for :head do %>
   <%= javascript_include_tag "jquery.lightbox-0.5" %>
   <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
 <% end %>
 
+<% if @show.end_date %>
 <% if @show.end_date < Date.today %>
   <p class="alert alert-info">
     <i class="icon-info-sign icon-large"></i>
     This show finished on <%= l @show.end_date, :format => :long %> and is kept for archiving purposes only.
   </p>
 <% end %>
+<% end %>
 
-<header>
-<h1><%= @show.name %></h1>
-<p><%= @show.tagline %></p>
-<p><%= @show.date_range %></p>
-</header>
+<div class="row" style="position: relative;">
+  <div class="span9">
+    <div class="carousel">
+      <!-- Carousel items -->
+      <div class="carousel-inner">
+        <div class="active item">
+          <%= image_tag @show.image.url(:slideshow) %>
+          <div class="carousel-caption">
+            <h1><%= @show.name %></h1>
+            <p><%= @show.tagline %></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<%= image_tag @show.image.url(:medium) %>
+  <div class="span3 show-info-box">
+    <div class="well">
+      <div class="slimScroll">
+        <% if @show.venue then %>
+          <h4>Venue</h4>
+          <p>
+            <%= link_to @show.venue.name, @show.venue %>
+          </p>
+        <% end %>
+
+        <h4>Dates</h4>
+        <p>
+          <%= @show.date_range %>
+        </p>
+
+        <% unless @show.team_members.count == 0 %>
+          <h4>Team</h4>
+          <dl>
+          <% @show.team_members.each do |team_member| %>
+            <dt><%= team_member.position %></dt>
+
+            <dd>
+            <% u = team_member.user %>
+            <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+            </dd>
+          <% end %>
+          </dl>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript">
+    $('.show-info-box .well .slimScroll').slimScroll({
+        height: '100%'
+    });
+  </script>
+</div>
 
 <%= render_markdown @show.description %>
 
-<h3>Team</h3>
+<% if @show.xts_id then %>
+  <hr />
 
-<% @show.team_members.each do |team_member| %>
-  <p>
-  <b><%= team_member.position %></b>
-
-  <% u = team_member.user %>
-  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-  </p>
+  <h4>Tickets</h4>
+  <%= xts_widget(@show.xts_id)%>
 <% end %>
 
-<%= xts_widget(@show.xts_id) unless @show.xts_id == 0 %>
-
 <% if @show.pictures.count > 0 then %>
+  <hr />
+
   <h3>Gallery</h3>
 
   <ul class="gallery thumbnails">

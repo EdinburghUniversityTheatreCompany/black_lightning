@@ -1,10 +1,22 @@
+##
+# Defines the abilities for each user. See CanCan documentation for more details.
+#
+# It reads the permissions model in the database to find if a user can do something.
+#
+# PLEASE, PLEASE, make sure that
+#
+#   if user.has_role? :admin
+#     can :manage, :all
+#   end
+#
+# is included as the last thing in the initialize method.
+# This ensures that users with the admin role will _always_ have permission to do everything.
+##
+
 class Ability
   include CanCan::Ability
 
   def initialize(user)
-    # Define abilities for the passed in user here. For example:
-    #
-    #   user ||= User.new # guest user (not logged in)
 
     #If you can approve something, you can also reject it
     alias_action :reject, :to => :approve
@@ -16,42 +28,43 @@ class Ability
       cannot :assign_roles, User
       cannot :read, User
 
-      ######################
-      # MEMBER PERMISSIONS #
-      ######################
-      if user.has_role? :member
-        can :access, :backend
+      can do |action, subject_class, subject|
+        allow = false
 
-        can :read, :all
-        can :sign_up_for, Admin::StaffingJob
+        user.roles.each do |role|
 
-        cannot :read, Admin::Proposals::Proposal
-        can :read, Admin::Proposals::Proposal do |proposal|
-          (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
+          Rails.logger.debug action
+          Rails.logger.debug subject_class
+
+          if subject_class == Symbol then
+            subject_class = subject
+          end
+
+          if role.permissions.where(:action => [aliases_for_action(action), :manage].flatten, :subject_class => subject_class).any? then
+            allow = true
+          end
         end
 
-        cannot :read, Admin::Questionnaires::Questionnaire
-        can :read, Admin::Questionnaires::Questionnaire do |questionnaire|
-          (questionnaire.users.include? user)
-        end
-
-        can :answer, Admin::Questionnaires::Questionnaire do |questionnaire|
-          (questionnaire.users.include? user)
-        end
-
-        cannot :read, Admin::EditableBlock
-        cannot :read, User
-        cannot :read, :jobs
-        cannot :read, Admin::Proposals::CallQuestionTemplate
+        next allow
       end
 
-      #########################
-      # COMMITTEE PERMISSIONS #
-      #########################
-      if user.has_role? :committee
-        can :manage, Admin::Staffing
-        can :manage, Admin::Proposals::Call
-        can :make_public, Show
+      cannot :read, Admin::Proposals::Proposal
+      can :read, Admin::Proposals::Proposal do |proposal|
+        (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
+      end
+
+      can :create, Admin::Proposals::Proposal
+      can :edit, Admin::Proposals::Proposal do |proposal|
+        (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
+      end
+
+      cannot :read, Admin::Questionnaires::Questionnaire
+      can :read, Admin::Questionnaires::Questionnaire do |questionnaire|
+        (questionnaire.users.include? user)
+      end
+
+      can :answer, Admin::Questionnaires::Questionnaire do |questionnaire|
+        (questionnaire.users.include? user)
       end
 
       #####################
@@ -68,19 +81,5 @@ class Ability
       can :read, News, :show_public => true
 
     end
-    #
-    # The first argument to `can` is the action you are giving the user permission to do.
-    # If you pass :manage it will apply to every action. Other common actions here are
-    # :read, :create, :update and :destroy.
-    #
-    # The second argument is the resource the user can perform the action on. If you pass
-    # :all it will apply to every resource. Otherwise pass a Ruby class of the resource.
-    #
-    # The third argument is an optional hash of conditions to further filter the objects.
-    # For example, here the user can only update published articles.
-    #
-    #   can :update, Article, :published => true
-    #
-    # See the wiki for details: https://github.com/ryanb/cancan/wiki/Defining-Abilities
   end
 end

@@ -4,7 +4,10 @@
 	<%= f.input :first_name %>
 	<%= f.input :last_name %>
 	<%= f.input :phone_number %>
-	<%= f.input :password %>
+
+    <% hint = "Leave blank to generate random password" if not @user.persisted? %>
+
+    <%= f.input :password, :hint => hint %>
 	<%= f.input :password_confirmation %>
 
     <% if can? :assign_roles, @user %>
