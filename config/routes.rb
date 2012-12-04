@@ -84,6 +84,8 @@ ChaosRails::Application.routes.draw do
 
   post 'markdown/preview' => 'markdown#preview'
 
+  post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
+
   match 'about' => 'about#index', :as => :about_index
   match 'about/:action' => 'about', :as => :about
 
