@@ -16,5 +16,7 @@ class Role < ActiveRecord::Base
 
   belongs_to :resource, :polymorphic => true
 
+  attr_accessible :name
+
   scopify
 end

@@ -1,0 +1,33 @@
+<% @title = 'Roles' %>
+
+<h1>Listing all roles</h1>
+<table class="table">
+	<tbody>
+		<tr>
+			<th>Name</th>
+			<th></th>
+            <th></th>
+		</tr>
+		<% @roles.each do |role| %>
+		<tr>
+			<td><%= role.name %></td>
+
+            <td>
+            <% if can? :edit, role %>
+			<%= link_to 'Edit', edit_admin_role_path(role) %>
+            <% end %>
+            </td>
+
+            <td>
+            <% if can? :delete, role %>
+            <%= link_to 'Destroy', admin_role_path(role), method: :delete, data: { confirm: 'Are you sure?' } %>
+            <% end %>
+            </td>
+		</tr>
+		<% end %>
+	</tbody>
+</table>
+
+<% if can? :create, Role %>
+<%= link_to 'New role', new_admin_role_path, :class => "btn" %>
+<% end %>
