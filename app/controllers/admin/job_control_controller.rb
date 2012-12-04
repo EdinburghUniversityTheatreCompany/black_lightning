@@ -11,35 +11,35 @@ class Admin::JobControlController < AdminController
   # GET /admin/jobs/overview
   ##
   def overview
-    authorize! :read, :jobs
+    authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
   ##
   # GET /admin/jobs/working
   ##
   def working
-    authorize! :read, :jobs
+    authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
   ##
   # GET /admin/jobs/pending
   ##
   def pending
-    authorize! :read, :jobs
+    authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
   ##
   # GET /admin/jobs/failed
   ##
   def failed
-    authorize! :read, :jobs
+    authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
   ##
   # GET /admin/jobs/remove/1
   ##
   def remove
-    authorize! :delete, :jobs
+    authorize! :delete, Delayed::Backend::ActiveRecord::Job
     Delayed::Job.find(params[:id]).delete
     redirect_to :back
   end
@@ -50,7 +50,7 @@ class Admin::JobControlController < AdminController
   # Sets the number of attempts to 0, and failed_at to nil.
   ##
   def retry
-    authorize! :manage, :jobs
+    authorize! :manage, Delayed::Backend::ActiveRecord::Job
 
     job = Delayed::Job.find(params[:id])
     job.attempts = 0

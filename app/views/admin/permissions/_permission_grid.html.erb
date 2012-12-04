@@ -1,0 +1,12 @@
+<% actions = ['read', 'create', 'edit', 'delete', 'manage'] %>
+
+<% actions.each do |action| %>
+  <td>
+    <% if permission %>
+      <% action_permission = permission.where(:action => action) %>
+      <% checked = action_permission.count > 0 %>
+    <% end %>
+
+    <%= check_box_tag "[#{role.name}][#{model.name}]#{action}", action, checked, :title => action %>
+  </td>
+<% end %>

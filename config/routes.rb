@@ -24,6 +24,9 @@ ChaosRails::Application.routes.draw do
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
+    resources :roles
+    get '/permissions/grid' => 'permissions#grid', :as => :permissions
+    post '/permissions/grid' => 'permissions#update_grid', :as => :permissions
 
     resources :techie_families, :only => [:index]
 
