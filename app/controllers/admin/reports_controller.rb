@@ -31,4 +31,25 @@ class Admin::ReportsController < ApplicationController
       end
     end
   end
+
+  def newsletter_subscribers
+    ::Axlsx::Package.new do |p|
+      p.workbook.add_worksheet(:name => "Subscribers") do |sheet|
+        NewsletterSubscriber.all().each do |subscriber|
+          sheet.add_row([subscriber.email])
+        end
+      end
+
+      file = ::Tempfile.new('subscribers.xlsx')
+
+      begin
+        p.serialize(file.path)
+
+        send_file file.path, :filename => 'subscribers.xlsx'
+      ensure
+        file.close
+        file.unlink
+      end
+    end
+  end
 end

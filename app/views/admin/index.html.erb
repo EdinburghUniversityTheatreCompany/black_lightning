@@ -81,7 +81,7 @@
   <li data-row="5" data-col="1" data-sizex="1" data-sizey="1">
   <h3><%= link_to 'Reports', admin_reports_path %></h3>
     <% list_reports.each do |report| %>
-      <%= link_to report, '/admin/reports/' + report %>
+      <p><%= link_to report, admin_report_path(report) %></p>
     <% end %>
   </li>
   <% end %>

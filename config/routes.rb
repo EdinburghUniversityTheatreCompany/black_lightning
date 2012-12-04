@@ -70,8 +70,8 @@ ChaosRails::Application.routes.draw do
       resources :questionnaire_templates
     end
 
-    match '/reports/' => 'reports#index', :as => 'reports'
-    match '/reports/:action', :controller => 'reports'
+    match '/reports/' => 'reports#index', :as => "reports"
+    match '/reports/:action', :controller => 'reports', :as => "report"
 
     match 'jobs/:action' => 'job_control', :as => "jobs"
 
