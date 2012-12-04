@@ -24,11 +24,19 @@ class Ability
     if user then
 
       can do |action, subject_class, subject|
+        allow = false
+
         user.roles.each do |role|
-          role.permissions.find_all_by_action([aliases_for_action(action), :manage].flatten).any? do |permission|
-            (permission.subject_class == subject_class.to_s) and not subject.nil?
-          end
+          Rails.logger.debug action
+          Rails.logger.debug subject_class
+          Rails.logger.debug [aliases_for_action(action), :manage].flatten
+
+          allow = true if role.permissions.find_all_by_action([aliases_for_action(action), :manage].flatten).any?
+
+          Rails.logger.debug allow
         end
+
+        next allow
       end
 
       cannot :read, Admin::Proposals::Proposal

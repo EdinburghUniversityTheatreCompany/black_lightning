@@ -37,6 +37,22 @@
         <% end %>
       </tr>
     <% end %>
+    <tr>
+        <td>Misc</td>
+
+        <% @roles.each do |role| %>
+          <% permission = role.permissions.where({ :subject_class => "backend" }) %>
+          <% if permission %>
+            <% action_permission = permission.where(:action => "access") %>
+            <% checked = action_permission.count > 0 %>
+          <% end %>
+
+          <td colspan="5">
+            <%= label_tag("[#{role.name}][backend]access", "Access Backend") %>
+            <%= check_box_tag "[#{role.name}][backend]access", "access", checked, :title => "Access Backend" %>
+          </td>
+        <% end %>
+      </tr>
   </tbody>
 </table>
 
