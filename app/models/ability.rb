@@ -27,13 +27,14 @@ class Ability
         allow = false
 
         user.roles.each do |role|
-          Rails.logger.debug action
-          Rails.logger.debug subject_class
-          Rails.logger.debug [aliases_for_action(action), :manage].flatten
 
-          allow = true if role.permissions.find_all_by_action([aliases_for_action(action), :manage].flatten).any?
+          if subject_class == Symbol then
+            subject_class = subject
+          end
 
-          Rails.logger.debug allow
+          if role.permissions.where(:action => [aliases_for_action(action), :manage].flatten, :subject_class => subject_class).any? then
+            allow = true
+          end
         end
 
         next allow

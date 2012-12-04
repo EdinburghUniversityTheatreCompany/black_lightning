@@ -1,7 +1,8 @@
 class Admin::PermissionsController < AdminController
 
   def grid
-    @roles  = ::Role.all
+    role_exclude = ['admin']
+    @roles  = ::Role.where("name NOT IN (?)", role_exclude)
 
     Rails.application.eager_load!
     @models = ::ActiveRecord::Base.descendants
