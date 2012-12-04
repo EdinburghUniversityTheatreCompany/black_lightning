@@ -4,7 +4,7 @@ class ApplicationController < ActionController::Base
   before_filter :set_globals
 
   rescue_from CanCan::AccessDenied do |exception|
-    redirect_to access_denied_path, :notice => exception.message
+    redirect_to static_path('access_denied'), :notice => exception.message
   end
 
   def authorize_backend!
