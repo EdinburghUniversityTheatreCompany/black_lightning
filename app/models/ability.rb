@@ -23,10 +23,18 @@ class Ability
 
     if user then
 
+      #All users can manage themselves.
+      can :manage, User, :id => user.id
+      cannot :assign_roles, User
+      cannot :read, User
+
       can do |action, subject_class, subject|
         allow = false
 
         user.roles.each do |role|
+
+          Rails.logger.debug action
+          Rails.logger.debug subject_class
 
           if subject_class == Symbol then
             subject_class = subject

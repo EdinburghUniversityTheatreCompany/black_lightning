@@ -45,15 +45,24 @@
         <td>Misc</td>
 
         <% @roles.each do |role| %>
-          <% permission = role.permissions.where({ :subject_class => "backend" }) %>
-          <% if permission %>
-            <% action_permission = permission.where(:action => "access") %>
-            <% checked = action_permission.count > 0 %>
-          <% end %>
-
           <td colspan="5">
+            <% permission = role.permissions.where({ :subject_class => "backend" }) %>
+            <% if permission %>
+              <% action_permission = permission.where(:action => "access") %>
+              <% checked = action_permission.count > 0 %>
+            <% end %>
+
             <%= label_tag("[#{role.name}][backend]access", "Access Backend") %>
             <%= check_box_tag "[#{role.name}][backend]access", "access", checked, :title => "Access Backend" %>
+
+            <% permission = role.permissions.where({ :subject_class => "Admin::StaffingJob" }) %>
+            <% if permission %>
+              <% action_permission = permission.where(:action => "sign_up_for") %>
+              <% checked = action_permission.count > 0 %>
+            <% end %>
+
+            <%= label_tag("[#{role.name}][Admin::StaffingJob]sign_up_for", "Sign Up For Staffing") %>
+            <%= check_box_tag "[#{role.name}][Admin::StaffingJob]sign_up_for", "sign_up_for", checked, :title => "Access Backend" %>
           </td>
         <% end %>
       </tr>
