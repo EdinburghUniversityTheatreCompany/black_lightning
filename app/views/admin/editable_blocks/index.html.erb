@@ -2,6 +2,11 @@
 
 <h1>Editable Blocks</h1>
 
+<%= display_block("Editable Blocks", true) %>
+
+<br />
+<br />
+
 <div class="accordion" id="ediable_block_accordion">
 <% @admin_editable_blocks.each do |group, editable_blocks| %>
   <%= render 'editable_block', :group => group, :editable_blocks => editable_blocks %>
