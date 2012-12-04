@@ -15,6 +15,7 @@ class ApplicationController < ActionController::Base
     @base_url = request.protocol + request.host_with_port
     #Create the @meta hash
     @meta = {}
+    @support_email = "it@bedlamtheatre.co.uk"
   end
 
 end
