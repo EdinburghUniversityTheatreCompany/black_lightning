@@ -17,9 +17,7 @@ addHandlers = ->
       data: input.val(),
       success: (data) ->
         preview = $("#" + id + "_preview")
-        preview.hide();
         preview.html(data);
-        preview.slideDown();
         return
     });
 
