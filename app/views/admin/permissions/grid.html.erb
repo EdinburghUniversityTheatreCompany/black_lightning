@@ -3,10 +3,11 @@
 <table class="table table-hover">
   <colgroup>
     <col span="1" style="border-right: 1px solid #dddddd;">
+
+    <% @roles.each do |role| %>
     <col span="4">
     <col span="1" style="border-right: 1px solid #dddddd;">
-    <col span="4">
-    <col span="1" style="border-right: 1px solid #dddddd;">
+    <% end %>
   </colgroup>
   <thead>
     <tr>
