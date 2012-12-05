@@ -61,7 +61,11 @@
 <% @admin_proposals_proposal.answers.each do |answer| %>
   <p>
     <b><%= answer.question.question_text %></b><br />
-    <%= answer.answer.presence || "This question has not been answered" %>
+    <% if answer.question.response_type == "File" then %>
+      <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
+    <% else %>
+      <%= answer.answer.presence || "This question has not been answered" %>
+    <% end %>
   </p>
 <% end %>
 

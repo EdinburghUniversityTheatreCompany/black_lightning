@@ -5,14 +5,7 @@
     <%= f.input_field :question_id, :value => f.object.question.id, :as => :hidden %>
 
     <div>
-      <% case f.object.question.response_type %>
-      <% when "Text" %>
-        <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :answer } %>
-      <% when "Integer" %>
-        <%= f.input_field :answer, :as => :integer %>
-      <% else %>
-        <%= f.input_field :answer, :as => :string %>
-      <% end %>
+      <%= render 'admin/shared/answer_field', :f => f %>
     </div>
 
     <hr />

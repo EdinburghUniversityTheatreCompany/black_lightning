@@ -19,4 +19,8 @@ class Admin::Question < ActiveRecord::Base
   validates :question_text, :presence => true
 
   attr_accessible :question_text, :response_type
+
+  def self.response_types
+    ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File']
+  end
 end

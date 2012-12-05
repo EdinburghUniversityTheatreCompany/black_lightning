@@ -11,15 +11,19 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121204214816) do
+ActiveRecord::Schema.define(:version => 20121205131722) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
     t.integer  "answerable_id"
     t.text     "answer"
-    t.datetime "created_at",      :null => false
-    t.datetime "updated_at",      :null => false
+    t.datetime "created_at",        :null => false
+    t.datetime "updated_at",        :null => false
     t.string   "answerable_type"
+    t.string   "file_file_name"
+    t.string   "file_content_type"
+    t.integer  "file_file_size"
+    t.datetime "file_updated_at"
   end
 
   add_index "admin_answers", ["answerable_id"], :name => "index_admin_proposals_answers_on_proposal_id"

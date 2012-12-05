@@ -1,0 +1,12 @@
+<% case f.object.question.response_type %>
+  <% when "Long Text" %>
+    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :answer } %>
+  <% when "Number" %>
+    <%= f.input_field :answer, :as => :decimal %>
+  <% when "Yes/No" %>
+    <%= f.input_field :answer, :as => :select, :collection => ['Yes', 'No'] %>
+  <% when "File" %>
+    <%= f.input_field :file %>
+  <% else %>
+    <%= f.input_field :answer, :as => :string %>
+<% end %>
