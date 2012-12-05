@@ -1,14 +1,14 @@
-<h1>Listing Proposal Call Question Templates</h1>
+<h1>Questionnaire Templates</h1>
 
 <table class="table">
   <tr>
     <th>Name</th>
 
-    <% if can? :edit, Admin::Proposals::CallQuestionTemplate %>
+    <% if can? :edit, Admin::Questionnaires::QuestionnaireTemplate %>
     <th></th>
     <% end %>
 
-    <% if can? :delete, Admin::Proposals::CallQuestionTemplate %>
+    <% if can? :delete, Admin::Questionnaires::QuestionnaireTemplate %>
     <th></th>
     <% end %>
   </tr>
@@ -18,7 +18,7 @@
     <td><%= template.name %></td>
 
     <% if can? :edit, template %>
-    <td><%= link_to 'Edit', edit_admin_proposals_call_question_template_path(template) %></td>
+    <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_template_path(template) %></td>
     <% end %>
 
     <% if can? :delete, template %>
@@ -30,6 +30,6 @@
 
 <br />
 
-<% if can? :create, Admin::Proposals::CallQuestionTemplate %>
-<%= link_to 'New Template', new_admin_proposals_call_question_template_path, :class => "btn" %>
+<% if can? :create, Admin::Questionnaires::QuestionnaireTemplate %>
+<%= link_to 'New Template', new_admin_questionnaires_questionnaire_template_path, :class => "btn" %>
 <% end %>

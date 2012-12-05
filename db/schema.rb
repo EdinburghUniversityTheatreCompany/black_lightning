@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121205131722) do
+ActiveRecord::Schema.define(:version => 20121205192118) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -77,7 +77,7 @@ ActiveRecord::Schema.define(:version => 20121205131722) do
   add_index "admin_proposals_proposals", ["call_id"], :name => "index_admin_proposals_proposals_on_call_id"
 
   create_table "admin_questionnaires_questionnaire_templates", :force => true do |t|
-    t.integer  "name"
+    t.string   "name"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
