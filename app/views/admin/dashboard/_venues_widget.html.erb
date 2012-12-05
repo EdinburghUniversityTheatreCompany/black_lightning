@@ -1,6 +1,0 @@
-<h3><%= link_to 'Venues', admin_venues_path %></h3>
-<% ::Venue.all.each do |venue| %>
-  <p><%= link_to venue.name, admin_venue_path(venue) %></p>
-<% end %>
-
-<%= link_to 'Add Venue', new_admin_venue_path, :class => "btn" %>
