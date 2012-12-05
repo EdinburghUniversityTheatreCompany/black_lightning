@@ -28,7 +28,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/new
   # GET /admin/staffings/new.json
   def new
-    @users = User.accessible_by(current_ability, :manage)
+    @users = User.all
     @admin_staffing = Admin::Staffing.new
 
     respond_to do |format|
@@ -39,13 +39,14 @@ class Admin::StaffingsController < AdminController
 
   # GET /admin/staffings/1/edit
   def edit
-    @users = User.accessible_by(current_ability, :manage)
+    @users = User.all
     @admin_staffing = Admin::Staffing.find(params[:id])
   end
 
   # POST /admin/staffings
   # POST /admin/staffings.json
   def create
+    @users = User.all
     @admin_staffing = Admin::Staffing.new(params[:admin_staffing])
 
     @admin_staffing.reminder_job = ::StaffingMailer.delay({:run_at => @admin_staffing.date.advance(:hours => -2)}).staffing_reminder(@admin_staffing)
@@ -63,7 +64,7 @@ class Admin::StaffingsController < AdminController
   end
 
   def new_for_show
-    @users = User.accessible_by(current_ability, :manage)
+    @users = User.all
     @admin_staffing = Admin::Staffing.new
   end
 
