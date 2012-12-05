@@ -1,12 +1,12 @@
 ﻿{
-    "name": "Bedfest",
+    "name": "Bedlam Festival",
     "jobs": [
         "Committee Rep",
         "Duty Manager",
         "Box Office",
-	"Box Office Manager",
-	"Cafe Manager",
-	"Cafe",
+        "Box Office Manager",
+        "Cafe Manager",
+        "Cafe",
         "Indoor Hallkeeper",
         "Outdoor Hallkeeper"
     ]
