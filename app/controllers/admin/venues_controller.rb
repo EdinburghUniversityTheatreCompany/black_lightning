@@ -5,6 +5,8 @@ class Admin::VenuesController < AdminController
   # GET /venues
   # GET /venues.json
   def index
+    @venues = Venue.all
+
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }

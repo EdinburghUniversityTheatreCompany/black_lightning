@@ -20,9 +20,7 @@
 one:
   name: MyString
   description: MyText
-  location: MyString
 
 two:
   name: MyString
   description: MyText
-  location: MyString

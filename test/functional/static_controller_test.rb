@@ -5,11 +5,4 @@ class StaticControllerTest < ActionController::TestCase
     get :home
     assert_response :success
   end
-
-  test "should get about" do
-    get :about
-    assert_response :success
-    
-    assert_select "h2", "Welcome to Project BlackLightning"
-  end
 end
