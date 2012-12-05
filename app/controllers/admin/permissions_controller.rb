@@ -1,6 +1,8 @@
 class Admin::PermissionsController < AdminController
 
   def grid
+    authorize!(:read, Admin::Permission)
+
     role_exclude = ['admin']
     @roles  = ::Role.where("name NOT IN (?)", role_exclude)
 
@@ -9,6 +11,8 @@ class Admin::PermissionsController < AdminController
   end
 
   def update_grid
+    authorize!(:edit, Admin::Permission)
+
     role_exclude = ['admin']
     @roles  = ::Role.where("name NOT IN (?)", role_exclude)
 
@@ -40,6 +44,7 @@ class Admin::PermissionsController < AdminController
     return redirect_to :admin_permissions
   end
 
+  private
   def update_permission(role, subject_class, actions)
     existing_permissions = role.permissions.where({ :subject_class => subject_class })
 
