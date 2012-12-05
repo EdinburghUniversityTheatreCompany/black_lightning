@@ -1,0 +1,13 @@
+﻿{
+    "name": "Bedfest",
+    "jobs": [
+        "Committee Rep",
+        "Duty Manager",
+        "Box Office",
+	"Box Office Manager",
+	"Cafe Manager",
+	"Cafe",
+        "Indoor Hallkeeper",
+        "Outdoor Hallkeeper"
+    ]
+}
