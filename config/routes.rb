@@ -12,7 +12,7 @@ ChaosRails::Application.routes.draw do
   match 'admin/' => 'admin#index'
   namespace :admin do
     #The resources pages:
-    match 'resources/branding' => 'resources#branding'
+    match 'resources/*action' => 'resources', :as => :resources
 
     resources :shows do
       member do
