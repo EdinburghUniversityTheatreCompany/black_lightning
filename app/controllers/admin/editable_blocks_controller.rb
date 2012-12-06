@@ -13,7 +13,7 @@ class Admin::EditableBlocksController < AdminController
   ##
   def index
     @admin_editable_blocks = Admin::EditableBlock.all.group_by { |e| e.group }
-
+    @title = "Editable Blocks"
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @admin_editable_blocks }
@@ -27,7 +27,7 @@ class Admin::EditableBlocksController < AdminController
   ##
   def new
     @admin_editable_block = Admin::EditableBlock.new
-
+    @title = "New Editable Block"
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @admin_editable_block }
@@ -39,6 +39,7 @@ class Admin::EditableBlocksController < AdminController
   ##
   def edit
     @admin_editable_block = Admin::EditableBlock.find(params[:id])
+    @title = "Edit #{@admin_editable_block.name}"
   end
 
   ##

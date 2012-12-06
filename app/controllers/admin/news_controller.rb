@@ -12,6 +12,7 @@ class Admin::NewsController < AdminController
   # GET /admin/news.json
   ##
   def index
+    @title = "News"
     @news = News.all
 
     respond_to do |format|
@@ -27,7 +28,7 @@ class Admin::NewsController < AdminController
   ##
   def show
     @news = News.find(params[:id])
-
+    @title = @news.title
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @news }
@@ -41,7 +42,7 @@ class Admin::NewsController < AdminController
   ##
   def new
     @news = News.new
-
+    @title = "Create News"
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @news }
@@ -53,6 +54,7 @@ class Admin::NewsController < AdminController
   ##
   def edit
     @news = News.find(params[:id])
+    @title = "Edit #{@news.title}"
   end
 
   ##

@@ -11,6 +11,7 @@ class Admin::JobControlController < AdminController
   # GET /admin/jobs/overview
   ##
   def overview
+    @title = "Delayed Jobs"
     authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
@@ -18,6 +19,7 @@ class Admin::JobControlController < AdminController
   # GET /admin/jobs/working
   ##
   def working
+    @title = "Working Delayed Jobs"
     authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
@@ -25,6 +27,7 @@ class Admin::JobControlController < AdminController
   # GET /admin/jobs/pending
   ##
   def pending
+    @title = "Pending Delayed Jobs"
     authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 
@@ -32,6 +35,7 @@ class Admin::JobControlController < AdminController
   # GET /admin/jobs/failed
   ##
   def failed
+    @title = "Failed Delayed Jobs"
     authorize! :read, Delayed::Backend::ActiveRecord::Job
   end
 

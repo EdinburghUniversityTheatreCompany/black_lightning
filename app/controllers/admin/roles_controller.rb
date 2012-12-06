@@ -3,6 +3,7 @@ class Admin::RolesController < AdminController
   load_and_authorize_resource
 
   def index
+    @title = "Roles"
     @roles = Role.all
   end
 

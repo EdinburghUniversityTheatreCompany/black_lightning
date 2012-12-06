@@ -10,11 +10,13 @@ class Admin::HelpController < AdminController
   # GET /admin/help/markdown
   ##
   def markdown
+    @title = "Markdown Help"
   end
 
   ##
   # GET /admin/help/venue_location
   ##
   def venue_location
+    @title = "Venue Location Help"
   end
 end

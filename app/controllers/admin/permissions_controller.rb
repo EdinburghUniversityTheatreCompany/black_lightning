@@ -8,6 +8,7 @@ class Admin::PermissionsController < AdminController
 
     Rails.application.eager_load!
     @models = ::ActiveRecord::Base.descendants
+    @title = "Permissions"
   end
 
   def update_grid
