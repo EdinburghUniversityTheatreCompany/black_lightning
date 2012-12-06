@@ -3,6 +3,9 @@ class ApplicationController < ActionController::Base
 
   before_filter :set_globals
 
+  rescue_from Exception, :with => :report_500     unless Rails.env.development? || Rails.env.test?
+  rescue_from StandardError, :with => :report_500 unless Rails.env.development? || Rails.env.test?
+
   rescue_from CanCan::AccessDenied do |exception|
     redirect_to static_path('access_denied'), :notice => exception.message
   end
@@ -11,9 +14,6 @@ class ApplicationController < ActionController::Base
     flash[:notice] = exception.message
     raise ActionController::RoutingError.new('Not Found')
   end
-
-  rescue_from Exception, :with => :report_500     unless Rails.env.development? || Rails.env.test?
-  rescue_from StandardError, :with => :report_500 unless Rails.env.development? || Rails.env.test?
 
   def authorize_backend!
     authorize! :access, :backend
