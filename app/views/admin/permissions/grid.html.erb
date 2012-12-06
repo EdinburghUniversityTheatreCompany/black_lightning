@@ -33,12 +33,8 @@
         <td><%= model.name %></td>
 
         <% @roles.each do |role| %>
-          <% if ["Admin::Proposals::Proposal", "Admin::Questionnaires::Questionnaire"].include? model.name then %>
-            <td colspan="5">Hard coded</td>
-          <% else %>
-            <% permission = role.permissions.where({ :subject_class => model.name }) %>
-            <%= render 'permission_grid', :role => role, :model => model, :permission => permission %>
-          <% end %>
+          <% permission = role.permissions.where({ :subject_class => model.name }) %>
+          <%= render 'permission_grid', :role => role, :model => model, :permission => permission %>
         <% end %>
       </tr>
     <% end %>
