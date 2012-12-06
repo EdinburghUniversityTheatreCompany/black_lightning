@@ -12,6 +12,8 @@ class StaticController < ApplicationController
   end
 
   def render_404
+    @meta["ROBOTS"] = "NOINDEX, NOFOLLOW"
+
     respond_to do |type|
       type.html { render :template => "static/404", :status => 404, :layout => 'application' }
       type.all  { render :nothing => true, :status => 404 }
@@ -19,6 +21,8 @@ class StaticController < ApplicationController
   end
 
   def render_500
+    @meta["ROBOTS"] = "NOINDEX, NOFOLLOW"
+
     @email_body = "----------------------------\n\n Error Details:\n\n message: #{flash[:error]}\n\n Location: #{flash[:error_location]} \n\n url: #{flash[:error_path]}"
 
     respond_to do |type|
