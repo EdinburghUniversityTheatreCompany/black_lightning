@@ -14,4 +14,9 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "should update permissions" do
+    post :update_grid
+    assert_redirected_to admin_permissions_path
+  end
+
 end

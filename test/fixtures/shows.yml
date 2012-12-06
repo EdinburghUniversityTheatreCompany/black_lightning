@@ -23,6 +23,7 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
+  id: 1
   name: "Accidental Death of an Anarchist"
   slug: "accidental-death-of-an-anarchist"
   tagline: "A play by Dario Fo"
