@@ -24,13 +24,15 @@ one:
   publish_date: <%= (3).days.ago.to_s(:db) %>
   show_public: true
   body: "In the begining there was news.  \n And the news was rendered with *markdown*. And the Lord saw that it was good. \n \n He also noted that if you create two new lines, a new paragraph begins. \n \n Finally, he saw that only the first paragraph after 140 characters was displayed in the preview."
-  
+  author_id: 1
+
 two:
   title: "Then"
   slug: "then"
   publish_date: <%= (2).days.ago.to_s(:db) %>
   show_public: false
   body: "Then the Lord saw that he could create news that was only displayed to members. He did test the system, and found that it was good."
+  author_id: 1
 
 three:
   title: "Finally"
@@ -38,3 +40,4 @@ three:
   publish_date: <%= (1).days.ago.to_s(:db) %>
   show_public: true
   body: "This is some more news. That is all."
+  author_id: 1

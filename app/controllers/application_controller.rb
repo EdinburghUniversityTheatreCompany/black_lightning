@@ -12,8 +12,8 @@ class ApplicationController < ActionController::Base
     raise ActionController::RoutingError.new('Not Found')
   end
 
-  rescue_from Exception, :with => :report_500     unless Rails.env.development?
-  rescue_from StandardError, :with => :report_500 unless Rails.env.development?
+  rescue_from Exception, :with => :report_500     unless Rails.env.development? || Rails.env.test?
+  rescue_from StandardError, :with => :report_500 unless Rails.env.development? || Rails.env.test?
 
   def authorize_backend!
     authorize! :access, :backend
