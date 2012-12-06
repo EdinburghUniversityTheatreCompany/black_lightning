@@ -13,6 +13,10 @@ class ShowsController < ApplicationController
   def show
     @show = Show.find_by_slug(params[:id])
 
+    if @show.nil? then
+      raise ActionController::RoutingError.new('Not Found')
+    end
+
     @title = @show.name
     @meta[:description] = @show.description
     @meta["og:image"] = [@base_url + @show.image.url(:medium)] + @show.pictures.collect{|p| @base_url + p.image.url }
@@ -20,7 +24,5 @@ class ShowsController < ApplicationController
     respond_to do |format|
       format.html
     end
-  rescue ActiveRecord::RecordNotFound
-    respond_to_not_found(:html)
   end
 end
