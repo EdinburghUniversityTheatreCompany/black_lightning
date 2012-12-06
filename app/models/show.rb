@@ -84,18 +84,18 @@ class Show < ActiveRecord::Base
   ##
   # Generates the frequently used "startdate - enddate" string.
   #
-  # The date format used is the :short format, defined in /config/locales/en.yml
+  # The date format used is the :long format, defined in /config/locales/en.yml
   ##
   def date_range
     if not self.start_date.presence then
       return
     end
 
-    date = I18n.l(self.start_date, :format => :short)
+    date = I18n.l(self.start_date, :format => :long)
 
     if self.end_date and not self.start_date == self.end_date then
         date << " - "
-        date << I18n.l(self.end_date, :format => :short)
+        date << I18n.l(self.end_date, :format => :long)
     end
 
     return date
