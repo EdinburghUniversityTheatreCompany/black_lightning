@@ -13,8 +13,17 @@ class StaticController < ApplicationController
 
   def render_404
     respond_to do |type|
-      type.html { render :template => "static/404", :layout => 'application' }#, :status => 404 }
+      type.html { render :template => "static/404", :status => 404, :layout => 'application' }
       type.all  { render :nothing => true, :status => 404 }
+    end
+  end
+
+  def render_500
+    @email_body = "----------------------------\n\n Error Details:\n\n message: #{flash[:error]}\n\n Location: #{flash[:error_location]} \n\n url: #{flash[:error_path]}"
+
+    respond_to do |type|
+      type.html { render :template => "static/500", :status => 500, :layout => 'application' }
+      type.all  { render :nothing => true, :status => 500 }
     end
   end
 end

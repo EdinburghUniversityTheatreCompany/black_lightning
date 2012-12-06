@@ -1,0 +1,16 @@
+<% @hide_cookie_notice = true %>
+<% @hide_alert = true %>
+
+<div style="text-align: center;">
+<p style="margin-top:20px;">
+  <b style="font-size: large; color: #dc143c;">Sorry<%= current_user.present? ? " #{current_user.first_name}, " : " ," %>there was a problem fetching this page.</b>
+</p>
+<pre><%= flash[:error] %></pre>
+<p>
+  Please use <%= mail_to @support_email, 'this link', :body => @email_body, :subject => "Website Error Report" %> to contact the Bedlam IT Systems Manager.<br />
+  Following the link includes important information in the e-mail that will help to diagnose the problem.
+</p>
+<p>
+  HAL is sorry.
+</p>
+</div>

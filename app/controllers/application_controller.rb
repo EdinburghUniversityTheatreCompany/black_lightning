@@ -7,6 +7,14 @@ class ApplicationController < ActionController::Base
     redirect_to static_path('access_denied'), :notice => exception.message
   end
 
+  rescue_from ActiveRecord::RecordNotFound do |exception|
+    flash[:notice] = exception.message
+    raise ActionController::RoutingError.new('Not Found')
+  end
+
+  rescue_from Exception, :with => :report_500     unless Rails.env.development?
+  rescue_from StandardError, :with => :report_500 unless Rails.env.development?
+
   def authorize_backend!
     authorize! :access, :backend
   end
@@ -16,6 +24,14 @@ class ApplicationController < ActionController::Base
     #Create the @meta hash
     @meta = {}
     @support_email = "it@bedlamtheatre.co.uk"
+  end
+
+  def report_500(ex)
+    flash[:error] = ex.message
+    flash[:error_path] = request.fullpath
+    flash[:error_location] = ex.backtrace[0].gsub Rails.root.to_s, ""
+
+    redirect_to '/500'
   end
 
 end

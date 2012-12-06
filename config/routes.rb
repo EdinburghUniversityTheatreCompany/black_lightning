@@ -92,10 +92,11 @@ ChaosRails::Application.routes.draw do
   match 'getinvolved' => 'get_involved#index', :as => :get_involved_index
   match 'getinvolved/:action' => 'get_involved', :as => :get_involved
 
-  match '*action' => 'static', :as => :static
+  # ERROR PAGES - match to ensure correct response code is sent
+  match '/404' => 'static#render_404'
+  match '/500' => 'static#render_500'
 
-  # ERROR PAGES
-  #match '/404' => 'static#render_404'
+  match '*action' => 'static', :as => :static
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

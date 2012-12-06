@@ -11,11 +11,9 @@ class ShowsController < ApplicationController
   end
 
   def show
-    @show = Show.find_by_slug(params[:id])
-
-    if @show.nil? then
-      raise ActionController::RoutingError.new('Not Found')
-    end
+    # Use ! on find_by to ensure a ActiveRecord::RecordNotFound exception is thrown if the show doesn't exist.
+    # This is caught by the application controller to redirect to 404
+    @show = Show.find_by_slug!(params[:id])
 
     @title = @show.name
     @meta[:description] = @show.description
