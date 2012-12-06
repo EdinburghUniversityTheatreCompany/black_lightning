@@ -1,15 +1,18 @@
 class Admin::UsersController < AdminController
   load_and_authorize_resource
   def index
+    @title = "Users"
     @users = User.all
   end
 
   def show
     @user = User.find(params[:id])
+    @title = @user.name
   end
 
   def new
     @user = User.new
+    @title = "New User"
   end
 
   def create
@@ -27,6 +30,7 @@ class Admin::UsersController < AdminController
 
   def edit
     @user = User.find(params[:id])
+    @title = "Editing #{@user.name}"
   end
 
   def update

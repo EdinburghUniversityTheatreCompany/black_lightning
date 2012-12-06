@@ -6,7 +6,7 @@ class Admin::VenuesController < AdminController
   # GET /venues.json
   def index
     @venues = Venue.all
-
+    @title = "Venues"
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }
@@ -17,7 +17,7 @@ class Admin::VenuesController < AdminController
   # GET /venues/1.json
   def show
     @venue = Venue.find(params[:id])
-
+    @title = @venue.name
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @venue }
@@ -28,7 +28,7 @@ class Admin::VenuesController < AdminController
   # GET /venues/new.json
   def new
     @venue = Venue.new
-
+    @title = "New Venue"
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @venue }
@@ -38,6 +38,7 @@ class Admin::VenuesController < AdminController
   # GET /venues/1/edit
   def edit
     @venue = Venue.find(params[:id])
+    @title = "Editing #{@venue.name}"
   end
 
   # POST /venues

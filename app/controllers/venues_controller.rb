@@ -4,7 +4,7 @@ class VenuesController < ApplicationController
   # GET /venues.json
   def index
     @venues = Venue.paginate(:page => params[:page], :per_page => 5).all
-
+    @title = "Venues"
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }
@@ -15,7 +15,7 @@ class VenuesController < ApplicationController
   # GET /venues/1.json
   def show
     @venue = Venue.find(params[:id])
-
+    @title = @venue.name
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @venue }

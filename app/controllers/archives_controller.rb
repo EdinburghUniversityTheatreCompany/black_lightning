@@ -12,6 +12,7 @@ class ArchivesController < ApplicationController
   end
 
   def index
+    @title = "Archives"
   end
 
   private
