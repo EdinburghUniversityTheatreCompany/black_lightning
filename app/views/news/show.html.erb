@@ -3,7 +3,10 @@
 <article>
     <header>
         <h2><%= @news.title %></h2>
-        <time datetime="<%= @news.publish_date.strftime("%FT%T%:z") %>"><%= l @news.publish_date, :format => :long %></time>
+        <p>
+          <time datetime="<%= @news.publish_date.strftime("%FT%T%:z") %>"><%= l @news.publish_date, :format => :long %></time>
+          by <span class="author"><%= @news.author.name %></span>
+        </p>
     </header>
 
     <%= image_tag @news.image.url(:medium), :class => "float-right span3" %>

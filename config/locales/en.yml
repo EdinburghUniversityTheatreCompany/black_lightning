@@ -5,6 +5,7 @@ en:
   time:
     formats:
       short: ! '%H:%M %d/%m/%y'
+      long : ! '%A %d %B at %H:%M'
   date:
     formats:
       long: ! '%A %d %B'

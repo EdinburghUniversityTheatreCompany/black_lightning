@@ -34,6 +34,8 @@ class News < ActiveRecord::Base
     "#{id}-#{slug}"
   end
 
+  belongs_to :author, :class_name => "User"
+
   validates :title, :presence => true
   validates :publish_date, :presence => true
   validates :slug, :presence => true, :uniqueness => true
