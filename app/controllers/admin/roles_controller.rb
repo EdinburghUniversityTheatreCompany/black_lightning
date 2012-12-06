@@ -9,10 +9,12 @@ class Admin::RolesController < AdminController
 
   def show
     @role = Role.find(params[:id])
+    @title = "#{@role.name} Role"
   end
 
   def new
     @role = Role.new
+    @title = "New Role"
   end
 
   def create
@@ -31,6 +33,7 @@ class Admin::RolesController < AdminController
 
   def edit
     @role = Role.find(params[:id])
+    @title = "Editing #{@role.name} Role"
   end
 
   def update

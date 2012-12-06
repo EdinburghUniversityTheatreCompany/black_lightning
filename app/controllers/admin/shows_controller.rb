@@ -3,16 +3,19 @@ class Admin::ShowsController < AdminController
   load_and_authorize_resource :find_by => :slug
 
   def index
+    @title = "Shows"
     @shows = Show.all
   end
 
   def show
     @show = Show.find_by_slug(params[:id])
+    @title = @show.name
   end
 
   def new
     @show = Show.new
     @users = User.all
+    @title = "New Show"
   end
 
   def create
@@ -31,6 +34,7 @@ class Admin::ShowsController < AdminController
   def edit
     @show = Show.find_by_slug(params[:id])
     @users = User.all
+    @title = "Editing #{@show.name}"
   end
 
   def update

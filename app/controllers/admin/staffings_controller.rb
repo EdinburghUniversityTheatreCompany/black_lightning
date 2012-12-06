@@ -7,7 +7,7 @@ class Admin::StaffingsController < AdminController
   def index
     @admin_staffings = Admin::Staffing.future.group_by { |s| s.show_title }
     @admin_staffings_archive = Admin::Staffing.past.group_by { |s| s.show_title }
-
+    @title = "Staffing"
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @admin_staffings }
@@ -18,7 +18,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/1.json
   def show
     @admin_staffing = Admin::Staffing.find(params[:id])
-
+    @title = @admin_staffing.name
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @admin_staffing }
@@ -30,7 +30,7 @@ class Admin::StaffingsController < AdminController
   def new
     @users = User.all
     @admin_staffing = Admin::Staffing.new
-
+    @title = "New Staffing"
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @admin_staffing }
@@ -41,6 +41,7 @@ class Admin::StaffingsController < AdminController
   def edit
     @users = User.all
     @admin_staffing = Admin::Staffing.find(params[:id])
+    @title = "Editing #{@admin_staffing.name}"
   end
 
   # POST /admin/staffings
@@ -66,6 +67,7 @@ class Admin::StaffingsController < AdminController
   def new_for_show
     @users = User.all
     @admin_staffing = Admin::Staffing.new
+    @title = "New Staffing for Show"
   end
 
   def create_for_show
@@ -123,6 +125,7 @@ class Admin::StaffingsController < AdminController
   def show_sign_up
     authorize! :sign_up_for, Admin::StaffingJob
     @admin_staffing = Admin::Staffing.find(params[:id])
+    @title = "Staffing for #{@admin_staffing.name}"
   end
 
   def sign_up
