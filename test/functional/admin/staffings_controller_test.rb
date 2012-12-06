@@ -3,10 +3,18 @@ require 'test_helper'
 class Admin::StaffingsControllerTest < ActionController::TestCase
   setup do
     @admin_staffing = admin_staffings(:one)
-    
+
     @user = User.find_by_email('admin@bedlamtheatre.co.uk')
     @user.add_role :admin
     sign_in @user
+
+    #Turn on delayed jobs for staffings - the staffing mailer refers to the job.
+    Delayed::Worker.delay_jobs = true
+  end
+
+  teardown do
+    #Turn off delayed jobs back off
+    Delayed::Worker.delay_jobs = false
   end
 
   test "should get index" do
