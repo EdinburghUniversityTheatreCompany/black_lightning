@@ -39,6 +39,12 @@
 
     </div>
 
+    <h3>Reviews</h3>
+
+    <%= f.simple_fields_for :reviews %>
+
+    <%= f.link_to_add "Add Review", :reviews, :class => "btn" %>
+
     <div class="gallery-form">
 
       <h3>Gallery</h3>
@@ -69,7 +75,7 @@
   			});
   		});
   	});
-  
+
 	$('#show_name').keyup(function() {
 		var slug = jQuery.trim($('#show_name').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
 		$('#show_slug').val(slug);

@@ -75,8 +75,27 @@
   <%= xts_widget(@show.xts_id)%>
 <% end %>
 
-<% if @show.pictures.count > 0 then %>
+<% if @show.reviews.count > 0 then %>
   <hr />
+
+  <h3>Reviews</h3>
+
+  <% @show.reviews.each do |review| %>
+    <article>
+      <header>
+        <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, :format => :long %>
+        <br />
+        <%= star_rating review.rating if review.rating && review.rating > 0 %>
+      </header>
+
+      <%= render_markdown review.body %>
+    </article>
+
+    <hr />
+  <% end %>
+<% end %>
+
+<% if @show.pictures.count > 0 then %>
 
   <h3>Gallery</h3>
 

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121206133837) do
+ActiveRecord::Schema.define(:version => 20121206143440) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -190,6 +190,16 @@ ActiveRecord::Schema.define(:version => 20121206133837) do
     t.datetime "image_updated_at"
     t.datetime "created_at",         :null => false
     t.datetime "updated_at",         :null => false
+  end
+
+  create_table "reviews", :force => true do |t|
+    t.integer  "show_id"
+    t.string   "reviewer"
+    t.text     "body"
+    t.decimal  "rating",      :precision => 2, :scale => 1
+    t.date     "review_date"
+    t.datetime "created_at",                                :null => false
+    t.datetime "updated_at",                                :null => false
   end
 
   create_table "roles", :force => true do |t|

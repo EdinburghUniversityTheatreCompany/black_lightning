@@ -75,6 +75,10 @@ h3 {
 	color: #dc143c;
 }
 
+.author {
+    font-weight: bold;
+}
+
 .footer {
     text-align: center;
     line-height: normal;

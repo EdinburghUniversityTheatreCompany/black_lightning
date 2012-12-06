@@ -1,0 +1,12 @@
+<div class="control-group fields">
+
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 15 } do %>
+      <%= f.input :reviewer %>
+      <%= f.input :review_date, :order => [:day, :month, :year] %>
+      <%= f.input :rating, :title => "Max 5. Halves allowed." %>
+
+      <%= f.link_to_remove "Remove Review", :class => "btn btn-danger", data: { confirm: 'Are you sure?' } %>
+    <% end %>
+
+    <hr />
+</div>
