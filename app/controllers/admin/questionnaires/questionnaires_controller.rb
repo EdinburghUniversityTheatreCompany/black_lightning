@@ -8,10 +8,10 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaires
   # GET /admin/questionnaires/questionnaires.json
   def index
-    @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.all
+    @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.all.group_by { |q| q.show }
 
     if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
-      @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.joins(:users).where('user_id = ?', current_user.id)
+      @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.joins(:users).where('user_id = ?', current_user.id).group_by { |q| q.show }
     end
 
     respond_to do |format|

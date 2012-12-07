@@ -49,6 +49,7 @@ class Show < ActiveRecord::Base
   has_many :users, :through => :team_members
   has_many :pictures, :as => :gallery
   has_many :reviews
+  has_many :questionnaires, :class_name => "Admin::Questionnaires::Questionnaire"
 
   belongs_to :venue
 
@@ -105,13 +106,11 @@ class Show < ActiveRecord::Base
 
   ##
   # Task to create a questionnaire for the show.
-  #
-  # Runs as a Delayed::Job
   ##
-  def create_questionnaire
+  def create_questionnaire(name)
     questionnaire = Admin::Questionnaires::Questionnaire.new
     questionnaire.show = self
+    questionnaire.name = name
     questionnaire.save
   end
-  handle_asynchronously :create_questionnaire
 end

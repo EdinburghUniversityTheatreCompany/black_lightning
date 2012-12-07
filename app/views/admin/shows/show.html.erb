@@ -52,17 +52,29 @@
 </table>
 
 <% if can? :edit, @show %>
-  <%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn'%>
+  <%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn', :method => :put %>
 <% end %>
 
-<% questionnaire = Admin::Questionnaires::Questionnaire.where(:show_id => @show.id) %>
+<% if @show.users.include? current_user or can?(:read, Admin::Questionnaires::Questionnaire) then %>
+  <h3>Questionnaires</h3>
 
-<% if questionnaire.count == 0 then %>
-  <% if can? :create, Admin::Questionnaires::Questionnaire %>
-    <%= link_to 'Create Questionnaire', create_questionnaire_admin_show_path(@show), :method => :put, :class => 'btn'%>
-  <% end %>
-<% else %>
-  <% if can? :read, questionnaire.first %>
-    <%= link_to 'View Questionnaire', admin_questionnaires_questionnaire_path(questionnaire.first), :class => 'btn'%>
+  <table class="table">
+    <tbody>
+      <% @show.questionnaires.each do |questionnaire| %>
+        <tr>
+          <td><%= link_to "Answer #{questionnaire.name} Questionnaire", answer_admin_questionnaires_questionnaire_path(questionnaire) %></td>
+          <% if can? :edit, questionnaire %>
+            <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(questionnaire) %></td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+
+  <% if can? :create, Admin::Questionnaires::Questionnaire then %>
+    <%= form_tag add_questionnaire_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+      <%= text_field_tag :questionnaire_name, nil, :placeholder => "Questionnaire Name" %>
+      <%= submit_tag 'Add Questionnaire', :class => 'btn' %>
+    <% end %>
   <% end %>
 <% end %>

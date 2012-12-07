@@ -1,32 +1,47 @@
 <h1>Listing Questionnaires</h1>
 
-<table class="table">
-  <tr>
-    <th>Show</th>
+<div class="accordion" id="shows_current_accordion">
+  <% @admin_questionnaires_questionnaires.each do |show, questionnaires| %>
+    <div class="accordion-group">
+      <% div_name = show.name.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
+      <div class="accordion-heading">
+        <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
+          <%= show.name %>
+        </a>
+      </div>
 
-    <% if can? :edit, Admin::Questionnaires::Questionnaire %>
-    <th></th>
-    <% end %>
+      <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
+        <table class="table">
+          <tr>
+            <th>Questionnaire</th>
 
-    <% if can? :delete, Admin::Questionnaires::Questionnaire %>
-    <th></th>
-    <% end %>
-  </tr>
+            <% if can? :edit, Admin::Questionnaires::Questionnaire %>
+            <th></th>
+            <% end %>
 
-<% @admin_questionnaires_questionnaires.each do |admin_questionnaires_questionnaire| %>
-  <tr>
-    <td><%= link_to admin_questionnaires_questionnaire.show.name, answer_admin_questionnaires_questionnaire_path(admin_questionnaires_questionnaire), :title => "Answer Questionnaire" %></td>
+            <% if can? :delete, Admin::Questionnaires::Questionnaire %>
+            <th></th>
+            <% end %>
+          </tr>
 
-    <% if can? :edit, admin_questionnaires_questionnaire %>
-    <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(admin_questionnaires_questionnaire) %></td>
-    <% end %>
+        <% questionnaires.each do |questionnaire| %>
+          <tr>
+            <td><%= link_to questionnaire.name, answer_admin_questionnaires_questionnaire_path(questionnaire), :title => "Answer Questionnaire" %></td>
 
-    <% if can? :delete, admin_questionnaires_questionnaire %>
-    <td><%= link_to 'Destroy', admin_questionnaires_questionnaire, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-    <% end %>
-  </tr>
-<% end %>
-</table>
+            <% if can? :edit, questionnaire %>
+            <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(questionnaire) %></td>
+            <% end %>
+
+            <% if can? :delete, questionnaire %>
+            <td><%= link_to 'Destroy', questionnaire, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+            <% end %>
+          </tr>
+        <% end %>
+        </table>
+      </div>
+    </div>
+  <% end %>
+</div>
 
 <br />
 

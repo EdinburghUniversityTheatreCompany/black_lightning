@@ -48,7 +48,6 @@ class Ability
         next allow
       end
 
-      cannot :read, Admin::Proposals::Proposal
       can :read, Admin::Proposals::Proposal do |proposal|
         (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
       end
@@ -58,7 +57,6 @@ class Ability
         (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
       end
 
-      cannot :read, Admin::Questionnaires::Questionnaire
       can :read, Admin::Questionnaires::Questionnaire do |questionnaire|
         (questionnaire.users.include? user)
       end

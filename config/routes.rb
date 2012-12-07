@@ -16,7 +16,7 @@ ChaosRails::Application.routes.draw do
 
     resources :shows do
       member do
-        put 'create_questionnaire'
+        put 'add_questionnaire'
       end
     end
 

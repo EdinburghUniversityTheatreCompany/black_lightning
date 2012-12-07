@@ -60,9 +60,9 @@ class Admin::ShowsController < AdminController
     end
   end
 
-  def create_questionnaire
+  def add_questionnaire
     @show = Show.find_by_slug(params[:id])
-    @show.create_questionnaire
+    @show.create_questionnaire(params[:questionnaire_name])
 
     respond_to do |format|
       format.html { redirect_to admin_show_url(@show), notice: 'Questionnaire will be created.' }
