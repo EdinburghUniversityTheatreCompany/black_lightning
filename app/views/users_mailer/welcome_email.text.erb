@@ -1,0 +1,13 @@
+Dear <%= @user.first_name.presence || @user.email  %>,
+
+An account has been created for you for the Bedlam Theatre website.
+
+<% if @reset_password then %>
+  To sign in, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %>
+<% else %>
+  Click <%= link_to 'here to sign in', new_user_session_url %>
+<% end %>
+
+Regards,
+
+The Bedlam Theatre Team
