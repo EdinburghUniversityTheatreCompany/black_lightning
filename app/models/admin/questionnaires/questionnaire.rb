@@ -22,6 +22,6 @@ class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
 
   validates :show_id, :presence => true, :uniqueness => true
 
-  attr_accessible :questions, :questions_attributes, :answers, :answers_attributes
+  attr_accessible :name, :questions, :questions_attributes, :answers, :answers_attributes
 
 end
