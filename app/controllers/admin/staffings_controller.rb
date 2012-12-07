@@ -18,7 +18,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/1.json
   def show
     @admin_staffing = Admin::Staffing.find(params[:id])
-    @title = @admin_staffing.name
+    @title = "Staffing for #{@admin_staffing.show_title}"
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @admin_staffing }
@@ -41,7 +41,7 @@ class Admin::StaffingsController < AdminController
   def edit
     @users = User.all
     @admin_staffing = Admin::Staffing.find(params[:id])
-    @title = "Editing #{@admin_staffing.name}"
+    @title = "Editing staffing for #{@admin_staffing.show_title}"
   end
 
   # POST /admin/staffings
@@ -125,7 +125,7 @@ class Admin::StaffingsController < AdminController
   def show_sign_up
     authorize! :sign_up_for, Admin::StaffingJob
     @admin_staffing = Admin::Staffing.find(params[:id])
-    @title = "Staffing for #{@admin_staffing.name}"
+    @title = "Staffing for #{@admin_staffing.show_title}"
   end
 
   def sign_up
