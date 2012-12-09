@@ -62,7 +62,7 @@
 <% end %>
 
 <% if can? :edit, @show %>
-  <%= link_to 'Edit', edit_admin_show_path(@show), :class => 'btn', :method => :put %>
+  <%= link_to 'Edit', edit_admin_show_path(@show), :class => 'btn' %>
 <% end %>
 
 <% if @show.users.include? current_user or can?(:read, Admin::Questionnaires::Questionnaire) then %>
