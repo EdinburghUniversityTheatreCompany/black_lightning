@@ -56,17 +56,22 @@
   </p>
 <% end %>
 
+<hr />
+
 <h3>Questions</h3>
 
 <% @admin_proposals_proposal.answers.each do |answer| %>
-  <p>
-    <b><%= answer.question.question_text %></b><br />
-    <% if answer.question.response_type == "File" then %>
-      <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
+  <div style="font-weight: bold"><%= render_markdown answer.question.question_text %></div>
+  <% if answer.question.response_type == "File" then %>
+    <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
+  <% else %>
+    <% if answer.answer.presence then %>
+      <%= render_markdown answer.answer %>
     <% else %>
-      <%= answer.answer.presence || "This question has not been answered" %>
+      This question has not been answered
     <% end %>
-  </p>
+  <% end %>
+  <hr />
 <% end %>
 
 <% if can? :edit, @admin_proposals_proposal %>
