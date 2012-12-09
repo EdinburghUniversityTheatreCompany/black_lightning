@@ -27,6 +27,11 @@ class ApplicationController < ActionController::Base
   end
 
   def report_500(ex)
+    # Prevent redirect loop if 500 rendering fails.
+    if request.env['PATH_INFO'] == static_path('500')
+      return render :inline => "Sorry. Something has gone very wrong. We will try to fix this asap."
+    end
+
     flash[:error] = ex.message
     flash[:error_path] = request.fullpath
     flash[:error_location] = ex.backtrace[0].gsub Rails.root.to_s, ""
