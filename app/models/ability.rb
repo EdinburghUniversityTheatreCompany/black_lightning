@@ -33,9 +33,6 @@ class Ability
 
         user.roles.each do |role|
 
-          Rails.logger.debug action
-          Rails.logger.debug subject_class
-
           if subject_class == Symbol then
             subject_class = subject
           end
