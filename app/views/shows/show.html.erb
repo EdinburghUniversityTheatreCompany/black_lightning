@@ -83,7 +83,7 @@
   <% @show.reviews.each do |review| %>
     <article>
       <header>
-        <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, :format => :long %>
+        <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, :format => :long %> <%= "for #{review.organisation}" if review.organisation.present? %>
         <br />
         <%= star_rating review.rating if review.rating && review.rating > 0 %>
       </header>

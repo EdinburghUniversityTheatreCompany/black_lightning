@@ -1,7 +1,8 @@
 <div class="control-group fields">
 
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 15 } do %>
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 17 } do %>
       <%= f.input :reviewer %>
+      <%= f.input :organisation %>
       <%= f.input :review_date, :order => [:day, :month, :year] %>
       <%= f.input :rating, :title => "Max 5. Halves allowed." %>
 
