@@ -1,6 +1,6 @@
 <div class="question control-group fields">
 
-    <label><%= f.object.question.question_text %></label>
+    <label><%= render_markdown f.object.question.question_text %></label>
 
     <%= f.input_field :question_id, :value => f.object.question.id, :as => :hidden %>
 

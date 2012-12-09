@@ -1,5 +1,3 @@
-<p id="notice"><%= notice %></p>
-
 <p>
   <b>Deadline:</b>
   <%= l @admin_proposals_call.deadline, :format => :long %>
@@ -12,15 +10,21 @@
 
 <p>
   <b>Open:</b>
-  <%= @admin_proposals_call.open %>
+  <%= @admin_proposals_call.open ? "&#10004;".html_safe : "&#10008;".html_safe %>
 </p>
+
+<%= link_to 'View Proposals', admin_proposals_call_proposals_path(@admin_proposals_call), :class => "btn btn-primary" %>
+<%= link_to 'Edit', edit_admin_proposals_call_path(@admin_proposals_call), :class => "btn" %>
+<%= link_to 'Back', admin_proposals_calls_path, :class => "btn"  %>
+
+<hr />
 
 <h3>Questions</h3>
 
 <% @admin_proposals_call.questions.each do |question| %>
   <p>
     <b>Question:</b>
-    <%= question.question_text %>
+    <%= render_markdown question.question_text %>
   </p>
 
   <p>
@@ -30,7 +34,3 @@
 
   <hr />
 <% end %>
-
-<%= link_to 'View Proposals', admin_proposals_call_proposals_path(@admin_proposals_call), :class => "btn btn-primary" %>
-<%= link_to 'Edit', edit_admin_proposals_call_path(@admin_proposals_call), :class => "btn" %>
-<%= link_to 'Back', admin_proposals_calls_path, :class => "btn"  %>
