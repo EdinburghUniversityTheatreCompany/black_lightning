@@ -51,8 +51,18 @@
 	</tbody>
 </table>
 
+<% if can? :create, Admin::Feedback %>
+  <%= link_to "Submit Feedback", new_admin_show_feedback_path(@show), :class => 'btn' %>
+<% end %>
+
+<% if @show.feedbacks.count > 0 then %>
+<% if can? :read, @show.feedbacks.first %>
+  <%= link_to "View Feedback", admin_show_feedbacks_path(@show), :class => 'btn' %>
+<% end %>
+<% end %>
+
 <% if can? :edit, @show %>
-  <%= link_to 'Edit', edit_admin_show_path(@show), class: 'btn', :method => :put %>
+  <%= link_to 'Edit', edit_admin_show_path(@show), :class => 'btn', :method => :put %>
 <% end %>
 
 <% if @show.users.include? current_user or can?(:read, Admin::Questionnaires::Questionnaire) then %>

@@ -1,0 +1,15 @@
+<% if @feedback.persisted? then url = admin_show_feedback_url else url = admin_show_feedbacks_url end %>
+
+<%= simple_form_for([@show, @feedback], :url => url) do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= render "admin/shared/md_editor", :f => f, :field => :body %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn btn-primary" %>
+  </div>
+<% end %>

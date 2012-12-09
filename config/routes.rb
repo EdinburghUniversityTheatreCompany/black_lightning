@@ -15,6 +15,8 @@ ChaosRails::Application.routes.draw do
     match 'resources/*action' => 'resources', :as => :resources
 
     resources :shows do
+      resources :feedbacks, :except => [:show]
+
       member do
         put 'add_questionnaire'
       end

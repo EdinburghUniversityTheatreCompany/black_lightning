@@ -65,6 +65,10 @@ class Ability
         (questionnaire.users.include? user)
       end
 
+      can :read, Admin::Feedback do |feedback|
+        feedback.show.users.all.include? user
+      end
+
       #####################
       # ADMIN PERMISSIONS #
       ##############################################

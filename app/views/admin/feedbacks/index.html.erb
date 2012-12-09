@@ -1,0 +1,20 @@
+<h1>Feedback for <%= @show.name %></h1>
+
+<% @feedbacks.each do |feedback| %>
+  <hr />
+
+  <div>
+    <article>
+      <%= render_markdown feedback.body %>
+    </article>
+    <div>
+      <% if can? :edit, feedback %>
+        <%= link_to 'Edit', edit_admin_show_feedback_path(@show, feedback), :class => "btn btn-small" %>
+      <% end %>
+
+      <% if can? :delete, feedback %>
+        <%= link_to 'Delete', admin_show_feedback_path(@show, feedback), method: :delete, data: { confirm: 'Are you sure?' }, :class => "btn btn-small" %>
+      <% end %>
+    </div>
+  </tr>
+<% end %>

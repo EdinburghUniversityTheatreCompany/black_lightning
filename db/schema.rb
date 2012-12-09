@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121207163632) do
+ActiveRecord::Schema.define(:version => 20121209124929) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -36,6 +36,13 @@ ActiveRecord::Schema.define(:version => 20121207163632) do
     t.datetime "updated_at", :null => false
     t.boolean  "admin_page"
     t.string   "group"
+  end
+
+  create_table "admin_feedbacks", :force => true do |t|
+    t.integer  "show_id"
+    t.text     "body"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
   end
 
   create_table "admin_permissions", :force => true do |t|

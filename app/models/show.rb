@@ -49,6 +49,8 @@ class Show < ActiveRecord::Base
   has_many :users, :through => :team_members
   has_many :pictures, :as => :gallery
   has_many :reviews
+
+  has_many :feedbacks, :class_name => "Admin::Feedback"
   has_many :questionnaires, :class_name => "Admin::Questionnaires::Questionnaire"
 
   belongs_to :venue
