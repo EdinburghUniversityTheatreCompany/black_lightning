@@ -42,7 +42,6 @@ namespace :doc do
         rdoc.main     = 'doc/README' # define README_FOR_APP as index
 
         rdoc.options << '--charset' << 'utf-8'
-        rdoc.options << '--coverage-report'
 
         rdoc.rdoc_files.include('app/**/*.rb')
         rdoc.rdoc_files.include('lib/**/*.rb')
