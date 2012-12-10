@@ -1,3 +1,6 @@
+##
+# A template for the questions that may be used in a questionnaire.
+#
 # == Schema Information
 #
 # Table name: admin_questionnaires_questionnaire_templates
@@ -9,7 +12,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Admin::Questionnaires::QuestionnaireTemplate < ActiveRecord::Base
   has_many :questions, :as => :questionable
 

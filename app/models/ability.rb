@@ -16,6 +16,7 @@
 class Ability
   include CanCan::Ability
 
+  # Define the permissions for a user.
   def initialize(user)
 
     #If you can approve something, you can also reject it

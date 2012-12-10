@@ -1,3 +1,14 @@
+##
+# Represents a proposal.
+#
+# NOTE
+#
+# If a proposal has the approved attribute set to false, it has been REJECTED.
+#
+# A proposal still waiting for approval should have approved set to NULL
+#
+# (Yes, we are using a boolean for something that has three possible values).
+#
 # == Schema Information
 #
 # Table name: admin_proposals_proposals
@@ -15,7 +26,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Admin::Proposals::Proposal < ActiveRecord::Base
   belongs_to :call, :class_name => "Admin::Proposals::Call"
 
@@ -29,15 +40,13 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   validates :show_title, :proposal_text, :publicity_text, :presence => true
   validates :team_members, :presence => { :message => "You must add at least one team member" }
 
-  ################################################################################
-  # NOTE                                                                         #
-  #                                                                              #
-  # If a proposal has the approved attribute set to false, it has been REJECTED. #
-  # A proposal still waiting for approval should have approved set to NULL       #
-  ################################################################################
-
   attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
 
+  ##
+  # Creates a show based on the proposal.
+  #
+  # Throws an error if the proposal has not been approved.
+  ##
   def convert_to_show
     puts self.show_title
 

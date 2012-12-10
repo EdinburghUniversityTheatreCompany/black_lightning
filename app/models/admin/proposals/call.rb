@@ -1,3 +1,6 @@
+##
+# Represents a collection of proposals.
+#
 # == Schema Information
 #
 # Table name: admin_proposals_calls
@@ -12,7 +15,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Admin::Proposals::Call < ActiveRecord::Base
   has_many :questions, :as => :questionable, :dependent => :destroy
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
@@ -25,6 +28,9 @@ class Admin::Proposals::Call < ActiveRecord::Base
 
   attr_accessible :deadline, :name, :open, :archived, :questions, :questions_attributes
 
+  ##
+  # Closes the call, and archives it.
+  ##
   def archive
     self.open = false
 

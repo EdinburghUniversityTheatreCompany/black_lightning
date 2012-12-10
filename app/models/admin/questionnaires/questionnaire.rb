@@ -1,3 +1,6 @@
+##
+# Represents a Questionnaire that must be answered by a Show's team.
+#
 # == Schema Information
 #
 # Table name: admin_questionnaires_questionnaires
@@ -10,7 +13,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
 
   belongs_to :show

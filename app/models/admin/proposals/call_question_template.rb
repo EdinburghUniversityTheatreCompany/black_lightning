@@ -1,3 +1,6 @@
+##
+# A template for the questions that may be used in a proposal call.
+#
 # == Schema Information
 #
 # Table name: admin_proposals_call_question_templates
@@ -9,7 +12,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Admin::Proposals::CallQuestionTemplate < ActiveRecord::Base
   has_many :questions, :as => :questionable
 

@@ -1,4 +1,15 @@
+##
+# Public controller for Show. More details can be found there.
+#
+# Uses Will_Paginate for pagination.
+##
 class ShowsController < ApplicationController
+
+  ##
+  # GET /shows
+  #
+  # GET /shows.json
+  ##
   def index
     @shows = Show.paginate(:page => params[:page], :per_page => 5).current(:order => "start_date ASC")
 
@@ -10,6 +21,9 @@ class ShowsController < ApplicationController
     end
   end
 
+  ##
+  # GET /shows/1
+  ##
   def show
     # Use ! on find_by to ensure a ActiveRecord::RecordNotFound exception is thrown if the show doesn't exist.
     # This is caught by the application controller to redirect to 404

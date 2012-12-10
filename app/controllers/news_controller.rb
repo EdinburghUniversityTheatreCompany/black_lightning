@@ -1,7 +1,16 @@
+##
+# Public controller for News. More details can be found there.
+#
+# Uses Will_Paginate for pagination.
+##
+
 class NewsController < ApplicationController
 
+  ##
   # GET /news
+  #
   # GET /news.json
+  ##
   def index
     @news = News.paginate(:page => params[:page], :per_page => 5).public
     @title = "News"
@@ -12,8 +21,11 @@ class NewsController < ApplicationController
     end
   end
 
+  ##
   # GET /news/1
+  #
   # GET /news/1.json
+  ##
   def show
     @news = News.find(params[:id])
     @title = @news.title

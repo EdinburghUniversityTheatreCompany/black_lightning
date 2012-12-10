@@ -1,7 +1,13 @@
+##
+# Public controller for Venue. More details can be found there.
+##
 class VenuesController < ApplicationController
 
+  ##
   # GET /venues
+  #
   # GET /venues.json
+  ##
   def index
     @venues = Venue.paginate(:page => params[:page], :per_page => 5).all
     @title = "Venues"
@@ -11,8 +17,11 @@ class VenuesController < ApplicationController
     end
   end
 
+  ##
   # GET /venues/1
+  #
   # GET /venues/1.json
+  ##
   def show
     @venue = Venue.find(params[:id])
     @title = @venue.name
