@@ -3,25 +3,27 @@
 #
 # == Paperclip
 # Images are stored as:
-# * thumb   (150x100)
+# * thumb   (192x100)
 # * display (700x700)
 #
 # == Schema Information
 #
 # Table name: pictures
 #
-#  id                 :integer          not null, primary key
-#  description        :text
-#  gallery_id         :integer
-#  gallery_type       :string(255)
-#  image_file_name    :string(255)
-#  image_content_type :string(255)
-#  image_file_size    :integer
-#  image_updated_at   :datetime
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
+# *id*::                 <tt>integer, not null, primary key</tt>
+# *description*::        <tt>text</tt>
+# *gallery_id*::         <tt>integer</tt>
+# *gallery_type*::       <tt>string(255)</tt>
+# *image_file_name*::    <tt>string(255)</tt>
+# *image_content_type*:: <tt>string(255)</tt>
+# *image_file_size*::    <tt>integer</tt>
+# *image_updated_at*::   <tt>datetime</tt>
+# *created_at*::         <tt>datetime, not null</tt>
+# *updated_at*::         <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 ##
-
 class Picture < ActiveRecord::Base
   belongs_to :gallery, :polymorphic => true
 

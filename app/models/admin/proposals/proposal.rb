@@ -2,17 +2,19 @@
 #
 # Table name: admin_proposals_proposals
 #
-#  id             :integer          not null, primary key
-#  call_id        :integer
-#  show_title     :string(255)
-#  publicity_text :text
-#  proposal_text  :text
-#  created_at     :datetime         not null
-#  updated_at     :datetime         not null
-#  late           :boolean
-#  approved       :boolean
-#  successful     :boolean
-#
+# *id*::             <tt>integer, not null, primary key</tt>
+# *call_id*::        <tt>integer</tt>
+# *show_title*::     <tt>string(255)</tt>
+# *publicity_text*:: <tt>text</tt>
+# *proposal_text*::  <tt>text</tt>
+# *created_at*::     <tt>datetime, not null</tt>
+# *updated_at*::     <tt>datetime, not null</tt>
+# *late*::           <tt>boolean</tt>
+# *approved*::       <tt>boolean</tt>
+# *successful*::     <tt>boolean</tt>
+#--
+# == Schema Information End
+#++
 
 class Admin::Proposals::Proposal < ActiveRecord::Base
   belongs_to :call, :class_name => "Admin::Proposals::Call"

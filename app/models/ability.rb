@@ -1,7 +1,7 @@
 ##
 # Defines the abilities for each user. See CanCan documentation for more details.
 #
-# It reads the permissions model in the database to find if a user can do something.
+# It reads the Admin::Permission model in the database to find if a user can do something.
 #
 # PLEASE, PLEASE, make sure that
 #

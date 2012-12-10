@@ -1,29 +1,32 @@
 ##
 # Nothing really interesting about news. It's news.
 #
-# ==Paperclip
+# == Paperclip
 # Images are stored as:
-# * medium (x300)
-# * thumb  (150x100)
+# * medium (576x300)
+# * thumb  (192x100)
 #
 # == Schema Information
 #
 # Table name: news
 #
-#  id                 :integer          not null, primary key
-#  title              :string(255)
-#  body               :text
-#  slug               :string(255)
-#  publish_date       :datetime
-#  show_public        :boolean
-#  created_at         :datetime         not null
-#  updated_at         :datetime         not null
-#  image_file_name    :string(255)
-#  image_content_type :string(255)
-#  image_file_size    :integer
-#  image_updated_at   :datetime
+# *id*::                 <tt>integer, not null, primary key</tt>
+# *title*::              <tt>string(255)</tt>
+# *body*::               <tt>text</tt>
+# *slug*::               <tt>string(255)</tt>
+# *publish_date*::       <tt>datetime</tt>
+# *show_public*::        <tt>boolean</tt>
+# *created_at*::         <tt>datetime, not null</tt>
+# *updated_at*::         <tt>datetime, not null</tt>
+# *image_file_name*::    <tt>string(255)</tt>
+# *image_content_type*:: <tt>string(255)</tt>
+# *image_file_size*::    <tt>integer</tt>
+# *image_updated_at*::   <tt>datetime</tt>
+# *author_id*::          <tt>integer</tt>
+#--
+# == Schema Information End
+#++
 ##
-
 class News < ActiveRecord::Base
   resourcify
 

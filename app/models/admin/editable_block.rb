@@ -1,16 +1,24 @@
+##
+# Represents a section in a page that can be edited using the Admin pages.
+#
+# IMPORTANT: The admin_page property is used to ensure that visitors that are not logged in
+# cannot access any Attachment belonging to this block.
+#
 # == Schema Information
 #
 # Table name: admin_editable_blocks
 #
-#  id         :integer          not null, primary key
-#  name       :string(255)
-#  content    :text
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  admin_page :boolean
-#  group      :string(255)
-#
-
+# *id*::         <tt>integer, not null, primary key</tt>
+# *name*::       <tt>string(255)</tt>
+# *content*::    <tt>text</tt>
+# *created_at*:: <tt>datetime, not null</tt>
+# *updated_at*:: <tt>datetime, not null</tt>
+# *admin_page*:: <tt>boolean</tt>
+# *group*::      <tt>string(255)</tt>
+#--
+# == Schema Information End
+#++
+##
 class Admin::EditableBlock < ActiveRecord::Base
   resourcify
 

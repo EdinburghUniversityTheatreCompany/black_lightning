@@ -5,7 +5,7 @@ Rake::Task["doc/app/index.html"].clear
 namespace :doc do
     task :todo do
       #Files to exclude from TODO list
-      exclude = [/Curry/, /dracula/, /lightbox/, /raphael/, /seedrandom/, /markdown/, /.png/]
+      exclude = [/Curry/, /dracula/, /lightbox/, /raphael/, /seedrandom/, /markdown/, /.png/, /jquery/]
 
       todo_file = File.open('doc/TODO', 'w')
 

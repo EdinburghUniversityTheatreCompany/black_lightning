@@ -1,25 +1,30 @@
+##
+# Model used by Devise for users.
+#
 # == Schema Information
 #
 # Table name: users
 #
-#  id                     :integer          not null, primary key
-#  email                  :string(255)      default(""), not null
-#  encrypted_password     :string(255)      default(""), not null
-#  reset_password_token   :string(255)
-#  reset_password_sent_at :datetime
-#  remember_created_at    :datetime
-#  sign_in_count          :integer          default(0)
-#  current_sign_in_at     :datetime
-#  last_sign_in_at        :datetime
-#  current_sign_in_ip     :string(255)
-#  last_sign_in_ip        :string(255)
-#  first_name             :string(255)
-#  last_name              :string(255)
-#  created_at             :datetime         not null
-#  updated_at             :datetime         not null
-#  phone_number           :string(255)
-#
-
+# *id*::                     <tt>integer, not null, primary key</tt>
+# *email*::                  <tt>string(255), default(""), not null</tt>
+# *encrypted_password*::     <tt>string(255), default(""), not null</tt>
+# *reset_password_token*::   <tt>string(255)</tt>
+# *reset_password_sent_at*:: <tt>datetime</tt>
+# *remember_created_at*::    <tt>datetime</tt>
+# *sign_in_count*::          <tt>integer, default(0)</tt>
+# *current_sign_in_at*::     <tt>datetime</tt>
+# *last_sign_in_at*::        <tt>datetime</tt>
+# *current_sign_in_ip*::     <tt>string(255)</tt>
+# *last_sign_in_ip*::        <tt>string(255)</tt>
+# *first_name*::             <tt>string(255)</tt>
+# *last_name*::              <tt>string(255)</tt>
+# *created_at*::             <tt>datetime, not null</tt>
+# *updated_at*::             <tt>datetime, not null</tt>
+# *phone_number*::           <tt>string(255)</tt>
+#--
+# == Schema Information End
+#++
+##
 class User < ActiveRecord::Base
   before_save :unify_numbers
   rolify
@@ -39,10 +44,16 @@ class User < ActiveRecord::Base
   # Setup accessible (or protected) attributes for your model
   attr_accessible :email, :password, :password_confirmation, :remember_me, :first_name, :last_name, :role_ids, :phone_number
 
+  ##
+  # A quick way of getting the user's full name.
+  ##
   def name
   	"#{self.first_name} #{self.last_name}"
   end
 
+  ##
+  # Ensures that all phone numbers begin with +44 and don't have any spaces in.
+  ##
   def unify_numbers
     return if not self.phone_number
 
@@ -53,6 +64,13 @@ class User < ActiveRecord::Base
     end
   end
 
+  ##
+  # Creates a new user using the given params (e.g):
+  #   User.create_user(params[:user])
+  #
+  # Generates a random password for the user if none is given.
+  # The user will then be sent a welcome e-mail with a link to set their password.
+  ##
   def self.create_user(params)
     user = User.new(params)
 

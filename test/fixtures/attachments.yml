@@ -2,16 +2,18 @@
 #
 # Table name: attachments
 #
-#  id                :integer          not null, primary key
-#  editable_block_id :integer
-#  name              :string(255)
-#  file_file_name    :string(255)
-#  file_content_type :string(255)
-#  file_file_size    :integer
-#  file_updated_at   :datetime
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#
+# *id*::                <tt>integer, not null, primary key</tt>
+# *editable_block_id*:: <tt>integer</tt>
+# *name*::              <tt>string(255)</tt>
+# *file_file_name*::    <tt>string(255)</tt>
+# *file_content_type*:: <tt>string(255)</tt>
+# *file_file_size*::    <tt>integer</tt>
+# *file_updated_at*::   <tt>datetime</tt>
+# *created_at*::        <tt>datetime, not null</tt>
+# *updated_at*::        <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 

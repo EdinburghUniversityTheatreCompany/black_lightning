@@ -2,14 +2,16 @@
 #
 # Table name: admin_proposals_calls
 #
-#  id         :integer          not null, primary key
-#  deadline   :datetime
-#  name       :string(255)
-#  open       :boolean
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  archived   :boolean
-#
+# *id*::         <tt>integer, not null, primary key</tt>
+# *deadline*::   <tt>datetime</tt>
+# *name*::       <tt>string(255)</tt>
+# *open*::       <tt>boolean</tt>
+# *created_at*:: <tt>datetime, not null</tt>
+# *updated_at*:: <tt>datetime, not null</tt>
+# *archived*::   <tt>boolean</tt>
+#--
+# == Schema Information End
+#++
 
 require 'test_helper'
 
