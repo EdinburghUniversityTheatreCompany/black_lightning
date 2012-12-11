@@ -18,10 +18,10 @@
   </div>
 
   <script>
-	$('#news_title').keyup(function() {
-		var slug = jQuery.trim($('#news_title').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
-		$('#news_slug').val(slug);
-	});
+    $('#news_title').keyup(function() {
+        var slug = jQuery.trim($('#news_title').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
+        $('#news_slug').val(slug);
+    });
   </script>
 
   <div class="form-actions">

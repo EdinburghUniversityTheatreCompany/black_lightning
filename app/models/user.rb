@@ -48,7 +48,7 @@ class User < ActiveRecord::Base
   # A quick way of getting the user's full name.
   ##
   def name
-  	"#{self.first_name} #{self.last_name}"
+    "#{self.first_name} #{self.last_name}"
   end
 
   ##
@@ -87,7 +87,7 @@ class User < ActiveRecord::Base
       reset_password = true
     end
 
-    user.save
+    user.save!
 
     UsersMailer.delay.welcome_email(user, reset_password)
 

@@ -2,21 +2,21 @@
 
 <h1>Listing all users</h1>
 <table class="table">
-	<tbody>
-		<tr>
-			<th>Email</th>
-			<th>Name</th>
-			<th></th>
+    <tbody>
+        <tr>
+            <th>Email</th>
+            <th>Name</th>
             <th></th>
-		</tr>
-		<% @users.each do |user| %>
-		<tr>
-			<td><%= user.email %></td>
-			<td><%= "#{user.first_name} #{user.last_name}" %></td>
+            <th></th>
+        </tr>
+        <% @users.each do |user| %>
+        <tr>
+            <td><%= user.email %></td>
+            <td><%= "#{user.first_name} #{user.last_name}" %></td>
 
             <td>
             <% if can? :edit, user %>
-			<%= link_to 'Edit', edit_admin_user_path(user) %>
+            <%= link_to 'Edit', edit_admin_user_path(user) %>
             <% end %>
             </td>
 
@@ -25,9 +25,9 @@
             <%= link_to 'Destroy', admin_user_path(user), method: :delete, data: { confirm: 'Are you sure? No, seriously. If you delete a user there is a chance that you also delete content which belongs to them. Do not take this decision lightly.' } %>
             <% end %>
             </td>
-		</tr>
-		<% end %>
-	</tbody>
+        </tr>
+        <% end %>
+    </tbody>
 </table>
 
 <% if can? :create, User %>

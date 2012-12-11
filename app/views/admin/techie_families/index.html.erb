@@ -17,9 +17,9 @@ g.addNode("<%= tech.name %>", {render:render});
 <% end %>
 
 <% @techies.each do |tech| %>
-	<% tech.children.each do |child| %>
-	g.addEdge("<%= tech.name %>", "<%= child.name %>", {directed: true});
-	<% end %>
+    <% tech.children.each do |child| %>
+    g.addEdge("<%= tech.name %>", "<%= child.name %>", {directed: true});
+    <% end %>
 <% end %>
 
 /* layout the graph using the Spring layout implementation */

@@ -60,7 +60,7 @@ class Admin::JobControlController < AdminController
     job.attempts = 0
     job.run_at = Time.now
     job.failed_at = nil
-    job.save
+    job.save!
 
     redirect_to :back
   end

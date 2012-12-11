@@ -62,7 +62,7 @@ class Admin::Staffing < ActiveRecord::Base
   def update_reminder
     if reminder_job.presence then
       reminder_job.run_at = date.advance(:hours => -2)
-      reminder_job.save
+      reminder_job.save!
     else
       reminder_job = ::StaffingMailer.delay({:run_at => date.advance(:hours => -2)}).staffing_reminder(self)
     end

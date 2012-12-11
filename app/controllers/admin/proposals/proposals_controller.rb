@@ -199,7 +199,7 @@ class Admin::Proposals::ProposalsController < AdminController
     authorize!(:approve, @proposal)
 
     @proposal.approved = true
-    @proposal.save
+    @proposal.save!
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as approved"
@@ -220,7 +220,7 @@ class Admin::Proposals::ProposalsController < AdminController
     authorize!(:reject, @proposal)
 
     @proposal.approved = false
-    @proposal.save
+    @proposal.save!
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as rejected"

@@ -36,6 +36,6 @@ class Admin::Proposals::Call < ActiveRecord::Base
 
     self.archived = true
 
-    self.save
+    self.save!
   end
 end

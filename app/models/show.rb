@@ -115,6 +115,6 @@ class Show < ActiveRecord::Base
     questionnaire = Admin::Questionnaires::Questionnaire.new
     questionnaire.show = self
     questionnaire.name = name
-    questionnaire.save
+    questionnaire.save!
   end
 end

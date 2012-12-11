@@ -58,10 +58,10 @@ class Admin::Permission < ActiveRecord::Base
           permission.roles << role
         end
 
-        permission.save
+        permission.save!
       end
     end
 
-    role.save
+    role.save!
   end
 end

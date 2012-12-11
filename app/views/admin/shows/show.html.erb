@@ -2,19 +2,19 @@
 
 <h1><%= @show.name %></h1>
 <table class="table table-bordered">
-	<tbody>
-		<tr>
-			<th>Tagline</th>
-			<td><%= @show.tagline %></td>
-		</tr>
-		<tr>
-			<th>URL Slug</th>
-			<td><%= @show.slug %></td>
-		</tr>
-		<tr>
-			<th>Description</th>
-			<td><%= render_markdown @show.description %></td>
-		</tr>
+    <tbody>
+        <tr>
+            <th>Tagline</th>
+            <td><%= @show.tagline %></td>
+        </tr>
+        <tr>
+            <th>URL Slug</th>
+            <td><%= @show.slug %></td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td><%= render_markdown @show.description %></td>
+        </tr>
         <tr>
             <th>Dates</th>
             <td><%= @show.date_range %></td>
@@ -23,13 +23,13 @@
             <th>Venue</th>
             <td><%= @show.venue.name if @show.venue %></td>
         </tr>
-		<tr>
-			<th>XTS Pro ID</th>
-			<td><%= @show.xts_id %></td>
-		</tr>
-		<tr>
-			<th>Public?</th>
-			<td><%= {true => "Yes", false => "No", nil => "No"}[@show.is_public] %>
+        <tr>
+            <th>XTS Pro ID</th>
+            <td><%= @show.xts_id %></td>
+        </tr>
+        <tr>
+            <th>Public?</th>
+            <td><%= {true => "Yes", false => "No", nil => "No"}[@show.is_public] %>
         </tr>
         <tr>
             <th>Image</th>
@@ -48,7 +48,7 @@
                 <% end %>
             </td>
         </tr>
-	</tbody>
+    </tbody>
 </table>
 
 <% if can? :create, Admin::Feedback %>
