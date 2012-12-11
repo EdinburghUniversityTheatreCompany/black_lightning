@@ -10,6 +10,8 @@ class Admin::ResourcesController < AdminController
 
     @root_page = action_sections[0]
 
+    Rails.logger.debug @root_page
+
     subpages_dir = "#{Rails.root}/app/views/admin/resources/#{@root_page}/"
 
     @subpages = []
