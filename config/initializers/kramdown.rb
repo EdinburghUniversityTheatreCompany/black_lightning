@@ -2,12 +2,12 @@
 
 class ActionView::Template
   module Handlers
-    class Markdown
+    class Kramdown
       def call(template)
         "Kramdown::Document.new(#{template.source.inspect}).to_html"
       end
     end
   end
 
-  register_template_handler(:md, Handlers::Markdown.new)
+  register_template_handler(:md, Handlers::Kramdown.new)
 end
