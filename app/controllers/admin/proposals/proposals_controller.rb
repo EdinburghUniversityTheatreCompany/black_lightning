@@ -43,13 +43,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     authorize!(:read, @admin_proposals_proposal)
 
-    @call.questions.each do |question|
-      if not @admin_proposals_proposal.questions.all.include? question then
-        answer = Admin::Answer.new
-        answer.question = question
-        @admin_proposals_proposal.answers.push(answer)
-      end
-    end
+    @admin_proposals_proposal.update_answers
     @admin_proposals_proposal.save
 
     respond_to do |format|
@@ -86,12 +80,7 @@ class Admin::Proposals::ProposalsController < AdminController
       @proposal.late = true
     end
 
-    # Create an Admin::Answer for each question
-    @call.questions.each do |question|
-      answer = Admin::Answer.new
-      answer.question = question
-      @proposal.answers.push(answer)
-    end
+    @proposal.update_answers
 
     respond_to do |format|
       format.html # new.html.erb
@@ -111,13 +100,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     authorize!(:edit, @proposal)
 
-    @call.questions.each do |question|
-      if not @proposal.questions.all.include? question then
-        answer = Admin::Answer.new
-        answer.question = question
-        @proposal.answers.push(answer)
-      end
-    end
+    @proposal.update_answers
     @proposal.save
   end
 

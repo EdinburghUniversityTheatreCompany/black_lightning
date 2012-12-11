@@ -43,6 +43,19 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
 
   ##
+  # Creates an instance of Admin::Answer for every question in the call.
+  ##
+  def update_answers
+    call.questions.each do |question|
+      if not questions.all.include? question then
+        answer = Admin::Answer.new
+        answer.question = question
+        answers.push(answer)
+      end
+    end
+  end
+
+  ##
   # Creates a show based on the proposal.
   #
   # Throws an error if the proposal has not been approved.
