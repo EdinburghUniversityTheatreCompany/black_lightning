@@ -13,6 +13,7 @@
 			<th>Name</th>
 			<th>Slug</th>
 			<th></th>
+            <th></th>
 		</tr>
 		<% @shows.each do |show| %>
 		<tr>
@@ -22,6 +23,14 @@
             <td>
             <% if can? :edit, show %>
             <%= link_to 'Edit', edit_admin_show_path(show)%>
+            <% end %>
+            </td>
+
+            <td>
+            <% if can? :delete, show %>
+            <%= link_to 'Destroy', admin_show_path(show), method: :delete, data: { "confirm" => "Deleting " + show.name,
+                                                                                   "detail"  => "Be warned. Things may break if you continue. <br /> Please type the name of the show below if you are absolutely sure you want to do this.",
+                                                                                   "type-confirm" => show.name } %>
             <% end %>
             </td>
 		</tr>

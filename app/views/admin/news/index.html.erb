@@ -30,7 +30,8 @@
 
     <td>
     <% if can? :delete, news %>
-    <%= link_to 'Destroy', admin_news_path(news), method: :delete, data: { confirm: 'Are you sure?' } %>
+    <%= link_to 'Destroy', admin_news_path(news), method: :delete, data: { "confirm" => "Deleting " + news.title,
+                                                                           "detail"  => "Are you sure you wish to continue?" } %>
     <% end %>
     </td>
   </tr>

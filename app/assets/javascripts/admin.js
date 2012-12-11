@@ -14,6 +14,7 @@
 //= require admin/md_editor
 //= require admin/staffings
 //= require alerts
+//= require admin/delete_confirmation
 
 (function () {
   var grid
