@@ -50,8 +50,6 @@ class Admin::StaffingsController < AdminController
     @users = User.all
     @admin_staffing = Admin::Staffing.new(params[:admin_staffing])
 
-    @admin_staffing.reminder_job = ::StaffingMailer.delay({:run_at => @admin_staffing.date.advance(:hours => -2)}).staffing_reminder(@admin_staffing)
-
     respond_to do |format|
       if @admin_staffing.save
         flash[:success] = 'Staffing was successfully created.'
@@ -81,8 +79,6 @@ class Admin::StaffingsController < AdminController
 
       staffing.date = DateTime.civil(date[:year].to_i, date[:month].to_i, date[:day].to_i, date[:hour].to_i, date[:minute].to_i)
 
-      staffing.reminder_job = ::StaffingMailer.delay({:run_at => staffing.date.advance(:hours => -2)}).staffing_reminder(staffing)
-
       if not staffing.save
         redirect_to redirect_to admin_staffings_url, alert: 'There were errors creating the staffing.'
         return
@@ -102,16 +98,6 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if @admin_staffing.update_attributes(params[:admin_staffing])
-        reminder_job = @admin_staffing.reminder_job
-
-        if reminder_job.presence then
-          reminder_job.run_at = @admin_staffing.date.advance(:hours => -2)
-          reminder_job.save
-        else
-          @admin_staffing.reminder_job = ::StaffingMailer.delay({:run_at => @admin_staffing.date.advance(:hours => -2)}).staffing_reminder(@admin_staffing)
-          @admin_staffing.save
-        end
-
         flash[:success] = 'Staffing was successfully updated.'
         format.html { redirect_to admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }

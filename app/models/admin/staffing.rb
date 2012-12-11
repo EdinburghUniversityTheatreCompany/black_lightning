@@ -1,12 +1,9 @@
 ##
 # Represents staffing that has many jobs. Users sign up for the Staffing_Job, not the Staffing.
 #
-# Note that a Delayed::Job will be created for the Staffing to send out reminders.
-# Ensure that the Delayed::Job is updated to run at the correct time if the Staffing time has changed.
-#--
-# TODO: Move the above logic into the model.
-#++
-# If the Staffing is deleted, job_cleanup removes the Delayed::Job
+# A Delayed::Job will be created to send out reminders, and updated whever the staffing is saved.
+#
+# If the Staffing is deleted, reminder_cleanup removes the Delayed::Job
 #
 # == Schema Information
 #
@@ -23,7 +20,8 @@
 #++
 ##
 class Admin::Staffing < ActiveRecord::Base
-  before_destroy :job_cleanup
+  before_save     :update_reminder
+  before_destroy :reminder_cleanup
 
   default_scope order("date ASC")
 
@@ -52,9 +50,21 @@ class Admin::Staffing < ActiveRecord::Base
   ##
   # Remove the reminder_job when the Staffing is deleted to prevent the job from failing.
   ##
-  def job_cleanup
+  def reminder_cleanup
     if reminder_job then
       reminder_job.delete
+    end
+  end
+
+  ##
+  # Update the reminder job for the staffing
+  ##
+  def update_reminder
+    if reminder_job.presence then
+      reminder_job.run_at = date.advance(:hours => -2)
+      reminder_job.save
+    else
+      reminder_job = ::StaffingMailer.delay({:run_at => date.advance(:hours => -2)}).staffing_reminder(self)
     end
   end
 end
