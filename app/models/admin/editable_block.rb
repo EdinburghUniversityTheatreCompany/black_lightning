@@ -25,7 +25,7 @@ class Admin::EditableBlock < ActiveRecord::Base
   validates :name, :presence => true, :uniqueness => true
 
   has_many :attachments, :class_name => "::Attachment"
-  accepts_nested_attributes_for :attachments, :reject_if => :all_blank
+  accepts_nested_attributes_for :attachments, :reject_if => :all_blank, :allow_destroy => true
 
   attr_accessible :content, :name, :attachments, :attachments_attributes, :admin_page, :group
 end

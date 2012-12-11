@@ -35,7 +35,7 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
   has_many :users, :through => :team_members
 
-  accepts_nested_attributes_for :answers, :team_members
+  accepts_nested_attributes_for :answers, :team_members, :reject_if => :all_blank, :allow_destroy => true
 
   validates :show_title, :proposal_text, :publicity_text, :presence => true
   validates :team_members, :presence => { :message => "You must add at least one team member" }
