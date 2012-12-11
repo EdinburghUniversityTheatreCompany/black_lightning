@@ -76,6 +76,7 @@ GEM
     json (1.7.5)
     jwt (0.1.5)
       multi_json (>= 1.0)
+    kramdown (0.14.0)
     mail (2.4.4)
       i18n (>= 0.4.0)
       mime-types (~> 1.16)
@@ -122,7 +123,6 @@ GEM
     rake (10.0.2)
     rdoc (3.12)
       json (~> 1.4)
-    redcarpet (2.2.2)
     rolify (3.2.0)
     rubyzip (0.9.9)
     sass (3.2.3)
@@ -179,12 +179,12 @@ DEPENDENCIES
   devise
   font-awesome-rails
   jquery-rails
+  kramdown
   mysql2
   nested_form
   paperclip
   rails (= 3.2.8)
   rails_autolink
-  redcarpet
   rolify
   sass-rails (~> 3.2.3)
   simple_form
