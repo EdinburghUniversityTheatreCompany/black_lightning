@@ -21,11 +21,13 @@ class StaffingMailer < ActionMailer::Base
         @user = job.user
         mail(:to => @user.email, :subject => "Bedlam Theatre Staffing")
 
-        client.account.sms.messages.create(
-          :from => ChaosRails::Application.config.twilio_phone_number,
-          :to => @user.phone_number,
-          :body => "Hey! You're staffing #{job.name} at #{job.staffing.show_title}!"
-        )
+        if @user.phone_number && (not @user.phone_number.blank?) then
+          client.account.sms.messages.create(
+            :from => ChaosRails::Application.config.twilio_phone_number,
+            :to => @user.phone_number,
+            :body => "Hey! You're staffing #{job.name} at #{job.staffing.show_title}!"
+          )
+        end
       rescue => e
         errors << e
       end
