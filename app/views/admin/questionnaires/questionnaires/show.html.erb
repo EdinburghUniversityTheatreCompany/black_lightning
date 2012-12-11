@@ -15,7 +15,15 @@
       <b>Response:</b>
     </p>
     <% question.answers.each do |answer| %>
-      <%= render_markdown answer.answer %>
+      <% if question.response_type == "File" then %>
+        <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
+      <% else %>
+        <% if answer.answer.presence then %>
+          <%= render_markdown answer.answer %>
+        <% else %>
+          This question has not been answered
+        <% end %>
+      <% end %>
     <% end %>
   </div>
 
