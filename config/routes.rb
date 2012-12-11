@@ -14,6 +14,9 @@ ChaosRails::Application.routes.draw do
     #The resources pages:
     match 'resources/*action' => 'resources', :as => :resources
 
+    #Answer files
+    match 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
+
     resources :shows do
       resources :feedbacks, :except => [:show]
 

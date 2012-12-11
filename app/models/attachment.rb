@@ -7,6 +7,9 @@
 #
 # Uses paperclip to store the file. See AttachmentController for fetching of attachments.
 #
+# Note that attachments are not stored in the public directory to prevent them from being
+# accessed without authentication.
+#
 # == Schema Information
 #
 # Table name: attachments
@@ -29,7 +32,7 @@ class Attachment < ActiveRecord::Base
 
   validates :name, :presence => true, :uniqueness => true
 
-  has_attached_file :file
+  has_attached_file :file, :url => "/attachments/#{slug}", :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
 
   attr_accessible :name, :file
 end

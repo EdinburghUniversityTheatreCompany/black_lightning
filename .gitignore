@@ -21,6 +21,9 @@
 #Ignore paperclip image store:
 /public/system
 
+#Ignore uploads
+/uploads/
+
 #Ignore precompiled assets
 /public/assets
 
