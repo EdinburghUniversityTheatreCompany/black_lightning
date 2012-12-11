@@ -23,22 +23,20 @@
         </div>
         <div class="span8">
           <div class="row">
-            <div class="row pull-right">
-              <%= link_to 'Press',    static_path('press'),    :class => "btn" %>
-              <%= link_to 'Sponsors', static_path('sponsors'), :class => "btn" %>
-              <%= link_to 'Archives', archives_index_path,     :class => "btn" %>
-              <%= link_to 'Members',  admin_path,              :class => "btn" %>
-              <a href="#" class="btn">Newsletter</a>
-            </div>
-            <div class="row">
-              <ul id="nav">
-                <li><%= link_to 'Shows', shows_path %></li>
-                <li><%= link_to 'News', news_index_path %></li>
-                <li><%= link_to 'About', about_index_path %></li>
-                <li><%= link_to 'Get Involved', get_involved_index_path %></li>
-                <li><%= link_to 'Contact', static_path('contact') %></li>
-              </ul>
-            </div>
+            <ul class="pull-right nav nav-pills">
+              <li><%= link_to 'Press',    static_path('press')    %></li>
+              <li><%= link_to 'Sponsors', static_path('sponsors') %></li>
+              <li><%= link_to 'Archives', archives_index_path     %></li>
+              <li><%= link_to 'Members',  admin_path              %></li>
+              <li><a href="#">Newsletter</a></li>
+            </ul>
+            <ul id="nav">
+              <li><%= link_to 'Shows', shows_path %></li>
+              <li><%= link_to 'News', news_index_path %></li>
+              <li><%= link_to 'About', about_index_path %></li>
+              <li><%= link_to 'Get Involved', get_involved_index_path %></li>
+              <li><%= link_to 'Contact', static_path('contact') %></li>
+            </ul>
           </div>
         </div>
       </div>
