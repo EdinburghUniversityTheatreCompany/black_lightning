@@ -1,5 +1,6 @@
 @import "bootstrap";
 
+/* Primarily for use in markdown */
 .float-left {
   @extend .pull-left;
 
@@ -18,4 +19,8 @@
 
 img.float-left, img.float-right {
   @extend .img-polaroid;
+}
+
+.center {
+  text-align: center;
 }

@@ -5,10 +5,7 @@ module MdHelper
           return ""
         end
 
-        require 'redcarpet'
-        renderer = Redcarpet::Render::HTML.new
-        redcarpet = Redcarpet::Markdown.new(renderer, {})
-        return redcarpet.render(md).html_safe
+        return Kramdown::Document.new(md).to_html.html_safe
     end
 
 end

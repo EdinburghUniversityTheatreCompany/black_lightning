@@ -30,7 +30,7 @@ gem 'cancan'
 gem 'rolify'
 
 gem 'will_paginate', '~> 3.0'
-gem 'redcarpet'
+gem 'kramdown'
 gem 'paperclip'
 gem 'nested_form'
 gem 'twitter'
