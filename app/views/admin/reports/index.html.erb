@@ -1,0 +1,7 @@
+<h1>Available Reports</h1>
+
+<ul>
+  <% list_reports.each do |report| %>
+    <li><%= link_to report.humanize.titleize, admin_report_path(report) %></li>
+  <% end %>
+</ul>
