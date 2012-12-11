@@ -19,7 +19,7 @@ class Admin::ReportsController < ApplicationController
         end
       end
 
-      file = ::Tempfile.new('roles.xlsx')
+      file = ::Tempfile.new("roles.xlsx", "#{Rails.root.to_s}/tmp/reports/")
 
       begin
         p.serialize(file.path)
@@ -27,7 +27,6 @@ class Admin::ReportsController < ApplicationController
         send_file file.path, :filename => 'roles.xlsx'
       ensure
         file.close
-        file.unlink
       end
     end
   end
@@ -40,7 +39,7 @@ class Admin::ReportsController < ApplicationController
         end
       end
 
-      file = ::Tempfile.new('subscribers.xlsx')
+      file = Tempfile.new("subscribers.xlsx", "#{Rails.root.to_s}/tmp/reports/")
 
       begin
         p.serialize(file.path)
@@ -48,7 +47,6 @@ class Admin::ReportsController < ApplicationController
         send_file file.path, :filename => 'subscribers.xlsx'
       ensure
         file.close
-        file.unlink
       end
     end
   end

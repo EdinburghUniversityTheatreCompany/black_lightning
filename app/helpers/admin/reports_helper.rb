@@ -5,6 +5,7 @@ module Admin::ReportsHelper
     reports.delete('index')
     reports.delete('authorize_backend!')
     reports.delete('set_globals')
+    reports.delete('report_500')
 
     return reports
   end
