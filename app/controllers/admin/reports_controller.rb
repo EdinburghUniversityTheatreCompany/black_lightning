@@ -47,6 +47,44 @@ class Admin::ReportsController < ApplicationController
     end
   end
 
+  def staffing
+    ::Axlsx::Package.new do |p|
+      wb = p.workbook
+
+      start_year = params[:first_year] || 1.years.ago.year
+      end_year = params[:end_year] || 1.years.since.year
+
+      current_date = Date.new(start_year, 1, 1)
+
+      while current_date.year <= end_year
+        next_date = current_date.months_since(6)
+
+        sheet_name = "#{current_date.month}-#{current_date.year} - #{next_date.month}-#{next_date.year}"
+        wb.add_worksheet(name: sheet_name) do |sheet|
+          sheet.add_row(["Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows"])
+
+          User.all.each do |user|
+            past_show_count = Show.joins(:users).where(["user_id = ? AND end_date < ? AND end_date >= ? AND end_date < ?", user.id, Date.today, current_date, next_date]).count
+            upcoming_show_count = Show.joins(:users).where(["user_id = ? AND end_date >= ? AND end_date >= ? AND end_date < ?", user.id, Date.today, current_date, next_date]).count
+
+            staffing_count = Admin::Staffing.joins(:staffing_jobs).where(["user_id = ? AND date >= ? AND date < ?", user.id, current_date, next_date]).count
+
+            sheet.add_row([user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count])
+          end
+
+          owes_staffing = wb.styles.add_style(:fg_color => "FF0000", :b => true, :type => :dxf)
+          will_owe_staffing = wb.styles.add_style(:fg_color => "FF9900", :b => true, :type => :dxf)
+          sheet.add_conditional_formatting("D:D", { :type => :cellIs, :operator => :lessThan, :formula => 'INDIRECT("RC[1]",0)', :dxfId => owes_staffing, :priority => 1 })
+          sheet.add_conditional_formatting("D:D", { :type => :cellIs, :operator => :lessThan, :formula => 'INDIRECT("RC[1]",0) + INDIRECT("RC[2]",0)', :dxfId => will_owe_staffing, :priority => 2 })
+        end
+
+        current_date = next_date
+      end
+
+      stream_workbook(p, "Staffing.xlsx")
+    end
+  end
+
   private
   def stream_workbook(package, filename)
     package.validate.each do |error|
