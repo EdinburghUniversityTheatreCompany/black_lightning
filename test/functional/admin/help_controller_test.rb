@@ -7,8 +7,8 @@ class Admin::HelpControllerTest < ActionController::TestCase
     sign_in @user
   end
 
-  test "should get markdown" do
-    get :markdown
+  test "should get kramdown" do
+    get :kramdown
     assert_response :success
   end
 
