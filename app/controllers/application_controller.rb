@@ -42,7 +42,7 @@ class ApplicationController < ActionController::Base
     flash[:error_path] = request.fullpath
     flash[:error_location] = ex.backtrace[0].gsub Rails.root.to_s, ""
 
-    redirect_to '/500'
+    redirect_to static_path('500', params[:format])
   end
 
 end
