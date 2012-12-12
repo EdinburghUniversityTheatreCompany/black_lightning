@@ -5,7 +5,7 @@ class Admin::ReportsController < ApplicationController
   def roles
     ::Axlsx::Package.new do |p|
       Role.all().each do |role|
-        p.workbook.add_worksheet(:name => role.name) do |sheet|
+        p.workbook.add_worksheet(:name => role.name.gsub(/\//, " - ")) do |sheet|
           sheet.add_row(["Firstname", "Surname", "Email"])
           role.users.each do |user|
             sheet.add_row([user.first_name, user.last_name, user.email])
@@ -19,15 +19,7 @@ class Admin::ReportsController < ApplicationController
         end
       end
 
-      file = ::Tempfile.new("roles.xlsx", "#{Rails.root.to_s}/tmp/reports/")
-
-      begin
-        p.serialize(file.path)
-
-        send_file file.path, :filename => 'roles.xlsx'
-      ensure
-        file.close
-      end
+      stream_workbook(p, "Roles.xlsx")
     end
   end
 
@@ -39,15 +31,17 @@ class Admin::ReportsController < ApplicationController
         end
       end
 
-      file = Tempfile.new("subscribers.xlsx", "#{Rails.root.to_s}/tmp/reports/")
-
-      begin
-        p.serialize(file.path)
-
-        send_file file.path, :filename => 'subscribers.xlsx'
-      ensure
-        file.close
-      end
+      stream_workbook(p, "Newsletter Subscribers.xlsx")
     end
+  end
+
+  private
+  def stream_workbook(package, filename)
+    package.validate.each do |error|
+      Rails.logger.warn "Error creating report with filename #{filename}: "
+      Rails.logger.warn error
+    end
+
+    send_data package.to_stream.read, :filename => filename, :type=> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
   end
 end
