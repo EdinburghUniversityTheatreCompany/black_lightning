@@ -4,11 +4,23 @@ class Admin::ReportsController < ApplicationController
 
   def roles
     ::Axlsx::Package.new do |p|
+      wb = p.workbook
+      datetime = wb.styles.add_style :format_code => 'dd/mm/yyyy hh:mm'
+
+      #Add a worksheet with all users:
+      wb.add_worksheet(name: "All Users") do |sheet|
+        sheet.add_row(["Firstname", "Surname", "Email", "Last Login"])
+        User.all.each do |user|
+          sheet.add_row([user.first_name, user.last_name, user.email, user.last_sign_in_at], :style => [nil,nil,nil,datetime])
+        end
+      end
+
+      #Add a worksheet for each role.
       Role.all().each do |role|
-        p.workbook.add_worksheet(:name => role.name.gsub(/\//, " - ")) do |sheet|
-          sheet.add_row(["Firstname", "Surname", "Email"])
+        wb.add_worksheet(:name => role.name.gsub(/\//, " - ")) do |sheet|
+          sheet.add_row(["Firstname", "Surname", "Email", "Last Login"])
           role.users.each do |user|
-            sheet.add_row([user.first_name, user.last_name, user.email])
+            sheet.add_row([user.first_name, user.last_name, user.email, user.last_sign_in_at])
           end
 
           sheet.sheet_view.pane do |pane|
