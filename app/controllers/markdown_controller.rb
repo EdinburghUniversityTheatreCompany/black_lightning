@@ -9,6 +9,11 @@ class MarkdownController < ApplicationController
   include MdHelper
 
   def preview
-    render :inline => render_markdown(request.body.read)
+    body = ActiveSupport::JSON.decode(request.body.read)
+    input_html = body["input_html"]
+
+    response = { rendered_md: render_markdown(input_html) }
+
+    render :json => response
   end
 end

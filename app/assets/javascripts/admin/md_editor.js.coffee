@@ -13,12 +13,19 @@ addHandlers = ->
 
     $.ajax({
       type: 'POST',
-      url: '/markdown/preview',
-      data: input.val(),
+      url: '/markdown/preview.json',
+      data: JSON.stringify({ input_html: input.val() }),
       success: (data) ->
         preview = $("#" + id + "_preview")
-        preview.html(data);
+        preview.html(data.rendered_md);
         return
+      error: (jqXHR, textStatus, errorThrown) ->
+        error_data = JSON.parse(jqXHR.responseText)
+        error_html =  """
+                      <b>There was an error rendering your kramdown.</b>
+                      <pre>#{error_data.error}</pre>
+                      """
+        $("#" + id + "_preview").html(error_html);
     });
 
 
