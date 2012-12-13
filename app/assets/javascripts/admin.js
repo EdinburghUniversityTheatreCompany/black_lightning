@@ -44,7 +44,7 @@
     createCookie("dashboard_pos", value, 3600);
   }
 
-  $(function () {
+  $(window).load(function() {
     var existing_pos = JSON.parse(readCookie('dashboard_pos'));
     if (existing_pos) {
       //Load from cookie
