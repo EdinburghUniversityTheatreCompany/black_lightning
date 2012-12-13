@@ -1,7 +1,5 @@
 ChaosRails::Application.routes.draw do
 
-  namespace :admin do  namespace :proposals do resources :call_question_templates end end
-
   devise_for :users
 
   resources :shows,       :only => [:index, :show]
@@ -62,6 +60,8 @@ ChaosRails::Application.routes.draw do
           end
         end
       end
+
+      resources :call_question_templates, :except => [:show]
     end
 
     namespace :questionnaires do

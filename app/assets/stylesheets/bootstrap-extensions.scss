@@ -25,3 +25,19 @@ img.float-left, img.float-right {
 .center {
   text-align: center;
 }
+
+/* font-awesome alignment */
+.btn [class^="icon-"] {
+    line-height: 1em !important;
+}
+
+.alert [class^="icon-"] {
+    line-height: 17px;
+    margin-right: 2px;
+}
+
+.btn-small [class^="icon-"] {
+    line-height: 14px;
+    margin-top: 3px;
+    margin-left: -5px;
+}

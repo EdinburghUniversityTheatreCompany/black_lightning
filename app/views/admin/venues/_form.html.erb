@@ -29,7 +29,8 @@
 
     <br />
 
-    <%= f.link_to_add "Add Photo", :pictures, :class => "btn" %>
+    <% add_photo_text = '<i class="icon-plus"></i> Add Photo'.html_safe %>
+    <%= f.link_to_add add_photo_text, :pictures, :class => "btn" %>
 
   </div>
 

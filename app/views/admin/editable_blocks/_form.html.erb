@@ -14,10 +14,11 @@
       <%= render "admin/shared/md_hints" %>
     <% end %>
 
-    <div class="well form-horizontal">
+    <div class="well form-inline">
       <%= f.simple_fields_for :attachments %>
 
-      <%= f.link_to_add "Add Attachment", :attachments, :class => "btn" %>
+      <% add_text = '<i class="icon-plus"></i> Add Attachment'.html_safe %>
+      <%= f.link_to_add add_text, :attachments, :class => "btn" %>
 
       <br />
 

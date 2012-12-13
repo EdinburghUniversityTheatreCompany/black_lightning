@@ -37,7 +37,8 @@
 
       <%= f.simple_fields_for :team_members %>
 
-      <%= f.link_to_add "Add Team Member", :team_members, :class => "btn" %>
+      <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
+      <%= f.link_to_add add_member_text, :team_members, :class => "btn" %>
 
     </div>
 

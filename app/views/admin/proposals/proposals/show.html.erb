@@ -1,32 +1,32 @@
 <% case @admin_proposals_proposal.successful %>
 <% when true %>
   <div class="alert alert-success">
-    This proposal was successful.
+    <i class="icon-ok icon-large"></i> This proposal was successful.
   </div>
 <% when false %>
   <div class="alert alert-error">
-    This proposal was unsuccessful.
+    <i class="icon-exclamation-sign icon-large"></i> This proposal was unsuccessful.
   </div>
 <% end %>
 
 <% if @admin_proposals_proposal.late %>
   <div class="alert alert-error">
-    This proposal has been marked late.
+    <i class="icon-info-sign icon-large"></i> This proposal has been marked late.
   </div>
 <% end %>
 
 <% case @admin_proposals_proposal.approved %>
 <% when true %>
   <div class="alert alert-success">
-    This proposal has been approved by committee.
+    <i class="icon-ok icon-large"></i> This proposal has been approved by committee.
   </div>
 <% when false %>
   <div class="alert alert-error">
-    This proposal has been rejected by committee.
+    <i class="icon-exclamation-sign icon-large"></i> This proposal has been rejected by committee.
   </div>
 <% else %>
   <div class="alert alert-info">
-    This proposal is waiting for approval by committee.
+    <i class="icon-info-sign icon-large"></i> This proposal is waiting for approval by committee.
   </div>
 <% end %>
 
@@ -75,7 +75,8 @@
 <% end %>
 
 <% if can? :edit, @admin_proposals_proposal %>
-<%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
+<% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+<%= link_to edit_text, edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
 <% end %>
 
 <% if (can? :manage, @admin_proposals_proposal) && (@admin_proposals_proposal.approved == true) %>
@@ -85,6 +86,10 @@
 <% if (can? :approve, @admin_proposals_proposal) && (@admin_proposals_proposal.approved.nil?) %>
 <br />
 <br />
-<%= link_to 'Approve', approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-success" %>
-<%= link_to 'Reject', reject_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-danger" %>
+
+<% approve_text = '<i class="icon-ok"></i> Approve'.html_safe %>
+<%= link_to approve_text, approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-success" %>
+
+<% reject_text = '<i class="icon-remove"></i> Reject'.html_safe %>
+<%= link_to reject_text, reject_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-danger" %>
 <% end %>

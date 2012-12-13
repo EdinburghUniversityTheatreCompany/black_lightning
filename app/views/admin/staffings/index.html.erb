@@ -15,8 +15,11 @@
 
 <br />
 <% if can? :create, Admin::Staffing %>
-<%= link_to 'Add Staffing', new_admin_staffing_path, :class => "btn" %>
-<%= link_to 'Create Staffing for Show', new_for_show_admin_staffings_path, :class => "btn" %>
+  <% add_text = '<i class="icon-plus"></i> Create Staffing for Show'.html_safe %>
+  <%= link_to add_text, new_for_show_admin_staffings_path, :class => "btn btn-primary" %>
+
+  <% add_text = '<i class="icon-plus"></i> Add Staffing'.html_safe %>
+  <%= link_to add_text, new_admin_staffing_path, :class => "btn" %>
 <% end %>
 
 <h3>Old Positions</h3>

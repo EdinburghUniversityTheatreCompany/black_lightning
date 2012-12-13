@@ -21,20 +21,6 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
   end
 
   ##
-  # GET /admin/proposals/call_question_templates/1
-  #
-  # GET /admin/proposals/call_question_templates/1.json
-  ##
-  def show
-    @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
-
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json { render :json => @template.to_json(:include => { :questions => {} }) }
-    end
-  end
-
-  ##
   # GET /admin/proposals/call_question_templates/new
   #
   # GET /admin/proposals/call_question_templates/new.json

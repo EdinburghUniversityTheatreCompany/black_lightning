@@ -12,9 +12,3 @@
   <%= render 'editable_block', :group => group, :editable_blocks => editable_blocks %>
 <% end %>
 </div>
-
-<br />
-
-<% if can? :create, Admin::EditableBlock %>
-<%= link_to 'New Editable block', new_admin_editable_block_path, :class => 'btn' %>
-<% end %>

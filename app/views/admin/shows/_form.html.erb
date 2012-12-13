@@ -35,7 +35,8 @@
 
       <%= f.simple_fields_for :team_members %>
 
-      <%= f.link_to_add "Add Team Member", :team_members, :class => "btn" %>
+      <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
+      <%= f.link_to_add add_member_text, :team_members, :class => "btn" %>
 
     </div>
 
@@ -43,7 +44,8 @@
 
     <%= f.simple_fields_for :reviews %>
 
-    <%= f.link_to_add "Add Review", :reviews, :class => "btn" %>
+    <% add_review_text = '<i class="icon-plus"></i> Add Review'.html_safe %>
+    <%= f.link_to_add add_review_text, :reviews, :class => "btn" %>
 
     <div class="gallery-form">
 
@@ -59,7 +61,8 @@
 
       <br />
 
-      <%= f.link_to_add "Add Photo", :pictures, :class => "btn" %>
+      <% add_photo_text = '<i class="icon-plus"></i> Add Photo'.html_safe %>
+      <%= f.link_to_add add_photo_text, :pictures, :class => "btn" %>
 
     </div>
 

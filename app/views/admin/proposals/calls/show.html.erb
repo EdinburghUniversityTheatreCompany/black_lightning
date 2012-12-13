@@ -14,7 +14,9 @@
 </p>
 
 <%= link_to 'View Proposals', admin_proposals_call_proposals_path(@admin_proposals_call), :class => "btn btn-primary" %>
-<%= link_to 'Edit', edit_admin_proposals_call_path(@admin_proposals_call), :class => "btn" %>
+
+<% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+<%= link_to edit_text, edit_admin_proposals_call_path(@admin_proposals_call), :class => "btn" %>
 <%= link_to 'Back', admin_proposals_calls_path, :class => "btn"  %>
 
 <hr />

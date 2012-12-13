@@ -20,4 +20,5 @@
 
 <br />
 
-<%= link_to 'New Venue', new_admin_venue_path, :class => "btn" %>
+<% new_text = '<i class="icon-plus"></i> New Venue'.html_safe %>
+<%= link_to new_text, new_admin_venue_path, :class => "btn" %>

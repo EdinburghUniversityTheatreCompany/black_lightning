@@ -1,6 +1,6 @@
 <% @title = 'Users' %>
 
-<h1>Listing all users</h1>
+<h1>Listing All Users</h1>
 <table class="table">
     <tbody>
         <tr>
@@ -31,5 +31,6 @@
 </table>
 
 <% if can? :create, User %>
-<%= link_to 'New user', new_admin_user_path, :class => "btn" %>
+  <% add_text = '<i class="icon-plus"></i> Add User'.html_safe %>
+  <%= link_to add_text, new_admin_user_path, :class => "btn" %>
 <% end %>

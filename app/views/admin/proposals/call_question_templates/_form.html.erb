@@ -9,7 +9,8 @@
 
     <%= f.simple_fields_for :questions %>
 
-    <%= f.link_to_add "Add Question", :questions, :class => "btn" %>
+    <% add_text = '<i class="icon-plus"></i> Add Question'.html_safe %>
+    <%= f.link_to_add add_text, :questions, :class => "btn" %>
 
   </div>
 

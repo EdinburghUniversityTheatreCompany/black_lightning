@@ -3,5 +3,6 @@
 
     <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
 
-    <%= f.link_to_remove "Remove", :class => "btn btn-danger" %>
+    <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
+    <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
 </div>

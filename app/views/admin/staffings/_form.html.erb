@@ -11,7 +11,8 @@
     <h3>Jobs</h3>
     <%= f.simple_fields_for :staffing_jobs %>
 
-    <%= f.link_to_add "Add Job", :staffing_jobs, :class => "btn" %>
+    <% add_job_text = '<i class="icon-plus"></i> Add Job'.html_safe %>
+    <%= f.link_to_add add_job_text, :staffing_jobs, :class => "btn" %>
     </div>
   </div>
 

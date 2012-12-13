@@ -26,7 +26,7 @@
 
           <td>
           <% if can? :delete, editable_block %>
-          <%= link_to 'Destroy', editable_block, method: :delete, data: { confirm: 'Are you sure?' } %>
+            <%= link_to "Delete", editable_block, method: :delete, data: { confirm: 'Are you sure?' } %>
           <% end %>
           </td>
         </tr>

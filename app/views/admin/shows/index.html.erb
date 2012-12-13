@@ -39,5 +39,6 @@
 </table>
 
 <% if can? :create, Show %>
-<%= link_to 'Add Show', new_admin_show_path, :class => "btn" %>
+  <% add_text = '<i class="icon-plus"></i> Add Show'.html_safe %>
+  <%= link_to add_text, new_admin_show_path, :class => "btn" %>
 <% end %>

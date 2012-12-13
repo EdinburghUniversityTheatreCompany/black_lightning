@@ -31,11 +31,6 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
     assert_redirected_to admin_proposals_call_question_template_path(assigns(:template))
   end
 
-  test "should show admin_proposals_call_question_template" do
-    get :show, id: @template
-    assert_response :success
-  end
-
   test "should get edit" do
     get :edit, id: @template
     assert_response :success

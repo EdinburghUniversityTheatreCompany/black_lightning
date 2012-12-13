@@ -31,5 +31,6 @@
 <br />
 
 <% if can? :create, Admin::Proposals::CallQuestionTemplate %>
-<%= link_to 'New Template', new_admin_proposals_call_question_template_path, :class => "btn" %>
+  <% new_text = '<i class="icon-plus"></i> New Template'.html_safe %>
+  <%= link_to new_text, new_admin_proposals_call_question_template_path, :class => "btn" %>
 <% end %>

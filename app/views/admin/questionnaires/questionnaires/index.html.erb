@@ -15,6 +15,10 @@
           <tr>
             <th>Questionnaire</th>
 
+            <% if can? :read, Admin::Questionnaires::Questionnaire %>
+            <th></th>
+            <% end %>
+
             <% if can? :edit, Admin::Questionnaires::Questionnaire %>
             <th></th>
             <% end %>
@@ -27,6 +31,10 @@
         <% questionnaires.each do |questionnaire| %>
           <tr>
             <td><%= link_to questionnaire.name, answer_admin_questionnaires_questionnaire_path(questionnaire), :title => "Answer Questionnaire" %></td>
+
+            <% if can? :read, questionnaire %>
+            <td><%= link_to 'View', admin_questionnaires_questionnaire_path(questionnaire) %></td>
+            <% end %>
 
             <% if can? :edit, questionnaire %>
             <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(questionnaire) %></td>

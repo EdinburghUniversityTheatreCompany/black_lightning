@@ -41,5 +41,6 @@
 <br />
 
 <% if can? :create, News %>
-<%= link_to 'New News', new_admin_news_path, :class => 'btn' %>
+<% new_text = '<i class="icon-plus"></i> New News'.html_safe %>
+<%= link_to new_text, new_admin_news_path, :class => 'btn' %>
 <% end %>

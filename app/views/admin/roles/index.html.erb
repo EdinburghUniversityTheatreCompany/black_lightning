@@ -1,6 +1,6 @@
 <% @title = 'Roles' %>
 
-<h1>Listing all roles</h1>
+<h1>Listing Roles</h1>
 <table class="table">
     <tbody>
         <tr>
@@ -29,5 +29,6 @@
 </table>
 
 <% if can? :create, Role %>
-<%= link_to 'New role', new_admin_role_path, :class => "btn" %>
+  <% new_text = '<i class="icon-plus"></i> New Role'.html_safe %>
+  <%= link_to new_text, new_admin_role_path, :class => "btn" %>
 <% end %>

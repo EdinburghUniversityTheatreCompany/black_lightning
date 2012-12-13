@@ -48,5 +48,6 @@
 <br />
 
 <% if can? :create, Admin::Proposals::Call %>
-<%= link_to 'New Call', new_admin_proposals_call_path, :class => "btn" %>
+<% new_text = '<i class="icon-plus"></i> New Call'.html_safe %>
+<%= link_to new_text, new_admin_proposals_call_path, :class => "btn" %>
 <% end %>

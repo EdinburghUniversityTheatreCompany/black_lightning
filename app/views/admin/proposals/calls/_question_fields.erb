@@ -3,7 +3,8 @@
     <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :question_text, :rows => 6 } do %>
       <%= f.input :response_type, :collection => Admin::Question.response_types %>
 
-      <%= f.link_to_remove "Remove Question", :class => "btn btn-danger" %>
+      <% delete_text = '<i class="icon-trash"></i> Delete Question'.html_safe %>
+      <%= f.link_to_remove delete_text, :class => "btn btn-danger" %>
     <% end %>
 
     <hr />

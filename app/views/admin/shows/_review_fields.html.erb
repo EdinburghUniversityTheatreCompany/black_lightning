@@ -6,7 +6,8 @@
       <%= f.input :review_date, :order => [:day, :month, :year] %>
       <%= f.input :rating, :title => "Max 5. Halves allowed." %>
 
-      <%= f.link_to_remove "Remove Review", :class => "btn btn-danger", data: { confirm: 'Are you sure?' } %>
+      <% remove_text = '<i class="icon-trash"></i> Delete Review'.html_safe %>
+      <%= f.link_to_remove remove_text, :class => "btn btn-danger", data: { confirm: 'Are you sure?' } %>
     <% end %>
 
     <hr />

@@ -52,7 +52,7 @@
 </table>
 
 <% if can? :create, Admin::Feedback %>
-  <%= link_to "Submit Feedback", new_admin_show_feedback_path(@show), :class => 'btn' %>
+  <%= link_to "Submit Feedback", new_admin_show_feedback_path(@show), :class => 'btn btn-primary' %>
 <% end %>
 
 <% if @show.feedbacks.count > 0 then %>
@@ -62,7 +62,8 @@
 <% end %>
 
 <% if can? :edit, @show %>
-  <%= link_to 'Edit', edit_admin_show_path(@show), :class => 'btn' %>
+  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+  <%= link_to edit_text, edit_admin_show_path(@show), :class => 'btn' %>
 <% end %>
 
 <% if @show.users.include? current_user or can?(:read, Admin::Questionnaires::Questionnaire) then %>
