@@ -6,7 +6,7 @@ class AdminControllerTest < ActionController::TestCase
     @user = User.find_by_email('admin@bedlamtheatre.co.uk')
     @user.add_role :admin
     sign_in @user
-    
+
     get :index
     assert_response :success
   end
