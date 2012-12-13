@@ -10,9 +10,9 @@
 
     <%= f.input :group %>
 
-    <%= render "admin/shared/md_editor", { :f => f, :field => :content }  %>
-
-    <br />
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :content, :rows => 12 } do %>
+      <%= render "admin/shared/md_hints" %>
+    <% end %>
 
     <div class="well form-horizontal">
       <%= f.simple_fields_for :attachments %>
