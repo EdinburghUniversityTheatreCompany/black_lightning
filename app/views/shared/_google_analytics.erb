@@ -3,6 +3,7 @@
 
   var _gaq = _gaq || [];
   _gaq.push(['_setAccount', 'UA-35697155-1']);
+  _gaq.push(['_setSiteSpeedSampleRate', 5]);
   _gaq.push(['_trackPageview']);
 
   (function() {
@@ -10,6 +11,28 @@
     ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
     var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
   })();
+
+  $(document).ready(function() {
+    doc_ready = new Date().getTime();
+
+    var timeSpent = doc_ready - load_start;
+    var hour = 1000 * 60 * 60;
+
+    if (0 < timeSpent && timeSpent < hour) {
+      _gaq.push(['_trackTiming', 'pageLoad', 'Document Ready', timeSpent]);
+    }
+  });
+
+  $(window).load(function() {
+    load_end = new Date().getTime();
+
+    var timeSpent = doc_ready - load_start;
+    var hour = 1000 * 60 * 60;
+
+    if (0 < timeSpent && timeSpent < hour) {
+      _gaq.push(['_trackTiming', 'pageLoad', 'Window Loaded', timeSpent]);
+    }
+  });
 
 </script>
 <% end %>
