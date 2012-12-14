@@ -1,4 +1,10 @@
+##
+# Helper for reports.
+##
 module Admin::ReportsHelper
+  ##
+  # Retrieves a list of all reports defined in Admin::ReportsController.
+  ##
   def list_reports
     reports = Admin::ReportsController.action_methods
     reports = reports.map { |r| r.to_s }

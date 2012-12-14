@@ -8,7 +8,6 @@
 #
 # Failure to correctly do so will cause bad things to happen (kittens may die).
 ##
-
 class Admin::Proposals::ProposalsController < AdminController
 
   authorize_resource :class => "Admin::Proposals::Proposal"

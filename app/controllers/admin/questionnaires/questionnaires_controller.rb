@@ -1,12 +1,20 @@
+##
+# Controller for Admin::Questionnaires::Questionnaire
+# ---
+# *IMPORTANT*
+#
+# Due to the complex nature of questionnaire permissions, each action may need to be authorized
+# in the controller method using the authorize! method.
+#
+# Failure to correctly do so will cause bad things to happen (kittens may die).
+##
 class Admin::Questionnaires::QuestionnairesController < AdminController
 
-  # IMPORTANT
-  # Due to the complex nature of questionnaire permissions, each action may need to be authorized
-  # in the controller method using the authorize! method.
-  # Failure to correctly do so will cause bad things to happen (kittens may die).
-
+  ##
   # GET /admin/questionnaires/questionnaires
+  #
   # GET /admin/questionnaires/questionnaires.json
+  ##
   def index
     @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.all.group_by { |q| q.show }
 
@@ -20,8 +28,11 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     end
   end
 
+  ##
   # GET /admin/questionnaires/questionnaires/1
+  #
   # GET /admin/questionnaires/questionnaires/1.json
+  ##
   def show
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
@@ -33,15 +44,20 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     end
   end
 
+  ##
   # GET /admin/questionnaires/questionnaires/1/edit
+  ##
   def edit
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
     authorize!(:edit, @admin_questionnaires_questionnaire)
   end
 
+  ##
   # PUT /admin/questionnaires/questionnaires/1
+  #
   # PUT /admin/questionnaires/questionnaires/1.json
+  ##
   def update
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
@@ -58,8 +74,11 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/questionnaires/questionnaires/1
+  #
   # DELETE /admin/questionnaires/questionnaires/1.json
+  ##
   def destroy
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
@@ -73,6 +92,9 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     end
   end
 
+  ##
+  # GET /admin/questionnaires/questionnaire/1/answer
+  ##
   def answer
     @questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 

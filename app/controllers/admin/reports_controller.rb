@@ -1,7 +1,16 @@
+##
+# Defines reports that may be downloaded in XLSX format, using axlsx.
+##
 class Admin::ReportsController < ApplicationController
+  ##
+  # GET /admin/reports
+  ##
   def index
   end
 
+  ##
+  # A report containing a list of all users, and lists of users in each role.
+  ##
   def roles
     ::Axlsx::Package.new do |p|
       wb = p.workbook
@@ -35,6 +44,9 @@ class Admin::ReportsController < ApplicationController
     end
   end
 
+  ##
+  # A report containing all the entries in the NewsletterSubscriber model.
+  ##
   def newsletter_subscribers
     ::Axlsx::Package.new do |p|
       p.workbook.add_worksheet(:name => "Subscribers") do |sheet|
@@ -47,6 +59,16 @@ class Admin::ReportsController < ApplicationController
     end
   end
 
+  ##
+  # A report showing the number of shows a user has been in, and the number of staffing slots
+  # they have completed.
+  #
+  # Broken into 6 month periods.
+  #
+  # Accepts two parameters:
+  # * start_year The first year to include in the report (default - 1 year ago)
+  # * end_year   The last year to include in the report (default - 1 year ahead)
+  ##
   def staffing
     ::Axlsx::Package.new do |p|
       wb = p.workbook
@@ -86,6 +108,10 @@ class Admin::ReportsController < ApplicationController
   end
 
   private
+
+  ##
+  # Streams the workbook back to the client.
+  ##
   def stream_workbook(package, filename)
     package.validate.each do |error|
       Rails.logger.warn "Error creating report with filename #{filename}: "

@@ -1,5 +1,11 @@
+##
+# The controller for setting permissions.
+##
 class Admin::PermissionsController < AdminController
 
+  ##
+  # Shows a grid for selecting permissions for each role.
+  ##
   def grid
     authorize!(:read, Admin::Permission)
 
@@ -11,6 +17,9 @@ class Admin::PermissionsController < AdminController
     @title = "Permissions"
   end
 
+  ##
+  # Takes the data posted from the grid and sets the permissions.
+  ##
   def update_grid
     authorize!(:edit, Admin::Permission)
 

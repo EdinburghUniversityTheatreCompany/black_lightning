@@ -1,9 +1,15 @@
+##
+# Controller for Admin::Questionnaires::QuestionnaireTemplate
+##
 class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
 
   load_and_authorize_resource :class => Admin::Questionnaires::QuestionnaireTemplate
 
+  ##
   # GET /admin/questionnaires/questionnaire_templates
+  #
   # GET /admin/questionnaires/questionnaire_templates.json
+  ##
   def index
     @templates = Admin::Questionnaires::QuestionnaireTemplate.all
 
@@ -13,8 +19,11 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     end
   end
 
+  ##
   # GET /admin/questionnaires/questionnaire_templates/1
+  #
   # GET /admin/questionnaires/questionnaire_templates/1.json
+  ##
   def show
     @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
 
@@ -24,8 +33,11 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     end
   end
 
+  ##
   # GET /admin/questionnaires/questionnaire_templates/new
+  #
   # GET /admin/questionnaires/questionnaire_templates/new.json
+  ##
   def new
     @template = Admin::Questionnaires::QuestionnaireTemplate.new
 
@@ -35,13 +47,18 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     end
   end
 
+  ##
   # GET /admin/questionnaires/questionnaire_templates/1/edit
+  ##
   def edit
     @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
   end
 
+  ##
   # POST /admin/questionnaires/questionnaire_templates
+  #
   # POST /admin/questionnaires/questionnaire_templates.json
+  ##
   def create
     @template = Admin::Questionnaires::QuestionnaireTemplate.new(params[:admin_questionnaires_questionnaire_template])
 
@@ -56,8 +73,11 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     end
   end
 
+  ##
   # PUT /admin/questionnaires/questionnaire_templates/1
+  #
   # PUT /admin/questionnaires/questionnaire_templates/1.json
+  ##
   def update
     @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
 
@@ -72,8 +92,11 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     end
   end
 
+  ##
   # DELETE /admin/questionnaires/questionnaire_templates/1
+  #
   # DELETE /admin/questionnaires/questionnaire_templates/1.json
+  ##
   def destroy
     @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
     @template.destroy

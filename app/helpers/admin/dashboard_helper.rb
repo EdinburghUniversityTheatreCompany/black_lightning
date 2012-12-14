@@ -1,4 +1,15 @@
+##
+# Helper for the Admin Dashboard
+##
 module Admin::DashboardHelper
+
+  ##
+  # Displays the specified widget.
+  #
+  # Widgets should be stored in app/views/admin/dashboard, and should end with _widget
+  #
+  # Rescues in case there is an error rendering the widget.
+  ##
   def dashboard_widget(name)
     begin
       render "admin/dashboard/#{name}_widget"
