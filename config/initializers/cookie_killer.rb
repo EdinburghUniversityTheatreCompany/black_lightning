@@ -1,8 +1,28 @@
+##
+#              _,._
+#         __.o`   o`"-.
+#      .-O o `"-.o   O )_,._
+#     ( o   O  o )--.-"`O   o"-.`
+#      '--------'  (   o  O    o)
+#                   `----------`
+#
+# EATS YOUR COOKIES. OM NOM NOM.
+# ---
+# Seriously though, prevents any cookies from leaving the server unless
+# you are trying to sign in or you have allowed cookies.
+##
 class CookieKiller
+  ##
+  # Store the app variable so we can use it later.
+  ##
   def initialize(app)
     @app = app
   end
 
+  ##
+  # On each request, checks if cookies have been allowed or if the user is
+  # trying to sign in (/users/). If not, deletes all cookies.
+  ##
   def call(env)
     status, headers, body = @app.call(env)
 
