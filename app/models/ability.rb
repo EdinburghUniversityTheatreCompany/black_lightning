@@ -51,7 +51,7 @@ class Ability
       end
 
       can :create, Admin::Proposals::Proposal
-      can :edit, Admin::Proposals::Proposal do |proposal|
+      can :update, Admin::Proposals::Proposal do |proposal|
         (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
       end
 
