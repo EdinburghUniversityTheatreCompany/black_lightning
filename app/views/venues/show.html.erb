@@ -67,7 +67,7 @@
   <h3>Shows at <%= @venue.name %></h3>
 
   <div class="row">
-  <% @venue.shows.first(3).each do |show| %>
+  <% @venue.shows.current.first(3).each do |show| %>
     <div class="span4">
       <div>
         <%= link_to (image_tag show.image.url(:medium)), show_path(show) %>
