@@ -1,7 +1,7 @@
 class StaticController < ApplicationController
 
   def home
-    @news = News.current(:limit => 2)
+    @news = News.public(:limit => 2)
     @shows = Show.current(:limit => 5)
   end
 
