@@ -22,7 +22,10 @@
 
             <td>
             <% if can? :delete, user %>
-            <%= link_to 'Destroy', admin_user_path(user), method: :delete, data: { confirm: 'Are you sure? No, seriously. If you delete a user there is a chance that you also delete content which belongs to them. Do not take this decision lightly.' } %>
+            <%= link_to 'Destroy', admin_user_path(user), method: :delete, data: { confirm:         "Deleting " + user.name,
+                                                                                   detail:          "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name ",
+                                                                                   "type-confirm" => user.name
+                                                                                 } %>
             <% end %>
             </td>
         </tr>
