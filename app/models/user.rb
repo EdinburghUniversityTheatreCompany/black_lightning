@@ -29,6 +29,8 @@ class User < ActiveRecord::Base
   before_save :unify_numbers
   rolify
 
+  default_scope order("last_name ASC")
+
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
