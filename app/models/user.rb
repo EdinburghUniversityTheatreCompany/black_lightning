@@ -69,7 +69,6 @@ class User < ActiveRecord::Base
   #   User.create_user(params[:user])
   #
   # Generates a random password for the user if none is given.
-  # The user will then be sent a welcome e-mail with a link to set their password.
   ##
   def self.create_user(params)
     user = User.new(params)
@@ -88,8 +87,6 @@ class User < ActiveRecord::Base
     end
 
     user.save!
-
-    UsersMailer.delay.welcome_email(user, reset_password)
 
     return user
   end
