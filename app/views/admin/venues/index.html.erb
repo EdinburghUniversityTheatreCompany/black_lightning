@@ -11,9 +11,24 @@
 <% @venues.each do |venue| %>
   <tr>
     <td><%= venue.name %></td>
-    <td><%= link_to 'Show', venue %></td>
-    <td><%= link_to 'Edit', edit_admin_venue_path(venue) %></td>
-    <td><%= link_to 'Destroy', admin_venues_path(venue), method: :delete, data: { confirm: 'Are you sure?' } %></td>
+
+    <td>
+      <% if can? :read, venue %>
+        <%= link_to 'Show', venue %>
+      <% end %>
+    </td>
+
+    <td>
+      <% if can? :edit, venue %>
+        <%= link_to 'Edit', edit_admin_venue_path(venue) %>
+      <% end %>
+    </td>
+
+    <td>
+      <% if can? :delete, venue %>
+        <%= link_to 'Destroy', admin_venues_path(venue), method: :delete, data: { confirm: 'Are you sure?' } %>
+      <% end %>
+    </td>
   </tr>
 <% end %>
 </table>
