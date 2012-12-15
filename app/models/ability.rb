@@ -67,6 +67,10 @@ class Ability
         feedback.show.users.all.include? user
       end
 
+      can :update, Show do |show|
+        show.team_members.where({ :position => "Producer", :user_id => user.id }).all.count > 0
+      end
+
       #####################
       # ADMIN PERMISSIONS #
       ##############################################

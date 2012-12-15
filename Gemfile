@@ -38,6 +38,7 @@ gem 'rails_autolink'
 gem 'twilio-ruby'
 
 gem 'delayed_job_active_record'
+gem 'daemons'
 gem 'axlsx'
 
 group :test do
