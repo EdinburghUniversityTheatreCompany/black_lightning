@@ -56,6 +56,7 @@ class Show < ActiveRecord::Base
   has_many :questionnaires, :class_name => "Admin::Questionnaires::Questionnaire"
 
   belongs_to :venue
+  belongs_to :season
 
   accepts_nested_attributes_for :team_members, :reject_if => :all_blank, :allow_destroy => true
   accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
