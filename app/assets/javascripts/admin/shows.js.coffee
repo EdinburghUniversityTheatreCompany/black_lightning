@@ -18,12 +18,12 @@ jQuery ->
         end_date   = new Date(data[0].lastperformance * 1000)
 
         $('#show_start_date_1i').val(start_date.getFullYear())
-        $('#show_start_date_2i').val(start_date.getMonth())
+        $('#show_start_date_2i').val(start_date.getMonth() + 1)
         $('#show_start_date_3i').val(start_date.getDate())
 
-        $('#show_end_date_1i').val(start_date.getFullYear())
-        $('#show_end_date_2i').val(start_date.getMonth())
-        $('#show_end_date_3i').val(start_date.getDate())
+        $('#show_end_date_1i').val(end_date.getFullYear())
+        $('#show_end_date_2i').val(end_date.getMonth() + 1)
+        $('#show_end_date_3i').val(end_date.getDate())
 
         message = "XTS details loaded."
         showAlert "success", message
