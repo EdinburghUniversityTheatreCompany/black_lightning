@@ -8,7 +8,15 @@
       <%= f.input :name, :input_html => { :value => params[:name] || params[:admin_editable_block][:name] } %>
     <% end %>
 
-    <%= f.input :group %>
+    <%= f.input :group,
+                :hint => "The section which the block should be displayed under in the admin site",
+                :input_html => {
+                    :data => {
+                       :provide => "typeahead",
+                       :source => Admin::EditableBlock.groups
+                    },
+                    :autocomplete => "off",
+                }%>
 
     <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :content, :rows => 12 } do %>
       <%= render "admin/shared/md_hints" %>

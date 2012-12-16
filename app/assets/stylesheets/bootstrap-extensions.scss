@@ -26,6 +26,11 @@ img.float-left, img.float-right {
   text-align: center;
 }
 
+form .help-block {
+  font-style: italic;
+  font-size: small;
+}
+
 /* font-awesome alignment */
 .btn [class^="icon-"] {
     line-height: 1em !important;
