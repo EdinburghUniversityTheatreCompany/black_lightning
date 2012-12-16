@@ -12,7 +12,7 @@ $.rails.allowAction = (element) ->
   message = element.data('confirm')
   # If the message is "" then either there is no confirmation, or we have already
   # processed it.
-  if message == ""
+  if (not message) or (message == "")
     if handler
       # Return the button
       $('#btn-holder').replaceWith(element)
@@ -28,7 +28,7 @@ $.rails.allowAction = (element) ->
   type_confirm = element.data('type-confirm')
 
   # Clone the clicked element (probably a delete link) so we can use it in the dialog box.
-  $link = element
+  $link = element.clone()
     # We don't want to pop up another confirmation (recursion). But we do want
     # this script to run again, so don't remove the attr, just set it to blank.
     .attr('data-confirm', "")
@@ -37,6 +37,8 @@ $.rails.allowAction = (element) ->
     .addClass('btn').addClass('btn-danger')
     # We want it to sound confirmy
     .html("Confirm")
+    # And copy the handler if there is one
+    .data('handler', element.data('handler'))
 
   # Create the modal box with the message
   modal_html = """
@@ -72,9 +74,6 @@ $.rails.allowAction = (element) ->
     $link.data('disabled', 'true')
     $link.addClass('disabled')
 
-  # Replace the button with a holder
-  $holder = $('<span id="btn-holder"></span>')
-  $link.before($holder)
   # Add the new button to the modal box
   $modal_html.find('.modal-footer').append($link)
   # Pop it up

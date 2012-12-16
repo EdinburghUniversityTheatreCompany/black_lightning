@@ -19,6 +19,9 @@ jQuery ->
         message = "Thank you for choosing to staff " + data.staffing.show_title + " - " + data.name + ", on " + data.staffing.date + ".";
         showAlert "success", message;
 
+        #Find the original button (rather than the clone in the modal)
+        button = $("a[data-job-id=#{job_id}]").not(".btn-danger")
+
         name = $("<span>" + data.user.first_name + " " + data.user.last_name + "</span>");
         name.hide();
         button.replaceWith(name);
