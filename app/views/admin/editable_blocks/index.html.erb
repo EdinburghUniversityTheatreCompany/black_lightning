@@ -12,3 +12,8 @@
   <%= render 'editable_block', :group => group, :editable_blocks => editable_blocks %>
 <% end %>
 </div>
+
+<% if can? :create, EditableBlock %>
+  <% add_text = '<i class="icon-plus"></i> Add Editable Block'.html_safe %>
+  <%= link_to add_text, new_admin_editable_block_path, :class => "btn" %>
+<% end %>
