@@ -28,6 +28,7 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :venues
+    resources :seasons
     resources :news
     resources :editable_blocks, :except => [:show]
     resources :users
