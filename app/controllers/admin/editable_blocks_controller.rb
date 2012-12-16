@@ -27,6 +27,8 @@ class Admin::EditableBlocksController < AdminController
   ##
   def new
     @admin_editable_block = Admin::EditableBlock.new
+    @admin_editable_block.name = params[:name]
+
     @title = "New Editable Block"
     respond_to do |format|
       format.html # new.html.erb

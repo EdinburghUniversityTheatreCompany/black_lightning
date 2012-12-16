@@ -5,7 +5,7 @@
   <div class="form-inputs">
 
     <% if not @admin_editable_block.persisted? then %>
-      <%= f.input :name, :input_html => { :value => params[:name] || params[:admin_editable_block][:name] } %>
+      <%= f.input :name %>
     <% end %>
 
     <%= f.input :group,
