@@ -7,7 +7,7 @@
 <% if @show.end_date < Date.today %>
   <p class="alert alert-info">
     <i class="icon-info-sign icon-large"></i>
-    This show finished on <%= l @show.end_date, :format => :long %> and is kept for archiving purposes only.
+    This show finished on <%= l @show.end_date, :format => :long %>, and this page is being kept for archival purposes only.
   </p>
 <% end %>
 <% end %>
