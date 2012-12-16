@@ -14,7 +14,7 @@ addHandlers = ->
     $.ajax({
       type: 'POST',
       url: '/markdown/preview.json',
-      data: JSON.stringify({ input_html: input.val() }),
+      data: JSON.stringify({ input_html: encodeURIComponent(input.val()) }),
       success: (data) ->
         preview = $("#" + id + "_preview")
         preview.html(data.rendered_md);
