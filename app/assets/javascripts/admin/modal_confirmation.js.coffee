@@ -4,11 +4,23 @@ $.rails.allowAction = (element) ->
   # If the link holds the 'disabled' data attribute, get out
   if element.data('disabled')
     return false
+
+  # Check if there is a handler assigned to this button
+  handler = element.data('handler')
+
   # The message is something like "Are you sure?"
   message = element.data('confirm')
-  # If there's no message, there's no data-confirm attribute,
-  # which means there's nothing to confirm
-  return true unless message
+  # If the message is "" then either there is no confirmation, or we have already
+  # processed it.
+  if message == ""
+    if handler
+      # Return the button
+      $('#btn-holder').replaceWith(element)
+      $('.modal').modal('hide')
+      handler element
+      return false
+    else
+      return true
 
   # Read the detail and require-type data attributes. Use type-confirm to force
   # the user to type the given string as confirmation (GitHub style).
@@ -16,11 +28,11 @@ $.rails.allowAction = (element) ->
   type_confirm = element.data('type-confirm')
 
   # Clone the clicked element (probably a delete link) so we can use it in the dialog box.
-  $link = element.clone()
-    # We don't necessarily want the same styling as the original link/button.
-    .removeAttr('class')
-    # We don't want to pop up another confirmation (recursion)
-    .removeAttr('data-confirm')
+  $link = element
+    # We don't want to pop up another confirmation (recursion). But we do want
+    # this script to run again, so don't remove the attr, just set it to blank.
+    .attr('data-confirm', "")
+    .data('confirm', "")
     # We want a button
     .addClass('btn').addClass('btn-danger')
     # We want it to sound confirmy
@@ -60,6 +72,9 @@ $.rails.allowAction = (element) ->
     $link.data('disabled', 'true')
     $link.addClass('disabled')
 
+  # Replace the button with a holder
+  $holder = $('<span id="btn-holder"></span>')
+  $link.before($holder)
   # Add the new button to the modal box
   $modal_html.find('.modal-footer').append($link)
   # Pop it up

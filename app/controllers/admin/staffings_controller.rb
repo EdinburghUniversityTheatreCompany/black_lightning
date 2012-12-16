@@ -1,6 +1,6 @@
 class Admin::StaffingsController < AdminController
 
-  load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up]
+  load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up, :sign_up_confirm]
 
   # GET /admin/staffings
   # GET /admin/staffings.json
@@ -112,6 +112,14 @@ class Admin::StaffingsController < AdminController
     authorize! :sign_up_for, Admin::StaffingJob
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
+  end
+
+  def sign_up_confirm
+    authorize! :sign_up_for, Admin::StaffingJob
+
+    @job = Admin::StaffingJob.find(params[:id])
+
+    @title = "Confirm Staffing"
   end
 
   def sign_up

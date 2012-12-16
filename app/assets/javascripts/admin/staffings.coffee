@@ -1,11 +1,8 @@
 jQuery ->
   tried_ajax = false;
-  $(".staffing-sign-up").click (e) ->
+  $(".staffing-sign-up").data 'handler', (button) ->
     return if tried_ajax;
 
-    e.preventDefault();
-
-    button = $(e.target);
     job_id = button.attr("data-job-id");
     button.hide();
 

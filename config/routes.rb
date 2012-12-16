@@ -44,6 +44,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => :get, :as => :sign_up_confirm
     match '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
 
     namespace :proposals do
