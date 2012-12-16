@@ -1,0 +1,21 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <b>Name:</b>
+  <%= @season.name %>
+</p>
+
+<p>
+  <b>Description:</b>
+  <%= @season.description %>
+</p>
+
+<p>
+  <b>Dates:</b>
+  <%= @season.start_date %> – <%= @season.end_date %>
+</p>
+
+
+<% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+<%= link_to edit_text, edit_admin_season_path(@season), :class => "btn" %>
+<%= link_to 'Back', admin_seasons_path, :class => "btn" %>

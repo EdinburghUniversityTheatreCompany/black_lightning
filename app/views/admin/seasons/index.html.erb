@@ -1,0 +1,39 @@
+<h1>Listing seasons</h1>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+    <th></th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @seasons.each do |season| %>
+  <tr>
+    <td><%= season.name %></td>
+
+    <td>
+      <% if can? :read, season %>
+        <%= link_to 'Show', season %>
+      <% end %>
+    </td>
+
+    <td>
+      <% if can? :edit, season %>
+        <%= link_to 'Edit', edit_admin_season_path(season) %>
+      <% end %>
+    </td>
+
+    <td>
+      <% if can? :delete, season %>
+        <%= link_to 'Destroy', admin_seasons_path(season), method: :delete, data: { confirm: 'Are you sure?' } %>
+      <% end %>
+    </td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<% new_text = '<i class="icon-plus"></i> New Season'.html_safe %>
+<%= link_to new_text, new_admin_season_path, :class => "btn" %>
