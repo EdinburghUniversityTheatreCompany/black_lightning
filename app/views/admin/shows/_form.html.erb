@@ -3,7 +3,12 @@
 
   <div class="form-inputs">
 
-    <%= f.input :name %>
+    <%= f.input :name, :wrapper => :append do %>
+      <%= f.input_field :name %>
+      <a class="btn xts_lookup" href="javascript:void(0);" title="Lookup show in XTS and fetch XTS ID, tagline and dates.">
+        <i class="icon-search"></i>
+      </a>
+    <% end %>
 
     <%= f.input :tagline %>
 
@@ -69,16 +74,6 @@
   </div>
 
   <script>
-  var xts_shows = [];
-    $(document).ready(function() {
-        $.get('https://internal.bedlamtheatre.co.uk:8443/xts/v2/tickets/getprogramme?agents=craig:insecure', function (data) {
-            $(data).find('showsummary').each(function () {
-                xts_shows.push({"name": $(this).find('name').text(), "id": $(this).find('id').text()});
-                console.log(xts_shows);
-            });
-        });
-    });
-
     $('#show_name').keyup(function() {
         var slug = jQuery.trim($('#show_name').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
         $('#show_slug').val(slug);

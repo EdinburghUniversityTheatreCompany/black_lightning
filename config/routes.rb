@@ -18,6 +18,10 @@ ChaosRails::Application.routes.draw do
     resources :shows do
       resources :feedbacks, :except => [:show]
 
+      collection do
+        get 'query_xts'
+      end
+
       member do
         put 'add_questionnaire'
       end

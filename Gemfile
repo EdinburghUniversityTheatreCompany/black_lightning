@@ -41,6 +41,8 @@ gem 'delayed_job_active_record'
 gem 'daemons'
 gem 'axlsx'
 
+gem 'nokogiri'
+
 group :test do
   gem 'ci_reporter'
   gem 'simplecov'

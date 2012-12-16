@@ -69,4 +69,44 @@ class Admin::ShowsController < AdminController
       format.html { render :no_content }
     end
   end
+
+  def query_xts
+    username = Rails.application.config.xts[:username]
+    password = Rails.application.config.xts[:password]
+
+    uniq = Time.now.to_i
+
+    # ?uniq=1355693791607&includedatetimes=true&agents=boxoffice:9n2nf92kt04&agents=boxoffice:9n2nf92kt04|craig:insecure
+
+    xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/tickets/getshows?uniq=#{uniq}&includedatetimes=true&agents=#{username.to_s}:#{password.to_s}"
+
+    uri = URI.parse(xts_api_uri)
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(request)
+    xml_data = response.body
+
+    doc = Nokogiri::XML(xml_data)
+
+    # Convert the xml into an array of hashes.
+    shows = []
+
+    doc.xpath('shows/showsummary').each do |element|
+      show = {}
+      element.children.each do |child|
+        show[child.name] = child.text
+      end
+      shows << show
+    end
+
+    if params[:name] then
+      shows = shows.reject { |show| show["name"] != params[:name] }
+    end
+
+    render :json => shows.to_json
+  end
 end

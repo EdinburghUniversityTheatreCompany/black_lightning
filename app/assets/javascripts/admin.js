@@ -13,6 +13,7 @@
 //= require admin/jquery.gridster.min
 //= require admin/md_editor
 //= require admin/staffings
+//= require admin/shows
 //= require alerts
 //= require admin/modal_confirmation
 

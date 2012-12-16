@@ -186,6 +186,7 @@ DEPENDENCIES
   kramdown
   mysql2
   nested_form
+  nokogiri
   paperclip
   rails (= 3.2.9)
   rails_autolink
