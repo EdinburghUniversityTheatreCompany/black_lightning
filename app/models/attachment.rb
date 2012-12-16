@@ -30,7 +30,7 @@
 class Attachment < ActiveRecord::Base
   belongs_to :editable_block, :class_name => "Admin::EditableBlock"
 
-  validates :name, :presence => true, :uniqueness => true
+  validates :name, :presence => { :message => "Attachment name cannot be blank." }, :uniqueness => { :message => "Attachment name already taken." }
 
   has_attached_file :file, :url => '/attachments/:slug', :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
 
