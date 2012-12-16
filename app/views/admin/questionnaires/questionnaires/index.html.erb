@@ -1,4 +1,4 @@
-<h1>Listing Questionnaires</h1>
+<h1>Questionnaires</h1>
 
 <div class="accordion" id="shows_current_accordion">
   <% @admin_questionnaires_questionnaires.each do |show, questionnaires| %>
@@ -54,5 +54,5 @@
 <br />
 
 <% if can? :create, Admin::Questionnaires::Questionnaire %>
-  <p>Please create questionnaires from the show details form.</p>
+  <p>You can create a questionnaire for a show by going to the admin page for that show, and clicking "Add Questionnaire"</p>
 <% end %>
