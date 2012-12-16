@@ -13,7 +13,7 @@
 <% end %>
 </div>
 
-<% if can? :create, EditableBlock %>
+<% if can? :create, Admin::EditableBlock %>
   <% add_text = '<i class="icon-plus"></i> Add Editable Block'.html_safe %>
   <%= link_to add_text, new_admin_editable_block_path, :class => "btn" %>
 <% end %>
