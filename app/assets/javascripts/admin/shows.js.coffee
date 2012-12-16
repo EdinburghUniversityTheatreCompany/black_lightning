@@ -7,6 +7,10 @@ jQuery ->
     $.ajax
       url: "/admin/shows/query_xts.json?name=#{show_name}"
       success: (data) ->
+        if data.length == 0
+          message = "XTS details not found."
+          showAlert "alert", message
+
         $('#show_xts_id').val(data[0].id)
         $('#show_tagline').val(data[0].tagline)
 
@@ -20,6 +24,10 @@ jQuery ->
         $('#show_end_date_1i').val(start_date.getFullYear())
         $('#show_end_date_2i').val(start_date.getMonth())
         $('#show_end_date_3i').val(start_date.getDate())
+
+        message = "XTS details loaded."
+        showAlert "success", message
+
         return
 
     return false
