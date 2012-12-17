@@ -16,7 +16,7 @@ importFromXTS = (data, index) ->
   message = "XTS details loaded."
   showAlert "success", message
 
-jQuery ->
+addXTSLookup = ->
   $('.xts_lookup').click (e) ->
     e.preventDefault()
 
@@ -65,3 +65,17 @@ jQuery ->
 
     return false
   return
+
+addSortable = ->
+  $(".sortable").sortable
+    stop: (event, ui) ->
+      $('.display_order_input').each (i, item) ->
+        $(item).val($(item).closest('li').index())
+    placeholder: 'ui-sortable-placeholder'
+    opacity: 0.6
+    containment: 'parent'
+    tolerance: 'pointer'
+
+jQuery ->
+  addXTSLookup()
+  addSortable()

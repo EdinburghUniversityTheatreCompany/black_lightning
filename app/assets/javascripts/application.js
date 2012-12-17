@@ -18,5 +18,5 @@
 //= require dracula_graph
 //= require bootstrap
 //= require alerts
-//= require jquery-ui-draggable
+//= require jquery-ui-1.9.2.custom
 //= require slimScroll.min

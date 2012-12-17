@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121217155024) do
+ActiveRecord::Schema.define(:version => 20121217204459) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -258,6 +258,7 @@ ActiveRecord::Schema.define(:version => 20121217155024) do
     t.datetime "created_at",    :null => false
     t.datetime "updated_at",    :null => false
     t.string   "teamwork_type"
+    t.integer  "display_order"
   end
 
   add_index "team_members", ["teamwork_id"], :name => "index_team_members_on_teamwork_id"

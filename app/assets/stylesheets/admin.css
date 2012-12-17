@@ -15,6 +15,7 @@
  *= require admin/jquery.gridster.min.css
  *= require admin/gallery_form.css.scss
  *= require admin/permissions.css.scss
+ *= require admin/shows.css.scss
  */
 
 body {
@@ -49,6 +50,14 @@ div.datetime select {
 
 .gridster li {
      margin-bottom : 10px;
+}
+
+.ui-sortable-placeholder {
+    margin: 10px;
+    height: 30px;
+    width: 560px;
+    border: 1px solid #e5e5e5;
+    border-radius: 5px;
 }
 
 /* Responsive */

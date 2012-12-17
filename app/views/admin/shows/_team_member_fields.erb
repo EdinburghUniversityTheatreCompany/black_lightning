@@ -1,8 +1,12 @@
-<div class="team_member control-group fields">
+<li class="team_member control-group fields">
+    <%= f.hidden_field :display_order,:class => 'display_order_input' %>
+
+    <i class="icon-sort"></i>
+
     <%= f.input_field :position, :data => { :provide => "typeahead", :source => ['Director', 'Producer', 'Technical Manager', 'Stage Manager', 'Assistant to Mr B. Hussey'] } %>
 
     <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
 
     <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
     <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
-</div>
+</li>

@@ -42,7 +42,9 @@
       </p>
       <% end %>
 
-      <%= f.simple_fields_for :team_members %>
+      <ul class="sortable">
+        <%= f.fields_for :team_members, :wrapper => false %>
+      </ul>
 
       <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
       <%= f.link_to_add add_member_text, :team_members, :class => "btn" %>
