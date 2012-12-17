@@ -46,3 +46,26 @@ div.datetime select {
     color: #333333;
     text-decoration: underline;
 }
+
+.gridster li {
+     margin-bottom : 10px;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+    .brand {
+        float: none !important;
+    }
+
+    #login_menu {
+        float: none;
+    }
+
+    #login_menu li {
+        float: none;
+    }
+
+    #login_menu a {
+        padding: 0;
+    }
+}

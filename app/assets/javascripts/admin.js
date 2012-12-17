@@ -46,6 +46,11 @@
   }
 
   $(window).load(function() {
+    //Don't load gridster if the window is too small.
+    if ($('body').width() < 979) {
+      return
+    }
+
     var existing_pos = JSON.parse(readCookie('dashboard_pos'));
     if (existing_pos) {
       //Load from cookie

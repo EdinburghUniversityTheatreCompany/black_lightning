@@ -14,61 +14,67 @@
         <div class="navbar-inner">
             <%= link_to 'Bedlam Theatre Admin', admin_path, :class => "brand"%>
 
-            <ul class="nav pull-right">
+            <ul id="login_menu" class="nav pull-right">
                 <li><p class="navbar-text">Welcome <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { :title => 'Edit Account' } %></p></li>
                 <li><%= link_to "Main Site", root_path %></li>
                 <li><%= link_to "Sign Out", destroy_user_session_path, :method => :delete %></li>
             </ul>
 
-            <ul class="nav">
-                <% if can? :read, Admin::Proposals::Call %>
-                <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
-                <% end %>
+            <div class="nav-collapse collapse">
+              <ul class="nav">
+                  <% if can? :read, Admin::Proposals::Call %>
+                  <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
+                  <% end %>
 
-                <% if can? :read, Show %>
-                <li><%= link_to 'Shows', admin_shows_path %></li>
-                <% end %>
+                  <% if can? :read, Show %>
+                  <li><%= link_to 'Shows', admin_shows_path %></li>
+                  <% end %>
 
-                <% if can? :read, Admin::Questionnaires::Questionnaire %>
-                <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
-                <% end %>
+                  <% if can? :read, Admin::Questionnaires::Questionnaire %>
+                  <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
+                  <% end %>
 
-                <% if can? :read, Venue %>
-                <li><%= link_to 'Venues', admin_venues_path %></li>
-                <% end %>
-				
-                <% if can? :read, Season %>
-                <li><%= link_to 'Seasons', admin_seasons_path %></li>
-                <% end %>
+                  <% if can? :read, Venue %>
+                  <li><%= link_to 'Venues', admin_venues_path %></li>
+                  <% end %>
 
-                <% if can? :read, News %>
-                <li><%= link_to 'News', admin_news_index_path %></li>
-                <% end %>
+                  <% if can? :read, Season %>
+                  <li><%= link_to 'Seasons', admin_seasons_path %></li>
+                  <% end %>
 
-                <% if can? :read, Admin::Staffing %>
-                <li><%= link_to 'Staffing', admin_staffings_path %></li>
-                <% end %>
+                  <% if can? :read, News %>
+                  <li><%= link_to 'News', admin_news_index_path %></li>
+                  <% end %>
 
-                <% if can? :read, Admin::EditableBlock %>
-                <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
-                <% end %>
+                  <% if can? :read, Admin::Staffing %>
+                  <li><%= link_to 'Staffing', admin_staffings_path %></li>
+                  <% end %>
 
-                <% if can? :read, User %>
-                <li><%= link_to 'Users', admin_users_path %></li>
-                <% end %>
+                  <% if can? :read, Admin::EditableBlock %>
+                  <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
+                  <% end %>
 
-                <% if can? :read, Role %>
-                <li><%= link_to 'Roles', admin_roles_path %></li>
-                <% end %>
+                  <% if can? :read, User %>
+                  <li><%= link_to 'Users', admin_users_path %></li>
+                  <% end %>
 
-                <% if can? :read, Admin::Permission %>
-                <li><%= link_to 'Permissions', admin_permissions_path %></li>
-                <% end %>
+                  <% if can? :read, Role %>
+                  <li><%= link_to 'Roles', admin_roles_path %></li>
+                  <% end %>
 
-                <% if can? :manage, :jobs %>
-                <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
-                <% end %>
-            </ul>
+                  <% if can? :read, Admin::Permission %>
+                  <li><%= link_to 'Permissions', admin_permissions_path %></li>
+                  <% end %>
+
+                  <% if can? :manage, :jobs %>
+                  <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
+                  <% end %>
+              </ul>
+            </div>
+
+            <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">
+              Menu
+            </a>
         </div>
     </div>
 
