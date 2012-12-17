@@ -1,6 +1,6 @@
 <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
 <% ::Admin::Proposals::Call.open.each do |call| %>
-  <p><%= link_to call.name, admin_proposals_call_path(call) %></p>
+  <p><%= link_to call.name, admin_proposals_call_proposals_path(call) %></p>
 <% end %>
 
 <% if ::Admin::Proposals::Call.open.empty? %>
