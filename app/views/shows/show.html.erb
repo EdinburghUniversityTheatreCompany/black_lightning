@@ -30,43 +30,45 @@
 
   <div class="span3 show-info-box">
     <div class="well">
-      <div class="slimScroll">
-        <% if @show.venue then %>
-          <h4>Venue</h4>
-          <p>
-            <%= link_to @show.venue.name, @show.venue %>
-          </p>
-        <% end %>
+      <h4>Dates</h4>
+      <p>
+        <b><%= @show.date_range %></b>
+      </p>
 
-        <h4>Dates</h4>
+      <% if @show.author and not @show.author.empty? %>
+        <h4>Author</h4>
         <p>
-          <%= @show.date_range %>
+          <%= @show.author %>
         </p>
+      <% end %>
 
-        <% unless @show.team_members.count == 0 %>
-          <h4>Cast and Crew</h4>
-          <dl>
-          <% @show.team_members.each do |team_member| %>
-            <dt><%= team_member.position %></dt>
-
-            <dd>
-            <% u = team_member.user %>
-            <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-            </dd>
-          <% end %>
-          </dl>
-        <% end %>
-      </div>
+      <% if @show.venue then %>
+        <h4>Venue</h4>
+        <p>
+          <%= link_to @show.venue.name, @show.venue %>
+        </p>
+      <% end %>
     </div>
   </div>
-  <script type="text/javascript">
-    $('.show-info-box .well .slimScroll').slimScroll({
-        height: '100%'
-    });
-  </script>
 </div>
 
 <%= render_markdown @show.description %>
+
+<% unless @show.team_members.count == 0 %>
+  <hr />
+
+  <h4>Cast and Crew</h4>
+  <dl class="cast_crew_list">
+  <% @show.team_members.each do |team_member| %>
+    <dt><%= team_member.position %></dt>
+
+    <dd>
+    <% u = team_member.user %>
+    <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+    </dd>
+  <% end %>
+  </dl>
+<% end %>
 
 <% if @show.xts_id then %>
   <hr />

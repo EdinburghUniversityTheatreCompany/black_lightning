@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121216230021) do
+ActiveRecord::Schema.define(:version => 20121217155024) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -248,6 +248,7 @@ ActiveRecord::Schema.define(:version => 20121216230021) do
     t.date     "end_date"
     t.integer  "venue_id"
     t.integer  "season_id"
+    t.string   "author"
   end
 
   create_table "team_members", :force => true do |t|

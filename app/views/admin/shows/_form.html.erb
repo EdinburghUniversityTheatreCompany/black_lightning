@@ -14,6 +14,8 @@
 
     <%= f.input :slug %>
 
+    <%= f.input :author %>
+
     <%= f.input :start_date %>
 
     <%= f.input :end_date %>
@@ -21,7 +23,7 @@
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
 
     <%= f.association :venue, :collection => Venue.all, :label_method => :name %>
-	
+
 	<%= f.association :season, :collection => Season.all, :label_method => :name %>
 
     <%= f.input :xts_id %>

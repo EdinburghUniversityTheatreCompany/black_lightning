@@ -72,7 +72,7 @@ class Show < ActiveRecord::Base
   has_attached_file :image, :styles => { :medium => "576x300#", :thumb => "192x100#", :slideshow => "960x500#" }, :default_url => :default_image
 
   # Accessible Attributes #
-  attr_accessible :description, :name, :slug, :tagline, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :reviews, :reviews_attributes
+  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :reviews, :reviews_attributes
 
   # Returns the last show to have finished.
   def self.last_show
