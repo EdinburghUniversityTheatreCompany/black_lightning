@@ -134,7 +134,7 @@ h3 {
 .xtsprodates form.bookingform .tickettyperow .bookingfeefield{width:330px;padding-left:10px;padding-right:0px;font-size:11px;}
 .xtsprodates form.bookingform .tickettyperow .totallabel{width:330px;padding-left:10px;padding-right:0px;font-size:16px;}
 .xtsprodates form.bookingform .totalrow{border-top:1px dashed black;}
-.xtsprodates form.bookingform .tickettyperow.description{font-size:11px;color:#666;padding-left:100px;padding-right:100px;text-align:middle;height:auto;line-height:1.1em;}
+.xtsprodates form.bookingform .tickettyperow.description{font-size:11px;color:#666;padding-left:100px;padding-right:100px;height:auto;line-height:1.1em;}
 .xtsprodates form.bookingform .continue{width:400px;padding-left:13px;text-align:right;}
 .xtsprodates form.bookingform .attrib{text-align:right;font-size:12px;line-height:15px;padding-top:10px;padding-right:3px;}
 .suggestion.twoforone{color:white;font-weight:bold;background-color:#DE6B4F;padding:10px;}
