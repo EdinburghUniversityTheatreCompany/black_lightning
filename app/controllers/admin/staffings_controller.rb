@@ -1,9 +1,15 @@
+##
+# Controller for Admin::Staffing. More details can be found there.
+##
 class Admin::StaffingsController < AdminController
 
   load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up, :sign_up_confirm]
 
+  ##
   # GET /admin/staffings
+  #
   # GET /admin/staffings.json
+  ##
   def index
     @admin_staffings = Admin::Staffing.future.group_by { |s| s.show_title }
     @admin_staffings_archive = Admin::Staffing.past.group_by { |s| s.show_title }
@@ -14,8 +20,11 @@ class Admin::StaffingsController < AdminController
     end
   end
 
+  ##
   # GET /admin/staffings/1
+  #
   # GET /admin/staffings/1.json
+  ##
   def show
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
@@ -25,8 +34,11 @@ class Admin::StaffingsController < AdminController
     end
   end
 
+  ##
   # GET /admin/staffings/new
+  #
   # GET /admin/staffings/new.json
+  ##
   def new
     @users = User.all
     @admin_staffing = Admin::Staffing.new
@@ -37,15 +49,20 @@ class Admin::StaffingsController < AdminController
     end
   end
 
+  ##
   # GET /admin/staffings/1/edit
+  ##
   def edit
     @users = User.all
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Editing staffing for #{@admin_staffing.show_title}"
   end
 
+  ##
   # POST /admin/staffings
+  #
   # POST /admin/staffings.json
+  ##
   def create
     @users = User.all
     @admin_staffing = Admin::Staffing.new(params[:admin_staffing])
@@ -62,12 +79,22 @@ class Admin::StaffingsController < AdminController
     end
   end
 
+  ##
+  # Renders a page for creating a set of staffings with given dates.
+  # ---
+  # GET /admin/staffings/new_for_show
+  ##
   def new_for_show
     @users = User.all
     @admin_staffing = Admin::Staffing.new
     @title = "New Staffing for Show"
   end
 
+  ##
+  # Creates staffings for the given dates.
+  # ---
+  # PUT  /admin/staffings/create_for_show
+  ##
   def create_for_show
     admin_staffing = Admin::Staffing.new(params[:admin_staffing])
     admin_staffing_jobs = admin_staffing.staffing_jobs
@@ -91,8 +118,11 @@ class Admin::StaffingsController < AdminController
     redirect_to admin_staffings_url
   end
 
+  ##
   # PUT /admin/staffings/1
+  #
   # PUT /admin/staffings/1.json
+  ##
   def update
     @admin_staffing = Admin::Staffing.find(params[:id])
 
@@ -108,12 +138,22 @@ class Admin::StaffingsController < AdminController
     end
   end
 
+  ##
+  # Renders the sign up page for staffing.
+  # ---
+  # GET /admin/staffings/1/show_sign_up
+  ##
   def show_sign_up
     authorize! :sign_up_for, Admin::StaffingJob
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
   end
 
+  ##
+  # A confirmation page to be displayed if JavaScript confirmation and PUT fails.
+  # ---
+  # GET /admin/staffings/job/1/sign_up
+  ##
   def sign_up_confirm
     authorize! :sign_up_for, Admin::StaffingJob
 
@@ -122,6 +162,11 @@ class Admin::StaffingsController < AdminController
     @title = "Confirm Staffing"
   end
 
+  ##
+  # Signs up the current user for the Admin::StaffingJob
+  # ---
+  # OUT /admin/staffings/1/sign_up
+  ##
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
     @job = Admin::StaffingJob.find(params[:id])
@@ -142,10 +187,11 @@ class Admin::StaffingsController < AdminController
     end
   end
 
-
-
+  ##
   # DELETE /admin/staffings/1
+  #
   # DELETE /admin/staffings/1.json
+  ##
   def destroy
     @admin_staffing = Admin::Staffing.find(params[:id])
     @admin_staffing.destroy

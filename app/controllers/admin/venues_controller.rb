@@ -1,9 +1,15 @@
+##
+# Admin controller for Venue management.
+##
 class Admin::VenuesController < AdminController
 
   load_and_authorize_resource
 
+  ##
   # GET /venues
+  #
   # GET /venues.json
+  ##
   def index
     @venues = Venue.all
     @title = "Venues"
@@ -13,8 +19,11 @@ class Admin::VenuesController < AdminController
     end
   end
 
+  ##
   # GET /venues/1
+  #
   # GET /venues/1.json
+  ##
   def show
     @venue = Venue.find(params[:id])
     @title = @venue.name
@@ -24,8 +33,11 @@ class Admin::VenuesController < AdminController
     end
   end
 
+  ##
   # GET /venues/new
+  #
   # GET /venues/new.json
+  ##
   def new
     @venue = Venue.new
     @title = "New Venue"
@@ -35,14 +47,19 @@ class Admin::VenuesController < AdminController
     end
   end
 
+  ##
   # GET /venues/1/edit
+  ##
   def edit
     @venue = Venue.find(params[:id])
     @title = "Editing #{@venue.name}"
   end
 
+  ##
   # POST /venues
+  #
   # POST /venues.json
+  ##
   def create
     @venue = Venue.new(params[:venue])
 
@@ -57,8 +74,11 @@ class Admin::VenuesController < AdminController
     end
   end
 
+  ##
   # PUT /venues/1
+  #
   # PUT /venues/1.json
+  ##
   def update
     @venue = Venue.find(params[:id])
 
@@ -73,8 +93,11 @@ class Admin::VenuesController < AdminController
     end
   end
 
+  ##
   # DELETE /venues/1
+  #
   # DELETE /venues/1.json
+  ##
   def destroy
     @venue = Venue.find(params[:id])
     @venue.destroy
