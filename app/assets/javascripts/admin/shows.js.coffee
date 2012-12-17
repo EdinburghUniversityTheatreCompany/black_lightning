@@ -75,6 +75,7 @@ addSortable = ->
     opacity: 0.6
     containment: 'parent'
     tolerance: 'pointer'
+    items: "li:not(.ui-state-disabled)"
 
 jQuery ->
   addXTSLookup()

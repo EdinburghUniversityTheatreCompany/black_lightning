@@ -1,7 +1,10 @@
-<li class="team_member control-group fields">
+<li class="team_member control-group fields <%= "error" if (f.error :user or f.error :position) %>">
     <%= f.hidden_field :display_order,:class => 'display_order_input' %>
 
     <i class="icon-sort"></i>
+
+    <%= f.error :user %>
+    <%= f.error :position %>
 
     <%= f.input_field :position, :data => { :provide => "typeahead", :source => ['Director', 'Producer', 'Technical Manager', 'Stage Manager', 'Assistant to Mr B. Hussey'] } %>
 

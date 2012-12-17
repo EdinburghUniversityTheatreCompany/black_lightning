@@ -52,6 +52,10 @@ div.datetime select {
      margin-bottom : 10px;
 }
 
+.sortable {
+    margin: 0;
+}
+
 .ui-sortable-placeholder {
     margin: 10px;
     height: 30px;
