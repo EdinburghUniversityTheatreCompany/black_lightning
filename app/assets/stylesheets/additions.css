@@ -57,21 +57,16 @@ h3 {
 #nav {
     float: right;
     margin-top: 50px;
-    margin-left: 20px;
-    padding: 0;
-    list-style: none;
 }
 #nav li {
     float: left;
     display: block;
-    padding: 8px 12px 8px 38px;
+    padding: 0 2px 0 18px;
 }
 
 #nav a {
-    text-decoration: none;
     font-weight: bold;
     font-size: 20px;
-    color: #dc143c;
 }
 
 .author {
@@ -89,6 +84,34 @@ h3 {
 .footer a{
     color: #333333;
     text-decoration: underline;
+}
+
+/* Responsive Stuff */
+@media (max-width: 979px) and (min-width: 768px) {
+  #nav li {
+    padding: inherit;
+  }
+}
+
+@media (max-width: 767px) {
+  #nav_minor {
+    float: none;
+    margin-bottom: 5px;
+  }
+
+  #nav_minor li {
+    float: none;
+  }
+
+  #nav {
+    margin-top: 0px;
+    float: none;
+  }
+
+  #nav li {
+    float: none;
+    padding: inherit;
+  }
 }
 
 .xtsprodates{margin-top:20px;}.xtsprodates a{text-decoration:none;}

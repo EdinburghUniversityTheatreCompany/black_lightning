@@ -24,19 +24,19 @@
   <div class="container">
     <!-- START HEADER SECTION -->
     <div class="row header">
-      <div class="span4">
+      <div class="span3">
         <%= link_to image_tag('BedlamLogoBW.png', :id => "logo", :style => "border: 2px solid black;"), root_path%>
       </div>
-      <div class="span8">
+      <div class="span9">
         <div class="row">
-          <ul class="pull-right nav nav-pills">
+          <ul id="nav_minor" class="pull-right nav nav-pills">
             <li><%= link_to 'Press',    static_path('press')    %></li>
             <li><%= link_to 'Sponsors', static_path('sponsors') %></li>
             <li><%= link_to 'Archives', archives_index_path     %></li>
             <li><%= link_to 'Members',  admin_path              %></li>
             <li><a href="#">Newsletter</a></li>
           </ul>
-          <ul id="nav">
+          <ul id="nav" class="nav nav-pills">
             <li><%= link_to 'Shows', shows_path %></li>
             <li><%= link_to 'News', news_index_path %></li>
             <li><%= link_to 'About', about_index_path %></li>
