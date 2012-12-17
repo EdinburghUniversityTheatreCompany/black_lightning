@@ -40,6 +40,8 @@ module MetaHelper
     @meta["og:title"]       ||= @title ? "#{@title} - Bedlam Theatre" : "Bedlam Theatre"
     @meta["og:description"] ||= @meta[:description]
 
+    @meta["viewport"] = "initial-scale = 1.0,maximum-scale = 1.0"
+
     @tags = []
 
     @meta.each do |name, content|
