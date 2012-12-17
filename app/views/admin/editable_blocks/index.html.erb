@@ -13,7 +13,6 @@
 <% end %>
 </div>
 
-<% if can? :create, Admin::EditableBlock %>
-  <% add_text = '<i class="icon-plus"></i> Add Editable Block'.html_safe %>
-  <%= link_to add_text, new_admin_editable_block_path, :class => "btn" %>
-<% end %>
+<p class="help-block">
+  To create new pages, please contact the <%= link_to 'Bedlam IT Systems Manager', 'mailto:it@bedlamtheatre.co.uk' %>.
+</p>
