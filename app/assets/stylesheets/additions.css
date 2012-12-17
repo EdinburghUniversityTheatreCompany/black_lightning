@@ -116,7 +116,7 @@ h3 {
 
 .xtsprodates{margin-top:20px;}.xtsprodates a{text-decoration:none;}
 .xtsprodates a:hover{text-decoration:underline;}
-.xtsprodates .director{width:160px;height:90px;background-color:#de6b4f;float:right;position:relative;}.xtsprodates .director .arrow{position:absolute;width:160px;height:31px;bottom:0px;background-color:white;background-image:url(../img/orange-down-arrow.png);}
+.xtsprodates .director{width:160px;height:90px;background-color:#de6b4f;float:right;position:relative;}.xtsprodates .director .arrow{position:absolute;width:160px;height:31px;bottom:0px;background-color:white;}
 .xtsprodates .date{clear:both;margin-bottom:10px;background-color:#EEE;}.xtsprodates .date .time{display:block;float:right;padding:5px 10px;width:140px;text-align:right;background-color:#8ba674;font-weight:bold;color:white;}.xtsprodates .date .time .booknow{float:left;text-transform:uppercase;font-size:0.7em;padding-top:3px;display:none;}
 .xtsprodates .date .time:hover{text-decoration:none;}.xtsprodates .date .time:hover .booknow{display:block;}
 .xtsprodates .date .time.preview{background-color:#9c446d;}
