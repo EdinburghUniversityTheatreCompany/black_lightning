@@ -23,8 +23,6 @@ class StaticController < ApplicationController
   def render_500
     @meta["ROBOTS"] = "NOINDEX, NOFOLLOW"
 
-    @email_body = "----------------------------\n\n Error Details:\n\n message: #{flash[:error]}\n\n Location: #{flash[:error_location]} \n\n url: #{flash[:error_path]}"
-
     respond_to do |type|
       type.html { render :template => "static/500", :status => 500, :layout => 'application' }
       type.json { render :json => {error: flash[:error]}, :status => 500 }
