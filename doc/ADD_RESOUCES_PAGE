@@ -1,0 +1,46 @@
+= Adding Resources / About / Get Involved pages
+
+While content in the above sections can be edited using the admin interface,
+it is not possible to create a new page.
+
+Instead, you should create a new file called <tt>mypage.html.erb</tt> under one of the
+following directories:
+
+* <tt>app/views/about</tt>
+* <tt>app/views/get_involved</tt>
+* <tt>app/views/admin/resources</tt> (and subdirectories)
+
+The file is just a normal HTML file, with embedded Ruby.
+
+In order to allow the content to be editable in the admin interface, add the following
+code to the page.
+
+  <%= display_block("Get Involved - Act", false) %>
+
+The first parameter to EditableBlockHelper#display_block is the block name.
+The second parameter tells the site whether the block is used in admin pages or
+not, so should be true for resources. It exists primarily to ensure that
+attachments to that block can't be accessed without authentication.
+
+== About and Get Involved Pages
+
+For the about and get involved pages, adding a file to one of the above directories
+will automagically create links in the correct layout.
+
+If necessary, you can configure the name of the link given to a page in the relevant
+controller by adding an entry to the alias hash.
+
+  @alias = {
+    'ssw' => 'Stage, Set and Wardrobe',
+    ...
+  }
+
+== Resources
+
+For the resources pages, any subdirectories are automagically linked (e.g. any
+resources in <tt>app/views/admin/resources/tech</tt> have links created automagically in
+the sidebar). For "top level" resources (i.e. those in the resources directory
+itself) a link will need to be created in the dashboard.
+
+The dashboard widget is defined in <tt>app/views/admin/dashboard/_resources_widget.html.erb</tt>
+
