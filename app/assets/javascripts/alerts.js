@@ -1,4 +1,4 @@
-function showAlert(level, text) {
+function showAlert(level, body) {
   var alertclass,
       icon;
 
@@ -20,11 +20,15 @@ function showAlert(level, text) {
   var alert = $(
     '<p id="' + level + '" class="alert ' + alertclass + '">' +
       '<i class="' + icon + ' icon-large"></i>' +
-      text +
+      '<span class="alert_body"></span>' +
       '<button type="button" class="close" data-dismiss="alert">&times;</button>' +
     '</p>');
+
+  $(alert).find(".alert_body").replaceWith(body)
 
   alert.hide();
   $('.alert-container').append(alert);
   alert.slideDown();
+
+  return alert
 }
