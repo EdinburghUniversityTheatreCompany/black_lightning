@@ -10,3 +10,10 @@
 .show-info-box .well {
   height: 100%;
 }
+
+/* Responsive */
+@media (max-width: 767px) {
+  .show-info-box {
+    position: relative;
+  }
+}
