@@ -21,4 +21,14 @@ module EditableBlockHelper
         end
     end
 
+	  def block_exists (name)
+        @editable_block = Admin::EditableBlock.find_by_name(name)
+
+        if @editable_block and @editable_block.content.length > 0 then
+          return true
+        else
+          return false
+        end
+    end
+
 end

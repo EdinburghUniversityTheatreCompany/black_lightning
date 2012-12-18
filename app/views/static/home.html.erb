@@ -3,7 +3,6 @@
     <div id="showSlider" class="carousel slide" <%= "data-interval=false" if mobile_device? %>>
 
       <div class="carousel-inner <%= "carousel-inner-mobile" if mobile_device? %>">
-
         <% @shows.each do |show| %>
 
           <div class="<%= "active" if show == @shows.first %> item">
@@ -50,9 +49,13 @@
     </div>
 
     <div class="row">
-      <div class="span8">
-        <%= display_block("Home", false) %>
-      </div>
+		  <% if block_exists("Home") %>
+        <div class="span8 borderbox">
+          <%= display_block("Home", false) %>
+        </div>
+      <% else %>
+        <div class="span8"></div>
+      <% end %>
     </div>
 
     <div class="row content">
