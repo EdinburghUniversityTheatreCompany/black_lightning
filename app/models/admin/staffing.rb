@@ -20,8 +20,8 @@
 #++
 ##
 class Admin::Staffing < ActiveRecord::Base
-  before_save     :update_reminder
-  before_destroy :reminder_cleanup
+  before_validation :update_reminder
+  before_destroy    :reminder_cleanup
 
   default_scope order("date ASC")
 
@@ -61,11 +61,13 @@ class Admin::Staffing < ActiveRecord::Base
   # Update the reminder job for the staffing
   ##
   def update_reminder
-    if reminder_job.presence then
-      reminder_job.run_at = date.advance(:hours => -2)
-      reminder_job.save!
+    if reminder_job.present? then
+      self.reminder_job.run_at = date.advance(:hours => -2)
+      self.reminder_job.save!
     else
-      reminder_job = ::StaffingMailer.delay({:run_at => date.advance(:hours => -2)}).staffing_reminder(self)
+      self.reminder_job = ::StaffingMailer.delay({:run_at => date.advance(:hours => -2)}).staffing_reminder(self)
+      self.reminder_job.description = "Reminder for staffing #{id} - #{show_title} - #{I18n::l date, :format => :short}"
+      self.reminder_job.save!
     end
   end
 end

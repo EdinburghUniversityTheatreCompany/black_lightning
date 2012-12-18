@@ -2,7 +2,7 @@
   <div class="accordion-heading">
     <div class="accordion-toggle clearfix">
       <a data-toggle="collapse" data-parent="#jobs_accordion" href="#job_<%= job.id %>">
-        Job #<%= job.id %>
+        Job #<%= job.id %><%= " - #{job.description}" if job.description %>
       </a>
       <span class="pull-right">
         <%= link_to 'Retry', admin_jobs_path(:action => "retry", :id => job.id), :class => "btn btn-small" %>
