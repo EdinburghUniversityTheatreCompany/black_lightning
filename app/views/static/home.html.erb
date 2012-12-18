@@ -49,7 +49,7 @@
     </div>
 
     <div class="row">
-		  <% if block_exists("Home") %>
+      <% if block_exists("Home") %>
         <div class="span8 borderbox">
           <%= display_block("Home", false) %>
         </div>
@@ -79,7 +79,7 @@
     <h3><%= link_to '@BedlamTheatre', 'https://twitter.com/bedlamtheatre' %></h3>
     <div>
       <% twitter_timeline.each do |tweet| %>
-        <p><small><%= auto_link(tweet.text) %></small></p>
+        <p><small><%= auto_link_tweet(tweet) %></small></p>
       <% end %>
     </div>
 
