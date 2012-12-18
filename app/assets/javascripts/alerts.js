@@ -20,8 +20,8 @@ function showAlert(level, body) {
   var alert = $(
     '<p id="' + level + '" class="alert ' + alertclass + '">' +
       '<i class="' + icon + ' icon-large"></i>' +
-      '<span class="alert_body"></span>' +
       '<button type="button" class="close" data-dismiss="alert">&times;</button>' +
+      '<span class="alert_body"></span>' +
     '</p>');
 
   $(alert).find(".alert_body").replaceWith(body)
