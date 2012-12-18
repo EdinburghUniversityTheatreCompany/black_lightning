@@ -80,8 +80,11 @@ form .help-block {
   font-size: small;
 }
 
-.borderbox > *{
+.borderbox {
   border: 1px #000000 solid;
+}
+
+.borderbox > * {
   padding: 5px;
 }
 
