@@ -39,3 +39,7 @@
 
 #Ignore the version file
 version
+
+#Don't ignore .htaccess files
+!/public/assets/.htaccess
+!/public/system/.htaccess
