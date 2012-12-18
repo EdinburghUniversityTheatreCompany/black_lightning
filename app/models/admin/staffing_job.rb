@@ -22,4 +22,11 @@ class Admin::StaffingJob < ActiveRecord::Base
   validates :name, :presence => true
 
   attr_accessible :name, :user, :user_id
+
+  ##
+  # Get the date in a js friendly fashion
+  ##
+  def js_date
+    return staffing.date.to_i
+  end
 end

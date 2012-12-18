@@ -16,7 +16,33 @@ jQuery ->
           button.click()
           return
 
-        message = "Thank you for choosing to staff " + data.staffing.show_title + " - " + data.name + ", on " + data.staffing.date + ".";
+        start_time = new Date(data.js_date * 1000)
+        end_time = new Date(data.js_date * 1000)
+        end_time.setHours(start_time.getHours() + 3)
+
+        start_str = start_time.toISOString().replace(/(-|:|\.)/g, "")
+        start_str = start_str.slice(0, -4) + "Z"
+        end_str = end_time.toISOString().replace(/(-|:|\.)/g, "")
+        end_str = end_str.slice(0, -4) + "Z"
+
+        google_calendar_addr = """
+                               http://www.google.com/calendar/event
+                                 ?action=TEMPLATE
+                                 &text=#{data.name} - #{data.staffing.show_title}
+                                 &dates=#{start_str}/#{end_str}
+                                 &location=Bedlam Theatre, Edinburgh
+                                 &trp=true
+                                 &sprop=website:http://www.bedlamtheatre.co.uk
+                                 &sprop=name:Bedlam Theatre
+                               """
+
+        # Remove the linebreaks added above for readability.
+        google_calendar_addr = google_calendar_addr.replace(/(\r\n|\n|\r)\s\s/gm,"");
+
+        message = """
+                  <p>Thank you for choosing to staff #{data.staffing.show_title} - #{data.name}, on #{data.staffing.date}.</p>
+                  <p><a href="#{google_calendar_addr}">Add to Google Calendar</a>
+                  """
         showAlert "success", message;
 
         #Find the original button (rather than the clone in the modal)
