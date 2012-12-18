@@ -1,5 +1,8 @@
 == PROJECT BLACK LIGHTNING
 
-This aim of this project is to build a new website for Bedlam Theatre. But not just that! It is to build a stable platform upon which new heights can be reached.
+This aim of this project is to build a new website for Bedlam Theatre. 
+But not just that! It is to build a stable platform upon which new 
+heights can be reached.
 
-The initial stage of the project is to build a public facing frontend accompanied by a member-facing (producer/committee) administration system.
+The initial stage of the project is to build a public facing frontend 
+accompanied by a member-facing (producer/committee) administration system.
