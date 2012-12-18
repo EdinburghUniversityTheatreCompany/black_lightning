@@ -1,0 +1,7 @@
+# See http://guides.rubyonrails.org/asset_pipeline.html#in-production
+
+Header unset ETag
+FileETag None
+# Only one month for images. These could change.
+ExpiresActive On
+ExpiresDefault "access plus 1 month"
