@@ -86,6 +86,19 @@ h3 {
     text-decoration: underline;
 }
 
+.carousel-inner-mobile {
+    background: #333333;
+}
+
+.mobile-carousel {
+    padding: 15px;
+}
+
+.mobile-carousel p {
+    color: white;
+    line-height: 20px;
+}
+
 /* Responsive Stuff */
 @media (max-width: 979px) and (min-width: 768px) {
   #nav li {

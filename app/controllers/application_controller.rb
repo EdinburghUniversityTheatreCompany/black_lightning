@@ -2,6 +2,7 @@ class ApplicationController < ActionController::Base
   protect_from_forgery
 
   before_filter :set_globals
+  before_filter :prepare_for_mobile
 
   rescue_from Exception, :with => :report_500     unless Rails.env.development? || Rails.env.test?
   rescue_from StandardError, :with => :report_500 unless Rails.env.development? || Rails.env.test?
@@ -45,4 +46,24 @@ class ApplicationController < ActionController::Base
     redirect_to static_path('500', params[:format])
   end
 
+  private
+
+  # Believed to match about 98% of mobile browsers. https://gist.github.com/1503252
+  MOBILE_REGEX = /Mobile|iP(hone|od|ad)|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/
+
+  ##
+  # Mobile device detection
+  ##
+  def mobile_device?
+    if session[:mobile_param]
+      session[:mobile_param] == "true"
+    else
+      request.user_agent =~ MOBILE_REGEX
+    end
+  end
+  helper_method :mobile_device?
+
+  def prepare_for_mobile
+    session[:mobile_param] = params[:mobile] if params[:mobile]
+  end
 end
