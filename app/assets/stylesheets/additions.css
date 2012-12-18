@@ -1,32 +1,5 @@
 @import url(http://fonts.googleapis.com/css?family=Asap);
 
-/* From bootstrap-century */
-body,
-input,
-button,
-select,
-textarea {
-    font-family: Asap;
-}
-
-a {
-  color: #dc143c;
-  text-decoration: none;
-}
-
-a:hover {
-  color: #dc143c;
-  text-decoration: underline;
-}
-
-h1,h2,h3,h4,h5,h6 {
-  line-height: 1;
-  color: #dc143c;
-}
-/* end from bootstrap-century */
-
-/* Custom Changes */
-
 #logo {
 	height: 130px;
 }
