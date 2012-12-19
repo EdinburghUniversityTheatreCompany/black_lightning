@@ -7,12 +7,12 @@
 
 <p>
   <b>Description:</b>
-  <%= @season.description %>
+  <%= render_markdown @season.description %>
 </p>
 
 <p>
   <b>Dates:</b>
-  <%= @season.start_date %> – <%= @season.end_date %>
+  <%= I18n.l(@season.start_date, :format => :long) %> – <%= I18n.l(@season.end_date, :format => :longy) %>
 </p>
 
 
