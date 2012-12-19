@@ -12,8 +12,8 @@ class ApplicationController < ActionController::Base
   end
 
   rescue_from ActiveRecord::RecordNotFound do |exception|
-    flash[:notice] = exception.message
-    raise ActionController::RoutingError.new('Not Found')
+        flash[:notice] = exception.message
+        raise ActionController::RoutingError.new('Not Found')
   end
 
   def authorize_backend!

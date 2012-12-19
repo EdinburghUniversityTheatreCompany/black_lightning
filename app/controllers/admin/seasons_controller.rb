@@ -1,6 +1,6 @@
 class Admin::SeasonsController < AdminController
 
-  load_and_authorize_resource
+  #load_and_authorize_resource
 
   # GET /seasons
   # GET /seasons.json
@@ -16,7 +16,9 @@ class Admin::SeasonsController < AdminController
   # GET /seasons/1
   # GET /seasons/1.json
   def show
-    @season = Season.find(params[:id])
+    logger.debug params[:id]
+    @season = Season.find_by_slug(params[:id])
+    
     @title = @season.name
     respond_to do |format|
       format.html # show.html.erb
@@ -37,7 +39,7 @@ class Admin::SeasonsController < AdminController
 
   # GET /seasons/1/edit
   def edit
-    @season = Season.find(params[:id])
+    @season = Season.find_by_slug(params[:id])
     @title = "Editing #{@season.name}"
   end
 
@@ -60,7 +62,7 @@ class Admin::SeasonsController < AdminController
   # PUT /seasons/1
   # PUT /seasons/1.json
   def update
-    @season = Season.find(params[:id])
+    @season = Season.find_by_slug(params[:id])
 
     respond_to do |format|
       if @season.update_attributes(params[:season])
@@ -76,7 +78,7 @@ class Admin::SeasonsController < AdminController
   # DELETE /seasons/1
   # DELETE /seasons/1.json
   def destroy
-    @season = Season.find(params[:id])
+    @season = Season.find_by_slug(params[:id])
     @season.destroy
 
     respond_to do |format|
