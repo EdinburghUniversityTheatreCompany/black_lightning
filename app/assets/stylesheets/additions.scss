@@ -66,6 +66,18 @@ h3 {
     text-decoration: underline;
 }
 
+.carousel-caption h4 {
+    display: inline-block;
+}
+
+.carousel-caption a {
+    color: #ffffff;
+}
+
+.carousel-caption a:hover {
+    text-decoration: none;
+}
+
 .carousel-inner-mobile {
     background: #333333;
 }
