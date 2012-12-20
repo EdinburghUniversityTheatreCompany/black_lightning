@@ -14,13 +14,13 @@ class Admin::ShowsController < AdminController
 
   def new
     @show = Show.new
-    @users = User.all
+    @users = User.by_first_name.all
     @title = "New Show"
   end
 
   def create
     @show = Show.new(params[:show])
-    @users = User.all
+    @users = User.by_first_name.all
 
     respond_to do |format|
       if @show.save
@@ -33,13 +33,13 @@ class Admin::ShowsController < AdminController
 
   def edit
     @show = Show.find_by_slug(params[:id])
-    @users = User.all
+    @users = User.by_first_name.all
     @title = "Editing #{@show.name}"
   end
 
   def update
     @show = Show.find_by_slug(params[:id])
-    @users = User.all
+    @users = User.by_first_name.all
 
     respond_to do |format|
       if @show.update_attributes(params[:show])

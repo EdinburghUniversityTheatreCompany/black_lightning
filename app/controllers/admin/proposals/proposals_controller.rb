@@ -70,7 +70,7 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     @proposal = Admin::Proposals::Proposal.new
-    @users = User.all
+    @users = User.by_first_name.all
 
     @proposal.call = @call
 
@@ -95,7 +95,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def edit
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
-    @users = User.all
+    @users = User.by_first_name.all
 
     authorize!(:edit, @proposal)
 
@@ -122,7 +122,7 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal.call = @call
 
     #This is required so that the new action can be rendered should the save fail.
-    @users = User.all
+    @users = User.by_first_name.all
 
     #Set a proposal as late if created after the call deadline:
     if Time.now > @call.deadline then
@@ -153,7 +153,7 @@ class Admin::Proposals::ProposalsController < AdminController
     @call = @proposal.call
 
     #This is required so that the edit action can be rendered should the update fail.
-    @users = User.all
+    @users = User.by_first_name.all
 
     authorize!(:edit, @proposal)
 

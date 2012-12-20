@@ -31,6 +31,10 @@ class User < ActiveRecord::Base
 
   default_scope order("last_name ASC")
 
+  def self.by_first_name
+    unscoped.order("first_name ASC")
+  end
+
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
