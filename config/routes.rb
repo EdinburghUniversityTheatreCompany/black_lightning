@@ -41,6 +41,7 @@ ChaosRails::Application.routes.draw do
 
     resources :techie_families, :only => [:index]
 
+    resources :staffing_templates
     resources :staffings do
       member do
         get 'show_sign_up'

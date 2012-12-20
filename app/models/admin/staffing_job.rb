@@ -16,7 +16,7 @@
 #++
 ##
 class Admin::StaffingJob < ActiveRecord::Base
-  belongs_to :staffing, :class_name => "Admin::Staffing"
+  belongs_to :staffable, :polymorphic => true
   belongs_to :user
 
   validates :name, :presence => true

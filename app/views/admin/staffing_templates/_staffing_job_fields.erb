@@ -1,0 +1,6 @@
+<div class="job control-group fields">
+    <%= f.input_field :name %>
+
+    <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
+    <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
+</div>

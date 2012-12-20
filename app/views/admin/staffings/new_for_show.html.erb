@@ -1,3 +1,7 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/staffing_templates.js" %>
+<% end %>
+
 <%= simple_nested_form_for(@admin_staffing, :url => {:action => 'create_for_show'}, :method => 'put') do |f| %>
   <%= f.error_notification %>
 
@@ -78,6 +82,7 @@
     </form>
   </div>
   <div class="modal-footer">
+    <span class="pull-left" style="position: absolute;bottom: 10px;"><%= link_to 'Edit templates', admin_staffing_templates_path %></span>
     <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
     <button id="template_load" class="btn btn-primary disabled">Load template</button>
   </div>
@@ -87,5 +92,3 @@
   <%= select_datetime %>
   <a class="btn btn-danger"><i class="icon-remove"></i> Remove</a>
 </div>
-
-<script type="text/javascript" src="/staffing_templates/templates.js"></script>
