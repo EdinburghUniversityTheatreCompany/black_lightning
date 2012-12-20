@@ -99,7 +99,7 @@
     <hr />
 
     <h3><%= link_to "Archives", archives_index_path %></h3>
-    <%= link_to Show.last_show.name, Show.last %>
+    <%= link_to Show.last_show.name, Show.last_show %>
     <% image = image_tag Show.last_show.image.url(:medium) %>
     <%= link_to image, Show.last_show, :class => "thumbnail" unless mobile_device? %>
   </div>
