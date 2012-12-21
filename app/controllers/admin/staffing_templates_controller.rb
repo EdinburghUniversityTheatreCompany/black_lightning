@@ -52,8 +52,7 @@ class Admin::StaffingTemplatesController < AdminController
   # GET /admin/staffing_templates/1/edit
   ##
   def edit
-    @users = User.all
-   @template = Admin::StaffingTemplate.find(params[:id])
+    @template = Admin::StaffingTemplate.find(params[:id])
     @title = "Editing Staffing Template"
   end
 
@@ -63,7 +62,6 @@ class Admin::StaffingTemplatesController < AdminController
   # POST /admin/staffing_templates.json
   ##
   def create
-    @users = User.all
     @template = Admin::StaffingTemplate.new(params[:admin_staffing_template])
 
     respond_to do |format|
