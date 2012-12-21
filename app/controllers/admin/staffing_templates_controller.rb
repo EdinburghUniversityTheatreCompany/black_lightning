@@ -11,7 +11,7 @@ class Admin::StaffingTemplatesController < AdminController
   # GET /admin/staffing_templates.json
   ##
   def index
-   @templates = Admin::StaffingTemplate.all
+    @templates = Admin::StaffingTemplate.all
     @title = "Staffing Templates"
     respond_to do |format|
       format.html # index.html.erb
@@ -25,7 +25,7 @@ class Admin::StaffingTemplatesController < AdminController
   # GET /admin/staffing_templates/1.json
   ##
   def show
-   @template = Admin::StaffingTemplate.find(params[:id])
+    @template = Admin::StaffingTemplate.find(params[:id])
     @title = "Staffing Templates"
     respond_to do |format|
       format.html # show.html.erb
@@ -39,8 +39,7 @@ class Admin::StaffingTemplatesController < AdminController
   # GET /admin/staffing_templates/new.json
   ##
   def new
-    @users = User.all
-   @template = Admin::StaffingTemplate.new
+    @template = Admin::StaffingTemplate.new
     @title = "New Staffing Template"
     respond_to do |format|
       format.html # new.html.erb
@@ -82,7 +81,7 @@ class Admin::StaffingTemplatesController < AdminController
   # PUT /admin/staffing_templates/1.json
   ##
   def update
-   @template = Admin::StaffingTemplate.find(params[:id])
+    @template = Admin::StaffingTemplate.find(params[:id])
 
     respond_to do |format|
       if@template.update_attributes(params[:admin_staffing_template])
