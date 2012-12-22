@@ -3,6 +3,7 @@ require 'test_helper'
 class Admin::StaffingsControllerTest < ActionController::TestCase
   setup do
     @admin_staffing = admin_staffings(:one)
+    @admin_staffing_job = admin_staffing_jobs(:one)
 
     @user = User.find_by_email('admin@bedlamtheatre.co.uk')
     @user.add_role :admin
@@ -57,5 +58,22 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to admin_staffings_path
+  end
+
+  test "should get sign_up_page" do
+    get :show_sign_up, id: @admin_staffing
+    assert_response :success
+  end
+
+  test "should get sign_up_confirm" do
+    get :sign_up_confirm, id: @admin_staffing_job
+    assert_response :success
+  end
+
+  test "should put sign_up" do
+    put :sign_up, id: @admin_staffing_job
+    assert_redirected_to admin_staffings_path
+
+    assert_equal Admin::StaffingJob.find(@admin_staffing_job.id).user_id, @user.id
   end
 end

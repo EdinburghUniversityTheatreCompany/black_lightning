@@ -1,5 +1,6 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
-one: 
-  date: 2012-10-25 10:38:14
-  show_title: "Test Staffings"
+one:
+  id: 1
+  date: <%= 5.days.from_now.to_s(:db) %>
+  show_title: "Test Staffing"
