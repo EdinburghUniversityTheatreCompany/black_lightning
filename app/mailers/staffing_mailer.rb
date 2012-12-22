@@ -25,7 +25,7 @@ class StaffingMailer < ActionMailer::Base
           client.account.sms.messages.create(
             :from => ChaosRails::Application.config.twilio_phone_number,
             :to => @user.phone_number,
-            :body => "Hey! You're staffing #{job.name} at #{job.staffing.show_title}!"
+            :body => "Hey! You're staffing #{job.name} at #{job.staffable.show_title}!"
           )
         end
       rescue => e

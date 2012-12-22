@@ -1,5 +1,5 @@
-<h1><%= "Confirm staffing as #{@job.name} for #{@job.staffing.show_title}" %></h1>
-<h3><%= l @job.staffing.date, :format => :long %></h3>
+<h1><%= "Confirm staffing as #{@job.name} for #{@job.staffable.show_title}" %></h1>
+<h3><%= l @job.staffable.date, :format => :long %></h3>
 
 <%= form_tag(admin_staffing_sign_up_path(@job), :method => :put, :class => "form-inline") do %>
   <%= button_tag(type: 'submit', class: "btn btn-primary") do %>
@@ -7,4 +7,4 @@
   <% end %>
 <% end %>
 
-<%= link_to 'Back', show_sign_up_admin_staffing_path(@job.staffing), :class => "btn" %>
+<%= link_to 'Back', show_sign_up_admin_staffing_path(@job.staffable), :class => "btn" %>

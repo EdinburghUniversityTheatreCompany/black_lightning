@@ -165,7 +165,7 @@ class Admin::StaffingsController < AdminController
   ##
   # Signs up the current user for the Admin::StaffingJob
   # ---
-  # OUT /admin/staffings/1/sign_up
+  # PUT /admin/staffings/1/sign_up
   ##
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
@@ -176,10 +176,10 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if @job.save
         format.html {
-          flash[:success] =  "Thank you for choosing to staff #{@job.staffing.show_title} - #{@job.name}, on #{(l @job.staffing.date, :format => :short)}."
+          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.date, :format => :short)}."
           redirect_to admin_staffings_path
         }
-        format.json { render :json => @job.to_json(:include => { :user => {}, :staffing => {} }, :methods => [ :js_date ] ) }
+        format.json { render :json => @job.to_json(:include => { :user => {}, :staffable => {} }, :methods => [ :js_date ] ) }
       else
         format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

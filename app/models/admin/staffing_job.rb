@@ -27,6 +27,6 @@ class Admin::StaffingJob < ActiveRecord::Base
   # Get the date in a js friendly fashion
   ##
   def js_date
-    return staffing.date.to_i
+    return staffable.date.to_i
   end
 end

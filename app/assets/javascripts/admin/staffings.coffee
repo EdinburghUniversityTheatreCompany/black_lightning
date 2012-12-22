@@ -28,7 +28,7 @@ jQuery ->
         google_calendar_addr = """
                                http://www.google.com/calendar/event
                                  ?action=TEMPLATE
-                                 &text=#{data.name} - #{data.staffing.show_title}
+                                 &text=#{data.name} - #{data.staffable.show_title}
                                  &dates=#{start_str}/#{end_str}
                                  &location=Bedlam Theatre, Edinburgh
                                  &trp=true
@@ -40,7 +40,7 @@ jQuery ->
         google_calendar_addr = google_calendar_addr.replace(/(\r\n|\n|\r)\s\s/gm,"");
 
         message = """
-                  <p>Thank you for choosing to staff #{data.staffing.show_title} - #{data.name}, on #{data.staffing.date}.</p>
+                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name}, on #{data.staffable.date}.</p>
                   <p><a href="#{google_calendar_addr}">Add to Google Calendar</a>
                   """
         showAlert "success", message;
