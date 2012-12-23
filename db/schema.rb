@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121220101658) do
+ActiveRecord::Schema.define(:version => 20121223231250) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -170,6 +170,27 @@ ActiveRecord::Schema.define(:version => 20121220101658) do
 
   add_index "delayed_jobs", ["priority", "run_at"], :name => "delayed_jobs_priority"
 
+  create_table "events", :force => true do |t|
+    t.string   "name"
+    t.string   "tagline"
+    t.string   "slug"
+    t.text     "description"
+    t.integer  "xts_id"
+    t.datetime "created_at",         :null => false
+    t.datetime "updated_at",         :null => false
+    t.boolean  "is_public"
+    t.string   "image_file_name"
+    t.string   "image_content_type"
+    t.integer  "image_file_size"
+    t.datetime "image_updated_at"
+    t.date     "start_date"
+    t.date     "end_date"
+    t.integer  "venue_id"
+    t.integer  "season_id"
+    t.string   "author"
+    t.string   "type"
+  end
+
   create_table "news", :force => true do |t|
     t.string   "title"
     t.text     "body"
@@ -238,26 +259,6 @@ ActiveRecord::Schema.define(:version => 20121220101658) do
     t.datetime "created_at",  :null => false
     t.datetime "updated_at",  :null => false
     t.string   "slug"
-  end
-
-  create_table "shows", :force => true do |t|
-    t.string   "name"
-    t.string   "tagline"
-    t.string   "slug"
-    t.text     "description"
-    t.integer  "xts_id"
-    t.datetime "created_at",         :null => false
-    t.datetime "updated_at",         :null => false
-    t.boolean  "is_public"
-    t.string   "image_file_name"
-    t.string   "image_content_type"
-    t.integer  "image_file_size"
-    t.datetime "image_updated_at"
-    t.date     "start_date"
-    t.date     "end_date"
-    t.integer  "venue_id"
-    t.integer  "season_id"
-    t.string   "author"
   end
 
   create_table "team_members", :force => true do |t|

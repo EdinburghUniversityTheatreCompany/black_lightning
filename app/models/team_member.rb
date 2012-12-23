@@ -1,7 +1,7 @@
 ##
 # Represents a collection of Users that have specific positions.
 #
-# Used by Show, Admin::Proposals::Proposal
+# Used by Event, Admin::Proposals::Proposal
 #
 # == Schema Information
 #
