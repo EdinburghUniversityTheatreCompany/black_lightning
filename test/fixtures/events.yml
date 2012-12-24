@@ -33,6 +33,7 @@ one:
   start_date: <%= 5.days.ago.to_s(:db) %>
   end_date:   <%= 3.days.ago.to_s(:db) %>
   is_public: true
+  type: "Show"
 
 two:
   name: "City of Cake"
@@ -43,6 +44,7 @@ two:
   start_date: <%= 5.days.from_now.to_s(:db) %>
   end_date:   <%= 5.days.from_now.to_s(:db) %>
   is_public: true
+  type: "Show"
 
 three:
   name: "Spring Awakening"
@@ -50,3 +52,4 @@ three:
   tagline: "Performances as Teviot Debating Hall"
   description: "Test"
   xts_id: 423
+  type: "Show"

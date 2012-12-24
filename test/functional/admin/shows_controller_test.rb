@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::ShowsControllerTest < ActionController::TestCase
   setup do
-    @show = shows(:one)
+    @show = events(:one)
     @user = User.find_by_email('admin@bedlamtheatre.co.uk')
     @user.add_role :admin
     sign_in @user
