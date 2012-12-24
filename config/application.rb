@@ -62,5 +62,10 @@ module ChaosRails
 
     # Handle error routes:
     config.exceptions_app = self.routes
+
+    # Use factory_girl instead of fixtures.
+    config.generators do |g|
+      g.fixture_replacement :factory_girl
+    end
   end
 end

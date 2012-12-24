@@ -11,9 +11,11 @@ class ApplicationController < ActionController::Base
     redirect_to static_path('access_denied'), :notice => exception.message
   end
 
-  rescue_from ActiveRecord::RecordNotFound do |exception|
-        flash[:notice] = exception.message
-        raise ActionController::RoutingError.new('Not Found')
+  unless Rails.env.development? || Rails.env.test?
+    rescue_from ActiveRecord::RecordNotFound do |exception|
+      flash[:notice] = exception.message
+      raise ActionController::RoutingError.new('Not Found')
+    end
   end
 
   def authorize_backend!
