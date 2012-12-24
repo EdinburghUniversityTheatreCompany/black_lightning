@@ -1,0 +1,82 @@
+<%= simple_nested_form_for [:admin, @workshop] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :name, :wrapper => :append do %>
+      <%= f.input_field :name %>
+    <% end %>
+
+    <%= f.input :tagline %>
+
+    <%= f.input :slug %>
+
+    <%= f.input :author %>
+
+    <%= f.input :start_date %>
+
+    <%= f.input :end_date %>
+
+    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
+
+    <%= f.association :venue, :collection => Venue.all, :label_method => :name %>
+
+	<%= f.association :season, :collection => Season.all, :label_method => :name %>
+
+
+    <%= f.input :image %>
+
+    <%= f.input :is_public if can? :make_public, @workshop %>
+
+    <div class="form-horizontal">
+
+      <h3>Team</h3>
+
+      <% if f.object.errors[:team_members].present? then %>
+      <p id="team_errors" class="alert alert-error">
+          <%= f.error :team_members %>
+      </p>
+      <% end %>
+
+      <ul class="sortable">
+        <%= f.fields_for :team_members, :wrapper => false %>
+
+        <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
+        <%= f.link_to_add add_member_text, :team_members, :class => "btn ui-state-disabled" %>
+      </ul>
+
+    </div>
+
+    <div class="gallery-form">
+
+      <h3>Gallery</h3>
+
+      <% if f.object.errors[:pictures].present? then %>
+      <p id="picture_errors" class="alert alert-error">
+          <%= f.error :pictures %>
+      </p>
+      <% end %>
+
+      <%= f.simple_fields_for :pictures %>
+
+      <br />
+
+      <% add_photo_text = '<i class="icon-plus"></i> Add Photo'.html_safe %>
+      <%= f.link_to_add add_photo_text, :pictures, :class => "btn" %>
+
+    </div>
+
+  </div>
+
+  <script>
+    $('#workshop_name').keyup(function() {
+        var slug = jQuery.trim($('#workshop_name').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
+        $('#workshop_slug').val(slug);
+    });
+  </script>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => 'btn-primary' %>
+    <%= link_to 'Cancel', admin_workshops_path, :class => "btn" %>
+  </div>
+<% end %>

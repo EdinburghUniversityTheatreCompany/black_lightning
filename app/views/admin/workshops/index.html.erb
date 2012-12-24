@@ -1,0 +1,44 @@
+<% @title = 'Workshops' %>
+
+<h1>Workshops</h1>
+
+<%= display_block("Workshops (Members Face)", true) %>
+
+<br />
+<br />
+
+<table class="table">
+    <tbody>
+        <tr>
+            <th>Name</th>
+            <th>Slug</th>
+            <th></th>
+            <th></th>
+        </tr>
+        <% @workshops.each do |workshop| %>
+        <tr>
+            <td><%= link_to workshop.name, admin_workshop_path(workshop) %></td>
+            <td><%= workshop.slug %></td>
+
+            <td>
+            <% if can? :edit, workshop %>
+            <%= link_to 'Edit', edit_admin_workshop_path(workshop)%>
+            <% end %>
+            </td>
+
+            <td>
+            <% if can? :delete, workshop %>
+            <%= link_to 'Destroy', admin_workshop_path(workshop), method: :delete, data: { "confirm" => "Deleting " + workshop.name,
+                                                                                   "detail"  => "Be warned. Things may break if you continue. <br /> Please type the name of the workshop below if you are absolutely sure you want to do this.",
+                                                                                   "type-confirm" => workshop.name } %>
+            <% end %>
+            </td>
+        </tr>
+        <% end %>
+    </tbody>
+</table>
+
+<% if can? :create, Workshop %>
+  <% add_text = '<i class="icon-plus"></i> Add Workshop'.html_safe %>
+  <%= link_to add_text, new_admin_workshop_path, :class => "btn" %>
+<% end %>

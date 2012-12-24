@@ -1,0 +1,53 @@
+<% @title = 'Workshop Details' %>
+
+<h1><%= @workshop.name %></h1>
+<table class="table table-bordered">
+    <tbody>
+        <tr>
+            <th>Tagline</th>
+            <td><%= @workshop.tagline %></td>
+        </tr>
+        <tr>
+            <th>URL Slug</th>
+            <td><%= @workshop.slug %></td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td><%= render_markdown @workshop.description %></td>
+        </tr>
+        <tr>
+            <th>Dates</th>
+            <td><%= @workshop.date_range %></td>
+        </tr>
+        <tr>
+            <th>Venue</th>
+            <td><%= @workshop.venue.name if @workshop.venue %></td>
+        </tr>
+        <tr>
+            <th>Public?</th>
+            <td><%= {true => "Yes", false => "No", nil => "No"}[@workshop.is_public] %>
+        </tr>
+        <tr>
+            <th>Image</th>
+            <td><%= image_tag @workshop.image.url(:medium) %></td>
+        </tr>
+        <tr>
+            <th>Team</th>
+            <td>
+                <% @workshop.team_members.each do |team_member| %>
+                  <p>
+                  <b><%= team_member.position %></b>
+
+                  <% u = team_member.user %>
+                  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+                  </p>
+                <% end %>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<% if can? :edit, @workshop %>
+  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+  <%= link_to edit_text, edit_admin_workshop_path(@workshop), :class => 'btn' %>
+<% end %>
