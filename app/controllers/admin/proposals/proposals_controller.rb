@@ -132,7 +132,10 @@ class Admin::Proposals::ProposalsController < AdminController
     respond_to do |format|
       if @proposal.save
         #Send the new proposal mail. See ProposalsMailer for more details.
-        ProposalsMailer.delay.new_proposal(@proposal, current_user)
+
+        @proposal.team_members.each do |team_member|
+          ProposalsMailer.delay.new_proposal(@proposal, current_user, team_member)
+        end
 
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
         format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
