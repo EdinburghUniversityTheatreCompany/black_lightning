@@ -73,7 +73,7 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      resources :call_question_templates, :except => [:show]
+      resources :call_question_templates
     end
 
     namespace :questionnaires do

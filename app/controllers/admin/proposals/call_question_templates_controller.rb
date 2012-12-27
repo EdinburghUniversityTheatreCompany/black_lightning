@@ -19,6 +19,14 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
       format.json { render json: @templates }
     end
   end
+  
+  def show
+    @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
+    
+    respond_to do |format|
+      format.json
+    end
+  end
 
   ##
   # GET /admin/proposals/call_question_templates/new
