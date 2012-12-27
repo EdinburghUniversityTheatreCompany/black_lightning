@@ -24,7 +24,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
     
     respond_to do |format|
-      format.json
+      format.json { render :json => @template.to_json(:include => { :questions => {} }) }
     end
   end
 

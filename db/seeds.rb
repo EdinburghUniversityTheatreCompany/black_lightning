@@ -13,9 +13,9 @@ test_user = User.create! :email => 'test@bedlamtheatre.co.uk', :password => 'Pas
 test_user.add_role :member
 
 Show.create!([
-    {name: "Accidental Death of an Anarchist", slug: "accidental-death-of-an-anarchist", tagline: "A play by Dario Fo"},
-    {name: "City of Cake", slug: "city-of-cake", tagline: "Cake! CAKE! THIS SHOW HAS CAKE!", xts_id: 419},
-    {name: "Spring Awakening", slug: 'spring-awakening', tagline: "Performances as Teviot Debating Hall", xts_id: 423}
+    {name: "Accidental Death of an Anarchist", slug: "accidental-death-of-an-anarchist", tagline: "A play by Dario Fo", description: "Blank"},
+    {name: "City of Cake", slug: "city-of-cake", tagline: "Cake! CAKE! THIS SHOW HAS CAKE!", description: "Blank", xts_id: 419},
+    {name: "Spring Awakening", slug: 'spring-awakening', tagline: "Performances as Teviot Debating Hall", description: "Blank", xts_id: 423}
     ])
 
 News.create!([
