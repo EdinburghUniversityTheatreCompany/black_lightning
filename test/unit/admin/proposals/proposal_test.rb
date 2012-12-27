@@ -20,9 +20,12 @@ require 'test_helper'
 
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test "convert to show" do
-    @admin_proposals_proposal = ::Admin::Proposals::Proposal.find(1)
-    @admin_proposals_proposal.convert_to_show()
+    call = FactoryGirl.create(:proposal_call)
 
-    assert ::Show.find_by_name('Test Proposal')
+    proposal = FactoryGirl.create(:proposal, call: call, approved: true)
+
+    proposal.convert_to_show()
+
+    assert ::Show.find_by_name(proposal.show_title)
   end
 end

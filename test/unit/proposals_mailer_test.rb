@@ -1,10 +1,9 @@
 class ProposalsMailerTest < ActionMailer::TestCase
   def test_new_proposal
-    user = FactoryGirl.create(:member)
+    call = FactoryGirl.create(:proposal_call)
 
-    proposal = admin_proposals_proposals(:one)
-    proposal.team_members = [::TeamMember.new({ :user => user, :position => 'Tester' })]
-    proposal.save
+    proposal = FactoryGirl.create(:proposal, call: call)
+    user = proposal.users.first()
 
     # Send the email, then test that it got queued
     email = ProposalsMailer.new_proposal(proposal, user).deliver

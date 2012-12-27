@@ -17,11 +17,10 @@ require 'test_helper'
 
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test "archive" do
-    @admin_proposals_call = ::Admin::Proposals::Call.find(1)
-    @admin_proposals_call.archive
-    @admin_proposals_call = ::Admin::Proposals::Call.find(1)
+    call = FactoryGirl.create(:proposal_call, open: true)
+    call.archive
 
-    assert(@admin_proposals_call.open == false)
-    assert(@admin_proposals_call.archived)
+    assert(call.open == false)
+    assert(call.archived)
   end
 end
