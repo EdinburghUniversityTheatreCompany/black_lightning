@@ -1,3 +1,7 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/team_member_fields.js.coffee" %>
+<% end %>
+
 <div class="team_member control-group fields <%= "error" if (f.error(:position).present? or f.error(:user).present?) %>">
     <% if f.error(:position).present? %>
       <%= f.error :position %>
