@@ -3,11 +3,8 @@ require 'test_helper'
 class Admin::NewsControllerTest < ActionController::TestCase
   setup do
     @news = news(:one)
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
-    sign_in @user
 
-    @user = users(:one)
+    sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do

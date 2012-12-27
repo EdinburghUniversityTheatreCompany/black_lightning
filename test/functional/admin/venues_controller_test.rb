@@ -4,9 +4,7 @@ class Admin::VenuesControllerTest < ActionController::TestCase
   setup do
     @venue = venues(:one)
 
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
-    sign_in @user
+    sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do

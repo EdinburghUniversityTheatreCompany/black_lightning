@@ -1,6 +1,7 @@
 class ProposalsMailerTest < ActionMailer::TestCase
   def test_new_proposal
-    user = users(:member)
+    user = FactoryGirl.create(:member)
+
     proposal = admin_proposals_proposals(:one)
     proposal.team_members = [::TeamMember.new({ :user => user, :position => 'Tester' })]
     proposal.save

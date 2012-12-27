@@ -5,8 +5,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     @admin_staffing = admin_staffings(:one)
     @admin_staffing_job = admin_staffing_jobs(:one)
 
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
+    @user = FactoryGirl.create(:admin)
     sign_in @user
 
     #Turn on delayed jobs for staffings - the staffing mailer refers to the job.

@@ -3,8 +3,9 @@ require 'test_helper'
 class Admin::EditableBlocksControllerTest < ActionController::TestCase
   setup do
     @admin_editable_block = admin_editable_blocks(:one)
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
+
+    @user = FactoryGirl.create(:admin)
+
     sign_in @user
   end
 

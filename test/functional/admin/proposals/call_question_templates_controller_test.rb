@@ -4,9 +4,7 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
   setup do
     @template = admin_proposals_call_question_templates(:one)
 
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
-    sign_in @user
+    sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do

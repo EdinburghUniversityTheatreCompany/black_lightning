@@ -4,9 +4,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   setup do
     @admin_proposals_proposal = admin_proposals_proposals(:one)
 
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
-    sign_in @user
+    sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do
@@ -22,12 +20,9 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test "should create admin_proposals_proposal" do
     assert_difference('Admin::Proposals::Proposal.count') do
-      team_user = User.find_by_email('test@bedlamtheatre.co.uk')
-      team_member = TeamMember.new()
-      team_member.user = team_user
-      team_member.position = 'Director'
+      team_user = FactoryGirl.create(:member)
 
-      post :create, :call_id => 1, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title, :team_members_attributes => { '0' => { 'position' => 'Director', 'user_id' => 1} } }
+      post :create, :call_id => 1, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title, :team_members_attributes => { '0' => { 'position' => 'Director', 'user_id' => team_user.id} } }
     end
 
     assert_redirected_to admin_proposals_call_proposal_path(1, assigns(:proposal))
@@ -44,9 +39,9 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test "should update admin_proposals_proposal" do
-    team_user = User.find_by_email('test@bedlamtheatre.co.uk')
+    team_user = FactoryGirl.create(:member)
 
-    put :update, :call_id => 1, id: @admin_proposals_proposal, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title, :team_members_attributes => { '0' => { 'position' => 'Director', 'user_id' => 1} } }
+    put :update, :call_id => 1, id: @admin_proposals_proposal, admin_proposals_proposal: { proposal_text: @admin_proposals_proposal.proposal_text, publicity_text: @admin_proposals_proposal.publicity_text, show_title: @admin_proposals_proposal.show_title, :team_members_attributes => { '0' => { 'position' => 'Director', 'user_id' => team_user.id} } }
     assert_redirected_to admin_proposals_call_proposal_path(1, assigns(:proposal))
   end
 

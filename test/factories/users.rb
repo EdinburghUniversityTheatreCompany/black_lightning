@@ -22,21 +22,24 @@
 # == Schema Information End
 #++
 
-# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
+FactoryGirl.define do
+  factory :user do
+     first_name            { Faker::Name.first_name }
+     last_name             { Faker::Name.last_name  }
+     email                 { Faker::Internet.email  }
+     password              :random_password
+     password_confirmation { password }
 
-# This model initially had no columns defined.  If you add columns to the
-# model remove the '{}' from the fixture names and add the columns immediately
-# below each fixture, per the syntax in the comments below
-#
-one:
-   email: 'one@bedlamtheatre.co.uk'
-   encrypted_password: 'IHaveOne-Honest'
+     factory :member do
+       after(:create) do |user, evaluator|
+         user.add_role :member
+       end
+     end
 
-admin: 
-   email: 'admin@bedlamtheatre.co.uk'
-   encrypted_password: '$2a$10$5V4DHloGOKgCxoENiC6wbOBUtrBi3CRA0n8YEV1O6EdsFzckxmKEO'
-
-member:
-   id: 1
-   email: 'test@bedlamtheatre.co.uk'
-   encrypted_password: '$2a$10$jho6KN2YCSRCmgDqRcMl5O2VUpxtzt.JSYvaf8iJ5y2IZq9KNKfT6'
+     factory :admin do
+       after(:create) do |user, evaluator|
+         user.add_role :admin
+       end
+     end
+  end
+end

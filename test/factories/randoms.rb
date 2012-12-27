@@ -3,6 +3,10 @@ FactoryGirl.define do
     "A Name #{n}"
   end
 
-  sequence(:random_text) {|n|  Lorem::Base.new(:paragraphs, 3).output() }
-  sequence(:random_string) {|n|  Lorem::Base.new(:words, 5).output() }
+  sequence(:random_text)   {|n|  Faker::Lorem.paragraphs(3).join(' ') }
+  sequence(:random_string) {|n|  Faker::Lorem.words(5).join(' ') }
+
+  sequence :random_password do |n|
+    (0...8).map{65.+(rand(26)).chr}.join
+  end
 end

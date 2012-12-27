@@ -3,9 +3,8 @@ require 'test_helper'
 class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   setup do
     @admin_staffing_template = admin_staffing_templates(:one)
-    @user = User.find_by_email('admin@bedlamtheatre.co.uk')
-    @user.add_role :admin
-    sign_in @user
+
+    sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do
