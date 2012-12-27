@@ -2,17 +2,19 @@ require 'test_helper'
 
 class Admin::NewsControllerTest < ActionController::TestCase
   setup do
-    @news = news(:one)
-
     sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do
+    FactoryGirl.create_list(:news, 10)
+
     get :index
     assert_response :success
   end
 
   test "should get show" do
+    @news = FactoryGirl.create(:news)
+
     get :show, id: @news
     assert_response :success
   end
@@ -23,27 +25,33 @@ class Admin::NewsControllerTest < ActionController::TestCase
   end
 
   test "should create news" do
-    #Remove the existing entry:
-    News.find(@news).destroy
+    attrs = FactoryGirl.attributes_for(:news)
 
     assert_difference('News.count') do
-      post :create, news: { title: @news.title, body: @news.body, slug: @news.slug, publish_date: @news.publish_date, show_public: @news.show_public }
+      post :create, news: attrs
     end
 
     assert_redirected_to admin_news_path(assigns(:news))
   end
 
   test "should get edit" do
+    @news = FactoryGirl.create(:news)
+
     get :edit, id: @news
     assert_response :success
   end
 
   test "should update news" do
-    put :update, id: @news, news: { title: @news.title, body: @news.body, slug: @news.slug, publish_date: @news.publish_date, show_public: @news.show_public }
-    assert_redirected_to admin_news_path(@news)
+    @news = FactoryGirl.create(:news)
+    attrs = FactoryGirl.attributes_for(:news)
+
+    put :update, id: @news, news: attrs
+    assert_redirected_to admin_news_path(assigns(:news))
   end
 
   test "should destroy news" do
+    @news = FactoryGirl.create(:news)
+
     assert_difference('News.count', -1) do
       delete :destroy, id: @news
     end

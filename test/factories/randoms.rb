@@ -3,7 +3,7 @@ FactoryGirl.define do
     "A Name #{n}"
   end
 
-  sequence(:random_text)   {|n|  Faker::Lorem.paragraphs(3).join(' ') }
+  sequence(:random_text)   {|n|  Faker::Lorem.paragraphs(3).join('\n\n') }
   sequence(:random_string) {|n|  Faker::Lorem.words(5).join(' ') }
 
   sequence :random_password do |n|
