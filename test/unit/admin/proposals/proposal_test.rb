@@ -22,9 +22,17 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test "convert to show" do
     call = FactoryGirl.create(:proposal_call)
 
-    proposal = FactoryGirl.create(:proposal, call: call, approved: true)
+    proposal = FactoryGirl.create(:proposal, call: call, approved: false)
 
-    proposal.convert_to_show()
+    exception = assert_raise(RuntimeError) do
+      proposal.convert_to_show
+    end
+    assert_equal("This proposal has not been approved", exception.message)
+
+    proposal.approved = true
+    proposal.save
+
+    proposal.convert_to_show
 
     assert ::Show.find_by_name(proposal.show_title)
   end

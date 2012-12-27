@@ -64,7 +64,7 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
     puts self.show_title
 
     if not self.approved == true then
-      abort("This proposal has not been approved")
+      raise "This proposal has not been approved"
     end
 
     @show = Show.new()
@@ -79,7 +79,7 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
       @show.errors.full_messages.each do |error|
         puts error
       end
-      abort("Couldn't save the new show")
+      raise "Couldn't save the new show"
     end
 
     puts "Adding Team Members"
