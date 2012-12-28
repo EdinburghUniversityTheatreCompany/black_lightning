@@ -1,3 +1,17 @@
+# == Schema Information
+#
+# Table name: roles
+#
+# *id*::            <tt>integer, not null, primary key</tt>
+# *name*::          <tt>string(255)</tt>
+# *resource_id*::   <tt>integer</tt>
+# *resource_type*:: <tt>string(255)</tt>
+# *created_at*::    <tt>datetime, not null</tt>
+# *updated_at*::    <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
+
 ##
 # Represents the different role that a User may have. Permissions are asigned using the
 # Admin::PermissionsController
