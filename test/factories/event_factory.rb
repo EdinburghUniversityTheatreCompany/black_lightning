@@ -39,6 +39,7 @@ FactoryGirl.define do
   factory :show, parent: :event, class: Show do
     after(:create) do |show, evaluator|
       create_list(:review, 3, show: show)
+      create_list(:team_member, 5, teamwork: show)
     end
   end
 end
