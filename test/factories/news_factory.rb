@@ -28,7 +28,7 @@ FactoryGirl.define do
 
      body  { generate(:random_text) }
 
-     publish_date { 5.days.from_now }
+     publish_date { generate(:random_date) }
      show_public  { [true, false].sample }
 
      association :author, factory: :user

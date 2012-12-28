@@ -31,11 +31,14 @@ FactoryGirl.define do
     slug         { name.gsub(/\s+/,'-').gsub(/[^a-zA-Z0-9\-]/,'').downcase.gsub(/\-{2,}/,'-') }
     tagline      { "The tagline for #{name}" }
     description  { "And a description for #{name}" }
-    start_date   { Time.at(rand * Time.now.to_i) }
+    start_date   { generate(:random_date) }
     end_date     { start_date + 5.days }
     is_public    { [true, false].sample }
   end
 
   factory :show, parent: :event, class: Show do
+    after(:create) do |show, evaluator|
+      create_list(:review, 3, show: show)
+    end
   end
 end

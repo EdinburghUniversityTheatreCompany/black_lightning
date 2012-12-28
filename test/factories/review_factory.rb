@@ -15,18 +15,11 @@
 # == Schema Information End
 #++
 
-# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
-
-one:
-  show_id: 1
-  reviewer: MyString
-  body: MyText
-  rating: 4.5
-  review_date: 2012-12-06
-
-two:
-  show_id: 1
-  reviewer: MyString
-  body: MyText
-  rating: 3
-  review_date: 2012-12-06
+FactoryGirl.define do
+  factory :review do
+    reviewer     { Faker::Name.name }
+    body         { generate(:random_text) }
+    review_date  { generate(:random_date) }
+    rating       { Random.rand(0.0..5.0)  }
+  end
+end
