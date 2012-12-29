@@ -31,6 +31,10 @@
                   <% if can? :read, Show %>
                   <li><%= link_to 'Shows', admin_shows_path %></li>
                   <% end %>
+				  
+                  <% if can? :read, Workshop %>
+                  <li><%= link_to 'Workshops', admin_workshops_path %></li>
+                  <% end %>
 
                   <% if can? :read, Admin::Questionnaires::Questionnaire %>
                   <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>

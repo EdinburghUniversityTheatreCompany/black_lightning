@@ -22,7 +22,7 @@ class Season < ActiveRecord::Base
   
   validates :slug, :presence => true, :uniqueness => true
   
-  has_many :shows
+  has_many :events
   
   
 end

@@ -1,0 +1,28 @@
+<div class="row">
+  <div class="span12">
+    <h1>Upcoming Workshops</h1>
+    <hr />
+
+    <% @workshops.each do |workshop| %>
+    <article class="media">
+      <% image = image_tag workshop.image.url(:thumb), :class => "media-object" %>
+      <%= link_to image, workshop, :class => "pull-left thumbnail" %>
+      <div class="media-body">
+        <header class="media-heading">
+          <h4 class="media-heading"><%= link_to workshop.name, workshop %></h4>
+        </header>
+        <p>
+          <%= workshop.tagline %>
+          <br />
+          <span class="workshop-date"><%= workshop.date_range %></span>
+        </p>
+        <p><%= link_to 'View Details', workshop %></p>
+      </div>
+    </article>
+    <hr />
+
+    <% end %>
+
+    <%= will_paginate(@workshops) %>
+  </div>
+</div>

@@ -5,6 +5,7 @@ ChaosRails::Application.routes.draw do
   devise_for :users
 
   resources :shows,       :only => [:index, :show]
+  resources :workshops,   :only => [:index, :show]
   resources :news,        :only => [:index, :show]
   resources :venues,      :only => [:index, :show]
   resources :seasons,     :only => [:show]

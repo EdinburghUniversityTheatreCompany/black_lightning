@@ -1,6 +1,6 @@
 <h1><%= @season.name %></h1>
 <div class="accordion" id="accordion2">
-	<% @season.shows.each do |show|%>
+	<% @season.events.each do |show|%>
   <div class="accordion-group">
     <div class="accordion-heading">
       
@@ -15,11 +15,13 @@
 			<%= render_markdown show.description %>
     </div>
 	
+	<% if show.type == "Show" %>
     <div id="<%= show.id %>" class="accordion-body collapse">
       <div class="accordion-inner">
 		  <%= xts_widget show.xts_id %>
       </div>
     </div>
+	<% end %>
   </div>
   <% end %>
 </div>
