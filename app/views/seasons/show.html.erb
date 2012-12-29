@@ -1,4 +1,6 @@
 <h1><%= @season.name %></h1>
+<%= render_markdown @season.description %>
+<hr>
 <div class="accordion" id="accordion2">
 	<% @season.events.each do |show|%>
   <div class="accordion-group">
