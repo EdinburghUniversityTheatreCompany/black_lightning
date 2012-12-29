@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121223231250) do
+ActiveRecord::Schema.define(:version => 20121229214216) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -26,7 +26,9 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.datetime "file_updated_at"
   end
 
+  add_index "admin_answers", ["answerable_id"], :name => "index_admin_answers_on_answerable_id"
   add_index "admin_answers", ["answerable_id"], :name => "index_admin_proposals_answers_on_proposal_id"
+  add_index "admin_answers", ["answerable_type"], :name => "index_admin_answers_on_answerable_type"
   add_index "admin_answers", ["question_id"], :name => "index_admin_proposals_answers_on_question_id"
 
   create_table "admin_editable_blocks", :force => true do |t|
@@ -105,6 +107,9 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.string   "questionable_type"
   end
 
+  add_index "admin_questions", ["questionable_id"], :name => "index_admin_questions_on_questionable_id"
+  add_index "admin_questions", ["questionable_type"], :name => "index_admin_questions_on_questionable_type"
+
   create_table "admin_staffing_jobs", :force => true do |t|
     t.string   "name"
     t.integer  "staffable_id"
@@ -114,7 +119,9 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.string   "staffable_type"
   end
 
+  add_index "admin_staffing_jobs", ["staffable_id"], :name => "index_admin_staffing_jobs_on_staffable_id"
   add_index "admin_staffing_jobs", ["staffable_id"], :name => "index_admin_staffing_jobs_on_staffing_id"
+  add_index "admin_staffing_jobs", ["staffable_type"], :name => "index_admin_staffing_jobs_on_staffable_type"
   add_index "admin_staffing_jobs", ["user_id"], :name => "index_admin_staffing_jobs_on_user_id"
 
   create_table "admin_staffing_templates", :force => true do |t|
@@ -152,6 +159,8 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
   end
+
+  add_index "children_techies", ["techie_id"], :name => "index_children_techies_on_techie_id"
 
   create_table "delayed_jobs", :force => true do |t|
     t.integer  "priority",    :default => 0
@@ -191,6 +200,9 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.string   "type"
   end
 
+  add_index "events", ["season_id"], :name => "index_events_on_season_id"
+  add_index "events", ["venue_id"], :name => "index_events_on_venue_id"
+
   create_table "news", :force => true do |t|
     t.string   "title"
     t.text     "body"
@@ -206,6 +218,8 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.integer  "author_id"
   end
 
+  add_index "news", ["author_id"], :name => "index_news_on_author_id"
+
   create_table "newsletter_subscribers", :force => true do |t|
     t.string   "email"
     t.datetime "created_at", :null => false
@@ -216,6 +230,8 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.integer "role_id"
     t.integer "permission_id"
   end
+
+  add_index "permissions_roles", ["role_id"], :name => "index_permissions_roles_on_role_id"
 
   create_table "pictures", :force => true do |t|
     t.text     "description"
@@ -228,6 +244,9 @@ ActiveRecord::Schema.define(:version => 20121223231250) do
     t.datetime "created_at",         :null => false
     t.datetime "updated_at",         :null => false
   end
+
+  add_index "pictures", ["gallery_id"], :name => "index_pictures_on_gallery_id"
+  add_index "pictures", ["gallery_type"], :name => "index_pictures_on_gallery_type"
 
   create_table "reviews", :force => true do |t|
     t.integer  "show_id"
