@@ -77,13 +77,13 @@ class Event < ActiveRecord::Base
   has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
   has_many :users, :through => :team_members
   has_many :pictures, :as => :gallery
-  
+
   belongs_to :venue
   belongs_to :season
 
   accepts_nested_attributes_for :team_members, :reject_if => :all_blank, :allow_destroy => true
   accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
-  
+
 
   # Validations #
 
@@ -95,7 +95,7 @@ class Event < ActiveRecord::Base
   has_attached_file :image, :styles => { :medium => "576x300#", :thumb => "192x100#", :slideshow => "960x500#" }, :default_url => :default_image
 
   # Accessible Attributes #
-  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, 
+  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes,
 
   # Returns the last show to have finished.
   def self.last_show

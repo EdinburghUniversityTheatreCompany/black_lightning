@@ -18,13 +18,13 @@
 <% if @season.events.count > 0 %>
 <h3>Events</h3>
 <ul>
-	<% @season.events.each do |show|
-		if show.type == "Show" %>
-			<li><%= link_to show.name, admin_show_path(show) %></li>
-		<% else %>
-			<li><%= link_to show.name, admin_workshop_path(show) %> <span class="label">Workshop</span></li>
-		<% end %>
-	<% end %>
+  <% @season.events.each do |show|
+    if show.type == "Show" %>
+      <li><%= link_to show.name, admin_show_path(show) %></li>
+    <% else %>
+      <li><%= link_to show.name, admin_workshop_path(show) %> <span class="label">Workshop</span></li>
+    <% end %>
+  <% end %>
 </ul>
 <% end %>
 

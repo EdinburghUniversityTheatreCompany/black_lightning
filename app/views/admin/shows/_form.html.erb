@@ -24,7 +24,7 @@
 
     <%= f.association :venue, :collection => Venue.all, :label_method => :name %>
 
-	<%= f.association :season, :collection => Season.all, :label_method => :name %>
+    <%= f.association :season, :collection => Season.all, :label_method => :name %>
 
     <%= f.input :xts_id %>
 
@@ -38,7 +38,7 @@
 
       <% if f.object.errors[:team_members].present? then %>
       <p id="team_errors" class="alert alert-error">
-          <%= f.error :team_members %>
+        <%= f.error :team_members %>
       </p>
       <% end %>
 
@@ -64,7 +64,7 @@
 
       <% if f.object.errors[:pictures].present? then %>
       <p id="picture_errors" class="alert alert-error">
-          <%= f.error :pictures %>
+        <%= f.error :pictures %>
       </p>
       <% end %>
 

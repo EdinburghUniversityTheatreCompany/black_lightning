@@ -2,28 +2,27 @@
 <%= render_markdown @season.description %>
 <hr>
 <div class="accordion" id="accordion2">
-	<% @season.events.each do |show|%>
+  <% @season.events.each do |show|%>
   <div class="accordion-group">
     <div class="accordion-heading">
-      
-	      <% image = image_tag show.image.url(:thumb), :class => "media-object" %>
-	      <%= link_to image, show, :class => "pull-right thumbnail" %>
-	      <h4 class="media-heading"><a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#<%= show.id %>"><%= show.name %></a></h4>
-	        <p>
-	          <%= show.tagline %>
-	          <br />
-	          <span class="show-date"><%= show.date_range %></span>
-	        </p>
-			<%= render_markdown show.description %>
+      <% image = image_tag show.image.url(:thumb), :class => "media-object" %>
+      <%= link_to image, show, :class => "pull-right thumbnail" %>
+      <h4 class="media-heading"><a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#<%= show.id %>"><%= show.name %></a></h4>
+      <p>
+        <%= show.tagline %>
+        <br />
+        <span class="show-date"><%= show.date_range %></span>
+      </p>
+      <%= render_markdown show.description %>
     </div>
-	
-	<% if show.type == "Show" %>
-    <div id="<%= show.id %>" class="accordion-body collapse">
-      <div class="accordion-inner">
-		  <%= xts_widget show.xts_id %>
+
+    <% if show.type == "Show" %>
+      <div id="<%= show.id %>" class="accordion-body collapse">
+        <div class="accordion-inner">
+        <%= xts_widget show.xts_id %>
+        </div>
       </div>
-    </div>
-	<% end %>
+    <% end %>
   </div>
   <% end %>
 </div>

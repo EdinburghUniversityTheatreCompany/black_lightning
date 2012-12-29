@@ -30,7 +30,7 @@ ChaosRails::Application.routes.draw do
         put 'add_questionnaire'
       end
     end
-    
+
     resources :workshops
 
     resources :venues

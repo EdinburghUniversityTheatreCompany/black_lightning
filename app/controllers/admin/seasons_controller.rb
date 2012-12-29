@@ -18,7 +18,7 @@ class Admin::SeasonsController < AdminController
   def show
     logger.debug params[:id]
     @season = Season.find_by_slug(params[:id])
-    
+
     @title = @season.name
     respond_to do |format|
       format.html # show.html.erb
