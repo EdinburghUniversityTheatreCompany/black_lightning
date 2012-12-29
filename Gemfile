@@ -43,6 +43,8 @@ gem 'axlsx'
 gem 'nokogiri'
 gem 'airbrake'
 
+gem 'rails-footnotes'
+
 group :test do
   gem 'ci_reporter'
   gem 'simplecov'
