@@ -143,6 +143,7 @@ GEM
     rubinius-actor (0.0.2)
       rubinius-core-api
     rubinius-core-api (0.0.1)
+    ruby-prof (0.11.3)
     rubyzip (0.9.9)
     sass (3.2.4)
     sass-rails (3.2.5)
@@ -211,6 +212,7 @@ DEPENDENCIES
   rails (= 3.2.9)
   rails_autolink
   rolify
+  ruby-prof
   sass-rails (~> 3.2.3)
   simple_form
   simplecov

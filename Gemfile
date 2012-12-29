@@ -49,6 +49,7 @@ group :test do
   gem 'simplecov-rcov'
   gem 'factory_girl_rails', '~> 4.0'
   gem 'faker'
+  gem 'ruby-prof'
 end
 
 # To use ActiveModel has_secure_password
