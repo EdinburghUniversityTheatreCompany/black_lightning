@@ -71,6 +71,11 @@ class User < ActiveRecord::Base
   validates :email, :presence => true
   validates :phone_number, :allow_blank => true, :format => { :with => /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})$/, :message => "Please enter a valid mobile number" }
 
+  has_many :team_membership, :class_name => "TeamMember"
+  has_many :shows, :through => :team_membership, :source => :teamwork, :source_type => "Show"
+  has_many :staffing_jobs, :class_name => "Admin::StaffingJob"
+  has_many :staffings, :through => :staffing_jobs, :source => :staffable, :source_type => "Admin::Staffing"
+
   # Setup accessible (or protected) attributes for your model
   attr_accessible :email, :password, :password_confirmation, :remember_me, :first_name, :last_name, :role_ids, :phone_number
 

@@ -86,10 +86,10 @@ class Admin::ReportsController < ApplicationController
           sheet.add_row(["Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows"])
 
           User.all.each do |user|
-            past_show_count = Show.joins(:users).where(["user_id = ? AND end_date < ? AND end_date >= ? AND end_date < ?", user.id, Date.today, current_date, next_date]).count
-            upcoming_show_count = Show.joins(:users).where(["user_id = ? AND end_date >= ? AND end_date >= ? AND end_date < ?", user.id, Date.today, current_date, next_date]).count
+            past_show_count = user.shows.where(["end_date < ? AND end_date >= ? AND end_date < ?", Date.today, current_date, next_date]).count
+            upcoming_show_count = user.shows.where(["end_date >= ? AND end_date >= ? AND end_date < ?", Date.today, current_date, next_date]).count
 
-            staffing_count = Admin::Staffing.joins(:staffing_jobs).where(["user_id = ? AND date >= ? AND date < ?", user.id, current_date, next_date]).count
+            staffing_count = user.staffings.joins(:staffing_jobs).where(["date >= ? AND date < ?", current_date, next_date]).count
 
             sheet.add_row([user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count])
           end
