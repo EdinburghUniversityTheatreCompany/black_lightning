@@ -1,9 +1,0 @@
-class CreateStaffingTemplates < ActiveRecord::Migration
-  def change
-    create_table :staffing_templates do |t|
-      t.datetime   :date
-      t.string     :show_title
-      t.timestamps
-    end
-  end
-end
