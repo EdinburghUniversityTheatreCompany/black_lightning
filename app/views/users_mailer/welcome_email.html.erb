@@ -5,27 +5,29 @@
   </head>
   <body>
     <p>
-      Dear <%= @user.first_name.presence || @user.email  %>,
-    </p>
-    <p>
-      An account has been created for you for the Bedlam Theatre website.
-    </p>
-
-    <% if @reset_password then %>
-      <p>
-        To sign in, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %>
-      </p>
-    <% else %>
-      <p>
-        Click <%= link_to 'here to sign in', new_user_session_url %>
-      </p>
-    <% end %>
-
-    <p>
-      Regards,
-    </p>
-    <p>
-      The Bedlam Theatre Team
-    </p>
+		Hi <%= @user.first_name.presence || @user.email  %>,
+	</p>
+	<p>
+		As a member of the EUTC, an account has been created for you on the new and improved Bedlam Theatre website. This is the new place for you to propose shows, sign up for staffing, read news and access new and old resources.
+	</p>
+	<p>
+		We're really excited to get you started on the new site, so <% if @reset_password then %>to sign in, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %><% else %>click <%= link_to 'here to sign in', new_user_session_url %><% end %>. 
+	</p>
+	<p>
+		You'll be able to access the members site from http://www,bedlamtheatre.co.uk, just click "members" in the top right. If you have any problems with signing in or suggestions about the website, please let us know on it@bedlamtheatre.co.uk as soon as possible.
+	</p>
+	<p>
+		Happy New Year!
+	</p>
+	<p>
+		The Project Black Lightning Team
+	</p>
+	<hr>
+	<p>
+		Bedlam Theatre<br />
+		11b Bristo Place<br />
+		Edinburgh<br />
+		EH1 1EZ<br />
+	</p>
   </body>
 </html>
