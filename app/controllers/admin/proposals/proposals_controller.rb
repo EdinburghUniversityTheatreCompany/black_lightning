@@ -19,10 +19,10 @@ class Admin::Proposals::ProposalsController < AdminController
   ##
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-    @proposals = Admin::Proposals::Proposal.where(:call_id => @call.id)
+    @proposals = @call.proposals
 
     if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
-      @proposals = @proposals.joins(:users).where('approved = true or user_id = ?', current_user.id)
+      @proposals = @proposals.joins(:users).where('approved = true or user_id = ?', current_user.id).uniq
     end
 
     respond_to do |format|

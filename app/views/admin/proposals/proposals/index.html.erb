@@ -14,13 +14,8 @@
   <tr>
     <th>Show title</th>
 
-    <% if can? :edit, Admin::Proposals::Proposal %>
     <th></th>
-    <% end %>
-
-    <% if can? :destroy, Admin::Proposals::Proposal %>
     <th></th>
-    <% end %>
   </tr>
 
 <% @proposals.each do |proposal| %>
@@ -46,13 +41,17 @@
       <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
     </td>
 
-    <% if can? :edit, proposal %>
-    <td><%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %></td>
-    <% end %>
+    <td>
+      <% if can? :edit, proposal %>
+        <%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %>
+      <% end %>
+    </td>
 
-    <% if can? :destroy, proposal %>
-    <td><%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %></td>
-    <% end %>
+    <td>
+      <% if can? :destroy, proposal %>
+        <%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %>
+      <% end %>
+    </td>
   </tr>
 <% end %>
 </table>
