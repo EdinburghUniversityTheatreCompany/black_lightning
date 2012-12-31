@@ -1,6 +1,6 @@
 <h3><%= link_to 'News', admin_news_index_path %></h3>
 
-<% ::News.all.first(4).each do |news| %>
+<% ::News.current.first(4).each do |news| %>
   <p><%= link_to news.title, admin_news_path(news) %> <%= "<span class='label label-important'>Members</span>".html_safe if !news.show_public%></p>
   <p><%= render_markdown (truncate(news.body, length: 80)) %></p>
   <hr />
