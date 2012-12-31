@@ -11,4 +11,15 @@ namespace :users do
       end
     end
   end
+  
+  task :email do
+    User.all.each do |u|
+      begin
+        UsersMailer.delay.welcome_email(u, true)
+        puts "Just emailed #{u.name} at #{u.email}"
+      rescue Exception => exc
+        puts "Uh oh: #{u.name}, #{u.email} > #{exc.message}"
+      end
+    end
+  end 
 end
