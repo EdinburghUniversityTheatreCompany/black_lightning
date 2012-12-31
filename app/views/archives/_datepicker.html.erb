@@ -1,4 +1,4 @@
-<form class="form-inline" method="get" action="<%= '/' + params[:controller] + '/set_date' %>">
+<%= form_tag('/' + params[:controller] + '/set_date', class: "form-inline") do %>
   <select name="start_month" class="span2">
     <option value="01" <%= 'selected' if params[:start_month] == '01' %> >January</option>
     <option value="02" <%= 'selected' if params[:start_month] == '02' %> >February</option>
@@ -32,4 +32,4 @@
   <input type="text" name="end_year" placeholder="Year" class="span2" value="<%= params[:end_year] %>">
 
   <input type="submit" class="btn" value="Search" >
-</form>
+<% end %>
