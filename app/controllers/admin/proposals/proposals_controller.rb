@@ -248,4 +248,7 @@ class Admin::Proposals::ProposalsController < AdminController
       format.json { head :no_content }
     end
   end
+  
+  def about
+  end
 end

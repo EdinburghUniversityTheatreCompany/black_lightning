@@ -74,7 +74,8 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      resources :call_question_templates
+      match '/about' => 'proposals#about'
+      resources :call_question_templates, :except => [:show]
     end
 
     namespace :questionnaires do
