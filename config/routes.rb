@@ -108,10 +108,10 @@ ChaosRails::Application.routes.draw do
   post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
 
   match 'about' => 'about#index', :as => :about_index
-  match 'about/:action' => 'about', :as => :about
+  match 'about/*action' => 'about', :as => :about
 
   match 'getinvolved' => 'get_involved#index', :as => :get_involved_index
-  match 'getinvolved/:action' => 'get_involved', :as => :get_involved
+  match 'getinvolved/*action' => 'get_involved', :as => :get_involved
 
   # ERROR PAGES - match to ensure correct response code is sent
   match '/404' => 'static#render_404'
