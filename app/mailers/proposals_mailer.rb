@@ -1,5 +1,5 @@
 class ProposalsMailer < ActionMailer::Base
-  default from: "proposals@bedlamtheatre.co.uk"
+  default from: "Bedlam Theatre <no-reply@bedlamtheatre.co.uk>"
 
   def new_proposal(proposal, creator, team_member)
     @proposal = proposal
