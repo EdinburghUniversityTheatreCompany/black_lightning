@@ -41,7 +41,7 @@ jQuery ->
 
         message = """
                   <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name}, on #{data.staffable.date}.</p>
-                  <p><a href="#{google_calendar_addr}">Add to Google Calendar</a>
+                  <p><a href="#{google_calendar_addr}" target="_blank">Add to Google Calendar</a>
                   """
         showAlert "success", message;
 
