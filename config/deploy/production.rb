@@ -12,6 +12,19 @@ after "deploy:restart", "delayed_job:restart"
 
 set :deploy_to, "/var/www/bedlamtheatre_co_uk"
 
+set :branch do
+  tag = `git tag`.split("\n").last
+
+  confirm = Capistrano::CLI.ui.ask "Tag to deploy (make sure to push the tag first): #{tag}. Please confirm. [N]"
+  confirm = "N" if confirm.empty?
+
+  unless ["Y", "y"].include? confirm
+    raise CommandError.new("Deploy Cancelled.")
+  end
+
+  return tag
+end
+
 namespace :deploy do
   desc "chmod delayed_job script"
   task :chmoddj do
