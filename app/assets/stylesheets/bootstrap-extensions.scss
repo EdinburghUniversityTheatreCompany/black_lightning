@@ -76,6 +76,7 @@ img.float-left, img.float-right {
   text-align: center;
 }
 
+/* misc other styles */
 form .help-block {
   font-style: italic;
   font-size: small;
@@ -87,6 +88,22 @@ form .help-block {
 
 .borderbox > * {
   padding: 5px;
+}
+
+@media (min-width: 979px) {
+  .vertical-rule {
+    position: relative;
+  }
+
+  .vertical-rule > [class ^= "span"]:not(:first-child):before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    border-left: 1px solid #eeeeee;
+    border-right: 1px solid white;
+    margin-left: -10px;
+  }
 }
 
 /* font-awesome alignment */
