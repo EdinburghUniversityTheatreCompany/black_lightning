@@ -1,8 +1,3 @@
-<% content_for :head do %>
-  <%= javascript_include_tag "jquery.lightbox-0.5" %>
-  <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
-<% end %>
-
 <% if @show.end_date %>
 <% if @show.end_date < Date.today %>
   <p class="alert alert-info">
@@ -123,7 +118,7 @@
 
   <h3>Gallery</h3>
 
-  <ul class="gallery thumbnails">
+  <ul class="lightbox thumbnails">
     <% @show.pictures.each do |picture| %>
       <li class="span2">
       <% img = image_tag picture.image.url(:thumb) %>
@@ -131,16 +126,4 @@
       </li>
     <% end %>
   </ul>
-
-  <script type="text/javascript">
-  $(function() {
-    $('.gallery a').lightBox({
-      imageLoading:  '/images/lightbox-ico-loading.gif',
-      imageBtnClose: '/images/lightbox-btn-close.gif',
-      imageBtnPrev:  '/images/lightbox-btn-prev.gif',
-      imageBtnNext:  '/images/lightbox-btn-next.gif',
-      imageBlank:    '/images/lightbox-blank.gif'
-    });
-  });
-  </script>
 <% end %>

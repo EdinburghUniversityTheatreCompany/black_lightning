@@ -51,7 +51,7 @@ class Attachment < ActiveRecord::Base
 
   has_attached_file :file,
                     :url => '/attachments/:slug/:style',
-                    :styles => { :thumb => "192x100#" },
+                    :styles => { :thumb => "192x100#", :display => "700x700" },
                     :convert_options => { :thumb => "-quality 75 -strip" },
                     :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
 
