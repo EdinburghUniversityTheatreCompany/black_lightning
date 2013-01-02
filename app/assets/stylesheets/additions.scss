@@ -1,24 +1,28 @@
 /* From Bootstrap Century */
-$sansFontFamily: Asap;
+$sansFontFamily: Helvetica, Arial;
 $headingsColor:  #dc143c;
 $linkColor:      #dc143c;
 
 @import "bootstrap-extensions";
 
-@import url(http://fonts.googleapis.com/css?family=Asap);
+@import url(http://fonts.googleapis.com/css?family=Gafata);
 
 #logo {
-	height: 130px;
+    height: 130px;
 }
 
 .header {
-	padding-top: 10px;
-	margin-bottom: 20px;
+    padding-top: 10px;
+    margin-bottom: 20px;
 }
 
 body {
-	background-image: url('cream_dust.png');
-	background-repeat: repeat;
+    background-image: url('cream_dust.png');
+    background-repeat: repeat;
+}
+
+h1,h2,h3,h4,g5,h6 {
+    font-family: Gafata, Arial
 }
 
 h3 {
@@ -26,12 +30,12 @@ h3 {
 }
 
 #side {
-	border-left: 1px solid #D1D1D1;
-	padding: 10px 0 20px 10px;
+    border-left: 1px solid #D1D1D1;
+    padding: 10px 0 20px 10px;
 }
 
 .content {
-	margin-top: 20px;
+    margin-top: 20px;
 }
 
 #nav {
