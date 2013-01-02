@@ -70,6 +70,18 @@ h3 {
     text-decoration: underline;
 }
 
+.seasons-accordion h4 {
+    margin: 0;
+}
+
+.seasons-accordion .accordion-heading {
+    padding: 10px;
+}
+
+.seasons-accordion .accordion-toggle {
+    padding: 0;
+}
+
 .carousel-caption h4 {
     display: inline-block;
 }
