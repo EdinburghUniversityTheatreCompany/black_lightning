@@ -60,6 +60,7 @@ ChaosRails::Application.routes.draw do
     match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => :get, :as => :sign_up_confirm
     match '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
 
+    match '/proposals' => redirect('/admin/proposals/calls')
     namespace :proposals do
       resources :calls do
         member do
