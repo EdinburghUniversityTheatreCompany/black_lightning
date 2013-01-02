@@ -30,7 +30,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
   test "should create admin_staffing" do
     assert_difference('Admin::Staffing.count') do
-      post :create, admin_staffing: { date: @admin_staffing.date, show_title: @admin_staffing.show_title }
+      post :create, admin_staffing: { start_time: @admin_staffing.start_time, end_time: @admin_staffing.end_time, show_title: @admin_staffing.show_title }
     end
 
     assert_redirected_to admin_staffing_path(assigns(:admin_staffing))
@@ -47,7 +47,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test "should update admin_staffing" do
-    put :update, id: @admin_staffing, admin_staffing: { date: @admin_staffing.date, show_title: @admin_staffing.show_title }
+    put :update, id: @admin_staffing, admin_staffing: { start_time: @admin_staffing.start_time, end_time: @admin_staffing.end_time, show_title: @admin_staffing.show_title }
     assert_redirected_to admin_staffing_path(assigns(:admin_staffing))
   end
 

@@ -177,10 +177,10 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if @job.save
         format.html {
-          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.date, :format => :short)}."
+          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.start_time, :format => :short)}."
           redirect_to admin_staffings_path
         }
-        format.json { render :json => @job.to_json(:include => { :user => {}, :staffable => {} }, :methods => [ :js_date ] ) }
+        format.json { render :json => @job.to_json(:include => { :user => {}, :staffable => {} }, :methods => [ :js_start_time, :js_end_time ] ) }
       else
         format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

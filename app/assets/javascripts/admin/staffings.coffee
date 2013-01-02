@@ -16,9 +16,8 @@ jQuery ->
           button.click()
           return
 
-        start_time = new Date(data.js_date * 1000)
-        end_time = new Date(data.js_date * 1000)
-        end_time.setHours(start_time.getHours() + 3)
+        start_time = new Date(data.js_start_time * 1000)
+        end_time = new Date(data.js_end_time * 1000)
 
         start_str = start_time.toISOString().replace(/(-|:|\.)/g, "")
         start_str = start_str.slice(0, -4) + "Z"
@@ -40,7 +39,7 @@ jQuery ->
         google_calendar_addr = google_calendar_addr.replace(/(\r\n|\n|\r)\s\s/gm,"");
 
         message = """
-                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name}, on #{data.staffable.date}.</p>
+                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name}, at #{data.staffable.start_time}.</p>
                   <p><a href="#{google_calendar_addr}" target="_blank">Add to Google Calendar</a>
                   """
         showAlert "success", message;
