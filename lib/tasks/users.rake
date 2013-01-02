@@ -22,4 +22,10 @@ namespace :users do
       end
     end
   end 
+
+  task :interaction => :environment do
+    percentage = 1 - (User.where(['sign_in_count = ?', 0]).count.to_f / User.all.count)
+    puts "#{percentage} of users have set a password and signed in at least once."
+  end
+
 end
