@@ -55,6 +55,20 @@ Images are very similar to links, simply use:
 
 See the section below on styles for resizing images.
 
+Captioned Images
+----------------
+
+N.B - This is a custom extension that does not exist in normal kramdown.
+{:.alert}
+
+Captioned images can be created as follows:
+
+    {::captioned_image .float-left}
+    ![Image Description](/attachments/myimage)
+
+    This is a caption
+    {:/captioned_image}
+
 ---------------------------------------------------------
 
 Headers

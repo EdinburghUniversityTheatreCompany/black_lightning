@@ -67,6 +67,15 @@
   margin-bottom: 10px;
 }
 
+.captioned-image {
+  max-width: 192px;
+  font-size: smaller;
+}
+
+.captioned-image p:last-child {
+  margin: 0px;
+}
+
 img.float-left, img.float-right {
   @extend .img-polaroid;
   max-width: 192px;
