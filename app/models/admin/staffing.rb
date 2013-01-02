@@ -3,7 +3,7 @@
 # Table name: admin_staffings
 #
 # *id*::              <tt>integer, not null, primary key</tt>
-# *date*::            <tt>datetime</tt>
+# *start_time*::            <tt>datetime</tt>
 # *show_title*::      <tt>string(255)</tt>
 # *created_at*::      <tt>datetime, not null</tt>
 # *updated_at*::      <tt>datetime, not null</tt>
@@ -24,7 +24,7 @@
 # Table name: admin_staffings
 #
 # *id*::              <tt>integer, not null, primary key</tt>
-# *date*::            <tt>datetime</tt>
+# *start_time*::            <tt>datetime</tt>
 # *show_title*::      <tt>string(255)</tt>
 # *created_at*::      <tt>datetime, not null</tt>
 # *updated_at*::      <tt>datetime, not null</tt>
@@ -37,10 +37,10 @@ class Admin::Staffing < ActiveRecord::Base
   after_save     :update_reminder
   before_destroy :reminder_cleanup
 
-  default_scope order("date ASC")
+  default_scope order("start_time ASC")
 
-  scope :future, where(['date > ?', DateTime.now])
-  scope :past, where(['date < ?', DateTime.now])
+  scope :future, where(['start_time > ?', DateTime.now])
+  scope :past, where(['start_time < ?', DateTime.now])
 
   has_many :staffing_jobs, :as => :staffable, :class_name => "Admin::StaffingJob"
   has_many :users, :through => :staffing_jobs
@@ -50,9 +50,9 @@ class Admin::Staffing < ActiveRecord::Base
 
   accepts_nested_attributes_for :staffing_jobs, :reject_if => :all_blank, :allow_destroy => true
 
-  validates :show_title, :date, :presence => true
+  validates :show_title, :start_time, :presence => true
 
-  attr_accessible :show_title, :date, :staffing_jobs, :staffing_jobs_attributes
+  attr_accessible :show_title, :start_time, :staffing_jobs, :staffing_jobs_attributes
 
   ##
   # Returns the number of jobs that have been filled
@@ -72,15 +72,15 @@ class Admin::Staffing < ActiveRecord::Base
   end
 
   ##
-  # Update the reminder job for the staffing
+  # Upstart_time the reminder job for the staffing
   ##
   def update_reminder
     if reminder_job.present? then
-      self.reminder_job.run_at = date.advance(:hours => -2)
+      self.reminder_job.run_at = start_time.advance(:hours => -2)
       self.reminder_job.save!
     else
-      self.reminder_job = delay({:run_at => date.advance(:hours => -2)}).send_reminder
-      self.reminder_job.description = "Reminder for staffing #{id} - #{show_title} - #{I18n::l date, :format => :short}"
+      self.reminder_job = delay({:run_at => start_time.advance(:hours => -2)}).send_reminder
+      self.reminder_job.description = "Reminder for staffing #{id} - #{show_title} - #{I18n::l start_time, :format => :short}"
       self.reminder_job.save!
 
       self.save!

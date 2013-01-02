@@ -32,11 +32,16 @@
             var item = $('#date_blueprint').clone();
             $(item).show();
             //TODO: This feels like a bit of a cheat - could probably be improved.
-            item.find('select[name*="day"]').attr('name', 'dates[' + counter + '][day]');
-            item.find('select[name*="month"]').attr('name', 'dates[' + counter + '][month]');
-            item.find('select[name*="year"]').attr('name', 'dates[' + counter + '][year]');
-            item.find('select[name*="hour"]').attr('name', 'dates[' + counter + '][hour]');
-            item.find('select[name*="minute"]').attr('name', 'dates[' + counter + '][minute]');
+            item.find('select[name*="start[day]"]').attr('name', 'start_times[' + counter + '][day]');
+            item.find('select[name*="start[month]"]').attr('name', 'start_times[' + counter + '][month]');
+            item.find('select[name*="start[year]"]').attr('name', 'start_times[' + counter + '][year]');
+            item.find('select[name*="start[hour]"]').attr('name', 'start_times[' + counter + '][hour]');
+            item.find('select[name*="start[minute]"]').attr('name', 'start_times[' + counter + '][minute]');
+            item.find('select[name*="end[day]"]').attr('name', 'end_times[' + counter + '][day]');
+            item.find('select[name*="end[month]"]').attr('name', 'end_times[' + counter + '][month]');
+            item.find('select[name*="end[year]"]').attr('name', 'end_times[' + counter + '][year]');
+            item.find('select[name*="end[hour]"]').attr('name', 'end_times[' + counter + '][hour]');
+            item.find('select[name*="end[minute]"]').attr('name', 'end_times[' + counter + '][minute]');
             item.find('a').click(function () {
               $(item).remove();
             });
@@ -89,6 +94,6 @@
 </div>
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
-  <%= select_datetime %>
+  <%= select_datetime(Time.current, {prefix: "start"}) %> to <%= select_time(Time.current + 3.hours, prefix: "end")%>
   <a class="btn btn-danger"><i class="icon-remove"></i> Remove</a>
 </div>

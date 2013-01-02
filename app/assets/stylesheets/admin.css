@@ -23,8 +23,10 @@ body {
 }
 
 div.datetime select {
-    width: 107.5px;
+    width: 100px;
 }
+
+select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !important;}
 
 .container {
     padding-bottom:10px;

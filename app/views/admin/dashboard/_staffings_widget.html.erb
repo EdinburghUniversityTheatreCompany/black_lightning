@@ -3,7 +3,7 @@
 <div style="height: 210px; overflow: hidden;">
   <% ::Admin::Staffing.future.limit(5).each do |staffing| %>
     <p>
-      <%= link_to (l staffing.date, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
+      <%= link_to (l staffing.start_time, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
 
       <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
       <% if remaining_positions > 0 %>
