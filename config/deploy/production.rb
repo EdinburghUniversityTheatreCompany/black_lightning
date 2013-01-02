@@ -13,7 +13,7 @@ after "deploy:restart", "delayed_job:restart"
 set :deploy_to, "/var/www/bedlamtheatre_co_uk"
 
 set :branch do
-  tag = `git tag`.split("\n").last
+  tag = `git describe`
 
   confirm = Capistrano::CLI.ui.ask "Tag to deploy (make sure to push the tag first): #{tag}. Please confirm. [N]"
   confirm = "N" if confirm.empty?
@@ -22,7 +22,7 @@ set :branch do
     raise CommandError.new("Deploy Cancelled.")
   end
 
-  return tag
+  next tag
 end
 
 namespace :deploy do
