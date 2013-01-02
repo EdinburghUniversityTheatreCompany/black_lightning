@@ -9,7 +9,8 @@ ChaosRails::Application.routes.draw do
   resources :news,        :only => [:index, :show]
   resources :venues,      :only => [:index, :show]
   resources :seasons,     :only => [:show]
-  resources :attachments, :only => [:show]
+
+  match 'attachments/:slug(/:style)' => 'attachments#show'
 
   match 'admin/' => 'admin#index'
   namespace :admin do

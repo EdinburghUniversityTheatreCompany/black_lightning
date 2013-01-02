@@ -49,7 +49,11 @@ class Attachment < ActiveRecord::Base
 
   validates :name, :presence => true, :uniqueness => true
 
-  has_attached_file :file, :url => '/attachments/:slug', :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
+  has_attached_file :file,
+                    :url => '/attachments/:slug/:style',
+                    :styles => { :thumb => "192x100#" },
+                    :convert_options => { :thumb => "-quality 75 -strip" },
+                    :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
 
   attr_accessible :name, :file
 
