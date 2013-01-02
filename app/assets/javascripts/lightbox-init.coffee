@@ -2,9 +2,11 @@ $ ->
   # Some clever bits to allow the zoomable class to work
   $(".zoomable").each (i, item) ->
     $item = $(item)
-    container = $("<a href='#{$item.attr("src")}/display' title='#{$item.attr("title")}' class='lightbox-single'></a>")
+
+    title = $item.attr("title") || ""
+    container = $("<a href='#{$item.attr("src")}/display' title='#{title}' class='lightbox-single'></a>")
     new_img = $item.clone()
-    new_img.src = $item.src + "/thumb"
+    new_img.attr('src', $item.attr('src') + "/thumb")
 
     container.append(new_img)
 
