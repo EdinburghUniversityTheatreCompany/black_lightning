@@ -7,13 +7,6 @@
 
     <%= image_tag @user.avatar.url(:thumb), class: "thumbnail zoomable" if @user.avatar? %>
 
-    <dl>
-      <dt>Member Since:</dt>
-      <dd><%= l @user.created_at, format: :longd %>
-
-      <dt>Shows:</dt>
-      <dd><%= @user.shows.count %></dd>
-    </dl>
   </div>
   <div class="span9">
     <%= render_markdown @user.bio %>
