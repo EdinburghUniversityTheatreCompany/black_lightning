@@ -9,6 +9,7 @@ ChaosRails::Application.routes.draw do
   resources :news,        :only => [:index, :show]
   resources :venues,      :only => [:index, :show]
   resources :seasons,     :only => [:show]
+  resources :users,       :only => [:show]
 
   match 'attachments/:slug(/:style)' => 'attachments#show'
 

@@ -6,7 +6,9 @@ en:
     formats:
       short: ! '%H:%M %d/%m/%y'
       long : ! '%A %d %B at %H:%M'
+      longd: ! '%A %d %B %Y'
   date:
     formats:
+      shorty: ! '%d/%m/%y'
       long: ! '%A %d %B'
       longy: ! '%A %d %B %Y'

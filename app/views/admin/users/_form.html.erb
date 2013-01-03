@@ -1,5 +1,6 @@
-<%= simple_form_for [:admin, @user], :html => {:class => "form-horizontal"} do |f| %>
+<%= simple_form_for [:admin, @user] do |f| %>
 <div class="form-inputs">
+  <fieldset class="form-horizontal">
     <%= f.input :email %>
     <%= f.input :first_name %>
     <%= f.input :last_name %>
@@ -13,6 +14,16 @@
     <% if can? :assign_roles, @user %>
       <%= f.association :roles, :as => :check_boxes %>
     <% end %>
+  </fieldset>
+
+  <fieldset>
+    <%= f.input :public_profile %>
+
+    <%= f.input :avatar %>
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :bio, :rows => 12 } do %>
+      <%= render "admin/shared/md_hints" %>
+    <% end %>
+  </fieldset>
 </div>
 <div class="form-actions">
     <%= f.button :submit, class: "btn-primary" %>

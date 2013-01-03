@@ -1,0 +1,58 @@
+<h1><%= @user.name %></h1>
+
+<hr />
+
+<div class="row vertical-rule">
+  <div class="span3">
+
+    <%= image_tag @user.avatar.url(:thumb), class: "thumbnail zoomable" if @user.avatar? %>
+
+    <dl>
+      <dt>Member Since:</dt>
+      <dd><%= l @user.created_at, format: :longd %>
+
+      <dt>Shows:</dt>
+      <dd><%= @user.shows.count %></dd>
+    </dl>
+  </div>
+  <div class="span9">
+    <%= render_markdown @user.bio %>
+  </div>
+</div>
+
+<hr />
+
+<h2>Shows</h2>
+
+<div class="row">
+  <div class="carousel slide span12" id="show-carousel">
+    <div class="carousel-inner">
+      <% items = @user.team_membership.where({ teamwork_type: 'Show' }) %>
+
+      <% items.each_with_index do |item, i| %>
+        <% if i.modulo(4) == 0 %>
+          <div class="item <%= 'active' if i == 0 %>">
+            <ul class="thumbnails">
+        <% end %>
+              <li class="span3">
+                <div class="thumbnail">
+                  <% img = image_tag item.teamwork.image.url(:medium) %>
+                  <%= link_to img, item.teamwork %>
+                  <%= link_to truncate(item.teamwork.name, length: 30), item.teamwork %><br />
+                  <%= l item.teamwork.start_date, format: :shorty %><br />
+                  <%= item.position %>
+                </div>
+              </li>
+        <% if i.modulo(4) == 3 || i == (items.count - 1) %>
+            </ul>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if items.count > 4 %>
+      <a data-slide="prev" href="#show-carousel" class="left carousel-control">‹</a>
+      <a data-slide="next" href="#show-carousel" class="right carousel-control">›</a>
+    <% end %>
+  </div>
+</div>
