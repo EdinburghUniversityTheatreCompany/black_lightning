@@ -24,6 +24,16 @@
 <div class="dashboard">
 
   <% if can? :manage, :jobs %>
+    <% if not delayed_job_running? then %>
+      <div class="alert alert-error">
+        <strong>Oh Dear</strong>
+        <p>
+          The DelayedJob daemon doesn't seem to be running. It may have
+          crashed (again).
+        </p>
+      </div>
+    <% end %>
+
     <% if delayed_jobs(:failed).count > 0 then %>
       <div class="alert alert-error">
         <strong>Stop. This is important</strong>
