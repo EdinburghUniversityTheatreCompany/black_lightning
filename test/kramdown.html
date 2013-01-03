@@ -1,0 +1,136 @@
+<h1 id="kramdown">kramdown</h1>
+
+<p>Most text entered into the Bedlam Admin site will be rendered using kramdown.</p>
+
+<p>kramdown is an increadibly powerful, yet very natrual markup language.</p>
+
+<p>More details about kramdown can be found <a href="http://kramdown.rubyforge.org/syntax.html#links-and-images">here</a>.</p>
+
+<p>You can view this file in raw kramdown format <a href="kramdown.txt">here</a></p>
+
+<hr />
+
+<h2 id="paragraphs">Paragraphs</h2>
+
+<p>Starting a new paragraph is easy. Simply create two newlines.</p>
+
+<pre><code>This is some text.
+
+This is a new paragraph.
+</code></pre>
+
+<p>However, one of the few oddities of kramdown is that a single newline will not have any effect.</p>
+
+<p>Fear not! You can force kramdown to create a newline by putting two spaces before the newline:</p>
+
+<pre><code>This is some text.  
+This is on a newline.
+</code></pre>
+
+<hr />
+
+<h2 id="links">Links</h2>
+
+<p>kramdown supports two style of links: <em>inline</em> and <em>reference</em>.<br />
+Details about reference links can be found on the <a href="http://kramdown.rubyforge.org/syntax.html#links-and-images">kramdown website</a></p>
+
+<p>Inline links can be created as follows:</p>
+
+<pre><code>[This](http://xtspro.com/+/eutc/) is EUTC's XTSPro page.
+</code></pre>
+
+<p>If you’re referring to a page that is on the Bedlam Website, you can use
+relative paths:</p>
+
+<pre><code>See the [About](/about/) page for details.
+</code></pre>
+
+<hr />
+
+<h2 id="images">Images</h2>
+
+<p>Images are very similar to links, simply use:</p>
+
+<pre><code>![Image description](/attachments/myimage)
+</code></pre>
+
+<p>See the section below on styles for resizing images.</p>
+
+<h2 id="captioned-images">Captioned Images</h2>
+
+<p class="alert">N.B - This is a custom extension that does not exist in normal kramdown.</p>
+
+<p>Captioned images can be created as follows:</p>
+
+<pre><code>{::captioned_image .float-left}
+![Image Description](/attachments/myimage)
+
+This is a caption
+{:/captioned_image}
+</code></pre>
+
+<hr />
+
+<h2 id="headers">Headers</h2>
+
+<p>Headers can be created by ‘underlining’ the text with dashes or equals signs.</p>
+
+<pre><code>This is a major header
+======================
+
+This is a minor header
+----------------------
+</code></pre>
+
+<h2 id="styles">Styles</h2>
+
+<p>You can apply styles using Inline Attribute Lists.</p>
+
+<pre><code>My paragraph to be centered.
+{:.center}
+
+![Img](/my/image/to/float){:.float-right}
+</code></pre>
+
+<p>The following styles have been provided for use:</p>
+
+<table>
+  <tbody>
+    <tr>
+      <td><code>{:.center}</code></td>
+      <td>Centrally aligns content</td>
+    </tr>
+    <tr>
+      <td><code>{:.float-right}</code></td>
+      <td>Causes the content to “float” to the right hand side, allowing other text to wrap around it.</td>
+    </tr>
+    <tr>
+      <td><code>{:.float-left}</code></td>
+      <td>Causes the content to “float” to the left hand side, allowing other text to wrap around it.</td>
+    </tr>
+    <tr>
+      <td><code>{:.zoomable)</code></td>
+      <td>For use on images. Allows the user to click on the image to make it larger. (Note that this will not work in the kramdown preview.)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>You can also use your own styles:</p>
+
+<pre><code>Style It!
+{:style="color: red;"}
+</code></pre>
+
+<p>The style attribute can be any valid CSS. This is particularly useful with
+images:</p>
+
+<pre><code>![My Image](/attachments/my_image){:style="width: 100px;"}
+![My Image](/attachments/my_tall_image){:style="height: 100px;"}
+</code></pre>
+
+<h1 id="further-tests">Further Tests</h1>
+
+<div class="captioned-image thumbnail float-left">    <p><img src="/attachments/myimage" alt="Image Description" /></p>
+
+    <p>This is a caption</p>
+</div>
