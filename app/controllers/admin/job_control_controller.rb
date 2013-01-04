@@ -50,17 +50,13 @@ class Admin::JobControlController < AdminController
 
   ##
   # GET /admin/jobs/retry/1
-  #
-  # Sets the number of attempts to 0, and failed_at to nil.
   ##
   def retry
     authorize! :manage, Delayed::Backend::ActiveRecord::Job
 
     job = Delayed::Job.find(params[:id])
-    job.attempts = 0
-    job.run_at = Time.now
-    job.failed_at = nil
-    job.save!
+    
+    job.retry_job
 
     redirect_to :back
   end
