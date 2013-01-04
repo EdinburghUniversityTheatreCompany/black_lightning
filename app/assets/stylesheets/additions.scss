@@ -12,8 +12,9 @@ $linkColor:      #dc143c;
 }
 
 .header {
-    padding-top: 10px;
+    margin-top: 10px;
     margin-bottom: 20px;
+	//background-color: white;
 }
 
 body {
@@ -40,7 +41,7 @@ h3 {
 
 #nav {
     float: right;
-    margin-top: 50px;
+    margin-top: 10px;
 }
 #nav li {
     float: left;
