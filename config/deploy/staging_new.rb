@@ -6,6 +6,8 @@ role :db,  "lomond.mercuric.co.uk", :primary => true        # This is where Rail
 
 after "deploy", "deploy:congratulate"
 
+default_run_options[:shell] = '/bin/bash'
+
 namespace :deploy do
   task :congratulate do
     puts ""
