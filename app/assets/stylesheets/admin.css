@@ -11,10 +11,10 @@
  *= require_self
  *= require 'bootstrap-extensions'
  *= require font-awesome
- *= require admin/md_editor.css.scss
+ *= require admin/md_editor.css
  *= require admin/jquery.gridster.min.css
- *= require admin/gallery_form.css.scss
- *= require admin/shows.css.scss
+ *= require admin/gallery_form.css
+ *= require admin/shows.css
  */
 
 body {
