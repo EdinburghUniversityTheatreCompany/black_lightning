@@ -29,8 +29,11 @@ namespace :users do
   end
 
   task :interaction => :environment do
-    percentage = 1 - (User.where(['sign_in_count = ?', 0]).count.to_f / User.all.count)
+    all = User.all.count
+    percentage = 1 - (User.where(['sign_in_count = ?', 0]).count.to_f / all)
     puts "#{percentage} of users have set a password and signed in at least once."
+    phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
+    puts "#{phones} of users have given us their phone number."
   end
 
 end
