@@ -20,9 +20,7 @@
 <div class="row">
   <div class="carousel slide span12" id="show-carousel">
     <div class="carousel-inner">
-      <% items = @user.team_membership.where({ teamwork_type: 'Show' }) %>
-
-      <% items.each_with_index do |item, i| %>
+      <% @shows.each_with_index do |item, i| %>
         <% if i.modulo(4) == 0 %>
           <div class="item <%= 'active' if i == 0 %>">
             <ul class="thumbnails">
@@ -36,14 +34,14 @@
                   <%= item.position %>
                 </div>
               </li>
-        <% if i.modulo(4) == 3 || i == (items.count - 1) %>
+        <% if i.modulo(4) == 3 || i == (@shows.count - 1) %>
             </ul>
           </div>
         <% end %>
       <% end %>
     </div>
 
-    <% if items.count > 4 %>
+    <% if @shows.count > 4 %>
       <a data-slide="prev" href="#show-carousel" class="left carousel-control">‹</a>
       <a data-slide="next" href="#show-carousel" class="right carousel-control">›</a>
     <% end %>
