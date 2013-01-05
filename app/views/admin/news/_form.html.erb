@@ -13,7 +13,20 @@
 
     <%= f.input :publish_date %>
 
-    <%= f.input :show_public %>
+    <%= f.input :show_public, boolean_style: :inline %>
+    <script type="text/javascript">
+      $('#news_show_public').parent().toggleButtons({
+        width: 220,
+        label: {
+          enabled: "Published",
+          disabled: "Private"
+        },
+        style: {
+          enabled:  "success",
+          disabled: "danger"
+        }
+      });
+    </script>
 
     <%= f.input :image %>
 

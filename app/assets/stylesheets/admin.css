@@ -11,6 +11,7 @@
  *= require_self
  *= require 'bootstrap-extensions'
  *= require font-awesome
+ *= require admin/bootstrap-toggle-buttons.css
  *= require admin/md_editor.css
  *= require admin/jquery.gridster.min.css
  *= require admin/gallery_form.css
@@ -18,8 +19,8 @@
  */
 
 body {
-	background-image: url('cream_dust.png');
-	background-repeat: repeat;
+    background-image: url('cream_dust.png');
+    background-repeat: repeat;
 }
 
 div.datetime select {

@@ -30,7 +30,20 @@
 
     <%= f.input :image %>
 
-    <%= f.input :is_public if can? :make_public, @show %>
+    <%= f.input :is_public, boolean_style: :inline if can? :make_public, @show %>
+    <script type="text/javascript">
+      $('#show_is_public').parent().toggleButtons({
+        width: 220,
+        label: {
+          enabled: "Published",
+          disabled: "Private"
+        },
+        style: {
+          enabled:  "success",
+          disabled: "danger"
+        }
+      });
+    </script>
 
     <div class="form-horizontal">
 
