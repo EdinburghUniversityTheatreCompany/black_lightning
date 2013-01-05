@@ -1,6 +1,8 @@
 <%= simple_form_for [:admin, @user] do |f| %>
 <div class="form-inputs">
-  <fieldset class="form-horizontal">
+  <fieldset class="fieldset form-horizontal">
+    <legend>User Details</legend>
+
     <%= f.input :email %>
     <%= f.input :first_name %>
     <%= f.input :last_name %>
@@ -16,7 +18,9 @@
     <% end %>
   </fieldset>
 
-  <fieldset>
+  <fieldset class="fieldset">
+    <legend>Public Profile</legend>
+
     <%= f.input :public_profile %>
 
     <%= f.input :avatar %>
