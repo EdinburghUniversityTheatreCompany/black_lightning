@@ -22,7 +22,7 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposals = @call.proposals
 
     if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
-      @proposals = @proposals.joins(:users).where('approved = true or user_id = ?', current_user.id).uniq
+      @proposals = @proposals.joins(:call).joins(:users).where('(approved = true and deadline < ?) or user_id = ?', Time.now, current_user.id).uniq
     end
 
     respond_to do |format|
@@ -248,7 +248,7 @@ class Admin::Proposals::ProposalsController < AdminController
       format.json { head :no_content }
     end
   end
-  
+
   def about
   end
 end

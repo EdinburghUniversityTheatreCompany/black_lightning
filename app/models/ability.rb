@@ -47,8 +47,10 @@ class Ability
       end
 
       can :read, Admin::Proposals::Proposal do |proposal|
-        (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
+        (proposal.users.include? user) || ((proposal.approved == true) && (proposal.call.deadline < Time.now)) || (proposal.call.archived)
       end
+
+      can :read, Admin::Proposals::Proposal if user.has_role? :committee
 
       can :create, Admin::Proposals::Proposal
       can :update, Admin::Proposals::Proposal do |proposal|
