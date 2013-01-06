@@ -42,7 +42,11 @@
     <% end %>
 
     <% if can? :delete, admin_proposals_call %>
-    <td><%= link_to 'Destroy', admin_proposals_call, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+    <td><%= link_to 'Destroy', admin_proposals_call, method: :delete, data: {
+                                                                               "confirm" => "Deleting " + admin_proposals_call.name,
+                                                                               "detail"  => "<p>Be warned. Things may break if you continue.</p><p>Under normal circumstances proposal calls should be archived rather than deleted.</p><p>Please type the name of the proposal call below if you are absolutely sure you want to do this.</p>",
+                                                                               "type-confirm" => admin_proposals_call.name
+                                                                            } %></td>
     <% end %>
   </tr>
 <% end %>
