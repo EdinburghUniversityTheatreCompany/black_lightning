@@ -16,14 +16,14 @@
     <%= f.input :show_public, boolean_style: :inline %>
     <script type="text/javascript">
       $('#news_show_public').parent().toggleButtons({
-        width: 220,
+        width: 240,
         label: {
-          enabled: "Published",
-          disabled: "Private"
+          enabled: "Public",
+          disabled: "Members Only"
         },
         style: {
           enabled:  "success",
-          disabled: "danger"
+          disabled: "info"
         }
       });
     </script>
