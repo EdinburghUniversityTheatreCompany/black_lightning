@@ -157,7 +157,9 @@ class Admin::Proposals::ProposalsController < AdminController
         #Send the new proposal mail. See ProposalsMailer for more details.
 
         @proposal.team_members.each do |team_member|
-          ProposalsMailer.delay.new_proposal(@proposal, current_user, team_member)
+          dj = ProposalsMailer.delay.new_proposal(@proposal, current_user, team_member)
+          dj.description = "Proposal Mailer - #{@proposal.show_title} - #{team_member.user.name}"
+          dj.save
         end
 
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
