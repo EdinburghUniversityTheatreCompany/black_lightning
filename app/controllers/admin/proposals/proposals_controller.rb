@@ -19,7 +19,30 @@ class Admin::Proposals::ProposalsController < AdminController
   ##
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-    @proposals = @call.proposals
+
+    if Time.now < @call.deadline
+      # Before the deadline, all users can only see proposals that they
+      # are part of.
+      @proposals = @call.proposals.joins(:users).where("user_id = ?", current_user.id).uniq
+    elsif not @call.archived
+      # After the deadline:
+      if current_user.has_role? :committee
+        # Committee can see all proposals.
+        @proposals = @call.proposals
+      else
+        # Other users can only see proposals that they are part of, or
+        # that have been approved.
+        @proposals = @call.proposals.joins(:users).where("user_id = ? or approved = true", current_user.id).uniq
+      end
+    else
+      # for archived calls, only approved proposals may be seen:
+      @proposals = @call.proposals.where("approved = true").uniq
+    end
+
+    # However, admin can see all proposals at any time.
+    if current_user.has_role? :admin
+      @proposals = @call.proposals
+    end
 
     if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
       @proposals = @proposals.joins(:call).joins(:users).where('(approved = true and deadline < ?) or user_id = ?', Time.now, current_user.id).uniq
