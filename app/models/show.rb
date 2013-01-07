@@ -1,3 +1,4 @@
+##
 # == Schema Information
 #
 # Table name: events
@@ -24,7 +25,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Show < Event
   has_many :reviews
 

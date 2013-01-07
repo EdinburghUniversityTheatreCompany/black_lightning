@@ -1,3 +1,4 @@
+##
 # == Schema Information
 #
 # Table name: seasons
@@ -13,7 +14,7 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Season < ActiveRecord::Base
   def to_param
     slug
