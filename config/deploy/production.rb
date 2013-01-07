@@ -12,6 +12,28 @@ after "deploy:restart", "delayed_job:restart"
 
 set :deploy_to, "/var/www/bedlamtheatre_co_uk"
 
+set :branch do
+  tag = `git describe`
+
+  confirm = Capistrano::CLI.ui.ask "Tag to deploy (make sure to push the tag first): #{tag}. Please confirm. [N]"
+  confirm = "N" if confirm.empty?
+
+  unless ["Y", "y"].include? confirm
+    raise CommandError.new("Deploy Cancelled.")
+  end
+
+  next tag
+end
+
+# Set the bundler directory
+set :bundle_dir, "/var/www/bedlamtheatre_co_uk/gems"
+set :bundle_without, []
+
+set :default_environment, {
+    'GEM_HOME' => "/var/www/bedlamtheatre_co_uk/gems",
+    'GEM_PATH' => "/var/www/bedlamtheatre_co_uk/gems"
+}
+
 namespace :deploy do
   desc "chmod delayed_job script"
   task :chmoddj do

@@ -11,7 +11,20 @@
 
     <%= f.input :name %>
 
-    <%= f.input :open %>
+    <%= f.input :open, boolean_style: :inline %>
+    <script type="text/javascript">
+      $('#admin_proposals_call_open').parent().toggleButtons({
+        width: 220,
+        label: {
+          enabled:  "Open",
+          disabled: "Closed"
+        },
+        style: {
+          enabled:  "success",
+          disabled: "danger"
+        }
+      });
+    </script>
 
     <h3>Questions</h3>
 

@@ -2,9 +2,6 @@ require 'test_helper'
 
 class Admin::StaffingsControllerTest < ActionController::TestCase
   setup do
-    @admin_staffing = admin_staffings(:one)
-    @admin_staffing_job = admin_staffing_jobs(:one)
-
     @user = FactoryGirl.create(:admin)
     sign_in @user
 
@@ -18,6 +15,8 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
+    FactoryGirl.create_list(:staffing, 10, job_count: 5)
+
     get :index
     assert_response :success
     assert_not_nil assigns(:admin_staffings)
@@ -29,50 +28,70 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test "should create admin_staffing" do
+    attrs = FactoryGirl.attributes_for(:staffing)
+
     assert_difference('Admin::Staffing.count') do
-      post :create, admin_staffing: { date: @admin_staffing.date, show_title: @admin_staffing.show_title }
+      post :create, admin_staffing: attrs
     end
 
     assert_redirected_to admin_staffing_path(assigns(:admin_staffing))
   end
 
   test "should show admin_staffing" do
-    get :show, id: @admin_staffing
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+
+    get :show, id: @staffing
     assert_response :success
   end
 
   test "should get edit" do
-    get :edit, id: @admin_staffing
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+
+    get :edit, id: @staffing
     assert_response :success
   end
 
   test "should update admin_staffing" do
-    put :update, id: @admin_staffing, admin_staffing: { date: @admin_staffing.date, show_title: @admin_staffing.show_title }
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+    attrs = FactoryGirl.attributes_for(:staffing)
+
+    put :update, id: @staffing, admin_staffing: attrs
     assert_redirected_to admin_staffing_path(assigns(:admin_staffing))
   end
 
   test "should destroy admin_staffing" do
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+
     assert_difference('Admin::Staffing.count', -1) do
-      delete :destroy, id: @admin_staffing
+      assert_difference('Admin::StaffingJob.count', -5) do
+        delete :destroy, id: @staffing
+      end
     end
 
     assert_redirected_to admin_staffings_path
   end
 
   test "should get sign_up_page" do
-    get :show_sign_up, id: @admin_staffing
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+
+    get :show_sign_up, id: @staffing
     assert_response :success
   end
 
   test "should get sign_up_confirm" do
-    get :sign_up_confirm, id: @admin_staffing_job
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+
+    get :sign_up_confirm, id: @staffing.staffing_jobs.first
     assert_response :success
   end
 
   test "should put sign_up" do
-    put :sign_up, id: @admin_staffing_job
+    @staffing = FactoryGirl.create(:staffing, job_count: 5)
+    @job = @staffing.staffing_jobs.first
+
+    put :sign_up, id: @job
     assert_redirected_to admin_staffings_path
 
-    assert_equal Admin::StaffingJob.find(@admin_staffing_job.id).user_id, @user.id
+    assert_equal Admin::StaffingJob.find(@job.id).user_id, @user.id
   end
 end

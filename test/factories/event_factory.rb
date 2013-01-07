@@ -42,4 +42,7 @@ FactoryGirl.define do
       create_list(:team_member, 5, teamwork: show)
     end
   end
+
+  factory :workshop, parent: :event, class: Workshop do
+  end
 end

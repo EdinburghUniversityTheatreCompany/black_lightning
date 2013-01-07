@@ -20,3 +20,5 @@
 //= require alerts
 //= require jquery-ui-1.9.2.custom
 //= require slimScroll.min
+//= require jquery.lightbox-0.5
+//= require lightbox-init

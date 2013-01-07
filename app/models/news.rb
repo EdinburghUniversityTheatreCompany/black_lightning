@@ -67,6 +67,9 @@ class News < ActiveRecord::Base
   scope :current, where(["publish_date <= ?", Time.current]).order("publish_date DESC")
   scope :public, where(["publish_date <= ? AND show_public = ?", Time.current, true]).order("publish_date DESC")
 
-  has_attached_file :image, :styles => { :medium => "576x300#", :thumb => "192x100#" }
+  has_attached_file :image,
+                    :styles => { :medium => "576x300#", :thumb => "192x100#" },
+                    :convert_options => { :medium => "-strip", :thumb => "-quality 75 -strip" }
+
   attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
 end

@@ -2,18 +2,20 @@ require 'test_helper'
 
 class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   setup do
-    @admin_staffing_template = admin_staffing_templates(:one)
-
     sign_in FactoryGirl.create(:admin)
   end
 
   test "should get index" do
+    @template = FactoryGirl.create_list(:staffing_template, 5)
+
     get :index
     assert_response :success
   end
 
   test "should get show" do
-    get :show, id: @admin_staffing_template
+    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+
+    get :show, id: @template
     assert_response :success
   end
 
@@ -23,26 +25,37 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   end
 
   test "should create staffing_template" do
+    attrs = FactoryGirl.attributes_for(:staffing_template)
+
     assert_difference('Admin::StaffingTemplate.count') do
-      post :create, admin_staffing_template: { name: @admin_staffing_template.name }
+      post :create, admin_staffing_template: attrs
     end
 
     assert_redirected_to admin_staffing_template_path(assigns(:template))
   end
 
   test "should get edit" do
-    get :edit, id: @admin_staffing_template
+    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+
+    get :edit, id: @template
     assert_response :success
   end
 
   test "should update staffing_template" do
-    put :update, id: @admin_staffing_template, admin_staffing_template: { name: @admin_staffing_template.name }
-    assert_redirected_to admin_staffing_template_path(@admin_staffing_template)
+    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+    attrs = FactoryGirl.attributes_for(:staffing_template)
+
+    put :update, id: @template, admin_staffing_template: attrs
+    assert_redirected_to admin_staffing_template_path(@template)
   end
 
   test "should destroy staffing_template" do
+    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+
     assert_difference('Admin::StaffingTemplate.count', -1) do
-      delete :destroy, id: @admin_staffing_template
+      assert_difference('Admin::StaffingJob.count', -5) do
+        delete :destroy, id: @template
+      end
     end
 
     assert_redirected_to admin_staffing_templates_path

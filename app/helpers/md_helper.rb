@@ -1,3 +1,5 @@
+require "#{Rails.root}/lib/kramdown/parser/b_kramdown"
+
 module MdHelper
 
     def render_markdown (md)
@@ -5,7 +7,7 @@ module MdHelper
           return ""
         end
 
-        return Kramdown::Document.new(md).to_html.html_safe
+        return Kramdown::Document.new(md, :input => 'BKramdown').to_html.html_safe
     end
 
 end

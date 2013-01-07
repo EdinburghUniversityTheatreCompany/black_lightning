@@ -1,7 +1,14 @@
 require 'test_helper'
 
 class Admin::AnswersControllerTest < ActionController::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  setup do
+    sign_in FactoryGirl.create(:admin)
+  end
+
+  test "should download answer with file" do
+    answer = FactoryGirl.create(:answer, response_type: "File")
+
+    get :get_file, id: answer
+    assert_response :success
+  end
 end

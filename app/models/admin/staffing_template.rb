@@ -11,7 +11,7 @@
 #++
 
 class Admin::StaffingTemplate < ActiveRecord::Base
-  has_many :staffing_jobs, :as => :staffable, :class_name => "Admin::StaffingJob"
+  has_many :staffing_jobs, :as => :staffable, :class_name => "Admin::StaffingJob", :dependent => :destroy
 
   accepts_nested_attributes_for :staffing_jobs, :reject_if => :all_blank, :allow_destroy => true
 

@@ -67,6 +67,15 @@
   margin-bottom: 10px;
 }
 
+.captioned-image {
+  max-width: 192px;
+  font-size: smaller;
+}
+
+.captioned-image p:last-child {
+  margin: 0px;
+}
+
 img.float-left, img.float-right {
   @extend .img-polaroid;
   max-width: 192px;
@@ -76,17 +85,26 @@ img.float-left, img.float-right {
   text-align: center;
 }
 
+/* misc other styles */
 form .help-block {
   font-style: italic;
   font-size: small;
 }
 
-.borderbox {
-  border: 1px #000000 solid;
-}
+@media (min-width: 979px) {
+  .vertical-rule {
+    position: relative;
+  }
 
-.borderbox > * {
-  padding: 5px;
+  .vertical-rule > [class ^= "span"]:not(:first-child):before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    bottom: -10px;
+    border-left: 1px solid #eeeeee;
+    border-right: 1px solid white;
+    margin-left: -10px;
+  }
 }
 
 /* font-awesome alignment */

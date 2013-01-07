@@ -2,6 +2,12 @@
 
 en:
   errors:
+    attributes:
+      reset_password_token:
+        messages:
+        expired: |-
+            has expired. <br />
+            Please click <a href="/users/password/new">here</a> to request a new one.
     messages:
       expired: "has expired, please request a new one"
       not_found: "not found"
@@ -10,7 +16,6 @@ en:
       not_saved:
         one: "1 error prohibited this %{resource} from being saved:"
         other: "%{count} errors prohibited this %{resource} from being saved:"
-
   devise:
     failure:
       already_authenticated: 'You are already signed in.'

@@ -39,9 +39,17 @@ class Admin::StaffingJob < ActiveRecord::Base
   attr_accessible :name, :user, :user_id
 
   ##
-  # Get the date in a js friendly fashion
+  # Get the start time in a js friendly fashion
   ##
-  def js_date
-    return staffable.date.to_i
+  def js_start_time
+    return staffable.start_time.to_i
   end
+
+  ##
+  # Get the end time in a js friendly fashion
+  ##
+  def js_end_time
+    return staffable.end_time.to_i
+  end
+
 end

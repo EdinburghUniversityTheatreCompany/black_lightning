@@ -99,13 +99,14 @@ class Admin::StaffingsController < AdminController
     admin_staffing = Admin::Staffing.new(params[:admin_staffing])
     admin_staffing_jobs = admin_staffing.staffing_jobs
 
-    dates = params[:dates]
+    start_times = params[:start_times]
+    end_times = params[:end_times]
 
-    dates.each_value do |date|
+    start_times.values.zip(end_times.values).each do |start_time, end_time|
       staffing = admin_staffing.dup
 
-      staffing.date = DateTime.civil(date[:year].to_i, date[:month].to_i, date[:day].to_i, date[:hour].to_i, date[:minute].to_i)
-
+      staffing.start_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
+      staffing.end_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
       if not staffing.save
         redirect_to redirect_to admin_staffings_url, alert: 'There were errors creating the staffing.'
         return
@@ -176,10 +177,10 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if @job.save
         format.html {
-          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.date, :format => :short)}."
+          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.start_time, :format => :short)}."
           redirect_to admin_staffings_path
         }
-        format.json { render :json => @job.to_json(:include => { :user => {}, :staffable => {} }, :methods => [ :js_date ] ) }
+        format.json { render :json => @job.to_json(:include => { :user => {}, :staffable => {} }, :methods => [ :js_start_time, :js_end_time ] ) }
       else
         format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

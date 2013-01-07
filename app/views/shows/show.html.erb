@@ -1,8 +1,3 @@
-<% content_for :head do %>
-  <%= javascript_include_tag "jquery.lightbox-0.5" %>
-  <%= stylesheet_link_tag "jquery.lightbox-0.5", :media => "all" %>
-<% end %>
-
 <% if @show.end_date %>
 <% if @show.end_date < Date.today %>
   <p class="alert alert-info">
@@ -54,23 +49,46 @@
 
 <%= render_markdown @show.description %>
 
-<% unless @show.team_members.count == 0 %>
+<% have_team_members = @show.team_members.count > 0 %>
+
+<% if have_team_members && @show.xts_id then %>
+  <hr />
+
+  <div class="row vertical-rule">
+    <div class="span3">
+      <h4>Cast and Crew</h4>
+      <dl class="cast_crew_list">
+        <% @show.team_members.each do |team_member| %>
+          <dt><%= team_member.position %></dt>
+
+          <dd>
+          <% u = team_member.user %>
+          <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+          </dd>
+        <% end %>
+      </dl>
+    </div>
+
+    <div class="span9">
+      <h4>Tickets</h4>
+      <%= xts_widget(@show.xts_id)%>
+    </div>
+  </div>
+<% elsif have_team_members %>
   <hr />
 
   <h4>Cast and Crew</h4>
   <dl class="cast_crew_list">
-  <% @show.team_members.each do |team_member| %>
-    <dt><%= team_member.position %></dt>
+    <% @show.team_members.each do |team_member| %>
+      <dt><%= team_member.position %></dt>
 
-    <dd>
-    <% u = team_member.user %>
-    <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-    </dd>
-  <% end %>
+      <dd>
+      <% u = team_member.user %>
+      <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+      </dd>
+    <% end %>
   </dl>
-<% end %>
-
-<% if @show.xts_id then %>
+<% elsif @show.xts_id %>
   <hr />
 
   <h4>Tickets</h4>
@@ -100,7 +118,7 @@
 
   <h3>Gallery</h3>
 
-  <ul class="gallery thumbnails">
+  <ul class="lightbox thumbnails">
     <% @show.pictures.each do |picture| %>
       <li class="span2">
       <% img = image_tag picture.image.url(:thumb) %>
@@ -108,16 +126,4 @@
       </li>
     <% end %>
   </ul>
-
-  <script type="text/javascript">
-  $(function() {
-    $('.gallery a').lightBox({
-      imageLoading:  '/images/lightbox-ico-loading.gif',
-      imageBtnClose: '/images/lightbox-btn-close.gif',
-      imageBtnPrev:  '/images/lightbox-btn-prev.gif',
-      imageBtnNext:  '/images/lightbox-btn-next.gif',
-      imageBlank:    '/images/lightbox-blank.gif'
-    });
-  });
-  </script>
 <% end %>

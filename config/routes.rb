@@ -9,7 +9,8 @@ ChaosRails::Application.routes.draw do
   resources :news,        :only => [:index, :show]
   resources :venues,      :only => [:index, :show]
   resources :seasons,     :only => [:show]
-  resources :attachments, :only => [:show]
+
+  match 'attachments/:slug(/:style)' => 'attachments#show'
 
   match 'admin/' => 'admin#index'
   namespace :admin do
@@ -59,6 +60,7 @@ ChaosRails::Application.routes.draw do
     match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => :get, :as => :sign_up_confirm
     match '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
 
+    match '/proposals' => redirect('/admin/proposals/calls')
     namespace :proposals do
       resources :calls do
         member do
@@ -74,7 +76,8 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      resources :call_question_templates
+      match '/about' => 'proposals#about'
+      resources :call_question_templates, :except => [:show]
     end
 
     namespace :questionnaires do
@@ -108,10 +111,10 @@ ChaosRails::Application.routes.draw do
   post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
 
   match 'about' => 'about#index', :as => :about_index
-  match 'about/:action' => 'about', :as => :about
+  match 'about/*action' => 'about', :as => :about
 
   match 'getinvolved' => 'get_involved#index', :as => :get_involved_index
-  match 'getinvolved/:action' => 'get_involved', :as => :get_involved
+  match 'getinvolved/*action' => 'get_involved', :as => :get_involved
 
   # ERROR PAGES - match to ensure correct response code is sent
   match '/404' => 'static#render_404'

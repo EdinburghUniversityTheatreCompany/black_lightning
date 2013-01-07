@@ -36,7 +36,7 @@
         </tr>
         <% for staffing in staffings %>
         <tr>
-          <td><%= link_to (l staffing.date, :format => :long), show_sign_up_admin_staffing_path(staffing), :title => "Click to sign up to staff on this date" %></td>
+          <td><%= link_to (l staffing.start_time, :format => :long), show_sign_up_admin_staffing_path(staffing), :title => "Click to sign up to staff on this date" %></td>
 
           <td><%= "#{staffing.filled_jobs} of #{staffing.staffing_jobs.count} filled" %></td>
 

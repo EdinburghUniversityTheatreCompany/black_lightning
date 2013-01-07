@@ -44,15 +44,18 @@ gem 'nokogiri'
 gem 'airbrake'
 
 gem 'rails-footnotes'
+gem 'oink'
 
+gem 'ci_reporter'
 group :test do
-  gem 'ci_reporter'
   gem 'simplecov'
   gem 'simplecov-rcov'
   gem 'factory_girl_rails', '~> 4.0'
   gem 'faker'
   gem 'ruby-prof'
 end
+
+gem 'unicorn'
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'

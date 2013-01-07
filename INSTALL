@@ -1,0 +1,8 @@
+I'm not going to describe everything you need to do, but things to remember:
+
+1. Make a database.yml file
+2. Comment out "config/use_dynamic_shortcuts" in config/initializers/rolify.rb 
+3a. Run "rake db:setup" ...if you want sample data
+3b. Run "rake db:schema:load" ... if you don't
+4. Uncomment "config/use_dynamic_shortcuts" in config/initializers/rolify.rb 
+5. Marvel at your personal Bedlam website

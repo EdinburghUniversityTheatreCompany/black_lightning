@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20121229214216) do
+ActiveRecord::Schema.define(:version => 20130101232833) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -131,11 +131,12 @@ ActiveRecord::Schema.define(:version => 20121229214216) do
   end
 
   create_table "admin_staffings", :force => true do |t|
-    t.datetime "date"
+    t.datetime "start_time"
     t.string   "show_title"
     t.datetime "created_at",      :null => false
     t.datetime "updated_at",      :null => false
     t.integer  "reminder_job_id"
+    t.datetime "end_time"
   end
 
   add_index "admin_staffings", ["reminder_job_id"], :name => "index_admin_staffings_on_reminder_job_id"

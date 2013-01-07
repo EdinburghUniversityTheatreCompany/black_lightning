@@ -48,12 +48,24 @@ class Attachment < ActiveRecord::Base
   belongs_to :editable_block, :class_name => "Admin::EditableBlock"
 
   validates :name, :presence => true, :uniqueness => true
+  validate  :check_file_size
 
-  has_attached_file :file, :url => '/attachments/:slug', :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
+  has_attached_file :file,
+                    :url => '/attachments/:slug/:style',
+                    :styles => { :thumb => "192x100#", :display => "700x700" },
+                    :convert_options => { :thumb => "-quality 75 -strip" },
+                    :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
 
   attr_accessible :name, :file
 
   def slug
     return name
+  end
+
+  def check_file_size
+    # Restrict file size for images:
+    if file_file_size > 1.megabytes && (/image\/.+/.match file_content_type)
+      errors.add(:file, "Attached images must be under 1MB in size.")
+    end
   end
 end

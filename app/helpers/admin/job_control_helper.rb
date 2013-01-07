@@ -44,4 +44,16 @@ module Admin::JobControlHelper
       'attempts = 0'
     end
   end
+
+  ##
+  # Checks the DJ Daemon is running
+  ##
+  def delayed_job_running?
+    pid = File.read("#{Rails.root}/tmp/pids/delayed_job.pid").strip
+    Process.kill(0, pid.to_i)
+    true
+  rescue Errno::ENOENT, Errno::ESRCH   # file or process not found
+    false
+  end
+
 end
