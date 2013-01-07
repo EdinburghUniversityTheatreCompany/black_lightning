@@ -1,7 +1,8 @@
 <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
 
 <div style="height: 210px; overflow: hidden;">
-  <% ::Admin::Staffing.future.limit(5).each do |staffing| %>
+  <% upcoming_staffing = Admin::Staffing.future.first(5) %>
+  <% upcoming_staffing.each do |staffing| %>
     <p>
       <%= link_to (l staffing.start_time, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
 
@@ -12,7 +13,7 @@
     </p>
   <% end %>
 
-  <% if ::Admin::Staffing.future.count == 0 then %>
+  <% if upcoming_staffing.count == 0 then %>
     <p>There are no upcoming staffing slots.</p>
   <% end %>
 </div>

@@ -1,8 +1,9 @@
 <h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
-<% ::Admin::Proposals::Call.open.each do |call| %>
+<% open_calls = Admin::Proposals::Call.open %>
+<% open_calls.each do |call| %>
   <p><%= link_to call.name, admin_proposals_call_proposals_path(call) %></p>
 <% end %>
 
-<% if ::Admin::Proposals::Call.open.empty? %>
+<% if open_calls.empty? %>
   <p>There are no open proposal calls.</p>
 <% end %>
