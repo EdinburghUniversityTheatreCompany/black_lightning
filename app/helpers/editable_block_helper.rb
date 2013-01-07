@@ -11,8 +11,10 @@ module EditableBlockHelper
           end
         end
 
-        @editable_block.admin_page = admin_page
-        @editable_block.save!
+        if @editable_block.admin_page != admin_page
+          @editable_block.admin_page = admin_page
+          @editable_block.save!
+        end
 
         if can? :edit, @editable_block then
           return render :partial => "/shared/editable_block_editor"
