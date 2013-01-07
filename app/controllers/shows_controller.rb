@@ -11,7 +11,7 @@ class ShowsController < ApplicationController
   # GET /shows.json
   ##
   def index
-    @shows = Show.paginate(:page => params[:page], :per_page => 5).current(:order => "start_date ASC")
+    @shows = Show.current(:order => "start_date ASC").paginate(:page => params[:page], :per_page => 5).all
 
     @title = "Shows"
 
@@ -29,9 +29,13 @@ class ShowsController < ApplicationController
     # This is caught by the application controller to redirect to 404
     @show = Show.find_by_slug!(params[:id])
 
+    @team_members = @show.team_members.all
+    @reviews  = @show.reviews.all
+    @pictures = @show.pictures.all
+
     @title = @show.name
     @meta[:description] = @show.description
-    @meta["og:image"] = [@base_url + @show.image.url(:medium)] + @show.pictures.collect{|p| @base_url + p.image.url }
+    @meta["og:image"] = [@base_url + @show.image.url(:medium)] + @pictures.collect{|p| @base_url + p.image.url }
 
     respond_to do |format|
       format.html

@@ -49,7 +49,7 @@
 
 <%= render_markdown @show.description %>
 
-<% have_team_members = @show.team_members.count > 0 %>
+<% have_team_members = @team_members.count > 0 %>
 
 <% if have_team_members && @show.xts_id then %>
   <hr />
@@ -58,7 +58,7 @@
     <div class="span3">
       <h4>Cast and Crew</h4>
       <dl class="cast_crew_list">
-        <% @show.team_members.each do |team_member| %>
+        <% @team_members.each do |team_member| %>
           <dt><%= team_member.position %></dt>
 
           <dd>
@@ -79,7 +79,7 @@
 
   <h4>Cast and Crew</h4>
   <dl class="cast_crew_list">
-    <% @show.team_members.each do |team_member| %>
+    <% @team_members.each do |team_member| %>
       <dt><%= team_member.position %></dt>
 
       <dd>
@@ -95,12 +95,12 @@
   <%= xts_widget(@show.xts_id)%>
 <% end %>
 
-<% if @show.reviews.count > 0 then %>
+<% if @reviews.count > 0 then %>
   <hr />
 
   <h3>Reviews</h3>
 
-  <% @show.reviews.each do |review| %>
+  <% @reviews.each do |review| %>
     <article>
       <header>
         <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, :format => :long %> <%= "for #{review.organisation}" if review.organisation? %>
@@ -113,13 +113,13 @@
   <% end %>
 <% end %>
 
-<% if @show.pictures.count > 0 then %>
+<% if @pictures.count > 0 then %>
   <hr />
 
   <h3>Gallery</h3>
 
   <ul class="lightbox thumbnails">
-    <% @show.pictures.each do |picture| %>
+    <% @pictures.each do |picture| %>
       <li class="span2">
       <% img = image_tag picture.image.url(:thumb) %>
       <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>
