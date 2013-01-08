@@ -41,6 +41,8 @@ class Venue < ActiveRecord::Base
                     :styles => { :thumb => "192x100#", :slideshow => "960x500#" },
                     :convert_options => { :thumb => "-quality 75 -strip" }
 
+  validates :name, :presence => true
+
   accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
 
   attr_accessible :description, :image, :location, :name, :tagline, :pictures, :pictures_attributes

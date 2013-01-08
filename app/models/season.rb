@@ -21,6 +21,7 @@ class Season < ActiveRecord::Base
   end
   attr_accessible :description, :end_date, :name, :start_date, :slug
 
+  validates :name, :presence => true
   validates :slug, :presence => true, :uniqueness => true
 
   has_many :events
