@@ -58,11 +58,11 @@
 
 <% end %>
 
-<% if @venue.shows.current.count > 0 then %>
+<% if @current_shows.count > 0 then %>
   <h3>Shows at <%= @venue.name %></h3>
 
   <div class="row">
-  <% @venue.shows.current.first(3).each do |show| %>
+  <% @current_shows.each do |show| %>
     <div class="span4">
       <div>
         <%= link_to (image_tag show.image.url(:medium)), show_path(show) %>
@@ -76,11 +76,11 @@
   <hr />
 <% end %>
 
-<% if @venue.pictures.count > 0 then %>
+<% if @pictures.count > 0 then %>
   <h3>Gallery</h3>
 
   <ul class="lightbox thumbnails">
-    <% @venue.pictures.each do |picture| %>
+    <% @pictures.each do |picture| %>
       <li class="span2">
       <% img = image_tag picture.image.url(:thumb) %>
       <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>
