@@ -55,9 +55,9 @@
   <hr />
 
   <div class="row vertical-rule">
-    <div class="span3">
+    <div class="span4">
       <h4>Cast and Crew</h4>
-      <dl class="cast_crew_list">
+      <dl class="cast-crew-list">
         <% @team_members.each do |team_member| %>
           <dt><%= team_member.position %></dt>
 
@@ -69,7 +69,7 @@
       </dl>
     </div>
 
-    <div class="span9">
+    <div class="span8">
       <h4>Tickets</h4>
       <%= xts_widget(@show.xts_id)%>
     </div>
@@ -78,7 +78,7 @@
   <hr />
 
   <h4>Cast and Crew</h4>
-  <dl class="cast_crew_list">
+  <dl class="cast-crew-list">
     <% @team_members.each do |team_member| %>
       <dt><%= team_member.position %></dt>
 

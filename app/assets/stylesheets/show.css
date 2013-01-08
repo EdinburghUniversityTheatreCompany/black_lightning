@@ -11,6 +11,16 @@
   height: 100%;
 }
 
+.cast-crew-list dt {
+  display:   inline-block;
+  min-width: 140px;
+}
+
+.cast-crew-list dd {
+  display: inline-block;
+  min-width: 140px;
+}
+
 /* Responsive */
 @media (max-width: 767px) {
   .show-info-box {
