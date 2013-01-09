@@ -120,6 +120,7 @@ ChaosRails::Application.routes.draw do
   match '/404' => 'static#render_404'
   match '/500' => 'static#render_500'
 
+  match '/:id' => 'seasons#show', :constraints => ExistingSeasonConstraint.new
   match '*action' => 'static', :as => :static
 
   # The priority is based upon order of creation:
