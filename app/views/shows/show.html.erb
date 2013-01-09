@@ -51,7 +51,7 @@
 
 <% have_team_members = @team_members.count > 0 %>
 
-<% if have_team_members && @show.xts_id then %>
+<% if have_team_members then %>
   <hr />
 
   <div class="row vertical-rule">
@@ -70,24 +70,12 @@
     </div>
 
     <div class="span8">
-      <h4>Tickets</h4>
-      <%= xts_widget(@show.xts_id)%>
+      <% if @show.xts_id %>
+        <h4>Tickets</h4>
+        <%= xts_widget(@show.xts_id)%>
+      <% end %>
     </div>
   </div>
-<% elsif have_team_members %>
-  <hr />
-
-  <h4>Cast and Crew</h4>
-  <dl class="cast-crew-list">
-    <% @team_members.each do |team_member| %>
-      <dt><%= team_member.position %></dt>
-
-      <dd>
-      <% u = team_member.user %>
-      <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-      </dd>
-    <% end %>
-  </dl>
 <% elsif @show.xts_id %>
   <hr />
 
