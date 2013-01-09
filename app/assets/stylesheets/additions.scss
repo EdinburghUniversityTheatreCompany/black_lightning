@@ -14,7 +14,7 @@ $linkColor:      #dc143c;
 .header {
     margin-top: 10px;
     margin-bottom: 20px;
-	//background-color: white;
+    //background-color: white;
 }
 
 body {
@@ -58,12 +58,32 @@ h3 {
     font-weight: bold;
 }
 
+.footer-container:before {
+    border-top: 1px solid #cccccc;
+    border-bottom: 1px solid #dddddd;
+    content: '';
+    width: 100%;
+    position: absolute;
+}
+
+.footer-container {
+    position: relative;
+
+    margin-top: 15px;
+    height: 40px;
+
+    background-color: #eeeeee;
+}
+
 .footer {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    right: 15px;
+
     text-align: center;
     line-height: normal;
     font-size: x-small;
-    width: 100%;
-    padding: 10px 0;
 }
 
 .footer a{

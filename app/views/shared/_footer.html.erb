@@ -1,30 +1,11 @@
-<footer class="footer">
-  Bedlam Theatre is run by the Edinburgh University Theatre Company. <%= link_to 'Contact Us', static_path('contact') %>.<br />
-  <%= version %> | <%= link_to 'Report Bug', 'https://bitbucket.org/bedlamtheatre/black_lightning/issues' %>
+<div class="footer-container">
+  <footer class="footer">
+    <span class="pull-left">
+      Bedlam Theatre is run by the Edinburgh University Theatre Company. <%= link_to 'Contact Us', static_path('contact') %>.
+    </span>
 
-  <% if Rails.env.development? %>
-  <br />
-  <span id="doc_ready_timer"></span>
-  <span id="load_end_timer"></span>
-  <script type="text/javascript">
-    function displayTimers() {
-      attempts = 0;
-
-      if (doc_ready) {
-        $('#doc_ready_timer').html("Doc Ready: " + (doc_ready - load_start));
-      }
-
-      if (load_end) {
-        $('#load_end_timer').html("Load End: " + (load_end - load_start));
-      } else {
-        if (attempts < 20) {
-          attempts += 1;
-          setTimeout(displayTimers, 1 * 1000);
-        }
-      }
-    }
-
-    displayTimers();
-  </script>
-  <% end %>
-</footer>
+    <span class="pull-right">
+      <%= version %> - <%= link_to 'Report Bug', 'https://bitbucket.org/bedlamtheatre/black_lightning/issues' %>
+    </span>
+  </footer>
+</div>
