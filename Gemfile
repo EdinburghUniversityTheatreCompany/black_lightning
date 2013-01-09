@@ -44,7 +44,7 @@ gem 'nokogiri'
 gem 'airbrake'
 
 gem 'rails-footnotes'
-gem 'oink'
+# gem 'oink'
 
 gem 'ci_reporter'
 group :test do

@@ -82,7 +82,6 @@ GEM
       connection_pool (~> 1.0)
       rubinius-actor
     hike (1.2.1)
-    hodel_3000_compliant_logger (0.1.1)
     htmlentities (4.3.1)
     i18n (0.6.1)
     journey (1.0.4)
@@ -106,9 +105,6 @@ GEM
     nested_form (0.3.1)
     nokogiri (1.5.6)
     nokogiri (1.5.6-x86-mingw32)
-    oink (0.10.0)
-      activerecord
-      hodel_3000_compliant_logger
     orm_adapter (0.4.0)
     paperclip (3.4.0)
       activemodel (>= 3.0.0)
@@ -221,7 +217,6 @@ DEPENDENCIES
   mysql2
   nested_form
   nokogiri
-  oink
   paperclip
   rails (= 3.2.11)
   rails-footnotes
