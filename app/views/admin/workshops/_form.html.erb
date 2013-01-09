@@ -17,6 +17,8 @@
 
     <%= f.input :end_date %>
 
+    <%= f.input :price %>
+
     <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
 
     <%= f.association :venue, :collection => Venue.all, :label_method => :name %>

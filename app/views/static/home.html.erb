@@ -14,12 +14,15 @@
             <% else %>
               <%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
               <div class="carousel-caption">
-                <% caption_text = "<h4>#{show.name}</h4>" %>
-                <% caption_text += " by #{show.author}" if show.author? %>
+                <%
+                  caption_text = "<h4>#{show.name}</h4>"
+                  caption_text += " by #{show.author}" if show.author?
+                %>
                 <%= link_to caption_text.html_safe, show_path(show) %>
                 <p>
-                  <%= "#{show.tagline} - " unless show.tagline.empty? %>
+                  <%= "#{show.tagline} - " if show.tagline? %>
                   <b><span class="show-date"><%= show.date_range %></span></b>
+                  <%= " - #{show.price}" if show.price? %>
                 </p>
               </div>
             <% end %>

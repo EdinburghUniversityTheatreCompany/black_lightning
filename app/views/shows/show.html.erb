@@ -30,6 +30,13 @@
         <b><%= @show.date_range %></b>
       </p>
 
+      <% if @show.price? %>
+        <h4>Price</h4>
+        <p>
+          <b><%= @show.price %></b>
+        </p>
+      <% end %>
+
       <% if @show.author and not @show.author.empty? %>
         <h4>Author</h4>
         <p>
