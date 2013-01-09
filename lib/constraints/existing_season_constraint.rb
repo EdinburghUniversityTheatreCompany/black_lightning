@@ -1,6 +1,6 @@
 class ExistingSeasonConstraint
   def initialize
-    @season_slugs = Season.all.map { |s| s.slug }
+    @season_slugs = Season.select(:slug).collect { |s| s.slug }
   end
 
   def matches?(request)
