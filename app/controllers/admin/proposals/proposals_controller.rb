@@ -44,10 +44,6 @@ class Admin::Proposals::ProposalsController < AdminController
       @proposals = @call.proposals
     end
 
-    if not ((current_user.has_role? :committee) || (current_user.has_role? :admin)) then
-      @proposals = @proposals.joins(:call).joins(:users).where('(approved = true and deadline < ?) or user_id = ?', Time.now, current_user.id).uniq
-    end
-
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @admin_proposals_proposals }
