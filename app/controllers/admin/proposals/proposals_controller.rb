@@ -56,7 +56,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1.json
   ##
   def show
-    @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
+    @admin_proposals_proposal = Admin::Proposals::Proposal.includes({:answers => {:question => {} } }).find(params[:id])
     @call = @admin_proposals_proposal.call
 
     authorize!(:read, @admin_proposals_proposal)
@@ -112,7 +112,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # Don't forget to re-read the call's Admin::Question s from here. Questions may have been created, so will need Admin::Answer s
   ##
   def edit
-    @proposal = Admin::Proposals::Proposal.find(params[:id])
+    @proposal = Admin::Proposals::Proposal.includes({:answers => {:question => {} } }).find(params[:id])
     @call = @proposal.call
     @users = User.by_first_name.select([ :id, :first_name, :last_name ])
 
