@@ -43,8 +43,12 @@ gem 'axlsx'
 gem 'nokogiri'
 gem 'airbrake'
 
-gem 'rails-footnotes'
 # gem 'oink'
+
+group :development do
+  gem 'rails-footnotes'
+  gem 'reek'
+end
 
 gem 'ci_reporter'
 group :test do
