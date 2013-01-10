@@ -10,7 +10,7 @@ class Admin::PermissionsController < AdminController
     authorize!(:read, Admin::Permission)
 
     role_exclude = ['admin']
-    @roles  = ::Role.where("name NOT IN (?)", role_exclude)
+    @roles  = ::Role.includes(:permissions).where("name NOT IN (?)", role_exclude).all
 
     Rails.application.eager_load!
     @models = ::ActiveRecord::Base.descendants
