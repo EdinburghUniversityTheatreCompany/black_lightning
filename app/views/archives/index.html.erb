@@ -1,13 +1,15 @@
 <div class="row">
-  <div style="margin-bottom: 10px;">
-    <%= display_block("Archives", false) %>
+  <div class="span12">
+    <div style="margin-bottom: 10px;">
+      <%= display_block("Archives", false) %>
+    </div>
+
+    <p>
+      Please select which archives you would like to view:
+    </p>
+
+    <ul>
+      <li><%= link_to 'Shows', archives_shows_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year]) %></li>
+    </ul>
   </div>
-
-  <p>
-    Please select which archives you would like to view:
-  </p>
-
-  <ul>
-    <li><%= link_to 'Shows', archives_shows_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year]) %></li>
-  </ul>
 </div>
