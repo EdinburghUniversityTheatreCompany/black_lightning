@@ -12,9 +12,13 @@ class NewsletterController < ApplicationController
   def subscribe
     subscription = NewsletterSubscriber.new
     subscription.email = params[:email]
-    subscription.save!
 
-    flash[:success] = "Added #{params[:email]} to the mailing list. Thank you."
-    return redirect_to :back
+    if subscription.save
+      flash[:success] = "Added #{params[:email]} to the mailing list. Thank you."
+      return redirect_to :back
+    else
+      flash[:alert] = "Error subscribing to mailing list: #{subscription.errors.full_messages.join(", ")}"
+      return redirect_to :back
+    end
   end
 end
