@@ -40,18 +40,37 @@ h3 {
 }
 
 #nav {
-    float: right;
     margin-top: 10px;
+    margin-left: -12px;
+    margin-right: -12px;
+    width: 100%;
+
+    width:          calc(100% + 24px);
+    width:     -moz-calc(100% + 24px);
+    width:  -webkit-calc(100% + 24px);
+
+    text-align: justify;
 }
+
+#nav:after {
+    content: "";
+    display: inline-block;
+    width: 100%;
+}
+
 #nav li {
-    float: left;
-    display: block;
-    padding: 0 2px 0 18px;
+    display: inline-block;
+    float: none;
 }
 
 #nav a {
     font-weight: bold;
     font-size: 20px;
+    color: #660000;
+}
+
+#nav_minor {
+    margin-right: -12px;
 }
 
 .author {
