@@ -1,4 +1,5 @@
 require "delayed/recipes"
+require 'airbrake/capistrano'
 
 before "deploy", "check_tag"
 
