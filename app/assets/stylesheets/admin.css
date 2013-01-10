@@ -37,19 +37,6 @@ select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !import
     background-image: none;
 }
 
-.footer {
-    text-align: center;
-    line-height: normal;
-    font-size: x-small;
-    width: 100%;
-    padding: 10px 0;
-}
-
-.footer a{
-    color: #333333;
-    text-decoration: underline;
-}
-
 .gridster li {
      margin-bottom : 10px;
 }
