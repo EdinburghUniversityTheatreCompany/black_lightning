@@ -59,7 +59,7 @@ class Ability
           else
             # Other users can only see proposals that they are part of, or
             # that have been approved.
-            next (proposal.users.include? user || proposal.approved == true)
+            next (proposal.users.include? user or proposal.approved == true)
           end
         else
           # for archived calls, only approved proposals may be seen:
