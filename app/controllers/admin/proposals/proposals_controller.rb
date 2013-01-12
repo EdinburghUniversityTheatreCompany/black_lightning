@@ -61,8 +61,9 @@ class Admin::Proposals::ProposalsController < AdminController
 
     authorize!(:read, @admin_proposals_proposal)
 
-    @admin_proposals_proposal.update_answers
-    @admin_proposals_proposal.save
+    # Dude, what the hell?
+    #   @admin_proposals_proposal.update_answers
+    #   @admin_proposals_proposal.save
 
     respond_to do |format|
       format.html # show.html.erb
@@ -98,7 +99,7 @@ class Admin::Proposals::ProposalsController < AdminController
       @proposal.late = true
     end
 
-    @proposal.update_answers
+    @proposal.answers
 
     respond_to do |format|
       format.html # new.html.erb
