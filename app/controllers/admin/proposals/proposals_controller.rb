@@ -62,8 +62,8 @@ class Admin::Proposals::ProposalsController < AdminController
     authorize!(:read, @admin_proposals_proposal)
 
     # Dude, what the hell?
-    #   @admin_proposals_proposal.update_answers
-    #   @admin_proposals_proposal.save
+    #  @admin_proposals_proposal.update_answers
+    #  @admin_proposals_proposal.save
 
     respond_to do |format|
       format.html # show.html.erb
