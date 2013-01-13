@@ -36,6 +36,13 @@ FactoryGirl.define do
        end
      end
 
+     factory :committee do
+       after(:create) do |user, evaluator|
+         user.add_role :member
+         user.add_role :committee
+       end
+     end
+
      factory :admin do
        after(:create) do |user, evaluator|
          user.add_role :admin

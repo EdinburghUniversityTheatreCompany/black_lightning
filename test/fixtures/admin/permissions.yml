@@ -1,9 +1,6 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
-  action: MyString
-  subject_class: MyString
-
-two:
-  action: MyString
-  subject_class: MyString
+  id: 1
+  action: access
+  subject_class: backend
