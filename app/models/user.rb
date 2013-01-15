@@ -80,6 +80,8 @@ class User < ActiveRecord::Base
   #   User.create_user(params[:user])
   #
   # Generates a random password for the user if none is given.
+  #
+  # Will not save the new user.
   ##
   def self.create_user(params)
     user = User.new(params)
@@ -96,8 +98,6 @@ class User < ActiveRecord::Base
 
       reset_password = true
     end
-
-    user.save!
 
     return user
   end

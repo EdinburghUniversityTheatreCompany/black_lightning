@@ -35,8 +35,10 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
+    @user = User.create_user(params[:user])
+
     respond_to do |format|
-      if @user = User.create_user(params[:user])
+      if @user.save
         format.html {redirect_to admin_user_url(@user)}
       else
         format.html {render "new"}
