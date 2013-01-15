@@ -30,7 +30,7 @@ class Admin::NewsController < AdminController
     @news = News.find(params[:id])
     @title = @news.title
     respond_to do |format|
-      format.html # show.html.erb
+      format.html { render 'news/show' }
       format.json { render json: @news }
     end
   end
