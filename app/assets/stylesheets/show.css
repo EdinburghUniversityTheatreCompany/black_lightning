@@ -14,11 +14,14 @@
 .cast-crew-list dt {
   display:   inline-block;
   min-width: 140px;
+  float: left;
+  clear: right;
 }
 
 .cast-crew-list dd {
   display: inline-block;
   min-width: 140px;
+  float: right;
 }
 
 /* Responsive */
