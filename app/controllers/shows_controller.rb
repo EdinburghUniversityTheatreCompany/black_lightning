@@ -39,6 +39,7 @@ class ShowsController < ApplicationController
 
     respond_to do |format|
       format.html
+      format.json { render json: @show.to_json(:methods => [:slideshow_image] ) }
     end
   end
 end

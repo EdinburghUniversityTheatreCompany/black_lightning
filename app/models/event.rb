@@ -92,6 +92,13 @@ class Event < ActiveRecord::Base
   end
 
   ##
+  # Returns the url of the slideshow image
+  ##
+  def slideshow_image
+    return image.url(:slideshow)
+  end
+
+  ##
   # Generates the frequently used "startdate - enddate" string.
   #
   # The date format used is the :long format, defined in /config/locales/en.yml
