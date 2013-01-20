@@ -8,7 +8,7 @@
       Dear <%= @user.first_name %>,
     </p>
     <p>
-      You are due to be staffing for <%= @staffing.show_title %> at <%= l @staffing.start_time, :format => :long %>
+      You are due to be staffing for <%= @staffing.show_title %> at <%= l @staffing.start_time, :format => :time_only %>
     </p>
     <p>
       Regards,
