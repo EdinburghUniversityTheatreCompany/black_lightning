@@ -38,7 +38,13 @@ ChaosRails::Application.routes.draw do
     resources :seasons
     resources :news
     resources :editable_blocks, :except => [:show]
-    resources :users
+
+    resources :users do
+      member do
+        post 'reset_password'
+      end
+    end
+
     resources :roles
     get '/permissions/grid' => 'permissions#grid', :as => :permissions
     post '/permissions/grid' => 'permissions#update_grid', :as => :permissions
