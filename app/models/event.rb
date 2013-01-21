@@ -48,6 +48,10 @@ class Event < ActiveRecord::Base
   scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true])
   scope :future, where(["end_date >= ?", Date.current])
 
+  def self.current_slideshow
+    return unscoped.where(["end_date >= ? AND is_public = ?", Date.current, true]).order("end_date ASC")
+  end
+
   # Relationships #
 
   has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
