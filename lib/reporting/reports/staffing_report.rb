@@ -30,7 +30,7 @@ class Reports::StaffingReport
           past_show_count = user.shows.where(["end_date < ? AND end_date >= ? AND end_date < ?", Date.today, current_date, next_date]).count
           upcoming_show_count = user.shows.where(["end_date >= ? AND end_date >= ? AND end_date < ?", Date.today, current_date, next_date]).count
 
-          staffing_count = user.staffings.joins(:staffing_jobs).where(["start_time >= ? AND start_time < ?", current_date, next_date]).count
+          staffing_count = user.staffings.joins(:staffing_jobs).where(["start_time >= ? AND start_time < ?", current_date, next_date]).uniq.count
 
           sheet.add_row([user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count])
         end
