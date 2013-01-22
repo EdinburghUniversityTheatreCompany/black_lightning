@@ -92,7 +92,7 @@ class Admin::Staffing < ActiveRecord::Base
 
     staffing_jobs.each do |job|
       #Keep going to other users if sending to one fails for some reason.
-      user = job.user
+      next unless job.user?
       begin
         StaffingMailer.staffing_reminder(job).deliver
 
