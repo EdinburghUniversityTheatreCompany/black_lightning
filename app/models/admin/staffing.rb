@@ -25,8 +25,8 @@ class Admin::Staffing < ActiveRecord::Base
 
   default_scope order("start_time ASC")
 
-  scope :future, where(['start_time > ?', DateTime.now])
-  scope :past, where(['start_time < ?', DateTime.now])
+  scope :future, where(['end_time > ?', DateTime.now])
+  scope :past, where(['end_time < ?', DateTime.now])
 
   has_many :staffing_jobs, :as => :staffable, :class_name => "Admin::StaffingJob", :dependent => :destroy
   has_many :users, :through => :staffing_jobs
