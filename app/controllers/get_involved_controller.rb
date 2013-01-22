@@ -6,6 +6,11 @@
 class GetInvolvedController < ApplicationController
   before_filter :get_subpages
 
+  def opportunities
+    @opportunities = Opportunity.where({ approved: true }).all
+  end
+
+  private
   ##
   # Returns a list of all the pages in the get_involved folder.
   ##
