@@ -105,8 +105,8 @@ class Admin::Staffing < ActiveRecord::Base
           )
         end
       rescue => e
-        e.message = "Error sending reminder to #{user.name}: " + e.message
-        errors << e
+        exception = e.exception "Error sending reminder to #{user.name}: " + e.message
+        errors << exception
       end
     end
 
