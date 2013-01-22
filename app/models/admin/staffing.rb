@@ -92,7 +92,8 @@ class Admin::Staffing < ActiveRecord::Base
 
     staffing_jobs.each do |job|
       #Keep going to other users if sending to one fails for some reason.
-      next unless job.user?
+      next if job.user.nil?
+      user = job.user
       begin
         StaffingMailer.staffing_reminder(job).deliver
 
@@ -100,7 +101,7 @@ class Admin::Staffing < ActiveRecord::Base
           client.account.sms.messages.create(
             :from => ChaosRails::Application.config.twilio_phone_number,
             :to => user.phone_number,
-            :body => "Hey! You're staffing #{job.name} for #{job.staffable.show_title} at #{l @staffing.start_time, :format => :time_only}."
+            :body => "Hey! You're staffing #{job.name} for #{job.staffable.show_title} at #{I18n.l job.staffable.start_time, :format => :time_only}."
           )
         end
       rescue => e
