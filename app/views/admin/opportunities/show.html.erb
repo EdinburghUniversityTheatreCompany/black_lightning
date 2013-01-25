@@ -1,4 +1,15 @@
 <h2><%= @opportunity.title %></h2>
+
+<div>
+  <dl>
+    <dt>Expiry Date</dt>
+    <dd><%= l @opportunity.expiry_date %></dd>
+
+    <dt>Approved By</dt>
+    <dd><%= @opportunity.approver.nil? ? "Not Approved" : @opportunity.approver.name %></dd>
+  </dl>
+</div>
+
 <div>
   <%= render_markdown @opportunity.description %>
 </div>
@@ -7,6 +18,13 @@
   <p>
     Please contact <%= @opportunity.creator.name %> by clicking <%= mail_to @opportunity.creator.email, 'here' %>.
   </p>
+<% end %>
+
+<% if can? :edit, :opportunity %>
+  <br />
+
+  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+  <%= link_to edit_text, edit_admin_opportunity_path(@opportunity), :class => 'btn' %>
 <% end %>
 
 <% if can? :approve, @opportunity %>

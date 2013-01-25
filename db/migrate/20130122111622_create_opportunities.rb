@@ -7,6 +7,7 @@ class CreateOpportunities < ActiveRecord::Migration
       t.boolean :approved
       t.integer :creator_id
       t.integer :approver_id
+      t.date    :expiry_date
 
       t.timestamps
     end

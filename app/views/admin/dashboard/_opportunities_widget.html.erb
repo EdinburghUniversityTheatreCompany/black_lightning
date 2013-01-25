@@ -1,0 +1,9 @@
+<h3><%= link_to 'Opportunities', admin_opportunities_path %></h3>
+<% opportunities = Opportunity.approved.first(5) %>
+<% opportunities.each do |opportunity| %>
+  <p><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></p>
+<% end %>
+
+<% if opportunities.empty? then %>
+  <%= display_block("No Opportunities", false) %>
+<% end %>

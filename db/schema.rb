@@ -235,6 +235,7 @@ ActiveRecord::Schema.define(:version => 20130122111622) do
     t.boolean  "approved"
     t.integer  "creator_id"
     t.integer  "approver_id"
+    t.date     "expiry_date"
     t.datetime "created_at",  :null => false
     t.datetime "updated_at",  :null => false
   end

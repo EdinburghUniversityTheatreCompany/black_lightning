@@ -5,6 +5,8 @@
 
     <%= f.input :title %>
 
+    <%= f.input :expiry_date %>
+
     <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :description, :rows => 12 } do %>
       <%= render "admin/shared/md_hints" %>
     <% end %>

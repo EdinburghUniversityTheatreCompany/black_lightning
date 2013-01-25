@@ -121,6 +121,7 @@ class Admin::OpportunitiesController < AdminController
     authorize!(:approve, @opportunity)
 
     @opportunity.approved = true
+    @opportunity.approver = current_user
     @opportunity.save!
 
     respond_to do |format|
@@ -144,7 +145,7 @@ class Admin::OpportunitiesController < AdminController
     @opportunity.save!
 
     respond_to do |format|
-      flash[:success] = "#{@proposal.show_title} has been rejected"
+      flash[:success] = "#{@opportunity.title} has been rejected"
       format.html { redirect_to admin_opportunities_url }
       format.json { head :no_content }
     end

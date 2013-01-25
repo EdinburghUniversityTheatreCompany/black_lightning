@@ -7,7 +7,7 @@ class GetInvolvedController < ApplicationController
   before_filter :get_subpages
 
   def opportunities
-    @opportunities = Opportunity.where({ approved: true }).all
+    @opportunities = Opportunity.approved.all
   end
 
   private
