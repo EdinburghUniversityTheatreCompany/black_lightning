@@ -3,6 +3,12 @@
 
   <div class="form-inputs">
 
+    <% unless (can? :approve, @opportunity) || @opportunity.approved == false  %>
+      <small>
+        Note: Editing this opportunity will result in it being removed until it is re-approved.
+      </small>
+    <% end %>
+
     <%= f.input :title %>
 
     <%= f.input :expiry_date %>

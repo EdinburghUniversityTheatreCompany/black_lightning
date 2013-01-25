@@ -84,6 +84,11 @@ class Admin::OpportunitiesController < AdminController
   def update
     @opportunity = Opportunity.find(params[:id])
 
+    unless can? :approve, @opportunity
+      @opportunity.approved = false
+      @opportunity.approver = nil
+    end
+
     respond_to do |format|
       if @opportunity.update_attributes(params[:opportunity])
         format.html { redirect_to [:admin, @opportunity], notice: 'Opportunity was successfully updated.' }
