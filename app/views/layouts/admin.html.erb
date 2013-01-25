@@ -36,6 +36,10 @@
                   <li><%= link_to 'Workshops', admin_workshops_path %></li>
                   <% end %>
 
+                  <% if can? :edit, Opportunity %>
+                  <li><%= link_to 'Opportunities', admin_opportunities_path %></li>
+                  <% end %>
+
                   <% if can? :read, Admin::Questionnaires::Questionnaire %>
                   <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
                   <% end %>

@@ -1,0 +1,25 @@
+<h1>Opportunities</h1>
+
+<%= display_block("Opportunities Description", false) %>
+
+<% if @opportunities.count == 0 %>
+  <hr />
+  <%= display_block("No Opportunities", false) %>
+<% end %>
+
+<% @opportunities.each do |opportunity| %>
+  <hr   />
+
+  <article>
+    <h3><%= opportunity.title %></h3>
+    <div>
+      <%= render_markdown opportunity.description %>
+    </div>
+
+    <% if opportunity.show_email %>
+      <p>
+        Please contact <%= opportunity.creator.name %> by clicking <%= mail_to opportunity.creator.email, 'here' %>.
+      </p>
+    <% end %>
+  </article>
+<% end %>

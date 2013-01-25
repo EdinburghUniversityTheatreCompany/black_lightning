@@ -1,0 +1,48 @@
+<% @title = 'Opportunities' %>
+
+<h1>Opportunities</h1>
+
+<%= display_block("Opportunities (Members Face)", true) %>
+
+<br />
+<br />
+
+<table class="table">
+  <tr>
+    <th>Title</th>
+    <th>Creator</th>
+    <th>Approved</th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @opportunities.each do |opportunity| %>
+  <tr>
+    <td><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></td>
+    <td><%= opportunity.creator.name %></td>
+    <td><%= opportunity.approved ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
+
+    <td>
+    <% if can? :edit, opportunity %>
+    <%= link_to 'Edit', edit_admin_opportunity_path(opportunity) %>
+    <% end %>
+    </td>
+
+    <td>
+    <% if can? :delete, opportunity %>
+    <%= link_to 'Destroy', admin_opportunity_path(opportunity), method: :delete, data: {
+                                                                                            "confirm" => "Deleting " + opportunity.title,
+                                                                                            "detail"  => "Are you sure you wish to continue?"
+                                                                                       } %>
+    <% end %>
+    </td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<% if can? :create, Opportunity %>
+<% new_text = '<i class="icon-plus"></i> New Opportunity'.html_safe %>
+<%= link_to new_text, new_admin_opportunity_path, :class => 'btn' %>
+<% end %>

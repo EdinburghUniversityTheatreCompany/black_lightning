@@ -37,6 +37,14 @@ ChaosRails::Application.routes.draw do
     resources :venues
     resources :seasons
     resources :news
+
+    resources :opportunities do
+      member do
+        put 'approve'
+        put 'reject'
+      end
+    end
+
     resources :editable_blocks, :except => [:show]
 
     resources :users do

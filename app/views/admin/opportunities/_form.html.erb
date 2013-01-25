@@ -1,0 +1,41 @@
+<%= simple_form_for [:admin, @opportunity] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <% unless (can? :approve, @opportunity) || @opportunity.approved == false  %>
+      <small>
+        Note: Editing this opportunity will result in it being removed until it is re-approved.
+      </small>
+    <% end %>
+
+    <%= f.input :title %>
+
+    <%= f.input :expiry_date %>
+
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :description, :rows => 12 } do %>
+      <%= render "admin/shared/md_hints" %>
+    <% end %>
+
+    <%= f.input :show_email, boolean_style: :inline %>
+    <script type="text/javascript">
+      $('#opportunity_show_email').parent().toggleButtons({
+        width: 240,
+        label: {
+          enabled: "Email Link",
+          disabled: "No Link"
+        },
+        style: {
+          enabled:  "success",
+          disabled: "danger"
+        }
+      });
+    </script>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn-primary" %>
+    <%= link_to 'Cancel', admin_opportunities_path, :class => "btn" %>
+  </div>
+<% end %>
