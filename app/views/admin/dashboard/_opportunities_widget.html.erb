@@ -5,5 +5,14 @@
 <% end %>
 
 <% if opportunities.empty? then %>
-  <%= display_block("No Opportunities", false) %>
+  <div>
+    <%= display_block("No Opportunities", false) %>
+  </div>
+<% end %>
+
+<% if can? :create, Opportunity %>
+  <br />
+
+  <% opportunity_text = '<i class="icon-plus"></i> Add Opportunity'.html_safe %>
+  <%= link_to opportunity_text, new_admin_opportunity_path, :class => "btn btn-small" %>
 <% end %>
