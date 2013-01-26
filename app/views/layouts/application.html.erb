@@ -41,6 +41,11 @@
 
       <ul id="nav" class="nav nav-pills">
         <li><%= link_to 'Shows', shows_path %></li>
+
+        <% if WorkshopCounter::workshop_count > 0 %>
+          <li><%= link_to 'Workshops', workshops_path %></li>
+        <% end %>
+
         <li><%= link_to 'News', news_index_path %></li>
         <li><%= link_to 'About', about_index_path %></li>
         <li><%= link_to 'Get Involved', get_involved_index_path %></li>
