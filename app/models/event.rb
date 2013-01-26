@@ -82,7 +82,7 @@ class Event < ActiveRecord::Base
 
   # Returns the last show to have finished.
   def self.last_show
-    return self.where(["end_date <= ? AND is_public = ?", Date.current, true]).last
+    return self.where(["end_date < ? AND is_public = ?", Date.current, true]).last
   end
 
   ##
