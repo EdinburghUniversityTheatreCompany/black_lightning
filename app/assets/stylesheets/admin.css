@@ -11,15 +11,16 @@
  *= require_self
  *= require 'bootstrap-extensions'
  *= require font-awesome
- *= require admin/md_editor.css.scss
+ *= require admin/bootstrap-toggle-buttons.css
+ *= require admin/md_editor.css
  *= require admin/jquery.gridster.min.css
- *= require admin/gallery_form.css.scss
- *= require admin/shows.css.scss
+ *= require admin/gallery_form.css
+ *= require admin/shows.css
  */
 
 body {
-	background-image: url('cream_dust.png');
-	background-repeat: repeat;
+    background-image: url('cream_dust.png');
+    background-repeat: repeat;
 }
 
 div.datetime select {
@@ -34,19 +35,6 @@ select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !import
 
 [class*=" icon-"] {
     background-image: none;
-}
-
-.footer {
-    text-align: center;
-    line-height: normal;
-    font-size: x-small;
-    width: 100%;
-    padding: 10px 0;
-}
-
-.footer a{
-    color: #333333;
-    text-decoration: underline;
 }
 
 .gridster li {

@@ -1,7 +1,14 @@
 require 'test_helper'
 
 class UsersMailerTest < ActionMailer::TestCase
-  # test "the truth" do
-  #   assert true
-  # end
+  test "should send welcome_email" do
+    user = FactoryGirl.create(:member)
+    
+    email = UsersMailer.welcome_email(user, true).deliver
+    assert !ActionMailer::Base.deliveries.empty?
+
+    # Test the body of the sent email contains what we expect it to
+    assert_equal [user.email], email.to
+    assert_equal "Welcome to Bedlam Theatre", email.subject
+  end
 end

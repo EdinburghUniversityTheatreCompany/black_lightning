@@ -1,7 +1,0 @@
-# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
-
-one:
-  id: 1
-  start_time: <%= 5.days.from_now.to_s(:db) %>
-  end_time:   <%= 5.days.from_now.to_s(:db) %>
-  show_title: "Test Staffing"

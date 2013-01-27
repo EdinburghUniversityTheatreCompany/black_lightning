@@ -36,5 +36,11 @@ FactoryGirl.define do
         when 'File'
       end
     end
+
+    file do
+      if response_type == 'File'
+        fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf')
+      end
+    end
   end
 end

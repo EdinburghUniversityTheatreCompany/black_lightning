@@ -14,12 +14,15 @@
             <% else %>
               <%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
               <div class="carousel-caption">
-                <% caption_text = "<h4>#{show.name}</h4>" %>
-                <% caption_text += " by #{show.author}" if show.author %>
+                <%
+                  caption_text = "<h4>#{show.name}</h4>"
+                  caption_text += " by #{show.author}" if show.author?
+                %>
                 <%= link_to caption_text.html_safe, show_path(show) %>
                 <p>
-                  <%= "#{show.tagline} - " unless show.tagline.empty? %>
+                  <%= "#{show.tagline} - " if show.tagline? %>
                   <b><span class="show-date"><%= show.date_range %></span></b>
+                  <%= " - #{show.price}" if show.price? %>
                 </p>
               </div>
             <% end %>
@@ -55,7 +58,7 @@
 
     <div class="row">
       <% if block_exists("Home") %>
-        <div class="span8 borderbox">
+        <div class="span8">
           <%= display_block("Home", false) %>
         </div>
       <% else %>
@@ -91,7 +94,7 @@
     <hr />
 
     <h3>Newsletter</h3>
-    <p>Sign up to receive information about Bedlam Theatre and our shows.</p>
+    <p>Sign up to receive free monthly updates on our theatre, our shows, workshops and upcoming auditions</p>
 
     <%= form_tag(newsletter_subscribe_path, :method => :post, :class => "form-inline") do %>
       <div class="input-prepend input-append">
@@ -104,10 +107,10 @@
     <hr />
 
     <h3><%= link_to "Archives", archives_index_path %></h3>
-    <% if Show.last_show %>
-      <%= link_to Show.last_show.name, Show.last_show %>
-      <% image = image_tag Show.last_show.image.url(:medium) %>
-      <%= link_to image, Show.last_show, :class => "thumbnail" unless mobile_device? %>
+    <% if @last_show %>
+      <%= link_to @last_show.name, @last_show %>
+      <% image = image_tag @last_show.image.url(:medium) %>
+      <%= link_to image, @last_show, :class => "thumbnail" unless mobile_device? %>
     <% end %>
   </div>
 </div>

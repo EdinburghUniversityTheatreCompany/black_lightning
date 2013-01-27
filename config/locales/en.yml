@@ -4,6 +4,7 @@
 en:
   time:
     formats:
+      time_only: ! '%H:%M'
       short: ! '%H:%M %d/%m/%y'
       long : ! '%A %d %B at %H:%M'
       longd: ! '%A %d %B %Y'

@@ -1,3 +1,4 @@
+##
 # == Schema Information
 #
 # Table name: events
@@ -24,12 +25,12 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Show < Event
   has_many :reviews
 
   has_many :feedbacks, :class_name => "Admin::Feedback"
-  has_many :questionnaires, :class_name => "Admin::Questionnaires::Questionnaire"
+  has_many :questionnaires, :class_name => "Admin::Questionnaires::Questionnaire", :dependent => :destroy
 
   attr_accessible :reviews, :reviews_attributes
 

@@ -24,13 +24,18 @@ class ArchivesController < ApplicationController
         return
       end
 
-      start_yr = Integer(params[:start_year])
-      start_mnth = Integer(params[:start_month])
-      end_yr = Integer(params[:end_year])
-      end_mnth = Integer(params[:end_month])
+      begin
+        start_yr = Integer(params[:start_year])
+        start_mnth = Integer(params[:start_month])
+        end_yr = Integer(params[:end_year])
+        end_mnth = Integer(params[:end_month])
 
-      @search_start_date = ::Date.new(start_yr, start_mnth, 1)
-      @search_end_date = ::Date.new(end_yr, end_mnth, Time.days_in_month(end_mnth))
+        @search_start_date = ::Date.new(start_yr, start_mnth, 1)
+        @search_end_date = ::Date.new(end_yr, end_mnth, Time.days_in_month(end_mnth))
+      rescue
+        flash[:alert] = "There was a problem using the given dates. Please try again."
+        redirect_to archives_index_path
+      end
     end
   end
 end

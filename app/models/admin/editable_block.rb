@@ -1,18 +1,3 @@
-# == Schema Information
-#
-# Table name: admin_editable_blocks
-#
-# *id*::         <tt>integer, not null, primary key</tt>
-# *name*::       <tt>string(255)</tt>
-# *content*::    <tt>text</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-# *admin_page*:: <tt>boolean</tt>
-# *group*::      <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
-
 ##
 # Represents a section in a page that can be edited using the Admin pages.
 #

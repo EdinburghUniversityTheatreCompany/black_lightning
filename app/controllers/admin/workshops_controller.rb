@@ -7,7 +7,7 @@ class Admin::WorkshopsController < AdminController
     @workshops = Workshop.all
   end
 
-  def workshop
+  def show
     @workshop = Workshop.find_by_slug(params[:id])
     @title = @workshop.name
   end

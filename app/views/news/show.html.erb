@@ -24,4 +24,4 @@
 
 </article>
 
-<%= link_to 'Back', news_index_path %>
+<%= link_to 'Back', :back %><% if can? :edit, @news %> | <%= link_to 'Edit', edit_admin_news_path(@news) %><% end %>

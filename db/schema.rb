@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130103155827) do
+ActiveRecord::Schema.define(:version => 20130122111622) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -199,6 +199,7 @@ ActiveRecord::Schema.define(:version => 20130103155827) do
     t.integer  "season_id"
     t.string   "author"
     t.string   "type"
+    t.string   "price"
   end
 
   add_index "events", ["season_id"], :name => "index_events_on_season_id"
@@ -225,6 +226,18 @@ ActiveRecord::Schema.define(:version => 20130103155827) do
     t.string   "email"
     t.datetime "created_at", :null => false
     t.datetime "updated_at", :null => false
+  end
+
+  create_table "opportunities", :force => true do |t|
+    t.string   "title"
+    t.text     "description"
+    t.boolean  "show_email"
+    t.boolean  "approved"
+    t.integer  "creator_id"
+    t.integer  "approver_id"
+    t.date     "expiry_date"
+    t.datetime "created_at",  :null => false
+    t.datetime "updated_at",  :null => false
   end
 
   create_table "permissions_roles", :force => true do |t|

@@ -1,21 +1,3 @@
-# == Schema Information
-#
-# Table name: admin_proposals_proposals
-#
-# *id*::             <tt>integer, not null, primary key</tt>
-# *call_id*::        <tt>integer</tt>
-# *show_title*::     <tt>string(255)</tt>
-# *publicity_text*:: <tt>text</tt>
-# *proposal_text*::  <tt>text</tt>
-# *created_at*::     <tt>datetime, not null</tt>
-# *updated_at*::     <tt>datetime, not null</tt>
-# *late*::           <tt>boolean</tt>
-# *approved*::       <tt>boolean</tt>
-# *successful*::     <tt>boolean</tt>
-#--
-# == Schema Information End
-#++
-
 ##
 # Represents a proposal.
 #
@@ -64,8 +46,9 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   # Creates an instance of Admin::Answer for every question in the call.
   ##
   def update_answers
-    call.questions.each do |question|
-      if not questions.all.include? question then
+    current_questions = questions.all
+    call.questions.all.each do |question|
+      if not current_questions.include? question then
         answer = Admin::Answer.new
         answer.question = question
         answers.push(answer)

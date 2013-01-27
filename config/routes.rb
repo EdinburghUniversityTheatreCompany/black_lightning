@@ -38,8 +38,22 @@ ChaosRails::Application.routes.draw do
     resources :venues
     resources :seasons
     resources :news
+
+    resources :opportunities do
+      member do
+        put 'approve'
+        put 'reject'
+      end
+    end
+
     resources :editable_blocks, :except => [:show]
-    resources :users
+
+    resources :users do
+      member do
+        post 'reset_password'
+      end
+    end
+
     resources :roles
     get '/permissions/grid' => 'permissions#grid', :as => :permissions
     post '/permissions/grid' => 'permissions#update_grid', :as => :permissions
@@ -78,7 +92,7 @@ ChaosRails::Application.routes.draw do
       end
 
       match '/about' => 'proposals#about'
-      resources :call_question_templates, :except => [:show]
+      resources :call_question_templates
     end
 
     namespace :questionnaires do
@@ -121,6 +135,7 @@ ChaosRails::Application.routes.draw do
   match '/404' => 'static#render_404'
   match '/500' => 'static#render_500'
 
+  match '/:id' => 'seasons#show', :constraints => ExistingSeasonConstraint.new
   match '*action' => 'static', :as => :static
 
   # The priority is based upon order of creation:

@@ -1,3 +1,10 @@
+##
+# Probably the most important model in the app.
+#
+# Note that urls are generated to include the slug rather than the id of an event.
+# Therefore, all lookups must be done as follows:
+#  @event = Event.find_by_slug(params[:id])
+#
 # == Schema Information
 #
 # Table name: events
@@ -24,37 +31,6 @@
 #--
 # == Schema Information End
 #++
-
-##
-# Probably the most important model in the app.
-#
-# Note that urls are generated to include the slug rather than the id of an event.
-# Therefore, all lookups must be done as follows:
-#  @event = Event.find_by_slug(params[:id])
-#
-# == Schema Information
-#
-# Table name: event
-#
-# *id*::                 <tt>integer, not null, primary key</tt>
-# *name*::               <tt>string(255)</tt>
-# *tagline*::            <tt>string(255)</tt>
-# *slug*::               <tt>string(255)</tt>
-# *description*::        <tt>text</tt>
-# *xts_id*::             <tt>integer</tt>
-# *created_at*::         <tt>datetime, not null</tt>
-# *updated_at*::         <tt>datetime, not null</tt>
-# *is_public*::          <tt>boolean</tt>
-# *image_file_name*::    <tt>string(255)</tt>
-# *image_content_type*:: <tt>string(255)</tt>
-# *image_file_size*::    <tt>integer</tt>
-# *image_updated_at*::   <tt>datetime</tt>
-# *start_date*::         <tt>date</tt>
-# *end_date*::           <tt>date</tt>
-# *venue_id*::           <tt>integer</tt>
-#--
-# == Schema Information End
-#++
 ##
 class Event < ActiveRecord::Base
   resourcify
@@ -71,6 +47,10 @@ class Event < ActiveRecord::Base
 
   scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true])
   scope :future, where(["end_date >= ?", Date.current])
+
+  def self.current_slideshow
+    return unscoped.where(["end_date >= ? AND is_public = ?", Date.current, true]).order("end_date ASC")
+  end
 
   # Relationships #
 
@@ -98,11 +78,11 @@ class Event < ActiveRecord::Base
                     :default_url => :default_image
 
   # Accessible Attributes #
-  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes,
+  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :price
 
   # Returns the last show to have finished.
   def self.last_show
-    return self.where(["end_date <= ? AND is_public = ?", Date.current, true]).last
+    return self.where(["end_date < ? AND is_public = ?", Date.current, true]).last
   end
 
   ##
@@ -113,6 +93,13 @@ class Event < ActiveRecord::Base
   def default_image
     number = self.id.modulo(4)
     return "/images/generic_shows/:style/#{number}.png"
+  end
+
+  ##
+  # Returns the url of the slideshow image
+  ##
+  def slideshow_image
+    return image.url(:slideshow)
   end
 
   ##

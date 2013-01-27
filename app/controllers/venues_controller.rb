@@ -25,6 +25,10 @@ class VenuesController < ApplicationController
   def show
     @venue = Venue.find(params[:id])
     @title = @venue.name
+
+    @current_shows = @venue.shows.current.first(3)
+    @pictures = @venue.pictures.all
+
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @venue }

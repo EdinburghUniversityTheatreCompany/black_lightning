@@ -33,7 +33,7 @@
         <td><%= model.name %></td>
 
         <% @roles.each do |role| %>
-          <% permission = role.permissions.where({ :subject_class => model.name }) %>
+          <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
           <%= render 'permission_grid', :role => role, :model => model, :permission => permission %>
         <% end %>
       </tr>
@@ -43,18 +43,18 @@
 
         <% @roles.each do |role| %>
           <td colspan="5">
-            <% permission = role.permissions.where({ :subject_class => "backend" }) %>
+            <% permission = role.permissions.select{ |p| p.subject_class == "backend" } %>
             <% if permission %>
-              <% action_permission = permission.where(:action => "access") %>
+              <% action_permission = permission.select{ |p| p.action == "access" } %>
               <% checked = action_permission.count > 0 %>
             <% end %>
 
             <%= label_tag("[#{role.name}][backend]access", "Access Backend") %>
             <%= check_box_tag "[#{role.name}][backend]access", "access", checked, :title => "Access Backend" %>
 
-            <% permission = role.permissions.where({ :subject_class => "Admin::StaffingJob" }) %>
+            <% permission = role.permissions.select{ |p| p.subject_class == "Admin::StaffingJob" } %>
             <% if permission %>
-              <% action_permission = permission.where(:action => "sign_up_for") %>
+              <% action_permission = permission.select{ |p| p.action == "sign_up_for" } %>
               <% checked = action_permission.count > 0 %>
             <% end %>
 

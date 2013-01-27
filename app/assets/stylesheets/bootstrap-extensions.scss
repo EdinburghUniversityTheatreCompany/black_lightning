@@ -91,14 +91,6 @@ form .help-block {
   font-size: small;
 }
 
-.borderbox {
-  border: 1px #000000 solid;
-}
-
-.borderbox > * {
-  padding: 5px;
-}
-
 @media (min-width: 979px) {
   .vertical-rule {
     position: relative;
@@ -113,6 +105,32 @@ form .help-block {
     border-right: 1px solid white;
     margin-left: -10px;
   }
+}
+
+.footer-container {
+    position: relative;
+
+    margin-top: 15px;
+    padding: 15px;
+
+    border-top: 1px solid #dddddd;
+    background-color: #eeeeee;
+}
+
+@media (max-width: 767px) {
+    .footer .pull-right {
+        float:left;
+    }
+}
+
+.footer {
+    line-height: normal;
+    font-size: x-small;
+}
+
+.footer a{
+    color: #333333;
+    text-decoration: underline;
 }
 
 /* font-awesome alignment */

@@ -12,8 +12,9 @@ $linkColor:      #dc143c;
 }
 
 .header {
-    padding-top: 10px;
+    margin-top: 10px;
     margin-bottom: 20px;
+    //background-color: white;
 }
 
 body {
@@ -39,35 +40,39 @@ h3 {
 }
 
 #nav {
-    float: right;
-    margin-top: 50px;
+    margin: 0 -12px -25px -12px;
+    width: 100%;
+
+    width:          calc(100% + 24px);
+    width:     -moz-calc(100% + 24px);
+    width:  -webkit-calc(100% + 24px);
+
+    text-align: justify;
 }
+
+#nav:after {
+    content: "";
+    display: inline-block;
+    width: 100%;
+}
+
 #nav li {
-    float: left;
-    display: block;
-    padding: 0 2px 0 18px;
+    display: inline-block;
+    float: none;
 }
 
 #nav a {
     font-weight: bold;
     font-size: 20px;
+    color: #660000;
+}
+
+#nav_minor {
+    margin-right: -12px;
 }
 
 .author {
     font-weight: bold;
-}
-
-.footer {
-    text-align: center;
-    line-height: normal;
-    font-size: x-small;
-    width: 100%;
-    padding: 10px 0;
-}
-
-.footer a{
-    color: #333333;
-    text-decoration: underline;
 }
 
 .seasons-accordion h4 {
@@ -126,12 +131,14 @@ h3 {
 
   #nav {
     margin-top: 0px;
-    float: none;
+    margin-left: 0px;
+    text-align: left;
+    width: 100%;
   }
 
   #nav li {
-    float: none;
     padding: inherit;
+    display: block;
   }
 }
 

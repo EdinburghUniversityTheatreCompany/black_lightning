@@ -1,17 +1,3 @@
-# == Schema Information
-#
-# Table name: admin_staffings
-#
-# *id*::              <tt>integer, not null, primary key</tt>
-# *start_time*::      <tt>datetime</tt>
-# *show_title*::      <tt>string(255)</tt>
-# *created_at*::      <tt>datetime, not null</tt>
-# *updated_at*::      <tt>datetime, not null</tt>
-# *reminder_job_id*:: <tt>integer</tt>
-#--
-# == Schema Information End
-#++
-
 ##
 # Represents staffing that has many jobs. Users sign up for the Staffing_Job, not the Staffing.
 #
@@ -24,7 +10,7 @@
 # Table name: admin_staffings
 #
 # *id*::              <tt>integer, not null, primary key</tt>
-# *start_time*::            <tt>datetime</tt>
+# *start_time*::      <tt>datetime</tt>
 # *show_title*::      <tt>string(255)</tt>
 # *created_at*::      <tt>datetime, not null</tt>
 # *updated_at*::      <tt>datetime, not null</tt>
@@ -39,10 +25,10 @@ class Admin::Staffing < ActiveRecord::Base
 
   default_scope order("start_time ASC")
 
-  scope :future, where(['start_time > ?', DateTime.now])
-  scope :past, where(['start_time < ?', DateTime.now])
+  scope :future, where(['end_time > ?', DateTime.now])
+  scope :past, where(['end_time < ?', DateTime.now])
 
-  has_many :staffing_jobs, :as => :staffable, :class_name => "Admin::StaffingJob"
+  has_many :staffing_jobs, :as => :staffable, :class_name => "Admin::StaffingJob", :dependent => :destroy
   has_many :users, :through => :staffing_jobs
 
    # Having this as a belongs_to feels wrong, but since the id of the job needs to be stored in the staffing it is necessary.
@@ -106,20 +92,21 @@ class Admin::Staffing < ActiveRecord::Base
 
     staffing_jobs.each do |job|
       #Keep going to other users if sending to one fails for some reason.
+      next if job.user.nil?
+      user = job.user
       begin
-        user = job.user
-
         StaffingMailer.staffing_reminder(job).deliver
 
         if user.phone_number && (not user.phone_number.blank?) then
           client.account.sms.messages.create(
             :from => ChaosRails::Application.config.twilio_phone_number,
             :to => user.phone_number,
-            :body => "Hey! You're staffing #{job.name} at #{job.staffable.show_title}!"
+            :body => "Hey! You're staffing #{job.name} for #{job.staffable.show_title} at #{I18n.l job.staffable.start_time, :format => :time_only}."
           )
         end
       rescue => e
-        errors << e
+        exception = e.exception "Error sending reminder to #{user.name}: " + e.message
+        errors << exception
       end
     end
 

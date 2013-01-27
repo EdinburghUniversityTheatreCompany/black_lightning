@@ -30,6 +30,13 @@
         <b><%= @show.date_range %></b>
       </p>
 
+      <% if @show.price? %>
+        <h4>Price</h4>
+        <p>
+          <b><%= @show.price %></b>
+        </p>
+      <% end %>
+
       <% if @show.author and not @show.author.empty? %>
         <h4>Author</h4>
         <p>
@@ -49,16 +56,16 @@
 
 <%= render_markdown @show.description %>
 
-<% have_team_members = @show.team_members.count > 0 %>
+<% have_team_members = @team_members.count > 0 %>
 
-<% if have_team_members && @show.xts_id then %>
+<% if have_team_members then %>
   <hr />
 
   <div class="row vertical-rule">
-    <div class="span3">
+    <div class="span4">
       <h4>Cast and Crew</h4>
-      <dl class="cast_crew_list">
-        <% @show.team_members.each do |team_member| %>
+      <dl class="cast-crew-list">
+        <% @team_members.each do |team_member| %>
           <dt><%= team_member.position %></dt>
 
           <dd>
@@ -73,29 +80,14 @@
       </dl>
     </div>
 
-    <div class="span9">
-      <h4>Tickets</h4>
-      <%= xts_widget(@show.xts_id)%>
+    <div class="span8">
+      <% if @show.xts_id %>
+        <h4>Tickets</h4>
+        <%= xts_widget(@show.xts_id)%>
+      <% end %>
     </div>
   </div>
-<% elsif have_team_members %>
-  <hr />
 
-  <h4>Cast and Crew</h4>
-  <dl class="cast_crew_list">
-    <% @show.team_members.each do |team_member| %>
-      <dt><%= team_member.position %></dt>
-
-      <dd>
-      <% u = team_member.user %>
-      <% if u.public_profile %>
-        <%= link_to u.name, u, style: "color: #333333;" %>
-      <% else %>
-        <%= u.name %>
-      <% end %>
-      </dd>
-    <% end %>
-  </dl>
 <% elsif @show.xts_id %>
   <hr />
 
@@ -103,12 +95,12 @@
   <%= xts_widget(@show.xts_id)%>
 <% end %>
 
-<% if @show.reviews.count > 0 then %>
+<% if @reviews.count > 0 then %>
   <hr />
 
   <h3>Reviews</h3>
 
-  <% @show.reviews.each do |review| %>
+  <% @reviews.each do |review| %>
     <article>
       <header>
         <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, :format => :long %> <%= "for #{review.organisation}" if review.organisation? %>
@@ -121,13 +113,13 @@
   <% end %>
 <% end %>
 
-<% if @show.pictures.count > 0 then %>
+<% if @pictures.count > 0 then %>
   <hr />
 
   <h3>Gallery</h3>
 
   <ul class="lightbox thumbnails">
-    <% @show.pictures.each do |picture| %>
+    <% @pictures.each do |picture| %>
       <li class="span2">
       <% img = image_tag picture.image.url(:thumb) %>
       <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>

@@ -47,7 +47,24 @@ class Ability
       end
 
       can :read, Admin::Proposals::Proposal do |proposal|
-        (proposal.users.include? user) || (proposal.approved) || (proposal.call.archived)
+        if Time.now < proposal.call.deadline
+          # Before the deadline, all users can only see proposals that they
+          # are part of.
+          next (proposal.users.include? user)
+        elsif not proposal.call.archived
+          # After the deadline:
+          if user.has_role? :committee
+            # Committee can see all proposals.
+            next true
+          else
+            # Other users can only see proposals that they are part of, or
+            # that have been approved.
+            next (proposal.users.include? user or proposal.approved == true)
+          end
+        else
+          # for archived calls, only approved proposals may be seen:
+          next (proposal.approved == true)
+        end
       end
 
       can :create, Admin::Proposals::Proposal

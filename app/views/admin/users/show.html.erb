@@ -15,10 +15,11 @@
             <th>Roles</th>
             <td><%= @user.roles.collect {|role| role.name.capitalize }.join(', ') %></td>
         </tr>
-		<tr>
-			<th>Sign in count</th>
-			<td><%= @user.sign_in_count %></td>
-		</tr>
+        <tr>
+            <th>Sign in count</th>
+            <td><%= @user.sign_in_count %></td>
+        </tr>
     </tbody>
 </table>
 <%= link_to 'Edit', edit_admin_user_path(@user.id), class: 'btn'%>
+<%= link_to 'Reset Password', reset_password_admin_user_path(@user.id), method: :post, class: 'btn'%>

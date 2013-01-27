@@ -1,8 +1,9 @@
 class StaticController < ApplicationController
 
   def home
-    @news = News.public(:limit => 2)
-    @shows = Show.current(:limit => 5)
+    @news = News.public.limit(2).all
+    @shows = Show.current_slideshow.limit(5).all
+    @last_show = Show.last_show
   end
 
   def access_denied

@@ -1,19 +1,3 @@
-# == Schema Information
-#
-# Table name: team_members
-#
-# *id*::            <tt>integer, not null, primary key</tt>
-# *position*::      <tt>string(255)</tt>
-# *user_id*::       <tt>integer</tt>
-# *teamwork_id*::   <tt>integer</tt>
-# *created_at*::    <tt>datetime, not null</tt>
-# *updated_at*::    <tt>datetime, not null</tt>
-# *teamwork_type*:: <tt>string(255)</tt>
-# *display_order*:: <tt>integer</tt>
-#--
-# == Schema Information End
-#++
-
 ##
 # Represents a collection of Users that have specific positions.
 #
@@ -30,6 +14,7 @@
 # *created_at*::    <tt>datetime, not null</tt>
 # *updated_at*::    <tt>datetime, not null</tt>
 # *teamwork_type*:: <tt>string(255)</tt>
+# *display_order*:: <tt>integer</tt>
 #--
 # == Schema Information End
 #++

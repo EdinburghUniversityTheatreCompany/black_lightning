@@ -4,7 +4,7 @@ class Admin::ShowsController < AdminController
 
   def index
     @title = "Shows"
-    @shows = Show.all
+    @shows = Show.unscoped.order("start_date DESC").all
   end
 
   def show

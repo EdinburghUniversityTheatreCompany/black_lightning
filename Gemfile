@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'rails', '3.2.9'
+gem 'rails', '3.2.11'
 
 # Bundle edge Rails instead:
 # gem 'rails', :git => 'git://github.com/rails/rails.git'
@@ -43,17 +43,23 @@ gem 'axlsx'
 gem 'nokogiri'
 gem 'airbrake'
 
-gem 'rails-footnotes'
-gem 'oink'
+# gem 'oink'
 
+group :development do
+  gem 'rails-footnotes'
+  gem 'reek'
+end
+
+gem 'ci_reporter'
 group :test do
-  gem 'ci_reporter'
   gem 'simplecov'
   gem 'simplecov-rcov'
   gem 'factory_girl_rails', '~> 4.0'
   gem 'faker'
   gem 'ruby-prof'
 end
+
+gem 'unicorn'
 
 # To use ActiveModel has_secure_password
 # gem 'bcrypt-ruby', '~> 3.0.0'

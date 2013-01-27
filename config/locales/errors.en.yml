@@ -2,5 +2,5 @@ en:
   activerecord:
     errors:
       messages:
-        blank: "%{attribute} must not be blank."
+        blank: "must not be blank."
         taken: "%{value} is already taken."

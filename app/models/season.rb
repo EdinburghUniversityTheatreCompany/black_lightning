@@ -1,3 +1,4 @@
+##
 # == Schema Information
 #
 # Table name: seasons
@@ -13,13 +14,14 @@
 #--
 # == Schema Information End
 #++
-
+##
 class Season < ActiveRecord::Base
   def to_param
     slug
   end
   attr_accessible :description, :end_date, :name, :start_date, :slug
 
+  validates :name, :presence => true
   validates :slug, :presence => true, :uniqueness => true
 
   has_many :events
