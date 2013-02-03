@@ -9,7 +9,21 @@ class Admin::UsersController < AdminController
   ##
   def index
     @title = "Users"
-    @users = User.all
+
+    if params[:show_non_members] == "true"
+      @users = User
+    else
+      @users = User.with_role(:member)
+    end
+
+    if params[:search]
+      q = "%#{params[:search]}%"
+      @users = @users.where("first_name like ? or last_name like ?", q, q)
+    end
+
+    @users = @users.paginate(:page => params[:page], :per_page => 15)
+
+    @users = @users.all
   end
 
   ##
