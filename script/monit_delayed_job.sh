@@ -7,21 +7,12 @@ fi
 
 action=$1
 
+export PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
 export RAILS_ENV=production
+export GEM_PATH="/var/www/bedlamtheatre_co_uk/gems"
+export GEM_HOME="/var/www/bedlamtheatre_co_uk/gems"
 
-#script_location=$(cd ${0%/*} && pwd -P)
-#cd $script_location/..
-#rails_root=`pwd`
+cd /var/www/bedlamtheatre_co_uk/current
 
-if [ -f "/etc/profile" ]; then
-  . /etc/profile
-fi
-
-logfile=/var/www/bedlamtheatre_co_uk/current/log/delayed_job.log
-echo "-----------------------------------------------" >> $logfile 2>&1
-cho "Running bundle exec ./script/delayed_job $action" >> $logfile 2>&1
-echo `date` >> $logfile 2>&1
-echo `env` >> $logfile 2>&1
-
-bundle exec /var/www/bedlamtheatre_co_uk/current/script/delayed_job $action >> $logfile 2>&1
+/var/www/bedlamtheatre_co_uk/gems/bin/bundle exec /var/www/bedlamtheatre_co_uk/current/script/delayed_job $action
 
