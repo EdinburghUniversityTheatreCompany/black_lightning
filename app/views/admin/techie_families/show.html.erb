@@ -1,0 +1,17 @@
+<h1><%= @techie.name %></h1>
+
+<h3>Parents</h3>
+
+<ul>
+  <% @techie.parents.each do |p| %>
+    <li><%= link_to p.name, admin_techie_family_path(p) %></li>
+  <% end %>
+</ul>
+
+<h3>Children</h3>
+
+<ul>
+  <% @techie.children.each do |c| %>
+    <li><%= link_to c.name, admin_techie_family_path(c) %></li>
+  <% end %>
+</ul>
