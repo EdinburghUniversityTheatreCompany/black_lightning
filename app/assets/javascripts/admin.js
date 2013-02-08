@@ -11,7 +11,7 @@
 // GO AFTER THE REQUIRES BELOW.
 //
 //= require admin/jquery.gridster.min
-//= require admin/jquery.toggle.buttons
+//= require admin/jquery.switch
 //= require admin/md_editor
 //= require admin/staffings
 //= require admin/shows

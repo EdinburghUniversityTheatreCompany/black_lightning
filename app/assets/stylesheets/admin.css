@@ -11,7 +11,7 @@
  *= require_self
  *= require 'bootstrap-extensions'
  *= require font-awesome
- *= require admin/bootstrap-toggle-buttons.css
+ *= require admin/bootstrap-switch.css
  *= require admin/md_editor.css
  *= require admin/jquery.gridster.min.css
  *= require admin/gallery_form.css
