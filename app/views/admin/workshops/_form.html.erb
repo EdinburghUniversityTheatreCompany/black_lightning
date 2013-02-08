@@ -30,7 +30,7 @@
 
     <%= f.input :is_public, boolean_style: :inline if can? :make_public, @workshop %>
     <script type="text/javascript">
-      $('#show_is_public').parent().toggleButtons({
+      $('#workshop_is_public').parent().toggleButtons({
         width: 220,
         label: {
           enabled: "Published",
