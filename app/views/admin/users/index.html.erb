@@ -1,6 +1,37 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/users" %>
+<% end %>
+
 <% @title = 'Users' %>
 
-<h1>Listing All Users</h1>
+<% prefix = params[:search] ? "Searching" : "Listing" %>
+
+<% if params[:show_non_members] %>
+  <h1><%= prefix %> All Users</h1>
+<% else %>
+  <h1><%= prefix %> All Members</h1>
+<% end %>
+
+<div class="row">
+  <div class="span9">
+    <%= form_for admin_users_path, html: { id: "search", class: "form-search" }, method: "GET" do %>
+      <div class="input-append">
+        <input name="search" type="text" class="input-medium search-query" value="<%= params[:search] %>">
+        <button type="submit" class="btn">Search</button>
+      </div>
+    <% end %>
+  </div>
+  <div class="span3">
+    <div class="control-group">
+      <div class="controls">
+        <label class="checkbox">
+          <input id="show_non_members" type="checkbox" <%= "checked" if params[:show_non_members] == "true" %>> Show Non-Members
+        </label>
+      </div>
+    </div>
+  </div>
+</div>
+
 <table class="table">
     <tbody>
         <tr>
@@ -32,6 +63,10 @@
         <% end %>
     </tbody>
 </table>
+
+<div class="paginate_holder">
+  <%= will_paginate(@users) %>
+</div>
 
 <% if can? :create, User %>
   <% add_text = '<i class="icon-plus"></i> Add User'.html_safe %>
