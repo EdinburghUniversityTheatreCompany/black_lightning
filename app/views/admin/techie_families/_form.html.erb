@@ -1,0 +1,38 @@
+<% if @techie.persisted? then url = admin_techie_family_url else url = admin_techie_families_url end%>
+
+<%= simple_nested_form_for @techie, url: url do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :name %>
+
+    <h3>Parents</h3>
+
+    <%= f.simple_fields_for :parents do |p| %>
+      <%= p.input_field :id, :collection => @techies.collect {|t| [t.name, t.id]} %>
+      <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
+      <%= p.link_to_remove remove_text, :class => "btn btn-danger" %>
+    <% end %>
+
+    <% add_parent_text = '<i class="icon-plus"></i> Add Parent'.html_safe %>
+    <%= f.link_to_add add_parent_text, :parents, :class => "btn" %>
+
+    <h3>Children</h3>
+
+    <%= f.simple_fields_for :children do |c| %>
+      <%= c.input_field :id, :collection => @techies.collect {|t| [t.name, t.id]} %>
+      <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
+      <%= c.link_to_remove remove_text, :class => "btn btn-danger" %>
+    <% end %>
+
+    <% add_child_text = '<i class="icon-plus"></i> Add Child'.html_safe %>
+    <%= f.link_to_add add_child_text, :children, :class => "btn" %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn-primary" %>
+    <%= link_to 'Cancel', admin_techie_families_path, :class => "btn" %>
+  </div>
+<% end %>

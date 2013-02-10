@@ -22,6 +22,9 @@ class Ability
     #If you can approve something, you can also reject it
     alias_action :reject, :to => :approve
 
+    #Alias grid to read
+    alias_action :grid, :to => :read
+
     if user then
 
       #All users can manage themselves.

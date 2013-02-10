@@ -1,15 +1,16 @@
-<% div_name = parent + "_" + show_title.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
-  <div class="accordion-group">
-    <% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ? and user_id is not null', show_title]).count %>
-    <% total_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ?', show_title]).count %>
+<% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ? and user_id is not null', show_title]).count %>
+<% total_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ?', show_title]).count %>
 
-    <% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
+<% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
 
-    <div class="accordion-heading" style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
-      <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
-        <%= show_title %>
-      </a>
+<% archived ||= nil %>
 
+<li style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
+
+  <%= link_to grid_admin_staffings_path(show_title, archived: archived) do %>
+    <%= show_title %>
+
+    <span class="pull-right">
       <% if show_warning %>
         <i class="icon-exclamation-sign"></i>
       <% else %>
@@ -17,40 +18,7 @@
       <% end %>
 
       <%= "#{filled_positions} of #{total_positions} filled" %>
-    </div>
-    <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
-      <table class="table">
-        <tr>
-          <th>Date</th>
-          <th></th>
+    </span>
+  <% end %>
 
-          <th></th>
-
-          <% if can? :edit, Admin::Staffing %>
-          <th></th>
-          <% end %>
-
-          <% if can? :delete, Admin::Staffing %>
-          <th></th>
-          <% end %>
-        </tr>
-        <% for staffing in staffings %>
-        <tr>
-          <td><%= link_to (l staffing.start_time, :format => :long), show_sign_up_admin_staffing_path(staffing), :title => "Click to sign up to staff on this date" %></td>
-
-          <td><%= "#{staffing.filled_jobs} of #{staffing.staffing_jobs.count} filled" %></td>
-
-          <td><%= link_to 'View', staffing %></td>
-
-          <% if can? :edit, staffing %>
-          <td><%= link_to 'Edit', edit_admin_staffing_path(staffing) %></td>
-          <% end %>
-
-          <% if can? :delete, staffing %>
-          <td><%= link_to 'Destroy', staffing, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-          <% end %>
-        </tr>
-        <% end %>
-      </table>
-    </div>
-  </div>
+</li>

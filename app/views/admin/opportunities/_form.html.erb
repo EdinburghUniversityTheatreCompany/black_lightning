@@ -17,21 +17,16 @@
       <%= render "admin/shared/md_hints" %>
     <% end %>
 
-    <%= f.input :show_email, boolean_style: :inline %>
-    <script type="text/javascript">
-      $('#opportunity_show_email').parent().toggleButtons({
-        width: 240,
-        label: {
-          enabled: "Email Link",
-          disabled: "No Link"
-        },
-        style: {
-          enabled:  "success",
-          disabled: "danger"
-        }
-      });
-    </script>
+    <div class="control-group">
+      <%= f.label :show_email %>
 
+      <div class="controls switch" data-on="success" data-on-label="Email Link", data-off="danger" data-off-label="No Link" style="width: 200px;">
+        <%=
+           f.input_field :show_email,
+                          boolean_style: :inline
+        %>
+      </div>
+    </div>
   </div>
 
   <div class="form-actions">

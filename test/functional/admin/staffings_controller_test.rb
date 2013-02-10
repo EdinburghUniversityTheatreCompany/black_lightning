@@ -22,6 +22,15 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:admin_staffings)
   end
 
+  test "should get grid" do
+    FactoryGirl.create_list(:staffing, 10, job_count: 5, show_title: "Test")
+
+    get :grid, show_title: "Test"
+    assert_response :success
+    assert_not_nil assigns(:staffings)
+    assert_not_nil assigns(:staffings_hash)
+  end
+
   test "should get new" do
     get :new
     assert_response :success

@@ -13,4 +13,62 @@ class Admin::TechieFamiliesController < AdminController
     @title = "Techie Families"
     @techies = Techie.all
   end
+
+  def show
+    @techie = Techie.find(params[:id])
+    @title = "Techie"
+  end
+
+  def new
+    @techies = Techie.all
+    @techie = Techie.new
+    @title = "New Techie"
+  end
+
+  def create
+    @techies = Techie.all
+    @techie = Techie.new(params[:techie])
+
+    respond_to do |format|
+      if @techie.save
+        format.html {redirect_to admin_techie_family_path(@techie), notice: 'Techie was successfully created.'}
+      else
+        format.html {render "new"}
+      end
+    end
+  end
+
+  def edit
+    @techies = Techie.all
+    @techie = Techie.find(params[:id])
+    @title = "Editing Techie"
+  end
+
+  def update
+    @techies = Techie.all
+    @techie = Techie.find(params[:id])
+
+    respond_to do |format|
+      if @techie.update_attributes(params[:techie])
+        format.html { redirect_to admin_techie_family_path(@techie), notice: 'Techie was successfully updated.' }
+      else
+        format.html { render "edit" }
+      end
+    end
+  end
+
+  def destroy
+    @techie = Techie.find(params[:id])
+    @techie.destroy
+
+    respond_to do |format|
+      format.html { redirect_to admin_techie_families_path }
+      format.json { head :no_content }
+    end
+  end
+
+  def graph
+    @title = "Techie Families"
+    @techies = Techie.all
+  end
 end

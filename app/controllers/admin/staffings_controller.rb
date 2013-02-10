@@ -21,6 +21,37 @@ class Admin::StaffingsController < AdminController
   end
 
   ##
+  # GET /admin/staffings/show_title/grid
+  ##
+  def grid
+    if params[:archived] == "true"
+      @staffings = Admin::Staffing.past.where({:show_title => params[:show_title]})
+    else
+      @staffings = Admin::Staffing.future.where({:show_title => params[:show_title]})
+    end
+    @job_titles = @staffings.joins(:staffing_jobs).select("admin_staffing_jobs.name").uniq.collect { |s| s.name }
+
+    @staffings = @staffings.includes(:staffing_jobs => :user)
+    @staffings_hash = @staffings.all.collect do |s|
+      staffing_hash = {}
+      staffing_hash[:staffing] = s
+      staffing_hash[:date] = s.start_time
+      staffing_hash[:jobs] = {}
+      s.staffing_jobs.each do |j|
+        staffing_hash[:jobs][j.name] = j
+      end
+
+      next staffing_hash
+    end
+
+    @title = "Staffing"
+
+    respond_to do |format|
+      format.html # index.html.erb
+    end
+  end
+
+  ##
   # GET /admin/staffings/1
   #
   # GET /admin/staffings/1.json
@@ -102,21 +133,24 @@ class Admin::StaffingsController < AdminController
     start_times = params[:start_times]
     end_times = params[:end_times]
 
-    start_times.values.zip(end_times.values).each do |start_time, end_time|
-      staffing = admin_staffing.dup
+    begin
+      start_times.values.zip(end_times.values).each do |start_time, end_time|
+        staffing = admin_staffing.dup
 
-      staffing.start_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
-      staffing.end_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
-      if not staffing.save
-        redirect_to redirect_to admin_staffings_url, alert: 'There were errors creating the staffing.'
-        return
+        staffing.start_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
+        staffing.end_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
+
+        staffing.save!
+
+        staffing.staffing_jobs << admin_staffing_jobs.collect { |job| job.dup }
       end
-
-      staffing.staffing_jobs << admin_staffing_jobs.collect { |job| job.dup }
+    rescue => e
+      redirect_to redirect_to admin_staffings_path, alert: 'There were errors creating the staffing.'
+      return
     end
 
     flash[:success] = 'Staffing was successfully created.'
-    redirect_to admin_staffings_url
+    redirect_to admin_staffings_path
   end
 
   ##
