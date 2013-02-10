@@ -16,7 +16,7 @@
   <tbody>
     <% @staffings_hash.each do |staffing_hash| %>
       <tr>
-        <td><%= staffing_hash[:date] %></td>
+        <td><%= link_to (l staffing_hash[:date], :format => :long), staffing_hash[:staffing] %></td>
 
         <% @job_titles.each do |title| %>
           <td>
@@ -29,7 +29,7 @@
               <% sign_up_text = '<i class="icon-edit"></i> Sign Up'.html_safe %>
               <% date = l staffing_hash[:date], :format => :long %>
               <%= link_to sign_up_text, admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
-                                                                                                                                             "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} at #{date}",
+                                                                                                                                             "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
                                                                                                                                              :job_id   => job.id
                                                                                                                                            } %>
             <% end %>

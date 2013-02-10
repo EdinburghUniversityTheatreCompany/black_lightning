@@ -31,9 +31,10 @@ class Admin::StaffingsController < AdminController
     end
     @job_titles = @staffings.joins(:staffing_jobs).select("admin_staffing_jobs.name").uniq.collect { |s| s.name }
 
-    @staffings = @staffings.includes(:staffing_jobs)
+    @staffings = @staffings.includes(:staffing_jobs => :user)
     @staffings_hash = @staffings.all.collect do |s|
       staffing_hash = {}
+      staffing_hash[:staffing] = s
       staffing_hash[:date] = s.start_time
       staffing_hash[:jobs] = {}
       s.staffing_jobs.each do |j|

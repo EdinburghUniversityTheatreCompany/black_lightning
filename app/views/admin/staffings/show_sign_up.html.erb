@@ -26,7 +26,7 @@
             <% sign_up_text = '<i class="icon-edit"></i> Sign Up'.html_safe %>
             <% date = l staffing_job.staffable.start_time, :format => :long %>
             <%= link_to sign_up_text, admin_sign_up_confirm_path(staffing_job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
-                                                                                                                                           "detail"  => "Confirm staffing as #{staffing_job.name} for #{staffing_job.staffable.show_title} at #{date}",
+                                                                                                                                           "detail"  => "Confirm staffing as #{staffing_job.name} for #{staffing_job.staffable.show_title} on #{date}",
                                                                                                                                            :job_id   => staffing_job.id
                                                                                                                                          } %>
           <% end %>
