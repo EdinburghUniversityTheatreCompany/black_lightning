@@ -27,17 +27,19 @@
         <% @job_titles.each do |title| %>
           <td>
             <% job = staffing_hash[:jobs][title] %>
-            <% u = job.user %>
-            <% if u then %>
-              <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-            <% else %>
-              <input type="hidden" class="job_json" value="<%= job.to_json %>" >
-              <% date = l staffing_hash[:date], :format => :long %>
-              <%= link_to admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
-                                                                                                                                             "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
-                                                                                                                                             :job_id   => job.id
-                                                                                                                                           } do %>
-                <i class="icon-edit"></i> Sign Up
+            <% if job %>
+              <% u = job.user %>
+              <% if u then %>
+                <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+              <% else %>
+                <input type="hidden" class="job_json" value="<%= job.to_json %>" >
+                <% date = l staffing_hash[:date], :format => :long %>
+                <%= link_to admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
+                                                                                                                                               "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
+                                                                                                                                               :job_id   => job.id
+                                                                                                                                             } do %>
+                  <i class="icon-edit"></i> Sign Up
+                <% end %>
               <% end %>
             <% end %>
           </td>
