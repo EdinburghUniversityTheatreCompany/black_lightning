@@ -4,9 +4,10 @@
 en:
   time:
     formats:
-      time_only: ! '%H:%M'
-      short: ! '%H:%M %d/%m/%y'
-      long : ! '%A %d %B at %H:%M'
+      time_only:       ! '%H:%M'
+      short:           ! '%H:%M %d/%m/%y'
+      long :           ! '%A %d %B at %H:%M'
+      long_date_only:  ! '%A %d %B'
   date:
     formats:
       long: ! '%A %d %B'

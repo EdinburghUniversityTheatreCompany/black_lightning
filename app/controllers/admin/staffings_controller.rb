@@ -21,6 +21,37 @@ class Admin::StaffingsController < AdminController
   end
 
   ##
+  # GET /admin/staffings/show_title/grid
+  ##
+  def grid
+    if params[:archived] == "true"
+      @staffings = Admin::Staffing.past.where({:show_title => params[:show_title]})
+    else
+      @staffings = Admin::Staffing.future.where({:show_title => params[:show_title]})
+    end
+    @job_titles = @staffings.joins(:staffing_jobs).select("admin_staffing_jobs.name").uniq.collect { |s| s.name }
+
+    @staffings = @staffings.includes(:staffing_jobs => :user)
+    @staffings_hash = @staffings.all.collect do |s|
+      staffing_hash = {}
+      staffing_hash[:staffing] = s
+      staffing_hash[:date] = s.start_time
+      staffing_hash[:jobs] = {}
+      s.staffing_jobs.each do |j|
+        staffing_hash[:jobs][j.name] = j
+      end
+
+      next staffing_hash
+    end
+
+    @title = "Staffing"
+
+    respond_to do |format|
+      format.html # index.html.erb
+    end
+  end
+
+  ##
   # GET /admin/staffings/1
   #
   # GET /admin/staffings/1.json
