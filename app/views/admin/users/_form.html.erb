@@ -1,5 +1,8 @@
-<%= simple_form_for [:admin, @user], :html => {:class => "form-horizontal"} do |f| %>
+<%= simple_form_for [:admin, @user] do |f| %>
 <div class="form-inputs">
+  <fieldset class="fieldset form-horizontal">
+    <legend>User Details</legend>
+
     <%= f.input :email %>
     <%= f.input :first_name %>
     <%= f.input :last_name %>
@@ -13,6 +16,31 @@
     <% if can? :assign_roles, @user %>
       <%= f.association :roles, :as => :check_boxes %>
     <% end %>
+  </fieldset>
+
+  <fieldset class="fieldset">
+    <legend>Public Profile</legend>
+
+    <%= f.input :public_profile, boolean_style: :inline if can? :make_public, @show %>
+    <script type="text/javascript">
+      $('#user_public_profile').parent().toggleButtons({
+        width: 220,
+        label: {
+          enabled: "Public",
+          disabled: "Private"
+        },
+        style: {
+          enabled:  "success",
+          disabled: "danger"
+        }
+      });
+    </script>
+
+    <%= f.input :avatar %>
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :bio, :rows => 12 } do %>
+      <%= render "admin/shared/md_hints" %>
+    <% end %>
+  </fieldset>
 </div>
 <div class="form-actions">
     <%= f.button :submit, class: "btn-primary" %>

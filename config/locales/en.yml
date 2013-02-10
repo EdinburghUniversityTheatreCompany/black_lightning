@@ -10,5 +10,6 @@ en:
       long_date_only:  ! '%A %d %B'
   date:
     formats:
+      shorty: ! '%d/%m/%y'
       long: ! '%A %d %B'
       longy: ! '%A %d %B %Y'
