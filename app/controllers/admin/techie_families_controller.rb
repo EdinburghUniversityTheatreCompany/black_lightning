@@ -59,7 +59,7 @@ class Admin::TechieFamiliesController < AdminController
 
   def destroy
     @techie = Techie.find(params[:id])
-    @show.destroy
+    @techie.destroy
 
     respond_to do |format|
       format.html { redirect_to admin_techie_families_path }

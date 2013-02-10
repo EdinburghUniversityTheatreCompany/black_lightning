@@ -34,7 +34,7 @@ class Techie < ActiveRecord::Base
         self.children << techie
       end
 
-      if attribute[1][:_destroy] == 1
+      if attribute[1][:_destroy] == "1"
         self.children.delete(techie)
       end
     end
@@ -45,11 +45,11 @@ class Techie < ActiveRecord::Base
       Rails.logger.debug attribute
       techie = Techie.find(attribute[1][:id])
 
-      unless self.children.all.include?(techie)
+      unless self.parents.all.include?(techie)
         self.parents << techie
       end
 
-      if attribute[1][:_destroy] == 1
+      if attribute[1][:_destroy] == "1"
         self.parents.delete(techie)
       end
     end
