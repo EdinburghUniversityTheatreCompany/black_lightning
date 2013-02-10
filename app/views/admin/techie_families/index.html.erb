@@ -1,32 +1,35 @@
-<div id="canvas" style="width: 940px; height: 2000px;"></div>
-<script>
-var g = new Graph();
+<h1>Techie Families</h1>
 
-var render = function(r, n) {
-        /* the Raphael set is obligatory, containing all you want to display */
-        var set = r.set().push(
-            /* custom objects go here */
-            r.rect(n.point[0]-30, n.point[1]-13, 60, 44).attr({"fill": "#feb", r : "12px", "stroke-width" : n.distance == 0 ? "3px" : "1px" })).push(
-            r.text(n.point[0], n.point[1] + 10, (n.label || n.id)));
-        return set;
-    };
+<table class="table">
+  <tr>
+    <th>Name</th>
+    <th></th>
+    <th></th>
+  </tr>
 
-/* add a simple node */
-<% @techies.each do |tech| %>
-g.addNode("<%= tech.name %>", {render:render});
-<% end %>
+<% @techies.each do |techie| %>
+  <tr>
+    <td><%= link_to techie.name, admin_techie_family_path(techie) %></td>
 
-<% @techies.each do |tech| %>
-    <% tech.children.each do |child| %>
-    g.addEdge("<%= tech.name %>", "<%= child.name %>", {directed: true});
+    <td>
+    <% if can? :edit, techie %>
+    <%= link_to 'Edit', edit_admin_techie_family_path(techie) %>
     <% end %>
+    </td>
+
+    <td>
+    <% if can? :delete, techie %>
+    <%= link_to 'Destroy', admin_techie_family_path(techie), method: :delete, data: { "confirm" => "Deleting " + techie.name,
+                                                                                      "detail"  => "Are you sure you wish to continue?" } %>
+    <% end %>
+    </td>
+  </tr>
 <% end %>
+</table>
 
-/* layout the graph using the Spring layout implementation */
-var layouter = new Graph.Layout.Spring(g);
-layouter.layout();
+<br />
 
-/* draw the graph using the RaphaelJS draw implementation */
-var renderer = new Graph.Renderer.Raphael('canvas', g, 940, 1500);
-renderer.draw();
-</script>
+<% if can? :create, Techie %>
+<% new_text = '<i class="icon-plus"></i> New Techie'.html_safe %>
+<%= link_to new_text, new_admin_techie_family_path, :class => 'btn' %>
+<% end %>

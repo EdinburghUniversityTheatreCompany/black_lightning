@@ -31,15 +31,16 @@
           $('#add_date').click(function () {
             var item = $('#date_blueprint').clone();
             $(item).show();
+            $(item).removeAttr('id');
             //TODO: This feels like a bit of a cheat - could probably be improved.
             item.find('select[name*="start[day]"]').attr('name', 'start_times[' + counter + '][day]');
             item.find('select[name*="start[month]"]').attr('name', 'start_times[' + counter + '][month]');
             item.find('select[name*="start[year]"]').attr('name', 'start_times[' + counter + '][year]');
             item.find('select[name*="start[hour]"]').attr('name', 'start_times[' + counter + '][hour]');
             item.find('select[name*="start[minute]"]').attr('name', 'start_times[' + counter + '][minute]');
-            item.find('select[name*="end[day]"]').attr('name', 'end_times[' + counter + '][day]');
-            item.find('select[name*="end[month]"]').attr('name', 'end_times[' + counter + '][month]');
-            item.find('select[name*="end[year]"]').attr('name', 'end_times[' + counter + '][year]');
+            item.find('input[name*="end[day]"]').attr('name', 'end_times[' + counter + '][day]');
+            item.find('input[name*="end[month]"]').attr('name', 'end_times[' + counter + '][month]');
+            item.find('input[name*="end[year]"]').attr('name', 'end_times[' + counter + '][year]');
             item.find('select[name*="end[hour]"]').attr('name', 'end_times[' + counter + '][hour]');
             item.find('select[name*="end[minute]"]').attr('name', 'end_times[' + counter + '][minute]');
             item.find('a').click(function () {

@@ -1,7 +1,12 @@
 class StaticController < ApplicationController
 
   def home
-    @news = News.public.limit(2).all
+
+    if current_user
+      @news = News.current.limit(2).all
+    else
+      @news = News.public.limit(2).all
+    end
     @shows = Show.current_slideshow.limit(5).all
     @last_show = Show.last_show
   end

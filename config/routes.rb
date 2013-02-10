@@ -58,7 +58,11 @@ ChaosRails::Application.routes.draw do
     get '/permissions/grid' => 'permissions#grid', :as => :permissions
     post '/permissions/grid' => 'permissions#update_grid', :as => :permissions
 
-    resources :techie_families, :only => [:index]
+    resources :techie_families do
+      collection do
+        get 'graph'
+      end
+    end
 
     resources :staffing_templates
     resources :staffings do

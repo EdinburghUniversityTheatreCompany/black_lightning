@@ -18,7 +18,40 @@
 #++
 ##
 class Techie < ActiveRecord::Base
-  attr_accessible :name
   has_and_belongs_to_many :children, :class_name => "Techie", :foreign_key => "techie_id", :association_foreign_key => "child_id", :join_table => "children_techies"
   has_and_belongs_to_many :parents, :class_name => "Techie", :foreign_key => "child_id", :association_foreign_key => "techie_id", :join_table => "children_techies"
+
+  accepts_nested_attributes_for :children, :parents, :reject_if => :all_blank, :allow_destroy => true
+
+  attr_accessible :name, :children, :parents, :children_attributes, :parents_attributes
+
+  # Without these, this was breaking - I don't know why.
+  def children_attributes=(attributes)
+    attributes.each do |attribute|
+      techie = Techie.find(attribute[1][:id])
+
+      unless self.children.all.include?(techie)
+        self.children << techie
+      end
+
+      if attribute[1][:_destroy] == "1"
+        self.children.delete(techie)
+      end
+    end
+  end
+
+  def parents_attributes=(attributes)
+    attributes.each do |attribute|
+      Rails.logger.debug attribute
+      techie = Techie.find(attribute[1][:id])
+
+      unless self.parents.all.include?(techie)
+        self.parents << techie
+      end
+
+      if attribute[1][:_destroy] == "1"
+        self.parents.delete(techie)
+      end
+    end
+  end
 end

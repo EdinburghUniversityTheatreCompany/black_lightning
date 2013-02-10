@@ -79,6 +79,8 @@
                   <% if can? :manage, :jobs %>
                   <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
                   <% end %>
+
+		  <li><%= link_to 'Ball', admin_resources_path(:action => "ball") %></li>
               </ul>
             </div>
 
