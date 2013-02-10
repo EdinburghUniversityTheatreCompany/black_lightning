@@ -7,13 +7,14 @@
 
 <h3>Upcoming Positions</h3>
 
-<div class="accordion" id="shows_current_accordion">
-<% @admin_staffings.each do |show_title, staffings| %>
-  <%= render 'staffing', :show_title => show_title, :staffings => staffings, :parent => "current" %>
-<% end %>
-</div>
+<ul class="nav nav-tabs nav-stacked">
+  <% @admin_staffings.each do |show_title, staffings| %>
+    <%= render 'staffing', show_title: show_title %>
+  <% end %>
+</ul>
 
 <br />
+
 <% if can? :create, Admin::Staffing %>
   <% add_text = '<i class="icon-plus"></i> Create Staffing for Show'.html_safe %>
   <%= link_to add_text, new_for_show_admin_staffings_path, :class => "btn btn-primary" %>
@@ -24,8 +25,8 @@
 
 <h3>Old Positions</h3>
 
-<div class="accordion" id="shows_archive_accordion">
-<% @admin_staffings_archive.each do |show_title, staffings| %>
-  <%= render 'staffing', :show_title => show_title, :staffings => staffings, :parent => "archive" %>
-<% end %>
-</div>
+<ul class="nav nav-tabs nav-stacked">
+  <% @admin_staffings_archive.each do |show_title, staffings| %>
+    <%= render 'staffing', show_title: show_title, archived: true %>
+  <% end %>
+</ul>

@@ -2,10 +2,10 @@
 
 <%= display_block("Staffing", true) %>
 
-<table class="table">
+<table class="table table-hover" style="table-layout: fixed;">
   <thead>
     <tr>
-      <th>Date</th>
+      <th style="width: 160px;">Date</th>
 
       <% @job_titles.each do |title| %>
         <th><%= title %></th>
@@ -16,7 +16,13 @@
   <tbody>
     <% @staffings_hash.each do |staffing_hash| %>
       <tr>
-        <td><%= link_to (l staffing_hash[:date], :format => :long), staffing_hash[:staffing] %></td>
+        <td>
+          <%= link_to staffing_hash[:staffing] do %>
+            <%= l staffing_hash[:date], :format => :long_date_only %>
+            <br />
+            <%= l staffing_hash[:date], :format => :time_only %>
+          <% end %>
+        </td>
 
         <% @job_titles.each do |title| %>
           <td>
@@ -26,12 +32,13 @@
               <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
             <% else %>
               <input type="hidden" class="job_json" value="<%= job.to_json %>" >
-              <% sign_up_text = '<i class="icon-edit"></i> Sign Up'.html_safe %>
               <% date = l staffing_hash[:date], :format => :long %>
-              <%= link_to sign_up_text, admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
+              <%= link_to admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
                                                                                                                                              "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
                                                                                                                                              :job_id   => job.id
-                                                                                                                                           } %>
+                                                                                                                                           } do %>
+                <i class="icon-edit"></i> Sign Up
+              <% end %>
             <% end %>
           </td>
         <% end %>
