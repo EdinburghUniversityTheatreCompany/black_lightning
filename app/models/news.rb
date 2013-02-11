@@ -48,7 +48,18 @@ class News < ActiveRecord::Base
 
   has_attached_file :image,
                     :styles => { :medium => "576x300#", :thumb => "192x100#" },
-                    :convert_options => { :medium => "-strip", :thumb => "-quality 75 -strip" }
+                    :convert_options => { :medium => "-strip", :thumb => "-quality 75 -strip" },
+                    :default_url => :default_image
 
   attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
+
+  ##
+  # Generates a default image for the news item. If extra artwork is added, increase the base of the modulo call.
+  #
+  # NOTE: The first image must have filename 0.png - remember that in modulo 2 (for example), valid numbers are 0,1 (not 2)!
+  ##
+  def default_image
+    number = self.id.modulo(2)
+    return "/images/generic_news/:style/#{number}.png"
+  end
 end
