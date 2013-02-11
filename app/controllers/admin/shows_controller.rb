@@ -4,7 +4,14 @@ class Admin::ShowsController < AdminController
 
   def index
     @title = "Shows"
+
     @shows = Show.unscoped.order("start_date DESC")
+
+    if params[:search]
+      q = "%#{params[:search]}%"
+      @shows = @shows.where("name like ?", q)
+    end
+
     @shows = @shows.paginate(:page => params[:page], :per_page => 15).all
   end
 

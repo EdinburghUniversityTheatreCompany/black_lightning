@@ -4,8 +4,16 @@
 
 <%= display_block("Shows (Members Face)", true) %>
 
-<br />
-<br />
+<div class="row">
+  <div class="span12">
+    <%= form_for admin_shows_path, html: { id: "search", class: "form-search" }, method: "GET" do %>
+      <div class="input-append">
+        <input name="search" type="text" class="input-medium search-query" value="<%= params[:search] %>">
+        <button type="submit" class="btn">Search</button>
+      </div>
+    <% end %>
+  </div>
+</div>
 
 <table class="table">
     <tbody>
