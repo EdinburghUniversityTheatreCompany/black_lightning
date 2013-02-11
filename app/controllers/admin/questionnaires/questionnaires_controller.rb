@@ -61,7 +61,13 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def update
     @admin_questionnaires_questionnaire = Admin::Questionnaires::Questionnaire.find(params[:id])
 
-    authorize!(:edit, @admin_questionnaires_questionnaire)
+    # Try authorizing update first
+    begin
+      authorize!(:update, @admin_questionnaires_questionnaire)
+    rescue CanCan::AccessDenied
+      # Otherwise, try answer as well.
+      authorize!(:answer, @admin_questionnaires_questionnaire)
+    end
 
     respond_to do |format|
       if @admin_questionnaires_questionnaire.update_attributes(params[:admin_questionnaires_questionnaire])
