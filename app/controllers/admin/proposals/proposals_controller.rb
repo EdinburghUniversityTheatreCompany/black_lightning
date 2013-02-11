@@ -180,7 +180,7 @@ class Admin::Proposals::ProposalsController < AdminController
     #This is required so that the edit action can be rendered should the update fail.
     @users = User.by_first_name.select([ :id, :first_name, :last_name ])
 
-    authorize!(:edit, @proposal)
+    authorize!(:update, @proposal)
 
     respond_to do |format|
       if @proposal.update_attributes(params[:admin_proposals_proposal])
