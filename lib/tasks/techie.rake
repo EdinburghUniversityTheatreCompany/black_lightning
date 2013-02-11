@@ -1,4 +1,4 @@
-require 'CSV'
+require 'csv'
 namespace :techie do
   task :import, [:file] => :environment do |t, args|
     CSV.foreach(args[:file]) do |row|
