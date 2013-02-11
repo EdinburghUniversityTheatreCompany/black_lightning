@@ -38,6 +38,8 @@
     </tbody>
 </table>
 
+<%= will_paginate(@shows) %>
+
 <% if can? :create, Show %>
   <% add_text = '<i class="icon-plus"></i> Add Show'.html_safe %>
   <%= link_to add_text, new_admin_show_path, :class => "btn" %>
