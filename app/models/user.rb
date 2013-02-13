@@ -67,6 +67,13 @@ class User < ActiveRecord::Base
   end
 
   ##
+  # A quick way to get the user's full name, if they have a name, or their email
+  ##
+  def name_or_email
+    self.name.presence || self.email
+  end
+  
+  ##
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
   ##
   def unify_numbers
