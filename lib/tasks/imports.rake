@@ -29,10 +29,21 @@ namespace :import do
 
       uri = URI.parse(show_uri + id + '.xml')
 
-      http = Net::HTTP.new(uri.host, uri.port)
-      request = Net::HTTP::Get.new(uri.request_uri)
-      response = http.request(request)
-      xml_data = response.body
+      xml_data = nil
+      counter = 0
+
+      # Quick and dirty hack to prevent failure half way through due to DNS etc...
+      while xml_data.nil? && counter < 10
+        begin
+          http = Net::HTTP.new(uri.host, uri.port)
+          request = Net::HTTP::Get.new(uri.request_uri)
+          response = http.request(request)
+          xml_data = response.body
+        rescue => e
+          Rails.logger.error e.message
+          counter += 1
+        end
+      end
 
       doc = Nokogiri::XML(xml_data)
 
