@@ -1,6 +1,12 @@
 <div class="row">
   <div class="span12">
-    <h1>Upcoming Shows</h1>
+    <%= render 'archives/search_form' %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="span12">
+    <h1>Previous Shows</h1>
     <hr />
 
     <% @shows.each do |show| %>
@@ -14,7 +20,7 @@
         <p>
           <%= show.tagline %>
           <br />
-          <span class="show-date"><%= show.date_range %></span>
+          <span class="show-date"><%= show.date_range(:longy) %></span>
         </p>
         <p><%= link_to 'View Details', show %></p>
       </div>

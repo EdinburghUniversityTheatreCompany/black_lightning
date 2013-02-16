@@ -107,16 +107,16 @@ class Event < ActiveRecord::Base
   #
   # The date format used is the :long format, defined in /config/locales/en.yml
   ##
-  def date_range
+  def date_range(format = :long)
     if not self.start_date.presence then
       return
     end
 
-    date = I18n.l(self.start_date, :format => :long)
+    date = I18n.l(self.start_date, :format => format)
 
     if self.end_date and not self.start_date == self.end_date then
         date << " - "
-        date << I18n.l(self.end_date, :format => :long)
+        date << I18n.l(self.end_date, :format => format)
     end
 
     return date

@@ -1,0 +1,22 @@
+<%= form_tag(nil, method: :get) do %>
+  <div class="row form-inline">
+    <span class="span2">Search by Date:</span>
+
+    <input name="start_date" type="text" class="span3" placeholder="Start Date" value="<%= params[:start_date] %>" >
+    <input name="end_date" type="text" class="span3" placeholder="End Date" value="<%= params[:end_date] %>">
+
+    <button type="submit" class="btn">Search</button>
+  </div>
+
+  <br />
+
+  <div class="row form-inline">
+    <span class="span2">
+      Search by Name:
+    </span>
+
+    <input name="name" type="text" class="span4" value="<%= params[:name] %>">
+
+    <button type="submit" class="btn">Search</button>
+  </div>
+<% end %>

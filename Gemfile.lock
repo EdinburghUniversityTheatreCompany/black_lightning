@@ -43,6 +43,7 @@ GEM
       sass (~> 3.2)
     builder (3.0.4)
     cancan (1.6.9)
+    chronic (0.9.0)
     ci_reporter (1.8.4)
       builder (>= 2.1.2)
     cocaine (0.4.2)
@@ -207,6 +208,7 @@ DEPENDENCIES
   axlsx
   bootstrap-sass
   cancan
+  chronic
   ci_reporter
   coffee-rails (~> 3.2.1)
   daemons

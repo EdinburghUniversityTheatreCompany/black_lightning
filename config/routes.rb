@@ -119,11 +119,10 @@ ChaosRails::Application.routes.draw do
     get "/help/:action" => 'help', :as => "help"
   end
 
-  match 'archives(/:start_month/:start_year/:end_month/:end_year)' => 'archives#index', :as => "archives_index"
-  match 'archives(/:target)/set_date' => 'archives#set_date', :via => :post
+  get 'archives' => 'archives#index', :as => :archives_index
   namespace :archives do
-    match 'shows(/:start_month/:start_year/:end_month/:end_year)' => 'shows#index', :as => :shows_index
-    match 'proposals(/:start_month/:start_year/:end_month/:end_year)' => 'proposals#index', :as => :proposals_index
+    get 'shows' => 'shows#index', :as => :shows_index
+    get 'proposals' => 'proposals#index', :as => :proposals_index
   end
 
   post 'markdown/preview' => 'markdown#preview'

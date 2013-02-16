@@ -1,40 +1,32 @@
 class ArchivesController < ApplicationController
   layout "archives"
 
-  before_filter :check_select_date, :except => [:set_date]
-
-  def set_date
-    if params[:target]
-      redirect_to send('archives_' + params[:target] + '_index_path', params[:start_month], params[:start_year], params[:end_month], params[:end_year])
-    else
-      redirect_to archives_index_path(params[:start_month], params[:start_year], params[:end_month], params[:end_year])
-    end
-  end
+  before_filter :set_search_params
 
   def index
     @title = "Archives"
   end
 
   private
-  def check_select_date
-    unless request.env['PATH_INFO'] == archives_index_path
-      unless params[:start_month] && params[:start_year] && params[:end_month] && params[:end_year]
-        controller = params[:controller].gsub(/archives\//, '')
-        redirect_to send('archives_' + controller + '_index_path', 01, 1.years.ago.year, 12, Date.today.year)
-        return
+  def set_search_params
+    if params[:start_date] && params[:end_date]
+      if params[:start_date] != "" && params[:end_date] != ""
+        @search_start_date = Chronic.parse(params[:start_date])
+        @search_end_date   = Chronic.parse(params[:end_date])
+
+        if @search_start_date.nil?
+          flash[:alert] = "Error parsing start date."
+        end
+
+        if @search_end_date.nil?
+          flash[:alert] = "Error parsing end date."
+        end
       end
+    end
 
-      begin
-        start_yr = Integer(params[:start_year])
-        start_mnth = Integer(params[:start_month])
-        end_yr = Integer(params[:end_year])
-        end_mnth = Integer(params[:end_month])
-
-        @search_start_date = ::Date.new(start_yr, start_mnth, 1)
-        @search_end_date = ::Date.new(end_yr, end_mnth, Time.days_in_month(end_mnth))
-      rescue
-        flash[:alert] = "There was a problem using the given dates. Please try again."
-        redirect_to archives_index_path
+    if params[:name]
+      if params[:name] != ""
+        @search_name = params[:name]
       end
     end
   end

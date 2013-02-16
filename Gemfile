@@ -40,6 +40,8 @@ gem 'delayed_job_active_record'
 gem 'daemons'
 gem 'axlsx'
 
+gem 'chronic'
+
 gem 'nokogiri'
 gem 'airbrake'
 
