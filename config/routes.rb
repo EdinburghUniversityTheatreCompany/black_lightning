@@ -52,6 +52,10 @@ ChaosRails::Application.routes.draw do
       member do
         post 'reset_password'
       end
+
+      collection do
+        get  'autocomplete_list', :constraints => {:format => :json}
+      end
     end
 
     resources :roles

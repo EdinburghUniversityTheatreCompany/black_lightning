@@ -1,6 +1,6 @@
 <% if @proposal.persisted? then url = admin_proposals_call_proposal_url else url = admin_proposals_call_proposals_url end%>
 
-<input type="hidden" name="users_list" value="<%= @users.to_json %>">
+<input type="hidden" name="autocomplete_users_list" value="true">
 
 <%= simple_nested_form_for([@call, @proposal], :url => url) do |f| %>
   <%= f.error_notification %>

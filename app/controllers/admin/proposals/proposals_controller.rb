@@ -90,8 +90,6 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     @proposal = Admin::Proposals::Proposal.new
-    @users = User.by_first_name.select([ :id, :first_name, :last_name ])
-
     @proposal.call = @call
 
     #Set a proposal as late if created after the call deadline:
@@ -115,7 +113,6 @@ class Admin::Proposals::ProposalsController < AdminController
   def edit
     @proposal = Admin::Proposals::Proposal.includes({:answers => {:question => {} } }).find(params[:id])
     @call = @proposal.call
-    @users = User.by_first_name.select([ :id, :first_name, :last_name ])
 
     authorize!(:edit, @proposal)
 
@@ -140,9 +137,6 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
 
     @proposal.call = @call
-
-    #This is required so that the new action can be rendered should the save fail.
-    @users = User.by_first_name.select([ :id, :first_name, :last_name ])
 
     #Set a proposal as late if created after the call deadline:
     if Time.now > @call.deadline then
@@ -176,9 +170,6 @@ class Admin::Proposals::ProposalsController < AdminController
   def update
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
-
-    #This is required so that the edit action can be rendered should the update fail.
-    @users = User.by_first_name.select([ :id, :first_name, :last_name ])
 
     authorize!(:update, @proposal)
 

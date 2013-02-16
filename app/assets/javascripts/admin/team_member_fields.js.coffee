@@ -2,6 +2,25 @@ users = []
 user_names = []
 user_ids = {}
 
+fetchUsers = ->
+  loader =  $("""
+              <span style="position: fixed; right: 0px; bottom: 0px; background: #fff; border: 1px solid #000; border-radius: 5px; padding: 10px;">
+                Loading users list...
+              </span>
+              """).hide()
+  $("body").append(loader)
+  loader.fadeIn();
+
+  $.getJSON("/admin/users/autocomplete_list.json", null, (data) ->
+    users = data
+
+    updateUserNames()
+
+    loader.fadeOut()
+
+    return
+  )
+
 updateUserNames = ->
   user_names = []
 
@@ -20,8 +39,6 @@ userUpdater = (item) ->
   return item
 
 addUserAutocomplete = ->
-  users = JSON.parse($('[name="users_list"]').val())
-  updateUserNames()
   $('.team_member .user_name').typeahead
     source:  user_names
     updater: userUpdater
@@ -42,7 +59,9 @@ addUserAutocomplete = ->
   return
 
 jQuery ->
-  return if $('[name="users_list"]').length == 0
+  return if $('[name="autocomplete_users_list"]').length == 0
+
+  fetchUsers()
 
   addUserAutocomplete()
   return

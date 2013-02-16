@@ -2,7 +2,7 @@
 # Admin controller for User management.
 ##
 class Admin::UsersController < AdminController
-  load_and_authorize_resource
+  load_and_authorize_resource :except => [:autocomplete_list]
 
   ##
   # GET /admin/users
@@ -108,6 +108,36 @@ class Admin::UsersController < AdminController
 
     respond_to do |format|
       format.html { redirect_to admin_user_url(@user), notice: 'Password reset instructions sent.' }
+    end
+  end
+
+  def autocomplete_list
+    response.headers.delete('Content-Length')
+    response.headers['Cache-Control'] = 'no-cache'
+    response.headers['Content-Type'] = 'application/json'
+
+    @users = User.select(["id", :first_name, :last_name])
+
+    # This... erm... thing... builds the response up one
+    # user at a time, which saves loading the whole lot into
+    # memory in one go. Unfortunately, it does mean doing some
+    # of the JSON myself. Sorry.
+    self.response_body = Enumerator.new do |output|
+      output << "["
+
+      first = true
+      @users.find_each do |u|
+
+        if first
+          first = false
+        else
+          output << ","
+        end
+
+        output << u.to_json
+      end
+
+      output << "]"
     end
   end
 end
