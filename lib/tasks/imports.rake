@@ -1,5 +1,8 @@
 namespace :import do
   task :shows => :environment do
+    Rails.logger = Logger.new("#{Rails.root}/log/import.log")
+    Rails.logger.level = Logger::DEBUG
+
     shows_uri = "http://old.bedlamtheatre.co.uk/shows.xml"
     show_uri = "http://old.bedlamtheatre.co.uk/shows/p"
 
@@ -12,7 +15,7 @@ namespace :import do
 
     doc = Nokogiri::XML(xml_data)
 
-    puts "Collecting show ids"
+    Rails.logger.info "Collecting show ids"
 
     shows = {}
     doc.xpath('/search/results/Production/id').each do |element|
@@ -21,8 +24,8 @@ namespace :import do
     end
 
     shows.each do |id, details|
-      puts "------"
-      puts "Collecting data for show #{id}"
+      Rails.logger.info "------"
+      Rails.logger.info "Collecting data for show #{id}"
 
       uri = URI.parse(show_uri + id + '.xml')
 
@@ -53,13 +56,13 @@ namespace :import do
           start_date  = Time.at(element.children.search('start').first.text.to_i).to_date
           finish_date = Time.at(element.children.search('finish').first.text.to_i).to_date
 
-          puts "Start Date: #{start_date}"
+          Rails.logger.info "Start Date: #{start_date}"
           if start_date.year == 1970
-            puts "  Using season date instead"
-            puts element.children.search('Season/start')
+            Rails.logger.info "  Using season date instead"
 
             start_date = Date.parse(element.children.search('Season/start').first.text)
             finish_date = Date.parse(element.children.search('Season/finish').first.text)
+            Rails.logger.info "  Start Date: #{start_date}"
           end
 
           details = {
@@ -94,20 +97,24 @@ namespace :import do
 
           show.save!
 
-          puts "Imported #{details[:name]}"
+          Rails.logger.info "Imported #{details[:name]}"
         rescue => e
-          puts "Couldn't import #{details[:name]}"
-          puts e.message
+          Rails.logger.error "Couldn't import #{details[:name]}"
+          Rails.logger.error e.message
         end
       end
+
+      Rails.logger.info "Sleeping for 2 seconds."
+
+      sleep(2)
     end
 
-    puts "--------------------------"
-    puts "Finished Importing Data."
+    Rails.logger.info "--------------------------"
+    Rails.logger.info "Finished Importing Data."
   end
 
   def find_or_create_user_by_full_name(name)
-    puts "Finding user #{name}"
+    Rails.logger.info "Finding user #{name}"
 
     user_broken = name.split(" ")
 
@@ -116,9 +123,11 @@ namespace :import do
       user_last_name = user_broken[1]
 
       user = User.where({ first_name: user_first_name, last_name: user_last_name }).first
+    elsif user_broken.count == 1 then
+      user_first_name = user_broken[0]
     else
       # Guess what the user's name really is.
-      puts "  WARNING: User's name may have been incorrectly parsed"
+      Rails.logger.warn "  WARNING: User's name may have been incorrectly parsed"
 
       user_first_name = user_broken[0]
       user_last_name = user_broken[1] + " " + user_broken[2]
@@ -127,7 +136,7 @@ namespace :import do
     end
 
     if user.nil?
-      puts "  User #{name} not found. Creating..."
+      Rails.logger.info "  User #{name} not found. Creating..."
 
       user = User.create_user(first_name: user_first_name, last_name: user_last_name, email: "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
       user.save!
