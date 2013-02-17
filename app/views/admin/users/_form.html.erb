@@ -21,20 +21,16 @@
   <fieldset class="fieldset">
     <legend>Public Profile</legend>
 
-    <%= f.input :public_profile, boolean_style: :inline if can? :make_public, @show %>
-    <script type="text/javascript">
-      $('#user_public_profile').parent().toggleButtons({
-        width: 220,
-        label: {
-          enabled: "Public",
-          disabled: "Private"
-        },
-        style: {
-          enabled:  "success",
-          disabled: "danger"
-        }
-      });
-    </script>
+    <div class="control-group">
+      <%= f.label :is_public %>
+
+      <div class="controls switch" data-on="success" data-on-label="Public", data-off="danger" data-off-label="Private" style="width: 200px;">
+        <%=
+           f.input_field :public_profile,
+                          boolean_style: :inline
+        %>
+      </div>
+    </div>
 
     <%= f.input :avatar %>
     <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :bio, :rows => 12 } do %>
