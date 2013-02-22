@@ -17,6 +17,8 @@ class UsersController < ApplicationController
     # events table and filter that).
     @shows = @user.team_membership.where({ teamwork_type: "Event" }).select { |e| (e.teamwork.is_a? Show) && (e.teamwork.is_public) }
 
+    @shows.sort! { |a,b| a.teamwork.start_date <=> b.teamwork.start_date }
+
     respond_to do |format|
       format.html # show.html.erb
     end
