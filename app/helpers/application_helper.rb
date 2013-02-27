@@ -4,4 +4,7 @@ module ApplicationHelper
 <script src='http://www.xtspro.com/book/book.js'></script>
 <script>XTSPRO.insert_dates('BT', #{xts_id}, '#ticketslist');</script>".html_safe
   end
+  def strip_tags(html)
+      return self.gsub(%r{</?[^>]+?>}, '')
+  end
 end

@@ -10,4 +10,10 @@ module MdHelper
         return Kramdown::Document.new(md, :input => 'BKramdown').to_html.html_safe
     end
 
+    def render_plain (md)
+    	if md == nil then
+	   return ""
+	end
+	return Kramdown::Document.new(md, :input => 'BKramdown').to_html.gsub(%r{</?[^>]+?>}, '')
+    end
 end
