@@ -7,7 +7,7 @@
       <%= f.input :rating, :title => "Max 5. Halves allowed." %>
 
       <% remove_text = '<i class="icon-trash"></i> Delete Review'.html_safe %>
-      <%= f.link_to_remove remove_text, :class => "btn btn-danger", data: { confirm: 'Are you sure?' } %>
+      <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
     <% end %>
 
     <hr />
