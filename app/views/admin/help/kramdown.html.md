@@ -1,9 +1,9 @@
 kramdown
 ========
 
-Most text entered into the Bedlam Admin site will be rendered using kramdown.
+Most text entered into the Bedlam Admin site will be rendered using kramdown. So if you want to do exciting things like formatting text, adding links or creating tables (Wow! Exciting) then this is the page for you.
 
-kramdown is an increadibly powerful, yet very natrual markup language.
+kramdown is an incredibly powerful, yet very natural markup language. 
 
 More details about kramdown can be found [here](http://kramdown.rubyforge.org/syntax.html#links-and-images).
 
