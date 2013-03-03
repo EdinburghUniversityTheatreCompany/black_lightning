@@ -74,7 +74,9 @@ gem 'unicorn'
 # gem 'unicorn'
 
 # Deploy with Capistrano
-# gem 'capistrano'
+gem 'capistrano'
+# and rvm
+gem 'rvm-capistrano'
 
 # To use debugger
 # gem 'debugger'
