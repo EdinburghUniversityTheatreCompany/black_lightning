@@ -12,8 +12,6 @@ after "deploy", "deploy:congratulate"
 # before "deploy:setup", "rvm:install_pkgs"
 # before "deploy:update", "rvm:create_gemset"
 
-default_run_options[:shell] = '/bin/bash --login' # ?
-
 require "rvm/capistrano"
 
 namespace :deploy do
