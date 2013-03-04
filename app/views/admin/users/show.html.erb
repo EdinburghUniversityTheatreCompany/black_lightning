@@ -9,7 +9,7 @@
         </tr>
         <tr>
             <th>Phone Number</th>
-            <td><%= @user.phone_number %></td>
+            <td><%= link_to @user.phone_number, "tel: #{@user.phone_number}" unless @user.phone_number.blank? %></td>
         </tr>
         <tr>
             <th>Roles</th>
