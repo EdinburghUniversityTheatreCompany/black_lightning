@@ -5,15 +5,14 @@ role :app, "awe.mercuric.co.uk"                          # This may be the same 
 role :db,  "awe.mercuric.co.uk", :primary => true        # This is where Rails migrations will run
 
 set :rvm_ruby_string, "2.0.0@bedlamtheatre"
+set :rvm_type, :system
 
 after "deploy", "deploy:congratulate"
 
-before "deploy:setup", "rvm:install_rvm"
 # before "deploy:setup", "rvm:install_pkgs"
-before "deploy:setup", "rvm:install_ruby"
-before "deploy_setup", "rvm:create_gemset"
+# before "deploy:update", "rvm:create_gemset"
 
-default_run_options[:shell] = '/bin/bash'
+default_run_options[:shell] = '/bin/bash --login' # ?
 
 require "rvm/capistrano"
 
