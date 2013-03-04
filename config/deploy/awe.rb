@@ -7,6 +7,9 @@ role :db,  "awe.mercuric.co.uk", :primary => true        # This is where Rails m
 set :rvm_ruby_string, "2.0.0@bedlamtheatre"
 set :rvm_type, :system
 
+set :bundle_dir, ""
+set :bundle_flags, "--quiet"
+
 after "deploy", "deploy:congratulate"
 
 # before "deploy:setup", "rvm:install_pkgs"
