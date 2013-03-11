@@ -1,6 +1,10 @@
 require "delayed/recipes"
 require 'airbrake/capistrano'
 
+role :web, "doon.mercuric.co.uk"
+role :app, "doon.mercuric.co.uk"
+role :db, "doon.mercuric.co.uk", :primary=>true
+
 before "deploy", "check_tag"
 
 before "delayed_job:stop",    "deploy:chmoddj"
