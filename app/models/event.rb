@@ -54,9 +54,9 @@ class Event < ActiveRecord::Base
 
   # Relationships #
 
-  has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
+  has_many :team_members, :class_name => "::TeamMember", :as => :teamwork, :dependent => :destroy
   has_many :users, :through => :team_members
-  has_many :pictures, :as => :gallery
+  has_many :pictures, :as => :gallery, :dependent => :destroy
 
   belongs_to :venue
   belongs_to :season
