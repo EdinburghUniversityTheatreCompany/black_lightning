@@ -58,10 +58,12 @@ namespace :import do
             blurb = ""
           end
 
+          description = "<i class=\"icon-info-sign icon-large\"></i> This show was imported from the old website. If you are able to provide any more information, please contact the [Archivist](mailto:archive@bedlamtheatre.co.uk).\n{:.alert .alert-info}"
+
           begin
-            description = element.children.search('description').first.text
+            description += "\n\n"
+            description += element.children.search('description').first.text
           rescue
-            description = "No description available"
           end
 
           start_date  = Time.at(element.children.search('start').first.text.to_i).to_date
