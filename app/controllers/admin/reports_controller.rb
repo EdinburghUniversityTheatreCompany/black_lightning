@@ -1,7 +1,7 @@
 ##
 # Defines reports that may be downloaded in XLSX format, using axlsx.
 ##
-class Admin::ReportsController < ApplicationController
+class Admin::ReportsController < AdminController
   ##
   # GET /admin/reports
   ##
