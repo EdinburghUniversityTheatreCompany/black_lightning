@@ -1,3 +1,6 @@
+<h1>Staffing for <%= @admin_staffing.show_title %></h1>
+<h3><%= l @admin_staffing.start_time, :format => :long %> – <%= l @admin_staffing.end_time, :format => :long  unless @admin_staffing.end_time == nil%></h3>
+
 
 <table class="table table-bordered">
   <thead>

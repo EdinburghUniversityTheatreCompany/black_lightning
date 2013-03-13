@@ -35,7 +35,8 @@ class Admin::StaffingsController < AdminController
     @staffings_hash = @staffings.all.collect do |s|
       staffing_hash = {}
       staffing_hash[:staffing] = s
-      staffing_hash[:date] = s.start_time
+      staffing_hash[:start_time] = s.start_time
+      staffing_hash[:end_time] = s.end_time
       staffing_hash[:jobs] = {}
       s.staffing_jobs.each do |j|
         staffing_hash[:jobs][j.name] = j

@@ -18,9 +18,11 @@
       <tr>
         <td>
           <%= link_to staffing_hash[:staffing] do %>
-            <%= l staffing_hash[:date], :format => :long_date_only %>
+            <%= l staffing_hash[:start_time], :format => :long_date_only %>
             <br />
-            <%= l staffing_hash[:date], :format => :time_only %>
+            <%= l staffing_hash[:start_time], :format => :time_only %>
+            -
+            <%= l staffing_hash[:end_time], :format => :time_only %>
           <% end %>
         </td>
 
@@ -30,14 +32,16 @@
             <% if job %>
               <% u = job.user %>
               <% if u then %>
-                <%=if can? :read, u 
-		      link_to u.name_or_email, admin_user_path(u) 
-		   else
-		      u.name_or_email 
-		   end%>
+                <%=
+                  if can? :read, u
+                    link_to u.name_or_email, admin_user_path(u)
+                  else
+                    u.name_or_email
+                  end
+                %>
               <% else %>
                 <input type="hidden" class="job_json" value="<%= job.to_json %>" >
-                <% date = l staffing_hash[:date], :format => :long %>
+                <% date = l staffing_hash[:start_time], :format => :long %>
                 <%= link_to admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
                                                                                                                                                "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
                                                                                                                                                :job_id   => job.id
