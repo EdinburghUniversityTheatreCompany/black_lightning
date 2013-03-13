@@ -38,7 +38,10 @@
     </tbody>
 </table>
 
+<%= will_paginate(@workshops) %>
+
 <% if can? :create, Workshop %>
-  <% add_text = '<i class="icon-plus"></i> Add Workshop'.html_safe %>
-  <%= link_to add_text, new_admin_workshop_path, :class => "btn" %>
+  <%= link_to new_admin_workshop_path, :class => "btn" do %>
+    <i class="icon-plus"></i> Add Workshop
+  <% end %>
 <% end %>

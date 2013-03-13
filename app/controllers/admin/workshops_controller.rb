@@ -4,7 +4,7 @@ class Admin::WorkshopsController < AdminController
 
   def index
     @title = "Workshops"
-    @workshops = Workshop.all
+    @workshops = Workshop.paginate(:page => params[:page], :per_page => 15).all
   end
 
   def show
