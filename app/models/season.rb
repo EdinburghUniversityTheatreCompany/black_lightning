@@ -15,16 +15,8 @@
 # == Schema Information End
 #++
 ##
-class Season < ActiveRecord::Base
-  def to_param
-    slug
-  end
-  attr_accessible :description, :end_date, :name, :start_date, :slug
-
-  validates :name, :presence => true
-  validates :slug, :presence => true, :uniqueness => true
+class Season < Event
 
   has_many :events
-
 
 end

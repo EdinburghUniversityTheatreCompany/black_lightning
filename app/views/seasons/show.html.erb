@@ -1,6 +1,37 @@
 <h1><%= @season.name %></h1>
 <%= render_markdown @season.description %>
 <hr>
+
+<% if @season.pictures.count > 0 %>
+  <h3>Gallery</h3>
+
+  <div class="carousel slide" id="gallery-carousel">
+    <div class="carousel-inner">
+      <% @season.pictures.each_with_index do |picture, i| %>
+        <% if i.modulo(6) == 0 %>
+          <div class="item <%= 'active' if i == 0 %>">
+            <ul class="lightbox thumbnails">
+        <% end %>
+              <li class="span2">
+                <% img = image_tag picture.image.url(:thumb) %>
+                <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>
+              </li>
+        <% if i.modulo(6) == 3 || i == (@season.pictures.count - 1) %>
+            </ul>
+          </div>
+        <% end %>
+      <% end %>
+    </div>
+
+    <% if @season.pictures.count > 4 %>
+      <a data-slide="prev" href="#show-carousel" class="left carousel-control">‹</a>
+      <a data-slide="next" href="#show-carousel" class="right carousel-control">›</a>
+    <% end %>
+  </div>
+
+  <hr />
+<% end %>
+
 <div class="accordion seasons-accordion" id="accordion2">
   <% @season.events.each do |event|%>
   <div class="accordion-group">

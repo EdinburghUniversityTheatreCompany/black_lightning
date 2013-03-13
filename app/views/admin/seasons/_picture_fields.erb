@@ -1,0 +1,12 @@
+<div class="picture control-group fields span4">
+    <%= image_tag f.object.image.url(:thumb), :class => "thumbnail" %>
+
+    <br />
+
+    <%= f.input :image %>
+
+    <%= f.input :description, :input_html => { :rows => 3 } %>
+
+    <% remove_text = '<i class="icon-remove"></i> Delete'.html_safe %>
+    <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
+</div>

@@ -30,6 +30,7 @@ class Admin::SeasonsController < AdminController
   # GET /seasons/new.json
   def new
     @season = Season.new
+    @users = User.by_first_name.all
     @title = "New Season"
     respond_to do |format|
       format.html # new.html.erb
@@ -40,6 +41,7 @@ class Admin::SeasonsController < AdminController
   # GET /seasons/1/edit
   def edit
     @season = Season.find_by_slug(params[:id])
+    @users = User.by_first_name.all
     @title = "Editing #{@season.name}"
   end
 
@@ -47,6 +49,7 @@ class Admin::SeasonsController < AdminController
   # POST /seasons.json
   def create
     @season = Season.new(params[:season])
+    @users = User.by_first_name.all
 
     respond_to do |format|
       if @season.save
@@ -63,6 +66,7 @@ class Admin::SeasonsController < AdminController
   # PUT /seasons/1.json
   def update
     @season = Season.find_by_slug(params[:id])
+    @users = User.by_first_name.all
 
     respond_to do |format|
       if @season.update_attributes(params[:season])
