@@ -12,7 +12,10 @@ class Admin::OpportunitiesController < AdminController
   ##
   def index
     @title = "Opportunity"
-    @opportunities = Opportunity.order("expiry_date DESC").paginate(:page => params[:page], :per_page => 15).all
+    @opportunities = Opportunity.order("expiry_date DESC") \
+                                .paginate(:page => params[:page], :per_page => 15) \
+                                .includes(:creator) \
+                                .all
 
     respond_to do |format|
       format.html # index.html.erb
