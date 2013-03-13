@@ -16,13 +16,11 @@ jQuery ->
           button.click()
           return
 
-        start_time = new Date(data.js_start_time * 1000)
-        end_time = new Date(data.js_end_time * 1000)
+        start_time = moment(new Date(data.js_start_time * 1000))
+        end_time = moment(new Date(data.js_end_time * 1000))
 
-        start_str = start_time.toISOString().replace(/(-|:|\.)/g, "")
-        start_str = start_str.slice(0, -4) + "Z"
-        end_str = end_time.toISOString().replace(/(-|:|\.)/g, "")
-        end_str = end_str.slice(0, -4) + "Z"
+        start_str = start_time.format("YYYYMMDD[T]HHmmss[Z]")
+        end_str = end_time.format("YYYYMMDD[T]HHmmss[Z]")
 
         google_calendar_addr = """
                                http://www.google.com/calendar/event
@@ -38,8 +36,10 @@ jQuery ->
         # Remove the linebreaks added above for readability.
         google_calendar_addr = google_calendar_addr.replace(/(\r\n|\n|\r)\s\s/gm,"");
 
+        start_str = start_time.format("dddd do MMMM [at] HH:mm")
+
         message = """
-                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name}, at #{data.staffable.start_time}.</p>
+                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name} on #{start_str}.</p>
                   <p><a href="#{google_calendar_addr}" target="_blank">Add to Google Calendar</a>
                   """
         showAlert "success", message;
