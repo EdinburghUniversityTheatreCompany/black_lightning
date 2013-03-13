@@ -12,6 +12,7 @@
     <th>Title</th>
     <th>Creator</th>
     <th>Approved</th>
+    <th>Expiry Date</th>
     <th></th>
     <th></th>
   </tr>
@@ -21,6 +22,7 @@
     <td><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></td>
     <td><%= opportunity.creator.name %></td>
     <td><%= opportunity.approved ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
+    <td><%= l opportunity.expiry_date, format: :shorty %>
 
     <td>
     <% if can? :edit, opportunity %>
@@ -39,6 +41,8 @@
   </tr>
 <% end %>
 </table>
+
+<%= will_paginate(@opportunities) %>
 
 <br />
 
