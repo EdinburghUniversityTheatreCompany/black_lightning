@@ -13,7 +13,7 @@ class Admin::NewsController < AdminController
   ##
   def index
     @title = "News"
-    @news = News.all
+    @news = News.paginate(:page => params[:page], :per_page => 15).all
 
     respond_to do |format|
       format.html # index.html.erb
