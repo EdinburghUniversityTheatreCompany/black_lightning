@@ -5,8 +5,3 @@
   <p><%= truncate(render_plain(news.body), length: 80) %></p>
   <hr />
 <% end %>
-
-<% if can? :create, News %>
-  <% news_text = '<i class="icon-plus"></i>Add News'.html_safe %>
-  <%= link_to news_text, new_admin_news_path, :class => "btn btn-small" %>
-<% end %>
