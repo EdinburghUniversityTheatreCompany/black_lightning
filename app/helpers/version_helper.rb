@@ -1,7 +1,7 @@
 module VersionHelper
   def version
     begin
-      return 'Website Version: ' + File.read("version")
+      return File.read("version")
     rescue
     end
   end
