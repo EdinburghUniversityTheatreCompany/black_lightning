@@ -112,6 +112,13 @@ h3 {
     line-height: 20px;
 }
 
+.tweet-date {
+    float: right;
+
+    color: $grayLight;
+    font-size: 0.8em;
+}
+
 /* Responsive Stuff */
 @media (max-width: 979px) and (min-width: 768px) {
   #nav li {

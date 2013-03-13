@@ -87,7 +87,7 @@
     <h3><%= link_to '@BedlamTheatre', 'https://twitter.com/bedlamtheatre' %></h3>
     <div>
       <% twitter_timeline.each do |tweet| %>
-        <p><small><%= auto_link_tweet(tweet) %></small></p>
+        <p><small><%= auto_link_tweet(tweet) %> <span class="tweet-date"><%= l tweet.created_at, format: :short %></span></small></p>
       <% end %>
     </div>
 
