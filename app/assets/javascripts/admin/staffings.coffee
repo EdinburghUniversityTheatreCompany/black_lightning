@@ -36,10 +36,10 @@ jQuery ->
         # Remove the linebreaks added above for readability.
         google_calendar_addr = google_calendar_addr.replace(/(\r\n|\n|\r)\s\s/gm,"");
 
-        start_str = start_time.format("dddd do MMMM [at] HH:mm")
+        start_str = start_time.calendar()
 
         message = """
-                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name} on #{start_str}.</p>
+                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name} #{start_str}.</p>
                   <p><a href="#{google_calendar_addr}" target="_blank">Add to Google Calendar</a>
                   """
         showAlert "success", message;
