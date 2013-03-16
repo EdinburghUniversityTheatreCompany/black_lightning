@@ -27,7 +27,15 @@
     <div class="span12 header">
       <%= link_to image_tag('BedlamLogoBW.png'), root_url, class: "visible-phone", style: "margin-left: 10px; width: 120px; border: 1px solid #000000;" %>
 
-      <ul id="nav_minor" class="pull-right nav nav-pills">
+      <ul id="nav_collapse" class="nav nav-pills visible-phone">
+        <li>
+          <a data-toggle="collapse" data-target=".nav-collapse">
+            Menu
+          </a>
+        </li>
+      </ul>
+
+      <ul id="nav_minor" class="pull-right nav nav-pills nav-collapse collapse">
         <li><a href="http://facebook.com/bedlamtheatre.ed" target="_blank"><i class="icon-facebook"></i></a></li>
         <li><a href="http://twitter.com/bedlamtheatre" target="_blank"><i class="icon-twitter"></i></a></li>
         <li><%= link_to 'Press',    static_path('press')        %></li>
@@ -35,7 +43,7 @@
         <li><%= link_to 'Archives', archives_index_path         %></li>
         <li><%= link_to 'Members',  admin_path                  %></li>
         <li><%= link_to 'Newsletter', static_path('newsletter') %></li>
-		<li><%= link_to 'Find Us', static_path('findus') %></li>
+        <li><%= link_to 'Find Us', static_path('findus')        %></li>
       </ul>
 
       <%= link_to image_tag('Header.png'), root_url, class: "hidden-phone" unless mobile_device? %>
