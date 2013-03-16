@@ -7,7 +7,8 @@ class Archives::ShowsController < ArchivesController
     end
 
     if @search_name
-      @shows = @shows.where(:name => @search_name)
+      q = "%#{@search_name}%"
+      @shows = @shows.where("name like ?", q)
     end
 
     respond_to do |format|
