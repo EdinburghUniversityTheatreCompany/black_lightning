@@ -79,12 +79,5 @@
 <% if @pictures.count > 0 then %>
   <h3>Gallery</h3>
 
-  <ul class="lightbox thumbnails">
-    <% @pictures.each do |picture| %>
-      <li class="span2">
-      <% img = image_tag picture.image.url(:thumb) %>
-      <%= link_to img, picture.image.url(:display), :class => "thumbnail", :title => (picture.description) %>
-      </li>
-    <% end %>
-  </ul>
+  <%= render 'shared/gallery', pictures: @pictures %>
 <% end %>
