@@ -126,6 +126,7 @@ ChaosRails::Application.routes.draw do
   get 'archives' => 'archives#index', :as => :archives_index
   namespace :archives do
     get 'shows' => 'shows#index', :as => :shows_index
+    get 'workshops' => 'workshops#index', :as => :workshops_index
     get 'proposals' => 'proposals#index', :as => :proposals_index
   end
 
