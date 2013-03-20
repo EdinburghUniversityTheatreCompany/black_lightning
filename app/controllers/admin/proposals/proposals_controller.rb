@@ -59,6 +59,8 @@ class Admin::Proposals::ProposalsController < AdminController
     @admin_proposals_proposal = Admin::Proposals::Proposal.includes({:answers => {:question => {} } }).find(params[:id])
     @call = @admin_proposals_proposal.call
 
+    @title = @admin_proposals_proposal.show_title
+
     authorize!(:read, @admin_proposals_proposal)
 
     # This may look odd, but it is fine. Honest. (HB Jan 13)

@@ -1,3 +1,5 @@
+<h1><%= @admin_proposals_proposal.show_title %></h1>
+
 <% case @admin_proposals_proposal.successful %>
 <% when true %>
   <div class="alert alert-success">
@@ -29,11 +31,6 @@
     <i class="icon-info-sign icon-large"></i> This proposal is waiting for approval by committee.
   </div>
 <% end %>
-
-<p>
-  <b>Show title:</b>
-  <%= @admin_proposals_proposal.show_title %>
-</p>
 
 <p>
   <b>Publicity text:</b>
