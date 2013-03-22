@@ -53,10 +53,10 @@ class Ability
         if Time.now < proposal.call.deadline
           # Before the deadline, all users can only see proposals that they
           # are part of.
-          next (proposal.users.include? user)
+          next (proposal.users.include? user or user.has_role? :proposal_viewer)
         elsif not proposal.call.archived
           # After the deadline:
-          if user.has_role? :committee
+          if (user.has_role? :committee or user.has_role? :proposal_viewer)
             # Committee can see all proposals.
             next true
           else
