@@ -23,10 +23,14 @@ class Admin::Proposals::ProposalsController < AdminController
     if Time.now < @call.deadline
       # Before the deadline, all users can only see proposals that they
       # are part of.
-      @proposals = @call.proposals.joins(:users).where("user_id = ?", current_user.id).uniq
+      if current_user.has_role? :proposal_viewer
+        @proposals = @call.proposals
+      else
+        @proposals = @call.proposals.joins(:users).where("user_id = ?", current_user.id).uniq
+      end
     elsif not @call.archived
       # After the deadline:
-      if current_user.has_role? :committee
+      if current_user.has_role? :committee or current_user.has_role? :proposal_viewer
         # Committee can see all proposals.
         @proposals = @call.proposals
       else
