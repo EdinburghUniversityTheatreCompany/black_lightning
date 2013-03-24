@@ -35,9 +35,15 @@ class Attachment < ActiveRecord::Base
 
   has_attached_file :file,
                     :url => '/attachments/:slug/:style',
-                    :styles => { :thumb => "192x100#", :display => "700x700" },
                     :convert_options => { :thumb => "-quality 75 -strip" },
-                    :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension'
+                    :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension',
+                    :styles => (lambda do |a|
+                      if /image\/.+/.match a.instance.file_content_type
+                        { :thumb => "192x100#", :display => "700x700" }
+                      else
+                        {}
+                      end
+                    end)
 
   attr_accessible :name, :file
 
