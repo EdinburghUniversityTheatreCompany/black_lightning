@@ -8,12 +8,12 @@
   <dt>
     <%= link_to 'Working Jobs', admin_jobs_path(:action => "working") %>
   </dt>
-  <dd><%= delayed_jobs(:working).count %></d>
+  <dd><%= delayed_jobs(:working).count %></dd>
 
   <dt>
     <%= link_to 'Pending Jobs', admin_jobs_path(:action => "pending") %>
   </dt>
-  <dd><%= delayed_jobs(:pending).count %></d>
+  <dd><%= delayed_jobs(:pending).count %></dd>
 
   <dt>
     <%= link_to 'Failed Jobs', admin_jobs_path(:action => "failed") %>
