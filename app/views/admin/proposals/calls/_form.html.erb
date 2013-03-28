@@ -14,7 +14,7 @@
     <div class="control-group">
       <%= f.label :open %>
 
-      <div class="controls switch" data-on="success" data-on-label="Open", data-off="danger" data-off-label="Closed" style="width: 150px;">
+      <div class="controls switch" data-on="success" data-on-label="Open" data-off="danger" data-off-label="Closed" style="width: 150px;">
         <%=
            f.input_field :open,
                           boolean_style: :inline
@@ -37,7 +37,7 @@
   </div>
 <% end %>
 
-<div class="modal hide" id="template_modal" tabindex="-1" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
+<div class="modal hide" id="template_modal" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
     <h3 id="template_modal_header">Select Questions from Template</h3>

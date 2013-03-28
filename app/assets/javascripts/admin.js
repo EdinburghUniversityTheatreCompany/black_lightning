@@ -13,6 +13,7 @@
 //= require admin/jquery.gridster.min
 //= require admin/jquery.switch
 //= require admin/moment
+//= require admin/nested_forms
 //= require admin/md_editor
 //= require admin/staffings
 //= require admin/shows

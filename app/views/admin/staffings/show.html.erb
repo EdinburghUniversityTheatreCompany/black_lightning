@@ -4,12 +4,14 @@
 
 <table class="table table-bordered">
   <thead>
-    <th>Job</th>
-    <th>Name</th>
+    <tr>
+      <th>Job</th>
+      <th>Name</th>
 
-    <% if current_user.has_role? :committee %>
-      <th>Phone Number</th>
-    <% end %>
+      <% if current_user.has_role? :committee %>
+        <th>Phone Number</th>
+      <% end %>
+    </tr>
   </thead>
   <tbody>
     <% @admin_staffing.staffing_jobs.each do |staffing_job| %>

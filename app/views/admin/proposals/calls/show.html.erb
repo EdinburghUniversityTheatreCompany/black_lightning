@@ -24,10 +24,10 @@
 <h3>Questions</h3>
 
 <% @admin_proposals_call.questions.each do |question| %>
-  <p>
+  <div>
     <b>Question:</b>
     <%= render_markdown question.question_text %>
-  </p>
+  </div>
 
   <p>
     <b>Type:</b>

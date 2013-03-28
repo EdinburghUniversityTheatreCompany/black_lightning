@@ -60,6 +60,7 @@ group :test do
   gem 'factory_girl_rails', '~> 4.0'
   gem 'faker'
   gem 'ruby-prof'
+  gem 'html_acceptance'
 end
 
 gem 'unicorn'

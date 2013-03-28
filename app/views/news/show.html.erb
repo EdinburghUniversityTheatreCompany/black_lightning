@@ -11,7 +11,7 @@
 
     <%= image_tag @news.image.url(:medium), :class => "float-right span3" %>
 
-    <p><%= render_markdown @news.body %></p>
+    <div><%= render_markdown @news.body %></div>
 
     <% if @news.publish_date != @news.updated_at %>
     <p>

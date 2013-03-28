@@ -26,8 +26,11 @@
       <ul class="sortable">
         <%= f.fields_for :team_members, :wrapper => false %>
 
-        <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
-        <%= f.link_to_add add_member_text, :team_members, :class => "btn ui-state-disabled" %>
+        <li>
+          <%= f.link_to_add :team_members, :class => "btn ui-state-disabled" do %>
+            <i class="icon-plus"></i> Add Team Member
+          <% end %>
+        </li>
       </ul>
 
     </div>

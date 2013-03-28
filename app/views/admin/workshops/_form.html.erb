@@ -31,7 +31,7 @@
     <div class="control-group">
       <%= f.label :is_public %>
 
-      <div class="controls switch" data-on="success" data-on-label="Published", data-off="danger" data-off-label="Private" style="width: 200px;">
+      <div class="controls switch" data-on="success" data-on-label="Published" data-off="danger" data-off-label="Private" style="width: 200px;">
         <%=
            f.input_field :is_public,
                           boolean_style: :inline
@@ -52,8 +52,11 @@
       <ul class="sortable">
         <%= f.fields_for :team_members, :wrapper => false %>
 
-        <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
-        <%= f.link_to_add add_member_text, :team_members, :class => "btn ui-state-disabled" %>
+        <li>
+          <%= f.link_to_add :team_members, :class => "btn ui-state-disabled" do %>
+            <i class="icon-plus"></i> Add Team Member
+          <% end %>
+        </li>
       </ul>
 
     </div>

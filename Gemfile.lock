@@ -90,6 +90,7 @@ GEM
       railties (>= 3.1)
     highline (1.6.16)
     hike (1.2.1)
+    html_acceptance (0.1.19)
     htmlentities (4.3.1)
     i18n (0.6.1)
     journey (1.0.4)
@@ -240,6 +241,7 @@ DEPENDENCIES
   factory_girl_rails (~> 4.0)
   faker
   font-awesome-rails
+  html_acceptance
   jquery-rails
   kramdown
   mysql2
