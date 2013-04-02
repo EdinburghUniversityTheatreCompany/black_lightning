@@ -28,13 +28,13 @@ class Admin::StaffingJob < ActiveRecord::Base
   # Get the start time in a js friendly fashion
   ##
   def js_start_time
-    return staffable.start_time.to_i
+    return staffable.start_time.utc.to_i
   end
 
   ##
   # Get the end time in a js friendly fashion
   ##
   def js_end_time
-    return staffable.end_time.to_i
+    return staffable.end_time.utc.to_i
   end
 end
