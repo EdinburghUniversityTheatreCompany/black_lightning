@@ -32,13 +32,7 @@
             <% if job %>
               <% u = job.user %>
               <% if u then %>
-                <%=
-                  if can? :read, u
-                    link_to u.name_or_email, admin_user_path(u)
-                  else
-                    u.name_or_email
-                  end
-                %>
+                <%= user_link_or_text(u) %>
               <% else %>
                 <input type="hidden" class="job_json" value="<%= job.to_json %>" >
                 <% date = l staffing_hash[:start_time], :format => :long %>
