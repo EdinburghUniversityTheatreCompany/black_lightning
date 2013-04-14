@@ -30,6 +30,7 @@ ChaosRails::Application.routes.draw do
 
       member do
         put 'add_questionnaire'
+        get 'xts_report'
       end
     end
 

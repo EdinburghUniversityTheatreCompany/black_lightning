@@ -117,4 +117,20 @@ class Admin::ShowsController < AdminController
 
     render :json => shows.to_json
   end
+  
+  def xts_report
+    show = Show.find_by_slug(params[:id])
+    xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/reports/show?showid=#{show.xts_id}"
+
+    uri = URI.parse(xts_api_uri)
+
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+
+    request = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(request)
+    data = response.body
+    send_data(data, filename: "#{show.name} - Sales Report.pdf", type: "application/pdf")
+  end
 end

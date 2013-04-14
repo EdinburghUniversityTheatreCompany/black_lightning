@@ -62,6 +62,7 @@
 <% end %>
 
 <% if can? :edit, @show %>
+  <%= link_to "<i class='icon-shopping-cart'></i> XTS Report".html_safe, xts_report_admin_show_path(@show), class: "btn"%>
   <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
   <%= link_to edit_text, edit_admin_show_path(@show), :class => 'btn' %>
 <% end %>
