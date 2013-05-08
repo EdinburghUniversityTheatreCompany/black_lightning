@@ -24,7 +24,7 @@ if env == "production"
   working_directory "/srv/blacklightning/current"
 
   # feel free to point this anywhere accessible on the filesystem
-  user 'bedlam', 'staff'
+  user 'bedlamtheatre', 'deploy'
   shared_path = "/srv/blacklightning/shared"
 
   stderr_path "#{shared_path}/log/unicorn.stderr.log"
