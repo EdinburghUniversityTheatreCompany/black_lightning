@@ -1,3 +1,11 @@
+GIT
+  remote: https://github.com/sosedoff/capistrano-unicorn.git
+  revision: 7a7d7a4ca04b562cba6733d15cf6fefe5f0aa671
+  branch: master
+  specs:
+    capistrano-unicorn (0.1.7)
+      capistrano
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -232,6 +240,7 @@ DEPENDENCIES
   bootstrap-sass
   cancan
   capistrano
+  capistrano-unicorn!
   chronic
   ci_reporter
   coffee-rails (~> 3.2.1)

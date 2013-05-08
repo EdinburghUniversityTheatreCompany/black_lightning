@@ -78,6 +78,8 @@ gem 'unicorn'
 gem 'capistrano'
 # and rvm
 gem 'rvm-capistrano'
+# and unicorn
+gem 'capistrano-unicorn', :git => 'https://github.com/sosedoff/capistrano-unicorn.git', :branch => 'master', :require => false
 
 # To use debugger
 # gem 'debugger'

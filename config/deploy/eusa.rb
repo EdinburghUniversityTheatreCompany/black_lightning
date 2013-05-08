@@ -11,6 +11,7 @@ set :rvm_path, "/usr/local/rvm"
 set :bundle_flags, "--quiet"
 set :bundle_dir, ""
 
+
 after "deploy", "deploy:restart"
 after "deploy", "deploy:congratulate"
 
@@ -19,19 +20,15 @@ after "deploy", "deploy:congratulate"
 
 require "rvm/capistrano"
 
+require "capistrano-unicorn"
+
+after 'deploy:restart', 'unicorn:reload' # app IS NOT preloaded
+after 'deploy:restart', 'unicorn:restart'  # app preloaded
 
 namespace :deploy do
   task :congratulate do
     puts ""
     puts "Welcome to Production on EUSA Pineapple."
   end
-  
-  task :restart, :except => { :no_release => true } do
-    run "kill -s USR2 `cat /tmp/unicorn.bedlamtheatre.pid`"
-  end
-
-  task :start, :except => {:no_release => true } do
-    run "cd #{current_path} ; bundle exec unicorn_rails -c config/unicorn.rb -D"
-  end
-  
+    
 end
