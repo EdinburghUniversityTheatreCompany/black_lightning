@@ -15,7 +15,7 @@ preload_app true
 # nuke workers after 30 seconds instead of 60 seconds (the default)
 timeout 30
 
-pid "/tmp/unicorn.bedlam_theatre.pid"
+pid "/srv/blacklightning/tmp/pids/unicorn.pid"
 
 # Production specific settings
 if env == "production"
@@ -40,7 +40,7 @@ before_fork do |server, worker|
 
   # Before forking, kill the master process that belongs to the .oldbin PID.
   # This enables 0 downtime deploys.
-  old_pid = "/tmp/unicorn.bedlam_theatre.pid.oldbin"
+  old_pid = "/srv/blacklightning/shared/tmp/unicorn.pid.oldbin"
   if File.exists?(old_pid) && server.pid != old_pid
     begin
       Process.kill("QUIT", File.read(old_pid).to_i)
