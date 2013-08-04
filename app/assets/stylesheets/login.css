@@ -1,28 +1,21 @@
-body {
-  background-color: #dddddd;
-}
-
 #login_form {
-  padding-bottom: 50px;
+  display: -webkit-flex;
+  display:    -mos-flex;
+  display:     -ms-flex;
+  display:         flex;
 }
 
-#login_form > div {
-  text-align: center;
-  
-  background-color: #ffffff;
-  
-  border: solid black 1px;
-  border-radius: 5px;
+#login_form form {
+  margin: 0;
 }
 
-#login_form .checkbox {
-  width: 100%;
+#login_form .form-actions {
+  margin-bottom:  0;
+  padding-bottom: 0;
 }
 
-#login_form .checkbox > input {
-  width: 100%;
-}
-
-button[type="submit"] {
-  border-radius: 20px;
+@media (max-width: 767px) {
+  #login_form {
+    display: block;
+  }
 }
