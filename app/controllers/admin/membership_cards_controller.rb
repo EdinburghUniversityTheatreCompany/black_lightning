@@ -39,4 +39,16 @@ class Admin::MembershipCardsController < AdminController
     redirect_to admin_membership_cards_path
   end
 
+  # See http://prawn.majesticseacreature.com/manual.pdf for pdf generation.
+  def generate_card
+    @card = MembershipCard.find(params[:membership_card_id])
+
+    pdf = Prawn::Document.new
+
+    pdf.text "Bedlam Theatre"
+    pdf.text @card.card_number
+
+    send_data pdf.render, :filename => "card_#{@card.card_number}.pdf", :type => "application/pdf", :disposition => "inline"
+  end
+
 end

@@ -1,7 +1,11 @@
 <h1><%= @card.card_number %></h1>
 
-<% if @card.user.nil? %>
-  Card not activated
-<% else %>
-  <%= @card.user.name %>
-<% end %>
+<p>
+  <% if @card.user.nil? %>
+    Card not activated
+  <% else %>
+    <%= @card.user.name %>
+  <% end %>
+</p>
+
+<%= link_to "Print Card", admin_membership_card_generate_card_path(@card), class: "btn btn-primary" %>

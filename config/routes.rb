@@ -59,7 +59,9 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :membership_cards, only: [:index, :show, :create, :destroy]
+    resources :membership_cards, only: [:index, :show, :create, :destroy] do
+      get 'generate_card'
+    end
 
     resources :roles
     get '/permissions/grid' => 'permissions#grid', :as => :permissions
