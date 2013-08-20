@@ -11,6 +11,7 @@
  *= require_self
  *= require 'additions'
  *= require font-awesome
+ *= require bootstrap-switch
  *= require 'show'
  *= require jquery.lightbox-0.5
  */

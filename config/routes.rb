@@ -2,7 +2,7 @@ ChaosRails::Application.routes.draw do
 
   get "seasons/show"
 
-  devise_for :users
+  devise_for :users, :controllers => { :registrations => "registrations" }
 
   resources :shows,       :only => [:index, :show]
   resources :workshops,   :only => [:index, :show]
