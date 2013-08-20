@@ -9,6 +9,13 @@ class RegistrationsController < Devise::RegistrationsController
       return
     end
 
+    if not membership_card.user.nil?
+      flash[:alert] = 'Card already registered'
+
+      redirect_to :new_user_registration
+      return
+    end
+
     params[:user].delete :card_number
 
     super
