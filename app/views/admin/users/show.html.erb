@@ -21,7 +21,11 @@
         </tr>
         <tr>
             <th>Card Number</th>
-            <td><%= @user.card_number %></td>
+            <td>
+                <% unless @user.card_number.nil? %>
+                  <%= link_to @user.card_number, admin_membership_card_path(@user.membership_card) %>
+                <% end %>
+            </td>
         </tr>
     </tbody>
 </table>
