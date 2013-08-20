@@ -18,6 +18,7 @@
 //= require dracula_graph
 //= require bootstrap
 //= require alerts
+//= require jquery.switch
 //= require jquery-ui-1.9.2.custom
 //= require slimScroll.min
 //= require jquery.lightbox-0.5
@@ -32,7 +33,7 @@ $(document).keydown(function(e){
             $.getScript('http://www.cornify.com/js/cornify.js',function(){
                 cornify_add();
                 $(document).keydown(cornify_add);
-            }); 
+            });
         }
     }else{
         konami_index = 0;

@@ -19,6 +19,14 @@
             <th>Sign in count</th>
             <td><%= @user.sign_in_count %></td>
         </tr>
+        <tr>
+            <th>Card Number</th>
+            <td>
+                <% unless @user.card_number.nil? %>
+                  <%= link_to @user.card_number, admin_membership_card_path(@user.membership_card) %>
+                <% end %>
+            </td>
+        </tr>
     </tbody>
 </table>
 <%= link_to 'Edit', edit_admin_user_path(@user.id), class: 'btn'%>

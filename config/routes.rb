@@ -2,7 +2,7 @@ ChaosRails::Application.routes.draw do
 
   get "seasons/show"
 
-  devise_for :users
+  devise_for :users, :controllers => { :registrations => "registrations" }
 
   resources :shows,       :only => [:index, :show]
   resources :workshops,   :only => [:index, :show]
@@ -57,6 +57,10 @@ ChaosRails::Application.routes.draw do
       collection do
         get  'autocomplete_list', :constraints => {:format => :json}
       end
+    end
+
+    resources :membership_cards, only: [:index, :show, :create, :destroy] do
+      get 'generate_card'
     end
 
     resources :roles

@@ -11,7 +11,7 @@
 // GO AFTER THE REQUIRES BELOW.
 //
 //= require admin/jquery.gridster.min
-//= require admin/jquery.switch
+//= require jquery.switch
 //= require admin/moment
 //= require admin/nested_forms
 //= require admin/md_editor
