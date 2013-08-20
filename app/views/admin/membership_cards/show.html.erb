@@ -1,0 +1,7 @@
+<h1><%= @card.card_number %></h1>
+
+<% if @card.user.nil? %>
+  Card not activated
+<% else %>
+  <%= @card.user.name %>
+<% end %>
