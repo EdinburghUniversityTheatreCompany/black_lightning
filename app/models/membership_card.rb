@@ -5,6 +5,10 @@ class MembershipCard < ActiveRecord::Base
 
   attr_accessible :card_number, :user
 
+  def to_param
+    card_number
+  end
+
   def set_card_number
     return unless self.card_number.nil?
 

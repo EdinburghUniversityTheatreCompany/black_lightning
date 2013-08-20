@@ -1,6 +1,6 @@
 class Admin::MembershipCardsController < AdminController
 
-  load_and_authorize_resource
+  load_and_authorize_resource :find_by => :card_number
 
   ##
   # GET /admin/membership_cards
@@ -14,7 +14,7 @@ class Admin::MembershipCardsController < AdminController
   # GET /admin/membership_cards/1
   ##
   def show
-    @card = MembershipCard.find(params[:id])
+    @card = MembershipCard.find_by_card_number(params[:id])
     @title = "Membership Card #{@card.card_number}"
   end
 
@@ -42,7 +42,7 @@ class Admin::MembershipCardsController < AdminController
   # See http://prawn.majesticseacreature.com/manual.pdf for pdf generation.
   require "prawn/measurement_extensions"
   def generate_card
-    @card = MembershipCard.find(params[:membership_card_id])
+    @card = MembershipCard.find_by_card_number!(params[:membership_card_id])
 
     width  = 85.mm
     height = 55.mm

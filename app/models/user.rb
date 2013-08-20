@@ -39,7 +39,7 @@ class User < ActiveRecord::Base
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
   devise :database_authenticatable, :recoverable, :rememberable, \
-    :trackable, :token_authenticatable, :registerable
+    :trackable, :registerable #, :token_authenticatable
 
   # set our own validations
 

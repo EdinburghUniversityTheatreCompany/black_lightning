@@ -39,6 +39,7 @@ gem 'twilio-ruby'
 
 gem 'delayed_job_active_record'
 gem 'daemons'
+
 gem 'axlsx'
 gem 'prawn'
 
