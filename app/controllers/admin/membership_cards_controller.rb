@@ -40,13 +40,25 @@ class Admin::MembershipCardsController < AdminController
   end
 
   # See http://prawn.majesticseacreature.com/manual.pdf for pdf generation.
+  require "prawn/measurement_extensions"
   def generate_card
     @card = MembershipCard.find(params[:membership_card_id])
 
-    pdf = Prawn::Document.new
+    width  = 85.mm
+    height = 55.mm
 
-    pdf.text "Bedlam Theatre"
-    pdf.text @card.card_number
+    pdf = Prawn::Document.new(
+            page_size: [width, height],
+            margin: 0
+          )
+
+    pdf.text_box "Bedlam Theatre", at: [5, height - 2]
+
+    if @card.user
+      pdf.text_box @card.user.name, at: [5, height - 20]
+    end
+
+    pdf.text_box @card.card_number, at: [5, 5 + 12], size: 12
 
     send_data pdf.render, :filename => "card_#{@card.card_number}.pdf", :type => "application/pdf", :disposition => "inline"
   end
