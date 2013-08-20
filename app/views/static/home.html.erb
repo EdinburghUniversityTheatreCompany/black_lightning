@@ -31,17 +31,12 @@
         <% end %>
 
         <% if @shows.count == 0 && not(mobile_device?) then %>
-          <%# between 1st July and 1st September, advertise Bedlam Fringe %>
+          <%# between 1st June and 1st September, advertise Bedlam Fringe %>
           <% year = Date.today.year %>
-          <% if (Date.new(year, 7, 01)..Date.new(year, 9, 01)).include_with_range? Date.today then %>
+          <% if (Date.new(year, 6, 01)..Date.new(year, 9, 01)).include_with_range? Date.today then %>
             <a href="http://www.bedlamfringe.co.uk">
               <img src="/images/fringe.png" />
             </a>
-            <div class="carousel-caption">
-              <p>
-                During the Edinburgh Festival Fringe, details of shows can be found on the Bedlam Fringe website.
-              </p>
-            </div>
           <% else %>
             <img src="/images/no-shows.png" />
           <% end %>

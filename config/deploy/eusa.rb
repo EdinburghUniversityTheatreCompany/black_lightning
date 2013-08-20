@@ -1,8 +1,20 @@
-set :deploy_to, "/srv/blacklightning"
+require "delayed/recipes"
+require 'airbrake/capistrano'
+require "rvm/capistrano"
 
-role :web, "pineapple.eusa.ed.ac.uk"                          # Your HTTP server, Apache/etc
-role :app, "pineapple.eusa.ed.ac.uk"                          # This may be the same as your `Web` server
-role :db,  "pineapple.eusa.ed.ac.uk", :primary => true        # This is where Rails migrations will run
+role :web, "pineapple.eusa.ed.ac.uk"
+role :app, "pineapple.eusa.ed.ac.uk"
+role :db, "pineapple.eusa.ed.ac.uk", :primary=>true
+
+before "delayed_job:stop",    "deploy:chmoddj"
+before "delayed_job:start",   "deploy:chmoddj"
+before "delayed_job:restart", "deploy:chmoddj"
+
+after "deploy:stop",    "delayed_job:stop"
+after "deploy:start",   "delayed_job:start"
+after "deploy:restart", "delayed_job:restart"
+
+set :deploy_to, "/srv/black_lightning"
 
 set :rvm_ruby_string, "2.0.0@blacklightning"
 set :rvm_type, :system
@@ -11,39 +23,9 @@ set :rvm_path, "/usr/local/rvm"
 set :bundle_flags, "--quiet"
 set :bundle_dir, ""
 
-
-after "deploy", "deploy:restart"
-after "deploy", "deploy:congratulate"
-
-# before "deploy:setup", "rvm:install_pkgs"
-# before "deploy:update", "rvm:create_gemset"
-
-require "rvm/capistrano"
-
-require "capistrano-unicorn"
-
-after 'deploy:restart', 'unicorn:reload' # app IS NOT preloaded
-after 'deploy:restart', 'unicorn:restart'  # app preloaded
-
 namespace :deploy do
-  task :congratulate do
-    puts ""
-    puts "Welcome to Production on EUSA Pineapple."
+  desc "chmod delayed_job script"
+  task :chmoddj do
+    run "chmod 775 #{current_path}/script/delayed_job"
   end
-  
-  desc "Zero-downtime restart of Unicorn"
-    task :restart, except: { no_release: true } do
-      run "kill -s USR2 `cat /srv/blacklightning/shared/tmp/pids/unicorn.pid`"
-    end
-
-    desc "Start unicorn"
-    task :start, except: { no_release: true } do
-      run "cd #{current_path} ; bundle exec unicorn_rails -c config/unicorn/production.rb -D"
-    end
-
-    desc "Stop unicorn"
-    task :stop, except: { no_release: true } do
-      run "kill -s QUIT `cat /srv/blacklightning/shared/tmp/pids/unicorn.pid`"
-    end  
-    
 end

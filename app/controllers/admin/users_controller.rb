@@ -20,10 +20,19 @@ class Admin::UsersController < AdminController
       q = "%#{params[:search]}%"
       @users = @users.where("first_name like ? or last_name like ?", q, q)
     end
+    
+    if params[:email]
+      @users = @users.where(email: params[:email])
+    end
 
     @users = @users.paginate(:page => params[:page], :per_page => 15)
 
     @users = @users.all
+    
+    respond_to do |format|
+      format.html
+      format.json { render json: @users }
+    end
   end
 
   ##
@@ -32,6 +41,11 @@ class Admin::UsersController < AdminController
   def show
     @user = User.find(params[:id])
     @title = @user.name
+    
+    respond_to do |format|
+      format.html
+      format.json { render json: @user }
+    end
   end
 
   ##
@@ -54,8 +68,10 @@ class Admin::UsersController < AdminController
     respond_to do |format|
       if @user.save
         format.html {redirect_to admin_user_url(@user)}
+        format.json { render json: @user }
       else
         format.html {render "new"}
+        format.json { render json: @user.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -84,8 +100,10 @@ class Admin::UsersController < AdminController
         else
           format.html { redirect_to admin_url, notice: 'User was successfully updated.' }
         end
+        format.json { head :no_content }
       else
         format.html { render "edit" }
+        format.json { render json: @user.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -99,6 +117,7 @@ class Admin::UsersController < AdminController
 
     respond_to do |format|
       format.html {redirect_to admin_users_path}
+      format.json { head :no_content }
     end
   end
 
