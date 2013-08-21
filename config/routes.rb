@@ -2,7 +2,10 @@ ChaosRails::Application.routes.draw do
 
   get "seasons/show"
 
-  devise_for :users, :controllers => { :registrations => "registrations" }
+  devise_for :users, :controllers => { :registrations => "registrations" } do
+    get  'users/reactivation' => 'registrations#reactivation', as: :user_reactivation
+    post 'users/reactivate'   => 'registrations#reactivate',   as: :reactivate_user
+  end
 
   resources :shows,       :only => [:index, :show]
   resources :workshops,   :only => [:index, :show]

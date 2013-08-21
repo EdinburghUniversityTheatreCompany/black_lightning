@@ -8,7 +8,11 @@ class ApplicationController < ActionController::Base
   rescue_from StandardError, :with => :report_500 unless Rails.env.development? || Rails.env.test?
 
   rescue_from CanCan::AccessDenied do |exception|
-    redirect_to static_path('access_denied'), :notice => exception.message
+    if current_user.has_role? :member
+      redirect_to static_path('access_denied'), :notice => exception.message
+    else
+      redirect_to user_reactivation_path
+    end
   end
 
   unless Rails.env.development? || Rails.env.test?
