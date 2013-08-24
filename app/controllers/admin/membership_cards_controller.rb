@@ -33,7 +33,7 @@ class Admin::MembershipCardsController < AdminController
   # DELETE /admin/news/1
   ##
   def destroy
-    @card = MembershipCard.find(params[:id])
+    @card = MembershipCard.find_by_card_number(params[:id])
     @card.destroy
 
     redirect_to admin_membership_cards_path
