@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  </head>
+  <body>
+    <p>
+      Dear <%= @user.name %>,
+    </p>
+
+    <p>Welcome to Bedlam!</p>
+
+    <p><%= image_tag attachments['qr.png'].url %></p>
+
+    <p>
+      Your membership number is <%= @card.card_number %>. Now that you
+      have activated your membership, please go to Box Office to print
+      your card.
+    </p>
+
+    <p>
+      Kind Regards,
+    </p>
+
+    <p>
+      Bedlam Theatre Committee and The Project Black Lightning Team
+    </p>
+
+    <hr>
+    <p>
+      Bedlam Theatre<br />
+      11b Bristo Place<br />
+      Edinburgh<br />
+      EH1 1EZ<br />
+    </p>
+  </body>
+</html>

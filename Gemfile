@@ -42,6 +42,8 @@ gem 'daemons'
 
 gem 'axlsx'
 gem 'prawn'
+gem 'rqrcode'
+gem 'mini_magick'
 
 gem 'chronic'
 

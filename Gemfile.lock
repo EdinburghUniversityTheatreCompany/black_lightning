@@ -117,6 +117,8 @@ GEM
       mime-types (~> 1.16)
       treetop (~> 1.4.8)
     mime-types (1.23)
+    mini_magick (3.6.0)
+      subexec (~> 0.2.1)
     mini_portile (0.5.1)
     multi_json (1.7.8)
     multipart-post (1.2.0)
@@ -184,6 +186,7 @@ GEM
       ruby_parser (~> 3.1.1)
       sexp_processor
     rolify (3.2.0)
+    rqrcode (0.4.2)
     ruby-prof (0.13.0)
     ruby-rc4 (0.1.5)
     ruby2ruby (2.0.6)
@@ -267,6 +270,7 @@ DEPENDENCIES
   html_acceptance
   jquery-rails
   kramdown
+  mini_magick
   mysql2
   nested_form
   nokogiri
@@ -277,6 +281,7 @@ DEPENDENCIES
   rails_autolink
   reek
   rolify
+  rqrcode
   ruby-prof
   rvm-capistrano
   sass-rails (~> 3.2.3)
