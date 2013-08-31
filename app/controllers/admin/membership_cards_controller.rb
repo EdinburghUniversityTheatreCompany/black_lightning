@@ -48,11 +48,12 @@ class Admin::MembershipCardsController < AdminController
     height = 55.mm
 
     pdf = Prawn::Document.new(
-            page_size: [width, height],
+            page_size:  [width, height],
             margin: 0
           )
+    pdf.font Rails.root.join("app", "assets", "fonts", "gothic.ttf")
 
-    pdf.text_box "Bedlam Theatre", at: [5, height - 5]
+    pdf.image Rails.root.join("app", "assets", "images","card_background.jpg"), at: [0, height], fit: [width, height]
 
     # QR Code
     qr_file = Tempfile.new("qr_#{@card.card_number}")
@@ -62,13 +63,32 @@ class Admin::MembershipCardsController < AdminController
     qr_file.write RQRCode::Renderers::PNG.render(qr)
     qr_file.close
 
-    pdf.image qr_file.path, at: [width - 80 - 5, 5 + 80], fit: [80, 80]
+    pdf.image qr_file.path, at: [5, 5 + 50], fit: [50, 50]
+    # End QR Code
 
-    if @card.user
-      pdf.text_box @card.user.name, at: [5, height - 20]
+    pdf.bounding_box([5.1.mm, height - 14.mm], width: 31.3.mm, height: 33.7.mm) do
+      pdf.font_size 7.5
+
+      # EUTC
+      pdf.font Rails.root.join("app", "assets", "fonts", "gothicb.ttf") do
+        pdf.text "EDINBURGH UNIVERSITY", align: :center
+        pdf.text "THEATRE COMPANY", align: :center
+      end
+
+      pdf.move_down 3.mm
+
+      # Member
+      pdf.text "MEMBER", align: :center
+
+      pdf.move_down 3.mm
+
+      # Name
+      pdf.font Rails.root.join("app", "assets", "fonts", "gothicb.ttf") do
+        pdf.text @card.user.name, align: :center
+      end
     end
 
-    pdf.text_box @card.card_number, at: [width - 67, 5 + 80 + 12], size: 8
+    pdf.text_box @card.card_number, at: [width - 67, 11], size: 8
 
     send_data pdf.render, :filename => "card_#{@card.card_number}.pdf", :type => "application/pdf", :disposition => "inline"
 
