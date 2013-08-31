@@ -52,15 +52,27 @@ class Admin::MembershipCardsController < AdminController
             margin: 0
           )
 
-    pdf.text_box "Bedlam Theatre", at: [5, height - 2]
+    pdf.text_box "Bedlam Theatre", at: [5, height - 5]
+
+    # QR Code
+    qr_file = Tempfile.new("qr_#{@card.card_number}")
+    qr = RQRCode::QRCode.new(@card.card_number, size: 2, level: :h )
+
+    qr_file.binmode
+    qr_file.write RQRCode::Renderers::PNG.render(qr)
+    qr_file.close
+
+    pdf.image qr_file.path, at: [width - 80 - 5, 5 + 80], fit: [80, 80]
 
     if @card.user
       pdf.text_box @card.user.name, at: [5, height - 20]
     end
 
-    pdf.text_box @card.card_number, at: [5, 5 + 12], size: 12
+    pdf.text_box @card.card_number, at: [width - 67, 5 + 80 + 12], size: 8
 
     send_data pdf.render, :filename => "card_#{@card.card_number}.pdf", :type => "application/pdf", :disposition => "inline"
+
+    qr_file.unlink
   end
 
 end
