@@ -30,6 +30,8 @@ class RegistrationsController < Devise::RegistrationsController
       set_flash_message :notice, :signed_up
       sign_in(User, user)
 
+      MembershipMailer.delay.new_member(user)
+
       redirect_to admin_path
     else
       render 'new'
@@ -64,8 +66,9 @@ class RegistrationsController < Devise::RegistrationsController
     end
 
     current_user.add_role :member
-
     current_user.save!
+
+    MembershipMailer.delay.renew_membership(user)
 
     flash[:notice] = "Membership Reactivated. Thank you."
 
