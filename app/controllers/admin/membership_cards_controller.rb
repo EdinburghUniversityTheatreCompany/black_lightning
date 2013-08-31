@@ -42,6 +42,12 @@ class Admin::MembershipCardsController < AdminController
   def generate_card
     @card = MembershipCard.find_by_card_number!(params[:membership_card_id])
 
+    if @card.user.nil?
+      flash[:alert] = "Card Not Activated"
+      redirect_to admin_membership_card_path(@card)
+      return
+    end
+
     MembershipCardPDF.create(@card) do |pdf|
       send_data pdf.render, :filename => "card_#{@card.card_number}.pdf", :type => "application/pdf", :disposition => "inline"
     end
