@@ -49,7 +49,13 @@ module RQRCode
 
         image = MiniMagick::Image.read(svg) { |i| i.format "svg" }
         image.format :png
-        image.to_blob
+
+        blob = image.to_blob
+
+        # Tidy up
+        image.destroy!
+
+        return blob
       end
     end
   end
