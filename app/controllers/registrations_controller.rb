@@ -68,7 +68,7 @@ class RegistrationsController < Devise::RegistrationsController
     current_user.add_role :member
     current_user.save!
 
-    MembershipMailer.delay.renew_membership(user)
+    MembershipMailer.delay.renew_membership(current_user)
 
     flash[:notice] = "Membership Reactivated. Thank you."
 
