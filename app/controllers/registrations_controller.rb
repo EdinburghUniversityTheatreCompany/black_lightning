@@ -6,6 +6,9 @@ class RegistrationsController < Devise::RegistrationsController
   def create
     @membership_card = MembershipCard.find_by_card_number params[:user][:card_number]
 
+    params[:user].delete :card_number
+    @user = User.new(params[:user])
+
     if @membership_card.nil?
       flash[:alert] = 'Card not found'
 
@@ -20,17 +23,14 @@ class RegistrationsController < Devise::RegistrationsController
       return
     end
 
-    params[:user].delete :card_number
-
-    user = User.new(params[:user])
-    user.membership_card = @membership_card
-    user.add_role :member
+    @user.membership_card = @membership_card
+    @user.add_role :member
 
     if user.save
       set_flash_message :notice, :signed_up
-      sign_in(User, user)
+      sign_in(User, @user)
 
-      MembershipMailer.delay.new_member(user)
+      MembershipMailer.delay.new_member(@user)
 
       redirect_to admin_path
     else
