@@ -9,8 +9,8 @@ class MembershipCardPDF < Prawn::Document
   end
 
   def initialize(card)
-    width  = 85.mm
-    height = 55.mm
+    width  = 86.mm
+    height = 54.mm
 
     super(
           page_size: [width, height],
