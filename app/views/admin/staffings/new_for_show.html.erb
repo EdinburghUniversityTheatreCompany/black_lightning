@@ -59,7 +59,7 @@
       <h3>Jobs</h3>
       <%= f.simple_fields_for :staffing_jobs %>
 
-      <% if can? :write, @staffing %>
+      <% if can? :write, @admin_staffing %>
         <% add_text = '<i class="icon-plus"></i> Add Job'.html_safe %>
         <%= f.link_to_add add_text, :staffing_jobs, :class => "btn" %>
       </div>
