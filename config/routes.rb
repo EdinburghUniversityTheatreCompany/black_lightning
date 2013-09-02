@@ -1,5 +1,7 @@
 ChaosRails::Application.routes.draw do
 
+  match '*path' => 'application#options', via: :options
+
   get "seasons/show"
 
   devise_for :users, :controllers => { :registrations => "registrations" } do

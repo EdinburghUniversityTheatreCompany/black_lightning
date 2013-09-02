@@ -1,5 +1,5 @@
 class ApplicationController < ActionController::Base
-  protect_from_forgery
+  protect_from_forgery except: :options
 
   before_filter :set_globals
   before_filter :prepare_for_mobile
@@ -20,6 +20,15 @@ class ApplicationController < ActionController::Base
       flash[:notice] = exception.message
       raise ActionController::RoutingError.new('Not Found')
     end
+  end
+
+  def options
+    headers['Access-Control-Allow-Origin'] = request.env['HTTP_ORIGIN']
+    headers['Access-Control-Allow-Methods'] = 'POST, GET, DELETE, OPTIONS'
+    headers['Access-Control-Max-Age'] = '1000'
+    headers['Access-Control-Allow-Headers'] = '*,x-requested-with,X-CSRF-Token,Authorization'
+
+    head :ok
   end
 
   def authorize_backend!

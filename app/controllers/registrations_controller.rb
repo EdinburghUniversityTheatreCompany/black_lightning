@@ -39,24 +39,35 @@ class RegistrationsController < Devise::RegistrationsController
     end
   end
 
+  before_filter only: [ :reactivate, :reactivation ] do
+    authenticate_user!
+  end
+
   def reactivation
     @title = "Membership Renewal"
   end
 
+  skip_before_filter :verify_authenticity_token, only: :reactivate
   def reactivate
     @membership_card = MembershipCard.find_by_card_number params[:user][:card_number]
 
     if @membership_card.nil?
       flash[:alert] = 'Card not found'
 
-      render 'registrations/reactivation'
+      respond_to do |format|
+        format.html { render 'registrations/reactivation' }
+        format.json { render json: { error: "Card not found" }}
+      end
       return
     end
 
     if not @membership_card.user.nil?
       flash[:alert] = 'Card already registered'
 
-      render 'registrations/reactivation'
+      respond_to do |format|
+        format.html { render 'registrations/reactivation' }
+        format.json { render json: { error: "Card already registered" }}
+      end
       return
     end
 
@@ -73,6 +84,9 @@ class RegistrationsController < Devise::RegistrationsController
 
     flash[:notice] = "Membership Reactivated. Thank you."
 
-    redirect_to admin_path
+    respond_to do |format|
+      format.html { redirect_to admin_path }
+      format.json { render json: { success: true } }
+    end
   end
 end

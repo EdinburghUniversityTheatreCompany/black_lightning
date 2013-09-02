@@ -50,6 +50,8 @@ gem 'chronic'
 gem 'nokogiri'
 gem 'airbrake'
 
+gem 'rack-cors'
+
 # gem 'oink'
 
 group :development do
