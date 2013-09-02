@@ -138,8 +138,8 @@ class Admin::StaffingsController < AdminController
       start_times.values.zip(end_times.values).each do |start_time, end_time|
         staffing = admin_staffing.dup
 
-        staffing.start_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
-        staffing.end_time = DateTime.civil(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
+        staffing.start_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
+        staffing.end_time   = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
 
         staffing.save!
 
