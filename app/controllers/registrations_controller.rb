@@ -28,7 +28,8 @@ class RegistrationsController < Devise::RegistrationsController
 
     if @user.save
       set_flash_message :notice, :signed_up
-      sign_in(User, @user)
+
+      sign_in(User, @user) unless params["kiosk"] == "yes"
 
       MembershipMailer.delay.new_member(@user)
 
