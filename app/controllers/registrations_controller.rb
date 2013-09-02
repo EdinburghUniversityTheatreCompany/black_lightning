@@ -26,7 +26,7 @@ class RegistrationsController < Devise::RegistrationsController
     @user.membership_card = @membership_card
     @user.add_role :member
 
-    if user.save
+    if @user.save
       set_flash_message :notice, :signed_up
       sign_in(User, @user)
 
