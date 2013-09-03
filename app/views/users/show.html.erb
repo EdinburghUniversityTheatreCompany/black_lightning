@@ -30,7 +30,7 @@
                   <% img = image_tag item.teamwork.image.url(:medium) %>
                   <%= link_to img, item.teamwork %>
                   <%= link_to truncate(item.teamwork.name, length: 30), item.teamwork %><br />
-                  <%= l item.teamwork.start_date, format: :shorty %><br />
+                  <%= item.teamwork.date_range %><br />
                   <%= item.position %>
                 </div>
               </li>
