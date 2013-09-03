@@ -6,7 +6,7 @@ class RegistrationsController < Devise::RegistrationsController
   def create
     @membership_card = MembershipCard.find_by_card_number params[:user][:card_number]
 
-    params[:user].delete :card_number
+    params[:card_number] = params[:user].delete :card_number
     @user = User.new(params[:user])
 
     if @membership_card.nil?

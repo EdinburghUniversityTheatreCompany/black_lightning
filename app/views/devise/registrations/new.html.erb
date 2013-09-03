@@ -6,7 +6,7 @@
 
     <%= simple_form_for(@user, url: user_registration_path) do |f| %>
       <div class="form-inputs">
-        <%= f.input :card_number, required: true %>
+        <%= f.input :card_number, required: true, input_html: { value: params[:card_number] } %>
 
         <%= f.input :email %>
 
