@@ -11,5 +11,6 @@
 <% if request.remote_ip == "188.220.33.218" %>
   <%= link_to "Print Receipt", "http://192.168.1.254:8179/print/#{@card.card_number}", method: :post, class: "btn btn-primary", remote: true %>
 <% end %>
+<%= link_to "Print Stall Receipt", "http://localhost:5000/print/#{@card.card_number}", method: :post, class: "btn btn-primary", remote: true %>
 
 <%= link_to "Print Card", admin_membership_card_generate_card_path(@card), class: "btn" %>
