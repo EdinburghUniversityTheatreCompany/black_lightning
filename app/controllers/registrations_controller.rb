@@ -12,14 +12,20 @@ class RegistrationsController < Devise::RegistrationsController
     if @membership_card.nil?
       flash[:alert] = 'Card not found'
 
-      render 'new'
+      respond_to do |format|
+        format.html { render 'new' }
+        format.json { render json: { error: "Card not found" }, status: :unprocessable_entity }
+      end
       return
     end
 
     if not @membership_card.user.nil?
       flash[:alert] = 'Card already registered'
 
-      render 'new'
+      respond_to do |format|
+        format.html { render 'new' }
+        format.json { render json: { error: "Card already registered" }, status: :unprocessable_entity }
+      end
       return
     end
 
@@ -29,13 +35,20 @@ class RegistrationsController < Devise::RegistrationsController
     if @user.save
       set_flash_message :notice, :signed_up
 
-      sign_in(User, @user) unless params["kiosk"] == "yes"
-
       MembershipMailer.delay.new_member(@user)
 
-      redirect_to admin_path
+      respond_to do |format|
+        format.html do
+          sign_in(User, @user)
+          redirect_to admin_path
+        end
+        format.json { render json: { success: true }}
+      end
     else
-      render 'new'
+      respond_to do |format|
+        format.html { render 'new' }
+        format.json { render json: @user.errors, status: :unprocessable_entity }
+      end
     end
   end
 
