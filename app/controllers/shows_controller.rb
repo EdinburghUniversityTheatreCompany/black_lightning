@@ -42,4 +42,10 @@ class ShowsController < ApplicationController
       format.json { render json: @show.to_json(:methods => [:slideshow_image] ) }
     end
   end
+
+  def find_by_xts_id
+    @show = Show.find_by_xts_id(params[:id])
+
+    render json: @show.to_json(methods: [:slideshow_image], include: [pictures: { methods: [:image_url] } ] )
+  end
 end

@@ -12,7 +12,11 @@ ChaosRails::Application.routes.draw do
     post 'users/reactivate/stripe' => 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
   end
 
-  resources :shows,       :only => [:index, :show]
+  resources :shows,       :only => [:index, :show] do
+    collection do
+      get 'xts/:id' => 'shows#find_by_xts_id'
+    end
+  end
   resources :workshops,   :only => [:index, :show]
   resources :news,        :only => [:index, :show]
   resources :venues,      :only => [:index, :show]

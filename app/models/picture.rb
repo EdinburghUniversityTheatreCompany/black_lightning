@@ -32,4 +32,8 @@ class Picture < ActiveRecord::Base
                     :convert_options => { :thumb => "-quality 75 -strip" }
 
   attr_accessible :description, :image
+
+  def image_url
+    image.url(:original)
+  end
 end
