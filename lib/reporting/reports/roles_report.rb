@@ -6,7 +6,7 @@ class Reports::RolesReport
   ##
   # Returns the Axlsx package for the report.
   ##
-  def self.create
+  def create
     p = Axlsx::Package.new
     wb = p.workbook
     datetime = wb.styles.add_style :format_code => 'dd/mm/yyyy hh:mm'

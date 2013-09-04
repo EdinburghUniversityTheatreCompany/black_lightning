@@ -12,18 +12,22 @@ class Admin::ReportsController < AdminController
   # A report containing a list of all users, and lists of users in each role.
   ##
   def roles
-    report = ::Reports::RolesReport.create
+    report = ::Reports::RolesReport.new
 
-    stream_workbook(report, 'Roles.xlsx')
+    ReportsMailer.delay.send_report(current_user, report)
+
+    redirect_to admin_path, notice: "The report will be emailed to you when it is ready."
   end
 
   ##
   # A report containing all the entries in the NewsletterSubscriber model.
   ##
   def newsletter_subscribers
-    report = ::Reports::NewsletterSubscribersReport.create
+    report = ::Reports::NewsletterSubscribersReport.new
 
-    stream_workbook(report, "Newsletter Subscribers.xlsx")
+    ReportsMailer.delay.send_report(current_user, report)
+
+    redirect_to admin_path, notice: "The report will be emailed to you when it is ready."
   end
 
   ##
@@ -38,20 +42,12 @@ class Admin::ReportsController < AdminController
   ##
   def staffing
     start_year = params[:first_year] || 1.years.ago.year
-    end_year = params[:end_year] || 1.years.since.year
+    end_year   = params[:end_year]   || 1.years.since.year
 
-    report = ::Reports::StaffingReport.create(start_year, end_year)
+    report = ::Reports::StaffingReport.new(start_year, end_year)
 
-    stream_workbook(report, "Staffing.xlsx")
-  end
+    ReportsMailer.delay.send_report(current_user, report)
 
-  private
-  def stream_workbook(package, filename)
-    package.validate.each do |error|
-      Rails.logger.warn "Error creating report with filename #{filename}: "
-      Rails.logger.warn error
-    end
-
-    send_data package.to_stream.read, :filename => filename, :type=> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    redirect_to admin_path, notice: "The report will be emailed to you when it is ready."
   end
 end

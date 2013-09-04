@@ -5,21 +5,26 @@
 # Broken into 6 month periods.
 #
 # Accepts two parameters:
-# * start_year The first year to include in the report (default - 1 year ago)
-# * end_year   The last year to include in the report (default - 1 year ahead)
+# * @start_year The first year to include in the report (default - 1 year ago)
+# * @end_year   The last year to include in the report (default - 1 year ahead)
 ##
 class Reports::StaffingReport
+  def new(start_year, end_year)
+    @start_year = start_year
+    @end_year   = end_year
+  end
+
   ##
   # Returns the Axlsx package for the report.
   ##
-  def self.create(start_year, end_year)
+  def create
     p = Axlsx::Package.new
 
     wb = p.workbook
 
-    current_date = Date.new(start_year, 1, 1)
+    current_date = Date.new(@start_year, 1, 1)
 
-    while current_date.year <= end_year
+    while current_date.year <= @end_year
       next_date = current_date.months_since(6)
 
       sheet_name = "#{current_date.month}-#{current_date.year} - #{next_date.month}-#{next_date.year}"

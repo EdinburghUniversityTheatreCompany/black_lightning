@@ -1,12 +1,12 @@
 ##
 # A report containing all the entries in the NewsletterSubscriber model.
 ##
-class Reports::NewsletterSubscribersReport
+class Reports::NewsletterSubscribersReport < Reports::Report
 
   ##
   # Returns the Axlsx package for the report.
   ##
-  def self.create
+  def create
     p = Axlsx::Package.new
 
     p.workbook.add_worksheet(:name => "Subscribers") do |sheet|
