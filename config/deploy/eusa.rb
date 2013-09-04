@@ -24,6 +24,12 @@ set :bundle_flags, "--quiet"
 set :bundle_dir, ""
 
 namespace :deploy do
+  task :start do ; end
+  task :stop do ; end
+  task :restart, :roles => :app, :except => { :no_release => true } do
+    run "touch #{File.join(current_path,'tmp','restart.txt')}"
+  end
+
   desc "chmod delayed_job script"
   task :chmoddj do
     run "chmod 775 #{current_path}/script/delayed_job"
