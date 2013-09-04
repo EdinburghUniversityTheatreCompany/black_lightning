@@ -88,7 +88,7 @@ class Ability
       end
 
       can :update, Show do |show|
-        show.team_members.where({ :position => "Producer", :user_id => user.id }).all.count > 0
+        show.team_members.where("(position = 'Director' OR position = 'Producer') AND user_id = ?", user.id).count > 0
       end
 
       #####################
