@@ -60,6 +60,15 @@
 
             <%= label_tag("[#{role.name}][Admin::StaffingJob]sign_up_for", "Sign Up For Staffing") %>
             <%= check_box_tag "[#{role.name}][Admin::StaffingJob]sign_up_for", "sign_up_for", checked, :title => "Access Backend" %>
+
+            <% permission = role.permissions.select{ |p| p.subject_class == "reports" } %>
+            <% if permission %>
+              <% action_permission = permission.select{ |p| p.action == "read" } %>
+              <% checked = action_permission.count > 0 %>
+            <% end %>
+
+            <%= label_tag("[#{role.name}][reports]read", "Read Reports") %>
+            <%= check_box_tag "[#{role.name}][reports]read", "read", checked, :title => "Read Reports" %>
           </td>
         <% end %>
       </tr>

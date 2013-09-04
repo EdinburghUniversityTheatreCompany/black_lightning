@@ -39,7 +39,7 @@ class Admin::PermissionsController < AdminController
         Admin::Permission.update_permission(role, model.name, actions)
       end
 
-      other_permissions = ['backend']
+      other_permissions = ['backend', 'reports']
 
       other_permissions.each do |model|
         _models = params[role.name]
