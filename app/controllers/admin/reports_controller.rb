@@ -20,6 +20,17 @@ class Admin::ReportsController < AdminController
   end
 
   ##
+  # A report containing a list of all members.
+  ##
+  def members
+    report = ::Reports::MembershipReport.new
+
+    ReportsMailer.delay.send_report(current_user, report)
+
+    redirect_to admin_path, notice: "The report will be emailed to you when it is ready."
+  end
+
+  ##
   # A report containing all the entries in the NewsletterSubscriber model.
   ##
   def newsletter_subscribers
