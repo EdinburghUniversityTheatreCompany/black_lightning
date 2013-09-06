@@ -25,6 +25,7 @@
 
     <%= f.association :season, :collection => Season.all, :label_method => :name %>
 
+    <%= f.input :xts_id, label: "XTS ID", hint: "This is the identifier XTS uses to refer to your workshop." %>
 
     <%= f.input :image %>
 
