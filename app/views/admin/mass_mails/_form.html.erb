@@ -1,0 +1,31 @@
+<%= simple_nested_form_for [:admin, @mass_mail] do |f| %>
+  <%= f.error_notification %>
+
+  <%= f.input :draft, as: :hidden %>
+
+  <div class="form-inputs">
+
+    <%= f.input :subject %>
+
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 12 } do %>
+      <%= render "admin/shared/md_hints" %>
+    <% end %>
+
+    <%= f.input :send_date %>
+
+  </div>
+
+  <div class="form-actions">
+    <%= submit_tag :Send, name: "send", class: "btn btn-primary", data: { "confirm" => "Send Mass Mail",
+                                                                          "detail"  => """
+                                                                            <p>
+                                                                              Are you sure you wish to continue?
+                                                                            </p>
+                                                                            <p>
+                                                                              Even if you have delayed sending this message, you will not be able to edit it (or remove it) once you confirm.
+                                                                            </p>
+                                                                          """ } %>
+    <%= submit_tag :Save, name: "save", class: "btn" %>
+    <%= link_to 'Cancel', admin_mass_mails_path, class: "btn" %>
+  </div>
+<% end %>

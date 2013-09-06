@@ -29,6 +29,20 @@ $.rails.allowAction = (element) ->
 
   # Clone the clicked element (probably a delete link) so we can use it in the dialog box.
   $link = element.clone()
+
+  if element.is(":input")
+    $link = $("<a></a>")
+    $link.click (e) ->
+      e.preventDefault();
+
+      element
+        .attr('data-confirm', "")
+        .data('confirm', "")
+      element.click();
+
+      return false;
+
+  $link = $link
     # We don't want to pop up another confirmation (recursion). But we do want
     # this script to run again, so don't remove the attr, just set it to blank.
     .attr('data-confirm', "")

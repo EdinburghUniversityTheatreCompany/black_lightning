@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130819171534) do
+ActiveRecord::Schema.define(:version => 20130906133225) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -205,6 +205,21 @@ ActiveRecord::Schema.define(:version => 20130819171534) do
   add_index "events", ["season_id"], :name => "index_events_on_season_id"
   add_index "events", ["venue_id"], :name => "index_events_on_venue_id"
 
+  create_table "mass_mails", :force => true do |t|
+    t.integer  "sender_id"
+    t.string   "subject"
+    t.text     "body"
+    t.datetime "send_date"
+    t.boolean  "draft"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  create_table "mass_mails_users", :force => true do |t|
+    t.integer "mass_mail_id"
+    t.integer "user_id"
+  end
+
   create_table "membership_cards", :force => true do |t|
     t.string   "card_number"
     t.integer  "user_id"
@@ -333,6 +348,7 @@ ActiveRecord::Schema.define(:version => 20130819171534) do
     t.string   "avatar_content_type"
     t.integer  "avatar_file_size"
     t.datetime "avatar_updated_at"
+    t.string   "stripe_customer_id"
   end
 
   add_index "users", ["email"], :name => "index_users_on_email", :unique => true

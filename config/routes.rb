@@ -61,6 +61,7 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :editable_blocks, :except => [:show]
+    resources :mass_mails
 
     resources :users do
       member do

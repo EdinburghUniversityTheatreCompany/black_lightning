@@ -1,0 +1,42 @@
+<% @title = 'Mass Mails' %>
+
+<h1>Mass Mails</h1>
+
+<table class="table">
+  <tr>
+    <th>Subject</th>
+    <th>Draft</th>
+    <th>Send Date</th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @mass_mails.each do |mass_mail| %>
+  <tr>
+    <td><%= link_to mass_mail.subject, admin_mass_mail_path(mass_mail) %></td>
+    <td><%= mass_mail.draft ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
+    <td><%= l mass_mail.send_date, format: :short %></td>
+
+    <td>
+    <% if can? :edit, mass_mail %>
+    <%= link_to 'Edit', edit_admin_mass_mail_path(mass_mail) %>
+    <% end %>
+    </td>
+
+    <td>
+    <% if can? :delete, mass_mail %>
+    <%= link_to 'Destroy', admin_mass_mail_path(mass_mail), method: :delete, data: { "confirm" => "Deleting " + mass_mail.subject,
+                                                                           "detail"  => "Are you sure you wish to continue?" } %>
+    <% end %>
+    </td>
+  </tr>
+<% end %>
+</table>
+
+<%= will_paginate(@mass_mails) %>
+
+<% if can? :create, MassMail %>
+  <%= link_to new_admin_mass_mail_path, :class => 'btn' do %>
+    <i class="icon-plus"></i> New Mass Mail
+  <% end %>
+<% end %>

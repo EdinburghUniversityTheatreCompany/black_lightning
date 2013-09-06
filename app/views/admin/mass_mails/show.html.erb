@@ -1,0 +1,28 @@
+<h2><%= @mass_mail.subject %></h2>
+
+<div>
+  <dl>
+    <dt>Send Date</dt>
+    <dd><%= l @mass_mail.send_date %></dd>
+
+    <% if @mass_mail.draft == true %>
+      <dt>Status</dt>
+      <dd>Draft Mail</dd>
+    <% else %>
+      <dt>Sent By</dt>
+      <dd><%= @mass_mail.sender.name %></dd>
+    <% end %>
+  </dl>
+</div>
+
+<div>
+  <%= render_markdown @mass_mail.body %>
+</div>
+
+<% if can? :edit, @mass_mail %>
+  <br />
+
+  <%= link_to edit_admin_mass_mail_path(@mass_mail), :class => 'btn' do %>
+    <i class="icon-pencil"></i> Edit
+  <% end %>
+<% end %>
