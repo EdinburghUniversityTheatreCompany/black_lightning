@@ -21,7 +21,11 @@ ChaosRails::Application.routes.draw do
   resources :news,        :only => [:index, :show]
   resources :venues,      :only => [:index, :show]
   resources :seasons,     :only => [:show]
-  resources :users,       :only => [:show]
+  resources :users,       :only => [:show] do
+    collection do
+      get 'check_membership' => 'users#check_membership'
+    end
+  end
 
   match 'attachments/:slug(/:style)' => 'attachments#show'
 

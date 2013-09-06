@@ -24,4 +24,37 @@ class UsersController < ApplicationController
     end
   end
 
+  # A json function to check if the given membership number or name
+  # belongs to a current member.
+  def check_membership
+    search = params[:search]
+
+    # Try a membership card
+    card = MembershipCard.find_by_card_number(search)
+
+    if not card.nil?
+      if card.user.nil?
+        render :json, { response: "Card Not Activated" }, status: :expectation_failed
+        return
+      else
+        user = card.user
+      end
+    end
+
+    # Else, search for a user
+    q = "%#{search}%"
+    user ||= User.where("CONCAT(first_name, ' ', last_name) like ?", q).first
+
+    case
+      when user.nil?
+        render json: { response: "Member not found" }, status: :not_found
+        return
+      when user.has_role?(:member)
+        render json: { response: user.name + " is a current member", image: user.avatar.url }
+        return
+      else
+        render json: { response: user.name + " is not a current member" }, status: :payment_required
+        return
+    end
+  end
 end
