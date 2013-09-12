@@ -1,6 +1,25 @@
 <div class="row">
   <div class="span12">
-    <%= render 'archives/search_form' %>
+    <div class="accordion-group">
+      <div class="accordion-heading">
+        <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
+          <i class="icon-chevron-down"></i> Search Form
+        </a>
+      </div>
+      <div id="search_container" class="accordion-body collapse">
+        <div class="accordion-inner">
+          <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :archives_shows_index do |f| %>
+            <%= f.input :name_cont,            label: "Show Title",  required: false %>
+            <%= f.input :users_full_name_cont, label: "Person Name", required: false %>
+
+            <%= f.input :start_date_gt, as: :date, label: "Start Date", include_blank: true, required: false %>
+            <%= f.input :end_date_lt,   as: :date, label: "End Date",   include_blank: true, required: false %>
+
+            <%= f.submit :Search, class: 'btn' %>
+          <% end %>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

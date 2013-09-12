@@ -10,25 +10,16 @@ class Admin::UsersController < AdminController
   def index
     @title = "Users"
 
-    if params[:show_non_members] == "true"
-      @users = User
-    else
-      @users = User.with_role(:member)
-    end
+    @q     = User.unscoped.search(params[:q])
+    @users = @q.result(distinct: true)
 
-    if params[:search]
-      q = "%#{params[:search]}%"
-      @users = @users.where("first_name like ? or last_name like ?", q, q)
-    end
-    
-    if params[:email]
-      @users = @users.where(email: params[:email])
+    if params[:show_non_members] != "1"
+      @users = @users.with_role(:member)
     end
 
     @users = @users.paginate(:page => params[:page], :per_page => 15)
-
     @users = @users.all
-    
+
     respond_to do |format|
       format.html
       format.json { render json: @users }
@@ -41,7 +32,7 @@ class Admin::UsersController < AdminController
   def show
     @user = User.find(params[:id])
     @title = @user.name
-    
+
     respond_to do |format|
       format.html
       format.json { render json: @user }

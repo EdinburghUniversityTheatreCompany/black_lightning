@@ -73,6 +73,10 @@ class User < ActiveRecord::Base
     "#{self.first_name} #{self.last_name}"
   end
 
+  ransacker :full_name do |parent|
+    Arel::Nodes::NamedFunction.new('concat_ws', [' ', parent.table[:first_name], parent.table[:last_name]])
+  end
+
   ##
   # A quick way to get the user's full name, if they have a name, or their email
   ##

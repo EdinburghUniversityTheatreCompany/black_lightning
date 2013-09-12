@@ -29,16 +29,17 @@ updateHistory = (param, value) ->
 $ ->
   search_textbox = $('#search input[type="text"]')
   search_textbox.keyup ->
-    searchStr = search_textbox.val()
+    $search = $('#search')
+    serial = $search.serialize()
     setTimeout (->
-        if searchStr == search_textbox.val()
+        if serial == $search.serialize()
           $('.table').fadeOut()
           $('.pagination').fadeOut()
 
-          $.get(location.toString(),
-            search: searchStr
+          $.get('/admin/users',
+            serial
             , (data) ->
-              updateHistory("search", searchStr)
+              updateHistory("search", serial)
               updatePage(data)
               return
             )
@@ -49,10 +50,12 @@ $ ->
   show_non_members = $('#show_non_members')
   show_non_members.change ->
     show = show_non_members.is(':checked')
-    $.get(location.toString(),
-      show_non_members: show
+    $search = $('#search')
+    serial  = $search.serialize()
+    $.get('/admin/users',
+      serial
       , (data) ->
-        updateHistory("show_non_members", show)
+        updateHistory("show_non_members", serial)
         updatePage(data)
         return
       )

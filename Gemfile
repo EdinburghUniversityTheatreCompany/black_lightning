@@ -46,6 +46,7 @@ gem 'rqrcode'
 gem 'mini_magick'
 
 gem 'chronic'
+gem 'ransack'
 
 gem 'nokogiri'
 gem 'airbrake'

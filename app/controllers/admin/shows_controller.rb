@@ -5,13 +5,9 @@ class Admin::ShowsController < AdminController
   def index
     @title = "Shows"
 
-    @shows = Show.unscoped.order("start_date DESC")
-
-    if params[:search]
-      q = "%#{params[:search]}%"
-      @shows = @shows.where("name like ?", q)
-    end
-
+    @q = Show.unscoped.search(params[:q])
+    @shows = @q.result(distinct: true)
+    @shows = @shows.order("start_date DESC")
     @shows = @shows.paginate(:page => params[:page], :per_page => 15).all
   end
 
@@ -117,7 +113,7 @@ class Admin::ShowsController < AdminController
 
     render :json => shows.to_json
   end
-  
+
   def xts_report
     show = Show.find_by_slug(params[:id])
     xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/reports/show?showid=#{show.xts_id}"
