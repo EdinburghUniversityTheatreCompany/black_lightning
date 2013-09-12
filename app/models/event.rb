@@ -98,6 +98,13 @@ class Event < ActiveRecord::Base
   ##
   # Returns the url of the slideshow image
   ##
+  def thumb_image
+    return image.url(:thumb)
+  end
+
+  ##
+  # Returns the url of the slideshow image
+  ##
   def slideshow_image
     return image.url(:slideshow)
   end

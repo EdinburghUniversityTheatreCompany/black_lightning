@@ -36,4 +36,8 @@ class Picture < ActiveRecord::Base
   def image_url
     image.url(:original)
   end
+
+  def thumb_url
+    image.url(:thumb)
+  end
 end
