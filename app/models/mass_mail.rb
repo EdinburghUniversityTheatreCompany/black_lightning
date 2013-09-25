@@ -6,7 +6,11 @@ class MassMail < ActiveRecord::Base
 
   def send!
     recipients.each do |recipient|
-      MassMailer.send_mail(self, recipient).deliver
+      begin
+        MassMailer.send_mail(self, recipient).deliver
+      rescue => e
+        Rails.logger.fatal e.message
+      end
     end
   end
   handle_asynchronously :send!, :run_at => Proc.new { |m| m.send_date }
