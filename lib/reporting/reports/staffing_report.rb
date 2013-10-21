@@ -9,7 +9,7 @@
 # * @end_year   The last year to include in the report (default - 1 year ahead)
 ##
 class Reports::StaffingReport
-  def new(start_year, end_year)
+  def initialize(start_year, end_year)
     @start_year = start_year
     @end_year   = end_year
   end
@@ -31,7 +31,7 @@ class Reports::StaffingReport
       wb.add_worksheet(name: sheet_name) do |sheet|
         sheet.add_row(["Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows"])
 
-        User.all.each do |user|
+        User.with_role(:member).each do |user|
           past_show_count = user.shows.where(["end_date < ? AND end_date >= ? AND end_date < ?", Date.today, current_date, next_date]).count
           upcoming_show_count = user.shows.where(["end_date >= ? AND end_date >= ? AND end_date < ?", Date.today, current_date, next_date]).count
 
