@@ -1,4 +1,4 @@
-<h1><%= @season.name if @season.image.nil? %></h1>
+<h1><%= @season.name if !@season.image.presence %></h1>
 
 <% if @season.end_date %>
 <% if @season.end_date < Date.today %>
