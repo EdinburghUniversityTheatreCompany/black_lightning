@@ -1,4 +1,4 @@
-<h1><%= @season.name %></h1>
+<h1><%= @season.name if @season.image.nil? %></h1>
 
 <% if @season.end_date %>
 <% if @season.end_date < Date.today %>
@@ -12,6 +12,19 @@
 
 <div class="row vertical-rule">
   <div class="span8">
+    <% if @season.image.presence %>
+    <div class="carousel">
+      <!-- Carousel items -->
+      <div class="carousel-inner">
+        <div class="active item">
+          <%= image_tag @season.image.url(:slideshow) %>
+          <div class="carousel-caption">
+            <h1><%= @season.name %></h1>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% end %>
     <%= render_markdown @season.description %>
   </div>
 
