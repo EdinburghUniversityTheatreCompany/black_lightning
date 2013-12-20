@@ -41,4 +41,19 @@ class Show < Event
     questionnaire.name = name
     questionnaire.save!
   end
+
+  def as_json(options = {})
+    defaults = {
+      include: [
+                 :reviews
+               ]
+    }
+
+    options = options.merge(defaults) do |key, oldval, newval|
+      # http://stackoverflow.com/a/11171921
+      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
+    end
+
+    super(options)
+  end
 end
