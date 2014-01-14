@@ -39,7 +39,7 @@ class ShowsController < ApplicationController
 
     respond_to do |format|
       format.html
-      format.json { render json: @show, methods: [:thumb_image, :slideshow_image], include: [ { pictures: { methods: [:thumb_url, :image_url] } }, :team_members] }
+      format.json { render json: @show, methods: [:thumb_image, :slideshow_image], include: [ { pictures: { methods: [:thumb_url, :image_url] } }, team_members: { methods: [:user_name] }] }
     end
   end
 end
