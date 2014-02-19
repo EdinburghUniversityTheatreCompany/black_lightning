@@ -97,6 +97,7 @@ ChaosRails::Application.routes.draw do
         get 'new_for_show'
         put 'create_for_show'
         get ':show_title/grid' => 'staffings#grid', :format => :html, :as => :grid
+        get 'guidelines'
       end
     end
 
