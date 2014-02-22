@@ -17,8 +17,7 @@ $.rails.allowAction = (element) ->
       # Return the button
       $('#btn-holder').replaceWith(element)
       $('.modal').modal('hide')
-      handler element
-      return false
+      return handler element
     else
       return true
 

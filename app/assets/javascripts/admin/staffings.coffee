@@ -1,7 +1,7 @@
 jQuery ->
   tried_ajax = false;
   $(".staffing-sign-up").data 'handler', (button) ->
-    return if tried_ajax;
+    return true if tried_ajax;
 
     job_id = button.attr("data-job-id");
     button.hide();
