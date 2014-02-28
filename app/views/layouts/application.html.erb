@@ -67,7 +67,12 @@
     <%= render "shared/ie_notice" %>
 
     <%= render "shared/cookie_notice" %>
-
+    <div class="alert-container">
+      <p class="alert alert-info">
+        <i class="icon-info-sign icon-large"></i>
+        Due to connectivity issues at the venue, we are currently unable to sell tickets online. All previous bookings still stand and tickets can still be purchased at the door. Sorry for the inconvenience.
+      </p> 
+    </div>
     <div class="alert-container">
       <% if @hide_alert != true %>
         <% flash.each do |key, msg| %>
