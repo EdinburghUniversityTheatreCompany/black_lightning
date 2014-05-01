@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130906133225) do
+ActiveRecord::Schema.define(:version => 20140501185205) do
 
   create_table "admin_answers", :force => true do |t|
     t.integer  "question_id"
@@ -200,6 +200,7 @@ ActiveRecord::Schema.define(:version => 20130906133225) do
     t.string   "author"
     t.string   "type"
     t.string   "price"
+    t.string   "spark_seat_slug"
   end
 
   add_index "events", ["season_id"], :name => "index_events_on_season_id"
@@ -348,7 +349,6 @@ ActiveRecord::Schema.define(:version => 20130906133225) do
     t.string   "avatar_content_type"
     t.integer  "avatar_file_size"
     t.datetime "avatar_updated_at"
-    t.string   "stripe_customer_id"
   end
 
   add_index "users", ["email"], :name => "index_users_on_email", :unique => true

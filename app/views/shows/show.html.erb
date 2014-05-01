@@ -95,6 +95,11 @@
         <h4>Tickets</h4>
         <%= xts_widget(@show.xts_id)%>
       <% end %>
+
+      <% if @show.spark_seat_slug %>
+        <h4>Tickets</h4>
+        <%= spark_seat_widget(@show.spark_seat_slug)%>
+      <% end %>
     </div>
   </div>
 
@@ -103,6 +108,11 @@
 
   <h4>Tickets</h4>
   <%= xts_widget(@show.xts_id)%>
+<% elsif @show.spark_seat_slug %>
+  <hr />
+
+  <h4>Tickets</h4>
+  <%= spark_seat_widget(@show.spark_seat_slug)%>
 <% end %>
 
 <% if @reviews.count > 0 then %>
