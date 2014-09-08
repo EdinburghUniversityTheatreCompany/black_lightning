@@ -2,7 +2,7 @@
 # Controller for Admin::Staffing. More details can be found there.
 ##
 class Admin::StaffingsController < AdminController
-
+  skip_before_filter :authorize_backend!
   load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up, :sign_up_confirm]
 
   ##
