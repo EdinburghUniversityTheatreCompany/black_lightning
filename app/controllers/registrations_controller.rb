@@ -10,7 +10,7 @@ class RegistrationsController < Devise::RegistrationsController
     @user = User.new(params[:user])
 
     if @membership_card.nil?
-      flash[:alert] = 'Card not found'
+      flash[:alert] = 'Card not found. It is possible that you have missed a digit, does your number start with 1?'
 
       respond_to do |format|
         format.html { render 'new' }
