@@ -25,6 +25,8 @@ class Ability
     #Alias grid to read
     alias_action :grid, :to => :read
 
+    alias_action :guidelines, to: :read
+
     if user then
 
       #All users can manage themselves.
