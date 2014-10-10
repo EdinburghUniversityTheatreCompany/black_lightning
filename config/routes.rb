@@ -5,6 +5,7 @@ ChaosRails::Application.routes.draw do
   get "seasons/show"
 
   devise_for :users, :controllers => { :registrations => "registrations" } do
+    get  'users/current'      => 'users#current'
     post 'users/stripe'       => 'registrations#create_with_stripe', as: :user_stripe_registration
 
     get  'users/reactivation' => 'registrations#reactivation', as: :user_reactivation
