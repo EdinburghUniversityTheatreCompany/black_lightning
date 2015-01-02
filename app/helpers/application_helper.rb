@@ -7,10 +7,10 @@ module ApplicationHelper
 
   def spark_seat_widget(spark_seat_slug)
     """
-      <div class=\"spark-container\" data-event-slug=\"#{spark_seat_slug}\">
+      <div class=\"spark-container\" data-event-slug=\"#{spark_seat_slug}\" data-load-styles=\"bootstrap2\">
         One moment please...
       </div>
-      <script src='https://www.sparkseat.com/assets/widget/loader.js'></script>
+      <script src='https://book.sparkseat.com/scripts/loader.js'></script>
     """.html_safe
   end
 
