@@ -10,7 +10,7 @@ module ApplicationHelper
       <div class=\"spark-container\" data-event-slug=\"#{spark_seat_slug}\" data-load-styles=\"bootstrap2\">
         One moment please...
       </div>
-      <script src='https://book.sparkseat.com/scripts/loader.js'></script>
+      <script src='https://book.sparkseat.com/scripts/loader.js' crossorigin='anonymous'></script>
     """.html_safe
   end
 
