@@ -20,6 +20,11 @@ Rails.application.config.assets.precompile += %w(
 
   admin.css
   admin/dashboard.css
+  admin/gallery_form.css
+  admin/jquery.gridster.min.css
+  admin/md_editor.css
+  admin/shows.css
+
   login.css
   jquery.lightbox-0.5.css
 )
