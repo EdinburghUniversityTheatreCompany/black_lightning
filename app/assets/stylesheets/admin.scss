@@ -1,22 +1,11 @@
-/*
- * This is a manifest file that'll be compiled into application.css, which will include all the files
- * listed below.
- *
- * Any CSS and SCSS file within this directory, lib/assets/stylesheets, vendor/assets/stylesheets,
- * or vendor/assets/stylesheets of plugins, if any, can be referenced here using a relative path.
- *
- * You're free to add application-wide styles to this file and they'll appear at the top of the
- * compiled file, but it's generally better to create a new file per style scope.
- *
- *= require_self
- *= require 'bootstrap-extensions'
- *= require font-awesome
- *= require bootstrap-switch
- *= require admin/md_editor.css
- *= require admin/jquery.gridster.min.css
- *= require admin/gallery_form.css
- *= require admin/shows.css
- */
+@import 'bootstrap-extensions';
+@import 'font-awesome-sprockets';
+@import 'font-awesome';
+@import 'bootstrap-switch';
+@import 'admin/md_editor.css';
+@import 'admin/jquery.gridster.min.css';
+@import 'admin/gallery_form.css';
+@import 'admin/shows.css'
 
 body {
     background-image: url('cream_dust.png');
