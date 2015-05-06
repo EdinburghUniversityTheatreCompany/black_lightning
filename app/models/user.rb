@@ -128,6 +128,6 @@ class User < ActiveRecord::Base
   # Returns true if the users first_name and last_name are set
   ##
   def has_basic_details?
-    return (first_name && last_name && notfirst_name.empty? || last_name.empty?)
+    return !first_name.blank? && !last_name.blank?
   end
 end

@@ -20,7 +20,7 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
 
   test 'should create admin_proposals_call_question_template' do
     # Remove the existing entry:
-    Admin::Proposals::CallQuestionTemplate.find(@template).destroy
+    Admin::Proposals::CallQuestionTemplate.find(@template.id).destroy
 
     assert_difference('Admin::Proposals::CallQuestionTemplate.count') do
       post :create, template: { name: @template.name }

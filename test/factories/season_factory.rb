@@ -24,7 +24,7 @@ FactoryGirl.define do
     start_date  { generate(:random_date) }
     end_date    { start_date.advance(days: rand(3..6)) }
 
-    ignore do
+    transient do
       event_count 0
       show_count  0
     end

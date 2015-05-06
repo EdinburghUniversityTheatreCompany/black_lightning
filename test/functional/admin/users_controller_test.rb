@@ -24,7 +24,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
   test 'should create user' do
     # Remove the existing user:
-    User.find(@user).destroy
+    User.find(@user.id).destroy
 
     assert_difference('User.count') do
       post :create, user: { email: @user.email }

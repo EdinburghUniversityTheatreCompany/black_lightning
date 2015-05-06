@@ -4,7 +4,7 @@ class Kramdown::Parser::BKramdown < Kramdown::Parser::Kramdown
     @options = options
    end
 
-  def handle_extension(name, opts, body, type)
+  def handle_extension(name, opts, body, type, _line_no)
     case name
     when 'captioned_image'
       div = Element.new(:html_element, 'div', { class: "captioned-image thumbnail #{opts['class']}" }, category: :block)

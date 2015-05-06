@@ -10,7 +10,7 @@ class ShowsController < ApplicationController
   # GET /shows.json
   ##
   def index
-    @shows = Show.current(order: 'start_date ASC').paginate(page: params[:page], per_page: 5).all
+    @shows = Show.current.order('start_date ASC').paginate(page: params[:page], per_page: 5).all
 
     @title = 'Shows'
 

@@ -5,8 +5,8 @@ class Admin::ResourcesControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test 'should get tech - lighting' do
-    get 'tech/lighting'
+  test 'should get tech resources' do
+    get 'admin/resources/tech'
     assert_response :success
   end
 end

@@ -25,7 +25,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
   test 'should create role' do
     # Remove the existing entry:
-    Role.find(@role).destroy
+    Role.find(@role.id).destroy
 
     assert_difference('Role.count') do
       post :create, role: { name: @role.name }

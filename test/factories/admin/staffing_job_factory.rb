@@ -17,8 +17,8 @@ FactoryGirl.define do
   factory :staffing_job, class: Admin::StaffingJob do
     name   { generate(:random_string) }
 
-    ignore do
-      staffed   { [true, false].sample }
+    transient do
+      staffed { [true, false].sample }
     end
 
     after(:create) do |job, evaluator|

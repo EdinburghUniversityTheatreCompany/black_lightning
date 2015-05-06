@@ -11,9 +11,6 @@
 /db/*.sqlite3
 /config/database.yml
 
-#Ignore specific development environment - required for imageMagick path amoung others.
-/config/environments/development.rb
-
 # Ignore all logfiles and tempfiles.
 /log/*.log
 /tmp

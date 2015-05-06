@@ -22,7 +22,7 @@ class Admin::EditableBlocksControllerTest < ActionController::TestCase
 
   test 'should create admin_editable_block' do
     # Remove the existing entry:
-    Admin::EditableBlock.find(@admin_editable_block).destroy
+    Admin::EditableBlock.find(@admin_editable_block.id).destroy
 
     assert_difference('Admin::EditableBlock.count') do
       post :create, admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }

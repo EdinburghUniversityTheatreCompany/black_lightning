@@ -11,14 +11,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20140501185205) do
+ActiveRecord::Schema.define(version: 20150506155951) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
     t.integer  "answerable_id",     limit: 4
     t.text     "answer",            limit: 65535
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                      null: false
+    t.datetime "updated_at",                      null: false
     t.string   "answerable_type",   limit: 255
     t.string   "file_file_name",    limit: 255
     t.string   "file_content_type", limit: 255
@@ -27,14 +27,15 @@ ActiveRecord::Schema.define(version: 20140501185205) do
   end
 
   add_index "admin_answers", ["answerable_id"], name: "index_admin_answers_on_answerable_id", using: :btree
+  add_index "admin_answers", ["answerable_id"], name: "index_admin_proposals_answers_on_proposal_id", using: :btree
   add_index "admin_answers", ["answerable_type"], name: "index_admin_answers_on_answerable_type", using: :btree
-  add_index "admin_answers", ["question_id"], name: "index_admin_answers_on_question_id", using: :btree
+  add_index "admin_answers", ["question_id"], name: "index_admin_proposals_answers_on_question_id", using: :btree
 
   create_table "admin_editable_blocks", force: :cascade do |t|
     t.string   "name",       limit: 255
     t.text     "content",    limit: 65535
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",               null: false
+    t.datetime "updated_at",               null: false
     t.boolean  "admin_page", limit: 1
     t.string   "group",      limit: 255
   end
@@ -42,8 +43,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
   create_table "admin_feedbacks", force: :cascade do |t|
     t.integer  "show_id",    limit: 4
     t.text     "body",       limit: 65535
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",               null: false
+    t.datetime "updated_at",               null: false
   end
 
   create_table "admin_permissions", force: :cascade do |t|
@@ -51,22 +52,29 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "description",   limit: 255
     t.string   "action",        limit: 255
     t.string   "subject_class", limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                null: false
+    t.datetime "updated_at",                null: false
   end
+
+  create_table "admin_permissions_roles", force: :cascade do |t|
+    t.integer "role_id",       limit: 4
+    t.integer "permission_id", limit: 4
+  end
+
+  add_index "admin_permissions_roles", ["role_id"], name: "index_admin_permissions_roles_on_role_id", using: :btree
 
   create_table "admin_proposals_call_question_templates", force: :cascade do |t|
     t.string   "name",       limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
   end
 
   create_table "admin_proposals_calls", force: :cascade do |t|
     t.datetime "deadline"
     t.string   "name",       limit: 255
     t.boolean  "open",       limit: 1
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
     t.boolean  "archived",   limit: 1
   end
 
@@ -75,8 +83,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "show_title",     limit: 255
     t.text     "publicity_text", limit: 65535
     t.text     "proposal_text",  limit: 65535
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                   null: false
+    t.datetime "updated_at",                   null: false
     t.boolean  "late",           limit: 1
     t.boolean  "approved",       limit: 1
     t.boolean  "successful",     limit: 1
@@ -86,22 +94,22 @@ ActiveRecord::Schema.define(version: 20140501185205) do
 
   create_table "admin_questionnaires_questionnaire_templates", force: :cascade do |t|
     t.string   "name",       limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
   end
 
   create_table "admin_questionnaires_questionnaires", force: :cascade do |t|
     t.integer  "show_id",    limit: 4
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
     t.string   "name",       limit: 255
   end
 
   create_table "admin_questions", force: :cascade do |t|
     t.text     "question_text",     limit: 65535
     t.string   "response_type",     limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                      null: false
+    t.datetime "updated_at",                      null: false
     t.integer  "questionable_id",   limit: 4
     t.string   "questionable_type", limit: 255
   end
@@ -113,26 +121,27 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "name",           limit: 255
     t.integer  "staffable_id",   limit: 4
     t.integer  "user_id",        limit: 4
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                 null: false
+    t.datetime "updated_at",                 null: false
     t.string   "staffable_type", limit: 255
   end
 
   add_index "admin_staffing_jobs", ["staffable_id"], name: "index_admin_staffing_jobs_on_staffable_id", using: :btree
+  add_index "admin_staffing_jobs", ["staffable_id"], name: "index_admin_staffing_jobs_on_staffing_id", using: :btree
   add_index "admin_staffing_jobs", ["staffable_type"], name: "index_admin_staffing_jobs_on_staffable_type", using: :btree
   add_index "admin_staffing_jobs", ["user_id"], name: "index_admin_staffing_jobs_on_user_id", using: :btree
 
   create_table "admin_staffing_templates", force: :cascade do |t|
     t.string   "name",       limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
   end
 
   create_table "admin_staffings", force: :cascade do |t|
     t.datetime "start_time"
     t.string   "show_title",      limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                  null: false
+    t.datetime "updated_at",                  null: false
     t.integer  "reminder_job_id", limit: 4
     t.datetime "end_time"
   end
@@ -146,8 +155,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "file_content_type", limit: 255
     t.integer  "file_file_size",    limit: 4
     t.datetime "file_updated_at"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                    null: false
+    t.datetime "updated_at",                    null: false
   end
 
   add_index "attachments", ["editable_block_id"], name: "index_attachments_on_editable_block_id", using: :btree
@@ -155,8 +164,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
   create_table "children_techies", force: :cascade do |t|
     t.integer  "techie_id",  limit: 4
     t.integer  "child_id",   limit: 4
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",           null: false
+    t.datetime "updated_at",           null: false
   end
 
   add_index "children_techies", ["techie_id"], name: "index_children_techies_on_techie_id", using: :btree
@@ -171,8 +180,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.datetime "failed_at"
     t.string   "locked_by",   limit: 255
     t.string   "queue",       limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                            null: false
+    t.datetime "updated_at",                            null: false
     t.string   "description", limit: 255
   end
 
@@ -184,8 +193,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "slug",               limit: 255
     t.text     "description",        limit: 65535
     t.integer  "xts_id",             limit: 4
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
     t.boolean  "is_public",          limit: 1
     t.string   "image_file_name",    limit: 255
     t.string   "image_content_type", limit: 255
@@ -210,8 +219,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.text     "body",       limit: 65535
     t.datetime "send_date"
     t.boolean  "draft",      limit: 1
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",               null: false
+    t.datetime "updated_at",               null: false
   end
 
   create_table "mass_mails_users", force: :cascade do |t|
@@ -222,8 +231,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
   create_table "membership_cards", force: :cascade do |t|
     t.string   "card_number", limit: 255
     t.integer  "user_id",     limit: 4
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",              null: false
+    t.datetime "updated_at",              null: false
   end
 
   create_table "news", force: :cascade do |t|
@@ -232,8 +241,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "slug",               limit: 255
     t.datetime "publish_date"
     t.boolean  "show_public",        limit: 1
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
     t.string   "image_file_name",    limit: 255
     t.string   "image_content_type", limit: 255
     t.integer  "image_file_size",    limit: 4
@@ -245,8 +254,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
 
   create_table "newsletter_subscribers", force: :cascade do |t|
     t.string   "email",      limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
   end
 
   create_table "opportunities", force: :cascade do |t|
@@ -257,16 +266,9 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.integer  "creator_id",  limit: 4
     t.integer  "approver_id", limit: 4
     t.date     "expiry_date"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                null: false
+    t.datetime "updated_at",                null: false
   end
-
-  create_table "permissions_roles", force: :cascade do |t|
-    t.integer "role_id",       limit: 4
-    t.integer "permission_id", limit: 4
-  end
-
-  add_index "permissions_roles", ["role_id"], name: "index_permissions_roles_on_role_id", using: :btree
 
   create_table "pictures", force: :cascade do |t|
     t.text     "description",        limit: 65535
@@ -276,8 +278,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "image_content_type", limit: 255
     t.integer  "image_file_size",    limit: 4
     t.datetime "image_updated_at"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
   end
 
   add_index "pictures", ["gallery_id"], name: "index_pictures_on_gallery_id", using: :btree
@@ -289,8 +291,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.text     "body",         limit: 65535
     t.decimal  "rating",                     precision: 2, scale: 1
     t.date     "review_date"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                                         null: false
+    t.datetime "updated_at",                                         null: false
     t.string   "organisation", limit: 255
   end
 
@@ -298,8 +300,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "name",          limit: 255
     t.integer  "resource_id",   limit: 4
     t.string   "resource_type", limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                null: false
+    t.datetime "updated_at",                null: false
   end
 
   add_index "roles", ["name", "resource_type", "resource_id"], name: "index_roles_on_name_and_resource_type_and_resource_id", using: :btree
@@ -309,8 +311,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "position",      limit: 255
     t.integer  "user_id",       limit: 4
     t.integer  "teamwork_id",   limit: 4
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                null: false
+    t.datetime "updated_at",                null: false
     t.string   "teamwork_type", limit: 255
     t.integer  "display_order", limit: 4
   end
@@ -321,8 +323,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
 
   create_table "techies", force: :cascade do |t|
     t.string   "name",       limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
   end
 
   create_table "users", force: :cascade do |t|
@@ -338,8 +340,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "last_sign_in_ip",        limit: 255
     t.string   "first_name",             limit: 255
     t.string   "last_name",              limit: 255
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                                          null: false
+    t.datetime "updated_at",                                          null: false
     t.string   "phone_number",           limit: 255
     t.boolean  "public_profile",         limit: 1,     default: true
     t.text     "bio",                    limit: 65535
@@ -368,8 +370,8 @@ ActiveRecord::Schema.define(version: 20140501185205) do
     t.string   "image_content_type", limit: 255
     t.integer  "image_file_size",    limit: 4
     t.datetime "image_updated_at"
-    t.datetime "created_at"
-    t.datetime "updated_at"
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
   end
 
 end

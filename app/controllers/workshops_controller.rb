@@ -10,7 +10,7 @@ class WorkshopsController < ApplicationController
   # GET /workshops.json
   ##
   def index
-    @workshops = Workshop.paginate(page: params[:page], per_page: 5).current(order: 'start_date ASC')
+    @workshops = Workshop.paginate(page: params[:page], per_page: 5).current.order('start_date ASC')
 
     @title = 'Workshops'
 

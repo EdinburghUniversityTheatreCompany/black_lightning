@@ -19,7 +19,7 @@
 
 FactoryGirl.define do
   factory :answer, class: Admin::Answer do
-    ignore do
+    transient do
       response_type 'Long Text'
     end
 

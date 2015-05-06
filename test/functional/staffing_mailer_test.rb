@@ -16,14 +16,14 @@ class StaffingMailerTest < ActionMailer::TestCase
 
     staffing.staffing_jobs.each do |job|
       if job.user
-        email = StaffingMailer.staffing_reminder(job).deliver
+        email = StaffingMailer.staffing_reminder(job).deliver_now
         assert !ActionMailer::Base.deliveries.empty?
 
         # Test the body of the sent email contains what we expect it to
         assert_equal [job.user.email], email.to
         assert_equal 'Bedlam Theatre Staffing', email.subject
       else
-        assert_nil StaffingMailer.staffing_reminder(job).deliver
+        assert_nil StaffingMailer.staffing_reminder(job).deliver_now
         assert     ActionMailer::Base.deliveries.empty?
       end
 

@@ -20,7 +20,7 @@ FactoryGirl.define do
     start_time   { generate(:random_date) }
     end_time     { start_time.advance(hours: rand(0.2..3.0)) }
 
-    ignore do
+    transient do
       job_count 0
     end
 

@@ -18,7 +18,7 @@ FactoryGirl.define do
     question_text :random_text
     response_type { ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File'].sample }
 
-    ignore do
+    transient do
       answered   { [true, false].sample }
       answerable nil
     end

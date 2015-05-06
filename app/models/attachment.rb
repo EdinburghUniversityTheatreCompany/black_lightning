@@ -45,6 +45,8 @@ class Attachment < ActiveRecord::Base
                       end
                     end)
 
+  do_not_validate_attachment_file_type :file
+
   attr_accessible :name, :file
 
   def slug

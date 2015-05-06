@@ -9,7 +9,7 @@ class ProposalsMailerTest < ActionMailer::TestCase
 
     # Send the email, then test that it got queued
     proposal.team_members.each do |team_member|
-      email = ProposalsMailer.new_proposal(proposal, creator, team_member).deliver
+      email = ProposalsMailer.new_proposal(proposal, creator, team_member).deliver_now
       assert !ActionMailer::Base.deliveries.empty?
 
       # Test the body of the sent email contains what we expect it to

@@ -14,7 +14,7 @@ class AddIndexes < ActiveRecord::Migration
 
     add_index :news,                :author_id
 
-    add_index :permissions_roles,   :role_id
+    add_index :admin_permissions_roles, :role_id
 
     add_index :pictures,            :gallery_id
     add_index :pictures,            :gallery_type

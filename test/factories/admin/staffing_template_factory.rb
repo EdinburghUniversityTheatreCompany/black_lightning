@@ -14,7 +14,7 @@ FactoryGirl.define do
   factory :staffing_template, class: Admin::StaffingTemplate do
     name   { generate(:random_string) }
 
-    ignore do
+    transient do
       job_count 0
     end
 

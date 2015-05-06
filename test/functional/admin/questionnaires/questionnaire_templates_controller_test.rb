@@ -20,7 +20,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesControllerTest < ActionContro
 
   test 'should create admin_questionnaires_questionnaire_template' do
     # Remove the existing entry:
-    Admin::Questionnaires::QuestionnaireTemplate.find(@template).destroy
+    Admin::Questionnaires::QuestionnaireTemplate.find(@template.id).destroy
 
     assert_difference('Admin::Questionnaires::QuestionnaireTemplate.count') do
       post :create, template: { name: @template.name }

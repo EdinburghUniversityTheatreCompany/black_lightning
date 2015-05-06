@@ -28,5 +28,7 @@ class Admin::Answer < ActiveRecord::Base
 
   has_attached_file :file, url: '/admin/answer/:id/file', path: ':rails_root/uploads/answers/:id_partition/:style.:extension'
 
+  do_not_validate_attachment_file_type :file
+
   attr_accessible :answer, :question_id, :file
 end

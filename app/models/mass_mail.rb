@@ -7,7 +7,7 @@ class MassMail < ActiveRecord::Base
   def send!
     recipients.each do |recipient|
       begin
-        MassMailer.send_mail(self, recipient).deliver
+        MassMailer.send_mail(self, recipient).deliver_now
       rescue => e
         Rails.logger.fatal e.message
       end

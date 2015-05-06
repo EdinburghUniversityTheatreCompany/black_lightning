@@ -96,7 +96,7 @@ class Admin::Staffing < ActiveRecord::Base
       next if job.user.nil?
       user = job.user
       begin
-        StaffingMailer.staffing_reminder(job).deliver
+        StaffingMailer.staffing_reminder(job).deliver_now
 
         if user.phone_number && (!user.phone_number.blank?)
           client.account.sms.messages.create(

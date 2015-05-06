@@ -19,7 +19,7 @@ FactoryGirl.define do
     open     { [true, false].sample }
     deadline { 5.days.from_now }
 
-    ignore do
+    transient do
       question_count 0
       proposal_count 0
     end
