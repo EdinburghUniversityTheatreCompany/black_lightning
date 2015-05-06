@@ -5,17 +5,13 @@ gem 'protected_attributes'
 
 gem 'mysql2'
 
-# Gems used only for assets and not required
-# in production environments by default.
-group :assets do
-  gem 'sass-rails',   '~> 5.0.0'
-  gem 'uglifier', '>= 1.3.0'
+gem 'sass-rails',   '~> 5.0.0'
+gem 'uglifier', '>= 1.3.0'
 
-  gem 'coffee-rails'
-  gem 'jquery-rails'
-  gem 'bootstrap-sass', '< 3.0'
-  gem 'font-awesome-sass'
-end
+gem 'coffee-rails'
+gem 'jquery-rails'
+gem 'bootstrap-sass', '< 3.0'
+gem 'font-awesome-sass'
 
 gem 'simple_form'
 gem 'devise'

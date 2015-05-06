@@ -1,22 +1,9 @@
-require 'delayed/recipes'
-require 'airbrake/capistrano'
-require 'rvm/capistrano'
+server 'pineapple.eusa.ed.ac.uk', roles: %w(web app db), user: fetch(:user), password: fetch(:password)
 
-role :web, 'pineapple.eusa.ed.ac.uk'
-role :app, 'pineapple.eusa.ed.ac.uk'
-role :db, 'pineapple.eusa.ed.ac.uk', primary: true
-
-before 'delayed_job:stop',    'deploy:chmoddj'
-before 'delayed_job:start',   'deploy:chmoddj'
-before 'delayed_job:restart', 'deploy:chmoddj'
-
-after 'deploy:stop',    'delayed_job:stop'
-after 'deploy:start',   'delayed_job:start'
-after 'deploy:restart', 'delayed_job:restart'
-
+set :stage, :eusa
 set :deploy_to, '/srv/black_lightning'
 
-set :rvm_ruby_string, '2.0.0@blacklightning'
+set :rvm_ruby_string, '2.2.1@blacklightning'
 set :rvm_type, :system
 set :rvm_path, '/usr/local/rvm'
 
@@ -24,14 +11,16 @@ set :bundle_flags, '--quiet'
 set :bundle_dir, ''
 
 namespace :deploy do
-  task :start do; end
-  task :stop do; end
-  task :restart, roles: :app, except: { no_release: true } do
-    run "touch #{File.join(current_path, 'tmp', 'restart.txt')}"
-  end
-
   desc 'chmod delayed_job script'
   task :chmoddj do
-    run "chmod 775 #{current_path}/script/delayed_job"
+    on roles(:app), in: :sequence, wait: 5 do
+      within release_path do
+        execute :chmod, '775', 'script/delayed_job'
+      end
+    end
   end
 end
+
+before 'delayed_job:restart', 'deploy:chmoddj'
+
+after 'deploy:restart', 'delayed_job:restart'
