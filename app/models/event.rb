@@ -43,10 +43,10 @@ class Event < ActiveRecord::Base
   # Scopes #
 
   # Usually order events with the earliest at the top.
-  default_scope order("start_date ASC")
+  default_scope -> { order("start_date ASC") }
 
-  scope :current, where(["end_date >= ? AND is_public = ?", Date.current, true])
-  scope :future, where(["end_date >= ?", Date.current])
+  scope :current, -> { where(["end_date >= ? AND is_public = ?", Date.current, true]) }
+  scope :future, -> { where(["end_date >= ?", Date.current]) }
 
   def self.current_slideshow
     return unscoped.where(["end_date >= ? AND is_public = ?", Date.current, true]).order("end_date ASC")

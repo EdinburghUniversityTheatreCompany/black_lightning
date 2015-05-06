@@ -24,16 +24,16 @@ ChaosRails::Application.routes.draw do
     end
   end
 
-  get   'events/xts/:id' => 'events#find_by_xts_id'
-  match 'attachments/:slug(/:style)' => 'attachments#show'
+  get 'events/xts/:id' => 'events#find_by_xts_id'
+  get 'attachments/:slug(/:style)' => 'attachments#show'
 
-  match 'admin/' => 'admin#index'
+  get 'admin/' => 'admin#index'
   namespace :admin do
-    #The resources pages:
-    match 'resources/*action' => 'resources', :as => :resources
+    # The resources pages:
+    get 'resources/*action' => 'resources', :as => :resources
 
-    #Answer files
-    match 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
+    # Answer files
+    get 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
 
     resources :shows do
       resources :feedbacks, :except => [:show]
@@ -79,8 +79,8 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :roles
-    get '/permissions/grid' => 'permissions#grid', :as => :permissions
-    post '/permissions/grid' => 'permissions#update_grid', :as => :permissions
+    get  '/permissions/grid' => 'permissions#grid', :as => :permissions
+    post '/permissions/grid' => 'permissions#update_grid', :as => :update_permissions
 
     resources :techie_families do
       collection do
@@ -102,10 +102,10 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
-    match '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
+    get '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
+    get '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
 
-    match '/proposals' => redirect('/admin/proposals/calls')
+    get '/proposals' => redirect('/admin/proposals/calls')
     namespace :proposals do
       resources :calls do
         member do
@@ -121,7 +121,7 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      match '/about' => 'proposals#about'
+      get '/about' => 'proposals#about'
       resources :call_question_templates
     end
 
@@ -136,10 +136,10 @@ ChaosRails::Application.routes.draw do
       resources :questionnaire_templates
     end
 
-    match '/reports/' => 'reports#index', :as => "reports"
-    match '/reports/:action', :controller => 'reports', :as => "report"
+    get '/reports/' => 'reports#index', :as => "reports"
+    get '/reports/:action', :controller => 'reports', :as => "report"
 
-    match 'jobs/:action' => 'job_control', :as => "jobs"
+    get 'jobs/:action' => 'job_control', :as => "jobs"
 
     get "/help/:action" => 'help', :as => "help"
   end
@@ -155,18 +155,18 @@ ChaosRails::Application.routes.draw do
 
   post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
 
-  match 'about' => 'about#index', :as => :about_index
-  match 'about/*action' => 'about', :as => :about
+  get 'about' => 'about#index', :as => :about_index
+  get 'about/*action' => 'about', :as => :about
 
-  match 'getinvolved' => 'get_involved#index', :as => :get_involved_index
-  match 'getinvolved/*action' => 'get_involved', :as => :get_involved
+  get 'getinvolved' => 'get_involved#index', :as => :get_involved_index
+  get 'getinvolved/*action' => 'get_involved', :as => :get_involved
 
   # ERROR PAGES - match to ensure correct response code is sent
-  match '/404' => 'static#render_404'
-  match '/500' => 'static#render_500'
+  get '/404' => 'static#render_404'
+  get '/500' => 'static#render_500'
 
-  match '/:id' => 'seasons#show', :constraints => ExistingSeasonConstraint.new
-  match '*action' => 'static', :as => :static
+  get '/:id' => 'seasons#show', :constraints => ExistingSeasonConstraint.new
+  get '*action' => 'static', :as => :static
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

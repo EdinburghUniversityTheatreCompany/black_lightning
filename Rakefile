@@ -8,6 +8,3 @@ ChaosRails::Application.load_tasks
 
 require 'rake/dsl_definition'
 require 'rubygems'
-
-gem 'ci_reporter'
-require 'ci/reporter/rake/minitest'

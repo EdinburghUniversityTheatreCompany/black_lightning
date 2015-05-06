@@ -6,5 +6,5 @@ class Opportunity < ActiveRecord::Base
 
   validates :expiry_date, :presence => true
 
-  scope :approved, where("approved = true AND expiry_date > ? ", Time.now).order("expiry_date ASC")
+  scope :approved, -> { where("approved = true AND expiry_date > ? ", Time.now).order("expiry_date ASC") }
 end

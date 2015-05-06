@@ -20,7 +20,7 @@ class Admin::Proposals::Call < ActiveRecord::Base
   has_many :questions, :as => :questionable, :dependent => :destroy
   has_many :proposals, :class_name => "Admin::Proposals::Proposal"
 
-  scope :open, :conditions => { :open => true }
+  scope :open, -> { where(open: true) }
 
   accepts_nested_attributes_for :questions, :reject_if => :all_blank, :allow_destroy => true
 

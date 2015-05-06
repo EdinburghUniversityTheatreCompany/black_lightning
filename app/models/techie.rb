@@ -25,7 +25,7 @@ class Techie < ActiveRecord::Base
 
   attr_accessible :name, :children, :parents, :children_attributes, :parents_attributes
 
-  default_scope order("name ASC")
+  default_scope -> { order("name ASC") }
 
   # Without these, this was breaking - I don't know why.
   def children_attributes=(attributes)

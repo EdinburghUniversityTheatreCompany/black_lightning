@@ -44,10 +44,10 @@ class News < ActiveRecord::Base
   validates :slug, :presence => true, :uniqueness => true
 
   # News should always be ordered by publish_date DESC
-  default_scope order("publish_date DESC")
+  default_scope -> { order("publish_date DESC") }
 
-  scope :current, where(["publish_date <= ?", Time.current])
-  scope :public, where(["publish_date <= ? AND show_public = ?", Time.current, true])
+  scope :current, -> { where(["publish_date <= ?", Time.current]) }
+  scope :for_public, -> { where(["publish_date <= ? AND show_public = ?", Time.current, true]) }
 
   has_attached_file :image,
                     :styles => { :medium => "576x300#", :thumb => "192x100#" },

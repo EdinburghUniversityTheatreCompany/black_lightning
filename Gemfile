@@ -1,35 +1,28 @@
 source 'http://rubygems.org'
 
-gem 'rails', '3.2.14'
-
-# Bundle edge Rails instead:
-# gem 'rails', :git => 'git://github.com/rails/rails.git'
+gem 'rails', '4.2.1'
+gem 'protected_attributes'
 
 gem 'mysql2'
 
 # Gems used only for assets and not required
 # in production environments by default.
 group :assets do
-  gem 'sass-rails',   '~> 3.2.3'
-  gem 'coffee-rails', '~> 3.2.1'
+  gem 'sass-rails',   '~> 5.0.0'
+  gem 'uglifier', '>= 1.3.0'
 
-  # See https://github.com/sstephenson/execjs#readme for more supported runtimes
-  # gem 'therubyracer', :platforms => :ruby
-
-  gem 'uglifier', '>= 1.0.3'
-  gem 'turbo-sprockets-rails3'
+  gem 'coffee-rails'
+  gem 'jquery-rails'
+  gem 'bootstrap-sass', '< 3.0'
+  gem 'font-awesome-rails'
 end
-
-gem 'jquery-rails'
-gem 'bootstrap-sass'
-gem 'font-awesome-rails'
 
 gem 'simple_form'
 gem 'devise'
 gem 'cancan'
 gem 'rolify'
 
-gem 'will_paginate', '~> 3.0'
+gem 'will_paginate'
 gem 'kramdown'
 gem 'paperclip'
 gem 'nested_form'
@@ -53,40 +46,24 @@ gem 'airbrake'
 
 gem 'rack-cors'
 
-# gem 'oink'
+group :development, :test do
+  gem 'byebug'
+  gem 'spring'
 
-group :development do
-  gem 'rails-footnotes'
-  gem 'reek'
+  gem 'better_errors'
+  gem 'binding_of_caller'
+
+  gem 'rdoc'
 end
 
-gem 'ci_reporter'
 group :test do
   gem 'simplecov'
   gem 'simplecov-rcov'
-  gem 'factory_girl_rails', '~> 4.0'
+  gem 'factory_girl_rails'
   gem 'faker'
   gem 'ruby-prof'
   gem 'html_acceptance'
 end
 
-gem 'unicorn'
-
-# To use ActiveModel has_secure_password
-# gem 'bcrypt-ruby', '~> 3.0.0'
-
-# To use Jbuilder templates for JSON
-# gem 'jbuilder'
-
-# Use unicorn as the app server
-# gem 'unicorn'
-
 # Deploy with Capistrano
 gem 'capistrano'
-# and rvm
-gem 'rvm-capistrano'
-# and unicorn
-gem 'capistrano-unicorn', :git => 'https://github.com/sosedoff/capistrano-unicorn.git', :branch => 'master', :require => false
-
-# To use debugger
-# gem 'debugger'

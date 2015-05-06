@@ -29,7 +29,7 @@ class User < ActiveRecord::Base
   before_save :unify_numbers
   rolify
 
-  default_scope order("last_name ASC")
+  default_scope -> { order("last_name ASC") }
 
   def self.by_first_name
     unscoped.order("first_name ASC")
@@ -46,7 +46,7 @@ class User < ActiveRecord::Base
   # Don't validate the password presence, so we can set it randomly for new users.
   # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
   validates :email, :presence => true, uniqueness: true
-  validates :phone_number, :allow_blank => true, :format => { :with => /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})$/, :message => "Please enter a valid mobile number" }
+  validates :phone_number, :allow_blank => true, :format => { :with => /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})\z/, :message => "Please enter a valid mobile number" }
 
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true

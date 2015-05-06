@@ -1,6 +1,4 @@
-﻿Rake::Task["doc:app"].clear
-Rake::Task["doc/app"].clear
-Rake::Task["doc/app/index.html"].clear
+require 'rdoc/task'
 
 namespace :doc do
     task :todo do
@@ -34,7 +32,7 @@ namespace :doc do
       end
     end
 
-    Rake::RDocTask.new('app') do |rdoc|
+    RDoc::Task.new('app') do |rdoc|
         Rake::Task["doc:todo"].invoke
 
         rdoc.rdoc_dir = 'doc/app'

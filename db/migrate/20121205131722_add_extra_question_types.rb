@@ -3,9 +3,9 @@ class AddExtraQuestionTypes < ActiveRecord::Migration
     add_attachment :admin_answers, :file
 
     say_with_time("Updating question response_types to new styles") do
-      ::Admin::Question.update_all("admin_questions.response_type = 'Short Text'", "admin_questions.response_type = 'String'")
-      ::Admin::Question.update_all("admin_questions.response_type = 'Long Text'", "admin_questions.response_type = 'Text'")
-      ::Admin::Question.update_all("admin_questions.response_type = 'Number'", "admin_questions.response_type = 'Integer'")
+      ::Admin::Question.where("response_type": 'String').update_all("response_type": 'Short Text')
+      ::Admin::Question.where("response_type": 'Text').update_all("response_type": 'Long Text')
+      ::Admin::Question.where("response_type": 'Integer').update_all("response_type": 'Number')
     end
   end
 
@@ -13,9 +13,9 @@ class AddExtraQuestionTypes < ActiveRecord::Migration
     remove_attachment :admin_answers, :file
 
     say_with_time("Reverting question response_types to old styles") do
-      ::Admin::Question.update_all("admin_questions.response_type = 'String'", "admin_questions.response_type = 'Short Text'")
-      ::Admin::Question.update_all("admin_questions.response_type = 'Text'", "admin_questions.response_type = 'Long Text'")
-      ::Admin::Question.update_all("admin_questions.response_type = 'Integer'", "admin_questions.response_type = 'Number'")
+      ::Admin::Question.where("response_type": 'Short Text').update_all("response_type": 'String')
+      ::Admin::Question.where("response_type": 'Long Text').update_all("response_type": 'Text')
+      ::Admin::Question.where("response_type": 'Number').update_all("response_type": 'Integer')
     end
   end
 end
