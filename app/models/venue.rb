@@ -31,19 +31,19 @@
 ##
 class Venue < ActiveRecord::Base
   def to_param
-    "#{id}-#{name.gsub(/\s+/,'-').gsub(/[^a-zA-Z0-9\-]/,'').downcase.gsub(/\-{2,}/,'-')}"
+    "#{id}-#{name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-')}"
   end
 
   has_many :shows
-  has_many :pictures, :as => :gallery
+  has_many :pictures, as: :gallery
 
   has_attached_file :image,
-                    :styles => { :thumb => "192x100#", :slideshow => "960x500#" },
-                    :convert_options => { :thumb => "-quality 75 -strip" }
+                    styles: { thumb: '192x100#', slideshow: '960x500#' },
+                    convert_options: { thumb: '-quality 75 -strip' }
 
-  validates :name, :presence => true
+  validates :name, presence: true
 
-  accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
+  accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
 
   attr_accessible :description, :image, :location, :name, :tagline, :pictures, :pictures_attributes
 end

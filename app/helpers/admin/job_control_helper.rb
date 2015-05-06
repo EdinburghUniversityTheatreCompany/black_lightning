@@ -9,11 +9,9 @@ module Admin::JobControlHelper
   # Fetches the Delayed::Job model
   ##
   def delayed_job
-    begin
-      Delayed::Job
-    rescue
-      false
-    end
+    Delayed::Job
+  rescue
+    false
   end
 
   ##
@@ -55,5 +53,4 @@ module Admin::JobControlHelper
   rescue Errno::ENOENT, Errno::ESRCH   # file or process not found
     false
   end
-
 end

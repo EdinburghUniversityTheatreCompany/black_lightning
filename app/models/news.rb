@@ -37,22 +37,22 @@ class News < ActiveRecord::Base
     "#{id}-#{slug}"
   end
 
-  belongs_to :author, :class_name => "User"
+  belongs_to :author, class_name: 'User'
 
-  validates :title, :presence => true
-  validates :publish_date, :presence => true
-  validates :slug, :presence => true, :uniqueness => true
+  validates :title, presence: true
+  validates :publish_date, presence: true
+  validates :slug, presence: true, uniqueness: true
 
   # News should always be ordered by publish_date DESC
-  default_scope -> { order("publish_date DESC") }
+  default_scope -> { order('publish_date DESC') }
 
-  scope :current, -> { where(["publish_date <= ?", Time.current]) }
-  scope :for_public, -> { where(["publish_date <= ? AND show_public = ?", Time.current, true]) }
+  scope :current, -> { where(['publish_date <= ?', Time.current]) }
+  scope :for_public, -> { where(['publish_date <= ? AND show_public = ?', Time.current, true]) }
 
   has_attached_file :image,
-                    :styles => { :medium => "576x300#", :thumb => "192x100#" },
-                    :convert_options => { :medium => "-strip", :thumb => "-quality 75 -strip" },
-                    :default_url => :default_image
+                    styles: { medium: '576x300#', thumb: '192x100#' },
+                    convert_options: { medium: '-strip', thumb: '-quality 75 -strip' },
+                    default_url: :default_image
 
   attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
 
@@ -62,7 +62,7 @@ class News < ActiveRecord::Base
   # NOTE: The first image must have filename 0.png - remember that in modulo 2 (for example), valid numbers are 0,1 (not 2)!
   ##
   def default_image
-    number = self.id.modulo(2)
+    number = id.modulo(2)
     return "/images/generic_news/:style/#{number}.png"
   end
 end

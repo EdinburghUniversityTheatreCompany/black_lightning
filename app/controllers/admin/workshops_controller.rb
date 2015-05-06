@@ -1,10 +1,9 @@
 class Admin::WorkshopsController < AdminController
-
-  load_and_authorize_resource :find_by => :slug
+  load_and_authorize_resource find_by: :slug
 
   def index
-    @title = "Workshops"
-    @workshops = Workshop.paginate(:page => params[:page], :per_page => 15).all
+    @title = 'Workshops'
+    @workshops = Workshop.paginate(page: params[:page], per_page: 15).all
   end
 
   def show
@@ -15,7 +14,7 @@ class Admin::WorkshopsController < AdminController
   def new
     @workshop = Workshop.new
     @users = User.by_first_name.all
-    @title = "New Workshop"
+    @title = 'New Workshop'
   end
 
   def create
@@ -24,9 +23,9 @@ class Admin::WorkshopsController < AdminController
 
     respond_to do |format|
       if @workshop.save
-        format.html {redirect_to admin_workshop_url(@workshop), notice: 'Workshop was successfully created.'}
+        format.html { redirect_to admin_workshop_url(@workshop), notice: 'Workshop was successfully created.' }
       else
-        format.html {render "new"}
+        format.html { render 'new' }
       end
     end
   end
@@ -45,7 +44,7 @@ class Admin::WorkshopsController < AdminController
       if @workshop.update_attributes(params[:workshop])
         format.html { redirect_to admin_workshop_url(@workshop), notice: 'Workshop was successfully updated.' }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
       end
     end
   end
@@ -59,5 +58,4 @@ class Admin::WorkshopsController < AdminController
       format.json { head :no_content }
     end
   end
-
 end

@@ -2,13 +2,13 @@ module StarHelper
   def star_rating(rating)
     half_star = rating.to_i != rating
 
-    stars = ""
+    stars = ''
 
     for i in 1..rating.floor
       stars << '<i class="icon-star"></i>'
     end
 
-    if half_star then
+    if half_star
       stars << '<i class="icon-star-half"></i>'
     end
 

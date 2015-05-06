@@ -16,7 +16,5 @@
 #++
 ##
 class Season < Event
-
   has_many :events
-
 end

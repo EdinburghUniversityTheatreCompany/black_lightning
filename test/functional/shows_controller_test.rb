@@ -1,8 +1,7 @@
 require 'test_helper'
 
 class ShowsControllerTest < ActionController::TestCase
-
-  test "should get index" do
+  test 'should get index' do
     FactoryGirl.create_list(:show, 10)
 
     get :index
@@ -10,11 +9,10 @@ class ShowsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:shows)
   end
 
-  test "should get show" do
+  test 'should get show' do
     @show = FactoryGirl.create(:show)
 
     get :show, id: @show
     assert_response :success
   end
-
 end

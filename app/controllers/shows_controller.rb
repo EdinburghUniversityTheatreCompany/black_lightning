@@ -4,16 +4,15 @@
 # Uses Will_Paginate for pagination.
 ##
 class ShowsController < ApplicationController
-
   ##
   # GET /shows
   #
   # GET /shows.json
   ##
   def index
-    @shows = Show.current(:order => "start_date ASC").paginate(:page => params[:page], :per_page => 5).all
+    @shows = Show.current(order: 'start_date ASC').paginate(page: params[:page], per_page: 5).all
 
-    @title = "Shows"
+    @title = 'Shows'
 
     respond_to do |format|
       format.html # index.html.erb
@@ -35,11 +34,11 @@ class ShowsController < ApplicationController
 
     @title = @show.name
     @meta[:description] = @show.description
-    @meta["og:image"] = [@base_url + @show.image.url(:medium)] + @pictures.collect{|p| @base_url + p.image.url }
+    @meta['og:image'] = [@base_url + @show.image.url(:medium)] + @pictures.collect { |p| @base_url + p.image.url }
 
     respond_to do |format|
       format.html
-      format.json { render json: @show, methods: [:thumb_image, :slideshow_image], include: [ { pictures: { methods: [:thumb_url, :image_url] } }, team_members: { methods: [:user_name] }] }
+      format.json { render json: @show, methods: [:thumb_image, :slideshow_image], include: [{ pictures: { methods: [:thumb_url, :image_url] } }, team_members: { methods: [:user_name] }] }
     end
   end
 end

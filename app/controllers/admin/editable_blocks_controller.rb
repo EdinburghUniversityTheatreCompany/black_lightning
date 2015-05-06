@@ -3,8 +3,7 @@
 ##
 
 class Admin::EditableBlocksController < AdminController
-
-  load_and_authorize_resource :class => Admin::EditableBlock
+  load_and_authorize_resource class: Admin::EditableBlock
 
   ##
   # GET /admin/editable_blocks
@@ -12,8 +11,8 @@ class Admin::EditableBlocksController < AdminController
   # GET /admin/editable_blocks.json
   ##
   def index
-    @admin_editable_blocks = Admin::EditableBlock.all.group_by { |e| e.group }
-    @title = "Editable Blocks"
+    @admin_editable_blocks = Admin::EditableBlock.all.group_by(&:group)
+    @title = 'Editable Blocks'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @admin_editable_blocks }
@@ -29,7 +28,7 @@ class Admin::EditableBlocksController < AdminController
     @admin_editable_block = Admin::EditableBlock.new
     @admin_editable_block.name = params[:name]
 
-    @title = "New Editable Block"
+    @title = 'New Editable Block'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @admin_editable_block }
@@ -57,7 +56,7 @@ class Admin::EditableBlocksController < AdminController
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully created.' }
         format.json { render json: admin_editable_blocks_url, status: :created, location: @admin_editable_block }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end
@@ -76,7 +75,7 @@ class Admin::EditableBlocksController < AdminController
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end

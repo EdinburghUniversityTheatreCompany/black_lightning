@@ -43,46 +43,45 @@ class Event < ActiveRecord::Base
   # Scopes #
 
   # Usually order events with the earliest at the top.
-  default_scope -> { order("start_date ASC") }
+  default_scope -> { order('start_date ASC') }
 
-  scope :current, -> { where(["end_date >= ? AND is_public = ?", Date.current, true]) }
-  scope :future, -> { where(["end_date >= ?", Date.current]) }
+  scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
+  scope :future, -> { where(['end_date >= ?', Date.current]) }
 
   def self.current_slideshow
-    return unscoped.where(["end_date >= ? AND is_public = ?", Date.current, true]).order("end_date ASC")
+    return unscoped.where(['end_date >= ? AND is_public = ?', Date.current, true]).order('end_date ASC')
   end
 
   # Relationships #
 
-  has_many :team_members, :class_name => "::TeamMember", :as => :teamwork, :dependent => :destroy
-  has_many :users, :through => :team_members
-  has_many :pictures, :as => :gallery, :dependent => :destroy
+  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :destroy
+  has_many :users, through: :team_members
+  has_many :pictures, as: :gallery, dependent: :destroy
 
   belongs_to :venue
   belongs_to :season
 
-  accepts_nested_attributes_for :team_members, :reject_if => :all_blank, :allow_destroy => true
-  accepts_nested_attributes_for :pictures, :reject_if => :all_blank, :allow_destroy => true
-
+  accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
+  accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
 
   # Validations #
 
-  #Do not validate start_date, end_date or tag_line, as these will cause the proposal to show conversion to fail.
-  validates :name, :description, :presence => true
-  validates :slug, :presence => true, :uniqueness => true
+  # Do not validate start_date, end_date or tag_line, as these will cause the proposal to show conversion to fail.
+  validates :name, :description, presence: true
+  validates :slug, presence: true, uniqueness: true
 
   # Paperclip #
   has_attached_file :image,
-                    :styles => {:medium => "576x300#", :thumb => "192x100#", :slideshow => "960x500#" },
-                    :convert_options => { :medium => "-strip", :thumb => "-quality 75 -strip" },
-                    :default_url => :default_image
+                    styles: { medium: '576x300#', thumb: '192x100#', slideshow: '960x500#' },
+                    convert_options: { medium: '-strip', thumb: '-quality 75 -strip' },
+                    default_url: :default_image
 
   # Accessible Attributes #
   attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :price, :spark_seat_slug
 
   # Returns the last show to have finished.
   def self.last_show
-    return self.where(["end_date < ? AND is_public = ?", Date.current, true]).last
+    return where(['end_date < ? AND is_public = ?', Date.current, true]).last
   end
 
   ##
@@ -91,7 +90,7 @@ class Event < ActiveRecord::Base
   # NOTE: The first image must have filename 0.png - remember that in modulo 4 (for example), valid numbers are 0,1,2,3 (not 4)!
   ##
   def default_image
-    number = self.id.modulo(4)
+    number = id.modulo(4)
     return "/images/generic_shows/:style/#{number}.png"
   end
 
@@ -115,15 +114,15 @@ class Event < ActiveRecord::Base
   # The date format used is the :long format, defined in /config/locales/en.yml
   ##
   def date_range(format = :long)
-    if not self.start_date.presence then
+    unless start_date.presence
       return
     end
 
-    date = I18n.l(self.start_date, :format => format)
+    date = I18n.l(start_date, format: format)
 
-    if self.end_date and not self.start_date == self.end_date then
-        date << " - "
-        date << I18n.l(self.end_date, :format => format)
+    if end_date and not start_date == end_date
+      date << ' - '
+      date << I18n.l(end_date, format: format)
     end
 
     return date
@@ -132,16 +131,15 @@ class Event < ActiveRecord::Base
   def as_json(options = {})
     defaults = {
       include: [
-                 :venue
-               ]
+        :venue
+      ]
     }
 
-    options = options.merge(defaults) do |key, oldval, newval|
+    options = options.merge(defaults) do |_key, oldval, newval|
       # http://stackoverflow.com/a/11171921
       (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
     end
 
     super(options)
   end
-
 end

@@ -20,12 +20,12 @@
 #++
 ##
 class TeamMember < ActiveRecord::Base
-  default_scope -> { order("display_order ASC") }
+  default_scope -> { order('display_order ASC') }
 
-  belongs_to :teamwork, :polymorphic => true
+  belongs_to :teamwork, polymorphic: true
   belongs_to :user
 
-  validates :position, :user, :presence => true
+  validates :position, :user, presence: true
 
   delegate :name, to: :user, prefix: true
 

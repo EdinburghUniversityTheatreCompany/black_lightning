@@ -18,26 +18,26 @@
 #++
 ##
 class Techie < ActiveRecord::Base
-  has_and_belongs_to_many :children, :class_name => "Techie", :foreign_key => "techie_id", :association_foreign_key => "child_id", :join_table => "children_techies"
-  has_and_belongs_to_many :parents, :class_name => "Techie", :foreign_key => "child_id", :association_foreign_key => "techie_id", :join_table => "children_techies"
+  has_and_belongs_to_many :children, class_name: 'Techie', foreign_key: 'techie_id', association_foreign_key: 'child_id', join_table: 'children_techies'
+  has_and_belongs_to_many :parents, class_name: 'Techie', foreign_key: 'child_id', association_foreign_key: 'techie_id', join_table: 'children_techies'
 
-  accepts_nested_attributes_for :children, :parents, :reject_if => :all_blank, :allow_destroy => true
+  accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
   attr_accessible :name, :children, :parents, :children_attributes, :parents_attributes
 
-  default_scope -> { order("name ASC") }
+  default_scope -> { order('name ASC') }
 
   # Without these, this was breaking - I don't know why.
   def children_attributes=(attributes)
     attributes.each do |attribute|
       techie = Techie.find(attribute[1][:id])
 
-      unless self.children.all.include?(techie)
-        self.children << techie
+      unless children.all.include?(techie)
+        children << techie
       end
 
-      if attribute[1][:_destroy] == "1"
-        self.children.delete(techie)
+      if attribute[1][:_destroy] == '1'
+        children.delete(techie)
       end
     end
   end
@@ -47,12 +47,12 @@ class Techie < ActiveRecord::Base
       Rails.logger.debug attribute
       techie = Techie.find(attribute[1][:id])
 
-      unless self.parents.all.include?(techie)
-        self.parents << techie
+      unless parents.all.include?(techie)
+        parents << techie
       end
 
-      if attribute[1][:_destroy] == "1"
-        self.parents.delete(techie)
+      if attribute[1][:_destroy] == '1'
+        parents.delete(techie)
       end
     end
   end

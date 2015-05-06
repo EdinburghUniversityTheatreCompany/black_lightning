@@ -5,19 +5,18 @@
 ##
 
 class NewsController < ApplicationController
-
   ##
   # GET /news
   #
   # GET /news.json
   ##
   def index
-    @news = News.paginate(:page => params[:page], :per_page => 5).for_public
-    @title = "News"
+    @news = News.paginate(page: params[:page], per_page: 5).for_public
+    @title = 'News'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @news }
-      format.rss { render :layout => false }
+      format.rss { render layout: false }
     end
   end
 

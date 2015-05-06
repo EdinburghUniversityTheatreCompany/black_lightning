@@ -17,10 +17,10 @@
 #++
 ##
 class Admin::StaffingJob < ActiveRecord::Base
-  belongs_to :staffable, :polymorphic => true
+  belongs_to :staffable, polymorphic: true
   belongs_to :user
 
-  validates :name, :presence => true
+  validates :name, presence: true
 
   attr_accessible :name, :user, :user_id
 

@@ -1,14 +1,13 @@
 class Admin::ShowsController < AdminController
-
-  load_and_authorize_resource :find_by => :slug
+  load_and_authorize_resource find_by: :slug
 
   def index
-    @title = "Shows"
+    @title = 'Shows'
 
     @q = Show.unscoped.search(params[:q])
     @shows = @q.result(distinct: true)
-    @shows = @shows.order("start_date DESC")
-    @shows = @shows.paginate(:page => params[:page], :per_page => 15).all
+    @shows = @shows.order('start_date DESC')
+    @shows = @shows.paginate(page: params[:page], per_page: 15).all
   end
 
   def show
@@ -19,7 +18,7 @@ class Admin::ShowsController < AdminController
   def new
     @show = Show.new
     @users = User.all
-    @title = "New Show"
+    @title = 'New Show'
   end
 
   def create
@@ -28,9 +27,9 @@ class Admin::ShowsController < AdminController
 
     respond_to do |format|
       if @show.save
-        format.html {redirect_to admin_show_url(@show), notice: 'Show was successfully created.'}
+        format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully created.' }
       else
-        format.html {render "new"}
+        format.html { render 'new' }
       end
     end
   end
@@ -49,7 +48,7 @@ class Admin::ShowsController < AdminController
       if @show.update_attributes(params[:show])
         format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
       end
     end
   end
@@ -82,7 +81,7 @@ class Admin::ShowsController < AdminController
 
     # ?uniq=1355693791607&includedatetimes=true&agents=boxoffice:9n2nf92kt04&agents=boxoffice:9n2nf92kt04|craig:insecure
 
-    xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/tickets/getshows?uniq=#{uniq}&includedatetimes=true&agents=#{username.to_s}:#{password.to_s}"
+    xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/tickets/getshows?uniq=#{uniq}&includedatetimes=true&agents=#{username}:#{password}"
 
     uri = URI.parse(xts_api_uri)
 
@@ -107,11 +106,11 @@ class Admin::ShowsController < AdminController
       shows << show
     end
 
-    if params[:name] then
-      shows = shows.reject { |show| show["name"] != params[:name] }
+    if params[:name]
+      shows = shows.reject { |show| show['name'] != params[:name] }
     end
 
-    render :json => shows.to_json
+    render json: shows.to_json
   end
 
   def xts_report
@@ -127,6 +126,6 @@ class Admin::ShowsController < AdminController
     request = Net::HTTP::Get.new(uri.request_uri)
     response = http.request(request)
     data = response.body
-    send_data(data, filename: "#{show.name} - Sales Report.pdf", type: "application/pdf")
+    send_data(data, filename: "#{show.name} - Sales Report.pdf", type: 'application/pdf')
   end
 end

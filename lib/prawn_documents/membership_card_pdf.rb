@@ -1,5 +1,5 @@
 # See http://prawn.majesticseacreature.com/manual.pdf for pdf generation.
-require "prawn/measurement_extensions"
+require 'prawn/measurement_extensions'
 
 class MembershipCardPDF < Prawn::Document
   def self.create(*args)
@@ -17,14 +17,14 @@ class MembershipCardPDF < Prawn::Document
           margin:    0
         )
 
-    font  Rails.root.join("app", "assets", "fonts", "gothic.ttf")
+    font  Rails.root.join('app', 'assets', 'fonts', 'gothic.ttf')
 
     # Background Image
-    image Rails.root.join("app", "assets", "images","card_background.jpg"), at: [0, height], fit: [width, height]
+    image Rails.root.join('app', 'assets', 'images', 'card_background.jpg'), at: [0, height], fit: [width, height]
 
     # QR Code
     @qr_file = Tempfile.new("qr_#{card.card_number}")
-    qr = RQRCode::QRCode.new(card.card_number, size: 2, level: :h )
+    qr = RQRCode::QRCode.new(card.card_number, size: 2, level: :h)
 
     @qr_file.binmode
     @qr_file.write RQRCode::Renderers::PNG.render(qr)
@@ -37,20 +37,20 @@ class MembershipCardPDF < Prawn::Document
       font_size 7.5
 
       # EUTC
-      font Rails.root.join("app", "assets", "fonts", "gothicb.ttf") do
-        text "EDINBURGH UNIVERSITY", align: :center
-        text "THEATRE COMPANY", align: :center
+      font Rails.root.join('app', 'assets', 'fonts', 'gothicb.ttf') do
+        text 'EDINBURGH UNIVERSITY', align: :center
+        text 'THEATRE COMPANY', align: :center
       end
 
       move_down 3.mm
 
       # Member
-      text "MEMBER", align: :center
+      text 'MEMBER', align: :center
 
       move_down 3.mm
 
       # Name
-      font Rails.root.join("app", "assets", "fonts", "gothicb.ttf") do
+      font Rails.root.join('app', 'assets', 'fonts', 'gothicb.ttf') do
         text card.user.name, align: :center
       end
     end

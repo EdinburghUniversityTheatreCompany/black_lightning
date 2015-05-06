@@ -1,5 +1,4 @@
 class Admin::MassMailsController < AdminController
-
   load_and_authorize_resource
 
   def send_mail(mail)
@@ -21,8 +20,8 @@ class Admin::MassMailsController < AdminController
   # GET /admin/mass_mails.json
   ##
   def index
-    @mass_mails = MassMail.paginate(:page => params[:page], :per_page => 15).all
-    @title = "Mass Mails"
+    @mass_mails = MassMail.paginate(page: params[:page], per_page: 15).all
+    @title = 'Mass Mails'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @mass_mails }
@@ -38,7 +37,7 @@ class Admin::MassMailsController < AdminController
     @mass_mail = MassMail.new
     @mass_mail.draft = true
 
-    @title = "New Mass Mail"
+    @title = 'New Mass Mail'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @mass_mail }
@@ -53,7 +52,7 @@ class Admin::MassMailsController < AdminController
 
     if @mass_mail.draft == false
       respond_to do |format|
-        format.html { redirect_to admin_mass_mails_url, notice: "Mail cannot be edited once it has been sent" }
+        format.html { redirect_to admin_mass_mails_url, notice: 'Mail cannot be edited once it has been sent' }
         format.json { head :no_content }
       end
     end
@@ -71,7 +70,6 @@ class Admin::MassMailsController < AdminController
 
     @mass_mail = MassMail.new(params[:mass_mail])
 
-
     if @mass_mail.save
       if send
         send_mail @mass_mail
@@ -83,7 +81,7 @@ class Admin::MassMailsController < AdminController
       end
     else
       respond_to do |format|
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: admin_mass_mails_url.errors, status: :unprocessable_entity }
       end
     end
@@ -108,7 +106,7 @@ class Admin::MassMailsController < AdminController
           format.json { head :no_content }
         end
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @mass_mail.errors, status: :unprocessable_entity }
       end
     end

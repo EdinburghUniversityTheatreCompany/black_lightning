@@ -5,26 +5,26 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get index" do
+  test 'should get index' do
     @template = FactoryGirl.create_list(:staffing_template, 5)
 
     get :index
     assert_response :success
   end
 
-  test "should get show" do
+  test 'should get show' do
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
 
     get :show, id: @template
     assert_response :success
   end
 
-  test "should get new" do
+  test 'should get new' do
     get :new
     assert_response :success
   end
 
-  test "should create staffing_template" do
+  test 'should create staffing_template' do
     attrs = FactoryGirl.attributes_for(:staffing_template)
 
     assert_difference('Admin::StaffingTemplate.count') do
@@ -34,14 +34,14 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
     assert_redirected_to admin_staffing_template_path(assigns(:template))
   end
 
-  test "should get edit" do
+  test 'should get edit' do
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
 
     get :edit, id: @template
     assert_response :success
   end
 
-  test "should update staffing_template" do
+  test 'should update staffing_template' do
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
     attrs = FactoryGirl.attributes_for(:staffing_template)
 
@@ -49,7 +49,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
     assert_redirected_to admin_staffing_template_path(@template)
   end
 
-  test "should destroy staffing_template" do
+  test 'should destroy staffing_template' do
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
 
     assert_difference('Admin::StaffingTemplate.count', -1) do

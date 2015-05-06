@@ -30,9 +30,9 @@ FactoryGirl.define do
         when 'Long Text'
           generate(:random_text)
         when 'Number'
-          Random.new().rand(500)
+          Random.new.rand(500)
         when 'Yes/No'
-          ['Yes', 'No'].sample
+          %w(Yes No).sample
         when 'File'
       end
     end

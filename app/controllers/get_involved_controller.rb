@@ -11,13 +11,14 @@ class GetInvolvedController < ApplicationController
   end
 
   private
+
   ##
   # Returns a list of all the pages in the get_involved folder.
   ##
   def get_subpages
     action = params[:action]
 
-    action_sections = action.split("/")
+    action_sections = action.split('/')
 
     @root_page = action_sections[0]
 
@@ -30,14 +31,14 @@ class GetInvolvedController < ApplicationController
       'ssw' => 'Stage, Set and Wardrobe'
     }
 
-    if not File.directory?(@subpages_dir) then
+    unless File.directory?(@subpages_dir)
       @subpages_dir = "#{Rails.root}/app/views/get_involved/"
       @root_page = nil
     end
 
     Dir.foreach(@subpages_dir) do |file|
-      if not File.directory?(File.join(@subpages_dir, file)) and not exclude.include? file then
-        @subpages << file.gsub(/\.html\.erb/, "")
+      if !File.directory?(File.join(@subpages_dir, file)) and !exclude.include? file
+        @subpages << file.gsub(/\.html\.erb/, '')
       end
     end
   end

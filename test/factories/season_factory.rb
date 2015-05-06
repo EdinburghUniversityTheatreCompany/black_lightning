@@ -17,12 +17,12 @@
 FactoryGirl.define do
   factory :season do
     name        { generate(:random_string) }
-    slug         { name.gsub(/\s+/,'-').gsub(/[^a-zA-Z0-9\-]/,'').downcase.gsub(/\-{2,}/,'-') }
+    slug         { name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') }
 
     description { generate(:random_text) }
 
     start_date  { generate(:random_date) }
-    end_date    { start_date.advance(:days => rand(3..6)) }
+    end_date    { start_date.advance(days: rand(3..6)) }
 
     ignore do
       event_count 0

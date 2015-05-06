@@ -3,7 +3,7 @@
 ##
 class Admin::StaffingsController < AdminController
   skip_before_filter :authorize_backend!
-  load_and_authorize_resource :class => Admin::Staffing, :except => [:sign_up, :show_sign_up, :sign_up_confirm]
+  load_and_authorize_resource class: Admin::Staffing, except: [:sign_up, :show_sign_up, :sign_up_confirm]
 
   ##
   # GET /admin/staffings
@@ -11,9 +11,9 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings.json
   ##
   def index
-    @admin_staffings = Admin::Staffing.future.group_by { |s| s.show_title }
-    @admin_staffings_archive = Admin::Staffing.past.group_by { |s| s.show_title }
-    @title = "Staffing"
+    @admin_staffings = Admin::Staffing.future.group_by(&:show_title)
+    @admin_staffings_archive = Admin::Staffing.past.group_by(&:show_title)
+    @title = 'Staffing'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @admin_staffings }
@@ -24,14 +24,14 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/show_title/grid
   ##
   def grid
-    if params[:archived] == "true"
-      @staffings = Admin::Staffing.past.where({:show_title => params[:show_title]})
+    if params[:archived] == 'true'
+      @staffings = Admin::Staffing.past.where(show_title: params[:show_title])
     else
-      @staffings = Admin::Staffing.future.where({:show_title => params[:show_title]})
+      @staffings = Admin::Staffing.future.where(show_title: params[:show_title])
     end
-    @job_titles = @staffings.joins(:staffing_jobs).select("admin_staffing_jobs.name").uniq.collect { |s| s.name }
+    @job_titles = @staffings.joins(:staffing_jobs).select('admin_staffing_jobs.name').uniq.collect(&:name)
 
-    @staffings = @staffings.includes(:staffing_jobs => :user)
+    @staffings = @staffings.includes(staffing_jobs: :user)
     @staffings_hash = @staffings.all.collect do |s|
       staffing_hash = {}
       staffing_hash[:staffing] = s
@@ -45,7 +45,7 @@ class Admin::StaffingsController < AdminController
       next staffing_hash
     end
 
-    @title = "Staffing"
+    @title = 'Staffing'
 
     respond_to do |format|
       format.html # index.html.erb
@@ -74,7 +74,7 @@ class Admin::StaffingsController < AdminController
   def new
     @users = User.all
     @admin_staffing = Admin::Staffing.new
-    @title = "New Staffing"
+    @title = 'New Staffing'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @admin_staffing }
@@ -105,7 +105,7 @@ class Admin::StaffingsController < AdminController
         format.html { redirect_to admin_staffing_path(@admin_staffing) }
         format.json { render json: @admin_staffing, status: :created, location: @admin_staffing }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end
@@ -119,7 +119,7 @@ class Admin::StaffingsController < AdminController
   def new_for_show
     @users = User.all
     @admin_staffing = Admin::Staffing.new
-    @title = "New Staffing for Show"
+    @title = 'New Staffing for Show'
   end
 
   ##
@@ -143,7 +143,7 @@ class Admin::StaffingsController < AdminController
 
         staffing.save!
 
-        staffing.staffing_jobs << admin_staffing_jobs.collect { |job| job.dup }
+        staffing.staffing_jobs << admin_staffing_jobs.collect(&:dup)
       end
     rescue => e
       redirect_to redirect_to admin_staffings_path, alert: 'There were errors creating the staffing.'
@@ -168,7 +168,7 @@ class Admin::StaffingsController < AdminController
         format.html { redirect_to admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end
@@ -195,7 +195,7 @@ class Admin::StaffingsController < AdminController
 
     @job = Admin::StaffingJob.find(params[:id])
 
-    @title = "Confirm Staffing"
+    @title = 'Confirm Staffing'
   end
 
   ##
@@ -211,14 +211,14 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if current_user.phone_number.blank? # you MUST have a phone number in your profile to be able to sign up for staffing
-        format.html { redirect_to edit_admin_user_path(current_user), alert: "In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary." }
-        format.json { render :json => { :error => "no_number "}}
+        format.html { redirect_to edit_admin_user_path(current_user), alert: 'In order to sign up for staffing you need to provide a MOBILE phone number. We will text you to remind you about your staffing automatically, but we need to be able to get in touch if necessary.' }
+        format.json { render json: { error: 'no_number ' } }
       elsif @job.save
-        format.html {
-          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.start_time, :format => :short)}."
+        format.html do
+          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.start_time, format: :short)}."
           redirect_to admin_staffings_path
-        }
-        format.json { render :json => @job.to_json(:include => { :user => {}, :staffable => {} }, :methods => [ :js_start_time, :js_end_time ] ) }
+        end
+        format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: [:js_start_time, :js_end_time]) }
       else
         format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

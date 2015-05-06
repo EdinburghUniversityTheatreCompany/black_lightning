@@ -1,12 +1,12 @@
 class Admin::ResourcesController < AdminController
   before_filter :get_subpages
 
-  layout "admin/resources"
+  layout 'admin/resources'
 
   def get_subpages
     action = params[:action]
 
-    action_sections = action.split("/")
+    action_sections = action.split('/')
 
     @root_page = action_sections[0]
 
@@ -16,10 +16,10 @@ class Admin::ResourcesController < AdminController
 
     @subpages = []
 
-    if File.directory?(subpages_dir) then
+    if File.directory?(subpages_dir)
       Dir.foreach(subpages_dir) do |file|
-        if not File.directory?(File.join(subpages_dir, file)) then
-          @subpages << file.gsub(/\.html\.erb/, "")
+        unless File.directory?(File.join(subpages_dir, file))
+          @subpages << file.gsub(/\.html\.erb/, '')
         end
       end
     end

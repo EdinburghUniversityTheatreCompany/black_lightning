@@ -4,16 +4,15 @@
 # Uses Will_Paginate for pagination.
 ##
 class WorkshopsController < ApplicationController
-
   ##
   # GET /workshops
   #
   # GET /workshops.json
   ##
   def index
-    @workshops = Workshop.paginate(:page => params[:page], :per_page => 5).current(:order => "start_date ASC")
+    @workshops = Workshop.paginate(page: params[:page], per_page: 5).current(order: 'start_date ASC')
 
-    @title = "Workshops"
+    @title = 'Workshops'
 
     respond_to do |format|
       format.html # index.html.erb
@@ -31,7 +30,7 @@ class WorkshopsController < ApplicationController
 
     @title = @workshop.name
     @meta[:description] = @workshop.description
-    @meta["og:image"] = [@base_url + @workshop.image.url(:medium)] + @workshop.pictures.collect{|p| @base_url + p.image.url }
+    @meta['og:image'] = [@base_url + @workshop.image.url(:medium)] + @workshop.pictures.collect { |p| @base_url + p.image.url }
 
     respond_to do |format|
       format.html

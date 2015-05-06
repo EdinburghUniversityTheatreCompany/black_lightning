@@ -7,19 +7,19 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get index" do
+  test 'should get index' do
     get :index
     assert_response :success
     assert_not_nil assigns(:templates)
   end
 
-  test "should get new" do
+  test 'should get new' do
     get :new
     assert_response :success
   end
 
-  test "should create admin_proposals_call_question_template" do
-    #Remove the existing entry:
+  test 'should create admin_proposals_call_question_template' do
+    # Remove the existing entry:
     Admin::Proposals::CallQuestionTemplate.find(@template).destroy
 
     assert_difference('Admin::Proposals::CallQuestionTemplate.count') do
@@ -29,17 +29,17 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
     assert_redirected_to admin_proposals_call_question_template_path(assigns(:template))
   end
 
-  test "should get edit" do
+  test 'should get edit' do
     get :edit, id: @template
     assert_response :success
   end
 
-  test "should update admin_proposals_call_question_template" do
+  test 'should update admin_proposals_call_question_template' do
     put :update, id: @template, template: { name: @template.name }
     assert_redirected_to admin_proposals_call_question_template_path(assigns(:template))
   end
 
-  test "should destroy admin_proposals_call_question_template" do
+  test 'should destroy admin_proposals_call_question_template' do
     assert_difference('Admin::Proposals::CallQuestionTemplate.count', -1) do
       delete :destroy, id: @template
     end

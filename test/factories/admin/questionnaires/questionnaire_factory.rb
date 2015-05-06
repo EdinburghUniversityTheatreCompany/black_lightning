@@ -16,7 +16,7 @@ FactoryGirl.define do
     name  { generate(:random_name) }
     show
 
-    after(:create) do |questionnaire, evaluator|
+    after(:create) do |questionnaire, _evaluator|
       questions = FactoryGirl.create_list(:question, 10, questionable: questionnaire, answerable: questionnaire)
     end
   end

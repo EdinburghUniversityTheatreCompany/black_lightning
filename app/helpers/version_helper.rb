@@ -1,8 +1,6 @@
 module VersionHelper
   def version
-    begin
-      return File.read("version")
-    rescue
-    end
+    return File.read('version')
+  rescue
   end
 end

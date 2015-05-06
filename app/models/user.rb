@@ -29,48 +29,48 @@ class User < ActiveRecord::Base
   before_save :unify_numbers
   rolify
 
-  default_scope -> { order("last_name ASC") }
+  default_scope -> { order('last_name ASC') }
 
   def self.by_first_name
-    unscoped.order("first_name ASC")
+    unscoped.order('first_name ASC')
   end
 
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
   devise :database_authenticatable, :recoverable, :rememberable, \
-    :trackable, :registerable #, :token_authenticatable
+         :trackable, :registerable # , :token_authenticatable
 
   # set our own validations
 
   # Don't validate the password presence, so we can set it randomly for new users.
   # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
-  validates :email, :presence => true, uniqueness: true
-  validates :phone_number, :allow_blank => true, :format => { :with => /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})\z/, :message => "Please enter a valid mobile number" }
+  validates :email, presence: true, uniqueness: true
+  validates :phone_number, allow_blank: true, format: { with: /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})\z/, message: 'Please enter a valid mobile number' }
 
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
-  accepts_nested_attributes_for :membership_card, :reject_if => :all_blank, :allow_destroy => true
+  accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true
 
-  has_many :team_membership, :class_name => "TeamMember"
-  has_many :shows, :through => :team_membership, :source => :teamwork, :source_type => "Show"
-  has_many :staffing_jobs, :class_name => "Admin::StaffingJob"
-  has_many :staffings, :through => :staffing_jobs, :source => :staffable, :source_type => "Admin::Staffing"
+  has_many :team_membership, class_name: 'TeamMember'
+  has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
+  has_many :staffing_jobs, class_name: 'Admin::StaffingJob'
+  has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
 
   has_attached_file :avatar,
-                    :styles => { :thumb => "150x150", :display => "700x700" },
-                    :convert_options => { :thumb => "-strip" }
+                    styles: { thumb: '150x150', display: '700x700' },
+                    convert_options: { thumb: '-strip' }
 
   # Setup accessible (or protected) attributes for your model
   attr_accessible :email, :password, :password_confirmation, :remember_me, \
-    :first_name, :last_name, :role_ids, :phone_number, :card_number, \
-    :public_profile, :bio, :avatar
+                  :first_name, :last_name, :role_ids, :phone_number, :card_number, \
+                  :public_profile, :bio, :avatar
 
   ##
   # A quick way of getting the user's full name.
   ##
   def name
-    "#{self.first_name} #{self.last_name}"
+    "#{first_name} #{last_name}"
   end
 
   ransacker :full_name do |parent|
@@ -81,19 +81,19 @@ class User < ActiveRecord::Base
   # A quick way to get the user's full name, if they have a name, or their email
   ##
   def name_or_email
-    self.name.presence || self.email
+    name.presence || email
   end
 
   ##
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
   ##
   def unify_numbers
-    return if not self.phone_number
+    return unless phone_number
 
     self.phone_number = phone_number.gsub(/\s/, '')
 
-    if self.phone_number[0] == '0' then
-      self.phone_number[0] = '+44'
+    if phone_number[0] == '0'
+      phone_number[0] = '+44'
     end
   end
 
@@ -110,7 +110,7 @@ class User < ActiveRecord::Base
 
     reset_password = false
 
-    if not user.password then
+    unless user.password
       password_length = 6
       password = Devise.friendly_token.first(password_length)
 
@@ -128,6 +128,6 @@ class User < ActiveRecord::Base
   # Returns true if the users first_name and last_name are set
   ##
   def has_basic_details?
-    return (first_name and last_name and not(first_name.empty? or last_name.empty?))
+    return (first_name && last_name && notfirst_name.empty? || last_name.empty?)
   end
 end

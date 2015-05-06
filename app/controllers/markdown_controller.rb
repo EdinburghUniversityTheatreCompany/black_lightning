@@ -10,10 +10,10 @@ class MarkdownController < ApplicationController
 
   def preview
     body = ActiveSupport::JSON.decode(request.body.read)
-    input_html = URI.unescape(body["input_html"])
+    input_html = URI.unescape(body['input_html'])
 
     response = { rendered_md: render_markdown(input_html) }
 
-    render :json => response
+    render json: response
   end
 end

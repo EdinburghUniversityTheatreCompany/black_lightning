@@ -5,9 +5,8 @@ class Admin::TechieFamiliesControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get index" do
+  test 'should get index' do
     get :index
     assert_response :success
   end
-
 end

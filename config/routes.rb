@@ -1,10 +1,9 @@
 ChaosRails::Application.routes.draw do
-
   match '*path' => 'application#options', via: :options
 
-  get "seasons/show"
+  get 'seasons/show'
 
-  devise_for :users, :controllers => { :registrations => "registrations" } do
+  devise_for :users, controllers: { registrations: 'registrations' } do
     get  'users/current'      => 'users#current'
     post 'users/stripe'       => 'registrations#create_with_stripe', as: :user_stripe_registration
 
@@ -13,12 +12,12 @@ ChaosRails::Application.routes.draw do
     post 'users/reactivate/stripe' => 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
   end
 
-  resources :shows,       :only => [:index, :show]
-  resources :workshops,   :only => [:index, :show]
-  resources :news,        :only => [:index, :show]
-  resources :venues,      :only => [:index, :show]
-  resources :seasons,     :only => [:show]
-  resources :users,       :only => [:show] do
+  resources :shows,       only: [:index, :show]
+  resources :workshops,   only: [:index, :show]
+  resources :news,        only: [:index, :show]
+  resources :venues,      only: [:index, :show]
+  resources :seasons,     only: [:show]
+  resources :users,       only: [:show] do
     collection do
       get 'check_membership' => 'users#check_membership'
     end
@@ -36,7 +35,7 @@ ChaosRails::Application.routes.draw do
     get 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
 
     resources :shows do
-      resources :feedbacks, :except => [:show]
+      resources :feedbacks, except: [:show]
 
       collection do
         get 'query_xts'
@@ -61,7 +60,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :editable_blocks, :except => [:show]
+    resources :editable_blocks, except: [:show]
     resources :mass_mails
 
     resources :users do
@@ -70,7 +69,7 @@ ChaosRails::Application.routes.draw do
       end
 
       collection do
-        get  'autocomplete_list', :constraints => {:format => :json}
+        get  'autocomplete_list', constraints: { format: :json }
       end
     end
 
@@ -126,7 +125,7 @@ ChaosRails::Application.routes.draw do
     end
 
     namespace :questionnaires do
-      resources :questionnaires, :except => [:new, :create] do
+      resources :questionnaires, except: [:new, :create] do
         member do
           get  'answer' => 'questionnaires#answer'
           post 'answer' => 'questionnaires#set_answers'
@@ -136,12 +135,12 @@ ChaosRails::Application.routes.draw do
       resources :questionnaire_templates
     end
 
-    get '/reports/' => 'reports#index', :as => "reports"
-    get '/reports/:action', :controller => 'reports', :as => "report"
+    get '/reports/' => 'reports#index', :as => 'reports'
+    get '/reports/:action', controller: 'reports', as: 'report'
 
-    get 'jobs/:action' => 'job_control', :as => "jobs"
+    get 'jobs/:action' => 'job_control', :as => 'jobs'
 
-    get "/help/:action" => 'help', :as => "help"
+    get '/help/:action' => 'help', :as => 'help'
   end
 
   get 'archives' => 'archives#index', :as => :archives_index
@@ -217,7 +216,7 @@ ChaosRails::Application.routes.draw do
 
   # You can have the root of your site routed with "root"
   # just remember to delete public/index.html.
-  root :to => 'static#home'
+  root to: 'static#home'
 
   # See how all your routes lay out with "rake routes"
 

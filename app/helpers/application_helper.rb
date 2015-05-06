@@ -6,15 +6,15 @@ module ApplicationHelper
   end
 
   def spark_seat_widget(spark_seat_slug)
-    """
+    ''"
       <div class=\"spark-container\" data-event-slug=\"#{spark_seat_slug}\" data-load-styles=\"bootstrap2\">
         One moment please...
       </div>
       <script src='https://book.sparkseat.com/scripts/loader.js' crossorigin='anonymous'></script>
-    """.html_safe
+    "''.html_safe
   end
 
-  def strip_tags(html)
-      return self.gsub(%r{</?[^>]+?>}, '')
+  def strip_tags(_html)
+    return gsub(%r{</?[^>]+?>}, '')
   end
 end

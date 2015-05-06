@@ -3,8 +3,7 @@
 ##
 
 class Admin::Proposals::CallsController < AdminController
-
-  load_and_authorize_resource :class => Admin::Proposals::Call
+  load_and_authorize_resource class: Admin::Proposals::Call
 
   ##
   # GET /admin/proposals/calls
@@ -12,7 +11,7 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls.json
   ##
   def index
-    @admin_proposals_calls = Admin::Proposals::Call.where( :archived => [nil,false] )
+    @admin_proposals_calls = Admin::Proposals::Call.where(archived: [nil, false])
 
     respond_to do |format|
       format.html # index.html.erb
@@ -68,7 +67,7 @@ class Admin::Proposals::CallsController < AdminController
         format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully created.' }
         format.json { render json: @admin_proposals_call, status: :created, location: @admin_proposals_call }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @admin_proposals_call.errors, status: :unprocessable_entity }
       end
     end
@@ -87,7 +86,7 @@ class Admin::Proposals::CallsController < AdminController
         format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @admin_proposals_call.errors, status: :unprocessable_entity }
       end
     end

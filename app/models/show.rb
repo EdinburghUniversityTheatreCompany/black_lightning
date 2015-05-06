@@ -27,13 +27,13 @@
 #++
 ##
 class Show < Event
-  has_many :reviews, :dependent => :destroy
-  has_many :feedbacks, :class_name => "Admin::Feedback", :dependent => :destroy
-  has_many :questionnaires, :class_name => "Admin::Questionnaires::Questionnaire", :dependent => :destroy
+  has_many :reviews, dependent: :destroy
+  has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :destroy
+  has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :destroy
 
   attr_accessible :reviews, :reviews_attributes
 
-  accepts_nested_attributes_for :reviews, :reject_if => :all_blank, :allow_destroy => true
+  accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
   def create_questionnaire(name)
     questionnaire = Admin::Questionnaires::Questionnaire.new
@@ -45,11 +45,11 @@ class Show < Event
   def as_json(options = {})
     defaults = {
       include: [
-                 :reviews
-               ]
+        :reviews
+      ]
     }
 
-    options = options.merge(defaults) do |key, oldval, newval|
+    options = options.merge(defaults) do |_key, oldval, newval|
       # http://stackoverflow.com/a/11171921
       (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
     end

@@ -3,8 +3,7 @@
 ##
 
 class Admin::Proposals::CallQuestionTemplatesController < AdminController
-
-  load_and_authorize_resource :class => Admin::Proposals::CallQuestionTemplate
+  load_and_authorize_resource class: Admin::Proposals::CallQuestionTemplate
 
   ##
   # GET /admin/proposals/call_question_templates
@@ -24,7 +23,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
 
     respond_to do |format|
-      format.json { render :json => @template.to_json(:include => { :questions => {} }) }
+      format.json { render json: @template.to_json(include: { questions: {} }) }
     end
   end
 
@@ -62,7 +61,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
         format.html { redirect_to @template, notice: 'Call question template was successfully created.' }
         format.json { render json: @template, status: :created, location: @template }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @template.errors, status: :unprocessable_entity }
       end
     end
@@ -81,7 +80,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
         format.html { redirect_to @template, notice: 'Call question template was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @template.errors, status: :unprocessable_entity }
       end
     end

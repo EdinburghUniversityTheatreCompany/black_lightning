@@ -23,10 +23,10 @@
 #++
 ##
 class Admin::Answer < ActiveRecord::Base
-  belongs_to :question, :class_name => "Admin::Question"
-  belongs_to :answerable, :polymorphic => true
+  belongs_to :question, class_name: 'Admin::Question'
+  belongs_to :answerable, polymorphic: true
 
-  has_attached_file :file, :url => '/admin/answer/:id/file', :path => ':rails_root/uploads/answers/:id_partition/:style.:extension'
+  has_attached_file :file, url: '/admin/answer/:id/file', path: ':rails_root/uploads/answers/:id_partition/:style.:extension'
 
   attr_accessible :answer, :question_id, :file
 end

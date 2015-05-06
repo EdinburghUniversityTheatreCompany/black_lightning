@@ -2,15 +2,14 @@
 # Public controller for Venue. More details can be found there.
 ##
 class VenuesController < ApplicationController
-
   ##
   # GET /venues
   #
   # GET /venues.json
   ##
   def index
-    @venues = Venue.paginate(:page => params[:page], :per_page => 5).all
-    @title = "Venues"
+    @venues = Venue.paginate(page: params[:page], per_page: 5).all
+    @title = 'Venues'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }
@@ -34,5 +33,4 @@ class VenuesController < ApplicationController
       format.json { render json: @venue }
     end
   end
-
 end

@@ -25,11 +25,11 @@
 #++
 ##
 class Picture < ActiveRecord::Base
-  belongs_to :gallery, :polymorphic => true
+  belongs_to :gallery, polymorphic: true
 
   has_attached_file :image,
-                    :styles => { :thumb => "192x100#", :display => "700x700" },
-                    :convert_options => { :thumb => "-quality 75 -strip" }
+                    styles: { thumb: '192x100#', display: '700x700' },
+                    convert_options: { thumb: '-quality 75 -strip' }
 
   attr_accessible :description, :image
 

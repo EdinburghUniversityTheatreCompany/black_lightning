@@ -1,4 +1,4 @@
-#See https://gist.github.com/1670699
+# See https://gist.github.com/1670699
 
 class ActionView::Template
   module Handlers

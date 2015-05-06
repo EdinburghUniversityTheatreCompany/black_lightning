@@ -3,7 +3,6 @@
 ##
 
 class Admin::NewsController < AdminController
-
   load_and_authorize_resource
 
   ##
@@ -12,8 +11,8 @@ class Admin::NewsController < AdminController
   # GET /admin/news.json
   ##
   def index
-    @title = "News"
-    @news = News.paginate(:page => params[:page], :per_page => 15).all
+    @title = 'News'
+    @news = News.paginate(page: params[:page], per_page: 15).all
 
     respond_to do |format|
       format.html # index.html.erb
@@ -42,7 +41,7 @@ class Admin::NewsController < AdminController
   ##
   def new
     @news = News.new
-    @title = "Create News"
+    @title = 'Create News'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @news }
@@ -71,7 +70,7 @@ class Admin::NewsController < AdminController
         format.html { redirect_to [:admin, @news], notice: 'News was successfully created.' }
         format.json { render json: [:admin, @news], status: :created, location: @news }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @news.errors, status: :unprocessable_entity }
       end
     end
@@ -90,7 +89,7 @@ class Admin::NewsController < AdminController
         format.html { redirect_to [:admin, @news], notice: 'News was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @news.errors, status: :unprocessable_entity }
       end
     end

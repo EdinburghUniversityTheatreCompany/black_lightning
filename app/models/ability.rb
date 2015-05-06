@@ -18,19 +18,18 @@ class Ability
 
   # Define the permissions for a user.
   def initialize(user)
+    # If you can approve something, you can also reject it
+    alias_action :reject, to: :approve
 
-    #If you can approve something, you can also reject it
-    alias_action :reject, :to => :approve
-
-    #Alias grid to read
-    alias_action :grid, :to => :read
+    # Alias grid to read
+    alias_action :grid, to: :read
 
     alias_action :guidelines, to: :read
 
-    if user then
+    if user
 
-      #All users can manage themselves.
-      can :manage, User, :id => user.id
+      # All users can manage themselves.
+      can :manage, User, id: user.id
       cannot :assign_roles, User
       cannot :read, User
 
@@ -38,12 +37,11 @@ class Ability
         allow = false
 
         user.roles.each do |role|
-
-          if subject_class == Symbol then
+          if subject_class == Symbol
             subject_class = subject
           end
 
-          if role.permissions.where(:action => [aliases_for_action(action), :manage].flatten, :subject_class => subject_class).any? then
+          if role.permissions.where(action: [aliases_for_action(action), :manage].flatten, subject_class: subject_class).any?
             allow = true
           end
         end
@@ -55,16 +53,16 @@ class Ability
         if Time.now < proposal.call.deadline
           # Before the deadline, all users can only see proposals that they
           # are part of.
-          next (proposal.users.include? user or user.has_role? :proposal_viewer)
-        elsif not proposal.call.archived
+          next (proposal.users.include?(user) || user.has_role?(:proposal_viewer))
+        elsif !proposal.call.archived
           # After the deadline:
-          if (user.has_role? :committee or user.has_role? :proposal_viewer)
+          if user.has_role?(:committee) || user.has_role?(:proposal_viewer)
             # Committee can see all proposals.
             next true
           else
             # Other users can only see proposals that they are part of, or
             # that have been approved.
-            next (proposal.users.include? user or proposal.approved == true)
+            next (proposal.users.include?(user) || proposal.approved == true)
           end
         else
           # for archived calls, only approved proposals may be seen:
@@ -104,7 +102,7 @@ class Ability
 
     else
 
-      can :read, News, :show_public => true
+      can :read, News, show_public: true
 
     end
   end

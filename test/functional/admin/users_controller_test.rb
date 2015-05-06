@@ -7,23 +7,23 @@ class Admin::UsersControllerTest < ActionController::TestCase
     @user = FactoryGirl.create(:user)
   end
 
-  test "should get index" do
+  test 'should get index' do
     get :index
     assert_response :success
   end
 
-  test "should get show" do
+  test 'should get show' do
     get :show, id: @user
     assert_response :success
   end
 
-  test "should get new" do
+  test 'should get new' do
     get :new
     assert_response :success
   end
 
-  test "should create user" do
-    #Remove the existing user:
+  test 'should create user' do
+    # Remove the existing user:
     User.find(@user).destroy
 
     assert_difference('User.count') do
@@ -33,22 +33,21 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_redirected_to admin_user_path(assigns(:user))
   end
 
-  test "should get edit" do
+  test 'should get edit' do
     get :edit, id: @user
     assert_response :success
   end
 
-  test "should update user" do
-    put :update, id: @user, user: { first_name: "Test" }
+  test 'should update user' do
+    put :update, id: @user, user: { first_name: 'Test' }
     assert_redirected_to admin_user_path(@user)
   end
 
-  test "should destroy user" do
+  test 'should destroy user' do
     assert_difference('User.count', -1) do
       delete :destroy, id: @user
     end
 
     assert_redirected_to admin_users_path
   end
-
 end

@@ -2,7 +2,6 @@
 # Admin controller for Opportunity. More details can be found there.
 ##
 class Admin::OpportunitiesController < AdminController
-
   load_and_authorize_resource
 
   ##
@@ -11,11 +10,11 @@ class Admin::OpportunitiesController < AdminController
   # GET /admin/opportunities.json
   ##
   def index
-    @title = "Opportunity"
-    @opportunities = Opportunity.order("expiry_date DESC") \
-                                .paginate(:page => params[:page], :per_page => 15) \
-                                .includes(:creator) \
-                                .all
+    @title = 'Opportunity'
+    @opportunities = Opportunity.order('expiry_date DESC') \
+                     .paginate(page: params[:page], per_page: 15) \
+                     .includes(:creator) \
+                     .all
 
     respond_to do |format|
       format.html # index.html.erb
@@ -44,7 +43,7 @@ class Admin::OpportunitiesController < AdminController
   ##
   def new
     @opportunity = Opportunity.new
-    @title = "Create Opportunity"
+    @title = 'Create Opportunity'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @opportunity }
@@ -73,7 +72,7 @@ class Admin::OpportunitiesController < AdminController
         format.html { redirect_to [:admin, @opportunity], notice: 'Opportunity was successfully created.' }
         format.json { render json: [:admin, @opportunity], status: :created, location: @opportunities }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @opportunity.errors, status: :unprocessable_entity }
       end
     end
@@ -97,7 +96,7 @@ class Admin::OpportunitiesController < AdminController
         format.html { redirect_to [:admin, @opportunity], notice: 'Opportunity was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @opportunity.errors, status: :unprocessable_entity }
       end
     end

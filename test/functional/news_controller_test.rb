@@ -1,7 +1,7 @@
 require 'test_helper'
 
 class NewsControllerTest < ActionController::TestCase
-  test "should get index" do
+  test 'should get index' do
     FactoryGirl.create_list(:news, 20)
 
     get :index
@@ -9,7 +9,7 @@ class NewsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:news)
   end
 
-  test "should show news" do
+  test 'should show news' do
     @news = FactoryGirl.create(:news)
 
     get :show, id: @news

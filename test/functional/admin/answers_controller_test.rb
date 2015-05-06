@@ -5,8 +5,8 @@ class Admin::AnswersControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should download answer with file" do
-    answer = FactoryGirl.create(:answer, response_type: "File")
+  test 'should download answer with file' do
+    answer = FactoryGirl.create(:answer, response_type: 'File')
 
     get :get_file, id: answer
     assert_response :success

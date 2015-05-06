@@ -10,7 +10,7 @@ class MembershipCard < ActiveRecord::Base
   end
 
   def set_card_number
-    return unless self.card_number.nil?
+    return unless card_number.nil?
 
     # Generate a 4 digit random number...
     number = rand(9999).to_s.center(4, rand(9).to_s)

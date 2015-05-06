@@ -1,6 +1,6 @@
 require 'csv'
 namespace :techie do
-  task :import, [:file] => :environment do |t, args|
+  task :import, [:file] => :environment do |_t, args|
     CSV.foreach(args[:file]) do |row|
       if Techie.where(name: row[0]).count == 0
         p = Techie.new(name: row[0])

@@ -24,29 +24,29 @@
 
 FactoryGirl.define do
   factory :user do
-     first_name            { Faker::Name.first_name }
-     last_name             { Faker::Name.last_name  }
-     email                 { Faker::Internet.email  }
-     password              :random_password
-     password_confirmation { password }
+    first_name            { Faker::Name.first_name }
+    last_name             { Faker::Name.last_name  }
+    email                 { Faker::Internet.email  }
+    password              :random_password
+    password_confirmation { password }
 
-     factory :member do
-       after(:create) do |user, evaluator|
-         user.add_role :member
-       end
-     end
+    factory :member do
+      after(:create) do |user, _evaluator|
+        user.add_role :member
+      end
+    end
 
-     factory :committee do
-       after(:create) do |user, evaluator|
-         user.add_role :member
-         user.add_role :committee
-       end
-     end
+    factory :committee do
+      after(:create) do |user, _evaluator|
+        user.add_role :member
+        user.add_role :committee
+      end
+    end
 
-     factory :admin do
-       after(:create) do |user, evaluator|
-         user.add_role :admin
-       end
-     end
+    factory :admin do
+      after(:create) do |user, _evaluator|
+        user.add_role :admin
+      end
+    end
   end
 end

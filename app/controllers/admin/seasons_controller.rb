@@ -1,12 +1,11 @@
 class Admin::SeasonsController < AdminController
-
-  #load_and_authorize_resource
+  # load_and_authorize_resource
 
   # GET /seasons
   # GET /seasons.json
   def index
     @seasons = Season.all
-    @title = "Seasons"
+    @title = 'Seasons'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @seasons }
@@ -31,7 +30,7 @@ class Admin::SeasonsController < AdminController
   def new
     @season = Season.new
     @users = User.by_first_name.all
-    @title = "New Season"
+    @title = 'New Season'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @season }
@@ -56,7 +55,7 @@ class Admin::SeasonsController < AdminController
         format.html { redirect_to admin_season_path(@season), notice: 'Season was successfully created.' }
         format.json { render json: @season, status: :created, location: @season }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @season.errors, status: :unprocessable_entity }
       end
     end
@@ -73,7 +72,7 @@ class Admin::SeasonsController < AdminController
         format.html { redirect_to admin_season_path(@season), notice: 'Season was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @season.errors, status: :unprocessable_entity }
       end
     end

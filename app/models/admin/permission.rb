@@ -35,21 +35,21 @@ class Admin::Permission < ActiveRecord::Base
   # for the subject_class.
   ##
   def self.update_permission(role, subject_class, actions)
-    existing_permissions = role.permissions.where({ :subject_class => subject_class })
+    existing_permissions = role.permissions.where(subject_class: subject_class)
 
-    if existing_permissions then
+    if existing_permissions
       existing_permissions.each do |perm|
-        if not actions.include? perm.action then
-          #The role no longer has this permission. Get rid
+        unless actions.include? perm.action
+          # The role no longer has this permission. Get rid
           role.permissions.delete(perm)
         end
       end
     end
 
     actions.each do |action|
-      if (not existing_permissions) or (not existing_permissions.find_by_action(action)) then
-        #Try to add the role to the existing permission
-        if permission = Admin::Permission.where({ :action => action, :subject_class => subject_class }).first;
+      if (!existing_permissions) || (!existing_permissions.find_by_action(action))
+        # Try to add the role to the existing permission
+        if permission = Admin::Permission.where(action: action, subject_class: subject_class).first
           permission.roles << role
         else
           permission = Admin::Permission.new

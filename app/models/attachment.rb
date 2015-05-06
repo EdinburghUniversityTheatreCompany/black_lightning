@@ -28,18 +28,18 @@
 #++
 ##
 class Attachment < ActiveRecord::Base
-  belongs_to :editable_block, :class_name => "Admin::EditableBlock"
+  belongs_to :editable_block, class_name: 'Admin::EditableBlock'
 
-  validates :name, :presence => true, :uniqueness => true
+  validates :name, presence: true, uniqueness: true
   validate  :check_file_size
 
   has_attached_file :file,
-                    :url => '/attachments/:slug/:style',
-                    :convert_options => { :thumb => "-quality 75 -strip" },
-                    :path => ':rails_root/uploads/attachments/:id_partition/:style.:extension',
-                    :styles => (lambda do |a|
+                    url: '/attachments/:slug/:style',
+                    convert_options: { thumb: '-quality 75 -strip' },
+                    path: ':rails_root/uploads/attachments/:id_partition/:style.:extension',
+                    styles: (lambda do |a|
                       if /image\/.+/.match a.instance.file_content_type
-                        { :thumb => "192x100#", :display => "700x700" }
+                        { thumb: '192x100#', display: '700x700' }
                       else
                         {}
                       end
@@ -54,7 +54,7 @@ class Attachment < ActiveRecord::Base
   def check_file_size
     # Restrict file size for images:
     if file_file_size > 1.megabytes && (/image\/.+/.match file_content_type)
-      errors.add(:file, "Attached images must be under 1MB in size.")
+      errors.add(:file, 'Attached images must be under 1MB in size.')
     end
   end
 end

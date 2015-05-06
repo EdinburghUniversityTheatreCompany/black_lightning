@@ -14,17 +14,17 @@ class RegistrationsController < Devise::RegistrationsController
 
       respond_to do |format|
         format.html { render 'new' }
-        format.json { render json: { error: "Card not found" }, status: :unprocessable_entity }
+        format.json { render json: { error: 'Card not found' }, status: :unprocessable_entity }
       end
       return
     end
 
-    if not @membership_card.user.nil?
+    unless @membership_card.user.nil?
       flash[:alert] = 'Card already registered'
 
       respond_to do |format|
         format.html { render 'new' }
-        format.json { render json: { error: "Card already registered" }, status: :unprocessable_entity }
+        format.json { render json: { error: 'Card already registered' }, status: :unprocessable_entity }
       end
       return
     end
@@ -42,7 +42,7 @@ class RegistrationsController < Devise::RegistrationsController
           sign_in(User, @user)
           redirect_to admin_path
         end
-        format.json { render json: { success: true }}
+        format.json { render json: { success: true } }
       end
     else
       respond_to do |format|
@@ -52,12 +52,12 @@ class RegistrationsController < Devise::RegistrationsController
     end
   end
 
-  before_filter only: [ :reactivate, :reactivation ] do
+  before_filter only: [:reactivate, :reactivation] do
     authenticate_user!
   end
 
   def reactivation
-    @title = "Membership Renewal"
+    @title = 'Membership Renewal'
   end
 
   skip_before_filter :verify_authenticity_token, only: :reactivate
@@ -69,17 +69,17 @@ class RegistrationsController < Devise::RegistrationsController
 
       respond_to do |format|
         format.html { render 'registrations/reactivation' }
-        format.json { render json: { error: "Card not found" }}
+        format.json { render json: { error: 'Card not found' } }
       end
       return
     end
 
-    if not @membership_card.user.nil?
+    unless @membership_card.user.nil?
       flash[:alert] = 'Card already registered'
 
       respond_to do |format|
         format.html { render 'registrations/reactivation' }
-        format.json { render json: { error: "Card already registered" }}
+        format.json { render json: { error: 'Card already registered' } }
       end
       return
     end
@@ -95,7 +95,7 @@ class RegistrationsController < Devise::RegistrationsController
 
     MembershipMailer.delay.renew_membership(current_user)
 
-    flash[:notice] = "Membership Reactivated. Thank you."
+    flash[:notice] = 'Membership Reactivated. Thank you.'
 
     respond_to do |format|
       format.html { redirect_to admin_path }

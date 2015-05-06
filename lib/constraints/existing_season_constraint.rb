@@ -1,7 +1,7 @@
 class ExistingSeasonConstraint
   def initialize
     if Season.table_exists?
-      @season_slugs = Season.select(:slug).collect { |s| s.slug }
+      @season_slugs = Season.select(:slug).collect(&:slug)
     else
       @season_slugs = nil
     end

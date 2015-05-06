@@ -12,7 +12,7 @@ class AboutController < ApplicationController
   def get_subpages
     action = params[:action]
 
-    action_sections = action.split("/")
+    action_sections = action.split('/')
 
     @root_page = action_sections[0]
 
@@ -25,14 +25,14 @@ class AboutController < ApplicationController
       'eutc' => 'EUTC'
     }
 
-    if not File.directory?(@subpages_dir) then
+    unless File.directory?(@subpages_dir)
       @subpages_dir = "#{Rails.root}/app/views/about/"
       @root_page = nil
     end
 
     Dir.foreach(@subpages_dir) do |file|
-      if not File.directory?(File.join(@subpages_dir, file)) and not exclude.include? file then
-        @subpages << file.gsub(/\.html\.erb/, "")
+      if !File.directory?(File.join(@subpages_dir, file)) and !exclude.include? file
+        @subpages << file.gsub(/\.html\.erb/, '')
       end
     end
   end

@@ -2,7 +2,6 @@
 # The controller for setting permissions.
 ##
 class Admin::PermissionsController < AdminController
-
   ##
   # Shows a grid for selecting permissions for each role.
   ##
@@ -10,11 +9,11 @@ class Admin::PermissionsController < AdminController
     authorize!(:read, Admin::Permission)
 
     role_exclude = ['admin']
-    @roles  = ::Role.includes(:permissions).where("name NOT IN (?)", role_exclude).all
+    @roles  = ::Role.includes(:permissions).where('name NOT IN (?)', role_exclude).all
 
     Rails.application.eager_load!
     @models = ::ActiveRecord::Base.descendants
-    @title = "Permissions"
+    @title = 'Permissions'
   end
 
   ##
@@ -24,7 +23,7 @@ class Admin::PermissionsController < AdminController
     authorize!(:edit, Admin::Permission)
 
     role_exclude = ['admin']
-    @roles  = ::Role.where("name NOT IN (?)", role_exclude)
+    @roles  = ::Role.where('name NOT IN (?)', role_exclude)
 
     Rails.application.eager_load!
     @models = ::ActiveRecord::Base.descendants
@@ -39,7 +38,7 @@ class Admin::PermissionsController < AdminController
         Admin::Permission.update_permission(role, model.name, actions)
       end
 
-      other_permissions = ['backend', 'reports']
+      other_permissions = %w(backend reports)
 
       other_permissions.each do |model|
         _models = params[role.name]
@@ -53,5 +52,4 @@ class Admin::PermissionsController < AdminController
 
     return redirect_to :admin_permissions
   end
-
 end

@@ -2,8 +2,7 @@
 # Controller for Admin::Questionnaires::QuestionnaireTemplate
 ##
 class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
-
-  load_and_authorize_resource :class => Admin::Questionnaires::QuestionnaireTemplate
+  load_and_authorize_resource class: Admin::Questionnaires::QuestionnaireTemplate
 
   ##
   # GET /admin/questionnaires/questionnaire_templates
@@ -29,7 +28,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
 
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render :json => @template.to_json(:include => { :questions => {} }) }
+      format.json { render json: @template.to_json(include: { questions: {} }) }
     end
   end
 
@@ -67,7 +66,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
         format.html { redirect_to @template, notice: 'Call question template was successfully created.' }
         format.json { render json: @template, status: :created, location: @template }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @template.errors, status: :unprocessable_entity }
       end
     end
@@ -86,7 +85,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
         format.html { redirect_to @template, notice: 'Call question template was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @template.errors, status: :unprocessable_entity }
       end
     end

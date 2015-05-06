@@ -18,7 +18,7 @@ FactoryGirl.define do
     show_title   { generate(:random_string) }
 
     start_time   { generate(:random_date) }
-    end_time     { start_time.advance(:hours => rand(0.2..3.0)) }
+    end_time     { start_time.advance(hours: rand(0.2..3.0)) }
 
     ignore do
       job_count 0

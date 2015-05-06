@@ -5,9 +5,8 @@ class Admin::HelpControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get kramdown" do
+  test 'should get kramdown' do
     get :kramdown
     assert_response :success
   end
-
 end

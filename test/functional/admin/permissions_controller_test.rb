@@ -7,14 +7,13 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get grid" do
+  test 'should get grid' do
     get :grid
     assert_response :success
   end
 
-  test "should update permissions" do
+  test 'should update permissions' do
     post :update_grid
     assert_redirected_to admin_permissions_path
   end
-
 end

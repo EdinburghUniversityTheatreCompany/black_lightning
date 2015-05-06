@@ -5,15 +5,14 @@ class VenuesControllerTest < ActionController::TestCase
     @venue = venues(:one)
   end
 
-  test "should get index" do
+  test 'should get index' do
     get :index
     assert_response :success
     assert_not_nil assigns(:venues)
   end
 
-  test "should show venue" do
+  test 'should show venue' do
     get :show, id: @venue
     assert_response :success
   end
-
 end

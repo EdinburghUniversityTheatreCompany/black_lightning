@@ -3,14 +3,13 @@
 ##
 
 class Admin::FeedbacksController < AdminController
-
-  load_and_authorize_resource :class => "Admin::Feedback"
+  load_and_authorize_resource class: 'Admin::Feedback'
 
   # GET /admin/feedbacks
   # GET /admin/feedbacks.json
   def index
     @show = Show.find_by_slug(params[:show_id])
-    @feedbacks = Admin::Feedback.where({ :show_id => @show.id })
+    @feedbacks = Admin::Feedback.where(show_id: @show.id)
 
     authorize! :read, @feedbacks.first
 
@@ -48,18 +47,18 @@ class Admin::FeedbacksController < AdminController
 
     respond_to do |format|
       if @feedback.save
-        format.html {
-          if can? :read, @feedback then
+        format.html do
+          if can? :read, @feedback
             flash[:success] = 'Feedback was successfully submitted.'
             redirect_to admin_show_feedbacks_path(@show)
           else
             flash[:success] = 'Feedback was successfully submitted.'
             redirect_to admin_show_path(@show)
           end
-        }
+        end
         format.json { render json: @feedback, status: :created, location: @feedback }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @feedback.errors, status: :unprocessable_entity }
       end
     end
@@ -76,7 +75,7 @@ class Admin::FeedbacksController < AdminController
         format.html { redirect_to admin_show_feedbacks_path(@show), notice: 'Feedback was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @feedback.errors, status: :unprocessable_entity }
       end
     end

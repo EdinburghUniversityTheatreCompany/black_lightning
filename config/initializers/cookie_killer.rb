@@ -27,7 +27,7 @@ class CookieKiller
     status, headers, body = @app.call(env)
 
     request = ActionDispatch::Request.new(env)
-    if not (request.cookie_jar[:allow_cookies] or env['PATH_INFO'].include?('/users/')) then
+    unless request.cookie_jar[:allow_cookies] || env['PATH_INFO'].include?('/users/')
       # remove ALL cookies from the response
       headers.delete 'Set-Cookie'
     end

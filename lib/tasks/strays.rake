@@ -4,9 +4,9 @@ module Paperclip
     def self.obtain_attachments(klass)
       klass = Paperclip.class_for(klass.to_s)
       name = ENV['ATTACHMENT'] || ENV['attachment']
-      raise "Class #{klass.name} has no attachments specified" unless klass.respond_to?(:attachment_definitions)
+      fail "Class #{klass.name} has no attachments specified" unless klass.respond_to?(:attachment_definitions)
       if !name.blank? && klass.attachment_definitions.keys.map(&:to_s).include?(name.to_s)
-        [ name ]
+        [name]
       else
         klass.attachment_definitions.keys
       end
@@ -15,7 +15,7 @@ module Paperclip
 end
 
 namespace :strays do
-  task :list, [:model] => :environment do |t, args|
+  task :list, [:model] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
 
@@ -26,14 +26,14 @@ namespace :strays do
 
       puts "#{klass_name.pluralize} with #{a.name.to_s.pluralize} that don't exist"
 
-      strays = klass.where("#{a.name.to_s}_id is not null").select { |k| k.send(a.name).nil? }
+      strays = klass.where("#{a.name}_id is not null").select { |k| k.send(a.name).nil? }
       strays.each do |s|
-        puts "  #{s.id} expected #{a.name} with id #{s.send(a.name.to_s + "_id")}"
+        puts "  #{s.id} expected #{a.name} with id #{s.send(a.name.to_s + '_id')}"
       end
     end
   end
 
-  task :remove, [:model] => :environment do |t, args|
+  task :remove, [:model] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
 
@@ -44,15 +44,15 @@ namespace :strays do
 
       puts "Removing #{klass_name.pluralize} with #{a.name.to_s.pluralize} that don't exist"
 
-      strays = klass.where("#{a.name.to_s}_id is not null").select { |k| k.send(a.name).nil? }
+      strays = klass.where("#{a.name}_id is not null").select { |k| k.send(a.name).nil? }
       strays.each do |s|
         s.delete
-        puts "  #{s.id} deleted, as #{a.name} with id #{s.send(a.name.to_s + "_id")} doesn't exist"
+        puts "  #{s.id} deleted, as #{a.name} with id #{s.send(a.name.to_s + '_id')} doesn't exist"
       end
     end
   end
 
-  task :list_missing_files, [:model] => :environment do |t, args|
+  task :list_missing_files, [:model] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
     attachments = Paperclip::Task.obtain_attachments(klass_name)
@@ -65,12 +65,12 @@ namespace :strays do
         missing = []
 
         attachment.styles.each do |s|
-          if not File.exist?(attachment.path(s[0]))
+          unless File.exist?(attachment.path(s[0]))
             missing << s[0]
           end
         end
 
-        if not File.exist?(attachment.path)
+        if !File.exist?(attachment.path)
           puts "#{klass_name} #{k.id} is missing its original file."
         elsif missing == attachment.styles.map { |s| s[0] }
           puts "#{klass_name} #{k.id} is missing all styles for attachment #{a} and should be reprocessed."
@@ -81,7 +81,7 @@ namespace :strays do
     end
   end
 
-  task :resolve_missing_files, [:model] => :environment do |t, args|
+  task :resolve_missing_files, [:model] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
     attachments = Paperclip::Task.obtain_attachments(klass_name)
@@ -94,12 +94,12 @@ namespace :strays do
         missing = []
 
         attachment.styles.each do |s|
-          if not File.exist?(attachment.path(s[0]))
+          unless File.exist?(attachment.path(s[0]))
             missing << s[0]
           end
         end
 
-        if not File.exist?(attachment.path)
+        if !File.exist?(attachment.path)
           puts "#{klass_name} #{k.id} is missing its original file. Setting file to nil."
           attachment.clear
           k.save!

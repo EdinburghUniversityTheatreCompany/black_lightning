@@ -5,26 +5,26 @@ class Admin::NewsControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get index" do
+  test 'should get index' do
     FactoryGirl.create_list(:news, 10)
 
     get :index
     assert_response :success
   end
 
-  test "should get show" do
+  test 'should get show' do
     @news = FactoryGirl.create(:news)
 
     get :show, id: @news
     assert_response :success
   end
 
-  test "should get new" do
+  test 'should get new' do
     get :new
     assert_response :success
   end
 
-  test "should create news" do
+  test 'should create news' do
     attrs = FactoryGirl.attributes_for(:news)
 
     assert_difference('News.count') do
@@ -34,14 +34,14 @@ class Admin::NewsControllerTest < ActionController::TestCase
     assert_redirected_to admin_news_path(assigns(:news))
   end
 
-  test "should get edit" do
+  test 'should get edit' do
     @news = FactoryGirl.create(:news)
 
     get :edit, id: @news
     assert_response :success
   end
 
-  test "should update news" do
+  test 'should update news' do
     @news = FactoryGirl.create(:news)
     attrs = FactoryGirl.attributes_for(:news)
 
@@ -49,7 +49,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
     assert_redirected_to admin_news_path(assigns(:news))
   end
 
-  test "should destroy news" do
+  test 'should destroy news' do
     @news = FactoryGirl.create(:news)
 
     assert_difference('News.count', -1) do

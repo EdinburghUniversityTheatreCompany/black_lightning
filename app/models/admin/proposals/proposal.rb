@@ -28,17 +28,17 @@
 #++
 ##
 class Admin::Proposals::Proposal < ActiveRecord::Base
-  belongs_to :call, :class_name => "Admin::Proposals::Call"
+  belongs_to :call, class_name: 'Admin::Proposals::Call'
 
-  has_many :questions, :through => :answers
-  has_many :answers, :as => :answerable
-  has_many :team_members, :class_name => "::TeamMember", :as => :teamwork
-  has_many :users, :through => :team_members
+  has_many :questions, through: :answers
+  has_many :answers, as: :answerable
+  has_many :team_members, class_name: '::TeamMember', as: :teamwork
+  has_many :users, through: :team_members
 
-  accepts_nested_attributes_for :answers, :team_members, :reject_if => :all_blank, :allow_destroy => true
+  accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
 
-  validates :show_title, :proposal_text, :publicity_text, :presence => true
-  validates :team_members, :presence => { :message => "You must add at least one team member" }
+  validates :show_title, :proposal_text, :publicity_text, presence: true
+  validates :team_members, presence: { message: 'You must add at least one team member' }
 
   attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
 
@@ -48,7 +48,7 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   def update_answers
     current_questions = questions.all
     call.questions.all.each do |question|
-      if not current_questions.include? question then
+      unless current_questions.include? question
         answer = Admin::Answer.new
         answer.question = question
         answers.push(answer)
@@ -62,35 +62,35 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   # Throws an error if the proposal has not been approved.
   ##
   def convert_to_show
-    puts self.show_title
+    puts show_title
 
-    if not self.approved == true then
-      raise "This proposal has not been approved"
+    unless approved == true
+      fail 'This proposal has not been approved'
     end
 
-    @show = Show.new()
-    @show.name = self.show_title
-    @show.description = self.publicity_text
+    @show = Show.new
+    @show.name = show_title
+    @show.description = publicity_text
 
-    @show.slug = @show.name.gsub(/\s+/,'-').gsub(/[^a-zA-Z0-9\-]/,'').downcase.gsub(/\-{2,}/,'-')
+    @show.slug = @show.name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-')
 
     self.successful = true
 
-    if not @show.save then
+    unless @show.save
       @show.errors.full_messages.each do |error|
         puts error
       end
-      raise "Couldn't save the new show"
+      fail "Couldn't save the new show"
     end
 
-    puts "Adding Team Members"
-    @show.team_members << self.team_members.collect { |team_member| team_member.dup }
+    puts 'Adding Team Members'
+    @show.team_members << team_members.collect(&:dup)
 
-    if not self.save then
+    unless save
       puts "Couldn't set the 'successful' flag on the proposal. This will need to be done manually"
     end
 
-    puts "Created Show:"
+    puts 'Created Show:'
     puts "Name: #{@show.name}"
     puts "Slug: #{@show.slug}"
   end

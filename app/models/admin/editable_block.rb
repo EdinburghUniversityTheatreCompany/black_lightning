@@ -22,14 +22,14 @@
 class Admin::EditableBlock < ActiveRecord::Base
   resourcify
 
-  validates :name, :presence => true, :uniqueness => true
+  validates :name, presence: true, uniqueness: true
 
-  has_many :attachments, :class_name => "::Attachment"
-  accepts_nested_attributes_for :attachments, :reject_if => :all_blank, :allow_destroy => true
+  has_many :attachments, class_name: '::Attachment'
+  accepts_nested_attributes_for :attachments, reject_if: :all_blank, allow_destroy: true
 
   attr_accessible :content, :name, :attachments, :attachments_attributes, :admin_page, :group
 
   def self.groups
-    select('`group`').uniq.map { |g| g.group }
+    select('`group`').uniq.map(&:group)
   end
 end

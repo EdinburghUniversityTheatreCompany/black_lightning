@@ -7,7 +7,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     sign_in FactoryGirl.create(:admin)
   end
 
-  test "should get index" do
+  test 'should get index' do
     FactoryGirl.create_list(:proposal, 10, call: @call)
 
     get :index, call_id: @call.id
@@ -21,13 +21,13 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_calls_path
   end
 
-  test "should get new" do
+  test 'should get new' do
     get :new, call_id: @call.id
 
     assert_response :success
   end
 
-  test "should create admin_proposals_proposal" do
+  test 'should create admin_proposals_proposal' do
     proposal = FactoryGirl.build(:proposal)
 
     # This mess is to force the inclusion of team_member attributes.
@@ -58,21 +58,21 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_call_proposal_path(@call, assigns(:proposal))
   end
 
-  test "should show admin_proposals_proposal" do
+  test 'should show admin_proposals_proposal' do
     @proposal = FactoryGirl.create(:proposal, call: @call)
 
     get :show, call_id: @call.id,  id: @proposal
     assert_response :success
   end
 
-  test "should get edit" do
+  test 'should get edit' do
     @proposal = FactoryGirl.create(:proposal, call: @call)
 
     get :edit, call_id: @call.id, id: @proposal
     assert_response :success
   end
 
-  test "should update admin_proposals_proposal" do
+  test 'should update admin_proposals_proposal' do
     @proposal = FactoryGirl.create(:proposal, call: @call)
     attrs = FactoryGirl.attributes_for(:proposal)
 
@@ -80,7 +80,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
   end
 
-  test "should destroy admin_proposals_proposal" do
+  test 'should destroy admin_proposals_proposal' do
     @proposal = FactoryGirl.create(:proposal, call: @call)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do
@@ -90,7 +90,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_call_proposals_url(@call)
   end
 
-  test "members should not view other proposals before the deadline" do
+  test 'members should not view other proposals before the deadline' do
     @call = FactoryGirl.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
     @proposal = FactoryGirl.create(:proposal, call: @call)
     member = FactoryGirl.create(:member)
@@ -106,7 +106,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to static_path('access_denied')
   end
 
-  test "members should view their own proposals before the deadline" do
+  test 'members should view their own proposals before the deadline' do
     @call = FactoryGirl.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
     @proposal = FactoryGirl.create(:proposal, call: @call)
     member = FactoryGirl.create(:member)
@@ -125,7 +125,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "committee should not view other proposals before the deadline" do
+  test 'committee should not view other proposals before the deadline' do
     @call = FactoryGirl.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
     @proposal = FactoryGirl.create(:proposal, call: @call)
     member = FactoryGirl.create(:committee)
@@ -141,7 +141,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to static_path('access_denied')
   end
 
-  test "committee should view their own proposals before the deadline" do
+  test 'committee should view their own proposals before the deadline' do
     @call = FactoryGirl.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
     @proposal = FactoryGirl.create(:proposal, call: @call)
     member = FactoryGirl.create(:committee)
@@ -160,7 +160,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "committee should see all proposals after the deadline" do
+  test 'committee should see all proposals after the deadline' do
     @call = FactoryGirl.create(:proposal_call, proposal_count: 5, open: true, deadline: 1.days.ago)
     @proposal = FactoryGirl.create(:proposal, call: @call)
     member = FactoryGirl.create(:committee)
@@ -176,7 +176,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "members should see only approved proposals after the deadline" do
+  test 'members should see only approved proposals after the deadline' do
     @call = FactoryGirl.create(:proposal_call, open: true, deadline: 1.days.ago)
     @approved = FactoryGirl.create(:proposal, call: @call, approved: true)
     @rejected = FactoryGirl.create(:proposal, call: @call, approved: false)

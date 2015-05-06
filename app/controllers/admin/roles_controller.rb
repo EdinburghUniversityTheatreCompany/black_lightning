@@ -1,9 +1,8 @@
 class Admin::RolesController < AdminController
-
   load_and_authorize_resource
 
   def index
-    @title = "Roles"
+    @title = 'Roles'
     @roles = Role.all
   end
 
@@ -14,7 +13,7 @@ class Admin::RolesController < AdminController
 
   def new
     @role = Role.new
-    @title = "New Role"
+    @title = 'New Role'
   end
 
   def create
@@ -25,7 +24,7 @@ class Admin::RolesController < AdminController
         format.html { redirect_to [:admin, @role], notice: 'Role was successfully created.' }
         format.json { render json: [:admin, @role], status: :created, location: @role }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @role.errors, status: :unprocessable_entity }
       end
     end
@@ -43,7 +42,7 @@ class Admin::RolesController < AdminController
       if @role.update_attributes(params[:role])
         format.html { redirect_to admin_role_url(@role), notice: 'Role was successfully updated.' }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
       end
     end
   end
@@ -53,7 +52,7 @@ class Admin::RolesController < AdminController
     @role.destroy
 
     respond_to do |format|
-      format.html {redirect_to admin_roles_path}
+      format.html { redirect_to admin_roles_path }
     end
   end
 end

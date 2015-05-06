@@ -23,14 +23,14 @@
 
 FactoryGirl.define do
   factory :news do
-     title { generate(:random_string) }
-     slug  { title.gsub(/\s+/,'-').gsub(/[^a-zA-Z0-9\-]/,'').downcase.gsub(/\-{2,}/,'-') }
+    title { generate(:random_string) }
+    slug  { title.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') }
 
-     body  { generate(:random_text) }
+    body  { generate(:random_text) }
 
-     publish_date { generate(:random_date) }
-     show_public  { [true, false].sample }
+    publish_date { generate(:random_date) }
+    show_public  { [true, false].sample }
 
-     association :author, factory: :user
+    association :author, factory: :user
   end
 end

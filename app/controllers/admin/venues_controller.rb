@@ -2,7 +2,6 @@
 # Admin controller for Venue management.
 ##
 class Admin::VenuesController < AdminController
-
   load_and_authorize_resource
 
   ##
@@ -12,7 +11,7 @@ class Admin::VenuesController < AdminController
   ##
   def index
     @venues = Venue.all
-    @title = "Venues"
+    @title = 'Venues'
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }
@@ -40,7 +39,7 @@ class Admin::VenuesController < AdminController
   ##
   def new
     @venue = Venue.new
-    @title = "New Venue"
+    @title = 'New Venue'
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @venue }
@@ -68,7 +67,7 @@ class Admin::VenuesController < AdminController
         format.html { redirect_to admin_venue_path(@venue), notice: 'Venue was successfully created.' }
         format.json { render json: @venue, status: :created, location: @venue }
       else
-        format.html { render "new" }
+        format.html { render 'new' }
         format.json { render json: @venue.errors, status: :unprocessable_entity }
       end
     end
@@ -87,7 +86,7 @@ class Admin::VenuesController < AdminController
         format.html { redirect_to admin_venue_path(@venue), notice: 'Venue was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @venue.errors, status: :unprocessable_entity }
       end
     end

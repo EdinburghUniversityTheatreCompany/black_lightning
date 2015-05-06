@@ -5,11 +5,11 @@ SimpleCov.start 'rails'
 
 require 'html_acceptance'
 
-ENV["RAILS_ENV"] = "test"
+ENV['RAILS_ENV'] = 'test'
 require File.expand_path('../../config/environment', __FILE__)
 require 'rails/test_help'
 
-#Turn off delayed jobs to test mailer
+# Turn off delayed jobs to test mailer
 Delayed::Worker.delay_jobs = false
 
 class ActiveSupport::TestCase
@@ -30,12 +30,12 @@ class ActiveSupport::TestCase
   # https://github.com/w3c/tidy-html5
   def validate_html
     return unless defined? response
-    return unless response.content_type == "text/html"
+    return unless response.content_type == 'text/html'
     return if response.status == 302
 
     validation_dir = Rails.root.join 'tmp/validation'
-    Dir.mkdir(validation_dir) unless File.exists?(validation_dir)
-    acceptance = HTMLAcceptance.new(validation_dir, :ignore_proprietary => true)
+    Dir.mkdir(validation_dir) unless File.exist?(validation_dir)
+    acceptance = HTMLAcceptance.new(validation_dir, ignore_proprietary: true)
 
     validator = acceptance.validator(response.body, request.url)
     assert validator.valid?, "Validation error:\n#{validator.exceptions}"

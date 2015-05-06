@@ -12,15 +12,15 @@ class UsersController < ApplicationController
   # GET /users/1.json
   ##
   def show
-    @user = User.where({:public_profile => true}).find(params[:id])
+    @user = User.where(public_profile: true).find(params[:id])
     @title = @user.name
 
     # Note this uses the ARRAY method "select" to filter results. (Since
     # teamwork is a polymorphic association, you can't just join the
     # events table and filter that).
-    @shows = @user.team_membership.where({ teamwork_type: "Event" }).select { |e| (e.teamwork.is_a? Show) && (e.teamwork.is_public) }
+    @shows = @user.team_membership.where(teamwork_type: 'Event').select { |e| (e.teamwork.is_a? Show) && (e.teamwork.is_public) }
 
-    @shows.sort! { |a,b| a.teamwork.start_date <=> b.teamwork.start_date }
+    @shows.sort! { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
 
     respond_to do |format|
       format.html # show.html.erb
@@ -35,9 +35,9 @@ class UsersController < ApplicationController
     # Try a membership card
     card = MembershipCard.find_by_card_number(search)
 
-    if not card.nil?
+    unless card.nil?
       if card.user.nil?
-        render :json, { response: "Card Not Activated" }, status: :expectation_failed
+        render :json, { response: 'Card Not Activated' }, status: :expectation_failed
         return
       else
         user = card.user
@@ -50,13 +50,13 @@ class UsersController < ApplicationController
 
     case
       when user.nil?
-        render json: { response: "Member not found" }, status: :not_found
+        render json: { response: 'Member not found' }, status: :not_found
         return
       when user.has_role?(:member)
-        render json: { response: user.name + " is a current member", image: user.avatar.url }
+        render json: { response: user.name + ' is a current member', image: user.avatar.url }
         return
       else
-        render json: { response: user.name + " is not a current member" }, status: :payment_required
+        render json: { response: user.name + ' is not a current member' }, status: :payment_required
         return
     end
   end

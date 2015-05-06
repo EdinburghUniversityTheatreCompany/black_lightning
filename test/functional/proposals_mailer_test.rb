@@ -1,11 +1,11 @@
 require 'test_helper'
 
 class ProposalsMailerTest < ActionMailer::TestCase
-  test "should send new_proposal" do
+  test 'should send new_proposal' do
     call = FactoryGirl.create(:proposal_call)
 
     proposal = FactoryGirl.create(:proposal, call: call)
-    creator = proposal.users.first()
+    creator = proposal.users.first
 
     # Send the email, then test that it got queued
     proposal.team_members.each do |team_member|

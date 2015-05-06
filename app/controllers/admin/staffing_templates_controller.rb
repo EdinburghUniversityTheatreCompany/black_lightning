@@ -2,8 +2,7 @@
 # Controller for Admin::StaffingTemplate. More details can be found there.
 ##
 class Admin::StaffingTemplatesController < AdminController
-
-  load_and_authorize_resource :class => Admin::StaffingTemplate
+  load_and_authorize_resource class: Admin::StaffingTemplate
 
   ##
   # GET /admin/staffing_templates
@@ -12,10 +11,10 @@ class Admin::StaffingTemplatesController < AdminController
   ##
   def index
     @templates = Admin::StaffingTemplate.all
-    @title = "Staffing Templates"
+    @title = 'Staffing Templates'
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json:@templates }
+      format.json { render json: @templates }
     end
   end
 
@@ -26,10 +25,10 @@ class Admin::StaffingTemplatesController < AdminController
   ##
   def show
     @template = Admin::StaffingTemplate.find(params[:id])
-    @title = "Staffing Templates"
+    @title = 'Staffing Templates'
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render :json => @template.to_json(:include => { :staffing_jobs => {} }) }
+      format.json { render json: @template.to_json(include: { staffing_jobs: {} }) }
     end
   end
 
@@ -40,10 +39,10 @@ class Admin::StaffingTemplatesController < AdminController
   ##
   def new
     @template = Admin::StaffingTemplate.new
-    @title = "New Staffing Template"
+    @title = 'New Staffing Template'
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json:@template }
+      format.json { render json: @template }
     end
   end
 
@@ -52,7 +51,7 @@ class Admin::StaffingTemplatesController < AdminController
   ##
   def edit
     @template = Admin::StaffingTemplate.find(params[:id])
-    @title = "Editing Staffing Template"
+    @title = 'Editing Staffing Template'
   end
 
   ##
@@ -67,10 +66,10 @@ class Admin::StaffingTemplatesController < AdminController
       if@template.save
         flash[:success] = 'Staffing template was successfully created.'
         format.html { redirect_to admin_staffing_template_path(@template) }
-        format.json { render json:@template, status: :created, location: @template }
+        format.json { render json: @template, status: :created, location: @template }
       else
-        format.html { render "new" }
-        format.json { render json:@template.errors, status: :unprocessable_entity }
+        format.html { render 'new' }
+        format.json { render json: @template.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -89,8 +88,8 @@ class Admin::StaffingTemplatesController < AdminController
         format.html { redirect_to admin_staffing_template_path(@template) }
         format.json { head :no_content }
       else
-        format.html { render "edit" }
-        format.json { render json:@template.errors, status: :unprocessable_entity }
+        format.html { render 'edit' }
+        format.json { render json: @template.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -101,8 +100,8 @@ class Admin::StaffingTemplatesController < AdminController
   # DELETE /admin/staffing_templates/1.json
   ##
   def destroy
-   @template = Admin::StaffingTemplate.find(params[:id])
-   @template.destroy
+    @template = Admin::StaffingTemplate.find(params[:id])
+    @template.destroy
 
     respond_to do |format|
       format.html { redirect_to admin_staffing_templates_url }

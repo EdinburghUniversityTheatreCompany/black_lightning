@@ -1,7 +1,7 @@
 class ArchivesController < ApplicationController
-  layout "archives"
+  layout 'archives'
 
   def index
-    @title = "Archives"
+    @title = 'Archives'
   end
 end

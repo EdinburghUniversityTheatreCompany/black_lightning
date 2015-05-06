@@ -32,23 +32,23 @@ module MetaHelper
   # Creates the meta data tags.
   ##
   def meta_tags
-    @meta[:description] ||= "The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh."
+    @meta[:description] ||= 'The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.'
 
     # facebook opengraph data:
-    @meta["og:url"]         ||= @base_url + request.fullpath
-    @meta["og:image"]       ||= @base_url + image_path('BedlamLogoBW.png')
-    @meta["og:title"]       ||= @title ? "#{@title} - Bedlam Theatre" : "Bedlam Theatre"
-    @meta["og:description"] ||= @meta[:description]
+    @meta['og:url']         ||= @base_url + request.fullpath
+    @meta['og:image']       ||= @base_url + image_path('BedlamLogoBW.png')
+    @meta['og:title']       ||= @title ? "#{@title} - Bedlam Theatre" : 'Bedlam Theatre'
+    @meta['og:description'] ||= @meta[:description]
 
-    @meta["viewport"] = "initial-scale = 1.0,maximum-scale = 1.0"
+    @meta['viewport'] = 'initial-scale = 1.0,maximum-scale = 1.0'
 
     @tags = []
 
     @meta.each do |name, content|
-      type = "name"
-      type = "property" if name.to_s.starts_with?('og') or name.to_s.starts_with?('fb')
+      type = 'name'
+      type = 'property' if name.to_s.starts_with?('og') || name.to_s.starts_with?('fb')
 
-      if content.kind_of?(Array) then
+      if content.is_a?(Array)
         content.each do |item|
           @tags << "<meta #{type}='#{name}' content='#{ERB::Util.html_escape item}' />"
         end

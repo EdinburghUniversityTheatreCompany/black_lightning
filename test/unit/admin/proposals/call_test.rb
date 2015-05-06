@@ -16,7 +16,7 @@
 require 'test_helper'
 
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
-  test "archive" do
+  test 'archive' do
     call = FactoryGirl.create(:proposal_call, open: true)
     call.archive
 

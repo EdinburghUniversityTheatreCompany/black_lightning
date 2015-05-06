@@ -2,22 +2,22 @@
 # Admin controller for User management.
 ##
 class Admin::UsersController < AdminController
-  load_and_authorize_resource :except => [:autocomplete_list]
+  load_and_authorize_resource except: [:autocomplete_list]
 
   ##
   # GET /admin/users
   ##
   def index
-    @title = "Users"
+    @title = 'Users'
 
     @q     = User.unscoped.search(params[:q])
     @users = @q.result(distinct: true)
 
-    if params[:show_non_members] != "1"
+    if params[:show_non_members] != '1'
       @users = @users.with_role(:member)
     end
 
-    @users = @users.paginate(:page => params[:page], :per_page => 15)
+    @users = @users.paginate(page: params[:page], per_page: 15)
     @users = @users.all
 
     respond_to do |format|
@@ -44,7 +44,7 @@ class Admin::UsersController < AdminController
   ##
   def new
     @user = User.new
-    @title = "New User"
+    @title = 'New User'
   end
 
   ##
@@ -58,10 +58,10 @@ class Admin::UsersController < AdminController
 
     respond_to do |format|
       if @user.save
-        format.html {redirect_to admin_user_url(@user)}
+        format.html { redirect_to admin_user_url(@user) }
         format.json { render json: @user }
       else
-        format.html {render "new"}
+        format.html { render 'new' }
         format.json { render json: @user.errors, status: :unprocessable_entity }
       end
     end
@@ -86,14 +86,14 @@ class Admin::UsersController < AdminController
 
     respond_to do |format|
       if @user.update_attributes(params[:user])
-        if can? :read, User then
+        if can? :read, User
           format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
         else
           format.html { redirect_to admin_url, notice: 'User was successfully updated.' }
         end
         format.json { head :no_content }
       else
-        format.html { render "edit" }
+        format.html { render 'edit' }
         format.json { render json: @user.errors, status: :unprocessable_entity }
       end
     end
@@ -107,7 +107,7 @@ class Admin::UsersController < AdminController
     @user.destroy
 
     respond_to do |format|
-      format.html {redirect_to admin_users_path}
+      format.html { redirect_to admin_users_path }
       format.json { head :no_content }
     end
   end
@@ -126,28 +126,27 @@ class Admin::UsersController < AdminController
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/json'
 
-    @users = User.select(["id", :first_name, :last_name])
+    @users = User.select(['id', :first_name, :last_name])
 
     # This... erm... thing... builds the response up one
     # user at a time, which saves loading the whole lot into
     # memory in one go. Unfortunately, it does mean doing some
     # of the JSON myself. Sorry.
     self.response_body = Enumerator.new do |output|
-      output << "["
+      output << '['
 
       first = true
       @users.find_each do |u|
-
         if first
           first = false
         else
-          output << ","
+          output << ','
         end
 
         output << u.to_json
       end
 
-      output << "]"
+      output << ']'
     end
   end
 end

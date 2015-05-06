@@ -23,11 +23,11 @@ FactoryGirl.define do
     publicity_text { generate(:random_text) }
     approved       { [true, nil, false].sample }
 
-    after(:build) do |proposal, evaluator|
+    after(:build) do |proposal, _evaluator|
       proposal.team_members << FactoryGirl.build_list(:team_member, 5, teamwork: proposal)
     end
 
-    after(:create) do |proposal, evaluator|
+    after(:create) do |proposal, _evaluator|
       proposal.call.questions.each do |q|
         create(:answer, question: q, answerable: proposal)
       end
