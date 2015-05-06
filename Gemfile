@@ -14,7 +14,7 @@ group :assets do
   gem 'coffee-rails'
   gem 'jquery-rails'
   gem 'bootstrap-sass', '< 3.0'
-  gem 'font-awesome-rails'
+  gem 'font-awesome-sass'
 end
 
 gem 'simple_form'
@@ -66,4 +66,6 @@ group :test do
 end
 
 # Deploy with Capistrano
-gem 'capistrano'
+gem 'capistrano-rails'
+gem 'capistrano-rvm'
+gem 'capistrano3-delayed-job'

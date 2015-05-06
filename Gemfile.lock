@@ -64,6 +64,17 @@ GEM
       i18n
       rake (>= 10.0.0)
       sshkit (~> 1.3)
+    capistrano-bundler (1.1.4)
+      capistrano (~> 3.1)
+      sshkit (~> 1.2)
+    capistrano-rails (1.1.3)
+      capistrano (~> 3.1)
+      capistrano-bundler (~> 1.1)
+    capistrano-rvm (0.1.2)
+      capistrano (~> 3.0)
+      sshkit (~> 1.2)
+    capistrano3-delayed-job (1.4.0)
+      capistrano (>= 3.0.0)
     chronic (0.10.2)
     climate_control (0.0.3)
       activesupport (>= 3.0)
@@ -106,8 +117,8 @@ GEM
       i18n (~> 0.5)
     faraday (0.9.1)
       multipart-post (>= 1.2, < 3)
-    font-awesome-rails (4.3.0.0)
-      railties (>= 3.2, < 5.0)
+    font-awesome-sass (4.3.1)
+      sass (~> 3.2)
     globalid (0.3.5)
       activesupport (>= 4.1.0)
     html_acceptance (0.1.19)
@@ -273,7 +284,9 @@ DEPENDENCIES
   bootstrap-sass (< 3.0)
   byebug
   cancan
-  capistrano
+  capistrano-rails
+  capistrano-rvm
+  capistrano3-delayed-job
   chronic
   coffee-rails
   daemons
@@ -281,7 +294,7 @@ DEPENDENCIES
   devise
   factory_girl_rails
   faker
-  font-awesome-rails
+  font-awesome-sass
   html_acceptance
   jquery-rails
   kramdown
