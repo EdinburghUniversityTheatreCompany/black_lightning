@@ -108,17 +108,11 @@ class User < ActiveRecord::Base
   def self.create_user(params)
     user = User.new(params)
 
-    reset_password = false
-
     unless user.password
       password_length = 6
       password = Devise.friendly_token.first(password_length)
 
       user.password = password
-      user.reset_password_token = User.reset_password_token
-      user.reset_password_sent_at = Time.now.utc
-
-      reset_password = true
     end
 
     return user
