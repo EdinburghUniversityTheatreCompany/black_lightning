@@ -81,13 +81,10 @@ class Admin::Staffing < ActiveRecord::Base
   ##
   def send_reminder
     if reminder_job.attempts > 0
-      # Prevent the job from running more than once to prevent us spewing text messages
+      # Prevent the job from running more than once to prevent us spewing emails
       # if there is an error.
       fail reminder_job.last_error
     end
-
-    # set up a client to talk to the Twilio REST API
-    client = ::Twilio::REST::Client.new ChaosRails::Application.config.twilio_account_sid, ChaosRails::Application.config.twilio_auth_token
 
     errors = []
 
@@ -97,14 +94,6 @@ class Admin::Staffing < ActiveRecord::Base
       user = job.user
       begin
         StaffingMailer.staffing_reminder(job).deliver_now
-
-        if user.phone_number && (!user.phone_number.blank?)
-          client.account.sms.messages.create(
-            from: ChaosRails::Application.config.twilio_phone_number,
-            to: user.phone_number,
-            body: "Hey! You're staffing #{job.name} for #{job.staffable.show_title} at #{I18n.l job.staffable.start_time, format: :time_only}."
-          )
-        end
       rescue => e
         exception = e.exception "Error sending reminder to #{user.name}: " + e.message
         errors << exception
