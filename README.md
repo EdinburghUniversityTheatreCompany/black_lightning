@@ -7,7 +7,7 @@ heights can be reached.
 There is (apparently) some more information in the `doc/` directory.
 You can generate documentation about the code using `rake doc:app`.
 
-You may also find some information on the [project wiki](https://bitbucket.org/bedlamtheatre/black_lightning/wiki/browse/) -- especially if you're interested in hacking.
+You may also find some information on the [project wiki](https://bitbucket.org/bedlamtheatre/black_lightning/wiki/browse/) - especially if you're interested in hacking.
 
 ## The Fine Print
 
