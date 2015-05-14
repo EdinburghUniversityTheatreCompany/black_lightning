@@ -44,7 +44,6 @@ namespace :doc do
     rdoc.rdoc_files.include('app/**/*.rb')
     rdoc.rdoc_files.include('lib/**/*.rb')
     rdoc.rdoc_files.include('config/initializers/*.rb')
-    rdoc.rdoc_files.include('doc/README')
     rdoc.rdoc_files.include('doc/TODO')
     rdoc.rdoc_files.include('doc/ADD_RESOUCES_PAGE')
   end

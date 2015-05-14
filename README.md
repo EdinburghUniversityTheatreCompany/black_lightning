@@ -5,6 +5,7 @@ But not just that! It is to build a stable platform upon which new
 heights can be reached.
 
 There is (apparently) some more information in the `doc/` directory.
+You can generate documentation about the code using `rake doc:app`.
 
 ## The Fine Print
 
