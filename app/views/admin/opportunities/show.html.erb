@@ -23,7 +23,7 @@
 <% if can? :edit, :opportunity %>
   <br />
 
-  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+  <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
   <%= link_to edit_text, edit_admin_opportunity_path(@opportunity), :class => 'btn' %>
 <% end %>
 
@@ -31,9 +31,9 @@
   <br />
   <br />
 
-  <% approve_text = '<i class="icon-ok"></i> Approve'.html_safe %>
+  <% approve_text = '<i class="fa fa-ok"></i> Approve'.html_safe %>
   <%= link_to approve_text, approve_admin_opportunity_path(@opportunity), :method => :put, :class => "btn btn-success" %>
 
-  <% reject_text = '<i class="icon-remove"></i> Reject'.html_safe %>
+  <% reject_text = '<i class="fa fa-remove"></i> Reject'.html_safe %>
   <%= link_to reject_text, reject_admin_opportunity_path(@opportunity), :method => :put, :class => "btn btn-danger" %>
 <% end %>

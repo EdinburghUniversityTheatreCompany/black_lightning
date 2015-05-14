@@ -25,6 +25,6 @@
   <%= image_tag @venue.image.url(:thumb) %>
 </p>
 
-<% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+<% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
 <%= link_to edit_text, edit_admin_venue_path(@venue), :class => "btn" %>
 <%= link_to 'Back', admin_venues_path, :class => "btn" %>

@@ -13,6 +13,6 @@
 <% if can? :create, Opportunity %>
   <br />
 
-  <% opportunity_text = '<i class="icon-plus"></i> Add Opportunity'.html_safe %>
+  <% opportunity_text = '<i class="fa fa-plus"></i> Add Opportunity'.html_safe %>
   <%= link_to opportunity_text, new_admin_opportunity_path, :class => "btn btn-small" %>
 <% end %>

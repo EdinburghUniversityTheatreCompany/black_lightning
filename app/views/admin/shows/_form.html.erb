@@ -8,7 +8,7 @@
     <%= f.input :name, :wrapper => :append do %>
       <%= f.input_field :name %>
       <a class="btn xts_lookup" href="javascript:void(0);" title="Lookup show in XTS and fetch XTS ID, tagline and dates.">
-        <i class="icon-search"></i>
+        <i class="fa fa-search"></i>
       </a>
     <% end %>
 
@@ -60,7 +60,7 @@
 
         <li>
           <%= f.link_to_add :team_members, :class => "btn ui-state-disabled" do %>
-            <i class="icon-plus"></i> Add Team Member
+            <i class="fa fa-plus"></i> Add Team Member
           <% end %>
         </li>
       </ul>
@@ -71,7 +71,7 @@
 
     <%= f.simple_fields_for :reviews %>
 
-    <% add_review_text = '<i class="icon-plus"></i> Add Review'.html_safe %>
+    <% add_review_text = '<i class="fa fa-plus"></i> Add Review'.html_safe %>
     <%= f.link_to_add add_review_text, :reviews, :class => "btn" %>
 
     <div class="gallery-form">
@@ -88,7 +88,7 @@
 
       <br />
 
-      <% add_photo_text = '<i class="icon-plus"></i> Add Photo'.html_safe %>
+      <% add_photo_text = '<i class="fa fa-plus"></i> Add Photo'.html_safe %>
       <%= f.link_to_add add_photo_text, :pictures, :class => "btn" %>
 
     </div>

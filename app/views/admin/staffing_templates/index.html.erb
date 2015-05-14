@@ -31,6 +31,6 @@
 <br />
 
 <% if can? :create, Admin::StaffingTemplate %>
-  <% new_text = '<i class="icon-plus"></i> New Template'.html_safe %>
+  <% new_text = '<i class="fa fa-plus"></i> New Template'.html_safe %>
   <%= link_to new_text, new_admin_staffing_template_path, :class => "btn" %>
 <% end %>

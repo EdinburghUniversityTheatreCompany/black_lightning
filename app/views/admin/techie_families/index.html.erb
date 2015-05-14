@@ -2,7 +2,7 @@
 
 <p>
   <%= link_to graph_admin_techie_families_url, class: 'btn' do %>
-    <i class="icon-bar-chart"></i> Graph
+    <i class="fa fa-bar-chart"></i> Graph
   <% end %>
 </p>
 
@@ -36,6 +36,6 @@
 <br />
 
 <% if can? :create, Techie %>
-<% new_text = '<i class="icon-plus"></i> New Techie'.html_safe %>
+<% new_text = '<i class="fa fa-plus"></i> New Techie'.html_safe %>
 <%= link_to new_text, new_admin_techie_family_path, :class => 'btn' %>
 <% end %>

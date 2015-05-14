@@ -52,7 +52,7 @@
           });
         });
       </script>
-      <a id="add_date" class="btn"><i class="icon-plus"></i> Add Date</a>
+      <a id="add_date" class="btn"><i class="fa fa-plus"></i> Add Date</a>
     </div>
 
     <div class="well form-horizontal">
@@ -60,7 +60,7 @@
       <%= f.simple_fields_for :staffing_jobs %>
 
       <% if can? :write, @admin_staffing %>
-        <% add_text = '<i class="icon-plus"></i> Add Job'.html_safe %>
+        <% add_text = '<i class="fa fa-plus"></i> Add Job'.html_safe %>
         <%= f.link_to_add add_text, :staffing_jobs, :class => "btn" %>
       </div>
     <% end %>
@@ -96,5 +96,5 @@
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
   <%= select_datetime(Time.current, {prefix: "start"}) %> to <%= select_time(Time.current + 3.hours, prefix: "end")%>
-  <a class="btn btn-danger"><i class="icon-remove"></i> Remove</a>
+  <a class="btn btn-danger"><i class="fa fa-remove"></i> Remove</a>
 </div>

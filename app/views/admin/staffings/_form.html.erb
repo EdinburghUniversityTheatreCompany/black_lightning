@@ -16,7 +16,7 @@
     <h3>Jobs</h3>
     <%= f.simple_fields_for :staffing_jobs %>
 
-    <% add_job_text = '<i class="icon-plus"></i> Add Job'.html_safe %>
+    <% add_job_text = '<i class="fa fa-plus"></i> Add Job'.html_safe %>
     <%= f.link_to_add add_job_text, :staffing_jobs, :class => "btn" %>
     </div>
   </div>
@@ -52,5 +52,5 @@
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
   <%= select_datetime %>
-  <a class="btn btn-danger"><i class="icon-remove"></i> Remove</a>
+  <a class="btn btn-danger"><i class="fa fa-remove"></i> Remove</a>
 </div>

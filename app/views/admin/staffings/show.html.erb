@@ -38,12 +38,12 @@
 </table>
 
 <% if can? :sign_up_for, Admin::StaffingJob %>
-  <% sign_up_text = '<i class="icon-edit"></i> Sign Up'.html_safe %>
+  <% sign_up_text = '<i class="fa fa-edit"></i> Sign Up'.html_safe %>
   <%= link_to sign_up_text, show_sign_up_admin_staffing_path(@admin_staffing), :class => "btn btn-primary" %>
 <% end %>
 
 <% if can? :edit, @admin_staffing %>
-  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
+  <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
   <%= link_to edit_text, edit_admin_staffing_path(@admin_staffing), :class => "btn" %>
 <% end %>
 

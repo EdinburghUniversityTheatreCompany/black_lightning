@@ -12,17 +12,17 @@
       <%= simple_form_for(resource, :as => resource_name, :url => session_path(resource_name) ) do |f| %>
         <div class="form-inputs">
           <%= f.input :email, :required => false, :autofocus => true, :wrapper => :prepend do %>
-            <span class="add-on"><i class="icon-envelope"></i></span><%= f.input_field :email %>
+            <span class="add-on"><i class="fa fa-envelope"></i></span><%= f.input_field :email %>
           <% end %>
           <%= f.input :password, :required => false, :wrapper => :prepend do %>
-            <span class="add-on"><i class="icon-lock"></i></span><%= f.input_field :password %>
+            <span class="add-on"><i class="fa fa-lock"></i></span><%= f.input_field :password %>
           <% end %>
           <%= f.input :remember_me, :as => :boolean if devise_mapping.rememberable? %>
         </div>
 
         <div class="form-actions">
           <%= button_tag(type: 'submit', class: "btn") do %>
-            <i class="icon-ok"></i> Login
+            <i class="fa fa-ok"></i> Login
           <% end %>
         </div>
       <% end %>

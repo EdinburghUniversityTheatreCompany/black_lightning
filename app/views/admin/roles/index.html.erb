@@ -29,6 +29,6 @@
 </table>
 
 <% if can? :create, Role %>
-  <% new_text = '<i class="icon-plus"></i> New Role'.html_safe %>
+  <% new_text = '<i class="fa fa-plus"></i> New Role'.html_safe %>
   <%= link_to new_text, new_admin_role_path, :class => "btn" %>
 <% end %>

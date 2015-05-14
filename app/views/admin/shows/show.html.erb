@@ -64,12 +64,12 @@
 <% if can? :edit, @show %>
   <% if @show.xts_id %>
     <%= link_to xts_report_admin_show_path(@show), class: "btn" do %>
-      <i class='icon-shopping-cart'></i> XTS Report
+      <i class='fa fa-shopping-cart'></i> XTS Report
     <% end %>
   <% end %>
 
   <%= link_to edit_admin_show_path(@show), :class => 'btn' do %>
-    <i class="icon-pencil"></i> Edit
+    <i class="fa fa-pencil"></i> Edit
   <% end %>
 <% end %>
 

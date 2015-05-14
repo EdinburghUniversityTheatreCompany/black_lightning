@@ -37,16 +37,16 @@
     switch(type) {
       case "alert":
         alertclass = "alert-danger";
-        icon       = "icon-exclamation-sign";
+        icon       = "fa fa-exclamation-sign";
         break;
       case "success":
         alertclass = "alert-success";
-        icon       = "icon-ok";
+        icon       = "fa fa-ok";
         break;
     }
 
     $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
-              "<i class=\"" + icon  + " icon-large\"></i> "
+              "<i class=\"" + icon  + " fa fa-large\"></i> "
               + message +
               "</div>");
 

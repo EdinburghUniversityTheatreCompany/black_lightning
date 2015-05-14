@@ -22,7 +22,7 @@
 
     <%= will_paginate(@news) %>
 
-    <% rss_icon = 'RSS Feed: <i class="icon-rss"></i>' %>
+    <% rss_icon = 'RSS Feed: <i class="fa fa-rss"></i>' %>
     <%= link_to rss_icon.html_safe, news_index_path(:format=>:rss) %>
   </div>
 </div>

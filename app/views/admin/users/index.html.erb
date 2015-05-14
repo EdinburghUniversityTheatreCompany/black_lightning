@@ -71,6 +71,6 @@
 </div>
 
 <% if can? :create, User %>
-  <% add_text = '<i class="icon-plus"></i> Add User'.html_safe %>
+  <% add_text = '<i class="fa fa-plus"></i> Add User'.html_safe %>
   <%= link_to add_text, new_admin_user_path, :class => "btn" %>
 <% end %>

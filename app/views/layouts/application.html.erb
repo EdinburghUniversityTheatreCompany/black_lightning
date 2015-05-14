@@ -36,8 +36,8 @@
       </ul>
 
       <ul id="nav_minor" class="pull-right nav nav-pills nav-collapse collapse">
-        <li><a href="http://facebook.com/bedlamtheatre.ed" target="_blank"><i class="icon-facebook"></i></a></li>
-        <li><a href="http://twitter.com/bedlamtheatre" target="_blank"><i class="icon-twitter"></i></a></li>
+        <li><a href="http://facebook.com/bedlamtheatre.ed" target="_blank"><i class="fa fa-facebook"></i></a></li>
+        <li><a href="http://twitter.com/bedlamtheatre" target="_blank"><i class="fa fa-twitter"></i></a></li>
         <li><%= link_to 'Press',    static_path('press')        %></li>
         <li><%= link_to 'Sponsors', static_path('sponsors')     %></li>
         <li><%= link_to 'Archives', archives_index_path         %></li>
@@ -73,16 +73,16 @@
           <% case key                               %>
           <% when :alert                            %>
           <%   alertclass = "alert-error"           %>
-          <%   icon       = "icon-exclamation-sign" %>
+          <%   icon       = "fa fa-exclamation-sign" %>
           <% when :success                          %>
           <%   alertclass = "alert-success"         %>
-          <%   icon       = "icon-ok"               %>
+          <%   icon       = "fa fa-ok"               %>
           <% when :notice                           %>
           <%   alertclass = "alert-info"            %>
-          <%   icon       = "icon-info-sign"        %>
+          <%   icon       = "fa fa-info-sign"        %>
           <% end %>
           <p id="<%= key %>" class="alert <%= alertclass %>">
-            <i class="<%= icon %> icon-large"></i>
+            <i class="<%= icon %> fa-large"></i>
             <%= msg %>
             <button type="button" class="close" data-dismiss="alert">&times;</button>
           </p>

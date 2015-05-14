@@ -94,16 +94,16 @@
           <% case key                               %>
           <% when :alert                            %>
           <%   alertclass = "alert-error"           %>
-          <%   icon       = "icon-exclamation-sign" %>
+          <%   icon       = "fa fa-exclamation-sign" %>
           <% when :success                          %>
           <%   alertclass = "alert-success"         %>
-          <%   icon       = "icon-ok"               %>
+          <%   icon       = "fa fa-ok"               %>
           <% when :notice                           %>
           <%   alertclass = "alert-info"            %>
-          <%   icon       = "icon-info-sign"        %>
+          <%   icon       = "fa fa-info-sign"        %>
           <% end %>
           <p id="<%= key %>" class="alert <%= alertclass %>">
-            <i class="<%= icon %> icon-large"></i>
+            <i class="<%= icon %> fa-large"></i>
             <%= msg %>
             <button type="button" class="close" data-dismiss="alert">&times;</button>
           </p>
