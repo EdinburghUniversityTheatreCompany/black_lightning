@@ -3,10 +3,14 @@ class Admin::ResourcesController < AdminController
 
   layout 'admin/resources'
 
-  def get_subpages
-    action = params[:action]
+  def page
+    render 'admin/resources/' + params[:page]
+  end
 
-    action_sections = action.split('/')
+  def get_subpages
+    page = params[:page]
+
+    action_sections = page.split('/')
 
     @root_page = action_sections[0]
 

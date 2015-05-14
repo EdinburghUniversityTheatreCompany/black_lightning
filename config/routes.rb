@@ -29,7 +29,7 @@ ChaosRails::Application.routes.draw do
   get 'admin/' => 'admin#index'
   namespace :admin do
     # The resources pages:
-    get 'resources/*action' => 'resources', :as => :resources
+    get 'resources/*page' => 'resources#page', as: :resources
 
     # Answer files
     get 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
