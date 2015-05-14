@@ -74,7 +74,7 @@ class User < ActiveRecord::Base
   end
 
   ransacker :full_name do |parent|
-    Arel::Nodes::NamedFunction.new('concat_ws', [' ', parent.table[:first_name], parent.table[:last_name]])
+    Arel::Nodes::NamedFunction.new('concat_ws', [Arel::Nodes.build_quoted(' '), parent.table[:first_name], parent.table[:last_name]])
   end
 
   ##
