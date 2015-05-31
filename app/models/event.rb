@@ -76,6 +76,8 @@ class Event < ActiveRecord::Base
                     convert_options: { medium: '-strip', thumb: '-quality 75 -strip' },
                     default_url: :default_image
 
+  validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
+
   # Accessible Attributes #
   attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :price, :spark_seat_slug
 
