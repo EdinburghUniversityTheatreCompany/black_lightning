@@ -1,6 +1,18 @@
 # Use this hook to configure devise mailer, warden hooks and so forth.
 # Many of these configuration options can be set straight in your model.
 Devise.setup do |config|
+  # config.ldap_logger = true
+  config.ldap_create_user = true
+  # This seemed like the easiest way to store the admin/bind user in secrets.yml
+  config.ldap_config = Proc.new do
+    config = YAML.load(ERB.new(File.read("#{Rails.root}/config/ldap.yml")).result)[Rails.env]
+    config['admin_user'], config['admin_password'] = *Rails.application.secrets.ldap.values_at('bind_user', 'bind_pass')
+    next config
+  end
+  config.ldap_check_group_membership = true
+  # config.ldap_check_attributes = false
+  config.ldap_use_admin_to_bind = true
+
   # The secret key used by Devise. Devise uses this key to generate
   # random tokens. Changing this key will render invalid all existing
   # confirmation, reset password and unlock tokens in the database.

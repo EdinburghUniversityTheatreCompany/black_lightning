@@ -15,6 +15,7 @@ gem 'font-awesome-sass'
 
 gem 'simple_form'
 gem 'devise'
+gem 'devise_ldap_authenticatable'
 gem 'cancan'
 gem 'rolify'
 
