@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'rails', '4.2.1'
+gem 'rails', '4.2.3'
 gem 'protected_attributes'
 
 gem 'mysql2'
