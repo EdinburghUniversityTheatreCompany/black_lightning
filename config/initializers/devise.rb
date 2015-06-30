@@ -3,15 +3,14 @@
 Devise.setup do |config|
   # config.ldap_logger = true
   config.ldap_create_user = true
-  # This seemed like the easiest way to store the admin/bind user in secrets.yml
+
   config.ldap_config = Proc.new do
-    config = YAML.load(ERB.new(File.read("#{Rails.root}/config/ldap.yml")).result)[Rails.env]
-    config['admin_user'], config['admin_password'] = *Rails.application.secrets.ldap.values_at('bind_user', 'bind_pass')
-    next config
+    YAML.load(ERB.new(File.read("#{Rails.root}/config/ldap.yml")).result)[Rails.env]
   end
-  config.ldap_check_group_membership = true
+
+  config.ldap_check_group_membership = false
   # config.ldap_check_attributes = false
-  config.ldap_use_admin_to_bind = true
+  config.ldap_use_admin_to_bind = false
 
   # The secret key used by Devise. Devise uses this key to generate
   # random tokens. Changing this key will render invalid all existing
@@ -40,7 +39,7 @@ Devise.setup do |config|
   # session. If you need permissions, you should implement that in a before filter.
   # You can also supply a hash where the value is a boolean determining whether
   # or not authentication should be aborted when the value is not present.
-  # config.authentication_keys = [ :email ]
+  config.authentication_keys = [:username]
 
   # Configure parameters from the request object used for authentication. Each entry
   # given should be a request method and it will automatically be passed to the
@@ -52,12 +51,12 @@ Devise.setup do |config|
   # Configure which authentication keys should be case-insensitive.
   # These keys will be downcased upon creating or modifying a user and when used
   # to authenticate or find a user. Default is :email.
-  config.case_insensitive_keys = [:email]
+  config.case_insensitive_keys = [:username]
 
   # Configure which authentication keys should have whitespace stripped.
   # These keys will have whitespace before and after removed upon creating or
   # modifying a user and when used to authenticate or find a user. Default is :email.
-  config.strip_whitespace_keys = [:email]
+  config.strip_whitespace_keys = [:username]
 
   # Tell if authentication through request.params is enabled. True by default.
   # It can be set to an array that will enable params authentication only for the

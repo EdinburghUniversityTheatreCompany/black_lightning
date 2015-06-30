@@ -38,14 +38,13 @@ class User < ActiveRecord::Base
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
-  devise :ldap_authenticatable, :recoverable, :rememberable, \
-         :trackable, :registerable # , :token_authenticatable
+  devise :ldap_authenticatable, :recoverable, :rememberable,
+         :trackable, :registerable
 
   # set our own validations
 
   # Don't validate the password presence, so we can set it randomly for new users.
   # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
-  validates :email, presence: true, uniqueness: true
   validates :phone_number, allow_blank: true, format: { with: /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})\z/, message: 'Please enter a valid mobile number' }
 
   has_one  :membership_card, dependent: :destroy

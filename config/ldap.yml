@@ -8,5 +8,5 @@ authorizations: &authorizations
 development:
   host: ldap.bedlamtheatre.co.uk
   port: 389
-  attribute: mail
+  attribute: uid
   <<: *authorizations
