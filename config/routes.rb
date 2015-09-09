@@ -155,10 +155,10 @@ ChaosRails::Application.routes.draw do
   post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
 
   get 'about' => 'about#index', :as => :about_index
-  get 'about/*action' => 'about', :as => :about
+  get 'about/*page' => 'about#page', :as => :about
 
   get 'getinvolved' => 'get_involved#index', :as => :get_involved_index
-  get 'getinvolved/*action' => 'get_involved', :as => :get_involved
+  get 'getinvolved/*page' => 'get_involved#page', :as => :get_involved
 
   # ERROR PAGES - match to ensure correct response code is sent
   get '/404' => 'static#render_404'
