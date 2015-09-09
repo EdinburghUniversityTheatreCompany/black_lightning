@@ -101,8 +101,8 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    get '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
-    get '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
+    match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
+    put '/staffings/job/:id/sign_up' => 'staffings#sign_up', :as => :staffing_sign_up
 
     get '/proposals' => redirect('/admin/proposals/calls')
     namespace :proposals do
