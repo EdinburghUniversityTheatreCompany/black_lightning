@@ -95,19 +95,6 @@
 
     <hr />
 
-    <h3>Newsletter</h3>
-    <p>Sign up to receive free monthly updates on our theatre, our shows, workshops and upcoming auditions</p>
-
-    <%= form_tag(newsletter_subscribe_path, :method => :post, :class => "form-inline") do %>
-      <div class="input-prepend input-append">
-        <span class="add-on"><i class="fa fa-envelope"></i></span>
-        <input type="text" name="email" class="span3" placeholder="Enter e-mail address"/>
-        <button type="submit" class="btn">Sign up</button>
-      </div>
-    <% end %>
-
-    <hr />
-
     <h3><%= link_to "Archives", archives_index_path %></h3>
     <% if @last_show %>
       <%= link_to @last_show.name, @last_show %>
