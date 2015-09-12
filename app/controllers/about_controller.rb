@@ -14,7 +14,7 @@ class AboutController < ApplicationController
   # Returns a list of all the pages in the about folder.
   ##
   def get_subpages
-    action = params[:page]
+    action = params[:page] || ''
 
     action_sections = action.split('/')
 

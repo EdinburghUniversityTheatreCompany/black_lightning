@@ -20,7 +20,7 @@ class GetInvolvedController < ApplicationController
   # Returns a list of all the pages in the get_involved folder.
   ##
   def get_subpages
-    action = params[:page]
+    action = params[:page] || ''
 
     action_sections = action.split('/')
 
