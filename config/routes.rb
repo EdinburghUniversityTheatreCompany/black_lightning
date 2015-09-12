@@ -158,6 +158,7 @@ ChaosRails::Application.routes.draw do
   get 'about/*page' => 'about#page', :as => :about
 
   get 'getinvolved' => 'get_involved#index', :as => :get_involved_index
+  get 'getinvolved/opportunities' => 'get_involved#opportunities'
   get 'getinvolved/*page' => 'get_involved#page', :as => :get_involved
 
   # ERROR PAGES - match to ensure correct response code is sent
