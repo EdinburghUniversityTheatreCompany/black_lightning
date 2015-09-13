@@ -12,6 +12,7 @@ namespace :users_to_ldap do
 
       migration.filters.each do |filter|
         user, remote = migration.send(filter, user, remote)
+        user.save!
       end
     end
   end
