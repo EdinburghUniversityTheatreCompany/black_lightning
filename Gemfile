@@ -38,7 +38,6 @@ gem 'chronic'
 gem 'ransack'
 
 gem 'nokogiri'
-gem 'airbrake'
 
 gem 'rack-cors'
 

@@ -37,9 +37,6 @@ GEM
       thread_safe (~> 0.3, >= 0.3.4)
       tzinfo (~> 1.1)
     addressable (2.3.8)
-    airbrake (4.3.0)
-      builder
-      multi_json
     arel (6.0.0)
     axlsx (2.0.1)
       htmlentities (~> 4.3.1)
@@ -148,7 +145,6 @@ GEM
     mini_magick (4.2.7)
     mini_portile (0.6.2)
     minitest (5.7.0)
-    multi_json (1.11.1)
     multipart-post (2.0.0)
     mysql2 (0.3.18)
     mysql2 (0.3.18-x86-mingw32)
@@ -281,7 +277,6 @@ PLATFORMS
   x86-mingw32
 
 DEPENDENCIES
-  airbrake
   axlsx
   better_errors
   binding_of_caller
