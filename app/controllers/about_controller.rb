@@ -6,11 +6,15 @@
 class AboutController < ApplicationController
   before_filter :get_subpages
 
+  def page
+    render 'about/' + params[:page]
+  end
+
   ##
   # Returns a list of all the pages in the about folder.
   ##
   def get_subpages
-    action = params[:action]
+    action = params[:page] || ''
 
     action_sections = action.split('/')
 

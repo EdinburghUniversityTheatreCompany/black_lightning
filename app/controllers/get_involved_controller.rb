@@ -10,13 +10,17 @@ class GetInvolvedController < ApplicationController
     @opportunities = Opportunity.approved.all
   end
 
+  def page
+    render 'get_involved/' + params[:page]
+  end
+
   private
 
   ##
   # Returns a list of all the pages in the get_involved folder.
   ##
   def get_subpages
-    action = params[:action]
+    action = params[:page] || ''
 
     action_sections = action.split('/')
 

@@ -101,8 +101,8 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    get '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
-    get '/staffings/job/:id/sign_up' => 'staffings#sign_up', :via => :put, :as => :staffing_sign_up
+    match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
+    put '/staffings/job/:id/sign_up' => 'staffings#sign_up', :as => :staffing_sign_up
 
     get '/proposals' => redirect('/admin/proposals/calls')
     namespace :proposals do
@@ -152,13 +152,12 @@ ChaosRails::Application.routes.draw do
 
   post 'markdown/preview' => 'markdown#preview'
 
-  post 'newsletter/subscribe' => 'newsletter#subscribe', :as => :newsletter_subscribe
-
   get 'about' => 'about#index', :as => :about_index
-  get 'about/*action' => 'about', :as => :about
+  get 'about/*page' => 'about#page', :as => :about
 
   get 'getinvolved' => 'get_involved#index', :as => :get_involved_index
-  get 'getinvolved/*action' => 'get_involved', :as => :get_involved
+  get 'getinvolved/opportunities' => 'get_involved#opportunities'
+  get 'getinvolved/*page' => 'get_involved#page', :as => :get_involved
 
   # ERROR PAGES - match to ensure correct response code is sent
   get '/404' => 'static#render_404'
