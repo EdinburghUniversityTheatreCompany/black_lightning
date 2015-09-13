@@ -120,6 +120,10 @@ class User < ActiveRecord::Base
   def ldap_before_save
     self.first_name = ldap_entry.givenName[0]
     self.last_name = ldap_entry.sn[0]
+    self.email = ldap_entry.mail[0]
+
+    tel = ldap_entry.try(:telephoneNumber) || []
+    self.phone_number = tel[0]
     roles << Role.find_by(name: 'member')
   end
 

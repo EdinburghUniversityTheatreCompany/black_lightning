@@ -5,12 +5,15 @@ Devise.setup do |config|
   config.ldap_create_user = true
 
   config.ldap_config = Proc.new do
-    YAML.load(ERB.new(File.read("#{Rails.root}/config/ldap.yml")).result)[Rails.env]
+    ldap_secrets = YAML.load(ERB.new(File.read("#{Rails.root}/config/ldap.yml")).result)[Rails.env]
+    ldap_secrets['admin_user'] = Rails.application.secrets.ldap['bind_user']
+    ldap_secrets['admin_password'] = Rails.application.secrets.ldap['bind_pass']
+    ldap_secrets
   end
 
   config.ldap_check_group_membership = false
   # config.ldap_check_attributes = false
-  config.ldap_use_admin_to_bind = false
+  config.ldap_use_admin_to_bind = true
 
   # The secret key used by Devise. Devise uses this key to generate
   # random tokens. Changing this key will render invalid all existing
