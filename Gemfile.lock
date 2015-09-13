@@ -105,6 +105,9 @@ GEM
       responders
       thread_safe (~> 0.1)
       warden (~> 1.2.3)
+    devise_ldap_authenticatable (0.8.5)
+      devise (>= 3.4.1)
+      net-ldap (>= 0.6.0, <= 0.11)
     docile (1.1.5)
     equalizer (0.0.11)
     erubis (2.7.0)
@@ -151,6 +154,7 @@ GEM
     mysql2 (0.3.18-x86-mingw32)
     naught (1.0.0)
     nested_form (0.3.2)
+    net-ldap (0.11)
     net-scp (1.2.1)
       net-ssh (>= 2.6.5)
     net-ssh (2.9.2)
@@ -292,6 +296,7 @@ DEPENDENCIES
   daemons
   delayed_job_active_record
   devise
+  devise_ldap_authenticatable
   factory_girl_rails
   faker
   font-awesome-sass
@@ -323,4 +328,4 @@ DEPENDENCIES
   will_paginate
 
 BUNDLED WITH
-   1.10.4
+   1.10.5

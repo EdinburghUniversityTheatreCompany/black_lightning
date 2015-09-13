@@ -1,0 +1,12 @@
+authorizations: &authorizations
+  allow_unauthenticated_bind: false
+  base: cn=users,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk
+  group_base: cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk
+  required_groups:
+    - ['member', 'cn=members,cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk']
+
+development:
+  host: ldap.bedlamtheatre.co.uk
+  port: 389
+  attribute: uid
+  <<: *authorizations

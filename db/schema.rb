@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150506155951) do
+ActiveRecord::Schema.define(version: 20150630174437) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -36,7 +36,7 @@ ActiveRecord::Schema.define(version: 20150506155951) do
     t.text     "content",    limit: 65535
     t.datetime "created_at",               null: false
     t.datetime "updated_at",               null: false
-    t.boolean  "admin_page", limit: 1
+    t.boolean  "admin_page"
     t.string   "group",      limit: 255
   end
 
@@ -72,10 +72,10 @@ ActiveRecord::Schema.define(version: 20150506155951) do
   create_table "admin_proposals_calls", force: :cascade do |t|
     t.datetime "deadline"
     t.string   "name",       limit: 255
-    t.boolean  "open",       limit: 1
+    t.boolean  "open"
     t.datetime "created_at",             null: false
     t.datetime "updated_at",             null: false
-    t.boolean  "archived",   limit: 1
+    t.boolean  "archived"
   end
 
   create_table "admin_proposals_proposals", force: :cascade do |t|
@@ -85,9 +85,9 @@ ActiveRecord::Schema.define(version: 20150506155951) do
     t.text     "proposal_text",  limit: 65535
     t.datetime "created_at",                   null: false
     t.datetime "updated_at",                   null: false
-    t.boolean  "late",           limit: 1
-    t.boolean  "approved",       limit: 1
-    t.boolean  "successful",     limit: 1
+    t.boolean  "late"
+    t.boolean  "approved"
+    t.boolean  "successful"
   end
 
   add_index "admin_proposals_proposals", ["call_id"], name: "index_admin_proposals_proposals_on_call_id", using: :btree
@@ -195,7 +195,7 @@ ActiveRecord::Schema.define(version: 20150506155951) do
     t.integer  "xts_id",             limit: 4
     t.datetime "created_at",                       null: false
     t.datetime "updated_at",                       null: false
-    t.boolean  "is_public",          limit: 1
+    t.boolean  "is_public"
     t.string   "image_file_name",    limit: 255
     t.string   "image_content_type", limit: 255
     t.integer  "image_file_size",    limit: 4
@@ -218,7 +218,7 @@ ActiveRecord::Schema.define(version: 20150506155951) do
     t.string   "subject",    limit: 255
     t.text     "body",       limit: 65535
     t.datetime "send_date"
-    t.boolean  "draft",      limit: 1
+    t.boolean  "draft"
     t.datetime "created_at",               null: false
     t.datetime "updated_at",               null: false
   end
@@ -240,7 +240,7 @@ ActiveRecord::Schema.define(version: 20150506155951) do
     t.text     "body",               limit: 65535
     t.string   "slug",               limit: 255
     t.datetime "publish_date"
-    t.boolean  "show_public",        limit: 1
+    t.boolean  "show_public"
     t.datetime "created_at",                       null: false
     t.datetime "updated_at",                       null: false
     t.string   "image_file_name",    limit: 255
@@ -261,8 +261,8 @@ ActiveRecord::Schema.define(version: 20150506155951) do
   create_table "opportunities", force: :cascade do |t|
     t.string   "title",       limit: 255
     t.text     "description", limit: 65535
-    t.boolean  "show_email",  limit: 1
-    t.boolean  "approved",    limit: 1
+    t.boolean  "show_email"
+    t.boolean  "approved"
     t.integer  "creator_id",  limit: 4
     t.integer  "approver_id", limit: 4
     t.date     "expiry_date"
@@ -343,12 +343,14 @@ ActiveRecord::Schema.define(version: 20150506155951) do
     t.datetime "created_at",                                          null: false
     t.datetime "updated_at",                                          null: false
     t.string   "phone_number",           limit: 255
-    t.boolean  "public_profile",         limit: 1,     default: true
+    t.boolean  "public_profile",                       default: true
     t.text     "bio",                    limit: 65535
     t.string   "avatar_file_name",       limit: 255
     t.string   "avatar_content_type",    limit: 255
     t.integer  "avatar_file_size",       limit: 4
     t.datetime "avatar_updated_at"
+    t.string   "username",               limit: 255
+    t.string   "remember_token",         limit: 255
   end
 
   add_index "users", ["email"], name: "index_users_on_email", unique: true, using: :btree
