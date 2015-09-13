@@ -12,6 +12,7 @@ class LDAPMigration
       :user_fields,
       :sanitize_name,
       :generate_username,
+      :set_username,
       :set_name,
       :set_contacts,
       :dump
@@ -64,6 +65,12 @@ class LDAPMigration
       @fields[user.id][:username] = username
       @fields[user.id][:action] = :create
     end
+
+    return user, remote
+  end
+
+  def set_username(user, remote)
+    user.username = remote.uid[0]
 
     return user, remote
   end
