@@ -117,6 +117,12 @@ class User < ActiveRecord::Base
     return user
   end
 
+  def ldap_before_save
+    self.first_name = ldap_entry.givenName[0]
+    self.last_name = ldap_entry.sn[0]
+    roles << Role.find_by(name: 'member')
+  end
+
   ##
   # Returns true if the users first_name and last_name are set
   ##
