@@ -10,3 +10,9 @@ development:
   port: 389
   attribute: uid
   <<: *authorizations
+
+production:
+  host: ldap.bedlamtheatre.co.uk
+  port: 389
+  attribute: uid
+  <<: *authorizations
