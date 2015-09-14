@@ -24,10 +24,11 @@ en:
             If you do not have a login, please contact the Bedlam IT manager.
       unconfirmed: 'You have to confirm your account before continuing.'
       locked: 'Your account is locked.'
-      invalid: 'Invalid email or password.'
+      invalid: 'Invalid username or password.'
       invalid_token: 'Invalid authentication token.'
       timeout: 'Your session expired, please sign in again to continue.'
       inactive: 'Your account was not activated yet.'
+
     sessions:
       signed_in: 'Signed in successfully.'
       signed_out: 'Signed out successfully.'
