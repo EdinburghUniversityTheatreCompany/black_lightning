@@ -70,7 +70,7 @@ class LDAPMigration
   end
 
   def set_username(user, remote)
-    user.username = remote.uid[0]
+    user.username = remote.uid[0] if remote.present?
 
     return user, remote
   end
