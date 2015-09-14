@@ -52,6 +52,7 @@ class ApplicationController < ActionController::Base
 
     Rails.logger.warn  'Caught error and redirected to 500'
     Rails.logger.error ex
+    Rails.logger.error ex.backtrace
 
     flash[:error] = ex.message.gsub Rails.root.to_s, ''
 
