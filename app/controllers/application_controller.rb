@@ -42,9 +42,6 @@ class ApplicationController < ActionController::Base
   end
 
   def report_500(ex)
-    Airbrake.notify(ex,                           parameters: params,
-                                                  session: session)
-
     # Prevent redirect loop if 500 rendering fails.
     if request.env['PATH_INFO'] == static_path('500')
       Rails.logger.error 'Could not render the 500 page:'
