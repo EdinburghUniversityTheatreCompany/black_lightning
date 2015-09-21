@@ -138,10 +138,10 @@ class User < ActiveRecord::Base
   end
 
   # For legacy reasons, some names are explicity mapped here:
-  # New roles should be added to IPA in lower case (e.g. marketing manager)
+  # New roles should be added to IPA in lower case with hyphens (e.g. marketing-manager)
   # and added to the website in title case (e.g Marketing Manager)
   def role_name_from_dn(dn)
-    group_name = dn.split(',')[0].gsub('cn=', '')
+    group_name = dn.split(',')[0].gsub('cn=', '').gsub('-', ' ')
 
     case group_name
     when 'members'
