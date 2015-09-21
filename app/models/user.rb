@@ -117,14 +117,47 @@ class User < ActiveRecord::Base
     return user
   end
 
-  def ldap_before_save
+  def after_ldap_authentication
     self.first_name = ldap_entry.givenName[0]
     self.last_name = ldap_entry.sn[0]
     self.email = ldap_entry.mail[0]
 
-    tel = ldap_entry.try(:telephoneNumber) || []
-    self.phone_number = tel[0]
-    roles << Role.find_by(name: 'member')
+    if ldap_entry.telephoneNumber
+      self.phone_number = ldap_entry.telephoneNumber[0]
+    end
+
+    add_ldap_roles
+
+    save!
+  end
+
+  def add_ldap_roles
+    ldap_group_names = ldap_groups.map { |dn| role_name_from_dn(dn) }
+
+    self.roles = Role.where(name: ldap_group_names)
+  end
+
+  # For legacy reasons, some names are explicity mapped here:
+  # New roles should be added to IPA in lower case (e.g. marketing manager)
+  # and added to the website in title case (e.g Marketing Manager)
+  def role_name_from_dn(dn)
+    group_name = dn.split(',')[0].gsub('cn=', '')
+
+    case group_name
+    when 'members'
+      return 'member'
+    when 'admins'
+      return 'admin'
+    else
+      group_name.titleize
+    end
+  end
+
+  # Override Devise LDAP method, as it doesn't seem to work properly
+  def ldap_groups
+    admin_ldap = Devise::LDAP::Connection.admin
+    filter = Net::LDAP::Filter.eq('member', ldap_entry.dn)
+    admin_ldap.search(filter: filter, base: 'cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk').collect(&:dn)
   end
 
   ##
