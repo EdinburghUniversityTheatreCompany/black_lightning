@@ -140,8 +140,6 @@ class User < ActiveRecord::Base
   end
 
   def add_ldap_roles
-    byebug
-
     ldap_group_names = ldap_groups.map { |dn| role_name_from_dn(dn) }
 
     self.roles = Role.where(name: ldap_group_names)
