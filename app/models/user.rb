@@ -117,12 +117,20 @@ class User < ActiveRecord::Base
     return user
   end
 
+  def ldap_before_save
+    self.first_name = ldap_entry.givenName[0]
+    self.last_name = ldap_entry.sn[0]
+    self.email = ldap_entry.mail[0]
+  end
+
   def after_ldap_authentication
+    # These have to be in both to ensure that these attributes are updated after
+    # every login
     self.first_name = ldap_entry.givenName[0]
     self.last_name = ldap_entry.sn[0]
     self.email = ldap_entry.mail[0]
 
-    if ldap_entry.telephoneNumber
+    if ldap_entry.try(:telephoneNumber)
       self.phone_number = ldap_entry.telephoneNumber[0]
     end
 
@@ -132,6 +140,8 @@ class User < ActiveRecord::Base
   end
 
   def add_ldap_roles
+    byebug
+
     ldap_group_names = ldap_groups.map { |dn| role_name_from_dn(dn) }
 
     self.roles = Role.where(name: ldap_group_names)
