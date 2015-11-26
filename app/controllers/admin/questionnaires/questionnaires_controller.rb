@@ -15,11 +15,13 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaires.json
   ##
   def index
-    @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.all.group_by(&:show)
-
-    unless (current_user.has_role? :committee) || (current_user.has_role? :admin)
-      @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.joins(:users).where('user_id = ?', current_user.id).group_by(&:show)
+    if (current_user.has_role? :committee) || (current_user.has_role? :admin)
+      @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire
+    else
+      @admin_questionnaires_questionnaires = Admin::Questionnaires::Questionnaire.joins(:users).where('user_id = ?', current_user.id)
     end
+
+    @admin_questionnaires_questionnaires = @admin_questionnaires_questionnaires.order('id DESC').all.group_by(&:show)
 
     respond_to do |format|
       format.html # index.html.erb
