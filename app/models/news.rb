@@ -54,6 +54,8 @@ class News < ActiveRecord::Base
                     convert_options: { medium: '-strip', thumb: '-quality 75 -strip' },
                     default_url: :default_image
 
+  validates_attachment_content_type :image, content_type: /\Aimage\/.*\Z/
+
   attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
 
   ##
