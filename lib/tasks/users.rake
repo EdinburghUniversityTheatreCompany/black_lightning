@@ -5,10 +5,7 @@ namespace :users do
   # N.B this also happens on sign in, but scheduling this as a cron job ensures
   # things are relatively up to date all the while.
   task update_attributes: :environment do
-    User.find_each do |user|
-      user.update_user_ldap_attributes
-      user.save!
-    end
+    User.find_each(&:update_ldap_attributes)
   end
 
   desc 'Import users from LDAP to black lightning'
