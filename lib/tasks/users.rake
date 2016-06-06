@@ -1,30 +1,35 @@
 require 'csv'
 require 'json'
 namespace :users do
-  task :import, [:file, :send_email] => :environment do |_t, args|
-    puts "Importing users from #{args[:file]} and #{'not ' if args[:send_email] != 'true'}sending welcome emails."
-
-    CSV.foreach(args[:file]) do |row|
-      begin
-        u = User.create_user(first_name: row[1], last_name: row[2], email: row[0])
-
-        UsersMailer.delay.welcome_email(u, true) if args[:send_email] == 'true'
-
-        puts "Just added #{u.name}"
-      rescue Exception => exc
-        puts "Uh oh: #{row[1]} #{row[2]}, #{exc.message}"
-      end
+  desc 'Updates user attributes to match LDAP roles'
+  # N.B this also happens on sign in, but scheduling this as a cron job ensures
+  # things are relatively up to date all the while.
+  task update_attributes: :environment do
+    User.find_each do |user|
+      user.update_user_ldap_attributes
+      user.save!
     end
   end
 
-  task :email do
-    User.all.each do |u|
-      begin
-        UsersMailer.delay.welcome_email(u, true)
-        puts "Just emailed #{u.name} at #{u.email}"
-      rescue Exception => exc
-        puts "Uh oh: #{u.name}, #{u.email} > #{exc.message}"
-      end
+  desc 'Import users from LDAP to black lightning'
+  task import_new_users: :environment do
+    # Fetch all usernames from ldap
+    connection = Devise::LDAP::Connection.new(admin: true)
+    filter = Net::LDAP::Filter.eq('memberof', 'cn=members,cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk')
+    ldap_users = connection.ldap.search(filter: filter)
+    ldap_usernames = ldap_users.map(&:uid).flatten
+
+    # Find existing known usernames
+    existing_usernames = User.pluck(:username)
+
+    users_to_create = ldap_usernames - existing_usernames
+
+    users_to_create.each do |username|
+      puts "Importing #{username}"
+
+      user = User.new(username: username)
+      user.update_ldap_attributes
+      user.save!
     end
   end
 

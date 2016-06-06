@@ -63,7 +63,7 @@ class User < ActiveRecord::Base
   # Setup accessible (or protected) attributes for your model
   attr_accessible :email, :password, :password_confirmation, :remember_me, \
                   :first_name, :last_name, :role_ids, :phone_number, :card_number, \
-                  :public_profile, :bio, :avatar
+                  :public_profile, :bio, :avatar, :username
 
   ##
   # A quick way of getting the user's full name.
@@ -124,8 +124,12 @@ class User < ActiveRecord::Base
   end
 
   def after_ldap_authentication
-    # These have to be in both to ensure that these attributes are updated after
-    # every login
+    update_ldap_attributes
+  end
+
+  # Read LDAP attributes and roles, and map them to Black Lightning attributes
+  # and roles.
+  def update_ldap_attributes
     self.first_name = ldap_entry.givenName[0]
     self.last_name = ldap_entry.sn[0]
     self.email = ldap_entry.mail[0]
