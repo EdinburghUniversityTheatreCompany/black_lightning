@@ -2,6 +2,7 @@
   <%= link_to "Sign in", new_session_path(resource_name) %><br />
 <% end -%>
 
+<%= link_to "Forgot your username?", 'http://membership.bedlamtheatre.co.uk/username_reminder/new' %><br />
 <%= link_to "Forgot your password?", 'http://membership.bedlamtheatre.co.uk/password_reset/new' %><br />
 
 <%- if devise_mapping.confirmable? && controller_name != 'confirmations' %>
