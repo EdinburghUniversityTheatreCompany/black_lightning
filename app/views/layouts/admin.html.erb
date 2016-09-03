@@ -60,6 +60,10 @@
                   <li><%= link_to 'Staffing', admin_staffings_path %></li>
                   <% end %>
 
+                  <% if can? :read, FaultReport %>
+                  <li><%= link_to 'Fault Reports', admin_fault_reports_path %></li>
+                  <% end %>
+
                   <% if can? :read, Admin::EditableBlock %>
                   <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
                   <% end %>
@@ -79,7 +83,7 @@
                   <% if can? :manage, :jobs %>
                   <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
                   <% end %>
-				  
+
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">

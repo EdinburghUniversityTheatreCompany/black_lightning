@@ -1,0 +1,53 @@
+<% @title = 'Fault Reports' %>
+
+<h1>Fault Reports</h1>
+
+<%= display_block("Fault Reports", true) %>
+
+<br />
+<br />
+
+<table class="table">
+  <tr>
+    <th>Item</th>
+    <th>Severity</th>
+    <th>Status</th>
+    <th>Reported by</th>
+    <th>Date reported</th>
+    <th>Last updated</th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @fault_reports.each do |fault_report| %>
+  <tr>
+    <td><%= link_to fault_report.item, admin_fault_report_path(fault_report) %></td>
+    <td><%= fault_report.severity.humanize %></td>
+    <td><%= fault_report.status.humanize %></td>
+    <td><%= fault_report.reported_by.name %></td>
+    <td><%= l fault_report.created_at, format: :short %></td>
+    <td><%= l fault_report.updated_at, format: :short %></td>
+
+    <td>
+    <% if can? :edit, fault_report %>
+    <%= link_to 'Edit', edit_admin_fault_report_path(fault_report) %>
+    <% end %>
+    </td>
+
+    <td>
+    <% if can? :delete, fault_report %>
+    <%= link_to 'Destroy', admin_fault_report_path(fault_report), method: :delete, data: { "confirm" => "Deleting #{fault_report.item}",
+                                                                           "detail"  => "Are you sure you wish to continue?" } %>
+    <% end %>
+    </td>
+  </tr>
+<% end %>
+</table>
+
+<%= will_paginate(@fault_reports) %>
+
+<% if can? :create, FaultReport %>
+  <%= link_to new_admin_fault_report_path, :class => 'btn' do %>
+    <i class="fa fa-plus"></i> New Fault Report
+  <% end %>
+<% end %>

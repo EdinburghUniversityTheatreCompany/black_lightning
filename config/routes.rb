@@ -52,6 +52,7 @@ ChaosRails::Application.routes.draw do
     resources :venues
     resources :seasons
     resources :news
+    resources :fault_reports
 
     resources :opportunities do
       member do

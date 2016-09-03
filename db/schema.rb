@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20150630174437) do
+ActiveRecord::Schema.define(version: 20160903224904) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -212,6 +212,22 @@ ActiveRecord::Schema.define(version: 20150630174437) do
 
   add_index "events", ["season_id"], name: "index_events_on_season_id", using: :btree
   add_index "events", ["venue_id"], name: "index_events_on_venue_id", using: :btree
+
+  create_table "fault_reports", force: :cascade do |t|
+    t.string   "item",           limit: 255
+    t.text     "description",    limit: 65535
+    t.integer  "severity",       limit: 4,     default: 0
+    t.integer  "status",         limit: 4,     default: 0
+    t.integer  "reported_by_id", limit: 4
+    t.integer  "fixed_by_id",    limit: 4
+    t.datetime "created_at",                               null: false
+    t.datetime "updated_at",                               null: false
+  end
+
+  add_index "fault_reports", ["fixed_by_id"], name: "index_fault_reports_on_fixed_by_id", using: :btree
+  add_index "fault_reports", ["reported_by_id"], name: "index_fault_reports_on_reported_by_id", using: :btree
+  add_index "fault_reports", ["severity"], name: "index_fault_reports_on_severity", using: :btree
+  add_index "fault_reports", ["status"], name: "index_fault_reports_on_status", using: :btree
 
   create_table "mass_mails", force: :cascade do |t|
     t.integer  "sender_id",  limit: 4

@@ -1,0 +1,32 @@
+<%= simple_form_for [:admin, @fault_report] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+
+    <%= f.input :item %>
+
+    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :description, :rows => 12 } do %>
+      <%= render "admin/shared/md_hints" %>
+    <% end %>
+
+    <%= f.input :severity, collection: FaultReport.severities.keys, label_method: :humanize,
+            :selected => FaultReport.severities.keys[@fault_report[:severity].to_i],
+            input_html: { autocomplete: 'off' } %>
+
+    <% if can? :edit, @fault_report %>
+    <%= f.input :status, collection: FaultReport.statuses.keys, label_method: :humanize,
+            :selected => FaultReport.statuses.keys[@fault_report[:status].to_i],
+            input_html: { autocomplete: 'off' } %>
+
+    <%= f.association :reported_by %>
+    <%= f.association :fixed_by %>
+    <% end %>
+    </td>
+
+  </div>
+
+  <div class="form-actions">
+    <%= f.button :submit, :class => "btn-primary" %>
+    <%= link_to 'Cancel', admin_fault_reports_path, :class => "btn" %>
+  </div>
+<% end %>
