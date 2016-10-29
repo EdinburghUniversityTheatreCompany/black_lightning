@@ -31,6 +31,8 @@ class Picture < ActiveRecord::Base
                     styles: { thumb: '192x100#', display: '700x700' },
                     convert_options: { thumb: '-quality 75 -strip' }
 
+  validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
+
   attr_accessible :description, :image
 
   def image_url
