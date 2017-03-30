@@ -63,7 +63,7 @@ class Admin::FaultReportsController < AdminController
   ##
   def create
     @fault_report = FaultReport.new(params[:fault_report])
-    @fault_report.reported_by = current_user
+    @fault_report.reported_by = current_user unless params[:fault_report][:reported_by_id]
 
     respond_to do |format|
       if @fault_report.save
