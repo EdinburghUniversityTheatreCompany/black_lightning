@@ -4,5 +4,5 @@ class FaultReport < ActiveRecord::Base
   enum severity: [:annoying, :probably_worth_fixing, :show_impeding, :dangerous]
   enum status: [:reported, :in_progress, :cant_fix, :wont_fix, :on_hold, :completed]
 
-  attr_accessible :item, :description, :severity, :status, :reported_by, :fixed_by
+  attr_accessible :item, :description, :severity, :status, :reported_by_id, :fixed_by_id
 end
