@@ -1,4 +1,4 @@
-
+<h1><%= @fault_report.item %></h1>
 <div>
   <dl>
     <dt>Severity</dt>
@@ -10,14 +10,14 @@
   </dl>
   <dl>
     <dt>Reported by</dt>
-    <dd><%= @fault_report.reported_by.try(:name) %></dd>
+    <dd><%= @fault_report.reported_by.try(:name) || "No one" %></dd>
   </dl>
   <dl>
     <dt>Fixed by</dt>
-    <dd><%= @fault_report.fixed_by.try(:name) %></dd>
+    <dd><%= @fault_report.fixed_by.try(:name) || "No one" %></dd>
   </dl>
 </div>
-
+<hr />
 <div>
   <%= render_markdown @fault_report.description %>
 </div>

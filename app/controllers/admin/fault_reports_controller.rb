@@ -11,7 +11,7 @@ class Admin::FaultReportsController < AdminController
   # GET /admin/fault_reports.json
   ##
   def index
-    @title = 'FaultReport'
+    @title = 'Fault Reports'
     @fault_reports = FaultReport.paginate(page: params[:page], per_page: 15).order('updated_at DESC')
 
     respond_to do |format|
