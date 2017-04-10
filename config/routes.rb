@@ -1,4 +1,7 @@
 ChaosRails::Application.routes.draw do
+  namespace :admin do
+    resources :maintenance_debts
+  end
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
@@ -43,6 +46,7 @@ ChaosRails::Application.routes.draw do
 
       member do
         put 'add_questionnaire'
+        put 'add_maintenance_due'
         get 'xts_report'
       end
     end

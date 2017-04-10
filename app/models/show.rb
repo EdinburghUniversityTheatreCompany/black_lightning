@@ -42,6 +42,7 @@ class Show < Event
     questionnaire.save!
   end
 
+
   def as_json(options = {})
     defaults = {
       include: [

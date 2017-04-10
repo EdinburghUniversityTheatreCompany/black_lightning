@@ -73,6 +73,16 @@ class Admin::ShowsController < AdminController
     end
   end
 
+  def add_maintenance_due
+    @show = Show.find_by_slug(params[:id])
+    @show.update(maintenance_debt_start: params[:maintenance_debt_start])
+
+    respond_to do |format|
+      format.html { redirect_to admin_show_url(@show), notice: 'Maintenance debt start date set' }
+      format.html { render :no_content }
+    end
+  end
+
   def query_xts
     username = Rails.application.config.xts[:username]
     password = Rails.application.config.xts[:password]
