@@ -1,0 +1,1484 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataSource name="bedlam_blacklightning@localhost">
+  <database-model serializer="dbm" rdbms="MYSQL" format-version="4.0">
+    <root id="1"/>
+    <schema id="2" parent="1" name="bedlam_blacklightning">
+      <Current>1</Current>
+      <Visible>1</Visible>
+    </schema>
+    <schema id="3" parent="1" name="information_schema"/>
+    <schema id="4" parent="1" name="mysql"/>
+    <schema id="5" parent="1" name="performance_schema"/>
+    <schema id="6" parent="1" name="sys"/>
+    <table id="7" parent="2" name="admin_answers"/>
+    <table id="8" parent="2" name="admin_editable_blocks"/>
+    <table id="9" parent="2" name="admin_feedbacks"/>
+    <table id="10" parent="2" name="admin_permissions"/>
+    <table id="11" parent="2" name="admin_permissions_roles"/>
+    <table id="12" parent="2" name="admin_proposals_call_question_templates"/>
+    <table id="13" parent="2" name="admin_proposals_calls"/>
+    <table id="14" parent="2" name="admin_proposals_proposals"/>
+    <table id="15" parent="2" name="admin_questionnaires_questionnaire_templates"/>
+    <table id="16" parent="2" name="admin_questionnaires_questionnaires"/>
+    <table id="17" parent="2" name="admin_questions"/>
+    <table id="18" parent="2" name="admin_staffing_jobs"/>
+    <table id="19" parent="2" name="admin_staffing_templates"/>
+    <table id="20" parent="2" name="admin_staffings"/>
+    <table id="21" parent="2" name="attachments"/>
+    <table id="22" parent="2" name="children_techies"/>
+    <table id="23" parent="2" name="delayed_jobs"/>
+    <table id="24" parent="2" name="events"/>
+    <table id="25" parent="2" name="fault_reports"/>
+    <table id="26" parent="2" name="mass_mails"/>
+    <table id="27" parent="2" name="mass_mails_users"/>
+    <table id="28" parent="2" name="membership_cards"/>
+    <table id="29" parent="2" name="news"/>
+    <table id="30" parent="2" name="newsletter_subscribers"/>
+    <table id="31" parent="2" name="opportunities"/>
+    <table id="32" parent="2" name="pictures"/>
+    <table id="33" parent="2" name="reviews"/>
+    <table id="34" parent="2" name="roles"/>
+    <table id="35" parent="2" name="schema_migrations"/>
+    <table id="36" parent="2" name="team_members"/>
+    <table id="37" parent="2" name="techies"/>
+    <table id="38" parent="2" name="users"/>
+    <table id="39" parent="2" name="users_roles"/>
+    <table id="40" parent="2" name="venues"/>
+    <column id="41" parent="7" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="42" parent="7" name="question_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="43" parent="7" name="answerable_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="44" parent="7" name="answer">
+      <Position>4</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="45" parent="7" name="created_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="46" parent="7" name="updated_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="47" parent="7" name="answerable_type">
+      <Position>7</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="48" parent="7" name="file_file_name">
+      <Position>8</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="49" parent="7" name="file_content_type">
+      <Position>9</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="50" parent="7" name="file_file_size">
+      <Position>10</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="51" parent="7" name="file_updated_at">
+      <Position>11</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <index id="52" parent="7" name="index_admin_answers_on_answerable_id">
+      <ColNames>answerable_id</ColNames>
+    </index>
+    <index id="53" parent="7" name="index_admin_answers_on_answerable_type">
+      <ColNames>answerable_type</ColNames>
+    </index>
+    <index id="54" parent="7" name="index_admin_proposals_answers_on_proposal_id">
+      <ColNames>answerable_id</ColNames>
+    </index>
+    <index id="55" parent="7" name="index_admin_proposals_answers_on_question_id">
+      <ColNames>question_id</ColNames>
+    </index>
+    <key id="56" parent="7" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="57" parent="8" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="58" parent="8" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="59" parent="8" name="content">
+      <Position>3</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="60" parent="8" name="created_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="61" parent="8" name="updated_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="62" parent="8" name="admin_page">
+      <Position>6</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="63" parent="8" name="group">
+      <Position>7</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <key id="64" parent="8" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="65" parent="9" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="66" parent="9" name="show_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="67" parent="9" name="body">
+      <Position>3</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="68" parent="9" name="created_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="69" parent="9" name="updated_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="70" parent="9" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="71" parent="10" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="72" parent="10" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="73" parent="10" name="description">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="74" parent="10" name="action">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="75" parent="10" name="subject_class">
+      <Position>5</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="76" parent="10" name="created_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="77" parent="10" name="updated_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="78" parent="10" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="79" parent="11" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="80" parent="11" name="role_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="81" parent="11" name="permission_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <index id="82" parent="11" name="index_admin_permissions_roles_on_role_id">
+      <ColNames>role_id</ColNames>
+    </index>
+    <key id="83" parent="11" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="84" parent="12" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="85" parent="12" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="86" parent="12" name="created_at">
+      <Position>3</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="87" parent="12" name="updated_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="88" parent="12" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="89" parent="13" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="90" parent="13" name="deadline">
+      <Position>2</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="91" parent="13" name="name">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="92" parent="13" name="open">
+      <Position>4</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="93" parent="13" name="created_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="94" parent="13" name="updated_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="95" parent="13" name="archived">
+      <Position>7</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <key id="96" parent="13" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="97" parent="14" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="98" parent="14" name="call_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="99" parent="14" name="show_title">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="100" parent="14" name="publicity_text">
+      <Position>4</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="101" parent="14" name="proposal_text">
+      <Position>5</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="102" parent="14" name="created_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="103" parent="14" name="updated_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="104" parent="14" name="late">
+      <Position>8</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="105" parent="14" name="approved">
+      <Position>9</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="106" parent="14" name="successful">
+      <Position>10</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <index id="107" parent="14" name="index_admin_proposals_proposals_on_call_id">
+      <ColNames>call_id</ColNames>
+    </index>
+    <key id="108" parent="14" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="109" parent="15" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="110" parent="15" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="111" parent="15" name="created_at">
+      <Position>3</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="112" parent="15" name="updated_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="113" parent="15" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="114" parent="16" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="115" parent="16" name="show_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="116" parent="16" name="created_at">
+      <Position>3</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="117" parent="16" name="updated_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="118" parent="16" name="name">
+      <Position>5</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <key id="119" parent="16" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="120" parent="17" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="121" parent="17" name="question_text">
+      <Position>2</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="122" parent="17" name="response_type">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="123" parent="17" name="created_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="124" parent="17" name="updated_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="125" parent="17" name="questionable_id">
+      <Position>6</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="126" parent="17" name="questionable_type">
+      <Position>7</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <index id="127" parent="17" name="index_admin_questions_on_questionable_id">
+      <ColNames>questionable_id</ColNames>
+    </index>
+    <index id="128" parent="17" name="index_admin_questions_on_questionable_type">
+      <ColNames>questionable_type</ColNames>
+    </index>
+    <key id="129" parent="17" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="130" parent="18" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="131" parent="18" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="132" parent="18" name="staffable_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="133" parent="18" name="user_id">
+      <Position>4</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="134" parent="18" name="created_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="135" parent="18" name="updated_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="136" parent="18" name="staffable_type">
+      <Position>7</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <index id="137" parent="18" name="index_admin_staffing_jobs_on_staffable_id">
+      <ColNames>staffable_id</ColNames>
+    </index>
+    <index id="138" parent="18" name="index_admin_staffing_jobs_on_staffable_type">
+      <ColNames>staffable_type</ColNames>
+    </index>
+    <index id="139" parent="18" name="index_admin_staffing_jobs_on_staffing_id">
+      <ColNames>staffable_id</ColNames>
+    </index>
+    <index id="140" parent="18" name="index_admin_staffing_jobs_on_user_id">
+      <ColNames>user_id</ColNames>
+    </index>
+    <key id="141" parent="18" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="142" parent="19" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="143" parent="19" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="144" parent="19" name="created_at">
+      <Position>3</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="145" parent="19" name="updated_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="146" parent="19" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="147" parent="20" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="148" parent="20" name="start_time">
+      <Position>2</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="149" parent="20" name="show_title">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="150" parent="20" name="created_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="151" parent="20" name="updated_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="152" parent="20" name="reminder_job_id">
+      <Position>6</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="153" parent="20" name="end_time">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <index id="154" parent="20" name="index_admin_staffings_on_reminder_job_id">
+      <ColNames>reminder_job_id</ColNames>
+    </index>
+    <key id="155" parent="20" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="156" parent="21" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="157" parent="21" name="editable_block_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="158" parent="21" name="name">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="159" parent="21" name="file_file_name">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="160" parent="21" name="file_content_type">
+      <Position>5</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="161" parent="21" name="file_file_size">
+      <Position>6</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="162" parent="21" name="file_updated_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="163" parent="21" name="created_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="164" parent="21" name="updated_at">
+      <Position>9</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <index id="165" parent="21" name="index_attachments_on_editable_block_id">
+      <ColNames>editable_block_id</ColNames>
+    </index>
+    <key id="166" parent="21" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="167" parent="22" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="168" parent="22" name="techie_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="169" parent="22" name="child_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="170" parent="22" name="created_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="171" parent="22" name="updated_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <index id="172" parent="22" name="index_children_techies_on_techie_id">
+      <ColNames>techie_id</ColNames>
+    </index>
+    <key id="173" parent="22" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="174" parent="23" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="175" parent="23" name="priority">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+      <DefaultExpression>&apos;0&apos;</DefaultExpression>
+    </column>
+    <column id="176" parent="23" name="attempts">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+      <DefaultExpression>&apos;0&apos;</DefaultExpression>
+    </column>
+    <column id="177" parent="23" name="handler">
+      <Position>4</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="178" parent="23" name="last_error">
+      <Position>5</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="179" parent="23" name="run_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="180" parent="23" name="locked_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="181" parent="23" name="failed_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="182" parent="23" name="locked_by">
+      <Position>9</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="183" parent="23" name="queue">
+      <Position>10</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="184" parent="23" name="created_at">
+      <Position>11</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="185" parent="23" name="updated_at">
+      <Position>12</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="186" parent="23" name="description">
+      <Position>13</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <index id="187" parent="23" name="delayed_jobs_priority">
+      <ColNames>priority
+run_at</ColNames>
+    </index>
+    <key id="188" parent="23" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="189" parent="24" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="190" parent="24" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="191" parent="24" name="tagline">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="192" parent="24" name="slug">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="193" parent="24" name="description">
+      <Position>5</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="194" parent="24" name="xts_id">
+      <Position>6</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="195" parent="24" name="created_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="196" parent="24" name="updated_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="197" parent="24" name="is_public">
+      <Position>9</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="198" parent="24" name="image_file_name">
+      <Position>10</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="199" parent="24" name="image_content_type">
+      <Position>11</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="200" parent="24" name="image_file_size">
+      <Position>12</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="201" parent="24" name="image_updated_at">
+      <Position>13</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="202" parent="24" name="start_date">
+      <Position>14</Position>
+      <DataType>date|0</DataType>
+    </column>
+    <column id="203" parent="24" name="end_date">
+      <Position>15</Position>
+      <DataType>date|0</DataType>
+    </column>
+    <column id="204" parent="24" name="venue_id">
+      <Position>16</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="205" parent="24" name="season_id">
+      <Position>17</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="206" parent="24" name="author">
+      <Position>18</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="207" parent="24" name="type">
+      <Position>19</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="208" parent="24" name="price">
+      <Position>20</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="209" parent="24" name="spark_seat_slug">
+      <Position>21</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <index id="210" parent="24" name="index_events_on_season_id">
+      <ColNames>season_id</ColNames>
+    </index>
+    <index id="211" parent="24" name="index_events_on_venue_id">
+      <ColNames>venue_id</ColNames>
+    </index>
+    <key id="212" parent="24" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="213" parent="25" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="214" parent="25" name="item">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="215" parent="25" name="description">
+      <Position>3</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="216" parent="25" name="severity">
+      <Position>4</Position>
+      <DataType>int(11)|0</DataType>
+      <DefaultExpression>&apos;0&apos;</DefaultExpression>
+    </column>
+    <column id="217" parent="25" name="status">
+      <Position>5</Position>
+      <DataType>int(11)|0</DataType>
+      <DefaultExpression>&apos;0&apos;</DefaultExpression>
+    </column>
+    <column id="218" parent="25" name="reported_by_id">
+      <Position>6</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="219" parent="25" name="fixed_by_id">
+      <Position>7</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="220" parent="25" name="created_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="221" parent="25" name="updated_at">
+      <Position>9</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <index id="222" parent="25" name="index_fault_reports_on_fixed_by_id">
+      <ColNames>fixed_by_id</ColNames>
+    </index>
+    <index id="223" parent="25" name="index_fault_reports_on_reported_by_id">
+      <ColNames>reported_by_id</ColNames>
+    </index>
+    <index id="224" parent="25" name="index_fault_reports_on_severity">
+      <ColNames>severity</ColNames>
+    </index>
+    <index id="225" parent="25" name="index_fault_reports_on_status">
+      <ColNames>status</ColNames>
+    </index>
+    <key id="226" parent="25" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="227" parent="26" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="228" parent="26" name="sender_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="229" parent="26" name="subject">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="230" parent="26" name="body">
+      <Position>4</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="231" parent="26" name="send_date">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="232" parent="26" name="draft">
+      <Position>6</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="233" parent="26" name="created_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="234" parent="26" name="updated_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="235" parent="26" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="236" parent="27" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="237" parent="27" name="mass_mail_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="238" parent="27" name="user_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <key id="239" parent="27" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="240" parent="28" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="241" parent="28" name="card_number">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="242" parent="28" name="user_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="243" parent="28" name="created_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="244" parent="28" name="updated_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="245" parent="28" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="246" parent="29" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="247" parent="29" name="title">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="248" parent="29" name="body">
+      <Position>3</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="249" parent="29" name="slug">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="250" parent="29" name="publish_date">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="251" parent="29" name="show_public">
+      <Position>6</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="252" parent="29" name="created_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="253" parent="29" name="updated_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="254" parent="29" name="image_file_name">
+      <Position>9</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="255" parent="29" name="image_content_type">
+      <Position>10</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="256" parent="29" name="image_file_size">
+      <Position>11</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="257" parent="29" name="image_updated_at">
+      <Position>12</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="258" parent="29" name="author_id">
+      <Position>13</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <index id="259" parent="29" name="index_news_on_author_id">
+      <ColNames>author_id</ColNames>
+    </index>
+    <key id="260" parent="29" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="261" parent="30" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="262" parent="30" name="email">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="263" parent="30" name="created_at">
+      <Position>3</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="264" parent="30" name="updated_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="265" parent="30" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="266" parent="31" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="267" parent="31" name="title">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="268" parent="31" name="description">
+      <Position>3</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="269" parent="31" name="show_email">
+      <Position>4</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="270" parent="31" name="approved">
+      <Position>5</Position>
+      <DataType>tinyint(1)|0</DataType>
+    </column>
+    <column id="271" parent="31" name="creator_id">
+      <Position>6</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="272" parent="31" name="approver_id">
+      <Position>7</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="273" parent="31" name="expiry_date">
+      <Position>8</Position>
+      <DataType>date|0</DataType>
+    </column>
+    <column id="274" parent="31" name="created_at">
+      <Position>9</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="275" parent="31" name="updated_at">
+      <Position>10</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="276" parent="31" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="277" parent="32" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="278" parent="32" name="description">
+      <Position>2</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="279" parent="32" name="gallery_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="280" parent="32" name="gallery_type">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="281" parent="32" name="image_file_name">
+      <Position>5</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="282" parent="32" name="image_content_type">
+      <Position>6</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="283" parent="32" name="image_file_size">
+      <Position>7</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="284" parent="32" name="image_updated_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="285" parent="32" name="created_at">
+      <Position>9</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="286" parent="32" name="updated_at">
+      <Position>10</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <index id="287" parent="32" name="index_pictures_on_gallery_id">
+      <ColNames>gallery_id</ColNames>
+    </index>
+    <index id="288" parent="32" name="index_pictures_on_gallery_type">
+      <ColNames>gallery_type</ColNames>
+    </index>
+    <key id="289" parent="32" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="290" parent="33" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="291" parent="33" name="show_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="292" parent="33" name="reviewer">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="293" parent="33" name="body">
+      <Position>4</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="294" parent="33" name="rating">
+      <Position>5</Position>
+      <DataType>decimal(2,1)|0</DataType>
+    </column>
+    <column id="295" parent="33" name="review_date">
+      <Position>6</Position>
+      <DataType>date|0</DataType>
+    </column>
+    <column id="296" parent="33" name="created_at">
+      <Position>7</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="297" parent="33" name="updated_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="298" parent="33" name="organisation">
+      <Position>9</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <key id="299" parent="33" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="300" parent="34" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="301" parent="34" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="302" parent="34" name="resource_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="303" parent="34" name="resource_type">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="304" parent="34" name="created_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="305" parent="34" name="updated_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <index id="306" parent="34" name="index_roles_on_name">
+      <ColNames>name</ColNames>
+    </index>
+    <index id="307" parent="34" name="index_roles_on_name_and_resource_type_and_resource_id">
+      <ColNames>name
+resource_type
+resource_id</ColNames>
+    </index>
+    <key id="308" parent="34" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="309" parent="35" name="version">
+      <Position>1</Position>
+      <DataType>varchar(255)|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <index id="310" parent="35" name="unique_schema_migrations">
+      <ColNames>version</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <key id="311" parent="35" name="unique_schema_migrations">
+      <ColNames>version</ColNames>
+      <UnderlyingIndexName>unique_schema_migrations</UnderlyingIndexName>
+    </key>
+    <column id="312" parent="36" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="313" parent="36" name="position">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="314" parent="36" name="user_id">
+      <Position>3</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="315" parent="36" name="teamwork_id">
+      <Position>4</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="316" parent="36" name="created_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="317" parent="36" name="updated_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="318" parent="36" name="teamwork_type">
+      <Position>7</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="319" parent="36" name="display_order">
+      <Position>8</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <index id="320" parent="36" name="index_team_members_on_teamwork_id">
+      <ColNames>teamwork_id</ColNames>
+    </index>
+    <index id="321" parent="36" name="index_team_members_on_teamwork_type">
+      <ColNames>teamwork_type</ColNames>
+    </index>
+    <index id="322" parent="36" name="index_team_members_on_user_id">
+      <ColNames>user_id</ColNames>
+    </index>
+    <key id="323" parent="36" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="324" parent="37" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="325" parent="37" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="326" parent="37" name="created_at">
+      <Position>3</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="327" parent="37" name="updated_at">
+      <Position>4</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="328" parent="37" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <column id="329" parent="38" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="330" parent="38" name="email">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+      <NotNull>1</NotNull>
+      <DefaultExpression>&apos;&apos;</DefaultExpression>
+    </column>
+    <column id="331" parent="38" name="encrypted_password">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+      <NotNull>1</NotNull>
+      <DefaultExpression>&apos;&apos;</DefaultExpression>
+    </column>
+    <column id="332" parent="38" name="reset_password_token">
+      <Position>4</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="333" parent="38" name="reset_password_sent_at">
+      <Position>5</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="334" parent="38" name="remember_created_at">
+      <Position>6</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="335" parent="38" name="sign_in_count">
+      <Position>7</Position>
+      <DataType>int(11)|0</DataType>
+      <DefaultExpression>&apos;0&apos;</DefaultExpression>
+    </column>
+    <column id="336" parent="38" name="current_sign_in_at">
+      <Position>8</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="337" parent="38" name="last_sign_in_at">
+      <Position>9</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="338" parent="38" name="current_sign_in_ip">
+      <Position>10</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="339" parent="38" name="last_sign_in_ip">
+      <Position>11</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="340" parent="38" name="first_name">
+      <Position>12</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="341" parent="38" name="last_name">
+      <Position>13</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="342" parent="38" name="created_at">
+      <Position>14</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="343" parent="38" name="updated_at">
+      <Position>15</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="344" parent="38" name="phone_number">
+      <Position>16</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="345" parent="38" name="public_profile">
+      <Position>17</Position>
+      <DataType>tinyint(1)|0</DataType>
+      <DefaultExpression>&apos;1&apos;</DefaultExpression>
+    </column>
+    <column id="346" parent="38" name="bio">
+      <Position>18</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="347" parent="38" name="avatar_file_name">
+      <Position>19</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="348" parent="38" name="avatar_content_type">
+      <Position>20</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="349" parent="38" name="avatar_file_size">
+      <Position>21</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="350" parent="38" name="avatar_updated_at">
+      <Position>22</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="351" parent="38" name="username">
+      <Position>23</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="352" parent="38" name="remember_token">
+      <Position>24</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <index id="353" parent="38" name="index_users_on_email">
+      <ColNames>email</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <index id="354" parent="38" name="index_users_on_reset_password_token">
+      <ColNames>reset_password_token</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <key id="355" parent="38" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+    <key id="356" parent="38" name="index_users_on_email">
+      <ColNames>email</ColNames>
+      <UnderlyingIndexName>index_users_on_email</UnderlyingIndexName>
+    </key>
+    <key id="357" parent="38" name="index_users_on_reset_password_token">
+      <ColNames>reset_password_token</ColNames>
+      <UnderlyingIndexName>index_users_on_reset_password_token</UnderlyingIndexName>
+    </key>
+    <column id="358" parent="39" name="user_id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="359" parent="39" name="role_id">
+      <Position>2</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <index id="360" parent="39" name="index_users_roles_on_user_id_and_role_id">
+      <ColNames>user_id
+role_id</ColNames>
+    </index>
+    <column id="361" parent="40" name="id">
+      <Position>1</Position>
+      <DataType>int(11)|0</DataType>
+      <NotNull>1</NotNull>
+      <SequenceIdentity>1</SequenceIdentity>
+    </column>
+    <column id="362" parent="40" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="363" parent="40" name="tagline">
+      <Position>3</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="364" parent="40" name="description">
+      <Position>4</Position>
+      <DataType>text|0</DataType>
+    </column>
+    <column id="365" parent="40" name="location">
+      <Position>5</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="366" parent="40" name="image_file_name">
+      <Position>6</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="367" parent="40" name="image_content_type">
+      <Position>7</Position>
+      <DataType>varchar(255)|0</DataType>
+    </column>
+    <column id="368" parent="40" name="image_file_size">
+      <Position>8</Position>
+      <DataType>int(11)|0</DataType>
+    </column>
+    <column id="369" parent="40" name="image_updated_at">
+      <Position>9</Position>
+      <DataType>datetime|0</DataType>
+    </column>
+    <column id="370" parent="40" name="created_at">
+      <Position>10</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <column id="371" parent="40" name="updated_at">
+      <Position>11</Position>
+      <DataType>datetime|0</DataType>
+      <NotNull>1</NotNull>
+    </column>
+    <key id="372" parent="40" name="PRIMARY">
+      <ColNames>id</ColNames>
+      <Primary>1</Primary>
+    </key>
+  </database-model>
+</dataSource>

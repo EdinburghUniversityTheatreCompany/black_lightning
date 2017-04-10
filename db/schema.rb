@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160903224904) do
+ActiveRecord::Schema.define(version: 20170410092713) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -45,6 +45,14 @@ ActiveRecord::Schema.define(version: 20160903224904) do
     t.text     "body",       limit: 65535
     t.datetime "created_at",               null: false
     t.datetime "updated_at",               null: false
+  end
+
+  create_table "admin_maintenance_debts", force: :cascade do |t|
+    t.integer  "user_id",    limit: 4
+    t.date     "dueBy"
+    t.integer  "show_id",    limit: 4
+    t.datetime "created_at",           null: false
+    t.datetime "updated_at",           null: false
   end
 
   create_table "admin_permissions", force: :cascade do |t|
@@ -188,26 +196,27 @@ ActiveRecord::Schema.define(version: 20160903224904) do
   add_index "delayed_jobs", ["priority", "run_at"], name: "delayed_jobs_priority", using: :btree
 
   create_table "events", force: :cascade do |t|
-    t.string   "name",               limit: 255
-    t.string   "tagline",            limit: 255
-    t.string   "slug",               limit: 255
-    t.text     "description",        limit: 65535
-    t.integer  "xts_id",             limit: 4
-    t.datetime "created_at",                       null: false
-    t.datetime "updated_at",                       null: false
+    t.string   "name",                   limit: 255
+    t.string   "tagline",                limit: 255
+    t.string   "slug",                   limit: 255
+    t.text     "description",            limit: 65535
+    t.integer  "xts_id",                 limit: 4
+    t.datetime "created_at",                           null: false
+    t.datetime "updated_at",                           null: false
     t.boolean  "is_public"
-    t.string   "image_file_name",    limit: 255
-    t.string   "image_content_type", limit: 255
-    t.integer  "image_file_size",    limit: 4
+    t.string   "image_file_name",        limit: 255
+    t.string   "image_content_type",     limit: 255
+    t.integer  "image_file_size",        limit: 4
     t.datetime "image_updated_at"
     t.date     "start_date"
     t.date     "end_date"
-    t.integer  "venue_id",           limit: 4
-    t.integer  "season_id",          limit: 4
-    t.string   "author",             limit: 255
-    t.string   "type",               limit: 255
-    t.string   "price",              limit: 255
-    t.string   "spark_seat_slug",    limit: 255
+    t.integer  "venue_id",               limit: 4
+    t.integer  "season_id",              limit: 4
+    t.string   "author",                 limit: 255
+    t.string   "type",                   limit: 255
+    t.string   "price",                  limit: 255
+    t.string   "spark_seat_slug",        limit: 255
+    t.date     "maintenance_debt_start"
   end
 
   add_index "events", ["season_id"], name: "index_events_on_season_id", using: :btree
