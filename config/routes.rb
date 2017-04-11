@@ -1,5 +1,8 @@
 ChaosRails::Application.routes.draw do
   namespace :admin do
+    resources :staffing_debts
+  end
+  namespace :admin do
     resources :maintenance_debts
   end
   match '*path' => 'application#options', via: :options

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170410092713) do
+ActiveRecord::Schema.define(version: 20170411152714) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -124,6 +124,15 @@ ActiveRecord::Schema.define(version: 20170410092713) do
 
   add_index "admin_questions", ["questionable_id"], name: "index_admin_questions_on_questionable_id", using: :btree
   add_index "admin_questions", ["questionable_type"], name: "index_admin_questions_on_questionable_type", using: :btree
+
+  create_table "admin_staffing_debts", force: :cascade do |t|
+    t.integer  "user_id",               limit: 4
+    t.integer  "show_id",               limit: 4
+    t.date     "dueBy"
+    t.integer  "admin_staffing_job_id", limit: 4
+    t.datetime "created_at",                      null: false
+    t.datetime "updated_at",                      null: false
+  end
 
   create_table "admin_staffing_jobs", force: :cascade do |t|
     t.string   "name",           limit: 255

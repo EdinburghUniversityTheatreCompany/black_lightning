@@ -12,7 +12,7 @@ class Admin::MaintenanceDebtsController < AdminController
       @mdebts = @admin_maintenance_debts.where(user_id: current_user.id)
     end
 
-    @mdebts = @mdebts.paginate(page: params[:page], per_page: 15)
+    @mdebts = @mdebts.order('dueBy ASC').paginate(page: params[:page], per_page: 15)
     @mdebts = @mdebts.all
   end
 
