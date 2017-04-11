@@ -46,7 +46,8 @@ current user = <%=current_user.name  %>
     <th></th>
   </tr>
   <% @mdebts.each do |mdebt| %>
-      <tr>
+
+      <tr<%= " class = error" if Date.current > mdebt.dueBy %>>
         <td><%= mdebt.user.email %></td>
         <td><%= "#{mdebt.user.first_name} #{mdebt.user.last_name}"%></td>
         <td><%= mdebt.show.name %></td>
@@ -54,7 +55,7 @@ current user = <%=current_user.name  %>
 
         <td>
           <% if can? :edit, mdebt %>
-              <%= link_to 'Edit', edit_admin_maintenance_debt_path(mdebt) %>
+              <%= link_to 'Change Deadline', edit_admin_maintenance_debt_path(mdebt) %>
           <% end %>
         </td>
 
