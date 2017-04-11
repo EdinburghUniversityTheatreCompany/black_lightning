@@ -1,0 +1,24 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>User:</strong>
+  <%= @admin_staffing_debt.user_id %>
+</p>
+
+<p>
+  <strong>Show:</strong>
+  <%= @admin_staffing_debt.show_id %>
+</p>
+
+<p>
+  <strong>Dueby:</strong>
+  <%= @admin_staffing_debt.dueBy %>
+</p>
+
+<p>
+  <strong>Admin staffing job:</strong>
+  <%= @admin_staffing_debt.admin_staffing_job_id %>
+</p>
+
+<%= link_to 'Edit', edit_admin_staffing_debt_path(@admin_staffing_debt) %> |
+<%= link_to 'Back', admin_staffing_debts_path %>

@@ -31,7 +31,7 @@ class Show < Event
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :destroy
   has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :destroy
 
-  attr_accessible :reviews, :reviews_attributes
+  attr_accessible :reviews, :reviews_attributes, :maintenance_debt_start
 
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
@@ -40,6 +40,17 @@ class Show < Event
     questionnaire.show = self
     questionnaire.name = name
     questionnaire.save!
+  end
+
+  def create_debts
+    uniqueTeam = self.users.uniq
+    uniqueTeam.each do |usr,index|
+      debt = Admin::MaintenanceDebt.new
+      debt.show = self
+      debt.user = usr
+      debt.dueBy = self.maintenance_debt_start
+      debt.save
+    end
   end
 
   def as_json(options = {})

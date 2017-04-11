@@ -1,0 +1,83 @@
+<p id="notice"><%= notice %></p>
+
+current user = <%=current_user.name  %>
+
+<% @title = 'Staffing Debts' %>
+
+<% prefix = params[:search] ? "Searching" : "Listing" %>
+
+<h1><%= prefix %> Staffing Debts</h1>
+
+<% if can? :manage, Admin::StaffingDebt%>
+    <% if false%>
+        <%# cant make searching happy right now%>
+        <div class="row">
+          <div class="span9">
+            <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_staffing_debts, html: { id: "search", class: "form-search" } do |f| %>
+                <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
+                <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
+                <%= f.input_field :show_name, placeholder: "Show", required: false %>
+                <%= f.submit :Search, class: 'btn' %>
+            <% end %>
+          </div>
+          <div class="span3">
+            <div class="control-group">
+              <div class="controls">
+                <label class="checkbox">
+
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+    <% end %>
+<%else%>
+    <%@q = {user_id:current_user}%>
+<%end%>
+
+<table class="table">
+  <tbody>
+  <tr>
+    <th>Email</th>
+    <th>Name</th>
+    <th>Show</th>
+    <th>Due Date</th>
+    <th>Staffing Job</th>
+    <th></th>
+    <th></th>
+  </tr>
+  <% @sdebts.each do |sdebt| %>
+
+      <tr<%= " class = error" if Date.current > sdebt.dueBy %>>
+        <td><%= sdebt.user.email %></td>
+        <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}"%></td>
+        <td><%= sdebt.show.name %></td>
+        <td><%= sdebt.dueBy %></td>
+        <td><%= sdebt.dueBy %></td>
+
+        <td>
+          <% if can? :edit, sdebt %>
+              <%= link_to 'Change Deadline', edit_admin_staffing_debt_path(sdebt) %>
+          <% end %>
+        </td>
+
+        <td>
+          <% if can? :delete, sdebt %>
+              <%= link_to 'Destroy', admin_staffing_debt_path(sdebt), method: :delete, data: { confirm:         "Deleting " + sdebt.user.name + "'s debt",
+                                                                                                  detail:          "If you delete a debt a FOH fairy dies",
+              } %>
+          <% end %>
+        </td>
+      </tr>
+  <% end %>
+  </tbody>
+</table>
+
+<div class="paginate_holder">
+  <%= will_paginate(@sdebts) %>
+</div>
+
+<br>
+<% if can? :create, Admin::StaffingDebt%>
+    <%= link_to 'New Staffing debt', new_admin_staffing_debt_path %>
+<% end %>

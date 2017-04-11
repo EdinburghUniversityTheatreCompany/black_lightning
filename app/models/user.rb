@@ -55,6 +55,7 @@ class User < ActiveRecord::Base
   has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
   has_many :staffing_jobs, class_name: 'Admin::StaffingJob'
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
+  has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt'
 
   has_attached_file :avatar,
                     styles: { thumb: '150x150', display: '700x700' },
