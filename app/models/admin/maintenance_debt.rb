@@ -5,5 +5,13 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
 
   validates :dueBy, presence: true
 
+  def convert_to_staffing_debt()
+    sdebt = Admin::StaffingDebt.new
+    sdebt.dueBy = self.dueBy
+    sdebt.show_id = self.show_id
+    sdebt.user_id = self.user_id
+    sdebt.save!
+    self.destroy
+  end
 
 end

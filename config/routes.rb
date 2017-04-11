@@ -57,7 +57,11 @@ ChaosRails::Application.routes.draw do
 
     resources :workshops
 
-    resources :maintenance_debts
+    resources :maintenance_debts do
+      member do
+        put 'convert_to_staffing_debt'
+      end
+    end
 
 
     resources :venues

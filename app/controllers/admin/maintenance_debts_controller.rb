@@ -29,6 +29,16 @@ class Admin::MaintenanceDebtsController < AdminController
   def edit
   end
 
+  def convert_to_staffing_debt
+    mdebt = Admin::MaintenanceDebt.find(params[:id])
+    mdebt.convert_to_staffing_debt()
+
+    respond_to do |format|
+      format.html { redirect_to admin_maintenance_debts_url, notice: 'Debt converted to Staffing Debt' }
+      format.html { render :no_content }
+    end
+  end
+
   # POST /admin/maintenance_debts
   def create
     @admin_maintenance_debt = Admin::MaintenanceDebt.new(admin_maintenance_debt_params)

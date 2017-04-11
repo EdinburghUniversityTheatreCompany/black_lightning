@@ -19,6 +19,7 @@
 class Admin::StaffingJob < ActiveRecord::Base
   belongs_to :staffable, polymorphic: true
   belongs_to :user
+  has_one :admin_staffing_debt, :class_name => 'Admin::StaffingDebt', :foreign_key => 'admin_staffing_job_id'
 
   validates :name, presence: true
 

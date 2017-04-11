@@ -53,7 +53,12 @@ current user = <%=current_user.name  %>
         <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}"%></td>
         <td><%= sdebt.show.name %></td>
         <td><%= sdebt.dueBy %></td>
-        <td><%= sdebt.dueBy %></td>
+        <td>
+          <% if sdebt.admin_staffing_job.present? %>
+            <% job = sdebt.admin_staffing_job.staffable %>
+            <%= link_to job.show_title , admin_staffing_path(job) %>
+          <% end %>
+        </td>
 
         <td>
           <% if can? :edit, sdebt %>
