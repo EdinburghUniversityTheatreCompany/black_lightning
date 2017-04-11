@@ -2,7 +2,7 @@
 
 <p>
   <strong>User:</strong>
-  <%= @admin_maintenance_debt.user_id %>
+  <%= @admin_maintenance_debt.user.name %>
 </p>
 
 <p>
@@ -12,7 +12,7 @@
 
 <p>
   <strong>Show:</strong>
-  <%= @admin_maintenance_debt.show_id %>
+  <%= @admin_maintenance_debt.show.name %>
 </p>
 
 <%= link_to 'Edit', edit_admin_maintenance_debt_path(@admin_maintenance_debt) %> |

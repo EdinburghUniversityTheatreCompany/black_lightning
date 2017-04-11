@@ -1,9 +1,19 @@
-class Admin::MaintenanceDebtsController < ApplicationController
+class Admin::MaintenanceDebtsController < AdminController
   before_action :set_admin_maintenance_debt, only: [:show, :edit, :update, :destroy]
 
   # GET /admin/maintenance_debts
   def index
     @admin_maintenance_debts = Admin::MaintenanceDebt.all
+    @title = 'Maintenance Debts'
+    if can? :manage, Admin::MaintenanceDebt
+      @q     = Admin::MaintenanceDebt.unscoped.search(params[:q])
+      @mdebts = @q.result(distinct: true)
+    else
+      @mdebts = @admin_maintenance_debts.where(user_id: current_user.id)
+    end
+
+    @mdebts = @mdebts.paginate(page: params[:page], per_page: 15)
+    @mdebts = @mdebts.all
   end
 
   # GET /admin/maintenance_debts/1

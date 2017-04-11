@@ -74,11 +74,24 @@ class Admin::ShowsController < AdminController
   end
 
   def add_maintenance_due
+    #NASTY but couldnt get date select to convert to date nicely
     @show = Show.find_by_slug(params[:id])
-    @show.update(maintenance_debt_start: params[:maintenance_debt_start])
+    event = params[:maintenance_debt_start]
+    date = Date.new(event["(1i)"].to_i, event["(2i)"].to_i, event["(3i)"].to_i)
+    @show.update(maintenance_debt_start: date)
 
     respond_to do |format|
       format.html { redirect_to admin_show_url(@show), notice: 'Maintenance debt start date set' }
+      format.html { render :no_content }
+    end
+  end
+
+  def create_debts
+    @show = Show.find_by_slug(params[:id])
+    @show.create_debts
+
+    respond_to do |format|
+      format.html { redirect_to admin_show_url(@show), notice: 'Debts created.' }
       format.html { render :no_content }
     end
   end

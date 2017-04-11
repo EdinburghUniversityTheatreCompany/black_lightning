@@ -84,6 +84,10 @@
                   <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
                   <% end %>
 
+                  <% if can? :read, Admin::MaintenanceDebt%>
+                  <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
+                  <%end%>
+
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">

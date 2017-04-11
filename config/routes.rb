@@ -47,11 +47,15 @@ ChaosRails::Application.routes.draw do
       member do
         put 'add_questionnaire'
         put 'add_maintenance_due'
+        put 'create_debts'
         get 'xts_report'
       end
     end
 
     resources :workshops
+
+    resources :maintenance_debts
+
 
     resources :venues
     resources :seasons

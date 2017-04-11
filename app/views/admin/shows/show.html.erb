@@ -98,8 +98,13 @@
 
   <% if can? :create, Admin::MaintenanceDebt then  %>
     <%= form_tag add_maintenance_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
-      <%= date_select :maintenance_debt_start, nil, :default => (@show.end_date + 7) %>
+      <%= date_select :maintenance_debt_start, nil, :default => (@show.end_date + 14) %>
       <%= submit_tag 'Set Maintenance due date', :class => 'btn' %>
+    <% end %>
+    <% if !Admin::MaintenanceDebt.exists?(show_id:@show) %>
+    <%= link_to create_debts_admin_show_path(@show), :method => :put , class: "btn" do%>
+       Create Debts
+    <% end %>
     <% end %>
   <% end %>
 
