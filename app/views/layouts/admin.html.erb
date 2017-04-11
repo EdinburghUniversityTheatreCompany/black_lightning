@@ -88,6 +88,10 @@
                   <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
                   <%end%>
 
+                  <% if can? :read, Admin::StaffingDebt%>
+                    <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
+                  <%end%>
+
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">
