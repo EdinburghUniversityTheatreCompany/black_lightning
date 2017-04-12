@@ -60,7 +60,7 @@ current user = <%=current_user.name  %>
 
         <td>
           <% if can? :delete, mdebt %>
-              <%= link_to 'Destroy', admin_maintenance_debt_path(mdebt), method: :delete, data: { confirm:         "Deleting " + mdebt.user.name + "'s debt",
+              <%= link_to 'Destroy', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger" ,data: { confirm:         "Deleting " + mdebt.user.name + "'s debt",
                                                                                                   detail:          "If you delete a debt a theatre manager fairy dies",
               } %>
           <% end %>

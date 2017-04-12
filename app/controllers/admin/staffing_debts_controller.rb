@@ -5,6 +5,9 @@ class Admin::StaffingDebtsController < AdminController
   def index
     @admin_staffing_debts = Admin::StaffingDebt.all
     @title = 'Staffing Debts'
+
+    @start_date = Date.today - 80
+
     if can? :manage, Admin::StaffingDebt
       @q     = Admin::StaffingDebt.unscoped.search(params[:q])
       @sdebts = @q.result(distinct: true)
@@ -18,7 +21,14 @@ class Admin::StaffingDebtsController < AdminController
 
   # GET /admin/staffing_debts/1
   def show
+    boundryDate = Date.today - 80
+    @admin_staffing_debt = Admin::StaffingDebt.find(params[:id])
+    dateIds = @admin_staffing_debt.user.staffings.where('start_time >?', boundryDate.to_datetime).ids
+    @jobs = @admin_staffing_debt.user.staffing_jobs.where(staffable_id: dateIds).where.not(id: Admin::StaffingDebt.pluck(:admin_staffing_job_id))
+
+    authorize!(:read , @admin_staffing_debt)
   end
+
 
   # GET /admin/staffing_debts/new
   def new
@@ -27,6 +37,17 @@ class Admin::StaffingDebtsController < AdminController
 
   # GET /admin/staffing_debts/1/edit
   def edit
+  end
+
+  def assign
+    debt = Admin::StaffingDebt.find(params[:id])
+    debt.update(admin_staffing_job_id: params[:jobid])
+    debt.save!
+
+    respond_to do |format|
+      format.html { redirect_to admin_staffing_debts_url, notice: 'Job Assigned' }
+      format.html { render :no_content }
+    end
   end
 
   # POST /admin/staffing_debts

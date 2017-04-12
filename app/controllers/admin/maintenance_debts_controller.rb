@@ -18,6 +18,9 @@ class Admin::MaintenanceDebtsController < AdminController
 
   # GET /admin/maintenance_debts/1
   def show
+    @admin_maintenance_debt = Admin::MaintenanceDebt.find(params[:id])
+
+    authorize!(:read , @admin_maintenance_debt)
   end
 
   # GET /admin/maintenance_debts/new

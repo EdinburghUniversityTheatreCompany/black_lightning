@@ -57,18 +57,22 @@ current user = <%=current_user.name  %>
           <% if sdebt.admin_staffing_job.present? %>
             <% job = sdebt.admin_staffing_job.staffable %>
             <%= link_to job.show_title , admin_staffing_path(job) %>
+          <% else %>
+              <%if can? :edit, sdebt %>
+                <%= link_to 'Associate' , admin_staffing_debt_path(sdebt), class: "btn" %>
+              <% end %>
           <% end %>
         </td>
 
         <td>
           <% if can? :edit, sdebt %>
-              <%= link_to 'Change Deadline', edit_admin_staffing_debt_path(sdebt) %>
+              <%= link_to 'Change Deadline', edit_admin_staffing_debt_path(sdebt) , class: "btn"%>
           <% end %>
         </td>
 
         <td>
           <% if can? :delete, sdebt %>
-              <%= link_to 'Destroy', admin_staffing_debt_path(sdebt), method: :delete, data: { confirm:         "Deleting " + sdebt.user.name + "'s debt",
+              <%= link_to 'Destroy', admin_staffing_debt_path(sdebt), method: :delete, class:"btn btn-danger" ,data: { confirm:         "Deleting " + sdebt.user.name + "'s debt",
                                                                                                   detail:          "If you delete a debt a FOH fairy dies",
               } %>
           <% end %>
