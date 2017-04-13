@@ -50,7 +50,9 @@ ChaosRails::Application.routes.draw do
       member do
         put 'add_questionnaire'
         put 'add_maintenance_due'
-        put 'create_debts'
+        put 'add_staffing_due'
+        put 'create_sdebts'
+        get 'create_mdebts'
         get 'xts_report'
       end
     end

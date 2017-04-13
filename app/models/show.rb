@@ -42,7 +42,7 @@ class Show < Event
     questionnaire.save!
   end
 
-  def create_debts
+  def create_mdebts
     uniqueTeam = self.users.uniq
     uniqueTeam.each do |usr,index|
       debt = Admin::MaintenanceDebt.new
@@ -50,6 +50,20 @@ class Show < Event
       debt.user = usr
       debt.dueBy = self.maintenance_debt_start
       debt.save
+    end
+  end
+
+  def create_sdebts(numEach)
+    uniqueTeam = self.users.uniq
+    uniqueTeam.each do |usr|
+      x = numEach - usr.admin_staffing_debts.where(converted:false).count
+      x.times do |i|
+        debt = Admin::StaffingDebt.new
+        debt.show = self
+        debt.user = usr
+        debt.dueBy = self.staffing_debt_start
+        debt.save!
+      end
     end
   end
 

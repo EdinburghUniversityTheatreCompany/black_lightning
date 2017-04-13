@@ -1,14 +1,14 @@
 <h1>Editing Admin Staffing Debt</h1>
 
-<%= simple_form_for(@admin_staffing_debt) do |f| %>
-    <%= f.error_notification %>
+<%= simple_form_for(@admin_staffing_debt) do |y| %>
+    <%= y.error_notification %>
 
     <div class="form-inputs">
-      <%= f.input :dueBy , label: "Due By"%>
+      <%= y.input :dueBy , label: "Due By"%>
     </div>
 
     <div class="form-actions">
-      <%= f.button :submit %>
+      <%= y.button :submit %>
     </div>
 <% end %>
 

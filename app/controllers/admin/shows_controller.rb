@@ -86,12 +86,37 @@ class Admin::ShowsController < AdminController
     end
   end
 
-  def create_debts
+  def add_staffing_due
+    #NASTY but couldnt get date select to convert to date nicely
     @show = Show.find_by_slug(params[:id])
-    @show.create_debts
+    event = params[:staffing_debt_start]
+    date = Date.new(event["(1i)"].to_i, event["(2i)"].to_i, event["(3i)"].to_i)
+    @show.staffing_debt_start = date
+    @show.save!
 
     respond_to do |format|
-      format.html { redirect_to admin_show_url(@show), notice: 'Debts created.' }
+      format.html { redirect_to admin_show_url(@show), notice: 'Staffing debt start date set' }
+      format.html { render :no_content }
+    end
+  end
+
+  def create_mdebts
+    @show = Show.find_by_slug(params[:id])
+    @show.create_mdebts
+
+    respond_to do |format|
+      format.html { redirect_to admin_show_url(@show), notice: 'Obligations created.' }
+      format.html { render :no_content }
+    end
+  end
+
+  def create_sdebts
+    authorize!(:create , Admin::StaffingDebt)
+    @show = Show.find_by_slug(params[:id])
+    @show.create_sdebts(params[:number_of_slots_due][0].to_i)
+
+    respond_to do |format|
+      format.html { redirect_to admin_show_url(@show), notice: 'Obligations created.' }
       format.html { render :no_content }
     end
   end

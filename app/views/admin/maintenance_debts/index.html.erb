@@ -13,8 +13,8 @@ current user = <%=current_user.name  %>
 <div class="row">
   <div class="span9">
     <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_maintenance_debts, html: { id: "search", class: "form-search" } do |f| %>
-        <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
-        <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
+        <%= f.input_field :dueBy, placeholder: "Name",  required: false %>
+        <%= f.input_field :user,     placeholder: "Email", required: false %>
         <%= f.input_field :show_name, placeholder: "Show", required: false %>
         <%= f.submit :Search, class: 'btn' %>
     <% end %>

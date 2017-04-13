@@ -10,6 +10,7 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
     sdebt.dueBy = self.dueBy
     sdebt.show_id = self.show_id
     sdebt.user_id = self.user_id
+    sdebt.converted = true
     sdebt.save!
     self.destroy
   end

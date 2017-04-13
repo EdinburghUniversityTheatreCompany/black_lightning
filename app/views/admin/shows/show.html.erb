@@ -96,17 +96,37 @@
     <% end %>
   <% end %>
 
-  <% if can? :create, Admin::MaintenanceDebt then  %>
+  <% if can? :create, Admin::MaintenanceDebt and !Admin::MaintenanceDebt.exists?(show_id:@show) and @show.maintenance_debt_start.present? then  %>
+
     <%= form_tag add_maintenance_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
       <%= date_select :maintenance_debt_start, nil, :default => (@show.end_date + 14) %>
       <%= submit_tag 'Set Maintenance due date', :class => 'btn' %>
     <% end %>
-    <% if !Admin::MaintenanceDebt.exists?(show_id:@show) %>
-    <%= link_to create_debts_admin_show_path(@show), :method => :put , class: "btn" do%>
-       Create Debts
+
+    <%= link_to create_mdebts_admin_show_path(@show), :method => :get , class: "btn" do%>
+       Create Maintenance Obligations
     <% end %>
-    <% end %>
+
+    <br></br>
   <% end %>
 
+
+  <% if can? :create, Admin::StaffingDebt then  %>
+
+    <% if !Admin::StaffingDebt.where(show_id:@show,converted:false).exists?  %>
+      <%= form_tag add_staffing_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+        <%= date_select :staffing_debt_start, nil, :default => (@show.end_date + 14) %>
+        <%= submit_tag 'Set Staffing due date', :class => 'btn' %>
+      <% end %>
+    <% end %>
+
+    <% if @show.staffing_debt_start.present? %>
+      <%= form_tag create_sdebts_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+        <%= number_field :number_of_slots_due , nil ,in:1..2 %>
+        <%= submit_tag 'Create Staffing Obligations', :class => 'btn' %>
+      <% end %>
+    <% end %>
+
+  <% end %>
 
 <% end %>

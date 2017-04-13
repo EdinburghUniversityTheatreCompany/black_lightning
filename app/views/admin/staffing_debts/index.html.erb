@@ -48,7 +48,7 @@ current user = <%=current_user.name  %>
   </tr>
   <% @sdebts.each do |sdebt| %>
 
-      <tr<%= " class = error" if Date.current > sdebt.dueBy %>>
+      <tr class = "<%= sdebt.status_class %>">
         <td><%= sdebt.user.email %></td>
         <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}"%></td>
         <td><%= sdebt.show.name %></td>

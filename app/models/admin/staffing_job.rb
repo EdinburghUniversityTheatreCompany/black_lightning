@@ -38,4 +38,8 @@ class Admin::StaffingJob < ActiveRecord::Base
   def js_end_time
     return staffable.end_time.utc.to_i
   end
+
+  def completed
+    return self.staffable.end_time < DateTime.now
+  end
 end

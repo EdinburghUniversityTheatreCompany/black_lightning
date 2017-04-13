@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170411152714) do
+ActiveRecord::Schema.define(version: 20170413144318) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -132,6 +132,7 @@ ActiveRecord::Schema.define(version: 20170411152714) do
     t.integer  "admin_staffing_job_id", limit: 4
     t.datetime "created_at",                      null: false
     t.datetime "updated_at",                      null: false
+    t.boolean  "converted"
   end
 
   create_table "admin_staffing_jobs", force: :cascade do |t|
@@ -226,6 +227,7 @@ ActiveRecord::Schema.define(version: 20170411152714) do
     t.string   "price",                  limit: 255
     t.string   "spark_seat_slug",        limit: 255
     t.date     "maintenance_debt_start"
+    t.date     "staffing_debt_start"
   end
 
   add_index "events", ["season_id"], name: "index_events_on_season_id", using: :btree

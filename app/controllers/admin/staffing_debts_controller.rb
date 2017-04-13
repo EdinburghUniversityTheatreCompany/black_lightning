@@ -6,8 +6,6 @@ class Admin::StaffingDebtsController < AdminController
     @admin_staffing_debts = Admin::StaffingDebt.all
     @title = 'Staffing Debts'
 
-    @start_date = Date.today - 80
-
     if can? :manage, Admin::StaffingDebt
       @q     = Admin::StaffingDebt.unscoped.search(params[:q])
       @sdebts = @q.result(distinct: true)
@@ -21,12 +19,12 @@ class Admin::StaffingDebtsController < AdminController
 
   # GET /admin/staffing_debts/1
   def show
+    authorize!(:manage , @admin_staffing_debt)
+
     boundryDate = Date.today - 80
     @admin_staffing_debt = Admin::StaffingDebt.find(params[:id])
     dateIds = @admin_staffing_debt.user.staffings.where('start_time >?', boundryDate.to_datetime).ids
     @jobs = @admin_staffing_debt.user.staffing_jobs.where(staffable_id: dateIds).where.not(id: Admin::StaffingDebt.pluck(:admin_staffing_job_id))
-
-    authorize!(:read , @admin_staffing_debt)
   end
 
 
