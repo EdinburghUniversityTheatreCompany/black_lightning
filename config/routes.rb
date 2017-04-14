@@ -62,6 +62,7 @@ ChaosRails::Application.routes.draw do
     resources :staffing_debts do
       member do
         get 'assign'
+        get 'unassign'
       end
     end
 

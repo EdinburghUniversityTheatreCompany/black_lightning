@@ -6,7 +6,7 @@ class Admin::StaffingDebtsController < AdminController
     @title = 'Staffing Debts'
 
     if can? :manage, Admin::StaffingDebt
-      if params.length > 2
+      if params.length > 3
         show_fulfilled = params[:show_fulfilled].present?
         @sdebts = Admin::StaffingDebt.searchfor(params[:user_fname],params[:user_sname],params[:show_name],show_fulfilled)
       else
@@ -34,12 +34,15 @@ class Admin::StaffingDebtsController < AdminController
   # GET /admin/staffing_debts/new
   def new
     @admin_staffing_debt = Admin::StaffingDebt.new
+    @users = User.all
+    @shows = Show.all
   end
 
   # GET /admin/staffing_debts/1/edit
   def edit
   end
 
+  #associates a debt with a staffing job
   def assign
     debt = Admin::StaffingDebt.find(params[:id])
     debt.update(admin_staffing_job_id: params[:jobid])
@@ -51,12 +54,23 @@ class Admin::StaffingDebtsController < AdminController
     end
   end
 
+  def unassign
+    debt = Admin::StaffingDebt.find(params[:id])
+    debt.update(admin_staffing_job_id: nil)
+    debt.save!
+
+    respond_to do |format|
+      format.html { redirect_to admin_staffing_debts_url, notice: 'Job Removed' }
+      format.html { render :no_content }
+    end
+  end
+
   # POST /admin/staffing_debts
   def create
     @admin_staffing_debt = Admin::StaffingDebt.new(admin_staffing_debt_params)
 
     if @admin_staffing_debt.save
-      redirect_to @admin_staffing_debt, notice: 'Staffing debt was successfully created.'
+      redirect_to admin_staffing_debts_url, notice: 'Staffing debt was successfully created.'
     else
       render :new
     end
@@ -65,7 +79,7 @@ class Admin::StaffingDebtsController < AdminController
   # PATCH/PUT /admin/staffing_debts/1
   def update
     if @admin_staffing_debt.update(admin_staffing_debt_params)
-      redirect_to @admin_staffing_debt, notice: 'Staffing debt was successfully updated.'
+      redirect_to admin_staffing_debts_url, notice: 'Staffing debt was successfully updated.'
     else
       render :edit
     end

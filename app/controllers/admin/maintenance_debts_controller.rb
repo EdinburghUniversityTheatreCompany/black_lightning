@@ -6,7 +6,7 @@ class Admin::MaintenanceDebtsController < AdminController
     @admin_maintenance_debts = Admin::MaintenanceDebt.all
     @title = 'Maintenance Debts'
     if can? :manage, Admin::MaintenanceDebt
-      if params.length > 2
+      if params.length > 3
         @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname],params[:user_sname],params[:show_name])
       else
         @mdebts = Admin::MaintenanceDebt.all
