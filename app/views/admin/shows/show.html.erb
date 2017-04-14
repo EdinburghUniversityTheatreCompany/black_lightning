@@ -2,131 +2,132 @@
 
 <h1><%= @show.name %></h1>
 <table class="table table-bordered">
-    <tbody>
-        <tr>
-            <th>Tagline</th>
-            <td><%= @show.tagline %></td>
-        </tr>
-        <tr>
-            <th>URL Slug</th>
-            <td><%= @show.slug %></td>
-        </tr>
-        <tr>
-            <th>Description</th>
-            <td><%= render_markdown @show.description %></td>
-        </tr>
-        <tr>
-            <th>Dates</th>
-            <td><%= @show.date_range %></td>
-        </tr>
-        <tr>
-            <th>Venue</th>
-            <td><%= @show.venue.name if @show.venue %></td>
-        </tr>
-        <tr>
-            <th>SparkSeat Slug</th>
-            <td><%= @show.spark_seat_slug %></td>
-        </tr>
-        <tr>
-            <th>Public?</th>
-            <td><%= {true => "Yes", false => "No", nil => "No"}[@show.is_public] %>
-        </tr>
-        <tr>
-            <th>Image</th>
-            <td><%= image_tag @show.image.url(:medium) %></td>
-        </tr>
-        <tr>
-            <th>Team</th>
-            <td>
-                <% @show.team_members.each do |team_member| %>
-                  <p>
-                  <b><%= team_member.position %></b>
+  <tbody>
+  <tr>
+    <th>Tagline</th>
+    <td><%= @show.tagline %></td>
+  </tr>
+  <tr>
+    <th>URL Slug</th>
+    <td><%= @show.slug %></td>
+  </tr>
+  <tr>
+    <th>Description</th>
+    <td><%= render_markdown @show.description %></td>
+  </tr>
+  <tr>
+    <th>Dates</th>
+    <td><%= @show.date_range %></td>
+  </tr>
+  <tr>
+    <th>Venue</th>
+    <td><%= @show.venue.name if @show.venue %></td>
+  </tr>
+  <tr>
+    <th>SparkSeat Slug</th>
+    <td><%= @show.spark_seat_slug %></td>
+  </tr>
+  <tr>
+    <th>Public?</th>
+    <td><%= {true => "Yes", false => "No", nil => "No"}[@show.is_public] %>
+  </tr>
+  <tr>
+    <th>Image</th>
+    <td><%= image_tag @show.image.url(:medium) %></td>
+  </tr>
+  <tr>
+    <th>Team</th>
+    <td>
+      <% @show.team_members.each do |team_member| %>
+          <p>
+            <b><%= team_member.position %></b>
 
-                  <% u = team_member.user %>
-                  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-                  </p>
-                <% end %>
-            </td>
-        </tr>
-    </tbody>
+            <% u = team_member.user %>
+            <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
+          </p>
+      <% end %>
+    </td>
+  </tr>
+  </tbody>
 </table>
 
 <% if can? :create, Admin::Feedback %>
-  <%= link_to "Submit Feedback", new_admin_show_feedback_path(@show), :class => 'btn btn-primary' %>
+    <%= link_to "Submit Feedback", new_admin_show_feedback_path(@show), :class => 'btn btn-primary' %>
 <% end %>
 
 <% if @show.feedbacks.count > 0 then %>
-<% if can? :read, @show.feedbacks.first %>
-  <%= link_to "View Feedback", admin_show_feedbacks_path(@show), :class => 'btn' %>
-<% end %>
+    <% if can? :read, @show.feedbacks.first %>
+        <%= link_to "View Feedback", admin_show_feedbacks_path(@show), :class => 'btn' %>
+    <% end %>
 <% end %>
 
 <% if can? :edit, @show %>
-  <% if @show.xts_id %>
-    <%= link_to xts_report_admin_show_path(@show), class: "btn" do %>
-      <i class='fa fa-shopping-cart'></i> XTS Report
+    <% if @show.xts_id %>
+        <%= link_to xts_report_admin_show_path(@show), class: "btn" do %>
+            <i class='fa fa-shopping-cart'></i> XTS Report
+        <% end %>
     <% end %>
-  <% end %>
 
-  <%= link_to edit_admin_show_path(@show), :class => 'btn' do %>
-    <i class="fa fa-pencil"></i> Edit
-  <% end %>
+    <%= link_to edit_admin_show_path(@show), :class => 'btn' do %>
+        <i class="fa fa-pencil"></i> Edit
+    <% end %>
 <% end %>
 
 <% if @show.users.include? current_user or can?(:read, Admin::Questionnaires::Questionnaire) then %>
-  <h3>Questionnaires</h3>
+    <h3>Questionnaires</h3>
 
-  <table class="table">
-    <tbody>
+    <table class="table">
+      <tbody>
       <% @show.questionnaires.each do |questionnaire| %>
-        <tr>
-          <td><%= link_to "Answer #{questionnaire.name} Questionnaire", answer_admin_questionnaires_questionnaire_path(questionnaire) %></td>
-          <% if can? :edit, questionnaire %>
-            <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(questionnaire) %></td>
-          <% end %>
-        </tr>
+          <tr>
+            <td><%= link_to "Answer #{questionnaire.name} Questionnaire", answer_admin_questionnaires_questionnaire_path(questionnaire) %></td>
+            <% if can? :edit, questionnaire %>
+                <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(questionnaire) %></td>
+            <% end %>
+          </tr>
       <% end %>
-    </tbody>
-  </table>
+      </tbody>
+    </table>
 
-  <% if can? :create, Admin::Questionnaires::Questionnaire then %>
-    <%= form_tag add_questionnaire_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
-      <%= text_field_tag :questionnaire_name, nil, :placeholder => "Questionnaire Name" %>
-      <%= submit_tag 'Add Questionnaire', :class => 'btn' %>
-    <% end %>
-  <% end %>
-
-  <% if can? :create, Admin::MaintenanceDebt and !Admin::MaintenanceDebt.exists?(show_id:@show) and @show.maintenance_debt_start.present? then  %>
-
-    <%= form_tag add_maintenance_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
-      <%= date_select :maintenance_debt_start, nil, :default => (@show.end_date + 14) %>
-      <%= submit_tag 'Set Maintenance due date', :class => 'btn' %>
+    <% if can? :create, Admin::Questionnaires::Questionnaire then %>
+        <%= form_tag add_questionnaire_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+            <%= text_field_tag :questionnaire_name, nil, :placeholder => "Questionnaire Name" %>
+            <%= submit_tag 'Add Questionnaire', :class => 'btn' %>
+        <% end %>
     <% end %>
 
-    <%= link_to create_mdebts_admin_show_path(@show), :method => :get , class: "btn" do%>
-       Create Maintenance Obligations
+    <% if can? :create, Admin::MaintenanceDebt and !Admin::MaintenanceDebt.exists?(show_id: @show) then %>
+
+        <%= form_tag add_maintenance_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+            <%= date_select :maintenance_debt_start, nil, :default => (@show.end_date + 14) %>
+            <%= submit_tag 'Set Maintenance due date', :class => 'btn' %>
+        <% end %>
+        <% if @show.maintenance_debt_start.present? %>
+            <%= link_to create_mdebts_admin_show_path(@show), :method => :get, class: "btn" do %>
+                Create Maintenance Obligations
+            <% end %>
+        <% end %>
+
+        <br></br>
     <% end %>
 
-    <br></br>
-  <% end %>
 
+    <% if can? :create, Admin::StaffingDebt then %>
 
-  <% if can? :create, Admin::StaffingDebt then  %>
+        <% if !Admin::StaffingDebt.where(show_id: @show, converted: false).exists? %>
+            <%= form_tag add_staffing_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+                <%= date_select :staffing_debt_start, nil, :default => (@show.end_date + 14) %>
+                <%= submit_tag 'Set Staffing due date', :class => 'btn' %>
+            <% end %>
+        <% end %>
 
-    <% if !Admin::StaffingDebt.where(show_id:@show,converted:false).exists?  %>
-      <%= form_tag add_staffing_due_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
-        <%= date_select :staffing_debt_start, nil, :default => (@show.end_date + 14) %>
-        <%= submit_tag 'Set Staffing due date', :class => 'btn' %>
-      <% end %>
+        <% if @show.staffing_debt_start.present? %>
+            <%= form_tag create_sdebts_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+                <%= number_field :number_of_slots_due, nil, in: 1..2 %>
+                <%= submit_tag 'Create Staffing Obligations', :class => 'btn' %>
+            <% end %>
+        <% end %>
+
     <% end %>
-
-    <% if @show.staffing_debt_start.present? %>
-      <%= form_tag create_sdebts_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
-        <%= number_field :number_of_slots_due , nil ,in:1..2 %>
-        <%= submit_tag 'Create Staffing Obligations', :class => 'btn' %>
-      <% end %>
-    <% end %>
-
-  <% end %>
 
 <% end %>

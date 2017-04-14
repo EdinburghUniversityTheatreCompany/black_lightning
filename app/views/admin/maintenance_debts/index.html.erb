@@ -1,29 +1,34 @@
 
-current user = <%=current_user.name  %>
-
 <% @title = 'Maintenance Debts' %>
 
-<% prefix = params[:search] ? "Searching" : "Listing" %>
+<% prefix = params.length>2 ? "Searching" : "Listing" %>
 
 <h1><%= prefix %> Maintenance Debts</h1>
 
-<% if can? :manage, Admin::MaintenanceDebt%>
-<% if false%>
-    <%# cant make searching happy right now%>
-<div class="row">
-  <div class="span9">
-    <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_maintenance_debts, html: { id: "search", class: "form-search" } do |f| %>
-        <%= f.input_field :dueBy, placeholder: "Name",  required: false %>
-        <%= f.input_field :user,     placeholder: "Email", required: false %>
-        <%= f.input_field :show_name, placeholder: "Show", required: false %>
-        <%= f.submit :Search, class: 'btn' %>
-    <% end %>
-  </div>
-</div>
+<% if can? :manage, Admin::MaintenanceDebt %>
+        <div class="row">
+          <div class="span12">
+            <div class="accordion-group">
+              <div class="accordion-heading">
+                <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
+                  <i class="fa fa-chevron-down"></i> Search Form
+                </a>
+              </div>
+              <div id="search_container" class="accordion-body collapse">
+                <div class="accordion-inner">
+                  <%= form_tag admin_maintenance_debts_url , :method => :get do %>
+                      First Name :<%= text_field_tag :user_fname %>
+                      Second Name :<%= text_field_tag :user_sname %>
+                      Show : <%= text_field_tag :show_name %>
+
+                      <%= submit_tag "Search", class: 'btn' %>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 <% end %>
-<%else%>
-    <%@q = {user_id:current_user}%>
-<%end%>
 
 <table class="table">
   <tbody>
@@ -40,19 +45,19 @@ current user = <%=current_user.name  %>
 
       <tr<%= " class = error" if Date.current > mdebt.dueBy %>>
         <td><%= mdebt.user.email %></td>
-        <td><%= "#{mdebt.user.first_name} #{mdebt.user.last_name}"%></td>
+        <td><%= "#{mdebt.user.first_name} #{mdebt.user.last_name}" %></td>
         <td><%= mdebt.show.name %></td>
         <td><%= mdebt.dueBy %></td>
 
         <td>
           <% if can? :edit, mdebt %>
-              <%= link_to 'Change Deadline', edit_admin_maintenance_debt_path(mdebt) , class: "btn" %>
+              <%= link_to 'Change Deadline', edit_admin_maintenance_debt_path(mdebt), class: "btn" %>
           <% end %>
         </td>
 
         <td>
           <% if can? :edit, mdebt %>
-              <%= link_to convert_to_staffing_debt_admin_maintenance_debt_path(mdebt.id), :method => :put , class: "btn" do%>
+              <%= link_to convert_to_staffing_debt_admin_maintenance_debt_path(mdebt.id), :method => :put, class: "btn" do %>
                   Convert To Staffing
               <% end %>
           <% end %>
@@ -60,8 +65,8 @@ current user = <%=current_user.name  %>
 
         <td>
           <% if can? :delete, mdebt %>
-              <%= link_to 'Destroy', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger" ,data: { confirm:         "Deleting " + mdebt.user.name + "'s debt",
-                                                                                                  detail:          "If you delete a debt a theatre manager fairy dies",
+              <%= link_to 'Destroy', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + mdebt.user.name + "'s debt",
+                                                                                                                          detail: "If you delete a debt a theatre manager fairy dies",
               } %>
           <% end %>
         </td>
@@ -75,6 +80,6 @@ current user = <%=current_user.name  %>
 </div>
 
 <br>
-<% if can? :create, Admin::MaintenanceDebt%>
-<%= link_to 'New Maintenance debt', new_admin_maintenance_debt_path %>
+<% if can? :create, Admin::MaintenanceDebt %>
+    <%= link_to 'New Maintenance debt', new_admin_maintenance_debt_path %>
 <% end %>

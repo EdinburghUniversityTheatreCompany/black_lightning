@@ -3,14 +3,17 @@ class Admin::StaffingDebtsController < AdminController
 
   # GET /admin/staffing_debts
   def index
-    @admin_staffing_debts = Admin::StaffingDebt.all
     @title = 'Staffing Debts'
 
     if can? :manage, Admin::StaffingDebt
-      @q     = Admin::StaffingDebt.unscoped.search(params[:q])
-      @sdebts = @q.result(distinct: true)
+      if params.length > 2
+        show_fulfilled = params[:show_fulfilled].present?
+        @sdebts = Admin::StaffingDebt.searchfor(params[:user_fname],params[:user_sname],params[:show_name],show_fulfilled)
+      else
+        @sdebts = Admin::StaffingDebt.all.filter_fulfilled
+      end
     else
-      @sdebts = @admin_staffing_debts.where(user_id: current_user.id)
+      @sdebts = Admin::StaffingDebt.where(user_id: current_user.id)
     end
 
     @sdebts = @sdebts.order('dueBy ASC').paginate(page: params[:page], per_page: 15)

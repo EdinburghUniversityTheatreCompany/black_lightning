@@ -41,4 +41,29 @@ class Admin::StaffingDebt < ActiveRecord::Base
     return out
   end
 
+  def fulfilled
+    if self.admin_staffing_job.present?
+      return self.admin_staffing_job.completed
+    else
+      return false
+    end
+  end
+
+  def self.searchfor(user_fname,user_sname,show_name,show_fulfilled)
+    userIDs = User.where("first_name LIKE '%#{user_fname}%' AND last_name LIKE '%#{user_sname}%'").ids
+    showIDs = Show.where("name LIKE '%#{show_name}%'")
+    sdebts = self.where(user_id: userIDs, show_id: showIDs)
+
+    if !show_fulfilled
+      sdebts = sdebts.filter_fulfilled
+    end
+
+    return sdebts
+  end
+
+  def self.filter_fulfilled
+    fulfilledids = self.all.map{ |debt| debt.fulfilled ? debt.id : nil }
+    return self.where.not(id: fulfilledids)
+  end
+
 end

@@ -6,14 +6,16 @@ class Admin::MaintenanceDebtsController < AdminController
     @admin_maintenance_debts = Admin::MaintenanceDebt.all
     @title = 'Maintenance Debts'
     if can? :manage, Admin::MaintenanceDebt
-      @q     = Admin::MaintenanceDebt.unscoped.search(params[:q])
-      @mdebts = @q.result(distinct: true)
+      if params.length > 2
+        @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname],params[:user_sname],params[:show_name])
+      else
+        @mdebts = Admin::MaintenanceDebt.all
+      end
     else
       @mdebts = @admin_maintenance_debts.where(user_id: current_user.id)
     end
 
     @mdebts = @mdebts.order('dueBy ASC').paginate(page: params[:page], per_page: 15)
-    @mdebts = @mdebts.all
   end
 
   # GET /admin/maintenance_debts/1
