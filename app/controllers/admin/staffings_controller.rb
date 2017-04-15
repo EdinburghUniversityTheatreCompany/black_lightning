@@ -139,7 +139,7 @@ class Admin::StaffingsController < AdminController
         staffing = admin_staffing.dup
 
         staffing.start_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
-        staffing.end_time   = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
+        staffing.end_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i) # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
 
         staffing.save!
 
@@ -212,15 +212,23 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if current_user.phone_number.blank? # you MUST have a phone number in your profile to be able to sign up for staffing
         format.html { redirect_to edit_admin_user_path(current_user), alert: 'In order to sign up for staffing you need to provide a MOBILE phone number so we are able to get in touch if necessary.' }
-        format.json { render json: { error: 'no_number ' } }
-      elsif @job.save
-        format.html do
-          flash[:success] =  "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.start_time, format: :short)}."
+        format.json { render json: {error: 'no_number '} }
+      elsif @job.staffable.start_time > Time.now
+        if @job.save
+          format.html do
+            flash[:success] = "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name}, on #{(l @job.staffable.start_time, format: :short)}."
+            redirect_to admin_staffings_path
+          end
+          format.json { render json: @job.to_json(include: {user: {}, staffable: {}}, methods: [:js_start_time, :js_end_time]) }
+        else
+          format.html
+          format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
+        end
+      else
+        format.html  do
+          flash[:failure] = "you can't sign up for staffings in the past please contact FOH if you staffed this shift"
           redirect_to admin_staffings_path
         end
-        format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: [:js_start_time, :js_end_time]) }
-      else
-        format.html
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end
