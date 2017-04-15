@@ -74,6 +74,7 @@ class Admin::ShowsController < AdminController
   end
 
   def add_maintenance_due
+    authorize! create, Admin::MaintenanceDebt
     #NASTY but couldnt get date select to convert to date nicely
     @show = Show.find_by_slug(params[:id])
     event = params[:maintenance_debt_start]
@@ -87,6 +88,7 @@ class Admin::ShowsController < AdminController
   end
 
   def add_staffing_due
+    authorize! create, Admin::StaffingDebt
     #NASTY but couldnt get date select to convert to date nicely
     @show = Show.find_by_slug(params[:id])
     event = params[:staffing_debt_start]
@@ -101,6 +103,7 @@ class Admin::ShowsController < AdminController
   end
 
   def create_mdebts
+    authorize! :create, Admin::MaintenanceDebt
     @show = Show.find_by_slug(params[:id])
     @show.create_mdebts
 

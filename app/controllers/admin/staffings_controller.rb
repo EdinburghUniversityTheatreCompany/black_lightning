@@ -226,7 +226,7 @@ class Admin::StaffingsController < AdminController
         end
       else
         format.html  do
-          flash[:failure] = "you can't sign up for staffings in the past please contact FOH if you staffed this shift"
+          flash[:failure] = 'you can\'t sign up for staffings in the past. Please contact FOH if you staffed this shift'
           redirect_to admin_staffings_path
         end
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

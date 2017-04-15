@@ -21,7 +21,6 @@ class Admin::MaintenanceDebtsController < AdminController
   # GET /admin/maintenance_debts/1
   def show
     @admin_maintenance_debt = Admin::MaintenanceDebt.find(params[:id])
-
     authorize!(:read , @admin_maintenance_debt)
   end
 
@@ -35,6 +34,7 @@ class Admin::MaintenanceDebtsController < AdminController
   end
 
   def convert_to_staffing_debt
+    authorize! :manage, Admin::MaintenanceDebt
     mdebt = Admin::MaintenanceDebt.find(params[:id])
     mdebt.convert_to_staffing_debt()
 

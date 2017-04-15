@@ -44,6 +44,7 @@ class Admin::StaffingDebtsController < AdminController
 
   #associates a debt with a staffing job
   def assign
+    authorize! :manage , Admin::StaffingDebt
     debt = Admin::StaffingDebt.find(params[:id])
     debt.update(admin_staffing_job_id: params[:jobid])
     debt.save!
@@ -55,6 +56,7 @@ class Admin::StaffingDebtsController < AdminController
   end
 
   def unassign
+    authorize! :manage , Admin::StaffingDebt
     debt = Admin::StaffingDebt.find(params[:id])
     debt.update(admin_staffing_job_id: nil)
     debt.save!
