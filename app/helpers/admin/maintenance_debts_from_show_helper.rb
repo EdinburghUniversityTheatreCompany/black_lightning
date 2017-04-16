@@ -1,0 +1,2 @@
+module Admin::MaintenanceDebtsFromShowHelper
+end

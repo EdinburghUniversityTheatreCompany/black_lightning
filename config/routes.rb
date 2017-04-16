@@ -1,4 +1,8 @@
 ChaosRails::Application.routes.draw do
+ # namespace :admin do
+ # get 'maintenance_debts_from_show/create'
+ # end
+
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
@@ -65,6 +69,8 @@ ChaosRails::Application.routes.draw do
         put 'convert_to_staffing_debt'
       end
     end
+
+    resources :maintenance_debts_from_show
 
 
     resources :venues
