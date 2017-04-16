@@ -31,7 +31,7 @@ class Show < Event
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :destroy
   has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :destroy
 
-  attr_accessible :reviews, :reviews_attributes, :maintenance_debt_start
+  attr_accessible :reviews, :reviews_attributes, :maintenance_debt_start, :staffing_debt_start
 
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
