@@ -8,7 +8,7 @@ class Admin::StaffingDebtsController < AdminController
     if can? :manage, Admin::StaffingDebt
       if params.length > 3
         show_fulfilled = params[:show_fulfilled].present?
-        @sdebts = Admin::StaffingDebt.searchfor(params[:user_fname],params[:user_sname],params[:show_name],show_fulfilled)
+        @sdebts = Admin::StaffingDebt.search_for(params[:user_fname],params[:user_sname],params[:show_name],show_fulfilled)
       else
         @sdebts = Admin::StaffingDebt.all.filter_fulfilled
       end
