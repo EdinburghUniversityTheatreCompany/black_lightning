@@ -16,7 +16,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
         return :not_signed_up
       end
     else
-      if self.admin_staffing_job.completed
+      if self.admin_staffing_job.completed?
         return :completed_staffing
       elsif self.due_by < Date.today
         return :causing_debt
@@ -29,7 +29,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
 
   def fulfilled
     if self.admin_staffing_job.present?
-      return self.admin_staffing_job.completed
+      return self.admin_staffing_job.completed?
     else
       return false
     end

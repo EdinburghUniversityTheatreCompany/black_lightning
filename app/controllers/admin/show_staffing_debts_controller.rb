@@ -2,7 +2,7 @@ class Admin::ShowStaffingDebtsController < AdminController
   def create
     authorize!(:create , Admin::StaffingDebt)
     show = Show.find(params[:format])
-    show.create_sdebts(params[:number_of_slots_due][0].to_i)
+    show.create_staffing_debts(params[:number_of_slots_due][0].to_i)
 
     redirect_to admin_show_url(show), notice: 'Obligations created.'
   end

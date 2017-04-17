@@ -39,7 +39,7 @@ class Admin::StaffingJob < ActiveRecord::Base
     return staffable.end_time.utc.to_i
   end
 
-  def completed
+  def completed?
     return self.staffable.end_time < DateTime.now
   end
 end
