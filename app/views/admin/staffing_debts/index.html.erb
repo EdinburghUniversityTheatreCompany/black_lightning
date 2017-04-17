@@ -17,7 +17,7 @@
           </div>
           <div id="search_container" class="accordion-body collapse">
             <div class="accordion-inner">
-              <%= form_tag admin_staffing_debts_url, :method => :get do %>
+              <%= form_tag admin_staffing_debts_path, :method => :get do %>
                   First Name :<%= text_field_tag :user_fname %>
                   Second Name :<%= text_field_tag :user_sname %>
                   Show : <%= text_field_tag :show_name %> <br></br>

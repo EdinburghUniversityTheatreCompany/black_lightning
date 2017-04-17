@@ -34,7 +34,7 @@
         <td><%= job.staffable.start_time.to_s(:long_ordinal)%></td>
         <td>
           <% if true %>
-              <%= link_to 'associate' , assign_admin_staffing_debt_url(id:@admin_staffing_debt.id,jobid:job)%>
+              <%= link_to 'associate' , assign_admin_staffing_debt_path(id:@admin_staffing_debt.id,jobid:job)%>
           <% end %>
         </td>
       </tr>
