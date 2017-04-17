@@ -18,7 +18,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
 
   test "should create admin_staffing_debt" do
     assert_difference('Admin::StaffingDebt.count') do
-      post :create, admin_staffing_debt: { admin_staffing_job_id: @admin_staffing_debt.admin_staffing_job_id, dueBy: @admin_staffing_debt.dueBy, show_id: @admin_staffing_debt.show_id, user_id: @admin_staffing_debt.user_id }
+      post :create, admin_staffing_debt: { admin_staffing_job_id: @admin_staffing_debt.admin_staffing_job_id, due_by: @admin_staffing_debt.due_by, show_id: @admin_staffing_debt.show_id, user_id: @admin_staffing_debt.user_id }
     end
 
     assert_redirected_to admin_staffing_debt_path(assigns(:admin_staffing_debt))
@@ -35,7 +35,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
   end
 
   test "should update admin_staffing_debt" do
-    patch :update, id: @admin_staffing_debt, admin_staffing_debt: { admin_staffing_job_id: @admin_staffing_debt.admin_staffing_job_id, dueBy: @admin_staffing_debt.dueBy, show_id: @admin_staffing_debt.show_id, user_id: @admin_staffing_debt.user_id }
+    patch :update, id: @admin_staffing_debt, admin_staffing_debt: { admin_staffing_job_id: @admin_staffing_debt.admin_staffing_job_id, due_by: @admin_staffing_debt.due_by, show_id: @admin_staffing_debt.show_id, user_id: @admin_staffing_debt.user_id }
     assert_redirected_to admin_staffing_debt_path(assigns(:admin_staffing_debt))
   end
 

@@ -186,10 +186,10 @@ class User < ActiveRecord::Base
 
   #returns true if the user is in debt
   def in_debt
-    if self.admin_maintenance_debts.where('dueBy <?', Date.today).exists?
+    if self.admin_maintenance_debts.where('due_by <?', Date.today).exists?
       return true
     else
-      sdebts = self.admin_staffing_debts.where('dueBy <?', Date.today)
+      sdebts = self.admin_staffing_debts.where('due_by <?', Date.today)
       return sdebts.any? {|debt| debt.status == 4}
     end
   end

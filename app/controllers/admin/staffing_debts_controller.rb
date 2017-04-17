@@ -16,7 +16,7 @@ class Admin::StaffingDebtsController < AdminController
       @sdebts = Admin::StaffingDebt.where(user_id: current_user.id)
     end
 
-    @sdebts = @sdebts.order('dueBy ASC').paginate(page: params[:page], per_page: 15)
+    @sdebts = @sdebts.order('due_by ASC').paginate(page: params[:page], per_page: 15)
     @sdebts = @sdebts.all
   end
 
@@ -101,6 +101,6 @@ class Admin::StaffingDebtsController < AdminController
 
     # Only allow a trusted parameter "white list" through.
     def admin_staffing_debt_params
-      params.require(:admin_staffing_debt).permit(:user_id, :show_id, :dueBy, :admin_staffing_job_id)
+      params.require(:admin_staffing_debt).permit(:user_id, :show_id, :due_by, :admin_staffing_job_id)
     end
 end

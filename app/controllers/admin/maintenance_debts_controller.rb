@@ -15,7 +15,7 @@ class Admin::MaintenanceDebtsController < AdminController
       @mdebts = @admin_maintenance_debts.where(user_id: current_user.id)
     end
 
-    @mdebts = @mdebts.order('dueBy ASC').paginate(page: params[:page], per_page: 15)
+    @mdebts = @mdebts.order('due_by ASC').paginate(page: params[:page], per_page: 15)
   end
 
   # GET /admin/maintenance_debts/1
@@ -78,6 +78,6 @@ class Admin::MaintenanceDebtsController < AdminController
 
     # Only allow a trusted parameter "white list" through.
     def admin_maintenance_debt_params
-      params.require(:admin_maintenance_debt).permit(:user_id, :dueBy, :show_id)
+      params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id)
     end
 end

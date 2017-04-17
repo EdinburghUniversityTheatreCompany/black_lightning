@@ -2,10 +2,10 @@
 
 one:
   user_id: 
-  dueBy: 
+  due_by:
   show_id: 1
 
 two:
   user_id: 
-  dueBy: 
+  due_by:
   show_id: 1

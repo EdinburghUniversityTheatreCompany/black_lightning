@@ -50,7 +50,7 @@
         <td><%= sdebt.user.email %></td>
         <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}" %></td>
         <td><%= sdebt.show.name %></td>
-        <td><%= sdebt.dueBy %></td>
+        <td><%= sdebt.due_by %></td>
         <td>
           <% if sdebt.admin_staffing_job.present? %>
               <% job = sdebt.admin_staffing_job.staffable %>

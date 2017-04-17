@@ -4,7 +4,7 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
   belongs_to :show
 
 
-  validates :dueBy, presence: true
+  validates :due_by, presence: true
 
   def self.searchfor(user_fname,user_sname,show_name)
     #User.where("username LIKE ?","%cooke%")
@@ -14,12 +14,12 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
   end
 
   def convert_to_staffing_debt()
-    sdebt = Admin::StaffingDebt.new
-    sdebt.dueBy = self.dueBy
-    sdebt.show_id = self.show_id
-    sdebt.user_id = self.user_id
-    sdebt.converted = true
-    sdebt.save!
+    staffingDebt = Admin::StaffingDebt.new
+    staffingDebt.due_by = self.due_by
+    staffingDebt.show_id = self.show_id
+    staffingDebt.user_id = self.user_id
+    staffingDebt.converted = true
+    staffingDebt.save!
     self.destroy
   end
 

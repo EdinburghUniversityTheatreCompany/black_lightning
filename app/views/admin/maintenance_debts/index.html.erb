@@ -43,11 +43,11 @@
   </tr>
   <% @mdebts.each do |mdebt| %>
 
-      <tr<%= " class = error" if Date.current > mdebt.dueBy %>>
+      <tr<%= " class = error" if Date.current > mdebt.due_by %>>
         <td><%= mdebt.user.email %></td>
         <td><%= "#{mdebt.user.first_name} #{mdebt.user.last_name}" %></td>
         <td><%= mdebt.show.name %></td>
-        <td><%= mdebt.dueBy %></td>
+        <td><%= mdebt.due_by %></td>
 
         <td>
           <% if can? :edit, mdebt %>

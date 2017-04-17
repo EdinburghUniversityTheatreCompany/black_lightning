@@ -49,7 +49,7 @@ ActiveRecord::Schema.define(version: 20170413144318) do
 
   create_table "admin_maintenance_debts", force: :cascade do |t|
     t.integer  "user_id",    limit: 4
-    t.date     "dueBy"
+    t.date     "due_by"
     t.integer  "show_id",    limit: 4
     t.datetime "created_at",           null: false
     t.datetime "updated_at",           null: false
@@ -128,7 +128,7 @@ ActiveRecord::Schema.define(version: 20170413144318) do
   create_table "admin_staffing_debts", force: :cascade do |t|
     t.integer  "user_id",               limit: 4
     t.integer  "show_id",               limit: 4
-    t.date     "dueBy"
+    t.date     "due_by"
     t.integer  "admin_staffing_job_id", limit: 4
     t.datetime "created_at",                      null: false
     t.datetime "updated_at",                      null: false

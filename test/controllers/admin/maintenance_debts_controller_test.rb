@@ -18,7 +18,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
   test "should create admin_maintenance_debt" do
     assert_difference('Admin::MaintenanceDebt.count') do
-      post :create, admin_maintenance_debt: { dueBy: @admin_maintenance_debt.dueBy, show_id: @admin_maintenance_debt.show_id, user_id: @admin_maintenance_debt.user_id }
+      post :create, admin_maintenance_debt: { due_by: @admin_maintenance_debt.due_by, show_id: @admin_maintenance_debt.show_id, user_id: @admin_maintenance_debt.user_id }
     end
 
     assert_redirected_to admin_maintenance_debt_path(assigns(:admin_maintenance_debt))
@@ -35,7 +35,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   end
 
   test "should update admin_maintenance_debt" do
-    patch :update, id: @admin_maintenance_debt, admin_maintenance_debt: { dueBy: @admin_maintenance_debt.dueBy, show_id: @admin_maintenance_debt.show_id, user_id: @admin_maintenance_debt.user_id }
+    patch :update, id: @admin_maintenance_debt, admin_maintenance_debt: { due_by: @admin_maintenance_debt.due_by, show_id: @admin_maintenance_debt.show_id, user_id: @admin_maintenance_debt.user_id }
     assert_redirected_to admin_maintenance_debt_path(assigns(:admin_maintenance_debt))
   end
 

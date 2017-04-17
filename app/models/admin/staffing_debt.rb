@@ -3,9 +3,9 @@ class Admin::StaffingDebt < ActiveRecord::Base
   belongs_to :show
   belongs_to :admin_staffing_job, :class_name => 'Admin::StaffingJob'
 
-  attr_accessible :admin_staffing_job_id, :dueBy
+  attr_accessible :admin_staffing_job_id, :due_by
 
-  validates :dueBy, presence: true
+  validates :due_by, presence: true
 
   #possible statuses
   #1 = not signed up to any slots and not over deadline
@@ -15,7 +15,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
   def status
 
     if !self.admin_staffing_job.present?
-      if self.dueBy < Date.today
+      if self.due_by < Date.today
         return 4
       else
         return 1
@@ -23,7 +23,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
     else
       if self.admin_staffing_job.completed
         return 3
-      elsif self.dueBy < Date.today
+      elsif self.due_by < Date.today
         return 4
       else
         return 2
@@ -52,13 +52,13 @@ class Admin::StaffingDebt < ActiveRecord::Base
   def self.searchfor(user_fname,user_sname,show_name,show_fulfilled)
     userIDs = User.where("first_name LIKE '%#{user_fname}%' AND last_name LIKE '%#{user_sname}%'").ids
     showIDs = Show.where("name LIKE '%#{show_name}%'")
-    sdebts = self.where(user_id: userIDs, show_id: showIDs)
+    staffingDebts = self.where(user_id: userIDs, show_id: showIDs)
 
     if !show_fulfilled
-      sdebts = sdebts.filter_fulfilled
+      staffingDebts = staffingDebts.filter_fulfilled
     end
 
-    return sdebts
+    return staffingDebts
   end
 
   def self.filter_fulfilled

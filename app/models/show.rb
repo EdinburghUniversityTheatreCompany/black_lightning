@@ -48,7 +48,7 @@ class Show < Event
       debt = Admin::MaintenanceDebt.new
       debt.show = self
       debt.user = usr
-      debt.dueBy = self.maintenance_debt_start
+      debt.due_by = self.maintenance_debt_start
       debt.save
     end
   end
@@ -61,7 +61,7 @@ class Show < Event
         debt = Admin::StaffingDebt.new
         debt.show = self
         debt.user = usr
-        debt.dueBy = self.staffing_debt_start
+        debt.due_by = self.staffing_debt_start
         debt.converted = false
         debt.save!
       end
