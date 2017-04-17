@@ -46,7 +46,7 @@
   </tr>
   <% @sdebts.each do |sdebt| %>
 
-      <tr class="<%= sdebt.status_class %>">
+      <tr class="<%= staffing_debt_class(sdebt) %>">
         <td><%= sdebt.user.email %></td>
         <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}" %></td>
         <td><%= sdebt.show.name %></td>

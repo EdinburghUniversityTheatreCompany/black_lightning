@@ -7,39 +7,25 @@ class Admin::StaffingDebt < ActiveRecord::Base
 
   validates :due_by, presence: true
 
-  #possible statuses
-  #1 = not signed up to any slots and not over deadline
-  #2 = signed up not completed staffing but not over deadline
-  #3 = completed staffing job
-  #4 = causing debt i.e. not staffed and over deadline
   def status
-
+#note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
     if !self.admin_staffing_job.present?
       if self.due_by < Date.today
-        return 4
+        return :causing_debt
       else
-        return 1
+        return :not_signed_up
       end
     else
       if self.admin_staffing_job.completed
-        return 3
+        return :completed_staffing
       elsif self.due_by < Date.today
-        return 4
+        return :causing_debt
       else
-        return 2
+        return :awaiting_staffing
       end
     end
   end
 
-  def status_class
-    out = case self.status
-            when 1 then "warning"
-            when 2 then ""
-            when 3 then "success"
-            when 4 then "error"
-          end
-    return out
-  end
 
   def fulfilled
     if self.admin_staffing_job.present?

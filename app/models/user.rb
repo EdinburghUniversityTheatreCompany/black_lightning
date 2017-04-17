@@ -190,7 +190,7 @@ class User < ActiveRecord::Base
       return true
     else
       sdebts = self.admin_staffing_debts.where('due_by <?', Date.today)
-      return sdebts.any? {|debt| debt.status == 4}
+      return sdebts.any? {|debt| debt.status == :causing_debt}
     end
   end
 end
