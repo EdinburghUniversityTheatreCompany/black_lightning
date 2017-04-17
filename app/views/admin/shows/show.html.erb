@@ -106,7 +106,7 @@
             <%= link_to create_mdebts_admin_show_path(@show), :method => :get, class: "btn btn-primary" do %>
                 Create Maintenance Obligations
             <% end %>
-            <%= link_to admin_maintenance_debts_from_show_index_path(@show.id), :method => :post, class: "btn btn-primary" do %>
+            <%= link_to admin_show_maintenance_debts_path(@show.id), :method => :post, class: "btn btn-primary" do %>
                 Create Maintenance Obligations
             <% end %>
         <% end %>

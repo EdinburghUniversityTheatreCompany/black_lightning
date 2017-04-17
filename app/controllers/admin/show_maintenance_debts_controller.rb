@@ -1,4 +1,4 @@
-class Admin::MaintenanceDebtsFromShowController < AdminController
+class Admin::ShowMaintenanceDebtsController < AdminController
 
   def create
     authorize! :create , Admin::MaintenanceDebt
@@ -6,7 +6,7 @@ class Admin::MaintenanceDebtsFromShowController < AdminController
 
     show.create_mdebts
 
-    redirect_to admin_show_url(show), notice: 'Obligations created.'
+    redirect_to admin_show_path(show), notice: 'Obligations created.'
   end
 
 end

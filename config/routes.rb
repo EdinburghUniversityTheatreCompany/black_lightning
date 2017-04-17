@@ -66,7 +66,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :maintenance_debts_from_show
+    resources :show_maintenance_debts
 
 
     resources :venues
