@@ -73,27 +73,6 @@ class Admin::ShowsController < AdminController
     end
   end
 
-  def create_mdebts
-    authorize! :create, Admin::MaintenanceDebt
-    @show = Show.find_by_slug(params[:id])
-    @show.create_mdebts
-
-    respond_to do |format|
-      format.html { redirect_to admin_show_url(@show), notice: 'Obligations created.' }
-      format.html { render :no_content }
-    end
-  end
-
-  def create_sdebts
-    authorize!(:create , Admin::StaffingDebt)
-    @show = Show.find_by_slug(params[:id])
-    @show.create_sdebts(params[:number_of_slots_due][0].to_i)
-
-    respond_to do |format|
-      format.html { redirect_to admin_show_url(@show), notice: 'Obligations created.' }
-      format.html { render :no_content }
-    end
-  end
 
   def query_xts
     username = Rails.application.config.xts[:username]

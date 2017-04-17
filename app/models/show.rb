@@ -62,6 +62,7 @@ class Show < Event
         debt.show = self
         debt.user = usr
         debt.dueBy = self.staffing_debt_start
+        debt.converted = false
         debt.save!
       end
     end

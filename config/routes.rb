@@ -1,4 +1,5 @@
 ChaosRails::Application.routes.draw do
+
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
@@ -67,6 +68,7 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :show_maintenance_debts
+    resources :show_staffing_debts
 
 
     resources :venues

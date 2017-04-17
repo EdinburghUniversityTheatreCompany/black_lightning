@@ -103,14 +103,11 @@
             <%= f.button :submit, value: 'Set Maintenance Due' , :class => 'btn' %>
         <% end %>
         <% if @show.maintenance_debt_start.present? %>
-            <%= link_to create_mdebts_admin_show_path(@show), :method => :get, class: "btn btn-primary" do %>
-                Create Maintenance Obligations
-            <% end %>
             <%= link_to admin_show_maintenance_debts_path(@show.id), :method => :post, class: "btn btn-primary" do %>
                 Create Maintenance Obligations
             <% end %>
         <% end %>
-        <br>
+        <br><br>
     <% end %>
 
 
@@ -124,7 +121,7 @@
         <% end %>
 
         <% if @show.staffing_debt_start.present? %>
-            <%= form_tag create_sdebts_admin_show_path(@show), :method => :put, :class => "form-inline" do %>
+            <%= form_tag admin_show_staffing_debts_path(@show.id), :method => :post, :class => "form-inline" do %>
                 <%= number_field :number_of_slots_due, nil, in: 1..2 %>
                 <%= submit_tag 'Create Staffing Obligations', :class => 'btn btn-primary' %>
             <% end %>
