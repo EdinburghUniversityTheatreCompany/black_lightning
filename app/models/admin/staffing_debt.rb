@@ -41,15 +41,16 @@ class Admin::StaffingDebt < ActiveRecord::Base
     staffingDebts = self.where(user_id: userIDs, show_id: showIDs)
 
     if !show_fulfilled
-      staffingDebts = staffingDebts.filter_fulfilled
+      staffingDebts = staffingDebts.unfulfilled
     end
 
     return staffingDebts
   end
 
-  def self.filter_fulfilled
+  def self.unfulfilled
     fulfilledids = self.all.map{ |debt| debt.fulfilled ? debt.id : nil }
     return self.where.not(id: fulfilledids)
   end
+
 
 end
