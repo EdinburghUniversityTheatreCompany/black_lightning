@@ -27,6 +27,8 @@ class Admin::MaintenanceDebtsController < AdminController
   # GET /admin/maintenance_debts/new
   def new
     @admin_maintenance_debt = Admin::MaintenanceDebt.new
+    @users = User.all
+    @shows = Show.all
   end
 
   # GET /admin/maintenance_debts/1/edit

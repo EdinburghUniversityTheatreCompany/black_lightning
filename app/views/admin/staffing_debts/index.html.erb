@@ -64,7 +64,7 @@
 
         <td>
           <% if can? :edit, sdebt %>
-              <%= link_to 'Dissociate', unassign_admin_staffing_debt_path(sdebt) , class: "btn" %>
+              <%= link_to 'Dissociate', unassign_admin_staffing_debt_path(sdebt), class: "btn" %>
           <% end %>
         </td>
 
@@ -89,5 +89,9 @@
 <div class="paginate_holder">
   <%= will_paginate(@sdebts) %>
 </div>
+
+<% if can? :create, Admin::StaffingDebt %>
+    <%= link_to 'Create Staffing Obligation', new_admin_staffing_debt_path, class: "btn" %>
+<% end %>
 
 <br>

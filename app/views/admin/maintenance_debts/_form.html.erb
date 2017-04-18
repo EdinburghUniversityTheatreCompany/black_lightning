@@ -2,9 +2,9 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-    <%= f.input :user_id %>
+    User: <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %><br>
+    Show: <%= f.input_field :show_id, :collection => @shows.collect {|s| ["#{s.name}" , s.id]} %><br>
     <%= f.input :due_by %>
-    <%= f.input :show_id %>
   </div>
 
   <div class="form-actions">

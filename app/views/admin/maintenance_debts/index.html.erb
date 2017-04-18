@@ -79,4 +79,8 @@
   <%= will_paginate(@mdebts) %>
 </div>
 
+<% if can? :create, Admin::MaintenanceDebt %>
+    <%= link_to 'Create Maintenance Obligation', new_admin_maintenance_debt_path, class: "btn" %>
+<% end %>
+
 <br>
