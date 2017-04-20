@@ -2,7 +2,11 @@ require 'test_helper'
 
 class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   setup do
-    @admin_maintenance_debt = admin_maintenance_debts(:one)
+    #Admin::MaintenanceDebt.destroy_all
+    sign_in FactoryGirl.create(:admin)
+    @user = FactoryGirl.create(:member)
+
+    @admin_maintenance_debt = FactoryGirl.create(:maintenance_debt)
   end
 
   test "should get index" do

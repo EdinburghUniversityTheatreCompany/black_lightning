@@ -1,5 +1,6 @@
 ChaosRails::Application.routes.draw do
 
+
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
@@ -66,6 +67,14 @@ ChaosRails::Application.routes.draw do
         put 'convert_to_staffing_debt'
       end
     end
+
+    resources :debts do
+      #get 'debt/index'
+      #get 'debt/show'
+    end
+
+    get 'debt/index'
+    get 'debt/show'
 
     resources :show_maintenance_debts
     resources :show_staffing_debts

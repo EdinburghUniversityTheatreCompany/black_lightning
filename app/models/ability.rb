@@ -91,6 +91,11 @@ class Ability
         show.team_members.where("(position = 'Director' OR position = 'Producer') AND user_id = ?", user.id).count > 0
       end
 
+      can :read, Admin::Debt do |debt|
+        debt.id == user.id
+      end
+      can :manage, Admin::Debt if user.has_role? :committee
+
       #####################
       # ADMIN PERMISSIONS #
       ##############################################
