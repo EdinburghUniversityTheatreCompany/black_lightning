@@ -5,8 +5,10 @@ class Admin::StaffingDebtsController < AdminController
   def index
     @title = 'Staffing Debts'
 
-    if can? :manage, Admin::StaffingDebt
-      if params.length > 3
+    if can? :read, Admin::StaffingDebt
+      if params[:user_id].present?
+        @sdebts = Admin::StaffingDebt.where(:user_id => params[:user_id])
+      elsif params.length > 3
         show_fulfilled = params[:show_fulfilled].present?
         @sdebts = Admin::StaffingDebt.search_for(params[:user_fname],params[:user_sname],params[:show_name],show_fulfilled)
       else

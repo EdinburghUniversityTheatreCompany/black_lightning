@@ -63,7 +63,7 @@
         </td>
 
         <td>
-          <% if can? :edit, sdebt %>
+          <% if (can? :edit, sdebt) && sdebt.admin_staffing_job_id.present? %>
               <%= link_to 'Dissociate', unassign_admin_staffing_debt_path(sdebt), class: "btn" %>
           <% end %>
         </td>

@@ -23,8 +23,9 @@ def index
 
   def show
     debt = Admin::Debt.new(params[:id])
-    authorize! :read, debt
+    authorize! :read, Admin::Debt
     @user = User.find(params[:id])
+    authorize! :read , debt if (current_user != @user)
     @title = 'Debt status'
   end
 

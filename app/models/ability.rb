@@ -92,7 +92,7 @@ class Ability
       end
 
       can :read, Admin::Debt do |debt|
-        debt.id == user.id
+        debt.id == user.id?
       end
       can :manage, Admin::Debt if user.has_role? :committee
 

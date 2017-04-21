@@ -1,0 +1,7 @@
+
+<% postfix = (current_user.in_debt)? "in Debt": "not in Debt" %>
+<h3> <%= "You are #{postfix}" %></h3>
+
+<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: current_user.id), class: 'btn' %>
+
+<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: current_user.id), class: 'btn' %>

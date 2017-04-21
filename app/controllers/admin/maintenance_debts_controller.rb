@@ -5,9 +5,11 @@ class Admin::MaintenanceDebtsController < AdminController
   def index
     @admin_maintenance_debts = Admin::MaintenanceDebt.all
     @title = 'Maintenance Debts'
-    if can? :manage, Admin::MaintenanceDebt
-      if params.length > 3
-        @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname],params[:user_sname],params[:show_name])
+    if can? :read, Admin::MaintenanceDebt
+      if params[:user_id].present?
+        @mdebts = Admin::MaintenanceDebt.where(:user_id => params[:user_id])
+      elsif (params.length > 3)
+        @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname], params[:user_sname], params[:show_name])
       else
         @mdebts = Admin::MaintenanceDebt.all
       end
@@ -21,7 +23,7 @@ class Admin::MaintenanceDebtsController < AdminController
   # GET /admin/maintenance_debts/1
   def show
     @admin_maintenance_debt = Admin::MaintenanceDebt.find(params[:id])
-    authorize!(:read , @admin_maintenance_debt)
+    authorize!(:read, @admin_maintenance_debt)
   end
 
   # GET /admin/maintenance_debts/new
@@ -73,13 +75,13 @@ class Admin::MaintenanceDebtsController < AdminController
   end
 
   private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_admin_maintenance_debt
-      @admin_maintenance_debt = Admin::MaintenanceDebt.find(params[:id])
-    end
+  # Use callbacks to share common setup or constraints between actions.
+  def set_admin_maintenance_debt
+    @admin_maintenance_debt = Admin::MaintenanceDebt.find(params[:id])
+  end
 
-    # Only allow a trusted parameter "white list" through.
-    def admin_maintenance_debt_params
-      params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id)
-    end
+  # Only allow a trusted parameter "white list" through.
+  def admin_maintenance_debt_params
+    params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id)
+  end
 end

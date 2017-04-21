@@ -7,7 +7,6 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
   validates :due_by, presence: true
 
   def self.searchfor(user_fname,user_sname,show_name)
-    #User.where("username LIKE ?","%cooke%")
     userIDs = User.where("first_name LIKE '%#{user_fname}%' AND last_name LIKE '%#{user_sname}%'").ids
     showIDs = Show.where("name LIKE '%#{show_name}%'")
     return self.where(user_id: userIDs, show_id: showIDs)

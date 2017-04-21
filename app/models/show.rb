@@ -49,7 +49,7 @@ class Show < Event
       debt.show = self
       debt.user = usr
       debt.due_by = self.maintenance_debt_start
-      debt.save
+      debt.save!
     end
   end
 
