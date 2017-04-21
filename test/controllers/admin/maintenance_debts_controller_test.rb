@@ -50,4 +50,15 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_maintenance_debts_path
   end
+
+  test "should convert to staffing debt" do
+    sdebt_count_before = Admin::StaffingDebt.count
+    mdebt_count_before = Admin::MaintenanceDebt.count
+    get :convert_to_staffing_debt, id:@admin_maintenance_debt.id
+
+    assert_redirected_to admin_maintenance_debts_path
+    assert_equal (sdebt_count_before + 1) , Admin::StaffingDebt.count
+    assert_equal (mdebt_count_before + -1) , Admin::MaintenanceDebt.count
+
+  end
 end
