@@ -92,6 +92,12 @@
                     <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
                   <%end%>
 
+                  <% if can? :manage, Admin::StaffingDebt %>
+                    <li><%= link_to 'Debt', admin_debts_path %></li>
+                  <% else %>
+                    <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
+                  <% end %>
+
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">
