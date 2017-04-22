@@ -193,4 +193,10 @@ class User < ActiveRecord::Base
       return sdebts.any? {|debt| debt.status == :causing_debt}
     end
   end
+
+  def self.in_debt
+    indebtids = self.all.map{ |user| user.in_debt ? user.id : nil }
+    return self.where(id: indebtids)
+  end
+
 end

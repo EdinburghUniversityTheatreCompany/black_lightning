@@ -7,9 +7,10 @@ def index
 
   @q     = User.unscoped.search(params[:q])
   @users = @q.result(distinct: true)
+  @users = @users.with_role(:member)
 
-  if params[:show_non_members] != '1'
-    @users = @users.with_role(:member)
+  if params[:show_in_debt_only] == '1'
+    @users = @users.in_debt
   end
 
   @users = @users.paginate(page: params[:page], per_page: 15)
