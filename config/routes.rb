@@ -68,13 +68,8 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :debts do
-      #get 'debt/index'
-      #get 'debt/show'
-    end
+    resources :debts
 
-    get 'debt/index'
-    get 'debt/show'
 
     resources :show_maintenance_debts
     resources :show_staffing_debts

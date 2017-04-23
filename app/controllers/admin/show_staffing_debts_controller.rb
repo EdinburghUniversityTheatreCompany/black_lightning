@@ -1,6 +1,6 @@
 class Admin::ShowStaffingDebtsController < AdminController
   def create
-    authorize!(:create , Admin::StaffingDebt)
+    authorize! :create , Admin::StaffingDebt
     show = Show.find(params[:format])
     show.create_staffing_debts(params[:number_of_slots_due][0].to_i)
 
@@ -8,6 +8,19 @@ class Admin::ShowStaffingDebtsController < AdminController
   end
 
   def update
-    #left in case it becomes desirable to modify all of a shows debts due dates post creation
+    show = Show.find(params[:id])
+
+    if params[:show].length == 3 && params[:show][:'maintenance_debt_start(1i)'].present? && params[:show][:'maintenance_debt_start(3i)'].present? && params[:show][:'maintenance_debt_start(3i)'].present?
+      authorize! :create, Admin::StaffingDebt
+
+      if show.update_attributes(params[:show])
+        redirect_to admin_show_path(show), notice: 'Maintenance Debt Start set'
+      else
+        redirect_to admin_show_path(show), notice: 'Error please contact IT'
+      end
+    else
+      redirect_to admin_show_path(show), notice: 'Error please contact IT'
+    end
   end
+
 end
