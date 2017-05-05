@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170427200532) do
+ActiveRecord::Schema.define(version: 20170413144318) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -87,16 +87,15 @@ ActiveRecord::Schema.define(version: 20170427200532) do
   end
 
   create_table "admin_proposals_proposals", force: :cascade do |t|
-    t.integer  "call_id",                 limit: 4
-    t.string   "show_title",              limit: 255
-    t.text     "publicity_text",          limit: 65535
-    t.text     "proposal_text",           limit: 65535
-    t.datetime "created_at",                            null: false
-    t.datetime "updated_at",                            null: false
+    t.integer  "call_id",        limit: 4
+    t.string   "show_title",     limit: 255
+    t.text     "publicity_text", limit: 65535
+    t.text     "proposal_text",  limit: 65535
+    t.datetime "created_at",                   null: false
+    t.datetime "updated_at",                   null: false
     t.boolean  "late"
     t.boolean  "approved"
     t.boolean  "successful"
-    t.boolean  "had_debtors_on_creation"
   end
 
   add_index "admin_proposals_proposals", ["call_id"], name: "index_admin_proposals_proposals_on_call_id", using: :btree

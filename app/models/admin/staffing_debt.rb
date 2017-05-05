@@ -8,10 +8,10 @@ class Admin::StaffingDebt < ActiveRecord::Base
 
   validates :due_by, presence: true
 
-  def status
+  def status(on_date = Date.today)
 #note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
     if !self.admin_staffing_job.present?
-      if self.due_by < Date.today
+      if self.due_by < on_date
         return :causing_debt
       else
         return :not_signed_up
@@ -19,7 +19,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
     else
       if self.admin_staffing_job.completed?
         return :completed_staffing
-      elsif self.due_by < Date.today
+      elsif self.due_by < on_date
         return :causing_debt
       else
         return :awaiting_staffing

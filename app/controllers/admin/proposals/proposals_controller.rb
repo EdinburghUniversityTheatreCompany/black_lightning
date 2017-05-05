@@ -148,9 +148,6 @@ class Admin::Proposals::ProposalsController < AdminController
       @proposal.late = true
     end
 
-    if @proposal.has_debtors
-      @proposal.had_debtors_on_creation = true
-    end
 
     respond_to do |format|
       if @proposal.save

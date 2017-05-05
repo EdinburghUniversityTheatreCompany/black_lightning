@@ -185,17 +185,17 @@ class User < ActiveRecord::Base
   end
 
   #returns true if the user is in debt
-  def in_debt
-    if self.admin_maintenance_debts.where('due_by <?', Date.today).exists?
+  def in_debt(on_date = Date.today)
+    if self.admin_maintenance_debts.where('due_by <?', on_date).exists?
       return true
     else
-      sdebts = self.admin_staffing_debts.where('due_by <?', Date.today)
-      return sdebts.any? {|debt| debt.status == :causing_debt}
+      sdebts = self.admin_staffing_debts.where('due_by <?', on_date)
+      return sdebts.any? {|debt| debt.status(on_date) == :causing_debt}
     end
   end
 
-  def self.in_debt
-    indebtids = self.all.map{ |user| user.in_debt ? user.id : nil }
+  def self.in_debt(on_date = Date.today)
+    indebtids = self.all.map{ |user| user.in_debt(on_date) ? user.id : nil }
     return self.where(id: indebtids)
   end
 
