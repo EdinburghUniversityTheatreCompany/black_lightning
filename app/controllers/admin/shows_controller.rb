@@ -44,11 +44,23 @@ class Admin::ShowsController < AdminController
     @show = Show.find_by_slug(params[:id])
     @users = User.all
 
+    #used to check any new users being added are not in debt PLEASE make nicer if you can
+    previous_users = @show.users
+    parameter_user_ids = params[:show][:team_members_attributes].values.collect { |e| e[:'user_id'] }.uniq
+    new_users = User.find(parameter_user_ids) - previous_users
+    new_debtors = new_users.select{|user| user.in_debt}
+
+
     respond_to do |format|
-      if @show.update_attributes(params[:show])
-        format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
+      if new_debtors.count == 0
+        if @show.update_attributes(params[:show])
+          format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
+        else
+          format.html { render 'edit' }
+        end
       else
-        format.html { render 'edit' }
+        flash[:error] = "Show update failed as #{new_debtors.collect{|u| u.name}} #{new_debtors.count > 1 ? 'are' : 'is'} in debt"
+        format.html {render 'edit'}
       end
     end
   end
