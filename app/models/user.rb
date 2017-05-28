@@ -57,6 +57,7 @@ class User < ActiveRecord::Base
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
   has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt'
   has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt'
+  has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification'
 
   has_attached_file :avatar,
                     styles: { thumb: '150x150', display: '700x700' },
@@ -197,6 +198,12 @@ class User < ActiveRecord::Base
   def self.in_debt(on_date = Date.today)
     indebtids = self.all.map{ |user| user.in_debt(on_date) ? user.id : nil }
     return self.where(id: indebtids)
+  end
+
+  def self.defaulted_since(date)
+    #returns an array of Users who have gone into debt since the provided date
+    already_in_debt = User.in_debt(date)
+    return (User.in_debt - already_in_debt)
   end
 
 end

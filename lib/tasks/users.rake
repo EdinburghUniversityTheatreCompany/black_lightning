@@ -37,4 +37,10 @@ namespace :users do
     phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
     puts "#{phones} of users have given us their phone number."
   end
+
+  desc 'notifies users who have gone into debt recently'
+  task notify_debtors: :enviroment do
+    new_debtors = User.defaulted_since(Date.today)
+  end
+
 end

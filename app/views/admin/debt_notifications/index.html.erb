@@ -1,0 +1,29 @@
+<p id="notice"><%= notice %></p>
+
+<h1>Listing Admin Debt Notifications</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Sent on</th>
+      <th colspan="3"></th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% @admin_debt_notifications.each do |admin_debt_notification| %>
+      <tr>
+        <td><%= admin_debt_notification.user %></td>
+        <td><%= admin_debt_notification.sent_on %></td>
+        <td><%= link_to 'Show', admin_debt_notification %></td>
+        <td><%= link_to 'Edit', edit_admin_debt_notification_path(admin_debt_notification) %></td>
+        <td><%= link_to 'Destroy', admin_debt_notification, method: :delete, data: { confirm: 'Are you sure?' } %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<br>
+
+<%= link_to 'New Debt notification', new_admin_debt_notification_path %>

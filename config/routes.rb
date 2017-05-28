@@ -1,6 +1,9 @@
 ChaosRails::Application.routes.draw do
 
 
+  namespace :admin do
+    resources :debt_notifications
+  end
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'

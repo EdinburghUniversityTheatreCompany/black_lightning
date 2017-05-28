@@ -8,5 +8,4 @@ class Admin::Debt
     return @id
   end
 
-
 end

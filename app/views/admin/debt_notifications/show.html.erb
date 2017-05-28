@@ -1,0 +1,14 @@
+<p id="notice"><%= notice %></p>
+
+<p>
+  <strong>User:</strong>
+  <%= @admin_debt_notification.user %>
+</p>
+
+<p>
+  <strong>Sent on:</strong>
+  <%= @admin_debt_notification.sent_on %>
+</p>
+
+<%= link_to 'Edit', edit_admin_debt_notification_path(@admin_debt_notification) %> |
+<%= link_to 'Back', admin_debt_notifications_path %>
