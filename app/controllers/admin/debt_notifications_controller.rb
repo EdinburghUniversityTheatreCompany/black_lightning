@@ -1,4 +1,4 @@
-class Admin::DebtNotificationsController < ApplicationController
+class Admin::DebtNotificationsController < AdminController
   before_action :set_admin_debt_notification, only: [:show, :edit, :update, :destroy]
 
   # GET /admin/debt_notifications
