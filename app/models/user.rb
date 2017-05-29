@@ -196,7 +196,7 @@ class User < ActiveRecord::Base
   end
 
   def self.in_debt(on_date = Date.today)
-    indebtids = self.all.map{ |user| user.in_debt(on_date) ? user.id : nil }
+    indebtids = self.find_each.map{ |user| user.in_debt(on_date) ? user.id : nil }
     return self.where(id: indebtids)
   end
 

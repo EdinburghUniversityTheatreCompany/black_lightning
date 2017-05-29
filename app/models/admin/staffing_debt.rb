@@ -37,8 +37,8 @@ class Admin::StaffingDebt < ActiveRecord::Base
   end
 
   def self.search_for(user_fname,user_sname,show_name,show_fulfilled)
-    userIDs = User.where("first_name LIKE '%#{user_fname}%' AND last_name LIKE '%#{user_sname}%'").ids
-    showIDs = Show.where("name LIKE '%#{show_name}%'")
+    userIDs = User.where('first_name LIKE ? AND last_name LIKE ?',"%#{user_fname}%","%#{user_sname}%").ids
+    showIDs = Show.where('name LIKE ?',"%#{show_name}%")
     staffingDebts = self.where(user_id: userIDs, show_id: showIDs)
 
     if !show_fulfilled
