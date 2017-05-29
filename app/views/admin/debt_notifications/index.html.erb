@@ -14,7 +14,7 @@
   <tbody>
     <% @admin_debt_notifications.each do |admin_debt_notification| %>
       <tr>
-        <td><%= admin_debt_notification.user %></td>
+        <td><%= admin_debt_notification.user.name_or_email %></td>
         <td><%= admin_debt_notification.sent_on %></td>
         <td><%= link_to 'Show', admin_debt_notification %></td>
         <td><%= link_to 'Edit', edit_admin_debt_notification_path(admin_debt_notification) %></td>
