@@ -200,10 +200,5 @@ class User < ActiveRecord::Base
     return self.where(id: indebtids)
   end
 
-  def self.defaulted_since(date)
-    #returns an array of Users who have gone into debt since the provided date
-    already_in_debt = User.in_debt(date)
-    return (User.in_debt - already_in_debt)
-  end
 
 end

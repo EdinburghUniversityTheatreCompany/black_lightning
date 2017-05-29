@@ -40,8 +40,9 @@ namespace :users do
 
   desc 'notifies users who have gone into debt recently'
   task notify_debtors: :enviroment do
-    new_debtors = User.defaulted_since(Date.today)
-    long_time_debtors = (User.in_debt(Date.today-14) && User.in_debt) - new_debtors
+    debtors = User.in_debt
+    new_debtors = debtors - User.in_debt(Date.today - 1) #debtors who weren't in debt yesterday
+    long_time_debtors = debtors - AdminDebtNotification.notified_since(Date.today - 14) #debtors who havent been notified in the last 2 weeks
     new_debtors.each do |user|
       puts "notifying #{user.name} of debt"
       DebtMailer.new_debtor(user)
