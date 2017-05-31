@@ -3,7 +3,12 @@ class Admin::DebtNotificationsController < AdminController
 
   # GET /admin/debt_notifications
   def index
-    @admin_debt_notifications = Admin::DebtNotification.all
+    @debt_notifications = Admin::DebtNotification.all
+    if params[:user_fname].present?
+      @debt_notifications = @debt_notifications.search_for(params[:user_fname],params[:user_sname])
+    end
+    @debt_notifications = @debt_notifications.order('sent_on ASC').paginate(page: params[:page], per_page: 15)
+    @debt_notifications.all
   end
 
   # GET /admin/debt_notifications/1

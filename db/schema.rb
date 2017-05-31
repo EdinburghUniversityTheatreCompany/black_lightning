@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170528211033) do
+ActiveRecord::Schema.define(version: 20170529095109) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -32,10 +32,11 @@ ActiveRecord::Schema.define(version: 20170528211033) do
   add_index "admin_answers", ["question_id"], name: "index_admin_proposals_answers_on_question_id", using: :btree
 
   create_table "admin_debt_notifications", force: :cascade do |t|
-    t.integer  "user_id",    limit: 4
+    t.integer  "user_id",           limit: 4
     t.date     "sent_on"
-    t.datetime "created_at",           null: false
-    t.datetime "updated_at",           null: false
+    t.datetime "created_at",                  null: false
+    t.datetime "updated_at",                  null: false
+    t.integer  "notification_type", limit: 4
   end
 
   add_index "admin_debt_notifications", ["user_id"], name: "index_admin_debt_notifications_on_user_id", using: :btree
