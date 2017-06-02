@@ -2,9 +2,9 @@
     <%= javascript_include_tag "admin/users" %>
 <% end %>
 
-<% @title = 'Users' %>
+<% @title = 'Debts' %>
 
-<% prefix = params[:search] ? "Searching" : "Listing" %>
+<% prefix = params[:commit] == "Search" ? "Searching" : "Listing" %>
 
 <% if params[:show_non_members] == "1" %>
     <h1><%= prefix %> All Users</h1>

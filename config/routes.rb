@@ -1,9 +1,6 @@
 ChaosRails::Application.routes.draw do
 
 
-  namespace :admin do
-    resources :debt_notifications
-  end
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
@@ -57,6 +54,8 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :workshops
+
+    resources :debt_notifications
 
     resources :staffing_debts do
       member do

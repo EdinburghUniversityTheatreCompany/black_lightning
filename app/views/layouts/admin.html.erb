@@ -92,8 +92,9 @@
                     <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
                   <%end%>
 
-                  <% if can? :manage, Admin::StaffingDebt %>
+                  <% if can? :read, Admin::DebtNotification %>
                     <li><%= link_to 'Debt', admin_debts_path %></li>
+                    <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
                   <% else %>
                     <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
                   <% end %>
