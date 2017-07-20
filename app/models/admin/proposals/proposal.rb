@@ -57,6 +57,14 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   end
 
   ##
+  # returns true if any users associated with the proposal are in debt with debts starting before the creation of this proposal
+  ##
+  def has_debtors
+    users = User.find(self.team_members.map(&:user_id)) #horrible but self.users doesnt work when self is still held in memory also .pluck doesnt work :(
+    users.uniq.any? {|usr| usr.in_debt(self.created_at.to_date)}
+  end
+
+  ##
   # Creates a show based on the proposal.
   #
   # Throws an error if the proposal has not been approved.

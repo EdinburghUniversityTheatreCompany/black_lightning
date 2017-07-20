@@ -74,14 +74,18 @@
         <%= dashboard_widget('card_number') %>
       </li>
 
-      <% if can? :manage, Delayed::Backend::ActiveRecord::Job %>
       <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
+        <%= dashboard_widget('debt') %>
+      </li>
+
+      <% if can? :manage, Delayed::Backend::ActiveRecord::Job %>
+      <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
         <%= dashboard_widget('delayed_jobs') %>
       </li>
       <% end %>
 
       <% if can? :read, :reports %>
-      <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
+      <li data-row="4" data-col="2" data-sizex="1" data-sizey="1">
       <h3><%= link_to 'Reports', admin_reports_path %></h3>
         <% list_reports.each do |report| %>
           <p><%= link_to report.humanize.titleize, admin_report_path(report) %></p>

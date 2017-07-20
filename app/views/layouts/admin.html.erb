@@ -84,6 +84,21 @@
                   <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
                   <% end %>
 
+                  <% if can? :read, Admin::MaintenanceDebt%>
+                  <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
+                  <%end%>
+
+                  <% if can? :read, Admin::StaffingDebt%>
+                    <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
+                  <%end%>
+
+                  <% if can? :read, Admin::DebtNotification %>
+                    <li><%= link_to 'Debt', admin_debts_path %></li>
+                    <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
+                  <% else %>
+                    <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
+                  <% end %>
+
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">

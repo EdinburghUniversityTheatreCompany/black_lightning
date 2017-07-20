@@ -6,13 +6,13 @@ authorizations: &authorizations
     - ['member', 'cn=members,cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk']
 
 development:
-  host: ldap.bedlamtheatre.co.uk
+  host: ipa.bedlamtheatre.co.uk
   port: 389
   attribute: uid
   <<: *authorizations
 
 production:
-  host: ldap.bedlamtheatre.co.uk
+  host: ipa.bedlamtheatre.co.uk
   port: 389
   attribute: uid
   <<: *authorizations

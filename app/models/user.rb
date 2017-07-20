@@ -45,7 +45,7 @@ class User < ActiveRecord::Base
 
   # Don't validate the password presence, so we can set it randomly for new users.
   # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
-  validates :phone_number, allow_blank: true, format: { with: /(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*$/, message: 'Please enter a valid mobile number', multiline: true }
+  validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
 
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
@@ -55,6 +55,9 @@ class User < ActiveRecord::Base
   has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
   has_many :staffing_jobs, class_name: 'Admin::StaffingJob'
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
+  has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt'
+  has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt'
+  has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification'
 
   has_attached_file :avatar,
                     styles: { thumb: '150x150', display: '700x700' },
@@ -181,4 +184,21 @@ class User < ActiveRecord::Base
   def has_basic_details?
     return !first_name.blank? && !last_name.blank?
   end
+
+  #returns true if the user is in debt
+  def in_debt(on_date = Date.today)
+    if self.admin_maintenance_debts.where('due_by <?', on_date).exists?
+      return true
+    else
+      sdebts = self.admin_staffing_debts.where('due_by <?', on_date)
+      return sdebts.any? {|debt| debt.status(on_date) == :causing_debt}
+    end
+  end
+
+  def self.in_debt(on_date = Date.today)
+    in_debt_ids = self.find_each.map{ |user| user.in_debt(on_date) ? user.id : nil }
+    return self.where(id: in_debt_ids)
+  end
+
+
 end

@@ -1,4 +1,6 @@
 ChaosRails::Application.routes.draw do
+
+
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
@@ -43,11 +45,37 @@ ChaosRails::Application.routes.draw do
 
       member do
         put 'add_questionnaire'
+        put 'add_maintenance_due'
+        put 'add_staffing_due'
+        put 'create_sdebts'
+        get 'create_mdebts'
         get 'xts_report'
       end
     end
 
     resources :workshops
+
+    resources :debt_notifications
+
+    resources :staffing_debts do
+      member do
+        get 'assign'
+        get 'unassign'
+      end
+    end
+
+    resources :maintenance_debts do
+      member do
+        put 'convert_to_staffing_debt'
+      end
+    end
+
+    resources :debts
+
+
+    resources :show_maintenance_debts
+    resources :show_staffing_debts
+
 
     resources :venues
     resources :seasons

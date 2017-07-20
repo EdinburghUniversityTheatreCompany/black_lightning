@@ -37,4 +37,6 @@ namespace :users do
     phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
     puts "#{phones} of users have given us their phone number."
   end
+
+
 end
