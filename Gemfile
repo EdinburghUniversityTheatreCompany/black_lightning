@@ -3,7 +3,7 @@ source 'http://rubygems.org'
 gem 'rails', '4.2.3'
 gem 'protected_attributes'
 
-gem 'mysql2', '~> 0.3.18' #added specific version as I was having issues starting server
+gem 'mysql2'
 
 gem 'sass-rails',   '~> 5.0.0'
 gem 'uglifier', '>= 1.3.0'
