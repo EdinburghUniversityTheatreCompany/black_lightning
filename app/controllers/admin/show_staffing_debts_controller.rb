@@ -10,16 +10,16 @@ class Admin::ShowStaffingDebtsController < AdminController
   def update
     show = Show.find(params[:id])
 
-    if params[:show].length == 3 && params[:show][:'maintenance_debt_start(1i)'].present? && params[:show][:'maintenance_debt_start(3i)'].present? && params[:show][:'maintenance_debt_start(3i)'].present?
+    if params[:show].length == 3 && params[:show][:'staffing_debt_start(1i)'].present? && params[:show][:'staffing_debt_start(3i)'].present? && params[:show][:'staffing_debt_start(3i)'].present?
       authorize! :create, Admin::StaffingDebt
 
       if show.update_attributes(params[:show])
-        redirect_to admin_show_path(show), notice: 'Maintenance Debt Start set'
+        redirect_to admin_show_path(show), notice: 'Staffing Debt Start set'
       else
-        redirect_to admin_show_path(show), notice: 'Error please contact IT'
+        redirect_to admin_show_path(show), notice: 'Error updating debt start please contact IT'
       end
     else
-      redirect_to admin_show_path(show), notice: 'Error please contact IT'
+      redirect_to admin_show_path(show), notice: 'Error bad update request please contact IT'
     end
   end
 
