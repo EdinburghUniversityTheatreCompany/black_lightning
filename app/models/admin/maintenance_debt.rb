@@ -3,7 +3,7 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
   belongs_to :user
   belongs_to :show
 
-
+  attr_accessible :user, :due_by, :show
   validates :due_by, presence: true
 
   def self.searchfor(user_fname,user_sname,show_name)
