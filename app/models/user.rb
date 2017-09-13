@@ -166,6 +166,8 @@ class User < ActiveRecord::Base
     when 'president'
       # The President is an admin in the eyes of the website
       return 'admin'
+    when 'proposal-viewer'
+      return 'proposal_viewer'
     else
       group_name.titleize
     end
