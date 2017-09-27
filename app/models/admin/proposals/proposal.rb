@@ -65,6 +65,13 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   end
 
   ##
+  # returns true if has any non members on team
+  ##
+  def has_non_members
+    return !self.users.all? {|user| user.has_role?(:member)}
+  end
+
+  ##
   # Creates a show based on the proposal.
   #
   # Throws an error if the proposal has not been approved.
