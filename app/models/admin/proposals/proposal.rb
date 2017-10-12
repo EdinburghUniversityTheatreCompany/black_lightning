@@ -64,10 +64,7 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
     users.uniq.any? {|usr| usr.in_debt(self.created_at.to_date)}
   end
 
-  ##
-  # returns true if has any non members on team
-  ##
-  def has_non_members
+  def has_non_members?
     return !self.users.all? {|user| user.has_role?(:member)}
   end
 

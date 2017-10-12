@@ -28,7 +28,7 @@ class Admin::Proposals::Call < ActiveRecord::Base
 
   attr_accessible :deadline, :name, :open, :archived, :questions, :questions_attributes
 
-  before_update :changing_to_closed, :if => :open_changed?
+  before_update :mark_non_members_as_late, :if => :open_changed?
 
   ##
   # Closes the call, and archives it.
@@ -41,14 +41,13 @@ class Admin::Proposals::Call < ActiveRecord::Base
     self.save!
   end
 
-  def changing_to_closed
-    if !self.open
-      self.proposals.each do |proposal|
-          if proposal.has_non_members
-            proposal.late = true
-            proposal.save
-          end
-        end
+  def mark_non_members_as_late
+    return if self.open
+    self.proposals.each do |proposal|
+      if proposal.has_non_members
+        proposal.late = true
+        proposal.save
+      end
     end
   end
 
