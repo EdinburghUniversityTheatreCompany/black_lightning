@@ -29,7 +29,7 @@ class Admin::StaffingDebtsController < AdminController
     boundryDate = Date.today - 80
     @admin_staffing_debt = Admin::StaffingDebt.find(params[:id])
     dateIds = @admin_staffing_debt.user.staffings.where('start_time >?', boundryDate.to_datetime).ids
-    @jobs = @admin_staffing_debt.user.staffing_jobs.where(staffable_id: dateIds).where.not(id: Admin::StaffingDebt.pluck(:admin_staffing_job_id))
+    @jobs = @admin_staffing_debt.user.staffing_jobs.where(staffable_id: dateIds).where.not(id: Admin::StaffingDebt.pluck(:admin_staffing_job_id), name: 'Committee Rep')
   end
 
 
