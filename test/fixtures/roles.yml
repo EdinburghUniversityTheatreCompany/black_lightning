@@ -21,3 +21,7 @@
 member:
    id: 1
    name: "member"
+
+admin:
+  id: 2
+  name: "admin"
