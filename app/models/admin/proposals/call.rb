@@ -44,7 +44,7 @@ class Admin::Proposals::Call < ActiveRecord::Base
   def mark_non_members_as_late
     return if self.open
     self.proposals.each do |proposal|
-      if proposal.has_non_members
+      if proposal.has_non_members?
         proposal.late = true
         proposal.save
       end
