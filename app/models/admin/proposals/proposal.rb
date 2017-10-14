@@ -64,6 +64,10 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
     users.uniq.any? {|usr| usr.in_debt(self.created_at.to_date)}
   end
 
+  def has_non_members?
+    return !self.users.all? {|user| user.has_role?(:member)}
+  end
+
   ##
   # Creates a show based on the proposal.
   #

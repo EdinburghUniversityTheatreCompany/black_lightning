@@ -99,7 +99,7 @@
     <% if can? :create, Admin::MaintenanceDebt and !Admin::MaintenanceDebt.exists?(show_id: @show) then %>
 
         <%= simple_form_for [:admin,@show], url: admin_show_maintenance_debt_path(@show.id) do |f| %>
-            <%= f.input :maintenance_debt_start, as: :date , default: (@show.end_date + 14) %>
+            <%= f.input :maintenance_debt_start, as: :date , default: ((@show.end_date || Date.today()) + 14) %>
             <%= f.button :submit, value: 'Set Maintenance Due' , :class => 'btn' %>
         <% end %>
         <% if @show.maintenance_debt_start.present? %>
@@ -115,7 +115,7 @@
 
         <% if !Admin::StaffingDebt.where(show_id: @show, converted: false).exists? %>
             <%= simple_form_for [:admin,@show], url: admin_show_staffing_debt_path(@show.id) do |f| %>
-                <%= f.input :staffing_debt_start, as: :date , default: (@show.end_date + 14) %>
+                <%= f.input :staffing_debt_start, as: :date , default: ((@show.end_date || Date.today()) + 14) %>
                 <%= f.button :submit, value: 'Set Staffing Due' , :class => 'btn' %>
             <% end %>
         <% end %>
