@@ -3,7 +3,6 @@ class Admin::StaffingDebt < ActiveRecord::Base
   belongs_to :show
   belongs_to :admin_staffing_job, :class_name => 'Admin::StaffingJob'
 
-  #seeems to be breaking stuff
   attr_accessible :due_by, :user, :user_id, :show, :show_id, :admin_staffing_job, :admin_staffing_job_id
 
   validates :due_by, presence: true
