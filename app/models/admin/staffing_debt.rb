@@ -1,4 +1,5 @@
 class Admin::StaffingDebt < ActiveRecord::Base
+
   belongs_to :user
   belongs_to :show
   belongs_to :admin_staffing_job, :class_name => 'Admin::StaffingJob'
@@ -50,6 +51,19 @@ class Admin::StaffingDebt < ActiveRecord::Base
   def self.unfulfilled
     fulfilledids = self.all.map{ |debt| debt.fulfilled ? debt.id : nil }
     return self.where.not(id: fulfilledids)
+  end
+
+  def forgive
+    if !Admin::Staffing.where(show_title: "FOH Forgiven").exists?
+      Admin::Staffing.create(start_time:DateTime.civil_from_format(:local,1999,5,9),end_time:DateTime.civil_from_format(:local,1999,5,9),show_title:"FOH Forgiven")
+    end
+    staffing = Admin::Staffing.where(show_title: "FOH Forgiven").first
+    job = Admin::StaffingJob.create(name:"Forgivness",user_id:self.user.id)
+    job.staffable_id = staffing.id
+    job.staffable_type= "Admin::Staffing"
+    job.save
+    self.admin_staffing_job = job
+    self.save
   end
 
 

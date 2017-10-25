@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170529095109) do
+ActiveRecord::Schema.define(version: 20171025103524) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -61,8 +61,9 @@ ActiveRecord::Schema.define(version: 20170529095109) do
     t.integer  "user_id",    limit: 4
     t.date     "due_by"
     t.integer  "show_id",    limit: 4
-    t.datetime "created_at",           null: false
-    t.datetime "updated_at",           null: false
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
+    t.string   "state",      limit: 255
   end
 
   create_table "admin_permissions", force: :cascade do |t|

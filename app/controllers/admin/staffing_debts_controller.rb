@@ -15,7 +15,7 @@ class Admin::StaffingDebtsController < AdminController
         @sdebts = Admin::StaffingDebt.all.unfulfilled
       end
     else
-      @sdebts = Admin::StaffingDebt.where(user_id: current_user.id)
+      @sdebts = Admin::StaffingDebt.where(user_id: current_user.id).unfulfilled
     end
 
     @sdebts = @sdebts.order('due_by ASC').paginate(page: params[:page], per_page: 15)
@@ -91,8 +91,8 @@ class Admin::StaffingDebtsController < AdminController
 
   # DELETE /admin/staffing_debts/1
   def destroy
-    @admin_staffing_debt.destroy
-    redirect_to admin_staffing_debts_url, notice: 'Staffing debt was successfully destroyed.'
+    @admin_staffing_debt.forgive
+    redirect_to admin_staffing_debts_url, notice: 'Staffing debt was successfully forgiven.'
   end
 
   private

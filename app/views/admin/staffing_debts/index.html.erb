@@ -76,7 +76,7 @@
 
         <td>
           <% if can? :delete, sdebt %>
-              <%= link_to 'Destroy', admin_staffing_debt_path(sdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + sdebt.user.name + "'s debt",
+              <%= link_to 'Forgive', admin_staffing_debt_path(sdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + sdebt.user.name + "'s debt",
                                                                                                                        detail: "If you delete a debt a FOH fairy dies",
               } %>
           <% end %>

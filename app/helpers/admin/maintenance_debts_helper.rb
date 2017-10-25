@@ -8,4 +8,13 @@ module Admin::MaintenanceDebtsHelper
           end
     return out
   end
+  def maintenance_debt_class(maintenance_debt)
+    out = case maintenance_debt.status
+            when :unfulfilled then "warning"
+            when :converted then "success"
+            when :completed then "success"
+            when :causing_debt then "error"
+          end
+    return out
+  end
 end
