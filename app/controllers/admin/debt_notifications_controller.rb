@@ -10,35 +10,7 @@ class Admin::DebtNotificationsController < AdminController
     @debt_notifications = @debt_notifications.order('sent_on ASC').paginate(page: params[:page], per_page: 15)
     @debt_notifications.all
   end
-
-  # GET /admin/debt_notifications/1
-  def show
-  end
-
-  # GET /admin/debt_notifications/new
-  def new
-    redirect_to admin_debt_notifications_path, notice:"Debt notifications shouldn't be created manually"
-  end
-
-  # GET /admin/debt_notifications/1/edit
-  def edit
-    redirect_to admin_debt_notifications_path, notice:"Debt notifications shouldn't be modified"
-  end
-
-  # POST /admin/debt_notifications
-  def create
-    redirect_to admin_debt_notifications_path, notice:"Debt notifications shouldn't be created manually"
-  end
-
-  # PATCH/PUT /admin/debt_notifications/1
-  def update
-    redirect_to admin_debt_notifications_path, notice:"Debt notifications shouldn't be modified"
-  end
-
-  # DELETE /admin/debt_notifications/1
-  def destroy
-    redirect_to admin_debt_notifications_path, notice:"Debt notifications shouldn't be destroyed"
-  end
+  
 
   private
     # Use callbacks to share common setup or constraints between actions.
