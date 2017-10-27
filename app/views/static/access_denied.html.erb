@@ -11,6 +11,9 @@
   If you think you have been sent here by mistake, please contact the <%= mail_to @support_email, 'Bedlam IT Systems Manager' %>.
 </p>
 <p>
+  If you've recently renewed your membership, you might need to <%= link_to "log out", destroy_user_session_path, :method => :delete %> and log back in again to regain access to members only pages.
+</p>
+<p>
   HAL is Watching.
 </p>
 </div>
