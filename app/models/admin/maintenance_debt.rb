@@ -1,14 +1,11 @@
 class Admin::MaintenanceDebt < ActiveRecord::Base
-##
-#possible state value's:  :unfulfilled
-#                          :converted
-#                          :completed
-##
   belongs_to :user
   belongs_to :show
 
   attr_accessible :user,:user_id, :due_by, :show, :show_id, :status
   validates :due_by, presence: true
+
+  enum state: [:unfulfilled, :converted, :completed]
 
   def self.searchfor(user_fname,user_sname,show_name,show_fulfilled)
     userIDs = User.where("first_name LIKE ? AND last_name LIKE ?","%#{user_fname}%","%#{user_sname}%").ids
@@ -35,24 +32,15 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
 
   def status(on_date = Date.today)
     case self.state
-      when "converted" then return :converted
-      when "completed" then return :completed
+      when :converted then :converted
+      when :completed then :completed
       else if self.due_by < on_date
-             return :causing_debt
+             :causing_debt
            else
-             return :unfulfilled
+             :unfulfilled
            end
     end
   end
 
-  def fulfilled
-    status = self.status
-    return (status == :converted || status == :completed)
-  end
-
-  def self.unfulfilled
-    fulfilledids = self.all.map{ |debt| debt.fulfilled ? debt.id : nil }
-    return self.where.not(id: fulfilledids)
-  end
 
 end

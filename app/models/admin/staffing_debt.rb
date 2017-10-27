@@ -10,6 +10,9 @@ class Admin::StaffingDebt < ActiveRecord::Base
 
   def status(on_date = Date.today)
 #note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
+    if self.forgiven
+      return :forgiven
+    end
     if !self.admin_staffing_job.present?
       if self.due_by < on_date
         return :causing_debt
@@ -32,7 +35,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
     if self.admin_staffing_job.present?
       return self.admin_staffing_job.completed?
     else
-      return false
+      return self.forgiven
     end
   end
 
@@ -54,15 +57,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
   end
 
   def forgive
-    if !Admin::Staffing.where(show_title: "FOH Forgiven").exists?
-      Admin::Staffing.create(start_time:DateTime.civil_from_format(:local,1999,5,9),end_time:DateTime.civil_from_format(:local,1999,5,9),show_title:"FOH Forgiven")
-    end
-    staffing = Admin::Staffing.where(show_title: "FOH Forgiven").first
-    job = Admin::StaffingJob.create(name:"Forgivness",user_id:self.user.id)
-    job.staffable_id = staffing.id
-    job.staffable_type= "Admin::Staffing"
-    job.save
-    self.admin_staffing_job = job
+    self.forgiven = true
     self.save
   end
 

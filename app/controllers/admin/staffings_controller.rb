@@ -12,7 +12,7 @@ class Admin::StaffingsController < AdminController
   ##
   def index
     @admin_staffings = Admin::Staffing.future.group_by(&:show_title)
-    @admin_staffings_archive = Admin::Staffing.past.where('end_time > ?',DateTime.civil_from_format(:local,2000,01,01)).group_by(&:show_title)
+    @admin_staffings_archive = Admin::Staffing.past.group_by(&:show_title)
     @title = 'Staffing'
     respond_to do |format|
       format.html # index.html.erb

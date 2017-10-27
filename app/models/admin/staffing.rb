@@ -66,7 +66,7 @@ class Admin::Staffing < ActiveRecord::Base
       reminder_job.run_at = start_time.advance(hours: -2)
       reminder_job.save!
     else
-      if self.start_time > DateTime.current()
+      if self.start_time > DateTime.current
         self.reminder_job = delay(run_at: start_time.advance(hours: -2)).send_reminder
         reminder_job.description = "Reminder for staffing #{id} - #{show_title} - #{I18n.l start_time, format: :short}"
         reminder_job.save!

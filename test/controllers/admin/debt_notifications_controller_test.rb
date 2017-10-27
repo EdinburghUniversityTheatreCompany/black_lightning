@@ -12,21 +12,4 @@ class Admin::DebtNotificationsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:debt_notifications)
   end
 
-  test "should not get new" do
-    get :new
-    assert_redirected_to admin_debt_notifications_url
-  end
-
-
-  test "should show admin_debt_notification" do
-    get :show, id: @admin_debt_notification
-    assert_response :success
-  end
-
-  test "should not get edit" do
-    get :edit, id: @admin_debt_notification
-    assert_redirected_to admin_debt_notifications_url
-  end
-
-
 end
