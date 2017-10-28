@@ -44,26 +44,29 @@ class Show < Event
 
   def create_maintenance_debts
     uniqueTeam = self.users.uniq
-    uniqueTeam.each do |usr,index|
-      debt = Admin::MaintenanceDebt.new
-      debt.show = self
-      debt.user = usr
-      debt.due_by = self.maintenance_debt_start
-      debt.state = :unfulfilled
-      debt.save!
+    uniqueTeam.each do |usr, index|
+      if !usr.admin_maintence_debts.any?
+        debt = Admin::MaintenanceDebt.new
+        debt.show = self
+        debt.user = usr
+        debt.due_by = self.maintenance_debt_start
+        debt.state = :unfulfilled
+        debt.save!
+      end
     end
   end
 
   def create_staffing_debts(numEach)
     uniqueTeam = self.users.uniq
     uniqueTeam.each do |usr|
-      x = numEach - usr.admin_staffing_debts.where(converted:false).count
+      x = numEach - usr.admin_staffing_debts.where(show_id:self.id, converted: false).count
       x.times do |i|
         debt = Admin::StaffingDebt.new
         debt.show = self
         debt.user = usr
         debt.due_by = self.staffing_debt_start
         debt.converted = false
+        debt.forgiven = false
         debt.save!
       end
     end
@@ -71,9 +74,9 @@ class Show < Event
 
   def as_json(options = {})
     defaults = {
-      include: [
-        :reviews
-      ]
+        include: [
+            :reviews
+        ]
     }
 
     options = options.merge(defaults) do |_key, oldval, newval|
