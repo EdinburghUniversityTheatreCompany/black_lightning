@@ -45,7 +45,7 @@ class Show < Event
   def create_maintenance_debts
     uniqueTeam = self.users.uniq
     uniqueTeam.each do |usr, index|
-      if !usr.admin_maintenance_debts.any?
+      if !usr.admin_maintenance_debts.where(show_id: self.id).any?
         debt = Admin::MaintenanceDebt.new
         debt.show = self
         debt.user = usr
