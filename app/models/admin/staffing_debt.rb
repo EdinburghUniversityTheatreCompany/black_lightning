@@ -7,6 +7,8 @@ class Admin::StaffingDebt < ActiveRecord::Base
   attr_accessible :due_by, :user, :user_id, :show, :show_id, :admin_staffing_job, :admin_staffing_job_id
 
   validates :due_by, presence: true
+  validates :show_id, presence: true
+  validates :user_id, presence: true
 
   def status(on_date = Date.today)
 #note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed

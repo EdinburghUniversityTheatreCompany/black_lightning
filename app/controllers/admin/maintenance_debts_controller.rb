@@ -57,7 +57,7 @@ class Admin::MaintenanceDebtsController < AdminController
     if @admin_maintenance_debt.save
       redirect_to @admin_maintenance_debt, notice: 'Maintenance debt was successfully created.'
     else
-      render :new
+      redirect_to new_admin_maintenance_debt_url, notice: 'Failed to create new Maintenance Debt contact IT'
     end
   end
 

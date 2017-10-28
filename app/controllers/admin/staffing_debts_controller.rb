@@ -76,7 +76,7 @@ class Admin::StaffingDebtsController < AdminController
     if @admin_staffing_debt.save
       redirect_to admin_staffing_debts_url, notice: 'Staffing debt was successfully created.'
     else
-      render :new
+      redirect_to new_admin_staffing_debt_path, notice: 'Failed to create new staffing Debt, contact IT'
     end
   end
 

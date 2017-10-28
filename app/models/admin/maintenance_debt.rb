@@ -4,6 +4,8 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
 
   attr_accessible :user,:user_id, :due_by, :show, :show_id, :status
   validates :due_by, presence: true
+  validates :show_id, presence: true
+  validates :user_id, presence: true
 
   enum state: [:unfulfilled, :converted, :completed]
 
