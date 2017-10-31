@@ -9,6 +9,8 @@ class Admin::StaffingDebt < ActiveRecord::Base
   validates :due_by, presence: true
   validates :show_id, presence: true
   validates :user_id, presence: true
+  #the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
+
 
   def status(on_date = Date.today)
 #note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
@@ -32,7 +34,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
     end
   end
 
-
+  #returns if the staffing debt has been completed or not
   def fulfilled
     if self.admin_staffing_job.present?
       return self.admin_staffing_job.completed?
@@ -53,6 +55,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
     return staffingDebts
   end
 
+  #returns uncompleted staffing debts
   def self.unfulfilled
     fulfilledids = self.all.map{ |debt| debt.fulfilled ? debt.id : nil }
     return self.where.not(id: fulfilledids)

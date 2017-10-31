@@ -8,6 +8,8 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
   validates :user_id, presence: true
 
   enum state: [:unfulfilled, :converted, :completed]
+  #the progress of a maintenance debt is tracked by its state enum
+  #with status being used to retrieve if the debt has become overdue and is causing debt
 
   def self.searchfor(user_fname,user_sname,show_name,show_fulfilled)
     userIDs = User.where("first_name LIKE ? AND last_name LIKE ?","%#{user_fname}%","%#{user_sname}%").ids
