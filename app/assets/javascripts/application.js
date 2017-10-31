@@ -30,7 +30,7 @@ $(document).keydown(function(e){
     if(e.keyCode === konami_keys[konami_index++]){
         if(konami_index === konami_keys.length){
             $(document).unbind('keydown', arguments.callee);
-            $.getScript('http://www.cornify.com/js/cornify.js',function(){
+            $.getScript('https://www.cornify.com/js/cornify.js',function(){
                 cornify_add();
                 $(document).keydown(cornify_add);
             });
