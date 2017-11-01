@@ -57,7 +57,7 @@
         </td>
 
         <td>
-          <% if (can? :edit, mdebt) && (mdebt.state == :unfulfilled) %>
+          <% if (can? :edit, mdebt) && (mdebt.unfulfilled?) %>
               <%= link_to convert_to_staffing_debt_admin_maintenance_debt_path(mdebt.id), :method => :put, class: "btn" do %>
                   Convert To Staffing
               <% end %>
@@ -65,7 +65,7 @@
         </td>
 
         <td>
-          <% if (can? :delete, mdebt) && (mdebt.state == :unfulfilled) %>
+          <% if (can? :delete, mdebt) && (mdebt.unfulfilled?) %>
               <%= link_to 'Completed', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + mdebt.user.name + "'s debt",
                                                                                                                           detail: "If you delete a debt a theatre manager fairy dies",
               } %>

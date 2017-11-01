@@ -35,9 +35,9 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
   end
 
   def status(on_date = Date.today)
-    case self.state
-      when :converted then :converted
-      when :completed then :completed
+    case state
+      when 'converted' then :converted
+      when 'completed' then :completed
       else if self.due_by < on_date
              :causing_debt
            else
