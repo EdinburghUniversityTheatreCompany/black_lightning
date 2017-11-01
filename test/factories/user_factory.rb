@@ -34,6 +34,9 @@ FactoryGirl.define do
       after(:create) do |user, _evaluator|
         user.add_role :member
       end
+      factory :member_with_phone_number do
+        phone_number { rand(10**9..10**10).to_s }
+      end
     end
 
     factory :committee do

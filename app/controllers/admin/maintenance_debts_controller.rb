@@ -9,15 +9,17 @@ class Admin::MaintenanceDebtsController < AdminController
       if params[:user_id].present?
         @mdebts = Admin::MaintenanceDebt.where(:user_id => params[:user_id])
       elsif (params.length > 3)
-        @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname], params[:user_sname], params[:show_name])
+        show_fulfilled = params[:show_fulfilled].present?
+        @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname], params[:user_sname], params[:show_name],show_fulfilled)
       else
-        @mdebts = Admin::MaintenanceDebt.all
+        @mdebts = Admin::MaintenanceDebt.unfulfilled
       end
     else
-      @mdebts = @admin_maintenance_debts.where(user_id: current_user.id)
+      @mdebts = @admin_maintenance_debts.where(user_id: current_user.id).unfulfilled
     end
 
     @mdebts = @mdebts.order('due_by ASC').paginate(page: params[:page], per_page: 15)
+    @mdebts = @mdebts.all
   end
 
   # GET /admin/maintenance_debts/1
@@ -55,7 +57,7 @@ class Admin::MaintenanceDebtsController < AdminController
     if @admin_maintenance_debt.save
       redirect_to @admin_maintenance_debt, notice: 'Maintenance debt was successfully created.'
     else
-      render :new
+      redirect_to new_admin_maintenance_debt_url, notice: 'Failed to create new Maintenance Debt contact IT'
     end
   end
 
@@ -70,8 +72,12 @@ class Admin::MaintenanceDebtsController < AdminController
 
   # DELETE /admin/maintenance_debts/1
   def destroy
-    @admin_maintenance_debt.destroy
-    redirect_to admin_maintenance_debts_url, notice: 'Maintenance debt was successfully destroyed.'
+    @admin_maintenance_debt.state = :completed
+    if @admin_maintenance_debt.save
+      redirect_to admin_maintenance_debts_url, notice: 'Maintenance debt completed.'
+    else
+      redirect_to admin_maintenance_debts_url, notice: 'Error marking debt completed'
+    end
   end
 
   private

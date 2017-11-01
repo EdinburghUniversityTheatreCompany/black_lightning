@@ -55,7 +55,7 @@ ChaosRails::Application.routes.draw do
 
     resources :workshops
 
-    resources :debt_notifications
+    resources :debt_notifications, only: [:index]
 
     resources :staffing_debts do
       member do

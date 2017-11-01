@@ -1,15 +1,22 @@
 class Admin::StaffingDebt < ActiveRecord::Base
+
   belongs_to :user
   belongs_to :show
   belongs_to :admin_staffing_job, :class_name => 'Admin::StaffingJob'
 
-  #seeems to be breaking stuff
   attr_accessible :due_by, :user, :user_id, :show, :show_id, :admin_staffing_job, :admin_staffing_job_id
 
   validates :due_by, presence: true
+  validates :show_id, presence: true
+  validates :user_id, presence: true
+  #the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
+
 
   def status(on_date = Date.today)
 #note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
+    if self.forgiven
+      return :forgiven
+    end
     if !self.admin_staffing_job.present?
       if self.due_by < on_date
         return :causing_debt
@@ -27,12 +34,12 @@ class Admin::StaffingDebt < ActiveRecord::Base
     end
   end
 
-
+  #returns if the staffing debt has been completed or not
   def fulfilled
     if self.admin_staffing_job.present?
       return self.admin_staffing_job.completed?
     else
-      return false
+      return self.forgiven
     end
   end
 
@@ -48,9 +55,15 @@ class Admin::StaffingDebt < ActiveRecord::Base
     return staffingDebts
   end
 
+  #returns uncompleted staffing debts
   def self.unfulfilled
     fulfilledids = self.all.map{ |debt| debt.fulfilled ? debt.id : nil }
     return self.where.not(id: fulfilledids)
+  end
+
+  def forgive
+    self.forgiven = true
+    self.save
   end
 
 

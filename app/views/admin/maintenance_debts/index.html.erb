@@ -20,6 +20,7 @@
                       First Name :<%= text_field_tag :user_fname %>
                       Second Name :<%= text_field_tag :user_sname %>
                       Show : <%= text_field_tag :show_name %>
+                      Show Fulfilled Obligations : <%= check_box_tag :show_fulfilled %>
 
                       <%= submit_tag "Search", class: 'btn' %>
                   <% end %>
@@ -43,7 +44,7 @@
   </tr>
   <% @mdebts.each do |mdebt| %>
 
-      <tr<%= " class = error" if Date.current > mdebt.due_by %>>
+      <tr class="<%= maintenance_debt_class(mdebt) %>">
         <td><%= mdebt.user.email %></td>
         <td><%= "#{mdebt.user.first_name} #{mdebt.user.last_name}" %></td>
         <td><%= mdebt.show.name %></td>
@@ -56,7 +57,7 @@
         </td>
 
         <td>
-          <% if can? :edit, mdebt %>
+          <% if (can? :edit, mdebt) && (mdebt.state == :unfulfilled) %>
               <%= link_to convert_to_staffing_debt_admin_maintenance_debt_path(mdebt.id), :method => :put, class: "btn" do %>
                   Convert To Staffing
               <% end %>
@@ -64,8 +65,8 @@
         </td>
 
         <td>
-          <% if can? :delete, mdebt %>
-              <%= link_to 'Destroy', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + mdebt.user.name + "'s debt",
+          <% if (can? :delete, mdebt) && (mdebt.state == :unfulfilled) %>
+              <%= link_to 'Completed', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + mdebt.user.name + "'s debt",
                                                                                                                           detail: "If you delete a debt a theatre manager fairy dies",
               } %>
           <% end %>
