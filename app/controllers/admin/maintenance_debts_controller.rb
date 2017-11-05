@@ -18,7 +18,7 @@ class Admin::MaintenanceDebtsController < AdminController
       @mdebts = @admin_maintenance_debts.where(user_id: current_user.id).unfulfilled
     end
 
-    @mdebts = @mdebts.order('due_by ASC').paginate(page: params[:page], per_page: 15)
+    @mdebts = @mdebts.order(due_by: :asc, show_id: :asc, user_id: :asc).paginate(page: params[:page], per_page: 15)
     @mdebts = @mdebts.all
   end
 

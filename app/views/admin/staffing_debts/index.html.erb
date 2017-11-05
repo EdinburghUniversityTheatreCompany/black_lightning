@@ -39,6 +39,7 @@
     <th>Name</th>
     <th>Show</th>
     <th>Due Date</th>
+    <th>Converted</th>
     <th>Staffing Job</th>
     <th></th>
     <th></th>
@@ -51,6 +52,7 @@
         <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}" %></td>
         <td><%= sdebt.show.name %></td>
         <td><%= sdebt.due_by %></td>
+        <td><%= sdebt.converted ? "&#10004;".html_safe : "&#10008;".html_safe%></td>
         <td>
           <% if sdebt.admin_staffing_job.present? %>
               <% job = sdebt.admin_staffing_job.staffable %>

@@ -18,7 +18,7 @@ class Admin::StaffingDebtsController < AdminController
       @sdebts = Admin::StaffingDebt.where(user_id: current_user.id).unfulfilled
     end
 
-    @sdebts = @sdebts.order('due_by ASC').paginate(page: params[:page], per_page: 15)
+    @sdebts = @sdebts.order(due_by: :asc, show_id: :asc, user_id: :asc).paginate(page: params[:page], per_page: 15)
     @sdebts = @sdebts.all
   end
 
