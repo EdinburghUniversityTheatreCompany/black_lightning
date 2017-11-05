@@ -1,3 +1,18 @@
+# == Schema Information
+#
+# Table name: admin_staffing_debts
+#
+#  id                    :integer          not null, primary key
+#  user_id               :integer
+#  show_id               :integer
+#  due_by                :date
+#  admin_staffing_job_id :integer
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  converted             :boolean
+#  forgiven              :boolean          default(FALSE)
+#
+
 class Admin::StaffingDebt < ActiveRecord::Base
 
   belongs_to :user

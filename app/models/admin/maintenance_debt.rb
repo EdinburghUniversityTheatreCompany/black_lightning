@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: admin_maintenance_debts
+#
+#  id         :integer          not null, primary key
+#  user_id    :integer
+#  due_by     :date
+#  show_id    :integer
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  state      :integer          default(0)
+#
+
 class Admin::MaintenanceDebt < ActiveRecord::Base
   belongs_to :user
   belongs_to :show
