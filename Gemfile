@@ -49,6 +49,7 @@ group :development, :test do
   gem 'binding_of_caller'
 
   gem 'rdoc'
+  gem 'rubocop'
 end
 
 group :test do
