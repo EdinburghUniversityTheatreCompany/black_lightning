@@ -6,7 +6,7 @@
 
 <h1><%= prefix %> Staffing Debts</h1>
 
-<% if can? :manage, Admin::MaintenanceDebt %>
+<% if can? :manage, Admin::StaffingDebt %>
     <div class="row">
       <div class="span12">
         <div class="accordion-group">
@@ -20,7 +20,7 @@
               <%= form_tag admin_staffing_debts_path, :method => :get do %>
                   First Name :<%= text_field_tag :user_fname %>
                   Second Name :<%= text_field_tag :user_sname %>
-                  Show : <%= text_field_tag :show_name %> <br></br>
+                  Show : <%= text_field_tag :show_name %> <br/>
                   Show Fulfilled Obligations : <%= check_box_tag :show_fulfilled %>
 
                   <%= submit_tag "Search", class: 'btn' %>
@@ -39,6 +39,7 @@
     <th>Name</th>
     <th>Show</th>
     <th>Due Date</th>
+    <th>Converted</th>
     <th>Staffing Job</th>
     <th></th>
     <th></th>
@@ -51,6 +52,7 @@
         <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}" %></td>
         <td><%= sdebt.show.name %></td>
         <td><%= sdebt.due_by %></td>
+        <td><%= sdebt.converted ? "&#10004;".html_safe : "&#10008;".html_safe%></td>
         <td>
           <% if sdebt.admin_staffing_job.present? %>
               <% job = sdebt.admin_staffing_job.staffable %>
