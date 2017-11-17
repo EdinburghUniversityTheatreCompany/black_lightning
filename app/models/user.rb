@@ -163,9 +163,6 @@ class User < ActiveRecord::Base
       return 'member'
     when 'admins'
       return 'admin'
-    when 'president'
-      # The President is an admin in the eyes of the website
-      return 'admin'
     when 'proposal viewer'
       return 'proposal_viewer'
     else

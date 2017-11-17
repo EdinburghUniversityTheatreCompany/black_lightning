@@ -5,7 +5,7 @@
 
 <h1><%= prefix %> Maintenance Debts</h1>
 
-<% if can? :manage, Admin::MaintenanceDebt %>
+<% if can? :read, Admin::MaintenanceDebt %>
         <div class="row">
           <div class="span12">
             <div class="accordion-group">
