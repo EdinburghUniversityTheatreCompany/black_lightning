@@ -92,6 +92,12 @@
         <% end %>
       </li>
       <% end %>
+
+      <% if can? :manage, Admin::Staffing %>
+          <li data-row="4" data-col="3" data-sizex="1" data-sizey="2">
+            <%= dashboard_widget('committee_staffing') %>
+          </li>
+      <% end %>
     </ul>
   </div>
 </div>
