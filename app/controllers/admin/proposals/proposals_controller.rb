@@ -9,6 +9,7 @@
 # Failure to correctly do so will cause bad things to happen (kittens may die).
 ##
 class Admin::Proposals::ProposalsController < AdminController
+  before_action :set_paper_trail_whodunnit
   authorize_resource class: 'Admin::Proposals::Proposal'
 
   ##

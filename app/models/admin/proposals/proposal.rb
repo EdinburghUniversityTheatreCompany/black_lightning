@@ -28,6 +28,7 @@
 #++
 ##
 class Admin::Proposals::Proposal < ActiveRecord::Base
+  has_paper_trail
   belongs_to :call, class_name: 'Admin::Proposals::Call'
 
   has_many :questions, through: :answers

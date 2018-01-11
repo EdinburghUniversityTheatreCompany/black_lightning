@@ -17,6 +17,7 @@
 #++
 ##
 class Admin::Proposals::Call < ActiveRecord::Base
+  has_paper_trail
   has_many :questions, as: :questionable, dependent: :destroy
   has_many :proposals, class_name: 'Admin::Proposals::Proposal'
 
