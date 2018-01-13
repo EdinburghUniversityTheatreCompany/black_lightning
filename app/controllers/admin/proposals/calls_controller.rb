@@ -3,6 +3,7 @@
 ##
 
 class Admin::Proposals::CallsController < AdminController
+  before_action :set_paper_trail_whodunnit
   load_and_authorize_resource class: Admin::Proposals::Call
 
   ##
