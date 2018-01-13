@@ -1,13 +1,20 @@
-<h3><%= link_to 'Opportunities', admin_opportunities_path %></h3>
-<% opportunities = Opportunity.approved.first(5) %>
-<% opportunities.each do |opportunity| %>
-  <p><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></p>
+<% if can? :read, Opportunity %>
+    <h3><%= link_to 'Opportunities', admin_opportunities_path %></h3>
+<% else %>
+    <h3><%= "Opportunities" %></h3>
 <% end %>
+
+<% opportunities = Opportunity.approved.first(5) %>
+
 
 <% if opportunities.empty? then %>
   <div>
     <%= display_block("No Opportunities", false) %>
   </div>
+    <% else %>
+    <% opportunities.each do |opportunity| %>
+        <p><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></p>
+    <% end %>
 <% end %>
 
 <% if can? :create, Opportunity %>
