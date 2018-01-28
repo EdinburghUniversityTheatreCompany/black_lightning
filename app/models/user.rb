@@ -133,17 +133,22 @@ class User < ActiveRecord::Base
   # Read LDAP attributes and roles, and map them to Black Lightning attributes
   # and roles.
   def update_ldap_attributes
-    self.first_name = ldap_entry.givenName[0]
-    self.last_name = ldap_entry.sn[0]
-    self.email = ldap_entry.mail[0]
+    if ldap_entry
+      puts "updating #{username}"
+      self.first_name = ldap_entry.givenName[0]
+      self.last_name = ldap_entry.sn[0]
+      self.email = ldap_entry.mail[0]
 
-    if ldap_entry.try(:telephoneNumber)
-      self.phone_number = ldap_entry.telephoneNumber[0]
+      if ldap_entry.try(:telephoneNumber)
+        self.phone_number = ldap_entry.telephoneNumber[0]
+      end
+
+      add_ldap_roles
+
+      save!
+    else
+      puts "skipping #{name}"
     end
-
-    add_ldap_roles
-
-    save!
   end
 
   def add_ldap_roles
