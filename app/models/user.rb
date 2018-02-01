@@ -45,7 +45,7 @@ class User < ActiveRecord::Base
 
   # Don't validate the password presence, so we can set it randomly for new users.
   # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
-  validates :phone_number, allow_blank: true, format: { with: /(\+44\s?7\d{3}|07\d{3})\s?(\d{3}\s?\d{3})\z/, message: 'Please enter a valid mobile number' }
+  validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
 
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
@@ -55,6 +55,9 @@ class User < ActiveRecord::Base
   has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
   has_many :staffing_jobs, class_name: 'Admin::StaffingJob'
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
+  has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt'
+  has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt'
+  has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification'
 
   has_attached_file :avatar,
                     styles: { thumb: '150x150', display: '700x700' },
@@ -130,17 +133,22 @@ class User < ActiveRecord::Base
   # Read LDAP attributes and roles, and map them to Black Lightning attributes
   # and roles.
   def update_ldap_attributes
-    self.first_name = ldap_entry.givenName[0]
-    self.last_name = ldap_entry.sn[0]
-    self.email = ldap_entry.mail[0]
+    if ldap_entry
+      puts "updating #{username}"
+      self.first_name = ldap_entry.givenName[0]
+      self.last_name = ldap_entry.sn[0]
+      self.email = ldap_entry.mail[0]
 
-    if ldap_entry.try(:telephoneNumber)
-      self.phone_number = ldap_entry.telephoneNumber[0]
+      if ldap_entry.try(:telephoneNumber)
+        self.phone_number = ldap_entry.telephoneNumber[0]
+      end
+
+      add_ldap_roles
+
+      save!
+    else
+      puts "skipping #{name}"
     end
-
-    add_ldap_roles
-
-    save!
   end
 
   def add_ldap_roles
@@ -160,9 +168,8 @@ class User < ActiveRecord::Base
       return 'member'
     when 'admins'
       return 'admin'
-    when 'president'
-      # The President is an admin in the eyes of the website
-      return 'admin'
+    when 'proposal viewer'
+      return 'proposal_viewer'
     else
       group_name.titleize
     end
@@ -181,4 +188,22 @@ class User < ActiveRecord::Base
   def has_basic_details?
     return !first_name.blank? && !last_name.blank?
   end
+
+  #returns true if the user is in debt
+  def in_debt(on_date = Date.today)
+    maintenance_debts = admin_maintenance_debts.where('due_by <?', on_date)
+    if maintenance_debts.any? {|debt| debt.status(on_date) == :causing_debt}
+      return true
+    end
+
+    staffing_debts = self.admin_staffing_debts.where('due_by <?', on_date)
+    return staffing_debts.any? {|debt| debt.status(on_date) == :causing_debt}
+  end
+
+  def self.in_debt(on_date = Date.today)
+    in_debt_ids = self.find_each.map{ |user| user.in_debt(on_date) ? user.id : nil }
+    return self.where(id: in_debt_ids)
+  end
+
+
 end

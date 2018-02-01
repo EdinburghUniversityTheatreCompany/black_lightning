@@ -40,6 +40,7 @@ gem 'ransack'
 gem 'nokogiri'
 
 gem 'rack-cors'
+gem 'paper_trail', '< 6.0'
 
 group :development, :test do
   gem 'byebug'
@@ -49,6 +50,7 @@ group :development, :test do
   gem 'binding_of_caller'
 
   gem 'rdoc'
+  gem 'rubocop'
 end
 
 group :test do

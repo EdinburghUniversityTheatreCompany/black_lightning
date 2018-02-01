@@ -28,6 +28,7 @@
 #++
 ##
 class Admin::Proposals::Proposal < ActiveRecord::Base
+  has_paper_trail
   belongs_to :call, class_name: 'Admin::Proposals::Call'
 
   has_many :questions, through: :answers
@@ -54,6 +55,18 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
         answers.push(answer)
       end
     end
+  end
+
+  ##
+  # returns true if any users associated with the proposal are in debt with debts starting before the creation of this proposal
+  ##
+  def has_debtors
+    users = User.find(self.team_members.map(&:user_id)) #horrible but self.users doesnt work when self is still held in memory also .pluck doesnt work :(
+    users.uniq.any? {|usr| usr.in_debt(call.deadline.to_date)}
+  end
+
+  def has_non_members?
+    return !self.users.all? {|user| user.has_role?(:member)}
   end
 
   ##

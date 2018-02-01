@@ -11,8 +11,8 @@ class Admin::FaultReportsController < AdminController
   # GET /admin/fault_reports.json
   ##
   def index
-    @title = 'FaultReport'
-    @fault_reports = FaultReport.paginate(page: params[:page], per_page: 15).all
+    @title = 'Fault Reports'
+    @fault_reports = FaultReport.paginate(page: params[:page], per_page: 15).order('updated_at DESC')
 
     respond_to do |format|
       format.html # index.html.erb
@@ -63,7 +63,7 @@ class Admin::FaultReportsController < AdminController
   ##
   def create
     @fault_report = FaultReport.new(params[:fault_report])
-    @fault_report.reported_by = current_user
+    @fault_report.reported_by = current_user unless params[:fault_report][:reported_by_id]
 
     respond_to do |format|
       if @fault_report.save

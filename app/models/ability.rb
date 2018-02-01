@@ -56,7 +56,7 @@ class Ability
           next (proposal.users.include?(user) || user.has_role?(:proposal_viewer))
         elsif !proposal.call.archived
           # After the deadline:
-          if user.has_role?(:committee) || user.has_role?(:proposal_viewer)
+          if user.has_role?(:committee) || user.has_role?(:subcommittee) || user.has_role?(:proposal_viewer)
             # Committee can see all proposals.
             next true
           else
@@ -90,6 +90,12 @@ class Ability
       can :update, Show do |show|
         show.team_members.where("(position = 'Director' OR position = 'Producer') AND user_id = ?", user.id).count > 0
       end
+
+      can :read, Admin::Debt do |debt|
+        debt.id == user.id
+      end
+
+      can :manage, Admin::Debt if user.has_role? :committee
 
       #####################
       # ADMIN PERMISSIONS #

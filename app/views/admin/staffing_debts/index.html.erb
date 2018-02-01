@@ -1,0 +1,99 @@
+<p id="notice"><%= notice %></p>
+
+<% @title = 'Staffing Debts' %>
+
+<% prefix = params.length > 3 ? "Searching" : "Listing" %>
+
+<h1><%= prefix %> Staffing Debts</h1>
+
+<% if can? :read, Admin::StaffingDebt %>
+    <div class="row">
+      <div class="span12">
+        <div class="accordion-group">
+          <div class="accordion-heading">
+            <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
+              <i class="fa fa-chevron-down"></i> Search Form
+            </a>
+          </div>
+          <div id="search_container" class="accordion-body collapse">
+            <div class="accordion-inner">
+              <%= form_tag admin_staffing_debts_path, :method => :get do %>
+                  First Name :<%= text_field_tag :user_fname %>
+                  Second Name :<%= text_field_tag :user_sname %>
+                  Show : <%= text_field_tag :show_name %> <br/>
+                  Show Fulfilled Obligations : <%= check_box_tag :show_fulfilled %>
+
+                  <%= submit_tag "Search", class: 'btn' %>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+<% end %>
+
+<table class="table">
+  <tbody>
+  <tr>
+    <th>Email</th>
+    <th>Name</th>
+    <th>Show</th>
+    <th>Due Date</th>
+    <th>Converted</th>
+    <th>Staffing Job</th>
+    <th></th>
+    <th></th>
+    <th></th>
+  </tr>
+  <% @sdebts.each do |sdebt| %>
+
+      <tr class="<%= staffing_debt_class(sdebt) %>">
+        <td><%= sdebt.user.email %></td>
+        <td><%= "#{sdebt.user.first_name} #{sdebt.user.last_name}" %></td>
+        <td><%= sdebt.show.name %></td>
+        <td><%= sdebt.due_by %></td>
+        <td><%= sdebt.converted ? "&#10004;".html_safe : "&#10008;".html_safe%></td>
+        <td>
+          <% if sdebt.admin_staffing_job.present? %>
+              <% job = sdebt.admin_staffing_job.staffable %>
+              <%= link_to job.show_title, admin_staffing_path(job) %>
+          <% else %>
+              <% if can? :edit, sdebt %>
+                  <%= link_to 'Associate', admin_staffing_debt_path(sdebt), class: "btn" %>
+              <% end %>
+          <% end %>
+        </td>
+
+        <td>
+          <% if (can? :edit, sdebt) && sdebt.admin_staffing_job_id.present? %>
+              <%= link_to 'Dissociate', unassign_admin_staffing_debt_path(sdebt), class: "btn" %>
+          <% end %>
+        </td>
+
+        <td>
+          <% if can? :edit, sdebt %>
+              <%= link_to 'Change Deadline', edit_admin_staffing_debt_path(sdebt), class: "btn" %>
+          <% end %>
+        </td>
+
+        <td>
+          <% if can? :delete, sdebt %>
+              <%= link_to 'Forgive', admin_staffing_debt_path(sdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + sdebt.user.name + "'s debt",
+                                                                                                                       detail: "If you delete a debt a FOH fairy dies",
+              } %>
+          <% end %>
+        </td>
+      </tr>
+  <% end %>
+  </tbody>
+</table>
+
+<div class="paginate_holder">
+  <%= will_paginate(@sdebts) %>
+</div>
+
+<% if can? :create, Admin::StaffingDebt %>
+    <%= link_to 'Create Staffing Obligation', new_admin_staffing_debt_path, class: "btn" %>
+<% end %>
+
+<br>

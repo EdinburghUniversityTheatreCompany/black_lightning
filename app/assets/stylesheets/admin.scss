@@ -28,6 +28,7 @@ select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !import
 
 .gridster li {
      margin-bottom : 10px;
+     overflow: auto;
 }
 
 .sortable {
@@ -86,3 +87,4 @@ select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !import
 .xtsprodates form.bookingform .continue{width:400px;padding-left:13px;text-align:right;}
 .xtsprodates form.bookingform .attrib{text-align:right;font-size:12px;line-height:15px;padding-top:10px;padding-right:3px;}
 .suggestion.twoforone{color:white;font-weight:bold;background-color:#DE6B4F;padding:10px;}
+

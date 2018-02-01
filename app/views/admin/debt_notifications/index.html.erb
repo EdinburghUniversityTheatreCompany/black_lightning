@@ -1,0 +1,47 @@
+
+<h1>Listing Admin Debt Notifications</h1>
+<div class="row">
+  <div class="span12">
+    <div class="accordion-group">
+      <div class="accordion-heading">
+        <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
+          <i class="fa fa-chevron-down"></i> Search Form
+        </a>
+      </div>
+      <div id="search_container" class="accordion-body collapse">
+        <div class="accordion-inner">
+          <%= form_tag admin_debt_notifications_path , :method => :get do %>
+              First Name :<%= text_field_tag :user_fname %>
+              Second Name :<%= text_field_tag :user_sname %>
+              
+              <%= submit_tag "Search", class: 'btn' %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<table class='table'>
+  <thead>
+    <tr>
+      <th>User</th>
+      <th>Sent on</th>
+      <th>Type</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <% @debt_notifications.each do |debt_notification| %>
+      <tr>
+        <td><%= debt_notification.user.name_or_email %></td>
+        <td><%= debt_notification.sent_on %></td>
+        <td><%= debt_notification.notification_type %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+<div class="paginate_holder">
+  <%= will_paginate(@debt_notifications) %>
+</div>
+<br>
+

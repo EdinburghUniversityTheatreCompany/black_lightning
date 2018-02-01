@@ -3,7 +3,7 @@ set :repo_url,    'git@bitbucket.org:bedlamtheatre/black_lightning.git'
 
 set :rails_env, 'production' # added for delayed job
 
-set :user, 'bedlamtheatre'
+set :user, 'deploy'
 
 set :keep_releases, 4
 

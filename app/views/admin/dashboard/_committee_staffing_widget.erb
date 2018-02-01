@@ -1,0 +1,12 @@
+<h3>Committee Staffing</h3>
+<dl>
+  <% committee = Role.where(name: "Committee").first.users%>
+  <% committee.each do |person|%>
+      <dt><%= person.name  %></dt>
+      <dd>
+        <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(start_of_year,christmas)}.count %>
+        /
+        <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(christmas,next_year_start)}.count %>
+      </dd>
+  <% end %>
+</dl>

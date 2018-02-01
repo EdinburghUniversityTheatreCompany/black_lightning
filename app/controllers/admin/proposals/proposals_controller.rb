@@ -9,6 +9,7 @@
 # Failure to correctly do so will cause bad things to happen (kittens may die).
 ##
 class Admin::Proposals::ProposalsController < AdminController
+  before_action :set_paper_trail_whodunnit
   authorize_resource class: 'Admin::Proposals::Proposal'
 
   ##
@@ -148,6 +149,7 @@ class Admin::Proposals::ProposalsController < AdminController
       @proposal.late = true
     end
 
+
     respond_to do |format|
       if @proposal.save
         # Send the new proposal mail. See ProposalsMailer for more details.
@@ -157,6 +159,7 @@ class Admin::Proposals::ProposalsController < AdminController
           dj.description = "Proposal Mailer - #{@proposal.show_title} - #{team_member.user.name}"
           dj.save
         end
+
 
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
         format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }

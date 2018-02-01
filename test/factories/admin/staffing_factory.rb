@@ -17,7 +17,7 @@ FactoryGirl.define do
   factory :staffing, class: Admin::Staffing do
     show_title   { generate(:random_string) }
 
-    start_time   { generate(:random_date) }
+    start_time   { generate(:random_future_date) }
     end_time     { start_time.advance(hours: rand(0.2..3.0)) }
 
     transient do

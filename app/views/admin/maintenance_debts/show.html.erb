@@ -1,0 +1,18 @@
+
+<p>
+  <strong>User:</strong>
+  <%= @admin_maintenance_debt.user.name %>
+</p>
+
+<p>
+  <strong>Dueby:</strong>
+  <%= @admin_maintenance_debt.due_by %>
+</p>
+
+<p>
+  <strong>Show:</strong>
+  <%= @admin_maintenance_debt.show.name %>
+</p>
+
+<%= link_to 'Edit', edit_admin_maintenance_debt_path(@admin_maintenance_debt) %> |
+<%= link_to 'Back', admin_maintenance_debts_path %>

@@ -7,7 +7,7 @@
 <br />
 <br />
 
-<table class="table">
+<table class="table table-hover">
   <tr>
     <th>Item</th>
     <th>Severity</th>
@@ -20,7 +20,7 @@
   </tr>
 
 <% @fault_reports.each do |fault_report| %>
-  <tr>
+  <tr class="<%= fault_report_class(fault_report) %>">
     <td><%= link_to fault_report.item, admin_fault_report_path(fault_report) %></td>
     <td><%= fault_report.severity.humanize %></td>
     <td><%= fault_report.status.humanize %></td>

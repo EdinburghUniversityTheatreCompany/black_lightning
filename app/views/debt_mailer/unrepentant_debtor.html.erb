@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content='text/html; charset=UTF-8' http-equiv='Content-Type' />
+</head>
+<body>
+<p>Dear <%= @user.name_or_email %>,</p>
+
+<p>
+  This is a reminder that you became in debt to the company on <%= Admin::Debt.users_oldest_debt(@user.id) %> . You became in debt due to [being absent from maintenance, without prior notice to the theatre manager on two separate occasions/ not having staffed within 4 weeks of your designated slot without making other arrangements with the front of house manager] and are yet to make reparations. If you feel you should not be receiving this reminder, are unsure of the reasons for your still being in debt to the company, please contact the theatre manager (Theatre@bedlamtheatre.co.uk) or front of house manager (foh@bedlamtheatre.co.uk).
+</p>
+<p>
+  While in debt to the company a member cannot:
+  -Vote at any meeting of the company, including GMs, AGM, or company meetings.
+  -Become involved in a production in <b>any</b> capacity (please be aware, this does include auditioning, being cast, or taking on a non-core team or assistant production role).
+  This will not affect any projects that you are already committed to.
+</p>
+<p>
+  We would like to make it clear that the aim of the debt system is not to discourage you in any way from getting involved in future Bedlam activities- Having fun while making theatre is the main aim of the EUTC. However, as we are lucky enough to have full use of Bedlam Theatre, we also have the responsibility of running and maintaining it. Operating as a public venue and a community theatre space is something we can only do if company members give back through maintenance and staffing. We would not like this notification to be taken as a punishment, but rather as a reminder of the communal responsibility which is a part of being an EUTC member.
+</p>
+<p>
+  To make reparations and alleviate your debt you can:
+  -attend a maintenance
+  -sign up for an extra staffing slot (additional to any already owed)
+  -arrange an alternative way of giving back to the company with the theatre manager (if, for whatever reason, you are unable to staff or attend maintenance)
+  If signing up for a staffing slot, or attending maintenance instead of staffing, please make the front of house or theatre manager aware that you have done so.
+</p>
+<p>
+  You will no longer be in debt to the company <b>after</b> this has been completed.
+</p>
+<p>
+  If you have become in debt to the company due to a welfare issue which you would rather not discuss with the theatre or front of house managers, please contact a Welfare Officer- (president@bedlamtheatre.co.uk).
+</p>
+<p>
+  For more details about in debt to the company, please see article 10.0 (In Debt to the Company) of the EUTC Constitution (www.bedlamtheatre.co.uk/admin/resources/constitution_and_production_guidelines/constitution)
+</p>
+<p>
+  Thanks,
+  The Bedlam Theatre team
+</p>
+</body>
+</html>

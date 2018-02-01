@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20160903224904) do
+ActiveRecord::Schema.define(version: 20171129195316) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -31,6 +31,16 @@ ActiveRecord::Schema.define(version: 20160903224904) do
   add_index "admin_answers", ["answerable_type"], name: "index_admin_answers_on_answerable_type", using: :btree
   add_index "admin_answers", ["question_id"], name: "index_admin_proposals_answers_on_question_id", using: :btree
 
+  create_table "admin_debt_notifications", force: :cascade do |t|
+    t.integer  "user_id",           limit: 4
+    t.date     "sent_on"
+    t.datetime "created_at",                  null: false
+    t.datetime "updated_at",                  null: false
+    t.integer  "notification_type", limit: 4
+  end
+
+  add_index "admin_debt_notifications", ["user_id"], name: "index_admin_debt_notifications_on_user_id", using: :btree
+
   create_table "admin_editable_blocks", force: :cascade do |t|
     t.string   "name",       limit: 255
     t.text     "content",    limit: 65535
@@ -45,6 +55,15 @@ ActiveRecord::Schema.define(version: 20160903224904) do
     t.text     "body",       limit: 65535
     t.datetime "created_at",               null: false
     t.datetime "updated_at",               null: false
+  end
+
+  create_table "admin_maintenance_debts", force: :cascade do |t|
+    t.integer  "user_id",    limit: 4
+    t.date     "due_by"
+    t.integer  "show_id",    limit: 4
+    t.datetime "created_at",                       null: false
+    t.datetime "updated_at",                       null: false
+    t.integer  "state",      limit: 4, default: 0
   end
 
   create_table "admin_permissions", force: :cascade do |t|
@@ -117,6 +136,17 @@ ActiveRecord::Schema.define(version: 20160903224904) do
   add_index "admin_questions", ["questionable_id"], name: "index_admin_questions_on_questionable_id", using: :btree
   add_index "admin_questions", ["questionable_type"], name: "index_admin_questions_on_questionable_type", using: :btree
 
+  create_table "admin_staffing_debts", force: :cascade do |t|
+    t.integer  "user_id",               limit: 4
+    t.integer  "show_id",               limit: 4
+    t.date     "due_by"
+    t.integer  "admin_staffing_job_id", limit: 4
+    t.datetime "created_at",                                      null: false
+    t.datetime "updated_at",                                      null: false
+    t.boolean  "converted"
+    t.boolean  "forgiven",                        default: false
+  end
+
   create_table "admin_staffing_jobs", force: :cascade do |t|
     t.string   "name",           limit: 255
     t.integer  "staffable_id",   limit: 4
@@ -188,26 +218,28 @@ ActiveRecord::Schema.define(version: 20160903224904) do
   add_index "delayed_jobs", ["priority", "run_at"], name: "delayed_jobs_priority", using: :btree
 
   create_table "events", force: :cascade do |t|
-    t.string   "name",               limit: 255
-    t.string   "tagline",            limit: 255
-    t.string   "slug",               limit: 255
-    t.text     "description",        limit: 65535
-    t.integer  "xts_id",             limit: 4
-    t.datetime "created_at",                       null: false
-    t.datetime "updated_at",                       null: false
+    t.string   "name",                   limit: 255
+    t.string   "tagline",                limit: 255
+    t.string   "slug",                   limit: 255
+    t.text     "description",            limit: 65535
+    t.integer  "xts_id",                 limit: 4
+    t.datetime "created_at",                           null: false
+    t.datetime "updated_at",                           null: false
     t.boolean  "is_public"
-    t.string   "image_file_name",    limit: 255
-    t.string   "image_content_type", limit: 255
-    t.integer  "image_file_size",    limit: 4
+    t.string   "image_file_name",        limit: 255
+    t.string   "image_content_type",     limit: 255
+    t.integer  "image_file_size",        limit: 4
     t.datetime "image_updated_at"
     t.date     "start_date"
     t.date     "end_date"
-    t.integer  "venue_id",           limit: 4
-    t.integer  "season_id",          limit: 4
-    t.string   "author",             limit: 255
-    t.string   "type",               limit: 255
-    t.string   "price",              limit: 255
-    t.string   "spark_seat_slug",    limit: 255
+    t.integer  "venue_id",               limit: 4
+    t.integer  "season_id",              limit: 4
+    t.string   "author",                 limit: 255
+    t.string   "type",                   limit: 255
+    t.string   "price",                  limit: 255
+    t.string   "spark_seat_slug",        limit: 255
+    t.date     "maintenance_debt_start"
+    t.date     "staffing_debt_start"
   end
 
   add_index "events", ["season_id"], name: "index_events_on_season_id", using: :btree
@@ -392,4 +424,16 @@ ActiveRecord::Schema.define(version: 20160903224904) do
     t.datetime "updated_at",                       null: false
   end
 
+  create_table "versions", force: :cascade do |t|
+    t.string   "item_type",  limit: 191,        null: false
+    t.integer  "item_id",    limit: 4,          null: false
+    t.string   "event",      limit: 255,        null: false
+    t.string   "whodunnit",  limit: 255
+    t.text     "object",     limit: 4294967295
+    t.datetime "created_at"
+  end
+
+  add_index "versions", ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id", using: :btree
+
+  add_foreign_key "admin_debt_notifications", "users"
 end

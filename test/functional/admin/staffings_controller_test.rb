@@ -95,6 +95,10 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test 'should put sign_up' do
+    @user = FactoryGirl.create(:member_with_phone_number)
+    sign_in @user
+    print(@user.phone_number)
+
     @staffing = FactoryGirl.create(:staffing, job_count: 5)
     @job = @staffing.staffing_jobs.first
 
