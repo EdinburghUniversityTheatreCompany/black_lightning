@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'rails', '4.2.3'
+gem 'rails', '>=4.2.3'
 gem 'protected_attributes'
 
 gem 'mysql2'
@@ -24,6 +24,7 @@ gem 'kramdown'
 gem 'paperclip'
 gem 'nested_form'
 gem 'twitter'
+gem 'json', '1.8.5'
 gem 'rails_autolink'
 
 gem 'delayed_job_active_record'
