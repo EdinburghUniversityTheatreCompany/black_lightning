@@ -14,7 +14,7 @@ class MembershipActivationsController < ApplicationController
     else
       token = MembershipActivationToken.create!
     end
-    MembershipActivationMailer.send_activation(params[:email], token).deliver_now
+    MembershipActivationMailer.send_activation(params[:user][:email], token).deliver_now
 
     redirect_to new_membership_activation_path, notice: 'Mail sent to member'
   end
