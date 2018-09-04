@@ -38,8 +38,11 @@ class User < ActiveRecord::Base
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
-  devise :ldap_authenticatable, :recoverable, :rememberable,
-         :trackable, :registerable
+  # devise :ldap_authenticatable, :recoverable, :rememberable,
+  #        :trackable, :registerable
+
+  devise :database_authenticatable,
+         :recoverable, :rememberable, :validatable
 
   # set our own validations
 
@@ -120,67 +123,67 @@ class User < ActiveRecord::Base
     return user
   end
 
-  def ldap_before_save
-    self.first_name = ldap_entry.givenName[0]
-    self.last_name = ldap_entry.sn[0]
-    self.email = ldap_entry.mail[0]
-  end
+  # def ldap_before_save
+  #   self.first_name = ldap_entry.givenName[0]
+  #   self.last_name = ldap_entry.sn[0]
+  #   self.email = ldap_entry.mail[0]
+  # end
 
-  def after_ldap_authentication
-    update_ldap_attributes
-  end
+  # def after_ldap_authentication
+  #   update_ldap_attributes
+  # end
 
-  # Read LDAP attributes and roles, and map them to Black Lightning attributes
-  # and roles.
-  def update_ldap_attributes
-    if ldap_entry
-      puts "updating #{username}"
-      self.first_name = ldap_entry.givenName[0]
-      self.last_name = ldap_entry.sn[0]
-      self.email = ldap_entry.mail[0]
+  # # Read LDAP attributes and roles, and map them to Black Lightning attributes
+  # # and roles.
+  # def update_ldap_attributes
+  #   if ldap_entry
+  #     puts "updating #{username}"
+  #     self.first_name = ldap_entry.givenName[0]
+  #     self.last_name = ldap_entry.sn[0]
+  #     self.email = ldap_entry.mail[0]
 
-      if ldap_entry.try(:telephoneNumber)
-        self.phone_number = ldap_entry.telephoneNumber[0]
-      end
+  #     if ldap_entry.try(:telephoneNumber)
+  #       self.phone_number = ldap_entry.telephoneNumber[0]
+  #     end
 
-      add_ldap_roles
+  #     add_ldap_roles
 
-      save!
-    else
-      puts "skipping #{name}"
-    end
-  end
+  #     save!
+  #   else
+  #     puts "skipping #{name}"
+  #   end
+  # end
 
-  def add_ldap_roles
-    ldap_group_names = ldap_groups.map { |dn| role_name_from_dn(dn) }
+  # def add_ldap_roles
+  #   ldap_group_names = ldap_groups.map { |dn| role_name_from_dn(dn) }
 
-    self.roles = Role.where(name: ldap_group_names)
-  end
+  #   self.roles = Role.where(name: ldap_group_names)
+  # end
 
-  # For legacy reasons, some names are explicity mapped here:
-  # New roles should be added to IPA in lower case with hyphens (e.g. marketing-manager)
-  # and added to the website in title case (e.g Marketing Manager)
-  def role_name_from_dn(dn)
-    group_name = dn.split(',')[0].gsub('cn=', '').gsub('-', ' ')
+  # # For legacy reasons, some names are explicity mapped here:
+  # # New roles should be added to IPA in lower case with hyphens (e.g. marketing-manager)
+  # # and added to the website in title case (e.g Marketing Manager)
+  # def role_name_from_dn(dn)
+  #   group_name = dn.split(',')[0].gsub('cn=', '').gsub('-', ' ')
 
-    case group_name
-    when 'members'
-      return 'member'
-    when 'admins'
-      return 'admin'
-    when 'proposal viewer'
-      return 'proposal_viewer'
-    else
-      group_name.titleize
-    end
-  end
+  #   case group_name
+  #   when 'members'
+  #     return 'member'
+  #   when 'admins'
+  #     return 'admin'
+  #   when 'proposal viewer'
+  #     return 'proposal_viewer'
+  #   else
+  #     group_name.titleize
+  #   end
+  # end
 
-  # Override Devise LDAP method, as it doesn't seem to work properly
-  def ldap_groups
-    admin_ldap = Devise::LDAP::Connection.admin
-    filter = Net::LDAP::Filter.eq('member', ldap_entry.dn)
-    admin_ldap.search(filter: filter, base: 'cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk').collect(&:dn)
-  end
+  # # Override Devise LDAP method, as it doesn't seem to work properly
+  # def ldap_groups
+  #   admin_ldap = Devise::LDAP::Connection.admin
+  #   filter = Net::LDAP::Filter.eq('member', ldap_entry.dn)
+  #   admin_ldap.search(filter: filter, base: 'cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk').collect(&:dn)
+  # end
 
   ##
   # Returns true if the users first_name and last_name are set

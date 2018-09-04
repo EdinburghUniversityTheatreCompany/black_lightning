@@ -1,17 +1,17 @@
 ChaosRails::Application.routes.draw do
 
-
+  devise_for :users
   match '*path' => 'application#options', via: :options
 
   get 'seasons/show'
 
-  devise_for :users, controllers: { registrations: 'registrations' } do
-    post 'users/stripe'       => 'registrations#create_with_stripe', as: :user_stripe_registration
+  # devise_for :users, controllers: { registrations: 'registrations' } do
+  #   post 'users/stripe'       => 'registrations#create_with_stripe', as: :user_stripe_registration
 
-    get  'users/reactivation' => 'registrations#reactivation', as: :user_reactivation
-    post 'users/reactivate'   => 'registrations#reactivate',   as: :reactivate_user
-    post 'users/reactivate/stripe' => 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
-  end
+  #   get  'users/reactivation' => 'registrations#reactivation', as: :user_reactivation
+  #   post 'users/reactivate'   => 'registrations#reactivate',   as: :reactivate_user
+  #   post 'users/reactivate/stripe' => 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
+  # end
 
   resources :shows,       only: [:index, :show]
   resources :workshops,   only: [:index, :show]
@@ -102,9 +102,9 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :membership_cards, only: [:index, :show, :create, :destroy] do
-      get 'generate_card'
-    end
+    # resources :membership_cards, only: [:index, :show, :create, :destroy] do
+    #   get 'generate_card'
+    # end
 
     resources :roles
     get  '/permissions/grid' => 'permissions#grid', :as => :permissions
