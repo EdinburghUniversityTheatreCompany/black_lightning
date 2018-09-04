@@ -18,6 +18,7 @@ ChaosRails::Application.routes.draw do
   resources :news,        only: [:index, :show]
   resources :venues,      only: [:index, :show]
   resources :seasons,     only: [:show]
+  resources :membership_activations
   resources :users,       only: [:show] do
     collection do
       get 'current'          => 'users#current'

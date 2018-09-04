@@ -1,8 +1,9 @@
+require 'securerandom'
 class MembershipActivationToken < ActiveRecord::Base
+  belongs_to :user
   before_validation :generate_token
 
   validates :token, presence: true
-  belongs_to :user
 
   def to_param
     token
