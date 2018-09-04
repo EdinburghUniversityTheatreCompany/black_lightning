@@ -99,6 +99,10 @@
                     <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
                   <% end %>
 
+                <% if can? :create, MembershipActivationToken%>
+                    <li><%= link_to 'Membership Activation', new_membership_activation_path %></li>
+                <%end%>
+
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">

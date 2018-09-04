@@ -16,37 +16,22 @@
 
       <hr />
 
-      <% flash.each do |key, msg| %>
-      <% case key                       %>
-      <% when :alert                    %>
-      <%   alertclass = "alert-error"   %>
-      <% when :success                  %>
-      <%   alertclass = "alert-success" %>
-      <% when :notice                   %>
-      <%   alertclass = "alert-info"    %>
-      <% end %>
-      <p id="<%= key %>" class="alert <%= alertclass %>">
-        <%= msg %>
-      </p>
-      <hr />
-      <% end %>
+<%= simple_form_for(resource, as: resource_name, url: password_path(resource_name), html: { method: :put }) do |f| %>
+  <%= f.error_notification %>
 
-      <%= simple_form_for(resource, :as => resource_name, :url => password_path(resource_name), :html => { :method => :put } ) do |f| %>
-        <%= f.input :reset_password_token, :as => :hidden %>
-        <%= f.full_error :reset_password_token %>
+  <%= f.input :reset_password_token, as: :hidden %>
+  <%= f.full_error :reset_password_token %>
 
-        <div class="form-inputs">
-          <%= f.input :password, :label => "New password", :required => true %>
-          <%= f.input :password_confirmation, :label => "Confirm your new password", :required => true %>
-        </div>
+  <div class="form-inputs">
+    <%= f.input :password, label: "New password", required: true, autofocus: true, hint: ("#{@minimum_password_length} characters minimum" if @minimum_password_length) %>
+    <%= f.input :password_confirmation, label: "Confirm your new password", required: true %>
+  </div>
 
-        <div class="form-actions">
-          <%= button_tag(type: 'submit', class: "btn") do %>
-            <i class="fa fa-ok"></i> Confirm
-          <% end %>
-        </div>
+  <div class="form-actions">
+    <%= f.button :submit, "Change my password" %>
+  </div>
 
-        <% if params[:initial] then %>
+      <% if params[:initial] then %>
           <p style="font-size: x-small; line-height: normal;">
             By signing in, you agree that this website may store both a session
             cookie to allow you to log in, and any other cookies including tracking cookies.

@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20171129195316) do
+ActiveRecord::Schema.define(version: 20180904182652) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -276,6 +276,16 @@ ActiveRecord::Schema.define(version: 20171129195316) do
     t.integer "user_id",      limit: 4
   end
 
+  create_table "membership_activation_tokens", force: :cascade do |t|
+    t.string   "uid",        limit: 255
+    t.string   "token",      limit: 255
+    t.integer  "user_id",    limit: 4
+    t.datetime "created_at",             null: false
+    t.datetime "updated_at",             null: false
+  end
+
+  add_index "membership_activation_tokens", ["user_id"], name: "index_membership_activation_tokens_on_user_id", using: :btree
+
   create_table "membership_cards", force: :cascade do |t|
     t.string   "card_number", limit: 255
     t.integer  "user_id",     limit: 4
@@ -436,4 +446,5 @@ ActiveRecord::Schema.define(version: 20171129195316) do
   add_index "versions", ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id", using: :btree
 
   add_foreign_key "admin_debt_notifications", "users"
+  add_foreign_key "membership_activation_tokens", "users"
 end

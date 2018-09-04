@@ -1,6 +1,9 @@
 <h1><%= @fault_report.item %></h1>
 <div>
   <dl>
+    <dt>Item</dt>
+    <dd><%= @fault_report.item %></dd>
+  <dl>
     <dt>Severity</dt>
     <dd><%= @fault_report.severity.humanize %></dd>
   </dl>
