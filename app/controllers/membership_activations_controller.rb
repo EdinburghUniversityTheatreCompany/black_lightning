@@ -34,9 +34,10 @@ class MembershipActivationsController < ApplicationController
       end
 
       user.add_role :member
-      @token.destroy
+      user.touch(:consented)
+      sign_out
 
-      sign_in(user)
+      @token.destroy
       redirect_to admin_url
     else
       redirect_to edit_membership_activation_path(params[:id]), notice: "Consent is required to register on this website"

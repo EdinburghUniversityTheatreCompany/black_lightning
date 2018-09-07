@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20180904182652) do
+ActiveRecord::Schema.define(version: 20180907110213) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -409,6 +409,7 @@ ActiveRecord::Schema.define(version: 20180904182652) do
     t.datetime "avatar_updated_at"
     t.string   "username",               limit: 255
     t.string   "remember_token",         limit: 255
+    t.date     "consented"
   end
 
   add_index "users", ["email"], name: "index_users_on_email", unique: true, using: :btree
