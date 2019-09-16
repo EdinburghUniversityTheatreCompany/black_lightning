@@ -27,7 +27,7 @@ class Admin::TechieFamiliesController < AdminController
 
   def create
     @techies = Techie.all
-    @techie = Techie.new(params[:techie])
+    @techie = Techie.new(techie_params)
 
     respond_to do |format|
       if @techie.save
@@ -49,7 +49,7 @@ class Admin::TechieFamiliesController < AdminController
     @techie = Techie.find(params[:id])
 
     respond_to do |format|
-      if @techie.update_attributes(params[:techie])
+      if @techie.update_attributes(techie_params)
         format.html { redirect_to admin_techie_family_path(@techie), notice: 'Techie was successfully updated.' }
       else
         format.html { render 'edit' }
@@ -70,5 +70,13 @@ class Admin::TechieFamiliesController < AdminController
   def graph
     @title = 'Techie Families'
     @techies = Techie.all
+  end
+
+  #TODO test this lots
+  private
+  def techie_params
+    params.require(:techie).permit(:name,
+                                   children: [:name],
+                                   parents: [:name])
   end
 end

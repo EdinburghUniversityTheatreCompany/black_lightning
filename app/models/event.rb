@@ -80,9 +80,6 @@ class Event < ActiveRecord::Base
 
   validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
 
-  # Accessible Attributes #
-  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :price, :spark_seat_slug
-
   # Returns the last show to have finished.
   def self.last_show
     return where(['end_date < ? AND is_public = ?', Date.current, true]).last

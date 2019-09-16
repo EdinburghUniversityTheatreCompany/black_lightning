@@ -66,11 +66,6 @@ class User < ActiveRecord::Base
                     styles: { thumb: '150x150', display: '700x700' },
                     convert_options: { thumb: '-strip' }
 
-  # Setup accessible (or protected) attributes for your model
-  attr_accessible :email, :password, :password_confirmation, :remember_me, \
-                  :first_name, :last_name, :role_ids, :phone_number, :card_number, \
-                  :public_profile, :bio, :avatar, :username
-
   ##
   # A quick way of getting the user's full name.
   ##

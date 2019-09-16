@@ -33,8 +33,6 @@ class Picture < ActiveRecord::Base
 
   validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
 
-  attr_accessible :description, :image
-
   def image_url
     image.url(:original)
   end

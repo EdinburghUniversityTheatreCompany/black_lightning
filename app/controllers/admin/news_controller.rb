@@ -62,7 +62,7 @@ class Admin::NewsController < AdminController
   # POST /admin/news.json
   ##
   def create
-    @news = News.new(params[:news])
+    @news = News.new(news_params)
     @news.author = current_user
 
     respond_to do |format|
@@ -85,7 +85,7 @@ class Admin::NewsController < AdminController
     @news = News.find(params[:id])
 
     respond_to do |format|
-      if @news.update_attributes(params[:news])
+      if @news.update_attributes(news_params)
         format.html { redirect_to [:admin, @news], notice: 'News was successfully updated.' }
         format.json { head :no_content }
       else
@@ -109,4 +109,10 @@ class Admin::NewsController < AdminController
       format.json { head :no_content }
     end
   end
+
+  private
+  def news_params
+    params.require(:news).permit(:publish_date, :show_public, :slug, :title, :body, :image)
+  end
+
 end

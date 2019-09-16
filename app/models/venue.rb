@@ -44,6 +44,4 @@ class Venue < ActiveRecord::Base
   validates :name, presence: true
 
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
-
-  attr_accessible :description, :image, :location, :name, :tagline, :pictures, :pictures_attributes
 end

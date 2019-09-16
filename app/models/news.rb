@@ -56,8 +56,6 @@ class News < ActiveRecord::Base
 
   validates_attachment_content_type :image, content_type: /\Aimage\/.*\Z/
 
-  attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
-
   ##
   # Generates a default image for the news item. If extra artwork is added, increase the base of the modulo call.
   #

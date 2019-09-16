@@ -17,4 +17,9 @@ class AttachmentsController < ApplicationController
 
     send_file @attachment.file.path(params[:style]), x_sendfile: true, type: @attachment.file.content_type, disposition: 'inline', filename: @attachment.file.original_filename
   end
+
+  private
+  def attachment_params
+    params.require(:attachment).permit(:name, :file)
+  end
 end

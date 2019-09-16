@@ -68,7 +68,7 @@ class Admin::MassMailsController < AdminController
   def create
     send = params.delete(:send)
 
-    @mass_mail = MassMail.new(params[:mass_mail])
+    @mass_mail = MassMail.new(mass_mail_params)
 
     if @mass_mail.save
       if send
@@ -98,7 +98,7 @@ class Admin::MassMailsController < AdminController
     @mass_mail = MassMail.find(params[:id])
 
     respond_to do |format|
-      if @mass_mail.update_attributes(params[:mass_mail])
+      if @mass_mail.update_attributes(mass_mail_params)
         if send
           send_mail @mass_mail
         else
@@ -125,5 +125,10 @@ class Admin::MassMailsController < AdminController
       format.html { redirect_to admin_mass_mails_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def mass_mail_params
+    params.require(:mass_mail).permit(:body, :draft, :send_date, :sender_id, :subject)
   end
 end

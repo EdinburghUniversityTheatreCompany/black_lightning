@@ -23,8 +23,6 @@ class Techie < ActiveRecord::Base
 
   accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
-  attr_accessible :name, :children, :parents, :children_attributes, :parents_attributes
-
   default_scope -> { order('name ASC') }
 
   # Without these, this was breaking - I don't know why.

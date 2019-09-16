@@ -17,7 +17,7 @@ class Admin::RolesController < AdminController
   end
 
   def create
-    @role = Role.new(params[:role])
+    @role = Role.new(role_params)
 
     respond_to do |format|
       if @role.save
@@ -39,7 +39,7 @@ class Admin::RolesController < AdminController
     @role = Role.find(params[:id])
 
     respond_to do |format|
-      if @role.update_attributes(params[:role])
+      if @role.update_attributes(role_params)
         format.html { redirect_to admin_role_url(@role), notice: 'Role was successfully updated.' }
       else
         format.html { render 'edit' }
@@ -54,5 +54,10 @@ class Admin::RolesController < AdminController
     respond_to do |format|
       format.html { redirect_to admin_roles_path }
     end
+  end
+
+  private
+  def role_params
+    params.require(:role).permit(:name)
   end
 end

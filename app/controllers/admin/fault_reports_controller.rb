@@ -62,7 +62,7 @@ class Admin::FaultReportsController < AdminController
   # POST /admin/fault_reports.json
   ##
   def create
-    @fault_report = FaultReport.new(params[:fault_report])
+    @fault_report = FaultReport.new(fault_report_params)
     @fault_report.reported_by = current_user unless params[:fault_report][:reported_by_id]
 
     respond_to do |format|
@@ -85,7 +85,7 @@ class Admin::FaultReportsController < AdminController
     @fault_report = FaultReport.find(params[:id])
 
     respond_to do |format|
-      if @fault_report.update_attributes(params[:fault_report])
+      if @fault_report.update_attributes(fault_report_params)
         format.html { redirect_to [:admin, @fault_report], notice: 'Fault Report was successfully updated.' }
         format.json { head :no_content }
       else
@@ -109,4 +109,10 @@ class Admin::FaultReportsController < AdminController
       format.json { head :no_content }
     end
   end
+
+  private
+  def fault_report_params
+    params.require(:fault_report).permit(:item, :description, :severity, :status, :reported_by_id, :fixed_by_id)
+  end
+
 end

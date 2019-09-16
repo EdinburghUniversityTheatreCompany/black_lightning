@@ -18,7 +18,7 @@ class Admin::WorkshopsController < AdminController
   end
 
   def create
-    @workshop = Workshop.new(params[:workshop])
+    @workshop = Workshop.new(workshop_params)
     @users = User.by_first_name.all
 
     respond_to do |format|
@@ -41,7 +41,7 @@ class Admin::WorkshopsController < AdminController
     @users = User.by_first_name.all
 
     respond_to do |format|
-      if @workshop.update_attributes(params[:workshop])
+      if @workshop.update_attributes(workshop_params)
         format.html { redirect_to admin_workshop_url(@workshop), notice: 'Workshop was successfully updated.' }
       else
         format.html { render 'edit' }
@@ -57,5 +57,14 @@ class Admin::WorkshopsController < AdminController
       format.html { redirect_to admin_workshops_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def workshop_params
+    params.require(:workshop).permit(:description, :name, :slug, :tagline, :author, :venue, :venue_id, :season,
+                                     :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :price,
+                                     :spark_seat_slug,
+                                     pictures: [:description, :image],
+                                     team_members: [:position, :user, :user_id, :proposal, :proposal_id, :display_order])
   end
 end

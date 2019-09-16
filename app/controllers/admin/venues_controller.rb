@@ -60,7 +60,7 @@ class Admin::VenuesController < AdminController
   # POST /venues.json
   ##
   def create
-    @venue = Venue.new(params[:venue])
+    @venue = Venue.new(venue_params)
 
     respond_to do |format|
       if @venue.save
@@ -82,7 +82,7 @@ class Admin::VenuesController < AdminController
     @venue = Venue.find(params[:id])
 
     respond_to do |format|
-      if @venue.update_attributes(params[:venue])
+      if @venue.update_attributes(venue_params)
         format.html { redirect_to admin_venue_path(@venue), notice: 'Venue was successfully updated.' }
         format.json { head :no_content }
       else
@@ -105,5 +105,11 @@ class Admin::VenuesController < AdminController
       format.html { redirect_to admin_venues_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def venue_params
+    params.require(:venue).permit(:description, :image, :location, :name, :tagline,
+                                  pictures: [:description, :image])
   end
 end

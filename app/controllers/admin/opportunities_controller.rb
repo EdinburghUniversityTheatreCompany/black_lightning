@@ -64,7 +64,7 @@ class Admin::OpportunitiesController < AdminController
   # POST /admin/opportunity.json
   ##
   def create
-    @opportunity = Opportunity.new(params[:opportunity])
+    @opportunity = Opportunity.new(opportunity_params)
     @opportunity.creator = current_user
 
     respond_to do |format|
@@ -92,7 +92,7 @@ class Admin::OpportunitiesController < AdminController
     end
 
     respond_to do |format|
-      if @opportunity.update_attributes(params[:opportunity])
+      if @opportunity.update_attributes(opportunity_params)
         format.html { redirect_to [:admin, @opportunity], notice: 'Opportunity was successfully updated.' }
         format.json { head :no_content }
       else
@@ -156,5 +156,10 @@ class Admin::OpportunitiesController < AdminController
       format.html { redirect_to admin_opportunities_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def opportunity_params
+    params.require(:opportunity).permit(:approved, :approver_id, :creator_id, :description, :show_email, :title, :expiry_date)
   end
 end

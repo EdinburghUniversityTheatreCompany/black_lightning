@@ -54,7 +54,7 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
-    @user = User.create_user(params[:user])
+    @user = User.create_user(user_params)
 
     respond_to do |format|
       if @user.save
@@ -85,7 +85,7 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
     respond_to do |format|
-      if @user.update_attributes(params[:user])
+      if @user.update_attributes(user_params)
         if can? :read, User
           format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
         else
@@ -148,5 +148,11 @@ class Admin::UsersController < AdminController
 
       output << ']'
     end
+  end
+
+  private
+  def user_params
+    params.require(:user).permit(:email, :password, :password_confirmation, :remember_me, :first_name, :last_name,
+                                 :role_ids, :phone_number, :card_number, :public_profile, :bio, :avatar, :username)
   end
 end

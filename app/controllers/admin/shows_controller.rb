@@ -22,7 +22,7 @@ class Admin::ShowsController < AdminController
   end
 
   def create
-    @show = Show.new(params[:show])
+    @show = Show.new(show_params)
     @users = User.all
 
     respond_to do |format|
@@ -58,7 +58,7 @@ class Admin::ShowsController < AdminController
 
     respond_to do |format|
       if new_debtors.count == 0
-        if @show.update_attributes(params[:show])
+        if @show.update_attributes(show_params)
           format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
         else
           format.html { render 'edit' }
@@ -145,5 +145,15 @@ class Admin::ShowsController < AdminController
     response = http.request(request)
     data = response.body
     send_data(data, filename: "#{show.name} - Sales Report.pdf", type: 'application/pdf')
+  end
+
+  private
+  def show_params
+    params.require(:show).permit(:maintenance_debt_start, :staffing_debt_start, :description, :name, :slug, :tagline,
+                                 :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image,
+                                 :start_date, :end_date, :price, :spark_seat_slug,
+                                 reviews: [:body, :rating, :review_date, :organisation, :reviewer, :show_id],
+                                 pictures: [:description, :image],
+                                 team_members: [:position, :user, :user_id, :proposal, :proposal_id, :display_order])
   end
 end

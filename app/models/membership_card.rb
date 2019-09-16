@@ -3,8 +3,6 @@ class MembershipCard < ActiveRecord::Base
 
   belongs_to :user
 
-  attr_accessible :card_number, :user
-
   def to_param
     card_number
   end
