@@ -25,8 +25,6 @@ class Admin::Question < ActiveRecord::Base
 
   validates :question_text, presence: true
 
-  attr_accessible :question_text, :response_type
-
   ##
   # Defines the possible response types.
   #

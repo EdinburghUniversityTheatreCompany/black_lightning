@@ -23,8 +23,6 @@ class Admin::StaffingJob < ActiveRecord::Base
 
   validates :name, presence: true
 
-  attr_accessible :name, :user, :user_id
-
   ##
   # Get the start time in a js friendly fashion (UTC)
   ##

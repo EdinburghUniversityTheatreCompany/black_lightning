@@ -88,6 +88,6 @@ class Admin::MaintenanceDebtsController < AdminController
 
   # Only allow a trusted parameter "white list" through.
   def admin_maintenance_debt_params
-    params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id)
+    params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id, :state)
   end
 end

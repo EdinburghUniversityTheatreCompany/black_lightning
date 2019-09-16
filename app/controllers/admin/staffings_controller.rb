@@ -97,7 +97,7 @@ class Admin::StaffingsController < AdminController
   ##
   def create
     @users = User.all
-    @admin_staffing = Admin::Staffing.new(params[:admin_staffing])
+    @admin_staffing = Admin::Staffing.new(staffing_params)
 
     respond_to do |format|
       if @admin_staffing.save
@@ -128,7 +128,7 @@ class Admin::StaffingsController < AdminController
   # PUT  /admin/staffings/create_for_show
   ##
   def create_for_show
-    admin_staffing = Admin::Staffing.new(params[:admin_staffing])
+    admin_staffing = Admin::Staffing.new(staffing_params)
     admin_staffing_jobs = admin_staffing.staffing_jobs
 
     start_times = params[:start_times]
@@ -163,7 +163,7 @@ class Admin::StaffingsController < AdminController
     @admin_staffing = Admin::Staffing.find(params[:id])
 
     respond_to do |format|
-      if @admin_staffing.update_attributes(params[:admin_staffing])
+      if @admin_staffing.update_attributes(staffing_params)
         flash[:success] = 'Staffing was successfully updated.'
         format.html { redirect_to admin_staffing_path(@admin_staffing) }
         format.json { head :no_content }
@@ -247,5 +247,11 @@ class Admin::StaffingsController < AdminController
       format.html { redirect_to admin_staffings_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def staffing_params
+    params.require(:admin_staffing).permit(:show_title, :start_time, :end_time,
+                                           staffing_jobs: [:name, :user, :user_id])
   end
 end

@@ -140,7 +140,7 @@ class Admin::Proposals::ProposalsController < AdminController
       return
     end
 
-    @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
+    @proposal = Admin::Proposals::Proposal.new(proposal_params)
 
     @proposal.call = @call
 
@@ -182,7 +182,7 @@ class Admin::Proposals::ProposalsController < AdminController
     authorize!(:update, @proposal)
 
     respond_to do |format|
-      if @proposal.update_attributes(params[:admin_proposals_proposal])
+      if @proposal.update_attributes(proposal_params)
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully updated.' }
         format.json { head :no_content }
       else
@@ -271,5 +271,13 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   def about
+  end
+
+  private
+  def proposal_params
+    params.require(:admin_proposals_proposal).permit(:proposal_text, :publicity_text, :show_title, :late, :approved,
+                                                     :successful,
+                                                     answers: [:answer, :question_id, :file],
+                                                     team_members: [:position, :user, :user_id, :proposal, :proposal_id, :display_order])
   end
 end

@@ -60,7 +60,7 @@ class Admin::StaffingTemplatesController < AdminController
   # POST /admin/staffing_templates.json
   ##
   def create
-    @template = Admin::StaffingTemplate.new(params[:admin_staffing_template])
+    @template = Admin::StaffingTemplate.new(staffing_template_params)
 
     respond_to do |format|
       if@template.save
@@ -83,7 +83,7 @@ class Admin::StaffingTemplatesController < AdminController
     @template = Admin::StaffingTemplate.find(params[:id])
 
     respond_to do |format|
-      if@template.update_attributes(params[:admin_staffing_template])
+      if@template.update_attributes(staffing_template_params)
         flash[:success] = 'Staffing template was successfully updated.'
         format.html { redirect_to admin_staffing_template_path(@template) }
         format.json { head :no_content }
@@ -107,5 +107,11 @@ class Admin::StaffingTemplatesController < AdminController
       format.html { redirect_to admin_staffing_templates_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def staffing_template_params
+    params.require(:admin_staffing_template).permit(:name,
+                                                    staffing_jobs: [:name, :user, :user_id])
   end
 end

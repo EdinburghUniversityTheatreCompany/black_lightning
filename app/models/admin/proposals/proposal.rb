@@ -41,8 +41,6 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   validates :show_title, :proposal_text, :publicity_text, presence: true
   validates :team_members, presence: { message: 'You must add at least one team member' }
 
-  attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
-
   ##
   # Creates an instance of Admin::Answer for every question in the call.
   ##

@@ -27,8 +27,6 @@ class Admin::Proposals::Call < ActiveRecord::Base
 
   validates :deadline, :name, presence: true
 
-  attr_accessible :deadline, :name, :open, :archived, :questions, :questions_attributes
-
   before_update :mark_non_members_as_late, :if => :open_changed?
 
   ##

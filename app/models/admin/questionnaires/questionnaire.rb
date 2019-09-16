@@ -26,6 +26,4 @@ class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
   accepts_nested_attributes_for :answers, reject_if: :all_blank, allow_destroy: true
 
   validates :show_id, presence: true
-
-  attr_accessible :name, :questions, :questions_attributes, :answers, :answers_attributes
 end

@@ -61,7 +61,7 @@ class Admin::Proposals::CallsController < AdminController
   # POST /admin/proposals/calls.json
   ##
   def create
-    @admin_proposals_call = Admin::Proposals::Call.new(params[:admin_proposals_call])
+    @admin_proposals_call = Admin::Proposals::Call.new(call_params)
 
     respond_to do |format|
       if @admin_proposals_call.save
@@ -83,7 +83,7 @@ class Admin::Proposals::CallsController < AdminController
     @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
 
     respond_to do |format|
-      if @admin_proposals_call.update_attributes(params[:admin_proposals_call])
+      if @admin_proposals_call.update_attributes(call_params)
         format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully updated.' }
         format.json { head :no_content }
       else
@@ -119,5 +119,11 @@ class Admin::Proposals::CallsController < AdminController
       format.html { redirect_to admin_proposals_calls_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def call_params
+    params.require(:admin_proposals_call).permit(:deadline, :name, :open, :archived,
+                                 questions: [:question_text, :response_type])
   end
 end

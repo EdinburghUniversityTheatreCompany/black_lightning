@@ -12,7 +12,6 @@
 class Admin::DebtNotification < ActiveRecord::Base
   enum notification_type: %i[initial_notification reminder]
   belongs_to :user
-  attr_accessible :user, :user_id, :sent_on, :notification_type
 
   def self.notified_since(date)
     # returns users who have been sent a notification since the given date

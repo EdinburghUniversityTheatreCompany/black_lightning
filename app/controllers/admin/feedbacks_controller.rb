@@ -40,7 +40,7 @@ class Admin::FeedbacksController < AdminController
   # POST /admin/feedbacks
   # POST /admin/feedbacks.json
   def create
-    @feedback = Admin::Feedback.new(params[:admin_feedback])
+    @feedback = Admin::Feedback.new(feedback_params)
     @show = Show.find_by_slug(params[:show_id])
 
     @feedback.show = @show
@@ -71,7 +71,7 @@ class Admin::FeedbacksController < AdminController
     @show = @feedback.show
 
     respond_to do |format|
-      if @feedback.update_attributes(params[:admin_feedback])
+      if @feedback.update_attributes(feedback_params)
         format.html { redirect_to admin_show_feedbacks_path(@show), notice: 'Feedback was successfully updated.' }
         format.json { head :no_content }
       else
@@ -93,5 +93,10 @@ class Admin::FeedbacksController < AdminController
       format.html { redirect_to admin_show_feedbacks_path(@show) }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def feedback_params
+    params.require(:admin_feedback).permit(:body, :show, :show_id)
   end
 end

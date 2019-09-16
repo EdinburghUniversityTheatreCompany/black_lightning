@@ -49,7 +49,7 @@ class Admin::EditableBlocksController < AdminController
   # POST /admin/editable_blocks.json
   ##
   def create
-    @admin_editable_block = Admin::EditableBlock.new(params[:admin_editable_block])
+    @admin_editable_block = Admin::EditableBlock.new(editable_block_params)
 
     respond_to do |format|
       if @admin_editable_block.save
@@ -71,7 +71,7 @@ class Admin::EditableBlocksController < AdminController
     @admin_editable_block = Admin::EditableBlock.find(params[:id])
 
     respond_to do |format|
-      if @admin_editable_block.update_attributes(params[:admin_editable_block])
+      if @admin_editable_block.update_attributes(editable_block_params)
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully updated.' }
         format.json { head :no_content }
       else
@@ -94,5 +94,11 @@ class Admin::EditableBlocksController < AdminController
       format.html { redirect_to admin_editable_blocks_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def editable_block_params
+    params.require(:admin_editable_block).permit(:content, :name, :admin_page, :group,
+                                                 attachments: [:name, :file])
   end
 end

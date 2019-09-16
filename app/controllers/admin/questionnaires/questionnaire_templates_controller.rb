@@ -59,7 +59,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # POST /admin/questionnaires/questionnaire_templates.json
   ##
   def create
-    @template = Admin::Questionnaires::QuestionnaireTemplate.new(params[:admin_questionnaires_questionnaire_template])
+    @template = Admin::Questionnaires::QuestionnaireTemplate.new(questionnaire_params)
 
     respond_to do |format|
       if @template.save
@@ -81,7 +81,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
 
     respond_to do |format|
-      if @template.update_attributes(params[:admin_questionnaires_questionnaire_template])
+      if @template.update_attributes(questionnaire_params)
         format.html { redirect_to @template, notice: 'Call question template was successfully updated.' }
         format.json { head :no_content }
       else
@@ -104,5 +104,10 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
       format.html { redirect_to admin_questionnaires_questionnaire_templates_url }
       format.json { head :no_content }
     end
+  end
+
+  def questionnaire_params
+    params.require(:admin_questionnaires_questionnaire_template).permit(:name,
+                                                                        questions: [:question_text, :response_type])
   end
 end

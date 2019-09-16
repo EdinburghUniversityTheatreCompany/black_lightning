@@ -71,7 +71,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     end
 
     respond_to do |format|
-      if @admin_questionnaires_questionnaire.update_attributes(params[:admin_questionnaires_questionnaire])
+      if @admin_questionnaires_questionnaire.update_attributes(questionnaire_params)
         format.html { redirect_to @admin_questionnaires_questionnaire, notice: 'Questionnaire was successfully updated.' }
         format.json { head :no_content }
       else
@@ -119,5 +119,13 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
       format.html # answer.html.erb
       format.json { render json: @admin_questionnaires_questionnaire }
     end
+  end
+
+  private
+  def questionnaire_params
+    #TODO check this prevents users from changing questions when answering them
+    params.require(:admin_questionnaires_questionnaire).permit(:name,
+                                                               questions: [:question_text, :response_type],
+                                                               answers: [:answer, :question_id, :file])
   end
 end
