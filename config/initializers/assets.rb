@@ -28,3 +28,4 @@ Rails.application.config.assets.precompile += %w(
   login.css
   jquery.lightbox-0.5.css
 )
+
