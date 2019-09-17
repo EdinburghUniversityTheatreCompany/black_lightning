@@ -72,11 +72,10 @@ class Admin::TechieFamiliesController < AdminController
     @techies = Techie.all
   end
 
-  #TODO test this lots
   private
   def techie_params
     params.require(:techie).permit(:name,
-                                   childrens_attributes: [:id, :_destroy, :name],
+                                   children_attributes: [:id, :_destroy, :name],
                                    parents_attributes: [:id, :_destroy, :name])
   end
 end
