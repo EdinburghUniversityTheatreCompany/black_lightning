@@ -44,7 +44,7 @@ class Admin::JobControlController < AdminController
   def remove
     authorize! :delete, Delayed::Backend::ActiveRecord::Job
     Delayed::Job.find(params[:id]).delete
-    redirect_to :back
+    redirect_back(fallback_location: admin_jobs_overview_path)
   end
 
   ##
@@ -57,6 +57,6 @@ class Admin::JobControlController < AdminController
 
     job.retry_job
 
-    redirect_to :back
+    redirect_back(fallback_location: admin_jobs_overview_path)
   end
 end
