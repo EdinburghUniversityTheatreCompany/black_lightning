@@ -41,7 +41,7 @@ class Ability
             subject_class = subject
           end
 
-          if role.permissions.where(action: [aliases_for_action(action), :manage].flatten, subject_class: subject_class).any?
+          if role.permissions.where(action: [aliases_for_action(action), :manage].flatten, subject_class: subject_class.to_s).any?
             allow = true
           end
         end
