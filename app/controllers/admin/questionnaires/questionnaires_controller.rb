@@ -125,7 +125,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def questionnaire_params
     #TODO check this prevents users from changing questions when answering them
     params.require(:admin_questionnaires_questionnaire).permit(:name,
-                                                               questions: [:question_text, :response_type],
-                                                               answers: [:answer, :question_id, :file])
+                                                               questions_attributes: [:question_text, :response_type],
+                                                               answers_attributes: [:answer, :question_id, :file])
   end
 end

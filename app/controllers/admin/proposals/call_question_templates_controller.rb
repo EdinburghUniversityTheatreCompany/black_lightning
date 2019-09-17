@@ -104,6 +104,6 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
   private
   def question_template_params
     params.require(:admin_proposals_call_question_template).permit(:name,
-                                                                   questions: [:question_text, :response_type])
+                                                                   questions_attributes: [:question_text, :response_type])
   end
 end

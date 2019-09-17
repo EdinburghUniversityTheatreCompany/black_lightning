@@ -110,6 +110,6 @@ class Admin::VenuesController < AdminController
   private
   def venue_params
     params.require(:venue).permit(:description, :image, :location, :name, :tagline,
-                                  pictures: [:description, :image])
+                                  pictures_attributes: [:description, :image])
   end
 end

@@ -277,7 +277,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def proposal_params
     params.require(:admin_proposals_proposal).permit(:proposal_text, :publicity_text, :show_title, :late, :approved,
                                                      :successful,
-                                                     answers: [:answer, :question_id, :file],
-                                                     team_members: [:position, :user, :user_id, :proposal, :proposal_id, :display_order])
+                                                     answers_attributes: [:answer, :question_id, :file],
+                                                     team_members_attributes: [:position, :user, :user_id, :proposal, :proposal_id, :display_order])
   end
 end

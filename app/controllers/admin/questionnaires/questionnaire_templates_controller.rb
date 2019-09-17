@@ -108,6 +108,6 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
 
   def questionnaire_params
     params.require(:admin_questionnaires_questionnaire_template).permit(:name,
-                                                                        questions: [:question_text, :response_type])
+                                                                        questions_attributes: [:question_text, :response_type])
   end
 end

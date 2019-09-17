@@ -99,6 +99,6 @@ class Admin::EditableBlocksController < AdminController
   private
   def editable_block_params
     params.require(:admin_editable_block).permit(:content, :name, :admin_page, :group,
-                                                 attachments: [:name, :file])
+                                                 attachments_attributes: [:name, :file])
   end
 end

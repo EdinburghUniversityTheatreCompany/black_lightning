@@ -112,6 +112,6 @@ class Admin::StaffingTemplatesController < AdminController
   private
   def staffing_template_params
     params.require(:admin_staffing_template).permit(:name,
-                                                    staffing_jobs: [:name, :user, :user_id])
+                                                    staffing_jobs_attributes: [:name, :user, :user_id])
   end
 end

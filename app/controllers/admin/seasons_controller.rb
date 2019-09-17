@@ -47,7 +47,7 @@ class Admin::SeasonsController < AdminController
   # POST /seasons
   # POST /seasons.json
   def create
-    @season = Season.new(params[:season])
+    @season = Season.new(season_params)
     @users = User.by_first_name.all
 
     respond_to do |format|
@@ -68,7 +68,7 @@ class Admin::SeasonsController < AdminController
     @users = User.by_first_name.all
 
     respond_to do |format|
-      if @season.update_attributes(params[:season])
+      if @season.update_attributes(season_params)
         format.html { redirect_to admin_season_path(@season), notice: 'Season was successfully updated.' }
         format.json { head :no_content }
       else
@@ -88,5 +88,10 @@ class Admin::SeasonsController < AdminController
       format.html { redirect_to admin_seasons_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+  def season_params
+    params.require(:season).permit(:description, :start_date, :end_date, :name, :slug)
   end
 end
