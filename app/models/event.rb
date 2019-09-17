@@ -138,7 +138,7 @@ class Event < ActiveRecord::Base
 
     options = options.merge(defaults) do |_key, oldval, newval|
       # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
+      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).distinct
     end
 
     super(options)

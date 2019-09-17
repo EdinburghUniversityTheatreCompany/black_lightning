@@ -28,6 +28,6 @@ class Admin::EditableBlock < ActiveRecord::Base
   accepts_nested_attributes_for :attachments, reject_if: :all_blank, allow_destroy: true
 
   def self.groups
-    select('`group`').uniq.map(&:group)
+    select('`group`').distinct.map(&:group)
   end
 end

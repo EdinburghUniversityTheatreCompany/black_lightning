@@ -15,7 +15,7 @@ class Admin::DebtNotification < ActiveRecord::Base
 
   def self.notified_since(date)
     # returns users who have been sent a notification since the given date
-    return User.includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on >?', date).references(:admin_debt_notifications).uniq
+    return User.includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on >?', date).references(:admin_debt_notifications).distinct
   end
 
   def self.search_for(user_fname, user_sname)

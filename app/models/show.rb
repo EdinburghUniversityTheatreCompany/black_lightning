@@ -43,7 +43,7 @@ class Show < Event
   end
 
   def create_maintenance_debts
-    uniqueTeam = self.users.uniq
+    uniqueTeam = self.users.distinct
     uniqueTeam.each do |usr, index|
       if !usr.admin_maintenance_debts.where(show_id: self.id).any?
         debt = Admin::MaintenanceDebt.new
@@ -57,7 +57,7 @@ class Show < Event
   end
 
   def create_staffing_debts(numEach)
-    uniqueTeam = self.users.uniq
+    uniqueTeam = self.users.distinct
     uniqueTeam.each do |usr|
       x = numEach - usr.admin_staffing_debts.where(show_id:self.id, converted: false).count
       x.times do |i|
@@ -81,7 +81,7 @@ class Show < Event
 
     options = options.merge(defaults) do |_key, oldval, newval|
       # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
+      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).distinct
     end
 
     super(options)

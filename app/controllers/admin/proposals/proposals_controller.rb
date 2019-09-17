@@ -26,7 +26,7 @@ class Admin::Proposals::ProposalsController < AdminController
       if current_user.has_role? :proposal_viewer
         @proposals = @call.proposals
       else
-        @proposals = @call.proposals.joins(:users).where('user_id = ?', current_user.id).uniq
+        @proposals = @call.proposals.joins(:users).where('user_id = ?', current_user.id).distinct
       end
     elsif !@call.archived
       # After the deadline:
@@ -36,11 +36,11 @@ class Admin::Proposals::ProposalsController < AdminController
       else
         # Other users can only see proposals that they are part of, or
         # that have been approved.
-        @proposals = @call.proposals.joins(:users).where('user_id = ? or approved = true', current_user.id).uniq
+        @proposals = @call.proposals.joins(:users).where('user_id = ? or approved = true', current_user.id).distinct
       end
     else
       # for archived calls, only approved proposals may be seen:
-      @proposals = @call.proposals.where('approved = true').uniq
+      @proposals = @call.proposals.where('approved = true').distinct
     end
 
     # However, admin can see all proposals at any time.

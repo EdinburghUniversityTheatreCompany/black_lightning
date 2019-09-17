@@ -47,7 +47,7 @@ class Admin::ShowsController < AdminController
     #used to check any new users being added are not in debt PLEASE make nicer if you can
     if params[:show][:team_members_attributes]
       previous_users = @show.users
-      parameter_user_ids = params[:show][:team_members_attributes].values.collect { |e| e[:'user_id'] }.uniq
+      parameter_user_ids = params[:show][:team_members_attributes].values.collect { |e| e[:'user_id'] }.distinct
       new_users = User.find(parameter_user_ids) - previous_users
       new_debtors = new_users.select{|user| user.in_debt}
     else
