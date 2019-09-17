@@ -103,7 +103,8 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
 
   private
   def question_template_params
-    params.require(:admin_proposals_call_question_template).permit(:name,
-                                                                   questions_attributes: [:question_text, :response_type])
+    #TODO confirm this still works and isnt a testing framework quirk
+    params.require(:template).permit(:name,
+                                     questions_attributes: [:question_text, :response_type])
   end
 end

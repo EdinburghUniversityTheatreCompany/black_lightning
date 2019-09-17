@@ -15,7 +15,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
   test 'should get show' do
     @news = FactoryGirl.create(:news)
 
-    get :show, id: @news
+    get :show, params: { id: @news}
     assert_response :success
   end
 
@@ -37,7 +37,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
   test 'should get edit' do
     @news = FactoryGirl.create(:news)
 
-    get :edit, id: @news
+    get :edit, params: { id: @news}
     assert_response :success
   end
 
@@ -45,7 +45,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
     @news = FactoryGirl.create(:news)
     attrs = FactoryGirl.attributes_for(:news)
 
-    put :update, id: @news, news: attrs
+    put :update, params: { id: @news, news: attrs}
     assert_redirected_to admin_news_path(assigns(:news))
   end
 
@@ -53,7 +53,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
     @news = FactoryGirl.create(:news)
 
     assert_difference('News.count', -1) do
-      delete :destroy, id: @news
+      delete :destroy, params: { id: @news}
     end
 
     assert_redirected_to admin_news_index_path

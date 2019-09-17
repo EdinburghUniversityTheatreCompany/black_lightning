@@ -14,7 +14,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should get role' do
-    get :show, id: @role
+    get :show, params: { id: @role}
     assert_response :success
   end
 
@@ -35,18 +35,18 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should get edit' do
-    get :edit, id: @role
+    get :edit, params: { id: @role}
     assert_response :success
   end
 
   test 'should update role' do
-    put :update, id: @role, role: { name: @role.name }
+    put :update, params: {id: @role, role: { name: @role.name }}
     assert_redirected_to admin_role_path(@role)
   end
 
   test 'should destroy role' do
     assert_difference('Role.count', -1) do
-      delete :destroy, id: @role
+      delete :destroy, params: { id: @role}
     end
 
     assert_redirected_to admin_roles_path

@@ -14,7 +14,7 @@ gem 'font-awesome-sass'
 
 gem 'simple_form'
 gem 'devise'
-gem 'cancan'
+gem 'cancancan'
 gem 'rolify'
 
 gem 'will_paginate'
@@ -50,6 +50,8 @@ group :development, :test do
 
   gem 'rdoc'
   gem 'rubocop'
+  gem 'rubocop-faker'
+  gem 'rails-controller-testing'
 end
 
 group :test do

@@ -4,7 +4,7 @@ class SeasonsControllerTest < ActionController::TestCase
   test 'should get show' do
     @season = FactoryGirl.create(:season, show_count: 10)
 
-    get :show, id: @season
+    get :show, params: { id: @season}
     assert_response :success
   end
 end

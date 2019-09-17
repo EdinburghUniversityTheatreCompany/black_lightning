@@ -12,7 +12,7 @@ class VenuesControllerTest < ActionController::TestCase
   end
 
   test 'should show venue' do
-    get :show, id: @venue
+    get :show, params: { id: @venue}
     assert_response :success
   end
 end

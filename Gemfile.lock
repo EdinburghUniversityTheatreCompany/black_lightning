@@ -60,7 +60,7 @@ GEM
     buftok (0.2.0)
     builder (3.2.3)
     byebug (11.0.1)
-    cancan (1.6.10)
+    cancancan (3.0.1)
     capistrano (3.11.1)
       airbrussh (>= 1.0.0)
       i18n
@@ -208,6 +208,10 @@ GEM
       bundler (>= 1.3.0)
       railties (= 5.0.7.2)
       sprockets-rails (>= 2.0.0)
+    rails-controller-testing (1.0.4)
+      actionpack (>= 5.0.1.x)
+      actionview (>= 5.0.1.x)
+      activesupport (>= 5.0.1.x)
     rails-dom-testing (2.0.3)
       activesupport (>= 4.2.0)
       nokogiri (>= 1.6)
@@ -248,6 +252,8 @@ GEM
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 1.7)
+    rubocop-faker (0.2.0)
+      rubocop (>= 0.74)
     ruby-prof (1.0.0)
     ruby-progressbar (1.10.1)
     rubyzip (1.0.0)
@@ -330,7 +336,7 @@ DEPENDENCIES
   binding_of_caller
   bootstrap-sass (< 3.0)
   byebug
-  cancan
+  cancancan
   capistrano-rails
   capistrano-rvm
   capistrano3-delayed-job
@@ -355,12 +361,14 @@ DEPENDENCIES
   prawn
   rack-cors
   rails (~> 5.0.0)
+  rails-controller-testing
   rails_autolink
   ransack
   rdoc
   rolify
   rqrcode
   rubocop
+  rubocop-faker
   ruby-prof
   sass-rails (~> 5.0.0)
   simple_form

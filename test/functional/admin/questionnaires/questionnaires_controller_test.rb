@@ -16,14 +16,14 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   test 'should show admin_questionnaires_questionnaire' do
     @questionnaire = FactoryGirl.create(:questionnaire)
 
-    get :show,  id: @questionnaire
+    get :show, params: { id: @questionnaire}
     assert_response :success
   end
 
   test 'should get edit' do
     @questionnaire = FactoryGirl.create(:questionnaire)
 
-    get :edit, id: @questionnaire
+    get :edit, params: { id: @questionnaire}
     assert_response :success
   end
 
@@ -32,7 +32,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
 
     team_user = User.find_by_email('test@bedlamtheatre.co.uk')
 
-    put :update, id: @questionnaire, admin_questionnaires_questionnaire: { questions_attributes: { '0' => { question_text: 'Testing', response_type: 'Long Text' } } }
+    put :update, params: {id: @questionnaire, admin_questionnaires_questionnaire: { questions_attributes: { '0' => { question_text: 'Testing', response_type: 'Long Text' } } }}
     assert_redirected_to admin_questionnaires_questionnaire_path(@questionnaire, assigns(:questionnaire))
   end
 
@@ -40,7 +40,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     @questionnaire = FactoryGirl.create(:questionnaire)
 
     assert_difference('Admin::Questionnaires::Questionnaire.count', -1) do
-      delete :destroy, id: @questionnaire
+      delete :destroy, params: { id: @questionnaire}
     end
 
     assert_redirected_to admin_questionnaires_questionnaires_path

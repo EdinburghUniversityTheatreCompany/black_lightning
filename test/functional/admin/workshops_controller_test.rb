@@ -16,7 +16,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
   test 'should get show' do
     @workshop = FactoryGirl.create(:workshop)
 
-    get :show, id: @workshop
+    get :show, params: { id: @workshop}
     assert_response :success
   end
 
@@ -38,7 +38,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
   test 'should get edit' do
     @workshop = FactoryGirl.create(:workshop)
 
-    get :edit, id: @workshop
+    get :edit, params: { id: @workshop}
     assert_response :success
   end
 
@@ -46,7 +46,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
     @workshop = FactoryGirl.create(:workshop)
     attrs = FactoryGirl.attributes_for(:workshop)
 
-    put :update, id: @workshop, workshop: attrs
+    put :update, params: { id: @workshop, workshop: attrs}
     assert_redirected_to admin_workshop_path(assigns(:workshop))
   end
 
@@ -54,7 +54,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
     @workshop = FactoryGirl.create(:workshop)
 
     assert_difference('Workshop.count', -1) do
-      delete :destroy, id: @workshop
+      delete :destroy, params: { id: @workshop}
     end
 
     assert_redirected_to admin_workshops_path

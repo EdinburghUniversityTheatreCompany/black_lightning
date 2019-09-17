@@ -30,7 +30,7 @@ class MembershipActivationsController < ApplicationController
       if @token.user
         user = @token.user
       else
-        user = User.create!(params[:user])
+        user = User.create!(user_params)
       end
 
       user.add_role :member

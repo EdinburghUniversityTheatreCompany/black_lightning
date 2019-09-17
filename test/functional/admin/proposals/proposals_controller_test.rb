@@ -10,7 +10,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'should get index' do
     FactoryGirl.create_list(:proposal, 10, call: @call)
 
-    get :index, call_id: @call.id
+    get :index, params: {call_id: @call.id}
     assert_response :success
     assert_not_nil assigns(:proposals)
   end
@@ -22,8 +22,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should get new' do
-    get :new, call_id: @call.id
-
+    get :new, params: {call_id: @call.id}
     assert_response :success
   end
 
@@ -52,7 +51,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     attrs[:team_members_attributes] = team_members
 
     assert_difference('Admin::Proposals::Proposal.count') do
-      post :create, call_id: @call.id, admin_proposals_proposal: attrs
+      post :create, params: {call_id: @call.id, admin_proposals_proposal: attrs}
     end
 
     assert_redirected_to admin_proposals_call_proposal_path(@call, assigns(:proposal))
@@ -68,7 +67,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'should get edit' do
     @proposal = FactoryGirl.create(:proposal, call: @call)
 
-    get :edit, call_id: @call.id, id: @proposal
+    get :edit, params: {call_id: @call.id, id: @proposal}
     assert_response :success
   end
 
@@ -76,7 +75,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @proposal = FactoryGirl.create(:proposal, call: @call)
     attrs = FactoryGirl.attributes_for(:proposal)
 
-    put :update, call_id: @call.id, id: @proposal, admin_proposals_proposal: attrs
+    put :update, params: {call_id: @call.id, id: @proposal, admin_proposals_proposal: attrs}
     assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
   end
 
@@ -84,7 +83,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @proposal = FactoryGirl.create(:proposal, call: @call)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do
-      delete :destroy, call_id: @call.id, id: @proposal
+      delete :destroy, params: {call_id: @call.id, id: @proposal}
     end
 
     assert_redirected_to admin_proposals_call_proposals_url(@call)
@@ -97,7 +96,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     sign_in member
 
-    get :index, call_id: @call.id
+    get :index, params: {call_id: @call.id}
     proposals = assigns(:proposals)
     assert_response :success
     assert_equal proposals.count, 0
@@ -116,7 +115,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @proposal.team_members << FactoryGirl.create(:team_member, user: member)
     @proposal.save
 
-    get :index, call_id: @call.id
+    get :index, params: {call_id: @call.id}
     proposals = assigns(:proposals)
     assert_response :success
     assert_equal proposals.count, 1
@@ -132,12 +131,12 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     sign_in member
 
-    get :index, call_id: @call.id
+    get :index, params: {call_id: @call.id}
     proposals = assigns(:proposals)
     assert_response :success
     assert_equal proposals.count, 0
 
-    get :show, call_id: @call.id,  id: @proposal
+    get :show, params: {call_id: @call.id,  id: @proposal}
     assert_redirected_to static_path('access_denied')
   end
 
@@ -151,7 +150,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @proposal.team_members << FactoryGirl.create(:team_member, user: member)
     @proposal.save
 
-    get :index, call_id: @call.id
+    get :index, params: {call_id: @call.id}
     proposals = assigns(:proposals)
     assert_response :success
     assert_equal proposals.count, 1
@@ -167,7 +166,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     sign_in member
 
-    get :index, call_id: @call.id
+    get :index, params: {call_id: @call.id}
     proposals = assigns(:proposals)
     assert_response :success
     assert_equal proposals.count, 6

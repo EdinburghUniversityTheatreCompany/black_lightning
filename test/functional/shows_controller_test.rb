@@ -12,7 +12,7 @@ class ShowsControllerTest < ActionController::TestCase
   test 'should get show' do
     @show = FactoryGirl.create(:show)
 
-    get :show, id: @show
+    get :show, params: { id: @show}
     assert_response :success
   end
 end

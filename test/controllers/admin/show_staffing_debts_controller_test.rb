@@ -10,7 +10,7 @@ class Admin::ShowStaffingDebtsControllerTest < ActionController::TestCase
 
   test "should get create" do
     before = Admin::StaffingDebt.count
-    get :create, {format:@show.id, number_of_slots_due: 1}
+    get :create, params: {format:@show.id, number_of_slots_due: 1}
     assert_redirected_to admin_show_path(@show)
     change = @show.users.uniq.count
     assert_equal (before + change) , Admin::StaffingDebt.count

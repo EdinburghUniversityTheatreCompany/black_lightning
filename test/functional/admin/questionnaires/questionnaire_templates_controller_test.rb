@@ -30,23 +30,23 @@ class Admin::Questionnaires::QuestionnaireTemplatesControllerTest < ActionContro
   end
 
   test 'should show admin_questionnaires_questionnaire_template' do
-    get :show, id: @template
+    get :show, params: { id: @template}
     assert_response :success
   end
 
   test 'should get edit' do
-    get :edit, id: @template
+    get :edit, params: { id: @template}
     assert_response :success
   end
 
   test 'should update admin_questionnaires_questionnaire_template' do
-    put :update, id: @template, template: { name: @template.name }
+    put :update, params: {id: @template, template: { name: @template.name }}
     assert_redirected_to admin_questionnaires_questionnaire_template_path(assigns(:template))
   end
 
   test 'should destroy admin_questionnaires_questionnaire_template' do
     assert_difference('Admin::Questionnaires::QuestionnaireTemplate.count', -1) do
-      delete :destroy, id: @template
+      delete :destroy, params: { id: @template}
     end
 
     assert_redirected_to admin_questionnaires_questionnaire_templates_path

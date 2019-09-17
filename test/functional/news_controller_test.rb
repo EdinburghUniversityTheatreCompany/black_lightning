@@ -12,7 +12,7 @@ class NewsControllerTest < ActionController::TestCase
   test 'should show news' do
     @news = FactoryGirl.create(:news)
 
-    get :show, id: @news
+    get :show, params: { id: @news}
     assert_response :success
   end
 end

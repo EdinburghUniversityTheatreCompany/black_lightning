@@ -15,7 +15,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   test 'should get show' do
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
 
-    get :show, id: @template
+    get :show, params: { id: @template}
     assert_response :success
   end
 
@@ -37,7 +37,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   test 'should get edit' do
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
 
-    get :edit, id: @template
+    get :edit, params: { id: @template}
     assert_response :success
   end
 
@@ -45,7 +45,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
     @template = FactoryGirl.create(:staffing_template, job_count: 5)
     attrs = FactoryGirl.attributes_for(:staffing_template)
 
-    put :update, id: @template, admin_staffing_template: attrs
+    put :update, params: {id: @template, admin_staffing_template: attrs}
     assert_redirected_to admin_staffing_template_path(@template)
   end
 
@@ -54,7 +54,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
 
     assert_difference('Admin::StaffingTemplate.count', -1) do
       assert_difference('Admin::StaffingJob.count', -5) do
-        delete :destroy, id: @template
+        delete :destroy, params: { id: @template}
       end
     end
 

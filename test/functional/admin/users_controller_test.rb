@@ -13,7 +13,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should get show' do
-    get :show, id: @user
+    get :show, params: { id: @user}
     assert_response :success
   end
 
@@ -34,18 +34,18 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should get edit' do
-    get :edit, id: @user
+    get :edit, params: { id: @user}
     assert_response :success
   end
 
   test 'should update user' do
-    put :update, id: @user, user: { first_name: 'Test' }
+    put :update, params: {id: @user, user: { first_name: 'Test' }}
     assert_redirected_to admin_user_path(@user)
   end
 
   test 'should destroy user' do
     assert_difference('User.count', -1) do
-      delete :destroy, id: @user
+      delete :destroy, params: { id: @user}
     end
 
     assert_redirected_to admin_users_path

@@ -15,7 +15,7 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
   test 'should get show' do
     @season = FactoryGirl.create(:season)
 
-    get :show, id: @season
+    get :show, params: { id: @season}
     assert_response :success
   end
 
@@ -37,7 +37,7 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
   test 'should get edit' do
     @season = FactoryGirl.create(:season)
 
-    get :edit, id: @season
+    get :edit, params: { id: @season}
     assert_response :success
   end
 
@@ -45,7 +45,7 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
     @season = FactoryGirl.create(:season)
     attrs = FactoryGirl.attributes_for(:season)
 
-    put :update, id: @season, season: attrs
+    put :update, params: {id: @season, season: attrs}
     assert_redirected_to admin_season_path(assigns(:season))
   end
 
@@ -53,7 +53,7 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
     @season = FactoryGirl.create(:season)
 
     assert_difference('Season.count', -1) do
-      delete :destroy, id: @season
+      delete :destroy, params: { id: @season}
     end
 
     assert_redirected_to admin_seasons_path

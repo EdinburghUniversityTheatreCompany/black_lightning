@@ -25,25 +25,25 @@ class Admin::EditableBlocksControllerTest < ActionController::TestCase
     Admin::EditableBlock.find(@admin_editable_block.id).destroy
 
     assert_difference('Admin::EditableBlock.count') do
-      post :create, admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }
+      post :create, params: {admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }}
     end
 
     assert_redirected_to admin_editable_blocks_path
   end
 
   test 'should get edit' do
-    get :edit, id: @admin_editable_block
+    get :edit, params: { id: @admin_editable_block}
     assert_response :success
   end
 
   test 'should update admin_editable_block' do
-    put :update, id: @admin_editable_block, admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }
+    put :update, params: {id: @admin_editable_block, admin_editable_block: { content: @admin_editable_block.content, name: @admin_editable_block.name }}
     assert_redirected_to admin_editable_blocks_path
   end
 
   test 'should destroy admin_editable_block' do
     assert_difference('Admin::EditableBlock.count', -1) do
-      delete :destroy, id: @admin_editable_block
+      delete :destroy, params: { id: @admin_editable_block}
     end
 
     assert_redirected_to admin_editable_blocks_path

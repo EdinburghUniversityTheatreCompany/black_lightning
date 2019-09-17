@@ -40,8 +40,7 @@ class Admin::JobControlControllerTest < ActionController::TestCase
     request.env['HTTP_REFERER'] = admin_jobs_path('overview')
 
     assert_difference('Delayed::Job.count', -1) do
-      get :remove, id: job.id
-    end
+      get :remove, params: {id: job.id}    end
 
     assert_redirected_to admin_jobs_path('overview')
   end
@@ -55,8 +54,7 @@ class Admin::JobControlControllerTest < ActionController::TestCase
 
     request.env['HTTP_REFERER'] = admin_jobs_path('overview')
 
-    get :retry, id: job.id
-
+    get :retry, params: {id: job.id}
     assert_redirected_to admin_jobs_path('overview')
 
     job.reload

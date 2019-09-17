@@ -16,7 +16,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   test 'should get show' do
     @opportunity = FactoryGirl.create(:opportunity)
 
-    get :show, id: @opportunity
+    get :show, params: { id: @opportunity}
     assert_response :success
   end
 
@@ -38,7 +38,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   test 'should get edit' do
     @opportunity = FactoryGirl.create(:opportunity)
 
-    get :edit, id: @opportunity
+    get :edit, params: { id: @opportunity}
     assert_response :success
   end
 
@@ -46,7 +46,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     @opportunity = FactoryGirl.create(:opportunity)
     attrs = FactoryGirl.attributes_for(:opportunity)
 
-    put :update, id: @opportunity, opportunity: attrs
+    put :update, params: {id: @opportunity, opportunity: attrs}
     assert_redirected_to admin_opportunity_path(assigns(:opportunity))
   end
 
@@ -54,7 +54,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     @opportunity = FactoryGirl.create(:opportunity)
 
     assert_difference('Opportunity.count', -1) do
-      delete :destroy, id: @opportunity
+      delete :destroy, params: { id: @opportunity}
     end
 
     assert_redirected_to admin_opportunities_path

@@ -5,7 +5,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     eb = admin_editable_blocks(:one)
     attachment = FactoryGirl.create(:attachment, editable_block: eb)
 
-    get :show, slug: attachment.name
+    get :show, params: {slug: attachment.name}
     assert_response :success
   end
 end

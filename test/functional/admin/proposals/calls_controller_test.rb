@@ -31,14 +31,14 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   test 'should show admin_proposals_call' do
     @call = FactoryGirl.create(:proposal_call, question_count: 5, proposal_count: 5)
 
-    get :show, id: @call
+    get :show, params: { id: @call}
     assert_response :success
   end
 
   test 'should get edit' do
     @call = FactoryGirl.create(:proposal_call, question_count: 5)
 
-    get :edit, id: @call
+    get :edit, params: { id: @call}
     assert_response :success
   end
 
@@ -46,7 +46,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     attrs = FactoryGirl.attributes_for(:proposal_call, question_count: 3)
     @call = FactoryGirl.create(:proposal_call, question_count: 5, proposal_count: 5)
 
-    put :update, id: @call, admin_proposals_call: attrs
+    put :update, params: {id: @call, admin_proposals_call: attrs}
     assert_redirected_to admin_proposals_call_path(assigns(:admin_proposals_call))
   end
 
@@ -54,7 +54,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     @call = FactoryGirl.create(:proposal_call)
 
     assert_difference('Admin::Proposals::Call.count', -1) do
-      delete :destroy, id: @call
+      delete :destroy, params: { id: @call}
     end
 
     assert_redirected_to admin_proposals_calls_path

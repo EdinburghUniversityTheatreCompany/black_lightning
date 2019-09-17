@@ -27,23 +27,23 @@ class Admin::VenuesControllerTest < ActionController::TestCase
   end
 
   test 'should show venue' do
-    get :show, id: @venue
+    get :show, params: { id: @venue}
     assert_response :success
   end
 
   test 'should get edit' do
-    get :edit, id: @venue
+    get :edit, params: { id: @venue}
     assert_response :success
   end
 
   test 'should update venue' do
-    put :update, id: @venue, venue: { description: @venue.description, location: @venue.location, name: @venue.name }
+    put :update, params: {id: @venue, venue: { description: @venue.description, location: @venue.location, name: @venue.name }}
     assert_redirected_to admin_venue_path(assigns(:venue))
   end
 
   test 'should destroy venue' do
     assert_difference('Venue.count', -1) do
-      delete :destroy, id: @venue
+      delete :destroy, params: { id: @venue}
     end
 
     assert_redirected_to admin_venues_path
