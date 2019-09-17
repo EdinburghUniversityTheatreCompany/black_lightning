@@ -54,7 +54,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
   # POST /admin/proposals/call_question_templates.json
   ##
   def create
-    @template = Admin::Proposals::CallQuestionTemplate.new(question_template_params)
+    @template = Admin::Proposals::CallQuestionTemplate.new(call_question_template_params)
 
     respond_to do |format|
       if @template.save
@@ -76,8 +76,9 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     @template = Admin::Proposals::CallQuestionTemplate.find(params[:id])
 
     respond_to do |format|
-      if @template.update_attributes(question_template_params)
-        format.html { redirect_to @template, notice: 'Call question template was successfully updated.' }
+      if @template.update_attributes(call_question_template_params)
+        format.html { redirect_to edit_admin_proposals_call_question_template_path(@template),
+                                  notice: 'Call question template was successfully updated.' }
         format.json { head :no_content }
       else
         format.html { render 'edit' }
@@ -102,8 +103,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
   end
 
   private
-  def question_template_params
-    #TODO confirm this still works and isnt a testing framework quirk
+  def call_question_template_params
     params.require(:admin_proposals_call_question_template).permit(:name,
                                                                    questions_attributes: [:question_text, :response_type, :_destroy, :id])
   end

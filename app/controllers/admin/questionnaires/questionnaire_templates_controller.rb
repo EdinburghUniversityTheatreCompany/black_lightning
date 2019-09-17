@@ -59,7 +59,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # POST /admin/questionnaires/questionnaire_templates.json
   ##
   def create
-    @template = Admin::Questionnaires::QuestionnaireTemplate.new(questionnaire_params)
+    @template = Admin::Questionnaires::QuestionnaireTemplate.new(questionnaire_template_params)
 
     respond_to do |format|
       if @template.save
@@ -81,7 +81,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
 
     respond_to do |format|
-      if @template.update_attributes(questionnaire_params)
+      if @template.update_attributes(questionnaire_template_params)
         format.html { redirect_to @template, notice: 'Call question template was successfully updated.' }
         format.json { head :no_content }
       else
@@ -106,9 +106,8 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
     end
   end
 
-  def questionnaire_params
-    #TODO confirm this still works and isnt a testing framework quirk
-    params.require(:template).permit(:name,
+  def questionnaire_template_params
+    params.require(:admin_questionnaires_questionnaire_template).permit(:name,
                                      questions_attributes: [:id, :_destroy, :question_text, :response_type])
   end
 end

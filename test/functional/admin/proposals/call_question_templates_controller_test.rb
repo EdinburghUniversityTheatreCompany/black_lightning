@@ -23,7 +23,7 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
     Admin::Proposals::CallQuestionTemplate.find(@template.id).destroy
 
     assert_difference('Admin::Proposals::CallQuestionTemplate.count') do
-      post :create, template: { name: @template.name }
+      post :create, params: {admin_proposals_call_question_template: { name: @template.name }}
     end
 
     assert_redirected_to admin_proposals_call_question_template_path(assigns(:template))
@@ -35,8 +35,8 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
   end
 
   test 'should update admin_proposals_call_question_template' do
-    put :update, params: {id: @template, template: { name: @template.name }}
-    assert_redirected_to admin_proposals_call_question_template_path(assigns(:template))
+    put :update, params: {id: @template, admin_proposals_call_question_template: { name: @template.name }}
+    assert_redirected_to edit_admin_proposals_call_question_template_path(assigns(:template))
   end
 
   test 'should destroy admin_proposals_call_question_template' do

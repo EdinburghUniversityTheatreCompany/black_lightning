@@ -23,7 +23,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesControllerTest < ActionContro
     Admin::Questionnaires::QuestionnaireTemplate.find(@template.id).destroy
 
     assert_difference('Admin::Questionnaires::QuestionnaireTemplate.count') do
-      post :create, template: { name: @template.name }
+      post :create, params:{admin_questionnaires_questionnaire_template: { name: @template.name }}
     end
 
     assert_redirected_to admin_questionnaires_questionnaire_template_path(assigns(:template))
@@ -40,7 +40,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesControllerTest < ActionContro
   end
 
   test 'should update admin_questionnaires_questionnaire_template' do
-    put :update, params: {id: @template, template: { name: @template.name }}
+    put :update, params: {id: @template, admin_questionnaires_questionnaire_template: { name: @template.name }}
     assert_redirected_to admin_questionnaires_questionnaire_template_path(assigns(:template))
   end
 
