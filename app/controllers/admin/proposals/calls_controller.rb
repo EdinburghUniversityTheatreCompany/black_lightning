@@ -124,6 +124,6 @@ class Admin::Proposals::CallsController < AdminController
   private
   def call_params
     params.require(:admin_proposals_call).permit(:deadline, :name, :open, :archived,
-                                 questions_attributes: [:question_text, :response_type])
+                                 questions_attributes: [:id, :_destroy, :question_text, :response_type])
   end
 end

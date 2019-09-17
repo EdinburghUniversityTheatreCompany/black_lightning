@@ -252,6 +252,6 @@ class Admin::StaffingsController < AdminController
   private
   def staffing_params
     params.require(:admin_staffing).permit(:show_title, :start_time, :end_time,
-                                           staffing_jobs_attributes: [:name, :user, :user_id])
+                                           staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
   end
 end

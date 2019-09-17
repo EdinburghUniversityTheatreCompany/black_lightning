@@ -76,7 +76,7 @@ class Admin::TechieFamiliesController < AdminController
   private
   def techie_params
     params.require(:techie).permit(:name,
-                                   childrens_attributes: [:name],
-                                   parents_attributes: [:name])
+                                   childrens_attributes: [:id, :_destroy, :name],
+                                   parents_attributes: [:id, :_destroy, :name])
   end
 end

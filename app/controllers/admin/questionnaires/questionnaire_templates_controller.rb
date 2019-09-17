@@ -109,6 +109,6 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   def questionnaire_params
     #TODO confirm this still works and isnt a testing framework quirk
     params.require(:template).permit(:name,
-                                     questions_attributes: [:question_text, :response_type])
+                                     questions_attributes: [:id, :_destroy, :question_text, :response_type])
   end
 end
