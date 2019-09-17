@@ -7,7 +7,7 @@
       <div class="tab-content span9">
           <div id="<%= id %>_input_field" class="tab-pane active">
               <% rows ||= "10" %>
-              <% md_notice = "Note: Text entered will be rendered using " + link_to('kramdown', admin_help_path(:kramdown), :target => '_blank') %>
+              <% md_notice = "Note: Text entered will be rendered using " + link_to('kramdown', admin_help_kramdown_path, :target => '_blank') %>
               <%= f.input field, :input_html => {:class => "md field", :rows => rows}, :hint => md_notice %>
           </div>
 

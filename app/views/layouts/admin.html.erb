@@ -81,7 +81,7 @@
                   <% end %>
 
                   <% if can? :manage, :jobs %>
-                  <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
+                  <li><%= link_to 'Jobs', admin_jobs_overview_path %></li>
                   <% end %>
 
                   <% if can? :read, Admin::MaintenanceDebt%>

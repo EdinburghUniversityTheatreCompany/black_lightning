@@ -166,11 +166,23 @@ ChaosRails::Application.routes.draw do
     end
 
     get '/reports/' => 'reports#index', :as => 'reports'
-    get '/reports/:action', controller: 'reports', as: 'report'
+    namespace 'reports' do
+      %w(roles members newsletter_subscribers staffing).each do |action|
+        get action, action: action, as:  action
+      end
+    end
 
-    get 'jobs/:action' => 'job_control', :as => 'jobs'
+    namespace 'jobs' do
+      %w(overview working pending failed remove retry).each do |action|
+        get action, action: action, as:  action, controller: '/admin/job_control'
+      end
+    end
 
-    get '/help/:action' => 'help', :as => 'help'
+    namespace 'help' do
+      %w(kramdown venue_location).each do |action|
+        get action, action: action, as:  action, controller: '/admin/help'
+      end
+    end
   end
 
   get 'archives' => 'archives#index', :as => :archives_index

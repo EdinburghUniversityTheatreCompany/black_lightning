@@ -38,7 +38,7 @@
       <div class="alert alert-error">
         <strong>Stop. This is important</strong>
         <p>
-          A DelayedJob has failed. Please review <%= link_to 'failed jobs', admin_jobs_path(:action => "failed") %>.
+          A DelayedJob has failed. Please review <%= link_to 'failed jobs', controller: "admin/job_control", action: "failed" %>.
         </p>
       </div>
     <% end %>
@@ -88,7 +88,7 @@
       <li data-row="4" data-col="2" data-sizex="1" data-sizey="1">
       <h3><%= link_to 'Reports', admin_reports_path %></h3>
         <% list_reports.each do |report| %>
-          <p><%= link_to report.humanize.titleize, admin_report_path(report) %></p>
+          <p><%= link_to report.humanize.titleize, controller: "admin/reports", action: report %></p>
         <% end %>
       </li>
       <% end %>

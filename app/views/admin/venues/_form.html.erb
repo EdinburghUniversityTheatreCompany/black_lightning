@@ -9,7 +9,7 @@
 
     <%= render "admin/shared/md_editor", :f => f, :field => :description %>
 
-    <%= f.input :location, :label => "Location - " + link_to('About Setting Locations', admin_help_path(:venue_location)), :target => '_blank' %>
+    <%= f.input :location, :label => "Location - " + link_to('About Setting Locations', admin_help_venue_location_path), :target => '_blank' %>
 
     <%= f.input :image %>
 
