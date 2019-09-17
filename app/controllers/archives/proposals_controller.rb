@@ -1,5 +1,5 @@
 class Archives::ProposalsController < ArchivesController
-  before_filter :authenticate_user!
+  before_action :authenticate_user!
 
   def index
     @q = Admin::Proposals::Proposal.joins(:call)

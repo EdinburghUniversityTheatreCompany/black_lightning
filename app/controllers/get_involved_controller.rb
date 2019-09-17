@@ -4,7 +4,7 @@
 # No actions are defined here. It serves up the files in app/views/get_involved/* using the app/views/layouts/get_involved.html.erb layout.
 ##
 class GetInvolvedController < ApplicationController
-  before_filter :get_subpages
+  before_action :get_subpages
 
   def opportunities
     @opportunities = Opportunity.approved.all

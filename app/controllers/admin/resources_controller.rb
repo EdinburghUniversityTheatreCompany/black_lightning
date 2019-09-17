@@ -1,5 +1,5 @@
 class Admin::ResourcesController < AdminController
-  before_filter :get_subpages
+  before_action :get_subpages
 
   layout 'admin/resources'
 

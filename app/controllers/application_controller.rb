@@ -5,8 +5,8 @@ class ApplicationController < ActionController::Base
   protect_from_forgery except: :options
   before_action :set_paper_trail_whodunnit
 
-  before_filter :set_globals
-  before_filter :prepare_for_mobile
+  before_action :set_globals
+  before_action :prepare_for_mobile
 
   rescue_from Exception, with: :report_500     unless Rails.env.development? || Rails.env.test?
   rescue_from StandardError, with: :report_500 unless Rails.env.development? || Rails.env.test?

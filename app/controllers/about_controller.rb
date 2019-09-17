@@ -4,7 +4,7 @@
 # No actions are defined here. It serves up the files in app/views/about/* using the app/views/layouts/about.html.erb layout.
 ##
 class AboutController < ApplicationController
-  before_filter :get_subpages
+  before_action :get_subpages
 
   def page
     render 'about/' + params[:page]
