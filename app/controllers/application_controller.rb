@@ -3,6 +3,7 @@ class ApplicationController < ActionController::Base
   #   render :text => exception, :status => 500
   # end
   protect_from_forgery except: :options
+  before_action :set_paper_trail_whodunnit
 
   before_filter :set_globals
   before_filter :prepare_for_mobile

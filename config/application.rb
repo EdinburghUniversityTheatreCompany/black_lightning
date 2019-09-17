@@ -42,5 +42,8 @@ module ChaosRails
     config.generators do |g|
       g.fixture_replacement :factory_girl
     end
+
+    #protect against csrf attacks by checking origin matches sites address
+    config.action_controller.forgery_protection_origin_check = true
   end
 end
