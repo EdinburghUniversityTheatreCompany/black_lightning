@@ -126,7 +126,7 @@ class Admin::UsersController < AdminController
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/json'
 
-    @users = User.select(['id', :first_name, :last_name])
+    @users = User.with_role(:member).select(['id', :first_name, :last_name])
 
     # This... erm... thing... builds the response up one
     # user at a time, which saves loading the whole lot into
