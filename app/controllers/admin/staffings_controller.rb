@@ -24,6 +24,11 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/show_title/grid
   ##
   def grid
+    authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+
+    @title = "Staffing for #{params[:show_title]}"
+
     if params[:archived] == 'true'
       @staffings = Admin::Staffing.past.where(show_title: params[:show_title])
     else
@@ -45,8 +50,6 @@ class Admin::StaffingsController < AdminController
       next staffing_hash
     end
 
-    @title = 'Staffing'
-
     respond_to do |format|
       format.html # index.html.erb
     end
@@ -58,6 +61,9 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/1.json
   ##
   def show
+    authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
     respond_to do |format|
@@ -181,6 +187,8 @@ class Admin::StaffingsController < AdminController
   ##
   def show_sign_up
     authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
   end
@@ -192,10 +200,12 @@ class Admin::StaffingsController < AdminController
   ##
   def sign_up_confirm
     authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
 
     @job = Admin::StaffingJob.find(params[:id])
 
     @title = 'Confirm Staffing'
+
   end
 
   ##
@@ -205,8 +215,8 @@ class Admin::StaffingsController < AdminController
   ##
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
-    @job = Admin::StaffingJob.find(params[:id])
 
+    @job = Admin::StaffingJob.find(params[:id])
     @job.user = current_user
 
     respond_to do |format|

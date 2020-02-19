@@ -1,5 +1,13 @@
-<h1>Staffing for <%= @admin_staffing.show_title %></h1>
+<h1><%= @title %></h1>
 <h3><%= l @admin_staffing.start_time, :format => :long %> – <%= l @admin_staffing.end_time, :format => :long  unless @admin_staffing.end_time == nil%></h3>
+
+<%= display_block("Staffing", true) %>
+
+<% if current_user.phone_number.blank? %>
+<br>
+<div class="alert alert-danger" role="alert">In order to sign up for staffing you need to provide a MOBILE phone number so we are able to get in touch if necessary. 
+You can do so <%= link_to 'here', edit_admin_user_path(current_user) %>.</div>
+<% end %>
 
 
 <table class="table table-bordered">
@@ -37,7 +45,7 @@
   </tbody>
 </table>
 
-<% if can? :sign_up_for, Admin::StaffingJob %>
+<% if @can_sign_up %>
   <% sign_up_text = '<i class="fa fa-edit"></i> Sign Up'.html_safe %>
   <%= link_to sign_up_text, show_sign_up_admin_staffing_path(@admin_staffing), :class => "btn btn-primary" %>
 <% end %>
