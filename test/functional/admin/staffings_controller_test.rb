@@ -40,7 +40,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     attrs = FactoryGirl.attributes_for(:staffing)
 
     assert_difference('Admin::Staffing.count') do
-      post :create, admin_staffing: attrs
+      post :create, params: {admin_staffing: attrs}
     end
 
     assert_redirected_to admin_staffing_path(assigns(:admin_staffing))
