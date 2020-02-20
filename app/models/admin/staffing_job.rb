@@ -25,6 +25,9 @@ class Admin::StaffingJob < ActiveRecord::Base
 
   attr_accessible :name, :user, :user_id
 
+  after_save :associate_staffing_job_with_oldest_outstanding_debt
+  
+
   ##
   # Get the start time in a js friendly fashion (UTC)
   ##
@@ -42,4 +45,17 @@ class Admin::StaffingJob < ActiveRecord::Base
   def completed?
     return self.staffable.end_time < DateTime.now
   end
+
+  def associate_staffing_job_with_oldest_outstanding_debt
+    # Only check for outstanding debt if the user has changed and the new user is not nil. 
+    if (self.user_id_changed? && self.user_id != nil)
+      debts = Admin::StaffingDebt.where(user_id: user_id).order(:due_by).limit(1)
+      unless debts.empty?
+        self.staffing_debt = debts.first
+      end
+      # This applies the change, and thus no longer marks the user as changed
+      @changed_attributes.delete(:user)
+    end
+  end
+
 end
