@@ -95,6 +95,6 @@
 </div>
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
-  <%= select_datetime(Time.current, {prefix: "start"}) %> to <%= select_time(Time.current + 3.hours, prefix: "end")%>
+  <%= select_datetime(@default_start_time, {prefix: "start"}) %> to <%= select_time(@default_end_time, prefix: "end")%>
   <a class="btn btn-danger"><i class="fa fa-remove"></i> Remove</a>
 </div>

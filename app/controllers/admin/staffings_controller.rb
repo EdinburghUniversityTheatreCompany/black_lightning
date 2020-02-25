@@ -133,6 +133,10 @@ class Admin::StaffingsController < AdminController
     @users = User.all
     @admin_staffing = Admin::Staffing.new
     @title = 'New Staffing for Show'
+
+    now = Time.now
+    @default_start_time = Time.new(now.year, now.month, now.day, 18, 00, 0)
+    @default_end_time = @default_start_time + 3.hours
   end
 
   ##
