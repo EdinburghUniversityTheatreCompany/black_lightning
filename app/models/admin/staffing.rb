@@ -38,7 +38,7 @@ class Admin::Staffing < ActiveRecord::Base
 
   validates :show_title, :start_time, presence: true
 
-  attr_accessible :show_title, :start_time, :end_time, :staffing_jobs, :staffing_jobs_attributes
+  attr_accessible :show_title, :start_time, :end_time, :counts_towards_debt, :staffing_jobs, :staffing_jobs_attributes
 
   ##
   # Returns the number of jobs that have been filled

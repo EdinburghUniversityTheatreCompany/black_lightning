@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20180907110213) do
+ActiveRecord::Schema.define(version: 20200225183306) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -169,11 +169,12 @@ ActiveRecord::Schema.define(version: 20180907110213) do
 
   create_table "admin_staffings", force: :cascade do |t|
     t.datetime "start_time"
-    t.string   "show_title",      limit: 255
-    t.datetime "created_at",                  null: false
-    t.datetime "updated_at",                  null: false
-    t.integer  "reminder_job_id", limit: 4
+    t.string   "show_title",          limit: 255
+    t.datetime "created_at",                      null: false
+    t.datetime "updated_at",                      null: false
+    t.integer  "reminder_job_id",     limit: 4
     t.datetime "end_time"
+    t.boolean  "counts_towards_debt"
   end
 
   add_index "admin_staffings", ["reminder_job_id"], name: "index_admin_staffings_on_reminder_job_id", using: :btree
