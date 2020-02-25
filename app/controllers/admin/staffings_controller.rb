@@ -6,6 +6,13 @@ class Admin::StaffingsController < AdminController
   load_and_authorize_resource class: Admin::Staffing, except: [:sign_up, :show_sign_up, :sign_up_confirm]
 
   ##
+  # Helper methods
+  ##
+
+  def check_if_current_user_can_sign_up 
+    return (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+  end
+  ##
   # GET /admin/staffings
   #
   # GET /admin/staffings.json
@@ -25,7 +32,7 @@ class Admin::StaffingsController < AdminController
   ##
   def grid
     authorize! :sign_up_for, Admin::StaffingJob
-    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+    @can_sign_up = check_if_current_user_can_sign_up
 
     @title = "Staffing for #{params[:show_title]}"
 
@@ -62,7 +69,7 @@ class Admin::StaffingsController < AdminController
   ##
   def show
     authorize! :sign_up_for, Admin::StaffingJob
-    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+    @can_sign_up = check_if_current_user_can_sign_up
 
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
@@ -187,7 +194,7 @@ class Admin::StaffingsController < AdminController
   ##
   def show_sign_up
     authorize! :sign_up_for, Admin::StaffingJob
-    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+    @can_sign_up = check_if_current_user_can_sign_up
 
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
@@ -200,7 +207,7 @@ class Admin::StaffingsController < AdminController
   ##
   def sign_up_confirm
     authorize! :sign_up_for, Admin::StaffingJob
-    @can_sign_up = (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+    @can_sign_up = check_if_current_user_can_sign_up
 
     @job = Admin::StaffingJob.find(params[:id])
 

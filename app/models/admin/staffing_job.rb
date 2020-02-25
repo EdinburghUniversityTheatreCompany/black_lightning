@@ -47,15 +47,23 @@ class Admin::StaffingJob < ActiveRecord::Base
   end
 
   def associate_staffing_job_with_oldest_outstanding_debt
-    # Only check for outstanding debt if the user has changed and the new user is not nil. 
-    if (self.user_id_changed? && self.user_id != nil)
+    # If the new user is nil, there can be no associated staffing_debt, so set it to nil.
+    # Setting the user to nil does not always set user_id_changed to true.
+    if user == nil
+      self.staffing_debt = nil
+      return
+    # Only check for outstanding debt if the user has changed.
+    elsif user_id_changed?
       debts = Admin::StaffingDebt.where(user_id: user_id).order(:due_by).limit(1)
-      unless debts.empty?
+      
+      # If the user changed and there are no debts found, it should not stay associated with the old debt.
+      if debts.empty?
+        self.staffing_debt = nil
+      else
         self.staffing_debt = debts.first
       end
       # This applies the change, and thus no longer marks the user as changed
       @changed_attributes.delete(:user)
     end
   end
-
 end
