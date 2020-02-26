@@ -82,6 +82,8 @@ class Admin::Staffing < ActiveRecord::Base
   # Should only be called as a delayed job.
   ##
   def send_reminder
+    return if reminder_job == nil
+    
     if reminder_job.attempts > 0
       # Prevent the job from running more than once to prevent us spewing emails
       # if there is an error.
