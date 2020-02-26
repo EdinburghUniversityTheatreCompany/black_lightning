@@ -48,7 +48,7 @@ class Admin::StaffingJob < ActiveRecord::Base
 
   def associate_staffing_job_with_oldest_outstanding_debt
     # Check if the staffing job counts towards staffing and return if it does not.
-    return unless self.staffable.counts_towards_debt?
+    return if (!self.staffable.counts_towards_debt? || self.name == "Committee Rep")
 
     # If the new user is nil, there can be no associated staffing_debt, so set it to nil.
     # Setting the user to nil does not always set user_id_changed to true.

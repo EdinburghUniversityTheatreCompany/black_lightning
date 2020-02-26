@@ -33,7 +33,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     @staffing_job.user = @user
     @staffing_job.save
 
-    assert_nil @staffing_job.staffing_debt
+    assert_nil @staffing_job.staffing_debt, 'The staffing job has associated with a staffing debt, even though the user is not in debt.'
   end
 
   test "removes_staffing_job_from_staffing_debt_when_removing_the_user_from_the_staffing_job" do
@@ -118,7 +118,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     assert_nil staffing_debt.admin_staffing_job, 'The staffing_job is not removed from the staffing_debt after changing the user.'
   end
 
-  test "returns_when_the_staffing_job_does_not_count_towards_debt" do
+  test "does_not_associate_when_the_staffing_job_does_not_count_towards_debt" do
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.save
@@ -131,7 +131,24 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
 
     staffing_debt.reload
 
-    assert_nil @staffing_job.staffing_debt, 'The staffing job has staffing debt associated with it.'
-    assert_nil staffing_debt.admin_staffing_job, 'The staffing_debt has a staffing_job associated with it'
+    assert_nil @staffing_job.staffing_debt, 'The staffing job has staffing debt associated with it even though the staffable/staffing associated with the job does not count towards staffing.'
+    assert_nil staffing_debt.admin_staffing_job, 'The staffing_debt has a staffing_job associated with it even though the staffable/staffing associated with the job does not count towards staffing.'
+  end
+
+  test "does_not_associate_when_the_name_of_the_job_is_committee_rep" do
+    staffing_debt = FactoryGirl.create(:staffing_debt)
+    staffing_debt.user = @user
+    staffing_debt.save
+
+    assert_nil staffing_debt.admin_staffing_job 'The staffing_debt has a staffing_job associated with it. Did you modify the staffing_debt factory?' 
+    
+    @staffing_job.user = @user
+    @staffing_job.name = "Committee Rep"
+    @staffing_job.save
+
+    staffing_debt.reload
+
+    assert_nil @staffing_job.staffing_debt, 'The staffing job has staffing debt associated with it even though the name of the job is "Committee Rep".'
+    assert_nil staffing_debt.admin_staffing_job, 'The staffing_debt has a staffing_job associated with it even though the name of the job is "Committee Rep".'
   end
 end
