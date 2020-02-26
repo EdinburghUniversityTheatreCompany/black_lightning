@@ -3,7 +3,7 @@
 ##
 class Admin::StaffingsController < AdminController
   skip_before_filter :authorize_backend!
-  load_and_authorize_resource class: Admin::Staffing, except: [:sign_up, :show_sign_up, :sign_up_confirm]
+  load_and_authorize_resource class: Admin::Staffing, except: [:sign_up, :sign_up_confirm]
 
   ##
   # Helper methods
@@ -192,19 +192,6 @@ class Admin::StaffingsController < AdminController
   end
 
   ##
-  # Renders the sign up page for staffing.
-  # ---
-  # GET /admin/staffings/1/show_sign_up
-  ##
-  def show_sign_up
-    authorize! :sign_up_for, Admin::StaffingJob
-    @can_sign_up = check_if_current_user_can_sign_up
-
-    @admin_staffing = Admin::Staffing.find(params[:id])
-    @title = "Staffing for #{@admin_staffing.show_title}"
-  end
-
-  ##
   # A confirmation page to be displayed if JavaScript confirmation and PUT fails.
   # ---
   # GET /admin/staffings/job/1/sign_up
@@ -213,10 +200,11 @@ class Admin::StaffingsController < AdminController
     authorize! :sign_up_for, Admin::StaffingJob
     @can_sign_up = check_if_current_user_can_sign_up
 
+    return unless @can_sign_up
+
     @job = Admin::StaffingJob.find(params[:id])
 
     @title = 'Confirm Staffing'
-
   end
 
   ##

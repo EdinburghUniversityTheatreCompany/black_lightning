@@ -42,7 +42,6 @@ You can do so <%= link_to 'here', edit_admin_user_path(current_user) %>.</div>
               <% elsif @can_sign_up %>
                 <input type="hidden" class="job_json" value="<%= job.to_json %>" >
                 <% date = l staffing_hash[:start_time], :format => :long %>
-                <%- #Is this confirm the same as the other one? DRY? -%>
                 <%= link_to admin_sign_up_confirm_path(job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
                                                                                                                                                "detail"  => "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
                                                                                                                                                :job_id   => job.id

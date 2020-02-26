@@ -80,13 +80,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_redirected_to admin_staffings_path
   end
 
-  test 'should get sign_up_page' do
-    @staffing = FactoryGirl.create(:staffing, job_count: 5)
-
-    get :show_sign_up, id: @staffing
-    assert_response :success
-  end
-
   test 'should get sign_up_confirm' do
     @staffing = FactoryGirl.create(:staffing, job_count: 5)
 

@@ -119,10 +119,6 @@ ChaosRails::Application.routes.draw do
 
     resources :staffing_templates
     resources :staffings do
-      member do
-        get 'show_sign_up'
-      end
-
       collection do
         get 'new_for_show'
         put 'create_for_show'
