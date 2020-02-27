@@ -10,7 +10,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     @user = FactoryGirl.create(:user)
   end
 
-  test "associates_with_staffing_debt_after_adding_user" do
+  test "associates with staffing_debt after adding user" do
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.save
@@ -29,14 +29,14 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     "The id of the staffing_debt associated with the staffing_job is #{staffing_debt.admin_staffing_job.id} instead of the expected value #{@staffing_job.id}."
   end
 
-  test "does_not_break_when_adding_staffing_job_to_someone_without_outstanding_debt" do
+  test "does not break when adding staffing_job to someone without outstanding staffing_debt" do
     @staffing_job.user = @user
     @staffing_job.save
 
     assert_nil @staffing_job.staffing_debt, 'The staffing job has associated with a staffing debt, even though the user is not in debt.'
   end
 
-  test "removes_staffing_job_from_staffing_debt_when_removing_the_user_from_the_staffing_job" do
+  test "removes staffing_job from staffing_debt when removing the user from the staffing_job" do
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.admin_staffing_job = @staffing_job
@@ -55,7 +55,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     assert_nil staffing_debt.admin_staffing_job, 'The staffing_job is not removed from the staffing_debt after removing the user.'
   end
 
-  test "does_not_associate_staffing_job_again_when_the_user_does_not_change" do
+  test "does not associate staffing_job again when the user does not change" do
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.save
@@ -71,7 +71,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     assert_not @staffing_job.user_id_changed?, 'The user associated with the staffing job is marked as changed.'
   end
 
-  test "associates_with_different_staffing_job_when_changing_the_user" do 
+  test "associates with different staffing_job when changing the user" do 
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.admin_staffing_job = @staffing_job
@@ -101,7 +101,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     "The id of the staffing_debt associated with the staffing_job is #{new_staffing_debt.admin_staffing_job.id} instead of the expected value #{@staffing_job.id}."
   end
 
-  test "associates_with_no_staffing_job_when_changing_the_user_to_someone_not_in_debt" do
+  test "is not associated with a staffing_job anymore after changing the user to someone not in debt" do
     staffing_debt = FactoryGirl.create(:staffing_debt, user: @user, admin_staffing_job: @staffing_job)
     staffing_debt.save
 
@@ -118,7 +118,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     assert_nil staffing_debt.admin_staffing_job, 'The staffing_job is not removed from the staffing_debt after changing the user.'
   end
 
-  test "does_not_associate_when_the_staffing_job_does_not_count_towards_debt" do
+  test "does not associate when the staffing_job does not count towards_debt" do
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.save
@@ -135,7 +135,7 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     assert_nil staffing_debt.admin_staffing_job, 'The staffing_debt has a staffing_job associated with it even though the staffable/staffing associated with the job does not count towards staffing.'
   end
 
-  test "does_not_associate_when_the_name_of_the_job_is_committee_rep" do
+  test "does not associate when the name of the job is Committee Rep" do
     staffing_debt = FactoryGirl.create(:staffing_debt)
     staffing_debt.user = @user
     staffing_debt.save

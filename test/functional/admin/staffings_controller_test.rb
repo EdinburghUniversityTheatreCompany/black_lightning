@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::StaffingsControllerTest < ActionController::TestCase
   setup do
-    @user = FactoryGirl.create(:admin)
+    @user = FactoryGirl.create(:admin, phone_number: rand(10**9..10**10).to_s )
     sign_in @user
 
     # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
@@ -88,10 +88,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test 'should put sign_up' do
-    @user = FactoryGirl.create(:member_with_phone_number)
-    sign_in @user
-    print(@user.phone_number)
-
     @staffing = FactoryGirl.create(:staffing, job_count: 5)
     @job = @staffing.staffing_jobs.first
 
