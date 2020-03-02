@@ -1,7 +1,7 @@
 <div class="job control-group fields">
     <%= f.input_field :name %>
 
-    <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
+    <%= f.input_field :user_id, :collection => @users.with_role(:member).collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
 
     <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
     <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
