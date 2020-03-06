@@ -37,6 +37,7 @@ class Admin::Staffing < ActiveRecord::Base
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
   validates :show_title, :start_time, presence: true
+  validates :show_title, uniqueness: true
 
   attr_accessible :show_title, :start_time, :end_time, :counts_towards_debt, :staffing_jobs, :staffing_jobs_attributes
 
