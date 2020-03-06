@@ -54,18 +54,17 @@ class Admin::ShowsController < AdminController
       new_debtors = []
     end
 
-
-
     respond_to do |format|
-      if new_debtors.count == 0
-        if @show.update_attributes(params[:show])
-          format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully updated.' }
-        else
-          format.html { render 'edit' }
-        end
+      if new_debtors.count > 0
+        flash[:notice] = "The show was successfully updated, but #{new_debtors.collect{|u| u.name}} #{new_debtors.count > 1 ? 'are' : 'is'} in debt"
       else
-        flash[:error] = "Show update failed as #{new_debtors.collect{|u| u.name}} #{new_debtors.count > 1 ? 'are' : 'is'} in debt"
-        format.html {render 'edit'}
+        flash[:notice] = 'The show was successfully updated.' 
+      end
+
+      if @show.update_attributes(params[:show])
+        format.html { redirect_to admin_show_url(@show)}
+      else
+        format.html { render 'edit' }
       end
     end
   end
