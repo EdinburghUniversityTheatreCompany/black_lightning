@@ -131,7 +131,7 @@ class Admin::StaffingsController < AdminController
   ##
   def new_for_show
     @users = User.all
-    @admin_staffing = Admin::Staffing.new(:counts_towards_debt => true)
+    @admin_staffing = Admin::Staffing.new(counts_towards_debt: true)
     @title = 'New Staffing for Show'
 
     now = Time.now
