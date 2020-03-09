@@ -29,7 +29,7 @@ FactoryGirl.define do
     end
   end
 
-  factory :staffing_that_counts_towards_debt, parent: :staffing do
+  factory :staffing_that_does_count_towards_debt, parent: :staffing do
     counts_towards_debt true
   end
 
