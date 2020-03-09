@@ -5,3 +5,6 @@
 <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: current_user.id), class: 'btn' %>
 <br><br>
 <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: current_user.id), class: 'btn' %>
+<br><br>
+<% unassociated_staffing_jobs_count = Admin::StaffingJob.where(user: current_user).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").count %>
+You have staffed <%= unassociated_staffing_jobs_count %> staffing <%= "#{unassociated_staffing_jobs_count == 1 ? 'slot that is' : 'lotss that are'}" %> not associated with any debt.
