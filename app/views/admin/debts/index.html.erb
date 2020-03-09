@@ -39,11 +39,17 @@
   <tr>
     <th>Email</th>
     <th>Name</th>
+    <th>Maintenance Debts</th>
+    <th>Staffing Debts</th>
+    <th>Unassociated Staffing Slots</th>
   </tr>
   <% @users.each do |user| %>
       <tr <%= user.in_debt ?  " class = error ": "" %>>
         <td><%= user.email %></td>
         <td><%= link_to "#{user.first_name} #{user.last_name}", admin_debt_path(user) %></td>
+        <td><%= user.amount_of_maintenance_debts %></td>
+        <td><%= user.amount_of_staffing_debts %></td>
+        <td><%= user.amount_of_unassociated_staffing_jobs %></td>
       </tr>
   <% end %>
   </tbody>
