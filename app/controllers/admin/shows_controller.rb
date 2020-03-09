@@ -56,7 +56,10 @@ class Admin::ShowsController < AdminController
 
     respond_to do |format|
       if new_debtors.count > 0
-        flash[:notice] = "The show was successfully updated, but #{new_debtors.collect{|u| u.name}} #{new_debtors.count > 1 ? 'are' : 'is'} in debt"
+        new_debtors_string = new_debtors.collect{|u| u.name}
+        flash[:notice] = "The show was successfully updated, but #{new_debtors_string} #{new_debtors.count > 1 ? 'are' : 'is'} in debt"
+
+        ShowMailer.warn_committee_about_debtors_added_to_show(@show, new_debtors_string, @current_user).deliver_now
       else
         flash[:notice] = 'The show was successfully updated.' 
       end
