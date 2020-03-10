@@ -1,10 +1,10 @@
 <% content_for :head do %>
-  <%= javascript_include_tag "admin/team_member_fields.js" %>
+  <%= javascript_include_tag "admin/user_typeahead_field.js" %>
 <% end %>
 
 <div class="team_member control-group fields <%= "error" if (f.error(:position).present? || f.error(:user).present?) %>">
     <%= f.hidden_field :id %>
-    <%= f.hidden_field :display_order,:class => 'display_order_input' %>
+    <%= f.hidden_field :display_order, class: 'display_order_input' %>
 
     <i class="icon-sort"></i>
     
@@ -13,10 +13,11 @@
 
     <div class="no-such-user" style="display: none">
       <span class="help-inline">The user cannot be found. Please make sure they have bought membership and activated their website account by emailing <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>. Still can't find them? Contact the secretary.</span>
-      <br />
+      <br/>
+      <br/>
     </div>
 
-    <%= f.input_field :position, data: { provide: "typeahead", source: ['Director', 'Assistant Director', 'Co-Director', 'Producer', 'Assistant Producer', 'Co-Producer', 'Tech Manager', 'Co-Tech Manager', 'Tech Assistant', 'Lighting Designer', 'Sound Designer', 'Projections Designer', 'Stage Manager', 'Assistant Stage Manager', 'Co-Stage Manager', 'Set Manager', 'Set Assistant', 'Set Designer', 'Production Manager', 'Writer', 'Costume Manager', 'Costume Assistant', 'Co-Costume Manager', 'Creative', 'Assistant to Mr B. Hussey'] } %>
+    <%= f.input_field :position, data: { provide: "typeahead", source: ['Director', 'Assistant Director', 'Co-Director', 'Producer', 'Assistant Producer', 'Co-Producer', 'Tech Manager', 'Co-Tech Manager', 'Tech Assistant', 'Lighting Designer', 'Sound Designer', 'Projections Designer', 'Stage Manager', 'Assistant Stage Manager', 'Co-Stage Manager', 'Set Manager', 'Set Assistant', 'Set Designer', 'Production Manager', 'Costume Manager', 'Costume Assistant', 'Co-Costume Manager', 'Writer', 'Actor', 'Creative', 'Assistant to Mr B. Hussey'] } %>
 
     <% value = f.object.user ? "#{f.object.user.first_name} #{f.object.user.last_name}" : "" %>
     <input class="user_name" type="text" value="<%= value %>">

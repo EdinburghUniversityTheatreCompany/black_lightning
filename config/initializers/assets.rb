@@ -15,7 +15,7 @@ Rails.application.config.assets.precompile += %w(
   admin/proposals/call_templates.js
   admin/questionnaires/questionnaire_templates.js
   admin/staffing_templates.js
-  admin/team_member_fields.js
+  admin/user_typeahead_field.js
   admin/users.js
 
   admin.css
