@@ -204,7 +204,7 @@ class User < ActiveRecord::Base
 
   def amount_of_unassociated_staffing_jobs(on_date = Date.today)
     # Returns the amount of staffing jobs that are not associated with any debt.
-    return Admin::StaffingJob.where(user: self).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").count
+    return Admin::StaffingJob.where(user: self).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").count { |job| job.counts_towards_debt? }
   end
 
     #returns true if the user is in debt

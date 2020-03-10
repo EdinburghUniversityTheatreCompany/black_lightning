@@ -17,7 +17,7 @@
       <br/>
     </div>
 
-    <%= f.input_field :position, data: { provide: "typeahead", source: ['Director', 'Assistant Director', 'Co-Director', 'Producer', 'Assistant Producer', 'Co-Producer', 'Tech Manager', 'Co-Tech Manager', 'Tech Assistant', 'Lighting Designer', 'Sound Designer', 'Projections Designer', 'Stage Manager', 'Assistant Stage Manager', 'Co-Stage Manager', 'Set Manager', 'Set Assistant', 'Set Designer', 'Production Manager', 'Costume Manager', 'Costume Assistant', 'Co-Costume Manager', 'Writer', 'Actor', 'Creative', 'Assistant to Mr B. Hussey'] } %>
+    <%= f.input_field :position, data: { provide: "typeahead", source: ['Director', 'Assistant Director', 'Co-Director', 'Producer', 'Assistant Producer', 'Co-Producer', 'Tech Manager', 'Co-Tech Manager', 'Tech Assistant', 'Lighting Designer', 'Sound Designer', 'Projections Designer', 'Stage Manager', 'Assistant Stage Manager', 'Co-Stage Manager', 'Set Manager', 'Set Assistant', 'Set Designer', 'Production Manager', 'Costume Manager', 'Costume Assistant', 'Co-Costume Manager', 'Writer', 'Actor', 'Musician', 'Performer', 'Creative', 'Assistant to Mr B. Hussey'] } %>
 
     <% value = f.object.user ? "#{f.object.user.first_name} #{f.object.user.last_name}" : "" %>
     <input class="user_name" type="text" value="<%= value %>">
