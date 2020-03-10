@@ -192,15 +192,24 @@ class User < ActiveRecord::Base
     return !first_name.blank? && !last_name.blank?
   end
 
-  #returns true if the user is in debt
-  def in_debt(on_date = Date.today)
-    maintenance_debts = admin_maintenance_debts.where('due_by <?', on_date)
-    if maintenance_debts.any? {|debt| debt.status(on_date) == :causing_debt}
-      return true
-    end
+  def amount_of_maintenance_debts(on_date = Date.today)
+    maintenance_debts = Admin::MaintenanceDebt.where(user: self).where('due_by <?', on_date).where.not(state: 'completed')
+    return maintenance_debts.count {|debt| debt.status(on_date) == :causing_debt}
+  end
 
-    staffing_debts = self.admin_staffing_debts.where('due_by <?', on_date)
-    return staffing_debts.any? {|debt| debt.status(on_date) == :causing_debt}
+  def amount_of_staffing_debts(on_date = Date.today)
+    staffing_debts = Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by <?', on_date)
+    return staffing_debts.count {|debt| debt.status(on_date) == :causing_debt}
+  end
+
+  def amount_of_unassociated_staffing_jobs(on_date = Date.today)
+    # Returns the amount of staffing jobs that are not associated with any debt.
+    return Admin::StaffingJob.where(user: self).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").count { |job| job.counts_towards_debt? }
+  end
+
+    #returns true if the user is in debt
+  def in_debt(on_date = Date.today)
+    return self.amount_of_maintenance_debts > 0 || self.amount_of_staffing_debts > 0
   end
 
   def self.in_debt(on_date = Date.today)

@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::StaffingsControllerTest < ActionController::TestCase
   setup do
-    @user = FactoryGirl.create(:admin)
+    @user = FactoryGirl.create(:admin, phone_number: rand(10**9..10**10).to_s )
     sign_in @user
 
     # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
@@ -80,13 +80,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_redirected_to admin_staffings_path
   end
 
-  test 'should get sign_up_page' do
-    @staffing = FactoryGirl.create(:staffing, job_count: 5)
-
-    get :show_sign_up, id: @staffing
-    assert_response :success
-  end
-
   test 'should get sign_up_confirm' do
     @staffing = FactoryGirl.create(:staffing, job_count: 5)
 
@@ -95,10 +88,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test 'should put sign_up' do
-    @user = FactoryGirl.create(:member_with_phone_number)
-    sign_in @user
-    print(@user.phone_number)
-
     @staffing = FactoryGirl.create(:staffing, job_count: 5)
     @job = @staffing.staffing_jobs.first
 

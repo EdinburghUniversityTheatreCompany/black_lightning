@@ -1,3 +1,5 @@
+<input type="hidden" name="autocomplete_users_list" value="true">
+
 <%= simple_nested_form_for [:admin, @workshop] do |f| %>
   <%= f.error_notification %>
 
@@ -50,15 +52,10 @@
       </p>
       <% end %>
 
-      <ul class="sortable">
-        <%= f.fields_for :team_members, :wrapper => false %>
+      <%= f.simple_fields_for :team_members %>
 
-        <li>
-          <%= f.link_to_add :team_members, :class => "btn ui-state-disabled" do %>
-            <i class="fa fa-plus"></i> Add Team Member
-          <% end %>
-        </li>
-      </ul>
+      <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
+      <%= f.link_to_add add_member_text, :team_members, :class => "btn" %>
 
     </div>
 

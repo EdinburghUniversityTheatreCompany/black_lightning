@@ -8,6 +8,7 @@
   <div class="form-inputs">
 
     <%= f.input :show_title, :input_html => { :autocomplete => "off" } %>
+    <%= f.input :counts_towards_debt, :label => 'Does the staffing count towards debt?'%>
 
     <script type="text/javascript">
       $('#admin_staffing_show_title').typeahead({
@@ -95,6 +96,6 @@
 </div>
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
-  <%= select_datetime(Time.current, {prefix: "start"}) %> to <%= select_time(Time.current + 3.hours, prefix: "end")%>
+  <%= select_datetime(@default_start_time, {prefix: "start"}) %> to <%= select_time(@default_end_time, prefix: "end")%>
   <a class="btn btn-danger"><i class="fa fa-remove"></i> Remove</a>
 </div>

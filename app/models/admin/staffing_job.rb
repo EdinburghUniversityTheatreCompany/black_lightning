@@ -25,6 +25,9 @@ class Admin::StaffingJob < ActiveRecord::Base
 
   attr_accessible :name, :user, :user_id
 
+  after_save :associate_staffing_job_with_oldest_outstanding_debt
+  
+
   ##
   # Get the start time in a js friendly fashion (UTC)
   ##
@@ -41,5 +44,36 @@ class Admin::StaffingJob < ActiveRecord::Base
 
   def completed?
     return self.staffable.end_time < DateTime.now
+  end
+
+  def counts_towards_debt?
+    return self.staffable.counts_towards_debt? && self.name != "Committee Rep"
+  end
+
+  private
+  def associate_staffing_job_with_oldest_outstanding_debt
+    # If the staffing job is associated with a template, do not try to associate the staffing_job with a debt.
+    # Check if the staffing job counts towards staffing and return if it does not.
+    return if (self.staffable.is_a?(Admin::StaffingTemplate) || !self.counts_towards_debt?)
+
+    # If the new user is nil, there can be no associated staffing_debt, so set it to nil.
+    # Setting the user to nil does not always set user_id_changed to true, so this check takes place here.
+    if !self.user.present?
+      self.staffing_debt = nil
+      return
+    # Only check for outstanding debt if the user has changed.
+    elsif user_id_changed?
+      debts = Admin::StaffingDebt.where(user_id: user_id).unfulfilled.order(:due_by).limit(1)
+      
+      if debts.empty?
+        # If the user changed and there are no debts found, it should not stay associated with the old debt.
+        self.staffing_debt = nil
+      else
+        self.staffing_debt = debts.first
+      end
+
+      # This applies the change, and thus no longer marks the user as changed.
+      @changed_attributes.delete(:user)
+    end
   end
 end

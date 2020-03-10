@@ -1,0 +1,11 @@
+Dear Productions Manager,
+
+The show <%= @show.name %> has one or more debtors added to it.
+
+<%= "#{@new_debtors_string.count(',') > 0 ? 'These are' : 'It is'} #{@new_debtors_string}" %>.
+
+The change was made by <%= @editor.name %>.
+
+Regards,
+
+The Bedlam Theatre Team

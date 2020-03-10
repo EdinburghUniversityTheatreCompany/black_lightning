@@ -38,7 +38,7 @@ class Admin::Staffing < ActiveRecord::Base
 
   validates :show_title, :start_time, presence: true
 
-  attr_accessible :show_title, :start_time, :end_time, :staffing_jobs, :staffing_jobs_attributes
+  attr_accessible :show_title, :start_time, :end_time, :counts_towards_debt, :staffing_jobs, :staffing_jobs_attributes
 
   ##
   # Returns the number of jobs that have been filled
@@ -82,6 +82,8 @@ class Admin::Staffing < ActiveRecord::Base
   # Should only be called as a delayed job.
   ##
   def send_reminder
+    return if reminder_job == nil
+    
     if reminder_job.attempts > 0
       # Prevent the job from running more than once to prevent us spewing emails
       # if there is an error.

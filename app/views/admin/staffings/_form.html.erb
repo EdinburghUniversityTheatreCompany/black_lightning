@@ -2,6 +2,8 @@
   <%= javascript_include_tag "admin/staffing_templates.js" %>
 <% end %>
 
+<input type="hidden" name="autocomplete_users_list" value="true">
+
 <%= simple_nested_form_for(@admin_staffing) do |f| %>
   <%= f.error_notification %>
 

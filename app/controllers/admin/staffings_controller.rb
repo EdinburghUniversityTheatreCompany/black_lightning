@@ -3,8 +3,15 @@
 ##
 class Admin::StaffingsController < AdminController
   skip_before_filter :authorize_backend!
-  load_and_authorize_resource class: Admin::Staffing, except: [:sign_up, :show_sign_up, :sign_up_confirm]
+  load_and_authorize_resource class: Admin::Staffing, except: [:sign_up, :sign_up_confirm]
 
+  ##
+  # Helper methods
+  ##
+
+  def check_if_current_user_can_sign_up 
+    return (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
+  end
   ##
   # GET /admin/staffings
   #
@@ -24,6 +31,11 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/show_title/grid
   ##
   def grid
+    authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = check_if_current_user_can_sign_up
+
+    @title = "Staffing for #{params[:show_title]}"
+
     if params[:archived] == 'true'
       @staffings = Admin::Staffing.past.where(show_title: params[:show_title])
     else
@@ -45,8 +57,6 @@ class Admin::StaffingsController < AdminController
       next staffing_hash
     end
 
-    @title = 'Staffing'
-
     respond_to do |format|
       format.html # index.html.erb
     end
@@ -58,6 +68,9 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/1.json
   ##
   def show
+    authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = check_if_current_user_can_sign_up
+
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Staffing for #{@admin_staffing.show_title}"
     respond_to do |format|
@@ -118,8 +131,12 @@ class Admin::StaffingsController < AdminController
   ##
   def new_for_show
     @users = User.all
-    @admin_staffing = Admin::Staffing.new
+    @admin_staffing = Admin::Staffing.new(counts_towards_debt: true)
     @title = 'New Staffing for Show'
+
+    now = Time.now
+    @default_start_time = Time.new(now.year, now.month, now.day, 18, 00, 0)
+    @default_end_time = @default_start_time + 3.hours
   end
 
   ##
@@ -175,23 +192,15 @@ class Admin::StaffingsController < AdminController
   end
 
   ##
-  # Renders the sign up page for staffing.
-  # ---
-  # GET /admin/staffings/1/show_sign_up
-  ##
-  def show_sign_up
-    authorize! :sign_up_for, Admin::StaffingJob
-    @admin_staffing = Admin::Staffing.find(params[:id])
-    @title = "Staffing for #{@admin_staffing.show_title}"
-  end
-
-  ##
   # A confirmation page to be displayed if JavaScript confirmation and PUT fails.
   # ---
   # GET /admin/staffings/job/1/sign_up
   ##
   def sign_up_confirm
     authorize! :sign_up_for, Admin::StaffingJob
+    @can_sign_up = check_if_current_user_can_sign_up
+
+    return unless @can_sign_up
 
     @job = Admin::StaffingJob.find(params[:id])
 
@@ -205,8 +214,8 @@ class Admin::StaffingsController < AdminController
   ##
   def sign_up
     authorize! :sign_up_for, Admin::StaffingJob
-    @job = Admin::StaffingJob.find(params[:id])
 
+    @job = Admin::StaffingJob.find(params[:id])
     @job.user = current_user
 
     respond_to do |format|

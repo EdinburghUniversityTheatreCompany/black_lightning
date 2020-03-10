@@ -17,7 +17,7 @@ FactoryGirl.define do
   factory :staffing, class: Admin::Staffing do
     show_title   { generate(:random_string) }
 
-    start_time   { generate(:random_future_date) }
+    start_time   { generate(:random_future_date) + 3.days }
     end_time     { start_time.advance(hours: rand(0.2..3.0)) }
 
     transient do
@@ -27,5 +27,13 @@ FactoryGirl.define do
     after(:create) do |staffing, evaluator|
       FactoryGirl.create_list(:staffing_job, evaluator.job_count, staffable: staffing)
     end
+  end
+
+  factory :staffing_that_does_count_towards_debt, parent: :staffing do
+    counts_towards_debt true
+  end
+
+  factory :staffing_that_does_not_count_towards_debt, parent: :staffing do
+    counts_towards_debt false
   end
 end

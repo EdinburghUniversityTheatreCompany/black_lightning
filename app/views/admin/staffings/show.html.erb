@@ -1,13 +1,20 @@
-<h1>Staffing for <%= @admin_staffing.show_title %></h1>
+<h1><%= @title %></h1>
 <h3><%= l @admin_staffing.start_time, :format => :long %> – <%= l @admin_staffing.end_time, :format => :long  unless @admin_staffing.end_time == nil%></h3>
+
+<%= display_block("Staffing", true) %>
+
+<% if current_user.phone_number.blank? %>
+<br>
+<div class="alert alert-danger" role="alert">In order to sign up for staffing you need to provide a MOBILE phone number so we are able to get in touch if necessary. 
+You can do so <%= link_to 'here', edit_admin_user_path(current_user) %>.</div>
+<% end %>
 
 
 <table class="table table-bordered">
   <thead>
     <tr>
-      <th>Job</th>
-      <th>Name</th>
-
+      <th>Staffing Job</th>
+      <th>Staffed By</th>
       <% if current_user.has_role? :committee %>
         <th>Phone Number</th>
       <% end %>
@@ -19,6 +26,7 @@
         <td><%= staffing_job.name %></td>
 
         <% u = staffing_job.user %>
+
         <% if u then %>
           <td><%= "#{u.first_name} #{u.last_name}".presence || u.email %></td>
 
@@ -26,7 +34,18 @@
             <td><%= u.phone_number %></td>
           <% end %>
         <% else %>
-          <td></td>
+          <td>
+            <% if @can_sign_up %>
+              <input type="hidden" class="staffing_job_json" value="<%= staffing_job.to_json %>" >
+              <% sign_up_text = '<i class="fa fa-edit"></i> Sign Up'.html_safe %>
+
+              <% date = l staffing_job.staffable.start_time, :format => :long %>
+              <%= link_to sign_up_text, admin_sign_up_confirm_path(staffing_job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
+                                                                                                                                            "detail"  => "Confirm staffing as #{staffing_job.name} for #{staffing_job.staffable.show_title} on #{date}",
+                                                                                                                                            :job_id   => staffing_job.id
+                                                                                                                                  } %>
+            <%end %>
+          </td>
 
           <% if current_user.has_role? :committee %>
             <td></td>
@@ -36,11 +55,6 @@
     <% end %>
   </tbody>
 </table>
-
-<% if can? :sign_up_for, Admin::StaffingJob %>
-  <% sign_up_text = '<i class="fa fa-edit"></i> Sign Up'.html_safe %>
-  <%= link_to sign_up_text, show_sign_up_admin_staffing_path(@admin_staffing), :class => "btn btn-primary" %>
-<% end %>
 
 <% if can? :edit, @admin_staffing %>
   <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>

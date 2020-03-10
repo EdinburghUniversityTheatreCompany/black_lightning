@@ -28,4 +28,12 @@ FactoryGirl.define do
       end
     end
   end
+
+  factory :staffed_staffing_job, parent: :staffing_job do
+    association :user, factory: :user 
+  end
+
+  factory :unstaffed_staffing_job, parent: :staffing_job do
+    user = nil
+  end
 end

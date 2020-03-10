@@ -1,3 +1,7 @@
+#
+# This script looks for all fields called user_name on the page, so be careful when including it.
+#
+
 users = []
 user_names = []
 user_ids = {}
@@ -22,8 +26,6 @@ fetchUsers = ->
   )
 
 updateUserNames = ->
-  user_names = []
-
   $.each users, (i, user) ->
     user_name = "#{user.first_name} #{user.last_name}"
 
@@ -39,7 +41,7 @@ userUpdater = (item) ->
   return item
 
 addUserAutocomplete = ->
-  $('.team_member .user_name').typeahead
+  $('.user_name').typeahead
     source:  user_names
     updater: userUpdater
   .change ->
