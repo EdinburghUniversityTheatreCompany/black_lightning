@@ -80,18 +80,19 @@ class Admin::StaffingsController < AdminController
   end
 
   ##
+  # Renders a page for creating a set of staffings with given dates.
+  # ---
   # GET /admin/staffings/new
-  #
-  # GET /admin/staffings/new.json
   ##
   def new
     @users = User.all
-    @admin_staffing = Admin::Staffing.new
-    @title = 'New Staffing'
-    respond_to do |format|
-      format.html # new.html.erb
-      format.json { render json: @admin_staffing }
-    end
+    @admin_staffing = Admin::Staffing.new(counts_towards_debt: true)
+    @title = 'New Staffing for Show'
+    @is_new = true
+
+    now = Time.now
+    @default_start_time = Time.new(now.year, now.month, now.day, 18, 00, 0)
+    @default_end_time = @default_start_time + 3.hours
   end
 
   ##
@@ -101,6 +102,7 @@ class Admin::StaffingsController < AdminController
     @users = User.all
     @admin_staffing = Admin::Staffing.find(params[:id])
     @title = "Editing staffing for #{@admin_staffing.show_title}"
+    @is_new = false
   end
 
   ##
@@ -122,21 +124,6 @@ class Admin::StaffingsController < AdminController
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }
       end
     end
-  end
-
-  ##
-  # Renders a page for creating a set of staffings with given dates.
-  # ---
-  # GET /admin/staffings/new_for_show
-  ##
-  def new_for_show
-    @users = User.all
-    @admin_staffing = Admin::Staffing.new(counts_towards_debt: true)
-    @title = 'New Staffing for Show'
-
-    now = Time.now
-    @default_start_time = Time.new(now.year, now.month, now.day, 18, 00, 0)
-    @default_end_time = @default_start_time + 3.hours
   end
 
   ##
