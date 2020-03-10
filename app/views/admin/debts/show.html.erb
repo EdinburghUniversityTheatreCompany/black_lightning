@@ -5,4 +5,4 @@
 <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %>
 <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn' %>
 
-This user has staffed <%= @user.amount_of_unassociated_staffing_jobs %> staffing <%= "#{@user.amount_of_unassociated_staffing_jobs == 1 ? 'slot that is' : 'slots that are'}" %> not associated with any debt.
+<%=  (@user == current_user)? "You have": "#{@user.name} has"%> staffed <%= @user.amount_of_unassociated_staffing_jobs %> staffing <%= "#{@user.amount_of_unassociated_staffing_jobs == 1 ? 'slot that is' : 'slots that are'}" %> not associated with any debt.
