@@ -1,6 +1,4 @@
-<% prefix = (@user == current_user)? "You are ": "#{@user.name} is " %>
-<% postfix = (@user.in_debt)? "in Debt": "not in Debt" %>
-<h1> <%= prefix + postfix %></h1>
+<h1> <%= @message %></h1>
 
 <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %>
 <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn' %>

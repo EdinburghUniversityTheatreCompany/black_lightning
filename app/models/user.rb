@@ -202,6 +202,21 @@ class User < ActiveRecord::Base
     return staffing_debts.to_a.count {|debt| debt.status(on_date) == :causing_debt}
   end
 
+  def debt_message_suffix(on_date = Date.today)
+    maintenance_debts_count = self.amount_of_debt_causing_maintenance_debts(on_date)
+    staffing_debts_count = self.amount_of_debt_causing_staffing_debts(on_date)
+
+    if maintenance_debts_count > 0 && staffing_debts_count > 0
+      return 'in staffing and maintenance Debt'
+    elsif maintenance_debts_count > 0
+      return 'in maintenance Debt'
+    elsif staffing_debts_count > 0
+      return 'in staffing Debt'
+    else
+      return 'not in Debt'
+    end
+  end
+
     #returns true if the user is in debt
   def in_debt(on_date = Date.today)
     return self.amount_of_debt_causing_maintenance_debts(on_date) > 0 || self.amount_of_debt_causing_staffing_debts(on_date) > 0

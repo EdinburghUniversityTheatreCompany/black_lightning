@@ -26,7 +26,12 @@ def index
     debt = Admin::Debt.new(params[:id].to_i)
     authorize! :read, debt
     @user = User.find(params[:id])
-    @title = 'Debt status'
+
+    prefix = (@user == current_user)? "You are ": "#{@user.name} is "
+
+    @message = prefix+@user.debt_message_suffix
+
+    @title = "Debt status for #{@user.name}"
   end
 
 end
