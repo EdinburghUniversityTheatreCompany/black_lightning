@@ -46,7 +46,7 @@
             <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
 
             <% if u.in_debt && current_user.has_role?(:committee) %>
-              <%= link_to 'This user is in debt.', admin_debt_path(u), class: "label label-warning" %>
+              <%= link_to 'This user is in debt.', admin_debt_path(u), class: "label label-important" %>
             <% end %>
           </p>
       <% end %>
