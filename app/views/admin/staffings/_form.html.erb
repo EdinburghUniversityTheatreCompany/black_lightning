@@ -9,8 +9,14 @@
 
   <div class="form-inputs">
 
-    <%= f.input :show_title, input_html: {autocomplete: 'off'} %>
-    
+    <%= f.input :show_title, input_html: {
+      autocomplete: 'off',
+      data: {
+        provide: "typeahead",
+        source: Show.where("events.end_date >= ?", Date.today).to_a.collect {|show| show.name}
+      }
+    } %>
+
     <%= f.input :counts_towards_debt, label: 'Does the staffing count towards debt?'%>
 
     <% if @is_new %>		
