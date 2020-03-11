@@ -63,7 +63,7 @@ class Admin::StaffingJob < ActiveRecord::Base
       return
     # Only check for outstanding debt if the user has changed.
     elsif user_id_changed?
-      debts = Admin::StaffingDebt.where(user_id: user_id).unfulfilled.order(:due_by).limit(1)
+      debts = Admin::StaffingDebt.where(user_id: user_id, admin_staffing_job: nil).unfulfilled.order(:due_by)
       
       if debts.empty?
         # If the user changed and there are no debts found, it should not stay associated with the old debt.

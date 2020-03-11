@@ -65,6 +65,8 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     other_staffing_job = FactoryGirl.create(:unstaffed_staffing_job, staffable: other_staffing, user: @user)
 
     @staffing_debt.reload
+    @staffing_job.reload
+    other_staffing_job.reload
 
     assert_equal @staffing_job.staffing_debt.id, @staffing_debt.id, 'The staffing_job is not associated with the staffing_debt'
     assert_nil other_staffing_job.staffing_debt, 'The other_staffing_job associated with the staffing_debt'
