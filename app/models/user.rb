@@ -203,7 +203,7 @@ class User < ActiveRecord::Base
   end
 
   def amount_of_unassociated_staffing_jobs()
-    # Returns the amount of staffing jobs that are not associated with any debt.
+    # Returns the amount of staffing jobs that are not associated with any debt and count towards staffing.
     return Admin::StaffingJob.where(user: self).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").to_a.count { |job| job.counts_towards_debt? }
   end
 
