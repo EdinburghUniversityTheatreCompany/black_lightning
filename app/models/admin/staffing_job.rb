@@ -19,7 +19,7 @@
 class Admin::StaffingJob < ActiveRecord::Base
   belongs_to :staffable, polymorphic: true
   belongs_to :user
-  has_one :staffing_debt, :class_name => 'Admin::StaffingDebt', :foreign_key => 'admin_staffing_job_id'
+  has_one :staffing_debt, class_name: 'Admin::StaffingDebt', foreign_key: 'admin_staffing_job_id'
 
   validates :name, presence: true
 
@@ -48,6 +48,12 @@ class Admin::StaffingJob < ActiveRecord::Base
 
   def counts_towards_debt?
     return self.staffable.counts_towards_debt? && self.name != "Committee Rep"
+  end
+
+  def self.unassociated_staffing_jobs_that_count_towards_debt
+    # Returns the staffing jobs that are not associated with any debt and count towards staffing.
+    ids = all.joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").map { |job| job.counts_towards_debt? ? job.id : nil }
+    return all.where(id: ids)
   end
 
   private

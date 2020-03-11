@@ -6,4 +6,5 @@
 <br><br>
 <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: current_user.id), class: 'btn' %>
 <br><br>
-You have staffed <%= current_user.amount_of_unassociated_staffing_jobs %> staffing <%= "#{ current_user.amount_of_unassociated_staffing_jobs == 1 ? 'slot that counts towards debt but has' : 'slots that count towards debt but have'}" %> not been associated with staffing debt yet.
+<% job_count = current_user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.count %>
+You have staffed <%= job_count %> staffing <%= "#{ job_count == 1 ? 'slot that counts towards debt but has' : 'slots that count towards debt but have'}" %> not been associated with staffing debt yet.

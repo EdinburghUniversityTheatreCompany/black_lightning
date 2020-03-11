@@ -76,7 +76,6 @@ class Admin::StaffingDebt < ActiveRecord::Base
     # Only associate when the record is new(that's why it's in the after_create) and the record does not already have a staffing job.
     return if admin_staffing_job.present?
 
-    jobs = Admin::StaffingJob.where(user: user).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null")
-    self.admin_staffing_job = jobs.find {|job| job.counts_towards_debt?}
+    self.admin_staffing_job = user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.first
   end
 end
