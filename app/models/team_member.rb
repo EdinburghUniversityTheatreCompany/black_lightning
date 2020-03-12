@@ -14,13 +14,12 @@
 # *created_at*::    <tt>datetime, not null</tt>
 # *updated_at*::    <tt>datetime, not null</tt>
 # *teamwork_type*:: <tt>string(255)</tt>
-# *display_order*:: <tt>integer</tt>
 #--
 # == Schema Information End
 #++
 ##
 class TeamMember < ActiveRecord::Base
-  default_scope -> { order('display_order ASC') }
+  default_scope -> { order('position ASC') }
 
   belongs_to :teamwork, polymorphic: true
   belongs_to :user
@@ -29,5 +28,5 @@ class TeamMember < ActiveRecord::Base
 
   delegate :name, to: :user, prefix: true
 
-  attr_accessible :position, :user, :user_id, :proposal, :proposal_id, :display_order
+  attr_accessible :position, :user, :user_id, :proposal, :proposal_id
 end
