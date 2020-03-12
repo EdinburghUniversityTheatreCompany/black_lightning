@@ -60,7 +60,7 @@
       <%# Checks if the user has permission to see debts, and if so, displays if the user is currently in debt or will be in debt on the proposal deadline %>
       <% if current_user.has_role?(:committee) || current_user.has_role?(:proposal_viewer) || @admin_proposals_proposal.team_members.any? {|team_member| team_member.user == current_user} %>
           <% if u.in_debt %>
-            <% current_debt_message = "#{u.debt_message_suffix.capitalize}" %>
+            <% current_debt_message = "#{u.debt_message_suffix}" %>
             <% current_debt_message[0] = current_debt_message[0].upcase %>
 
             <%= link_to current_debt_message, admin_debt_path(u), class: "label label-important" %>
