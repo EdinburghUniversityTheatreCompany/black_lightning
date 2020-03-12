@@ -3,7 +3,7 @@ class Admin::DebtsController < AdminController
 def index
   authorize! :manage, Admin::Debt
 
-  @title = 'Users'
+  @title = 'All Debts'
 
   @q     = User.unscoped.search(params[:q])
   @users = @q.result(distinct: true)
@@ -19,7 +19,7 @@ def index
   respond_to do |format|
     format.html
     format.json { render json: @users }
-  end
+    end
   end
 
   def show
