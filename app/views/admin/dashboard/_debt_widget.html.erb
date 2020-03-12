@@ -1,9 +1,3 @@
-
-<% postfix = (current_user.in_debt)? "in Debt": "not in Debt" %>
-<h3> <%= "You are #{postfix}" %></h3>
-
-<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: current_user.id), class: 'btn' %>
-<br><br>
-<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: current_user.id), class: 'btn' %>
-<br><br>
-You have staffed <%= current_user.amount_of_unassociated_staffing_jobs %> staffing <%= "#{ current_user.amount_of_unassociated_staffing_jobs == 1 ? 'slot that counts towards debt but has' : 'slots that count towards debt but have'}" %> not been associated with staffing debt yet.
+<% @message = "You are #{current_user.debt_message_suffix}" %>
+<% @user = current_user %>
+<%= render file: '/admin/debts/show.html.erb' %>

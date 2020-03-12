@@ -192,24 +192,34 @@ class User < ActiveRecord::Base
     return !first_name.blank? && !last_name.blank?
   end
 
-  def amount_of_maintenance_debts(on_date = Date.today)
+  def amount_of_debt_causing_maintenance_debts(on_date = Date.today)
     maintenance_debts = Admin::MaintenanceDebt.where(user: self).where('due_by <?', on_date)
     return maintenance_debts.to_a.count {|debt| debt.status(on_date) == :causing_debt}
   end
 
-  def amount_of_staffing_debts(on_date = Date.today)
+  def amount_of_debt_causing_staffing_debts(on_date = Date.today)
     staffing_debts = Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by <?', on_date)
     return staffing_debts.to_a.count {|debt| debt.status(on_date) == :causing_debt}
   end
 
-  def amount_of_unassociated_staffing_jobs()
-    # Returns the amount of staffing jobs that are not associated with any debt and count towards staffing.
-    return Admin::StaffingJob.where(user: self).joins("LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id").where("admin_staffing_debts.admin_staffing_job_id IS null").to_a.count { |job| job.counts_towards_debt? }
+  def debt_message_suffix(on_date = Date.today)
+    maintenance_debts_count = self.amount_of_debt_causing_maintenance_debts(on_date)
+    staffing_debts_count = self.amount_of_debt_causing_staffing_debts(on_date)
+
+    if maintenance_debts_count > 0 && staffing_debts_count > 0
+      return 'in staffing and maintenance Debt'
+    elsif maintenance_debts_count > 0
+      return 'in maintenance Debt'
+    elsif staffing_debts_count > 0
+      return 'in staffing Debt'
+    else
+      return 'not in Debt'
+    end
   end
 
     #returns true if the user is in debt
   def in_debt(on_date = Date.today)
-    return self.amount_of_maintenance_debts(on_date) > 0 || self.amount_of_staffing_debts(on_date) > 0
+    return self.amount_of_debt_causing_maintenance_debts(on_date) > 0 || self.amount_of_debt_causing_staffing_debts(on_date) > 0
   end
 
   def self.in_debt(on_date = Date.today)

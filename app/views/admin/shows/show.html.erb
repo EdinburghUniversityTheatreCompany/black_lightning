@@ -46,7 +46,10 @@
             <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
 
             <% if u.in_debt && current_user.has_role?(:committee) %>
-              <%= link_to 'This user is in debt.', admin_debt_path(u), class: "label label-important" %>
+              <% current_debt_message = "#{u.debt_message_suffix}" %>
+              <% current_debt_message[0] = current_debt_message[0].upcase %>
+
+              <%= link_to current_debt_message, admin_debt_path(u), class: "label label-important" %>
             <% end %>
           </p>
       <% end %>

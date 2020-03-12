@@ -2,8 +2,6 @@
     <%= javascript_include_tag "admin/users" %>
 <% end %>
 
-<% @title = 'Debts' %>
-
 <% prefix = params[:commit] == "Search" ? "Searching" : "Listing" %>
 
 <% if params[:show_non_members] == "1" %>
@@ -23,17 +21,8 @@
 
     <% end %>
   </div>
-  <div class="span3">
-    <div class="control-group">
-      <div class="controls">
-        <label class="checkbox">
-
-        </label>
-      </div>
-    </div>
-  </div>
 </div>
-
+The display is formatted using (current debts) / (upcoming debts)
 <table class="table">
   <tbody>
   <tr>
@@ -47,9 +36,9 @@
       <tr <%= user.in_debt ?  " class = error ": "" %>>
         <td><%= user.email %></td>
         <td><%= link_to "#{user.first_name} #{user.last_name}", admin_debt_path(user) %></td>
-        <td><%= user.amount_of_maintenance_debts %></td>
-        <td><%= user.amount_of_staffing_debts %></td>
-        <td><%= user.amount_of_unassociated_staffing_jobs %></td>
+        <td><%= "#{user.amount_of_debt_causing_maintenance_debts} / #{(user.amount_of_debt_causing_maintenance_debts Date.today.advance(years: 1)) - user.amount_of_debt_causing_maintenance_debts}" %></td>
+        <td><%= "#{user.amount_of_debt_causing_staffing_debts} / #{(user.amount_of_debt_causing_staffing_debts Date.today.advance(years: 1)) - user.amount_of_debt_causing_staffing_debts}" %></td>
+        <td><%= user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.count %></td>
       </tr>
   <% end %>
   </tbody>

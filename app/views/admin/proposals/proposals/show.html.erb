@@ -57,8 +57,21 @@
       <% u = team_member.user %>
       <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
 
-      <% if u.in_debt(@admin_proposals_proposal.call.deadline) && (current_user.has_role?(:committee) || @admin_proposals_proposal.team_members.any? {|team_member| team_member.user == current_user}) %>
-          <%= link_to 'This user is in debt.', admin_debt_path(u), class: "label label-important" %>
+      <%# Checks if the user has permission to see debts, and if so, displays if the user is currently in debt or will be in debt on the proposal deadline %>
+      <% if current_user.has_role?(:committee) || current_user.has_role?(:proposal_viewer) || @admin_proposals_proposal.team_members.any? {|team_member| team_member.user == current_user} %>
+          <% if u.in_debt %>
+            <% current_debt_message = "#{u.debt_message_suffix}" %>
+            <% current_debt_message[0] = current_debt_message[0].upcase %>
+
+            <%= link_to current_debt_message, admin_debt_path(u), class: "label label-important" %>
+          <% end %>
+
+          <% if u.in_debt(@admin_proposals_proposal.call.deadline)%>
+            <% on_deadline_debt_message = "#{u.debt_message_suffix(@admin_proposals_proposal.call.deadline)} on the proposal deadline" %>
+            <% on_deadline_debt_message[0] = on_deadline_debt_message[0].upcase %>
+        
+            <%= link_to on_deadline_debt_message, admin_debt_path(u), class: "label label-warning" %>        
+          <% end %>
       <% end %>
     </p>
 <% end %>
