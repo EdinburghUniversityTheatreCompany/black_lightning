@@ -1,11 +1,11 @@
 <h3> <%= @message %></h3>
 
-<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user: @user), class: 'btn' %> 
+<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %> 
 <br>
 <%= "(#{@user.amount_of_debt_causing_maintenance_debts} now) (#{(@user.amount_of_debt_causing_maintenance_debts Date.today.advance(years: 1)) - @user.amount_of_debt_causing_maintenance_debts} upcoming)"%>
 <br>
 <br>
-<%= link_to 'Staffing Debts', admin_staffing_debts_path(user: @user), class: 'btn' %>
+<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn' %>
 <br>
 <%= "(#{@user.amount_of_debt_causing_staffing_debts} now) (#{(@user.amount_of_debt_causing_staffing_debts Date.today.advance(years: 1)) - @user.amount_of_debt_causing_staffing_debts} upcoming)"%>
 <br>
