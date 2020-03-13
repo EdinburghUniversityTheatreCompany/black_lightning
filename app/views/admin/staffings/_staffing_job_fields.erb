@@ -1,8 +1,29 @@
-<div class="job control-group fields">
+<%# Based on the very similar _team_member_fields.erb file %>
+
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/user_typeahead_field.js" %>
+<% end %>
+
+<div class="job control-group fields <%= "error" if (f.error(:user).present?) %>">
+    <%= f.hidden_field :id %>
+
+    <i class="icon-sort"></i>
+    
+    <%= f.error :name %>
+    <%= f.error :user %>
+
+    <div class="no-such-user" style="display: none">
+      <span class="help-inline">The user cannot be found. Please make sure they have bought membership and activated their website account by emailing <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>. Still can't find them? Contact the secretary.</span>
+      <br/>
+      <br/>
+    </div>
+    
     <%= f.input_field :name %>
 
-    <%= f.input_field :user_id, :collection => @users.with_role(:member).collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
+    <% value = f.object.user ? "#{f.object.user.first_name} #{f.object.user.last_name}" : "" %>
+    <input class="user_name" type="text" value="<%= value %>">
+    <%= f.hidden_field :user_id, class: "user_id" %>
 
     <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
-    <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
+    <%= f.link_to_remove remove_text, class: "btn btn-danger" %>
 </div>

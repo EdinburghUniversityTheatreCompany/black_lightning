@@ -1,7 +1,14 @@
-<% prefix = (@user == current_user)? "You are ": "#{@user.name} is " %>
-<% postfix = (@user.in_debt)? "in Debt": "not in Debt" %>
-<h1> <%= prefix + postfix %></h1>
+<h3> <%= @message %></h3>
 
-<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %>
-<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn' %>
-
+<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user: @user), class: 'btn' %> 
+<br>
+<%= "(#{@user.amount_of_debt_causing_maintenance_debts} now) (#{(@user.amount_of_debt_causing_maintenance_debts Date.today.advance(years: 1)) - @user.amount_of_debt_causing_maintenance_debts} upcoming)"%>
+<br>
+<br>
+<%= link_to 'Staffing Debts', admin_staffing_debts_path(user: @user), class: 'btn' %>
+<br>
+<%= "(#{@user.amount_of_debt_causing_staffing_debts} now) (#{(@user.amount_of_debt_causing_staffing_debts Date.today.advance(years: 1)) - @user.amount_of_debt_causing_staffing_debts} upcoming)"%>
+<br>
+<br>
+<% unassociated_job_count = @user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.count%>
+<%= "#{(@user == current_user)? "You have": "#{@user.name} has"} staffed #{unassociated_job_count} staffing #{unassociated_job_count == 1 ? 'slot that is' : 'slots that are'} not associated with any Debt." %>

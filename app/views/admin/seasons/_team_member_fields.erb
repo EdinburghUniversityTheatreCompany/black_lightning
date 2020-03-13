@@ -1,16 +1,1 @@
-<li class="team_member control-group fields <%= "error" if (f.error :user or f.error :position) %>">
-    <%= f.hidden_field :id %>
-    <%= f.hidden_field :display_order,:class => 'display_order_input' %>
-
-    <i class="icon-sort"></i>
-
-    <%= f.error :user %>
-    <%= f.error :position %>
-
-    <%= f.input_field :position, :data => { :provide => "typeahead", :source => ['Director', 'Producer', 'Technical Manager', 'Stage Manager', 'Assistant to Mr B. Hussey'] } %>
-
-    <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
-
-    <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
-    <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
-</li>
+<%= render file: '/admin/shared/_team_member_fields.erb', locals: {f: f} %>

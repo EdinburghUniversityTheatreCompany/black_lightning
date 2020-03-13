@@ -65,6 +65,8 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     other_staffing_job = FactoryGirl.create(:unstaffed_staffing_job, staffable: other_staffing, user: @user)
 
     @staffing_debt.reload
+    @staffing_job.reload
+    other_staffing_job.reload
 
     assert_equal @staffing_job.staffing_debt.id, @staffing_debt.id, 'The staffing_job is not associated with the staffing_debt'
     assert_nil other_staffing_job.staffing_debt, 'The other_staffing_job associated with the staffing_debt'
@@ -147,5 +149,16 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
 
     assert_nil @staffing_job.staffing_debt, 'The staffing job has staffing debt associated with it even though the name of the job is "Committee Rep"'
     assert_nil @staffing_debt.admin_staffing_job, 'The staffing_debt has a staffing_job associated with it even though the name of the job is "Committee Rep"'
+  end
+
+  test "does not associate when the staffing debt is forgiven" do
+    @staffing_debt.forgive
+
+    @staffing_job.user = @user
+    @staffing_job.save
+    @staffing_debt.reload
+
+    assert_nil @staffing_job.staffing_debt, 'The staffing job has staffing debt associated with it even though the staffing_debt is forgiven'
+    assert_nil @staffing_debt.admin_staffing_job, 'The staffing_debt has a staffing_job associated with it even though the staffing_debt is forgiven'
   end
 end

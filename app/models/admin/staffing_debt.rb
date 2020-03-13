@@ -22,8 +22,10 @@ class Admin::StaffingDebt < ActiveRecord::Base
   validates :due_by, presence: true
   validates :show_id, presence: true
   validates :user_id, presence: true
-  # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
+  
+  before_create :associate_staffing_debt_with_existing_staffing_job
 
+  # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
   def status(on_date = Date.today)
     # note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
     return :forgiven if forgiven
@@ -67,5 +69,13 @@ class Admin::StaffingDebt < ActiveRecord::Base
   def forgive
     self.forgiven = true
     save
+  end
+
+  private 
+  def associate_staffing_debt_with_existing_staffing_job
+    # Only associate when the record is new(that's why it's in the after_create) and the record does not already have a staffing job.
+    return if admin_staffing_job.present?
+
+    self.admin_staffing_job = user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.first
   end
 end

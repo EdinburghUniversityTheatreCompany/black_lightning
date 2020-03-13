@@ -3,7 +3,7 @@ class Admin::DebtsController < AdminController
 def index
   authorize! :manage, Admin::Debt
 
-  @title = 'Users'
+  @title = 'All Debts'
 
   @q     = User.unscoped.search(params[:q])
   @users = @q.result(distinct: true)
@@ -19,14 +19,19 @@ def index
   respond_to do |format|
     format.html
     format.json { render json: @users }
-  end
+    end
   end
 
   def show
     debt = Admin::Debt.new(params[:id].to_i)
     authorize! :read, debt
     @user = User.find(params[:id])
-    @title = 'Debt status'
+
+    prefix = (@user == current_user)? "You are ": "#{@user.name} is "
+
+    @message = prefix+@user.debt_message_suffix
+
+    @title = "Debt status for #{@user.name}"
   end
 
 end

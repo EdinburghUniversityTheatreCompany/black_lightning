@@ -7,7 +7,7 @@ class Admin::StaffingDebtsController < AdminController
 
     if can? :read, Admin::StaffingDebt
       if params[:user_id].present?
-        @sdebts = Admin::StaffingDebt.where(:user_id => params[:user_id])
+        @sdebts = Admin::StaffingDebt.where(user_id: params[:user_id])
       elsif params.length > 3
         show_fulfilled = params[:show_fulfilled].present?
         @sdebts = Admin::StaffingDebt.search_for(params[:user_fname],params[:user_sname],params[:show_name],show_fulfilled)
@@ -26,10 +26,8 @@ class Admin::StaffingDebtsController < AdminController
   def show
     authorize!(:manage , @admin_staffing_debt)
 
-    boundryDate = Date.today - 80
     @admin_staffing_debt = Admin::StaffingDebt.find(params[:id])
-    dateIds = @admin_staffing_debt.user.staffings.where('start_time >?', boundryDate.to_datetime).ids
-    @jobs = @admin_staffing_debt.user.staffing_jobs.where(staffable_id: dateIds).where.not(id: Admin::StaffingDebt.pluck(:admin_staffing_job_id), name: 'Committee Rep')
+    @jobs = @admin_staffing_debt.user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt
   end
 
 

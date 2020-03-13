@@ -48,7 +48,8 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
     case state
     when 'converted' then :converted
     when 'completed' then :completed
-    else if due_by < on_date
+    else 
+      if due_by < on_date
            :causing_debt
          else
            :unfulfilled
