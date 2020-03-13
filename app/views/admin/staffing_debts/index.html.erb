@@ -58,7 +58,9 @@
               <% job = sdebt.admin_staffing_job.staffable %>
               <%= link_to job.show_title, admin_staffing_path(job) %>
           <% else %>
-              <% if can? :edit, sdebt %>
+              <% if sdebt.status == :forgiven %>
+                  Forgiven
+              <% elsif can? :edit, sdebt %>
                   <%= link_to 'Associate', admin_staffing_debt_path(sdebt), class: "btn" %>
               <% end %>
           <% end %>
@@ -71,15 +73,15 @@
         </td>
 
         <td>
-          <% if can? :edit, sdebt %>
+          <% if (can? :edit, sdebt) && sdebt.status != :forgiven %>
               <%= link_to 'Change Deadline', edit_admin_staffing_debt_path(sdebt), class: "btn" %>
           <% end %>
         </td>
 
         <td>
-          <% if can? :delete, sdebt %>
-              <%= link_to 'Forgive', admin_staffing_debt_path(sdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + sdebt.user.name + "'s debt",
-                                                                                                                       detail: "If you delete a debt a FOH fairy dies",
+          <% if (can? :delete, sdebt) && sdebt.status != :forgiven %>
+              <%= link_to 'Forgive', admin_staffing_debt_path(sdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Forgiving " + sdebt.user.name + "'s Debt",
+                                                                                                                       detail: "If you forgive a Debt a FOH fairy dies#{' and the associated staffing job will be disassociated' if sdebt.admin_staffing_job.present?}.",
               } %>
           <% end %>
         </td>

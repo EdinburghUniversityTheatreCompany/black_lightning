@@ -68,6 +68,7 @@ class Admin::StaffingDebt < ActiveRecord::Base
 
   def forgive
     self.forgiven = true
+    self.admin_staffing_job = nil
     save
   end
 
