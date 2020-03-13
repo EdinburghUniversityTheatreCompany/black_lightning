@@ -1,4 +1,5 @@
-<h3> <%= @message %></h3>
+<% header_size = 1 if header_size == nil %>
+<%= "<h#{header_size}>#{@message}</h#{header_size}>".html_safe %>
 
 <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %> 
 <br>

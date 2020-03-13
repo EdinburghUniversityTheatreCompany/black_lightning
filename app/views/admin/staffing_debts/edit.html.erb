@@ -1,15 +1,9 @@
-<h1>Editing Admin Staffing Debt</h1>
+<h1><%= @title %></h1>
 
 <%= simple_form_for(@admin_staffing_debt) do |y| %>
     <%= y.error_notification %>
-
-    <div class="form-inputs">
-      <%= y.input :due_by , label: "Due By"%>
-    </div>
-
-    <div class="form-actions">
-      <%= y.button :submit %>
-    </div>
+    <%= y.input :due_by , label: "Due By"%>
+    <%= y.button :submit %>
 <% end %>
 
 <%= link_to 'Show', @admin_staffing_debt %> |
