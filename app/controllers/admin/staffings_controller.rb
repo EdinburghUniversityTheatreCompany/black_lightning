@@ -41,7 +41,7 @@ class Admin::StaffingsController < AdminController
     else
       @staffings = Admin::Staffing.future.where(show_title: params[:show_title])
     end
-    @job_titles = @staffings.joins(:staffing_jobs).select('admin_staffing_jobs.name').uniq.collect(&:name)
+    @job_titles = @staffings.joins(:staffing_jobs).select('admin_staffing_jobs.name').uniq.collect(&:name).sort
 
     @staffings = @staffings.includes(staffing_jobs: :user)
     @staffings_hash = @staffings.all.collect do |s|
