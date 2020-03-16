@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20200225183306) do
+ActiveRecord::Schema.define(version: 20200312231849) do
 
   create_table "admin_answers", force: :cascade do |t|
     t.integer  "question_id",       limit: 4
@@ -373,7 +373,6 @@ ActiveRecord::Schema.define(version: 20200225183306) do
     t.datetime "created_at",                null: false
     t.datetime "updated_at",                null: false
     t.string   "teamwork_type", limit: 255
-    t.integer  "display_order", limit: 4
   end
 
   add_index "team_members", ["teamwork_id"], name: "index_team_members_on_teamwork_id", using: :btree

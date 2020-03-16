@@ -9,7 +9,6 @@
 # *created_at*::    <tt>datetime, not null</tt>
 # *updated_at*::    <tt>datetime, not null</tt>
 # *teamwork_type*:: <tt>string(255)</tt>
-# *display_order*:: <tt>integer</tt>
 #--
 # == Schema Information End
 #++

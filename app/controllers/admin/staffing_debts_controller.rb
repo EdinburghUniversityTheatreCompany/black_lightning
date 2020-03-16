@@ -40,6 +40,8 @@ class Admin::StaffingDebtsController < AdminController
 
   # GET /admin/staffing_debts/1/edit
   def edit
+    user = Admin::StaffingDebt.find(params[:id]).user
+    @title = "Editing Staffing Debt for #{user.name}"
   end
 
   #associates a debt with a staffing job

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta content='text/html; charset=UTF-8' http-equiv='Content-Type'/>
+</head>
+<body>
+
+<p>
+  Dear <%= @user.name_or_email %>,
+</p>
+
+<p>
+  This is a <%= @new_debtor ? 'notification' : 'reminder' %> that you became in debt to the company on <%= Admin::Debt.users_oldest_debt(@user.id) %>. You become in debt if you haven’t signed up to staff or attended maintenance in the appropriate time period after being involved in a show. If you feel you should not be in debt to the company, please check the <a href="https://edinburghuniversitytheatrecompany.github.io/StaffingFAQs/StaffingFAQs.html">FAQs</a>, and then contact the Theatre Manager regarding maintenance debt (theatre@bedlamtheatre.co.uk) or the Front of House Manager for staffing debt (foh@bedlamtheatre.co.uk).
+</p>
+<p>
+  While in debt you can’t become involved in a new production in <b>any</b> capacity (including auditioning, being cast, or taking on a non-core team or assistant production role). This will not affect any projects that you are already committed to.
+</p>
+<p>
+  Clearing debt is quite easy. If you are in maintenance debt, just attend a maintenance session (12pm on Sundays during term time), and if you are in staffing debt, sign up for a staffing slot <%= link_to 'here', admin_staffings_path %> (and then staff it!). If you can’t do either of these please don’t hesitate to contact the Theatre or the Front of House Manager to arrange an alternative way of giving back to the company.
+</p>
+<p>
+  If you have become in debt to the company due to a welfare issue which you would rather not discuss with the Theatre or Front of House Manager, please contact one of the Welfare Officers or the president (president@bedlamtheatre.co.uk).
+</p>
+<p>
+  Many thanks,
+</p>
+<p>
+Bedlam Committee
+</p>
+</body>
+</html>
+
