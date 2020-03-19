@@ -28,10 +28,10 @@
     <%= render_markdown @season.description %>
   </div>
 
-  <% if @team_members.count > 0 %>
+  <% if @season.team_members.count > 0 %>
     <div class="span4">
       <dl class="cast-crew-list">
-        <% @team_members.each do |team_member| %>
+        <%  @season.team_members.each do |team_member| %>
           <dt><%= team_member.position %></dt>
 
           <dd>

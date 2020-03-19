@@ -28,7 +28,6 @@ class ShowsController < ApplicationController
     # This is caught by the application controller to redirect to 404
     @show = Show.find_by_slug!(params[:id])
 
-    @team_members = @show.team_members.all
     @reviews  = @show.reviews.all
     @pictures = @show.pictures.all
 

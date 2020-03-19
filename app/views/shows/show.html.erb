@@ -60,16 +60,14 @@
 
 <%= render_markdown @show.description %>
 
-<% have_team_members = @team_members.count > 0 %>
-
-<% if have_team_members then %>
+<% if @show.team_members.count > 0 then %>
   <hr />
 
   <div class="row vertical-rule">
     <div class="span4">
       <h4>Cast and Crew</h4>
       <dl class="cast-crew-list">
-        <% @team_members.each do |team_member| %>
+        <% @show.team_members.each do |team_member| %>
           <dt><%= team_member.position %></dt>
 
           <dd>

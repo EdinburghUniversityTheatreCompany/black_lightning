@@ -1,6 +1,6 @@
 class SeasonsController < ApplicationController
+  # GET /seasons/1
   def show
     @season = Season.find_by_slug!(params[:id])
-    @team_members = @season.team_members
   end
 end
