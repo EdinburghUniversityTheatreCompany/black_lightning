@@ -49,32 +49,7 @@
 </div>
 
 <h3>Team</h3>
-
-<% @admin_proposals_proposal.team_members.each do |team_member| %>
-    <p>
-      <b><%= team_member.position %></b>
-
-      <% u = team_member.user %>
-      <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-
-      <%# Checks if the user has permission to see debts, and if so, displays if the user is currently in debt or will be in debt on the proposal deadline %>
-      <% if current_user.has_role?(:committee) || current_user.has_role?(:proposal_viewer) || @admin_proposals_proposal.team_members.any? {|team_member| team_member.user == current_user} %>
-          <% if u.in_debt %>
-            <% current_debt_message = "#{u.debt_message_suffix}" %>
-            <% current_debt_message[0] = current_debt_message[0].upcase %>
-
-            <%= link_to current_debt_message, admin_debt_path(u), class: "label label-important" %>
-          <% end %>
-
-          <% if u.in_debt(@admin_proposals_proposal.call.deadline)%>
-            <% on_deadline_debt_message = "#{u.debt_message_suffix(@admin_proposals_proposal.call.deadline)} on the proposal deadline" %>
-            <% on_deadline_debt_message[0] = on_deadline_debt_message[0].upcase %>
-        
-            <%= link_to on_deadline_debt_message, admin_debt_path(u), class: "label label-warning" %>        
-          <% end %>
-      <% end %>
-    </p>
-<% end %>
+<%= render 'admin_show_team_members', team_members: @admin_proposals_proposal.team_members, deadline: @admin_proposals_proposal.call.deadline, can_see_if_fellow_team_members_are_in_debt: true %>
 
 <hr/>
 

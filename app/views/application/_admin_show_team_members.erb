@@ -1,0 +1,37 @@
+
+<% deadline = nil if deadline.nil? %>
+<% can_see_if_fellow_team_members_are_in_debt = false if can_see_if_fellow_team_members_are_in_debt.nil? %>
+
+<% can_see_in_debt_label = current_user.has_role?(:committee) || current_user.has_role?(:admin) || (can_see_if_fellow_team_members_are_in_debt && team_members.any? {|team_member| team_member.user == current_user}) %>
+
+<% team_members.each do |team_member| %>
+  <p>
+    <b><%= team_member.position %></b>
+
+    <% user = team_member.user %>
+    <% name = user.nil? ? 'Unknown' : (user.name.presence || ((can? :edit, user) ? user.email.presence : nil) || 'Unknown') %>
+
+    <% if can? :edit, user %>
+      <%= link_to name, edit_admin_user_path(user) %>
+    <% elsif user.public_profile? %>
+      <%= link_to name, user %>
+    <% else %>
+      <%= name %>
+    <% end %>
+
+    <% if can_see_in_debt_label && user.in_debt %>
+      <% debt_message = "#{user.debt_message_suffix}" %>
+      <% debt_message[0] = debt_message[0].upcase %>
+
+      <%= link_to debt_message, admin_debt_path(user), class: "label label-important" %>
+    <% end %>
+
+    <% if can_see_in_debt_label && deadline.present? && user.in_debt(deadline) %>
+      <% on_deadline_debt_message = "#{user.debt_message_suffix(deadline)} on the deadline" %>
+      <% on_deadline_debt_message[0] = on_deadline_debt_message[0].upcase %>
+        
+      <%= link_to on_deadline_debt_message, admin_debt_path(user), class: "label label-warning" %>        
+    <% end %>
+  </p>
+<% end %>
+

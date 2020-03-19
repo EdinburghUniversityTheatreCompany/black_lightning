@@ -34,14 +34,7 @@
         <tr>
             <th>Team</th>
             <td>
-                <% @workshop.team_members.each do |team_member| %>
-                  <p>
-                  <b><%= team_member.position %></b>
-
-                  <% u = team_member.user %>
-                  <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-                  </p>
-                <% end %>
+                <%= render 'admin_show_team_members', team_members: @workshop.team_members %>
             </td>
         </tr>
     </tbody>
