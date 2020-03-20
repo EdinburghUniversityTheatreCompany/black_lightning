@@ -1,0 +1,14 @@
+
+<% event_label = "#{event.name} - #{event.date_range}" %>
+
+<% if event.type == "Show" %>
+<%= link_to event_label, admin_show_path(event), target: :blank %>
+<% elsif event.type == "Workshop" %>
+<%= link_to event_label, admin_workshop_path(event), target: :blank %>
+<% elsif event.type == "Season" %>
+<%= link_to event_label, admin_season_path(event), target: :blank %>
+<% else %>
+<%= event_label %>
+<% end %>
+
+<span class="label"><%= event.type.presence || "Unknown Type" %></span>

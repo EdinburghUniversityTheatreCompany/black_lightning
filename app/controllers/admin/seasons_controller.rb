@@ -50,6 +50,8 @@ class Admin::SeasonsController < AdminController
     @season = Season.new(params[:season])
     @users = User.by_first_name.all
 
+    @season.event_ids = params[:season][:event_ids]
+
     respond_to do |format|
       if @season.save
         format.html { redirect_to admin_season_path(@season), notice: 'Season was successfully created.' }
@@ -66,6 +68,8 @@ class Admin::SeasonsController < AdminController
   def update
     @season = Season.find_by_slug(params[:id])
     @users = User.by_first_name.all
+
+    @season.event_ids = params[:season][:event_ids]
 
     respond_to do |format|
       if @season.update_attributes(params[:season])

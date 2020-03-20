@@ -31,7 +31,22 @@
 
       <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
       <%= f.link_to_add add_member_text, :team_members, :class => "btn" %>
+    </div>
+    
+    <div class="form-horizontal">
+      <h3>Events</h3>
 
+      <% if f.object.errors[:events].present? then %>
+      <p id="events_errors" class="alert alert-error">
+        <%= f.error :events %>
+      </p>
+      <% end %>
+
+      <p>The list of events that can be added to the season will not automatically update after changing the start or end date. You have to save the season and start editing it again to refresh the list.</p>
+
+      <%= f.collection_check_boxes(:event_ids, (@season.events + Event.where("end_date >= ?", @season.start_date).where("start_date <= ?", @season.end_date).order(:start_date) - [@season]).uniq, :id, ->(event) { render 'event_label', event: event }) do |b| %>
+        <%= b.label { b.check_box + "   #{b.text}".html_safe } %>
+      <% end %>
     </div>
 
     <div class="gallery-form">
