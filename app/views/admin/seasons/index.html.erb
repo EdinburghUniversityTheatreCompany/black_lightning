@@ -26,7 +26,7 @@
 
     <td>
       <% if can? :delete, season %>
-        <%= link_to 'Destroy', admin_seasons_path(season), method: :delete, data: { confirm: 'Are you sure?' } %>
+        <%= link_to 'Destroy', admin_season_path(season), method: :delete, data: { confirm: "Deleting Season #{season.name}", detail: "Are you sure you want to delete the Season #{season.name}?"} %>
       <% end %>
     </td>
   </tr>
