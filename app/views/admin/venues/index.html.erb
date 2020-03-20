@@ -5,18 +5,11 @@
     <th>Name</th>
     <th></th>
     <th></th>
-    <th></th>
   </tr>
 
 <% @venues.each do |venue| %>
   <tr>
-    <td><%= venue.name %></td>
-
-    <td>
-      <% if can? :read, venue %>
-        <%= link_to 'Show', venue %>
-      <% end %>
-    </td>
+    <td><%= (can? :read, venue) ? link_to(venue.name, admin_venue_path(venue)) : venue.name %></td>
 
     <td>
       <% if can? :edit, venue %>

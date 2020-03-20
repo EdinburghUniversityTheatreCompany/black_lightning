@@ -3,20 +3,16 @@
 <table class="table">
   <tr>
     <th>Name</th>
-    <th></th>
+    <th>Dates</th>
     <th></th>
     <th></th>
   </tr>
 
 <% @seasons.each do |season| %>
   <tr>
-    <td><%= season.name %></td>
+    <td><%= (can? :read, season) ? link_to(season.name, admin_season_path(season)) : season.name %></td>
 
-    <td>
-      <% if can? :read, season %>
-        <%= link_to 'Show', admin_season_path(season) %>
-      <% end %>
-    </td>
+    <td><%= season.date_range true %></td>
 
     <td>
       <% if can? :edit, season %>

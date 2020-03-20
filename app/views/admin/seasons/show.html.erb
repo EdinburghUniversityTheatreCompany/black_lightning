@@ -7,7 +7,7 @@
 
 <p>
   <b>Dates:</b>
-  <%= I18n.l(@season.start_date, format: :long) %> – <%= I18n.l(@season.end_date, format: :longy) %>
+  <%= @season.date_range true %>
 </p>
 
 <h3>Events</h3>

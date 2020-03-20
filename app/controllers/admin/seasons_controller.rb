@@ -4,7 +4,7 @@ class Admin::SeasonsController < AdminController
   # GET /admin/seasons
   # GET /admin/seasons.json
   def index
-    @seasons = Season.all
+    @seasons = Season.all.order(:start_date)
     @title = 'Seasons'
     respond_to do |format|
       format.html # index.html.erb

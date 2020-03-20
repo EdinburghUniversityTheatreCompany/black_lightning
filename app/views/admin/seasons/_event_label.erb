@@ -1,5 +1,5 @@
 
-<% event_label = "#{event.name} - #{event.date_range}" %>
+<% event_label = "#{event.name} - #{event.date_range true}" %>
 
 <% if event.type == "Show" %>
 <%= link_to event_label, admin_show_path(event), target: :blank %>

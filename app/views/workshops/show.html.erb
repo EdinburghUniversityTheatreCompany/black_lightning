@@ -27,7 +27,7 @@
     <div class="well">
       <h4>Dates</h4>
       <p>
-        <b><%= @workshop.date_range %></b>
+        <b><%= @workshop.date_range true %></b>
       </p>
 
       <% if @workshop.author and not @workshop.author.empty? %>

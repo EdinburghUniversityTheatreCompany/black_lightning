@@ -11,14 +11,15 @@
     <tbody>
         <tr>
             <th>Name</th>
-            <th>Slug</th>
+            <th>Dates</th>
             <th></th>
             <th></th>
         </tr>
         <% @workshops.each do |workshop| %>
         <tr>
-            <td><%= link_to workshop.name, admin_workshop_path(workshop) %></td>
-            <td><%= workshop.slug %></td>
+            <td><%= (can? :read, workshop) ? link_to(workshop.name, admin_workshop_path(workshop)) : workshop.name %></td>
+
+            <td><%= workshop.date_range true %></td>
 
             <td>
             <% if can? :edit, workshop %>
