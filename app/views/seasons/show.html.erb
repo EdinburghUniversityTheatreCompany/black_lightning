@@ -13,24 +13,31 @@
 <div class="row vertical-rule">
   <div class="span8">
     <% if @season.image.presence %>
-    <div class="carousel">
-      <!-- Carousel items -->
-      <div class="carousel-inner">
-        <div class="active item">
-          <%= image_tag @season.image.url(:slideshow) %>
-          <div class="carousel-caption">
-            <h1><%= @season.name %></h1>
+      <div class="carousel">
+        <!-- Carousel items -->
+        <div class="carousel-inner">
+          <div class="active item">
+            <%= image_tag @season.image.url(:slideshow) %>
+            <div class="carousel-caption">
+              <h1><%= @season.name %></h1>
+            </div>
           </div>
         </div>
       </div>
-    </div>
     <% end %>
+
+    <h3>Date<%= 's' if @season.start_date != @season.end_date %></h3>
+    <%= @season.date_range true %>
+
+    <h3>Details</h3>
+
     <%= render_markdown @season.description %>
   </div>
 
   <% if @season.team_members.count > 0 %>
     <div class="span4">
-    <%= render 'show_team_members', team_members: @season.team_members, admin_view: true %>
+      <h3>Crew</h3>
+      <%= render 'show_team_members', team_members: @season.team_members, admin_view: true %>
     </div>
   <% end %>
 </div>
@@ -67,37 +74,42 @@
   <hr />
 <% end %>
 
-<div class="accordion seasons-accordion" id="accordion2">
-  <% @season.events.each do |event|%>
-  <div class="accordion-group">
-    <div class="accordion-heading clearfix">
-      <% image = image_tag event.image.url(:thumb) %>
-      <%= link_to image, event, class: "pull-right thumbnail" %>
+<h3>Events</h3>
+<% if @events.length == 0 %>
+  There are no events attached to this festival.
+<% else %>
+  <div class="accordion seasons-accordion" id="accordion2">
+    <% @events.each do |day, events_by_day|%>
+    <p><h4><%= day %></h4><p>
+    
+      <% events_by_day.each do |event|%>
+      <div class="accordion-group">
+        <div class="accordion-heading clearfix">
+          <% image = image_tag event.image.url(:thumb) %>
+          <%= link_to image, event, class: "pull-right thumbnail" %>
 
-      <h4>
-        <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#<%= event.id %>"><%= event.name %></a>
-      </h4>
+          <h4>
+            <%= link_to event.name, event %>
+          </h4>
 
-      <div class="accordion-heading-content">
-        <p>
-          <%= event.tagline %>
-          <br />
-          <span class="event-date"><%= event.date_range true %></span>
-        </p>
+          <div>
+            <p>
+              <%= event.tagline %>
+              <% if event.start_date != event.end_date %>
+                <br />
+                <span class="event-date"><%= event.date_range false %></span>
+              <% end %>
+            </p>
 
-        <%= render_markdown event.description %>
+            <%= render_markdown event.description %>
+
+            <% if event.type == "Show" %>
+              <%= xts_widget event.xts_id if event.xts_id %>
+            <% end %>
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div id="<%= event.id %>" class="accordion-body collapse">
-      <div class="accordion-inner">
-        <% if event.type == "Show" %>
-          <%= xts_widget event.xts_id if event.xts_id %>
-        <% end %>
-
-        <%= link_to 'More Details', event %>
-     </div>
-    </div>
+      <% end %>
+    <% end %>
   </div>
-  <% end %>
-</div>
+<% end %>
