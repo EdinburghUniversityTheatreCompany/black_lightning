@@ -123,6 +123,7 @@ ChaosRails::Application.routes.draw do
         put 'create_for_show'
         get ':slug/grid' => 'staffings#grid', :format => :html, :as => :grid
         get 'guidelines'
+        get 'faq'
       end
     end
 
