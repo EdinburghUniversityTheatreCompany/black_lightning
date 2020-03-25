@@ -19,7 +19,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Staffing < ActiveRecord::Base
+class Admin::Staffing < ApplicationRecord
   after_save     :update_reminder
   before_destroy :reminder_cleanup
 

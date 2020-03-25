@@ -34,7 +34,7 @@
 #  staffing_debt_start    :date
 #
 
-class Event < ActiveRecord::Base
+class Event < ApplicationRecord
   resourcify
 
   # Use the format slug for urls. e.g. /events/myshow

@@ -14,7 +14,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
+class Admin::Questionnaires::Questionnaire < ApplicationRecord
   belongs_to :show
 
   has_many :questions, as: :questionable, dependent: :destroy

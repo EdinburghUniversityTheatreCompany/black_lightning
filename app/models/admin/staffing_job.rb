@@ -16,7 +16,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::StaffingJob < ActiveRecord::Base
+class Admin::StaffingJob < ApplicationRecord
   belongs_to :staffable, polymorphic: true
   belongs_to :user
   has_one :staffing_debt, :class_name => 'Admin::StaffingDebt', :foreign_key => 'admin_staffing_job_id'

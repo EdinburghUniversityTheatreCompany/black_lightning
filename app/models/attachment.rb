@@ -27,7 +27,7 @@
 # == Schema Information End
 #++
 ##
-class Attachment < ActiveRecord::Base
+class Attachment < ApplicationRecord
   belongs_to :editable_block, class_name: 'Admin::EditableBlock'
 
   validates :name, presence: true, uniqueness: true

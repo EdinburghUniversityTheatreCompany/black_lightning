@@ -29,7 +29,7 @@
 # == Schema Information End
 #++
 ##
-class Venue < ActiveRecord::Base
+class Venue < ApplicationRecord
   def to_param
     "#{id}-#{name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-')}"
   end

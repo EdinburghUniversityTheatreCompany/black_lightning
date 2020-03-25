@@ -18,7 +18,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Question < ActiveRecord::Base
+class Admin::Question < ApplicationRecord
   belongs_to :questionable, polymorphic: true
 
   has_many :answers, class_name: 'Admin::Answer', dependent: :destroy

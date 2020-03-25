@@ -10,7 +10,7 @@
 #  updated_at :datetime         not null
 #  state      :integer          default(0)
 #
-class Admin::MaintenanceDebt < ActiveRecord::Base
+class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show
 

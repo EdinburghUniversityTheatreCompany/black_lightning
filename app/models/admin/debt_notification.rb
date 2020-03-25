@@ -9,7 +9,7 @@
 #  updated_at        :datetime         not null
 #  notification_type :integer
 #
-class Admin::DebtNotification < ActiveRecord::Base
+class Admin::DebtNotification < ApplicationRecord
   enum notification_type: %i[initial_notification reminder]
   belongs_to :user
 

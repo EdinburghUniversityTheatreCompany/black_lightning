@@ -12,7 +12,7 @@
 #  converted             :boolean
 #  forgiven              :boolean          default(FALSE)
 #
-class Admin::StaffingDebt < ActiveRecord::Base
+class Admin::StaffingDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show
   belongs_to :admin_staffing_job, class_name: 'Admin::StaffingJob'

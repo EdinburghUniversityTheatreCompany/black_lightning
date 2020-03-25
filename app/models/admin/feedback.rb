@@ -14,6 +14,6 @@
 # == Schema Information End
 #++
 ##
-class Admin::Feedback < ActiveRecord::Base
+class Admin::Feedback < ApplicationRecord
   belongs_to :show, class_name: 'Show'
 end

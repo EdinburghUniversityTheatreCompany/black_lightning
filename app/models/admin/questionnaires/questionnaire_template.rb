@@ -13,7 +13,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Questionnaires::QuestionnaireTemplate < ActiveRecord::Base
+class Admin::Questionnaires::QuestionnaireTemplate < ApplicationRecord
   has_many :questions, as: :questionable
 
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true

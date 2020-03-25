@@ -27,7 +27,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Proposals::Proposal < ActiveRecord::Base
+class Admin::Proposals::Proposal < ApplicationRecord
   has_paper_trail
   belongs_to :call, class_name: 'Admin::Proposals::Call'
 

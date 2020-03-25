@@ -1,4 +1,4 @@
-class FaultReport < ActiveRecord::Base
+class FaultReport < ApplicationRecord
   belongs_to :reported_by,  class_name: User
   belongs_to :fixed_by,     class_name: User
   enum severity: [:annoying, :probably_worth_fixing, :show_impeding, :dangerous]

@@ -18,6 +18,6 @@
 # == Schema Information End
 #++
 ##
-class Review < ActiveRecord::Base
+class Review < ApplicationRecord
   belongs_to :show
 end

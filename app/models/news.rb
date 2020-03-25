@@ -27,7 +27,7 @@
 # == Schema Information End
 #++
 ##
-class News < ActiveRecord::Base
+class News < ApplicationRecord
   resourcify
 
   ##

@@ -25,7 +25,7 @@
 # == Schema Information End
 #++
 ##
-class User < ActiveRecord::Base
+class User < ApplicationRecord
   before_save :unify_numbers
   rolify
 
