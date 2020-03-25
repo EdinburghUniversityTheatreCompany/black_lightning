@@ -6,24 +6,19 @@
 <br />
 
 <h3>Upcoming Positions</h3>
-
-<ul class="nav nav-tabs nav-stacked">
-  <% @admin_staffings.each do |slug, staffings| %>
-    <%= render 'staffing', slug: slug, show_title: staffings.first.show_title %>
-  <% end %>
-</ul>
-
-<br />
+<% if @admin_staffings.length > 0 %>
+  <%= render 'staffing', staffings_hash: @admin_staffings %>
+<% else %>
+  There are no upcoming staffing positions.
+  <br />
+<% end %>
 
 <% if can? :create, Admin::Staffing %>
   <% add_text = '<i class="fa fa-plus"></i> Create Staffing for Show'.html_safe %>
   <%= link_to add_text, new_admin_staffing_path, class: "btn btn-primary" %>
 <% end %>
 
-<h3>Old Positions</h3>
-
-<ul class="nav nav-tabs nav-stacked">
-  <% @admin_staffings_archive.each do |slug, staffings| %>
-    <%= render 'staffing', slug: slug, show_title: staffings.first.show_title, archived: true %>
-  <% end %>
-</ul>
+<% if @admin_staffings_archive.length > 0 %>
+  <h3>Old Positions</h3>
+  <%= render 'staffing', staffings_hash: @admin_staffings_archive, archived: true %>
+<% end %>
