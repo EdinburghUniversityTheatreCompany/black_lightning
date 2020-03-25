@@ -18,8 +18,9 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings.json
   ##
   def index
-    @admin_staffings = Admin::Staffing.future.group_by(&:show_title)
-    @admin_staffings_archive = Admin::Staffing.past.group_by(&:show_title)
+    @admin_staffings = Admin::Staffing.future.group_by(&:slug)
+    @admin_staffings_archive = Admin::Staffing.past.group_by(&:slug)
+
     @title = 'Staffing'
     respond_to do |format|
       format.html # index.html.erb
@@ -28,19 +29,20 @@ class Admin::StaffingsController < AdminController
   end
 
   ##
-  # GET /admin/staffings/show_title/grid
+  # GET /admin/staffings/:slug/grid
   ##
   def grid
     authorize! :sign_up_for, Admin::StaffingJob
     @can_sign_up = check_if_current_user_can_sign_up
 
-    @title = "Staffing for #{params[:show_title]}"
-
     if params[:archived] == 'true'
-      @staffings = Admin::Staffing.past.where(show_title: params[:show_title])
+      @staffings = Admin::Staffing.past.where(slug: params[:slug])
     else
-      @staffings = Admin::Staffing.future.where(show_title: params[:show_title])
+      @staffings = Admin::Staffing.future.where(slug: params[:slug])
     end
+
+    @title = "Staffing for #{@staffings.empty? ? "Nothing" : @staffings.first.show_title}"
+
     @job_titles = @staffings.joins(:staffing_jobs).select('admin_staffing_jobs.name').uniq.collect(&:name).sort
 
     @staffings = @staffings.includes(staffing_jobs: :user)
@@ -222,7 +224,7 @@ class Admin::StaffingsController < AdminController
         end
       else
         format.html  do
-          flash[:failure] = 'you can\'t sign up for staffings in the past. Please contact FOH if you staffed this shift'
+          flash[:failure] = 'You can\'t sign up for staffings in the past. Please contact the FOH manager if you have staffed this shift.'
           redirect_to admin_staffings_path
         end
         format.json { render json: @admin_staffing.errors, status: :unprocessable_entity }

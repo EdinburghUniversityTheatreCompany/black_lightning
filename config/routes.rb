@@ -121,7 +121,7 @@ ChaosRails::Application.routes.draw do
     resources :staffings do
       collection do
         put 'create_for_show'
-        get ':show_title/grid' => 'staffings#grid', :format => :html, :as => :grid
+        get ':slug/grid' => 'staffings#grid', :format => :html, :as => :grid
         get 'guidelines'
       end
     end

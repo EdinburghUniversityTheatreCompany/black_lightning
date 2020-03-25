@@ -1,5 +1,5 @@
-<% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ? and user_id is not null', show_title]).count %>
-<% total_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ?', show_title]).count %>
+<% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['slug = ? and user_id is not null', slug]).count %>
+<% total_positions = Admin::Staffing.joins(:staffing_jobs).where(['slug = ?', slug]).count %>
 
 <% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
 
@@ -7,7 +7,7 @@
 
 <li style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
 
-  <%= link_to grid_admin_staffings_path(show_title, archived: archived) do %>
+  <%= link_to grid_admin_staffings_path(slug, archived: archived) do %>
     <%= show_title %>
 
     <span class="pull-right">

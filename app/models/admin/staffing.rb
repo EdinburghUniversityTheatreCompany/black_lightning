@@ -40,6 +40,8 @@ class Admin::Staffing < ActiveRecord::Base
 
   attr_accessible :show_title, :start_time, :end_time, :counts_towards_debt, :staffing_jobs, :staffing_jobs_attributes
 
+  acts_as_url :show_title, url_attribute: :slug, sync_url: true, allow_duplicates: true
+
   ##
   # Returns the number of jobs that have been filled
   ##

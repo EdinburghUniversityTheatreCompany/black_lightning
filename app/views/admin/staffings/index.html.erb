@@ -8,8 +8,8 @@
 <h3>Upcoming Positions</h3>
 
 <ul class="nav nav-tabs nav-stacked">
-  <% @admin_staffings.each do |show_title, staffings| %>
-    <%= render 'staffing', show_title: show_title %>
+  <% @admin_staffings.each do |slug, staffings| %>
+    <%= render 'staffing', slug: slug, show_title: staffings.first.show_title %>
   <% end %>
 </ul>
 
@@ -17,13 +17,13 @@
 
 <% if can? :create, Admin::Staffing %>
   <% add_text = '<i class="fa fa-plus"></i> Create Staffing for Show'.html_safe %>
-  <%= link_to add_text, new_admin_staffing_path, :class => "btn btn-primary" %>
+  <%= link_to add_text, new_admin_staffing_path, class: "btn btn-primary" %>
 <% end %>
 
 <h3>Old Positions</h3>
 
 <ul class="nav nav-tabs nav-stacked">
-  <% @admin_staffings_archive.each do |show_title, staffings| %>
-    <%= render 'staffing', show_title: show_title, archived: true %>
+  <% @admin_staffings_archive.each do |slug, staffings| %>
+    <%= render 'staffing', slug: slug, show_title: staffings.first.show_title, archived: true %>
   <% end %>
 </ul>
