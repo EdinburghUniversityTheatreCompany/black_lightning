@@ -35,6 +35,7 @@
 #
 
 class Event < ActiveRecord::Base
+  include DateHelper
   resourcify
 
   # Use the format slug for urls. e.g. /events/myshow
@@ -118,22 +119,7 @@ class Event < ActiveRecord::Base
   # The date format used is the :long format, defined in /config/locales/en.yml
   ##
   def date_range(include_year, format = :long)
-    unless start_date.presence
-      return
-    end
-
-    date = I18n.l(start_date, format: format)
-
-    date << " #{start_date.year} " if include_year && (!end_date || start_date == end_date || start_date.year != end_date.year)
-
-    if end_date && start_date != end_date
-      date << ' - '
-      date << I18n.l(end_date, format: format)
-
-      date << " #{end_date.year}" if include_year
-    end
-
-    return date
+    return date_range_string(start_date, end_date, include_year, format)
   end
 
   def as_json(options = {})

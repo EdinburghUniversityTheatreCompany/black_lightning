@@ -19,7 +19,15 @@ class Admin::StaffingsController < AdminController
   ##
   def index
     @admin_staffings = Admin::Staffing.future.group_by(&:slug)
-    @admin_staffings_archive = Admin::Staffing.past.group_by(&:slug)
+
+    # The sorting looks a bit weird to ensure it behaves properly when the order is descending.
+    # It first sorts the staffings in descending order, but this also groups them in the wrong order (as 7 March, 6 March, 5 March).
+    # To fix that weird order, it then reverses the array with staffings, so staffings.first is 5 March as you would expect.
+    @admin_staffings_archive = Admin::Staffing.past.sort_by {|staffing| -(staffing.end_time.to_i)} .group_by(&:slug)
+
+    @admin_staffings_archive.each do |slug, staffings|
+      @admin_staffings_archive[slug] = staffings.reverse
+    end
 
     @title = 'Staffing'
     respond_to do |format|
