@@ -10,7 +10,7 @@ class Admin::UsersController < AdminController
   def index
     @title = 'Users'
 
-    @q     = User.unscoped.search(params[:q])
+    @q     = User.unscoped.ransack(params[:q])
     @users = @q.result(distinct: true)
 
     if params[:show_non_members] != '1'

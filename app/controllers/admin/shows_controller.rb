@@ -4,7 +4,7 @@ class Admin::ShowsController < AdminController
   def index
     @title = 'Shows'
 
-    @q = Show.unscoped.search(params[:q])
+    @q = Show.unscoped.ransack(params[:q])
     @shows = @q.result(distinct: true)
     @shows = @shows.order('start_date DESC')
     @shows = @shows.paginate(page: params[:page], per_page: 15).all

@@ -5,7 +5,7 @@ def index
 
   @title = 'Users'
 
-  @q     = User.unscoped.search(params[:q])
+  @q     = User.unscoped.ransack(params[:q])
   @users = @q.result(distinct: true)
   @users = @users.with_role(:member)
 
