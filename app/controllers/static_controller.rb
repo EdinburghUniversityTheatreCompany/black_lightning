@@ -1,4 +1,13 @@
 class StaticController < ApplicationController
+  # This is a catch-all for the pages that do not have explicitly defined routes.
+  def show 
+    begin
+      render "static/#{params[:page]}"
+    rescue
+      render_404
+    end
+  end
+
   def home
     if current_user
       @news = News.current.limit(2).all
