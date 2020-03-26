@@ -1,34 +1,16 @@
-
-<% @title = 'Maintenance Debts' %>
-
-<% prefix = params.length>3 ? "Searching" : "Listing" %>
-
-<h1><%= prefix %> Maintenance Debts</h1>
+<h1><%= @title %></h1>
 
 <% if can? :read, Admin::MaintenanceDebt %>
-        <div class="row">
-          <div class="span12">
-            <div class="accordion-group">
-              <div class="accordion-heading">
-                <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
-                  <i class="fa fa-chevron-down"></i> Search Form
-                </a>
-              </div>
-              <div id="search_container" class="accordion-body collapse">
-                <div class="accordion-inner">
-                  <%= form_tag admin_maintenance_debts_path , :method => :get do %>
-                      First Name :<%= text_field_tag :user_fname %>
-                      Second Name :<%= text_field_tag :user_sname %>
-                      Show : <%= text_field_tag :show_name %>
-                      Show Fulfilled Obligations : <%= check_box_tag :show_fulfilled %>
+    <div id="search_container">
+      <%= form_tag admin_maintenance_debts_path, method: :get do %>
+          First Name :<%= text_field_tag :first_name, @first_name %>
+          Last Name :<%= text_field_tag :last_name, @last_name %>
+          Show : <%= text_field_tag :show_name, @show_name %> <br/>
+          Show Fulfilled Obligations : <%= check_box_tag :show_fulfilled, :show_fulfilled, @show_fulfilled %>
 
-                      <%= submit_tag "Search", class: 'btn' %>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          <%= submit_tag "Search", class: 'btn' %>
+      <% end %>
+    </div>
 <% end %>
 
 <table class="table">
