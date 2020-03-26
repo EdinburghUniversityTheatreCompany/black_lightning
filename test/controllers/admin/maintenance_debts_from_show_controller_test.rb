@@ -2,8 +2,8 @@ require 'test_helper'
 
 class Admin::ShowMaintenanceDebtsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
-    @show = FactoryGirl.create(:show)
+    sign_in FactoryBot.create(:admin)
+    @show = FactoryBot.create(:show)
     @show.maintenance_debt_start = Date.today + 3
     @show.save!
   end

@@ -57,7 +57,7 @@ end
 group :test do
   gem 'simplecov'
   gem 'simplecov-rcov'
-  gem 'factory_girl_rails'
+  gem 'factory_bot_rails'
   gem 'faker'
   gem 'ruby-prof'
   gem 'html_acceptance'

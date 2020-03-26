@@ -4,7 +4,7 @@ class Admin::VenuesControllerTest < ActionController::TestCase
   setup do
     @venue = venues(:one)
 
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
   end
 
   test 'should get index' do

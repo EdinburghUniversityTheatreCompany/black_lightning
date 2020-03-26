@@ -2,9 +2,9 @@ require 'test_helper'
 
 class Admin::UsersControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
 
-    @user = FactoryGirl.create(:user)
+    @user = FactoryBot.create(:user)
   end
 
   test 'should get index' do

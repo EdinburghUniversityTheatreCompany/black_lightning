@@ -11,9 +11,9 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :feedback, class: Admin::Feedback do
-    body  :random_string
+    body  { :random_string }
     show
   end
 end

@@ -2,8 +2,8 @@ require 'test_helper'
 
 class Admin::DebtsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
-    @user = FactoryGirl.create(:member)
+    sign_in FactoryBot.create(:admin)
+    @user = FactoryBot.create(:member)
   end
 
   test "should get index" do

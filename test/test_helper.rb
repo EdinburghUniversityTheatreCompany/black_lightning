@@ -1,6 +1,9 @@
 require 'simplecov'
 require 'simplecov-rcov'
+
 SimpleCov.formatter = SimpleCov::Formatter::RcovFormatter
+SimpleCov.command_name 'Unit Tests'
+
 SimpleCov.start 'rails'
 
 require 'html_acceptance'

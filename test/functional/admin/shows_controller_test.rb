@@ -2,13 +2,13 @@ require 'test_helper'
 
 class Admin::ShowsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
 
-    @user = FactoryGirl.create(:member)
+    @user = FactoryBot.create(:member)
   end
 
   test 'should get index' do
-    FactoryGirl.create_list(:show, 10)
+    FactoryBot.create_list(:show, 10)
 
     get :index
     assert_response :success
@@ -16,7 +16,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should get show' do
-    @show = FactoryGirl.create(:show)
+    @show = FactoryBot.create(:show)
 
     get :show, params: { id: @show}
     assert_response :success
@@ -28,7 +28,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should create show' do
-    @show = FactoryGirl.build(:show)
+    @show = FactoryBot.build(:show)
 
     assert_difference('Show.count') do
       post :create, params: {show: { name: @show.name, slug: @show.slug, tagline: @show.tagline, description: @show.description } }
@@ -38,21 +38,21 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should get edit' do
-    @show = FactoryGirl.create(:show)
+    @show = FactoryBot.create(:show)
 
     get :edit, params: { id: @show}
     assert_response :success
   end
 
   test 'should update show' do
-    @show = FactoryGirl.create(:show)
+    @show = FactoryBot.create(:show)
 
     put :update, params: {id: @show, show: { name: @show.name, slug: @show.slug, tagline: @show.tagline, description: @show.description }}
     assert_redirected_to admin_show_path(@show)
   end
 
   test 'should destroy show' do
-    @show = FactoryGirl.create(:show)
+    @show = FactoryBot.create(:show)
 
     assert_difference('Show.count', -1) do
       delete :destroy, params: { id: @show}

@@ -15,7 +15,7 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :review do
     reviewer     { Faker::Name.name }
     body         { generate(:random_text) }

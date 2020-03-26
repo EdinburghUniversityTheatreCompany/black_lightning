@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::RolesControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
 
     @role = roles(:member)
   end

@@ -2,10 +2,10 @@ require 'test_helper'
 
 class Admin::StaffingDebtsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
-    @admin_staffing_debt = FactoryGirl.create(:staffing_debt)
-    @show = FactoryGirl.create(:show)
-    @user = FactoryGirl.create(:member)
+    sign_in FactoryBot.create(:admin)
+    @admin_staffing_debt = FactoryBot.create(:staffing_debt)
+    @show = FactoryBot.create(:show)
+    @user = FactoryBot.create(:member)
   end
 
   test "should get index" do

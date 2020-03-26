@@ -2,7 +2,7 @@ require 'test_helper'
 
 class UsersMailerTest < ActionMailer::TestCase
   test 'should send welcome_email' do
-    user = FactoryGirl.create(:member)
+    user = FactoryBot.create(:member)
 
     email = UsersMailer.welcome_email(user, true).deliver_now
     assert !ActionMailer::Base.deliveries.empty?

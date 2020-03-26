@@ -20,9 +20,9 @@ require 'test_helper'
 
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test 'convert to show' do
-    call = FactoryGirl.create(:proposal_call)
+    call = FactoryBot.create(:proposal_call)
 
-    proposal = FactoryGirl.create(:proposal, call: call, approved: false)
+    proposal = FactoryBot.create(:proposal, call: call, approved: false)
 
     exception = assert_raise(RuntimeError) do
       proposal.convert_to_show

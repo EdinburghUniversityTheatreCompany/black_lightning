@@ -2,11 +2,11 @@ require 'test_helper'
 
 class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
   end
 
   test 'should get index' do
-    FactoryGirl.create_list(:proposal_call, 10)
+    FactoryBot.create_list(:proposal_call, 10)
 
     get :index
     assert_response :success
@@ -19,7 +19,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   end
 
   test 'should create admin_proposals_call' do
-    attrs = FactoryGirl.attributes_for(:proposal_call, question_count: 5)
+    attrs = FactoryBot.attributes_for(:proposal_call, question_count: 5)
 
     assert_difference('Admin::Proposals::Call.count') do
       post :create, admin_proposals_call: attrs
@@ -29,29 +29,29 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   end
 
   test 'should show admin_proposals_call' do
-    @call = FactoryGirl.create(:proposal_call, question_count: 5, proposal_count: 5)
+    @call = FactoryBot.create(:proposal_call, question_count: 5, proposal_count: 5)
 
     get :show, params: { id: @call}
     assert_response :success
   end
 
   test 'should get edit' do
-    @call = FactoryGirl.create(:proposal_call, question_count: 5)
+    @call = FactoryBot.create(:proposal_call, question_count: 5)
 
     get :edit, params: { id: @call}
     assert_response :success
   end
 
   test 'should update admin_proposals_call' do
-    attrs = FactoryGirl.attributes_for(:proposal_call, question_count: 3)
-    @call = FactoryGirl.create(:proposal_call, question_count: 5, proposal_count: 5)
+    attrs = FactoryBot.attributes_for(:proposal_call, question_count: 3)
+    @call = FactoryBot.create(:proposal_call, question_count: 5, proposal_count: 5)
 
     put :update, params: {id: @call, admin_proposals_call: attrs}
     assert_redirected_to admin_proposals_call_path(assigns(:admin_proposals_call))
   end
 
   test 'should destroy admin_proposals_call' do
-    @call = FactoryGirl.create(:proposal_call)
+    @call = FactoryBot.create(:proposal_call)
 
     assert_difference('Admin::Proposals::Call.count', -1) do
       delete :destroy, params: { id: @call}

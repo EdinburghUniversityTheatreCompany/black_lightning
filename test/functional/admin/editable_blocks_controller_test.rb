@@ -4,7 +4,7 @@ class Admin::EditableBlocksControllerTest < ActionController::TestCase
   setup do
     @admin_editable_block = admin_editable_blocks(:one)
 
-    @user = FactoryGirl.create(:admin)
+    @user = FactoryBot.create(:admin)
 
     sign_in @user
   end

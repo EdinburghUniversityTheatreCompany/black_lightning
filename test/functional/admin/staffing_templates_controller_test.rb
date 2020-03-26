@@ -2,18 +2,18 @@ require 'test_helper'
 
 class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
   end
 
   test 'should get index' do
-    @template = FactoryGirl.create_list(:staffing_template, 5)
+    @template = FactoryBot.create_list(:staffing_template, 5)
 
     get :index
     assert_response :success
   end
 
   test 'should get show' do
-    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+    @template = FactoryBot.create(:staffing_template, job_count: 5)
 
     get :show, params: { id: @template}
     assert_response :success
@@ -25,7 +25,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   end
 
   test 'should create staffing_template' do
-    attrs = FactoryGirl.attributes_for(:staffing_template)
+    attrs = FactoryBot.attributes_for(:staffing_template)
 
     assert_difference('Admin::StaffingTemplate.count') do
       post :create, admin_staffing_template: attrs
@@ -35,22 +35,22 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
   end
 
   test 'should get edit' do
-    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+    @template = FactoryBot.create(:staffing_template, job_count: 5)
 
     get :edit, params: { id: @template}
     assert_response :success
   end
 
   test 'should update staffing_template' do
-    @template = FactoryGirl.create(:staffing_template, job_count: 5)
-    attrs = FactoryGirl.attributes_for(:staffing_template)
+    @template = FactoryBot.create(:staffing_template, job_count: 5)
+    attrs = FactoryBot.attributes_for(:staffing_template)
 
     put :update, params: {id: @template, admin_staffing_template: attrs}
     assert_redirected_to admin_staffing_template_path(@template)
   end
 
   test 'should destroy staffing_template' do
-    @template = FactoryGirl.create(:staffing_template, job_count: 5)
+    @template = FactoryBot.create(:staffing_template, job_count: 5)
 
     assert_difference('Admin::StaffingTemplate.count', -1) do
       assert_difference('Admin::StaffingJob.count', -5) do

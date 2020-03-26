@@ -14,7 +14,7 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :season do
     name        { generate(:random_string) }
     slug         { name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') }
@@ -25,8 +25,8 @@ FactoryGirl.define do
     end_date    { start_date.advance(days: rand(3..6)) }
 
     transient do
-      event_count 0
-      show_count  0
+      event_count { 0 }
+      show_count  { 0 }
     end
 
     after(:create) do |season, evaluator|

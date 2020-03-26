@@ -16,7 +16,7 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :proposal, class: Admin::Proposals::Proposal do
     show_title     { generate(:random_string) }
     proposal_text  { generate(:random_text) }
@@ -24,7 +24,7 @@ FactoryGirl.define do
     approved       { [true, nil, false].sample }
 
     after(:build) do |proposal, _evaluator|
-      proposal.team_members << FactoryGirl.build_list(:team_member, 5, teamwork: proposal)
+      proposal.team_members << FactoryBot.build_list(:team_member, 5, teamwork: proposal)
     end
 
     after(:create) do |proposal, _evaluator|

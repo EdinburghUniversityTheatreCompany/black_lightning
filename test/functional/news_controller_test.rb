@@ -2,7 +2,7 @@ require 'test_helper'
 
 class NewsControllerTest < ActionController::TestCase
   test 'should get index' do
-    FactoryGirl.create_list(:news, 20)
+    FactoryBot.create_list(:news, 20)
 
     get :index
     assert_response :success
@@ -10,7 +10,7 @@ class NewsControllerTest < ActionController::TestCase
   end
 
   test 'should show news' do
-    @news = FactoryGirl.create(:news)
+    @news = FactoryBot.create(:news)
 
     get :show, params: { id: @news}
     assert_response :success
