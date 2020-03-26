@@ -29,7 +29,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     attrs = FactoryBot.attributes_for(:opportunity)
 
     assert_difference('Opportunity.count') do
-      post :create, opportunity: attrs
+      post :create, params: { opportunity: attrs }
     end
 
     assert_redirected_to admin_opportunity_path(assigns(:opportunity))

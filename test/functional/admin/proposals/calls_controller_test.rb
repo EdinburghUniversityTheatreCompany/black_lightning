@@ -22,7 +22,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
     attrs = FactoryBot.attributes_for(:proposal_call, question_count: 5)
 
     assert_difference('Admin::Proposals::Call.count') do
-      post :create, admin_proposals_call: attrs
+      post :create, params: { admin_proposals_call: attrs }
     end
 
     assert_redirected_to admin_proposals_call_path(assigns(:admin_proposals_call))

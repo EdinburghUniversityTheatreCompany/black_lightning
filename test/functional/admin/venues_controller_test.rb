@@ -20,7 +20,7 @@ class Admin::VenuesControllerTest < ActionController::TestCase
 
   test 'should create venue' do
     assert_difference('Venue.count') do
-      post :create, venue: { description: @venue.description, location: @venue.location, name: @venue.name }
+      post :create, params: { venue: { description: @venue.description, location: @venue.location, name: @venue.name } }
     end
 
     assert_redirected_to admin_venue_path(assigns(:venue))

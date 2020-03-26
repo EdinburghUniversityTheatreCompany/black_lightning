@@ -41,7 +41,7 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
     @feedback = FactoryBot.create(:feedback, show: @show)
     @attrs = FactoryBot.attributes_for(:feedback, show: @show)
 
-    put :update, show_id: @show, id: @feedback, admin_feedback: @attrs
+    put :update, params: { show_id: @show, id: @feedback, admin_feedback: @attrs} 
     assert_redirected_to admin_show_feedbacks_path(@show)
   end
 

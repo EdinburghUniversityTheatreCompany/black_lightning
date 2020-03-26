@@ -28,7 +28,7 @@ class Admin::StaffingTemplatesControllerTest < ActionController::TestCase
     attrs = FactoryBot.attributes_for(:staffing_template)
 
     assert_difference('Admin::StaffingTemplate.count') do
-      post :create, admin_staffing_template: attrs
+      post :create, params: { admin_staffing_template: attrs }
     end
 
     assert_redirected_to admin_staffing_template_path(assigns(:template))

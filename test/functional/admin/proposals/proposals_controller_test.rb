@@ -16,7 +16,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test "shouldn't get new on closed call" do
-    get :new, call_id: FactoryBot.create(:proposal_call, open: false).id
+    get :new, params: { call_id: FactoryBot.create(:proposal_call, open: false).id }
 
     assert_redirected_to admin_proposals_calls_path
   end
@@ -60,7 +60,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'should show admin_proposals_proposal' do
     @proposal = FactoryBot.create(:proposal, call: @call)
 
-    get :show, call_id: @call.id,  id: @proposal
+    get :show, params: { call_id: @call.id,  id: @proposal }
     assert_response :success
   end
 
@@ -101,7 +101,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal proposals.count, 0
 
-    get :show, call_id: @call.id,  id: @proposal
+    get :show,params: { call_id: @call.id,  id: @proposal }
     assert_redirected_to static_path('access_denied')
   end
 
@@ -120,7 +120,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal proposals.count, 1
 
-    get :show, call_id: @call.id,  id: @proposal
+    get :show, params: { call_id: @call.id,  id: @proposal }
     assert_response :success
   end
 
@@ -155,7 +155,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal proposals.count, 1
 
-    get :show, call_id: @call.id,  id: @proposal
+    get :show, params: { call_id: @call.id,  id: @proposal }
     assert_response :success
   end
 
@@ -171,7 +171,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
     assert_equal proposals.count, 6
 
-    get :show, call_id: @call.id,  id: @proposal
+    get :show, params: { call_id: @call.id,  id: @proposal }
     assert_response :success
   end
 
@@ -184,19 +184,19 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     member = FactoryBot.create(:member)
     sign_in member
 
-    get :index, call_id: @call.id
+    get :index, params: { call_id: @call.id }
     proposals = assigns(:proposals)
     assert_response :success
 
     assert_equal 1, proposals.all.count
 
-    get :show, call_id: @call.id,  id: @approved
+    get :show, params: {call_id: @call.id,  id: @approved }
     assert_response :success
 
-    get :show, call_id: @call.id,  id: @rejected
+    get :show, params: {call_id: @call.id,  id: @rejected }
     assert_redirected_to static_path('access_denied')
 
-    get :show, call_id: @call.id,  id: @waiting
+    get :show, params: { call_id: @call.id,  id: @waiting }
     assert_redirected_to static_path('access_denied')
   end
 end

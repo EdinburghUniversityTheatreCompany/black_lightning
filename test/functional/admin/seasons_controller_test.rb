@@ -28,7 +28,7 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
     attrs = FactoryBot.attributes_for(:season)
 
     assert_difference('Season.count') do
-      post :create, season: attrs
+      post :create, params: { season: attrs }
     end
 
     assert_redirected_to admin_season_path(assigns(:season))

@@ -28,7 +28,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     Role.find(@role.id).destroy
 
     assert_difference('Role.count') do
-      post :create, role: { name: @role.name }
+      post :create, params: { role: { name: @role.name } }
     end
 
     assert_redirected_to admin_role_path(assigns(:role))

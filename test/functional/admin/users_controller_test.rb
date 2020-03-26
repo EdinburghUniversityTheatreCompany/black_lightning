@@ -27,7 +27,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     User.find(@user.id).destroy
 
     assert_difference('User.count') do
-      post :create, user: { email: @user.email }
+      post :create, params: { user: { email: @user.email } }
     end
 
     assert_redirected_to admin_user_path(assigns(:user))

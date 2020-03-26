@@ -22,7 +22,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
   test "should create admin_maintenance_debt" do
     assert_difference('Admin::MaintenanceDebt.count') do
-      post :create, admin_maintenance_debt: {due_by: Date.today, show_id: @show.id, user_id: @user.id}
+      post :create, params: { admin_maintenance_debt: {due_by: Date.today, show_id: @show.id, user_id: @user.id} }
     end
     assert(Admin::MaintenanceDebt.where(due_by: Date.today, show_id: @show.id, user_id: @user.id).any?, "there should be a debt with the details entered")
 

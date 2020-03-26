@@ -28,7 +28,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
     attrs = FactoryBot.attributes_for(:news)
 
     assert_difference('News.count') do
-      post :create, news: attrs
+      post :create, params: { news: attrs }
     end
 
     assert_redirected_to admin_news_path(assigns(:news))

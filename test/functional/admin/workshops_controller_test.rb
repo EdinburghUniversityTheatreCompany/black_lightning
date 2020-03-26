@@ -29,7 +29,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
     attrs = FactoryBot.attributes_for(:workshop)
 
     assert_difference('Workshop.count') do
-      post :create, workshop: attrs
+      post :create, params: { workshop: attrs }
     end
 
     assert_redirected_to admin_workshop_path(assigns(:workshop))
