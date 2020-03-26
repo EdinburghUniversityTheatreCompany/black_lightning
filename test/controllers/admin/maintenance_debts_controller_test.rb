@@ -12,7 +12,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   test "should get index" do
     get :index
     assert_response :success
-    assert_not_nil assigns(:admin_maintenance_debts)
+    assert_not_nil assigns(:mdebts)
   end
 
   test "should get new" do
