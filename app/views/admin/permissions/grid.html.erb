@@ -34,7 +34,7 @@
 
         <% @roles.each do |role| %>
           <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
-          <%= render 'permission_grid', :role => role, :model => model, :permission => permission %>
+          <%= render 'permission_grid', role: role, model: model, permission: permission %>
         <% end %>
       </tr>
     <% end %>

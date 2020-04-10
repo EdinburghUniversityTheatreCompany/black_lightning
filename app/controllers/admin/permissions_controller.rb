@@ -6,13 +6,13 @@ class Admin::PermissionsController < AdminController
   # Shows a grid for selecting permissions for each role.
   ##
   def grid
-    authorize!(:read, Admin::Permission)
+    authorize! :read, Admin::Permission
 
-    role_exclude = ['admin']
-    @roles = ::Role.includes(:permissions).where('name NOT IN (?)', role_exclude).all
+    @roles = get_roles
 
     Rails.application.eager_load!
-    @models = ApplicationRecord.descendants
+    @models = get_models
+
     @title = 'Permissions'
   end
 
@@ -20,13 +20,12 @@ class Admin::PermissionsController < AdminController
   # Takes the data posted from the grid and sets the permissions.
   ##
   def update_grid
-    authorize!(:edit, Admin::Permission)
+    authorize! :edit, Admin::Permission
 
-    role_exclude = ['admin']
-    @roles = ::Role.where('name NOT IN (?)', role_exclude)
+    @roles = get_roles
 
     Rails.application.eager_load!
-    @models = ApplicationRecord.descendants
+    @models = get_models
 
     @roles.each do |role|
       @models.each do |model|
@@ -51,5 +50,15 @@ class Admin::PermissionsController < AdminController
     end
 
     return redirect_to :admin_permissions
+  end
+
+  def get_roles
+    role_exclude = ['admin']
+    return ::Role.includes(:permissions).where('name NOT IN (?)', role_exclude).all
+  end
+
+  def get_models
+    models = ApplicationRecord.descendants + [Admin::Debt]
+    return models.sort_by(&:name)
   end
 end

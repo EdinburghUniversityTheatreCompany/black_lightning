@@ -47,15 +47,15 @@ class Admin::Permission < ApplicationRecord
     actions.each do |action|
       if (!existing_permissions) || (!existing_permissions.find_by_action(action))
         # Try to add the role to the existing permission
-        if permission = Admin::Permission.where(action: action, subject_class: subject_class).first
-          permission.roles << role
-        else
+        permission = Admin::Permission.where(action: action, subject_class: subject_class).first
+
+        if permission.nil?
           permission = Admin::Permission.new
-          permission.action = action[0]
+          permission.action = action
           permission.subject_class = subject_class
-          permission.roles << role
         end
 
+        permission.roles << role
         permission.save!
       end
     end
