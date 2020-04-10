@@ -9,10 +9,10 @@ class Admin::PermissionsController < AdminController
     authorize!(:read, Admin::Permission)
 
     role_exclude = ['admin']
-    @roles  = ::Role.includes(:permissions).where('name NOT IN (?)', role_exclude).all
+    @roles = ::Role.includes(:permissions).where('name NOT IN (?)', role_exclude).all
 
     Rails.application.eager_load!
-    @models = ::ActiveRecord::Base.descendants
+    @models = ApplicationRecord.descendants
     @title = 'Permissions'
   end
 
@@ -23,10 +23,10 @@ class Admin::PermissionsController < AdminController
     authorize!(:edit, Admin::Permission)
 
     role_exclude = ['admin']
-    @roles  = ::Role.where('name NOT IN (?)', role_exclude)
+    @roles = ::Role.where('name NOT IN (?)', role_exclude)
 
     Rails.application.eager_load!
-    @models = ::ActiveRecord::Base.descendants
+    @models = ApplicationRecord.descendants
 
     @roles.each do |role|
       @models.each do |model|
