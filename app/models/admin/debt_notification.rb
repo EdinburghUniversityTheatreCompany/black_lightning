@@ -14,11 +14,4 @@ class Admin::DebtNotification < ApplicationRecord
   belongs_to :user
 
   DISABLED_PERMISSIONS = %w[create update delete manage].freeze
-
-  def self.search_for(first_name, last_name)
-    user_ids = User.search_for(first_name, last_name).ids
-    notifications = self.where(user_id: user_ids)
-
-    return notifications
-  end
 end

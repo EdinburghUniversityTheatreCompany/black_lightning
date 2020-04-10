@@ -5,8 +5,7 @@ class Admin::DebtsController < AdminController
     @title = 'Users'
 
     @q     = User.unscoped.ransack(params[:q])
-    @users = @q.result(distinct: true)
-    @users = @users.with_role(:member)
+    @users = @q.result(distinct: true).with_role(:member)
 
     @users = @users.in_debt if params[:show_in_debt_only] == '1'
 
@@ -20,10 +19,10 @@ class Admin::DebtsController < AdminController
   end
 
   def show
-    authorize! :show, Admin::Debt
-
     debt = Admin::Debt.new(params[:id].to_i)
+
     authorize! :read, debt
+
     @user = User.find(params[:id])
     @title = "Debt Status for #{@user.name}"
   end

@@ -3,9 +3,18 @@ class Admin::DebtNotificationsController < AdminController
   def index
     authorize! :read, Admin::DebtNotification
 
-    @debt_notifications = Admin::DebtNotification.all
-    @debt_notifications = @debt_notifications.search_for(params[:first_name], params[:last_name])
+    @title = 'Debt Notifications'
+
+    @q = User.unscoped.ransack(params[:q])
+    @users = @q.result(distinct: true)
+
+    @debt_notifications = Admin::DebtNotification.where(user_id: @users.ids)
     @debt_notifications = @debt_notifications.order('sent_on ASC').paginate(page: params[:page], per_page: 15)
     @debt_notifications.all
+
+    respond_to do |format|
+      format.html
+      format.json { render json: @debt_notifications }
+    end
   end
 end

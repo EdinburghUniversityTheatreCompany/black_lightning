@@ -8,42 +8,36 @@
 
 <h1><%= prefix %> All Members</h1>
 <div class="row">
-  <div class="span9">
-    <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debts, html: { id: "search", class: "form-search" } do |f| %>
-        <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
-        <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
-        <%= f.submit :Search, class: 'btn' %>
+    <div class="span12">
+        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debts, html: { id: "search", class: "form-search" } do |f| %>
+            <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
+            <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
+            <%= f.submit :Search, class: 'btn' %>
 
-        <%= f.input :show_in_debt_only, label: "Show In Debt Only", input_html: {id: "show_in_debt_only", checked: params[:show_in_debt_only] == "1" ? true : false, name: "show_in_debt_only" }, as: :boolean %>
-
-    <% end %>
-  </div>
-  <div class="span3">
-    <div class="control-group">
-      <div class="controls">
-        <label class="checkbox">
-
-        </label>
-      </div>
+            <%= f.input :show_in_debt_only, label: "Show In Debt Only", input_html: {id: "show_in_debt_only", checked: params[:show_in_debt_only] == "1" ? true : false, name: "show_in_debt_only" }, as: :boolean %>
+        <% end %>
     </div>
+</div>
+
+<% if @users.empty? %>
+  <p>HAL could not find any users.</p>
+<% else %>
+  <table class="table">
+    <tbody>
+    <tr>
+      <th>Email</th>
+      <th>Name</th>
+    </tr>
+    <% @users.each do |user| %>
+        <tr <%= user.in_debt ?  " class = error ": "" %>>
+          <td><%= user.email %></td>
+          <td><%= link_to "#{user.first_name} #{user.last_name}", admin_debt_path(user) %></td>
+        </tr>
+    <% end %>
+    </tbody>
+  </table>
+
+  <div class="paginate_holder">
+    <%= will_paginate(@users) %>
   </div>
-</div>
-
-<table class="table">
-  <tbody>
-  <tr>
-    <th>Email</th>
-    <th>Name</th>
-  </tr>
-  <% @users.each do |user| %>
-      <tr <%= user.in_debt ?  " class = error ": "" %>>
-        <td><%= user.email %></td>
-        <td><%= link_to "#{user.first_name} #{user.last_name}", admin_debt_path(user) %></td>
-      </tr>
-  <% end %>
-  </tbody>
-</table>
-
-<div class="paginate_holder">
-  <%= will_paginate(@users) %>
-</div>
+<% end %>
