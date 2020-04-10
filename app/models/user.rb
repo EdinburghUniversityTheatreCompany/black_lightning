@@ -190,12 +190,10 @@ class User < ApplicationRecord
   #returns true if the user is in debt
   def in_debt(on_date = Date.today)
     maintenance_debts = admin_maintenance_debts.where('due_by <?', on_date)
-    if maintenance_debts.any? {|debt| debt.status(on_date) == :causing_debt}
-      return true
-    end
+    return true if maintenance_debts.any? { |debt| debt.status(on_date) == :causing_debt }
 
     staffing_debts = self.admin_staffing_debts.where('due_by <?', on_date)
-    return staffing_debts.any? {|debt| debt.status(on_date) == :causing_debt}
+    return staffing_debts.any? { |debt| debt.status(on_date) == :causing_debt }
   end
 
   def self.in_debt(on_date = Date.today)
@@ -203,5 +201,8 @@ class User < ApplicationRecord
     return self.where(id: in_debt_ids)
   end
 
-
+  def self.notified_since(date)
+    # returns users who have been sent a notification since the given date
+    return self.includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on > ?', date).references(:admin_debt_notifications).distinct
+  end
 end

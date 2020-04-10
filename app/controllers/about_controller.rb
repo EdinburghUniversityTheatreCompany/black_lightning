@@ -7,11 +7,16 @@ class AboutController < ApplicationController
   before_action :get_subpages
 
   def page
-    render 'about/' + params[:page]
+    begin
+      render 'about/' + params[:page]
+    rescue ActionView::MissingTemplate
+      redirect_to '404', status: 404
+    end
   end
 
   ##
   # Returns a list of all the pages in the about folder.
+  # This is used by the about layout page to render the navigation.
   ##
   def get_subpages
     action = params[:page] || ''

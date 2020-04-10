@@ -52,12 +52,14 @@ group :development, :test do
   gem 'rubocop'
   gem 'rubocop-faker'
   gem 'rails-controller-testing'
+
+  gem 'factory_bot_rails'
+
 end
 
 group :test do
   gem 'simplecov'
   gem 'simplecov-rcov'
-  gem 'factory_bot_rails'
   gem 'faker'
   gem 'ruby-prof'
   gem 'html_acceptance'
