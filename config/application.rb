@@ -36,12 +36,7 @@ module ChaosRails
     # Handle error routes:
     config.exceptions_app = routes
 
-    # Use factory_girl instead of fixtures.
-    config.generators do |g|
-      g.fixture_replacement :factory_girl
-    end
-
-    #protect against csrf attacks by checking origin matches sites address
+    # Protect against csrf attacks by checking origin matches sites address
     config.action_controller.forgery_protection_origin_check = true
   end
 end
