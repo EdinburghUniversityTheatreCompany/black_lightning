@@ -205,4 +205,8 @@ class User < ApplicationRecord
     # returns users who have been sent a notification since the given date
     return self.includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on > ?', date).references(:admin_debt_notifications).distinct
   end
+
+  def self.search_for(first_name, last_name)
+    return self.where("first_name LIKE ? AND last_name LIKE ?", "%#{first_name}%", "%#{last_name}%")
+  end
 end

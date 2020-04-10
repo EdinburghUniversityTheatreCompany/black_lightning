@@ -13,10 +13,10 @@ class Admin::DebtNotification < ApplicationRecord
   enum notification_type: %i[initial_notification reminder]
   belongs_to :user
 
-  DISABLED_PERMISSIONS = %w[read create update delete].freeze
+  DISABLED_PERMISSIONS = %w[create update delete manage].freeze
 
   def self.search_for(first_name, last_name)
-    user_ids = User.where('first_name LIKE ? AND last_name LIKE ?', first_name, last_name).ids
+    user_ids = User.search_for(first_name, last_name).ids
     notifications = self.where(user_id: user_ids)
 
     return notifications

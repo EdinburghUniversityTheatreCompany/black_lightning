@@ -11,7 +11,7 @@ class Admin::MaintenanceDebtsController < AdminController
       if params[:user_id].present?
         @mdebts = Admin::MaintenanceDebt.where(user_id: params[:user_id])
       else
-        @show_fulfilled = params[:show_fulfilled].presence || false 
+        @show_fulfilled = params[:show_fulfilled]
 
         @first_name = params[:first_name]
         @last_name = params[:last_name]

@@ -23,11 +23,11 @@ class Admin::MaintenanceDebt < ApplicationRecord
   # with status being used to retrieve if the debt has become overdue and is causing debt
 
   def self.search_for(first_name, last_name, show_name, show_fulfilled)
-    user_ids = User.where('first_name LIKE ? AND last_name LIKE ?', "%#{first_name}%", "%#{last_name}%").ids
+    user_ids = User.search_for(first_name, last_name).ids
     show_ids = Show.where('name LIKE ?', "%#{show_name}%")
     maintenance_debts = where(user_id: user_ids, show_id: show_ids)
 
-    maintenance_debts = maintenance_debts.unfulfilled unless show_fulfilled
+    maintenance_debts = maintenance_debts.unfulfilled unless (show_fulfilled.presence || false)
 
     return maintenance_debts
   end
