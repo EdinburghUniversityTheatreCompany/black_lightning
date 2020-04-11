@@ -34,6 +34,7 @@ class Admin::FeedbacksController < AdminController
   # GET /admin/feedbacks/1/edit
   def edit
     @feedback = Admin::Feedback.find(params[:id])
+
     @show = @feedback.show
   end
 
@@ -48,11 +49,11 @@ class Admin::FeedbacksController < AdminController
     respond_to do |format|
       if @feedback.save
         format.html do
+          flash[:success] = 'Feedback was successfully submitted.'
+
           if can? :read, @feedback
-            flash[:success] = 'Feedback was successfully submitted.'
             redirect_to admin_show_feedbacks_path(@show)
           else
-            flash[:success] = 'Feedback was successfully submitted.'
             redirect_to admin_show_path(@show)
           end
         end
@@ -68,6 +69,7 @@ class Admin::FeedbacksController < AdminController
   # PUT /admin/feedbacks/1.json
   def update
     @feedback = Admin::Feedback.find(params[:id])
+
     @show = @feedback.show
 
     respond_to do |format|
@@ -85,6 +87,7 @@ class Admin::FeedbacksController < AdminController
   # DELETE /admin/feedbacks/1.json
   def destroy
     @feedback = Admin::Feedback.find(params[:id])
+
     @show = @feedback.show
 
     @feedback.destroy
@@ -96,6 +99,7 @@ class Admin::FeedbacksController < AdminController
   end
 
   private
+
   def feedback_params
     params.require(:admin_feedback).permit(:body, :show, :show_id)
   end

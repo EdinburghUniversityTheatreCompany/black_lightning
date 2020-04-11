@@ -11,7 +11,7 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     get :index
     assert_response :success
 
-    assert User.with_role(:member).all.to_a & assigns(:users).to_a == assigns(:users).to_a
+    assert_equal User.with_role(:member).all.ids.sort, assigns(:users).ids.sort, 'Not all users with the members role are included in the index'
   end
 
   test 'should get index with only in debt' do
@@ -20,8 +20,8 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     get :index, params: { show_in_debt_only: 1 }
     assert_response :success
 
-    assert assigns(:users).to_a.include? @member
-    assert_not assigns(:users).to_a.include? @admin
+    assert_includes assigns(:users).to_a, @member, 'The user with debt is not included in the index when show_in_debt_only is true'
+    assert_not_includes assigns(:users).to_a, @admin, 'The user without debt is included in the index when show_in_debt_only is true'
   end
 
   test 'should get show' do

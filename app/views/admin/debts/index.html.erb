@@ -29,7 +29,7 @@
       <th>Name</th>
     </tr>
     <% @users.each do |user| %>
-        <tr <%= user.in_debt ?  " class = error ": "" %>>
+        <tr <%= user.in_debt ?  ' class="error"'.html_safe : '' %>>
           <td><%= user.email %></td>
           <td><%= link_to "#{user.first_name} #{user.last_name}", admin_debt_path(user) %></td>
         </tr>

@@ -206,6 +206,8 @@ ChaosRails::Application.routes.draw do
   get '/404' => 'static#render_404'
   get '/500' => 'static#render_500'
 
+  get '/access_denied' => 'static#access_denied'
+
   get '/:id' => 'seasons#show', :constraints => ExistingSeasonConstraint.new
 
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.

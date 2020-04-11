@@ -18,7 +18,9 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     notified_users = User.notified_since(date).to_a
 
-    assert notified_users.include? user_four
-    assert_not notified_users.include?(user_one) && notified_users.include?(user_two) && notified_users.include?(user_three)
+    assert_not_includes notified_users, user_one, 'The list of notified users includes the user without any notifications'
+    assert_not_includes notified_users, user_two, 'The list of notified users includes the user with a notification from before date'
+    assert_not_includes notified_users, user_three, 'The list of notified users includes the user with a notification on the date'
+    assert_includes notified_users, user_four, 'The list of notified users does not include the user that should be notified'
   end
 end

@@ -9,7 +9,7 @@ class Admin::DebtNotificationsControllerTest < ActionController::TestCase
   test 'should get index' do
     get :index
     assert_response :success
-    assert_not_nil assigns(:debt_notifications)
+    assert_not_nil assigns(:debt_notifications), 'The debt notifications were not set by the index method'
   end
 
   test 'should get index with search' do
@@ -25,7 +25,7 @@ class Admin::DebtNotificationsControllerTest < ActionController::TestCase
 
     assert_response :success
 
-    assert assigns(:debt_notifications).to_a.include?(other_debt_notification), 'The debt notifications do not include the expected debt notification.'
-    assert_not assigns(:debt_notifications).to_a.include?(debt_notification), 'The debt notifications include an unexpected debt notification.'
+    assert_includes assigns(:debt_notifications).to_a, other_debt_notification, 'The debt notifications do not include the expected debt notification'
+    assert_includes assigns(:debt_notifications).to_a, debt_notification, 'The debt notifications include an unexpected debt notification'
   end
 end
