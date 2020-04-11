@@ -9,4 +9,14 @@ class Admin::HelpControllerTest < ActionController::TestCase
     get :kramdown
     assert_response :success
   end
+
+  test 'should get kramdown as text' do
+    get :kramdown, format: :text
+
+    assert_response :success
+  end
+
+  test 'should get venue location' do
+    get :venue_location
+  end
 end
