@@ -20,11 +20,11 @@
   </tr>
 
 <% @fault_reports.each do |fault_report| %>
-  <tr class="<%= fault_report_class(fault_report) %>">
+  <tr class="<%= fault_report_css_class(fault_report) %>">
     <td><%= link_to fault_report.item, admin_fault_report_path(fault_report) %></td>
     <td><%= fault_report.severity.humanize %></td>
     <td><%= fault_report.status.humanize %></td>
-    <td><%= fault_report.reported_by.name %></td>
+    <td><%= fault_report.reported_by_name %></td>
     <td><%= l fault_report.created_at, format: :short %></td>
     <td><%= l fault_report.updated_at, format: :short %></td>
 

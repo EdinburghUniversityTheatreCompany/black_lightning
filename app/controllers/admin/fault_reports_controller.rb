@@ -105,14 +105,14 @@ class Admin::FaultReportsController < AdminController
     @fault_report.destroy
 
     respond_to do |format|
-      format.html { redirect_to admin_fault_reports_index_url }
+      format.html { redirect_to admin_fault_reports_path }
       format.json { head :no_content }
     end
   end
 
   private
+
   def fault_report_params
     params.require(:fault_report).permit(:item, :description, :severity, :status, :reported_by_id, :fixed_by_id)
   end
-
 end
