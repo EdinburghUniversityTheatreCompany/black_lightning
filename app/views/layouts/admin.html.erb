@@ -105,6 +105,10 @@
                   <% if can? :create, MembershipActivationToken%>
                       <li><%= link_to 'Membership Activation', new_membership_activation_path %></li>
                   <% end %>
+
+                  <% if can? :read, MassMail %>
+                      <li><%= link_to 'Mass Mail', admin_mass_mails_path %></li>
+                  <% end %>
 			  </ul>
 			</div>
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">
