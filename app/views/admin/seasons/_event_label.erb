@@ -1,0 +1,6 @@
+
+<% event_label = "#{event.name} - #{event.date_range true}" %>
+
+<%= link_to event_label, event, target: :blank %>
+
+<span class="label"><%= event.type.presence || "Unknown Type" %></span>

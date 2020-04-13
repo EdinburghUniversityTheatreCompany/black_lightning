@@ -1,9 +1,4 @@
-<p id="notice"><%= notice %></p>
-
-<p>
-  <b>Name:</b>
-  <%= @season.name %>
-</p>
+<h1><%= @season.name %></h1>
 
 <div>
   <b>Description:</b>
@@ -12,22 +7,19 @@
 
 <p>
   <b>Dates:</b>
-  <%= I18n.l(@season.start_date, :format => :long) %> – <%= I18n.l(@season.end_date, :format => :longy) %>
+  <%= @season.date_range true %>
 </p>
 
-<% if @season.events.count > 0 %>
 <h3>Events</h3>
-<ul>
-  <% @season.events.each do |show|
-    if show.type == "Show" %>
-      <li><%= link_to show.name, admin_show_path(show) %></li>
-    <% else %>
-      <li><%= link_to show.name, admin_workshop_path(show) %> <span class="label">Workshop</span></li>
-    <% end %>
-  <% end %>
-</ul>
+<% @season.events.each do |event| %>
+  <p>
+    <%= render 'event_label', event: event %>
+  </p>
 <% end %>
 
+<h3>Team</h3>
+<%= render 'admin_show_team_members', team_members: @season.team_members %>
+
 <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
-<%= link_to edit_text, edit_admin_season_path(@season), :class => "btn" %>
-<%= link_to 'Back', admin_seasons_path, :class => "btn" %>
+<%= link_to edit_text, edit_admin_season_path(@season), class: "btn" %>
+<%= link_to 'Back', admin_seasons_path, class: "btn" %>

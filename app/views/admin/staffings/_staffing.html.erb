@@ -1,24 +1,51 @@
-<% filled_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ? and user_id is not null', show_title]).count %>
-<% total_positions = Admin::Staffing.joins(:staffing_jobs).where(['show_title = ?', show_title]).count %>
+<% content_for :head do %>
+  <style>
+    td a { 
+      display: block; 
+    }
+  </style>
+<% end %>
 
-<% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
+<% archived ||= nil %>  
+  
+<% # TODO: Styling it using Bootstrap does not work. It might work better in Bootstrap 4. %>
+  <table class="table">
+    <thead>
+        <tr>
+          <th scope="col" style="width: 48%;">Name</th>
+          <th scope="col" style="width: 40%;">Dates</th>
+          <th scope="col" style="width: 12%;">Positions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% staffings_hash.each do |slug, staffings| %>
+          <% filled_positions = 0 %>
+          <% unfilled_positions = 0 %>
 
-<% archived ||= nil %>
+          <% staffings.each do |staffing| %>
+            <% staffing.staffing_jobs.each {|job| job.user.nil? ? unfilled_positions += 1 : filled_positions += 1 } %>
+          <% end %>
+          
+          <% total_positions = filled_positions + unfilled_positions %>
 
-<li style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
+          <% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
 
-  <%= link_to grid_admin_staffings_path(show_title, archived: archived) do %>
-    <%= show_title %>
+          <% show_title = staffings.first.show_title %>
 
-    <span class="pull-right">
-      <% if show_warning %>
-        <i class="fa fa-exclamation-sign"></i>
-      <% else %>
-        <i class="fa fa-ok-sign"></i>
+          <% dates = staffings.collect {|staffing| staffing.start_time.to_date }%>
+          <% date_range = date_range_string dates.first, dates.last, true, :short %>
+
+          <% positions_filled = "#{filled_positions} of #{total_positions} filled" %>
+
+          <tr style="<%= 'background-color: #f2dede; color: #b94a48;' if show_warning %>">
+            <% [show_title, date_range, positions_filled].each do |text| %> 
+              <td><%= link_to text, grid_admin_staffings_path(slug, archived: archived) %></td>
+            <% end %>
+          </tr>
       <% end %>
+    </tbody>
+</table>
 
-      <%= "#{filled_positions} of #{total_positions} filled" %>
-    </span>
-  <% end %>
 
-</li>
+
+

@@ -27,7 +27,7 @@
     <div class="well">
       <h4>Dates</h4>
       <p>
-        <b><%= @workshop.date_range %></b>
+        <b><%= @workshop.date_range true %></b>
       </p>
 
       <% if @workshop.author and not @workshop.author.empty? %>
@@ -54,14 +54,7 @@
 
   <h4>Team</h4>
   <dl class="team_list">
-  <% @workshop.team_members.each do |team_member| %>
-    <dt><%= team_member.position %></dt>
-
-    <dd>
-    <% u = team_member.user %>
-    <%= "#{u.first_name} #{u.last_name}".presence || u.email %>
-    </dd>
-  <% end %>
+    <%= render 'show_team_members', team_members: @workshop.team_members %>
   </dl>
 <% end %>
 
