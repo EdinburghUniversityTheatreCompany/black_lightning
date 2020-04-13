@@ -30,6 +30,19 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_feedbacks_path(@show)
   end
 
+  test 'should create admin_feedback without read permission' do
+    #skip 'Setting the sign up permissions is very hard'
+    sign_in FactoryBot.create(:member)
+
+    @feedback = FactoryBot.attributes_for(:feedback, show: nil)
+
+    assert_difference('Admin::Feedback.count') do
+      post :create, params: { show_id: @show, admin_feedback: @feedback }
+    end
+
+    assert_redirected_to admin_show_path(@show)
+  end
+
   test 'should get edit' do
     @feedback = FactoryBot.create(:feedback, show: @show)
 

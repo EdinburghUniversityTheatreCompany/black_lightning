@@ -4,6 +4,7 @@
 #
 # *id*::            <tt>integer, not null, primary key</tt>
 # *name*::          <tt>string(255)</tt>
+# *permissions*::
 # *resource_id*::   <tt>integer</tt>
 # *resource_type*:: <tt>string(255)</tt>
 # *created_at*::    <tt>datetime, not null</tt>
@@ -13,10 +14,6 @@
 #++
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
-
-# This model initially had no columns defined.  If you add columns to the
-# model remove the '{}' from the fixture names and add the columns immediately
-# below each fixture, per the syntax in the comments below
 #
 member:
    id: 1
@@ -25,3 +22,4 @@ member:
 admin:
   id: 2
   name: "admin"
+  

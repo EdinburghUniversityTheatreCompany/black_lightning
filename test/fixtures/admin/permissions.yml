@@ -4,3 +4,8 @@ one:
   id: 1
   action: access
   subject_class: backend
+
+can_create_feedback:
+  id: 2
+  action: 'create'
+  subject_class: 'Admin::Feedback'
