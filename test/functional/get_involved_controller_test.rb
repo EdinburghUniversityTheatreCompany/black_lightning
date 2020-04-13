@@ -7,7 +7,7 @@ class GetInvolvedControllerTest < ActionController::TestCase
   end
 
   test 'should get opportunities' do
-    FactoryGirl.create_list(:opportunity, 10)
+    FactoryBot.create_list(:opportunity, 10)
 
     get :opportunities
     assert_response :success

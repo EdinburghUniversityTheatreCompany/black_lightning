@@ -16,7 +16,7 @@
 #++
 
 include ActionDispatch::TestProcess
-FactoryGirl.define do
+FactoryBot.define do
   factory :attachment do
     name { generate(:random_string) }
     file { fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf') }

@@ -2,9 +2,9 @@ require 'test_helper'
 
 class Admin::UsersControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
 
-    @user = FactoryGirl.create(:user)
+    @user = FactoryBot.create(:user)
   end
 
   test 'should get index' do
@@ -27,7 +27,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     User.find(@user.id).destroy
 
     assert_difference('User.count') do
-      post :create, user: { email: @user.email }
+      post :create, params: { user: { email: @user.email } }
     end
 
     assert_redirected_to admin_user_path(assigns(:user))

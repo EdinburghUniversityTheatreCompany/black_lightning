@@ -27,7 +27,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Proposals::Proposal < ActiveRecord::Base
+class Admin::Proposals::Proposal < ApplicationRecord
   has_paper_trail
   belongs_to :call, class_name: 'Admin::Proposals::Call'
 
@@ -40,6 +40,8 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
 
   validates :show_title, :proposal_text, :publicity_text, presence: true
   validates :team_members, presence: { message: 'You must add at least one team member' }
+
+  DISABLED_PERMISSIONS = %w[read create update].freeze
 
   ##
   # Creates an instance of Admin::Answer for every question in the call.

@@ -27,7 +27,7 @@
 # == Schema Information End
 #++
 ##
-class News < ActiveRecord::Base
+class News < ApplicationRecord
   resourcify
 
   ##
@@ -39,7 +39,7 @@ class News < ActiveRecord::Base
 
   belongs_to :author, class_name: 'User'
 
-  validates :title, presence: true
+  validates :title, :body, presence: true
   validates :publish_date, presence: true
   validates :slug, presence: true, uniqueness: true
 

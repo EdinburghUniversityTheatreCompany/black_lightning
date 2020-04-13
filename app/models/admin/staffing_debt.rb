@@ -12,7 +12,7 @@
 #  converted             :boolean
 #  forgiven              :boolean          default(FALSE)
 #
-class Admin::StaffingDebt < ActiveRecord::Base
+class Admin::StaffingDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show
   belongs_to :admin_staffing_job, class_name: 'Admin::StaffingJob'
@@ -46,12 +46,12 @@ class Admin::StaffingDebt < ActiveRecord::Base
     end
   end
 
-  def self.search_for(user_fname, user_sname, show_name, show_fulfilled)
-    user_ids = User.where('first_name LIKE ? AND last_name LIKE ?', "%#{user_fname}%", "%#{user_sname}%").ids
+  def self.search_for(first_name, last_name, show_name, show_fulfilled)
+    user_ids = User.search_for(first_name, last_name).ids
     show_ids = Show.where('name LIKE ?', "%#{show_name}%")
     staffing_debts = where(user_id: user_ids, show_id: show_ids)
 
-    staffing_debts = staffing_debts.unfulfilled unless show_fulfilled
+    staffing_debts = staffing_debts.unfulfilled unless (show_fulfilled.presence || false)
 
     return staffing_debts
   end

@@ -19,7 +19,13 @@ class Admin::JobControlController < AdminController
   ##
   def working
     @title = 'Working Delayed Jobs'
+    @description = 'The list below contains jobs currently being processed.'
+
+    @type = :working
+
     authorize! :read, Delayed::Backend::ActiveRecord::Job
+
+    render action: :list
   end
 
   ##
@@ -27,7 +33,13 @@ class Admin::JobControlController < AdminController
   ##
   def pending
     @title = 'Pending Delayed Jobs'
+    @description = 'The list below contains jobs waiting to be processed.'
+
+    @type = :pending
+
     authorize! :read, Delayed::Backend::ActiveRecord::Job
+
+    render action: :list
   end
 
   ##
@@ -35,7 +47,13 @@ class Admin::JobControlController < AdminController
   ##
   def failed
     @title = 'Failed Delayed Jobs'
+    @description = 'The list below contains jobs that have an error message.'
+
+    @type = :failed
+
     authorize! :read, Delayed::Backend::ActiveRecord::Job
+
+    render action: :list
   end
 
   ##

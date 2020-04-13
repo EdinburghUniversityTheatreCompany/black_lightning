@@ -1,4 +1,4 @@
-class MembershipCard < ActiveRecord::Base
+class MembershipCard < ApplicationRecord
   before_create :set_card_number
 
   belongs_to :user

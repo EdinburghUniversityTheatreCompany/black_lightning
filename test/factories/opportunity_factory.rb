@@ -1,4 +1,4 @@
-FactoryGirl.define do
+FactoryBot.define do
   factory :opportunity do
     title        { generate(:random_string) }
     description  { generate(:random_text) }

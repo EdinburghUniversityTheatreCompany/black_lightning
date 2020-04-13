@@ -22,7 +22,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Answer < ActiveRecord::Base
+class Admin::Answer < ApplicationRecord
   belongs_to :question, class_name: 'Admin::Question'
   belongs_to :answerable, polymorphic: true
 

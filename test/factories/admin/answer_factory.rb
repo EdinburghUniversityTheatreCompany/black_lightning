@@ -17,10 +17,10 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :answer, class: Admin::Answer do
     transient do
-      response_type 'Long Text'
+      response_type { 'Long Text' }
     end
 
     answer do

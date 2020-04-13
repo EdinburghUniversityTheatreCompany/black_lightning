@@ -1,4 +1,4 @@
-FactoryGirl.define do
+FactoryBot.define do
   sequence :random_name do |n|
     "A Name #{n}"
   end

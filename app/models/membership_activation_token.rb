@@ -1,5 +1,5 @@
 require 'securerandom'
-class MembershipActivationToken < ActiveRecord::Base
+class MembershipActivationToken < ApplicationRecord
   belongs_to :user
   before_validation :generate_token
 

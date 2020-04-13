@@ -1,6 +1,4 @@
-<% @title = 'News' %>
-
-<h1>News</h1>
+<h1><% @title %></h1>
 
 <%= display_block("News (Members Face)", true) %>
 
@@ -12,8 +10,13 @@
     <th>Title</th>
     <th>Publish Date</th>
     <th>Show public</th>
-    <th></th>
-    <th></th>
+    
+    <% if can? :edit, News %>
+      <th></th>
+    <% end %>
+    <% if can? :delete, News %>
+      <th></th>
+    <% end %>
   </tr>
 
 <% @news.each do |news| %>
@@ -22,18 +25,15 @@
     <td><%= l news.publish_date, format: :short %></td>
     <td><%= news.show_public ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
 
-    <td>
     <% if can? :edit, news %>
-    <%= link_to 'Edit', edit_admin_news_path(news) %>
+      <td><%= link_to 'Edit', edit_admin_news_path(news) %></td>
     <% end %>
-    </td>
 
-    <td>
     <% if can? :delete, news %>
-    <%= link_to 'Destroy', admin_news_path(news), method: :delete, data: { "confirm" => "Deleting " + news.title,
-                                                                           "detail"  => "Are you sure you wish to continue?" } %>
+      <td><%= link_to 'Destroy', admin_news_path(news), method: :delete, 
+                      data: { confirm: "Deleting " + news.title,
+                              detail:  "Are you sure you wish to delete this news?" } %></td>
     <% end %>
-    </td>
   </tr>
 <% end %>
 </table>
@@ -41,7 +41,7 @@
 <%= will_paginate(@news) %>
 
 <% if can? :create, News %>
-  <%= link_to new_admin_news_path, :class => 'btn' do %>
+  <%= link_to new_admin_news_path, class: 'btn' do %>
     <i class="fa fa-plus"></i> New News
   <% end %>
 <% end %>

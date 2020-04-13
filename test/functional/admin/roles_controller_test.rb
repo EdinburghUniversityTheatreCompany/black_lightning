@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::RolesControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
 
     @role = roles(:member)
   end
@@ -28,7 +28,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     Role.find(@role.id).destroy
 
     assert_difference('Role.count') do
-      post :create, role: { name: @role.name }
+      post :create, params: { role: { name: @role.name } }
     end
 
     assert_redirected_to admin_role_path(assigns(:role))

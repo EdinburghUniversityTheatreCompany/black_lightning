@@ -12,7 +12,7 @@ class StaffingMailerTest < ActionMailer::TestCase
   end
 
   test 'should send staffing_reminder' do
-    staffing = FactoryGirl.create(:staffing, job_count: 5)
+    staffing = FactoryBot.create(:staffing, job_count: 5)
 
     staffing.staffing_jobs.each do |job|
       if job.user

@@ -19,7 +19,7 @@
 # == Schema Information End
 #++
 ##
-class TeamMember < ActiveRecord::Base
+class TeamMember < ApplicationRecord
   default_scope -> { order('display_order ASC') }
 
   belongs_to :teamwork, polymorphic: true

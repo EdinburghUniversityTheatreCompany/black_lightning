@@ -13,7 +13,7 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :staffing, class: Admin::Staffing do
     show_title   { generate(:random_string) }
 
@@ -21,11 +21,11 @@ FactoryGirl.define do
     end_time     { start_time.advance(hours: rand(0.2..3.0)) }
 
     transient do
-      job_count 0
+      job_count { 0 }
     end
 
     after(:create) do |staffing, evaluator|
-      FactoryGirl.create_list(:staffing_job, evaluator.job_count, staffable: staffing)
+      FactoryBot.create_list(:staffing_job, evaluator.job_count, staffable: staffing)
     end
   end
 end

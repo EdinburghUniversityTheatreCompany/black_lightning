@@ -11,13 +11,13 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :questionnaire, class: Admin::Questionnaires::Questionnaire do
     name  { generate(:random_name) }
     show
 
     after(:create) do |questionnaire, _evaluator|
-      questions = FactoryGirl.create_list(:question, 10, questionable: questionnaire, answerable: questionnaire)
+      questions = FactoryBot.create_list(:question, 10, questionable: questionnaire, answerable: questionnaire)
     end
   end
 end

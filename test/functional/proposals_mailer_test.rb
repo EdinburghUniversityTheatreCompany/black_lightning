@@ -2,9 +2,9 @@ require 'test_helper'
 
 class ProposalsMailerTest < ActionMailer::TestCase
   test 'should send new_proposal' do
-    call = FactoryGirl.create(:proposal_call)
+    call = FactoryBot.create(:proposal_call)
 
-    proposal = FactoryGirl.create(:proposal, call: call)
+    proposal = FactoryBot.create(:proposal, call: call)
     creator = proposal.users.first
 
     # Send the email, then test that it got queued

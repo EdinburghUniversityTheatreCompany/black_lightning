@@ -2,17 +2,17 @@ require 'test_helper'
 
 class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
-    @user = FactoryGirl.create(:member)
-    @show = FactoryGirl.create(:show)
+    sign_in FactoryBot.create(:admin)
+    @user = FactoryBot.create(:member)
+    @show = FactoryBot.create(:show)
 
-    @admin_maintenance_debt = FactoryGirl.create(:maintenance_debt)
+    @admin_maintenance_debt = FactoryBot.create(:maintenance_debt)
   end
 
   test "should get index" do
     get :index
     assert_response :success
-    assert_not_nil assigns(:admin_maintenance_debts)
+    assert_not_nil assigns(:mdebts)
   end
 
   test "should get new" do
@@ -22,7 +22,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
   test "should create admin_maintenance_debt" do
     assert_difference('Admin::MaintenanceDebt.count') do
-      post :create, admin_maintenance_debt: {due_by: Date.today, show_id: @show.id, user_id: @user.id}
+      post :create, params: { admin_maintenance_debt: {due_by: Date.today, show_id: @show.id, user_id: @user.id} }
     end
     assert(Admin::MaintenanceDebt.where(due_by: Date.today, show_id: @show.id, user_id: @user.id).any?, "there should be a debt with the details entered")
 

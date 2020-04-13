@@ -13,7 +13,7 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :staffing_job, class: Admin::StaffingJob do
     name   { generate(:random_string) }
 
@@ -23,7 +23,7 @@ FactoryGirl.define do
 
     after(:create) do |job, evaluator|
       if evaluator.staffed
-        job.user = FactoryGirl.create(:user)
+        job.user = FactoryBot.create(:user)
         job.save
       end
     end

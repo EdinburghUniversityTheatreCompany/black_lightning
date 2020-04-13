@@ -1,0 +1,9 @@
+<h1><%= @title %></h1>
+
+<p class="sub"><%= @description %></p>
+
+<div class="accordion" id="jobs_enqueued">
+  <% delayed_jobs(@type).each do |job| %>
+    <%= render 'job', job: job %>
+  <% end %>
+</div>

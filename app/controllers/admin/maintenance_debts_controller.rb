@@ -1,18 +1,23 @@
+
+# These views are very similar to those for staffing_debts, so if you have improvements for this, have a look if you can apply them there as well.
 class Admin::MaintenanceDebtsController < AdminController
   before_action :set_admin_maintenance_debt, only: [:show, :edit, :update, :destroy]
 
   # GET /admin/maintenance_debts
   def index
-    @admin_maintenance_debts = Admin::MaintenanceDebt.all
     @title = 'Maintenance Debts'
+
     if can? :read, Admin::MaintenanceDebt
       if params[:user_id].present?
-        @mdebts = Admin::MaintenanceDebt.where(:user_id => params[:user_id])
-      elsif (params.length > 3)
-        show_fulfilled = params[:show_fulfilled].present?
-        @mdebts = Admin::MaintenanceDebt.searchfor(params[:user_fname], params[:user_sname], params[:show_name],show_fulfilled)
+        @mdebts = Admin::MaintenanceDebt.where(user_id: params[:user_id])
       else
-        @mdebts = Admin::MaintenanceDebt.unfulfilled
+        @show_fulfilled = params[:show_fulfilled]
+
+        @first_name = params[:first_name]
+        @last_name = params[:last_name]
+        @show_name = params[:show_name]
+
+        @mdebts = Admin::MaintenanceDebt.search_for(@first_name, @last_name, @show_name, @show_fulfilled)
       end
     else
       @mdebts = @admin_maintenance_debts.where(user_id: current_user.id).unfulfilled

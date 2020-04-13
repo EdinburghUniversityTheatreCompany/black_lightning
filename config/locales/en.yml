@@ -25,6 +25,7 @@ en:
       time_only:       ! '%H:%M'
       short:           ! '%H:%M %d/%m/%y'
       long :           ! '%A %d %B at %H:%M'
+      longy:           ! '%A %d %B %Y at %H:%M'
       long_date_only:  ! '%A %d %B'
   date:
     formats:

@@ -1,5 +1,9 @@
 # This makes sure the member role has permission to access the backend.
 #TODO : allow members to sign up for staffing by default for testing
-one:
+authorize_backend:
   role_id:       1
   permission_id: 1
+
+create_feedback:
+  role_id: 1
+  permission_id: 2

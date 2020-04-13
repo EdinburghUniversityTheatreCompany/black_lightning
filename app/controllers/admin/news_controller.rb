@@ -28,6 +28,7 @@ class Admin::NewsController < AdminController
   def show
     @news = News.find(params[:id])
     @title = @news.title
+
     respond_to do |format|
       format.html { render 'news/show' }
       format.json { render json: @news }
@@ -40,8 +41,10 @@ class Admin::NewsController < AdminController
   # GET /admin/news/new.json
   ##
   def new
-    @news = News.new
     @title = 'Create News'
+
+    @news = News.new
+
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @news }
@@ -53,6 +56,7 @@ class Admin::NewsController < AdminController
   ##
   def edit
     @news = News.find(params[:id])
+
     @title = "Edit #{@news.title}"
   end
 
@@ -70,7 +74,7 @@ class Admin::NewsController < AdminController
         format.html { redirect_to [:admin, @news], notice: 'News was successfully created.' }
         format.json { render json: [:admin, @news], status: :created, location: @news }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @news.errors, status: :unprocessable_entity }
       end
     end
@@ -89,7 +93,7 @@ class Admin::NewsController < AdminController
         format.html { redirect_to [:admin, @news], notice: 'News was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @news.errors, status: :unprocessable_entity }
       end
     end
@@ -114,5 +118,4 @@ class Admin::NewsController < AdminController
   def news_params
     params.require(:news).permit(:publish_date, :show_public, :slug, :title, :body, :image)
   end
-
 end

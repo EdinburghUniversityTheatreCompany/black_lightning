@@ -10,7 +10,7 @@ class Admin::UsersController < AdminController
   def index
     @title = 'Users'
 
-    @q     = User.unscoped.search(params[:q])
+    @q     = User.unscoped.ransack(params[:q])
     @users = @q.result(distinct: true)
 
     if params[:show_non_members] != '1'
@@ -83,7 +83,6 @@ class Admin::UsersController < AdminController
 
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
-
     respond_to do |format|
       if @user.update_attributes(user_params)
         if can? :read, User
@@ -153,6 +152,6 @@ class Admin::UsersController < AdminController
   private
   def user_params
     params.require(:user).permit(:email, :password, :password_confirmation, :remember_me, :first_name, :last_name,
-                                 :role_ids, :phone_number, :card_number, :public_profile, :bio, :avatar, :username)
+                                 :phone_number, :card_number, :public_profile, :bio, :avatar, :username, :role_ids => [])
   end
 end

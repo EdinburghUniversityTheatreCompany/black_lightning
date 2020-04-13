@@ -2,7 +2,7 @@ require 'test_helper'
 
 class StaticControllerTest < ActionController::TestCase
   test 'should get home' do
-    FactoryGirl.create_list(:show, 10)
+    FactoryBot.create_list(:show, 10)
 
     get :home
     assert_response :success

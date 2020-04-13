@@ -19,7 +19,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::EditableBlock < ActiveRecord::Base
+class Admin::EditableBlock < ApplicationRecord
   resourcify
 
   validates :name, presence: true, uniqueness: true

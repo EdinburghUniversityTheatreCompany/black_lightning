@@ -1,23 +1,20 @@
-<% actions = ['read', 'create', 'update', 'delete', 'manage'] %>
-<% disable = { "Admin::Proposals::Proposal" => ['read', 'create', 'update'] } %>
-
-<% actions.each do |action| %>
+<% @actions.each do |action| %>
   <td>
     <% if permission then %>
-      <% action_permission = permission.select{ |p| p.action == action } %>
+      <% action_permission = permission.select { |p| p.action == action } %>
       <% checked = action_permission.count > 0 %>
     <% end %>
 
     <% title = action.titleize %>
 
-    <%# disable the permissions that are in the hash above. These should be ones which are hard coded. %>
-    <% if disable.include?(model.name) then %>
-      <% if disable[model.name].include? action then %>
+    <%# Disable the permissions that are included in the disabled_permissions property of the record. %>
+    <% if model.const_defined? :DISABLED_PERMISSIONS then %>
+      <% if model.const_get(:DISABLED_PERMISSIONS).include?(action) then %>
         <% disabled = true %>
         <% title = "Hard Coded" %>
       <% end %>
     <% end %>
-
-    <%= check_box_tag "[#{role.name}][#{model.name}]#{action}", action, checked, :title => title, :disabled => disabled %>
+    
+    <%= check_box_tag "[#{role.name}][#{model.name}]#{action}", action, checked, title: title, disabled: disabled %>
   </td>
 <% end %>

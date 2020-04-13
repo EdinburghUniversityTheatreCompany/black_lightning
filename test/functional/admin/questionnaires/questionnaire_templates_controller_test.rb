@@ -4,7 +4,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesControllerTest < ActionContro
   setup do
     @template = admin_questionnaires_questionnaire_templates(:one)
 
-    sign_in FactoryGirl.create(:admin)
+    sign_in FactoryBot.create(:admin)
   end
 
   test 'should get index' do

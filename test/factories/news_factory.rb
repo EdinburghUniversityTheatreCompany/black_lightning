@@ -21,7 +21,7 @@
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :news do
     title { generate(:random_string) }
     slug  { title.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') }

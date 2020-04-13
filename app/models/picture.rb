@@ -24,7 +24,7 @@
 # == Schema Information End
 #++
 ##
-class Picture < ActiveRecord::Base
+class Picture < ApplicationRecord
   belongs_to :gallery, polymorphic: true
 
   has_attached_file :image,
