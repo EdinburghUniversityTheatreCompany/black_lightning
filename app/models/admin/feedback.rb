@@ -15,5 +15,6 @@
 #++
 ##
 class Admin::Feedback < ApplicationRecord
+  validates :show_id, :body, presence: true
   belongs_to :show, class_name: 'Show'
 end

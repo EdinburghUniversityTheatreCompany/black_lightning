@@ -59,7 +59,7 @@ class Admin::FeedbacksController < AdminController
         end
         format.json { render json: @feedback, status: :created, location: @feedback }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @feedback.errors, status: :unprocessable_entity }
       end
     end
@@ -77,7 +77,7 @@ class Admin::FeedbacksController < AdminController
         format.html { redirect_to admin_show_feedbacks_path(@show), notice: 'Feedback was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @feedback.errors, status: :unprocessable_entity }
       end
     end

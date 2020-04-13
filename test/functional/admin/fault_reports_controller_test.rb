@@ -49,8 +49,14 @@ class Admin::FaultReportsControllerTest < ActionController::TestCase
     assert_redirected_to admin_fault_report_path(assigns(:fault_report))
   end
 
-  test 'should create fault_report without read rights' do
+  test 'should not create fault_report that is invalid' do
+    fault_report_attributes = FactoryBot.attributes_for(:fault_report, description: '')
 
+    assert_no_difference('FaultReport.count') do
+      post :create, params: { fault_report: fault_report_attributes }
+    end
+
+    assert_response :unprocessable_entity
   end
 
   test 'should update fault_report' do
@@ -61,7 +67,16 @@ class Admin::FaultReportsControllerTest < ActionController::TestCase
     assert_redirected_to admin_fault_report_path(assigns(:fault_report))
   end
 
-  test 'should destroy admin_feedback' do
+  test 'should not update fault_report that is invalid' do
+    fault_report = FactoryBot.create(:fault_report)
+    attributes = FactoryBot.attributes_for(:fault_report, description: '')
+
+    put :update, params: { id: fault_report, fault_report: attributes }
+
+    assert_response :unprocessable_entity
+  end
+
+  test 'should destroy fault_report' do
     fault_report = FactoryBot.create(:fault_report)
 
     assert_difference('FaultReport.count', -1) do

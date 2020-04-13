@@ -21,7 +21,7 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
   end
 
   test 'should create admin_feedback' do
-    @feedback = FactoryBot.attributes_for(:feedback, show: @show)
+    @feedback = FactoryBot.attributes_for(:feedback, show: nil)
 
     assert_difference('Admin::Feedback.count') do
       post :create, params: { show_id: @show, admin_feedback: @feedback }
@@ -43,6 +43,16 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_path(@show)
   end
 
+  test 'should not create admin_feedback that is invalid' do
+    @feedback = FactoryBot.attributes_for(:feedback, body: '')
+
+    assert_no_difference('Admin::Feedback.count') do
+      post :create, params: { show_id: @show, admin_feedback: @feedback }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test 'should get edit' do
     @feedback = FactoryBot.create(:feedback, show: @show)
 
@@ -56,6 +66,14 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
 
     put :update, params: { show_id: @show, id: @feedback, admin_feedback: @attrs }
     assert_redirected_to admin_show_feedbacks_path(@show)
+  end
+
+  test 'should not update admin_feedback that is invalid' do
+    @feedback = FactoryBot.create(:feedback, show: @show)
+    @attrs = FactoryBot.attributes_for(:feedback, body: '')
+
+    put :update, params: { show_id: @show, id: @feedback, admin_feedback: @attrs }
+    assert_response :unprocessable_entity
   end
 
   test 'should destroy admin_feedback' do

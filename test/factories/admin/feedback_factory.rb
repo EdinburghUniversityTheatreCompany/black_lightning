@@ -13,7 +13,7 @@
 
 FactoryBot.define do
   factory :feedback, class: Admin::Feedback do
-    body  { :random_string }
+    body  { generate :random_string }
     show
   end
 end

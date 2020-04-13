@@ -3,6 +3,9 @@ require 'test_helper'
 class Admin::MassMailsControllerTest < ActionController::TestCase
   setup do
     sign_in FactoryBot.create(:admin)
+
+    # There has to be at least one member who can receive the email
+    FactoryBot.create(:member)
   end
 
   test 'should get index' do

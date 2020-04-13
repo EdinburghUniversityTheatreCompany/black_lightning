@@ -70,7 +70,7 @@ class Admin::FaultReportsController < AdminController
         format.html { redirect_to [:admin, @fault_report], notice: 'Fault Report was successfully created.' }
         format.json { render json: [:admin, @fault_report], status: :created, location: @fault_report }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @fault_report.errors, status: :unprocessable_entity }
       end
     end
@@ -89,7 +89,7 @@ class Admin::FaultReportsController < AdminController
         format.html { redirect_to [:admin, @fault_report], notice: 'Fault Report was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @fault_report.errors, status: :unprocessable_entity }
       end
     end
