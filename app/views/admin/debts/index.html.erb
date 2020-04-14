@@ -1,20 +1,13 @@
-<% content_for :head do %>
-    <%= javascript_include_tag "admin/users" %>
-<% end %>
-
-<% @title = 'Debts' %>
-
-<% prefix = params[:commit] == "Search" ? "Searching" : "Listing" %>
+<% prefix = params[:commit] == 'Search' ? 'Searching' : 'Listing' %>
 
 <h1><%= prefix %> All Members</h1>
 <div class="row">
     <div class="span12">
-        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debts, html: { id: "search", class: "form-search" } do |f| %>
-            <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
-            <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
+        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debts, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
+            <%= f.input_field :full_name_cont, placeholder: 'Name',  required: false %>
+            <%= f.input_field :email_cont,     placeholder: 'Email', required: false %>
+            <%= f.input :show_in_debt_only, label: 'Show In Debt Only', input_html: {id: 'show_in_debt_only', checked: params[:show_in_debt_only] == '1' ? true : false, name: 'show_in_debt_only' }, as: :boolean %>
             <%= f.submit :Search, class: 'btn' %>
-
-            <%= f.input :show_in_debt_only, label: "Show In Debt Only", input_html: {id: "show_in_debt_only", checked: params[:show_in_debt_only] == "1" ? true : false, name: "show_in_debt_only" }, as: :boolean %>
         <% end %>
     </div>
 </div>
@@ -22,16 +15,21 @@
 <% if @users.empty? %>
   <p>HAL could not find any users.</p>
 <% else %>
+  The display is formatted using (current debts) / (uncleared debts with a deadline in the future)
   <table class="table">
     <tbody>
     <tr>
-      <th>Email</th>
       <th>Name</th>
+      <th>Maintenance Debts</th>
+      <th>Staffing Debts</th>
+      <th>Unassociated Staffing Slots</th>
     </tr>
     <% @users.each do |user| %>
-        <tr <%= user.in_debt ?  ' class="error"'.html_safe : '' %>>
-          <td><%= user.email %></td>
-          <td><%= link_to "#{user.first_name} #{user.last_name}", admin_debt_path(user) %></td>
+        <tr <%= user.in_debt ? ' class="error"'.html_safe : '' %>>
+          <td><%= link_to user.name, admin_debt_path(user) %></td>
+          <td><%= "#{user.amount_of_debt_causing_maintenance_debts} / #{(user.amount_of_debt_causing_maintenance_debts Date.today.advance(years: 1)) - user.amount_of_debt_causing_maintenance_debts}" %></td>
+          <td><%= "#{user.amount_of_debt_causing_staffing_debts} / #{(user.amount_of_debt_causing_staffing_debts Date.today.advance(years: 1)) - user.amount_of_debt_causing_staffing_debts}" %></td>
+          <td><%= user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.count %></td>
         </tr>
     <% end %>
     </tbody>

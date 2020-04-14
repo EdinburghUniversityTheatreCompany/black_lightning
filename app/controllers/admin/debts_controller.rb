@@ -6,9 +6,9 @@ class Admin::DebtsController < AdminController
   def index
     authorize! :manage, Admin::Debt
 
-    @title = 'Users'
+    @title = 'All Debts'
 
-    @q     = User.unscoped.ransack(params[:q])
+    @q     = User.unscoped.ransack(:q)
     @users = @q.result(distinct: true).with_role(:member)
 
     @users = @users.in_debt if params[:show_in_debt_only] == '1'
@@ -28,6 +28,11 @@ class Admin::DebtsController < AdminController
     authorize! :read, debt
 
     @user = User.find(params[:id])
-    @title = "Debt Status for #{@user.name}"
+
+    prefix = @user == current_user ? 'You are ' : "#{@user.name} is "
+
+    @message = prefix + @user.debt_message_suffix
+
+    @title = "Debt status for #{@user.name}"
   end
 end
