@@ -38,9 +38,7 @@ FactoryBot.define do
     end
 
     file do
-      if response_type == 'File'
-        fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf')
-      end
+      fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf') if response_type == 'File'
     end
   end
 end
