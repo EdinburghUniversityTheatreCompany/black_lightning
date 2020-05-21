@@ -33,7 +33,8 @@ ChaosRails::Application.routes.draw do
     get '', to: 'dashboard#index'
 
     # The resources pages:
-    get 'resources/*page' => 'resources#page', as: :resources
+    get 'resources', to: 'resources#index', as: :resources
+    get 'resources/(*page)', to: 'resources#page', as: :resources_page
 
     # Answer files
     get 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
@@ -88,6 +89,12 @@ ChaosRails::Application.routes.draw do
       member do
         put 'approve'
         put 'reject'
+      end
+    end
+
+    resources :membership, only: [] do
+      collection do
+        get 'check_membership', to: 'membership#check_membership'
       end
     end
 
