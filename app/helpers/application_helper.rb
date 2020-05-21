@@ -1,4 +1,16 @@
 module ApplicationHelper
+  def bool_icon(bool)
+    return bool ? '&#10004;'.html_safe : '&#10008;'.html_safe
+  end
+
+  def bool_text(bool, capitalized = true)
+    word = bool ? 'yes' : 'no'
+
+    return word.upcase_first if capitalized
+
+    return word
+  end
+
   def html_alert_info(key)
     case key.to_sym
     when :alert, :error
@@ -23,6 +35,18 @@ module ApplicationHelper
     return 'application'
   end
 
+  def append_to_flash(key, message)
+    if flash[key].blank?
+      flash[key] = [message]
+    elsif flash[key].is_a? Enumerable
+      flash[key] << message
+    else
+      flash[key] = [flash[key], message]
+    end
+  end
+
+  # These probably should live somewhere else
+
   def xts_widget(xts_id)
     "<div id='tickets-#{xts_id}' class='xtsprodates'></div>
 <script src='http://www.xtspro.com/book/book.js'></script>
@@ -38,7 +62,7 @@ module ApplicationHelper
     "''.html_safe
   end
 
-  def strip_tags(_html)
-    return gsub(%r{</?[^>]+?>}, '')
+  def strip_tags(html)
+    return html.gsub(%r{</?[^>]+?>}, '')
   end
 end
