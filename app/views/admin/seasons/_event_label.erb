@@ -1,0 +1,6 @@
+<% event_label = "#{event.name} - #{event.date_range true}" %>
+<% admin = true if admin.nil? %>
+
+<%= get_link event, :show, link_text: event_label, target: :blank, admin: admin %>
+
+<span class="label"><%= event.type.presence || "Unknown Type" %></span>

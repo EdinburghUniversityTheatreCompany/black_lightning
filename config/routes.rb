@@ -17,7 +17,8 @@ ChaosRails::Application.routes.draw do
   resources :workshops,   only: [:index, :show]
   resources :news,        only: [:index, :show]
   resources :venues,      only: [:index, :show]
-  resources :seasons,     only: [:show]
+  resources :seasons,     only: [:index, :show]
+
   resources :membership_activations
   resources :users, only: [:show] do
     collection do
