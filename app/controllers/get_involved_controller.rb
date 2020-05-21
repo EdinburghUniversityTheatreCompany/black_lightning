@@ -4,46 +4,40 @@
 # No actions are defined here. It serves up the files in app/views/get_involved/* using the app/views/layouts/get_involved.html.erb layout.
 ##
 class GetInvolvedController < ApplicationController
-  before_action :get_subpages
+  skip_authorization_check
 
-  def opportunities
-    @opportunities = Opportunity.approved.all
+  layout 'subpage_sidebar'
+
+  def index
+    set_subpages('')
+    render 'get_involved/overview'
   end
 
   def page
-    render 'get_involved/' + params[:page]
+    @opportunities = Opportunity.active if params[:page] == 'opportunities'
+
+    if params[:page].nil? || params[:page] == '' || params[:page].downcase == 'overview'
+      index
+    else
+      set_subpages(params[:page])
+      begin
+        render 'get_involved/' + params[:page]
+      rescue ActionView::MissingTemplate
+        redirect_to '404', status: 404
+      end
+    end
   end
 
   private
 
-  ##
-  # Returns a list of all the pages in the get_involved folder.
-  ##
-  def get_subpages
-    action = params[:page] || ''
+  def set_subpages(page)
+    @controller = 'get_involved'
 
-    action_sections = action.split('/')
-
-    @root_page = action_sections[0]
-
-    @subpages_dir = "#{Rails.root}/app/views/get_involved/#{@root_page}"
-
-    @subpages = []
-
-    exclude = ['index.html.erb']
     @alias = {
       'ssw' => 'Stage, Set and Wardrobe'
     }
 
-    unless File.directory?(@subpages_dir)
-      @subpages_dir = "#{Rails.root}/app/views/get_involved/"
-      @root_page = nil
-    end
-
-    Dir.foreach(@subpages_dir) do |file|
-      if !File.directory?(File.join(@subpages_dir, file)) and !exclude.include? file
-        @subpages << file.gsub(/\.html\.erb/, '')
-      end
-    end
+    @root_page = helpers.get_subpage_root_page(page)
+    @subpages = helpers.get_subpages(@controller, @root_page)
   end
 end
