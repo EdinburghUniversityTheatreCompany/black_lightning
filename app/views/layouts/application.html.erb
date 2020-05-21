@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
-<%# Include the opengraph namespaces: %>
-<head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
+  <%# Include the opengraph namespaces: %>
+  <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
   <meta charset="UTF-8">
 
   <!-- measure page load time -->
@@ -11,14 +11,14 @@
     load_end = null;
   </script>
 
-  <title><%= "#{@title} | " unless @title == nil%>Bedlam Theatre</title>
-  <%= stylesheet_link_tag    "application", :media => "all" %>
+  <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
+  <%= stylesheet_link_tag    "application", media: "all" %>
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
 
   <%= yield :head %>
 
-  <%= meta_tags.html_safe %>
+  <%= meta_tags(@meta).html_safe %>
 </head>
 <body>
   <div class="container">
@@ -52,7 +52,7 @@
       <ul id="nav" class="nav nav-pills">
         <li><%= link_to 'Shows', shows_path %></li>
 
-        <% if WorkshopCounter::workshop_count > 0 %>
+        <% if WorkshopCounter.workshop_count > 0 %>
           <li><%= link_to 'Workshops', workshops_path %></li>
         <% end %>
 
