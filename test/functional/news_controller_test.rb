@@ -10,9 +10,9 @@ class NewsControllerTest < ActionController::TestCase
   end
 
   test 'should show news' do
-    @news = FactoryBot.create(:news)
+    @news = FactoryBot.create(:news, show_public: true)
 
-    get :show, params: { id: @news}
+    get :show, params: { id: @news }
     assert_response :success
   end
 end

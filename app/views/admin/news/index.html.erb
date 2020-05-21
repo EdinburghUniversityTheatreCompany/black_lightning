@@ -21,27 +21,17 @@
 
 <% @news.each do |news| %>
   <tr>
-    <td><%= link_to news.title, admin_news_path(news) %></td>
+    <td><%= get_link news, :show %></td>
     <td><%= l news.publish_date, format: :short %></td>
-    <td><%= news.show_public ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
+    <td><%= bool_icon news.show_public %></td>
 
-    <% if can? :edit, news %>
-      <td><%= link_to 'Edit', edit_admin_news_path(news) %></td>
-    <% end %>
-
-    <% if can? :delete, news %>
-      <td><%= link_to 'Destroy', admin_news_path(news), method: :delete, 
-                      data: { confirm: "Deleting " + news.title,
-                              detail:  "Are you sure you wish to delete this news?" } %></td>
-    <% end %>
+    <%= get_link news, :edit, wrap_tag: 'td' %>
+    
+    <%= get_link news, :destroy, wrap_tag: 'td' %>
   </tr>
 <% end %>
 </table>
 
 <%= will_paginate(@news) %>
 
-<% if can? :create, News %>
-  <%= link_to new_admin_news_path, class: 'btn' do %>
-    <i class="fa fa-plus"></i> New News
-  <% end %>
-<% end %>
+<%= get_link News, :new %>

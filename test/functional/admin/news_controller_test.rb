@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::NewsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
 
     @news = FactoryBot.create(:news)
   end
@@ -59,7 +59,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
   test 'should update news' do
     attrs = FactoryBot.attributes_for(:news)
 
-    put :update, params: { id: @news, news: attrs}
+    put :update, params: { id: @news, news: attrs }
 
     assert_redirected_to admin_news_path(assigns(:news))
   end
