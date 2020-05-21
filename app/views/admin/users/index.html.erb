@@ -2,66 +2,46 @@
   <%= javascript_include_tag "admin/users" %>
 <% end %>
 
-<% @title = 'Users' %>
+<h1><%= @title %></h1>
 
-<% prefix = params[:search] ? "Searching" : "Listing" %>
+<div id="search_container">
+  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_users, html: { id: "search", class: "form-search form-inline" } do |f| %>
+    <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
+    <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
 
-<% if params[:show_non_members] == "1" %>
-  <h1><%= prefix %> All Users</h1>
-<% else %>
-  <h1><%= prefix %> All Members</h1>
-<% end %>
-
-<div class="row">
-  <div class="span9">
-    <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_users, html: { id: "search", class: "form-search" } do |f| %>
-      <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
-      <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
-      <%= f.submit :Search, class: 'btn' %>
-
-      <%= f.input :show_non_members, label: "Show Non-Members", input_html: {id: "show_non_members", checked: params[:show_non_members] == "1" ? true : false, name: "show_non_members" }, as: :boolean %>
-
-    <% end %>
-  </div>
-  <div class="span3">
-    <div class="control-group">
-      <div class="controls">
-        <label class="checkbox">
-
-        </label>
-      </div>
-    </div>
-  </div>
+    <%= f.input :show_non_members, label: "Show Non-Members", input_html: { id: "show_non_members", checked: params[:show_non_members] == "1" ? true : false, name: "show_non_members" }, as: :boolean %>
+    
+    <%= submit_tag "Search", class: 'btn' %>
+  <% end %>
 </div>
 
 <table class="table">
     <tbody>
         <tr>
-            <th>Email</th>
             <th>Name</th>
-            <th></th>
-            <th></th>
+            <th>Email</th>
+
+            <% if can? :edit, User%>
+              <th></th>
+            <% end %>
+            <% if can? :delete, User%>
+              <th></th>
+            <% end %>
         </tr>
         <% @users.each do |user| %>
-        <tr>
+          <tr>
+            <td><%= user_link(user, true) %></td>
             <td><%= user.email %></td>
-            <td><%= link_to "#{user.first_name} #{user.last_name}", admin_user_path(user) %></td>
+              
 
-            <td>
-            <% if can? :edit, user %>
-            <%= link_to 'Edit', edit_admin_user_path(user) %>
-            <% end %>
-            </td>
+            <%= get_link user, :edit, wrap_tag: 'td' %>
 
-            <td>
-            <% if can? :delete, user %>
-            <%= link_to 'Destroy', admin_user_path(user), method: :delete, data: { confirm:         "Deleting " + user.name,
-                                                                                   detail:          "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name ",
-                                                                                   "type-confirm" => user.name
-                                                                                 } %>
-            <% end %>
-            </td>
-        </tr>
+            <%= get_link user, :destroy, wrap_tag: 'td',
+                         confirm:         "Deleting #{user.name(current_user)}",
+                         detail:          "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name:",
+                         type_confirm:     user.name(current_user)
+            %>
+          </tr>
         <% end %>
     </tbody>
 </table>
@@ -70,7 +50,4 @@
   <%= will_paginate(@users) %>
 </div>
 
-<% if can? :create, User %>
-  <% add_text = '<i class="fa fa-plus"></i> Add User'.html_safe %>
-  <%= link_to add_text, new_admin_user_path, :class => "btn" %>
-<% end %>
+<%= get_link User, :new %>

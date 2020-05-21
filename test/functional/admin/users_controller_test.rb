@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::UsersControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
 
     @user = FactoryBot.create(:user)
   end
@@ -13,7 +13,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should get show' do
-    get :show, params: { id: @user}
+    get :show, params: { id: @user }
     assert_response :success
   end
 
@@ -23,31 +23,75 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should create user' do
-    # Remove the existing user:
-    User.find(@user.id).destroy
+    attributes = FactoryBot.attributes_for(:user)
 
     assert_difference('User.count') do
-      post :create, params: { user: { email: @user.email } }
+      post :create, params: { user: attributes }
     end
 
     assert_redirected_to admin_user_path(assigns(:user))
   end
 
+  test 'should not create invalid user' do
+    attributes = FactoryBot.attributes_for(:user, email: '')
+
+    assert_no_difference('User.count') do
+      post :create, params: { user: attributes }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test 'should get edit' do
-    get :edit, params: { id: @user}
+    get :edit, params: { id: @user }
     assert_response :success
   end
 
   test 'should update user' do
-    put :update, params: {id: @user, user: { first_name: 'Test' }}
+    attributes = FactoryBot.attributes_for(:user)
+
+    put :update, params: { id: @user, user: attributes }
+
     assert_redirected_to admin_user_path(@user)
+  end
+
+  test 'should not update invalid user' do
+    attributes = FactoryBot.attributes_for(:user, phone_number: 'This is not a phone number! This is a sentence!')
+
+    put :update, params: { id: @user, user: attributes }
+
+    assert_response :unprocessable_entity
   end
 
   test 'should destroy user' do
     assert_difference('User.count', -1) do
-      delete :destroy, params: { id: @user}
+      delete :destroy, params: { id: @user }
     end
 
     assert_redirected_to admin_users_path
+  end
+
+  test 'should reset password' do
+    post :reset_password, params: { id: @user }
+
+    assert_redirected_to admin_user_url(@user)
+  end
+
+  test 'get autocomplete list' do
+    members = FactoryBot.create_list :member, 5
+
+    user = FactoryBot.create :user
+
+    get :autocomplete_list
+
+    members.each do |member|
+      assert_includes response.body, member.first_name
+      assert_includes response.body, member.last_name
+      assert_includes response.body, member.id.to_s
+    end
+
+    assert_not_includes response.body, user.first_name
+    assert_not_includes response.body, user.last_name
+    assert_not_includes response.body, user.id.to_s
   end
 end

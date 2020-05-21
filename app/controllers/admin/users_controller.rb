@@ -3,14 +3,14 @@
 ##
 class Admin::UsersController < AdminController
   load_and_authorize_resource except: [:autocomplete_list]
-
+  skip_load_resource only: [:create]
   ##
   # GET /admin/users
   ##
   def index
     @title = 'Users'
 
-    @q     = User.unscoped.ransack(params[:q])
+    @q     = User.ransack(params[:q])
     @users = @q.result(distinct: true)
 
     if params[:show_non_members] != '1'
@@ -18,7 +18,6 @@ class Admin::UsersController < AdminController
     end
 
     @users = @users.paginate(page: params[:page], per_page: 15)
-    @users = @users.all
 
     respond_to do |format|
       format.html
@@ -30,8 +29,9 @@ class Admin::UsersController < AdminController
   # GET /admin/users/1
   ##
   def show
-    @user = User.find(params[:id])
-    @title = @user.name
+    @title = @user.name(current_user)
+
+    @team_memberships = @user.team_memberships(false)
 
     respond_to do |format|
       format.html
@@ -43,25 +43,21 @@ class Admin::UsersController < AdminController
   # GET /admin/users/new
   ##
   def new
-    @user = User.new
-    @title = 'New User'
+    # Title is set by the view.
   end
 
   ##
   # POST /admin/users
   ##
   def create
-    params[:user].delete(:password) if params[:user][:password].blank?
-    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
-
-    @user = User.create_user(user_params)
+    @user = User.new_user(user_params)
 
     respond_to do |format|
       if @user.save
         format.html { redirect_to admin_user_url(@user) }
         format.json { render json: @user }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @user.errors, status: :unprocessable_entity }
       end
     end
@@ -71,28 +67,19 @@ class Admin::UsersController < AdminController
   # GET /admin/users/1/edit
   ##
   def edit
-    @user = User.find(params[:id])
-    @title = "Editing #{@user.name}"
+    # The title is set by the view
   end
 
   ##
   # PUT /admin/users/1
   ##
   def update
-    @user = User.find(params[:id])
-
-    params[:user].delete(:password) if params[:user][:password].blank?
-    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
     respond_to do |format|
-      if @user.update_attributes(user_params)
-        if can? :read, User
-          format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
-        else
-          format.html { redirect_to admin_url, notice: 'User was successfully updated.' }
-        end
+      if @user.update(user_params)
+        format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @user.errors, status: :unprocessable_entity }
       end
     end
@@ -102,8 +89,7 @@ class Admin::UsersController < AdminController
   # DELETE /admin/users/1
   ##
   def destroy
-    @user = User.find(params[:id])
-    @user.destroy
+    helpers.destroy_with_flash_message(@user)
 
     respond_to do |format|
       format.html { redirect_to admin_users_path }
@@ -112,11 +98,10 @@ class Admin::UsersController < AdminController
   end
 
   def reset_password
-    @user = User.find(params[:id])
     @user.send_reset_password_instructions
 
     respond_to do |format|
-      format.html { redirect_to admin_user_url(@user), notice: 'Password reset instructions sent.' }
+      format.html { redirect_back fallback_location: admin_user_url(@user), notice: 'Password reset instructions sent.' }
     end
   end
 
@@ -125,7 +110,7 @@ class Admin::UsersController < AdminController
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/json'
 
-    @users = User.select(['id', :first_name, :last_name])
+    @users = User.with_role(:member).select(['id', :first_name, :last_name])
 
     # This... erm... thing... builds the response up one
     # user at a time, which saves loading the whole lot into
@@ -150,8 +135,14 @@ class Admin::UsersController < AdminController
   end
 
   private
+
   def user_params
-    params.require(:user).permit(:email, :password, :password_confirmation, :remember_me, :first_name, :last_name,
-                                 :phone_number, :card_number, :public_profile, :bio, :avatar, :username, :role_ids => [])
+    params[:user]
+    params[:user][:password]
+    params[:user].delete(:password) if params[:user][:password].blank?
+    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
+
+    return params.require(:user).permit(:email, :password, :password_confirmation, :remember_me, :first_name, :last_name,
+                                 :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: [])
   end
 end
