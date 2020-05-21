@@ -2,7 +2,7 @@ class Kramdown::Parser::BKramdown < Kramdown::Parser::Kramdown
   def initialize(source, options)
     super
     @options = options
-   end
+  end
 
   def handle_extension(name, opts, body, type, _line_no)
     case name
@@ -14,7 +14,9 @@ class Kramdown::Parser::BKramdown < Kramdown::Parser::Kramdown
       @tree.children << div
       true
     else
+      # :nocov:
       super(name, opts, body, type)
+      # :nocov:
     end
   end
 end

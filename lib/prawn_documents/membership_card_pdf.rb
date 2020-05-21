@@ -51,7 +51,7 @@ class MembershipCardPDF < Prawn::Document
 
       # Name
       font Rails.root.join('app', 'assets', 'fonts', 'gothicb.ttf') do
-        text card.user.name, align: :center
+        text card.user.name_or_email, align: :center
       end
     end
 

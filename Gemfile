@@ -28,7 +28,7 @@ gem 'rails_autolink'
 gem 'delayed_job_active_record'
 gem 'daemons'
 
-gem 'axlsx'
+gem 'caxlsx'
 gem 'prawn'
 gem 'rqrcode'
 gem 'mini_magick'
