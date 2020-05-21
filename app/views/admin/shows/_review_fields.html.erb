@@ -1,14 +1,12 @@
 <div class="control-group fields">
-
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 17 } do %>
+    <%= render layout: "/shared/form/md_editor", locals: { f: f, field: :body, rows: 18 } do %>
       <%= f.input :reviewer %>
       <%= f.input :organisation %>
-      <%= f.input :review_date, :order => [:day, :month, :year] %>
-      <%= f.input :rating, :title => "Max 5. Halves allowed." %>
+      <%= f.input :review_date, order: [:day, :month, :year] %>
+      <% rating_help = 'Maximum rating of 5. Halves are allowed.' %>
+      <%= f.input :rating, label: "Rating - #{rating_help}", title: rating_help %>
 
-      <% remove_text = '<i class="fa fa-trash"></i> Delete Review'.html_safe %>
-      <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
+      <%= link_to_remove f %>
     <% end %>
-
     <hr />
 </div>

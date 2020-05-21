@@ -47,11 +47,8 @@ ChaosRails::Application.routes.draw do
       end
 
       member do
-        put 'add_questionnaire'
-        put 'add_maintenance_due'
-        put 'add_staffing_due'
-        put 'create_sdebts'
-        get 'create_mdebts'
+        post 'create_staffing_debts', to: 'shows#create_staffing_debts'
+        post 'create_maintenance_debts', to: 'shows#create_maintenance_debts'
         get 'xts_report'
       end
     end
