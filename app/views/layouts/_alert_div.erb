@@ -3,10 +3,10 @@
     <% flash.each do |key, message| %>
       <% if message.is_a? Enumerable %>
         <% message.each do |inner_message| %>
-          <%= render 'alert_message', key: key, message: inner_message %>
+          <%= render '/layouts/alert_message', key: key, message: inner_message %>
         <% end %>
       <% else %>
-        <%= render 'alert_message', key: key, message: message %>
+        <%= render '/layouts/alert_message', key: key, message: message %>
       <% end %>
     <% end %>
   <% end %>
