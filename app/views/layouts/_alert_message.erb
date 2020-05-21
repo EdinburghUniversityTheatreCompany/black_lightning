@@ -1,0 +1,7 @@
+<% alert_class, icon = html_alert_info(key) %>
+
+<p id="<%= key %>" class="alert <%= alert_class %>">
+  <i class="<%= icon %> fa-large" aria-hidden=”true”></i>
+  <%= " #{message}" %>
+  <button type="button" class="close" data-dismiss="alert">&times;</button>
+</p>

@@ -1,4 +1,17 @@
 module ApplicationHelper
+  def html_alert_info(key)
+    case key.to_sym
+    when :alert, :error
+      return 'alert-danger', 'fas fa-exclamation-circle'
+    when :success
+      return 'alert-success', 'fas fa-check-circle'
+    when :notice
+      return 'alert-info', 'fas fa-info-circle'
+    else
+      return '', ''
+    end
+  end
+
   def xts_widget(xts_id)
     "<div id='tickets-#{xts_id}' class='xtsprodates'></div>
 <script src='http://www.xtspro.com/book/book.js'></script>

@@ -121,26 +121,7 @@
     </div>
 
     <div class="container">
-      <div class="alert-container">
-        <% flash.each do |key, msg| %>
-          <% case key                               %>
-          <% when :alert                            %>
-          <%   alertclass = "alert-error"           %>
-          <%   icon       = "fa fa-exclamation-sign" %>
-          <% when :success                          %>
-          <%   alertclass = "alert-success"         %>
-          <%   icon       = "fa fa-ok"               %>
-          <% when :notice                           %>
-          <%   alertclass = "alert-info"            %>
-          <%   icon       = "fa fa-info-sign"        %>
-          <% end %>
-          <p id="<%= key %>" class="alert <%= alertclass %>">
-            <i class="<%= icon %> fa-large"></i>
-            <%= msg %>
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
-          </p>
-        <% end %>
-      </div>
+      <%= render '/layouts/alert_div' %>
 
       <%= content_for?(:content) ? yield(:content) : yield %>
     </div>
