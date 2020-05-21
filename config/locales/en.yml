@@ -24,11 +24,12 @@ en:
     formats:
       time_only:       ! '%H:%M'
       short:           ! '%H:%M %d/%m/%y'
-      long :           ! '%A %d %B at %H:%M'
+      long :           ! '%H:%M %A %d %B'
       longy:           ! '%A %d %B %Y at %H:%M'
       long_date_only:  ! '%A %d %B'
   date:
     formats:
-      shorty: ! '%d/%m/%y'
-      long: ! '%A %d %B'
-      longy: ! '%A %d %B %Y'
+      time_only:       ! ''
+      shorty:          ! '%d/%m/%y'
+      long:            ! '%A %d %B'
+      longy:           ! '%A %d %B %Y'
