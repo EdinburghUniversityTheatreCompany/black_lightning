@@ -1,6 +1,6 @@
 ##
 # =Metadata
-# The following metadata is set as default on each page:
+# The following metadata is set as default on each page by the Application Controller:
 #
 #  <meta name='description' content='The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.'>
 #
@@ -31,20 +31,12 @@ module MetaHelper
   ##
   # Creates the meta data tags.
   ##
-  def meta_tags
-    @meta[:description] ||= 'The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.'
-
-    # facebook opengraph data:
-    @meta['og:url']         ||= @base_url + request.fullpath
-    @meta['og:image']       ||= @base_url + image_path('BedlamLogoBW.png')
-    @meta['og:title']       ||= @title ? "#{@title} - Bedlam Theatre" : 'Bedlam Theatre'
-    @meta['og:description'] ||= @meta[:description]
-
-    @meta['viewport'] = 'initial-scale = 1.0,maximum-scale = 1.0'
+  def meta_tags(meta)
+    meta['og:description'] = meta[:description] if meta['og:description'].nil?
 
     @tags = []
 
-    @meta.each do |name, content|
+    meta.each do |name, content|
       type = 'name'
       type = 'property' if name.to_s.starts_with?('og') || name.to_s.starts_with?('fb')
 

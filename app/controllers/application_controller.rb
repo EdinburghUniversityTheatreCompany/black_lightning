@@ -38,7 +38,17 @@ class ApplicationController < ActionController::Base
   def set_globals
     @base_url = request.protocol + request.host_with_port
     # Create the @meta hash
-    @meta = {}
+    @meta = {
+      description: 'The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.',
+
+      # facebook opengraph data:
+      'og:url' => @base_url + request.fullpath,
+      'og:image' => @base_url + helpers.image_path('BedlamLogoBW.png'),
+      'og:title' => @title ? "#{@title} - Bedlam Theatre" : 'Bedlam Theatre',
+
+      'viewport' => 'initial-scale = 1.0,maximum-scale = 1.0'
+    }
+
     @support_email = 'it@bedlamtheatre.co.uk'
   end
 
