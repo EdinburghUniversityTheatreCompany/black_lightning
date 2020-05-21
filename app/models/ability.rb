@@ -2,15 +2,14 @@
 # Defines the abilities for each user. See CanCanCan documentation for more details.
 #
 # It reads the Admin::Permission model in the database to find if a user can do something.
+###########
+# WARNING #
+###########
+# Please do not define permissions using blocks. Use the hash notation.
+# Using blocks breaks load_and_authorize_resource unless you define the SQL query as well.
+# See: https://github.com/CanCanCommunity/cancancan/wiki/Defining-Abilities and the separate pages for the different kinds of definitions.
 #
-# PLEASE, PLEASE, make sure that
-#
-#   if user.has_role? :admin
-#     can :manage, :all
-#   end
-#
-# is included as the last thing in the initialize method.
-# This ensures that users with the admin role will _always_ have permission to do everything.
+# When you add a permission, please add a test for it, even if it is obvious what it does.
 ##
 
 class Ability
@@ -18,98 +17,86 @@ class Ability
 
   # Define the permissions for a user.
   def initialize(user)
-    # If you can approve something, you can also reject it
-    alias_action :reject, to: :approve
+    # The 4 CRUD actions are automatically aliased to the 7 RESTful actions.
+    # :read -> :show, :index
+    # :create -> :new, :create
+    # :update -> :edit, :update
+    # :delete is not mapped to :destroy, that's done manually.
+    # :manage -> every action
 
+    if user&.has_role?(:admin)
+      ##############################################
+      #              ADMIN PERMISSIONS             #
+      ##############################################
+      #        (Leave at the top like this)        #
+      ##############################################
+      can :manage, :all
+      return
+    end
+
+    # If you can approve something, you can also reject it.
+    alias_action :reject, to: :approve
     # Alias grid to read
     alias_action :grid, to: :read
-
     alias_action :guidelines, to: :read
+    alias_action :debt_status, to: :read
+    # Alias :delete to :destroy because they're easy to mix up and
+    # because the current permission actions use :delete and the controller actions use :destroy
+    alias_action :destroy, to: :delete
 
-    if user
+    # You must also update opportunity.rb when editing this.
+    can :read, Opportunity, approved: true, expiry_date: Time.now..DateTime::Infinity.new
 
-      # All users can manage themselves.
-      can :manage, User, id: user.id
-      cannot :assign_roles, User
-      cannot :read, User
+    # Guests can see all venues.
+    can :read, Venue
 
-      can do |action, subject_class, subject|
-        allow = false
+    # Guests can see public events, news, and user profiles.
+    can :read, News, show_public: true
+    can :read, Event, is_public: true
+    can :view_public_profile, User, public_profile: true
 
-        user.roles.each do |role|
-          if subject_class == Symbol
-            subject_class = subject
-          end
+    # Stop if the user is not logged in.
+    return if user.nil?
+    # All users can edit, see and destroy themselves.
+    can %I[show debt_status update edit destroy], User, id: user.id
 
-          if role.permissions.where(action: [aliases_for_action(action), :manage].flatten, subject_class: subject_class.to_s).any?
-            allow = true
-          end
-        end
+    # People can see debt status for users on proposals they are on.
+    # It is disabled because it is currently more efficient to just do this on the proposal show thing.
+    #proposals_with_current_user = Admin::Proposals::Proposal.joins(:team_members).where('team_members.user_id = ?', user.id)
+    #shared_proposal_user_ids = TeamMember.where(teamwork: proposals_with_current_user).pluck(:user_id)
 
-        next allow
+    #can :debt_status, User, id: shared_proposal_user_ids
+
+
+
+
+    can %I[read answer], Admin::Questionnaires::Questionnaire, users: { id: user.id }
+
+    can :read, Admin::Feedback, show: { users: { id: user.id } }
+
+    team_member_roles_that_can_update_shows = %w[Director Producer]
+    team_member_roles_that_can_update_shows.each do |role|
+      can %I[read update], Show, team_members: { position: role, user_id: user.id }
+    end
+
+    can :read, Admin::MaintenanceDebt, user_id: user.id
+    can :read, Admin::StaffingDebt, user_id: user.id
+    # Only grant the :show action for Admin::Debt so that normal users do not have access to the index page which is useless for them.
+    can :show, Admin::Debt, id: user.id
+
+    can %I[read update], Opportunity, creator_id: user.id
+
+    # Grant the user permissions based on the grid.
+    permissions = user.roles.includes(:permissions).flat_map(&:permissions).uniq
+    permissions.each do |permission|
+      # Some permissions are not associated with a class, but just with a symbol, such as :backend.
+      begin
+        subject_class = permission.subject_class.constantize
+      rescue NameError
+        subject_class = permission.subject_class.to_sym
+      ensure
+        can permission.action.to_sym, subject_class
       end
-
-      can :read, Admin::Proposals::Proposal do |proposal|
-        if Time.now < proposal.call.deadline
-          # Before the deadline, all users can only see proposals that they
-          # are part of.
-          next (proposal.users.include?(user) || user.has_role?(:proposal_viewer))
-        elsif !proposal.call.archived
-          # After the deadline:
-          if user.has_role?(:committee) || user.has_role?(:subcommittee) || user.has_role?(:proposal_viewer)
-            # Committee can see all proposals.
-            next true
-          else
-            # Other users can only see proposals that they are part of, or
-            # that have been approved.
-            next (proposal.users.include?(user) || proposal.approved == true)
-          end
-        else
-          # for archived calls, only approved proposals may be seen:
-          next (proposal.approved == true)
-        end
-      end
-
-      can :create, Admin::Proposals::Proposal
-      can :update, Admin::Proposals::Proposal do |proposal|
-        (proposal.users.include? user) && (proposal.call.deadline > Time.now) && (proposal.call.open)
-      end
-
-      can :read, Admin::Questionnaires::Questionnaire do |questionnaire|
-        (questionnaire.users.include? user)
-      end
-
-      can :answer, Admin::Questionnaires::Questionnaire do |questionnaire|
-        (questionnaire.users.include? user)
-      end
-
-      can :read, Admin::Feedback do |feedback|
-        feedback.show.users.all.include? user
-      end
-
-      can :update, Show do |show|
-        show.team_members.where("(position = 'Director' OR position = 'Producer') AND user_id = ?", user.id).count > 0
-      end
-
-      can :read, Admin::Debt do |debt|
-        debt.id == user.id
-      end
-
-      can :manage, Admin::Debt if user.has_role? :committee
-
-      #####################
-      # ADMIN PERMISSIONS #
-      ##############################################
-      # (Leave at the bottom to ensure precedence) #
-      ##############################################
-      if user.has_role? :admin
-        can :manage, :all
-      end
-
-    else
-
-      can :read, News, show_public: true
-
     end
   end
 end
