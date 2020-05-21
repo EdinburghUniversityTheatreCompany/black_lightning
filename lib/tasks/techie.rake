@@ -1,21 +1,12 @@
 require 'csv'
+require "#{Rails.root}/lib/tasks/logic/techie_task_logic"
+
 namespace :techie do
+  # :nocov:
   task :import, [:file] => :environment do |_t, args|
-    CSV.foreach(args[:file]) do |row|
-      if Techie.where(name: row[0]).count == 0
-        p = Techie.new(name: row[0])
-        p.save
-      else
-        p = Techie.where(name: row[0]).first
-      end
-      if Techie.where(name: row[1]).count == 0
-        c = Techie.new(name: row[1])
-        c.save
-      else
-        c = Techie.where(name: row[1]).first
-      end
-      p.children << c
-      p.save
-    end
+    p 'Importing CSV file...'
+    TechieTaskLogic.import(args[:file])
+    p 'Imported all techies'
   end
+  # :nocov:
 end

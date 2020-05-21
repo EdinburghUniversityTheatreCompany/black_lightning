@@ -22,7 +22,7 @@ namespace :users do
   #   users_to_create = ldap_usernames - existing_usernames
 
   #   users_to_create.each do |username|
-  #     puts "Importing #{username}"
+  #     p "Importing #{username}"
 
   #     user = User.new(username: username)
   #     user.update_ldap_attributes
@@ -30,13 +30,14 @@ namespace :users do
   #   end
   # end
 
+  # :nocov:
   task interaction: :environment do
     all = User.all.count
+    p "We have #{User.all.count} users, of which #{User.with_role(:member).count} are members"
     percentage = 1 - (User.where(['sign_in_count = ?', 0]).count.to_f / all)
-    puts "#{percentage} of users have set a password and signed in at least once."
+    p "#{percentage} of users have set a password and signed in at least once."
     phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
-    puts "#{phones} of users have given us their phone number."
+    p "#{phones} of users have given us their phone number."
   end
-
-
+  # :nocov:
 end
