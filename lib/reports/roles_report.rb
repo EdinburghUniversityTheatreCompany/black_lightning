@@ -1,13 +1,13 @@
 ##
 # A report containing a list of all users, and lists of users in each role.
 ##
-class Reports::RolesReport
+class RolesReport
   ##
   # Returns the Axlsx package for the report.
   ##
   def create
-    p = Axlsx::Package.new
-    wb = p.workbook
+    package = Axlsx::Package.new
+    wb = package.workbook
     datetime = wb.styles.add_style format_code: 'dd/mm/yyyy hh:mm'
 
     # Add a worksheet with all users:
@@ -34,6 +34,6 @@ class Reports::RolesReport
       end
     end
 
-    return p
+    return package
   end
 end

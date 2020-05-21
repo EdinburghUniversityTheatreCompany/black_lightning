@@ -5,10 +5,10 @@
 # Broken into 6 month periods.
 #
 # Accepts two parameters:
-# * @start_year The first year to include in the report (default - 1 year ago)
-# * @end_year   The last year to include in the report (default - 1 year ahead)
+# * @start_year The first year to include in the report (default = 1 year ago)
+# * @end_year   The last year to include in the report (default = 1 year ahead)
 ##
-class Reports::StaffingReport
+class StaffingReport
   def initialize(start_year, end_year)
     @start_year = start_year
     @end_year   = end_year
@@ -18,9 +18,9 @@ class Reports::StaffingReport
   # Returns the Axlsx package for the report.
   ##
   def create
-    p = Axlsx::Package.new
+    package = Axlsx::Package.new
 
-    wb = p.workbook
+    wb = package.workbook
 
     current_date = Date.new(@start_year, 1, 1)
 
@@ -35,7 +35,7 @@ class Reports::StaffingReport
           past_show_count = user.shows.where(['end_date < ? AND end_date >= ? AND end_date < ?', Date.today, current_date, next_date]).count
           upcoming_show_count = user.shows.where(['end_date >= ? AND end_date >= ? AND end_date < ?', Date.today, current_date, next_date]).count
 
-          staffing_count = user.staffings.joins(:staffing_jobs).where(['start_time >= ? AND start_time < ?', current_date, next_date]).uniq.count
+          staffing_count = user.staffings.joins(:staffing_jobs).where(['start_time >= ? AND start_time < ?', current_date, next_date]).distinct.count
 
           sheet.add_row([user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count])
         end
@@ -49,6 +49,6 @@ class Reports::StaffingReport
       current_date = next_date
     end
 
-    return p
+    return package
   end
 end
