@@ -12,10 +12,10 @@ Rails.application.config.assets.precompile += %w(
   jquery.lightbox-0.5.js
 
   admin.js
-  admin/proposals/call_templates.js
-  admin/questionnaires/questionnaire_templates.js
+  admin/question_templates.js
   admin/staffing_templates.js
-  admin/team_member_fields.js
+  admin/user_typeahead_field.js
+  admin/staffings.js.coffee
   admin/users.js
 
   admin.css
@@ -27,5 +27,5 @@ Rails.application.config.assets.precompile += %w(
 
   login.css
   jquery.lightbox-0.5.css
+  name_to_slug.js
 )
-

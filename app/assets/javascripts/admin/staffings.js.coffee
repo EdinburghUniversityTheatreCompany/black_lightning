@@ -23,23 +23,25 @@ jQuery ->
         end_str = end_time.format("YYYYMMDD[T]HHmmss[Z]")
 
         google_calendar_addr = """
-                               http://www.google.com/calendar/event
-                                 ?action=TEMPLATE
-                                 &text=#{data.name} - #{data.staffable.show_title}
-                                 &dates=#{start_str}/#{end_str}
-                                 &location=Bedlam Theatre, Edinburgh
-                                 &trp=true
-                                 &sprop=website:http://www.bedlamtheatre.co.uk
-                                 &sprop=name:Bedlam Theatre
-                               """
+                                  http://www.google.com/calendar/event
+                                  ?action=TEMPLATE
+                                  &text=#{data.name} - #{data.staffable.show_title}
+                                  &dates=#{start_str}/#{end_str}
+                                  &location=Bedlam Theatre, Edinburgh
+                                  &trp=true
+                                  &sprop=website:http://www.bedlamtheatre.co.uk
+                                  &sprop=name:Bedlam Theatre
+                                """
+
 
         # Remove the linebreaks added above for readability.
         google_calendar_addr = google_calendar_addr.replace(/(\r\n|\n|\r)\s\s/gm,"");
 
         start_str = start_time.local().calendar()
 
+        # This message is separate from the message set in the controller.
         message = """
-                  <p>Thank you for choosing to staff #{data.staffable.show_title} - #{data.name} #{start_str}.</p>
+                  <p>Thank you for choosing to staff #{data.staffable.show_title} as #{data.name} on #{start_str}.</p>
                   <p><a href="#{google_calendar_addr}" target="_blank">Add to Google Calendar</a>
                   """
         showAlert "success", message;

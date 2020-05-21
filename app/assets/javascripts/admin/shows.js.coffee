@@ -66,17 +66,6 @@ addXTSLookup = ->
     return false
   return
 
-addSortable = ->
-  $(".sortable").sortable
-    stop: (event, ui) ->
-      $('.display_order_input').each (i, item) ->
-        $(item).val($(item).closest('li').index())
-    placeholder: 'ui-sortable-placeholder'
-    opacity: 0.6
-    containment: 'parent'
-    tolerance: 'pointer'
-    items: "li:not(.ui-state-disabled)"
 
 jQuery ->
   addXTSLookup()
-  addSortable()
