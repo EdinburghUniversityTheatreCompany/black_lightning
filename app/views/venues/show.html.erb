@@ -11,14 +11,14 @@
   </div>
 </div>
 
-<%= render_markdown @venue.description %>
 
-<hr />
+<%= render_markdown @venue.description %>
 
 <% if @venue.location %>
   <h3>Map</h3>
 
-  <%# don't load the map unless we have to, were only allowed to do so 25,000 times a day %>
+  <%# don't load the map unless we have to as we're only allowed to do so 25,000 times a day %>
+  <%# Is this still true? %>
   <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh3mh3Lt0ymci2MV_KDHn9CFZRG0bppcE&sensor=false">
   </script>
 
@@ -53,12 +53,9 @@
     }
     initialize();
   </script>
-
-<hr />
-
 <% end %>
 
-<% if @current_shows.count > 0 then %>
+<% if @current_shows.any? then %>
   <h3>Shows at <%= @venue.name %></h3>
 
   <div class="row">
@@ -72,12 +69,6 @@
     </div>
     <% end %>
   </div>
-
-  <hr />
 <% end %>
 
-<% if @pictures.count > 0 then %>
-  <h3>Gallery</h3>
-
-  <%= render 'shared/gallery', pictures: @pictures %>
-<% end %>
+<%= render '/shared/gallery', pictures: @pictures %>

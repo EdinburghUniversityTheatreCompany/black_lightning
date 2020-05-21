@@ -4,7 +4,7 @@ class Admin::VenuesControllerTest < ActionController::TestCase
   setup do
     @venue = venues(:one)
 
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
   end
 
   test 'should get index' do
@@ -26,6 +26,14 @@ class Admin::VenuesControllerTest < ActionController::TestCase
     assert_redirected_to admin_venue_path(assigns(:venue))
   end
 
+  test 'should not create invalid venue' do
+    assert_no_difference('Venue.count') do
+      post :create, params: { venue: { description: @venue.description, location: @venue.location, name: nil } }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test 'should show venue' do
     get :show, params: { id: @venue}
     assert_response :success
@@ -37,13 +45,23 @@ class Admin::VenuesControllerTest < ActionController::TestCase
   end
 
   test 'should update venue' do
-    put :update, params: {id: @venue, venue: { description: @venue.description, location: @venue.location, name: @venue.name }}
+    new_name = FactoryBot.generate(:random_string)
+
+    put :update, params: { id: @venue, venue: { name: new_name } }
+
+    assert_equal new_name, assigns(:venue).name
+
     assert_redirected_to admin_venue_path(assigns(:venue))
+  end
+
+  test 'should not update invalid venue' do
+    put :update, params: { id: @venue, venue: { name: nil } }
+    assert_response :unprocessable_entity
   end
 
   test 'should destroy venue' do
     assert_difference('Venue.count', -1) do
-      delete :destroy, params: { id: @venue}
+      delete :destroy, params: { id: @venue }
     end
 
     assert_redirected_to admin_venues_path

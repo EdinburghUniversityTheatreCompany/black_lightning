@@ -1,39 +1,27 @@
-<h1>Listing venues</h1>
+<h1><%= @title %></h1>
 
 <table class="table">
   <tr>
     <th>Name</th>
-    <th></th>
-    <th></th>
-    <th></th>
+
+    <% if can? :edit, Venue %>
+      <th></th>
+    <% end %>
+
+    <% if can? :delete, Venue %>
+      <th></th>
+    <% end %>
   </tr>
 
 <% @venues.each do |venue| %>
   <tr>
-    <td><%= venue.name %></td>
+      <%= get_link venue, :show, wrap_tag: 'td' %>
 
-    <td>
-      <% if can? :read, venue %>
-        <%= link_to 'Show', venue %>
-      <% end %>
-    </td>
+      <%= get_link venue, :edit, wrap_tag: 'td' %>
 
-    <td>
-      <% if can? :edit, venue %>
-        <%= link_to 'Edit', edit_admin_venue_path(venue) %>
-      <% end %>
-    </td>
-
-    <td>
-      <% if can? :delete, venue %>
-        <%= link_to 'Destroy', admin_venues_path(venue), method: :delete, data: { confirm: 'Are you sure?' } %>
-      <% end %>
-    </td>
+      <%= get_link venue, :destroy, wrap_tag: 'td' %>
   </tr>
 <% end %>
 </table>
 
-<br />
-
-<% new_text = '<i class="fa fa-plus"></i> New Venue'.html_safe %>
-<%= link_to new_text, new_admin_venue_path, :class => "btn" %>
+<%= get_link Venue, :new %>

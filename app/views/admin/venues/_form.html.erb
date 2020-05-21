@@ -2,40 +2,18 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-
     <%= f.input :name %>
 
     <%= f.input :tagline %>
 
-    <%= render "admin/shared/md_editor", :f => f, :field => :description %>
+    <%= render "/shared/form/md_editor", f: f, field: :description, show_hint: true %>
 
-    <%= f.input :location, :label => "Location - " + link_to('About Setting Locations', admin_help_venue_location_path), :target => '_blank' %>
+    <%= f.input :location, label: "Location - #{link_to('About Setting Locations', admin_help_venue_location_path, target: '_blank')}".html_safe %>
 
     <%= f.input :image %>
 
+    <%= render '/shared/form/sections/gallery', f: f %>
   </div>
 
-  <div class="gallery-form">
-
-    <h3>Gallery</h3>
-
-    <% if f.object.errors[:pictures].present? then %>
-    <p id="picture_errors" class="alert alert-error">
-        <%= f.error :pictures %>
-    </p>
-    <% end %>
-
-    <%= f.simple_fields_for :pictures %>
-
-    <br />
-
-    <% add_photo_text = '<i class="fa fa-plus"></i> Add Photo'.html_safe %>
-    <%= f.link_to_add add_photo_text, :pictures, :class => "btn" %>
-
-  </div>
-
-  <div class="form-actions">
-    <%= f.button :submit, :class => "btn btn-primary" %>
-    <%= link_to 'Back', admin_venues_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>

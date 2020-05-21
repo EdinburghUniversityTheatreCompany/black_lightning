@@ -30,18 +30,19 @@
 #++
 ##
 class Venue < ApplicationRecord
-  def to_param
-    "#{id}-#{name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-')}"
-  end
+  validates :name, :description, presence: true
 
   has_many :shows
   has_many :pictures, as: :gallery
 
+  accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
+
   has_attached_file :image,
                     styles: { thumb: '192x100#', slideshow: '960x500#' },
-                    convert_options: { thumb: '-quality 75 -strip' }
+                    convert_options: { thumb: '-quality 75 -strip' },
+                    default_url: '/images/bedlam.png'
 
-  validates :name, presence: true
-
-  accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
+  def to_param
+    return "#{id}-#{name.to_url}"
+  end
 end
