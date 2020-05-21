@@ -1,7 +1,13 @@
 <h3><%= link_to 'News', admin_news_index_path %></h3>
 
-<% ::News.current.first(4).each do |news| %>
+<% current_news = News.accessible_by(current_ability).current.order('publish_date DESC').first(4)%>
+
+<% current_news.first(4).each do |news| %>
   <p><%= link_to news.title, admin_news_path(news) %> <%= "<span class='label label-important'>Members</span>".html_safe if !news.show_public%></p>
   <p><%= truncate(render_plain(news.body), length: 80) %></p>
   <hr />
+<% end %>
+
+<% if current_news.empty? then %>
+  <p>There is no news.</p>
 <% end %>

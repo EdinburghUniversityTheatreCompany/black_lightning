@@ -29,8 +29,9 @@ ChaosRails::Application.routes.draw do
   get 'events/xts/:id' => 'events#find_by_xts_id'
   get 'attachments/:slug(/:style)' => 'attachments#show'
 
-  get 'admin/' => 'admin#index'
   namespace :admin do
+    get '', to: 'dashboard#index'
+
     # The resources pages:
     get 'resources/*page' => 'resources#page', as: :resources
 
@@ -182,6 +183,11 @@ ChaosRails::Application.routes.draw do
       %w(kramdown venue_location).each do |action|
         get action, action: action, as:  action, controller: '/admin/help'
       end
+    end
+
+    # Test route
+    if Rails.env.test? || Rails.env.development?
+      get 'dashboard/widget/:widget_name', to: 'dashboard#widget'
     end
   end
 
