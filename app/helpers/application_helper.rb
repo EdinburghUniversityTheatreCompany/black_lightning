@@ -12,6 +12,17 @@ module ApplicationHelper
     end
   end
 
+  # It's a bit hacky, but it works. 
+  # Used by the error pages to decide the layout to use
+  # Cannot be unit tested because a request needs to be present :/
+  # It does not really matter if it renders the wrong layout though.
+
+  def current_environment
+    return 'admin' if request.fullpath[0..6].include? 'admin'
+
+    return 'application'
+  end
+
   def xts_widget(xts_id)
     "<div id='tickets-#{xts_id}' class='xtsprodates'></div>
 <script src='http://www.xtspro.com/book/book.js'></script>

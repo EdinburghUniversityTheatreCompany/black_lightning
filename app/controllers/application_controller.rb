@@ -1,12 +1,11 @@
 class ApplicationController < ActionController::Base
-  # rescue_from DeviseLdapAuthenticatable::LdapException do |exception|
-  #   render :text => exception, :status => 500
-  # end
-  protect_from_forgery except: :options
+  protect_from_forgery
   before_action :set_paper_trail_whodunnit
 
   before_action :set_globals
   before_action :prepare_for_mobile
+
+  check_authorization unless: :devise_controller?
 
   rescue_from Exception, with: :report_500     unless Rails.env.development? || Rails.env.test?
   rescue_from StandardError, with: :report_500 unless Rails.env.development? || Rails.env.test?
@@ -16,23 +15,13 @@ class ApplicationController < ActionController::Base
   end
 
   unless Rails.env.development? || Rails.env.test?
+    # Unreachable, but easy to check manually.
+    # :nocov:
     rescue_from ActiveRecord::RecordNotFound do |exception|
       flash[:notice] = exception.message
-      fail ActionController::RoutingError.new('Not Found')
+      raise(ActionController::RoutingError, 'Not Found')
     end
-  end
-
-  def options
-    headers['Access-Control-Allow-Origin'] = request.env['HTTP_ORIGIN']
-    headers['Access-Control-Allow-Methods'] = 'POST, GET, DELETE, OPTIONS'
-    headers['Access-Control-Max-Age'] = '1000'
-    headers['Access-Control-Allow-Headers'] = '*,x-requested-with,X-CSRF-Token,Authorization'
-
-    head :ok
-  end
-
-  def authorize_backend!
-    authorize! :access, :backend
+    # :nocov:
   end
 
   def set_globals
@@ -52,20 +41,20 @@ class ApplicationController < ActionController::Base
     @support_email = 'it@bedlamtheatre.co.uk'
   end
 
-  def report_500(ex)
+  def report_500(exception)
     # Prevent redirect loop if 500 rendering fails.
     if request.env['PATH_INFO'] == static_path('500')
       Rails.logger.error 'Could not render the 500 page:'
-      Rails.logger.error ex
+      Rails.logger.error exception
 
       return render inline: 'Sorry. Something has gone very wrong. We will try to fix this asap.'
     end
 
-    Rails.logger.warn  'Caught error and redirected to 500'
-    Rails.logger.error ex
-    Rails.logger.error ex.backtrace
+    Rails.logger.warn 'Caught error and redirected to 500'
+    Rails.logger.error exception
+    Rails.logger.error exception.backtrace
 
-    flash[:error] = ex.message.gsub Rails.root.to_s, ''
+    flash[:error] = exception.message.gsub Rails.root.to_s, ''
 
     redirect_to static_path('500', params[:format])
   end
