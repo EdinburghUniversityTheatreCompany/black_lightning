@@ -1,5 +1,5 @@
 <div class="question control-group fields">
-    <%= render layout: 'form/md_editor', locals: { f: f, field: :question_text, rows: 6 } do %>
+    <%= render layout: '/shared/form/md_editor', locals: { f: f, field: :question_text, rows: 6 } do %>
       <%= f.input :response_type, collection: Admin::Question.response_types %>
 
       <%= link_to_remove f %>

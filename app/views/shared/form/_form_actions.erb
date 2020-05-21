@@ -1,0 +1,13 @@
+<% wrap_tags = true if wrap_tags.nil? %>
+
+<% if wrap_tags %>
+  <div class="form-actions">
+<% end %>
+
+<%= f.button :submit, class: "btn btn-primary" %>
+<%= get_link f.object, :show, link_text: 'View', html_class: 'btn', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
+<%= get_link f.object.class, :index %>
+
+<% if wrap_tags %>
+  </div>
+<% end %>
