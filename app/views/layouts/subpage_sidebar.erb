@@ -1,0 +1,21 @@
+<% @alias ||= {} %>
+
+<% content_for :content do %>
+  <div class="row">
+    <div class="span3">
+      <ul class="nav nav-list well">
+        <li><%= get_subpage_link('overview', @controller) %></li>
+        <hr />
+        <li><%= get_subpage_link(@root_page, @controller) unless @root_page == '' || @subpages.include?(@root_page) %></li>
+        <% @subpages.each do |subpage| %>
+          <li><%= get_subpage_link(subpage, @controller) %></li>
+        <% end %>
+      </ul>
+    </div>
+    <div class="span9">
+      <%= yield %>
+    </div>
+  </div>
+<% end %>
+
+<%= render template: "layouts/#{current_environment}" %>
