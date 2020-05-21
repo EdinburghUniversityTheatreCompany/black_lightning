@@ -1,16 +1,16 @@
 ChaosRails::Application.routes.draw do
-
   devise_for :users
-  match '*path' => 'application#options', via: :options
 
-  get 'seasons/show'
+  root to: 'static#home'
+
+  match '*path', to: 'application#options', via: :options
 
   # devise_for :users, controllers: { registrations: 'registrations' } do
-  #   post 'users/stripe'       => 'registrations#create_with_stripe', as: :user_stripe_registration
+  #   post 'users/stripe'      , to: 'registrations#create_with_stripe', as: :user_stripe_registration
 
-  #   get  'users/reactivation' => 'registrations#reactivation', as: :user_reactivation
-  #   post 'users/reactivate'   => 'registrations#reactivate',   as: :reactivate_user
-  #   post 'users/reactivate/stripe' => 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
+  #   get  'users/reactivation', to: 'registrations#reactivation', as: :user_reactivation
+  #   post 'users/reactivate'  , to: 'registrations#reactivate',   as: :reactivate_user
+  #   post 'users/reactivate/stripe', to: 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
   # end
 
   resources :shows,       only: [:index, :show]
@@ -19,15 +19,14 @@ ChaosRails::Application.routes.draw do
   resources :venues,      only: [:index, :show]
   resources :seasons,     only: [:show]
   resources :membership_activations
-  resources :users,       only: [:show] do
+  resources :users, only: [:show] do
     collection do
-      get 'current'          => 'users#current'
-      get 'check_membership' => 'users#check_membership'
+      get 'current', to: 'users#current'
     end
   end
 
-  get 'events/xts/:id' => 'events#find_by_xts_id'
-  get 'attachments/:slug(/:style)' => 'attachments#show'
+  get 'events/xts/:id', to: 'events#find_by_xts_id'
+  get 'attachments/:slug(/:style)', to: 'attachments#show'
 
   namespace :admin do
     get '', to: 'dashboard#index'
@@ -37,7 +36,7 @@ ChaosRails::Application.routes.draw do
     get 'resources/(*page)', to: 'resources#page', as: :resources_page
 
     # Answer files
-    get 'answer/:id/file' => 'answers#get_file', :as => :answer_get_file
+    get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file
 
     resources :shows do
       resources :feedbacks, except: [:show]
@@ -116,8 +115,9 @@ ChaosRails::Application.routes.draw do
     # end
 
     resources :roles
-    get  '/permissions/grid' => 'permissions#grid', :as => :permissions
-    post '/permissions/grid' => 'permissions#update_grid', :as => :update_permissions
+    get  '/permissions/grid', to: 'permissions#grid', as: :permissions
+    post '/permissions/grid', to: 'permissions#update_grid', as: :update_permissions
+
 
     resources :techie_families do
       collection do
@@ -139,10 +139,10 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    match '/staffings/job/:id/sign_up_confirm' => 'staffings#sign_up_confirm', :via => [:get, :put], :as => :sign_up_confirm
-    put '/staffings/job/:id/sign_up' => 'staffings#sign_up', :as => :staffing_sign_up
+    match '/staffings/job/:id/sign_up_confirm', to: 'staffings#sign_up_confirm', via: [:get, :put], as: :sign_up_confirm
+    put '/staffings/job/:id/sign_up', to: 'staffings#sign_up', as: :staffing_sign_up
 
-    get '/proposals' => redirect('/admin/proposals/calls')
+    get '/proposals', to: redirect('/admin/proposals/calls')
     namespace :proposals do
       resources :calls do
         member do
@@ -158,7 +158,7 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      get '/about' => 'proposals#about'
+      get '/about', to: 'proposals#about'
       resources :call_question_templates
     end
 
@@ -173,10 +173,10 @@ ChaosRails::Application.routes.draw do
       resources :questionnaire_templates
     end
 
-    get '/reports/' => 'reports#index', :as => 'reports'
+    get '/reports/', to: 'reports#index', as: 'reports'
     namespace 'reports' do
       %w(roles members newsletter_subscribers staffing).each do |action|
-        get action, action: action, as:  action
+        put action, action: action, as: action
       end
     end
 
@@ -198,43 +198,44 @@ ChaosRails::Application.routes.draw do
     end
   end
 
-  get 'archives' => 'archives#index', :as => :archives_index
+  get 'archives', to: 'archives#index', as: :archives_index
   namespace :archives do
-    get 'shows' => 'shows#index', :as => :shows_index
-    get 'workshops' => 'workshops#index', :as => :workshops_index
-    get 'proposals' => 'proposals#index', :as => :proposals_index
+    get 'shows', to: 'shows#index', as: :shows_index
+    get 'workshops', to: 'workshops#index', as: :workshops_index
+    get 'proposals', to: 'proposals#index', as: :proposals_index
   end
 
-  post 'markdown/preview' => 'markdown#preview'
+  post 'markdown/preview', to: 'markdown#preview'
 
-  get 'about' => 'about#index', :as => :about_index
-  get 'about/*page' => 'about#page', :as => :about
+  get 'about', to: 'about#index', as: :about_index
+  get 'about/(*page)', to: 'about#page', as: :about
 
   get 'getinvolved', to: 'get_involved#index', as: :get_involved_index
   get 'getinvolved/(*page)', to: 'get_involved#page', as: :get_involved
   get 'youth', to: redirect('/getinvolved/youth_project')
 
   # ERROR PAGES - match to ensure correct response code is sent
-  get '/404' => 'static#render_404'
-  get '/500' => 'static#render_500'
+  get '/404', to: 'static#render_404'
+  get '/500', to: 'static#render_500'
 
-  get '/access_denied' => 'static#access_denied'
+  get '/access_denied', to: 'static#access_denied'
 
-  get '/:id' => 'seasons#show', :constraints => ExistingSeasonConstraint.new
+  # Use bedlamtheatre.co.uk/:slug to find a season
+  get '/:id', to: 'seasons#show', constraints: ExistingSeasonConstraint.new
 
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.
-  get '/*page' => 'static#show', as: :static
+  get '/*page', to: 'static#show', as: :static
 
   # The priority is based upon order of creation:
   # first created -> highest priority.
 
   # Sample of regular route:
-  #   match 'products/:id' => 'catalog#view'
+  #   match 'products/:id', to: 'catalog#view'
   # Keep in mind you can assign values other than :controller and :action
 
   # Sample of named route:
-  #   match 'products/:id/purchase' => 'catalog#purchase', :as => :purchase
-  # This route can be invoked with purchase_url(:id => product.id)
+  #   match 'products/:id/purchase', to: 'catalog#purchase', as: :purchase
+  # This route can be invoked with purchase_url(:id, to: product.id)
 
   # Sample resource route (maps HTTP verbs to controller actions automatically):
   #   resources :products
@@ -261,7 +262,7 @@ ChaosRails::Application.routes.draw do
   #   resources :products do
   #     resources :comments
   #     resources :sales do
-  #       get 'recent', :on => :collection
+  #       get 'recent', :on, to: :collection
   #     end
   #   end
 
