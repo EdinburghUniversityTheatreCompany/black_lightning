@@ -41,6 +41,8 @@ gem 'nokogiri'
 gem 'rack-cors'
 gem 'paper_trail', '< 6.0'
 
+gem 'stringex'
+
 group :development, :test do
   gem 'byebug'
   gem 'spring'

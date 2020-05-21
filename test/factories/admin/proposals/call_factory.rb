@@ -20,13 +20,14 @@ FactoryBot.define do
     deadline { 5.days.from_now }
 
     transient do
-      question_count { 0 }
-      proposal_count { 0 }
+      question_count { 5 }
+      proposal_count { 2 }
     end
 
     after(:create) do |call, evaluator|
-      FactoryBot.create_list(:question, evaluator.question_count, questionable: call)
-      FactoryBot.create_list(:proposal, evaluator.proposal_count, call: call)
+      call.questions = FactoryBot.create_list(:question, evaluator.question_count, questionable: call)
+      call.proposals = FactoryBot.create_list(:proposal, evaluator.proposal_count, call: call)
+      call.save
     end
   end
 end

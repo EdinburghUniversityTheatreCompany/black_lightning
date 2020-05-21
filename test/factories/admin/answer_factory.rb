@@ -19,6 +19,8 @@
 
 FactoryBot.define do
   factory :answer, class: Admin::Answer do
+    question
+
     transient do
       response_type { 'Long Text' }
     end

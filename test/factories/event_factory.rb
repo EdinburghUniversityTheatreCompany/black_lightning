@@ -28,7 +28,7 @@
 FactoryBot.define do
   factory :event do
     name         { generate(:random_name) }
-    slug         { name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') }
+    slug         { name.to_url }
     tagline      { "The tagline for #{name}" }
     description  { "And a description for #{name}" }
     start_date   { generate(:random_date) }
@@ -37,6 +37,9 @@ FactoryBot.define do
   end
 
   factory :show, parent: :event, class: Show do
+    author { generate(:random_name) }
+    price { generate(:random_name) }
+
     after(:create) do |show, _evaluator|
       create_list(:review, 3, show: show)
       create_list(:team_member, 5, teamwork: show)

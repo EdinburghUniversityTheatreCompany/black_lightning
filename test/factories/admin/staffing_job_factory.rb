@@ -15,17 +15,28 @@
 
 FactoryBot.define do
   factory :staffing_job, class: Admin::StaffingJob do
-    name   { generate(:random_string) }
+    name { generate(:random_string) }
+    association :staffable, factory: :staffing_that_does_count_towards_debt
 
     transient do
       staffed { [true, false].sample }
     end
 
     after(:create) do |job, evaluator|
-      if evaluator.staffed
+      if evaluator.staffed && job.user.nil?
         job.user = FactoryBot.create(:user)
         job.save
       end
     end
+  end
+
+  factory :staffed_staffing_job, parent: :staffing_job do
+    association :user, factory: :user
+    staffed { true }
+  end
+
+  factory :unstaffed_staffing_job, parent: :staffing_job do
+    user { nil }
+    staffed { false }
   end
 end

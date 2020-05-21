@@ -1,9 +1,26 @@
 # This makes sure the member role has permission to access the backend.
-#TODO : allow members to sign up for staffing by default for testing
+# The reason for giving these permissions is explained in the permissions.yml file.
+# Roles:
+# 1 - member
+# 2 - committee
+# 3 - admin
+
 authorize_backend:
   role_id:       1
   permission_id: 1
 
-create_feedback:
-  role_id: 1
+read_proposals:
+  role_id:       2
   permission_id: 2
+
+update_opportunities:
+  role_id:       2
+  permission_id: 3
+  
+create_opportunities:
+  role_id:       2
+  permission_id: 4
+    
+show_staffing:
+  role_id:       2
+  permission_id: 5
