@@ -1,5 +1,6 @@
 <% content_for :head do %>
-  <%= javascript_include_tag "admin/questionnaires/questionnaire_templates.js" %>
+  <meta name="templates-base-url" content="/admin/questionnaires/questionnaire_templates" />
+  <%= javascript_include_tag "admin/question_templates.js" %>
 <% end %>
 
 <%= simple_nested_form_for(@admin_questionnaires_questionnaire) do |f| %>
@@ -25,23 +26,4 @@
   </div>
 <% end %>
 
-<div class="modal hide" id="template_modal" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-    <h3 id="template_modal_header">Select Questions from Template</h3>
-  </div>
-  <div class="modal-body">
-    <form id="template_selector">
-      <select id="template_list">
-        <option></option>
-      </select>
-      <div id="template_summary">
-      </div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <span class="pull-left" style="position: absolute;bottom: 10px;"><%= link_to 'Edit templates', admin_questionnaires_questionnaire_templates_path %></span>
-    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-    <button id="template_load" class="btn btn-primary disabled">Load template</button>
-  </div>
-</div>
+<%= render '/shared/form/template_modal', header: 'Select Questions from Template', template_model: Admin::Questionnaires::QuestionnaireTemplate %>

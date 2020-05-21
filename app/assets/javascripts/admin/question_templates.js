@@ -1,8 +1,15 @@
-// Call Templates
+// Very similar to assets/javascripts/admin/staffing_templates.
+
 (function () {
   "use strict";
 
   var selected_template = null;
+
+  // You need to set a meta tag with the templates base url.
+  // Do not end with a slash.
+  // See questionnaires form for an example on how to do this.
+  // Make sure you set the meta tag ABOVE the javascript include tag
+  var templates_base_url = $('meta[name="templates-base-url"]').attr("content");
 
   function loadTemplate() {
     //TODO: This feels dirty - there must be a better way:
@@ -31,9 +38,8 @@
       $('#template_load').addClass('disabled');
       return;
     }
-
     $.getJSON(
-      '/admin/proposals/call_question_templates/' + template_id + '.json',
+      templates_base_url + '/' + template_id + '.json',
       function (data) {
         selected_template = data;
         $('#template_summary').empty();
@@ -53,7 +59,7 @@
 
   $(function () {
     $.getJSON(
-      '/admin/proposals/call_question_templates.json',
+      templates_base_url,
       function (data) {
         $.each(data, function (index, template) {
           $('#template_list').append('<option value="' + template.id + '">' + template.name + '</option>');
