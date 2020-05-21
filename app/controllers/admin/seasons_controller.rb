@@ -1,88 +1,90 @@
 class Admin::SeasonsController < AdminController
-  # load_and_authorize_resource
+  load_and_authorize_resource find_by: :slug
+  skip_load_resource only: %i[index]
 
-  # GET /seasons
-  # GET /seasons.json
+  # GET /admin/seasons
+  # GET /admin/seasons.json
   def index
-    @seasons = Season.all
     @title = 'Seasons'
+
+    @editable_block_name = 'Seasons (Members Face)'
+    @url = :admin_seasons
+
+    @q = Season.ransack(params[:q])
+    @events = @q.result(distinct: true)
+                .accessible_by(current_ability)
+                .paginate(page: params[:page], per_page: 15)
+
     respond_to do |format|
-      format.html # index.html.erb
-      format.json { render json: @seasons }
+      format.html { render 'admin/events/index' }
+      format.json { render json: @events }
     end
   end
 
-  # GET /seasons/1
-  # GET /seasons/1.json
+  # GET /admin/seasons/1
+  # GET /admin/seasons/1.json
   def show
-    logger.debug params[:id]
-    @season = Season.find_by_slug(params[:id])
-
     @title = @season.name
+
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @season }
     end
   end
 
-  # GET /seasons/new
-  # GET /seasons/new.json
+  # GET /admin/seasons/new
+  # GET /admin/seasons/new.json
   def new
-    @season = Season.new
-    @users = User.by_first_name.all
     @title = 'New Season'
+
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @season }
     end
   end
 
-  # GET /seasons/1/edit
+  # GET /admin/seasons/1/edit
   def edit
-    @season = Season.find_by_slug(params[:id])
-    @users = User.by_first_name.all
     @title = "Editing #{@season.name}"
+
+    respond_to do |format|
+      format.html # edit.html.erb
+      format.json { render json: @season }
+    end
   end
 
-  # POST /seasons
-  # POST /seasons.json
+  # POST /admin/seasons
+  # POST /admin/seasons.json
   def create
-    @season = Season.new(season_params)
-    @users = User.by_first_name.all
-
     respond_to do |format|
       if @season.save
-        format.html { redirect_to admin_season_path(@season), notice: 'Season was successfully created.' }
+        format.html { redirect_to admin_season_path(@season), notice: "Season #{@season.name} was successfully created." }
         format.json { render json: @season, status: :created, location: @season }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @season.errors, status: :unprocessable_entity }
       end
     end
   end
 
-  # PUT /seasons/1
-  # PUT /seasons/1.json
+  # PUT /admin/seasons/1
+  # PUT /admin/seasons/1.json
   def update
-    @season = Season.find_by_slug(params[:id])
-    @users = User.by_first_name.all
-
     respond_to do |format|
-      if @season.update_attributes(season_params)
-        format.html { redirect_to admin_season_path(@season), notice: 'Season was successfully updated.' }
+      if @season.update(season_params)
+        format.html { redirect_to admin_season_path(@season), notice: "Season #{@season.name} was successfully updated." }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @season.errors, status: :unprocessable_entity }
       end
     end
   end
 
-  # DELETE /seasons/1
-  # DELETE /seasons/1.json
+  # DELETE /admin/seasons/1
+  # DELETE /admin/seasons/1.json
   def destroy
-    @season = Season.find_by_slug(params[:id])
-    @season.destroy
+    helpers.destroy_with_flash_message(@season)
 
     respond_to do |format|
       format.html { redirect_to admin_seasons_url }
@@ -91,7 +93,12 @@ class Admin::SeasonsController < AdminController
   end
 
   private
+
   def season_params
-    params.require(:season).permit(:description, :start_date, :end_date, :name, :slug)
+    params.require(:season).permit(:name, :tagline, :slug, :description, :start_date, :end_date, :image,
+      :venue_id, :is_public, :author, :price,
+      pictures_attributes: [:id, :_destroy, :description, :image],
+      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
+      event_ids: [])
   end
-end
+ end
