@@ -2,35 +2,29 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-
-    <% unless (can? :approve, @opportunity) || @opportunity.approved == false  %>
+    <% if @opportunity.approved %>
       <small>
-        Note: Editing this opportunity will result in it being removed until it is re-approved.
+        <% if can? :approve, @opportunity %>
+          Note: Because you can approve opportunities, this opportunity will stay approved after editing it.
+        <% else %>
+          Note: Editing this opportunity will result in it being hidden until it is re-approved.
+        <% end %>
       </small>
     <% end %>
-
+    
     <%= f.input :title %>
 
     <%= f.input :expiry_date %>
 
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :description, :rows => 12 } do %>
-      <%= render "admin/shared/md_hints" %>
-    <% end %>
+    <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12, show_hint: true %>
 
-    <div class="control-group">
-      <%= f.label :show_email %>
-
-      <div class="controls switch" data-on="success" data-on-label="Email Link" data-off="danger" data-off-label="No Link" style="width: 200px;">
-        <%=
-           f.input_field :show_email,
-                          boolean_style: :inline
-        %>
-      </div>
-    </div>
+    <%= render '/shared/form/public_private_switch', f: f, field_symbol: :show_email, off_colour: 'danger', off_label: 'No Email' %>
+    
+    <p>
+      Turning this on will result in your email (<%= current_user.email %>) being publicly visible. 
+      If you do not want this, please include an alternative method to contact you in the description.
+    </p>
   </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, :class => "btn-primary" %>
-    <%= link_to 'Cancel', admin_opportunities_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>
