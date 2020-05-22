@@ -14,4 +14,8 @@ class Admin::DebtNotification < ApplicationRecord
   belongs_to :user
 
   DISABLED_PERMISSIONS = %w[create update delete manage].freeze
+
+  def self.default_scope
+    order('sent_on DESC')
+  end
 end
