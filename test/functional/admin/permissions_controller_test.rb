@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::PermissionsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
   end
 
   test 'should get grid' do
