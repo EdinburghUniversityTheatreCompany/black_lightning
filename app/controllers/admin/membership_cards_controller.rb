@@ -6,14 +6,13 @@ class Admin::MembershipCardsController < AdminController
   ##
   def index
     @title = 'Membership Cards'
-    @cards = MembershipCard.paginate(page: params[:page], per_page: 15).all
+    @cards = @membership_cards.paginate(page: params[:page], per_page: 15)
   end
 
   ##
   # GET /admin/membership_cards/1
   ##
   def show
-    @card = MembershipCard.find_by_card_number(params[:id])
     @title = "Membership Card #{@card.card_number}"
   end
 
@@ -21,8 +20,6 @@ class Admin::MembershipCardsController < AdminController
   # POST /admin/membership_card
   ##
   def create
-    @card = MembershipCard.create!
-
     flash[:notice] = 'Membership Card successfully created.'
 
     redirect_to admin_membership_card_path(@card)
@@ -32,17 +29,14 @@ class Admin::MembershipCardsController < AdminController
   # DELETE /admin/news/1
   ##
   def destroy
-    @card = MembershipCard.find_by_card_number(params[:id])
-    @card.destroy
+    helpers.destroy_with_flash_message(@card.destroy)
 
     redirect_to admin_membership_cards_path
   end
 
   def generate_card
-    @card = MembershipCard.find_by_card_number!(params[:membership_card_id])
-
     if @card.user.nil?
-      flash[:alert] = 'Card Not Activated'
+      flash[:error] = 'Card Not Activated'
       redirect_to admin_membership_card_path(@card)
       return
     end

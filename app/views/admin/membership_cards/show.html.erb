@@ -4,7 +4,7 @@
   <% if @card.user.nil? %>
     Card not activated
   <% else %>
-    <%= @card.user.name %>
+    <%= user_link(@card.user, false) %>
   <% end %>
 </p>
 

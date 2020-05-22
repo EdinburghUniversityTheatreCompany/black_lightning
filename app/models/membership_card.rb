@@ -3,6 +3,8 @@ class MembershipCard < ApplicationRecord
 
   belongs_to :user
 
+  # Unused
+  # :nocov:
   def to_param
     card_number
   end
@@ -18,4 +20,5 @@ class MembershipCard < ApplicationRecord
 
     self.card_number = date_i + number
   end
+  # :nocov:
 end
