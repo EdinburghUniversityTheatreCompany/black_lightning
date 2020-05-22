@@ -1,32 +1,27 @@
-<%= simple_nested_form_for @admin_editable_block, :html => {:multipart => true} do |f| %>
+<%= simple_nested_form_for @editable_block, html: { multipart: true} do |f| %>
   <%= f.error_notification %>
 
-
   <div class="form-inputs">
-
-    <% if not @admin_editable_block.persisted? then %>
+    <% unless @editable_block.persisted? then %>
       <%= f.input :name %>
     <% end %>
 
     <%= f.input :group,
-                :hint => "The section which the block should be displayed under in the admin site",
-                :input_html => {
-                    :data => {
-                       :provide => "typeahead",
-                       :source => Admin::EditableBlock.groups
+                hint: "The section which the block should be displayed under in the admin site",
+                input_html: {
+                    data: {
+                       provide: "typeahead",
+                       source: Admin::EditableBlock.groups
                     },
-                    :autocomplete => "off",
-                }%>
+                    autocomplete: "off",
+                } %>
 
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :content, :rows => 12 } do %>
-      <%= render "admin/shared/md_hints" %>
-    <% end %>
+    <%= render "/shared/form/md_editor", f: f, field: :content, rows: 12, show_hint: true %>
 
     <div class="well form-inline">
       <%= f.simple_fields_for :attachments %>
 
-      <% add_text = '<i class="fa fa-plus"></i> Add Attachment'.html_safe %>
-      <%= f.link_to_add add_text, :attachments, :class => "btn" %>
+      <%= link_to_add(f, :attachments) %>
 
       <br />
 
@@ -40,8 +35,5 @@
 
   </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, :class => 'btn-primary' %>
-    <%= link_to 'Cancel', admin_editable_blocks_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>
