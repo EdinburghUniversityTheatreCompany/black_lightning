@@ -59,8 +59,8 @@ ChaosRails::Application.routes.draw do
 
     resources :staffing_debts do
       member do
-        get 'assign'
-        get 'unassign'
+        put 'assign'
+        put 'unassign'
       end
     end
 
@@ -71,11 +71,6 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :debts
-
-
-    resources :show_maintenance_debts
-    resources :show_staffing_debts
-
 
     resources :venues
     resources :seasons
@@ -162,10 +157,11 @@ ChaosRails::Application.routes.draw do
     end
 
     namespace :questionnaires do
-      resources :questionnaires, except: [:new, :create] do
+      resources :questionnaires do
         member do
-          get  'answer' => 'questionnaires#answer'
-          post 'answer' => 'questionnaires#set_answers'
+          get  'answer', to: 'questionnaires#answer'
+          put 'answer', to: 'questionnaires#set_answers'
+          patch 'answer', to: 'questionnaires#set_answers'
         end
       end
 
@@ -272,13 +268,5 @@ ChaosRails::Application.routes.draw do
   #     resources :products
   #   end
 
-  # You can have the root of your site routed with "root"
-  # just remember to delete public/index.html.
-  root to: 'static#home'
-
-  # See how all your routes lay out with "rake routes"
-
-  # This is a legacy wild controller route that's not recommended for RESTful applications.
-  # Note: This route will make all actions in every controller accessible via GET requests.
-  # match ':controller(/:action(/:id))(.:format)'
+  # See how all your routes lay out with "rails routes"
 end
