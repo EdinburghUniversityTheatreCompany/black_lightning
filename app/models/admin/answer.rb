@@ -23,6 +23,8 @@
 #++
 ##
 class Admin::Answer < ApplicationRecord
+  validates :question_id, presence: true
+
   belongs_to :question, class_name: 'Admin::Question'
   belongs_to :answerable, polymorphic: true
 
