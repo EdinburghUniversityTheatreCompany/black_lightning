@@ -14,18 +14,17 @@
 # *created_at*::    <tt>datetime, not null</tt>
 # *updated_at*::    <tt>datetime, not null</tt>
 # *teamwork_type*:: <tt>string(255)</tt>
-# *display_order*:: <tt>integer</tt>
 #--
 # == Schema Information End
 #++
 ##
-class TeamMember < ApplicationRecord
-  default_scope -> { order('display_order ASC') }
+class TeamMember < ActiveRecord::Base
+  validates :position, :user, presence: true
+
+  default_scope -> { order('position ASC') }
 
   belongs_to :teamwork, polymorphic: true
   belongs_to :user
-
-  validates :position, :user, presence: true
 
   delegate :name, to: :user, prefix: true
 end
