@@ -12,6 +12,19 @@ class FaultReport < ApplicationRecord
   end
 
   def fixed_by_name
-    return reported_by.try(:name) || 'Unknown'
+    return fixed_by.try(:name) || 'Unknown'
+  end
+
+  def css_class
+    case status.to_sym
+    when :in_progress, :on_hold
+      return 'warning'
+    when :cant_fix, :wont_fix
+      return 'error'
+    when :completed
+      return 'success'
+    else
+      return ''
+    end
   end
 end

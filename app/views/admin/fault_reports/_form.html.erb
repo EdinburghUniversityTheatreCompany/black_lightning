@@ -2,31 +2,26 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-
     <%= f.input :item %>
 
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :description, :rows => 12 } do %>
-      <%= render "admin/shared/md_hints" %>
-    <% end %>
+    <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12, show_hint: true %>
 
     <%= f.input :severity, collection: FaultReport.severities.keys, label_method: :humanize,
-            :selected => FaultReport.severities.keys[@fault_report[:severity].to_i],
+            selected: FaultReport.severities.keys[@fault_report[:severity].to_i],
             input_html: { autocomplete: 'off' } %>
 
     <% if can? :edit, @fault_report %>
-    <%= f.input :status, collection: FaultReport.statuses.keys, label_method: :humanize,
-            :selected => FaultReport.statuses.keys[@fault_report[:status].to_i],
-            input_html: { autocomplete: 'off' } %>
+      <%= f.input :status, collection: FaultReport.statuses.keys, label_method: :humanize,
+              selected: FaultReport.statuses.keys[@fault_report[:status].to_i],
+              input_html: { autocomplete: 'off' } %>
 
-    <%= f.association :reported_by %>
-    <%= f.association :fixed_by %>
+      <% # It would be nice to use the autocomplete fields for these, but it requires the association to be called user %>
+      <% # Because this is the only use case where that is not the case, and because we no longer use this bit of the website, I am not fixing that %>
+      
+      <%= f.association :reported_by %>
+      <%= f.association :fixed_by %>
     <% end %>
-    </td>
-
   </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, :class => "btn-primary" %>
-    <%= link_to 'Cancel', admin_fault_reports_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>
