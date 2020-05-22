@@ -19,5 +19,8 @@
 #++
 ##
 class Review < ApplicationRecord
+  validates :body, :reviewer, :review_date, presence: true
+  validates :rating, numericality: { greater_than: 0 }
+
   belongs_to :show
 end
