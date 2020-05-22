@@ -1,4 +1,4 @@
-<h1>Feedback for <%= @show.name %></h1>
+<h1><%= @title %></h1>
 
 <% @feedbacks.each do |feedback| %>
   <hr />
@@ -8,13 +8,9 @@
       <%= render_markdown feedback.body %>
     </article>
     <div>
-      <% if can? :edit, feedback %>
-        <%= link_to 'Edit', edit_admin_show_feedback_path(@show, feedback), :class => "btn btn-small" %>
-      <% end %>
+      <%= get_link feedback, :edit, link_target: edit_admin_show_feedback_path(@show, feedback) %>
 
-      <% if can? :delete, feedback %>
-        <%= link_to 'Delete', admin_show_feedback_path(@show, feedback), method: :delete, data: { confirm: 'Are you sure?' }, :class => "btn btn-small" %>
-      <% end %>
+      <%= get_link feedback, :destroy, link_target: edit_admin_show_feedback_path(@show, feedback) %>
     </div>
   </tr>
 <% end %>
