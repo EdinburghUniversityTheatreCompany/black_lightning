@@ -1,4 +1,6 @@
 <%= simple_form_for(@user, method: :patch, url: membership_activation_path(@token)) do |f| %>
+    <%= f.error_notification %>
+
     <% unless @token.user %>
         <%= f.input :first_name %>
         <%= f.input :last_name %>
@@ -9,15 +11,16 @@
     <input id="consent_checkbox" name="consent" type="checkbox" required="true">
     <label for="consent_checkbox">I give consent to the EUTC to store my:
       <ul>
-        <li>Name indefinitely to maintain records of shows I work on and propose</li>
-        <li>Email for up to 2 years to contact me about:
+        <li>Full name indefinitely to maintain records of shows I work on and propose</li>
+        <li>Email for up to 1 year after leaving the society to contact me about:
           <ul>
             <li>Shows I am proposing/working on</li>
             <li>Company events including General Meetings</li>
             <li>Staffing slots and maintenance time I may owe the company</li>
           </ul>
-        <li>Phone number for up to 1 year to contact me about staffing I have agreed to do</li>
+        <li>Phone number for up to 6 months after leaving the society to contact me about staffing I have agreed to do</li>
       </ul>
+      If you do not want to consent to any of these terms, please contact the secretary at <%= link_to 'secretary@bedlamtheatre.co.uk', 'mailto:secretary@bedlamtheatre.co.uk' %>
     </label>
     <%= f.button :submit %>
 

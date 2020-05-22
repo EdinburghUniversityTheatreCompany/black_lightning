@@ -66,18 +66,18 @@
     </div>
     <!-- END HEADER -->
 
-    <%= render "shared/ie_notice" %>
+    <%= render "layouts/ie_notice" %>
 
-    <%= render "shared/cookie_notice" %>
+    <%= render "layouts/cookie_notice" %>
 
     <%= render '/layouts/alert_div' %>
 
     <%= content_for?(:content) ? yield(:content) : yield %>
 
-    <%= render "shared/google_analytics" %>
+    <%= render "layouts/google_analytics" %>
   </div>
 
-  <%= render "shared/footer" %>
+  <%= render "layouts/footer" %>
 
   <script type="text/javascript">
     document.domain = "bedlamtheatre.co.uk";
