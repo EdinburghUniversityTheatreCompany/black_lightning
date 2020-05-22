@@ -48,13 +48,29 @@ class MassMailTest < ActiveSupport::TestCase
     mass_mail = FactoryBot.create(:draft_mass_mail, recipients: recipients, sender: FactoryBot.create(:member))
     mass_mail.update_attribute :send_date, DateTime.now.advance(seconds: -1)
 
-    assert_raise 'ActiveRecord::RecordInvalid' do
+    assert_raise ActiveRecord::RecordInvalid do
       mass_mail.prepare_send!
     end
 
     # Test if the error would be thrown on creation as well.
-    assert_raise 'ActiveRecord::RecordInvalid' do
+    assert_raise ActiveRecord::RecordInvalid do
       FactoryBot.create(:draft_mass_mail, send_date: DateTime.now.advance(seconds: -1))
+    end
+  end
+
+  test 'cannot destroy mass mail that is sent' do
+    mass_mail = FactoryBot.create(:sent_mass_mail)
+
+    assert_no_difference('MassMail.count') do
+      assert_not mass_mail.destroy
+    end
+    
+    assert_match "The mass mail \"#{mass_mail.subject}\" has already been send.", mass_mail.errors.full_messages.join('')
+
+    mass_mail.update_attribute(:draft, true)
+
+    assert_difference 'MassMail.count', -1 do
+      assert mass_mail.destroy
     end
   end
 end

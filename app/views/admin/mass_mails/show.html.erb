@@ -5,7 +5,7 @@
     <dt>Send Date</dt>
     <dd><%= get_send_date(@mass_mail) %></dd>
 
-    <% if @mass_mail.draft == true %>
+    <% if @mass_mail.draft %>
       <dt>Status</dt>
       <dd>Draft Mail</dd>
     <% else %>
@@ -24,7 +24,7 @@
   <br />
 
   <%= link_to edit_admin_mass_mail_path(@mass_mail), class: 'btn' do %>
-    <i class="fa fa-pencil"></i> Edit
+    <i class="fa fa-pencil" aria-hidden=”true”></i> Edit
   <% end %>
   <%= link_to 'Back', admin_mass_mails_path, class: "btn" %>
 <% end %>

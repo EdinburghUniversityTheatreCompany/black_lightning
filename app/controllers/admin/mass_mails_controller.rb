@@ -9,7 +9,7 @@ class Admin::MassMailsController < AdminController
   def index
     @title = 'Mass Mails'
 
-    @mass_mails = MassMail.order(:send_date).paginate(page: params[:page], per_page: 15).all
+    @mass_mails = @mass_mails.order(:send_date).paginate(page: params[:page], per_page: 15)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -23,8 +23,6 @@ class Admin::MassMailsController < AdminController
   # GET /admin/mass_mails/1.json
   ##
   def show
-    @mass_mail = MassMail.find(params[:id])
-
     @title = @mass_mail.subject
 
     respond_to do |format|
@@ -41,7 +39,6 @@ class Admin::MassMailsController < AdminController
   def new
     @title = 'New Mass Mail'
 
-    @mass_mail = MassMail.new
     @mass_mail.draft = true
 
     respond_to do |format|
@@ -56,12 +53,15 @@ class Admin::MassMailsController < AdminController
   def edit
     @title = "Edit #{@mass_mail.subject}"
 
-    @mass_mail = MassMail.find(params[:id])
-
     if @mass_mail.draft == false
       respond_to do |format|
         format.html { redirect_to admin_mass_mails_url, notice: 'Mail cannot be edited once it has been sent' }
         format.json { head :no_content }
+      end
+    else
+      respond_to do |format|
+        format.html
+        format.json { render json: @mass_mail }
       end
     end
   end
@@ -73,8 +73,6 @@ class Admin::MassMailsController < AdminController
   ##
   def create
     send = params.delete(:send)
-
-    @mass_mail = MassMail.new(mass_mail_params)
 
     if @mass_mail.save
       if send
@@ -101,24 +99,22 @@ class Admin::MassMailsController < AdminController
   def update
     send = params.delete(:send)
 
-    @mass_mail = MassMail.find(params[:id])
-
-      if @mass_mail.update_attributes(mass_mail_params)
-        if send
-          send_mail @mass_mail
-        else
-          respond_to do |format|
-            format.html { redirect_to admin_mass_mail_url(@mass_mail), notice: 'Mass mail was successfully updated.' }
-            format.json { head :no_content }
-          end
-        end
+    if @mass_mail.update(mass_mail_params)
+      if send
+        send_mail @mass_mail
       else
         respond_to do |format|
-          format.html { render 'edit', status: :unprocessable_entity }
-          format.json { render json: @mass_mail.errors, status: :unprocessable_entity }
+          format.html { redirect_to admin_mass_mail_url(@mass_mail), notice: 'Mass mail was successfully updated.' }
+          format.json { head :no_content }
         end
       end
+    else
+      respond_to do |format|
+        format.html { render 'edit', status: :unprocessable_entity }
+        format.json { render json: @mass_mail.errors, status: :unprocessable_entity }
+      end
     end
+  end
 
   ##
   # DELETE /admin/mass_mails/1
@@ -126,11 +122,9 @@ class Admin::MassMailsController < AdminController
   # DELETE /admin/mass_mails/1.json
   ##
   def destroy
-    @mass_mail = MassMail.find(params[:id])
-
     respond_to do |format|
       if @mass_mail.draft
-        @mass_mail.destroy
+        helpers.destroy_with_flash_message(@mass_mail)
 
         format.html { redirect_to admin_mass_mails_url }
         format.json { head :no_content }
@@ -144,7 +138,7 @@ class Admin::MassMailsController < AdminController
   private
 
   def mass_mail_params
-    params.require(:mass_mail).permit(:body, :draft, :send_date, :sender_id, :subject)
+    params.require(:mass_mail).permit(:body, :draft, :send_date, :subject)
   end
 
   def send_mail(mail)
