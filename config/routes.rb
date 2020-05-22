@@ -120,15 +120,10 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :staffing_templates
-    resources :staffings do
-      member do
-        get 'show_sign_up'
-      end
 
+    resources :staffings do
       collection do
-        get 'new_for_show'
-        put 'create_for_show'
-        get ':show_title/grid' => 'staffings#grid', :format => :html, :as => :grid
+        get ':slug/grid', to: 'staffings#grid', format: :html, as: :grid
         get 'guidelines'
       end
     end

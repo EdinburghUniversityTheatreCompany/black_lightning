@@ -1,8 +1,20 @@
-<div class="job control-group fields">
-    <%= f.input_field :name %>
+<%# Based on the very similar _team_member_fields.erb file %>
 
-    <%= f.input_field :user_id, :collection => @users.collect {|u| ["#{u.first_name} #{u.last_name}".presence || u.email, u.id]} %>
+<% error = f.error(:name).present? || f.error(:user).present? %>
 
-    <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
-    <%= f.link_to_remove remove_text, :class => "btn btn-danger" %>
+<div class="job control-group fields <%= "error" if error %>">
+    <%= f.hidden_field :id %>
+
+    <% name_field = [f.input_field(:name, placeholder: 'Job')] %>
+
+    <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: name_field %>
+
+    <%= link_to_remove f %>
+
+    <% if error %>
+        <p>
+            <%= f.full_error :name %>
+            <%= f.full_error :user %>
+        </p>
+    <% end %>
 </div>

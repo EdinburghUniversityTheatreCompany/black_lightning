@@ -1,12 +1,17 @@
-<h1>Staffing for <%= @admin_staffing.show_title %></h1>
-<h3><%= l @admin_staffing.start_time, :format => :long %> – <%= l @admin_staffing.end_time, :format => :long  unless @admin_staffing.end_time == nil%></h3>
+<%= javascript_include_tag "admin/staffings" %>
 
+<h1><%= @title %></h1>
+<h3><%= time_range_string(@staffing.start_time, @staffing.end_time, true) %></h3>
 
-<table class="table table-bordered">
+<%= display_block("Staffing", true) %>
+
+<%= render 'phone_number_warning' %>
+
+<table class="table table-hover">
   <thead>
     <tr>
-      <th>Job</th>
-      <th>Name</th>
+      <th>Staffing Job</th>
+      <th>Staffed By</th>
 
       <% if current_user.has_role? :committee %>
         <th>Phone Number</th>
@@ -14,37 +19,27 @@
     </tr>
   </thead>
   <tbody>
-    <% @admin_staffing.staffing_jobs.each do |staffing_job| %>
+    <% @staffing.staffing_jobs.each do |staffing_job| %>
       <tr>
         <td><%= staffing_job.name %></td>
 
-        <% u = staffing_job.user %>
-        <% if u then %>
-          <td><%= "#{u.first_name} #{u.last_name}".presence || u.email %></td>
+        <% user = staffing_job.user %>
 
-          <% if current_user.has_role? :committee %>
-            <td><%= u.phone_number %></td>
+        <td>
+          <% if user.present? %>
+            <%= user_link(user, false) %>
+          <% elsif @can_sign_up %>
+            <%= render 'sign_up_button', job: staffing_job %>
           <% end %>
-        <% else %>
-          <td></td>
+        </td>
 
-          <% if current_user.has_role? :committee %>
-            <td></td>
-          <% end %>
+        <% if current_user.has_role? :committee %>
+          <%= user&.phone_number %></td>
         <% end %>
       </tr>
     <% end %>
   </tbody>
 </table>
 
-<% if can? :sign_up_for, Admin::StaffingJob %>
-  <% sign_up_text = '<i class="fa fa-edit"></i> Sign Up'.html_safe %>
-  <%= link_to sign_up_text, show_sign_up_admin_staffing_path(@admin_staffing), :class => "btn btn-primary" %>
-<% end %>
-
-<% if can? :edit, @admin_staffing %>
-  <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
-  <%= link_to edit_text, edit_admin_staffing_path(@admin_staffing), :class => "btn" %>
-<% end %>
-
-<%= link_to 'Back', admin_staffings_path, :class => "btn" %>
+<%= render '/shared/show_actions', object: @staffing %>
+<%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn') %>

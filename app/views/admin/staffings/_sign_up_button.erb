@@ -1,0 +1,7 @@
+<input type="hidden" class="staffing_job_json" value="<%= job.to_json %>" >
+<% sign_up_text = '<i class="fa fa-edit" aria-hidden=”true”></i> Sign Up'.html_safe %>
+
+<% date = l job.staffable.start_time, format: :long %>
+<%= link_to sign_up_text, admin_sign_up_confirm_path(job), class: "btn staffing-sign-up", method: :put, 
+            data: { confirm: "Confirm Staffing", detail: "Confirm staffing as #{job.name} for #{job.staffable.show_title} on #{date}", job_id: job.id } 
+%>
