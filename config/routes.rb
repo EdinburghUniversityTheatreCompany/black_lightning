@@ -116,10 +116,11 @@ ChaosRails::Application.routes.draw do
     get  '/permissions/grid', to: 'permissions#grid', as: :permissions
     post '/permissions/grid', to: 'permissions#update_grid', as: :update_permissions
 
+    get 'techie_families', to: 'techies#index'
 
-    resources :techie_families do
+    resources :techies do
       collection do
-        get 'graph'
+        get 'tree'
       end
     end
 

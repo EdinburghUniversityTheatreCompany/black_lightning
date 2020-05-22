@@ -1,14 +1,12 @@
-<div>
-  <%= link_to admin_techie_families_url, class: 'btn' do %>
-    <i class="fa fa-reorder"></i> Index
-  <% end %>
+<h1><%= @title %></h1>
 
-  <%= link_to new_admin_techie_family_url, class: 'btn' do %>
-    <i class="fa fa-plus"></i> Add Techie
-  <% end %>
+<div>
+  <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
+
+  <%= get_link Techie, :new, html_class: 'btn' %>
 </div>
 
-<div id="canvas" style="width: 940px; height: 2000px;"></div>
+<div id="canvas" style="width: 940px; height: 1500px;"></div>
 <script>
 var g = new Graph();
 
@@ -28,13 +26,13 @@ var render = function(renderer, node) {
     };
 
 /* add a simple node */
-<% @techies.each do |tech| %>
-g.addNode("<%= tech.id %>", { render:render, label: "<%= tech.name.html_safe %>" });
+<% @techies.each do |techie| %>
+g.addNode("<%= techie.id %>", { render:render, label: "<%= techie.name.html_safe %>" });
 <% end %>
 
-<% @techies.each do |tech| %>
-    <% tech.children.each do |child| %>
-    g.addEdge("<%= tech.id %>", "<%= child.id %>", {directed: true});
+<% @techies.each do |techie| %>
+    <% techie.children.each do |child| %>
+    g.addEdge("<%= techie.id %>", "<%= child.id %>", {directed: true});
     <% end %>
 <% end %>
 

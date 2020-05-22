@@ -1,0 +1,34 @@
+<h1><%= @title%></h1>
+
+<p>
+  <%= link_to tree_admin_techies_url, class: 'btn' do %>
+    <i class="fa fa-bar-chart" aria-hidden=”true”></i> Graph
+  <% end %>
+</p>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+    <% if can? :edit, Techie %>
+      <th></th>
+    <% end %>
+
+    <% if can? :delete, Techie %>
+      <th></th>
+    <% end %>
+  </tr>
+
+  <% @techies.each do |techie| %>
+    <tr>
+      <%= get_link techie, :show, wrap_tag: 'td' %>
+
+      <%= get_link techie, :edit, wrap_tag: 'td' %>
+
+      <%= get_link techie, :destroy, wrap_tag: 'td' %>
+    </tr>
+  <% end %>
+</table>
+
+<br />
+
+<%= get_link Techie, :new %>
