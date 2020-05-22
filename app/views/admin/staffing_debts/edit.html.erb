@@ -1,16 +1,8 @@
-<h1>Editing Admin Staffing Debt</h1>
+<h1><%= @title = "Edit Staffing Debt for #{@staffing_debt.user.name(current_user)}" %></h1>
 
-<%= simple_form_for(@admin_staffing_debt) do |y| %>
-    <%= y.error_notification %>
+<%= simple_form_for(@staffing_debt) do |f| %>
+    <%= f.error_notification %>
 
-    <div class="form-inputs">
-      <%= y.input :due_by , label: "Due By"%>
-    </div>
-
-    <div class="form-actions">
-      <%= y.button :submit %>
-    </div>
+    <%= f.input :due_by %>
+    <%= render '/shared/form/form_actions', f: f %>
 <% end %>
-
-<%= link_to 'Show', @admin_staffing_debt %> |
-<%= link_to 'Back', admin_staffing_debts_path %>
