@@ -34,9 +34,16 @@ class SubpageHelperTest < ActionView::TestCase
     assert_equal subpages, get_subpages('admin/resources', 'ball')
   end
 
+  test 'will include the parent when two layers deep' do
+    # For example, tech, tech/lighting & tech/sound when you're at tech/lighting.
+    subpages = %w[tech tech/lighting tech/projection tech/sound]
+
+    assert_equal subpages, get_subpages('admin/resources', 'tech/lighting')
+  end
+
   # Tests if the link can handle differently styled page names
   test 'get subpages at secretary' do
-    subpages = %w[secretary/current_minutes secretary/minutes_archive secretary/miscellaneous secretary/rehearsal_schedules]
+    subpages = %w[secretary secretary/current_minutes secretary/minutes_archive secretary/miscellaneous secretary/rehearsal_schedules]
 
     root_folder = 'admin/resources/'
 

@@ -6,7 +6,6 @@
       <ul class="nav nav-list well">
         <li><%= get_subpage_link('overview', @controller) %></li>
         <hr />
-        <li><%= get_subpage_link(@root_page, @controller) unless @root_page == '' || @subpages.include?(@root_page) %></li>
         <% @subpages.each do |subpage| %>
           <li><%= get_subpage_link(subpage, @controller) %></li>
         <% end %>

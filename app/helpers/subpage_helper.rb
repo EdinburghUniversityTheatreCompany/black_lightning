@@ -14,6 +14,13 @@ module SubpageHelper
 
     subpages = []
 
+    # Add all higher layers to the subpages (tech when you are currently at tech/lighting)
+    temporary_root_page = root_page
+    while temporary_root_page.present?
+      subpages << temporary_root_page
+      temporary_root_page = temporary_root_page.rpartition('/').first
+    end
+
     if File.directory?(subpages_dir)
       Dir.foreach(subpages_dir) do |file|
         unless File.directory?(File.join(subpages_dir, file))
@@ -25,10 +32,12 @@ module SubpageHelper
           end
         end
       end
-    else
+    elsif root_page.present?
       # If there is no folder, move one layer up when generating the subpages
-      return get_subpages(root_folder, root_page.rpartition('/').first) if root_page.present?
+      return get_subpages(root_folder, root_page.rpartition('/').first)
     end
+
+
 
     # Those are included by default by the subpage_sidebar layout.
     subpages.delete('')
