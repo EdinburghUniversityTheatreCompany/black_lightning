@@ -108,6 +108,28 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
+  test 'get_link with approve' do
+    news = FactoryBot.create(:opportunity, id: 1)
+    expected_link = '<a class="btn btn-success" title="Approve" rel="nofollow" data-method="put" href="/admin/opportunities/1/approve">Approve</a>'
+
+    assert_equal expected_link, get_link(news, :approve, condition: true)
+
+    assert_raises TypeError do
+      get_link(Opportunity, :approve)
+    end
+  end
+
+  test 'get_link with reject' do
+    news = FactoryBot.create(:opportunity, id: 1)
+    expected_link = '<a class="btn btn-danger" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
+
+    assert_equal expected_link, get_link(news, :reject, condition: true)
+
+    assert_raises TypeError do
+      get_link(Opportunity, :reject)
+    end
+  end
+
   test 'get_link with custom action' do
     maintenance_debt = FactoryBot.create(:maintenance_debt, id: 1)
 
@@ -249,6 +271,8 @@ class LinkHelperTest < ActionView::TestCase
       destroy: 'btn btn-danger',
       edit: 'btn',
       index: 'btn',
+      approve: 'btn btn-success',
+      reject: 'btn btn-danger',
       answer: 'btn',
       hexagon: 'btn',
     }
@@ -265,6 +289,8 @@ class LinkHelperTest < ActionView::TestCase
       new: :get,
       edit: :get,
       destroy: :delete,
+      approve: :put,
+      reject: :put
     }
 
     hash.each do |action, http_method|
@@ -290,7 +316,7 @@ class LinkHelperTest < ActionView::TestCase
     }
 
     hash.each do |action, response|
-      assert_equal "", get_default_link_target(object, action, nil, nil)
+      assert_equal '', get_default_link_target(object, action, nil, nil)
     end
 
     assert_raises ArgumentError do

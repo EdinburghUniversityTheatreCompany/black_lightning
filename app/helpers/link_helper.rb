@@ -1,6 +1,6 @@
 module LinkHelper
   def user_link(user, use_public_link_as_fallback)
-    return 'No user found' if user.nil?
+    return 'User Not Found' if user.nil?
 
     if can? :read, user
       return link_to user.name(current_user), admin_user_path(user)
@@ -99,7 +99,6 @@ module LinkHelper
       when :show
         link_text = get_object_name(object, "Show #{get_formatted_class_name(object)}")
       when :index
-        # Does not set a prefix and s
         prefix = '<i class="fa fa-th-list" aria-hidden=”true”></i> Show All'.html_safe
         append_name = true if append_name.nil?
       when :new
@@ -109,7 +108,7 @@ module LinkHelper
         prefix = '<i class="fa fa-pencil-alt" aria-hidden=”true”></i> Edit'
       when :destroy
         prefix = '<i class="fa fa-trash" aria-hidden=”true”></i> Destroy'
-      else
+      else #when :reject, :approve
         prefix = action.to_s.humanize.titleize
       end
     end
@@ -128,8 +127,10 @@ module LinkHelper
       ''
     when :new
       'btn btn-primary'
-    when :destroy
+    when :destroy, :reject
       'btn btn-danger'
+    when :approve
+      'btn btn-success'
     else
       'btn'
     end
@@ -141,6 +142,8 @@ module LinkHelper
       :get
     when :destroy
       :delete
+    when :approve, :reject
+      :put
     else
       raise(ArgumentError, "There is no default HTTP method for the specified action #{action}")
     end

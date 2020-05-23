@@ -29,5 +29,5 @@
 <br />
 <%= render 'shared/show_actions', object: @opportunity %>
 
-<%= get_link @opportunity, :approve, http_method: :put, condition: !@opportunity.approved, html_class: "btn btn-success" %>
-<%= get_link @opportunity, :reject, http_method: :put, condition: @opportunity.approved, html_class: "btn btn-danger" %>
+<%= get_link @opportunity, :approve, condition: !@opportunity.approved %>
+<%= get_link @opportunity, :reject, condition: @opportunity.approved %>
