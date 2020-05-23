@@ -90,12 +90,14 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test 'should show staffing' do
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5)
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, staffed_job_count: 2)
 
     get :show, params: { id: staffing }
 
     assert_response :success
     assert assigns(:can_sign_up)
+    # Check if the phone number column is visible.
+    assert_match '<th>Phone Number</th>', response.body
   end
 
   test 'cannot sign up in show without phone number' do
@@ -113,7 +115,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     sign_out @user
     sign_in FactoryBot.create(:committee, phone_number: '11000111')
 
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2)
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, staffed_job_count: 2)
     get :show, params: { id: staffing }
 
     assert_response :success
@@ -121,6 +123,17 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_no_match 'you need to provide a MOBILE phone number', response.body
   end
 
+  test 'normal users cannot see the phone number column' do
+    sign_out @user
+
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, staffed_job_count: 2)
+
+    # Assert that the user cannot see phone numbers even though they have read permission on themselves.
+    sign_in staffing.users.first
+
+    # Assert that the phone number column is not visible, because (at least this version of) committee does not have user read permission.
+    assert_no_match '<th>Phone Number</th>', response.body
+  end
   test 'should get new' do
     get :new
     assert_response :success

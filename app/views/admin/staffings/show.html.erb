@@ -7,13 +7,16 @@
 
 <%= render 'phone_number_warning' %>
 
+<% # Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
+<% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
+
 <table class="table table-hover">
   <thead>
     <tr>
       <th>Staffing Job</th>
       <th>Staffed By</th>
 
-      <% if current_user.has_role? :committee %>
+      <% if show_phone_number_column %>
         <th>Phone Number</th>
       <% end %>
     </tr>
@@ -33,8 +36,12 @@
           <% end %>
         </td>
 
-        <% if current_user.has_role? :committee %>
-          <%= user&.phone_number %></td>
+        <% if show_phone_number_column %>
+          <td>
+            <% if can? :read, user %>
+              <%= user&.phone_number %>
+            <% end %>
+          </td>
         <% end %>
       </tr>
     <% end %>
