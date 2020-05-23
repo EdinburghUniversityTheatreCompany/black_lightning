@@ -15,6 +15,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
   test 'should get show' do
     get :show, params: { id: @user }
     assert_response :success
+    assert assigns(:link_to_admin_events)
   end
 
   test 'should get new' do

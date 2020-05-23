@@ -32,6 +32,7 @@ class Admin::UsersController < AdminController
     @title = @user.name(current_user)
 
     @team_memberships = @user.team_memberships(false)
+    @link_to_admin_events = true
 
     respond_to do |format|
       format.html
