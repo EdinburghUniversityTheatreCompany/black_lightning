@@ -72,16 +72,10 @@ class Admin::MassMailsController < AdminController
   # POST /admin/mass_mails.json
   ##
   def create
-    send = params.delete(:send)
-
     if @mass_mail.save
-      if send
-        send_mail @mass_mail
-      else
-        respond_to do |format|
-          format.html { redirect_to admin_mass_mail_url(@mass_mail), notice: 'Mass mail was successfully created.' }
-          format.json { render json: @mass_mail, status: :created, location: @mass_mail }
-        end
+      respond_to do |format|
+        format.html { redirect_to admin_mass_mail_url(@mass_mail), notice: 'Mass mail was successfully created.' }
+        format.json { render json: @mass_mail, status: :created, location: @mass_mail }
       end
     else
       respond_to do |format|

@@ -41,6 +41,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert assigns(:mass_mail).draft
+    assert_no_match 'value="Send"', response.body, 'The send button is visible on the create form'
   end
 
   test 'should get edit' do
@@ -49,8 +50,10 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     get :edit, params: { id: mass_mail }
 
     assert_response :success
+
     assert_equal mass_mail, assigns(:mass_mail), 'The mass mail was not assigned by the controller'
     assert_includes assigns(:title), mass_mail.subject, 'The title does not contain the subject of the mass mail'
+    assert_match 'value="Send"', response.body, 'The send button is not visibile on the create form'
   end
 
   test 'cannot edit a mail that is already sent' do
@@ -72,15 +75,17 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), 'The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page'
   end
 
-  test 'should create mass mail with sending' do
+  test 'should only save mass mail when creating mass mail with sending' do
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
-    assert_difference 'ActionMailer::Base.deliveries.count', User.with_role(:member).count do
-      post :create, params: { mass_mail: attributes, send: true }
+    assert_no_difference 'ActionMailer::Base.deliveries.count', User.with_role(:member).count do
+      assert_difference('MassMail.count') do
+        post :create, params: { mass_mail: attributes, send: true }
+      end
     end
 
     assert_nil assigns(:error_message), "An error was caught when catching the mail: #{assigns(:error_message)}"
-    assert_not assigns(:mass_mail).draft, 'The mass email should be send, but it is still a draft'
+    assert assigns(:mass_mail).draft, 'The mass email should not be send, but is no longer a draft'
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), 'The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page'
   end
 
