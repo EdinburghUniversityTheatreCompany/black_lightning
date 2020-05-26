@@ -29,60 +29,56 @@
 #
 
 class Show < Event
+  include ApplicationHelper
+  
+  validates :author, :price, presence: true
+
+  # Validate uniqueness on Event Subtype basis instead of on the event.
+  # Otherwise, you cannot have two different types with the same slug.
+  validates :slug, uniqueness: true
+
   has_many :reviews, dependent: :destroy
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :destroy
   has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :destroy
 
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
-  def create_questionnaire(name)
-    questionnaire = Admin::Questionnaires::Questionnaire.new
-    questionnaire.show = self
-    questionnaire.name = name
-    questionnaire.save!
-  end
-
   def create_maintenance_debts
-    uniqueTeam = self.users.distinct
-    uniqueTeam.each do |usr, index|
-      if !usr.admin_maintenance_debts.where(show_id: self.id).any?
-        debt = Admin::MaintenanceDebt.new
-        debt.show = self
-        debt.user = usr
-        debt.due_by = self.maintenance_debt_start
-        debt.state = :unfulfilled
-        debt.save!
-      end
+    users.distinct.each do |user|
+      next if user.admin_maintenance_debts.where(show_id: id).any?
+
+      Admin::MaintenanceDebt.create!(
+        show: self,
+        user: user,
+        due_by: maintenance_debt_start,
+        state: :uncompleted
+      )
     end
   end
 
-  def create_staffing_debts(numEach)
-    uniqueTeam = self.users.distinct
-    uniqueTeam.each do |usr|
-      x = numEach - usr.admin_staffing_debts.where(show_id:self.id, converted: false).count
-      x.times do |i|
-        debt = Admin::StaffingDebt.new
-        debt.show = self
-        debt.user = usr
-        debt.due_by = self.staffing_debt_start
-        debt.converted = false
-        debt.forgiven = false
-        debt.save!
+  def create_staffing_debts(total_amount)
+    users.distinct.each do |user|
+      amount = total_amount - user.admin_staffing_debts.where(show_id: id, converted: false).count
+      amount.times do
+        Admin::StaffingDebt.create!(
+          show: self,
+          user: user,
+          due_by: staffing_debt_start,
+          converted: false,
+          forgiven: false
+        )
       end
     end
   end
 
   def as_json(options = {})
     defaults = {
-        include: [
-            :reviews
-        ]
+      include: [
+          :reviews
+      ]
     }
 
-    options = options.merge(defaults) do |_key, oldval, newval|
-      # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).distinct
-    end
+    options = merge_hash(defaults, options)
 
     super(options)
   end

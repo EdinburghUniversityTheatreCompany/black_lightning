@@ -35,6 +35,9 @@
 #
 
 class Event < ApplicationRecord
+  include TimeHelper
+  include ApplicationHelper
+
   resourcify
 
   # Use the format slug for urls. e.g. /events/myshow
@@ -42,17 +45,9 @@ class Event < ApplicationRecord
     slug
   end
 
-  # Scopes #
+  # Validations #
 
-  # Usually order events with the earliest at the top.
-  default_scope -> { order('start_date ASC') }
-
-  scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
-  scope :future, -> { where(['end_date >= ?', Date.current]) }
-
-  def self.current_slideshow
-    return unscoped.where(['end_date >= ? AND is_public = ?', Date.current, true]).order('end_date ASC')
-  end
+  validates :name, :slug, :description, :start_date, :end_date, presence: true
 
   # Relationships #
 
@@ -66,12 +61,6 @@ class Event < ApplicationRecord
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
 
-  # Validations #
-
-  # Do not validate start_date, end_date or tag_line, as these will cause the proposal to show conversion to fail.
-  validates :name, :description, presence: true
-  validates :slug, presence: true, uniqueness: true
-
   # Paperclip #
   has_attached_file :image,
                     styles: { medium: '576x300#', thumb: '192x100#', slideshow: '960x500#' },
@@ -80,9 +69,20 @@ class Event < ApplicationRecord
 
   validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
 
-  # Returns the last show to have finished.
-  def self.last_show
+  # Scopes #
+
+  scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
+  scope :future, -> { where(['end_date >= ?', Date.current]) }
+  scope :this_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
+
+  # Returns the last event to have finished.
+  def self.last_event
     return where(['end_date < ? AND is_public = ?', Date.current, true]).last
+  end
+
+  # Formats the shows so they can be used in a selection field
+  def self.selection_collection
+    return pluck(:name, :id)
   end
 
   ##
@@ -114,19 +114,12 @@ class Event < ApplicationRecord
   #
   # The date format used is the :long format, defined in /config/locales/en.yml
   ##
-  def date_range(format = :long)
-    unless start_date.presence
-      return
-    end
+  def date_range(include_year, format = :long)
+    return time_range_string(start_date, end_date, include_year, format)
+  end
 
-    date = I18n.l(start_date, format: format)
-
-    if end_date and not start_date == end_date
-      date << ' - '
-      date << I18n.l(end_date, format: format)
-    end
-
-    return date
+  def simultaneous_seasons
+    return Season.where('start_date <= ? and end_date >= ?', end_date, start_date)
   end
 
   def as_json(options = {})
@@ -136,10 +129,7 @@ class Event < ApplicationRecord
       ]
     }
 
-    options = options.merge(defaults) do |_key, oldval, newval|
-      # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).distinct
-    end
+    options = merge_hash(defaults, options)
 
     super(options)
   end

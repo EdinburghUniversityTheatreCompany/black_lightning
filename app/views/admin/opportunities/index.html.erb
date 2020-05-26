@@ -1,6 +1,4 @@
-<% @title = 'Opportunities' %>
-
-<h1>Opportunities</h1>
+<h1><%= @title %></h1>
 
 <%= display_block("Opportunities (Members Face)", true) %>
 
@@ -11,33 +9,37 @@
   <tr>
     <th>Title</th>
     <th>Creator</th>
-    <th>Approved</th>
     <th>Expiry Date</th>
+
+    <th>Approved</th>
+  	
+    <% # The column with the edit button is always visible, because it is very irregular who can edit opportunities. %>
     <th></th>
-    <th></th>
+
+    <% if can? :delete, Opportunity %>
+      <th></th>
+    <% end %>
   </tr>
 
 <% @opportunities.each do |opportunity| %>
-  <tr>
-    <td><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></td>
-    <td><%= opportunity.creator.name %></td>
-    <td><%= opportunity.approved ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
-    <td><%= l opportunity.expiry_date, format: :shorty %>
+  <tr <%= opportunity.css_class if can?(:manage, Opportunity) %>>
+    <%= get_link opportunity, :show, wrap_tag: 'td' %>
+
+    <td><%= user_link opportunity.creator, false %></td>
+    
+    <td><%= l opportunity.expiry_date, format: :longy %></td>
 
     <td>
-    <% if can? :edit, opportunity %>
-    <%= link_to 'Edit', edit_admin_opportunity_path(opportunity) %>
-    <% end %>
+      <%= bool_icon opportunity.approved %>
     </td>
 
     <td>
-    <% if can? :delete, opportunity %>
-    <%= link_to 'Destroy', admin_opportunity_path(opportunity), method: :delete, data: {
-                                                                                            "confirm" => "Deleting " + opportunity.title,
-                                                                                            "detail"  => "Are you sure you wish to continue?"
-                                                                                       } %>
-    <% end %>
+      <%= get_link opportunity, :edit %>
     </td>
+    
+    <%= get_link opportunity, :destroy, wrap_tag: 'td', 
+                 detail: "Are you sure you wish to delete this opportunity? You can also hide it by editing or rejecting it." 
+    %>
   </tr>
 <% end %>
 </table>
@@ -46,7 +48,9 @@
 
 <br />
 
-<% if can? :create, Opportunity %>
-<% new_text = '<i class="fa fa-plus"></i> New Opportunity'.html_safe %>
-<%= link_to new_text, new_admin_opportunity_path, :class => 'btn' %>
+<%= get_link Opportunity, :new %>
+<% if can? :approve, Opportunity %>
+  <br />
+  <br />
+  <p>You can approve or reject an opportunity by viewing the details.</p>
 <% end %>

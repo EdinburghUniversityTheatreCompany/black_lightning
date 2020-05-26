@@ -1,3 +1,17 @@
-<h1>Editing Staffing</h1>
+<h1><%= @title = "Edit Staffing for #{@staffing.show_title}"%></h1>
 
-<%= render 'form' %>
+<%= simple_nested_form_for @staffing do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+    <%= render 'form_base', f: f %>
+
+    <%= f.input :start_time %>
+    <%= f.input :end_time %>
+  </div>
+  
+  <div class="form-actions">
+    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
+    <%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn') %>
+  </div>
+<% end %>

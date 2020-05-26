@@ -1,15 +1,20 @@
+# The constraint is tested in the (non-admin) seasons controller test.
 class ExistingSeasonConstraint
-  def initialize
+  def get_season_slugs
     if Season.table_exists?
-      @season_slugs = Season.select(:slug).collect(&:slug)
+      return Season.select(:slug).collect(&:slug)
     else
-      @season_slugs = nil
+      # :nocov:
+      p 'The table seasons does not exist'
+      return nil
+      #: nocov:
     end
   end
 
   def matches?(request)
-    return false if @season_slugs.nil?
+    season_slugs = get_season_slugs
+    return false if season_slugs.nil?
 
-    @season_slugs.include?(request.url.split('/').last)
+    return season_slugs.include?(request.url.split('/').last)
   end
 end

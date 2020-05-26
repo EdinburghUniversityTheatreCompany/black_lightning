@@ -1,5 +1,4 @@
 FactoryBot.define do
-
   factory :initial_debt_notification, class: Admin::DebtNotification do
     association :user, factory: :member
     sent_on { Date.today - 20 }

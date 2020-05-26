@@ -1,0 +1,30 @@
+
+<% deadline = nil if deadline.nil? %>
+
+<h3>Team</h3>
+
+<% team_members.each do |team_member| %>
+  <p>
+    <b><%= team_member&.position %></b>
+
+    <% if team_member.present?%>
+      <%= user_link(team_member.user, true) %>
+      <% can_see_in_debt_label = can? :debt_status, team_member.user %>
+
+      <% if can_see_in_debt_label && team_member.user.in_debt %>
+        <% debt_message = "#{team_member.user.debt_message_suffix}".upcase_first %>
+
+        <%= link_to debt_message, admin_debt_path(team_member.user), class: "label label-important" %>
+      <% end %>
+
+      <% if can_see_in_debt_label && deadline.present? && team_member.user.in_debt(deadline) %>
+        <% on_deadline_debt_message = "#{team_member.user.debt_message_suffix(deadline).upcase} on the deadline" %>
+          
+        <%= link_to on_deadline_debt_message, admin_debt_path(team_member.user), class: "label label-warning" %>        
+      <% end %>
+    <% else %>
+      
+    <% end %>
+  </p>
+<% end %>
+

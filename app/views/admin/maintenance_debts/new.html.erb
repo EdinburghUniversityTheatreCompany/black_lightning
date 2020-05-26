@@ -1,5 +1,15 @@
-<h1>New Maintenance Debt</h1>
+<h1><%= @title = 'New Maintenance Debt' %></h1>
 
-<%= render 'form' %>
+<%= simple_form_for(@maintenance_debt) do |f| %>
+  <%= f.error_notification %>
 
-<%= link_to 'Back', admin_maintenance_debts_path %>
+  <div class="form-inputs">
+    <%= render '/shared/form/user_field', f: f %>
+
+    <%= f.input :show_id, collection: Show.this_year.selection_collection %>
+
+    <%= f.input :due_by %>
+  </div>
+
+  <%= render '/shared/form/form_actions', f: f %>
+<% end %>

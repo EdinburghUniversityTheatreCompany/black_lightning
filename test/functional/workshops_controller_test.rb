@@ -10,9 +10,9 @@ class WorkshopsControllerTest < ActionController::TestCase
   end
 
   test 'should get show' do
-    @workshop = FactoryBot.create(:workshop)
+    @workshop = FactoryBot.create(:workshop, is_public: true)
 
-    get :show, params: { id: @workshop}
+    get :show, params: { id: @workshop }
     assert_response :success
   end
 end

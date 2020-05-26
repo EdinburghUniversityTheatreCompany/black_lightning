@@ -1,109 +1,15 @@
-<input type="hidden" name="autocomplete_users_list" value="true">
-
-<%= simple_nested_form_for [:admin, @show], :html => {class: "form-horizontal"} do |f| %>
+<%= simple_nested_form_for [:admin, @show] do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
+    <%= render 'admin/events/basic_form', f: f %>
 
-    <%= f.input :name, :wrapper => :append do %>
-      <%= f.input_field :name %>
-      <a class="btn xts_lookup" href="javascript:void(0);" title="Lookup show in XTS and fetch XTS ID, tagline and dates.">
-        <i class="fa fa-search"></i>
-      </a>
-    <% end %>
+    <%= render '/shared/form/sections/team_members', f: f %>
 
-    <%= f.input :tagline %>
+    <%= render 'reviews_form_partial', f: f %>
 
-    <%= f.input :slug %>
-
-    <%= f.input :author %>
-
-    <%= f.input :start_date, start_year: 1890 %>
-
-    <%= f.input :end_date, start_year: 1890 %>
-
-    <%= f.input :price %>
-
-    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :description } %>
-
-    <%= f.association :venue, :collection => Venue.all, :label_method => :name %>
-
-    <%= f.association :season, :collection => Season.all, :label_method => :name %>
-
-    <%= f.input :spark_seat_slug, label: "SparkSeat Slug", hint: "This is the identifier SparkSeat use to refer to your show." %>
-
-    <%= f.input :image, hint: "This is the image that appears in the slideshow on the frontpage, and as the header image on your show page. 960x500 pixels!"  %>
-
-    <div class="control-group">
-      <%= f.label :is_public %>
-
-      <div class="controls switch" data-on="success" data-on-label="Published" data-off="danger" data-off-label="Private" style="width: 200px;">
-        <%=
-           f.input_field :is_public,
-                          boolean_style: :inline
-        %>
-      </div>
-    </div>
-
-    <div class="form-horizontal">
-
-      <h3>Team</h3>
-
-      <% if f.object.errors[:team_members].present? then %>
-      <p id="team_errors" class="alert alert-error">
-        <%= f.error :team_members %>
-      </p>
-      <% end %>
-
-      <ul class="sortable">
-        <%= f.fields_for :team_members, :wrapper => false %>
-
-        <li>
-          <%= f.link_to_add :team_members, :class => "btn ui-state-disabled" do %>
-            <i class="fa fa-plus"></i> Add Team Member
-          <% end %>
-        </li>
-      </ul>
-
-    </div>
-
-    <h3>Reviews</h3>
-
-    <%= f.simple_fields_for :reviews %>
-
-    <% add_review_text = '<i class="fa fa-plus"></i> Add Review'.html_safe %>
-    <%= f.link_to_add add_review_text, :reviews, :class => "btn" %>
-
-    <div class="gallery-form">
-
-      <h3>Gallery</h3>
-
-      <% if f.object.errors[:pictures].present? then %>
-      <p id="picture_errors" class="alert alert-error">
-        <%= f.error :pictures %>
-      </p>
-      <% end %>
-
-      <%= f.simple_fields_for :pictures %>
-
-      <br />
-
-      <% add_photo_text = '<i class="fa fa-plus"></i> Add Photo'.html_safe %>
-      <%= f.link_to_add add_photo_text, :pictures, :class => "btn" %>
-
-    </div>
-
+    <%= render '/shared/form/sections/gallery', f: f %>
   </div>
 
-  <script>
-    $('#show_name').keyup(function() {
-        var slug = jQuery.trim($('#show_name').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
-        $('#show_slug').val(slug);
-    });
-  </script>
-
-  <div class="form-actions">
-    <%= f.button :submit, :class => 'btn-primary' %>
-    <%= link_to 'Cancel', admin_shows_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>

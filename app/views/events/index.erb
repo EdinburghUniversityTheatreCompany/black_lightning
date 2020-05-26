@@ -1,0 +1,26 @@
+<div class="row">
+  <div class="span12">
+    <h1><%= @title %></h1>
+    <hr />
+
+    <% @events.each do |event| %>
+      <article class="media">
+        <% image = image_tag event.image.url(:thumb), class: "media-object" %>
+        <%= link_to image, event, class: "pull-left thumbnail" %>
+        <div class="media-body">
+          <header class="media-heading">
+            <h4 class="media-heading"><%= link_to event.name, event %></h4>
+          </header>  
+          <p><span class="date"><%= event.date_range true %></span></p>
+          <p><%= event.tagline.presence || truncate(event.description, length: 100) %></p>
+          <p><%= link_to 'View Details', event %></p>
+        </div>
+      </article>
+
+      <hr />
+
+    <% end %>
+
+    <%= will_paginate(@events) %>
+  </div>
+</div>

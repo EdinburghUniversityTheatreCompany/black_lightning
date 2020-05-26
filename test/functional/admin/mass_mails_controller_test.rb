@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::MassMailsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
 
     # There has to be at least one member who can receive the email
     FactoryBot.create(:member)
@@ -41,6 +41,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert assigns(:mass_mail).draft
+    assert_no_match 'value="Send"', response.body, 'The send button is visible on the create form'
   end
 
   test 'should get edit' do
@@ -49,11 +50,13 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     get :edit, params: { id: mass_mail }
 
     assert_response :success
+
     assert_equal mass_mail, assigns(:mass_mail), 'The mass mail was not assigned by the controller'
     assert_includes assigns(:title), mass_mail.subject, 'The title does not contain the subject of the mass mail'
+    assert_match 'value="Send"', response.body, 'The send button is not visibile on the create form'
   end
 
-  test 'cannot edit a mail that is already sent' do 
+  test 'cannot edit a mail that is already sent' do
     mass_mail = FactoryBot.create(:sent_mass_mail)
 
     get :edit, params: { id: mass_mail }
@@ -72,15 +75,17 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), 'The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page'
   end
 
-  test 'should create mass mail with sending' do
+  test 'should only save mass mail when creating mass mail with sending' do
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
-    assert_difference 'ActionMailer::Base.deliveries.count', User.with_role(:member).count do
-      post :create, params: { mass_mail: attributes, send: true }
+    assert_no_difference 'ActionMailer::Base.deliveries.count', User.with_role(:member).count do
+      assert_difference('MassMail.count') do
+        post :create, params: { mass_mail: attributes, send: true }
+      end
     end
 
     assert_nil assigns(:error_message), "An error was caught when catching the mail: #{assigns(:error_message)}"
-    assert_not assigns(:mass_mail).draft, 'The mass email should be send, but it is still a draft'
+    assert assigns(:mass_mail).draft, 'The mass email should not be send, but is no longer a draft'
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), 'The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page'
   end
 
@@ -145,14 +150,14 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   test 'Should not send mail that has already been sent' do
     mass_mail = FactoryBot.create(:sent_mass_mail)
 
-    _helper_test_send_mail_with_errors(mass_mail)
+    helper_test_send_mail_with_errors(mass_mail)
   end
 
   test 'Should not send mail that has a send date in the past' do
     mass_mail = FactoryBot.create(:draft_mass_mail)
     mass_mail.update_attribute :send_date, DateTime.now.advance(days: -1)
 
-    _helper_test_send_mail_with_errors(mass_mail)
+    helper_test_send_mail_with_errors(mass_mail)
   end
 
   test 'Should not send mail when there are no members' do
@@ -164,15 +169,17 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
       member.remove_role :member
     end
 
-    _helper_test_send_mail_with_errors(mass_mail)
+    helper_test_send_mail_with_errors(mass_mail)
 
     members.each do |member|
       member.add_role :member
     end
   end
 
+  private
+
   # Testing this function is just a bit annoying because it is not a view.
-  def _helper_test_send_mail_with_errors(mass_mail)
+  def helper_test_send_mail_with_errors(mass_mail)
     @request.format = :json
 
     assert_no_difference('ActionMailer::Base.deliveries.count') do
@@ -183,8 +190,8 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
       end
     end
 
-    # This would that it has succesfully rendered the edit page, and has not redirected.
     # I have not found a way to test that it actually returns :unprocessable entity,
+    # This would assert that it has succesfully rendered the edit page with errors, and has not redirected.
     # assert_response :unprocessable_entity, 'The request should have returned an error status code, but it did not'
     assert_not_nil assigns(:error_message), 'The request should have set an error message, but it did not'
   end

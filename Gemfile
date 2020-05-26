@@ -28,7 +28,7 @@ gem 'rails_autolink'
 gem 'delayed_job_active_record'
 gem 'daemons'
 
-gem 'axlsx'
+gem 'caxlsx'
 gem 'prawn'
 gem 'rqrcode'
 gem 'mini_magick'
@@ -40,6 +40,8 @@ gem 'nokogiri'
 
 gem 'rack-cors'
 gem 'paper_trail', '< 6.0'
+
+gem 'stringex'
 
 group :development, :test do
   gem 'byebug'

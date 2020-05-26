@@ -1,142 +1,25 @@
-<% if @show.end_date %>
-<% if @show.end_date < Date.today %>
-  <p class="alert alert-info">
-    <i class="fa fa-info-sign fa-large"></i>
-    This show finished on <%= l @show.end_date, :format => :longy %>, and this page is being kept for archival purposes only.
-  </p>
-<% end %>
-<% end %>
+<%= render '/events/basic_info', event: @show, event_name: 'show' %>
 
-<div class="row" style="position: relative;">
-  <div class="span9">
-    <div class="carousel">
-      <!-- Carousel items -->
-      <div class="carousel-inner">
-        <div class="active item">
-          <%= image_tag @show.image.url(:slideshow) %>
-          <div class="carousel-caption">
-            <h1><%= @show.name %></h1>
-            <p><%= @show.tagline %></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+<%= render '/events/description_and_team_members', event: @show %>
 
-  <div class="span3 show-info-box">
-    <div class="well">
-      <h4>Dates</h4>
-      <p>
-        <b><%= @show.date_range %></b>
-      </p>
-
-      <% if @show.price? %>
-        <h4>Price</h4>
-        <p>
-          <b><%= @show.price %></b>
-        </p>
-      <% end %>
-
-      <% if @show.author and not @show.author.empty? %>
-        <h4>Author</h4>
-        <p>
-          <%= @show.author %>
-        </p>
-      <% end %>
-
-      <% if @show.venue then %>
-        <h4>Venue</h4>
-        <p>
-          <%= link_to @show.venue.name, @show.venue %>
-        </p>
-      <% end %>
-
-      <% if @show.season then %>
-        <p>Part of <%= link_to @show.season.name, @show.season %></p>
-      <% end %>
-    </div>
-  </div>
-</div>
-
-<%= render_markdown @show.description %>
-
-<% have_team_members = @team_members.count > 0 %>
-
-<% if have_team_members then %>
+<% if @show.reviews.any? then %>
   <hr />
 
   <div class="row vertical-rule">
-    <div class="span4">
-      <h4>Cast and Crew</h4>
-      <dl class="cast-crew-list">
-        <% @team_members.each do |team_member| %>
-          <dt><%= team_member.position %></dt>
+    <h3>Reviews</h3>
 
-          <dd>
-          <% u = team_member.user %>
-          <% if u.nil? %>
-            Unknown
-          <% else %>
-            <% if u.public_profile %>
-              <%= link_to u.name, u, style: "color: #333333;" %>
-            <% else %>
-              <%= u.name %>
-            <% end %>
-          <% end %>
-          </dd>
-        <% end %>
-      </dl>
-    </div>
+    <% @show.reviews.each do |review| %>
+      <article>
+        <header>
+          <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, format: :long %> <%= "for #{review.organisation}" if review.organisation? %>
+          <br />
+          <%= star_rating review.rating if review.rating && review.rating > 0 %>
+        </header>
 
-    <hr class="visible-phone" />
-
-    <div class="span8">
-      <% if @show.xts_id %>
-        <h4>Tickets</h4>
-        <%= xts_widget(@show.xts_id)%>
-      <% end %>
-
-      <% if !@show.spark_seat_slug.blank? %>
-        <h4>Tickets</h4>
-        <%= spark_seat_widget(@show.spark_seat_slug)%>
-      <% end %>
-    </div>
+        <%= render_markdown review.body %>
+      </article>
+    <% end %>
   </div>
-
-<% elsif @show.xts_id %>
-  <hr />
-
-  <h4>Tickets</h4>
-  <%= xts_widget(@show.xts_id)%>
-<% elsif !@show.spark_seat_slug.blank? %>
-  <hr />
-
-  <h4>Tickets</h4>
-  <%= spark_seat_widget(@show.spark_seat_slug)%>
 <% end %>
 
-<% if @reviews.count > 0 then %>
-  <hr />
-
-  <h3>Reviews</h3>
-
-  <% @reviews.each do |review| %>
-    <article>
-      <header>
-        <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, :format => :long %> <%= "for #{review.organisation}" if review.organisation? %>
-        <br />
-        <%= star_rating review.rating if review.rating && review.rating > 0 %>
-      </header>
-
-      <%= render_markdown review.body %>
-    </article>
-  <% end %>
-<% end %>
-
-<% if @pictures.count > 0 then %>
-  <hr />
-
-  <h3>Gallery</h3>
-
-  <%= render 'shared/gallery', pictures: @pictures %>
-<% end %>
+<%= render '/shared/gallery', pictures: @show.pictures %>

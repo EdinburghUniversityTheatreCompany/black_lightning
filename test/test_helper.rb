@@ -4,11 +4,16 @@ require 'simplecov-rcov'
 SimpleCov.formatter = SimpleCov::Formatter::RcovFormatter
 SimpleCov.command_name 'minitest'
 
-SimpleCov.start 'rails'
+SimpleCov.start do
+  'rails'
+  add_filter '/test/'
+  add_filter '/config/'
+end
 
 require 'html_acceptance'
 
 ENV['RAILS_ENV'] = 'test'
+
 require File.expand_path('../../config/environment', __FILE__)
 require 'rails/test_help'
 

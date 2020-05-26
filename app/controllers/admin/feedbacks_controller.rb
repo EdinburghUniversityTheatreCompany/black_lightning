@@ -3,15 +3,16 @@
 ##
 
 class Admin::FeedbacksController < AdminController
-  load_and_authorize_resource class: 'Admin::Feedback'
+  load_and_authorize_resource class: Admin::Feedback
+
 
   # GET /admin/feedbacks
   # GET /admin/feedbacks.json
   def index
     @show = Show.find_by_slug(params[:show_id])
-    @feedbacks = Admin::Feedback.where(show_id: @show.id)
+    @feedbacks = @feedbacks.where(show_id: @show.id)
 
-    authorize! :read, @feedbacks.first
+    @title = "Feedback for #{@show.name}"
 
     respond_to do |format|
       format.html # index.html.erb
@@ -22,8 +23,8 @@ class Admin::FeedbacksController < AdminController
   # GET /admin/feedbacks/new
   # GET /admin/feedbacks/new.json
   def new
-    @feedback = Admin::Feedback.new
     @show = Show.find_by_slug(params[:show_id])
+    @title = "New Feedback for #{@show.name}"
 
     respond_to do |format|
       format.html # new.html.erb
@@ -33,15 +34,13 @@ class Admin::FeedbacksController < AdminController
 
   # GET /admin/feedbacks/1/edit
   def edit
-    @feedback = Admin::Feedback.find(params[:id])
-
     @show = @feedback.show
+    @title = "Feedback with ID #{@feedback.id} for #{@show.name}"
   end
 
   # POST /admin/feedbacks
   # POST /admin/feedbacks.json
   def create
-    @feedback = Admin::Feedback.new(feedback_params)
     @show = Show.find_by_slug(params[:show_id])
 
     @feedback.show = @show
@@ -51,7 +50,7 @@ class Admin::FeedbacksController < AdminController
         format.html do
           flash[:success] = 'Feedback was successfully submitted.'
 
-          if can? :read, @feedback
+          if can? :show, @feedback
             redirect_to admin_show_feedbacks_path(@show)
           else
             redirect_to admin_show_path(@show)
@@ -68,12 +67,10 @@ class Admin::FeedbacksController < AdminController
   # PUT /admin/feedbacks/1
   # PUT /admin/feedbacks/1.json
   def update
-    @feedback = Admin::Feedback.find(params[:id])
-
     @show = @feedback.show
 
     respond_to do |format|
-      if @feedback.update_attributes(feedback_params)
+      if @feedback.update(feedback_params)
         format.html { redirect_to admin_show_feedbacks_path(@show), notice: 'Feedback was successfully updated.' }
         format.json { head :no_content }
       else
@@ -86,11 +83,9 @@ class Admin::FeedbacksController < AdminController
   # DELETE /admin/feedbacks/1
   # DELETE /admin/feedbacks/1.json
   def destroy
-    @feedback = Admin::Feedback.find(params[:id])
-
     @show = @feedback.show
 
-    @feedback.destroy
+    helpers.destroy_with_flash_message(@feedback)
 
     respond_to do |format|
       format.html { redirect_to admin_show_feedbacks_path(@show) }

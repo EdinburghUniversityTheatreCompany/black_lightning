@@ -1,7 +1,10 @@
 <h3>Committee Staffing</h3>
+Displays the amount of committee rep slots staffed per semester for each committee member.
+<br>
 <dl>
   <% committee = Role.where(name: "Committee").first.users%>
   <% committee.each do |person|%>
+    
       <dt><%= person.name  %></dt>
       <dd>
         <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(start_of_year,christmas)}.count %>

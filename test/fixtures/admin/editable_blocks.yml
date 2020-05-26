@@ -1,5 +1,10 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
-one:
+public:
   name: "About Content"
   content: "Welcome to Project BlackLightning\n------------------------"
+
+admin:
+  name: "Admin Content"
+  content: "Welcome to our admin page"
+  admin_page: true

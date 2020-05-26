@@ -1,0 +1,35 @@
+<%= render '/events/happened_message', event: event, event_name: event_name %>
+
+<div class="row" style="position: relative;">
+  <div class="span9">
+    <%= render '/events/image_and_name', event: event %>
+  </div>
+
+  <div class="span3 show-info-box">
+    <div class="well">
+      <h4>Date<%= 's' if event.start_date != event.end_date %></h4>
+      <p>
+        <b><%= event.date_range true %></b>
+      </p>
+
+      <% if event.venue.present?  %>
+        <h4>Venue</h4>
+        <p><b><%= link_to event.venue.name, event.venue %></b></p>
+      <% end %>
+
+      <% if event.price? %>
+        <h4>Price</h4>
+        <p><b><%= event.price %></b></p>
+      <% end %>
+
+      <% if event.author.present? %>
+        <h4>Author</h4>
+        <p><b><%= event.author %></b></p>
+      <% end %>
+
+      <% if event.season.present? %>
+      <p>Part of <%= link_to event.season.name, event.season %></p>
+      <% end %>
+    </div>
+  </div>
+</div>

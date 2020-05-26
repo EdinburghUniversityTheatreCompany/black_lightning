@@ -19,7 +19,7 @@ function showAlert(level, body) {
 
   var alert = $(
     '<p id="' + level + '" class="alert ' + alertclass + '">' +
-      '<i class="' + icon + ' icon-large"></i>' +
+      '<i class="' + icon + ' icon-large" aria-hidden=”true”></i>' +
       '<button type="button" class="close" data-dismiss="alert">&times;</button>' +
       '<span class="alert_body"></span>' +
     '</p>');

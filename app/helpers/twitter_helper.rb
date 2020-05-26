@@ -1,5 +1,7 @@
 # see http://stackoverflow.com/questions/5460862/caching-twitter-api-calls-in-rails
+# Can't really test this.
 module TwitterHelper
+  # :nocov:
   def twitter_timeline
     client = Twitter::REST::Client.new do |config|
       if Rails.application.secrets.twitter
@@ -30,4 +32,5 @@ module TwitterHelper
     html = auto_link(html)
     return html
   end
+  # :nocov:
 end

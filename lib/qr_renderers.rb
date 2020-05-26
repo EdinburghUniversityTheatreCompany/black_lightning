@@ -1,4 +1,7 @@
 module RQRCode
+  # :nocov:
+  # CURRENTLY UNUSED BUT TEST IT WHEN YOU ARE USING IT AGAIN.
+  # maybe there is a gem that can handle this, if you fancy not maintaining it yourself.
   module Renderers
     class SVG
       class << self
@@ -59,4 +62,5 @@ module RQRCode
       end
     end
   end
+  # :nocov:
 end

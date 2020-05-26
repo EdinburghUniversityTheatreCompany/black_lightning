@@ -1,0 +1,22 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/user_typeahead_field.js" %>
+<% end %>
+
+<input type="hidden" name="autocomplete_users_list" value="true">
+
+<%= f.input :show_title, input_html: {
+  autocomplete: 'off',
+  data: {
+    provide: "typeahead",
+    source: Show.future.to_a.collect {|show| show.name}
+  }
+} %>
+
+<%= f.input :counts_towards_debt, label: 'Does the staffing count towards debt?'%>
+
+<div class="well form-horizontal">
+  <h3>Jobs</h3>
+  <%= f.simple_fields_for :staffing_jobs %>
+
+  <%= link_to_add f, :staffing_jobs  %>
+</div>

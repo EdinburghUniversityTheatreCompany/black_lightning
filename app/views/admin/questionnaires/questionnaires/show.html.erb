@@ -1,6 +1,6 @@
-<h3>Questionnaire for <%= @admin_questionnaires_questionnaire.show.name %></h3>
+<h1><%= @title%></h1>
 
-<% @admin_questionnaires_questionnaire.questions.each do |question| %>
+<% @questionnaire.questions.each do |question| %>
   <div>
     <p>
       <b>Question:</b>
@@ -12,14 +12,18 @@
     <p>
       <b>Response:</b>
     </p>
-    <% question.answers.each do |answer| %>
-      <% if question.response_type == "File" then %>
-        <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
-      <% else %>
-        <% if answer.answer.presence then %>
-          <%= render_markdown answer.answer %>
+    <% if question.answers.empty? %>
+      This question has not been answered
+    <% else %>
+      <% question.answers.each do |answer| %>
+        <% if question.response_type == "File" %>
+          <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
         <% else %>
-          This question has not been answered
+          <% if answer.answer.present? %>
+            <%= render_markdown answer.answer %>
+          <% else %>
+            This question has not been answered
+          <% end %>
         <% end %>
       <% end %>
     <% end %>
@@ -28,14 +32,11 @@
   <hr />
 <% end %>
 
-<% if can? :answer, @admin_questionnaires_questionnaire %>
-<% answer_text = '<i class="icon-book"></i> Answer Questionnaire'.html_safe %>
-<%= link_to answer_text, answer_admin_questionnaires_questionnaire_path(@admin_questionnaires_questionnaire), :class => "btn btn-primary" %>
-<% end %>
+<% # You cannot use the shared/show_actions here because they're all quite different %>
 
-<% if can? :edit, @admin_questionnaires_questionnaire %>
-  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
-  <%= link_to edit_text, edit_admin_questionnaires_questionnaire_path(@admin_questionnaires_questionnaire), :class => "btn" %>
-<% end %>
+<%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary', link_text: '<i class="icon-book" aria-hidden=”true”></i> Answer'.html_safe %>
 
-<%= link_to 'Back', admin_questionnaires_questionnaires_path, :class => "btn"  %>
+<%= get_link @questionnaire, :edit %>
+
+<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View', anchor: "#{@questionnaire.show.name.to_url}-table" %>
+

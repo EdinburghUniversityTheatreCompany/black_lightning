@@ -1,0 +1,13 @@
+<div class="alert-container">
+  <% if @hide_alert != true %>
+    <% flash.each do |key, message| %>
+      <% if message.is_a? Enumerable %>
+        <% message.each do |inner_message| %>
+          <%= render '/layouts/alert_message', key: key, message: inner_message %>
+        <% end %>
+      <% else %>
+        <%= render '/layouts/alert_message', key: key, message: message %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

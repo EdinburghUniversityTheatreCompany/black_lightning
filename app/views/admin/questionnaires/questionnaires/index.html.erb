@@ -1,58 +1,69 @@
-<h1>Questionnaires</h1>
+<h1><%= @title %></h1>
+
+<%= display_block('Questionnaires', true) %>
+
+<br />
+<br />
+
+<%= render layout: '/shared/collapsible_search_form' do %>
+  <h3>Search</h3>
+  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_questionnaires_questionnaires do |f| %>
+    <%= f.input_field :show_name_cont, placeholder: "Show Title",  required: false %>
+
+    <%= f.input :show_end_date_gt, as: :date, label: "Start Date", start_year: 2012, end_year: Date.today.year, include_blank: true, required: false %>
+    <%= f.input :show_start_date_lt,   as: :date, label: "End Date", start_year: 2012, end_year: Date.today.year, include_blank: true, required: false %>
+
+    <%= f.submit :Search, class: 'btn' %>
+  <% end %>
+<% end %>
 
 <div class="accordion" id="shows_current_accordion">
-  <% @admin_questionnaires_questionnaires.each do |show, questionnaires| %>
+  <% @questionnaires.each do |show_name, questionnaires| %>
     <div class="accordion-group">
-      <% div_name = show.name.downcase.gsub(/[^a-zA-Z0-9\-]/,'') + "_table" %>
+      <% # If you change the div_name, please also change the anchor for the back buttn on the questionnaire show page. %>
+      <% div_name = "#{show_name.to_url}-table" %>
       <div class="accordion-heading">
-        <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
-          <%= show.name %>
-        </a>
+        <h4>
+          <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
+            <%= show_name %>
+          </a>
+        </h4>
       </div>
 
       <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
         <table class="table">
           <tr>
-            <th>Questionnaire</th>
+            <th>Questionnaires</th>
 
             <% if can? :read, Admin::Questionnaires::Questionnaire %>
-            <th></th>
+              <th></th>
             <% end %>
 
             <% if can? :edit, Admin::Questionnaires::Questionnaire %>
-            <th></th>
+              <th></th>
             <% end %>
 
             <% if can? :delete, Admin::Questionnaires::Questionnaire %>
-            <th></th>
+              <th></th>
             <% end %>
           </tr>
 
-        <% questionnaires.each do |questionnaire| %>
-          <tr>
-            <td><%= link_to questionnaire.name, answer_admin_questionnaires_questionnaire_path(questionnaire), :title => "Answer Questionnaire" %></td>
+          <% questionnaires.each do |questionnaire| %>
+            <tr>
+              <%= get_link questionnaire, :answer, http_method: :get, html_class: '', append_name: true, wrap_tag: 'td' %>
 
-            <% if can? :read, questionnaire %>
-            <td><%= link_to 'View', admin_questionnaires_questionnaire_path(questionnaire) %></td>
-            <% end %>
+              <%= get_link questionnaire, :show, link_text: 'View', html_class: 'btn', wrap_tag: 'td' %>
 
-            <% if can? :edit, questionnaire %>
-            <td><%= link_to 'Edit', edit_admin_questionnaires_questionnaire_path(questionnaire) %></td>
-            <% end %>
+              <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
 
-            <% if can? :delete, questionnaire %>
-            <td><%= link_to 'Destroy', questionnaire, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-            <% end %>
-          </tr>
-        <% end %>
+              <%= get_link questionnaire, :destroy, wrap_tag: 'td' %>
+            </tr>
+          <% end %>
         </table>
       </div>
     </div>
   <% end %>
 </div>
 
-<br />
-
-<% if can? :create, Admin::Questionnaires::Questionnaire %>
-  <p>You can create a questionnaire for a show by going to the admin page for that show, and clicking "Add Questionnaire"</p>
-<% end %>
+<%= get_link Admin::Questionnaires::Questionnaire, :new %>
+<%= get_link Admin::Questionnaires::QuestionnaireTemplate, :index %>

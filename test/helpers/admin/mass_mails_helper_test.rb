@@ -1,3 +1,5 @@
+require 'test_helper'
+
 class Admin::MassMailsHelperTest < ActionView::TestCase
   setup do
     @mass_mail = FactoryBot.create :draft_mass_mail

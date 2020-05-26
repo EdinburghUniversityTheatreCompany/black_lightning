@@ -4,7 +4,7 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
   setup do
     @show = FactoryBot.create(:show)
 
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
   end
 
   test 'should get index' do
@@ -31,8 +31,9 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
   end
 
   test 'should create admin_feedback without read permission' do
-    #skip 'Setting the sign up permissions is very hard'
     sign_in FactoryBot.create(:member)
+
+    permission = Admin::Permission.create(action: :create, subject_class: 'Admin::Feedback', roles: Role.where(name: 'member'))
 
     @feedback = FactoryBot.attributes_for(:feedback, show: nil)
 
@@ -41,6 +42,8 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to admin_show_path(@show)
+
+    permission.destroy
   end
 
   test 'should not create admin_feedback that is invalid' do

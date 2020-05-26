@@ -29,11 +29,14 @@ class User < ApplicationRecord
   before_save :unify_numbers
   rolify
 
-  default_scope -> { order('last_name ASC') }
-
-  def self.by_first_name
-    unscoped.order('first_name ASC')
-  end
+  ###############
+  # Permissions
+  ###############
+  # Users have an additional permission called view_public_profile.
+  # If an user has this permission, they can see the bio, avatar, and shows of the user they have the permission for.
+  # It allows you to keep read for people who can see ALL info, including email and phone number.
+  # Guests have :view_public_profile for all users who have set public_profile to true
+  ##############
 
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
@@ -45,10 +48,8 @@ class User < ApplicationRecord
          :recoverable, :rememberable, :validatable
 
   # set our own validations
-
-  # Don't validate the password presence, so we can set it randomly for new users.
-  # validates :password, :presence => true, :if => lambda { new_record? || !password.nil? || !password.blank? }
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
+  validates :email, presence: true
 
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
@@ -66,27 +67,48 @@ class User < ApplicationRecord
                     styles: { thumb: '150x150', display: '700x700' },
                     convert_options: { thumb: '-strip' }
 
-  ##
+  default_scope -> { order('last_name ASC') }
+
+  def self.by_first_name
+    unscoped.order('first_name ASC')
+  end
+
+  def ability
+    @ability ||= Ability.new(self)
+  end
+
+  delegate :can?, :cannot?, to: :ability
+
+  # Returns true if the users first_name and last_name are set.
+  def name?
+    return first_name.present? && last_name.present?
+  end
+
   # A quick way of getting the user's full name.
-  ##
-  def name
-    "#{first_name} #{last_name}"
+  def name_or_default
+    return "#{first_name} #{last_name}" if name?
+
+    return 'No Name Set'
   end
 
-  ransacker :full_name do |parent|
-    Arel::Nodes::NamedFunction.new('concat_ws', [Arel::Nodes.build_quoted(' '), parent.table[:first_name], parent.table[:last_name]])
-  end
-
-  ##
-  # A quick way to get the user's full name, if they have a name, or their email
-  ##
+  # A quick way to get the user's full name, if they have a name, or their email.
+  # Does not check for permissions.
   def name_or_email
-    name.presence || email
+    return name_or_default if name?
+
+    return email
   end
 
-  ##
+  # Returns the name if present, and the email if the user has the permission.
+  def name(current_user = nil)
+    if current_user.present? && current_user.can?(:show, self)
+      return name_or_email
+    else
+      return name_or_default
+    end
+  end
+
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
-  ##
   def unify_numbers
     return unless phone_number
 
@@ -97,15 +119,19 @@ class User < ApplicationRecord
     end
   end
 
+  ransacker :full_name do |parent|
+    Arel::Nodes::NamedFunction.new('concat_ws', [Arel::Nodes.build_quoted(' '), parent.table[:first_name], parent.table[:last_name]])
+  end
+
   ##
   # Creates a new user using the given params (e.g):
-  #   User.create_user(params[:user])
+  #   User.new_user(params[:user])
   #
   # Generates a random password for the user if none is given.
   #
   # Will not save the new user.
   ##
-  def self.create_user(params)
+  def self.new_user(params)
     user = User.new(params)
 
     unless user.password
@@ -118,95 +144,58 @@ class User < ApplicationRecord
     return user
   end
 
-  # def ldap_before_save
-  #   self.first_name = ldap_entry.givenName[0]
-  #   self.last_name = ldap_entry.sn[0]
-  #   self.email = ldap_entry.mail[0]
-  # end
-
-  # def after_ldap_authentication
-  #   update_ldap_attributes
-  # end
-
-  # # Read LDAP attributes and roles, and map them to Black Lightning attributes
-  # # and roles.
-  # def update_ldap_attributes
-  #   if ldap_entry
-  #     puts "updating #{username}"
-  #     self.first_name = ldap_entry.givenName[0]
-  #     self.last_name = ldap_entry.sn[0]
-  #     self.email = ldap_entry.mail[0]
-
-  #     if ldap_entry.try(:telephoneNumber)
-  #       self.phone_number = ldap_entry.telephoneNumber[0]
-  #     end
-
-  #     add_ldap_roles
-
-  #     save!
-  #   else
-  #     puts "skipping #{name}"
-  #   end
-  # end
-
-  # def add_ldap_roles
-  #   ldap_group_names = ldap_groups.map { |dn| role_name_from_dn(dn) }
-
-  #   self.roles = Role.where(name: ldap_group_names)
-  # end
-
-  # # For legacy reasons, some names are explicity mapped here:
-  # # New roles should be added to IPA in lower case with hyphens (e.g. marketing-manager)
-  # # and added to the website in title case (e.g Marketing Manager)
-  # def role_name_from_dn(dn)
-  #   group_name = dn.split(',')[0].gsub('cn=', '').gsub('-', ' ')
-
-  #   case group_name
-  #   when 'members'
-  #     return 'member'
-  #   when 'admins'
-  #     return 'admin'
-  #   when 'proposal viewer'
-  #     return 'proposal_viewer'
-  #   else
-  #     group_name.titleize
-  #   end
-  # end
-
-  # # Override Devise LDAP method, as it doesn't seem to work properly
-  # def ldap_groups
-  #   admin_ldap = Devise::LDAP::Connection.admin
-  #   filter = Net::LDAP::Filter.eq('member', ldap_entry.dn)
-  #   admin_ldap.search(filter: filter, base: 'cn=groups,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk').collect(&:dn)
-  # end
-
-  ##
-  # Returns true if the users first_name and last_name are set
-  ##
-  def has_basic_details?
-    return !first_name.blank? && !last_name.blank?
+  # The current and upcoming function share code, so please check them both if you change things.
+  def debt_causing_maintenance_debts(on_date = Date.today)
+    return Admin::MaintenanceDebt.where(user: self).where('due_by < ?', on_date).uncompleted
   end
 
-  #returns true if the user is in debt
-  def in_debt(on_date = Date.today)
-    maintenance_debts = admin_maintenance_debts.where('due_by <?', on_date)
-    return true if maintenance_debts.any? { |debt| debt.status(on_date) == :causing_debt }
+  def upcoming_maintenance_debts(from_date = Date.today)
+    return Admin::MaintenanceDebt.where(user: self).where('due_by >= ?', from_date).uncompleted
+  end
 
-    staffing_debts = self.admin_staffing_debts.where('due_by <?', on_date)
-    return staffing_debts.any? { |debt| debt.status(on_date) == :causing_debt }
+  def debt_causing_staffing_debts(on_date = Date.today)
+    return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by < ?', on_date).where(admin_staffing_job: nil, forgiven: false)
+  end
+
+  def upcoming_staffing_debts(from_date = Date.today)
+    return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by >= ?', from_date).where(admin_staffing_job: nil, forgiven: false)
+  end
+
+  def debt_message_suffix(on_date = Date.today)
+    in_maintenance_debt = debt_causing_maintenance_debts(on_date).any?
+    in_staffing_debt = debt_causing_staffing_debts(on_date).any?
+
+    if in_maintenance_debt && in_staffing_debt
+      return 'in staffing and maintenance Debt'
+    elsif in_maintenance_debt
+      return 'in maintenance Debt'
+    elsif in_staffing_debt
+      return 'in staffing Debt'
+    else
+      return 'not in Debt'
+    end
+  end
+
+  # Returns true if the user is in debt
+  # Rename to in debt?
+  def in_debt(on_date = Date.today)
+    return debt_causing_maintenance_debts(on_date).any? || debt_causing_staffing_debts(on_date).any?
   end
 
   def self.in_debt(on_date = Date.today)
-    in_debt_ids = self.find_each.map{ |user| user.in_debt(on_date) ? user.id : nil }
-    return self.where(id: in_debt_ids)
+    in_debt_ids = find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
+    return where(id: in_debt_ids)
   end
 
+  # returns users who have been sent a notification since the given date
   def self.notified_since(date)
-    # returns users who have been sent a notification since the given date
-    return self.includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on > ?', date).references(:admin_debt_notifications).distinct
+    return includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on > ?', date).references(:admin_debt_notifications).distinct
   end
 
-  def self.search_for(first_name, last_name)
-    return self.where("first_name LIKE ? AND last_name LIKE ?", "%#{first_name}%", "%#{last_name}%")
+  # Note: This function does not have any regard for permissions.
+  def team_memberships(public_only)
+    team_memberships = team_membership.where(teamwork_type: 'Event')
+    team_memberships = team_memberships.select { |event| event.teamwork.is_public } if public_only
+    return team_memberships.sort { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
   end
 end

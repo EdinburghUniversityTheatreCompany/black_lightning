@@ -1,0 +1,12 @@
+<div class="carousel">
+  <!-- Carousel items -->
+  <div class="carousel-inner">
+    <div class="active item">
+      <%= image_tag event.image.url(:slideshow) %>
+      <div class="carousel-caption">
+        <h1><%= event.name %></h1>
+        <p> <%= event.tagline %>
+      </div>
+    </div>
+  </div>
+</div>

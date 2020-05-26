@@ -1,0 +1,14 @@
+<% if f.object.question %>
+  <div class="question control-group fields <%= "error" if (f.error(:answer).present?) %>">
+      <%= f.label :answer, render_markdown(f.object.question.question_text) %>
+
+      <%= f.input_field :question_id, value: f.object.question.id, as: :hidden %>
+
+      <p>
+        <%= render '/shared/form/answer_field', f: f %>
+      </p>
+      
+      <%= f.error :answer %>
+      <hr />
+  </div>
+<% end %>

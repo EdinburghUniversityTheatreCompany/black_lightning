@@ -1,7 +1,3 @@
-
-<% postfix = (current_user.in_debt)? "in Debt": "not in Debt" %>
-<h3> <%= "You are #{postfix}" %></h3>
-
-<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: current_user.id), class: 'btn' %>
-<br><br>
-<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: current_user.id), class: 'btn' %>
+<% @user = current_user %>
+<% @message = "You are #{@user.debt_message_suffix}" %>
+<%= render file: '/admin/debts/show.html.erb', locals: { header_size: 3, header_is_link: true} %>

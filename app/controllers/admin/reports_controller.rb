@@ -2,43 +2,50 @@
 # Defines reports that may be downloaded in XLSX format, using axlsx.
 ##
 class Admin::ReportsController < AdminController
+  before_action :authorization
+
+  # If you add a report, please also edit the reports helper to update the list of reports.
+
   ##
   # GET /admin/reports
   ##
   def index
+    @title = 'Reports'
   end
 
   ##
   # A report containing a list of all users, and lists of users in each role.
+  #
+  # PUT /admin/reports/roles
   ##
   def roles
-    report = ::Reports::RolesReport.new
+    report = RolesReport.new
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_path, notice: 'The report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: 'The roles report will be emailed to you when it is ready.'
   end
 
   ##
   # A report containing a list of all members.
   ##
   def members
-    report = ::Reports::MembershipReport.new
+    report = MembershipReport.new
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_path, notice: 'The report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: 'The members report will be emailed to you when it is ready.'
   end
 
   ##
   # A report containing all the entries in the NewsletterSubscriber model.
   ##
   def newsletter_subscribers
-    report = ::Reports::NewsletterSubscribersReport.new
+    report = NewsletterSubscribersReport.new
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_path, notice: 'The report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: 'The subscribers report will be emailed to you when it is ready.'
   end
 
   ##
@@ -55,10 +62,16 @@ class Admin::ReportsController < AdminController
     start_year = params[:first_year] || 1.years.ago.year
     end_year   = params[:end_year]   || 1.years.since.year
 
-    report = ::Reports::StaffingReport.new(start_year, end_year)
+    report = StaffingReport.new(start_year, end_year)
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_path, notice: 'The report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: 'The staffing report will be emailed to you when it is ready.'
+  end
+
+  private
+
+  def authorization
+    authorize! :read, 'reports'
   end
 end

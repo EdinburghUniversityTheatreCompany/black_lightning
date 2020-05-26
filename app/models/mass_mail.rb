@@ -5,26 +5,36 @@ class MassMail < ApplicationRecord
   belongs_to :sender, class_name: 'User'
   has_and_belongs_to_many :recipients, class_name: 'User'
 
+  before_destroy :check_if_mail_has_been_sent
+
   def send_date_is_not_in_the_past
     errors.add(:send_date, 'cannot be in the past') if send_date_is_in_the_past?
   end
 
   def prepare_send!
-    raise(Exceptions::MassMail::NoRecipients.new('There are no recipients')) if recipients.nil? || recipients.empty?
-    raise(Exceptions::MassMail::NoSender.new('There is no sender')) if sender.nil?
-    raise(Exceptions::MassMail::AlreadySent.new('The mass mail has already been send')) unless draft
+    raise(Exceptions::MassMail::NoRecipients, 'There are no recipients') if recipients.nil? || recipients.empty?
+    raise(Exceptions::MassMail::NoSender, 'There is no sender') if sender.nil?
+    raise(Exceptions::MassMail::AlreadySent, 'The mass mail has already been send') unless draft
 
-    raise ActiveRecord::InvalidRecord.new(self) if invalid?
-
-    update draft: false
+    raise ActiveRecord::RecordInvalid.new(self) if invalid?
 
     send!
+
+    # Cannot save because the object cannot be saved when draft is false to prevent editing it.
+    update(draft: false)
   end
 
   private
 
   def send_date_is_in_the_past?
     return !send_date.present? || (send_date.present? && send_date < DateTime.now)
+  end
+
+  def check_if_mail_has_been_sent
+    return if draft
+
+    errors.add(:destroy, "The mass mail \"#{subject}\" has already been send.")
+    throw(:abort)
   end
 
   def send!

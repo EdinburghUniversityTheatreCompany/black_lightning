@@ -3,17 +3,19 @@
 ##
 module Admin::ReportsHelper
   ##
-  # Retrieves a list of all reports defined in Admin::ReportsController.
+  # Defines all existing reports Admin::ReportsController.
   ##
   def list_reports
-    reports = Admin::ReportsController.action_methods
-    reports = reports.map(&:to_s)
-    reports.delete('index')
-    reports.delete('authorize_backend!')
-    reports.delete('set_globals')
-    reports.delete('report_500')
-    reports.delete('options')
+    # action: name
+    return {
+      roles: 'Roles',
+      members: 'Members',
+      newsletter_subscribers: 'Newsletter Subscribers',
+      staffing: 'Staffing'
+    }
+  end
 
-    return reports
+  def get_report_link(report, report_name)
+    return link_to report_name, url_for(['admin_reports', report]), method: :put
   end
 end

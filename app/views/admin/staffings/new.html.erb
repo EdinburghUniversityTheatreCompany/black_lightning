@@ -1,3 +1,56 @@
-<h1>New admin_staffing</h1>
+<h1><%= @title = 'New Staffing' %></h1>
 
-<%= render 'form' %>
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/staffing_templates.js" %>
+<% end %>
+
+<%= simple_nested_form_for @staffing do |f| %>
+  <%= f.error_notification %>
+  
+  <div class="form-inputs">
+    <%= render 'form_base', f: f %>
+		
+    <div id="dates_container" class="well form-horizontal">	
+      <h3>Dates</h3>	
+      <script type="text/javascript">	
+        $(function () {
+          var counter = 0;
+          $('#add_date').click(function () {
+            var item = $('#date_blueprint').clone();
+            $(item).show();
+            $(item).removeAttr('id');
+            
+            types = ['start', 'end']
+            subdivisions = ['day', 'month', 'year', 'hour', 'minute']
+              
+            for (i = 0; i < types.length; i++) {
+              for (j = 0; j < subdivisions.length; j++) {
+                item.find('select[name*="' + types[i] + '[' + subdivisions[j] + '"]').attr('name', types[i] + '_times[' + counter + '][' + subdivisions[j] + ']');
+              }
+            }
+
+            item.find('a').click(function () {	
+              $(item).remove();	
+            });	
+            counter++;	
+  
+            $('#add_date').before(item);	
+          });	
+        });	
+      </script>	
+      <a id="add_date" class="btn"><i class="fa fa-plus" aria-hidden=”true”></i> Add Date</a>
+    </div>
+  </div>
+  
+  <div class="form-actions">
+    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
+    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
+  </div>
+<% end %>
+
+<%= render '/shared/form/template_modal', header: 'Select Jobs from Template', template_model: Admin::StaffingTemplate %>
+
+<div id="date_blueprint" style="display: none" class="control-group datetime">
+  <%= select_datetime(@default_start_time, { prefix: "start" } ) %> to <%= select_time(@default_end_time, prefix: "end")%>
+  <a class="btn btn-danger"><%= remove_button_text %></a>
+</div>

@@ -19,7 +19,7 @@ FactoryBot.define do
     end
 
     after(:create) do |staffing_template, evaluator|
-      FactoryBot.create_list(:staffing_job, evaluator.job_count, staffable: staffing_template)
+      FactoryBot.create_list(:unstaffed_staffing_job, evaluator.job_count, staffable: staffing_template)
     end
   end
 end

@@ -1,6 +1,3 @@
-<% @title = 'Role Details' %>
+<h1><%= @title %></h1>
 
-<h1><%= @role.name %></h1>
-
-<% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
-<%= link_to edit_text, edit_admin_role_path(@role.id), class: 'btn'%>
+<%= render '/shared/show_actions', object: @role %>

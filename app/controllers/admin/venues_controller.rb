@@ -10,8 +10,8 @@ class Admin::VenuesController < AdminController
   # GET /venues.json
   ##
   def index
-    @venues = Venue.all
     @title = 'Venues'
+
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }
@@ -24,8 +24,8 @@ class Admin::VenuesController < AdminController
   # GET /venues/1.json
   ##
   def show
-    @venue = Venue.find(params[:id])
     @title = @venue.name
+
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @venue }
@@ -38,8 +38,8 @@ class Admin::VenuesController < AdminController
   # GET /venues/new.json
   ##
   def new
-    @venue = Venue.new
-    @title = 'New Venue'
+    # Title is set by the view.
+
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @venue }
@@ -50,8 +50,7 @@ class Admin::VenuesController < AdminController
   # GET /venues/1/edit
   ##
   def edit
-    @venue = Venue.find(params[:id])
-    @title = "Editing #{@venue.name}"
+    # Title is set by the view.
   end
 
   ##
@@ -60,14 +59,12 @@ class Admin::VenuesController < AdminController
   # POST /venues.json
   ##
   def create
-    @venue = Venue.new(venue_params)
-
     respond_to do |format|
       if @venue.save
         format.html { redirect_to admin_venue_path(@venue), notice: 'Venue was successfully created.' }
         format.json { render json: @venue, status: :created, location: @venue }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @venue.errors, status: :unprocessable_entity }
       end
     end
@@ -79,14 +76,12 @@ class Admin::VenuesController < AdminController
   # PUT /venues/1.json
   ##
   def update
-    @venue = Venue.find(params[:id])
-
     respond_to do |format|
-      if @venue.update_attributes(venue_params)
+      if @venue.update(venue_params)
         format.html { redirect_to admin_venue_path(@venue), notice: 'Venue was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @venue.errors, status: :unprocessable_entity }
       end
     end
@@ -98,8 +93,7 @@ class Admin::VenuesController < AdminController
   # DELETE /venues/1.json
   ##
   def destroy
-    @venue = Venue.find(params[:id])
-    @venue.destroy
+    helpers.destroy_with_flash_message(@venue)
 
     respond_to do |format|
       format.html { redirect_to admin_venues_url }
@@ -108,8 +102,9 @@ class Admin::VenuesController < AdminController
   end
 
   private
+
   def venue_params
     params.require(:venue).permit(:description, :image, :location, :name, :tagline,
-                                  pictures_attributes: [:id, :_destroy, :description, :image])
+                                  pictures_attributes: %I[id _destroy description image])
   end
 end

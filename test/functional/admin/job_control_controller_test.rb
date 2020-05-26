@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::JobControlControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryBot.create(:admin)
+    sign_in users(:admin)
 
     # Turn on delayed jobs to test they can be removed and reset.
     Delayed::Worker.delay_jobs = true

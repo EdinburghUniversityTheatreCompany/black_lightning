@@ -1,14 +1,5 @@
-<h3>Resources</h3>
-<p><%= link_to 'Membership Checker', admin_resources_path('membership_checker') %></p>
+<h3><%= link_to 'Resources', admin_resources_path %></h3>
 
-<p><%= link_to 'Archive', admin_resources_path('archive') %></p>
-<p><%= link_to 'Business', admin_resources_path('business') %></p>
-<p><%= link_to 'Constitution and Production Guidelines', admin_resources_path('constitution_and_production_guidelines') %></p>
-<p><%= link_to 'Library', admin_resources_path('library') %></p>
-<p><%= link_to 'Marketing', admin_resources_path('marketing') %></p>
-<p><%= link_to 'Secretary', admin_resources_path('secretary') %></p>
-<p><%= link_to 'Stage, Set and Wardrobe', admin_resources_path('stage_set_and_wardrobe') %></p>
-<p><%= link_to 'Tech', admin_resources_path('tech') %></p>
-<p><%= link_to 'Miscellaneous', admin_resources_path('miscellaneous') %>
-<p><%= link_to 'Production Schedule',admin_resources_path('production_schedule') %></p>
-<p><%= link_to 'Proposals Archive', archives_proposals_index_path %></p>
+<% get_subpages('admin/resources/', '').each do |page| %>
+  <p><%= get_subpage_link(page, 'admin/resources') %></p>
+<% end %>

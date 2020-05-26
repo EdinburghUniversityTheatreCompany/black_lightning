@@ -1,0 +1,7 @@
+<dl class="cast-crew-list">
+  <% team_members.each do |team_member| %>
+    <dt><b><%= team_member&.position %></b></dt>
+
+    <dd><%= user_link(team_member&.user, true) %></dd>
+  <% end %>
+</dl>

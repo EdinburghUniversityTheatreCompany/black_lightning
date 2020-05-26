@@ -17,11 +17,16 @@
 #++
 ##
 class Admin::StaffingJob < ApplicationRecord
+  validates :name, presence: true
+
   belongs_to :staffable, polymorphic: true
   belongs_to :user
-  has_one :staffing_debt, :class_name => 'Admin::StaffingDebt', :foreign_key => 'admin_staffing_job_id'
+  has_one :staffing_debt, class_name: 'Admin::StaffingDebt', foreign_key: 'admin_staffing_job_id'
 
-  validates :name, presence: true
+  after_save :associate_staffing_job_with_oldest_outstanding_debt
+
+  # The functions that use staffable don't check if it's a staffing instead of a template.
+  # They should just hard-fail when the staffable is a template. That situation should simply not occur.
 
   ##
   # Get the start time in a js friendly fashion (UTC)
@@ -38,6 +43,43 @@ class Admin::StaffingJob < ApplicationRecord
   end
 
   def completed?
-    return self.staffable.end_time < DateTime.now
+    return staffable.end_time < DateTime.now
+  end
+
+  def counts_towards_debt?
+    return staffable.present? && staffable.counts_towards_debt? && name != 'Committee Rep'
+  end
+
+  def self.unassociated_staffing_jobs_that_count_towards_debt
+    # Returns the staffing jobs that are not associated with any debt and count towards staffing.
+
+    staffing_jobs = all.joins('LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id').where('admin_staffing_debts.admin_staffing_job_id IS null')
+    ids = staffing_jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
+
+    return all.where(id: ids)
+  end
+
+  private
+
+  def associate_staffing_job_with_oldest_outstanding_debt
+    # If the staffing job is associated with a template, do not try to associate the staffing_job with a debt.
+    # Check if the staffing job counts towards staffing and return if it does not.
+    return if (self.staffable.is_a?(Admin::StaffingTemplate) || !self.counts_towards_debt?)
+
+    # If the new user is nil, there can be no associated staffing_debt, so set it to nil.
+    # Setting the user to nil does not always set user_id_changed to true, so this check takes place here.
+    if !self.user.present?
+      self.staffing_debt = nil
+      return
+    # Only check for outstanding debt if the user has changed.
+    elsif user_id_changed?
+      debts = Admin::StaffingDebt.where(user_id: user_id, admin_staffing_job: nil).unfulfilled.order(:due_by)
+      if debts.empty?
+        # If the user changed and there are no debts found, it should not stay associated with the old debt.
+        self.staffing_debt = nil
+      else
+        self.staffing_debt = debts.first
+      end
+    end
   end
 end

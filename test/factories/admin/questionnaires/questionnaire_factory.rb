@@ -17,7 +17,7 @@ FactoryBot.define do
     show
 
     after(:create) do |questionnaire, _evaluator|
-      questions = FactoryBot.create_list(:question, 10, questionable: questionnaire, answerable: questionnaire)
+      questions = FactoryBot.create_list(:question, 10, questionable: questionnaire)
     end
   end
 end

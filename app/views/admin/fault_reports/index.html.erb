@@ -1,54 +1,47 @@
-<% @title = 'Fault Reports' %>
-
-<h1>Fault Reports</h1>
+<h1><%= @title %></h1>
 
 <%= display_block("Fault Reports", true) %>
 
 <br />
 <br />
 
-<table class="table table-hover">
-  <tr>
-    <th>Item</th>
-    <th>Severity</th>
-    <th>Status</th>
-    <th>Reported by</th>
-    <th>Date reported</th>
-    <th>Last updated</th>
-    <% if can? :edit, FaultReport %>
-    <th></th>
-    <% end %>
+<% if @fault_reports.empty? %>
+  <p>HAL could not find any fault reports.</p>
+<% else %>
+  <table class="table table-hover">
+    <tr>
+      <th>Item</th>
+      <th>Severity</th>
+      <th>Status</th>
+      <th>Reported by</th>
+      <th>Date reported</th>
+      <th>Last updated</th>
 
-    <% if can? :delete, FaultReport %>
-    <th></th>
-    <% end %>
-  </tr>
+      <% if can? :edit, FaultReport %>
+        <th></th>
+      <% end %>
 
-<% @fault_reports.each do |fault_report| %>
-  <tr class="<%= fault_report_css_class(fault_report) %>">
-    <td><%= link_to fault_report.item, admin_fault_report_path(fault_report) %></td>
-    <td><%= fault_report.severity.humanize %></td>
-    <td><%= fault_report.status.humanize %></td>
-    <td><%= fault_report.reported_by_name %></td>
-    <td><%= l fault_report.created_at, format: :short %></td>
-    <td><%= l fault_report.updated_at, format: :short %></td>
+      <% if can? :delete, FaultReport %>
+        <th></th>
+      <% end %>
+    </tr>
 
-    <% if can? :edit, fault_report %>
-    <td><%= link_to 'Edit', edit_admin_fault_report_path(fault_report) %></td>
-    <% end %>
+    <% @fault_reports.each do |fault_report| %>
+      <tr class="<%= fault_report.css_class %>">
+        <td><%= link_to fault_report.item, admin_fault_report_path(fault_report) %></td>
+        <td><%= fault_report.severity.humanize %></td>
+        <td><%= fault_report.status.humanize %></td>
+        <td><%= fault_report.reported_by_name %></td>
+        <td><%= l fault_report.created_at, format: :short %></td>
+        <td><%= l fault_report.updated_at, format: :short %></td>
 
-    <% if can? :delete, fault_report %>
-   <td><%= link_to 'Destroy', admin_fault_report_path(fault_report), method: :delete, data: { "confirm" => "Deleting #{fault_report.item}",
-                                                                           "detail"  => "Are you sure you wish to continue?" } %></td>
+        <%= get_link fault_report, :edit, wrap_tag: 'td' %>
+        <%= get_link fault_report, :destroy, wrap_tag: 'td' %>
+      </tr>
     <% end %>
-  </tr>
+  </table>
+
+  <%= will_paginate(@fault_reports) %>
 <% end %>
-</table>
 
-<%= will_paginate(@fault_reports) %>
-
-<% if can? :create, FaultReport %>
-  <%= link_to new_admin_fault_report_path, :class => 'btn' do %>
-    <i class="fa fa-plus"></i> New Fault Report
-  <% end %>
-<% end %>
+<%= get_link FaultReport, :new %>

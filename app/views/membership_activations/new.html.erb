@@ -1,4 +1,6 @@
 <%= simple_form_for(@user, url: membership_activations_path) do |f| %>
+    <%= f.error_notification %>
+
     <%= f.input :email %>
     <%= f.button :submit, "Send Activation" %>
 <% end %>
