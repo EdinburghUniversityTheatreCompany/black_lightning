@@ -29,6 +29,8 @@
 #
 
 class Show < Event
+  include ApplicationHelper
+  
   validates :author, :price, presence: true
 
   # Validate uniqueness on Event Subtype basis instead of on the event.
@@ -71,16 +73,13 @@ class Show < Event
 
   def as_json(options = {})
     defaults = {
-        include: [
-            :reviews
-        ]
+      include: [
+          :reviews
+      ]
     }
 
-    options = options.merge(defaults) do |_key, oldval, newval|
-      # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).distinct
-    end
-    
+    options = merge_hash(defaults, options)
+
     super(options)
   end
 end

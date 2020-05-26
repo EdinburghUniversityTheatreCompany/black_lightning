@@ -36,6 +36,8 @@
 
 class Event < ApplicationRecord
   include TimeHelper
+  include ApplicationHelper
+
   resourcify
 
   # Use the format slug for urls. e.g. /events/myshow
@@ -127,10 +129,7 @@ class Event < ApplicationRecord
       ]
     }
 
-    options = options.merge(defaults) do |_key, oldval, newval|
-      # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
-    end
+    options = merge_hash(defaults, options)
 
     super(options)
   end

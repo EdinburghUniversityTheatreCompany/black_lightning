@@ -64,4 +64,15 @@ class ShowTest < ActiveSupport::TestCase
 
     assert_equal 4, user.admin_staffing_debts.count
   end
+
+  test 'as_json' do
+    show = FactoryBot.create(:show, venue: venues(:one), season: FactoryBot.create(:season))
+
+    json = show.as_json(include: [:season])
+
+    assert json.is_a? Hash
+    assert json.key? 'venue'
+    assert json.key? 'season'
+    assert json.key? 'reviews'
+  end
 end

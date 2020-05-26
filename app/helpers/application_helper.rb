@@ -24,7 +24,7 @@ module ApplicationHelper
     end
   end
 
-  # It's a bit hacky, but it works. 
+  # It's a bit hacky, but it works.
   # Used by the error pages to decide the layout to use
   # Cannot be unit tested because a request needs to be present :/
   # It does not really matter if it renders the wrong layout though.
@@ -45,7 +45,14 @@ module ApplicationHelper
     end
   end
 
-  # These probably should live somewhere else
+  def merge_hash(a, b)
+    return a.merge(b) do |_key, oldval, newval|
+      # http://stackoverflow.com/a/11171921
+      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
+    end
+  end
+
+  # These should probably live somewhere else
 
   def xts_widget(xts_id)
     "<div id='tickets-#{xts_id}' class='xtsprodates'></div>

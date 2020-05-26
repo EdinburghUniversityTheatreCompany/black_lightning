@@ -23,6 +23,10 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal ['', ''], html_alert_info(:pineapple)
   end
 
+  test 'current environment' do
+    skip 'I do not know how. Requires a request to be present.'
+  end
+
   test 'append to flash' do
     assert_nil flash[:error]
 
@@ -30,13 +34,34 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal flash[:error], ['Pineapple']
 
     append_to_flash(:error, 'Hexagon')
-    assert_equal flash[:error], ['Pineapple', 'Hexagon']
+    assert_equal flash[:error], %w[Pineapple Hexagon]
 
     flash[:error] = 'Viking'
     assert_equal flash[:error], 'Viking'
 
     append_to_flash(:error, 'Donkey')
-    assert_equal flash[:error], ['Viking', 'Donkey']
+    assert_equal flash[:error], %w[Viking Donkey]
+  end
+
+  test 'merge hash' do
+    a = {
+      ingredients: [:pineapple],
+      jobs: [:chef]
+    }
+
+    b = {
+      ingredients: [:cheese, :pineapple],
+      jobs: [:techie],
+      lead: 'Finbar the Viking'
+    }
+
+    result = {
+      ingredients: [:pineapple, :cheese],
+      jobs: [:chef, :techie],
+      lead: 'Finbar the Viking'
+    }
+
+    assert_equal result, merge_hash(a, b)
   end
 
   test 'Get xts_widget' do
