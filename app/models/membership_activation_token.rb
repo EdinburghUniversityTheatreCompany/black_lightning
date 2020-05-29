@@ -1,13 +1,13 @@
 require 'securerandom'
+
 class MembershipActivationToken < ApplicationRecord
   belongs_to :user
   before_validation :generate_token
 
-  validates :token, presence: true
+  validates :token, uniqueness: true, presence: true
 
-  def to_param
-    token
-  end
+  # Manage means creating in this case, but there are two types of creation. There is nothing to read, and everyone can activate.
+  DISABLED_PERMISSIONS = %w[create read update].freeze
 
   private
 
