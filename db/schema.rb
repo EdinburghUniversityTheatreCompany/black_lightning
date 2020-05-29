@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20200320112531) do
+ActiveRecord::Schema.define(version: 20200522122350) do
 
   create_table "admin_answers", force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci" do |t|
     t.integer  "question_id"
@@ -85,12 +85,12 @@ ActiveRecord::Schema.define(version: 20200320112531) do
   end
 
   create_table "admin_proposals_calls", force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci" do |t|
-    t.datetime "deadline"
+    t.datetime "submission_deadline"
     t.string   "name"
-    t.boolean  "open"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.datetime "created_at",          null: false
+    t.datetime "updated_at",          null: false
     t.boolean  "archived"
+    t.datetime "editing_deadline"
   end
 
   create_table "admin_proposals_proposals", force: :cascade, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci" do |t|
