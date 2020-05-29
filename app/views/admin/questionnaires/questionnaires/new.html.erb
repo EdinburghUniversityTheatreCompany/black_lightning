@@ -1,3 +1,3 @@
-<h1><%= @title = "Editing #{@questionnaire.name} for #{@questionnaire.show.name}" %></h1>
+<h1><%= @title = "New Questionnaire#{" for #{@show.name}" if @show.present?}" %></h1>
 
 <%= render 'form' %>
