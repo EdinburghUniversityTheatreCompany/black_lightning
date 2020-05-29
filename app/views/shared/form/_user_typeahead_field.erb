@@ -4,6 +4,8 @@
 <% # Finally, you have to add a f.full_error :user_id tag. %>
 <% # The best example is probably the /shared/form/sections/_team_members %>
 
+<% # If you want to use this for just a single user relation, it's better to use _user_field (for example: setting the debtor on debt) %>
+
 <% insert_fields ||= [] %>
 
 <div class="no-such-user" style="display: none">

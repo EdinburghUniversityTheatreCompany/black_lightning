@@ -1,9 +1,15 @@
+<% all_users ||= false %>
+
 <div class="control-group fields <%= "error" if f.error(:user).present? %>">
   <%= f.label :user_id %>
   <%= render 'shared/form/user_typeahead_field', f: f %>
   <p><%= f.full_error :user %></p>
 
   <% content_for :head do %>
+    <% if all_users %>
+      <meta name="all-users" content="true" />
+    <% end %>
+
     <%= javascript_include_tag "admin/user_typeahead_field.js" %>
   <% end %>
 
