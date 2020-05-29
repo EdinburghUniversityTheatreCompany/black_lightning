@@ -1,4 +1,4 @@
-class MembershipActivationMailer < ActionMailer::Base
+class MembershipActivationTokenMailer < ActionMailer::Base
   default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
 
   def send_activation(email, token)
