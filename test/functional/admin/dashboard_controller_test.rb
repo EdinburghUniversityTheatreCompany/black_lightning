@@ -47,7 +47,7 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_widget_does_not_error 'proposals'
     assert_match 'There are no open proposal calls.', response.body
 
-    call = FactoryBot.create(:proposal_call, open: true)
+    call = FactoryBot.create(:proposal_call)
 
     assert_widget_does_not_error 'proposals'
     assert_match call.name, response.body

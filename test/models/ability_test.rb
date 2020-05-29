@@ -71,8 +71,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'test users have the correct permissions for users' do
-    allowed_actions = %I[show debt_status update edit destroy]
-    forbidden_actions = %I[index read create assign_roles check_membership]
+    allowed_actions = %I[show debt_status update edit]
+    forbidden_actions = %I[index read create assign_roles check_membership destroy]
 
     helper_test_actions(@user, 'itself', @ability, allowed_actions + [:view_public_profile], forbidden_actions)
 
