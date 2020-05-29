@@ -6,11 +6,6 @@ access_backend:
   action: access
   subject_class: backend
 
-read_proposals:
-  id: 2
-  action: read
-  subject_class: Admin::Proposals::Proposal
-
 # For testing the automatic dis-approving in the opportunity
 update_opportunities:
   id: 3
