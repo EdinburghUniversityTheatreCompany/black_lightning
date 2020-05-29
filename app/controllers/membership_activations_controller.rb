@@ -1,24 +1,4 @@
 class MembershipActivationsController < ApplicationController
-
-  def new
-    authorize! :create, MembershipActivationToken
-    @user = User.new
-  end
-
-  def create
-    authorize! :create, MembershipActivationToken
-    @user = User.find_by(email: params[:user][:email])
-
-    if @user.present?
-      token = MembershipActivationToken.create!(user: @user)
-    else
-      token = MembershipActivationToken.create!
-    end
-    MembershipActivationMailer.send_activation(params[:user][:email], token).deliver_now
-
-    redirect_to new_membership_activation_path, notice: 'Mail sent to member'
-  end
-
   def edit
     @token = MembershipActivationToken.find_by!(token: params[:id])
     @user = User.new

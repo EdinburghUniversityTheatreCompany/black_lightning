@@ -107,6 +107,13 @@ ChaosRails::Application.routes.draw do
     #   get 'generate_card'
     # end
 
+    resources :membership_activation_tokens, only: [:new] do
+      collection do
+        post 'create_activation', to: 'membership_activation_tokens#create_activation'
+        post 'create_reactivation', to: 'membership_activation_tokens#create_reactivation'
+      end
+    end
+
     resources :roles
     get  '/permissions/grid', to: 'permissions#grid', as: :permissions
     post '/permissions/grid', to: 'permissions#update_grid', as: :update_permissions
