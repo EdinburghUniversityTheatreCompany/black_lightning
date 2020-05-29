@@ -42,7 +42,7 @@ class Admin::PermissionsController < AdminController
 
     @models = ApplicationRecord.descendants + [Admin::Debt, Season] - [Event]
 
-    role_exclude = ['admin']
+    role_exclude = ['admin', 'Proposal Checker']
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all
   end
 end
