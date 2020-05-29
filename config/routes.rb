@@ -19,7 +19,14 @@ ChaosRails::Application.routes.draw do
   resources :venues,      only: [:index, :show]
   resources :seasons,     only: [:index, :show]
 
-  resources :membership_activations
+  resources :membership_activation_tokens, only: [] do
+    member do
+      get 'activate', to: 'membership_activation_tokens#activate'
+      put 'submit', to: 'membership_activation_tokens#submit'
+      patch 'submit', to: 'membership_activation_tokens#submit'
+    end
+  end
+
   resources :users, only: [:show] do
     collection do
       get 'current', to: 'users#current'
