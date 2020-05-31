@@ -1,0 +1,11 @@
+<% on_label ||= 'Public' %>
+<% off_label ||= 'Members Only' %>
+<% off_colour ||= 'info' %>
+
+<div class="control-group">
+  <%= f.label field_symbol %>
+
+  <div class="controls switch" data-on="success" data-on-label="<%= on_label %>" data-off="<%= off_colour %>" data-off-label="<%= off_label %>" style="width: 200px;">
+    <%= f.input_field field_symbol, boolean_style: :inline %>
+  </div>
+</div>

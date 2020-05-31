@@ -1,34 +1,29 @@
-<% @title = 'Roles' %>
+<h1><%= @title %></h1>
 
-<h1>Listing Roles</h1>
 <table class="table">
     <tbody>
         <tr>
             <th>Name</th>
-            <th></th>
-            <th></th>
+
+            <% if can? :edit, Role %>
+                <th></th>
+            <% end %>
+            
+            <% if can? :delete, Role %>
+                <th></th>
+            <% end %>
         </tr>
+
         <% @roles.each do |role| %>
-        <tr>
-            <td><%= role.name %></td>
+            <tr>
+                <%= get_link role, :show, wrap_tag: 'td' %>
 
-            <td>
-            <% if can? :edit, role %>
-            <%= link_to 'Edit', edit_admin_role_path(role) %>
-            <% end %>
-            </td>
+                <%= get_link role, :edit, wrap_tag: 'td' %>
 
-            <td>
-            <% if can? :delete, role %>
-            <%= link_to 'Destroy', admin_role_path(role), method: :delete, data: { confirm: 'Are you sure?' } %>
-            <% end %>
-            </td>
-        </tr>
+                <%= get_link role, :destroy, wrap_tag: 'td' %>
+            </tr>
         <% end %>
     </tbody>
 </table>
 
-<% if can? :create, Role %>
-  <% new_text = '<i class="fa fa-plus"></i> New Role'.html_safe %>
-  <%= link_to new_text, new_admin_role_path, :class => "btn" %>
-<% end %>
+<%= get_link Role, :new %>

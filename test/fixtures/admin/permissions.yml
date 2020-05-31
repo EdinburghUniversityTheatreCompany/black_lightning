@@ -1,6 +1,18 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
-one:
+# Automatically given to members and committee for convenience.
+access_backend:
   id: 1
   action: access
   subject_class: backend
+
+# For testing the automatic dis-approving in the opportunity
+update_opportunities:
+  id: 3
+  action: update
+  subject_class: Opportunity
+
+show_staffing:
+  id: 4
+  action: show
+  subject_class: Admin::Staffing

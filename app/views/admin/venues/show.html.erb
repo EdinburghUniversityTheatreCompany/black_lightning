@@ -1,4 +1,4 @@
-<p id="notice"><%= notice %></p>
+<h1><%= @title %></h1>
 
 <p>
   <b>Name:</b>
@@ -11,11 +11,6 @@
 </p>
 
 <p>
-  <b>Description:</b>
-  <%= @venue.description %>
-</p>
-
-<p>
   <b>Location:</b>
   <%= @venue.location %>
 </p>
@@ -25,6 +20,10 @@
   <%= image_tag @venue.image.url(:thumb) %>
 </p>
 
-<% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
-<%= link_to edit_text, edit_admin_venue_path(@venue), :class => "btn" %>
-<%= link_to 'Back', admin_venues_path, :class => "btn" %>
+<p>
+  <b>Description:</b>
+  <%= render_markdown @venue.description %>
+</p>
+
+<%= get_link @venue, :edit, html_class: 'btn btn-primary' %>
+<%= get_link Venue, :new, html_class: 'btn' %>

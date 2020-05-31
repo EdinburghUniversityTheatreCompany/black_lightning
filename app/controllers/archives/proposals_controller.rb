@@ -1,11 +1,9 @@
-class Archives::ProposalsController < ArchivesController
-  before_filter :authenticate_user!
-
+class Archives::ProposalsController < AdminController
   def index
-    @q = Admin::Proposals::Proposal.joins(:call)
-         .where(admin_proposals_calls: { archived: true }, approved: true)
-         .search(params[:q])
-    @proposals = @q.result(distinct: true)
-    @proposals = @proposals.group_by(&:call)
+    authorize! :index, Admin::Proposals::Proposal
+
+    @title = 'Proposal Archive'
+    @q = Admin::Proposals::Proposal.ransack(params[:q])
+    @proposals = @q.result(distinct: true).accessible_by(current_ability).reverse.group_by(&:call)
   end
 end

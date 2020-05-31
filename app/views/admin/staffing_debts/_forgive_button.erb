@@ -1,0 +1,6 @@
+<% if staffing_debt.status != :forgiven %>
+  <%= get_link staffing_debt, :destroy, link_text: 'Forgive', 
+               confirm: "Forgiving #{staffing_debt.user.name(current_user)}'s Debt",
+               detail: "If you forgive a Debt a FOH fairy dies#{' and the associated staffing job will be disassociated' if staffing_debt.admin_staffing_job.present?}."
+  %>
+<% end %>

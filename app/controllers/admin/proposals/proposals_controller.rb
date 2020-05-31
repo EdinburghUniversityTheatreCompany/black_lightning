@@ -3,54 +3,26 @@
 # ---
 # *IMPORTANT*
 #
-# Due to the complex nature of proposal permissions, each action may need to be authorized
-# in the controller method using the authorize! method.
-#
-# Failure to correctly do so will cause bad things to happen (kittens may die).
+# The proposal permissions are very carefully laid out in the ability.rb file.
+# Please be very very very careful when editing them, or kittens may die.
 ##
 class Admin::Proposals::ProposalsController < AdminController
   before_action :set_paper_trail_whodunnit
-  authorize_resource class: 'Admin::Proposals::Proposal'
+  load_and_authorize_resource class: Admin::Proposals::Proposal
 
   ##
-  # GET /admin/proposals/proposals
+  # GET /admin/proposals/calls/1/proposals
   #
-  # GET /admin/proposals/proposals.json
+  # GET /admin/proposals/calls/1/proposals.json
   ##
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-
-    if Time.now < @call.deadline
-      # Before the deadline, all users can only see proposals that they
-      # are part of.
-      if current_user.has_role? :proposal_viewer
-        @proposals = @call.proposals
-      else
-        @proposals = @call.proposals.joins(:users).where('user_id = ?', current_user.id).uniq
-      end
-    elsif !@call.archived
-      # After the deadline:
-      if current_user.has_role?(:committee) || current_user.has_role?(:proposal_viewer)
-        # Committee can see all proposals.
-        @proposals = @call.proposals
-      else
-        # Other users can only see proposals that they are part of, or
-        # that have been approved.
-        @proposals = @call.proposals.joins(:users).where('user_id = ? or approved = true', current_user.id).uniq
-      end
-    else
-      # for archived calls, only approved proposals may be seen:
-      @proposals = @call.proposals.where('approved = true').uniq
-    end
-
-    # However, admin can see all proposals at any time.
-    if current_user.has_role? :admin
-      @proposals = @call.proposals
-    end
+    @proposals = @proposals.where(call: @call)
+    @title = "Proposals for #{@call.name}"
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @admin_proposals_proposals }
+      format.json { render json: @proposals }
     end
   end
 
@@ -60,20 +32,15 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1.json
   ##
   def show
-    @admin_proposals_proposal = Admin::Proposals::Proposal.includes(answers: { question: {} }).find(params[:id])
-    @call = @admin_proposals_proposal.call
+    @title = @proposal.show_title
 
-    @title = @admin_proposals_proposal.show_title
+    @call = @proposal.call
 
-    authorize!(:read, @admin_proposals_proposal)
-
-    # This may look odd, but it is fine. Honest. (HB Jan 13)
-    @admin_proposals_proposal.update_answers
-    @admin_proposals_proposal.save
+    @proposal.instantiate_answers!
 
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render json: @admin_proposals_proposal }
+      format.json { render json: @proposal }
     end
   end
 
@@ -82,48 +49,20 @@ class Admin::Proposals::ProposalsController < AdminController
   #
   # GET /admin/proposals/proposals/new.json
   # ---
-  # Note that proposals created after the call's deadline will be marked as late here.
-  #
-  # It is also important that an Admin::Answer for each Admin::Question is created here.
   ##
   def new
     @call = Admin::Proposals::Call.find(params[:call_id])
 
-    unless @call.open
-      flash[:alert] = "Sorry. #{@call.name} isn't open yet. You cannot add a proposal for a closed call."
-      redirect_to admin_proposals_calls_path
-      return
-    end
+    return call_closed_message unless @call.open?
 
-    @proposal = Admin::Proposals::Proposal.new
     @proposal.call = @call
 
-    # Set a proposal as late if created after the call deadline:
-    if Time.now > @call.deadline
-      @proposal.late = true
-    end
-
-    @proposal.update_answers
+    @proposal.instantiate_answers!
 
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @proposal }
     end
-  end
-
-  ##
-  # GET /admin/proposals/proposals/1/edit
-  # ---
-  # Don't forget to re-read the call's Admin::Question s from here. Questions may have been created, so will need Admin::Answer s
-  ##
-  def edit
-    @proposal = Admin::Proposals::Proposal.includes(answers: { question: {} }).find(params[:id])
-    @call = @proposal.call
-
-    authorize!(:edit, @proposal)
-
-    @proposal.update_answers
-    @proposal.save
   end
 
   ##
@@ -134,40 +73,32 @@ class Admin::Proposals::ProposalsController < AdminController
   def create
     @call = Admin::Proposals::Call.find(params[:call_id])
 
-    unless @call.open
-      flash[:alert] = "Sorry. #{@call.name} isn't open yet. You cannot add a proposal for a closed call."
-      redirect_to admin_proposals_calls_path
-      return
-    end
-
-    @proposal = Admin::Proposals::Proposal.new(params[:admin_proposals_proposal])
+    return call_closed_message unless @call.open?
 
     @proposal.call = @call
 
-    # Set a proposal as late if created after the call deadline:
-    if Time.now > @call.deadline
-      @proposal.late = true
-    end
-
-
     respond_to do |format|
       if @proposal.save
-        # Send the new proposal mail. See ProposalsMailer for more details.
+        mail_team_members(@proposal.team_members, [])
 
-        @proposal.team_members.each do |team_member|
-          dj = ProposalsMailer.delay.new_proposal(@proposal, current_user, team_member)
-          dj.description = "Proposal Mailer - #{@proposal.show_title} - #{team_member.user.name}"
-          dj.save
-        end
-
+        flash[:success] = 'The proposal was successfully created.'
 
         format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
         format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @proposal.errors, status: :unprocessable_entity }
       end
     end
+  end
+
+  ##
+  # GET /admin/proposals/proposals/1/edit
+  ##
+  def edit
+    @call = @proposal.call
+
+    @proposal.instantiate_answers!
   end
 
   ##
@@ -176,17 +107,20 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1.json
   ##
   def update
-    @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
 
-    authorize!(:update, @proposal)
+    previous_team_member_ids = @proposal.team_member_ids
 
     respond_to do |format|
-      if @proposal.update_attributes(params[:admin_proposals_proposal])
-        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully updated.' }
+      if @proposal.update(proposal_params)
+        mail_team_members(@proposal.team_members, previous_team_member_ids)
+
+        flash[:success] = 'The proposal was successfully updated.'
+
+        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @proposal.errors, status: :unprocessable_entity }
       end
     end
@@ -198,11 +132,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # DELETE /admin/proposals/proposals/1.json
   ##
   def destroy
-    @admin_proposals_proposal = Admin::Proposals::Proposal.find(params[:id])
-
-    authorize!(:destory, @proposal)
-
-    @admin_proposals_proposal.destroy
+    helpers.destroy_with_flash_message(@proposal)
 
     respond_to do |format|
       format.html { redirect_to admin_proposals_call_proposals_url }
@@ -216,17 +146,15 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1/approve.json
   ##
   def approve
-    @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
-
-    authorize!(:approve, @proposal)
 
     @proposal.approved = true
     @proposal.save!
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as approved"
-      format.html { redirect_to admin_proposals_call_proposals_path(@call) }
+
+      format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
       format.json { head :no_content }
     end
   end
@@ -237,17 +165,15 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1/reject.json
   ##
   def reject
-    @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
-
-    authorize!(:reject, @proposal)
 
     @proposal.approved = false
     @proposal.save!
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as rejected"
-      format.html { redirect_to admin_proposals_call_proposals_path(@call) }
+
+      format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
       format.json { head :no_content }
     end
   end
@@ -261,15 +187,44 @@ class Admin::Proposals::ProposalsController < AdminController
     @proposal = Admin::Proposals::Proposal.find(params[:id])
     @call = @proposal.call
 
-    @proposal.convert_to_show
+    begin
+      @proposal.convert_to_show
 
-    respond_to do |format|
-      flash[:notice] = "#{@proposal.show_title} is queued to be converted."
-      format.html { redirect_to admin_proposals_call_proposals_path(@call) }
-      format.json { head :no_content }
+      flash[:notice] = "#{@proposal.show_title} is queued to be converted. Please remember to enter the rest of the show info and to publicise the show."
+    rescue ArgumentError => e
+      helpers.append_to_flash(:error, e.message)
+    ensure
+      respond_to do |format|
+        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
+        format.json { head :no_content }
+      end
     end
   end
 
   def about
+    # Renders a help page.
+  end
+
+  private
+
+  def call_closed_message
+    flash[:error] = "Sorry. The submission deadline for #{@call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call."
+    redirect_to admin_proposals_call_proposals_path(@call)
+    return
+  end
+
+  def mail_team_members(current_team_members, previous_team_member_ids)
+    # Send the new proposal mail. See ProposalsMailer for more details.
+    current_team_members.select { |id| previous_team_member_ids.exclude? id }.each do |team_member|
+      delayed_job = ProposalsMailer.delay.new_proposal(@proposal, current_user, team_member)
+      delayed_job.description = "Proposal Mailer - #{@proposal.show_title} - #{team_member.user.name_or_email}"
+      delayed_job.save
+    end
+  end
+
+  def proposal_params
+    params.require(:admin_proposals_proposal).permit(:proposal_text, :publicity_text, :show_title, :late, :approved, :successful,
+                                                     answers_attributes: %I[id _destroy answer question_id file],
+                                                     team_members_attributes: %I[id _destroy position user user_id proposal proposal_id])
   end
 end

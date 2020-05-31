@@ -1,19 +1,20 @@
 <h3><%= link_to 'Staffing', admin_staffings_path %></h3>
 
 <div style="height: 210px; overflow: hidden;">
-  <% upcoming_staffing = Admin::Staffing.future.first(5) %>
+  <% upcoming_staffing = Admin::Staffing.accessible_by(current_ability).future.order('start_time ASC').first(5) %>
+  
   <% upcoming_staffing.each do |staffing| %>
     <p>
-      <%= link_to (l staffing.start_time, :format => :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
+      <%= link_to (l staffing.start_time, format: :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
 
       <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
       <% if remaining_positions > 0 %>
-      <span class="badge badge-important pull-right" title="Remaining positions"><%= remaining_positions %></span>
+        <span class="badge badge-important pull-right" title="Remaining positions"><%= remaining_positions %></span>
       <% end %>
     </p>
   <% end %>
 
-  <% if upcoming_staffing.count == 0 then %>
+  <% if upcoming_staffing.empty? then %>
     <p>There are no upcoming staffing slots.</p>
   <% end %>
 </div>

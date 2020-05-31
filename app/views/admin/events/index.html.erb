@@ -1,0 +1,41 @@
+<h1><%= @title %></h1>
+
+<%= display_block(@editable_block_name, true) %> 
+
+<%= render '/events/search_form', url: @url %>
+
+<table class="table">
+    <tbody>
+        <tr>
+          <th>Name</th>
+          <th>Dates</th>
+          <th>Tagline</th>
+          <% if can? :edit, Show %>
+            <th></th>
+          <% end %>
+          <% if can? :delete, Show%>
+            <th></th>
+          <% end %>
+        </tr>
+        <% @events.each do |event| %>
+        <tr>
+            <%= get_link event, :show, wrap_tag: 'td' %>
+
+            <td><%= event.date_range true, :short %>
+            <td><%= event.tagline.present? ? event.tagline : render_markdown(truncate(event.description, length: 100)) %></td>
+
+
+            <%= get_link event, :edit, wrap_tag: 'td' %>
+
+            <%= get_link event, :destroy, wrap_tag: 'td', 
+                              detail: "Be warned. Things may break if you continue. <br /> Please type the name of the event below if you are absolutely sure you want to do this.", 
+                              type_confirm: event.name 
+            %>
+        </tr>
+        <% end %>
+    </tbody>
+</table>
+
+<%= will_paginate(@events) %>
+
+<%= get_link @events.klass, :new %>

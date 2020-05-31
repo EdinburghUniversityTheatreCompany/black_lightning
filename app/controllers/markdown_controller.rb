@@ -8,6 +8,8 @@
 class MarkdownController < ApplicationController
   include MdHelper
 
+  skip_authorization_check
+
   def preview
     body = ActiveSupport::JSON.decode(request.body.read)
     input_html = URI.unescape(body['input_html'])

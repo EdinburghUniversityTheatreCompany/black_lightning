@@ -1,4 +1,4 @@
-<h1>Proposals to the EUTC</h1>
+<h1><%= @title %></h1>
 
 <%= display_block("Proposal Calls", true) %>
 
@@ -8,53 +8,27 @@
 <table class="table">
   <tr>
     <th>Name</th>
-    <th>Deadline</th>
-    <th>Open</th>
+    <th>Submission Deadline</th>
+    <th>Editing Deadline</th>
 
     <% if can? :edit, Admin::Proposals::Call %>
-    <th></th>
-    <% end %>
-
-    <% if can? :archive, Admin::Proposals::Call %>
-    <th></th>
-    <% end %>
-
-    <% if can? :delete, Admin::Proposals::Call %>
-    <th></th>
+      <th></th>
+      <th></th>
     <% end %>
   </tr>
 
-<% @admin_proposals_calls.each do |admin_proposals_call| %>
+<% @calls.each do |call| %>
   <tr>
-    <td><%= link_to admin_proposals_call.name, admin_proposals_call_proposals_path(admin_proposals_call), :title => "View Proposals" %></td>
-    <td><%= l admin_proposals_call.deadline, :format => :long %></td>
-    <td><%= admin_proposals_call.open ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
+    <%= get_link call, :show, link_target: admin_proposals_call_proposals_path(call), wrap_tag: 'td' %>
 
-    <% if can? :edit, admin_proposals_call %>
-    <td><%= link_to 'Edit', edit_admin_proposals_call_path(admin_proposals_call) %></td>
-    <% end %>
+    <td><%= l call.submission_deadline, format: :longy %></td>
+    <td><%= l call.editing_deadline, format: :longy %></td>
 
-    <% if can? :archive, admin_proposals_call %>
-    <td><%= link_to 'Archive', archive_admin_proposals_call_path(admin_proposals_call), method: :put, data: {
-                                                                                                                "confirm" => "Archiving " + admin_proposals_call.name,
-                                                                                                                "detail"  => "Please confirm this is correct."
-                                                                                                            } %></td>
-    <% end %>
+    <%= get_link call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn', wrap_tag: 'td' %>
 
-    <% if can? :delete, admin_proposals_call %>
-    <td><%= link_to 'Destroy', admin_proposals_call, method: :delete, data: {
-                                                                               "confirm" => "Deleting " + admin_proposals_call.name,
-                                                                               "detail"  => "<p>Be warned. Things may break if you continue.</p><p>Under normal circumstances proposal calls should be archived rather than deleted.</p><p>Please type the name of the proposal call below if you are absolutely sure you want to do this.</p>",
-                                                                               "type-confirm" => admin_proposals_call.name
-                                                                            } %></td>
-    <% end %>
+    <%= get_link call, :edit, wrap_tag: 'td' %>
   </tr>
 <% end %>
 </table>
 
-<br />
-
-<% if can? :create, Admin::Proposals::Call %>
-<% new_text = '<i class="icon-plus"></i> New Call'.html_safe %>
-<%= link_to new_text, new_admin_proposals_call_path, :class => "btn" %>
-<% end %>
+<%= get_link Admin::Proposals::Call, :new %>

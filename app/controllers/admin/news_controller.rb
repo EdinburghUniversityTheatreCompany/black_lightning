@@ -12,7 +12,7 @@ class Admin::NewsController < AdminController
   ##
   def index
     @title = 'News'
-    @news = News.paginate(page: params[:page], per_page: 15).all
+    @news = @news.order('publish_date DESC').paginate(page: params[:page], per_page: 15)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -26,8 +26,8 @@ class Admin::NewsController < AdminController
   # GET /admin/news/1.json
   ##
   def show
-    @news = News.find(params[:id])
     @title = @news.title
+
     respond_to do |format|
       format.html { render 'news/show' }
       format.json { render json: @news }
@@ -40,8 +40,8 @@ class Admin::NewsController < AdminController
   # GET /admin/news/new.json
   ##
   def new
-    @news = News.new
     @title = 'Create News'
+
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @news }
@@ -52,7 +52,6 @@ class Admin::NewsController < AdminController
   # GET /admin/news/1/edit
   ##
   def edit
-    @news = News.find(params[:id])
     @title = "Edit #{@news.title}"
   end
 
@@ -62,7 +61,6 @@ class Admin::NewsController < AdminController
   # POST /admin/news.json
   ##
   def create
-    @news = News.new(params[:news])
     @news.author = current_user
 
     respond_to do |format|
@@ -70,7 +68,7 @@ class Admin::NewsController < AdminController
         format.html { redirect_to [:admin, @news], notice: 'News was successfully created.' }
         format.json { render json: [:admin, @news], status: :created, location: @news }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @news.errors, status: :unprocessable_entity }
       end
     end
@@ -82,14 +80,12 @@ class Admin::NewsController < AdminController
   # PUT /admin/news/1.json
   ##
   def update
-    @news = News.find(params[:id])
-
     respond_to do |format|
-      if @news.update_attributes(params[:news])
+      if @news.update(news_params)
         format.html { redirect_to [:admin, @news], notice: 'News was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @news.errors, status: :unprocessable_entity }
       end
     end
@@ -101,12 +97,17 @@ class Admin::NewsController < AdminController
   # DELETE /admin/news/1.json
   ##
   def destroy
-    @news = News.find(params[:id])
-    @news.destroy
+    helpers.destroy_with_flash_message(@news)
 
     respond_to do |format|
       format.html { redirect_to admin_news_index_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+
+  def news_params
+    params.require(:news).permit(:publish_date, :show_public, :slug, :title, :body, :image)
   end
 end

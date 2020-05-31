@@ -1,0 +1,6 @@
+<% if maintenance_debt.uncompleted? %>
+  <%= get_link maintenance_debt, :destroy, link_text: 'Completed',
+               confirm: "Completing " + maintenance_debt.user.name(current_user)+ "'s debt",
+               detail: "If you forgive an uncompleted debt a theatre manager fairy will be squished by a pineapple."
+  %>
+<% end %>

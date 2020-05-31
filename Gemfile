@@ -1,7 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'rails', '>=4.2.3'
-gem 'protected_attributes'
+gem 'rails', '~> 5.0.0'
 
 gem 'mysql2'
 
@@ -15,7 +14,7 @@ gem 'font-awesome-sass'
 
 gem 'simple_form'
 gem 'devise'
-gem 'cancan'
+gem 'cancancan'
 gem 'rolify'
 
 gem 'will_paginate'
@@ -29,7 +28,7 @@ gem 'rails_autolink'
 gem 'delayed_job_active_record'
 gem 'daemons'
 
-gem 'axlsx'
+gem 'caxlsx'
 gem 'prawn'
 gem 'rqrcode'
 gem 'mini_magick'
@@ -53,12 +52,16 @@ group :development, :test do
 
   gem 'rdoc'
   gem 'rubocop'
+  gem 'rubocop-faker'
+  gem 'rails-controller-testing'
+
+  gem 'factory_bot_rails'
+
 end
 
 group :test do
   gem 'simplecov'
   gem 'simplecov-rcov'
-  gem 'factory_girl_rails'
   gem 'faker'
   gem 'ruby-prof'
   gem 'html_acceptance'

@@ -1,0 +1,32 @@
+<% # Looks for an input tagged with event_name and an input tagged with event_slug %>
+<%= javascript_include_tag 'name_to_slug.js' %>
+
+<%= f.input :name, input_html: { id: 'event_name' } %>
+
+<%= f.input :tagline %>
+
+<%= f.input :slug, input_html: { id: 'event_slug' } %>
+
+<%= f.input :image, hint: "This is the image that appears in the slideshow on the frontpage, and as the header image on your event page. 960x500 pixels!"  %>
+
+<%= render "/shared/form/md_editor", f: f, field: :description, show_hint: true %>
+
+<%= f.input :start_date, start_year: 1890 %>
+
+<%= f.input :end_date, start_year: 1890 %>
+
+<%= f.association :venue, collection: Venue.all, label_method: :name %>
+
+<%= f.input :author %>
+
+<%= f.input :price %>
+
+<% unless f.object.is_a? Season %>
+  <% if f.object.persisted? %>
+    <%= f.association :season, collection: f.object.simultaneous_seasons, label_method: :name %>
+  <% else %>
+    <p>You can add a season after adding the event.</p>
+  <% end %>
+<% end %>
+
+<%= render '/shared/form/public_private_switch', f: f, field_symbol: :is_public %>

@@ -1,15 +1,13 @@
+<%= javascript_include_tag "admin/staffings.js" %>
+
 <h1><%= @title %></h1>
 
 <%= display_block("Staffing", true) %>
 
 <% if @staffings.empty? %>
-  <p>No staffing slots have been found for this slug.</p>
+  <p>No staffing slots have been found for this url.</p>
 <% else %>
-  <% if current_user.phone_number.blank? %>
-  <br>
-  <div class="alert alert-danger" role="alert">In order to sign up for staffing you need to provide a MOBILE phone number so we are able to get in touch if necessary. 
-  You can do so <%= link_to 'here', edit_admin_user_path(current_user) %>.</div>
-  <% end %>
+  <%= render 'phone_number_warning' %>
 
   <table class="table table-hover" style="table-layout: fixed;">
     <thead>
@@ -27,30 +25,21 @@
         <tr>
           <td>
             <%= link_to staffing_hash[:staffing] do %>
-              <%= l staffing_hash[:start_time], format: :long_date_only %>
-              <br />
-              <%= l staffing_hash[:start_time], format: :time_only %>
-              -
-              <%= l staffing_hash[:end_time], format: :time_only %>
+              <%= time_range_string(staffing_hash[:start_time], staffing_hash[:end_time], false) %>
             <% end %>
           </td>
 
           <% @job_titles.each do |title| %>
             <td>
               <% job = staffing_hash[:jobs][title] %>
+
               <% if job %>
-                <% u = job.user %>
-                <% if u then %>
-                  <%= user_link_or_text(u) %>
+                <% user = job.user %>
+
+                <% if user.present? %>
+                  <%= user_link(user, false) %>
                 <% elsif @can_sign_up %>
-                  <input type="hidden" class="job_json" value="<%= job.to_json %>" >
-                  <% date = l staffing_hash[:start_time], format: :long %>
-                  <%= link_to admin_sign_up_confirm_path(job), class: "btn staffing-sign-up", method: :put, data: { confirm: "Confirm Staffing",
-                                                                                                                                                detail: "Confirm staffing as #{job.name} for #{params[:show_title]} on #{date}",
-                                                                                                                                                job_id: job.id
-                                                                                                                                              } do %>
-                    <i class="fa fa-edit"></i> Sign Up
-                  <% end %>
+                  <%= render 'sign_up_button', job: job %>
                 <% end %>
               <% end %>
             </td>
@@ -60,3 +49,5 @@
     </tbody>
   </table>
 <% end %>
+
+<%= get_link Admin::Staffing, :index %>

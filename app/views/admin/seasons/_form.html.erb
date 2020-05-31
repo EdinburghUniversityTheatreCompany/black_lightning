@@ -1,77 +1,34 @@
-<input type="hidden" name="autocomplete_users_list" value="true">
-
-<%= simple_nested_form_for [:admin, @season], html:{multipart: true} do |f| %>
+<%= simple_nested_form_for [:admin, @season] do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
+    <%= render 'admin/events/basic_form', f: f %>
 
-    <%= f.input :name %>
+    <%= render '/shared/form/sections/team_members', f: f %>
 
-    <%= f.input :slug %>
-
-    <%= render "admin/shared/md_editor", f: f, field: :description %>
-
-    <%= f.input :start_date %>
-
-    <%= f.input :end_date %>
-
-    <%= f.input :image %>
-
-    <div class="form-horizontal">
-
-      <h3>Team</h3>
-
-      <% if f.object.errors[:team_members].present? then %>
-      <p id="team_errors" class="alert alert-error">
-        <%= f.error :team_members %>
-      </p>
-      <% end %>
-
-      <%= f.simple_fields_for :team_members %>
-
-      <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
-      <%= f.link_to_add add_member_text, :team_members, class: "btn" %>
-    </div>
-    
     <div class="form-horizontal">
       <h3>Events</h3>
+      <% if @season.new_record? %>
+        You can add events after creating the season.
+      <% else%>
+        <% if f.object.errors[:events].present? then %>
+          <p id="events_errors" class="alert alert-error">
+            <%= f.error :events %>
+          </p>
+        <% end %>
 
-      <% if f.object.errors[:events].present? then %>
-      <p id="events_errors" class="alert alert-error">
-        <%= f.error :events %>
-      </p>
-      <% end %>
+        <p>
+          The list of events that can be added to the season will not automatically update after changing the start or end date.
+          You have to save the season and start editing it again to refresh the list.
+        </p>
+        
+        <%= f.collection_check_boxes(:event_ids, @season.simultaneous_events, :id, ->(event) { render 'event_label', event: event }) do |b| %>
+          <%= b.label { "#{b.check_box}   #{b.text}".html_safe } %>
+        <% end %>
+      <% end%>
 
-      <p>The list of events that can be added to the season will not automatically update after changing the start or end date. You have to save the season and start editing it again to refresh the list.</p>
-
-      <%= f.collection_check_boxes(:event_ids, (@season.events + Event.where("end_date >= ?", @season.start_date).where("start_date <= ?", @season.end_date).order(:start_date) - [@season]).uniq, :id, ->(event) { render 'event_label', event: event }) do |b| %>
-        <%= b.label { b.check_box + "   #{b.text}".html_safe } %>
-      <% end %>
+      <%= render '/shared/form/sections/gallery', f: f %>
     </div>
 
-    <div class="gallery-form">
-
-      <h3>Gallery</h3>
-
-      <% if f.object.errors[:pictures].present? then %>
-      <p id="picture_errors" class="alert alert-error">
-        <%= f.error :pictures %>
-      </p>
-      <% end %>
-
-      <%= f.simple_fields_for :pictures %>
-
-      <br />
-
-      <% add_photo_text = '<i class="fa fa-plus"></i> Add Photo'.html_safe %>
-      <%= f.link_to_add add_photo_text, :pictures, class: "btn" %>
-
-    </div>
-
-  </div>
-
-  <div class="form-actions">
-    <%= f.button :submit, class: "btn btn-primary" %>
-    <%= link_to 'Back', admin_seasons_path, class: "btn" %>
-  </div>
+    <%= render '/shared/form/form_actions', f: f %>
 <% end %>

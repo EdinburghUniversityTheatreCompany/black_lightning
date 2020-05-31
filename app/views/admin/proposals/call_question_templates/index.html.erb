@@ -1,36 +1,28 @@
-<h1>Listing Proposal Call Question Templates</h1>
+<h1><%= @title %></h1>
 
 <table class="table">
   <tr>
     <th>Name</th>
 
     <% if can? :edit, Admin::Proposals::CallQuestionTemplate %>
-    <th></th>
+      <th></th>
     <% end %>
 
     <% if can? :delete, Admin::Proposals::CallQuestionTemplate %>
-    <th></th>
+      <th></th>
     <% end %>
   </tr>
 
-<% @templates.each do |template| %>
-  <tr>
-    <td><%= template.name %></td>
+  <% @call_question_templates.each do |template| %>
+    <tr>
+      <%= get_link template, :show, wrap_tag: 'td '%>
 
-    <% if can? :edit, template %>
-    <td><%= link_to 'Edit', edit_admin_proposals_call_question_template_path(template) %></td>
-    <% end %>
-
-    <% if can? :delete, template %>
-    <td><%= link_to 'Destroy', template, method: :delete, data: { confirm: 'Are you sure?' } %></td>
-    <% end %>
-  </tr>
-<% end %>
+      <%= get_link template, :edit, wrap_tag: 'td'%>
+      
+      <%= get_link template, :destroy, wrap_tag: 'td'%>
+    </tr>
+  <% end %>
 </table>
 
-<br />
-
-<% if can? :create, Admin::Proposals::CallQuestionTemplate %>
-  <% new_text = '<i class="icon-plus"></i> New Template'.html_safe %>
-  <%= link_to new_text, new_admin_proposals_call_question_template_path, :class => "btn" %>
-<% end %>
+<%= get_link Admin::Proposals::CallQuestionTemplate, :new %>
+<%= get_link Admin::Proposals::Call, :index, link_text: 'Back to Proposal Calls'%>

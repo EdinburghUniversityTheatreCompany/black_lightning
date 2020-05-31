@@ -12,11 +12,12 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls.json
   ##
   def index
-    @admin_proposals_calls = Admin::Proposals::Call.where(archived: [nil, false])
+    @title = 'Proposals to the EUTC'
+    @calls = @calls.where(archived: [nil, false])
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @admin_proposals_calls }
+      format.json { render json: @calls }
     end
   end
 
@@ -26,11 +27,11 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls/1.json
   ##
   def show
-    @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
+    @title = @call.name
 
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render json: @admin_proposals_call }
+      format.json { render json: @call }
     end
   end
 
@@ -40,11 +41,11 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls/new.json
   ##
   def new
-    @admin_proposals_call = Admin::Proposals::Call.new
+    # The title is set in the view.
 
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json: @admin_proposals_call }
+      format.json { render json: @call }
     end
   end
 
@@ -52,7 +53,7 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls/1/edit
   ##
   def edit
-    @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
+    # The title is set in the view.
   end
 
   ##
@@ -61,15 +62,13 @@ class Admin::Proposals::CallsController < AdminController
   # POST /admin/proposals/calls.json
   ##
   def create
-    @admin_proposals_call = Admin::Proposals::Call.new(params[:admin_proposals_call])
-
     respond_to do |format|
-      if @admin_proposals_call.save
-        format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully created.' }
-        format.json { render json: @admin_proposals_call, status: :created, location: @admin_proposals_call }
+      if @call.save
+        format.html { redirect_to @call, notice: 'Call was successfully created.' }
+        format.json { render json: @call, status: :created, location: @call }
       else
-        format.html { render 'new' }
-        format.json { render json: @admin_proposals_call.errors, status: :unprocessable_entity }
+        format.html { render 'new', status: :unprocessable_entity }
+        format.json { render json: @call.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -80,15 +79,13 @@ class Admin::Proposals::CallsController < AdminController
   # PUT /admin/proposals/calls/1.json
   ##
   def update
-    @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
-
     respond_to do |format|
-      if @admin_proposals_call.update_attributes(params[:admin_proposals_call])
-        format.html { redirect_to @admin_proposals_call, notice: 'Call was successfully updated.' }
+      if @call.update(call_params)
+        format.html { redirect_to @call, notice: 'Call was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
-        format.json { render json: @admin_proposals_call.errors, status: :unprocessable_entity }
+        format.html { render 'edit', status: :unprocessable_entity }
+        format.json { render json: @call.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -99,11 +96,10 @@ class Admin::Proposals::CallsController < AdminController
   # DELETE /admin/proposals/calls/1.json
   ##
   def destroy
-    @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
-    @admin_proposals_call.destroy
+    helpers.destroy_with_flash_message(@call)
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_calls_url }
+      format.html { redirect_to admin_proposals_calls_path }
       format.json { head :no_content }
     end
   end
@@ -112,12 +108,22 @@ class Admin::Proposals::CallsController < AdminController
   # PUT /admin/proposals/call/1/archive
   ##
   def archive
-    @admin_proposals_call = Admin::Proposals::Call.find(params[:id])
-    @admin_proposals_call.archive
+    if @call.archive
+      flash[:success] = 'The Proposal Call has been successfully archived.'
+    else
+      flash[:error] = 'Error archiving the Proposal Call. Has the editing deadline been reached?'
+    end
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_calls_url }
+      format.html { redirect_to admin_proposals_calls_path }
       format.json { head :no_content }
     end
+  end
+
+  private
+
+  def call_params
+    params.require(:admin_proposals_call).permit(:submission_deadline, :editing_deadline, :name, :archived,
+                                                 questions_attributes: [:id, :_destroy, :question_text, :response_type])
   end
 end

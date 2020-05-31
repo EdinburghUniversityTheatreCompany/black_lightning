@@ -1,0 +1,79 @@
+<% # I cannot guarantee that all of these if's are properly tested (all cases being hit), so be careful when modifying %>
+<p>
+  <b>Slug:</b>
+  <%= event.slug %>
+</p>
+
+<% if can? :manage, event %>
+  <p>
+    <b>ID:</b>
+    <%= event.id %>
+  </p>
+<% end %>
+
+<p>
+  <b>Tagline:</b>
+  <%= event.tagline.presence || 'No tagline' %>
+</p>
+
+<p>
+  <b>Date(s):</b>
+  <%= event.date_range true %>
+</p>
+
+<p>
+  <b>Venue:</b>
+  <%= event.venue.try(:name) || 'No venue specified' %>
+</p>
+
+<p>
+  <b>Season:</b>
+  <% if event.season.present? %>
+    <%= get_link event.season, :show, link_text: event.season.name %>
+  <% else %>
+    Not part of a season
+  <% end %>
+</p>
+
+<p>
+  <b>Is Public:</b>
+  <%= bool_text event.is_public %>
+</p>
+
+<% if event.spark_seat_slug.present? %>
+  <p>
+    <b>SparkSeat Slug:</b>
+    <%= event.spark_seat_slug %>
+  </p>
+<% end %>
+
+<% if event.xts_id.present? %>
+  <p>
+    <b>XTS ID:</b>
+    <%= event.xts_id %>
+  </p>
+<% end %>
+
+<p>
+  <b>Image:</b>
+  <% if event.image.present? %>
+    <p><%= image_tag event.image.url(:slideshow) %></p>
+  <% else %>
+    No image
+  <% end %>
+</p>
+
+<div class="row vertical-rule">
+  <div class="span<%= event.team_members.any? ? '6' : '12' %>">
+    <p>
+      <h3>Description</h3>
+      <%= render_markdown event.description %>
+    </p>
+  </div>
+
+  <% if event.team_members.any? %>
+    <div class="span6">
+        <%= render '/shared/admin_show_team_members', team_members: event.team_members %>
+    </div>
+  <% end %>
+</div>

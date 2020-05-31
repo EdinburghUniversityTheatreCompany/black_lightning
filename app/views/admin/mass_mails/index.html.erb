@@ -1,42 +1,42 @@
-<% @title = 'Mass Mails' %>
-
-<h1>Mass Mails</h1>
+<h1><%= @title %></h1>
 
 <table class="table">
   <tr>
     <th>Subject</th>
-    <th>Draft</th>
+    <th>Is Send</th>
     <th>Send Date</th>
-    <th></th>
-    <th></th>
+    <% if can?(:edit, MassMail) %>
+      <th></th>
+    <% end %>
+    <% if can?(:delete, MassMail) %>
+      <th></th>
+    <% end %>
   </tr>
 
 <% @mass_mails.each do |mass_mail| %>
   <tr>
-    <td><%= link_to mass_mail.subject, admin_mass_mail_path(mass_mail) %></td>
-    <td><%= mass_mail.draft ? "&#10004;".html_safe : "&#10008;".html_safe %></td>
-    <td><%= l mass_mail.send_date, format: :short %></td>
+    <%= get_link mass_mail, :show, link_text: get_subject(mass_mail), wrap_tag: 'td' %>
 
-    <td>
+    <td><%= bool_icon(!mass_mail.draft) %></td>
+    <td><%= get_send_date(mass_mail) %></td>
+    
     <% if can? :edit, mass_mail %>
-    <%= link_to 'Edit', edit_admin_mass_mail_path(mass_mail) %>
+      <td>
+        <%= get_link mass_mail, :edit, additional_condition: mass_mail.draft %>
+      </td>
     <% end %>
-    </td>
+    
 
-    <td>
-    <% if can? :delete, mass_mail %>
-    <%= link_to 'Destroy', admin_mass_mail_path(mass_mail), method: :delete, data: { "confirm" => "Deleting " + mass_mail.subject,
-                                                                           "detail"  => "Are you sure you wish to continue?" } %>
+    <% if can?(:delete, mass_mail) %>
+      <td>
+        <%= get_link mass_mail, :destroy, additional_condition: mass_mail.draft %>
+      </td>
     <% end %>
-    </td>
+    
   </tr>
 <% end %>
 </table>
 
 <%= will_paginate(@mass_mails) %>
 
-<% if can? :create, MassMail %>
-  <%= link_to new_admin_mass_mail_path, :class => 'btn' do %>
-    <i class="fa fa-plus"></i> New Mass Mail
-  <% end %>
-<% end %>
+<%= get_link MassMail, :new %>

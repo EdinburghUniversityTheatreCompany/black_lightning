@@ -2,7 +2,7 @@
 # Controller for Admin::Questionnaires::QuestionnaireTemplate
 ##
 class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
-  load_and_authorize_resource class: Admin::Questionnaires::QuestionnaireTemplate
+  load_and_authorize_resource
 
   ##
   # GET /admin/questionnaires/questionnaire_templates
@@ -10,11 +10,11 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # GET /admin/questionnaires/questionnaire_templates.json
   ##
   def index
-    @templates = Admin::Questionnaires::QuestionnaireTemplate.all
+    @title = 'Questionnaire Templates'
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @templates }
+      format.json { render json: @questionnaire_templates }
     end
   end
 
@@ -24,11 +24,10 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # GET /admin/questionnaires/questionnaire_templates/1.json
   ##
   def show
-    @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
-
+    @title = "#{@questionnaire_template.name} Questionnaire Template"
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render json: @template.to_json(include: { questions: {} }) }
+      format.json { render json: @questionnaire_template.to_json(include: { questions: {} }) }
     end
   end
 
@@ -38,11 +37,11 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # GET /admin/questionnaires/questionnaire_templates/new.json
   ##
   def new
-    @template = Admin::Questionnaires::QuestionnaireTemplate.new
+    # The title is set by the view.
 
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json: @template }
+      format.json { render json: @questionnaire_template }
     end
   end
 
@@ -50,7 +49,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # GET /admin/questionnaires/questionnaire_templates/1/edit
   ##
   def edit
-    @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
+    # The title is set by the view.
   end
 
   ##
@@ -59,15 +58,13 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # POST /admin/questionnaires/questionnaire_templates.json
   ##
   def create
-    @template = Admin::Questionnaires::QuestionnaireTemplate.new(params[:admin_questionnaires_questionnaire_template])
-
     respond_to do |format|
-      if @template.save
-        format.html { redirect_to @template, notice: 'Call question template was successfully created.' }
-        format.json { render json: @template, status: :created, location: @template }
+      if @questionnaire_template.save
+        format.html { redirect_to @questionnaire_template, notice: "The questionnaire template #{@questionnaire_template.name} was successfully created." }
+        format.json { render json: @questionnaire_template, status: :created, location: @questionnaire_template }
       else
-        format.html { render 'new' }
-        format.json { render json: @template.errors, status: :unprocessable_entity }
+        format.html { render 'new', status: :unprocessable_entity }
+        format.json { render json: @questionnaire_template.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -78,15 +75,13 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # PUT /admin/questionnaires/questionnaire_templates/1.json
   ##
   def update
-    @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
-
     respond_to do |format|
-      if @template.update_attributes(params[:admin_questionnaires_questionnaire_template])
-        format.html { redirect_to @template, notice: 'Call question template was successfully updated.' }
+      if @questionnaire_template.update(questionnaire_template_params)
+        format.html { redirect_to @questionnaire_template, notice: "The questionnaire template #{@questionnaire_template.name} was successfully updated." }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
-        format.json { render json: @template.errors, status: :unprocessable_entity }
+        format.html { render 'edit', status: :unprocessable_entity }
+        format.json { render json: @questionnaire_template.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -97,12 +92,16 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   # DELETE /admin/questionnaires/questionnaire_templates/1.json
   ##
   def destroy
-    @template = Admin::Questionnaires::QuestionnaireTemplate.find(params[:id])
-    @template.destroy
+    helpers.destroy_with_flash_message(@questionnaire_template)
 
     respond_to do |format|
       format.html { redirect_to admin_questionnaires_questionnaire_templates_url }
       format.json { head :no_content }
     end
+  end
+
+  def questionnaire_template_params
+    params.require(:admin_questionnaires_questionnaire_template).permit(:name,
+                                     questions_attributes: [:id, :_destroy, :question_text, :response_type])
   end
 end

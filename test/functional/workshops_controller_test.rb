@@ -2,7 +2,7 @@ require 'test_helper'
 
 class WorkshopsControllerTest < ActionController::TestCase
   test 'should get index' do
-    FactoryGirl.create_list(:workshop, 10)
+    FactoryBot.create_list(:workshop, 10)
 
     get :index
     assert_response :success
@@ -10,9 +10,9 @@ class WorkshopsControllerTest < ActionController::TestCase
   end
 
   test 'should get show' do
-    @workshop = FactoryGirl.create(:workshop)
+    @workshop = FactoryBot.create(:workshop, is_public: true)
 
-    get :show, id: @workshop
+    get :show, params: { id: @workshop }
     assert_response :success
   end
 end

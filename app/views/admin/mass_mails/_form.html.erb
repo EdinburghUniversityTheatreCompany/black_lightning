@@ -7,25 +7,23 @@
 
     <%= f.input :subject %>
 
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 12 } do %>
-      <%= render "admin/shared/md_hints" %>
-    <% end %>
+    <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12, show_hint: true %>
 
     <%= f.input :send_date %>
 
   </div>
 
   <div class="form-actions">
-    <%= submit_tag :Send, name: "send", class: "btn btn-primary", data: { "confirm" => "Send Mass Mail",
-                                                                          "detail"  => """
-                                                                            <p>
-                                                                              Are you sure you wish to continue?
-                                                                            </p>
-                                                                            <p>
-                                                                              Even if you have delayed sending this message, you will not be able to edit it (or remove it) once you confirm.
-                                                                            </p>
-                                                                          """ } %>
-    <%= submit_tag :Save, name: "save", class: "btn" %>
-    <%= link_to 'Cancel', admin_mass_mails_path, class: "btn" %>
+    <% if @mass_mail.persisted? %>
+      <%= submit_tag :Send, name: 'send', class: "btn btn-primary", 
+                    data: { confirm: "Send Mass Mail",
+                            detail: """
+                                    Are you sure you wish to continue? The mass mail will be send at the time specified.<br><br>
+                                    Even if you have delayed sending this message, you will not be able to edit it (or remove it) once you confirm.
+                                    """ 
+                            } 
+      %>
+    <% end %>
+    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
   </div>
 <% end %>

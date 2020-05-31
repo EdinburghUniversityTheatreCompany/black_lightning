@@ -1,81 +1,11 @@
-<h1><%= @season.name if !@season.image.presence %></h1>
+<%= render '/events/basic_info', event: @season, event_name: 'festival' %>
 
-<% if @season.end_date %>
-<% if @season.end_date < Date.today %>
-  <p class="alert alert-info">
-    <i class="fa fa-info-sign fa-large"></i>
-    This festival finished on <%= l @season.end_date, format: :longy %>,
-    and this page is being kept for archival purposes only.
-  </p>
-<% end %>
-<% end %>
-
-<div class="row vertical-rule">
-  <div class="span8">
-    <% if @season.image.presence %>
-      <div class="carousel">
-        <!-- Carousel items -->
-        <div class="carousel-inner">
-          <div class="active item">
-            <%= image_tag @season.image.url(:slideshow) %>
-            <div class="carousel-caption">
-              <h1><%= @season.name %></h1>
-            </div>
-          </div>
-        </div>
-      </div>
-    <% end %>
-
-    <h3>Date<%= 's' if @season.start_date != @season.end_date %></h3>
-    <%= @season.date_range true %>
-
-    <h3>Details</h3>
-
-    <%= render_markdown @season.description %>
-  </div>
-
-  <% if @season.team_members.count > 0 %>
-    <div class="span4">
-      <h3>Crew</h3>
-      <%= render 'show_team_members', team_members: @season.team_members, admin_view: true %>
-    </div>
-  <% end %>
-</div>
+<%= render '/events/description_and_team_members', event: @season%>
 
 <hr>
 
-<% if @season.pictures.count > 0 %>
-  <h3>Gallery</h3>
-
-  <div class="carousel slide" id="gallery-carousel">
-    <div class="carousel-inner">
-      <% @season.pictures.each_with_index do |picture, i| %>
-        <% if i.modulo(6) == 0 %>
-          <div class="item <%= 'active' if i == 0 %>">
-            <ul class="lightbox thumbnails">
-        <% end %>
-              <li class="span2">
-                <% img = image_tag picture.image.url(:thumb) %>
-                <%= link_to img, picture.image.url(:display), class: "thumbnail", title: (picture.description) %>
-              </li>
-        <% if i.modulo(6) == 3 || i == (@season.pictures.count - 1) %>
-            </ul>
-          </div>
-        <% end %>
-      <% end %>
-    </div>
-
-    <% if @season.pictures.count > 4 %>
-      <a data-slide="prev" href="#show-carousel" class="left carousel-control">‹</a>
-      <a data-slide="next" href="#show-carousel" class="right carousel-control">›</a>
-    <% end %>
-  </div>
-
-  <hr />
-<% end %>
-
 <h3>Events</h3>
-<% if @events.length == 0 %>
+<% if @events.empty? %>
   There are no events attached to this festival.
 <% else %>
   <div class="accordion seasons-accordion" id="accordion2">
@@ -88,20 +18,18 @@
           <% image = image_tag event.image.url(:thumb) %>
           <%= link_to image, event, class: "pull-right thumbnail" %>
 
-          <h4>
-            <%= link_to event.name, event %>
-          </h4>
+          <h4><%= link_to event.name, event %></h4>
 
           <div>
             <p>
-              <%= event.tagline %>
               <% if event.start_date != event.end_date %>
-                <br />
-                <span class="event-date"><%= event.date_range false %></span>
+                <b><%= event.date_range false %></b>
               <% end %>
             </p>
 
-            <%= render_markdown event.description %>
+            <p><i><%= event.tagline %></i></p>
+            
+            <%= render_markdown event.description.truncate(120) %>
 
             <% if event.type == "Show" %>
               <%= xts_widget event.xts_id if event.xts_id %>
@@ -113,3 +41,5 @@
     <% end %>
   </div>
 <% end %>
+
+<%= render '/shared/gallery', pictures: @season.pictures %>

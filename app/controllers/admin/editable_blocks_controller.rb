@@ -11,11 +11,13 @@ class Admin::EditableBlocksController < AdminController
   # GET /admin/editable_blocks.json
   ##
   def index
-    @admin_editable_blocks = Admin::EditableBlock.all.group_by(&:group)
     @title = 'Editable Blocks'
+    
+    @editable_blocks = @editable_blocks.group_by(&:group)
+    
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @admin_editable_blocks }
+      format.json { render json: @editable_blocks }
     end
   end
 
@@ -25,13 +27,12 @@ class Admin::EditableBlocksController < AdminController
   # GET /admin/editable_blocks/new.json
   ##
   def new
-    @admin_editable_block = Admin::EditableBlock.new
-    @admin_editable_block.name = params[:name]
+    # The title is set by the view.
+    @editable_block.name = params[:name]
 
-    @title = 'New Editable Block'
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json: @admin_editable_block }
+      format.json { render json: @editable_block }
     end
   end
 
@@ -39,8 +40,7 @@ class Admin::EditableBlocksController < AdminController
   # GET /admin/editable_blocks/1/edit
   ##
   def edit
-    @admin_editable_block = Admin::EditableBlock.find(params[:id])
-    @title = "Edit #{@admin_editable_block.name}"
+    # The title is set by the view.
   end
 
   ##
@@ -49,14 +49,12 @@ class Admin::EditableBlocksController < AdminController
   # POST /admin/editable_blocks.json
   ##
   def create
-    @admin_editable_block = Admin::EditableBlock.new(params[:admin_editable_block])
-
     respond_to do |format|
-      if @admin_editable_block.save
+      if @editable_block.save
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully created.' }
-        format.json { render json: admin_editable_blocks_url, status: :created, location: @admin_editable_block }
+        format.json { render json: admin_editable_blocks_url, status: :created, location: @editable_block }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end
@@ -68,14 +66,12 @@ class Admin::EditableBlocksController < AdminController
   # PUT /admin/editable_blocks/1.json
   ##
   def update
-    @admin_editable_block = Admin::EditableBlock.find(params[:id])
-
     respond_to do |format|
-      if @admin_editable_block.update_attributes(params[:admin_editable_block])
+      if @editable_block.update(editable_block_params)
         format.html { redirect_to admin_editable_blocks_url, notice: 'Editable block was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: admin_editable_blocks_url.errors, status: :unprocessable_entity }
       end
     end
@@ -87,12 +83,18 @@ class Admin::EditableBlocksController < AdminController
   # DELETE /admin/editable_blocks/1.json
   ##
   def destroy
-    @admin_editable_block = Admin::EditableBlock.find(params[:id])
-    @admin_editable_block.destroy
+    helpers.destroy_with_flash_message(@editable_block)
 
     respond_to do |format|
       format.html { redirect_to admin_editable_blocks_url }
       format.json { head :no_content }
     end
+  end
+
+  private
+
+  def editable_block_params
+    params.require(:admin_editable_block).permit(:content, :name, :admin_page, :group,
+                                                 attachments_attributes: [:id, :_destroy, :name, :file])
   end
 end

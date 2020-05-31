@@ -22,13 +22,13 @@
 # == Schema Information End
 #++
 ##
-class Admin::Answer < ActiveRecord::Base
+class Admin::Answer < ApplicationRecord
+  validates :question_id, presence: true
+
   belongs_to :question, class_name: 'Admin::Question'
   belongs_to :answerable, polymorphic: true
 
   has_attached_file :file, url: '/admin/answer/:id/file', path: ':rails_root/uploads/answers/:id_partition/:style.:extension'
 
   do_not_validate_attachment_file_type :file
-
-  attr_accessible :answer, :question_id, :file
 end

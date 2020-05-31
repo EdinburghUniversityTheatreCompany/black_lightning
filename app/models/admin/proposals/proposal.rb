@@ -27,8 +27,13 @@
 # == Schema Information End
 #++
 ##
-class Admin::Proposals::Proposal < ActiveRecord::Base
+class Admin::Proposals::Proposal < ApplicationRecord
+  include LabelHelper
   has_paper_trail
+
+  validates :show_title, :proposal_text, :publicity_text, :call_id, presence: true
+  validates :team_members, presence: { message: 'You must add at least one team member' }
+
   belongs_to :call, class_name: 'Admin::Proposals::Call'
 
   has_many :questions, through: :answers
@@ -38,35 +43,56 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
 
   accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
 
-  validates :show_title, :proposal_text, :publicity_text, presence: true
-  validates :team_members, presence: { message: 'You must add at least one team member' }
-
-  attr_accessible :proposal_text, :publicity_text, :show_title, :answers, :answers_attributes, :team_members, :team_members_attributes, :late, :approved, :successful
+  # Reading is completely managed by ability.rb because it is so complicated and dependent on the call.
+  DISABLED_PERMISSIONS = %w[read].freeze
 
   ##
   # Creates an instance of Admin::Answer for every question in the call.
   ##
-  def update_answers
-    current_questions = questions.all
-    call.questions.all.each do |question|
-      unless current_questions.include? question
-        answer = Admin::Answer.new
-        answer.question = question
-        answers.push(answer)
-      end
+  def instantiate_answers!
+    call.questions&.each do |question|
+      next if question.answers.where(answerable: self).any?
+
+      answer = Admin::Answer.new
+      answer.question = question
+
+      answers.push(answer)
     end
+  end
+
+  ##
+  # Generates a list of html labels with info about the proposal.
+  ##
+  def labels(pull_right)
+    labels = []
+
+    labels << case successful
+              when true
+                generate_label(:success, 'Successful', pull_right)
+              when false
+                generate_label(:danger, 'Unsuccessful', pull_right)
+              else
+                case approved
+                when true
+                  generate_label(:success, 'Approved', pull_right)
+                when false
+                  generate_label(:danger, 'Rejected', pull_right)
+                else
+                  generate_label(:warning, 'Waiting for Approval', pull_right)
+                end
+              end
+
+    labels << generate_label(:danger, 'Late', pull_right) if late
+    labels << generate_label(:danger, 'Has Debtors', pull_right) if has_debtors
+
+    return labels.join("\n").html_safe
   end
 
   ##
   # returns true if any users associated with the proposal are in debt with debts starting before the creation of this proposal
   ##
   def has_debtors
-    users = User.find(self.team_members.map(&:user_id)) #horrible but self.users doesnt work when self is still held in memory also .pluck doesnt work :(
-    users.uniq.any? {|usr| usr.in_debt(call.deadline.to_date)}
-  end
-
-  def has_non_members?
-    return !self.users.all? {|user| user.has_role?(:member)}
+    return users.in_debt(call.editing_deadline.to_date).any?
   end
 
   ##
@@ -75,37 +101,50 @@ class Admin::Proposals::Proposal < ActiveRecord::Base
   # Throws an error if the proposal has not been approved.
   ##
   def convert_to_show
-    puts show_title
-
-    unless approved == true
-      fail 'This proposal has not been approved'
+    unless successful
+      p "The proposal #{show_title} was not succesful and cannot be converted to a show"
+      raise ArgumentError, 'This proposal was not successful'
     end
+
+    p "Converting #{show_title} from proposal to show"
 
     @show = Show.new
     @show.name = show_title
     @show.description = publicity_text
 
-    @show.slug = @show.name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-')
+    @show.slug = @show.name&.to_url
 
-    self.successful = true
+    @show.author = 'TBC'
+    @show.price = 'TBC'
+
+    @show.start_date = Date.today
+    @show.end_date = Date.today
+    @show.is_public = false
 
     unless @show.save
       @show.errors.full_messages.each do |error|
-        puts error
+        p error
       end
-      fail "Couldn't save the new show"
+      p 'Converting the proposal to a show failed for the above reasons.'
+      raise ActiveRecord::RecordNotSaved, "Could not save the new show. #{@show.errors.full_messages.join(' ,')}"
     end
 
-    puts 'Adding Team Members'
+    p 'Adding Team Members'
     @show.team_members << team_members.collect(&:dup)
 
-    unless save
-      puts "Couldn't set the 'successful' flag on the proposal. This will need to be done manually"
-    end
+    self.successful = true
 
-    puts 'Created Show:'
-    puts "Name: #{@show.name}"
-    puts "Slug: #{@show.slug}"
+    # Highly unlikely situation, but you never know. I cannot deliberately cause it.
+    # :nocov:
+    unless save
+      p "Couldn't set the 'successful' flag on the proposal. This will need to be done manually."
+      raise ActiveRecord::RecordNotSaved, "Couldn't set the 'successful' flag on the proposal. This will need to be done manually."
+    end
+  # :nocov:
+
+    p 'Created Show:'
+    p "Name: #{@show.name}"
+    p "Slug: #{@show.slug}"
   end
   handle_asynchronously :convert_to_show
 end

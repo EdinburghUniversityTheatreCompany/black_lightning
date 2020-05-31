@@ -1,10 +1,11 @@
 <h1><%= "Confirm staffing as #{@job.name} for #{@job.staffable.show_title}" %></h1>
-<h3><%= l @job.staffable.start_time, :format => :long %></h3>
+<h3><%= time_range_string(@job.staffable.start_time, @job.staffable.end_time, true) %></h3>
 
-<%= form_tag(admin_staffing_sign_up_path(@job), :method => :put, :class => "form-inline") do %>
+<%= form_tag(admin_staffing_sign_up_path(@job), method: :put, class: "form-inline") do %>
   <%= button_tag(type: 'submit', class: "btn btn-primary") do %>
-    <i class="fa fa-ok fa fa-white"></i> Confirm
+    <i class="fa fa-ok fa fa-white" aria-hidden=”true”></i> Confirm
   <% end %>
+  <%= link_to 'Back', admin_staffing_path(@job.staffable), class: "btn" %>
 <% end %>
 
-<%= link_to 'Back', admin_staffing_path(@job), :class => "btn" %>
+

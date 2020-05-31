@@ -13,20 +13,22 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :proposal_call, class: Admin::Proposals::Call do
-    name     { generate(:random_string) }
-    open     { [true, false].sample }
-    deadline { 5.days.from_now }
+    name { generate(:random_string) }
+
+    submission_deadline { 5.days.from_now }
+    editing_deadline { submission_deadline.advance(days: 5) }
 
     transient do
-      question_count 0
-      proposal_count 0
+      question_count { 5 }
+      proposal_count { 2 }
     end
 
     after(:create) do |call, evaluator|
-      FactoryGirl.create_list(:question, evaluator.question_count, questionable: call)
-      FactoryGirl.create_list(:proposal, evaluator.proposal_count, call: call)
+      call.questions = FactoryBot.create_list(:question, evaluator.question_count, questionable: call)
+      call.proposals = FactoryBot.create_list(:proposal, evaluator.proposal_count, call: call)
+      call.save
     end
   end
 end

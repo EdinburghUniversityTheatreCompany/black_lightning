@@ -1,0 +1,15 @@
+<div class="gallery-form">
+
+  <h3>Gallery</h3>
+
+  <% if f.object.errors[:pictures].present? then %>
+    <p id="picture_errors" class="alert alert-error">
+      <%= f.error :pictures %>
+    </p>
+  <% end %>
+
+  <%= f.simple_fields_for :pictures %>
+
+  <%= link_to_add f, :pictures %>
+
+</div>

@@ -1,10 +1,8 @@
 Dear Productions Manager,
 
-The show <%= @show.name %> has one or more debtors added to it.
+ <%= @editor.name_or_email %> added one or more debtors to <%= @show.name %>.
 
 <%= "#{@new_debtors_string.count(',') > 0 ? 'These are' : 'It is'} #{@new_debtors_string}" %>.
-
-The change was made by <%= @editor.name %>.
 
 Regards,
 

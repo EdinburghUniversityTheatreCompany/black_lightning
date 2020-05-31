@@ -1,32 +1,33 @@
-<%= form_tag(admin_permissions_path, :method => :post) do %>
+<h1><%= @title %></h1>
 
+<%= form_tag(admin_permissions_path, method: :post) do %>
 <table class="table table-hover">
   <colgroup>
     <col span="1" style="border-right: 1px solid #dddddd;">
 
     <% @roles.each do |role| %>
-    <col span="4">
-    <col span="1" style="border-right: 1px solid #dddddd;">
+      <col span="<%= @actions.count - 1%>">
+      <col span="1" style="border-right: 1px solid #dddddd;">
     <% end %>
   </colgroup>
   <thead>
     <tr>
       <th></th>
       <% @roles.each do |role| %>
-        <th colspan=5><%= role.name %></th>
+        <th colspan="<%= @actions.count %>"><%= role.name %></th>
       <% end %>
     </tr>
+
     <tr>
-      <th></th>
+      <th>Subject Class</th>
       <% @roles.each do |role| %>
-        <th title="Read"  >R</th>
-        <th title="Create">C</th>
-        <th title="Update">U</th>
-        <th title="Delete">D</th>
-        <th title="Manage">M</th>
+        <% @actions.each do |action|%>
+        <th title="<%= action %>"><%= action[0].capitalize %></th>
+        <%end%>
       <% end %>
     </tr>
   </thead>
+
   <tbody>
     <% @models.each do |model| %>
       <tr>
@@ -34,41 +35,24 @@
 
         <% @roles.each do |role| %>
           <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
-          <%= render 'permission_grid', :role => role, :model => model, :permission => permission %>
+          <%= render 'permission_grid', role: role, model: model, permission: permission %>
         <% end %>
       </tr>
     <% end %>
     <tr>
-        <td>Misc</td>
-
+        <td>Miscellaneous</td>
         <% @roles.each do |role| %>
-          <td colspan="5">
-            <% permission = role.permissions.select{ |p| p.subject_class == "backend" } %>
-            <% if permission %>
-              <% action_permission = permission.select{ |p| p.action == "access" } %>
-              <% checked = action_permission.count > 0 %>
+          <td colspan="<%= @actions.count %>">
+            <% @miscellaneous_permission_subject_classes.each do |subject_class, actions| %>
+              <% actions.each do |action, description| %>
+                <% permission = role.permissions.select{ |p| p.subject_class == subject_class } %>
+
+                <% checked = permission&.any? { |p| p.action == action } %>
+
+                <%= label_tag("[#{role.name}][#{subject_class}]#{action}", description) %>
+                <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", "#{action}", checked, title: description %>
+              <% end %>
             <% end %>
-
-            <%= label_tag("[#{role.name}][backend]access", "Access Backend") %>
-            <%= check_box_tag "[#{role.name}][backend]access", "access", checked, :title => "Access Backend" %>
-
-            <% permission = role.permissions.select{ |p| p.subject_class == "Admin::StaffingJob" } %>
-            <% if permission %>
-              <% action_permission = permission.select{ |p| p.action == "sign_up_for" } %>
-              <% checked = action_permission.count > 0 %>
-            <% end %>
-
-            <%= label_tag("[#{role.name}][Admin::StaffingJob]sign_up_for", "Sign Up For Staffing") %>
-            <%= check_box_tag "[#{role.name}][Admin::StaffingJob]sign_up_for", "sign_up_for", checked, :title => "Access Backend" %>
-
-            <% permission = role.permissions.select{ |p| p.subject_class == "reports" } %>
-            <% if permission %>
-              <% action_permission = permission.select{ |p| p.action == "read" } %>
-              <% checked = action_permission.count > 0 %>
-            <% end %>
-
-            <%= label_tag("[#{role.name}][reports]read", "Read Reports") %>
-            <%= check_box_tag "[#{role.name}][reports]read", "read", checked, :title => "Read Reports" %>
           </td>
         <% end %>
       </tr>

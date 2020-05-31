@@ -1,9 +1,9 @@
-<%= simple_form_for [:admin, @role], :html => {:class => "form-horizontal"} do |f| %>
-<div class="form-inputs">
-    <%= f.input :name %>
-</div>
-<div class="form-actions">
-    <%= f.button :submit, class: 'btn-primary' %>
-    <%= link_to 'Back', admin_roles_path, class: 'btn'%>
-</div>
+<%= simple_form_for [:admin, @role] do |f| %>
+  <%= f.error_notification %>
+
+    <div class="form-inputs">
+        <%= f.input :name %>
+    </div>
+    
+    <%= render '/shared/form/form_actions', f: f %>
 <% end %>

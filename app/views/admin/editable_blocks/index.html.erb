@@ -1,6 +1,4 @@
-<% @title = 'Editable Blocks' %>
-
-<h1>Editable Blocks</h1>
+<h1><% @title %></h1>
 
 <%= display_block("Editable Blocks", true) %>
 
@@ -8,11 +6,11 @@
 <br />
 
 <div class="accordion" id="ediable_block_accordion">
-<% @admin_editable_blocks.each do |group, editable_blocks| %>
-  <%= render 'editable_block', :group => group, :editable_blocks => editable_blocks %>
+<% @editable_blocks.each do |group, editable_blocks| %>
+  <%= render 'editable_block', group: group, editable_blocks: editable_blocks %>
 <% end %>
 </div>
 
 <p class="help-block">
-  To create new pages, please contact the <%= link_to 'Bedlam IT Systems Manager', 'mailto:it@bedlamtheatre.co.uk' %>.
+  To create new pages, please contact the <%= link_to 'IT subcommittee', 'mailto:it@bedlamtheatre.co.uk' %>.
 </p>

@@ -1,67 +1,48 @@
-<h1>Listing Proposals for <%= @call.name %></h1>
+<h1><%= @title %></h1>
+<%= display_block("Proposal Calls", true) %>
+
+<br />
+<br />
 
 <p>
-  <b>Deadline:</b>
-  <%= l @call.deadline, :format => :long %>
+  <b>Submission Deadline:</b>
+  <%= l @call.submission_deadline, format: :longy %>
 </p>
 
 <p>
-  <b>Open:</b>
-  <%= @call.open ? "&#10004;".html_safe : "&#10008;".html_safe %>
+  <b>Editing Deadline:</b>
+  <%= l @call.editing_deadline, format: :longy %>
 </p>
 
 <table class="table">
   <tr>
     <th>Show title</th>
 
-    <th></th>
-    <th></th>
+    <% if can? :edit, Admin::Proposals::Proposal %>
+      <th></th>
+    <% end %>
+
+    <% if can? :delete, Admin::Proposals::Proposal %>
+      <th></th>
+    <% end %>
   </tr>
 
-<% @proposals.each do |proposal| %>
-  <tr>
-    <td>
-      <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(@call, proposal), :title => "View Proposal" %>
-      <% case proposal.successful %>
-      <% when true%>
-        <span style="margin-left: 5px;" class="label label-success pull-right">Successful</span>
-      <% when false %>
-        <span style="margin-left: 5px;" class="label label-important pull-right">Unsuccessful</span>
-      <% end %>
+  <% @proposals.each do |proposal| %>
+    <tr>
+      <td>
+        <%= get_link proposal, :show, link_target: admin_proposals_call_proposal_path(@call, proposal) %>
+        <%= proposal.labels true %>
+      </td>
 
-      <% case proposal.approved %>
-      <% when true %>
-        <span class="label label-success pull-right">Approved</span>
-      <% when false %>
-        <span class="label label-important pull-right">Rejected</span>
-      <% else %>
-        <span class="label label-info pull-right">Waiting for approval</span>
-      <% end %>
+      <%= get_link proposal, :edit, link_target: edit_admin_proposals_call_proposal_path(@call, proposal), wrap_tag: 'td' %>
 
-      <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
-      <% if proposal.has_debtors %><span style="margin-right: 5px;" class="label label-important pull-right">Has Debtors</span><% end %>
-    </td>
-
-    <td>
-      <% if can? :edit, proposal %>
-        <%= link_to 'Edit', edit_admin_proposals_call_proposal_path(@call, proposal) %>
-      <% end %>
-    </td>
-
-    <td>
-      <% if can? :destroy, proposal %>
-        <%= link_to 'Destroy', admin_proposals_call_proposal_path(@call, proposal), method: :delete, data: { confirm: 'Are you sure?' } %>
-      <% end %>
-    </td>
-  </tr>
-<% end %>
+      <%= get_link proposal, :destroy, link_target: admin_proposals_call_proposal_path(@call, proposal), wrap_tag: 'td' %>
+    </tr>
+  <% end %>
 </table>
 
 <br />
 
-<% if can? :create, Admin::Proposals::Proposal and @call.open %>
-  <% new_proposal_text = '<i class="icon-plus"></i> New Proposal'.html_safe %>
-  <%= link_to new_proposal_text, new_admin_proposals_call_proposal_path, :class => "btn btn-primary" %>
-<% end %>
-
-<%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>
+<%= get_link Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_call_proposal_path, additional_condition: @call.open? %>
+<%= get_link @call, :edit, append_name: true %>
+<%= get_link Admin::Proposals::Call, :index, link_text: 'Back To Calls' %>

@@ -18,8 +18,9 @@
 # == Schema Information End
 #++
 ##
-class Review < ActiveRecord::Base
-  belongs_to :show
+class Review < ApplicationRecord
+  validates :body, :reviewer, :review_date, presence: true
+  validates :rating, numericality: { greater_than: 0 }
 
-  attr_accessible :body, :rating, :review_date, :organisation, :reviewer, :show_id
+  belongs_to :show
 end

@@ -1,59 +1,29 @@
 <% content_for :head do %>
-  <%= javascript_include_tag "admin/proposals/call_templates.js" %>
+  <meta name="templates-base-url" content="/admin/proposals/call_question_templates" />
+  <%= javascript_include_tag "admin/question_templates.js" %>
 <% end %>
 
-<%= simple_nested_form_for(@admin_proposals_call) do |f| %>
+<%= simple_nested_form_for(@call) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
-
-    <%= f.input :deadline %>
-
     <%= f.input :name %>
 
-    <div class="control-group">
-      <%= f.label :open %>
+    <%= f.input :submission_deadline %>
 
-      <div class="controls switch" data-on="success" data-on-label="Open" data-off="danger" data-off-label="Closed" style="width: 150px;">
-        <%=
-           f.input_field :open,
-                          boolean_style: :inline
-        %>
-      </div>
-    </div>
+    <%= f.input :editing_deadline %>
 
     <h3>Questions</h3>
 
     <%= f.simple_fields_for :questions %>
 
-    <%= f.link_to_add "Add Question", :questions, :class => "btn" %>
-
+    <%= link_to_add f, :questions %>
   </div>
 
   <div class="form-actions">
-    <%= f.button :submit, :class => "btn-primary" %>
+    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
     <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
-    <%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>
   </div>
 <% end %>
 
-<div class="modal hide" id="template_modal" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-    <h3 id="template_modal_header">Select Questions from Template</h3>
-  </div>
-  <div class="modal-body">
-    <form id="template_selector">
-      <select id="template_list">
-        <option></option>
-      </select>
-      <div id="template_summary">
-      </div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <span class="pull-left" style="position: absolute;bottom: 10px;"><%= link_to 'Edit templates', admin_proposals_call_question_templates_path %></span>
-    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-    <button id="template_load" class="btn btn-primary disabled">Load template</button>
-  </div>
-</div>
+<%= render '/shared/form/template_modal', header: 'Select Questions from Template', template_model: Admin::Proposals::CallQuestionTemplate %>

@@ -1,15 +1,16 @@
+<% # Not quite sure why the form can't figure it out himself, but this next line is necessary %>
 <% if @feedback.persisted? then url = admin_show_feedback_url else url = admin_show_feedbacks_url end %>
 
-<%= simple_form_for([@show, @feedback], :url => url) do |f| %>
+<%= simple_form_for([@show, @feedback], url: url) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
-
-    <%= render "admin/shared/md_editor", :f => f, :field => :body %>
-
+    <%= render "/shared/form/md_editor", f: f, field: :body, show_hint: true %>
   </div>
 
+  <% # You cannot use the form actions ofr this one. %>
   <div class="form-actions">
-    <%= f.button :submit, :class => "btn btn-primary" %>
+    <%= f.button :submit, class: "btn btn-primary" %>
+    <%= get_link @show, :show, link_text: 'Back to Show', html_class: 'btn' %>
   </div>
 <% end %>

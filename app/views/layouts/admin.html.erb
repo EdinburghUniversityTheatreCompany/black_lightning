@@ -1,110 +1,119 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title><%= "#{@title} | " unless @title == nil%>Bedlam Theatre Admin</title>
-  <%= stylesheet_link_tag    "admin", :media => "all" %>
-  <%= javascript_include_tag "application" %>
-  <%= javascript_include_tag "admin" %>
-  <%= csrf_meta_tags %>
+  <head>
+    <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Admin</title>
+    <%= stylesheet_link_tag    "admin", media: "all" %>
+    <%= javascript_include_tag "application" %>
+    <%= javascript_include_tag "admin" %>
+    <%= csrf_meta_tags %>
 
-  <%= yield :head %>
+    <%= yield :head %>
 
-  <meta name="viewport" content="initial-scale = 1.0" />
-</head>
-<body>
+    <meta name="viewport" content="initial-scale = 1.0" />
+  </head>
+  <body>
     <div class="navbar">
         <div class="navbar-inner">
-            <%= link_to 'Bedlam Theatre Admin', admin_path, :class => "brand"%>
+            <%= link_to 'Bedlam Theatre Admin', admin_path, class: "brand" %>
 
             <ul id="login_menu" class="nav pull-right">
-                <li><p class="navbar-text">Welcome <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { :title => 'Edit Account' } %></p></li>
+                <li><p class="navbar-text">Welcome <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { title: 'Edit Account' } %></p></li>
                 <li><%= link_to "Main Site", root_path %></li>
-                <li><%= link_to "Sign Out", destroy_user_session_path, :method => :delete %></li>
+                <li><%= link_to "Sign Out", destroy_user_session_path, method: :delete %></li>
             </ul>
 
             <div class="nav-collapse collapse">
               <ul class="nav">
-                  <% if can? :read, Admin::Proposals::Call %>
-                  <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
-                  <% end %>
+                <% if can? :index, Admin::Proposals::Call %>
+                <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
+                <% end %>
 
-                  <% if can? :read, Show %>
-                  <li><%= link_to 'Shows', admin_shows_path %></li>
-                  <% end %>
+                <% if can? :index, Show %>
+                <li><%= link_to 'Shows', admin_shows_path %></li>
+                <% end %>
 
-                  <% if can? :read, Workshop %>
-                  <li><%= link_to 'Workshops', admin_workshops_path %></li>
-                  <% end %>
+                <% if can? :index, Workshop %>
+                <li><%= link_to 'Workshops', admin_workshops_path %></li>
+                <% end %>
 
-                  <% if can? :edit, Opportunity %>
-                  <li><%= link_to 'Opportunities', admin_opportunities_path %></li>
-                  <% end %>
+                <% if can? :index, Opportunity %>
+                <li><%= link_to 'Opportunities', admin_opportunities_path %></li>
+                <% end %>
 
-                  <% if can? :read, Admin::Questionnaires::Questionnaire %>
-                  <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
-                  <% end %>
+                <% if can? :index, Admin::Questionnaires::Questionnaire %>
+                <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
+                <% end %>
 
-                  <% if can? :read, Venue %>
-                  <li><%= link_to 'Venues', admin_venues_path %></li>
-                  <% end %>
+                <% if can? :index, Venue %>
+                <li><%= link_to 'Venues', admin_venues_path %></li>
+                <% end %>
 
-                  <% if can? :read, Season %>
-                  <li><%= link_to 'Seasons', admin_seasons_path %></li>
-                  <% end %>
+                <% if can? :index, Season %>
+                <li><%= link_to 'Seasons', admin_seasons_path %></li>
+                <% end %>
 
-                  <% if can? :read, News %>
-                  <li><%= link_to 'News', admin_news_index_path %></li>
-                  <% end %>
+                <% if can? :index, News %>
+                <li><%= link_to 'News', admin_news_index_path %></li>
+                <% end %>
 
-                  <% if can? :read, Admin::Staffing %>
-                  <li><%= link_to 'Staffing', admin_staffings_path %></li>
-                  <% end %>
+                <% if can? :index, Admin::Staffing %>
+                <li><%= link_to 'Staffing', admin_staffings_path %></li>
+                <% end %>
 
-                  <% if can? :read, FaultReport %>
-                  <li><%= link_to 'Fault Reports', admin_fault_reports_path %></li>
-                  <% end %>
+                <% if can? :index, FaultReport %>
+                <li><%= link_to 'Fault Reports', admin_fault_reports_path %></li>
+                <% end %>
 
-                  <% if can? :read, Admin::EditableBlock %>
-                  <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
-                  <% end %>
+                <% if can? :index, Admin::EditableBlock %>
+                <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
+                <% end %>
 
-                  <% if can? :read, User %>
-                  <li><%= link_to 'Users', admin_users_path %></li>
-                  <% end %>
+                <% if can? :index, User %>
+                <li><%= link_to 'Users', admin_users_path %></li>
+                <% end %>
 
-                  <% if can? :read, Role %>
-                  <li><%= link_to 'Roles', admin_roles_path %></li>
-                  <% end %>
+                <% if can? :index, Role %>
+                <li><%= link_to 'Roles', admin_roles_path %></li>
+                <% end %>
 
-                  <% if can? :read, Admin::Permission %>
-                  <li><%= link_to 'Permissions', admin_permissions_path %></li>
-                  <% end %>
+                <% if can? :index, Admin::Permission %>
+                <li><%= link_to 'Permissions', admin_permissions_path %></li>
+                <% end %>
 
-                  <% if can? :manage, :jobs %>
-                  <li><%= link_to 'Jobs', admin_jobs_path(:action => "overview") %></li>
-                  <% end %>
+                <% if can? :manage, :jobs %>
+                <li><%= link_to 'Jobs', admin_jobs_overview_path %></li>
+                <% end %>
 
-                  <% if can? :read, Admin::MaintenanceDebt%>
-                  <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
-                  <%end%>
-
-                  <% if can? :read, Admin::StaffingDebt%>
-                    <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
-                  <%end%>
-
-                  <% if can? :read, Admin::DebtNotification %>
-                    <li><%= link_to 'Debt', admin_debts_path %></li>
-                    <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
-                  <% else %>
-                    <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
-                  <% end %>
-
-                <% if can? :create, MembershipActivationToken%>
-                    <li><%= link_to 'Membership Activation', new_membership_activation_path %></li>
+                <% if can? :index, Admin::MaintenanceDebt %>
+                <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
                 <%end%>
 
-			  </ul>
-			</div>
+                <% if can? :index, Admin::StaffingDebt %>
+                  <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
+                <%end%>
+
+                <% if can? :index, Admin::Debt %>
+                  <li> <%= link_to 'Debt', admin_debts_path %></li>
+                <% else %>
+                  <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
+                <% end %>
+
+                <% if can? :index, Admin::DebtNotification %>
+                  <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
+                <% end %>
+
+                <% if can? :create, MembershipActivationToken %>
+                  <li><%= link_to 'Membership Activation', new_admin_membership_activation_token_path %></li>
+                <% end %>
+
+                <% if can? :index, MassMail %>
+                  <li><%= link_to 'Mass Mail', admin_mass_mails_path %></li>
+                <% end %>
+
+
+              </ul>
+            </div>
+
             <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">
               Menu
             </a>
@@ -112,31 +121,11 @@
     </div>
 
     <div class="container">
-      <div class="alert-container">
-        <% flash.each do |key, msg| %>
-          <% case key                               %>
-          <% when :alert                            %>
-          <%   alertclass = "alert-error"           %>
-          <%   icon       = "fa fa-exclamation-sign" %>
-          <% when :success                          %>
-          <%   alertclass = "alert-success"         %>
-          <%   icon       = "fa fa-ok"               %>
-          <% when :notice                           %>
-          <%   alertclass = "alert-info"            %>
-          <%   icon       = "fa fa-info-sign"        %>
-          <% end %>
-          <p id="<%= key %>" class="alert <%= alertclass %>">
-            <i class="<%= icon %> fa-large"></i>
-            <%= msg %>
-            <button type="button" class="close" data-dismiss="alert">&times;</button>
-          </p>
-        <% end %>
-      </div>
+      <%= render '/layouts/alert_div' %>
 
       <%= content_for?(:content) ? yield(:content) : yield %>
-
     </div>
 
-    <%= render "shared/footer" %>
-</body>
+    <%= render "layouts/footer" %>
+  </body>
 </html>

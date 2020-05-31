@@ -34,8 +34,10 @@
 #  staffing_debt_start    :date
 #
 
-class Event < ActiveRecord::Base
-  include DateHelper
+class Event < ApplicationRecord
+  include TimeHelper
+  include ApplicationHelper
+
   resourcify
 
   # Use the format slug for urls. e.g. /events/myshow
@@ -43,17 +45,9 @@ class Event < ActiveRecord::Base
     slug
   end
 
-  # Scopes #
+  # Validations #
 
-  # Usually order events with the earliest at the top.
-  default_scope -> { order('start_date ASC') }
-
-  scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
-  scope :future, -> { where(['end_date >= ?', Date.current]) }
-
-  def self.current_slideshow
-    return unscoped.where(['end_date >= ? AND is_public = ?', Date.current, true]).order('end_date ASC')
-  end
+  validates :name, :slug, :description, :start_date, :end_date, presence: true
 
   # Relationships #
 
@@ -67,12 +61,6 @@ class Event < ActiveRecord::Base
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
 
-  # Validations #
-
-  # Do not validate start_date, end_date or tag_line, as these will cause the proposal to show conversion to fail.
-  validates :name, :description, presence: true
-  validates :slug, presence: true, uniqueness: true
-
   # Paperclip #
   has_attached_file :image,
                     styles: { medium: '576x300#', thumb: '192x100#', slideshow: '960x500#' },
@@ -81,12 +69,20 @@ class Event < ActiveRecord::Base
 
   validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
 
-  # Accessible Attributes #
-  attr_accessible :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :team_members, :team_members_attributes, :pictures, :pictures_attributes, :price, :spark_seat_slug
+  # Scopes #
 
-  # Returns the last show to have finished.
-  def self.last_show
+  scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
+  scope :future, -> { where(['end_date >= ?', Date.current]) }
+  scope :this_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
+
+  # Returns the last event to have finished.
+  def self.last_event
     return where(['end_date < ? AND is_public = ?', Date.current, true]).last
+  end
+
+  # Formats the shows so they can be used in a selection field
+  def self.selection_collection
+    return pluck(:name, :id)
   end
 
   ##
@@ -119,7 +115,11 @@ class Event < ActiveRecord::Base
   # The date format used is the :long format, defined in /config/locales/en.yml
   ##
   def date_range(include_year, format = :long)
-    return date_range_string(start_date, end_date, include_year, format)
+    return time_range_string(start_date, end_date, include_year, format)
+  end
+
+  def simultaneous_seasons
+    return Season.where('start_date <= ? and end_date >= ?', end_date, start_date)
   end
 
   def as_json(options = {})
@@ -129,10 +129,7 @@ class Event < ActiveRecord::Base
       ]
     }
 
-    options = options.merge(defaults) do |_key, oldval, newval|
-      # http://stackoverflow.com/a/11171921
-      (newval.is_a?(Array) ? (oldval + newval) : (oldval << newval)).uniq
-    end
+    options = merge_hash(defaults, options)
 
     super(options)
   end

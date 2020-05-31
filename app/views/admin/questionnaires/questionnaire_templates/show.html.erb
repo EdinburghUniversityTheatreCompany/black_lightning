@@ -1,24 +1,7 @@
-<p>
-  <b>Name:</b>
-  <%= @template.name %>
-</p>
+<h1><%= @title %></h1>
 
-<h3>Questions</h3>
-
-<% @template.questions.each do |question| %>
-  <p>
-    <b>Question:</b>
-    <%= question.question_text %>
-  </p>
-
-  <p>
-    <b>Type:</b>
-    <%= question.response_type %>
-  </p>
-
-  <hr />
+<% @questionnaire_template.questions.each do |question| %>
+  <%= render 'question_template_field', question: question %>
 <% end %>
 
-<% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
-<%= link_to edit_text, edit_admin_questionnaires_questionnaire_template_path(@template), :class => "btn" %>
-<%= link_to 'Back', admin_questionnaires_questionnaire_templates_path, :class => "btn"  %>
+<%= render 'shared/show_actions', object: @questionnaire_template %>

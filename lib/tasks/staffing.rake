@@ -1,4 +1,6 @@
 namespace :staffing do
+  # Might come in handy one day, but I am not testing it
+  # :nocov:
   task fix_bedfest: :environment do
     Admin::Staffing.where(show_title: 'Bedlam Festival 2013').each do |s|
       s.end_time = case
@@ -14,4 +16,5 @@ namespace :staffing do
       s.save
     end
   end
+  # :nocov:
 end

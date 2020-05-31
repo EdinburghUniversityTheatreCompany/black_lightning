@@ -14,8 +14,7 @@
 # == Schema Information End
 #++
 ##
-class Admin::Feedback < ActiveRecord::Base
+class Admin::Feedback < ApplicationRecord
+  validates :show_id, :body, presence: true
   belongs_to :show, class_name: 'Show'
-
-  attr_accessible :body, :show, :show_id
 end

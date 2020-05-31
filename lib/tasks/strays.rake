@@ -1,5 +1,7 @@
 # From paperclip source.
+
 module Paperclip
+  # :nocov:
   module Task
     def self.obtain_attachments(klass)
       klass = Paperclip.class_for(klass.to_s)
@@ -12,9 +14,11 @@ module Paperclip
       end
     end
   end
+  # :nocov:
 end
 
 namespace :strays do
+  # :nocov:
   task :list, [:model] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
@@ -24,11 +28,11 @@ namespace :strays do
     associations.each do |a|
       next unless a.belongs_to?
 
-      puts "#{klass_name.pluralize} with #{a.name.to_s.pluralize} that don't exist"
+      p "#{klass_name.pluralize} with #{a.name.to_s.pluralize} that don't exist"
 
       strays = klass.where("#{a.name}_id is not null").select { |k| k.send(a.name).nil? }
       strays.each do |s|
-        puts "  #{s.id} expected #{a.name} with id #{s.send(a.name.to_s + '_id')}"
+        p "  #{s.id} expected #{a.name} with id #{s.send(a.name.to_s + '_id')}"
       end
     end
   end
@@ -42,12 +46,12 @@ namespace :strays do
     associations.each do |a|
       next unless a.belongs_to?
 
-      puts "Removing #{klass_name.pluralize} with #{a.name.to_s.pluralize} that don't exist"
+      p "Removing #{klass_name.pluralize} with #{a.name.to_s.pluralize} that don't exist"
 
       strays = klass.where("#{a.name}_id is not null").select { |k| k.send(a.name).nil? }
       strays.each do |s|
         s.delete
-        puts "  #{s.id} deleted, as #{a.name} with id #{s.send(a.name.to_s + '_id')} doesn't exist"
+        p "  #{s.id} deleted, as #{a.name} with id #{s.send(a.name.to_s + '_id')} doesn't exist"
       end
     end
   end
@@ -71,11 +75,11 @@ namespace :strays do
         end
 
         if !File.exist?(attachment.path)
-          puts "#{klass_name} #{k.id} is missing its original file."
+          p "#{klass_name} #{k.id} is missing its original file."
         elsif missing == attachment.styles.map { |s| s[0] }
-          puts "#{klass_name} #{k.id} is missing all styles for attachment #{a} and should be reprocessed."
+          p "#{klass_name} #{k.id} is missing all styles for attachment #{a} and should be reprocessed."
         elsif missing.count > 0
-          puts "#{klass_name} #{k.id} is missing styles #{missing} for attachment #{a} and should be reprocessed."
+          p "#{klass_name} #{k.id} is missing styles #{missing} for attachment #{a} and should be reprocessed."
         end
       end
     end
@@ -100,17 +104,19 @@ namespace :strays do
         end
 
         if !File.exist?(attachment.path)
-          puts "#{klass_name} #{k.id} is missing its original file. Setting file to nil."
+          p "#{klass_name} #{k.id} is missing its original file. Setting file to nil."
           attachment.clear
           k.save!
         elsif missing == attachment.styles.map { |s| s[0] }
-          puts "#{klass_name} #{k.id} is missing all styles for attachment #{a} and will be reprocessed."
+          p "#{klass_name} #{k.id} is missing all styles for attachment #{a} and will be reprocessed."
           attachment.reprocess!
         elsif missing.count > 0
-          puts "#{klass_name} #{k.id} is missing styles #{missing} for attachment #{a} and will be reprocessed."
+          p "#{klass_name} #{k.id} is missing styles #{missing} for attachment #{a} and will be reprocessed."
           attachment.reprocess!
         end
       end
     end
   end
+  # :nocov:
 end
+

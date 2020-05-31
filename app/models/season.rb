@@ -16,5 +16,13 @@
 #++
 ##
 class Season < Event
+  # Validate uniqueness on Event Subtype basis instead of on the event.
+  # Otherwise, you cannot have two different types with the same slug.
+  validates :slug, uniqueness: true
+
   has_many :events
+
+  def simultaneous_events
+    return (Event.unscoped.where('end_date >= ? and start_date <= ?', start_date, end_date).or(Event.unscoped.where(season: self)).order('start_date ASC') - [self]).uniq
+  end
 end

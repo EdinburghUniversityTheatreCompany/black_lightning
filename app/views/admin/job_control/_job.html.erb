@@ -5,8 +5,8 @@
         Job #<%= job.id %><%= " - #{job.description}" if job.description %>
       </a>
       <span class="pull-right">
-        <%= link_to 'Retry', admin_jobs_path(:action => "retry", :id => job.id), :class => "btn btn-small" %>
-        <%= link_to 'Remove', admin_jobs_path(:action => "remove", :id => job.id), :class => "btn btn-small btn-danger" %>
+        <%= link_to 'Retry', admin_jobs_retry_path(:id => job.id), :class => "btn btn-small" %>
+        <%= link_to 'Remove', admin_jobs_remove_path(:id => job.id), :class => "btn btn-small btn-danger" %>
       </span>
     </div>
   </div>

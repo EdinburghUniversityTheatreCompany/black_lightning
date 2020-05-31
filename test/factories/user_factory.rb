@@ -22,18 +22,19 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :user do
     first_name            { Faker::Name.first_name }
     last_name             { Faker::Name.last_name  }
     email                 { Faker::Internet.email  }
-    password              :random_password
+    password              { :random_password }
     password_confirmation { password }
 
     factory :member do
       after(:create) do |user, _evaluator|
         user.add_role :member
       end
+      
       factory :member_with_phone_number do
         phone_number { rand(10**9..10**10).to_s }
       end

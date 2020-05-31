@@ -18,20 +18,19 @@
 # == Schema Information End
 #++
 ##
-class Admin::Question < ActiveRecord::Base
+class Admin::Question < ApplicationRecord
+  validates :question_text, :response_type, presence: true
+  
   belongs_to :questionable, polymorphic: true
 
   has_many :answers, class_name: 'Admin::Answer', dependent: :destroy
-
-  validates :question_text, presence: true
-
-  attr_accessible :question_text, :response_type
 
   ##
   # Defines the possible response types.
   #
   # Note that if you change these, you will need to update the answer_field partial.
   # app/views/admin/shared/_answer_field.html.erb
+  # You may also need to change the questionnaire show page.
   ##
   def self.response_types
     ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File']

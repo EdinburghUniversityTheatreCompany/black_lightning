@@ -1,0 +1,49 @@
+div.datetime select {
+    width: 100px;
+}
+
+select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !important;}
+
+.container {
+    padding-bottom:10px;
+}
+
+[class*=" icon-"] {
+    background-image: none;
+}
+
+.gridster li {
+     margin-bottom : 10px;
+     overflow: auto;
+}
+
+.sortable {
+    margin: 0;
+}
+
+.ui-sortable-placeholder {
+    margin: 10px;
+    height: 30px;
+    width: 560px;
+    border: 1px solid #e5e5e5;
+    border-radius: 5px;
+}
+
+/* Responsive */
+@media (max-width: 400px) {
+    .brand {
+        float: none !important;
+    }
+
+    #login_menu {
+        float: none;
+    }
+
+    #login_menu li {
+        float: none;
+    }
+
+    #login_menu a {
+        padding: 0;
+    }
+}

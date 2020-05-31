@@ -1,45 +1,35 @@
 <%= simple_form_for [:admin, @user] do |f| %>
-<div class="form-inputs">
-  <fieldset class="fieldset form-horizontal">
-    <legend>User Details</legend>
+  <%= f.error_notification %>
 
-    <%= f.input :email %>
-    <%= f.input :first_name %>
-    <%= f.input :last_name %>
-    <%= f.input :phone_number %>
+  <div class="form-inputs">
+    <fieldset class="fieldset form-horizontal">
+      <legend>User Details</legend>
 
-    <% hint = "Leave blank to generate random password" if not @user.persisted? %>
+      <%= f.input :email %>
+      <%= f.input :first_name %>
+      <%= f.input :last_name %>
+      <%= f.input :phone_number %>
 
-    <%= f.input :password, :hint => hint %>
-    <%= f.input :password_confirmation %>
+      <% hint = "Leave blank to generate random password" if @user.new_record? %>
 
-    <% if can? :assign_roles, @user %>
-      <%= f.association :roles, :as => :check_boxes %>
-    <% end %>
-  </fieldset>
+      <%= f.input :password, hint: hint %>
+      <%= f.input :password_confirmation %>
 
-  <fieldset class="fieldset">
-    <legend>Public Profile</legend>
+      <% if can? :assign_roles, @user %>
+        <%= f.association :roles, as: :check_boxes %>
+      <% end %>
+    </fieldset>
 
-    <div class="control-group">
-      <%= f.label :is_public %>
+    <fieldset class="fieldset">
+      <legend>Public Profile</legend>
+      
+      <%= render '/shared/form/public_private_switch', f: f, field_symbol: :public_profile %>
 
-      <div class="controls switch" data-on="success" data-on-label="Public" data-off="danger" data-off-label="Private" style="width: 200px;">
-        <%=
-           f.input_field :public_profile,
-                          boolean_style: :inline
-        %>
-      </div>
-    </div>
+      <%= f.input :avatar %>
 
-    <%= f.input :avatar %>
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :bio, :rows => 12 } do %>
-      <%= render "admin/shared/md_hints" %>
-    <% end %>
-  </fieldset>
-</div>
-<div class="form-actions">
-    <%= f.button :submit, class: "btn-primary" %>
-    <%= link_to 'Back', :back, class: "btn" %>
-</div>
+      <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+    </fieldset>
+  </div>
+
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>

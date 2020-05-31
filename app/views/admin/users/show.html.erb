@@ -1,34 +1,35 @@
-<%= render file: '/users//show.html.erb' %>
+<%= render file: '/users/show.html.erb' %>
 
 <hr />
 <h2>Details</h2>
-<table class="table table-bordered">
-    <tbody>
-        <tr>
-            <th>Email</th>
-            <td><%= @user.email %></td>
-        </tr>
-        <tr>
-            <th>Phone Number</th>
-            <td><%= link_to @user.phone_number, "tel: #{@user.phone_number}" unless @user.phone_number.blank? %></td>
-        </tr>
-        <tr>
-            <th>Roles</th>
-            <td><%= @user.roles.collect {|role| role.name.capitalize }.join(', ') %></td>
-        </tr>
-        <tr>
-            <th>Sign in count</th>
-            <td><%= @user.sign_in_count %></td>
-        </tr>
-        <tr>
-            <th>Card Number</th>
-            <td>
-                <% unless @user.card_number.nil? %>
-                  <%= link_to @user.card_number, admin_membership_card_path(@user.membership_card) %>
-                <% end %>
-            </td>
-        </tr>
-    </tbody>
-</table>
-<%= link_to 'Edit', edit_admin_user_path(@user.id), class: 'btn'%>
-<%= link_to 'Reset Password', reset_password_admin_user_path(@user.id), method: :post, class: 'btn'%>
+<p>
+    <b>Email:</b>
+    <%= @user.email %>
+</p>
+<p>
+    <b>Phone Number:</b>
+    <%= link_to @user.phone_number, "tel: #{@user.phone_number}" unless @user.phone_number.blank? %>
+</p>
+<p>
+    <b>Roles:</b>
+    <%= @user.roles.collect {|role| role.name.capitalize }.to_sentence %>
+</p>
+<p>
+    <b>Sign-in Count:</b>
+    <%= @user.sign_in_count %>
+</p>
+<p>
+    <b>Profile Visible to Public:</b>
+    <%= bool_text @user.public_profile %>
+</p>
+
+<% if false #@user.card_number.present? Can be re-enabled if you want to use membership card again%>
+    <p>
+        <b>Card Number:</b>
+        <%= link_to @user.card_number, admin_membership_card_path(@user.membership_card) %>
+    </p>
+<% end %>
+
+
+<%= render '/shared/show_actions', object: @user %>
+<%= get_link @user, :reset_password, http_method: :post %>

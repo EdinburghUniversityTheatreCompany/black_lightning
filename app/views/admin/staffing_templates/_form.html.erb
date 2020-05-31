@@ -1,4 +1,4 @@
-<%= simple_nested_form_for(@template) do |f| %>
+<%= simple_nested_form_for(@staffing_template) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
@@ -6,16 +6,12 @@
     <%= f.input :name %>
 
     <div class="well form-horizontal">
-    <h3>Jobs</h3>
-    <%= f.simple_fields_for :staffing_jobs %>
+      <h3>Jobs</h3>
+      <%= f.simple_fields_for :staffing_jobs %>
 
-    <% add_job_text = '<i class="fa fa-plus"></i> Add Job'.html_safe %>
-    <%= f.link_to_add add_job_text, :staffing_jobs, :class => "btn" %>
+      <%= link_to_add f, :staffing_jobs %>
     </div>
   </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, :class => 'btn-primary' %>
-    <%= link_to 'Cancel', admin_staffing_templates_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>

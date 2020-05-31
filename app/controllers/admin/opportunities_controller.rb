@@ -10,11 +10,10 @@ class Admin::OpportunitiesController < AdminController
   # GET /admin/opportunities.json
   ##
   def index
-    @title = 'Opportunity'
-    @opportunities = Opportunity.order('expiry_date DESC') \
-                     .paginate(page: params[:page], per_page: 15) \
-                     .includes(:creator) \
-                     .all
+    @title = 'Opportunities'
+    @opportunities = @opportunities.includes(:creator)
+                                   .order('expiry_date DESC')
+                                   .paginate(page: params[:page], per_page: 15)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -28,11 +27,11 @@ class Admin::OpportunitiesController < AdminController
   # GET /admin/opportunity/1.json
   ##
   def show
-    @opportunities = Opportunity.find(params[:id])
-    @title = @opportunities.title
+    @title = @opportunity.title
+
     respond_to do |format|
       format.html
-      format.json { render json: @opportunities }
+      format.json { render json: @opportunity }
     end
   end
 
@@ -42,8 +41,7 @@ class Admin::OpportunitiesController < AdminController
   # GET /admin/opportunity/new.json
   ##
   def new
-    @opportunity = Opportunity.new
-    @title = 'Create Opportunity'
+    # The title is set by the view.
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: @opportunity }
@@ -54,8 +52,7 @@ class Admin::OpportunitiesController < AdminController
   # GET /admin/opportunity/1/edit
   ##
   def edit
-    @opportunity = Opportunity.find(params[:id])
-    @title = "Edit #{@opportunity.title}"
+    # The title is set by the view.
   end
 
   ##
@@ -64,15 +61,19 @@ class Admin::OpportunitiesController < AdminController
   # POST /admin/opportunity.json
   ##
   def create
-    @opportunity = Opportunity.new(params[:opportunity])
     @opportunity.creator = current_user
+
+    # Make sure users cannot create an opportunity that is approved.
+    # They should manually approve it.
+    @opportunity.approved = false
+    @opportunity.approver = nil
 
     respond_to do |format|
       if @opportunity.save
         format.html { redirect_to [:admin, @opportunity], notice: 'Opportunity was successfully created.' }
         format.json { render json: [:admin, @opportunity], status: :created, location: @opportunities }
       else
-        format.html { render 'new' }
+        format.html { render 'new', status: :unprocessable_entity }
         format.json { render json: @opportunity.errors, status: :unprocessable_entity }
       end
     end
@@ -84,19 +85,20 @@ class Admin::OpportunitiesController < AdminController
   # PUT /admin/opportunity/1.json
   ##
   def update
-    @opportunity = Opportunity.find(params[:id])
-
-    unless can? :approve, @opportunity
+    if can? :approve, @opportunity
+      # Maintain the approval, but update the approver if it stays approved.
+      @opportunity.approver = current_user if @opportunity.approved
+    else
       @opportunity.approved = false
       @opportunity.approver = nil
     end
 
     respond_to do |format|
-      if @opportunity.update_attributes(params[:opportunity])
+      if @opportunity.update(opportunity_params)
         format.html { redirect_to [:admin, @opportunity], notice: 'Opportunity was successfully updated.' }
         format.json { head :no_content }
       else
-        format.html { render 'edit' }
+        format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: @opportunity.errors, status: :unprocessable_entity }
       end
     end
@@ -108,8 +110,7 @@ class Admin::OpportunitiesController < AdminController
   # DELETE /admin/opportunity/1.json
   ##
   def destroy
-    @opportunity = Opportunity.find(params[:id])
-    @opportunity.destroy
+    helpers.destroy_with_flash_message(@opportunity)
 
     respond_to do |format|
       format.html { redirect_to admin_opportunities_url }
@@ -123,17 +124,20 @@ class Admin::OpportunitiesController < AdminController
   # PUT /admin/opportunity/1/approve.json
   ##
   def approve
-    @opportunity = Opportunity.find(params[:id])
-
-    authorize!(:approve, @opportunity)
-
     @opportunity.approved = true
     @opportunity.approver = current_user
-    @opportunity.save!
+
+    if @opportunity.save
+      flash[:success] = "#{@opportunity.title} has been approved"
+    else
+      # I can see that this will work, but I cannot get it to fail.
+      # :nocov:
+      flash[:error] = "Could not approve #{@opportunity.title}"
+      # :nocov:
+    end
 
     respond_to do |format|
-      flash[:success] = "#{@opportunity.title} has been approved"
-      format.html { redirect_to admin_opportunities_url }
+      format.html { redirect_to admin_opportunity_url(@opportunity) }
       format.json { head :no_content }
     end
   end
@@ -144,17 +148,28 @@ class Admin::OpportunitiesController < AdminController
   # PUT /admin/opportunity/1/reject.json
   ##
   def reject
-    @opportunity = Opportunity.find(params[:id])
-
-    authorize!(:reject, @opportunity)
-
     @opportunity.approved = false
-    @opportunity.save!
+    @opportunity.approver = nil
+
+    if @opportunity.save
+      flash[:success] = "#{@opportunity.title} has been rejected"
+    else
+      # I can see that this will work, but I cannot get it to fail.
+      # :nocov:
+      flash[:error] = "Could not reject #{@opportunity.title}"
+      # :nocov:
+    end
 
     respond_to do |format|
-      flash[:success] = "#{@opportunity.title} has been rejected"
-      format.html { redirect_to admin_opportunities_url }
+      format.html { redirect_to admin_opportunity_url(@opportunity) }
       format.json { head :no_content }
     end
+  end
+
+  private
+
+  def opportunity_params
+    # Do not include information about the approver and creator. That should only be settable by the controller.
+    params.require(:opportunity).permit(:description, :show_email, :title, :expiry_date)
   end
 end

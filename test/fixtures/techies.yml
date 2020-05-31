@@ -13,11 +13,7 @@
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
 one:
-  name: MyString
-  created_at: <%= Time.now %>
-  updated_at: <%= Time.now %>
+  name: Finbar the Viking
 
 two:
-  name: MyString
-  created_at: <%= Time.now %>
-  updated_at: <%= Time.now %>
+  name: Dennis the Donkey

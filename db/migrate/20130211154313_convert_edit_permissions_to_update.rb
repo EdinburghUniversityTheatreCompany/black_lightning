@@ -1,7 +1,6 @@
 class ConvertEditPermissionsToUpdate < ActiveRecord::Migration
   # Faux model for the migration.
   class Admin::Permission < ActiveRecord::Base
-    attr_accessible :action
   end
 
   def up
