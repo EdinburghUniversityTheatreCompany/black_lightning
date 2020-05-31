@@ -17,8 +17,6 @@
 # == Schema Information End
 #++
 ##
-class NewsletterSubscriber < ActiveRecord::Base
+class NewsletterSubscriber < ApplicationRecord
   validates :email, presence: true
-
-  attr_accessible :email
 end

@@ -1,8 +1,12 @@
 class AdminController < ApplicationController
-  before_filter :authenticate_user!
-  before_filter :authorize_backend!
+  before_action :authenticate_user!
+  before_action :authorize_backend!
+
   layout 'admin'
-  def index
-    @title = 'Administration'
+
+  private
+
+  def authorize_backend!
+    authorize! :access, :backend
   end
 end

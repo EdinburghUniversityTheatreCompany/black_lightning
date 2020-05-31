@@ -17,10 +17,12 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :answer, class: Admin::Answer do
+    question
+
     transient do
-      response_type 'Long Text'
+      response_type { 'Long Text' }
     end
 
     answer do
@@ -38,9 +40,7 @@ FactoryGirl.define do
     end
 
     file do
-      if response_type == 'File'
-        fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf')
-      end
+      fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf') if response_type == 'File'
     end
   end
 end

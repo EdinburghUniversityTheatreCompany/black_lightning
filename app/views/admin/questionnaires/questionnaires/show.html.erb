@@ -1,41 +1,12 @@
-<h3>Questionnaire for <%= @admin_questionnaires_questionnaire.show.name %></h3>
+<h1><%= @title%></h1>
 
-<% @admin_questionnaires_questionnaire.questions.each do |question| %>
-  <div>
-    <p>
-      <b>Question:</b>
-    </p>
-    <%= render_markdown question.question_text %>
-  </div>
+<%= render '/shared/questions_and_answers', answers: @questionnaire.answers %>
 
-  <div>
-    <p>
-      <b>Response:</b>
-    </p>
-    <% question.answers.each do |answer| %>
-      <% if question.response_type == "File" then %>
-        <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
-      <% else %>
-        <% if answer.answer.presence then %>
-          <%= render_markdown answer.answer %>
-        <% else %>
-          This question has not been answered
-        <% end %>
-      <% end %>
-    <% end %>
-  </div>
+<% # You cannot use the shared/show_actions here because they're all quite different %>
 
-  <hr />
-<% end %>
+<%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary' %>
 
-<% if can? :answer, @admin_questionnaires_questionnaire %>
-<% answer_text = '<i class="icon-book"></i> Answer Questionnaire'.html_safe %>
-<%= link_to answer_text, answer_admin_questionnaires_questionnaire_path(@admin_questionnaires_questionnaire), :class => "btn btn-primary" %>
-<% end %>
+<%= get_link @questionnaire, :edit %>
 
-<% if can? :edit, @admin_questionnaires_questionnaire %>
-  <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
-  <%= link_to edit_text, edit_admin_questionnaires_questionnaire_path(@admin_questionnaires_questionnaire), :class => "btn" %>
-<% end %>
+<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View All Questionnaires', anchor: "#{@questionnaire.show.name.to_url}-table" %>
 
-<%= link_to 'Back', admin_questionnaires_questionnaires_path, :class => "btn"  %>

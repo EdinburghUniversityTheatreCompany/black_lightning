@@ -4,22 +4,20 @@
     <h3><%= "Opportunities" %></h3>
 <% end %>
 
-<% opportunities = Opportunity.approved.first(5) %>
-
+<% displayed_opportunities_count = 5 %>
+<% opportunities = Opportunity.active %>
 
 <% if opportunities.empty? then %>
   <div>
     <%= display_block("No Opportunities", false) %>
   </div>
-    <% else %>
-    <% opportunities.each do |opportunity| %>
-        <p><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></p>
-    <% end %>
-<% end %>
+<% else %>
+  <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
+    <p><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></p>
+  <% end %>
 
-<% if can? :create, Opportunity %>
-  <br />
-
-  <% opportunity_text = '<i class="fa fa-plus"></i> Add Opportunity'.html_safe %>
-  <%= link_to opportunity_text, new_admin_opportunity_path, :class => "btn btn-small" %>
+  <% if opportunities.count > displayed_opportunities_count %>
+    <% link_text = "#{pluralize(opportunities.count - displayed_opportunities_count, 'more opportunity', 'more opportunities')} available." %>
+    <%= link_to link_text, admin_opportunities_url %>
+  <% end %>
 <% end %>

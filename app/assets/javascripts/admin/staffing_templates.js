@@ -1,3 +1,5 @@
+// Very similar to assets/javascripts/admin/question_templates.
+
 (function () {
   "use strict";
 

@@ -1,15 +1,22 @@
-<% header_size = 1 if header_size == nil %>
-<%= "<h#{header_size}>#{@message}</h#{header_size}>".html_safe %>
+<% header_size ||= 1 %>
+<% header_is_link ||= false %>
+<%= "<h#{header_size}>".html_safe %>
+  <% if header_is_link %>
+    <%= link_to @message, admin_debt_path(@user.id) %>
+  <% else %>
+    <%= @message %>
+  <% end %>
+<%= "</h#{header_size}>".html_safe %>
 
 <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %> 
 <br>
-<%= "(#{@user.amount_of_debt_causing_maintenance_debts} now) (#{(@user.amount_of_debt_causing_maintenance_debts Date.today.advance(years: 1)) - @user.amount_of_debt_causing_maintenance_debts} upcoming)"%>
+<%= "(#{@user.debt_causing_maintenance_debts.count} now) (#{@user.upcoming_maintenance_debts.count} upcoming)"%>
 <br>
 <br>
 <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn' %>
 <br>
-<%= "(#{@user.amount_of_debt_causing_staffing_debts} now) (#{(@user.amount_of_debt_causing_staffing_debts Date.today.advance(years: 1)) - @user.amount_of_debt_causing_staffing_debts} upcoming)"%>
+<%= "(#{@user.debt_causing_staffing_debts.count} now) (#{@user.upcoming_staffing_debts.count} upcoming)"%>
 <br>
 <br>
 <% unassociated_job_count = @user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.count%>
-<%= "#{(@user == current_user)? "You have": "#{@user.name} has"} staffed #{unassociated_job_count} staffing #{unassociated_job_count == 1 ? 'slot that is' : 'slots that are'} not associated with any Debt." %>
+<%= "#{(@user == current_user) ? "You have": "#{@user.name(current_user)} has"} staffed #{pluralize(unassociated_job_count, 'staffing slot that is', 'staffings slots that are')} not associated with any Debt." %>

@@ -1,0 +1,21 @@
+require 'test_helper'
+
+class MembershipActivationTokenTest < ActionView::TestCase
+  test 'generate token' do
+    token = MembershipActivationToken.new
+
+    assert_nil token.token
+
+    # Should create a token on validation.
+    token = MembershipActivationToken.create
+
+    assert_not_nil token.token
+
+    # Make sure the token does not change when saving.
+    current_token = token.token
+
+    token.save
+
+    assert current_token, token.token
+  end
+end

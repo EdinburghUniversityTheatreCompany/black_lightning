@@ -1,4 +1,6 @@
 namespace :import do
+  # Might be useful one day, but probably not.
+  # :nocov:
   task shows: :environment do
     Rails.logger = Logger.new("#{Rails.root}/log/import.log")
     Rails.logger.level = Logger::DEBUG
@@ -58,7 +60,7 @@ namespace :import do
             blurb = ''
           end
 
-          description = "<i class=\"icon-info-sign icon-large\"></i> This show was imported from the old website. If you are able to provide any more information, please contact the [Archivist](mailto:archive@bedlamtheatre.co.uk).\n{:.alert .alert-info}"
+          description = "<i class=\"icon-info-sign icon-large\" aria-hidden=”true”></i> This show was imported from the old website. If you are able to provide any more information, please contact the [Archivist](mailto:archive@bedlamtheatre.co.uk).\n{:.alert .alert-info}"
 
           begin
             description += "\n\n"
@@ -151,10 +153,11 @@ namespace :import do
     if user.nil?
       Rails.logger.info "  User #{name} not found. Creating..."
 
-      user = User.create_user(first_name: user_first_name, last_name: user_last_name, email: "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+      user = User.new_user(first_name: user_first_name, last_name: user_last_name, email: "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
       user.save!
     end
 
     return user
   end
+    # :nocov:
 end

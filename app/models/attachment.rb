@@ -27,7 +27,10 @@
 # == Schema Information End
 #++
 ##
-class Attachment < ActiveRecord::Base
+
+# TODO: This needs work with rails 6 because Paperclip is deprecated.
+# TODO: should there be permission checks?
+class Attachment < ApplicationRecord
   belongs_to :editable_block, class_name: 'Admin::EditableBlock'
 
   validates :name, presence: true, uniqueness: true
@@ -47,16 +50,17 @@ class Attachment < ActiveRecord::Base
 
   do_not_validate_attachment_file_type :file
 
-  attr_accessible :name, :file
-
   def slug
     return name
   end
 
   def check_file_size
+    # Not tested because that would take a lot of time for something that will be revised soon.
+    # :nocov:
     # Restrict file size for images:
     if file_file_size > 1.megabytes && (/image\/.+/.match file_content_type)
       errors.add(:file, 'Attached images must be under 1MB in size.')
     end
+    # :nocov: 
   end
 end

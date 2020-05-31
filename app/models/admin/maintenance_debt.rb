@@ -10,28 +10,15 @@
 #  updated_at :datetime         not null
 #  state      :integer          default(0)
 #
-class Admin::MaintenanceDebt < ActiveRecord::Base
+class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show
 
-  attr_accessible :user, :user_id, :due_by, :show, :show_id, :state
-  validates :due_by, presence: true
-  validates :show_id, presence: true
-  validates :user_id, presence: true
+  validates :due_by, :show_id, :user_id, presence: true
 
-  enum state: %i[unfulfilled converted completed]
+  enum state: %i[uncompleted converted completed]
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
-
-  def self.searchfor(user_fname, user_sname, show_name, show_fulfilled)
-    user_ids = User.where('first_name LIKE ? AND last_name LIKE ?', "%#{user_fname}%", "%#{user_sname}%").ids
-    show_ids = Show.where('name LIKE ?', "%#{show_name}%")
-    maintenance_debts = where(user_id: user_ids, show_id: show_ids)
-
-    maintenance_debts = maintenance_debts.unfulfilled unless show_fulfilled
-
-    return maintenance_debts
-  end
 
   def convert_to_staffing_debt
     staffing_debt = Admin::StaffingDebt.new
@@ -41,19 +28,34 @@ class Admin::MaintenanceDebt < ActiveRecord::Base
     staffing_debt.converted = true
     staffing_debt.save!
     self.state = :converted
-    save
+    save!
   end
 
   def status(on_date = Date.today)
     case state
-    when 'converted' then :converted
-    when 'completed' then :completed
-    else 
+    when 'converted'
+      return :converted
+    when 'completed'
+      return :completed
+    when 'uncompleted' then
       if due_by < on_date
-           :causing_debt
-         else
-           :unfulfilled
-         end
+        :causing_debt
+      else
+        :unfulfilled
+      end
+    end
+  end
+
+  def css_class
+    case status
+    when :unfulfilled
+      'warning'
+    when :converted
+      'success'
+    when :completed
+      'success'
+    when :causing_debt
+      'error'
     end
   end
 end

@@ -2,7 +2,7 @@ module EditableBlockHelper
   def display_block(name, admin_page)
     @editable_block = Admin::EditableBlock.find_by_name(name)
 
-    unless @editable_block
+    if @editable_block.nil?
       if can? :create, Admin::EditableBlock
         return ('Block not defined. ' + link_to('Create Block', new_admin_editable_block_path(name: name))).html_safe
       else
@@ -15,20 +15,12 @@ module EditableBlockHelper
       @editable_block.save!
     end
 
-    if can? :edit, @editable_block
-      return render partial: '/shared/editable_block_editor'
-    else
-      return render_markdown(@editable_block.content)
-    end
+    return render partial: '/editable_blocks/display'
   end
 
   def block_exists(name)
     @editable_block = Admin::EditableBlock.find_by_name(name)
 
-    if @editable_block && @editable_block.content.length > 0
-      return true
-    else
-      return false
-    end
+    return @editable_block.present?
   end
 end

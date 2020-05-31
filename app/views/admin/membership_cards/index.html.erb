@@ -6,7 +6,9 @@
   <tr>
     <th>Card Number</th>
     <th>Member Name</th>
-    <th></th>
+    <% if can? :destroy, MembershipCard%>
+      <th></th>
+    <% end %>
   </tr>
 
 <% @cards.each do |card| %>
@@ -14,26 +16,16 @@
     <td>
       <%= link_to card.card_number, admin_membership_card_path(card) %>
     </td>
-    <td>
-      <% unless card.user.nil? %>
-        <%= link_to card.user.name, admin_user_path(card.user) %>
-      <% end %>
-    </td>
 
     <td>
-      <% if can? :delete, card %>
-        <%= link_to 'Delete', admin_membership_card_path(card), method: :delete, data: { "confirm" => "Deleting card " + card.card_number,
-                                                                                         "detail"  => "Are you sure you wish to continue?" } %>
-    <% end %>
+      <%= user_link(card.user, false) %>
     </td>
+
+    <%= get_link card, :destroy, wrap_tag: 'td '%>
   </tr>
 <% end %>
 </table>
 
 <%= will_paginate(@cards) %>
 
-<% if can? :create, MembershipCard %>
-  <%= link_to admin_membership_cards_path, :class => 'btn', method: :post do %>
-    <i class="fa fa-plus"></i> Create New Card
-  <% end %>
-<% end %>
+<%= get_link MembershipCard, :new %>

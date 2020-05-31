@@ -16,7 +16,7 @@
   $form.submit(function (e) {
     e.preventDefault();
 
-    $.getJSON("/users/check_membership", $form.serialize())
+    $.getJSON("/admin/membership/check_membership", $form.serialize())
       .done(function (data) {
         showResult("success", data.response);
         $('#search').val("").focus();
@@ -46,7 +46,7 @@
     }
 
     $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
-              "<i class=\"" + icon  + " fa fa-large\"></i> "
+              "<i class=\"" + icon  + " fa fa-large\" aria-hidden=”true”></i> "
               + message +
               "</div>");
 

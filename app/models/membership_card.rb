@@ -1,10 +1,10 @@
-class MembershipCard < ActiveRecord::Base
+class MembershipCard < ApplicationRecord
   before_create :set_card_number
 
   belongs_to :user
 
-  attr_accessible :card_number, :user
-
+  # Unused
+  # :nocov:
   def to_param
     card_number
   end
@@ -20,4 +20,5 @@ class MembershipCard < ActiveRecord::Base
 
     self.card_number = date_i + number
   end
+  # :nocov:
 end

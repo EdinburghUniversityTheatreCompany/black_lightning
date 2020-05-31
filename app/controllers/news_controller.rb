@@ -5,14 +5,16 @@
 ##
 
 class NewsController < ApplicationController
+  load_and_authorize_resource
   ##
   # GET /news
   #
   # GET /news.json
   ##
   def index
-    @news = News.paginate(page: params[:page], per_page: 5).for_public
-    @title = 'News'
+    @title = 'Bedlam News'
+    @news = @news.order('publish_date DESC').paginate(page: params[:page], per_page: 5)
+
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @news }
@@ -26,7 +28,6 @@ class NewsController < ApplicationController
   # GET /news/1.json
   ##
   def show
-    @news = News.find(params[:id])
     @title = @news.title
     respond_to do |format|
       format.html # show.html.erb

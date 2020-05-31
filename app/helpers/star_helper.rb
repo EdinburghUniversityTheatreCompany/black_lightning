@@ -1,15 +1,18 @@
 module StarHelper
   def star_rating(rating)
-    half_star = rating.to_i != rating
+    rating = rating.to_f
+
+    half_star = rating.floor != rating
 
     stars = ''
 
-    for i in 1..rating.floor
-      stars << '<i class="icon-star"></i>'
+    amount_of_stars = rating.floor
+    (1..amount_of_stars).each do
+      stars << '<i class="fas fa-star" aria-hidden=”true”></i>'
     end
 
     if half_star
-      stars << '<i class="icon-star-half"></i>'
+      stars << '<i class="fas fa-star-half-alt" aria-hidden=”true”></i>'
     end
 
     return stars.html_safe

@@ -1,27 +1,18 @@
-<% content_for :head do %>
-  <%= javascript_include_tag "admin/user_typeahead_field.js" %>
-<% end %>
+<% error = f.error(:position).present? || f.error(:user).present?%>
 
-<div class="team_member control-group fields <%= "error" if (f.error(:position).present? || f.error(:user).present?) %>">
+<div class="team_member control-group fields <%= "error" if error %>">
     <%= f.hidden_field :id %>
 
-    <i class="icon-sort"></i>
-    
-    <%= f.error :position %>
-    <%= f.error :user %>
+    <% position_field = [f.input_field(:position, placeholder: 'Position', autocomplete: 'off', data: { provide: "typeahead", source: position_typeahead })] %>
+ 
+    <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: position_field %>
 
-    <div class="no-such-user" style="display: none">
-      <span class="help-inline">The user cannot be found. Please make sure they have bought membership and activated their website account by emailing <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>. Still can't find them? Contact the secretary.</span>
-      <br/>
-      <br/>
-    </div>
+    <%= link_to_remove f %>
 
-    <%= f.input_field :position, data: { provide: "typeahead", source: ['Director', 'Assistant Director', 'Co-Director', 'Producer', 'Assistant Producer', 'Co-Producer', 'Tech Manager', 'Co-Tech Manager', 'Tech Assistant', 'Lighting Designer', 'Sound Designer', 'Projections Designer', 'Stage Manager', 'Assistant Stage Manager', 'Co-Stage Manager', 'Set Manager', 'Set Assistant', 'Set Designer', 'Production Manager', 'Costume Manager', 'Costume Assistant', 'Co-Costume Manager', 'Writer', 'Actor', 'Musician', 'Performer', 'Creative', 'Assistant to Mr B. Hussey'] } %>
-
-    <% value = f.object.user ? "#{f.object.user.first_name} #{f.object.user.last_name}" : "" %>
-    <input class="user_name" type="text" value="<%= value %>">
-    <%= f.hidden_field :user_id, class: "user_id" %>
-
-    <% remove_text = '<i class="icon-remove"></i> Remove'.html_safe %>
-    <%= f.link_to_remove remove_text, class: "btn btn-danger" %>
+    <% if error %>
+        <p>
+            <%= f.full_error :position %>
+            <%= f.full_error :user %>
+        </p>
+    <% end %>
 </div>

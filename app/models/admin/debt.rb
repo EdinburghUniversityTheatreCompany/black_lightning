@@ -1,4 +1,5 @@
 class Admin::Debt
+  DISABLED_PERMISSIONS = %w[create update delete manage].freeze
 
   def initialize(id)
     @id = id
@@ -10,11 +11,9 @@ class Admin::Debt
 
   def self.users_oldest_debt(user_id)
     user = User.find(user_id)
-    oldest_mdebt_date = user.admin_maintenance_debts.unfulfilled.minimum(:due_by)
-    oldest_sdebt_date = user.admin_staffing_debts.unfulfilled.minimum(:due_by)
-    out = [oldest_mdebt_date,oldest_sdebt_date].compact.min
+    oldest_maintenance_debt_date = user.admin_maintenance_debts.uncompleted.minimum(:due_by)
+    oldest_staffing_debt_date = user.admin_staffing_debts.unfulfilled.minimum(:due_by)
+    out = [oldest_maintenance_debt_date, oldest_staffing_debt_date].compact.min
     return out
   end
-
-
 end

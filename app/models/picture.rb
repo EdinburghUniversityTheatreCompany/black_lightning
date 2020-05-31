@@ -24,7 +24,7 @@
 # == Schema Information End
 #++
 ##
-class Picture < ActiveRecord::Base
+class Picture < ApplicationRecord
   belongs_to :gallery, polymorphic: true
 
   has_attached_file :image,
@@ -32,8 +32,6 @@ class Picture < ActiveRecord::Base
                     convert_options: { thumb: '-quality 75 -strip' }
 
   validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
-
-  attr_accessible :description, :image
 
   def image_url
     image.url(:original)

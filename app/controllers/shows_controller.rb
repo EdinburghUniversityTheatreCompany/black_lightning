@@ -4,18 +4,19 @@
 # Uses Will_Paginate for pagination.
 ##
 class ShowsController < ApplicationController
+  load_and_authorize_resource find_by: :slug
   ##
   # GET /shows
   #
   # GET /shows.json
   ##
   def index
-    @shows = Show.current.order('start_date ASC').paginate(page: params[:page], per_page: 5).all
-
     @title = 'Shows'
 
+    @events = @shows.current.paginate(page: params[:page], per_page: 5)
+
     respond_to do |format|
-      format.html # index.html.erb
+      format.html { render '/events/index' }
       format.json { render json: @shows }
     end
   end
@@ -24,16 +25,9 @@ class ShowsController < ApplicationController
   # GET /shows/1
   ##
   def show
-    # Use ! on find_by to ensure a ActiveRecord::RecordNotFound exception is thrown if the show doesn't exist.
-    # This is caught by the application controller to redirect to 404
-    @show = Show.find_by_slug!(params[:id])
-
-    @reviews  = @show.reviews.all
-    @pictures = @show.pictures.all
-
     @title = @show.name
     @meta[:description] = @show.description
-    @meta['og:image'] = [@base_url + @show.image.url(:medium)] + @pictures.collect { |p| @base_url + p.image.url }
+    @meta['og:image'] = [@base_url + @show.image.url(:medium)] + @show.pictures.collect { |p| @base_url + p.image.url }
 
     respond_to do |format|
       format.html

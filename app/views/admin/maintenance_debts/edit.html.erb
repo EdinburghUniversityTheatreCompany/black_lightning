@@ -1,16 +1,11 @@
-<h1>Editing Maintenance Debt</h1>
+<h1><%= @title = 'Edit Maintenance Debt' %></h1>
 
-<%= simple_form_for(@admin_maintenance_debt) do |f| %>
+<%= simple_form_for(@maintenance_debt) do |f| %>
     <%= f.error_notification %>
 
     <div class="form-inputs">
-      <%= f.input :due_by , label: "Due By"%>
+      <%= f.input :due_by %>
     </div>
 
-    <div class="form-actions">
-      <%= f.button :submit %>
-    </div>
+    <%= render '/shared/form/form_actions', f: f %>
 <% end %>
-
-<%= link_to 'Show', @admin_maintenance_debt %> |
-<%= link_to 'Back', admin_maintenance_debts_path %>

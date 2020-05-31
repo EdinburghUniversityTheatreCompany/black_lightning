@@ -1,4 +1,4 @@
-<h1><%= @user.name %></h1>
+<h1><%= @title %></h1>
 
 <hr />
 
@@ -6,30 +6,21 @@
   <div class="span<%= @user.avatar.present? ? '9' : '12' %>">
     <%= render_markdown @user.bio %>
   </div>
-  <% if @user.avatar? %>
+  <% if @user.avatar.present? %>
     <div class="span3">
-      <%= image_tag @user.avatar.url(:thumb), class: "thumbnail zoomable" if @user.avatar? %>
+      <%= image_tag @user.avatar.url(:thumb), class: "thumbnail zoomable" %>
     </div>
   <% end%>
 </div>
 
 <hr />
 
-<% 
-# Note this uses the ARRAY method "select" to filter results. (Since
-# teamwork is a polymorphic association, you can't just join the
-# events table and filter that). 
-%>
-<% @shows = @user.team_membership.where(teamwork_type: 'Event').select { |e| (e.teamwork.is_a? Show) && (e.teamwork.is_public) }%>
-
-<% @shows.sort! { |a, b| a.teamwork.start_date <=> b.teamwork.start_date } %>
-
-<h2>Shows</h2>
+<h2>Projects</h2>
 
 <div class="row">
   <div class="carousel slide span12" id="show-carousel">
     <div class="carousel-inner">
-      <% @shows.each_with_index do |item, i| %>
+      <% @team_memberships.each_with_index do |item, i| %>
         <% if i.modulo(4) == 0 %>
           <div class="item <%= 'active' if i == 0 %>">
             <ul class="thumbnails">
@@ -37,20 +28,22 @@
               <li class="span3">
                 <div class="thumbnail">
                   <% img = image_tag item.teamwork.image.url(:medium) %>
-                  <%= link_to img, item.teamwork %>
-                  <%= link_to truncate(item.teamwork.name, length: 30), item.teamwork %><br />
+                  <% url = @link_to_admin_events ? [:admin, item.teamwork] : item.teamwork %>
+
+                  <%= link_to img, url %>
+                  <%= link_to truncate(item.teamwork.name, length: 30), url %><br />
                   <%= item.teamwork.date_range true %><br />
                   <%= item.position %>
                 </div>
               </li>
-        <% if i.modulo(4) == 3 || i == (@shows.count - 1) %>
+        <% if i.modulo(4) == 3 || i == (@team_memberships.size - 1) %>
             </ul>
           </div>
         <% end %>
       <% end %>
     </div>
 
-    <% if @shows.count > 4 %>
+    <% if @team_memberships.size > 4 %>
       <a data-slide="prev" href="#show-carousel" class="left carousel-control">‹</a>
       <a data-slide="next" href="#show-carousel" class="right carousel-control">›</a>
     <% end %>

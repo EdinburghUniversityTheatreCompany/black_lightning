@@ -27,7 +27,7 @@
 # == Schema Information End
 #++
 ##
-class News < ActiveRecord::Base
+class News < ApplicationRecord
   resourcify
 
   ##
@@ -39,15 +39,13 @@ class News < ActiveRecord::Base
 
   belongs_to :author, class_name: 'User'
 
-  validates :title, presence: true
-  validates :publish_date, presence: true
+  validates :title, :body, :publish_date, presence: true
   validates :slug, presence: true, uniqueness: true
 
   # News should always be ordered by publish_date DESC
   default_scope -> { order('publish_date DESC') }
 
   scope :current, -> { where(['publish_date <= ?', Time.current]) }
-  scope :for_public, -> { where(['publish_date <= ? AND show_public = ?', Time.current, true]) }
 
   has_attached_file :image,
                     styles: { medium: '576x300#', thumb: '192x100#' },
@@ -55,8 +53,6 @@ class News < ActiveRecord::Base
                     default_url: :default_image
 
   validates_attachment_content_type :image, content_type: /\Aimage\/.*\Z/
-
-  attr_accessible :publish_date, :show_public, :slug, :title, :body, :image
 
   ##
   # Generates a default image for the news item. If extra artwork is added, increase the base of the modulo call.

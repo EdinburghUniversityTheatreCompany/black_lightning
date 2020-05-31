@@ -1,3 +1,5 @@
+# This mailer is currently completely unused.
+# :nocov:
 class MembershipMailer < ActionMailer::Base
   default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
 
@@ -21,3 +23,4 @@ class MembershipMailer < ActionMailer::Base
     mail(to: @user.email, subject: 'Bedlam Membership')
   end
 end
+# :nocov:

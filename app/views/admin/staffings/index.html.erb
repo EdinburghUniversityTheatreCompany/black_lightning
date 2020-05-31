@@ -1,4 +1,4 @@
-<h1>Staffing</h1>
+<h1><%= @title %></h1>
 
 <%= display_block("Staffing", true) %>
 
@@ -6,19 +6,17 @@
 <br />
 
 <h3>Upcoming Positions</h3>
-<% if @admin_staffings.length > 0 %>
-  <%= render 'staffing', staffings_hash: @admin_staffings %>
+<% if @upcoming_staffings.any? %>
+  <%= render 'staffing_index_row', staffings_hash: @upcoming_staffings %>
 <% else %>
   There are no upcoming staffing positions.
   <br />
 <% end %>
 
-<% if can? :create, Admin::Staffing %>
-  <% add_text = '<i class="fa fa-plus"></i> Create Staffing for Show'.html_safe %>
-  <%= link_to add_text, new_admin_staffing_path, class: "btn btn-primary" %>
-<% end %>
+<%= get_link Admin::Staffing, :new %>
+<%= get_link Admin::StaffingTemplate, :index %>
 
-<% if @admin_staffings_archive.length > 0 %>
+<% if @archived_staffings.any? %>
   <h3>Old Positions</h3>
-  <%= render 'staffing', staffings_hash: @admin_staffings_archive, archived: true %>
+  <%= render 'staffing_index_row', staffings_hash: @archived_staffings, archived: true %>
 <% end %>

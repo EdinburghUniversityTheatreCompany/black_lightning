@@ -1,46 +1,8 @@
-<% @title = 'Workshop Details' %>
+<h1><%= @title %></h1>
 
-<h1><%= @workshop.name %></h1>
-<table class="table table-bordered">
-    <tbody>
-        <tr>
-            <th>Tagline</th>
-            <td><%= @workshop.tagline %></td>
-        </tr>
-        <tr>
-            <th>URL Slug</th>
-            <td><%= @workshop.slug %></td>
-        </tr>
-        <tr>
-            <th>Description</th>
-            <td><%= render_markdown @workshop.description %></td>
-        </tr>
-        <tr>
-            <th>Dates</th>
-            <td><%= @workshop.date_range true %></td>
-        </tr>
-        <tr>
-            <th>Venue</th>
-            <td><%= @workshop.venue.name if @workshop.venue %></td>
-        </tr>
-        <tr>
-            <th>Public?</th>
-            <td><%= {true => "Yes", false => "No", nil => "No"}[@workshop.is_public] %>
-        </tr>
-        <tr>
-            <th>Image</th>
-            <td><%= image_tag @workshop.image.url(:medium) %></td>
-        </tr>
-        <tr>
-            <th>Team</th>
-            <td>
-                <%= render 'admin_show_team_members', team_members: @workshop.team_members %>
-            </td>
-        </tr>
-    </tbody>
-</table>
+<%= render 'admin/events/basic_show', event: @workshop %>
 
-<% if can? :edit, @workshop %>
-  <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
-  <%= link_to edit_text, edit_admin_workshop_path(@workshop), :class => 'btn' %>
-<% end %>
+<%= render '/shared/gallery', pictures: @workshop.pictures %>
+
+<%= get_link @workshop, :edit, html_class: 'btn btn-primary' %>
+<%= get_link Workshop, :index %>

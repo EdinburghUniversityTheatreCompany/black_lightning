@@ -1,0 +1,29 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/user_typeahead_field.js" %>
+<% end %>
+
+<input type="hidden" name="autocomplete_users_list" value="true">
+
+<div class="form-horizontal">
+
+  <h3>Team</h3>
+
+  <% if f.object.errors[:team_members].present? then %>
+  <p id="team_errors" class="alert alert-error">
+      <%= f.error :team_members %>
+  </p>
+  <% end %>
+
+  <p>
+    Please be as specific as possible when entering the position. 
+    For actors, also enter the role(s) if you can. For example: <br/>
+    Actor (The King / The Beggar) - Finbar the Viking <br/>
+    Do the same for the prod team members. For example, if the tech manager was also the lighting designer, do: <br/>
+    Tech Manager / Lighting Designer - The Bedlam Ghost<br/>
+    Additionally, try to have one entry per person and prefer combining the roles using a slash rather than having two entries.
+  </p>
+
+  <%= f.simple_fields_for :team_members, wrapper: false %>
+
+  <%= link_to_add f, :team_members %>
+</div>

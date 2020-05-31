@@ -14,7 +14,6 @@
 //= require admin/moment
 //= require admin/nested_forms
 //= require admin/md_editor
-//= require admin/staffings
 //= require admin/shows
 //= require alerts
 //= require admin/modal_confirmation

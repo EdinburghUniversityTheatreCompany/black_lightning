@@ -1,0 +1,52 @@
+<% content_for :head do %>
+  <style>
+    td a { 
+      display: block; 
+    }
+  </style>
+<% end %>
+
+<% archived ||= nil %>  
+  
+<% # TODO: Styling it using Bootstrap does not work. It might work better in Bootstrap 4. %>
+  <table class="table">
+    <thead>
+        <tr>
+          <th scope="col" style="width: 48%;">Name</th>
+          <th scope="col" style="width: 40%;">Dates</th>
+          <th scope="col" style="width: 12%;">Positions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% staffings_hash.each do |url, staffings| %>
+          <% show_title = staffings.first.show_title %>
+
+          <% dates = staffings.collect {|staffing| staffing.start_time.to_date } .sort %>
+          <% date_range = time_range_string dates.first, dates.last, true, :short %>
+
+          <% # Yes, this looks messy, but we got passed an array and not an object, so there is not much choice. %>
+          <% filled_positions = 0 %>
+          <% unfilled_positions = 0 %>
+
+          <% staffings.each do |staffing| %>
+            <% staffing.staffing_jobs.each {|job| job.user.nil? ? unfilled_positions += 1 : filled_positions += 1 } %>
+          <% end %>
+          
+          <% total_positions = filled_positions + unfilled_positions %>
+
+          <% show_warning = (filled_positions.to_f / total_positions.to_f) <= 0.7 %>
+
+          <% positions_filled = "#{filled_positions} of #{total_positions} filled" %>
+
+          <tr class="<%= 'error' if show_warning %>">
+            <% [show_title, date_range, positions_filled].each do |text| %> 
+              <td><%= link_to text, grid_admin_staffings_path(url, archived: archived) %></td>
+            <% end %>
+          </tr>
+      <% end %>
+    </tbody>
+</table>
+
+
+
+

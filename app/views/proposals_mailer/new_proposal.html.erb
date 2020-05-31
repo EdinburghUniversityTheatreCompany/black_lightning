@@ -14,7 +14,8 @@
       The proposal was submitted by <%= @creator.name %>
     </p>
     <p>
-      You can view the proposal by visiting <%= admin_proposals_call_proposal_url(@proposal.call, @proposal) %>
+    <% url = admin_proposals_call_proposal_url(@proposal.call, @proposal) %>
+      You can view the proposal by visiting <%= link_to url, url %>.
     </p>
     <p>
       Regards,

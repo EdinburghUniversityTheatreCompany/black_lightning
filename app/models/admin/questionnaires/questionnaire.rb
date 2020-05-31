@@ -14,7 +14,9 @@
 # == Schema Information End
 #++
 ##
-class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
+class Admin::Questionnaires::Questionnaire < ApplicationRecord
+  validates :show_id, :name, presence: true
+
   belongs_to :show
 
   has_many :questions, as: :questionable, dependent: :destroy
@@ -25,7 +27,13 @@ class Admin::Questionnaires::Questionnaire < ActiveRecord::Base
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :answers, reject_if: :all_blank, allow_destroy: true
 
-  validates :show_id, presence: true
+  def instantiate_answers!
+    questions.each do |question|
+      next if question.answers.where(answerable: self).any?
 
-  attr_accessible :name, :questions, :questions_attributes, :answers, :answers_attributes
+      answer = Admin::Answer.new
+      answer.question = question
+      answers.push(answer)
+    end
+  end
 end

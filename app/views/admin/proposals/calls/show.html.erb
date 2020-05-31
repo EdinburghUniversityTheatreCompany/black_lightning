@@ -1,29 +1,29 @@
+<h1><%= @title %></h1>
+
 <p>
-  <b>Deadline:</b>
-  <%= l @admin_proposals_call.deadline, :format => :long %>
+  <b>Submission Deadline:</b>
+  <%= l @call.submission_deadline, format: :longy %>
 </p>
 
 <p>
-  <b>Name:</b>
-  <%= @admin_proposals_call.name %>
+  <b>Editing Deadline:</b>
+  <%= l @call.editing_deadline, format: :longy %>
 </p>
 
-<p>
-  <b>Open:</b>
-  <%= @admin_proposals_call.open ? "&#10004;".html_safe : "&#10008;".html_safe %>
-</p>
+<hr />
 
-<%= link_to 'View Proposals', admin_proposals_call_proposals_path(@admin_proposals_call), :class => "btn btn-primary" %>
+<%= render 'shared/show_actions', object: @call %>
 
-<% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
-<%= link_to edit_text, edit_admin_proposals_call_path(@admin_proposals_call), :class => "btn" %>
-<%= link_to 'Back', admin_proposals_calls_path, :class => "btn"  %>
+<%= get_link @call, :view_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
+<%= get_link @call, :archive, wrap_tag: 'td', http_method: 'put', additional_condition: DateTime.now > @call.editing_deadline,
+              confirm: "Archiving #{@call.name}", detail: 'Please confirm that you want to archive this proposal call.' 
+%>
 
 <hr />
 
 <h3>Questions</h3>
 
-<% @admin_proposals_call.questions.each do |question| %>
+<% @call.questions.each do |question| %>
   <div>
     <b>Question:</b>
     <%= render_markdown question.question_text %>

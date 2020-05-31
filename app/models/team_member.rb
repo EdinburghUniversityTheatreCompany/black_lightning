@@ -19,14 +19,12 @@
 #++
 ##
 class TeamMember < ActiveRecord::Base
+  validates :position, :user, presence: true
+
   default_scope -> { order('position ASC') }
 
   belongs_to :teamwork, polymorphic: true
   belongs_to :user
 
-  validates :position, :user, presence: true
-
   delegate :name, to: :user, prefix: true
-
-  attr_accessible :position, :user, :user_id, :proposal, :proposal_id
 end

@@ -1,7 +1,9 @@
-<h1>Available Reports</h1>
+<h1><%= @title %></h1>
 
 <ul>
-  <% list_reports.each do |report| %>
-    <li><%= link_to report.humanize.titleize, admin_report_path(report) %></li>
+  <% # List Reports is a method of the helper class. %>
+  <% # This code is also used in the reports widget. %>
+  <% list_reports.each do |report, report_name| %>
+    <li><%= get_report_link report, report_name %></li>
   <% end %>
 </ul>

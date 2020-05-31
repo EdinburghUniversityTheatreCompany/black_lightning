@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::RolesControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in users(:admin)
 
     @role = roles(:member)
   end
@@ -14,7 +14,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should get role' do
-    get :show, id: @role
+    get :show, params: { id: @role }
     assert_response :success
   end
 
@@ -24,29 +24,44 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should create role' do
-    # Remove the existing entry:
-    Role.find(@role.id).destroy
-
     assert_difference('Role.count') do
-      post :create, role: { name: @role.name }
+      post :create, params: { role: { name: 'Hexagon' } }
     end
+
+    assert Role.where(name: 'Hexagon').one?
 
     assert_redirected_to admin_role_path(assigns(:role))
   end
 
+  test 'should not create invalid role' do
+    assert_no_difference('Role.count') do
+      post :create, params: { role: { name: nil } }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
   test 'should get edit' do
-    get :edit, id: @role
+    get :edit, params: { id: @role }
     assert_response :success
   end
 
   test 'should update role' do
-    put :update, id: @role, role: { name: @role.name }
+    put :update, params: { id: @role, role: { name: 'Viking' } }
+
+    assert 'Viking', assigns(:role).name
     assert_redirected_to admin_role_path(@role)
+  end
+
+  test 'should not update invalid role' do
+    put :update, params: { id: @role, role: { name: nil } }
+
+    assert_response :unprocessable_entity
   end
 
   test 'should destroy role' do
     assert_difference('Role.count', -1) do
-      delete :destroy, id: @role
+      delete :destroy, params: { id: @role }
     end
 
     assert_redirected_to admin_roles_path

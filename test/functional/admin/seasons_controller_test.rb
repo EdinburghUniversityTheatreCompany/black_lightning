@@ -2,20 +2,21 @@ require 'test_helper'
 
 class Admin::SeasonsControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in users(:admin)
   end
 
   test 'should get index' do
-    FactoryGirl.create_list(:season, 5)
+    FactoryBot.create_list(:season, 5)
 
     get :index
     assert_response :success
+    assert_not_nil assigns(:events)
   end
 
   test 'should get show' do
-    @season = FactoryGirl.create(:season)
+    @season = FactoryBot.create(:season, venue: venues(:one))
 
-    get :show, id: @season
+    get :show, params: { id: @season }
     assert_response :success
   end
 
@@ -25,35 +26,61 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
   end
 
   test 'should create season' do
-    attrs = FactoryGirl.attributes_for(:season)
+    attrs = FactoryBot.attributes_for(:season)
 
     assert_difference('Season.count') do
-      post :create, season: attrs
+      post :create, params: { season: attrs }
     end
 
     assert_redirected_to admin_season_path(assigns(:season))
   end
 
-  test 'should get edit' do
-    @season = FactoryGirl.create(:season)
+  test 'should not create invalid season' do
+    attrs = FactoryBot.attributes_for(:season)
+    attrs[:start_date] = nil
 
-    get :edit, id: @season
+    assert_no_difference('Season.count') do
+      post :create, params: { season: attrs }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test 'should get edit' do
+    @season = FactoryBot.create(:season)
+
+    get :edit, params: { id: @season }
     assert_response :success
   end
 
   test 'should update season' do
-    @season = FactoryGirl.create(:season)
-    attrs = FactoryGirl.attributes_for(:season)
+    @season = FactoryBot.create(:season)
+    attrs = FactoryBot.attributes_for(:season)
 
-    put :update, id: @season, season: attrs
+    workshop = FactoryBot.create(:workshop)
+
+    attrs[:event_ids] = [workshop.id]
+
+    put :update, params: { id: @season, season: attrs }
+
+    assert_includes assigns(:season).events, workshop
     assert_redirected_to admin_season_path(assigns(:season))
   end
 
+  test 'should not update invalid season' do
+    @season = FactoryBot.create(:season)
+    attrs = FactoryBot.attributes_for(:season)
+    attrs[:end_date] = nil
+
+    put :update, params: { id: @season, season: attrs }
+    assert_response :unprocessable_entity
+  end
+
   test 'should destroy season' do
-    @season = FactoryGirl.create(:season)
+    @season = FactoryBot.create(:season)
 
     assert_difference('Season.count', -1) do
-      delete :destroy, id: @season
+      delete :destroy, params: { id: @season }
     end
 
     assert_redirected_to admin_seasons_path

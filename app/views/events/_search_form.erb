@@ -1,0 +1,15 @@
+<%= render layout: '/shared/collapsible_search_form' do %>
+  <% search_form_for @q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "form-search" } do |f| %>
+    <%= f.input_field :name_cont,            placeholder: "Title",  required: false %>
+    <%= f.input_field :description_cont,     placeholder: "Description", required: false %>
+    <%= f.input_field :users_full_name_cont, placeholder: "Person Name", required: false %>
+    
+    <br>
+    <br>
+
+    <%= f.input :start_date_gt, as: :date, label: "Start Date", start_year: 1890, end_year: Date.today.year, include_blank: true, required: false %>
+    <%= f.input :end_date_lt,   as: :date, label: "End Date", start_year: 1890, end_year: Date.today.year,   include_blank: true, required: false %>
+
+    <%= f.submit :Search, class: 'btn' %>
+  <% end %>
+<% end %>

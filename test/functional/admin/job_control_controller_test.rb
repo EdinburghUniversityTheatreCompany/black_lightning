@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::JobControlControllerTest < ActionController::TestCase
   setup do
-    sign_in FactoryGirl.create(:admin)
+    sign_in users(:admin)
 
     # Turn on delayed jobs to test they can be removed and reset.
     Delayed::Worker.delay_jobs = true
@@ -37,13 +37,12 @@ class Admin::JobControlControllerTest < ActionController::TestCase
     job = Delayed::Job.new
     job.save!
 
-    request.env['HTTP_REFERER'] = admin_jobs_path('overview')
+    request.env['HTTP_REFERER'] = admin_jobs_overview_path
 
     assert_difference('Delayed::Job.count', -1) do
-      get :remove, id: job.id
-    end
+      get :remove, params: {id: job.id}    end
 
-    assert_redirected_to admin_jobs_path('overview')
+    assert_redirected_to admin_jobs_overview_path
   end
 
   test 'should reset job' do
@@ -53,11 +52,10 @@ class Admin::JobControlControllerTest < ActionController::TestCase
     job.failed_at = Time.now
     job.save!
 
-    request.env['HTTP_REFERER'] = admin_jobs_path('overview')
+    request.env['HTTP_REFERER'] = admin_jobs_overview_path
 
-    get :retry, id: job.id
-
-    assert_redirected_to admin_jobs_path('overview')
+    get :retry, params: {id: job.id}
+    assert_redirected_to admin_jobs_overview_path
 
     job.reload
 

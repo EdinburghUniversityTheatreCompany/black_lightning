@@ -1,6 +1,6 @@
 class Archives::ShowsController < ArchivesController
   def index
-    @q = Show.search(params[:q])
+    @q = Show.ransack(params[:q])
     @shows = @q.result(distinct: true)
              .where(is_public: true)
 

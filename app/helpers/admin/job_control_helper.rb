@@ -9,9 +9,14 @@ module Admin::JobControlHelper
   # Fetches the Delayed::Job model
   ##
   def delayed_job
-    Delayed::Job
-  rescue
-    false
+    begin
+      return Delayed::Job
+    rescue
+      # Can't really test that.
+      # :nocov:
+      return false
+      # :nocov:
+    end
   end
 
   ##
@@ -24,7 +29,7 @@ module Admin::JobControlHelper
   # * Pending
   ##
   def delayed_jobs(type)
-    delayed_job.where(delayed_job_sql(type))
+    return delayed_job.where(delayed_job_sql(type))
   end
 
   ##
@@ -33,13 +38,13 @@ module Admin::JobControlHelper
   def delayed_job_sql(type)
     case type
     when :enqueued
-      ''
+      return ''
     when :working
-      'locked_at is not null'
+      return 'locked_at is not null'
     when :failed
-      'last_error is not null'
+      return 'last_error is not null'
     when :pending
-      'attempts = 0'
+      return 'attempts = 0'
     end
   end
 
@@ -48,9 +53,12 @@ module Admin::JobControlHelper
   ##
   def delayed_job_running?
     pid = File.read("#{Rails.root}/tmp/pids/delayed_job.pid").strip
+    # :nocov:
     Process.kill(0, pid.to_i)
-    true
-  rescue Errno::ENOENT, Errno::ESRCH   # file or process not found
-    false
+    return true
+    # :nocov:
+  # file or process not found.
+  rescue Errno::ENOENT, Errno::ESRCH
+    return false
   end
 end

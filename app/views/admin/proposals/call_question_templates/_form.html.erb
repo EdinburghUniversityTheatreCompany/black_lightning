@@ -1,4 +1,4 @@
-<%= simple_nested_form_for(@template) do |f| %>
+<%= simple_nested_form_for(@call_question_template) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
@@ -9,13 +9,8 @@
 
     <%= f.simple_fields_for :questions %>
 
-    <% add_text = '<i class="icon-plus"></i> Add Question'.html_safe %>
-    <%= f.link_to_add add_text, :questions, :class => "btn" %>
-
+    <%= link_to_add f, :questions %>
   </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, :class => "btn-primary", :value => "Create Template" %>
-    <%= link_to 'Back', admin_proposals_calls_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>

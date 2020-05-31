@@ -1,19 +1,10 @@
-<div class="job control-group <%= "error" if (f.error(:name).present? or f.error(:file).present?) %>">
+<div class="job control-group <%= "error" if (f.error(:name).present? || f.error(:file).present?) %>">
+    <%= f.error :name %>
+    <%= f.error :file %>
 
-    <% if f.error(:name).present? %>
-      <%= f.error :name %>
-      <br />
-    <% end %>
-    <% if f.error(:file).present? %>
-      <%= f.error :file %>
-      <br />
-    <% end %>
-
-    <%= f.input_field :name, :placeholder => "Attachment Name" %>
+    <%= f.input :name, placeholder: "Attachment Name" %>
 
     <%= f.input_field :file %>
 
-    <% delete_text = '<i class="icon-trash"></i> Delete'.html_safe %>
-    <%= f.link_to_remove delete_text, :class => "btn btn-danger" %>
-
+    <%= link_to_remove f %>
 </div>

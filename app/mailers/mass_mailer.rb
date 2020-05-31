@@ -6,6 +6,6 @@ class MassMailer < ActionMailer::Base
     @body    = mass_mail.body
     @subject = mass_mail.subject
 
-    mail(to: recipient.email, subject: "Bedlam Theatre - #{mass_mail.subject}")
+    mail(to: [recipient.email], subject: "Bedlam Theatre - #{@subject}")
   end
 end

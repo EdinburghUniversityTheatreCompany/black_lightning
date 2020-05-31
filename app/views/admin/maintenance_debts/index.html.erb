@@ -1,87 +1,63 @@
+<h1><%= @title %></h1>
 
-<% @title = 'Maintenance Debts' %>
 
-<% prefix = params.length>3 ? "Searching" : "Listing" %>
+<%= render 'admin/shared_debt/search_form', is_specific_user: @is_specific_user, url: :admin_maintenance_debts %>
 
-<h1><%= prefix %> Maintenance Debts</h1>
+<% if @maintenance_debts.empty? %>
+  <p>No Maintenance Debts found.</p>
+<% else %>
+  <table class="table">
+    <tbody>
+    <tr>
+      <%= content_tag :th, sort_link(@q, :user_full_name, 'User Name') %>
+      <%= content_tag :th, sort_link(@q, :show_name, 'Show Name') %>
+      <%= content_tag :th, sort_link(@q, :due_by, 'Due By') %>
 
-<% if can? :read, Admin::MaintenanceDebt %>
-        <div class="row">
-          <div class="span12">
-            <div class="accordion-group">
-              <div class="accordion-heading">
-                <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
-                  <i class="fa fa-chevron-down"></i> Search Form
-                </a>
-              </div>
-              <div id="search_container" class="accordion-body collapse">
-                <div class="accordion-inner">
-                  <%= form_tag admin_maintenance_debts_path , :method => :get do %>
-                      First Name :<%= text_field_tag :user_fname %>
-                      Second Name :<%= text_field_tag :user_sname %>
-                      Show : <%= text_field_tag :show_name %>
-                      Show Fulfilled Obligations : <%= check_box_tag :show_fulfilled %>
+      <% if can? :edit, Admin::MaintenanceDebt %>
+        <th></th>
+        <th></th>
+      <% end %>
 
-                      <%= submit_tag "Search", class: 'btn' %>
-                  <% end %>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-<% end %>
+      <% if can? :delete, Admin::MaintenanceDebt %>
+        <th></th>
+      <% end%>
+    </tr>
+    <% @maintenance_debts.each do |maintenance_debt| %>
+        <tr class="<%= maintenance_debt.css_class %>">
+          <td><%= user_link(maintenance_debt.user, false) %></td>
+          <td><%= maintenance_debt.show.name %></td>
+          <td><%= get_link maintenance_debt, :show, link_text: maintenance_debt.due_by %></td>
 
-<table class="table">
-  <tbody>
-  <tr>
-    <th>Email</th>
-    <th>Name</th>
-    <th>Show</th>
-    <th>Due Date</th>
-    <th></th>
-    <th></th>
-    <th></th>
-  </tr>
-  <% @mdebts.each do |mdebt| %>
+          <% if can? :edit, maintenance_debt %>
+            <td>
+              <%= get_link maintenance_debt, :edit, link_text: 'Change Deadline', condition: maintenance_debt.uncompleted? %>
+            </td>
 
-      <tr class="<%= maintenance_debt_class(mdebt) %>">
-        <td><%= mdebt.user.email %></td>
-        <td><%= "#{mdebt.user.first_name} #{mdebt.user.last_name}" %></td>
-        <td><%= mdebt.show.name %></td>
-        <td><%= mdebt.due_by %></td>
-
-        <td>
-          <% if can? :edit, mdebt %>
-              <%= link_to 'Change Deadline', edit_admin_maintenance_debt_path(mdebt), class: "btn" %>
-          <% end %>
-        </td>
-
-        <td>
-          <% if (can? :edit, mdebt) && (mdebt.unfulfilled?) %>
-              <%= link_to convert_to_staffing_debt_admin_maintenance_debt_path(mdebt.id), :method => :put, class: "btn" do %>
-                  Convert To Staffing
+            <td>
+              <% if maintenance_debt.uncompleted? %>
+                  <%= get_link maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing', html_class: 'btn', http_method: :put, 
+                                                  confirm: "Converting the Maintenance Debt to Staffing Debt", 
+                                                  detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a staffing debt?" 
+                  %>
               <% end %>
+            </td>
           <% end %>
-        </td>
 
-        <td>
-          <% if (can? :delete, mdebt) && (mdebt.unfulfilled?) %>
-              <%= link_to 'Completed', admin_maintenance_debt_path(mdebt), method: :delete, class: "btn btn-danger", data: {confirm: "Deleting " + mdebt.user.name + "'s debt",
-                                                                                                                          detail: "If you delete a debt a theatre manager fairy dies",
-              } %>
+          <% if can? :delete, maintenance_debt %>
+            <td>
+              <%= render 'complete_button', maintenance_debt: maintenance_debt %>
+            </td>
           <% end %>
-        </td>
-      </tr>
+        </tr>
+    <% end %>
+    </tbody>
+  </table>
+
+  <% unless @is_specific_user %>
+    <div class="paginate_holder">
+      <%= will_paginate(@maintenance_debts) %>
+    </div>
   <% end %>
-  </tbody>
-</table>
-
-<div class="paginate_holder">
-  <%= will_paginate(@mdebts) %>
-</div>
-
-<% if can? :create, Admin::MaintenanceDebt %>
-    <%= link_to 'Create Maintenance Obligation', new_admin_maintenance_debt_path, class: "btn" %>
 <% end %>
 
-<br>
+<%= get_link Admin::MaintenanceDebt, :new %>

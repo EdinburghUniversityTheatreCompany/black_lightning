@@ -1,64 +1,52 @@
+<%= javascript_include_tag "admin/staffings" %>
+
 <h1><%= @title %></h1>
-<h3><%= l @admin_staffing.start_time, :format => :long %> – <%= l @admin_staffing.end_time, :format => :long  unless @admin_staffing.end_time == nil%></h3>
+<h3><%= time_range_string(@staffing.start_time, @staffing.end_time, true) %></h3>
 
 <%= display_block("Staffing", true) %>
 
-<% if current_user.phone_number.blank? %>
-<br>
-<div class="alert alert-danger" role="alert">In order to sign up for staffing you need to provide a MOBILE phone number so we are able to get in touch if necessary. 
-You can do so <%= link_to 'here', edit_admin_user_path(current_user) %>.</div>
-<% end %>
+<%= render 'phone_number_warning' %>
 
+<% # Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
+<% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
 
-<table class="table table-bordered">
+<table class="table table-hover">
   <thead>
     <tr>
       <th>Staffing Job</th>
       <th>Staffed By</th>
-      <% if current_user.has_role? :committee %>
+
+      <% if show_phone_number_column %>
         <th>Phone Number</th>
       <% end %>
     </tr>
   </thead>
   <tbody>
-    <% @admin_staffing.staffing_jobs.each do |staffing_job| %>
+    <% @staffing.staffing_jobs.each do |staffing_job| %>
       <tr>
         <td><%= staffing_job.name %></td>
 
-        <% u = staffing_job.user %>
+        <% user = staffing_job.user %>
 
-        <% if u then %>
-          <td><%= "#{u.first_name} #{u.last_name}".presence || u.email %></td>
-
-          <% if current_user.has_role? :committee %>
-            <td><%= u.phone_number %></td>
+        <td>
+          <% if user.present? %>
+            <%= user_link(user, false) %>
+          <% elsif @can_sign_up %>
+            <%= render 'sign_up_button', job: staffing_job %>
           <% end %>
-        <% else %>
+        </td>
+
+        <% if show_phone_number_column %>
           <td>
-            <% if @can_sign_up %>
-              <input type="hidden" class="staffing_job_json" value="<%= staffing_job.to_json %>" >
-              <% sign_up_text = '<i class="fa fa-edit"></i> Sign Up'.html_safe %>
-
-              <% date = l staffing_job.staffable.start_time, :format => :long %>
-              <%= link_to sign_up_text, admin_sign_up_confirm_path(staffing_job), :class => "btn staffing-sign-up", :method => :put, data: { "confirm" => "Confirm Staffing",
-                                                                                                                                            "detail"  => "Confirm staffing as #{staffing_job.name} for #{staffing_job.staffable.show_title} on #{date}",
-                                                                                                                                            :job_id   => staffing_job.id
-                                                                                                                                  } %>
-            <%end %>
+            <% if can? :read, user %>
+              <%= user&.phone_number %>
+            <% end %>
           </td>
-
-          <% if current_user.has_role? :committee %>
-            <td></td>
-          <% end %>
         <% end %>
       </tr>
     <% end %>
   </tbody>
 </table>
 
-<% if can? :edit, @admin_staffing %>
-  <% edit_text = '<i class="fa fa-pencil"></i> Edit'.html_safe %>
-  <%= link_to edit_text, edit_admin_staffing_path(@admin_staffing), :class => "btn" %>
-<% end %>
-
-<%= link_to 'Back', admin_staffings_path, :class => "btn" %>
+<%= render '/shared/show_actions', object: @staffing %>
+<%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn') %>

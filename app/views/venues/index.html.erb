@@ -1,11 +1,11 @@
 <div class="row">
-  <h1>Venues</h1>
+  <h1><%= @title %></h1>
   <hr />
 
   <% @venues.each do |venue| %>
   <article class="media">
-    <% image = image_tag venue.image.url(:thumb), :class => "media-object" %>
-    <%= link_to image, venue, :class => "pull-left thumbnail" %>
+    <% image = image_tag venue.image.url(:thumb), class: "media-object" %>
+    <%= link_to image, venue, class: "pull-left thumbnail" %>
     <div class="media-body">
       <header class="media-heading">
         <h4 class="media-heading"><%= link_to venue.name, venue %></h4>

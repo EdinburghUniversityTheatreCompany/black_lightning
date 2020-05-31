@@ -1,97 +1,45 @@
-<h1><%= @admin_proposals_proposal.show_title %></h1>
+<h1><%= @title %></h1>
 
-<% if @admin_proposals_proposal.has_debtors %>
-    <div class="alert alert-error">
-      <i class="icon-exclamation-sign icon-large"></i> One or more of this team are in debt.
-    </div>
-<% end %>
-
-<% case @admin_proposals_proposal.successful %>
-<% when true %>
-    <div class="alert alert-success">
-      <i class="icon-ok icon-large"></i> This proposal was successful.
-    </div>
-<% when false %>
-    <div class="alert alert-error">
-      <i class="icon-exclamation-sign icon-large"></i> This proposal was unsuccessful.
-    </div>
-<% end %>
-
-<% if @admin_proposals_proposal.late %>
-    <div class="alert alert-error">
-      <i class="icon-info-sign icon-large"></i> This proposal has been marked late.
-    </div>
-<% end %>
-
-<% case @admin_proposals_proposal.approved %>
-<% when true %>
-    <div class="alert alert-success">
-      <i class="icon-ok icon-large"></i> This proposal has been approved by committee.
-    </div>
-<% when false %>
-    <div class="alert alert-error">
-      <i class="icon-exclamation-sign icon-large"></i> This proposal has been rejected by committee.
-    </div>
-<% else %>
-    <div class="alert alert-info">
-      <i class="icon-info-sign icon-large"></i> This proposal is waiting for approval by committee.
-    </div>
-<% end %>
+<div>
+  <%= @proposal.labels false %>
+  <br>
+  <br>
+</div>
 
 <div>
   <b>Publicity text:</b>
-  <%= render_markdown @admin_proposals_proposal.publicity_text %>
+  <%= render_markdown @proposal.publicity_text %>
 </div>
 
 <div>
   <b>Proposal text:</b>
-  <%= render_markdown @admin_proposals_proposal.proposal_text %>
+  <%= render_markdown @proposal.proposal_text %>
 </div>
 
-<h3>Team</h3>
-<%= render 'admin_show_team_members', team_members: @admin_proposals_proposal.team_members, deadline: @admin_proposals_proposal.call.deadline, can_see_if_fellow_team_members_are_in_debt: true %>
+<%= render '/shared/admin_show_team_members', team_members: @proposal.team_members, deadline: @proposal.call.editing_deadline, can_see_if_fellow_team_members_are_in_debt: true %>
 
 <hr/>
 
-<h3>Questions</h3>
+<%= render '/shared/questions_and_answers', answers: @proposal.answers %>
 
-<% @admin_proposals_proposal.answers.each do |answer| %>
-    <div style="font-weight: bold"><%= render_markdown answer.question.question_text %></div>
-    <% if answer.question.response_type == "File" then %>
-        <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
-    <% else %>
-        <% if answer.answer.presence then %>
-            <%= render_markdown answer.answer %>
-        <% else %>
-            This question has not been answered
-        <% end %>
-    <% end %>
-    <hr/>
-<% end %>
+<% # You cannot use /shared/show_actions here. %>
+<%= get_link @proposal, :edit, link_target: edit_admin_proposals_call_proposal_path(@call, @proposal), html_class: 'btn btn-primary' %>
+<%= get_link @proposal, :convert, link_target: convert_admin_proposals_call_proposal_path(@call, @proposal), http_method: :put, additional_condition: @proposal.approved %>
+<%= get_link @call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
 
-<% if can? :edit, @admin_proposals_proposal %>
-    <% edit_text = '<i class="icon-pencil"></i> Edit'.html_safe %>
-    <%= link_to edit_text, edit_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :class => "btn" %>
-<% end %>
-
-<% if (can? :manage, @admin_proposals_proposal) && (@admin_proposals_proposal.approved == true) %>
-    <%= link_to 'Convert to Show', convert_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-primary" %>
-<% end %>
-
-<% if (can? :approve, @admin_proposals_proposal) && (@admin_proposals_proposal.approved.nil?) %>
+<% if can?(:approve, @proposal) && @proposal.approved.nil? %>
     <br/>
     <br/>
 
-    <% approve_text = '<i class="icon-ok"></i> Approve'.html_safe %>
-    <% case @admin_proposals_proposal.has_debtors %>
-    <% when true %>
-        <%= link_to approve_text, approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), method: :put, class:"btn btn-success", data: {"confirm" => "Approving " + @admin_proposals_proposal.show_title,
-                                                                                                                                                              "detail" => "Warning you are attempting to approve a show with debtors.\n Please type \"Ignoring Debt\" to confirm",
-                                                                                                                                                              "type-confirm" => 'Ignoring Debt'} %>
-    <% when false %>
-        <%= link_to approve_text, approve_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-success" %>
+    <% if @proposal.has_debtors %>
+      <% confirm = "Approving #{ @proposal.show_title}" %>
+      <% detail = 'Warning: You are attempting to approve a show with debtors.\n Please type "Ignoring Debt" to confirm' %>
+      <% type_confirm = 'Ignoring Debt' %>
     <% end %>
 
-    <% reject_text = '<i class="icon-remove"></i> Reject'.html_safe %>
-    <%= link_to reject_text, reject_admin_proposals_call_proposal_path(@call, @admin_proposals_proposal), :method => :put, :class => "btn btn-danger" %>
+    <%= get_link @proposal, :approve, link_target: approve_admin_proposals_call_proposal_path(@call, @proposal),
+                 confirm: confirm, detail: detail, type_confirm: type_confirm 
+    %>
+    
+    <%= get_link @proposal, :reject, link_target: reject_admin_proposals_call_proposal_path(@call, @proposal) %>
 <% end %>

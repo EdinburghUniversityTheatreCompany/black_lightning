@@ -1,0 +1,21 @@
+<h1><%= @title%></h1>
+
+<h3>Parents</h3>
+
+<ul>
+  <% @techie.parents.each do |parent| %>
+    <li><%= get_link parent, :show %></li>
+  <% end %>
+</ul>
+
+<h3>Children</h3>
+
+<ul>
+  <% @techie.children.each do |child| %>
+    <li><%= get_link child, :show %></li>
+  <% end %>
+</ul>
+
+<hr />
+
+<%= render '/shared/show_actions', object: @techie %>

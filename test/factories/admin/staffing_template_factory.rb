@@ -10,16 +10,16 @@
 # == Schema Information End
 #++
 
-FactoryGirl.define do
+FactoryBot.define do
   factory :staffing_template, class: Admin::StaffingTemplate do
     name   { generate(:random_string) }
 
     transient do
-      job_count 0
+      job_count { 0 }
     end
 
     after(:create) do |staffing_template, evaluator|
-      FactoryGirl.create_list(:staffing_job, evaluator.job_count, staffable: staffing_template)
+      FactoryBot.create_list(:unstaffed_staffing_job, evaluator.job_count, staffable: staffing_template)
     end
   end
 end

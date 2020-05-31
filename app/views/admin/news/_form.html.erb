@@ -1,42 +1,22 @@
+<%= javascript_include_tag 'name_to_slug.js' %>
+<% # Requires the name to be called event_name and the slug to be called event_slug %>
+
 <%= simple_form_for [:admin, @news] do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
+    <%= f.input :title, input_html: { id: 'event_name' } %>
 
-    <%= f.input :title %>
+    <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12, show_hint: true %>
 
-    <%= render :layout => "admin/shared/md_editor", :locals => { :f => f, :field => :body, :rows => 12 } do %>
-      <%= render "admin/shared/md_hints" %>
-    <% end %>
-
-    <%= f.input :slug %>
+    <%= f.input :slug, input_html: { id: 'event_slug' } %>
 
     <%= f.input :publish_date %>
 
-    <div class="control-group">
-      <%= f.label :show_public %>
-
-      <div class="controls switch" data-on="success" data-on-label="Public" data-off="info" data-off-label="Members Only" style="width: 250px;">
-        <%=
-           f.input_field :show_public,
-                          boolean_style: :inline
-        %>
-      </div>
-    </div>
+    <%= render '/shared/form/public_private_switch', f: f, field_symbol: :show_public %>
 
     <%= f.input :image %>
-
   </div>
 
-  <script>
-    $('#news_title').keyup(function() {
-        var slug = jQuery.trim($('#news_title').val()).replace(/\s+/g,'-').replace(/[^a-zA-Z0-9\-]/g,'').toLowerCase().replace(/\-{2,}/g,'-');
-        $('#news_slug').val(slug);
-    });
-  </script>
-
-  <div class="form-actions">
-    <%= f.button :submit, :class => "btn-primary" %>
-    <%= link_to 'Cancel', admin_news_index_path, :class => "btn" %>
-  </div>
+  <%= render '/shared/form/form_actions', f: f %>
 <% end %>

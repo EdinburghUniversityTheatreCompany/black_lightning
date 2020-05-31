@@ -30,10 +30,10 @@
 
         <% end %>
 
-        <% if @shows.count == 0 && not(mobile_device?) then %>
+        <% if @shows.empty? && !(mobile_device?) then %>
           <%# between 1st June and 1st September, advertise Bedlam Fringe %>
           <% year = Date.today.year %>
-          <% if (Date.new(year, 6, 01)..Date.new(year, 9, 01)).include_with_range? Date.today then %>
+          <% if (Date.new(year, 6, 01)..Date.new(year, 9, 01)).include? Date.today then %>
             <a href="http://www.bedlamfringe.co.uk">
               <img src="/images/fringe.png" />
             </a>
@@ -62,12 +62,12 @@
     </div>
 
     <div class="row content">
-      <% @news.first(2).each do |news| %>
+      <% @news.each do |news| %>
       <div class="span4">
         <div>
           <%= link_to (image_tag news.image.url(:medium)), news_path(news) unless mobile_device? %>
           <h4><%= link_to news.title, news_path(news) %></h4>
-          <%= truncate(render_plain(news.body), length: 80) %>
+          <%= truncate(render_plain(news.body), length: 120) %>
           <%= link_to 'Read More', news_path(news) %>
         </div>
       </div>
@@ -99,7 +99,7 @@
     <% if @last_show %>
       <%= link_to @last_show.name, @last_show %>
       <% image = image_tag @last_show.image.url(:medium) %>
-      <%= link_to image, @last_show, :class => "thumbnail" unless mobile_device? %>
+      <%= link_to image, @last_show, class: "thumbnail" unless mobile_device? %>
     <% end %>
   </div>
 </div>

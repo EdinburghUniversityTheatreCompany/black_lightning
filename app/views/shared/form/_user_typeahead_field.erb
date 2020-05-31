@@ -1,0 +1,26 @@
+<% ### WARNING ### %>
+<% # You have to include the content tag and the autocomplete field in the form yourself. %>
+<% # You also have to set the error on the fields group.  %>
+<% # Finally, you have to add a f.full_error :user_id tag. %>
+<% # The best example is probably the /shared/form/sections/_team_members %>
+
+<% # If you want to use this for just a single user relation, it's better to use _user_field (for example: setting the debtor on debt) %>
+
+<% insert_fields ||= [] %>
+
+<div class="no-such-user" style="display: none">
+  <span class="help-inline">The user cannot be found. Please make sure they have bought membership, activated their website account by emailing <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>, and have set their name. Still can't find them? Please contact the secretary.</span>
+  <br/>
+  <br/>
+</div>
+
+<% insert_fields.each do |field| %>
+  <%= field %>
+<% end %>
+
+<% value = f.object.user ? "#{f.object.user.name(current_user)}" : "" %>
+
+<% # User_name_field has that suffix because otherwise it would conflict with the actual team member user name field. You can access the user_name_field if you like. %>
+<%= f.input_field :user_name_field, class: 'user_name', value: value, placeholder: 'User Name', required: true, autocomplete: 'off'  %>
+
+<%= f.hidden_field :user_id, class: "user_id" %>

@@ -1,6 +1,6 @@
-ChaosRails::Application.config.middleware.use Rack::Cors do
+ChaosRails::Application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins  '*' # /(.+?)\.bedlamtheatre\.co\.uk$/
+    origins  'localhost:3000', '127.0.0.1:3000', '/(.+?)\.bedlamtheatre\.co\.uk', 'bedlamtheatre.co.uk', 'api.twitter.com'
     resource '*',
              headers: :any,
              methods: [:get, :put, :create, :delete, :options]

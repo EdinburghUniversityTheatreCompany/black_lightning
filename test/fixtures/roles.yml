@@ -4,6 +4,7 @@
 #
 # *id*::            <tt>integer, not null, primary key</tt>
 # *name*::          <tt>string(255)</tt>
+# *permissions*::
 # *resource_id*::   <tt>integer</tt>
 # *resource_type*:: <tt>string(255)</tt>
 # *created_at*::    <tt>datetime, not null</tt>
@@ -13,15 +14,20 @@
 #++
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
-
-# This model initially had no columns defined.  If you add columns to the
-# model remove the '{}' from the fixture names and add the columns immediately
-# below each fixture, per the syntax in the comments below
 #
+# Member only has access backend permission. Try to not give them additional permissions using fixtures.
+# This makes it possible to use member to test the 'default' settings.
 member:
    id: 1
    name: "member"
 
-admin:
+# Committee has extra permissions and can thus be used for testing.
+# You can also give committee extra permissions using the fixtures for testing.
+committee:
   id: 2
+  name: "committee"
+
+admin:
+  id: 3
   name: "admin"
+  

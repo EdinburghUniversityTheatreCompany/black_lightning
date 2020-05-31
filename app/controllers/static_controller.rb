@@ -1,17 +1,25 @@
 class StaticController < ApplicationController
-  def home
-    if current_user
-      @news = News.current.limit(2).all
-    else
-      @news = News.for_public.limit(2).all
+  skip_authorization_check
+  
+  # This is a catch-all for the pages that do not have explicitly defined routes.
+  def show
+    begin
+      render "static/#{params[:page]}"
+    rescue
+      render_404
     end
-    @shows = Show.current_slideshow.limit(5).all
-    @last_show = Show.last_show
+  end
+
+  def home
+    @news = News.accessible_by(current_ability).order('publish_date DESC').first(2)
+    @shows = Show.current.order('start_date ASC')
+    @last_show = Show.last_event
   end
 
   def access_denied
     respond_to do |format|
       format.html { render status: 403 }
+      format.all  { render body: nil, status: 403 }
     end
   end
 
@@ -19,8 +27,8 @@ class StaticController < ApplicationController
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     respond_to do |type|
-      type.html { render template: 'static/404', status: 404, layout: 'application' }
-      type.all  { render nothing: true, status: 404 }
+      type.html { render template: 'static/404', status: 404, layout: helpers.current_environment }
+      type.all  { render body: nil, status: 404 }
     end
   end
 
@@ -28,7 +36,7 @@ class StaticController < ApplicationController
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     respond_to do |type|
-      type.html { render template: 'static/500', status: 500, layout: 'application' }
+      type.html { render template: 'static/500', status: 500, layout: helpers.current_environment }
       type.json { render json: { error: flash[:error] }, status: 500 }
       type.all  { render nothing: true, status: 500 }
     end

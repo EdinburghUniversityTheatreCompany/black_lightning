@@ -1,8 +1,6 @@
 ##
-# Represents a techie that will be an entry in the techie families graph.
+# Represents a techie that will be an entry in the techie family tree.
 #
-#--
-# TODO: Currently no way to add instances of this model.
 #++
 #
 # == Schema Information
@@ -17,43 +15,35 @@
 # == Schema Information End
 #++
 ##
-class Techie < ActiveRecord::Base
-  has_and_belongs_to_many :children, class_name: 'Techie', foreign_key: 'techie_id', association_foreign_key: 'child_id', join_table: 'children_techies'
+class Techie < ApplicationRecord
+  validates :name, presence: true, length: { in: 1..32 }
+
   has_and_belongs_to_many :parents, class_name: 'Techie', foreign_key: 'child_id', association_foreign_key: 'techie_id', join_table: 'children_techies'
+
+  has_and_belongs_to_many :children, class_name: 'Techie', foreign_key: 'techie_id', association_foreign_key: 'child_id', join_table: 'children_techies'
 
   accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
-  attr_accessible :name, :children, :parents, :children_attributes, :parents_attributes
-
   default_scope -> { order('name ASC') }
 
-  # Without these, this was breaking - I don't know why.
+  # Because the relations are quite complicated, this breaks without this code.
   def children_attributes=(attributes)
     attributes.each do |attribute|
       techie = Techie.find(attribute[1][:id])
 
-      unless children.all.include?(techie)
-        children << techie
-      end
+      children << techie unless children.all.include?(techie)
 
-      if attribute[1][:_destroy] == '1'
-        children.delete(techie)
-      end
+      children.delete(techie) if attribute[1][:_destroy] == '1'
     end
   end
 
   def parents_attributes=(attributes)
     attributes.each do |attribute|
-      Rails.logger.debug attribute
       techie = Techie.find(attribute[1][:id])
 
-      unless parents.all.include?(techie)
-        parents << techie
-      end
+      parents << techie unless parents.all.include?(techie)
 
-      if attribute[1][:_destroy] == '1'
-        parents.delete(techie)
-      end
+      parents.delete(techie) if attribute[1][:_destroy] == '1'
     end
   end
 end

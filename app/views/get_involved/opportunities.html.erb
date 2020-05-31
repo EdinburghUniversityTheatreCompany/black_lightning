@@ -12,6 +12,7 @@
 
   <article>
     <h3><%= opportunity.title %></h3>
+    <p><small>This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
     <div>
       <%= render_markdown opportunity.description %>
     </div>
