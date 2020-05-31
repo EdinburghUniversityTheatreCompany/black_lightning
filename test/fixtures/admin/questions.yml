@@ -1,0 +1,47 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
+
+# Questionnaire
+questionnaire_template_question_one:
+  id: 1
+  question_text: Yadieyadieya
+  response_type: Number
+  questionable_id: 1
+  questionable_type: Admin::Questionnaires::QuestionnaireTemplate
+  
+questionnaire_template_question_two:
+  id: 2
+  question_text: Helahelaho
+  response_type: Short Text
+  questionable_id: 1
+  questionable_type: Admin::Questionnaires::QuestionnaireTemplate
+
+# Mainterm call
+mainterm_call_template_question_one:
+  id: 3
+  question_text: Vikings
+  response_type: Number
+  questionable_id: 1
+  questionable_type: Admin::Proposals::CallQuestionTemplate
+  
+mainterm_call_template_question_two:
+  id: 4
+  question_text: Pineapples
+  response_type: Long Text
+  questionable_id: 1
+  questionable_type: Admin::Proposals::CallQuestionTemplate
+  
+# Lunchtime call
+lunchtime_call_template_question_one:
+  id: 5
+  question_text: Yadieyadieya
+  response_type: File
+  questionable_id: 2
+  questionable_type: Admin::Proposals::CallQuestionTemplate
+  
+questionnaire_template_question_two:
+  id: 6
+  question_text: Helahelaho
+  response_type: Yes/No
+  questionable_id: 2
+  questionable_type: Admin::Proposals::CallQuestionTemplate
+  
