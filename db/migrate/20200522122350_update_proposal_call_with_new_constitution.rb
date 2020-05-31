@@ -7,7 +7,7 @@ class UpdateProposalCallWithNewConstitution < ActiveRecord::Migration[5.0]
     end
 
     Admin::Proposals::Call.all.each do |call|
-      call.update_attribute(:editing_deadline, :submission_deadline)
+      call.update_attribute(:editing_deadline, call.submission_deadline)
     end
   end
 
