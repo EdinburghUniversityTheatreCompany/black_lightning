@@ -75,6 +75,9 @@ class Event < ApplicationRecord
   scope :future, -> { where(['end_date >= ?', Date.current]) }
   scope :this_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
 
+  # Events are generally ordered with the most recent/upcoming ones first.
+  default_scope -> { order('end_date DESC') }
+
   # Returns the last event to have finished.
   def self.last_event
     return where(['end_date < ? AND is_public = ?', Date.current, true]).last
