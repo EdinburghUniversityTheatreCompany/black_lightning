@@ -1,8 +1,6 @@
-<% if @proposal.persisted? then url = admin_proposals_call_proposal_url else url = admin_proposals_call_proposals_url end%>
+<% if @proposal.persisted? then url = admin_proposals_call_proposal_url else url = admin_proposals_call_proposals_url end %>
+<%= simple_nested_form_for([@call, @proposal], url: url) do |f| %>
 
-<input type="hidden" name="autocomplete_users_list" value="true">
-
-<%= simple_nested_form_for([@call, @proposal], :url => url) do |f| %>
   <%= f.error_notification %>
 
   <div class="form-inputs">
@@ -11,38 +9,22 @@
       <b>Proposal for: <%= @call.name %></b>
     </p>
 
-    <% if can? :change_late, @proposal and Time.now > @call.deadline %>
-      <%= f.input :late, :as => :select, :blank => true %>
-    <% end %>
+    <% if can?(:approve, @proposal) %>
+      <% if @proposal.successful.nil? && !@proposal.approved.nil? %>
+        <%= f.input :approved, as: :select, blank: true %>
+      <% end %>
 
-    <% if can? :approve, @proposal and @proposal.approved %>
-      <%= f.input :successful, :as => :select, :blank => true %>
+      <% if @proposal.approved %>
+        <%= f.input :successful, as: :select, blank: true %>
+      <% end %>
     <% end %>
 
     <%= f.input :show_title %>
 
-    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :publicity_text } %>
+    <%= render "/shared/form/md_editor", f: f, field: :publicity_text, rows: 12, show_hint: true %>
 
-    <br />
 
-    <%= render :partial => "admin/shared/md_editor", :locals => { :f => f, :field => :proposal_text } %>
-
-    <div class="form-horizontal">
-
-      <h3>Team</h3>
-
-      <% if f.object.errors[:team_members].present? then %>
-      <p id="team_errors" class="alert alert-error">
-          <%= f.error :team_members %>
-      </p>
-      <% end %>
-
-      <%= f.simple_fields_for :team_members %>
-
-      <% add_member_text = '<i class="icon-plus"></i> Add Team Member'.html_safe %>
-      <%= f.link_to_add add_member_text, :team_members, :class => "btn" %>
-
-    </div>
+    <%= render "/shared/form/md_editor", f: f, field: :proposal_text, rows: 12, show_hint: true %>
 
     <div>
       <h3>Questions</h3>
@@ -50,11 +32,17 @@
       <%= f.simple_fields_for :answers %>
     </div>
 
+    <%= render '/shared/form/sections/team_members', f: f %>
   </div>
 
+  <div>By submitting this form you agree that this proposal (including the names of the team members) may be shared with Friends of Bedlam</div>
+  
+  <% # This cannot use /shared/form/form_actions because the links are so different %>
   <div class="form-actions">
-    <%= f.button :submit, :class => "btn-primary" %>
-
-    <%= link_to 'Back', admin_proposals_call_proposals_path(@call), :class => "btn" %>
+    <%= f.button :submit, class: "btn btn-primary" %>
+    <% if @proposal.persisted?%>
+      <%= get_link f.object, :show, link_target: admin_proposals_call_proposal_path(@call, @proposal), link_text: 'View', html_class: 'btn', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
+    <% end %>
+    <%= get_link @call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
   </div>
 <% end %>

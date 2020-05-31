@@ -9,10 +9,6 @@ authorize_backend:
   role_id:       1
   permission_id: 1
 
-read_proposals:
-  role_id:       2
-  permission_id: 2
-
 update_opportunities:
   role_id:       2
   permission_id: 3

@@ -15,9 +15,10 @@
 
 FactoryBot.define do
   factory :proposal_call, class: Admin::Proposals::Call do
-    name     { generate(:random_string) }
-    open     { [true, false].sample }
-    deadline { 5.days.from_now }
+    name { generate(:random_string) }
+
+    submission_deadline { 5.days.from_now }
+    editing_deadline { submission_deadline.advance(days: 5) }
 
     transient do
       question_count { 5 }

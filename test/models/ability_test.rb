@@ -13,7 +13,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     models = ApplicationRecord.descendants
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
-                  Admin::Proposals::Proposal]
+                  Admin::Proposals::Proposal, Admin::Proposals::Call]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -101,56 +101,89 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users have the correct proposal permissions' do
-    # Committee can always see all proposals (they have proposal :read). This permission is a fixture.
+    admin_abilities = [:update, :read, :create, :delete, :approve, :reject, :convert].freeze
+    @admin_ability = Ability.new(users(:admin))
+
+    # Proposal Checkers can always see all proposals (they have proposal :read). This permission is a fixture.
     # Test that that still stays valid even in the different scenarios.
-    @committee_ability = Ability.new(FactoryBot.create(:committee))
+    checker_user = FactoryBot.create(:user)
+    checker_user.add_role 'Proposal Checker'
+    @checker_ability = Ability.new(checker_user)
 
     @random_ability = Ability.new(FactoryBot.create(:user))
 
-    call = FactoryBot.create :proposal_call, deadline: DateTime.now.advance(days: 1), open: true
+    call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: 4))
+
     proposal = call.proposals.sample
-    proposal.approved = false
 
     @on_proposal_ability = Ability.new(proposal.users.sample)
 
-    # 0: Test default permissions for random proposal.
-    random_proposal = FactoryBot.create :proposal
-    helper_test_proposal(:read, random_proposal, true, false, false, 'that is random')
+    situation = 'before the submission deadline'
 
-    # 1A Before the deadline and while calls are open, users can only see proposals that they are part of...
-    helper_test_proposal(:read, proposal, true, true, false, 'before deadline')
-    helper_test_proposal(:update, proposal, false, true, false, 'before deadline')
-    # 1B: ...and create a new one for open calls
-    helper_test_proposal(:create, proposal, true, true, true, 'before deadline')
+    # 1A: Before the submission deadline, users can only see proposals that they are part of..
+    # .. proposal checkers and admins cannot read..
+    helper_test_proposal(:read, proposal, false, true, false, situation)
+    helper_test_actions(proposal, "proposal #{situation}", @admin_ability, [], admin_abilities)
+    # 1B: Users edit current proposals..
+    helper_test_proposal(:update, proposal, false, true, false, situation)
+    # 1C: ..and create new proposals..
+    helper_test_proposal(:create, proposal, true, true, true, situation)
+    # 1D: .. and cannot destroy proposals.
+    helper_test_proposal(:delete, proposal, false, false, false, situation)
 
-    # 2A: Cannot update the proposal after closing the call even if the deadline has not been reached...
-    call.open = false
-    helper_test_proposal(:update, proposal, false, false, false, 'after closing the call')
-    # 2B: ...nor create a new one...
-    helper_test_proposal(:create, proposal, false, false, false, 'after closing the call')
-    # 2C: ...and also cannot update after the deadline has been surpassed, but the call is still open
-    call.open = true
-    call.deadline = DateTime.now.advance(days: -1)
-    helper_test_proposal(:update, proposal, false, false, false, 'after the deadline is surpassed but the call is still open')
-    # 3A: After the deadline and closing the call, users can only read proposals that they are part of...
-    call.open = false
+    call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    situation = 'after the submission deadline / before the editing deadline'
 
-    helper_test_proposal(:read, proposal, true, true, false, 'after closing and after the deadline')
-    # 3B: ...or that have been approved...
+    # 2A: Before the editing deadline, users can only see proposals that they are part of..
+    # .. or all if they are a proposal checker.
+    helper_test_proposal(:read, proposal, true, true, false, situation)
+    # 2B: .. and edit existing proposals they are part of..
+    helper_test_proposal(:update, proposal, false, true, false, situation)
+    # 2C: .. but cannot create new ones..
+    helper_test_proposal(:create, proposal, false, false, false, situation)
+    # 2D: .. or destroy existing ones..
+    helper_test_proposal(:delete, proposal, false, false, false, situation)
+    # 2E: .. and admins can now modify proposals.
+    helper_test_actions(proposal, "proposal #{situation}", @admin_ability, admin_abilities, [])
+
+    call.update_attribute(:editing_deadline, DateTime.now.advance(days: -1))
+    situation = 'after the editing deadline'
+
+    # 3A: After the editing deadline, users can only read proposals if they are a Proposal Checker or the ones that they are part of..
+    helper_test_proposal(:read, proposal, true, true, false, situation)
+    # 3B: .. including when they have been rejected.
+    proposal.approved = false
+    helper_test_proposal(:read, proposal, true, true, false, situation)
+
+    # 4A: Everyone can see the ones that have been approved...
     proposal.approved = true
-    helper_test_proposal(:read, proposal, true, true, true, 'after closing and after the deadline, but that is approved')
-    # 3C: ...and can no longer update.
-    helper_test_proposal(:update, proposal, false, false, false, 'after closing and after the deadline')
+    situation = "#{situation}, but that is approved"
+    helper_test_proposal(:read, proposal, true, true, true, situation)
+    # 4B: ...and can no longer update proposals.
+    helper_test_proposal(:update, proposal, false, false, false, situation)
 
-    # 4A: People can see all archived proposals that are approved...
+    # 5A: People can see all archived proposals that are approved...
+    # (Archiving only happens after both deadlines have passed)
     call.archived = true
     proposal.approved = true
     helper_test_proposal(:read, proposal, true, true, true, 'that is archived and approved')
-    # 4B: ...or rejected ones that they were a part of...
+    # 5B: ...or rejected ones that they were a part of...
     proposal.approved = false
     helper_test_proposal(:read, proposal, true, true, false, 'that is archived but not approved')
-    # 4C: ...and no one can edit archived proposals.
+    # 5C: ...and no one can edit archived proposals.
     helper_test_proposal(:update, proposal, false, false, false, 'that is archived but not approved')
+
+    # 6: Everyone can read the about page.
+    helper_test_proposal(:about, proposal, true, true, true, 'that is archived but not approved')
+  end
+
+  test 'have the correct call permissions' do
+    allowed_actions = %I[show read index]
+    forbidden_actions = %I[new create update delete]
+
+    call = FactoryBot.create(:proposal_call)
+
+    helper_test_actions(call, 'a random proposal call', @ability, allowed_actions, forbidden_actions)
   end
 
   test 'have the correct questionnaire permissions' do
@@ -336,8 +369,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     end
   end
 
-  def helper_test_proposal(action, proposal, can_committee, can_on_proposal, can_random, situation)
-    assert_equal can_committee,   @committee_ability.can?(action,   proposal), "Committee #{correct_negative(can_committee)} :#{action} the proposal #{situation}"
+  def helper_test_proposal(action, proposal, can_checker, can_on_proposal, can_random, situation)
+    assert_equal can_checker,     @checker_ability.can?(action,     proposal), "Proposal Checkers #{correct_negative(can_checker)} :#{action} the proposal #{situation}"
     assert_equal can_on_proposal, @on_proposal_ability.can?(action, proposal), "A person on the proposal #{correct_negative(can_on_proposal)} :#{action} the proposal #{situation}"
     assert_equal can_random,      @random_ability.can?(action,      proposal), "A random person #{correct_negative(can_random)} :#{action} the proposal #{situation}"
   end

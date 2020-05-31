@@ -42,6 +42,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def show
     @title = "#{@questionnaire.name} for #{@questionnaire.show.name}"
 
+    @questionnaire.instantiate_answers!
+
     respond_to do |format|
       format.html # show.html.erb
       format.json { render json: @questionnaire }
@@ -62,10 +64,10 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     # The title is set in the view.
     set_create_form_parameters
 
-    failure_notice = 'There are no future shows, so it is not possible to add a questionnaire at the moment.'.freeze
-
     respond_to do |format|
       if @shows_collection.empty?
+        failure_notice = 'There are no future shows, so it is not possible to add a questionnaire at the moment.'.freeze
+
         format.html { redirect_to Admin::Questionnaires::Questionnaire, notice: failure_notice }
         format.json { render json: failure_notice }
       else
@@ -118,13 +120,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def answer
     @title = "Answering #{@questionnaire.name} for #{@questionnaire.show.name}"
 
-    @questionnaire.questions.each do |question|
-      if question.answers.where(answerable_id: @questionnaire.id, answerable_type: 'Admin::Questionnaires::Questionnaire').empty?
-        answer = Admin::Answer.new
-        answer.question = question
-        @questionnaire.answers.push(answer)
-      end
-    end
+    @questionnaire.instantiate_answers!
 
     respond_to do |format|
       format.html # answer.html.erb

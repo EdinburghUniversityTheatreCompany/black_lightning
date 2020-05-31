@@ -14,7 +14,8 @@
 #++
 ##
 class Admin::Proposals::CallQuestionTemplate < ApplicationRecord
-  has_many :questions, as: :questionable
+  validates :name, presence: true, uniqueness: true
 
+  has_many :questions, as: :questionable
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
 end

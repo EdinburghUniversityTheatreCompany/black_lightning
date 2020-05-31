@@ -1,42 +1,12 @@
 <h1><%= @title%></h1>
 
-<% @questionnaire.questions.each do |question| %>
-  <div>
-    <p>
-      <b>Question:</b>
-    </p>
-    <%= render_markdown question.question_text %>
-  </div>
-
-  <div>
-    <p>
-      <b>Response:</b>
-    </p>
-    <% if question.answers.empty? %>
-      This question has not been answered
-    <% else %>
-      <% question.answers.each do |answer| %>
-        <% if question.response_type == "File" %>
-          <%= answer.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
-        <% else %>
-          <% if answer.answer.present? %>
-            <%= render_markdown answer.answer %>
-          <% else %>
-            This question has not been answered
-          <% end %>
-        <% end %>
-      <% end %>
-    <% end %>
-  </div>
-
-  <hr />
-<% end %>
+<%= render '/shared/questions_and_answers', answers: @questionnaire.answers %>
 
 <% # You cannot use the shared/show_actions here because they're all quite different %>
 
-<%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary', link_text: '<i class="icon-book" aria-hidden=”true”></i> Answer'.html_safe %>
+<%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary' %>
 
 <%= get_link @questionnaire, :edit %>
 
-<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View', anchor: "#{@questionnaire.show.name.to_url}-table" %>
+<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View All Questionnaires', anchor: "#{@questionnaire.show.name.to_url}-table" %>
 

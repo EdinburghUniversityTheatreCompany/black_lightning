@@ -1,0 +1,28 @@
+<h3>Questions</h3>
+
+<% answers.includes(:question).each do |answer| %>
+  <div>
+    <p>
+      <b>Question:</b>
+    </p>
+    <%= render_markdown answer.question.question_text %>
+  </div>
+
+  <div>
+    <p>
+      <b>Response:</b>
+    </p>
+
+    <% if answer.question.response_type == "File" %>
+      <%= answer&.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
+    <% else %>
+      <% if answer&.answer.present? %>
+        <%= render_markdown answer.answer %>
+      <% else %>
+        <p>This question has not been answered.</p>
+      <% end %>
+    <% end %>
+  </div>
+
+  <hr />
+<% end %>

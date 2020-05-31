@@ -3,27 +3,34 @@
 
 <h3>Team</h3>
 
-<% team_members.each do |team_member| %>
-  <p>
-    <b><%= team_member&.position %></b>
+<% user_is_part_of_proposal = team_members&.first&.teamwork.users.include?(current_user) %>
 
-    <% if team_member.present?%>
-      <%= user_link(team_member.user, true) %>
-      <% can_see_in_debt_label = can? :debt_status, team_member.user %>
+<% team_members.each do |team_member| %>
+  <% continue if team_member.nil? %>
+
+  <p>
+    <b><%= team_member.position %></b>
+
+    <%= user_link(team_member.user, true) %>
+
+    <% if team_member.user.present? %>
+      <% can_see_in_debt_label = user_is_part_of_proposal || can?(:show, team_member.user) %>
 
       <% if can_see_in_debt_label && team_member.user.in_debt %>
-        <% debt_message = "#{team_member.user.debt_message_suffix}".upcase_first %>
+        <% debt_message = team_member.user.debt_message_suffix.upcase_first %>
 
         <%= link_to debt_message, admin_debt_path(team_member.user), class: "label label-important" %>
       <% end %>
 
       <% if can_see_in_debt_label && deadline.present? && team_member.user.in_debt(deadline) %>
-        <% on_deadline_debt_message = "#{team_member.user.debt_message_suffix(deadline).upcase} on the deadline" %>
-          
-        <%= link_to on_deadline_debt_message, admin_debt_path(team_member.user), class: "label label-warning" %>        
+        <% on_deadline_debt_message = team_member.user.debt_message_suffix(deadline).upcase_first %>
+
+        <% # Only show the deadline message if the debt on the deadline is different. %>
+        <% if on_deadline_debt_message != debt_message %>
+          <% on_deadline_debt_message = "#{on_deadline_debt_message} on the editing deadline" %>
+          <%= link_to on_deadline_debt_message, admin_debt_path(team_member.user), class: "label label-warning" %>
+        <% end %>    
       <% end %>
-    <% else %>
-      
     <% end %>
   </p>
 <% end %>

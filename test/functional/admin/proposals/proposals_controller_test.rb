@@ -2,201 +2,210 @@ require 'test_helper'
 
 class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   setup do
-    @call = FactoryBot.create(:proposal_call, question_count: 5, open: true)
+    @call = FactoryBot.create(:proposal_call, question_count: 5, submission_deadline: DateTime.now.advance(days: 5))
 
-    sign_in FactoryBot.create(:admin)
+    @admin = users(:admin)
+    sign_in @admin
   end
 
   test 'should get index' do
     FactoryBot.create_list(:proposal, 10, call: @call)
 
-    get :index, params: {call_id: @call.id}
+    get :index, params: { call_id: @call.id }
     assert_response :success
     assert_not_nil assigns(:proposals)
   end
 
-  test "shouldn't get new on closed call" do
-    get :new, params: { call_id: FactoryBot.create(:proposal_call, open: false).id }
+  test 'should show proposal' do
+    sign_out @admin
+    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal.users.first.add_role :admin
+    sign_in proposal.users.first
 
-    assert_redirected_to admin_proposals_calls_path
-  end
-
-  test 'should get new' do
-    get :new, params: {call_id: @call.id}
+    get :show, params: { call_id: @call.id, id: proposal }
     assert_response :success
   end
 
-  test 'should create admin_proposals_proposal' do
+  test 'someone on the proposal can see debt status' do
+    sign_out @admin
+
+    proposal = FactoryBot.create(:proposal, call: @call)
+    user = proposal.users.first
+    user.add_role(:member)
+    debtor = proposal.users.last
+
+    assert_not_nil user
+    assert_not_equal user, debtor, 'The debtor is the same as the current user. This means the test will not be accurate. Did you add more than 1 person to the proposal?'
+
+    FactoryBot.create(:maintenance_debt, user: debtor, due_by: Date.today.advance(days: -1))
+
+    sign_in user
+
+    get :show, params: { call_id: @call.id, id: proposal }
+
+    assert_response :success
+
+    assert_match '<a class="label label-important"', response.body
+    assert_match 'In maintenance Debt', response.body
+
+    assert_match 'class="label label-danger">Has Debtors</span>', response.body, 'The Has Debtors label is absent. Are you sure the label generation did not change? Are you sure one of the users is actually in debt (most likely because there is a maintenance debt label)?'
+  end
+
+  test 'should get new' do
+    get :new, params: { call_id: @call.id }
+    assert_response :success
+  end
+
+  test 'should not get new after the submission deadline' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(hours: -1))
+    get :new, params: { call_id: @call.id }
+
+    assert_includes flash[:error], "The submission deadline for #{@call.name} has been passed"
+    assert_redirected_to admin_proposals_call_proposals_path(@call)
+  end
+
+  test 'should create proposal' do
+    # This mess is to force the inclusion of team_member attributes.
+    # You cannot just use attributes_for, and team_work does not actually get an user linked when using build.
     proposal = FactoryBot.build(:proposal)
 
-    # This mess is to force the inclusion of team_member attributes.
-    attrs = proposal.attributes
-    attrs.delete('id')
-    attrs.delete('call_id')
-    attrs.delete('created_at')
-    attrs.delete('updated_at')
+    attributes = proposal.attributes.except('id', 'call_id', 'created_at', 'updated_at')
+    attributes[:team_members_attributes] = {}
 
-    team_members = {}
-    i = 0
-    proposal.team_members.each do |team_member|
-      team_members[i] = team_member.attributes
-      team_members[i].delete('id')
-      team_members[i].delete('teamwork_id')
-      team_members[i].delete('teamwork_type')
-      team_members[i].delete('created_at')
-      team_members[i].delete('updated_at')
-      i += 1
+    proposal.team_members.each_with_index do |team_member, index|
+      team_member_attributes = team_member.attributes.except('id', 'teamwork_id', 'teamwork_type', 'created_at', 'updated_at')
+      team_member_attributes[:user_id] = FactoryBot.create(:member).id
+      attributes[:team_members_attributes][index] = team_member_attributes
     end
 
-    attrs[:team_members_attributes] = team_members
-
     assert_difference('Admin::Proposals::Proposal.count') do
-      post :create, params: {call_id: @call.id, admin_proposals_proposal: attrs}
+      post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
     end
 
     assert_redirected_to admin_proposals_call_proposal_path(@call, assigns(:proposal))
   end
 
-  test 'should show admin_proposals_proposal' do
-    @proposal = FactoryBot.create(:proposal, call: @call)
+  test 'should not create invalid proposal' do
+    attributes = FactoryBot.attributes_for(:proposal, show_title: nil)
 
-    get :show, params: { call_id: @call.id,  id: @proposal }
-    assert_response :success
+    assert_no_difference('Admin::Proposals::Proposal.count') do
+      post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
+    end
+
+    assert_response :unprocessable_entity
+  end
+
+  test 'should not create after the submission deadline' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(hours: -1))
+    attributes = FactoryBot.attributes_for(:proposal)
+
+    assert_no_difference('Admin::Proposals::Proposal.count') do
+      post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
+    end
+
+    assert_includes flash[:error], "The submission deadline for #{@call.name} has been passed"
+    assert_redirected_to admin_proposals_call_proposals_path(@call)
   end
 
   test 'should get edit' do
-    @proposal = FactoryBot.create(:proposal, call: @call)
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call)
 
-    get :edit, params: {call_id: @call.id, id: @proposal}
+    get :edit, params: { call_id: @call.id, id: proposal }
     assert_response :success
   end
 
-  test 'should update admin_proposals_proposal' do
-    @proposal = FactoryBot.create(:proposal, call: @call)
-    attrs = FactoryBot.attributes_for(:proposal)
+  test 'should update proposal' do
+    sign_out @admin
+    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal.users.first.add_role :admin
+    sign_in proposal.users.first
 
-    put :update, params: {call_id: @call.id, id: @proposal, admin_proposals_proposal: attrs}
+    attributes = FactoryBot.attributes_for(:proposal)
+
+    put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+
+    assert_not_nil assigns(:proposal), 'The update function did not set a proposal. There is probably something wrong with the authentication.'
+
     assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
   end
 
+  test 'should not update invalid proposal' do
+    sign_out @admin
+
+    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal.users.first.add_role :admin
+    sign_in proposal.users.first
+
+    attributes = FactoryBot.attributes_for(:proposal, publicity_text: nil)
+
+    put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+
+    assert proposal.show_title, assigns(:proposal).show_title
+
+    assert_response :unprocessable_entity
+  end
+
   test 'should destroy admin_proposals_proposal' do
-    @proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, call: @call)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do
-      delete :destroy, params: {call_id: @call.id, id: @proposal}
+      delete :destroy, params: { call_id: @call.id, id: proposal }
     end
 
     assert_redirected_to admin_proposals_call_proposals_url(@call)
   end
 
-  test 'members should not view other proposals before the deadline' do
-    @call = FactoryBot.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
-    @proposal = FactoryBot.create(:proposal, call: @call)
-    member = FactoryBot.create(:member)
+  test 'approve' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call)
 
-    sign_in member
+    put :approve, params: { call_id: @call.id, id: proposal.id }
 
-    get :index, params: {call_id: @call.id}
-    proposals = assigns(:proposals)
-    assert_response :success
-    assert_equal proposals.count, 0
-
-    get :show,params: { call_id: @call.id,  id: @proposal }
-    assert_redirected_to static_path('access_denied')
+    assert assigns(:proposal).approved
+    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_equal "#{proposal.show_title} has been marked as approved", flash[:success]
   end
 
-  test 'members should view their own proposals before the deadline' do
-    @call = FactoryBot.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
-    @proposal = FactoryBot.create(:proposal, call: @call)
-    member = FactoryBot.create(:member)
+  test 'reject' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call)
 
-    sign_in member
+    put :reject, params: { call_id: @call.id, id: proposal.id }
 
-    @proposal.team_members << FactoryBot.create(:team_member, user: member)
-    @proposal.save
-
-    get :index, params: {call_id: @call.id}
-    proposals = assigns(:proposals)
-    assert_response :success
-    assert_equal proposals.count, 1
-
-    get :show, params: { call_id: @call.id,  id: @proposal }
-    assert_response :success
+    assert_not assigns(:proposal).approved
+    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_equal "#{proposal.show_title} has been marked as rejected", flash[:success]
   end
 
-  test 'committee should not view other proposals before the deadline' do
-    @call = FactoryBot.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
-    @proposal = FactoryBot.create(:proposal, call: @call)
-    member = FactoryBot.create(:committee)
+  test 'convert' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, successful: true)
 
-    sign_in member
+    assert_difference 'Show.count' do
+      put :convert, params: { call_id: @call.id, id: proposal.id }
+    end
 
-    get :index, params: {call_id: @call.id}
-    proposals = assigns(:proposals)
-    assert_response :success
-    assert_equal proposals.count, 0
-
-    get :show, params: {call_id: @call.id,  id: @proposal}
-    assert_redirected_to static_path('access_denied')
+    assert Show.where(name: proposal.show_title).any?
+    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_includes flash[:notice], 'is queued to be converted'
   end
 
-  test 'committee should view their own proposals before the deadline' do
-    @call = FactoryBot.create(:proposal_call, proposal_count: 5, open: true, deadline: 5.days.from_now)
-    @proposal = FactoryBot.create(:proposal, call: @call)
-    member = FactoryBot.create(:committee)
+  test 'should not convert when the proposal has not been approved' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call)
 
-    sign_in member
+    assert_no_difference 'Show.count' do
+      put :convert, params: { call_id: @call.id, id: proposal.id }
+    end
 
-    @proposal.team_members << FactoryBot.create(:team_member, user: member)
-    @proposal.save
-
-    get :index, params: {call_id: @call.id}
-    proposals = assigns(:proposals)
-    assert_response :success
-    assert_equal proposals.count, 1
-
-    get :show, params: { call_id: @call.id,  id: @proposal }
-    assert_response :success
+    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_equal ['This proposal was not successful'], flash[:error]
   end
 
-  test 'committee should see all proposals after the deadline' do
-    @call = FactoryBot.create(:proposal_call, proposal_count: 5, open: true, deadline: 1.days.ago)
-    @proposal = FactoryBot.create(:proposal, call: @call)
-    member = FactoryBot.create(:committee)
+  test 'about' do
+    get :about
 
-    sign_in member
-
-    get :index, params: {call_id: @call.id}
-    proposals = assigns(:proposals)
     assert_response :success
-    assert_equal proposals.count, 6
-
-    get :show, params: { call_id: @call.id,  id: @proposal }
-    assert_response :success
-  end
-
-  test 'members should see only approved proposals after the deadline' do
-    @call = FactoryBot.create(:proposal_call, open: true, deadline: 1.days.ago)
-    @approved = FactoryBot.create(:proposal, call: @call, approved: true)
-    @rejected = FactoryBot.create(:proposal, call: @call, approved: false)
-    @waiting = FactoryBot.create(:proposal, call: @call, approved: nil)
-
-    member = FactoryBot.create(:member)
-    sign_in member
-
-    get :index, params: { call_id: @call.id }
-    proposals = assigns(:proposals)
-    assert_response :success
-
-    assert_equal 1, proposals.all.count
-
-    get :show, params: {call_id: @call.id,  id: @approved }
-    assert_response :success
-
-    get :show, params: {call_id: @call.id,  id: @rejected }
-    assert_redirected_to static_path('access_denied')
-
-    get :show, params: { call_id: @call.id,  id: @waiting }
-    assert_redirected_to static_path('access_denied')
   end
 end

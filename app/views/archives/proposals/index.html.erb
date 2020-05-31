@@ -1,67 +1,44 @@
-<div class="row">
-  <div class="span12">
-    <div class="accordion-group">
-      <div class="accordion-heading">
-        <a class="accordion-toggle" data-toggle="collapse" href="#search_container">
-          <i class="fa fa-chevron-down" aria-hidden=”true”></i> Search Form
-        </a>
-      </div>
-      <div id="search_container" class="accordion-body collapse">
-        <div class="accordion-inner">
-          <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :archives_proposals_index do |f| %>
-            <%= f.input :show_title_cont,      label: "Proposal Title", required: false %>
-            <%= f.input :users_full_name_cont, label: "Person Name",    required: false %>
+<%= render layout: '/shared/collapsible_search_form' do %>
+  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :archives_proposals_index do |f| %>
+    <%= f.input :show_title_cont,      label: "Proposal Title", required: false %>
+    <%= f.input :users_full_name_cont, label: "Person Name",    required: false %>
 
-            <%= f.input :call_deadline_gt, as: :date, label: "Start Date", include_blank: true, required: false %>
-            <%= f.input :call_deadline_lt, as: :date, label: "End Date",   include_blank: true, required: false %>
+    <%= f.input :proposal_text_cont,   label: "Proposal Text",  required: false %>
+    <%= f.input :publicity_text_cont,  label: "Publicity Text", required: false %>
 
-            <%= f.submit :Search, class: 'btn' %>
-          <% end %>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+    <%= f.input :call_submission_deadline_gt, as: :date, label: "Start Date", start_year: 2013, include_blank: true, required: false %>
+    <%= f.input :call_editing_deadline_lt,    as: :date, label: "End Date",   start_year: 2013, include_blank: true, required: false %>
+
+    <%= f.submit :Search, class: 'btn' %>
+  <% end %>
+<% end %>
 
 <div class="row">
   <div class="span12">
-    <h1>Proposals</h1>
-    <hr />
+    <h1><%= @title %></h1>
 
     <div class="accordion" id="calls_accordion">
       <% @proposals.each do |call, proposals| %>
         <% div_name = "call_" + call.id.to_s + "_proposals" %>
+
         <div class="accordion-group">
           <div class="accordion-heading">
             <div class="accordion-toggle">
-                <a href="#<%= div_name %>" data-toggle="collapse" style="display: inline-block;">
-                  <%= call.name %>
-                </a>
-                <span class="pull-right">Deadline: <%= l call.deadline, :format => :short %></span>
+              <a href="#<%= div_name %>" data-toggle="collapse" style="display: inline-block;">
+                <%= call.name %>
+              </a>
+              <span class="pull-right">
+                Submission Deadline: <%= l call.submission_deadline, format: :short %>
+                |
+                Editing Deadline: <%= l call.editing_deadline, format: :short %>
+              </span>
             </div>
           </div>
           <div id="<%= div_name %>" class="accordion-body collapse">
             <% proposals.each do |proposal| %>
               <div style="margin: 3px 15px;">
-                <%= link_to proposal.show_title.presence || "Unnamed" ,  admin_proposals_call_proposal_path(call, proposal), :title => "View Proposal" %>
-
-                <% case proposal.successful %>
-                <% when true%>
-                  <span style="margin-left: 5px;" class="label label-success pull-right">Successful</span>
-                <% when false %>
-                  <span style="margin-left: 5px;" class="label label-important pull-right">Unsuccessful</span>
-                <% end %>
-
-                <% case proposal.approved %>
-                <% when true %>
-                  <span class="label label-success pull-right">Approved</span>
-                <% when false %>
-                  <span class="label label-important pull-right">Rejected</span>
-                <% else %>
-                  <span class="label label-info pull-right">Waiting for approval</span>
-                <% end %>
-
-                <% if proposal.late %><span style="margin-right: 5px;" class="label label-important pull-right">Late</span><% end %>
+                <%= get_link proposal, :show, link_target: admin_proposals_call_proposal_path(call, proposal) %>
+                <%= proposal.labels true %>
               </div>
             <% end %>
           </div>

@@ -31,6 +31,11 @@ class Ability
       #        (Leave at the top like this)        #
       ##############################################
       can :manage, :all
+
+      # Even admins should not be able to read proposals before the submission deadline has been passed.
+      cannot [:update, :read, :create, :delete, :approve, :reject, :convert], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+      can [:update, :read, :delete], Admin::Proposals::Proposal, users: { id: user.id }
+
       return
     end
 
@@ -62,13 +67,32 @@ class Ability
 
     # People can see debt status for users on proposals they are on.
     # It is disabled because it is currently more efficient to just do this on the proposal show thing.
-    #proposals_with_current_user = Admin::Proposals::Proposal.joins(:team_members).where('team_members.user_id = ?', user.id)
-    #shared_proposal_user_ids = TeamMember.where(teamwork: proposals_with_current_user).pluck(:user_id)
+    # proposals_with_current_user = Admin::Proposals::Proposal.joins(:team_members).where('team_members.user_id = ?', user.id)
+    # shared_proposal_user_ids = TeamMember.where(teamwork: proposals_with_current_user).pluck(:user_id)
 
-    #can :debt_status, User, id: shared_proposal_user_ids
+    # can :debt_status, User, id: shared_proposal_user_ids
 
+    # Give committee and proposal viewers the read permission using the grid.
+    # Show all proposals that an user is on, even if they are not approved / the submission deadline has not been reached.
+    can :read, Admin::Proposals::Proposal, users: { id: user.id }
+    # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
+    can :read, Admin::Proposals::Proposal, approved: true
 
+    # If a user is a proposal checker, they should be able to read any call, no matter if they are approved, rejected, or awaiting, after the submission deadline.
+    if user.has_role? 'Proposal Checker'
+      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now.advance(years: -100)..DateTime.now }
+    end
 
+    # TODO: There is an issue with using -infinity, but that will be fixed in Ruby 2.6 / Rails 6
+    can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+
+    can :update, Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.now..DateTime::Infinity.new }
+
+    # Everyone can read the about page.
+    can :about, Admin::Proposals::Proposal
+
+    # Because otherwise you also cannot read the proposals due to the url structure.
+    can :read, Admin::Proposals::Call
 
     can %I[read answer], Admin::Questionnaires::Questionnaire, users: { id: user.id }
 
