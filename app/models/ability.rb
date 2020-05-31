@@ -58,12 +58,15 @@ class Ability
     # Guests can see public events, news, and user profiles.
     can :read, News, show_public: true
     can :read, Event, is_public: true
+
+    # Have a specific view_public_profile permission because it is a bad idea to give normal users full :read permission for users.
     can :view_public_profile, User, public_profile: true
 
     # Stop if the user is not logged in.
     return if user.nil?
-    # All users can edit, see and destroy themselves.
-    can %I[show debt_status update edit destroy], User, id: user.id
+
+    # All users can edit and see themselves.
+    can %I[show debt_status update edit], User, id: user.id
 
     # People can see debt status for users on proposals they are on.
     # It is disabled because it is currently more efficient to just do this on the proposal show thing.

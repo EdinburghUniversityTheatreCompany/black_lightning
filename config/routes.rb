@@ -19,7 +19,14 @@ ChaosRails::Application.routes.draw do
   resources :venues,      only: [:index, :show]
   resources :seasons,     only: [:index, :show]
 
-  resources :membership_activations
+  resources :membership_activation_tokens, only: [] do
+    member do
+      get 'activate', to: 'membership_activation_tokens#activate'
+      put 'submit', to: 'membership_activation_tokens#submit'
+      patch 'submit', to: 'membership_activation_tokens#submit'
+    end
+  end
+
   resources :users, only: [:show] do
     collection do
       get 'current', to: 'users#current'
@@ -106,6 +113,13 @@ ChaosRails::Application.routes.draw do
     # resources :membership_cards, only: [:index, :show, :create, :destroy] do
     #   get 'generate_card'
     # end
+
+    resources :membership_activation_tokens, only: [:new] do
+      collection do
+        post 'create_activation', to: 'membership_activation_tokens#create_activation'
+        post 'create_reactivation', to: 'membership_activation_tokens#create_reactivation'
+      end
+    end
 
     resources :roles
     get  '/permissions/grid', to: 'permissions#grid', as: :permissions

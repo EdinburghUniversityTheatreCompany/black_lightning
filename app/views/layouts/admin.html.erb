@@ -102,8 +102,8 @@
                   <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
                 <% end %>
 
-                <% if can? :create, MembershipActivationToken%>
-                  <li><%= link_to 'Membership Activation', new_membership_activation_path %></li>
+                <% if can? :create, MembershipActivationToken %>
+                  <li><%= link_to 'Membership Activation', new_admin_membership_activation_token_path %></li>
                 <% end %>
 
                 <% if can? :index, MassMail %>

@@ -96,8 +96,7 @@ class Admin::Proposals::CallsController < AdminController
   # DELETE /admin/proposals/calls/1.json
   ##
   def destroy
-    # TEST THE ADDITIONAL CONDITIOn
-    helpers.destroy_with_flash_message(@call, additional_condition: @call.proposals.empty?)
+    helpers.destroy_with_flash_message(@call)
 
     respond_to do |format|
       format.html { redirect_to admin_proposals_calls_path }

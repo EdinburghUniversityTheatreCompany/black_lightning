@@ -21,13 +21,16 @@ class Admin::Proposals::Call < ApplicationRecord
 
   has_paper_trail
 
+  # Should stay above the dependent: :destroy clause
+  before_destroy :check_if_call_has_proposals
+  after_save :instantiate_answers_on_proposals
+
   has_many :questions, as: :questionable, dependent: :destroy
   has_many :proposals, class_name: 'Admin::Proposals::Proposal'
 
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
 
-  before_destroy :check_if_call_has_proposals
-  after_save :instantiate_answers_on_proposals
+  
 
   # Rails 6
   # TODO: Maybe revise what open means?

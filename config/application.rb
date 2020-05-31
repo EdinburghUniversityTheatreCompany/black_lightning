@@ -38,5 +38,7 @@ module ChaosRails
 
     # Protect against csrf attacks by checking origin matches sites address
     config.action_controller.forgery_protection_origin_check = true
+
+    config.active_job.queue_adapter = :delayed_job
   end
 end

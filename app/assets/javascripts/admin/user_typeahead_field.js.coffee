@@ -15,7 +15,17 @@ fetchUsers = ->
   $("body").append(loader)
   loader.fadeIn();
 
-  $.getJSON("/admin/users/autocomplete_list.json", null, (data) ->
+  base_url = "/admin/users/autocomplete_list.json"
+
+  all_users_meta = $('meta[name="all-users"]')
+
+  if all_users_meta.length
+    all_users = all_users_meta.attr("content");
+    url = base_url + "?all_users=" + all_users
+  else
+    url = base_url
+
+  $.getJSON(url, null, (data) ->
     users = data
 
     updateUserNames()

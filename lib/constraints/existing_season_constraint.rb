@@ -4,6 +4,7 @@ class ExistingSeasonConstraint
     if Season.table_exists?
       return Season.select(:slug).collect(&:slug)
     else
+      # This is here because of issue #123
       # :nocov:
       p 'The table seasons does not exist'
       return nil

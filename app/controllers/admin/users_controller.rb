@@ -111,7 +111,11 @@ class Admin::UsersController < AdminController
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/json'
 
-    @users = User.with_role(:member).select(['id', :first_name, :last_name])
+    @users = User.all
+
+    @users = @users.with_role(:member) if params[:all_users].nil?
+
+    @users = @users.select(['id', :first_name, :last_name])
 
     # This... erm... thing... builds the response up one
     # user at a time, which saves loading the whole lot into
@@ -144,6 +148,6 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
     return params.require(:user).permit(:email, :password, :password_confirmation, :remember_me, :first_name, :last_name,
-                                 :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: [])
+                                        :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: [])
   end
 end

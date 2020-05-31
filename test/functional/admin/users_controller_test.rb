@@ -80,19 +80,34 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
   test 'get autocomplete list' do
     members = FactoryBot.create_list :member, 5
-
     user = FactoryBot.create :user
 
     get :autocomplete_list
 
-    members.each do |member|
-      assert_includes response.body, member.first_name
-      assert_includes response.body, member.last_name
-      assert_includes response.body, member.id.to_s
-    end
+    members.each { |member| assert_includes_user(member) }
 
     assert_not_includes response.body, user.first_name
     assert_not_includes response.body, user.last_name
     assert_not_includes response.body, user.id.to_s
+  end
+
+  test 'get autocomplete list for all users' do
+    members = FactoryBot.create_list :member, 2
+
+    users = FactoryBot.create_list :user, 2
+
+    get :autocomplete_list, params: { all_users: 'true' }
+
+    members.each { |member| assert_includes_user(member) }
+
+    users.each { |user| assert_includes_user(user) }
+  end
+
+  private
+
+  def assert_includes_user(user)
+    assert_includes response.body, user.first_name
+    assert_includes response.body, user.last_name
+    assert_includes response.body, user.id.to_s
   end
 end
