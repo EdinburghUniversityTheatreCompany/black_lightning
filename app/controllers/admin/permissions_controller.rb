@@ -38,6 +38,7 @@ class Admin::PermissionsController < AdminController
       'backend' => { 'access' => 'Access Backend' },
       'reports' => { 'read' => 'Read Reports' },
       'User' => { 'view_public_profile' => 'View the public part of the user profile (Bio, avatar, and shows)' },
+      'Event' => { 'add_non_members' => 'Add non-members to events, mainly for archiving purposes' },
     }
 
     @models = ApplicationRecord.descendants + [Admin::Debt, Season] - [Event]
