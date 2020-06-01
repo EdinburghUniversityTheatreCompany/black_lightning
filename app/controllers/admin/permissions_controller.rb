@@ -37,11 +37,10 @@ class Admin::PermissionsController < AdminController
       'Admin::StaffingJob' => { 'sign_up_for' => 'Sign Up For Staffing' },
       'backend' => { 'access' => 'Access Backend' },
       'reports' => { 'read' => 'Read Reports' },
-      'User' => { 'view_public_profile' => 'View the public part of the user profile (Bio, avatar, and shows)' },
       'Event' => { 'add_non_members' => 'Add non-members to events, mainly for archiving purposes' },
     }
 
-    @models = ApplicationRecord.descendants + [Admin::Debt, Season] - [Event]
+    @models = ApplicationRecord.descendants + [Admin::Debt, Season]
 
     role_exclude = ['admin', 'Proposal Checker']
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all
