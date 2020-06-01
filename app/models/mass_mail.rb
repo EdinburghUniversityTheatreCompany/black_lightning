@@ -40,7 +40,7 @@ class MassMail < ApplicationRecord
   def send!
     recipients.each do |recipient|
       begin
-        MassMailer.send_mail(self, recipient).deliver_now
+        MassMailer.send_mail(self, recipient).deliver_later
       rescue => e
         # :nocov:
         Rails.logger.fatal e.message

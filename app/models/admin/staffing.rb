@@ -102,7 +102,7 @@ class Admin::Staffing < ApplicationRecord
       next if job.user.nil?
 
       begin
-        StaffingMailer.staffing_reminder(job).deliver_now
+        StaffingMailer.staffing_reminder(job).deliver_later
       rescue => e
         # :nocov:
         exception = e.exception "Error sending reminder to #{job.user.name(current_user)}: " + e.message

@@ -1,6 +1,7 @@
 require 'test_helper'
 
 class Admin::StaffingTest < ActiveSupport::TestCase
+  include ActionMailer::TestHelper
   setup do
     # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
     Delayed::Worker.delay_jobs = true
@@ -24,16 +25,16 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
   test 'reminder_cleanup' do
     skip 'This test fails. It seems the reminder job does not actually get removed. It is not that big of a deal, because in the very rare case a staffing is removed, it will just fail and do nothing'
-    
+
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 25, start_time: DateTime.now.advance(days: 1))
 
     assert_not_nil staffing.reminder_job
     assert_includes staffing.reminder_job.description, "Reminder for Staffing #{staffing.id}"
-    
+
     staffing.reminder_job.delete
     p staffing
     p staffing.reminder_job
-    
+
     staffing.send(:reminder_cleanup)
     p 'Try again'
 
@@ -93,9 +94,8 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
     staffing.staffing_jobs.first.update_attribute(:user, user)
 
-    assert_difference 'ActionMailer::Base.deliveries.count' do
-      staffing.send(:send_reminder)
-    end
+    staffing.send(:send_reminder)
+    assert_enqueued_emails 1
 
     # Should raise an error the second time, because it has already send mails.
     assert_raises ArgumentError do
