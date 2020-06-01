@@ -17,6 +17,12 @@
   <% end %>
 <% end %>
 
+<% if @show_current_term_only %>
+  <p>
+    By default, this display only includes questionnaires from the current semester. Please use the search form if you want to view older questionnaires.
+  </p>
+<% end %>
+
 <div class="accordion" id="shows_current_accordion">
   <% @questionnaires.each do |show_name, questionnaires| %>
     <div class="accordion-group">

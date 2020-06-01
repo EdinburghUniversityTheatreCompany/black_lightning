@@ -2,25 +2,50 @@ require 'test_helper'
 
 class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::TestCase
   setup do
-    sign_in users(:admin)
+    @admin = users(:admin)
+    sign_in @admin
 
     @questionnaire = FactoryBot.create(:questionnaire)
   end
 
   test 'should get index' do
-    FactoryBot.create_list(:questionnaire, 3)
+    old_show = FactoryBot.create(:show, start_date: Date.today.advance(years: -2), end_date: Date.today.advance(years: -2))
+    previous_year = FactoryBot.create(:questionnaire, show: old_show)
+
+    new_show = FactoryBot.create(:show, start_date: Date.today, end_date: Date.today)
+    this_year = FactoryBot.create(:questionnaire, show: new_show)
 
     get :index
+
     assert_response :success
     assert_not_nil assigns(:questionnaires)
+
+    assert_match 'only includes questionnaires from the current semester', response.body
+
+    questionnaire_ids = assigns(:questionnaires).values.flatten.collect(&:id)
+
+    assert_includes questionnaire_ids, this_year.id
+    assert_not_includes questionnaire_ids, previous_year.id
   end
 
-  test 'should get index with many records' do
-    FactoryBot.create_list(:questionnaire, 15)
+  test 'should get index as normal user' do
+    show = FactoryBot.create(:show, start_date: Date.today, end_date: Date.today)
+    user = show.users.first
+
+    assert_not_nil user
+
+    sign_out @admin
+    sign_in user
+
+    questionnaires = FactoryBot.create_list(:questionnaire, 4, show: show)
 
     get :index
     assert_response :success
     assert_not_nil assigns(:questionnaires)
+
+    questionnaire_ids = assigns(:questionnaires).values.flatten.collect(&:id).sort
+
+    assert_equal questionnaires.collect(&:id).sort, questionnaire_ids
   end
 
   test 'should show admin_questionnaires_questionnaire' do

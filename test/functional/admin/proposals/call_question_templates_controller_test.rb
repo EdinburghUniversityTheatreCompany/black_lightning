@@ -4,6 +4,8 @@ class Admin::Proposals::CallQuestionTemplatesControllerTest < ActionController::
   setup do
     @template = admin_proposals_call_question_templates(:mainterm)
 
+    assert @template.questions.present?
+
     sign_in users(:admin)
   end
 

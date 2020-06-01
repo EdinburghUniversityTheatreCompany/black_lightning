@@ -1,6 +1,6 @@
 <h1><%= @title = 'Activate Membership' %></h1>
 
-<%= simple_form_for(@user, method: :patch, url: submit_membership_activation_token_path(@membership_activation_token.token)) do |f| %>
+<%= simple_form_for(@user, method: :patch, url: submit_membership_activation_token_path(@membership_activation_token)) do |f| %>
     <%= f.error_notification %>
 
     <% unless @user.persisted? %>

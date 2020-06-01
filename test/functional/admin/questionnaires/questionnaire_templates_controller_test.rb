@@ -3,7 +3,7 @@ require 'test_helper'
 class Admin::Questionnaires::QuestionnaireTemplatesControllerTest < ActionController::TestCase
   setup do
     @template = admin_questionnaires_questionnaire_templates(:one)
-
+    assert @template.questions.present?
     sign_in users(:admin)
   end
 

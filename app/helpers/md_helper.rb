@@ -12,4 +12,8 @@ module MdHelper
 
     return strip_tags(Kramdown::Document.new(md, input: 'BKramdown').to_html)
   end
+
+  def truncate_markdown(content, length = 100)
+    return truncate(render_plain(content).strip, length: length)
+  end
 end

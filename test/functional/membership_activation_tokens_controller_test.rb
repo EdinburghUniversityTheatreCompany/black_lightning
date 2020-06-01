@@ -8,7 +8,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   test 'get activate for new user' do
     # Should not be signed in.
 
-    get :activate, params: { id: @token.token }
+    get :activate, params: { id: @token }
 
     assert_response :success
 
@@ -23,7 +23,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
 
     sign_in user
 
-    get :activate, params: { id: @token.token }
+    get :activate, params: { id: @token }
 
     assert_response :success
 
@@ -35,7 +35,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   test 'cannot get activate when signed in while the token does not have an user' do
     sign_in FactoryBot.create(:user)
 
-    get :activate, params: { id: @token.token }
+    get :activate, params: { id: @token }
 
     assert_redirected_to access_denied_url
     assert_equal 'This token belongs to a new user, but you are already signed in.', flash[:error]
@@ -46,7 +46,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
 
     sign_in FactoryBot.create(:user)
 
-    get :activate, params: { id: @token.token }
+    get :activate, params: { id: @token }
 
     assert_redirected_to access_denied_url
     assert_equal 'This token belongs to a different user.', flash[:error]
@@ -55,7 +55,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   test 'cannot get activate when signed in as member' do
     sign_in FactoryBot.create(:member)
 
-    get :activate, params: { id: @token.token }
+    get :activate, params: { id: @token }
 
     assert_redirected_to access_denied_url
     assert_equal 'You have already activated your account.', flash[:error]
@@ -64,7 +64,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   test 'cannot submit when not signed in but the token belongs to an user' do
     @token.update_attribute(:user, FactoryBot.create(:user))
 
-    get :activate, params: { id: @token.token }
+    get :activate, params: { id: @token }
 
     assert_redirected_to access_denied_url
     assert_equal 'This token belongs to an existing user, but you are not signed in. Please sign in and try again.', flash[:error]
@@ -76,7 +76,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     user_attributes = FactoryBot.attributes_for(:user)
 
     assert_difference 'User.count' do
-      patch :submit, params: { id: @token.token, user: user_attributes, consent: 'true' }
+      patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
 
       assert_not_nil assigns(:user)
       assert assigns(:user).has_role? :member
@@ -93,7 +93,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     user_attributes = FactoryBot.attributes_for(:user)
 
     assert_no_difference 'User.count' do
-      patch :submit, params: { id: @token.token, user: user_attributes, consent: 'true' }
+      patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
 
       assert_not_nil assigns(:user)
       assert assigns(:user).has_role? :member
@@ -104,7 +104,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   test 'cannot submit without consent' do
     user_attributes = FactoryBot.attributes_for(:user)
 
-    patch :submit, params: { id: @token.token, user: user_attributes }
+    patch :submit, params: { id: @token, user: user_attributes }
 
     assert_response :unprocessable_entity
     assert_match 'You need to give consent', flash[:error]
@@ -119,7 +119,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   test 'cannot submit with invalid user attributes' do
     user_attributes = FactoryBot.attributes_for(:user, email: nil)
 
-    patch :submit, params: { id: @token.token, user: user_attributes, consent: 'true' }
+    patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
 
     assert_response :unprocessable_entity
     assert_nil flash[:error]

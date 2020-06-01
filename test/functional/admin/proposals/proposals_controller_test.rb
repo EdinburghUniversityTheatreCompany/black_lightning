@@ -72,7 +72,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     attributes = proposal.attributes.except('id', 'call_id', 'created_at', 'updated_at')
     attributes[:team_members_attributes] = {}
 
-    proposal.team_members.each_with_index do |team_member, index|
+    team_members_count = 4
+    team_members = FactoryBot.build_list(:team_member, team_members_count)
+
+    team_members.each_with_index do |team_member, index|
       team_member_attributes = team_member.attributes.except('id', 'teamwork_id', 'teamwork_type', 'created_at', 'updated_at')
       team_member_attributes[:user_id] = FactoryBot.create(:member).id
       attributes[:team_members_attributes][index] = team_member_attributes
@@ -81,6 +84,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_difference('Admin::Proposals::Proposal.count') do
       post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
     end
+
+    assert_enqueued_emails team_members_count
 
     assert_redirected_to admin_proposals_call_proposal_path(@call, assigns(:proposal))
   end

@@ -68,8 +68,4 @@ module ApplicationHelper
       <script src='https://book.sparkseat.com/scripts/loader.js' crossorigin='anonymous'></script>
     "''.html_safe
   end
-
-  def strip_tags(html)
-    return html.gsub(%r{</?[^>]+?>}, '')
-  end
 end

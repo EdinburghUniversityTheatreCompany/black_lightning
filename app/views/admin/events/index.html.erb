@@ -22,7 +22,7 @@
             <%= get_link event, :show, wrap_tag: 'td' %>
 
             <td><%= event.date_range true, :short %>
-            <td><%= event.tagline.present? ? event.tagline : render_markdown(truncate(event.description, length: 100)) %></td>
+            <td><%= event.tagline.present? ? event.tagline : truncate_markdown(event.description) %></td>
 
 
             <%= get_link event, :edit, wrap_tag: 'td' %>

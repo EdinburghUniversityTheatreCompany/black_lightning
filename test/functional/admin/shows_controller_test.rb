@@ -97,9 +97,9 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     FactoryBot.create(:overdue_staffing_debt, user: users.first)
 
-    assert_difference 'ActionMailer::Base.deliveries.count' do
-      put :update, params: { id: @show, show: attributes }
-    end
+    put :update, params: { id: @show, show: attributes }
+
+    assert_enqueued_emails 1
 
     assert_equal "The show was successfully updated, but #{users.first.name} is in debt.", flash[:notice]
     assert_redirected_to admin_show_path(assigns(:show))

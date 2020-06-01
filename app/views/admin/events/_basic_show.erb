@@ -11,9 +11,28 @@
   </p>
 <% end %>
 
+<% if event.spark_seat_slug.present? %>
+  <p>
+    <b>SparkSeat Slug:</b>
+    <%= event.spark_seat_slug %>
+  </p>
+<% end %>
+
+<% if event.xts_id.present? %>
+  <p>
+    <b>XTS ID:</b>
+    <%= event.xts_id %>
+  </p>
+<% end %>
+
 <p>
-  <b>Tagline:</b>
-  <%= event.tagline.presence || 'No tagline' %>
+  <b>Is Public:</b>
+  <%= bool_text event.is_public %>
+</p>
+
+<p>
+  <b>Author:</b>
+  <%= event.author.presence || 'No author specified' %>
 </p>
 
 <p>
@@ -36,23 +55,9 @@
 </p>
 
 <p>
-  <b>Is Public:</b>
-  <%= bool_text event.is_public %>
+  <b>Tagline:</b>
+  <%= event.tagline.presence || 'No tagline' %>
 </p>
-
-<% if event.spark_seat_slug.present? %>
-  <p>
-    <b>SparkSeat Slug:</b>
-    <%= event.spark_seat_slug %>
-  </p>
-<% end %>
-
-<% if event.xts_id.present? %>
-  <p>
-    <b>XTS ID:</b>
-    <%= event.xts_id %>
-  </p>
-<% end %>
 
 <p>
   <b>Image:</b>

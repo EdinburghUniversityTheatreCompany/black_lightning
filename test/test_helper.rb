@@ -21,6 +21,8 @@ require 'rails/test_help'
 Delayed::Worker.delay_jobs = false
 
 class ActiveSupport::TestCase
+  include ActionMailer::TestHelper
+  
   # Setup all fixtures in test/fixtures/*.(yml|csv) for all tests in alphabetical order.
   #
   # Note: You'll currently still have to declare fixtures explicitly in integration tests
@@ -59,4 +61,5 @@ end
 
 class ActionController::TestCase
   include Devise::Test::ControllerHelpers
+  include ActionMailer::TestHelper
 end

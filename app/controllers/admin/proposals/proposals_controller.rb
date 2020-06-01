@@ -216,9 +216,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def mail_team_members(current_team_members, previous_team_member_ids)
     # Send the new proposal mail. See ProposalsMailer for more details.
     current_team_members.select { |id| previous_team_member_ids.exclude? id }.each do |team_member|
-      delayed_job = ProposalsMailer.delay.new_proposal(@proposal, current_user, team_member)
-      delayed_job.description = "Proposal Mailer - #{@proposal.show_title} - #{team_member.user.name_or_email}"
-      delayed_job.save
+      ProposalsMailer.new_proposal(@proposal, current_user, team_member).deliver_later
     end
   end
 

@@ -86,8 +86,8 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     members.each { |member| assert_includes_user(member) }
 
-    assert_not_includes response.body, user.first_name
-    assert_not_includes response.body, user.last_name
+    assert_not_includes response.body, user.first_name, 'Ocassionally fails if the first name is not unique'
+    assert_not_includes response.body, user.last_name, 'Ocassionally fails if the last name is not unique'
     assert_not_includes response.body, user.id.to_s
   end
 

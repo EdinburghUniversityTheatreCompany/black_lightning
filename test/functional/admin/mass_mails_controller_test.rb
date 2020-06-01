@@ -75,7 +75,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), 'The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the new page'
   end
 
-  test 'should only save mass mail when creating mass mail with sending' do
+  test 'should just save mass mail when creating mass mail with sending' do
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
     assert_no_difference 'ActionMailer::Base.deliveries.count', User.with_role(:member).count do
@@ -111,9 +111,9 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     mass_mail = FactoryBot.create(:draft_mass_mail)
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
-    assert_difference 'ActionMailer::Base.deliveries.count', User.with_role(:member).count do
-      put :update, params: { id: mass_mail, mass_mail: attributes, send: true }
-    end
+    put :update, params: { id: mass_mail, mass_mail: attributes, send: true }
+
+    assert_enqueued_emails User.with_role(:member).count
 
     assert_nil assigns(:error_message), "An error was caught when catching the mail: #{assigns(:error_message)}"
     assert_not assigns(:mass_mail).draft, 'The mass mail should be send, but it is still a draft'

@@ -78,7 +78,7 @@ class Admin::ShowsController < AdminController
           new_debtors_string = new_debtors.collect(&:name).to_sentence
           flash[:notice] = "The show was successfully updated, but #{new_debtors_string} #{'is'.pluralize(new_debtors.count)} in debt."
 
-          ShowMailer.warn_committee_about_debtors_added_to_show(@show, new_debtors_string, @current_user).deliver_now
+          ShowMailer.warn_committee_about_debtors_added_to_show(@show, new_debtors_string, @current_user).deliver_later
         end
       end
 

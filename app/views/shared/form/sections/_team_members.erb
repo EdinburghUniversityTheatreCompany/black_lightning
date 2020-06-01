@@ -1,4 +1,9 @@
+<% all_users = can?(:add_non_members, f.object) if all_users.nil? %>
+
 <% content_for :head do %>
+  <% if all_users %>
+    <meta name="all-users" content="true" />
+  <% end %>
   <%= javascript_include_tag "admin/user_typeahead_field.js" %>
 <% end %>
 

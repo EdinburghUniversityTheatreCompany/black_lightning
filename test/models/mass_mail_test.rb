@@ -2,12 +2,12 @@ require 'test_helper'
 
 class MassMailTest < ActiveSupport::TestCase
   test 'can send unsent mass mail' do
-    recipients = FactoryBot.create_list(:member, 10)
+    recipients = FactoryBot.create_list(:member, 5)
     mass_mail = FactoryBot.create(:draft_mass_mail, recipients: recipients, sender: FactoryBot.create(:member))
 
-    assert_difference 'ActionMailer::Base.deliveries.count', 10 do
-      mass_mail.prepare_send!
-    end
+    mass_mail.prepare_send!
+
+    assert_enqueued_emails 5
   end
 
   test 'cannot send mass mail without recipients' do
@@ -61,10 +61,10 @@ class MassMailTest < ActiveSupport::TestCase
   test 'cannot destroy mass mail that is sent' do
     mass_mail = FactoryBot.create(:sent_mass_mail)
 
-    assert_no_difference('MassMail.count') do
-      assert_not mass_mail.destroy
-    end
-    
+    assert_not mass_mail.destroy
+
+    assert_no_enqueued_emails
+
     assert_match "The mass mail \"#{mass_mail.subject}\" has already been send.", mass_mail.errors.full_messages.join('')
 
     mass_mail.update_attribute(:draft, true)

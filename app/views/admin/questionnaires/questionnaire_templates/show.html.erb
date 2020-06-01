@@ -1,7 +1,7 @@
 <h1><%= @title %></h1>
 
 <% @questionnaire_template.questions.each do |question| %>
-  <%= render 'question_template_field', question: question %>
+  <%= render '/shared/question_template_show', question: question %>
 <% end %>
 
 <%= render 'shared/show_actions', object: @questionnaire_template %>

@@ -67,7 +67,7 @@
         <div>
           <%= link_to (image_tag news.image.url(:medium)), news_path(news) unless mobile_device? %>
           <h4><%= link_to news.title, news_path(news) %></h4>
-          <%= truncate(render_plain(news.body), length: 120) %>
+          <%= truncate_markdown(news.body, 140) %>
           <%= link_to 'Read More', news_path(news) %>
         </div>
       </div>

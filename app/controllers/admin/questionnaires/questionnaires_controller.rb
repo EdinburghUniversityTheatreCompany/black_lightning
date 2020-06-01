@@ -1,12 +1,5 @@
 ##
 # Controller for Admin::Questionnaires::Questionnaire
-# ---
-# *IMPORTANT*
-#
-# Due to the complex nature of questionnaire permissions, each action may need to be authorized
-# in the controller method using the authorize! method.
-#
-# Failure to correctly do so will cause bad things to happen (kittens may die).
 ##
 class Admin::Questionnaires::QuestionnairesController < AdminController
   load_and_authorize_resource
@@ -21,12 +14,25 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     q = params[:q]
 
     @q = Admin::Questionnaires::Questionnaire.ransack(q)
-    @q.show_end_date_gt = helpers.start_of_term unless q
-    @q.show_start_date_lt = helpers.end_of_term unless q
 
-    @questionnaires = @q.result.accessible_by(current_ability)
+    @show_current_term_only = q.nil?
 
-    @questionnaires = @questionnaires.includes(:show).order('id DESC').group_by { |questionnaire| questionnaire.show.name }
+    # Set the range to the current term by default.
+    @q.show_end_date_gt = helpers.start_of_term if @show_current_term_only
+    @q.show_start_date_lt = helpers.end_of_term if @show_current_term_only
+
+    # Is this a bit hacky? Yes. Does it work? Yes. Does it work when you try to do it the normal way? No. Can I try to fix it? Of course!
+    # I suspect the generated SQL query gets messed up when you try to do:
+    # @q.result.accessible_by(current_ability)
+    # For some reason, it does work when you're an admin. Probably because accessible_by doesn't do anything in that case.
+
+    result_ids = @q.result.ids
+
+    @questionnaires = Admin::Questionnaires::Questionnaire.where(id: result_ids)
+                                                          .accessible_by(current_ability)
+                                                          .includes(:show)
+                                                          .order('id DESC')
+                                                          .group_by { |questionnaire| questionnaire.show.name }
 
     respond_to do |format|
       format.html # index.html.erb

@@ -1,9 +1,8 @@
-<h1><%= @title %>
+<h1><%= @title %></h1>
 <%= render '/events/search_form', url: :archives_shows_index %>
 
 <div class="row">
   <div class="span12">
-    <h1>Previous Shows</h1>
     <hr />
 
     <% @shows.each do |show| %>
