@@ -10,7 +10,7 @@ class MembershipActivationTokenMailerTest < ActionMailer::TestCase
       mail = MembershipActivationTokenMailer.send_activation(email, token).deliver_now
 
       assert_equal [email], mail.to
-      assert_includes mail.body.to_s, token.to_param
+      assert_includes mail.body.to_s, token.token
     end
   end
 end

@@ -9,6 +9,10 @@ class MembershipActivationToken < ApplicationRecord
   # Manage means creating in this case, but there are two types of creation. There is nothing to read, and everyone can activate.
   DISABLED_PERMISSIONS = %w[create read update].freeze
 
+  def to_param
+    return token
+  end
+
   private
 
   def generate_token
