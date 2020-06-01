@@ -74,7 +74,9 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_match slug, spark_seat_widget(slug)
   end
 
+  # We now use the built-in function, but it is still good to test it
   test 'Get strip_tags' do
-    assert_match 'This is stripped', strip_tags('<div><span title="hello world!>This is stripped</div>')
+    assert_equal 'This is stripped', strip_tags('<!-- it happened 2 years before 1980, idk when exactly -->This is stripped')
+    assert_equal 'This is stripped', strip_tags('<div><span title="hello world!">This is stripped</div>')
   end
 end
