@@ -2,7 +2,8 @@ require 'test_helper'
 
 class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::TestCase
   setup do
-    sign_in users(:admin)
+    @admin = users(:admin)
+    sign_in @admin
 
     @questionnaire = FactoryBot.create(:questionnaire)
   end
@@ -15,12 +16,24 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     assert_not_nil assigns(:questionnaires)
   end
 
-  test 'should get index with many records' do
-    FactoryBot.create_list(:questionnaire, 15)
+  test 'should get index as normal user' do
+    show = FactoryBot.create(:show, start_date: Date.today, end_date: Date.today)
+    user = show.users.first
+
+    assert_not_nil user
+
+    sign_out @admin
+    sign_in user
+
+    questionnaires = FactoryBot.create_list(:questionnaire, 4, show: show)
 
     get :index
     assert_response :success
     assert_not_nil assigns(:questionnaires)
+
+    questionnaire_ids = assigns(:questionnaires).values.flatten.collect(&:id).sort
+
+    assert_equal questionnaires.collect(&:id).sort, questionnaire_ids
   end
 
   test 'should show admin_questionnaires_questionnaire' do
