@@ -1,7 +1,6 @@
 require 'test_helper'
 
 class Admin::StaffingTest < ActiveSupport::TestCase
-  include ActionMailer::TestHelper
   setup do
     # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
     Delayed::Worker.delay_jobs = true
