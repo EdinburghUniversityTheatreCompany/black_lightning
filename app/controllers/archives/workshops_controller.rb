@@ -1,6 +1,6 @@
 class Archives::WorkshopsController < ArchivesController
   def index
-    @q = Workshop.search(params[:q])
+    @q = Workshop.ransack(params[:q])
     @workshops = @q.result(distinct: true)
                  .paginate(page: params[:page], per_page: 5)
                  .where(is_public: true)
