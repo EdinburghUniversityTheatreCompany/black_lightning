@@ -20,10 +20,6 @@
       <% if can? :edit, FaultReport %>
         <th></th>
       <% end %>
-
-      <% if can? :delete, FaultReport %>
-        <th></th>
-      <% end %>
     </tr>
 
     <% @fault_reports.each do |fault_report| %>
@@ -36,7 +32,6 @@
         <td><%= l fault_report.updated_at, format: :short %></td>
 
         <%= get_link fault_report, :edit, wrap_tag: 'td' %>
-        <%= get_link fault_report, :destroy, wrap_tag: 'td' %>
       </tr>
     <% end %>
   </table>

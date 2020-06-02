@@ -8,9 +8,6 @@
     <% if can?(:edit, MassMail) %>
       <th></th>
     <% end %>
-    <% if can?(:delete, MassMail) %>
-      <th></th>
-    <% end %>
   </tr>
 
 <% @mass_mails.each do |mass_mail| %>
@@ -25,14 +22,6 @@
         <%= get_link mass_mail, :edit, additional_condition: mass_mail.draft %>
       </td>
     <% end %>
-    
-
-    <% if can?(:delete, mass_mail) %>
-      <td>
-        <%= get_link mass_mail, :destroy, additional_condition: mass_mail.draft %>
-      </td>
-    <% end %>
-    
   </tr>
 <% end %>
 </table>

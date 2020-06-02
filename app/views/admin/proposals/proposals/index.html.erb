@@ -21,10 +21,6 @@
     <% if can? :edit, Admin::Proposals::Proposal %>
       <th></th>
     <% end %>
-
-    <% if can? :delete, Admin::Proposals::Proposal %>
-      <th></th>
-    <% end %>
   </tr>
 
   <% @proposals.each do |proposal| %>
@@ -35,8 +31,6 @@
       </td>
 
       <%= get_link proposal, :edit, link_target: edit_admin_proposals_call_proposal_path(@call, proposal), wrap_tag: 'td' %>
-
-      <%= get_link proposal, :destroy, link_target: admin_proposals_call_proposal_path(@call, proposal), wrap_tag: 'td' %>
     </tr>
   <% end %>
 </table>

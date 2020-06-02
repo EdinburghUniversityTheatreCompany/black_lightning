@@ -8,10 +8,6 @@
             <% if can? :edit, Role %>
                 <th></th>
             <% end %>
-            
-            <% if can? :delete, Role %>
-                <th></th>
-            <% end %>
         </tr>
 
         <% @roles.each do |role| %>
@@ -19,8 +15,6 @@
                 <%= get_link role, :show, wrap_tag: 'td' %>
 
                 <%= get_link role, :edit, wrap_tag: 'td' %>
-
-                <%= get_link role, :destroy, wrap_tag: 'td' %>
             </tr>
         <% end %>
     </tbody>

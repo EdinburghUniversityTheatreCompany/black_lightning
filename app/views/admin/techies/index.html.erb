@@ -12,10 +12,6 @@
     <% if can? :edit, Techie %>
       <th></th>
     <% end %>
-
-    <% if can? :delete, Techie %>
-      <th></th>
-    <% end %>
   </tr>
 
   <% @techies.each do |techie| %>
@@ -23,8 +19,6 @@
       <%= get_link techie, :show, wrap_tag: 'td' %>
 
       <%= get_link techie, :edit, wrap_tag: 'td' %>
-
-      <%= get_link techie, :destroy, wrap_tag: 'td' %>
     </tr>
   <% end %>
 </table>

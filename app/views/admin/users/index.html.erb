@@ -18,15 +18,12 @@
 <table class="table">
     <tbody>
         <tr>
-            <th>Name</th>
-            <th>Email</th>
+          <th>Name</th>
+          <th>Email</th>
 
-            <% if can? :edit, User%>
-              <th></th>
-            <% end %>
-            <% if can? :delete, User%>
-              <th></th>
-            <% end %>
+          <% if can? :edit, User%>
+            <th></th>
+          <% end %>
         </tr>
         <% @users.each do |user| %>
           <tr>
@@ -35,19 +32,11 @@
               
 
             <%= get_link user, :edit, wrap_tag: 'td' %>
-
-            <%= get_link user, :destroy, wrap_tag: 'td',
-                         confirm:         "Deleting #{user.name(current_user)}",
-                         detail:          "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name:",
-                         type_confirm:     user.name(current_user)
-            %>
           </tr>
         <% end %>
     </tbody>
 </table>
 
-<div class="paginate_holder">
-  <%= will_paginate(@users) %>
-</div>
+<%= will_paginate(@users) %>
 
 <%= get_link User, :new %>

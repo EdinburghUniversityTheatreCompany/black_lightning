@@ -48,10 +48,6 @@
             <% if can? :edit, Admin::Questionnaires::Questionnaire %>
               <th></th>
             <% end %>
-
-            <% if can? :delete, Admin::Questionnaires::Questionnaire %>
-              <th></th>
-            <% end %>
           </tr>
 
           <% questionnaires.each do |questionnaire| %>
@@ -61,8 +57,6 @@
               <%= get_link questionnaire, :show, link_text: 'View', html_class: 'btn', wrap_tag: 'td' %>
 
               <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
-
-              <%= get_link questionnaire, :destroy, wrap_tag: 'td' %>
             </tr>
           <% end %>
         </table>
