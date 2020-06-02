@@ -30,13 +30,15 @@
             <td><%= user_link(user, true) %></td>
             <td><%= user.email %></td>
               
-
             <%= get_link user, :edit, wrap_tag: 'td' %>
           </tr>
         <% end %>
     </tbody>
 </table>
 
-<%= will_paginate(@users) %>
+<% # This paginate_holder is used by the user script so it knows where to place the updated pagination, so please leave it in place. %>
+<div class="paginate_holder">
+  <%= will_paginate(@users) %>
+</div>
 
 <%= get_link User, :new %>

@@ -54,9 +54,7 @@
   </table>
 
   <% unless @is_specific_user %>
-    <div class="paginate_holder">
-      <%= will_paginate(@maintenance_debts) %>
-    </div>
+    <%= will_paginate(@maintenance_debts) %>
   <% end %>
 <% end %>
 
