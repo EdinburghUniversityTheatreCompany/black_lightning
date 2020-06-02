@@ -16,6 +16,6 @@ class SeasonsController < ApplicationController
   # GET /seasons/1
   def show
     @title = @season.name
-    @events = @season.events.order(:start_date).group_by { |event| l event.start_date, format: :longy }
+    @events = @season.events.unscoped.order(:start_date).group_by { |event| l event.start_date, format: :longy }
   end
 end
