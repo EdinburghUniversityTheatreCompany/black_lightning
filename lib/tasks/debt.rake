@@ -14,7 +14,7 @@ namespace :debt do
   task clear_all_debts: :environment do
     DebtTaskLogic.clear_all_debts
 
-    p 'All debt records cleared'
+    p 'All debt and staffing records cleared.'
   end
   # :nocov:
 end
