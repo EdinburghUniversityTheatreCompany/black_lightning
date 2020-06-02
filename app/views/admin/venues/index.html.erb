@@ -7,21 +7,15 @@
     <% if can? :edit, Venue %>
       <th></th>
     <% end %>
-
-    <% if can? :delete, Venue %>
-      <th></th>
-    <% end %>
   </tr>
 
-<% @venues.each do |venue| %>
-  <tr>
-      <%= get_link venue, :show, wrap_tag: 'td' %>
+  <% @venues.each do |venue| %>
+    <tr>
+        <%= get_link venue, :show, wrap_tag: 'td' %>
 
-      <%= get_link venue, :edit, wrap_tag: 'td' %>
-
-      <%= get_link venue, :destroy, wrap_tag: 'td' %>
-  </tr>
-<% end %>
+        <%= get_link venue, :edit, wrap_tag: 'td' %>
+    </tr>
+  <% end %>
 </table>
 
 <%= get_link Venue, :new %>

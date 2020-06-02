@@ -18,34 +18,25 @@
 <table class="table">
     <tbody>
         <tr>
-            <th>Name</th>
-            <th>Email</th>
+          <th>Name</th>
+          <th>Email</th>
 
-            <% if can? :edit, User%>
-              <th></th>
-            <% end %>
-            <% if can? :delete, User%>
-              <th></th>
-            <% end %>
+          <% if can? :edit, User%>
+            <th></th>
+          <% end %>
         </tr>
         <% @users.each do |user| %>
           <tr>
             <td><%= user_link(user, true) %></td>
             <td><%= user.email %></td>
               
-
             <%= get_link user, :edit, wrap_tag: 'td' %>
-
-            <%= get_link user, :destroy, wrap_tag: 'td',
-                         confirm:         "Deleting #{user.name(current_user)}",
-                         detail:          "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name:",
-                         type_confirm:     user.name(current_user)
-            %>
           </tr>
         <% end %>
     </tbody>
 </table>
 
+<% # This paginate_holder is used by the user script so it knows where to place the updated pagination, so please leave it in place. %>
 <div class="paginate_holder">
   <%= will_paginate(@users) %>
 </div>

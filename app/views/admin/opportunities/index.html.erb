@@ -15,10 +15,6 @@
   	
     <% # The column with the edit button is always visible, because it is very irregular who can edit opportunities. %>
     <th></th>
-
-    <% if can? :delete, Opportunity %>
-      <th></th>
-    <% end %>
   </tr>
 
 <% @opportunities.each do |opportunity| %>
@@ -36,10 +32,6 @@
     <td>
       <%= get_link opportunity, :edit %>
     </td>
-    
-    <%= get_link opportunity, :destroy, wrap_tag: 'td', 
-                 detail: "Are you sure you wish to delete this opportunity? You can also hide it by editing or rejecting it." 
-    %>
   </tr>
 <% end %>
 </table>

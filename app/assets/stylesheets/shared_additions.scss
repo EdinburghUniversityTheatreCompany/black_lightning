@@ -3,6 +3,10 @@ body {
     background-repeat: repeat;
 }
 
+.no-wrap {
+    white-space: nowrap
+}
+
 /* Inline forms */
 .form-inline {
     line-height: 3em;

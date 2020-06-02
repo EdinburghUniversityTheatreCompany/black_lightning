@@ -14,9 +14,6 @@
     <% if can? :edit, News %>
       <th></th>
     <% end %>
-    <% if can? :delete, News %>
-      <th></th>
-    <% end %>
   </tr>
 
 <% @news.each do |news| %>
@@ -26,8 +23,6 @@
     <td><%= bool_icon news.show_public %></td>
 
     <%= get_link news, :edit, wrap_tag: 'td' %>
-    
-    <%= get_link news, :destroy, wrap_tag: 'td' %>
   </tr>
 <% end %>
 </table>

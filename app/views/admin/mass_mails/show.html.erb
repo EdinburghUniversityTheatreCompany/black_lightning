@@ -20,11 +20,7 @@
   <%= render_markdown @mass_mail.body %>
 </div>
 
-<% if can? :edit, @mass_mail %>
-  <br />
-
-  <%= link_to edit_admin_mass_mail_path(@mass_mail), class: 'btn' do %>
-    <i class="fa fa-pencil" aria-hidden=”true”></i> Edit
-  <% end %>
-  <%= link_to 'Back', admin_mass_mails_path, class: "btn" %>
-<% end %>
+<% # The normal /shared/show_actions does not work for this one %>
+<%= get_link @mass_mail, :edit, html_class: 'btn btn-primary', additional_condition: @mass_mail.draft %>
+<%= get_link @mass_mail, :destroy, additional_condition: @mass_mail.draft %>
+<%= get_link MassMail, :index %>

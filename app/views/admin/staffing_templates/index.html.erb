@@ -7,24 +7,16 @@
     <% if can? :edit, Admin::StaffingTemplate %>
       <th></th>
     <% end %>
-
-    <% if can? :delete, Admin::StaffingTemplate %>
-      <th></th>
-    <% end %>
   </tr>
 
 <% @staffing_templates.each do |template| %>
   <tr>
-    <td><%= template.name %></td>
+    <%= get_link template, :show, wrap_tag: 'td' %>
 
     <%= get_link template, :edit, wrap_tag: 'td'%>
-
-    <%= get_link template, :destroy, wrap_tag: 'td'%>
   </tr>
 <% end %>
 </table>
 
-<br />
-
-  <%= get_link Admin::StaffingTemplate, :new %>
-  <%= get_link Admin::Staffing, :index %>
+<%= get_link Admin::StaffingTemplate, :new %>
+<%= get_link Admin::Staffing, :index %>

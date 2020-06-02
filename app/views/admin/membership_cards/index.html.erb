@@ -6,22 +6,17 @@
   <tr>
     <th>Card Number</th>
     <th>Member Name</th>
-    <% if can? :destroy, MembershipCard%>
-      <th></th>
-    <% end %>
   </tr>
 
 <% @cards.each do |card| %>
   <tr>
     <td>
-      <%= link_to card.card_number, admin_membership_card_path(card) %>
+      <%= get_link card, :show, link_text: card.card_number %>
     </td>
 
     <td>
       <%= user_link(card.user, false) %>
     </td>
-
-    <%= get_link card, :destroy, wrap_tag: 'td '%>
   </tr>
 <% end %>
 </table>

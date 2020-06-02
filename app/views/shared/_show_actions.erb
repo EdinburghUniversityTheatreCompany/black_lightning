@@ -1,3 +1,11 @@
+<% custom_destroy ||= false %>
+
 <%= get_link object, :edit, html_class: 'btn btn-primary' %>
-<%= get_link object, :destroy %>
+
+<% if custom_destroy == false %>
+  <%= get_link object, :destroy %>
+<% else %>
+  <%= custom_destroy %>
+<% end %>
+
 <%= get_link object.class, :index %>

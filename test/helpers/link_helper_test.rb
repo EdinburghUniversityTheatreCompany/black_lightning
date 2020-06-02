@@ -56,7 +56,7 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'get_link with index' do
-    expected_link = '<a class="btn" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><i class="fa fa-th-list" aria-hidden=”true”></i> Show All Fault Reports</a>'
+    expected_link = '<a class="btn no-wrap" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><i class="fa fa-th-list" aria-hidden=”true”></i> Show All Fault Reports</a>'
 
     assert_equal expected_link, get_link(FaultReport, :index, condition: true)
 
@@ -67,7 +67,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with show' do
     proposal_call = FactoryBot.create(:proposal_call, id: 1, name: 'Dionysia Proposals')
-    expected_link = '<a class="" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
+    expected_link = '<a class=" no-wrap" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
 
     assert_equal expected_link, get_link(proposal_call, :show, condition: true)
 
@@ -77,7 +77,7 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'get_link with new' do
-    expected_link = '<a class="btn btn-primary" title="New Maintenance Debt" data-method="get" href="/admin/maintenance_debts/new"><i class="fa fa-plus" aria-hidden=”true”></i> New Maintenance Debt</a>'
+    expected_link = '<a class="btn btn-primary no-wrap" title="New Maintenance Debt" data-method="get" href="/admin/maintenance_debts/new"><i class="fa fa-plus" aria-hidden=”true”></i> New Maintenance Debt</a>'
 
     assert_equal expected_link, get_link(Admin::MaintenanceDebt, :new, condition: true)
 
@@ -86,11 +86,11 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
-  test 'get_link with edit' do
+  test 'get_link with edit with no_wrap disabled' do
     staffing = FactoryBot.create(:staffing, id: 1)
     expected_link = '<a class="btn" title="Edit" data-method="get" href="/admin/staffings/1/edit"><i class="fa fa-pencil-alt" aria-hidden=”true”></i> Edit</a>'
 
-    assert_equal expected_link, get_link(staffing, :edit, condition: true)
+    assert_equal expected_link, get_link(staffing, :edit, condition: true, no_wrap: false)
 
     assert_raises TypeError do
       get_link(Opportunity, :edit)
@@ -99,7 +99,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with destroy' do
     news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
-    expected_link = '<a class="btn btn-danger" data-confirm="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-detail="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</a>'
+    expected_link = '<a class="btn btn-danger no-wrap" data-confirm="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-detail="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</a>'
 
     assert_equal expected_link, get_link(news, :destroy, condition: true)
 
@@ -110,7 +110,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with approve' do
     news = FactoryBot.create(:opportunity, id: 1)
-    expected_link = '<a class="btn btn-success" title="Approve" rel="nofollow" data-method="put" href="/admin/opportunities/1/approve">Approve</a>'
+    expected_link = '<a class="btn btn-success no-wrap" title="Approve" rel="nofollow" data-method="put" href="/admin/opportunities/1/approve">Approve</a>'
 
     assert_equal expected_link, get_link(news, :approve, condition: true)
 
@@ -121,7 +121,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with reject' do
     news = FactoryBot.create(:opportunity, id: 1)
-    expected_link = '<a class="btn btn-danger" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
+    expected_link = '<a class="btn btn-danger no-wrap" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
 
     assert_equal expected_link, get_link(news, :reject, condition: true)
 
@@ -137,7 +137,7 @@ class LinkHelperTest < ActionView::TestCase
       get_link(maintenance_debt, :convert_to_staffing_debt, condition: true)
     end
 
-    expected_link = '<a class="btn" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
+    expected_link = '<a class="btn no-wrap" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
 
     assert_equal expected_link, get_link(maintenance_debt, :convert_to_staffing_debt, condition: true, http_method: :put)
   end

@@ -7,10 +7,6 @@
     <% if can? :edit, Admin::Questionnaires::QuestionnaireTemplate %>
       <th></th>
     <% end %>
-
-    <% if can? :delete, Admin::Questionnaires::QuestionnaireTemplate %>
-      <th></th>
-    <% end %>
   </tr>
 
   <% @questionnaire_templates.each do |template| %>
@@ -18,8 +14,6 @@
       <%= get_link template, :show,  wrap_tag: 'td' %>
 
       <%= get_link template, :edit, wrap_tag: 'td' %>
-
-      <%= get_link template, :destroy, wrap_tag: 'td' %>
     </tr>
   <% end %>
 </table>
