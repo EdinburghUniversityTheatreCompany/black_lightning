@@ -30,6 +30,9 @@
     </p>
 <% end %>
 
+<% destroy_button = get_link @user, :destroy, type_confirm: @user.name,
+                             detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name:"
+%>
 
-<%= render '/shared/show_actions', object: @user %>
+<%= render '/shared/show_actions', object: @user, custom_destroy: destroy_button %>
 <%= get_link @user, :reset_password, http_method: :post %>
