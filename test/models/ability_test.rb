@@ -74,11 +74,11 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     allowed_actions = %I[show debt_status update edit]
     forbidden_actions = %I[index read create assign_roles check_membership destroy]
 
-    helper_test_actions(@user, 'itself', @ability, allowed_actions + [:view_public_profile], forbidden_actions)
+    helper_test_actions(@user, 'itself', @ability, allowed_actions + [:view_shows_and_bio], forbidden_actions)
 
     public_user = FactoryBot.create :user, public_profile: true
 
-    helper_test_actions(public_user, 'another user with a public profile', @ability, [:view_public_profile], allowed_actions + forbidden_actions)
+    helper_test_actions(public_user, 'another user with a public profile', @ability, [:view_shows_and_bio], allowed_actions + forbidden_actions)
 
     private_user = FactoryBot.create :user, public_profile: false
 

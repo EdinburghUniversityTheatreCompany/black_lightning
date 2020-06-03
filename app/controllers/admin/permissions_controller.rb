@@ -37,6 +37,7 @@ class Admin::PermissionsController < AdminController
       'Admin::StaffingJob' => { 'sign_up_for' => 'Sign Up For Staffing' },
       'backend' => { 'access' => 'Access Backend' },
       'reports' => { 'read' => 'Read Reports' },
+      'User' => { 'view_shows_and_bio' => 'View the public part of the user profile (Bio, avatar, and shows)' },
       'Event' => { 'add_non_members' => 'Add non-members to events, mainly for archiving purposes' },
     }
 

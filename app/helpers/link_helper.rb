@@ -4,7 +4,7 @@ module LinkHelper
 
     if can? :read, user
       return link_to user.name(current_user), admin_user_path(user)
-    elsif use_public_link_as_fallback && can?(:view_public_profile, user)
+    elsif use_public_link_as_fallback && can?(:view_shows_and_bio, user)
       return link_to user.name(current_user), user_path(user)
     else
       return user.name(current_user)

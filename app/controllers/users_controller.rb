@@ -9,7 +9,7 @@ class UsersController < ApplicationController
   # GET /users/1.json
   ##
   def show
-    authorize! :view_public_profile, @user
+    authorize! :view_shows_and_bio, @user
 
     @title = @user.name(current_user)
 
