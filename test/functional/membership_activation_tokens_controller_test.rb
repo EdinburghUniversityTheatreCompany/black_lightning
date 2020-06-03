@@ -33,7 +33,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   end
 
   test 'cannot get activate when signed in while the token does not have an user' do
-    sign_in FactoryBot.create(:user)
+    sign_in FactoryBot.create(:member)
 
     get :activate, params: { id: @token }
 
@@ -52,8 +52,11 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_equal 'This token belongs to a different user.', flash[:error]
   end
 
-  test 'cannot get activate when signed in as member' do
-    sign_in FactoryBot.create(:member)
+  test 'cannot get activate when the user thatthe token belongs to is signed in as member' do
+    member = FactoryBot.create(:member)
+    sign_in member
+
+    @token.update_attribute(:user, member)
 
     get :activate, params: { id: @token }
 
