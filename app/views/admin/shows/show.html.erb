@@ -4,17 +4,13 @@
 
 <br>
 
-<% if can? :edit, @show %>
-  <%= get_link @show, :edit, html_class: 'btn btn-primary' %>
+<%= render '/shared/show_actions', object: @show %>
 
-  <% if @show.xts_id %>
-      <%= link_to xts_report_admin_show_path(@show), class: "btn" do %>
-          <i class='fa fa-shopping-cart' aria-hidden=”true”></i> XTS Report
-      <% end %>
-  <% end %>
+<% if @show.xts_id && can?(:edit, @show) %>
+    <%= link_to xts_report_admin_show_path(@show), class: "btn" do %>
+        <i class='fa fa-shopping-cart' aria-hidden=”true”></i> XTS Report
+    <% end %>
 <% end %>
-
-<%= get_link Show, :index %>
 
 <%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn' %>
 

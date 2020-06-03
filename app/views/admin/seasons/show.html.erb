@@ -9,5 +9,4 @@
 
 <%= render '/shared/gallery', pictures: @season.pictures %>
 
-<%= get_link @season, :edit, html_class: 'btn btn-primary' %>
-<%= get_link Season, :index %>
+<%= render '/shared/show_actions', object: @season %>
