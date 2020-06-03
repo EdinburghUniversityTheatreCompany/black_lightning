@@ -34,7 +34,7 @@ module LinkHelper
     return "<i class=\"fa fa-trash\" aria-hidden=\"true\"></i> #{text}".html_safe
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: true)
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false)
     raise(ArgumentError, 'The object is nil') if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -101,15 +101,15 @@ module LinkHelper
       when :show
         link_text = get_object_name(object, "Show #{get_formatted_class_name(object)}")
       when :index
-        prefix = '<i class="fa fa-th-list" aria-hidden=”true”></i> Show All'.html_safe
+        prefix = generate_icon_prefix('th-list', 'Show All')
         append_name = true if append_name.nil?
       when :new
-        prefix = '<i class="fa fa-plus" aria-hidden=”true”></i> New'
+        prefix = generate_icon_prefix('plus', 'New')
         append_name = true if append_name.nil?
       when :edit
-        prefix = '<i class="fa fa-pencil-alt" aria-hidden=”true”></i> Edit'
+        prefix = generate_icon_prefix('pencil-alt', 'Edit')
       when :destroy
-        prefix = '<i class="fa fa-trash" aria-hidden=”true”></i> Destroy'
+        prefix = generate_icon_prefix('trash', 'Destroy')
       else #when :reject, :approve
         prefix = action.to_s.humanize.titleize
       end
@@ -121,6 +121,10 @@ module LinkHelper
     link_text ||= "#{prefix}#{" #{name}" if append_name}".html_safe
 
     return link_text.to_s
+  end
+
+  def generate_icon_prefix(icon_name, prefix)
+    return "<span class=\"no-wrap\"><i class=\"fa fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
   end
 
   def get_default_html_class(action)
