@@ -84,8 +84,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     labels << generate_label(:danger, 'Late', pull_right) if late
     labels << generate_label(:danger, 'Has Debtors', pull_right) if has_debtors
+    label_html = labels.join("\n").html_safe
 
-    return labels.join("\n").html_safe
+    if pull_right
+      return "#{label_html}\n<div style=\"clear: both;\"></div>".html_safe
+    else
+      return label_html
+    end
   end
 
   ##

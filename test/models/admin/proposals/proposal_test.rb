@@ -91,7 +91,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal.late = true
     @proposal.approved = false
 
-    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Rejected</span>\n<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Late</span>"
+    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Rejected</span>\n<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Late</span>\n<div style=\"clear: both;\"></div>"
 
     assert_equal expected_labels, @proposal.labels(true)
   end
@@ -119,7 +119,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test 'labels for unsuccessful proposal with pull right' do
     @proposal.successful = false
 
-    expected_labels = '<span style="margin-right: 5px;" class="label label-danger pull-right">Unsuccessful</span>'
+    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Unsuccessful</span>\n<div style=\"clear: both;\"></div>"
 
     assert_equal expected_labels, @proposal.labels(true)
   end
