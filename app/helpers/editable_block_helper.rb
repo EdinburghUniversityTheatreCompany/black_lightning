@@ -1,5 +1,5 @@
 module EditableBlockHelper
-  def display_block(name, admin_page)
+  def display_block(name, admin_page, display_edit = true)
     @editable_block = Admin::EditableBlock.find_by_name(name)
 
     if @editable_block.nil?
@@ -14,8 +14,9 @@ module EditableBlockHelper
       @editable_block.admin_page = admin_page
       @editable_block.save!
     end
-
-    return render partial: '/editable_blocks/display'
+    
+    # Will only actually display edit if the user also has permission to edit the block.
+    return render partial: '/editable_blocks/display', locals: { display_edit: display_edit }
   end
 
   def block_exists(name)
