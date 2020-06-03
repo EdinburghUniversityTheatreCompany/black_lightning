@@ -1,7 +1,6 @@
 class Admin::DebtsController < AdminController
-  authorize_resource
-
   def index
+    authorize! :index, Admin::Debt
     @title = 'All Debts'
 
     @q     = User.ransack(params[:q])
@@ -20,6 +19,8 @@ class Admin::DebtsController < AdminController
 
   def show
     debt = Admin::Debt.new(params[:id].to_i)
+
+    authorize! :show, debt
 
     @user = User.find(params[:id])
 

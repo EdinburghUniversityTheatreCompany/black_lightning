@@ -1,4 +1,5 @@
 class Admin::MembershipActivationTokensController < AdminController
+  # Be careful that authorization happens correctly / is executed on the model when adding more actions.
   authorize_resource
 
   def new

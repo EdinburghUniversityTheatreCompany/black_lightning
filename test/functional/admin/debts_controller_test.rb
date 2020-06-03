@@ -28,4 +28,13 @@ class Admin::DebtsControllerTest < ActionController::TestCase
     get :show, params: { id: @member.id }
     assert_response :success
   end
+
+  test 'should not get show for other user' do
+    sign_out @admin
+    sign_in @member
+
+    get :show, params: { id: @admin.id }
+
+    assert_redirected_to access_denied_url
+  end
 end
