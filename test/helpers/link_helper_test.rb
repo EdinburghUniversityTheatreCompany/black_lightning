@@ -88,7 +88,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with edit with no_wrap' do
     staffing = FactoryBot.create(:staffing, id: 1)
-    expected_link = '<a class="btn" title="Edit" data-method="get" href="/admin/staffings/1/edit"><span class="no-wrap"><i class="fa fa-pencil-alt" aria-hidden=”true”></i> Edit</span></a>'
+    expected_link = '<a class="btn no-wrap" title="Edit" data-method="get" href="/admin/staffings/1/edit"><span class="no-wrap"><i class="fa fa-pencil-alt" aria-hidden=”true”></i> Edit</span></a>'
 
     assert_equal expected_link, get_link(staffing, :edit, condition: true, no_wrap: true)
 
