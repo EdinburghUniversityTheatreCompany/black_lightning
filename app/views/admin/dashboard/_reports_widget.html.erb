@@ -1,6 +1,9 @@
 <% #Very similar to the reports index. %>
 
 <h3><%= link_to 'Reports', admin_reports_path %></h3>
+
+<%= display_block('About Reports', true, false) %>
+
 <% list_reports.each do |report, report_name| %>
   - <%= get_report_link report, report_name %><br/>
 <% end %>
