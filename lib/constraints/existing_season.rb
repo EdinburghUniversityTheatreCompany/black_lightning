@@ -1,5 +1,5 @@
 # The constraint is tested in the (non-admin) seasons controller test.
-class ExistingSeasonConstraint
+class Constraints::ExistingSeason
   def get_season_slugs
     if Season.table_exists?
       return Season.select(:slug).collect(&:slug)

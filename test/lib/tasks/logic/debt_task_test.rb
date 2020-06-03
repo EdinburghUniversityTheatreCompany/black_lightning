@@ -15,7 +15,7 @@ class DebtTaskTest < ActiveSupport::TestCase
 
     assert_difference 'Admin::DebtNotification.where(notification_type: :initial_notification).count', new_debts.count do
       assert_difference 'ActionMailer::Base.deliveries.count', new_debts.count do
-        DebtTaskLogic.notify_debtors
+        Tasks::Logic::Debt.notify_debtors
       end
     end
 
@@ -39,7 +39,7 @@ class DebtTaskTest < ActiveSupport::TestCase
 
     assert_difference 'Admin::DebtNotification.where(notification_type: :reminder).count', unrepentant_debts.count do
       assert_difference 'ActionMailer::Base.deliveries.count', unrepentant_debts.count do
-        DebtTaskLogic.notify_debtors
+        Tasks::Logic::Debt.notify_debtors
       end
     end
 
@@ -53,7 +53,7 @@ class DebtTaskTest < ActiveSupport::TestCase
     FactoryBot.create_list(:initial_debt_notification, 5)
     FactoryBot.create_list(:staffing, 5, staffed_job_count: 2)
 
-    DebtTaskLogic.clear_all_debts
+    Tasks::Logic::Debt.clear_all_debts
 
     assert Admin::MaintenanceDebt.all.empty?
     assert Admin::StaffingDebt.all.empty?

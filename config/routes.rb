@@ -225,7 +225,7 @@ ChaosRails::Application.routes.draw do
   get '/access_denied', to: 'static#access_denied'
 
   # Use bedlamtheatre.co.uk/:slug to find a season
-  get '/:id', to: 'seasons#show', constraints: ExistingSeasonConstraint.new
+  get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
 
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.
   get '/*page', to: 'static#show', as: :static

@@ -1,6 +1,6 @@
 require 'csv'
 
-class TechieTaskLogic
+class Tasks::Logic::Techie
   def self.import(file)
     CSV.foreach(file) do |row|
       parent = Techie.find_or_create_by(name: row[0])

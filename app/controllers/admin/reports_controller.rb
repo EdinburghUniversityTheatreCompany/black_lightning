@@ -1,3 +1,4 @@
+
 ##
 # Defines reports that may be downloaded in XLSX format, using axlsx.
 ##
@@ -19,7 +20,7 @@ class Admin::ReportsController < AdminController
   # PUT /admin/reports/roles
   ##
   def roles
-    report = RolesReport.new
+    report = Reports::Roles.new
 
     ReportsMailer.delay.send_report(current_user, report)
 
@@ -30,7 +31,7 @@ class Admin::ReportsController < AdminController
   # A report containing a list of all members.
   ##
   def members
-    report = MembershipReport.new
+    report = Reports::Membership.new
 
     ReportsMailer.delay.send_report(current_user, report)
 
@@ -41,7 +42,7 @@ class Admin::ReportsController < AdminController
   # A report containing all the entries in the NewsletterSubscriber model.
   ##
   def newsletter_subscribers
-    report = NewsletterSubscribersReport.new
+    report = Reports::NewsletterSubscribers.new
 
     ReportsMailer.delay.send_report(current_user, report)
 
@@ -62,7 +63,7 @@ class Admin::ReportsController < AdminController
     start_year = params[:first_year] || 1.years.ago.year
     end_year   = params[:end_year]   || 1.years.since.year
 
-    report = StaffingReport.new(start_year, end_year)
+    report = Reports::Staffing.new(start_year, end_year)
 
     ReportsMailer.delay.send_report(current_user, report)
 
