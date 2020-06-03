@@ -82,7 +82,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal.approved = true
     @proposal.successful = true
     _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
-    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-success\">Successful</span>\n<span style=\"margin-right: 5px;\" class=\"label label-danger\">Has Debtors</span>"
+    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-success\">Successful</span>\n<span style=\"margin-right: 5px;\" class=\"label label-important\">Has Debtors</span>"
 
     assert_equal expected_labels, @proposal.labels(false)
   end
@@ -91,7 +91,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal.late = true
     @proposal.approved = false
 
-    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Rejected</span>\n<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Late</span>\n<div style=\"clear: both;\"></div>"
+    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-important pull-right\">Rejected</span>\n<span style=\"margin-right: 5px;\" class=\"label label-important pull-right\">Late</span>\n<div style=\"clear: both;\"></div>"
 
     assert_equal expected_labels, @proposal.labels(true)
   end
@@ -102,7 +102,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal.late = true
     _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
 
-    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-warning\">Waiting for Approval</span>\n<span style=\"margin-right: 5px;\" class=\"label label-danger\">Late</span>\n<span style=\"margin-right: 5px;\" class=\"label label-danger\">Has Debtors</span>"
+    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-warning\">Waiting for Approval</span>\n<span style=\"margin-right: 5px;\" class=\"label label-important\">Late</span>\n<span style=\"margin-right: 5px;\" class=\"label label-important\">Has Debtors</span>"
 
     assert_equal expected_labels, @proposal.labels(false)
   end
@@ -119,7 +119,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test 'labels for unsuccessful proposal with pull right' do
     @proposal.successful = false
 
-    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-danger pull-right\">Unsuccessful</span>\n<div style=\"clear: both;\"></div>"
+    expected_labels = "<span style=\"margin-right: 5px;\" class=\"label label-important pull-right\">Unsuccessful</span>\n<div style=\"clear: both;\"></div>"
 
     assert_equal expected_labels, @proposal.labels(true)
   end
