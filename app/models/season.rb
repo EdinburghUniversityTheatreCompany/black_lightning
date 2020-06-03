@@ -23,6 +23,6 @@ class Season < Event
   has_many :events
 
   def simultaneous_events
-    return (Event.unscoped.where('end_date >= ? and start_date <= ?', start_date, end_date).or(Event.unscoped.where(season: self)).order('start_date ASC') - [self]).uniq
+    return (Event.where('end_date >= ? and start_date <= ?', start_date, end_date).or(Event.where(season: self)).reorder('start_date ASC') - [self]).uniq
   end
 end

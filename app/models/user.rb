@@ -70,7 +70,7 @@ class User < ApplicationRecord
   default_scope -> { order('last_name ASC') }
 
   def self.by_first_name
-    unscoped.order('first_name ASC')
+    reorder('first_name ASC')
   end
 
   def ability
