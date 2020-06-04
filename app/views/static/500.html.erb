@@ -6,16 +6,16 @@
     <b style="font-size: large; color: #dc143c;">Sorry<%= current_user.present? ? " #{current_user.first_name}, " : " ," %>there was a problem fetching this page.</b>
   </p>
   <% if current_user&.has_role? :member %>
-    <pre><%= flash[:error] %></pre>
     <p><!-- HONEYBADGER ERROR --></p>
+    <pre><%= flash[:error] %></pre>
   <% end %>
   <p>
     We have been informed.
   </p>
   <p>
-  <!-- HONEYBADGER FEEDBACK -->
+    HAL is sorry.
   </p>
   <p>
-    HAL is sorry.
+    <!-- HONEYBADGER FEEDBACK -->
   </p>
 </div>
