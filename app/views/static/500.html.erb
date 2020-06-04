@@ -7,9 +7,13 @@
   </p>
   <% if current_user&.has_role? :member %>
     <pre><%= flash[:error] %></pre>
+    <p><!-- HONEYBADGER ERROR --></p>
   <% end %>
   <p>
     We have been informed.
+  </p>
+  <p>
+  <!-- HONEYBADGER FEEDBACK -->
   </p>
   <p>
     HAL is sorry.

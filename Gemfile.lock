@@ -45,7 +45,7 @@ GEM
     arel (7.1.4)
     ast (2.4.0)
     bcrypt (3.1.13)
-    better_errors (2.5.1)
+    better_errors (2.7.1)
       coderay (>= 1.0.0)
       erubi (>= 1.0.0)
       rack (>= 0.9.0)
@@ -81,7 +81,7 @@ GEM
     chronic (0.10.2)
     chunky_png (1.3.11)
     climate_control (0.2.0)
-    coderay (1.1.2)
+    coderay (1.1.3)
     coffee-rails (4.2.2)
       coffee-script (>= 2.2.0)
       railties (>= 4.0.0)
@@ -108,7 +108,7 @@ GEM
     domain_name (0.5.20190701)
       unf (>= 0.0.5, < 1.0.0)
     equalizer (0.0.11)
-    erubi (1.8.0)
+    erubi (1.9.0)
     erubis (2.7.0)
     execjs (2.7.0)
     factory_bot (5.1.2)
@@ -125,6 +125,7 @@ GEM
       sassc (>= 1.11)
     globalid (0.4.2)
       activesupport (>= 4.2.0)
+    honeybadger (4.7.0)
     html_acceptance (0.1.19)
     htmlentities (4.3.4)
     http (3.3.0)
@@ -351,13 +352,13 @@ DEPENDENCIES
   caxlsx
   chronic
   coffee-rails
-  coffee-script-source
   daemons
   delayed_job_active_record
   devise
   factory_bot_rails
   faker
   font-awesome-sass
+  honeybadger (~> 4.0)
   html_acceptance
   jquery-rails
   json (= 1.8.5)
