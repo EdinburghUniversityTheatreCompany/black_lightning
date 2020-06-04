@@ -1,7 +1,7 @@
 ##
 # A report containing all the entries in the NewsletterSubscriber model.
 ##
-class MembershipReport
+class Reports::Membership
   ##
   # Returns the Axlsx package for the report.
   ##

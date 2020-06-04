@@ -4,5 +4,4 @@
 
 <%= render '/shared/gallery', pictures: @workshop.pictures %>
 
-<%= get_link @workshop, :edit, html_class: 'btn btn-primary' %>
-<%= get_link Workshop, :index %>
+<%= render '/shared/show_actions', object: @workshop %>

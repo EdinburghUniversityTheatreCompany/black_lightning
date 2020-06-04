@@ -27,7 +27,7 @@ class LabelHelperTest < ActionView::TestCase
 
   test 'returns label' do
     label = generate_label('danger', "It's dangerous to go alone!")
-    assert_equal '<span style="margin-right: 5px;" class="label label-danger">It\'s dangerous to go alone!</span>', label
+    assert_equal '<span style="margin-right: 5px;" class="label label-important">It\'s dangerous to go alone!</span>', label
   end
 
   test 'returns label with pull-right' do

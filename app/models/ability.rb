@@ -59,8 +59,8 @@ class Ability
     can :read, News, show_public: true
     can :read, Event, is_public: true
 
-    # Have a specific view_public_profile permission because it is a bad idea to give normal users full :read permission for users.
-    can :view_public_profile, User, public_profile: true
+    # Have a specific view_shows_and_bio permission because it is a bad idea to give normal users full :read permission for users.
+    can :view_shows_and_bio, User, public_profile: true
 
     # Stop if the user is not logged in.
     return if user.nil?

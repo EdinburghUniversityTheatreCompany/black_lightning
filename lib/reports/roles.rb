@@ -1,7 +1,7 @@
 ##
 # A report containing a list of all users, and lists of users in each role.
 ##
-class RolesReport
+class Reports::Roles
   ##
   # Returns the Axlsx package for the report.
   ##

@@ -5,7 +5,7 @@ require 'rake'
 class TechieTaskTest < ActiveSupport::TestCase
   test 'should get interaction' do
     assert_difference 'Techie.count', 4 do
-      TechieTaskLogic.import('test/techies_test.csv')
+      Tasks::Logic::Techie.import('test/techies_test.csv')
     end
 
     assert 'Clara Cucumber', Techie.first.children.first.name

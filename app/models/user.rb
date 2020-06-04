@@ -32,10 +32,10 @@ class User < ApplicationRecord
   ###############
   # Permissions
   ###############
-  # Users have an additional permission called view_public_profile.
+  # Users have an additional permission called view_shows_and_bio.
   # If an user has this permission, they can see the bio, avatar, and shows of the user they have the permission for.
   # It allows you to keep read for people who can see ALL info, including email and phone number.
-  # Guests have :view_public_profile for all users who have set public_profile to true
+  # Guests have :view_shows_and_bio for all users who have set public_profile to true
   ##############
 
   # Include default devise modules. Others available are:
@@ -70,7 +70,7 @@ class User < ApplicationRecord
   default_scope -> { order('last_name ASC') }
 
   def self.by_first_name
-    unscoped.order('first_name ASC')
+    reorder('first_name ASC')
   end
 
   def ability

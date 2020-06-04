@@ -4,12 +4,12 @@ class MembershipActivationTokensController < ApplicationController
   load_resource find_by: :token
 
   def activate
+    @user = get_user
+
     if current_user&.has_role? :member
       flash[:error] = 'You have already activated your account.'
       raise(CanCan::AccessDenied, flash[:error])
     end
-
-    @user = get_user
   end
 
   def submit

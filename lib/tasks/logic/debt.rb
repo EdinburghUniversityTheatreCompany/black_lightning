@@ -1,5 +1,5 @@
 # Please use deliver_now in rake tasks.
-class DebtTaskLogic
+class Tasks::Logic::Debt
   def self.notify_debtors
     debtors = User.in_debt
 

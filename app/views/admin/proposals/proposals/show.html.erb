@@ -7,6 +7,19 @@
 </div>
 
 <div>
+  <b>Call:</b>
+  <div>
+    <%= get_link @call, :show, link_target: admin_proposals_call_proposals_path(@call) %>
+    <br>
+    <i>Submission Deadline:</i> <%= l @call.submission_deadline, format: :longy %>
+    <br>
+    <i>Editing Deadline:</i> <%= l @call.editing_deadline, format: :longy %>
+    <br>
+    <br>
+  </div>
+</div>
+
+<div>
   <b>Publicity text:</b>
   <%= render_markdown @proposal.publicity_text %>
 </div>
@@ -16,7 +29,7 @@
   <%= render_markdown @proposal.proposal_text %>
 </div>
 
-<%= render '/shared/admin_show_team_members', team_members: @proposal.team_members, deadline: @proposal.call.editing_deadline, can_see_if_fellow_team_members_are_in_debt: true %>
+<%= render '/shared/admin_show_team_members', team_members: @proposal.team_members, deadline: @call.editing_deadline, can_see_if_fellow_team_members_are_in_debt: true %>
 
 <hr/>
 

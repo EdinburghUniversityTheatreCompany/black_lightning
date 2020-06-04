@@ -43,6 +43,8 @@ gem 'paper_trail', '< 6.0'
 
 gem 'stringex'
 
+gem 'honeybadger', '~> 4.0'
+
 group :development, :test do
   gem 'byebug'
   gem 'spring'

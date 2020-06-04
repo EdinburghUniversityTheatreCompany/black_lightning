@@ -2,7 +2,7 @@ require 'test_helper'
 
 class ReportsMailerTest < ActionMailer::TestCase
   test 'send report' do
-    report = RolesReport.new
+    report = Reports::Roles.new
     user = FactoryBot.create(:user)
 
     mail = nil

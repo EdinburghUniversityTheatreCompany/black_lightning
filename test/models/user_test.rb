@@ -8,7 +8,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   test 'sort by first name' do
     FactoryBot.create :user
 
-    assert_equal User.unscoped.order('first_name ASC'), User.by_first_name
+    assert_equal User.reorder('first_name ASC'), User.by_first_name
   end
 
   test 'get ability' do

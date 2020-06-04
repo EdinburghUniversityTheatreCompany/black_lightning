@@ -12,7 +12,7 @@ class MigrationsTaskTest < ActiveSupport::TestCase
     incorrect_call = FactoryBot.build(:proposal_call, editing_deadline: nil)
     incorrect_call.save(validate: false)
 
-    assert_equal 1, MigrationsTaskLogic.fix_editing_deadline
+    assert_equal 1, Tasks::Logic::Migrations.fix_editing_deadline
 
     correct_call = Admin::Proposals::Call.find(correct_call.id)
     incorrect_call = Admin::Proposals::Call.find(incorrect_call.id)

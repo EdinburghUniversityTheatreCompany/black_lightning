@@ -8,7 +8,7 @@
 # * @start_year The first year to include in the report (default = 1 year ago)
 # * @end_year   The last year to include in the report (default = 1 year ahead)
 ##
-class StaffingReport
+class Reports::Staffing
   def initialize(start_year, end_year)
     @start_year = start_year
     @end_year   = end_year

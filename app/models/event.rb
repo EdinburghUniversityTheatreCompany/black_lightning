@@ -80,7 +80,7 @@ class Event < ApplicationRecord
 
   # Returns the last event to have finished.
   def self.last_event
-    return unscoped.order('end_date DESC').where(['end_date < ? AND is_public = ?', Date.current, true]).first
+    return reorder('end_date DESC').where(['end_date < ? AND is_public = ?', Date.current, true]).first
   end
 
   # Formats the shows so they can be used in a selection field

@@ -3,11 +3,10 @@
 <%= render 'admin/events/basic_show', event: @season %>
 
 <h3>Events</h3>
-<% @season.events.unscoped.order(:start_date).each do |event| %>
+<% @season.events.reorder(:start_date).each do |event| %>
   <p><%= render 'event_label', event: event %></p>
 <% end %>
 
 <%= render '/shared/gallery', pictures: @season.pictures %>
 
-<%= get_link @season, :edit, html_class: 'btn btn-primary' %>
-<%= get_link Season, :index %>
+<%= render '/shared/show_actions', object: @season %>

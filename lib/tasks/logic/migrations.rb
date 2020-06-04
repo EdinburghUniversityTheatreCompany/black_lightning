@@ -1,4 +1,4 @@
-class MigrationsTaskLogic
+class Tasks::Logic::Migrations
   def self.fix_editing_deadline
     counter = 0
     Admin::Proposals::Call.all.each do |call|
