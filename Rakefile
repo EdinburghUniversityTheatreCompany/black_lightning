@@ -4,6 +4,8 @@
 
 require File.expand_path('../config/application', __FILE__)
 
+require "#{Rails.root}/lib/tasks/logic"
+
 ChaosRails::Application.load_tasks
 
 require 'rake/dsl_definition'
