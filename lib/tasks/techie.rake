@@ -1,5 +1,5 @@
 require 'csv'
-require "#{Rails.root}/lib/tasks/logic/techi"
+require "#{Rails.root}/lib/tasks/logic/techie"
 
 namespace :techie do
   # :nocov:
