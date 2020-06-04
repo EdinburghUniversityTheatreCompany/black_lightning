@@ -1,4 +1,7 @@
-require 'net/ldap'
+# Including this causes errors after switching from auto loading to eager loading in production.
+# This means it was probably broken all along, but because it was never loaded, it never complained.
+# This class is not used, so it's fine-ish?
+# require 'net/ldap'
 
 class LDAPMigration
   def initialize(ldap_params)
