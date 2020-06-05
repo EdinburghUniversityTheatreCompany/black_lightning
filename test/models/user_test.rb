@@ -157,8 +157,14 @@ class Admin::UserTest < ActiveSupport::TestCase
     events = FactoryBot.create_list :show, 3, is_public: true
     user = events.first.users.first
 
+    _team_membership_without_teamwork = FactoryBot.create(:team_member, user: user, teamwork: nil, teamwork_type: 'Event')
+
     team_memberships = user.team_memberships(true)
 
-    assert_equal team_memberships.first.teamwork, events.first
+    teamworks = team_memberships.map(&:teamwork)
+
+    assert_equal 1, teamworks.count
+
+    assert_includes teamworks, events.first
   end
 end
