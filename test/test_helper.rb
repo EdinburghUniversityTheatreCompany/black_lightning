@@ -2,12 +2,13 @@ require 'simplecov'
 require 'simplecov-rcov'
 
 SimpleCov.formatter = SimpleCov::Formatter::RcovFormatter
-SimpleCov.command_name 'minitest'
+SimpleCov.command_name 'MiniTest'
 
 SimpleCov.start do
   'rails'
   add_filter '/test/'
   add_filter '/config/'
+  enable_coverage :branch
 end
 
 require 'html_acceptance'

@@ -1,6 +1,7 @@
 require_relative 'boot'
 
 require 'rails/all'
+require 'sprockets/railtie'
 
 if defined?(Bundler)
   # If you precompile assets before deploying to production, use this line

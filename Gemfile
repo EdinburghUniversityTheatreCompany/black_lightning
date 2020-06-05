@@ -1,15 +1,15 @@
 source 'http://rubygems.org'
 
-gem 'rails', '~> 5.0.0'
+gem 'rails', '~> 5.1'
 
 gem 'mysql2'
 
-gem 'sass-rails',   '~> 5.0.0'
+gem 'sassc-rails'
 gem 'uglifier', '>= 1.3.0'
 
 gem 'coffee-rails'
 gem 'jquery-rails'
-gem 'bootstrap-sass', '< 3.0'
+gem 'bootstrap-sass'
 gem 'font-awesome-sass'
 
 gem 'simple_form'
@@ -39,7 +39,7 @@ gem 'ransack'
 gem 'nokogiri'
 
 gem 'rack-cors'
-gem 'paper_trail', '< 6.0'
+gem 'paper_trail'
 
 gem 'stringex'
 
