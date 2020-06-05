@@ -35,9 +35,9 @@ class Admin::Proposals::Proposal < ApplicationRecord
   validates :team_members, presence: { message: 'You must add at least one team member' }
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
-
-  has_many :questions, through: :answers
+  
   has_many :answers, as: :answerable
+  has_many :questions, through: :answers
   has_many :team_members, class_name: '::TeamMember', as: :teamwork
   has_many :users, through: :team_members
 
