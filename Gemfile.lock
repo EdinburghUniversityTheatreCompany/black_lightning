@@ -48,8 +48,6 @@ GEM
       sshkit (>= 1.6.1, != 1.7.0)
     arel (9.0.0)
     ast (2.4.0)
-    autoprefixer-rails (9.7.6)
-      execjs
     bcrypt (3.1.13)
     better_errors (2.7.1)
       coderay (>= 1.0.0)
@@ -57,9 +55,8 @@ GEM
       rack (>= 0.9.0)
     binding_of_caller (0.8.0)
       debug_inspector (>= 0.0.1)
-    bootstrap-sass (3.4.1)
-      autoprefixer-rails (>= 5.2.1)
-      sassc (>= 2.0.0)
+    bootstrap-sass (2.3.2.2)
+      sass (~> 3.2)
     buftok (0.2.0)
     builder (3.2.4)
     byebug (11.1.3)
@@ -95,7 +92,7 @@ GEM
     coffee-script (2.4.1)
       coffee-script-source
       execjs
-    coffee-script-source (1.12.2)
+    coffee-script-source (1.8.0)
     concurrent-ruby (1.1.6)
     crass (1.0.6)
     daemons (1.3.1)
@@ -122,9 +119,9 @@ GEM
     factory_bot_rails (5.2.0)
       factory_bot (~> 5.2.0)
       railties (>= 4.2.0)
-    faker (2.11.0)
+    faker (2.12.0)
       i18n (>= 1.6, < 2)
-    ffi (1.12.2-x64-mingw32)
+    ffi (1.13.0-x64-mingw32)
     ffi-compiler (1.0.1)
       ffi (>= 1.0.0)
       rake
@@ -146,7 +143,7 @@ GEM
     http-parser (1.2.1)
       ffi-compiler (>= 1.0, < 2.0)
     http_parser.rb (0.6.0)
-    i18n (1.8.2)
+    i18n (1.8.3)
       concurrent-ruby (~> 1.0)
     jquery-rails (4.4.0)
       rails-dom-testing (>= 1, < 3)
@@ -245,22 +242,27 @@ GEM
       activesupport (>= 5.2.1)
       i18n
       polyamorous (= 2.3.2)
+    rb-fsevent (0.10.4)
+    rb-inotify (0.10.1)
+      ffi (~> 1.0)
     rdoc (6.2.1)
+    regexp_parser (1.7.0)
     request_store (1.5.0)
       rack (>= 1.4)
     responders (3.0.1)
       actionpack (>= 5.0)
       railties (>= 5.0)
     rexml (3.2.4)
-    rolify (5.2.0)
+    rolify (5.3.0)
     rqrcode (1.1.2)
       chunky_png (~> 1.0)
       rqrcode_core (~> 0.1)
     rqrcode_core (0.1.2)
-    rubocop (0.84.0)
+    rubocop (0.85.0)
       parallel (~> 1.10)
       parser (>= 2.7.0.1)
       rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 1.7)
       rexml
       rubocop-ast (>= 0.0.3)
       ruby-progressbar (~> 1.7)
@@ -272,14 +274,19 @@ GEM
     ruby-prof (1.4.1-x64-mingw32)
     ruby-progressbar (1.10.1)
     rubyzip (2.3.0)
-    sassc (2.3.0-x64-mingw32)
+    sass (3.7.4)
+      sass-listen (~> 4.0.0)
+    sass-listen (4.0.0)
+      rb-fsevent (~> 0.9, >= 0.9.4)
+      rb-inotify (~> 0.9, >= 0.9.7)
+    sass-rails (5.0.8)
+      railties (>= 5.2.0)
+      sass (~> 3.1)
+      sprockets (>= 2.8, < 4.0)
+      sprockets-rails (>= 2.0, < 4.0)
+      tilt (>= 1.1, < 3)
+    sassc (2.4.0-x64-mingw32)
       ffi (~> 1.9)
-    sassc-rails (2.1.2)
-      railties (>= 4.0.0)
-      sassc (>= 2.0)
-      sprockets (> 3.0)
-      sprockets-rails
-      tilt
     simple_form (5.0.2)
       actionpack (>= 5.0)
       activemodel (>= 5.0)
@@ -291,7 +298,7 @@ GEM
     simplecov-rcov (0.2.3)
       simplecov (>= 0.4.1)
     spring (2.1.0)
-    sprockets (4.0.0)
+    sprockets (3.7.2)
       concurrent-ruby (~> 1.0)
       rack (> 1, < 3)
     sprockets-rails (3.2.1)
@@ -331,7 +338,7 @@ GEM
       rack (>= 2.0.6)
     websocket-driver (0.7.2)
       websocket-extensions (>= 0.1.0)
-    websocket-extensions (0.1.4)
+    websocket-extensions (0.1.5)
     will_paginate (3.3.0)
 
 PLATFORMS
@@ -340,7 +347,7 @@ PLATFORMS
 DEPENDENCIES
   better_errors
   binding_of_caller
-  bootstrap-sass
+  bootstrap-sass (< 3.0)
   byebug
   cancancan
   capistrano-rails
@@ -378,7 +385,7 @@ DEPENDENCIES
   rubocop
   rubocop-faker
   ruby-prof
-  sassc-rails
+  sass-rails (~> 5.0.0)
   simple_form
   simplecov
   simplecov-rcov
