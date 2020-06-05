@@ -24,7 +24,7 @@
     <td><%= l call.submission_deadline, format: :longy %></td>
     <td><%= l call.editing_deadline, format: :longy %></td>
 
-    <%= get_link call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn', wrap_tag: 'td' %>
+    <%= get_link call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn', wrap_tag: 'td', return_link_text_if_no_permission: false %>
 
     <%= get_link call, :edit, wrap_tag: 'td' %>
   </tr>
