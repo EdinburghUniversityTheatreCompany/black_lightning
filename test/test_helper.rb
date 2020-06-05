@@ -51,16 +51,11 @@ class ActiveSupport::TestCase
     validator = acceptance.validator(response.body, request.url)
     assert validator.valid?, "Validation error:\n#{validator.exceptions}"
   end
-
-  def raw_post(action, params, body)
-    @request.env['RAW_POST_DATA'] = body
-    response = post(action, params)
-    @request.env.delete('RAW_POST_DATA')
-    response
-  end
 end
 
 class ActionController::TestCase
   include Devise::Test::ControllerHelpers
   include ActionMailer::TestHelper
+
+  # parallelize workers: 5 TODO FOR RAILS 6?
 end
