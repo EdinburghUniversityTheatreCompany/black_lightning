@@ -73,7 +73,7 @@
     <% end %>
 
     <% if @show.staffing_debt_start.present? %>
-        <%= form_tag create_staffing_debts_admin_show_path(@show), method: :post, class: "form-inline" do %>
+        <%= form_with(url: create_staffing_debts_admin_show_path(@show), method: :post, class: "form-inline") do %>
             Total Amount of Staffing Debts: 
             <%= number_field :number_of_slots, nil, in: 1..2 %>
             <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>

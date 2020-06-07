@@ -30,6 +30,14 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test 'should get show with debt dates set' do
+    @show = FactoryBot.create(:show, is_public: true, staffing_debt_start: Date.today, maintenance_debt_start: Date.today)
+
+    get :show, params: { id: @show }
+    assert_response :success 
+    assert_match 'Total Amount of Staffing Debts', response.body
+  end
+
   test 'should get new' do
     get :new
     assert_response :success
