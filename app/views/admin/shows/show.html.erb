@@ -53,7 +53,7 @@
 
         <%= get_link @show, :create_maintenance_debts, link_text: 'Create Maintenance Obligations', http_method: :post, html_class: "btn btn-primary",
                      confirm: ('Creating Maintenance Obligations' if has_maintenance_debt),
-                     detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Are you sure you want to add more?" if has_maintenance_debt) 
+                     detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Adding Maintenance Debts again will result in users on the proposal without Maintenance Debt for this show getting a Maintenance Debt." if has_maintenance_debt) 
         %>
     <% end %>
 <% end %>
