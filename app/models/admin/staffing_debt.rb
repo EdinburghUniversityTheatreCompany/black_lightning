@@ -17,7 +17,7 @@ class Admin::StaffingDebt < ApplicationRecord
 
   belongs_to :user
   belongs_to :show
-  belongs_to :admin_staffing_job, class_name: 'Admin::StaffingJob'
+  belongs_to :admin_staffing_job, class_name: 'Admin::StaffingJob', optional: true
 
   before_create :associate_staffing_debt_with_existing_staffing_job
 

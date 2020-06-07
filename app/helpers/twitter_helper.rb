@@ -5,10 +5,10 @@ module TwitterHelper
   def twitter_timeline
     client = Twitter::REST::Client.new do |config|
       if Rails.application.secrets.twitter
-        config.consumer_key = Rails.application.secrets.twitter['consumer_key']
-        config.consumer_secret = Rails.application.secrets.twitter['consumer_secret']
-        config.access_token = Rails.application.secrets.twitter['access_token']
-        config.access_token_secret = Rails.application.secrets.twitter['access_token_secret']
+        config.consumer_key = Rails.application.secrets.twitter[:consumer_key]
+        config.consumer_secret = Rails.application.secrets.twitter[:consumer_secret]
+        config.access_token = Rails.application.secrets.twitter[:access_token]
+        config.access_token_secret = Rails.application.secrets.twitter[:access_token_secret]
       end
     end
 

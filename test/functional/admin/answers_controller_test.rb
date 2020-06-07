@@ -4,7 +4,11 @@ class Admin::AnswersControllerTest < ActionController::TestCase
   test 'should download answer with file' do
     sign_in users(:admin)
 
-    answer = FactoryBot.create(:answer, response_type: 'File')
+    questionable = FactoryBot.create(:questionnaire)
+    question = questionable.questions.first
+    assert_not_nil question
+    
+    answer = FactoryBot.create(:answer, response_type: 'File', question: question, answerable: questionable)
 
     get :get_file, params: { id: answer }
     assert_response :success

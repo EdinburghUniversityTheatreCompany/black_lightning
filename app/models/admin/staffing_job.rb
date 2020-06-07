@@ -20,9 +20,10 @@ class Admin::StaffingJob < ApplicationRecord
   validates :name, presence: true
 
   belongs_to :staffable, polymorphic: true
-  belongs_to :user
+  belongs_to :user, optional: true
   has_one :staffing_debt, class_name: 'Admin::StaffingDebt', foreign_key: 'admin_staffing_job_id'
 
+  before_save :check_if_the_user_has_changed
   after_save :associate_staffing_job_with_oldest_outstanding_debt
 
   # The functions that use staffable don't check if it's a staffing instead of a template.
@@ -61,6 +62,10 @@ class Admin::StaffingJob < ApplicationRecord
 
   private
 
+  def check_if_the_user_has_changed
+    @user_changed = user_id_changed?
+  end
+
   def associate_staffing_job_with_oldest_outstanding_debt
     # If the staffing job is associated with a template, do not try to associate the staffing_job with a debt.
     # Check if the staffing job counts towards staffing and return if it does not.
@@ -72,8 +77,8 @@ class Admin::StaffingJob < ApplicationRecord
       self.staffing_debt = nil
       return
     # Only check for outstanding debt if the user has changed.
-    elsif user_id_changed?
-      debts = Admin::StaffingDebt.where(user_id: user_id, admin_staffing_job: nil).unfulfilled.order(:due_by)
+    elsif @user_changed
+      debts = Admin::StaffingDebt.where(user_id: user_id, admin_staffing_job: nil).unfulfilled.reorder(:due_by)
       if debts.empty?
         # If the user changed and there are no debts found, it should not stay associated with the old debt.
         self.staffing_debt = nil

@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'rails', '~> 5.0.0'
+gem 'rails', '~> 5.2'
 
 gem 'mysql2'
 
@@ -39,11 +39,13 @@ gem 'ransack'
 gem 'nokogiri'
 
 gem 'rack-cors'
-gem 'paper_trail', '< 6.0'
+gem 'paper_trail'
 
 gem 'stringex'
 
 gem 'honeybadger', '~> 4.0'
+
+gem 'bootsnap'
 
 group :development, :test do
   gem 'byebug'

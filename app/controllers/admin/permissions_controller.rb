@@ -32,6 +32,8 @@ class Admin::PermissionsController < AdminController
     return redirect_to :admin_permissions
   end
 
+  private
+  
   def set_models_and_roles
     @miscellaneous_permission_subject_classes = {
       'Admin::StaffingJob' => { 'sign_up_for' => 'Sign Up For Staffing' },

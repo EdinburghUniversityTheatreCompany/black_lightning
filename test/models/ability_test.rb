@@ -100,81 +100,91 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(@user, 'an user without shared proposal', ability, [], allowed_actions + forbidden_actions)
   end
 
-  test 'users have the correct proposal permissions' do
-    admin_abilities = [:update, :read, :create, :delete, :approve, :reject, :convert].freeze
-    @admin_ability = Ability.new(users(:admin))
-
-    # Proposal Checkers can always see all proposals (they have proposal :read). This permission is a fixture.
-    # Test that that still stays valid even in the different scenarios.
-    checker_user = FactoryBot.create(:user)
-    checker_user.add_role 'Proposal Checker'
-    @checker_ability = Ability.new(checker_user)
-
-    @random_ability = Ability.new(FactoryBot.create(:user))
-
-    call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: 4))
-
-    proposal = call.proposals.sample
-
-    @on_proposal_ability = Ability.new(proposal.users.sample)
+  test 'users have the correct proposal permissions before the submission deadline' do
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: 4))
+    helper_set_up_proposal
 
     situation = 'before the submission deadline'
 
     # 1A: Before the submission deadline, users can only see proposals that they are part of..
-    # .. proposal checkers and admins cannot read..
-    helper_test_proposal(:read, proposal, false, true, false, situation)
-    helper_test_actions(proposal, "proposal #{situation}", @admin_ability, [], admin_abilities)
-    # 1B: Users edit current proposals..
-    helper_test_proposal(:update, proposal, false, true, false, situation)
+    helper_test_actions(@proposal, "@proposal#{situation}", @admin_ability, [], @admin_abilities)
+    # .. but proposal checkers and admins cannot read.
+    helper_test_proposal(:read, @proposal, false, true, false, situation) 
+    # 1B: Users edit current proposals they are on..
+    helper_test_proposal(:update, @proposal, false, true, false, situation)
     # 1C: ..and create new proposals..
-    helper_test_proposal(:create, proposal, true, true, true, situation)
+    helper_test_proposal(:create, @proposal, true, true, true, situation)
     # 1D: .. and cannot destroy proposals.
-    helper_test_proposal(:delete, proposal, false, false, false, situation)
+    helper_test_proposal(:delete, @proposal, false, false, false, situation)
+  end
 
-    call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+  test 'users have the correct proposal permissions after the submission deadline / before the editing deadline' do
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -1), editing_deadline: DateTime.now.advance(days: 1))
+    helper_set_up_proposal
     situation = 'after the submission deadline / before the editing deadline'
 
     # 2A: Before the editing deadline, users can only see proposals that they are part of..
     # .. or all if they are a proposal checker.
-    helper_test_proposal(:read, proposal, true, true, false, situation)
+    helper_test_proposal(:read, @proposal, true, true, false, situation)
     # 2B: .. and edit existing proposals they are part of..
-    helper_test_proposal(:update, proposal, false, true, false, situation)
+    helper_test_proposal(:update, @proposal, false, true, false, situation)
     # 2C: .. but cannot create new ones..
-    helper_test_proposal(:create, proposal, false, false, false, situation)
+    helper_test_proposal(:create, @proposal, false, false, false, situation)
     # 2D: .. or destroy existing ones..
-    helper_test_proposal(:delete, proposal, false, false, false, situation)
+    helper_test_proposal(:delete, @proposal, false, false, false, situation)
     # 2E: .. and admins can now modify proposals.
-    helper_test_actions(proposal, "proposal #{situation}", @admin_ability, admin_abilities, [])
+    helper_test_actions(@proposal, "proposal #{situation}", @admin_ability, @admin_abilities, [])
+  end
 
-    call.update_attribute(:editing_deadline, DateTime.now.advance(days: -1))
+  test 'users have the correct proposal permissions after the editing deadline' do
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
+    helper_set_up_proposal
+    @proposal.approved = false
+
     situation = 'after the editing deadline'
 
     # 3A: After the editing deadline, users can only read proposals if they are a Proposal Checker or the ones that they are part of..
-    helper_test_proposal(:read, proposal, true, true, false, situation)
+    helper_test_proposal(:read, @proposal, true, true, false, situation)
     # 3B: .. including when they have been rejected.
-    proposal.approved = false
-    helper_test_proposal(:read, proposal, true, true, false, situation)
+    @proposal.approved = false
+    helper_test_proposal(:read, @proposal, true, true, false, situation)
+  end
 
-    # 4A: Everyone can see the ones that have been approved...
-    proposal.approved = true
-    situation = "#{situation}, but that is approved"
-    helper_test_proposal(:read, proposal, true, true, true, situation)
+  test 'users have the correct proposal permissions after the editing deadline for proposals that have been approved ' do
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
+    helper_set_up_proposal
+
+    @proposal.approved = true
+
+    situation = "after the editing deadline, but that is approved"
+
+    # 4A: Everyone can see proposals that have been approved...
+    helper_test_proposal(:read, @proposal, true, true, true, situation)
     # 4B: ...and can no longer update proposals.
-    helper_test_proposal(:update, proposal, false, false, false, situation)
+    helper_test_proposal(:update, @proposal, false, false, false, situation)
+  end
+
+  test 'users have the correct proposal permissions for archived proposals' do
+    @call = FactoryBot.create(:proposal_call, archived: true, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
+    helper_set_up_proposal
+
+    @proposal.approved = true
 
     # 5A: People can see all archived proposals that are approved...
     # (Archiving only happens after both deadlines have passed)
-    call.archived = true
-    proposal.approved = true
-    helper_test_proposal(:read, proposal, true, true, true, 'that is archived and approved')
+    helper_test_proposal(:read, @proposal, true, true, true, 'that is archived and approved')
     # 5B: ...or rejected ones that they were a part of...
-    proposal.approved = false
-    helper_test_proposal(:read, proposal, true, true, false, 'that is archived but not approved')
+    @proposal.approved = false
+    helper_test_proposal(:read, @proposal, true, true, false, 'that is archived but not approved')
     # 5C: ...and no one can edit archived proposals.
-    helper_test_proposal(:update, proposal, false, false, false, 'that is archived but not approved')
+    helper_test_proposal(:update, @proposal, false, false, false, 'that is archived but not approved')
+  end
 
+  test 'users can access the proposal about page' do
+    @call = FactoryBot.create(:proposal_call)
+    helper_set_up_proposal
     # 6: Everyone can read the about page.
-    helper_test_proposal(:about, proposal, true, true, true, 'that is archived but not approved')
+    helper_test_proposal(:about, @proposal, true, true, true, 'that is archived but not approved')
   end
 
   test 'have the correct call permissions' do
@@ -367,6 +377,24 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     when 'Admin::StaffingDebt'
       return FactoryBot.create :staffing_debt, user_id: id
     end
+  end
+
+  def helper_set_up_proposal
+    assert_not_nil @call, 'The call should be set before setting up the proposal'
+
+    @admin_abilities = [:update, :read, :create, :delete, :approve, :reject, :convert].freeze
+    @admin_ability = Ability.new(users(:admin))
+
+    checker_user = FactoryBot.create(:user)
+    checker_user.add_role 'Proposal Checker'
+    @checker_ability = Ability.new(checker_user)
+
+    @random_ability = Ability.new(FactoryBot.create(:user))
+
+    @proposal = @call.proposals.sample
+    @proposal.approved = false
+
+    @on_proposal_ability = Ability.new(@proposal.users.sample)
   end
 
   def helper_test_proposal(action, proposal, can_checker, can_on_proposal, can_random, situation)

@@ -136,7 +136,13 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   test 'should get answer when there is an answer with a question id that is no longer on the questionnaire' do
-    @questionnaire.answers << FactoryBot.create(:answer, question_id: 0)
+    question = @questionnaire.questions.sample
+
+    new_answer = FactoryBot.create(:answer, question: question, answerable: @questionnaire)
+    @questionnaire.answers << new_answer
+
+    @questionnaire.questions.delete(question)
+    
     get :answer, params: { id: @questionnaire }
     assert_response :success
   end
