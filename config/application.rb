@@ -54,7 +54,7 @@ module ChaosRails
 
     if Rails.application.secrets.honeybadger
       Honeybadger.configure do |config|
-        config.api_key = Rails.application.secrets.honeybadger['api_key']
+        config.api_key = Rails.application.secrets.honeybadger[:api_key]
       end
     end
   end
