@@ -41,6 +41,8 @@ module ChaosRails
 
     config.active_job.queue_adapter = :delayed_job
 
+    config.action_mailer.default_url_options = { host: 'www.bedlamtheatre.co.uk' }
+
     if Rails.application.secrets.honeybadger
       Honeybadger.configure do |config|
         config.api_key = Rails.application.secrets.honeybadger['api_key']

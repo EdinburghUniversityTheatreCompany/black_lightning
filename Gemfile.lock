@@ -55,6 +55,8 @@ GEM
       rack (>= 0.9.0)
     binding_of_caller (0.8.0)
       debug_inspector (>= 0.0.1)
+    bootsnap (1.4.6)
+      msgpack (~> 1.0)
     bootstrap-sass (2.3.2.2)
       sass (~> 3.2)
     buftok (0.2.0)
@@ -170,6 +172,7 @@ GEM
     mini_mime (1.0.2)
     mini_portile2 (2.4.0)
     minitest (5.14.1)
+    msgpack (1.3.3-x64-mingw32)
     multipart-post (2.1.1)
     mysql2 (0.5.3-x64-mingw32)
     naught (1.1.0)
@@ -347,6 +350,7 @@ PLATFORMS
 DEPENDENCIES
   better_errors
   binding_of_caller
+  bootsnap
   bootstrap-sass (< 3.0)
   byebug
   cancancan
@@ -375,7 +379,7 @@ DEPENDENCIES
   paperclip
   prawn
   rack-cors
-  rails (~> 5.1)
+  rails (~> 5.2)
   rails-controller-testing
   rails_autolink
   ransack
