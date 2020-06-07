@@ -45,8 +45,6 @@ gem 'stringex'
 
 gem 'honeybadger', '~> 4.0'
 
-gem 'bootsnap'
-
 group :development, :test do
   gem 'byebug'
   gem 'spring'
