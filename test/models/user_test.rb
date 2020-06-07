@@ -157,7 +157,12 @@ class Admin::UserTest < ActiveSupport::TestCase
     events = FactoryBot.create_list :show, 3, is_public: true
     user = events.first.users.first
 
-    _team_membership_without_teamwork = FactoryBot.create(:team_member, user: user, teamwork: nil, teamwork_type: 'Event')
+    team_membership_without_teamwork = events.last.team_members.last
+
+    assert_not_equal user, team_membership_without_teamwork.user
+
+    team_membership_without_teamwork.update_attribute :teamwork_type, 'Event'
+    team_membership_without_teamwork.update_attribute :teamwork, nil
 
     team_memberships = user.team_memberships(true)
 

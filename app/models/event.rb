@@ -55,8 +55,8 @@ class Event < ApplicationRecord
   has_many :users, through: :team_members
   has_many :pictures, as: :gallery, dependent: :destroy
 
-  belongs_to :venue
-  belongs_to :season
+  belongs_to :venue, optional: true
+  belongs_to :season, optional: true
 
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true

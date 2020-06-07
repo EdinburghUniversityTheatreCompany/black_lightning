@@ -20,7 +20,7 @@ class Admin::StaffingJob < ApplicationRecord
   validates :name, presence: true
 
   belongs_to :staffable, polymorphic: true
-  belongs_to :user
+  belongs_to :user, optional: true
   has_one :staffing_debt, class_name: 'Admin::StaffingDebt', foreign_key: 'admin_staffing_job_id'
 
   before_save :check_if_the_user_has_changed

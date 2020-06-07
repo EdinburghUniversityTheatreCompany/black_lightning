@@ -2,8 +2,8 @@ class MassMail < ApplicationRecord
   validate :send_date_is_not_in_the_past
   validates :subject, :body, presence: true
 
-  belongs_to :sender, class_name: 'User'
-  has_and_belongs_to_many :recipients, class_name: 'User'
+  belongs_to :sender, class_name: 'User', optional: true
+  has_and_belongs_to_many :recipients, class_name: 'User', optional: true
 
   before_destroy :check_if_mail_has_been_sent
 

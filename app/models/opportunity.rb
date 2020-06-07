@@ -1,6 +1,6 @@
 class Opportunity < ApplicationRecord
   belongs_to :creator,  class_name: 'User'
-  belongs_to :approver, class_name: 'User'
+  belongs_to :approver, class_name: 'User', optional: true
 
   validates :title, :expiry_date, :description, :creator_id, presence: true
 
