@@ -1,4 +1,4 @@
-<%= render file: '/users/show.html.erb' %>
+<%= render template:'users/show.html.erb' %>
 
 <hr />
 <h2>Details</h2>
@@ -23,7 +23,7 @@
     <%= bool_text @user.public_profile %>
 </p>
 
-<% if false #@user.card_number.present? Can be re-enabled if you want to use membership card again%>
+<% if false #@user&.card_number&.present? Can be re-enabled if you want to use membership card again %>
     <p>
         <b>Card Number:</b>
         <%= link_to @user.card_number, admin_membership_card_path(@user.membership_card) %>

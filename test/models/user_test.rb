@@ -19,7 +19,7 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert @user.name?
     @user.update_attribute(:first_name, '')
     assert_not @user.name?
-    @user.update_attributes(first_name: 'Finbar', last_name: nil)
+    @user.update!(first_name: 'Finbar', last_name: nil)
     assert_not @user.name?
   end
 

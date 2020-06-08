@@ -3,8 +3,8 @@
 class ActionView::Template
   module Handlers
     class Kramdown
-      def call(template)
-        "Kramdown::Document.new(#{template.source.inspect}).to_html"
+      def call(template, source)
+        "Kramdown::Document.new(#{source.inspect}).to_html"
       end
     end
   end

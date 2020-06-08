@@ -40,7 +40,7 @@ class News < ApplicationRecord
   belongs_to :author, class_name: 'User'
 
   validates :title, :body, :publish_date, presence: true
-  validates :slug, presence: true, uniqueness: true
+  validates :slug, presence: true, uniqueness: { case_sensitive: false }
 
   # News should always be ordered by publish_date DESC
   default_scope -> { order('publish_date DESC') }
