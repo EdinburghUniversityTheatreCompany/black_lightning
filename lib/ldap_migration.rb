@@ -3,7 +3,7 @@
 # This class is not used, so it's fine-ish?
 # require 'net/ldap'
 
-class LDAPMigration
+class LdapMigration
   def initialize(ldap_params)
     @conn = Net::LDAP.new(ldap_params)
     @fields = {}

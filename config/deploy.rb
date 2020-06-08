@@ -10,6 +10,11 @@ set :keep_releases, 4
 set :linked_files, %w(config/database.yml config/secrets.yml)
 set :linked_dirs, %w(log bundle tmp/pids tmp/cache tmp/sockets public/system public/assets uploads)
 
+# TODO: Run zeitwerk:check
+# TODO: Run tests
+# TODO: Fix the issue with delayed_job not restarting properly
+# TODO: Do a mysql dump
+
 # If you are using Passenger mod_rails uncomment this:
 namespace :deploy do
   after :publishing, :restart do

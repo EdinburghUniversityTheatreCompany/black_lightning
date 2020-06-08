@@ -41,7 +41,7 @@ class Admin::MembershipCardsController < AdminController
       return
     end
 
-    MembershipCardPDF.create(@card) do |pdf|
+    MembershipCardPdf.create(@card) do |pdf|
       send_data pdf.render, filename: "card_#{@card.card_number}.pdf", type: 'application/pdf', disposition: 'inline'
     end
   end

@@ -5,7 +5,7 @@ namespace :users_to_ldap do
 
 
     auth = { method: :simple, username: Rails.application.secrets.ldap[:bind_user], password: Rails.application.secrets.ldap[:bind_pass] }
-    migration = LDAPMigration.new(host: 'ldap.bedlamtheatre.co.uk', port: 389, base: 'cn=users,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk', auth: auth)
+    migration = LdapMigration.new(host: 'ldap.bedlamtheatre.co.uk', port: 389, base: 'cn=users,cn=accounts,dc=bedlamtheatre,dc=co,dc=uk', auth: auth)
     users = User.all.order('id ASC')
 
     users.each do |user|

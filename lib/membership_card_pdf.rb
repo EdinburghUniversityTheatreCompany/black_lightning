@@ -1,7 +1,7 @@
 # See http://prawn.majesticseacreature.com/manual.pdf for pdf generation.
 require 'prawn/measurement_extensions'
 
-class MembershipCardPDF < Prawn::Document
+class MembershipCardPdf < Prawn::Document
   def self.create(*args)
     pdf = new(*args)
     yield pdf
