@@ -56,6 +56,4 @@ end
 class ActionController::TestCase
   include Devise::Test::ControllerHelpers
   include ActionMailer::TestHelper
-
-  # parallelize workers: 5 TODO FOR RAILS 6?
 end

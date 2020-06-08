@@ -60,17 +60,9 @@ module SubpageHelper
   private
 
   def normalize_link(page)
-    if page[0] == '/'
-      page = page[1..page.size]
-    end
-
-    if page.last == '/'
-      page = page[0..(page.size() - 2)]
-    end
-
-    # TODO: Once we're on Ruby 2.5/Rails 6
-    #page.delete_prefix!('/')
-    #page.delete_suffix!('/')
+    page.delete_prefix!('/')
+    page.delete_suffix!('/')
+    
     return page.downcase
   end
 end

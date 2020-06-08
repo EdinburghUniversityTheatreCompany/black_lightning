@@ -47,7 +47,7 @@ class EventTest < ActionView::TestCase
   end
 
   test 'as_json' do
-    @event.update_attributes(venue: venues(:one), season: FactoryBot.create(:season))
+    @event.update!(venue: venues(:one), season: FactoryBot.create(:season))
 
     json = @event.as_json(include: [:season])
 

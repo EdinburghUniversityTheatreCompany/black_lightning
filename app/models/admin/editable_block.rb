@@ -22,7 +22,7 @@
 class Admin::EditableBlock < ApplicationRecord
   resourcify
 
-  validates :name, presence: true, uniqueness: true
+  validates :name, presence: true, uniqueness: { case_sensitive: false }
 
   has_many :attachments, class_name: '::Attachment'
   accepts_nested_attributes_for :attachments, reject_if: :all_blank, allow_destroy: true

@@ -33,7 +33,7 @@
 class Attachment < ApplicationRecord
   belongs_to :editable_block, class_name: 'Admin::EditableBlock'
 
-  validates :name, presence: true, uniqueness: true
+  validates :name, presence: true, uniqueness: { case_sensitive: false }
   validate  :check_file_size
 
   has_attached_file :file,

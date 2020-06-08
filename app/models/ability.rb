@@ -86,7 +86,6 @@ class Ability
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now.advance(years: -100)..DateTime.now }
     end
 
-    # TODO: There is an issue with using -infinity, but that will be fixed in Ruby 2.6 / Rails 6
     can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
 
     can :update, Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.now..DateTime::Infinity.new }

@@ -1,3 +1,3 @@
 <% @user = current_user %>
 <% @message = "You are #{@user.debt_message_suffix}" %>
-<%= render file: '/admin/debts/show.html.erb', locals: { header_size: 3, header_is_link: true} %>
+<%= render template: 'admin/debts/show.html.erb', locals: { header_size: 3, header_is_link: true } %>

@@ -35,7 +35,7 @@ class Show < Event
 
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
-  validates :slug, uniqueness: true
+  validates :slug, uniqueness: { case_sensitive: false }
 
   has_many :reviews, dependent: :destroy
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :destroy
