@@ -4,16 +4,14 @@
 
 <h1><%= @title %></h1>
 
-<div id="search_container">
-  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_users, html: { id: "search", class: "form-search form-inline" } do |f| %>
-    <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
-    <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
+<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_users, html: { id: "search", class: "form-search form-inline" } do |f| %>
+  <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
+  <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
 
-    <%= f.input :show_non_members, label: "Show Non-Members", input_html: { id: "show_non_members", checked: params[:show_non_members] == "1" ? true : false, name: "show_non_members" }, as: :boolean %>
-    
-    <%= submit_tag "Search", class: 'btn' %>
-  <% end %>
-</div>
+  <%= f.input :show_non_members, label: "Show Non-Members", input_html: { id: "show_non_members", checked: params[:show_non_members] == "1" ? true : false, name: "show_non_members" }, as: :boolean %>
+  
+  <%= submit_tag "Search", class: 'btn' %>
+<% end %>
 
 <table class="table">
     <tbody>
