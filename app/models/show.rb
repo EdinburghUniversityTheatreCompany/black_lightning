@@ -45,14 +45,20 @@ class Show < Event
 
   def create_maintenance_debts
     users.distinct.each do |user|
-      next if user.admin_maintenance_debts.where(show_id: id).any?
+      debts = user.admin_maintenance_debts.where(show_id: id)
 
-      Admin::MaintenanceDebt.create!(
-        show: self,
-        user: user,
-        due_by: maintenance_debt_start,
+      if debts.empty?
+        Admin::MaintenanceDebt.create!(
+          show: self,
+          user: user,
+          due_by: maintenance_debt_start,
           state: :unfulfilled
         )
+      else
+        debts.each do |debt| 
+          debt.update!(due_by: maintenance_debt_start)
+        end
+      end 
     end
   end
 

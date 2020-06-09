@@ -8,18 +8,31 @@ class ShowTest < ActiveSupport::TestCase
     show.create_maintenance_debts
 
     show.users.each do |user|
-      assert_equal 1, user.admin_maintenance_debts.where(show: show).count
+      maintenance_debts = user.admin_maintenance_debts.where(show: show)
+      assert_equal 1, maintenance_debts.count
+      assert_equal due_by, maintenance_debts.first.due_by
     end
+
+    # Test that the date changes, but the amount stays 1. 
+    new_due_by = Date.today.advance(days: 5)
+    show.update_attribute(:maintenance_debt_start, new_due_by)
+    
+    FactoryBot.create(:team_member, teamwork: show)
+
+    # Test that the new user also gets a maintenance debt.
 
     show.create_maintenance_debts
 
     show.users.each do |user|
-      assert_equal 1, user.admin_maintenance_debts.where(show: show).count
+      maintenance_debts = user.admin_maintenance_debts.where(show: show)
+      assert_equal 1, maintenance_debts.count
+      assert_equal new_due_by, maintenance_debts.first.due_by
     end
 
+    # Extra validation on the generated maintenance debt
     maintenance_debt = show.users.first.admin_maintenance_debts.first
 
-    assert_equal due_by, maintenance_debt.due_by
+    assert_equal new_due_by, maintenance_debt.due_by
     assert_equal show.users.first, maintenance_debt.user
     assert_equal 'unfulfilled', maintenance_debt.state
     assert_equal show, maintenance_debt.show
