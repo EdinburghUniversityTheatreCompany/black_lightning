@@ -146,13 +146,13 @@ class User < ApplicationRecord
 
   # The current and upcoming function share code, so please check them both if you change things.
   def debt_causing_maintenance_debts(on_date = Date.today)
-    return Admin::MaintenanceDebt.where(user: self).where('due_by < ?', on_date).uncompleted
+    return Admin::MaintenanceDebt.where(user: self).where('due_by < ?', on_date).unfulfilled
   end
 
   def upcoming_maintenance_debts(from_date = Date.today)
-    return Admin::MaintenanceDebt.where(user: self).where('due_by >= ?', from_date).uncompleted
+    return Admin::MaintenanceDebt.where(user: self).where('due_by >= ?', from_date).unfulfilled
   end
-
+  
   def debt_causing_staffing_debts(on_date = Date.today)
     return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by < ?', on_date).where(admin_staffing_job: nil, forgiven: false)
   end

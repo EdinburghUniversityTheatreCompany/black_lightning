@@ -4,6 +4,7 @@
     <tbody>
         <tr>
             <th>Name</th>
+            <th>Amount of Users</th>
 
             <% if can? :edit, Role %>
                 <th></th>
@@ -13,7 +14,7 @@
         <% @roles.each do |role| %>
             <tr>
                 <%= get_link role, :show, wrap_tag: 'td' %>
-
+                <td><%= role.users.count %></td>
                 <%= get_link role, :edit, wrap_tag: 'td' %>
             </tr>
         <% end %>

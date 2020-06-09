@@ -46,6 +46,11 @@
 </p>
 
 <p>
+  <b>Price:</b>
+  <%= event.price %>
+</p>
+
+<p>
   <b>Season:</b>
   <% if event.season.present? %>
     <%= get_link event.season, :show, link_text: event.season.name %>

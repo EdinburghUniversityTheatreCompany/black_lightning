@@ -34,7 +34,7 @@ class Admin::StaffingDebt < ApplicationRecord
     return :not_signed_up
   end
 
-  # returns if the staffing debt has been completed or not
+  # returns if the staffing debt has been completed or not.
   def fulfilled
     if admin_staffing_job.present?
       admin_staffing_job.completed?
@@ -43,7 +43,7 @@ class Admin::StaffingDebt < ApplicationRecord
     end
   end
 
-  # returns uncompleted staffing debts
+  # returns unfulfilled staffing debts.
   def self.unfulfilled
     fulfilled_ids = all.map { |debt| debt.fulfilled ? debt.id : nil }
     return where.not(id: fulfilled_ids)

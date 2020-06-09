@@ -97,7 +97,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   end
 
   test 'should "destroy" admin_maintenance_debt' do
-    assert_difference('Admin::MaintenanceDebt.uncompleted.count', -1) do
+    assert_difference('Admin::MaintenanceDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::MaintenanceDebt.count') do
         delete :destroy, params: { id: @maintenance_debt }
       end
@@ -109,7 +109,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   end
 
   test 'should convert to staffing debt' do
-    assert_difference('Admin::MaintenanceDebt.uncompleted.count', -1) do
+    assert_difference('Admin::MaintenanceDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::MaintenanceDebt.count') do
         assert_difference('Admin::StaffingDebt.count', +1) do
           put :convert_to_staffing_debt, params: { id: @maintenance_debt.id }

@@ -6,7 +6,7 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
   end
 
   test 'can convert to staffing debt' do
-    assert_difference('Admin::MaintenanceDebt.uncompleted.count', -1) do
+    assert_difference('Admin::MaintenanceDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::MaintenanceDebt.count') do
         assert_difference('Admin::StaffingDebt.count', +1) do
           @maintenance_debt.convert_to_staffing_debt
@@ -22,7 +22,7 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     @maintenance_debt.state = :completed
     assert_equal :completed, @maintenance_debt.status
 
-    @maintenance_debt.state = :uncompleted
+    @maintenance_debt.state = :unfulfilled
     assert_equal :unfulfilled, @maintenance_debt.status(@maintenance_debt.due_by.advance(days: -1))
     assert_equal :causing_debt, @maintenance_debt.status(@maintenance_debt.due_by.advance(days: 1))
   end
@@ -32,10 +32,10 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     helper_compare_css_class 'success', :converted
 
     @maintenance_debt.due_by = Date.today.advance(days: 1)
-    helper_compare_css_class'warning', :uncompleted
+    helper_compare_css_class'warning', :unfulfilled
 
     @maintenance_debt.due_by = Date.today.advance(days: -1)
-    helper_compare_css_class 'error', :uncompleted
+    helper_compare_css_class 'error', :unfulfilled
   end
 
   def helper_compare_css_class(expected_class, state)
