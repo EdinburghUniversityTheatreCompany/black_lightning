@@ -6,7 +6,15 @@ class Admin::RolesController < AdminController
   end
 
   def show
-    @title = "#{@role.name} Role"
+    @title = @role.name
+
+    @q = @role.users.ransack(params[:q])
+
+    @users = @q.result
+               .accessible_by(current_ability)
+
+    # Using a token is not the nicest way of handling it, but it works.
+    @token = MembershipActivationToken.new
   end
 
   def new
