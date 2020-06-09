@@ -1,7 +1,7 @@
 <% all_users ||= false %>
-
+<% include_label = true  if include_label.nil? %>
 <div class="control-group fields <%= "error" if f.error(:user).present? %>">
-  <%= f.label :user_id %>
+  <%= f.label(:user_id) if include_label %>
   <%= render 'shared/form/user_typeahead_field', f: f %>
   <p><%= f.full_error :user %></p>
 

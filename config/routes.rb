@@ -121,7 +121,12 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :roles
+    resources :roles do
+      member do
+        post 'add_user', to: 'roles#add_user'
+      end
+    end
+
     get  '/permissions/grid', to: 'permissions#grid', as: :permissions
     post '/permissions/grid', to: 'permissions#update_grid', as: :update_permissions
 

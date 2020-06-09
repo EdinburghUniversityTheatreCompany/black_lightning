@@ -1,5 +1,28 @@
 <h1><%= @title %></h1>
 
+<% if can? :assign_roles, User %>
+  <h3>Add User</h3>
+
+  <% if @role.name.downcase == 'member' %>
+    <% if can? :new, MembershipActivationToken %>
+      Please add members from the membership activation page.
+      <br>
+      <%= get_link MembershipActivationToken, :new, link_text: '(Re)-activate Membership' %>
+    <% else %>
+      You are not allowed to add members. Please ask the secretary to add new members.
+    <% end %>
+  <% else %>
+    <% # Using a token is not the nicest way of handling it, but it works and is quite clean. %>
+    <%= simple_form_for(@token, url: add_user_admin_role_url(@role), html: { class: 'form-inline' }) do |f| %>
+        <%= f.error_notification %>
+
+        <%= render '/shared/form/user_field', f: f, include_label: false %>
+
+        <%= f.button :submit, 'Add User To Role' %>
+    <% end %>
+  <% end %>
+<% end %>
+
 <h3>Users</h3>
 <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: admin_role_url(@role), html: { id: 'search', class: 'form-search form-inline' } do |f| %>
   <%= f.input_field :full_name_cont, placeholder: 'User Name', required: false %>

@@ -100,4 +100,33 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_roles_path
   end
+
+  test 'should add user' do
+    user = FactoryBot.create(:user, first_name: 'Finbar', last_name: 'the Viking')
+
+    post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
+
+    assert user.has_role? :member
+
+    assert_equal ['Finbar the Viking has been added to the role of member'], flash[:success]
+    assert_redirected_to admin_role_url(@role)
+  end
+
+  test 'should not add user who already has the role' do
+    user = FactoryBot.create(:member, first_name: 'Dennis', last_name: 'the Donkey')
+
+    post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
+
+    assert user.has_role? :member
+
+    assert_equal ['Dennis the Donkey already has the role of member'], flash[:success]
+    assert_redirected_to admin_role_url(@role)
+  end
+
+  test 'should not add user that does not exist' do
+    post :add_user, params: { id: @role, membership_activation_token: { user_id: -1 } }
+
+    assert_equal ['This user does not exist.'], flash[:error]
+    assert_redirected_to admin_role_url(@role)
+  end
 end
