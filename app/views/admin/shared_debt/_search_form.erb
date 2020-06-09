@@ -1,7 +1,7 @@
 <% unless is_specific_user %>
   <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: url, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
-    <%= f.input_field :user_full_name_cont, value: @full_name, placeholder: 'User Name', required: false %>
-    <%= f.input_field :show_name_cont, value: @show_name, placeholder: 'Show Name', required: false %>
+    <%= f.input_field :user_full_name_cont, placeholder: 'User Name', required: false %>
+    <%= f.input_field :show_name_cont, placeholder: 'Show Name', required: false %>
     
     <%= f.input :show_fulfilled, label: 'Show Fulfilled', input_html: { id: 'show_in_debt_only', checked: @show_fulfilled, name: 'show_fulfilled' }, as: :boolean %>
 

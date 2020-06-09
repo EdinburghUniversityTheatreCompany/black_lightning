@@ -6,26 +6,7 @@ class Admin::StaffingDebtsController < AdminController
   def index
     @title = 'Staffing Debts'
 
-    get_search_params(params)
-
-    @q = Admin::StaffingDebt.ransack(params[:q])
-    @q.sorts = ['due_by asc', 'show_name asc', 'user_full_name asc'] if @q.sorts.empty?
-
-    @staffing_debts = @q.result.includes(:user, :admin_staffing_job).accessible_by(current_ability)
-
-    if params[:user_id].present?
-      @staffing_debts = @staffing_debts.where(user_id: params[:user_id])
-
-      # If we are just displaying one user, also display the fulfilled debts even if the box is not ticked.
-      @show_fulfilled = true
-      @is_specific_user = true
-    elsif Admin::StaffingDebt.accessible_by(current_ability).map { |debt| debt.user.id }.uniq.count < 2
-      @is_specific_user = true
-      @show_fulfilled = true
-    end
-
-    @staffing_debts = @staffing_debts.unfulfilled unless @show_fulfilled
-    @staffing_debts = @staffing_debts.paginate(page: params[:page], per_page: 30) unless @is_specific_user
+    @staffing_debts, @q, @show_fulfilled, @is_specific_user = helpers.shared_debt_load(@staffing_debts, params, [:user, :admin_staffing_job])
 
     respond_to do |format|
       format.html
@@ -139,12 +120,5 @@ class Admin::StaffingDebtsController < AdminController
   # Only allow a trusted parameter "white list" through.
   def staffing_debt_params
     params.require(:admin_staffing_debt).permit(:user_id, :show_id, :due_by, :admin_staffing_job_id)
-  end
-
-  def get_search_params(params)
-    q = params[:q] || {}
-    @full_name = q.fetch(:user_full_name_cont, '')
-    @show_name = q.fetch(:show_name_cont, '')
-    @show_fulfilled = params.fetch(:show_fulfilled, nil) == '1'
   end
 end

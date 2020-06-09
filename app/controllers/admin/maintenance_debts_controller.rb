@@ -6,28 +6,7 @@ class Admin::MaintenanceDebtsController < AdminController
   def index
     @title = 'Maintenance Debts'
 
-    get_search_params(params)
-
-    @q = Admin::MaintenanceDebt.ransack(params[:q])
-    @q.sorts = ['due_by asc', 'show_name asc', 'user_full_name asc'] if @q.sorts.empty?
-
-    @maintenance_debts = @q.result.includes(:user, :show).accessible_by(current_ability)
-
-    @is_specific_user = params[:user_id].present? || Admin::MaintenanceDebt.accessible_by(current_ability).map { |debt| debt.user.id }.uniq.count < 2
-
-    if params[:user_id].present?
-      @maintenance_debts = @maintenance_debts.where(user_id: params[:user_id])
-
-      # If we are just displaying one user, also display the fulfilled debts even if the box is not ticked.
-      @show_fulfilled = true
-      @is_specific_user = true
-    elsif Admin::MaintenanceDebt.accessible_by(current_ability).map { |debt| debt.user.id }.uniq.count < 2
-      @is_specific_user = true
-      @show_fulfilled = true
-    end
-
-    @maintenance_debts = @maintenance_debts.uncompleted unless @show_fulfilled
-    @maintenance_debts = @maintenance_debts.paginate(page: params[:page], per_page: 30) unless @is_specific_user
+    @maintenance_debts, @q, @show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params, [:user, :show])
 
     respond_to do |format|
       format.html
@@ -121,12 +100,5 @@ class Admin::MaintenanceDebtsController < AdminController
   # Only allow a trusted parameter "white list" through.
   def maintenance_debt_params
     params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id, :state)
-  end
-
-  def get_search_params(params)
-    q = params[:q] || {}
-    @full_name = q.fetch(:user_full_name_cont, '')
-    @show_name = q.fetch(:show_name_cont, '')
-    @show_fulfilled = params.fetch(:show_fulfilled, nil) == '1'
   end
 end
