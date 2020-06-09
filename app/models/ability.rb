@@ -82,7 +82,7 @@ class Ability
     can :read, Admin::Proposals::Proposal, approved: true
 
     # If a user is a proposal checker, they should be able to read any call, no matter if they are approved, rejected, or awaiting, after the submission deadline.
-    if user.has_role? 'Proposal Checker'
+    if user.has_role?('Proposal Checker') || user.has_role?('Committee')
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now.advance(years: -100)..DateTime.now }
     end
 

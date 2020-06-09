@@ -25,7 +25,7 @@ member:
 # You can also give committee extra permissions using the fixtures for testing.
 committee:
   id: 2
-  name: "committee"
+  name: "Committee"
 
 admin:
   id: 3

@@ -44,7 +44,7 @@ FactoryBot.define do
     factory :committee do
       after(:create) do |user, _evaluator|
         user.add_role :member
-        user.add_role :committee
+        user.add_role 'Committee'
       end
     end
 
