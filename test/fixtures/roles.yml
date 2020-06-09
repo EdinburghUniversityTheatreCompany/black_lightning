@@ -15,7 +15,7 @@
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 #
-# Member only has access backend permission. Try to not give them additional permissions using fixtures.
+# Member only has access backend permission and sign_up_for staffing permissions. Try to not give them additional permissions using fixtures.
 # This makes it possible to use member to test the 'default' settings.
 member:
    id: 1
@@ -25,7 +25,7 @@ member:
 # You can also give committee extra permissions using the fixtures for testing.
 committee:
   id: 2
-  name: "committee"
+  name: "Committee"
 
 admin:
   id: 3

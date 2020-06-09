@@ -16,3 +16,20 @@ show_staffing:
   id: 4
   action: show
   subject_class: Admin::Staffing
+
+# To test if the Role show page displays the correct message when not having the permission to create membership activation tokens.
+read_roles:
+  id: 5
+  action: show
+  subject_class: Role
+
+# To test if the Role show page displays the correct message when not having the permission to create membership activation tokens.
+assign_roles:
+  id: 6
+  action: assign_roles
+  subject_class: User
+
+can_sign_up_for_staffing:
+  id: 7
+  action: sign_up_for
+  subject_class: Admin::StaffingJob

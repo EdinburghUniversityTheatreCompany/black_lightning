@@ -111,18 +111,6 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_match 'you need to provide a MOBILE phone number', response.body
   end
 
-  test 'cannot sign up in show without permission' do
-    sign_out @user
-    sign_in FactoryBot.create(:committee, phone_number: '11000111')
-
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, staffed_job_count: 2)
-    get :show, params: { id: staffing }
-
-    assert_response :success
-    assert_not assigns(:can_sign_up)
-    assert_no_match 'you need to provide a MOBILE phone number', response.body
-  end
-
   test 'normal users cannot see the phone number column' do
     sign_out @user
 
@@ -134,6 +122,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     # Assert that the phone number column is not visible, because (at least this version of) committee does not have user read permission.
     assert_no_match '<th>Phone Number</th>', response.body
   end
+
   test 'should get new' do
     get :new
     assert_response :success
@@ -267,7 +256,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     get :sign_up_confirm, params: { id: job }
 
-    assert_equal 'You cannot sign up for staffings. Have you set a phone number?', flash[:error]
+    assert_equal ['You cannot sign up for staffings. Have you set a phone number?'], flash[:error]
     assert_redirected_to admin_staffing_path(job.staffable)
   end
 
@@ -278,7 +267,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     get :sign_up_confirm, params: { id: job }
 
-    assert_equal 'You cannot sign up for staffings. Have you set a phone number?', flash[:error]
+    assert_equal ['You cannot sign up for staffings. Have you set a phone number?'], flash[:error]
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end

@@ -13,16 +13,18 @@
 
     <%= user_link(team_member.user, true) %>
 
-    <% if team_member.user.present? %>
-      <% can_see_in_debt_label = user_is_part_of_proposal || can?(:show, team_member.user) %>
+    <% if team_member.user.present? && (user_is_part_of_proposal || can?(:show, team_member.user)) %>
+      <% if team_member.user.has_role? 'DM Trained' %>
+        <%= generate_label :info, 'DM Trained' %>
+      <% end %>
 
-      <% if can_see_in_debt_label && team_member.user.in_debt %>
+      <% if team_member.user.in_debt %>
         <% debt_message = team_member.user.debt_message_suffix.upcase_first %>
 
         <%= link_to debt_message, admin_debt_path(team_member.user), class: "label label-important" %>
       <% end %>
 
-      <% if can_see_in_debt_label && deadline.present? && team_member.user.in_debt(deadline) %>
+      <% if deadline.present? && team_member.user.in_debt(deadline) %>
         <% on_deadline_debt_message = team_member.user.debt_message_suffix(deadline).upcase_first %>
 
         <% # Only show the deadline message if the debt on the deadline is different. %>

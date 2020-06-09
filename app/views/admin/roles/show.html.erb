@@ -1,3 +1,57 @@
 <h1><%= @title %></h1>
 
+<% if can? :assign_roles, User %>
+  <h3>Add User</h3>
+
+  <% if @role.name.downcase == 'member' %>
+    <% if can? :new, MembershipActivationToken %>
+      Please add members from the membership activation page.
+      <br>
+      <%= get_link MembershipActivationToken, :new, link_text: '(Re)-activate Membership' %>
+    <% else %>
+      You are not allowed to add members. Please ask the secretary to add new members.
+    <% end %>
+  <% else %>
+    <% # Using a token is not the nicest way of handling it, but it works and is quite clean. %>
+    <%= simple_form_for(@token, url: add_user_admin_role_url(@role), html: { class: 'form-inline' }) do |f| %>
+        <%= f.error_notification %>
+
+        <%= render '/shared/form/user_field', f: f, include_label: false %>
+
+        <%= f.button :submit, 'Add User To Role' %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<h3>Users</h3>
+<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: admin_role_url(@role), html: { id: 'search', class: 'form-search form-inline' } do |f| %>
+  <%= f.input_field :full_name_cont, placeholder: 'User Name', required: false %>
+
+  <%= submit_tag "Search", class: 'btn' %>
+<% end %>
+
+<table class="table">
+  <tbody>
+    <tr>
+      <%= content_tag :th, sort_link(@q, :user_full_name, 'User Name') %>
+
+      <% if can? :assign_roles, User %>
+        <th></th>
+      <% end%>
+    </tr>
+
+    <% @users.each do |user| %>
+      <tr>
+        <td><%= user_link(user, true) %></td>
+
+        <% if can? :assign_roles, user %>
+          <td>
+            <%= get_link user, :edit %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
 <%= render '/shared/show_actions', object: @role %>

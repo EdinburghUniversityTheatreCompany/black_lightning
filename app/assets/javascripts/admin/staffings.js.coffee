@@ -56,7 +56,5 @@ jQuery ->
 
         return;
       error: (jqXHR, textStatus, errorThrown) ->
-        tried_ajax = true
-        button.click()
-        return
+        window.location.reload(true);
     return false

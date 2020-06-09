@@ -27,6 +27,7 @@ FactoryBot.define do
     first_name            { Faker::Name.first_name }
     last_name             { Faker::Name.last_name  }
     email                 { Faker::Internet.email  }
+    phone_number          { '12345' }
     password              { :random_password }
     password_confirmation { password }
 
@@ -43,7 +44,7 @@ FactoryBot.define do
     factory :committee do
       after(:create) do |user, _evaluator|
         user.add_role :member
-        user.add_role :committee
+        user.add_role 'Committee'
       end
     end
 

@@ -45,7 +45,7 @@ class Admin::PermissionsController < AdminController
 
     @models = (ApplicationRecord.descendants + [Admin::Debt, Season]).uniq
 
-    role_exclude = ['admin', 'Proposal Checker']
+    role_exclude = ['admin', 'Proposal Checker', 'DM Trained']
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all
   end
 end
