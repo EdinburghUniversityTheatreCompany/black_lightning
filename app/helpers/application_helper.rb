@@ -30,7 +30,7 @@ module ApplicationHelper
   # It does not really matter if it renders the wrong layout though.
 
   def current_environment
-    return 'admin' if request.fullpath[0..6].include?('admin') && current_user.present?
+    return 'admin' if request.fullpath[0..6].include?('admin') && can?(:access, :backend)
 
     return 'application'
   end
