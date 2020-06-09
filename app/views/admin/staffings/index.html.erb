@@ -9,8 +9,7 @@
 <% if @upcoming_staffings.any? %>
   <%= render 'staffing_index_row', staffings_hash: @upcoming_staffings %>
 <% else %>
-  There are no upcoming staffing positions.
-  <br />
+  <p>There are no upcoming staffing positions.</p>
 <% end %>
 
 <%= get_link Admin::Staffing, :new %>
