@@ -23,7 +23,7 @@
   <% end %>
 <% end %>
 
-<h3>Users</h3>
+<h3>Users (<%= @users.count %>)</h3>
 <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: admin_role_url(@role), html: { id: 'search', class: 'form-search form-inline' } do |f| %>
   <%= f.input_field :full_name_cont, placeholder: 'User Name', required: false %>
 
