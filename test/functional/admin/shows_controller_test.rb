@@ -18,6 +18,20 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     get :show, params: { id: @show }
     assert_response :success
+
+    assert_no_match 'DM Trained', response.body
+  end
+
+  # This mainly tests the show team members partial.
+  test 'should get show with a team member that is DM trained' do
+    @show = FactoryBot.create(:show)
+
+    @show.users.first.add_role 'DM Trained'
+
+    get :show, params: { id: @show }
+
+    assert_response :success
+    assert_match 'DM Trained', response.body
   end
 
   test 'should get show with staffing debts and maintenance debts' do
