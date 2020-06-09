@@ -32,6 +32,16 @@ class Admin::MembershipControllerTest < ActionController::TestCase
     assert_equal '{"response":"Dennis Donkey is a current member","image":"/avatars/original/missing.png"}', response.body
   end
 
+  test 'search for a DM Trained user' do
+    user = FactoryBot.create(:user, first_name: 'Finbar', last_name: 'the Viking')
+
+    user.add_role 'DM Trained'
+    user.add_role :member
+
+    get :check_membership, params: { search: user.first_name }
+    assert_match 'Finbar the Viking is a current member and is DM trained', response.body
+  end
+
   test 'search for invalid user' do
     get :check_membership, params: { search: 'pineapple is not a name for a human' }
     assert_response :not_found
