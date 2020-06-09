@@ -28,3 +28,8 @@ assign_roles:
   id: 6
   action: assign_roles
   subject_class: User
+
+can_sign_up_for_staffing:
+  id: 7
+  action: sign_up_for
+  subject_class: Admin::StaffingJob

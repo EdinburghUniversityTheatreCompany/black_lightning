@@ -28,3 +28,7 @@ commitee_read_roles:
 commitee_can_assign_roles:
   role_id:       2
   permission_id: 6
+
+member_can_sign_up_for_staffing:
+  role_id:       2
+  permission_id: 7

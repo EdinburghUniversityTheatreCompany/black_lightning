@@ -39,7 +39,7 @@ class Admin::StaffingsController < AdminController
   def grid
     @staffings = @staffings.includes(:staffing_jobs, staffing_jobs: :user).where(slug: params[:slug])
 
-    @can_sign_up = check_if_current_user_can_sign_up
+    @can_sign_up = helpers.check_if_current_user_can_sign_up(current_user)
 
     @title = "Staffing for #{@staffings.empty? ? 'Nothing' : @staffings.first.show_title}"
 
@@ -79,7 +79,7 @@ class Admin::StaffingsController < AdminController
   def show
     @title = "Staffing for #{@staffing.show_title}"
 
-    @can_sign_up = check_if_current_user_can_sign_up
+    @can_sign_up = helpers.check_if_current_user_can_sign_up(current_user)
 
     respond_to do |format|
       format.html # show.html.erb
@@ -213,15 +213,15 @@ class Admin::StaffingsController < AdminController
   def sign_up_confirm
     @title = 'Confirm Staffing'
 
-    @can_sign_up = check_if_current_user_can_sign_up
-
     @job = Admin::StaffingJob.find(params[:id])
 
+    @can_sign_up = helpers.check_if_current_user_can_sign_up(current_user)
+
     respond_to do |format|
-      if @can_sign_up
+      if helpers.check_if_current_user_can_sign_up(current_user, @job.name)
         format.html # render sign_up_confirm.html.erb
       else
-        flash[:error] = 'You cannot sign up for staffings. Have you set a phone number?'
+        helpers.append_to_flash(:error, 'You cannot sign up for staffings. Have you set a phone number?')
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         format.json { render json: @job.errors, status: :unprocessable_entity }
       end
@@ -246,13 +246,13 @@ class Admin::StaffingsController < AdminController
       helpers.append_to_flash(:error, 'You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.')
     end
 
-    unless check_if_current_user_can_sign_up
+    unless helpers.check_if_current_user_can_sign_up(current_user, @job.name)
       helpers.append_to_flash(:error, 'You cannot sign up for staffings. Have you set a phone number?')
     end
 
     respond_to do |format|
       if flash[:error].blank? && @job.save
-        flash[:success] = "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name} on #{(l @job.staffable.start_time, format: :short)}."
+        helpers.append_to_flash(:success, "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name} on #{(l @job.staffable.start_time, format: :short)}.")
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
       else
@@ -289,10 +289,6 @@ class Admin::StaffingsController < AdminController
     now = Time.now
     @default_start_time = Time.new(now.year, now.month, now.day, 18, 0, 0)
     @default_end_time = @default_start_time + 3.hours
-  end
-
-  def check_if_current_user_can_sign_up
-    return (can? :sign_up_for, Admin::StaffingJob) && !current_user.phone_number.blank?
   end
 
   def staffing_params
