@@ -21,7 +21,7 @@ class ShowTest < ActiveSupport::TestCase
 
     assert_equal due_by, maintenance_debt.due_by
     assert_equal show.users.first, maintenance_debt.user
-    assert_equal 'uncompleted', maintenance_debt.state
+    assert_equal 'unfulfilled', maintenance_debt.state
     assert_equal show, maintenance_debt.show
   end
 

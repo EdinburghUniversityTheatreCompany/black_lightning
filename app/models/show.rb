@@ -51,8 +51,8 @@ class Show < Event
         show: self,
         user: user,
         due_by: maintenance_debt_start,
-        state: :uncompleted
-      )
+          state: :unfulfilled
+        )
     end
   end
 

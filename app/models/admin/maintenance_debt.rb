@@ -16,7 +16,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
 
   validates :due_by, :show_id, :user_id, presence: true
 
-  enum state: %i[uncompleted converted completed]
+  enum state: %i[unfulfilled converted completed]
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
 
@@ -37,7 +37,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
       return :converted
     when 'completed'
       return :completed
-    when 'uncompleted' then
+    when 'unfulfilled' then
       if due_by < on_date
         :causing_debt
       else
