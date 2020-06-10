@@ -31,6 +31,8 @@ gem 'daemons'
 gem 'caxlsx'
 gem 'prawn'
 gem 'rqrcode'
+
+gem 'image_processing'
 gem 'mini_magick'
 
 gem 'chronic'

@@ -233,7 +233,10 @@ ChaosRails::Application.routes.draw do
   get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
 
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.
-  get '/*page', to: 'static#show', as: :static
+  get '/*page', to: 'static#show', as: :static, constraints: lambda { |req| 
+    # Exclude active_storage paths from being redirected to the 404 page.
+    req.path.exclude? 'rails/active_storage'
+  }
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

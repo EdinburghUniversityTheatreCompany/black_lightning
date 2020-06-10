@@ -17,7 +17,7 @@
 
 <p>
   <b>Image:</b>
-  <%= image_tag @venue.image.url(:thumb) %>
+  <%= image_tag @venue.image.variant(slideshow_variant) %>
 </p>
 
 <p>

@@ -24,6 +24,9 @@
 #Ignore uploads
 /uploads/
 
+# Ignore storage for ActiveStorage
+/storage/
+
 #Ignore precompiled assets
 /public/assets
 
