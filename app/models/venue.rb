@@ -36,11 +36,13 @@ class Venue < ApplicationRecord
   has_many :pictures, as: :gallery
 
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
-
-  has_attached_file :image,
-                    styles: { thumb: '192x100#', slideshow: '960x500#' },
-                    convert_options: { thumb: '-quality 75 -strip' },
-                    default_url: '/images/bedlam.png'
+  
+  # TODO AFTER MIGRATION: Remove the paperclip bit
+  if ActiveStorage::Attachment.where(record_type: 'Venue').empty?
+    has_attached_file :image
+  else
+    has_one_attached :image
+  end
 
   def to_param
     return "#{id}-#{name.to_url}"
