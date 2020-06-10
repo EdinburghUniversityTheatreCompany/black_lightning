@@ -25,5 +25,4 @@
   <%= render_markdown @venue.description %>
 </p>
 
-<%= get_link @venue, :edit, html_class: 'btn btn-primary' %>
-<%= get_link Venue, :new, html_class: 'btn' %>
+<%= render 'shared/show_actions', object: @venue %>
