@@ -2,7 +2,7 @@
   <!-- Carousel items -->
   <div class="carousel-inner">
     <div class="active item">
-      <%= image_tag(@venue.image.variant(slideshow_variant) || 'bedlam.jpg') %>
+      <%= image_tag(@venue.image&.variant(slideshow_variant) || 'bedlam.jpg') %>
       <div class="carousel-caption">
         <h1><%= @venue.name %></h1>
         <p><%= @venue.tagline %></p>

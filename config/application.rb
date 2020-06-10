@@ -16,6 +16,8 @@ require "action_cable/engine"
 require "sprockets/railtie"
 require "rails/test_unit/railtie"
 
+require "image_processing/mini_magick"
+
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
@@ -56,6 +58,8 @@ module ChaosRails
     config.active_job.queue_adapter = :delayed_job
 
     config.action_mailer.default_url_options = { host: 'www.bedlamtheatre.co.uk' }
+
+    config.active_storage.variant_processor = :image_magick
 
     if Rails.application.secrets.honeybadger
       Honeybadger.configure do |config|
