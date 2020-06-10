@@ -10,6 +10,14 @@ class Tasks::Logic::Migrations
 
     return counter
   end
+
+  def self.venue_image
+    model = Venue
+    attachments = ['image']
+
+    migrate_from_paperclip_to_active_storage(model, attachments)
+  end
+
   private
   
   def self.key(instance, attachment)
