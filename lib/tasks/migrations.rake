@@ -15,6 +15,16 @@ namespace :migrations do
       Tasks::Logic::Migrations.venue_image
       p 'Migrated all Venue images.'
     end
+
+    desc 'Migrate the Venue image from Paperclip to ActiveStorage'
+    task user_avatar: :environment do
+      model = User
+      attachments = ['avatar']
+
+      migrate_from_paperclip_to_active_storage(model, attachments)
+
+      p 'Migrated all User avatars.'
+    end
   end
   # :nocov:
 end

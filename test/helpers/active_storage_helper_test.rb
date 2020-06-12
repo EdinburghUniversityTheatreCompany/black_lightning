@@ -9,7 +9,7 @@ class ActiveStorageHelperTest < ActionView::TestCase
       end
     end
 
-    assert blob.filename = 'active_storage_default_bedlam.png'
+    assert blob.filename = 'active_storage_default/bedlam.png'
 
     assert_no_difference('ActiveStorage::Attachment.count') do
       assert_no_difference('ActiveStorage::Blob.count') do
