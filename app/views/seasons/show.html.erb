@@ -15,7 +15,7 @@
       <% events_by_day.each do |event|%>
       <div class="accordion-group">
         <div class="accordion-heading clearfix">
-          <% image = image_tag event.image.url(:thumb) %>
+          <% image = image_tag event.fetch_image.variant(thumb_variant) %>
           <%= link_to image, event, class: "pull-right thumbnail" %>
 
           <h4><%= link_to event.name, event %></h4>

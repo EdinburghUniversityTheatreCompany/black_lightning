@@ -7,7 +7,7 @@
 
     <% @workshops.each do |workshop| %>
     <article class="media">
-      <% image = image_tag workshop.image.url(:thumb), class: "media-object" %>
+      <% image = image_tag workshop.fetch_image.variant(thumb_variant), class: "media-object" %>
       <%= link_to image, workshop, class: "pull-left thumbnail" %>
       <div class="media-body">
         <header class="media-heading">

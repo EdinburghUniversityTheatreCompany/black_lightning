@@ -5,7 +5,7 @@
 
     <% @events.each do |event| %>
       <article class="media">
-        <% image = image_tag event.image.url(:thumb), class: "media-object" %>
+        <% image = image_tag event.fetch_image.variant(thumb_variant), class: "media-object" %>
         <%= link_to image, event, class: "pull-left thumbnail" %>
         <div class="media-body">
           <header class="media-heading">

@@ -12,7 +12,7 @@
                 <p><%= show.tagline %> - <b><span class="show-date"><%= show.date_range true %></span></b></p>
               </div>
             <% else %>
-              <%= link_to (image_tag show.image.url(:slideshow)).html_safe, show_path(show) %>
+              <%= link_to (image_tag show.fetch_image.variant(slideshow_variant)).html_safe, show_path(show) %>
               <div class="carousel-caption">
                 <%
                   caption_text = "<h4>#{show.name}</h4>"
@@ -98,7 +98,7 @@
     <h3><%= link_to "Archives", archives_index_path %></h3>
     <% if @last_show %>
       <%= link_to @last_show.name, @last_show %>
-      <% image = image_tag @last_show.image.url(:medium) %>
+      <% image = image_tag @last_show.fetch_image.variant(medium_variant) %>
       <%= link_to image, @last_show, class: "thumbnail" unless mobile_device? %>
     <% end %>
   </div>

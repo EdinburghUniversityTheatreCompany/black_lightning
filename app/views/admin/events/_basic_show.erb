@@ -67,7 +67,7 @@
 <p>
   <b>Image:</b>
   <% if event.image.present? %>
-    <p><%= image_tag event.image.url(:slideshow) %></p>
+    <p><%= image_tag event.fetch_image.variant(slideshow_variant) %></p>
   <% else %>
     No image
   <% end %>

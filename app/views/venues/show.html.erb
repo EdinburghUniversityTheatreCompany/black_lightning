@@ -62,7 +62,7 @@
   <% @current_shows.each do |show| %>
     <div class="span4">
       <div>
-        <%= link_to (image_tag show.image.url(:medium)), show_path(show) %>
+        <%= link_to (image_tag show.fetch_image.variant(medium_variant)), show_path(show) %>
         <h4><%= link_to show.name, show_path(show) %></h4>
         <p><%= show.tagline %> <%= link_to 'Read More', show_path(show) %></p>
       </div>

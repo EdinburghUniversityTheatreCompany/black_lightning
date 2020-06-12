@@ -7,7 +7,7 @@
 
     <% @shows.each do |show| %>
     <article class="media">
-      <% image = image_tag show.image.url(:thumb), class: "media-object" %>
+      <% image = image_tag show.fetch_image.variant(thumb_variant), class: "media-object" %>
       <%= link_to image, show, class: "pull-left thumbnail" %>
       <div class="media-body">
         <header class="media-heading">

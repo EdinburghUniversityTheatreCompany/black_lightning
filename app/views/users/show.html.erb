@@ -28,7 +28,7 @@
         <% end %>
               <li class="span3">
                 <div class="thumbnail">
-                  <% img = image_tag item.teamwork.image.url(:medium) %>
+                  <% img = image_tag item.teamwork.fetch_image.variant(medium_variant) %>
                   <% url = @link_to_admin_events ? [:admin, item.teamwork] : item.teamwork %>
 
                   <%= link_to img, url %>

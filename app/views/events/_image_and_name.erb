@@ -2,7 +2,7 @@
   <!-- Carousel items -->
   <div class="carousel-inner">
     <div class="active item">
-      <%= image_tag event.image.url(:slideshow) %>
+      <%= image_tag event.fetch_image.variant(slideshow_variant) %>
       <div class="carousel-caption">
         <h1><%= event.name %></h1>
         <p> <%= event.tagline %>
