@@ -61,13 +61,8 @@ class Event < ApplicationRecord
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
 
-  # Paperclip #
-  has_attached_file :image,
-                    styles: { medium: '576x300#', thumb: '192x100#', slideshow: '960x500#' },
-                    convert_options: { medium: '-strip', thumb: '-quality 75 -strip' },
-                    default_url: :default_image
-
-  validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
+  # ActiveStorage #
+  has_one_attached :image
 
   # Scopes #
 
@@ -93,9 +88,11 @@ class Event < ApplicationRecord
   #
   # NOTE: The first image must have filename 0.png - remember that in modulo 4 (for example), valid numbers are 0,1,2,3 (not 4)!
   ##
-  def default_image
+  def fetch_image
     number = id.modulo(4)
-    return "/images/generic_shows/:style/#{number}.png"
+    image.attach(ApplicationController.helpers.default_image_blob("events/#{number}.png")) unless image.attached? 
+
+    return image
   end
 
   ##
