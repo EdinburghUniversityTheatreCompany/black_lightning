@@ -10,7 +10,7 @@ class VenuesController < ApplicationController
   ##
   def index
     @title = 'Venues'
-    @venues = @venues.paginate(page: params[:page], per_page: 20)
+    @venues = @venues.includes(image_attachment: :blob).paginate(page: params[:page], per_page: 20)
 
     respond_to do |format|
       format.html # index.html.erb

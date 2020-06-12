@@ -12,8 +12,6 @@ class Admin::VenuesController < AdminController
   def index
     @title = 'Venues'
 
-    @venues.includes(image_attachment: :blob)
-
     respond_to do |format|
       format.html # index.html.erb
       format.json { render json: @venues }
