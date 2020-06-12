@@ -6,7 +6,7 @@ Run the following command in the rails console and make sure it returns exactly 
 If it does not return one result, there is a duplicate blob and you have to carefully check which ones you need to delete.
 
 If it does, you can run:
-> blob = ActiveStorage::Blob.find_by(filename: 'active_storage_default-<filename>.<extension>)
+> blob = ActiveStorage::Blob.find_by(filename: 'active_storage_default/<filename>.<extension>)
 
 You first have to delete all related attachments. You can do this by running:
 > attachments = ActiveStorage::Attachment.where(blob_id: blob)
