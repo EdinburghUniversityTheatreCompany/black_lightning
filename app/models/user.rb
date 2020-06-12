@@ -63,9 +63,7 @@ class User < ApplicationRecord
   has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt'
   has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification'
 
-  has_attached_file :avatar,
-                    styles: { thumb: '150x150', display: '700x700' },
-                    convert_options: { thumb: '-strip' }
+  has_one_attached :avatar
 
   default_scope -> { order('last_name ASC') }
 

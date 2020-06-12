@@ -29,7 +29,7 @@ class Admin::MembershipControllerTest < ActionController::TestCase
     user.add_role :member
 
     get :check_membership, params: { search: user.first_name.last + ' ' + user.last_name.first }
-    assert_equal '{"response":"Dennis Donkey is a current member","image":"/avatars/original/missing.png"}', response.body
+    assert_equal '{"response":"Dennis Donkey is a current member","image":""}', response.body
   end
 
   test 'search for a DM Trained user' do

@@ -35,7 +35,13 @@ class Admin::MembershipController < AdminController
         message =  user.name(current_user) + ' is a current member'
       end
 
-      render json: { response: message, image: user.avatar.url }
+      image_url = if user.avatar.attached?
+        user.avatar.url
+      else
+        ''
+      end
+
+      render json: { response: message, image: image_url }
     else
       render json: { response: user.name(current_user) + ' is not a current member' }, status: :payment_required
     end

@@ -3,12 +3,13 @@
 <hr />
 
 <div class="row vertical-rule">
-  <div class="span<%= @user.avatar.present? ? '9' : '12' %>">
+  <div class="span<%= @user.avatar.attached? ? '9' : '12' %>">
     <%= render_markdown @user.bio %>
   </div>
-  <% if @user.avatar.present? %>
+  <% if @user.avatar.attached? %>
     <div class="span3">
-      <%= image_tag @user.avatar.url(:thumb), class: "thumbnail zoomable" %>
+      <% # not a fetch_avatar call.%>
+      <%= image_tag @user.avatar.variant(square_thumb_variant), class: "thumbnail zoomable" %>
     </div>
   <% end%>
 </div>
