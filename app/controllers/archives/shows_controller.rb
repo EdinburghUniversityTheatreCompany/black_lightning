@@ -10,7 +10,7 @@ class Archives::ShowsController < ArchivesController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @shows, methods: [:thumb_image, :slideshow_image] }
+      format.json { render json: @shows, methods: [:thumb_image_url, :slideshow_image_url] }
     end
   end
 end

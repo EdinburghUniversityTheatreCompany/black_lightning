@@ -27,11 +27,11 @@ class ShowsController < ApplicationController
   def show
     @title = @show.name
     @meta[:description] = @show.description
-    @meta['og:image'] = [@base_url + @show.image.url(:medium)] + @show.pictures.collect { |p| @base_url + p.image.url }
+    @meta['og:image'] = [@base_url + @show.slideshow_image_url] + @show.pictures.collect { |p| @base_url + p.image.url }
 
     respond_to do |format|
       format.html
-      format.json { render json: @show, methods: [:thumb_image, :slideshow_image], include: [{ pictures: { methods: [:thumb_url, :image_url] } }, team_members: { methods: [:user_name] }] }
+      format.json { render json: @show, methods: [:thumb_image_url, :slideshow_image_url], include: [{ pictures: { methods: [:thumb_url, :image_url] } }, team_members: { methods: [:user_name] }] }
     end
   end
 end

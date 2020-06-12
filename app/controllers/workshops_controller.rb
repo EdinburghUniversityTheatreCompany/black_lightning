@@ -27,7 +27,8 @@ class WorkshopsController < ApplicationController
   def show
     @title = @workshop.name
     @meta[:description] = @workshop.description
-    @meta['og:image'] = [@base_url + @workshop.image.url(:medium)] + @workshop.pictures.collect { |p| @base_url + p.image.url }
+
+    @meta['og:image'] = [@base_url + @workshop.slideshow_image_url] + @workshop.pictures.collect { |p| @base_url + p.image.url }
 
     respond_to do |format|
       format.html

@@ -28,17 +28,18 @@ class EventTest < ActionView::TestCase
     assert_not_includes Event.this_year, future_workshop
   end
 
-  test 'thumb_image' do
-    assert_includes @event.thumb_image, '/images/generic_shows/thumb/'
+  test 'thumb_image_url' do
+    assert_includes @event.thumb_image_url, 'active_storage_default-events-'
   end
 
-  test 'slideshow_image' do
-    assert_includes @event.slideshow_image, '/images/generic_shows/slideshow/'
+  test 'slideshow_image_url' do
+    assert_includes @event.slideshow_image_url, 'active_storage_default-events-'
   end
 
   test 'date_range' do
     assert_equal time_range_string(@event.start_date, @event.end_date, true), @event.date_range(true)
   end
+
   test 'simultaneous seasons' do
     season = FactoryBot.create(:season)
     assert_includes season.simultaneous_seasons, season

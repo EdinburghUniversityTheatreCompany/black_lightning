@@ -98,15 +98,15 @@ class Event < ApplicationRecord
   ##
   # Returns the url of the slideshow image
   ##
-  def thumb_image
-    return image.url(:thumb)
+  def thumb_image_url
+    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.slideshow_variant).processed, only_path: true)
   end
 
   ##
   # Returns the url of the slideshow image
   ##
-  def slideshow_image
-    return image.url(:slideshow)
+  def slideshow_image_url
+    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.slideshow_variant).processed, only_path: true)
   end
 
   ##
