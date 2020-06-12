@@ -39,4 +39,14 @@ class ActiveStorageHelperTest < ActionView::TestCase
     assert thumb_variant.is_a? Hash
     assert thumb_variant.values.first.is_a? Array
   end
+
+  test 'square_display_variant' do
+    assert square_display_variant.is_a? Hash
+    assert square_display_variant.values.first.is_a? Array
+  end
+
+  test 'square_thumb_variant' do
+    assert square_thumb_variant.is_a? Hash
+    assert square_thumb_variant.values.first.is_a? Array
+  end
 end

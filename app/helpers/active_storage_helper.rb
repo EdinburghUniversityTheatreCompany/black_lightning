@@ -31,4 +31,12 @@ module ActiveStorageHelper
   def slideshow_variant
     return { resize_to_fill: [960, 500] }
   end
+
+  def square_thumb_variant
+    return { resize_to_fill: [150, 150] }
+  end
+
+  def square_display_variant
+    return { resize_to_fill: [700, 700] }
+  end
 end
