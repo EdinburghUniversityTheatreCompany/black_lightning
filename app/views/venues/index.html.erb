@@ -4,7 +4,7 @@
 
   <% @venues.each do |venue| %>
   <article class="media">
-    <% image = image_tag venue.image.variant(thumb_variant), class: "media-object" if venue.image.attached? %>
+    <% image = image_tag venue.fetch_image.variant(thumb_variant), class: "media-object" %>
     <%= link_to image, venue, class: "pull-left thumbnail" %>
     <div class="media-body">
       <header class="media-heading">

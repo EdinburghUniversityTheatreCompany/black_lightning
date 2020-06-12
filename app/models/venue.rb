@@ -39,6 +39,12 @@ class Venue < ApplicationRecord
   
   has_one_attached :image
 
+  def fetch_image
+    image.attach(ApplicationController.helpers.default_image_blob('bedlam.png')) unless image.attached? 
+
+    return image
+  end
+
   def to_param
     return "#{id}-#{name.to_url}"
   end

@@ -1,0 +1,20 @@
+This is because of the way ActiveStorage's blobs work.
+
+Run the following command in the rails console and make sure it returns exactly one result:
+> ActiveStorage::Blob.where(filename: 'default-<filename>.<extension>')
+
+If it does not return one result, there is a duplicate blob and you have to carefully check which ones you need to delete.
+
+If it does, you can run:
+> blob = ActiveStorage::Blob.find_by(filename: 'active_storage_default-<filename>.<extension>)
+
+You first have to delete all related attachments. You can do this by running:
+> attachments = ActiveStorage::Attachment.where(blob_id: blob)
+> attachments.delete_all
+
+Then you can delete the blob:
+> blob.delete
+
+As long as you update the new default url on the model, it should be fine and it will load the new default image automatically.
+
+Please note that the default_image_blob in the active_storage_helper looks for defaults with the assets/images/defaults (aka the current folder) as its root.
