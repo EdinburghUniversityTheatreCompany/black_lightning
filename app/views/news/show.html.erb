@@ -7,7 +7,7 @@
         </p>
     </header>
 
-    <%= image_tag @news.image.url(:medium), class: "float-right span3" %>
+    <%= image_tag @news.fetch_image.variant(medium_variant), class: "float-right span3" %>
 
     <div><%= render_markdown @news.body %></div>
 

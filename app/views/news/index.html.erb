@@ -6,7 +6,7 @@
 
     <% @news.each do |news| %>
     <article class="media">
-      <% image = image_tag news.image.url(:thumb), class: "media-object" %>
+      <% image = image_tag news.fetch_image.variant(thumb_variant), class: "media-object" %>
       <%= link_to image, news, class: "pull-left thumbnail" %>
       <div class="media-body">
         <header class="media-heading">
