@@ -37,7 +37,7 @@ namespace :migrations do
     end
 
     desc 'Migrate the Event image from Paperclip to ActiveStorage'
-    task show_image: :environment do
+    task event_image: :environment do
       model = Event
       attachments = ['image']
 
