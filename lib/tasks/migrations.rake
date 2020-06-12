@@ -21,7 +21,7 @@ namespace :migrations do
       model = User
       attachments = ['avatar']
 
-      migrate_from_paperclip_to_active_storage(model, attachments)
+      Tasks::Logic::Migrations.migrate_from_paperclip_to_active_storage(model, attachments)
 
       p 'Migrated all User avatars.'
     end

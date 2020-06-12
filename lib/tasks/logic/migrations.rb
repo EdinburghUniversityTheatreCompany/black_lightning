@@ -18,18 +18,6 @@ class Tasks::Logic::Migrations
     migrate_from_paperclip_to_active_storage(model, attachments)
   end
 
-  private
-  
-  def self.key(instance, attachment)
-    SecureRandom.uuid
-  end
-
-  def self.checksum(attachment)
-    # local files stored on disk:
-    url = attachment.path
-    Digest::MD5.base64digest(File.read(url))
-  end
-
   def self.migrate_from_paperclip_to_active_storage(model, attachments)
     model.find_each.each do |instance|
       attachments.each do |attachment|
@@ -59,6 +47,19 @@ class Tasks::Logic::Migrations
         )
       end
     end
+  end
+
+
+  private
+  
+  def self.key(instance, attachment)
+    SecureRandom.uuid
+  end
+
+  def self.checksum(attachment)
+    # local files stored on disk:
+    url = attachment.path
+    Digest::MD5.base64digest(File.read(url))
   end
 
   def self.copy_file_from_paperclip_to_storage(name, blob, instance)
