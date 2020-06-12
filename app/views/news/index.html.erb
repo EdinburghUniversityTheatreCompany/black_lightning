@@ -12,7 +12,7 @@
         <header class="media-heading">
             <h4 class="media-heading"><%= link_to news.title, news %></h4>
         </header>
-        <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, format: :long %></time></p>
+        <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, format: :longy %></time></p>
         <%= raw generate_preview render_markdown news.body %>
         <p><%= link_to 'View Full Article', news %></p>
       </div>
