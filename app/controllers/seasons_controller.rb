@@ -3,7 +3,9 @@ class SeasonsController < ApplicationController
 
   # GET /seasons/
   def index
-    @events = @seasons.paginate(page: params[:page], per_page: 10).current
+    @events = @seasons.includes(image_attachment: :blob)
+                      .paginate(page: params[:page], per_page: 10)
+                      .current
 
     @title = 'Seasons'
 

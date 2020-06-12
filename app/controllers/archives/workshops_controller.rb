@@ -2,8 +2,10 @@ class Archives::WorkshopsController < ArchivesController
   def index
     @q = Workshop.ransack(params[:q])
     @workshops = @q.result(distinct: true)
-                 .paginate(page: params[:page], per_page: 5)
-                 .where(is_public: true)
+                   .where(is_public: true)
+                   .includes(image_attachment: :blob)
+                   .paginate(page: params[:page], per_page: 5)
+                 
 
     respond_to do |format|
       format.html # index.html.erb

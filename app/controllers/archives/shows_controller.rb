@@ -2,7 +2,8 @@ class Archives::ShowsController < ArchivesController
   def index
     @q = Show.ransack(params[:q])
     @shows = @q.result(distinct: true)
-             .where(is_public: true)
+               .includes(image_attachment: :blob)
+               .where(is_public: true)
 
     response.headers['X-Total-Count'] = @shows.count.to_s
 

@@ -13,7 +13,9 @@ class ShowsController < ApplicationController
   def index
     @title = 'Shows'
 
-    @events = @shows.current.paginate(page: params[:page], per_page: 5)
+    @events = @shows.includes(image_attachment: :blob)
+                    .current
+                    .paginate(page: params[:page], per_page: 5)
 
     respond_to do |format|
       format.html { render '/events/index' }

@@ -11,7 +11,10 @@ class WorkshopsController < ApplicationController
   # GET /workshops.json
   ##
   def index
-    @events = @workshops.paginate(page: params[:page], per_page: 10).current.order('start_date ASC')
+    @events = @workshops.includes(image_attachment: :blob)
+                        .paginate(page: params[:page], per_page: 10)
+                        .current
+                        .order('start_date ASC')
 
     @title = 'Workshops'
 
