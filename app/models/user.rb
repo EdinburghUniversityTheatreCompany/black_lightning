@@ -51,20 +51,18 @@ class User < ApplicationRecord
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
   validates :email, presence: true
 
-  has_one :membership_activation_token, dependent: :destroy
-  has_one :debt_notification, dependent: :destroy, class_name: 'Admin::DebtNotification'
-
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
   accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true
 
-  has_many :team_membership, class_name: 'TeamMember'
+  has_many :team_membership, class_name: 'TeamMember', dependent: :restrict_with_exception 
   has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
-  has_many :staffing_jobs, class_name: 'Admin::StaffingJob'
+  has_many :staffing_jobs, class_name: 'Admin::StaffingJob', dependent: :restrict_with_exception 
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
-  has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt'
-  has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt'
-  has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification'
+  has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt', dependent: :restrict_with_exception 
+  has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt', dependent: :restrict_with_exception 
+  has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification', dependent: :destroy
+  has_many :membership_activation_tokens, class_name: 'MembershipActivationToken', dependent: :destroy
 
   has_one_attached :avatar
 
