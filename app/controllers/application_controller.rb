@@ -58,7 +58,7 @@ class ApplicationController < ActionController::Base
 
     flash[:error] = exception.message.gsub Rails.root.to_s, ''
 
-    redirect_to static_path('500', params[:format])
+    return redirect_to static_path('500', params[:format])
   end
 
   private

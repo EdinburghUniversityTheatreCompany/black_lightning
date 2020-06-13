@@ -38,7 +38,7 @@ class StaticController < ApplicationController
     respond_to do |type|
       type.html { render template: 'static/500', status: 500, layout: helpers.current_environment }
       type.json { render json: { error: flash[:error] }, status: 500 }
-      type.all  { render nothing: true, status: 500 }
+      type.all  { render body: nil, status: 500 }
     end
   end
 end
