@@ -30,6 +30,29 @@ class ActiveStorageHelperTest < ActionView::TestCase
     end
   end
 
+  test 'get file attached hint without file attached' do
+    show = FactoryBot.create(:show)
+
+    assert_not show.image.attached?
+    assert_nil get_file_attached_hint(show.image)
+  end
+
+  test 'get file attached hint with default file attached' do
+    news = FactoryBot.create(:news)
+    news.image.attach(default_image_blob('bedlam.png'))
+
+    assert news.image.attached?
+    assert_nil get_file_attached_hint(news.image)
+  end
+
+  test 'get file attached hint with file attached' do
+    user = FactoryBot.create(:user)
+    user.avatar.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png')
+    
+    assert user.avatar.attached?
+    assert_equal 'The message next to the button is wrong. Current file: test.png', get_file_attached_hint(user.avatar)
+  end
+
   test 'slideshow_variant' do
     assert slideshow_variant.is_a? Hash
     assert slideshow_variant.values.first.is_a? Array

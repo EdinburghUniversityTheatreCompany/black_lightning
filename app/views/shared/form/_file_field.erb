@@ -1,0 +1,16 @@
+<% # Bit hacky, but by default the field always says it does not have an image attached %>
+
+<% file = f.object.send(field_name) %>
+
+<% has_file_attached_hint = get_file_attached_hint(file) # ActiveStorageHelper %>
+
+
+<% hint = nil if hint.nil? %>
+
+<% if hint.nil? %>
+  <% hint = has_file_attached_hint %>
+<% else %>
+  <% hint = "#{hint}<br><br>#{has_file_attached_hint}".html_safe %>
+<% end %>
+
+<%= f.input field_name, hint: hint %>

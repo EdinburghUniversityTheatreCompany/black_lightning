@@ -15,7 +15,7 @@
 
     <%= render '/shared/form/public_private_switch', f: f, field_symbol: :show_public %>
 
-    <%= f.input :image %>
+    <%= render 'shared/form/file_field', f: f, field_name: :image %>
   </div>
 
   <%= render '/shared/form/form_actions', f: f %>

@@ -1,11 +1,11 @@
 module ActiveStorageHelper
-  # Please change the note in the assets/images/defaults folder if you change this.
-  def default_image_blob(default_image_filename)
-    prefix = 'active_storage_default'.freeze
+  # Please change the note in the assets/images/defaults folder if you change this or the key_filename.
+  PREFIX = 'active_storage_default'.freeze
 
+  def default_image_blob(default_image_filename)
     # Use a slash so user uploaded files are very unlikely to match.
-    # It's not an issue if they do match, but it makes life harder when you want to replace the default image.
-    key_filename = "#{prefix}/#{default_image_filename}"
+    # It's not an issue if they do match, but it makes life a little bit harder when you want to replace the default image.
+    key_filename = "#{PREFIX}/#{default_image_filename}"
 
     blob = ActiveStorage::Blob.find_by(filename: key_filename)
 
@@ -22,6 +22,21 @@ module ActiveStorageHelper
     end
     
     return blob
+  end
+
+  def get_file_attached_hint(file)
+    # nil because the message next to the button also displays 'No file chosen'
+    if file.attached? 
+      filename = file.filename.to_s
+
+      if filename.starts_with?(PREFIX) 
+        hint = nil
+      else 
+        hint = "The message next to the button is wrong. Current file: #{filename}" 
+      end
+    else
+      hint = nil
+    end
   end
 
   def thumb_variant
