@@ -71,7 +71,10 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   test 'should not get new when there are no future shows' do
-    Show.all.destroy_all
+    Show.all.delete_all
+
+    assert Show.all.empty?
+
     get :new
     assert_redirected_to admin_questionnaires_questionnaires_path
   end

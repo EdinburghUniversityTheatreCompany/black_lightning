@@ -47,13 +47,23 @@ class Admin::AdminHelperTest < ActionView::TestCase
     end
   end
 
-  test 'Cannot destroy_with_flash_message for invalid object' do
+  test 'destroy_with_flash_message for invalid object adds errors to flash' do
     @mass_mail = FactoryBot.create(:sent_mass_mail)
 
     assert_not destroy_with_flash_message(@mass_mail, condition: true)
 
-    assert_equal(["The Mass Mail \"#{@mass_mail.subject}\" could not be destroyed.",  *@mass_mail.errors.messages[:destroy]], flash[:error])
+    assert_equal(["The Mass Mail \"#{@mass_mail.subject}\" could not be destroyed."] + @mass_mail.errors.messages[:destroy], flash[:error])
     assert_nil flash[:success]
+  end
+
+  test 'destroy_with_flash_message for object with restrict_with_error does not destroy the object' do
+    @proposal = FactoryBot.create(:proposal)
+
+    assert_no_difference 'Admin::Proposals::Proposal.count' do
+      assert_not destroy_with_flash_message(@proposal, condition: true)
+
+      assert_equal ["The Proposal \"#{@proposal.show_title}\" could not be destroyed."] + @proposal.errors.messages[:destroy], flash[:error]
+    end
   end
 
   test 'destroy_with_flash_message! for invalid object raises an error' do

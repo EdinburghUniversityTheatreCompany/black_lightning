@@ -136,14 +136,23 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+
   test 'should destroy show' do
-    @show = FactoryBot.create(:show)
+    @show = FactoryBot.create(:show, team_member_count: 0)
 
     assert_difference('Show.count', -1) do
       delete :destroy, params: { id: @show }
     end
 
     assert_redirected_to admin_shows_path
+  end
+
+  test 'should not destroy show with team members' do
+    @show = FactoryBot.create(:show, team_member_count: 1)
+
+    assert_no_difference 'Show.count' do
+      delete :destroy, params: { id: @show }
+    end
   end
 
   test 'should create maintenance debts' do

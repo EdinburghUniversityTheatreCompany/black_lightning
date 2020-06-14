@@ -51,9 +51,9 @@ class Event < ApplicationRecord
 
   # Relationships #
 
-  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :destroy
+  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
   has_many :users, through: :team_members
-  has_many :pictures, as: :gallery, dependent: :destroy
+  has_many :pictures, as: :gallery, dependent: :restrict_with_error
 
   belongs_to :venue, optional: true
   belongs_to :season, optional: true

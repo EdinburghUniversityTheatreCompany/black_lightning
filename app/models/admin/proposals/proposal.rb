@@ -37,7 +37,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   
   has_many :answers, as: :answerable
   has_many :questions, through: :answers
-  has_many :team_members, class_name: '::TeamMember', as: :teamwork
+  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
   has_many :users, through: :team_members
 
   accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
