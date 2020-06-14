@@ -45,6 +45,16 @@ namespace :migrations do
 
       p 'Migrated all Event images.'
     end
+
+    desc 'Migrate the Picture image from Paperclip to ActiveStorage'
+    task picture_image: :environment do
+      model = Picture
+      attachments = ['image']
+
+      Tasks::Logic::Migrations.migrate_from_paperclip_to_active_storage(model, attachments)
+
+      p 'Migrated all Picture images.'
+    end
   end
   # :nocov:
 end
