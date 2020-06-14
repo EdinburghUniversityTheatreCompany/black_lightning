@@ -24,8 +24,12 @@ FactoryBot.define do
     approved       { [true, nil, false].sample }
     call           { FactoryBot.create :proposal_call }
 
-    after(:build) do |proposal, _evaluator|
-      proposal.team_members << FactoryBot.build_list(:team_member, 5, teamwork: proposal)
+    transient do 
+      team_member_count { 5 }
+    end
+
+    after(:build) do |proposal, evaluator|
+      proposal.team_members << FactoryBot.build_list(:team_member, evaluator.team_member_count, teamwork: proposal)
     end
   end
 end

@@ -2,7 +2,11 @@ Dear <%= @user.first_name %>,
 
 You have been added as <%= @team_member.position %> to the proposal "<%= @proposal.show_title %>".
 
-The proposal was submitted by <%= @creator.name %>
+<% if @new %>
+  The proposal was submitted by <%= @updater.name %>.
+<% else %>
+  You have been added by <%= @updater.name %>.
+<% end %>
 
 You can view the proposal by visiting <%= admin_proposals_call_proposal_url(@proposal.call, @proposal) %>
 

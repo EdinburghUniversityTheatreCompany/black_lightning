@@ -69,17 +69,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     # You cannot just use attributes_for, and team_work does not actually get an user linked when using build.
     proposal = FactoryBot.build(:proposal)
 
-    attributes = proposal.attributes.except('id', 'call_id', 'created_at', 'updated_at')
-    attributes[:team_members_attributes] = {}
+    attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
 
     team_members_count = 4
-    team_members = FactoryBot.build_list(:team_member, team_members_count)
-
-    team_members.each_with_index do |team_member, index|
-      team_member_attributes = team_member.attributes.except('id', 'teamwork_id', 'teamwork_type', 'created_at', 'updated_at')
-      team_member_attributes[:user_id] = FactoryBot.create(:member).id
-      attributes[:team_members_attributes][index] = team_member_attributes
-    end
+    attributes[:team_members_attributes] = generate_team_member_attributes(team_members_count)
 
     assert_difference('Admin::Proposals::Proposal.count') do
       post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
@@ -123,12 +116,18 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'should update proposal' do
     sign_out @admin
     proposal = FactoryBot.create(:proposal, call: @call)
+
     proposal.users.first.add_role :admin
     sign_in proposal.users.first
 
-    attributes = FactoryBot.attributes_for(:proposal)
+    attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
+
+    team_members_count = 2
+    attributes[:team_members_attributes] = generate_team_member_attributes(team_members_count)
 
     put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+
+    assert_enqueued_emails team_members_count
 
     assert_not_nil assigns(:proposal), 'The update function did not set a proposal. There is probably something wrong with the authentication.'
 
@@ -152,7 +151,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should destroy admin_proposals_proposal' do
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, call: @call, team_member_count: 0)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do
       delete :destroy, params: { call_id: @call.id, id: proposal }
@@ -212,5 +211,20 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     get :about
 
     assert_response :success
+  end
+
+  private
+
+  def generate_team_member_attributes(count)
+    team_members_attributes = {}
+    team_members = FactoryBot.build_list(:team_member,count)
+
+    team_members.each_with_index do |team_member, index|
+      team_member_attributes = team_member.attributes.except('id', 'teamwork_id', 'teamwork_type', 'created_at', 'updated_at')
+      team_member_attributes[:user_id] = FactoryBot.create(:member).id
+      team_members_attributes[index] = team_member_attributes
+    end
+
+    return team_members_attributes
   end
 end

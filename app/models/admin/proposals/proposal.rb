@@ -32,7 +32,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
   has_paper_trail
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, presence: true
-  validates :team_members, presence: { message: 'You must add at least one team member' }
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
   

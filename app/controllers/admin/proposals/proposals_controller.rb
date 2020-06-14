@@ -79,7 +79,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     respond_to do |format|
       if @proposal.save
-        mail_team_members(@proposal.team_members, [])
+        mail_team_members(@proposal.team_members, [], true)
 
         flash[:success] = 'The proposal was successfully created.'
 
@@ -113,7 +113,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     respond_to do |format|
       if @proposal.update(proposal_params)
-        mail_team_members(@proposal.team_members, previous_team_member_ids)
+        mail_team_members(@proposal.team_members, previous_team_member_ids, false)
 
         flash[:success] = 'The proposal was successfully updated.'
 
@@ -213,10 +213,10 @@ class Admin::Proposals::ProposalsController < AdminController
     return
   end
 
-  def mail_team_members(current_team_members, previous_team_member_ids)
+  def mail_team_members(current_team_members, previous_team_member_ids, new)
     # Send the new proposal mail. See ProposalsMailer for more details.
-    current_team_members.select { |id| previous_team_member_ids.exclude? id }.each do |team_member|
-      ProposalsMailer.new_proposal(@proposal, current_user, team_member).deliver_later
+    current_team_members.select { |team_member| previous_team_member_ids.exclude?(team_member.id) }.each do |team_member|
+      ProposalsMailer.added_to_proposal(@proposal, current_user, team_member, new).deliver_later
     end
   end
 
