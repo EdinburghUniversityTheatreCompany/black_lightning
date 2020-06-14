@@ -59,4 +59,18 @@ FactoryBot.define do
 
   factory :workshop, parent: :event, class: Workshop do
   end
+
+  factory :season, parent: :event, class: Season do
+    transient do
+      event_count { 0 }
+      show_count { 0 }
+      workshop_count { 0 }
+    end
+
+    after(:create) do |season, evaluator|
+      create_list(:event, evaluator.event_count, season: season)
+      create_list(:show, evaluator.show_count, season: season)
+      create_list(:workshop, evaluator.workshop_count, season: season)
+    end
+  end
 end
