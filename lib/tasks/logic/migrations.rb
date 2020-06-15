@@ -23,6 +23,9 @@ class Tasks::Logic::Migrations
       attachments.each do |attachment|
         if instance.send(attachment).path.blank?
           next
+        elsif !File.file?(instance.send(attachment).path)
+          p "WARNING: #{instance.send(attachment).path} does not exist on disk."
+          next
         end
 
         p "Migrating #{attachment} for #{instance}"
