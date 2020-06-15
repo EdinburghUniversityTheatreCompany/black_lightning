@@ -42,4 +42,4 @@
   </div>
 <% end %>
 
-<%= render '/shared/gallery', pictures: @season.pictures %>
+<%= render '/shared/gallery', pictures: @season.pictures.includes(image_attachment: :blob) %>

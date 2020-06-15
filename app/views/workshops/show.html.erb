@@ -2,4 +2,4 @@
 
 <%= render '/events/description_and_team_members', event: @workshop %>
 
-<%= render '/shared/gallery', pictures: @workshop.pictures %>
+<%= render '/shared/gallery', pictures: @workshop.pictures.includes(image_attachment: :blob) %>

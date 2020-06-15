@@ -27,7 +27,6 @@ class VenuesController < ApplicationController
     @title = @venue.name
 
     @current_shows = @venue.shows.current.first(3)
-    @pictures = @venue.pictures.all
 
     respond_to do |format|
       format.html # show.html.erb

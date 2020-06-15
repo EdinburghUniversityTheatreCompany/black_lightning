@@ -7,6 +7,6 @@
   <p><%= render 'event_label', event: event %></p>
 <% end %>
 
-<%= render '/shared/gallery', pictures: @season.pictures %>
+<%= render '/shared/gallery', pictures: @season.pictures.includes(image_attachment: :blob) %>
 
 <%= render '/shared/show_actions', object: @season %>
