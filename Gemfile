@@ -11,6 +11,7 @@ gem 'coffee-rails'
 gem 'jquery-rails'
 gem 'bootstrap-sass', '< 3.0'
 gem 'font-awesome-sass'
+gem 'fancybox3'
 
 gem 'simple_form'
 gem 'devise'

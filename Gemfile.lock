@@ -134,6 +134,8 @@ GEM
       railties (>= 4.2.0)
     faker (2.12.0)
       i18n (>= 1.6, < 2)
+    fancybox3 (0.1.1)
+      rails (>= 5.0)
     ffi (1.13.0-x64-mingw32)
     ffi-compiler (1.0.1)
       ffi (>= 1.0.0)
@@ -382,6 +384,7 @@ DEPENDENCIES
   devise
   factory_bot_rails
   faker
+  fancybox3
   font-awesome-sass
   honeybadger (~> 4.0)
   html_acceptance
