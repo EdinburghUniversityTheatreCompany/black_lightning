@@ -138,7 +138,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
 
   test 'should destroy show' do
-    @show = FactoryBot.create(:show, team_member_count: 0)
+    @show = FactoryBot.create(:show, team_member_count: 0, picture_count: 0)
 
     assert_difference('Show.count', -1) do
       delete :destroy, params: { id: @show }
