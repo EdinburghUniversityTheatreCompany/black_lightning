@@ -55,6 +55,16 @@ namespace :migrations do
 
       p 'Migrated all Picture images.'
     end
+
+    desc 'Migrate the Attachment file from Paperclip to ActiveStorage'
+    task attachment_file: :environment do
+      model = Attachment
+      attachments = ['file']
+
+      Tasks::Logic::Migrations.migrate_from_paperclip_to_active_storage(model, attachments)
+
+      p 'Migrated all Attachment files.'
+    end
   end
   # :nocov:
 end
