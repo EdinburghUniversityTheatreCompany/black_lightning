@@ -36,7 +36,7 @@ class Admin::MembershipController < AdminController
       end
 
       image_url = if user.avatar.attached?
-        user.avatar.url
+        url_for(user.avatar)
       else
         ''
       end

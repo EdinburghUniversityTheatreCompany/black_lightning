@@ -17,6 +17,7 @@ class Admin::MembershipControllerTest < ActionController::TestCase
 
   test 'search for an user name' do
     user = FactoryBot.create(:user, first_name: 'Dennis', last_name: 'Donkey')
+    user.avatar.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png')
 
     not_found_response = '{"response":"Dennis Donkey is not a current member"}'
 
@@ -29,7 +30,8 @@ class Admin::MembershipControllerTest < ActionController::TestCase
     user.add_role :member
 
     get :check_membership, params: { search: user.first_name.last + ' ' + user.last_name.first }
-    assert_equal '{"response":"Dennis Donkey is a current member","image":""}', response.body
+    assert_match '{"response":"Dennis Donkey is a current member","image":"', response.body
+    assert_match 'test.png"}', response.body
   end
 
   test 'search for a DM Trained user' do
