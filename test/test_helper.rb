@@ -31,6 +31,7 @@ class ActiveSupport::TestCase
   fixtures :all
 
   teardown do
+    FileUtils.rm_rf(Rails.root.join('tmp', 'storage'))
     if ENV['VALIDATE']
       validate_html
     end
@@ -56,4 +57,8 @@ end
 class ActionController::TestCase
   include Devise::Test::ControllerHelpers
   include ActionMailer::TestHelper
+
+  teardown do
+    FileUtils.rm_rf(Rails.root.join('tmp', 'storage'))
+  end
 end
