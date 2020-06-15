@@ -1,11 +1,6 @@
 ##
 # Represents a picture in the polymorphic association <tt>gallery</tt>
 #
-# == Paperclip
-# Images are stored as:
-# * thumb   (192x100)
-# * display (700x700)
-#
 # == Schema Information
 #
 # Table name: pictures
@@ -27,17 +22,26 @@
 class Picture < ApplicationRecord
   belongs_to :gallery, polymorphic: true
 
-  has_attached_file :image,
-                    styles: { thumb: '192x100#', display: '700x700' },
-                    convert_options: { thumb: '-quality 75 -strip' }
+  has_one_attached :image
 
-  validates_attachment :image, content_type: { content_type: ["image/jpg", "image/jpeg", "image/png", "image/gif"] }
+  def fetch_image
+    image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached? 
 
-  def image_url
-    image.url(:original)
+    return image
   end
 
+  ##
+  # Returns the url of the slideshow image
+  ##
   def thumb_url
-    image.url(:thumb)
+    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.thumb_variant).processed, only_path: true)
+  end
+
+  ##
+  # Returns the url of the full-size image
+  ##
+  def display_url
+    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.square_display_variant).processed, only_path: true)
+
   end
 end

@@ -3,11 +3,14 @@
   
   <h3>Gallery</h3>
 
+  GAH, LIGHTBOX IS BROKEN!
   <ul class="lightbox thumbnails">
     <% pictures.each do |picture| %>
       <li class="span2 gallery">
-        <% img = image_tag picture.image.url(:thumb) %>
-        <%= link_to img, picture.image.url(:display), class: "thumbnail", title: (picture.description) %>
+        <% img = image_tag picture.fetch_image.variant(thumb_variant) %>
+        <% url = url_for(picture.fetch_image) %>
+        
+        <%= link_to img, url, class: "thumbnail", title: picture.description %>
       </li>
     <% end %>
   </ul>
