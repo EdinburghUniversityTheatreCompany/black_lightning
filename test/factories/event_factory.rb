@@ -38,11 +38,14 @@ FactoryBot.define do
     transient do
       team_member_count { 5 }
       picture_count { rand(3) }
+      attach_image { true }
     end
 
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
+
+      event.image.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png') if evaluator.attach_image && !event.image.attached?
     end
   end
 

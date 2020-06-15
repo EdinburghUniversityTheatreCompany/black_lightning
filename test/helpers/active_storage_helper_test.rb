@@ -31,7 +31,7 @@ class ActiveStorageHelperTest < ActionView::TestCase
   end
 
   test 'get file attached hint without file attached' do
-    show = FactoryBot.create(:show)
+    show = FactoryBot.create(:show, attach_image: false)
 
     assert_not show.image.attached?
     assert_nil get_file_attached_hint(show.image)

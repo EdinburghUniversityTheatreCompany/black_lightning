@@ -29,11 +29,13 @@ class EventTest < ActionView::TestCase
   end
 
   test 'thumb_image_url' do
-    assert_includes @event.thumb_image_url, 'active_storage_default-events-'
+    event = FactoryBot.create(:event, attach_image: false)
+    assert_includes event.thumb_image_url, 'active_storage_default-events-'
   end
 
   test 'slideshow_image_url' do
-    assert_includes @event.slideshow_image_url, 'active_storage_default-events-'
+    event = FactoryBot.create(:event, attach_image: false)
+    assert_includes event.slideshow_image_url, 'active_storage_default-events-'
   end
 
   test 'date_range' do
