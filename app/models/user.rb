@@ -51,6 +51,8 @@ class User < ApplicationRecord
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
   validates :email, presence: true
 
+  validates :avatar, content_type: %i[png jpg jpeg gif]
+
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
   accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true

@@ -39,6 +39,7 @@ class Venue < ApplicationRecord
   
   has_one_attached :image
 
+  validates :image, content_type: %i[png jpg jpeg gif]
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob('bedlam.png')) unless image.attached? 
 

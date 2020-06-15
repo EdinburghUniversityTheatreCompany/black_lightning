@@ -49,6 +49,8 @@ class News < ApplicationRecord
 
   has_one_attached :image
 
+  validates :image, content_type: %i[png jpg jpeg gif]
+
   ##
   # Generates a default image for the news item. If extra artwork is added, increase the base of the modulo call.
   #

@@ -35,6 +35,7 @@ gem 'rqrcode'
 
 gem 'image_processing'
 gem 'mini_magick'
+gem 'active_storage_validations'
 
 gem 'chronic'
 gem 'ransack'

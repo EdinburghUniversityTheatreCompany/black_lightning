@@ -24,6 +24,8 @@ class Picture < ApplicationRecord
 
   has_one_attached :image
 
+  validates :image, content_type: %i[png jpg jpeg gif], attached: true
+
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached? 
 

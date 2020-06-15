@@ -64,6 +64,7 @@ class Event < ApplicationRecord
   # ActiveStorage #
   has_one_attached :image
 
+  validates :image, content_type: %i[png jpg jpeg gif]
   # Scopes #
 
   scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
