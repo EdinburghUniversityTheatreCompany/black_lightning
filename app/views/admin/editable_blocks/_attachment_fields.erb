@@ -7,4 +7,9 @@
     <%= f.input_field :file %>
 
     <%= link_to_remove f %>
+
+    <% if f.object.file.attached? %>
+        <br />
+        <%= get_file_attached_hint(f.object.file) %>
+    <% end %>
 </div>
