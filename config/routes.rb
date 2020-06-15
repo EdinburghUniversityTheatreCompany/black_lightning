@@ -34,7 +34,7 @@ ChaosRails::Application.routes.draw do
   end
 
   get 'events/xts/:id', to: 'events#find_by_xts_id'
-  get 'attachments/:slug(/:style)', to: 'attachments#show'
+  get 'attachments/:slug(/:style)', to: 'attachments#file'
 
   namespace :admin do
     get '', to: 'dashboard#index'

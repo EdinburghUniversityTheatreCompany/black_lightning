@@ -15,12 +15,14 @@
 # == Schema Information End
 #++
 
-include ActionDispatch::TestProcess
 FactoryBot.define do
   factory :attachment do
     name { generate(:random_string) }
-    file { fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf') }
 
     association :editable_block, factory: :editable_block
+
+    after :build do |attachment|
+      attachment.file.attach(io: File.open(Rails.root.join('test', 'test.pdf')), filename: 'test.pdf', content_type: 'application/pdf') unless attachment.file.attached?
+    end
   end
 end

@@ -28,39 +28,22 @@
 #++
 ##
 
-# TODO: This needs work with rails 6 because Paperclip is deprecated.
 # TODO: should there be permission checks?
 class Attachment < ApplicationRecord
   belongs_to :editable_block, class_name: 'Admin::EditableBlock'
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
-  validate  :check_file_size
+  validates :file, attached: true
 
-  has_attached_file :file,
-                    url: '/attachments/:slug/:style',
-                    convert_options: { thumb: '-quality 75 -strip' },
-                    path: ':rails_root/uploads/attachments/:id_partition/:style.:extension',
-                    styles: (lambda do |a|
-                      if /image\/.+/.match a.instance.file_content_type
-                        { thumb: '192x100#', display: '700x700' }
-                      else
-                        {}
-                      end
-                    end)
-
-  do_not_validate_attachment_file_type :file
+  has_one_attached :file
 
   def slug
     return name
   end
 
-  def check_file_size
-    # Not tested because that would take a lot of time for something that will be revised soon.
-    # :nocov:
-    # Restrict file size for images:
-    if file_file_size > 1.megabytes && (/image\/.+/.match file_content_type)
-      errors.add(:file, 'Attached images must be under 1MB in size.')
-    end
-    # :nocov: 
+  def fetch_file
+    file.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless file.attached? 
+
+    return file
   end
 end
