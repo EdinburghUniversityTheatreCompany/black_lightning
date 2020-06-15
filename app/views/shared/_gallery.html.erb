@@ -1,16 +1,27 @@
 <% if pictures.any? then %>
+  <% content_for :head do %>
+    <%= stylesheet_link_tag 'jquery.fancybox' %>
+    <%= javascript_include_tag 'jquery.fancybox' %>
+  <% end %>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      $(".fancybox").fancybox();
+    });
+  </script>
+
   <hr />
   
   <h3>Gallery</h3>
 
   GAH, LIGHTBOX IS BROKEN!
-  <ul class="lightbox thumbnails">
-    <% pictures.each do |picture| %>
+  <ul class="thumbnails">
+    <% pictures.each_with_index do |picture, index| %>
       <li class="span2 gallery">
         <% img = image_tag picture.fetch_image.variant(thumb_variant) %>
         <% url = url_for(picture.fetch_image) %>
-        
-        <%= link_to img, url, class: "thumbnail", title: picture.description %>
+
+        <%= link_to img, url, class: "thumbnail fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
       </li>
     <% end %>
   </ul>

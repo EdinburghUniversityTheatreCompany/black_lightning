@@ -9,8 +9,6 @@ Rails.application.config.assets.version = '1.0'
 # Precompile additional assets.
 # application.js, application.css, and all non-JS/CSS in app/assets folder are already added.
 Rails.application.config.assets.precompile += %w(
-  jquery.lightbox-0.5.js
-
   admin.js
   admin/question_templates.js
   admin/staffing_templates.js
@@ -26,6 +24,8 @@ Rails.application.config.assets.precompile += %w(
   admin/shows.css
 
   login.css
-  jquery.lightbox-0.5.css
   name_to_slug.js
+
+  jquery.fancybox.css
+  jquery.fancybox.js
 )

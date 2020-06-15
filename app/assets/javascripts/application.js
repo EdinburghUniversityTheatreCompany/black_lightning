@@ -21,8 +21,7 @@
 //= require jquery.switch
 //= require jquery-ui-1.9.2.custom
 //= require slimScroll.min
-//= require jquery.lightbox-0.5
-//= require lightbox-init
+//= require activestorage
 
 var konami_keys = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
 var konami_index = 0;
