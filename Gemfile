@@ -20,7 +20,6 @@ gem 'rolify'
 
 gem 'will_paginate'
 gem 'kramdown'
-gem 'paperclip'
 gem 'nested_form'
 gem 'twitter'
 gem 'json', '1.8.5'

@@ -5,7 +5,7 @@
 # TODO: Possibly should be moved to Admin namespace?
 #++
 #
-# Uses paperclip to store the file. See AttachmentController for fetching of attachments.
+# See AttachmentController for fetching of attachments.
 #
 # Note that attachments are not stored in the public directory to prevent them from being
 # accessed without authentication.

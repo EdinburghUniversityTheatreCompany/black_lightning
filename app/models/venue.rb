@@ -5,11 +5,6 @@
 #
 # Therefore, unlike Show, it is NOT necessary to search for the venue by slug - using <tt>find</tt> will work perfectly well.
 #
-# == Paperclip
-# Images are stored as:
-# * thumb:     (192x100)
-# * slideshow: (960x500)
-#
 # == Schema Information
 #
 # Table name: venues

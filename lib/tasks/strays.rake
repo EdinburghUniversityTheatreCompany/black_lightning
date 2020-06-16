@@ -1,4 +1,5 @@
 # From paperclip source.
+# This will very likely not work anymore after we upgraded to ActiveStorage.
 
 module Paperclip
   # :nocov:

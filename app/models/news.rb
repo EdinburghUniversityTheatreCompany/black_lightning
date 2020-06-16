@@ -1,11 +1,6 @@
 ##
 # Nothing really interesting about news. It's news.
 #
-# == Paperclip
-# Images are stored as:
-# * medium (576x300)
-# * thumb  (192x100)
-#
 # == Schema Information
 #
 # Table name: news
