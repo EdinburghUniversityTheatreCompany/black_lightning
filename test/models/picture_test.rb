@@ -2,7 +2,10 @@ require 'test_helper'
 
 class PictureTest < ActionView::TestCase
   test 'missing image' do
-    picture = FactoryBot.create(:picture, attach_image: false)
+    picture = FactoryBot.create(:picture)
+    picture.image.purge
+    picture.save(validate: false)
+
     assert_equal 'active_storage_default-missing.png', picture.fetch_image.filename.to_s
   end
 

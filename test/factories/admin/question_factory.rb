@@ -15,6 +15,8 @@
 
 FactoryBot.define do
   factory :question, class: Admin::Question do
+    association :questionable, factory: :questionnaire
+
     question_text { generate(:random_text) }
     response_type { ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File'].sample }
 

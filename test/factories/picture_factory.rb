@@ -24,12 +24,11 @@ FactoryBot.define do
   factory :picture, class: Picture do
     association :gallery, factory: :show
     description { generate(:random_text) }
+
     transient do
       attach_image { true }
     end
 
-    after(:create) do |picture, evaluator|
-      picture.image.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png') if evaluator.attach_image && !picture.image.attached?
-    end
+    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') if attach_image }
   end
 end

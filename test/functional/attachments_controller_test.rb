@@ -11,7 +11,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_equal 'application/pdf', response.headers["Content-Type"]
-    assert_equal "inline; #{attachment.file.filename}", response.headers["Content-Disposition"]
+    assert_equal "inline; test.pdf", response.headers["Content-Disposition"]
   end
 
   # Should not return a thumbnail, but just a file link.

@@ -28,7 +28,6 @@
 #++
 ##
 
-# TODO: should there be permission checks?
 class Attachment < ApplicationRecord
   belongs_to :editable_block, class_name: 'Admin::EditableBlock'
 

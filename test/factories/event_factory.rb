@@ -41,11 +41,11 @@ FactoryBot.define do
       attach_image { true }
     end
 
+    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') if attach_image }
+
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
-
-      event.image.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png') if evaluator.attach_image && !event.image.attached?
     end
   end
 

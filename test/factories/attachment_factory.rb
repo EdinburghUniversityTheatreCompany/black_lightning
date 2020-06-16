@@ -21,8 +21,6 @@ FactoryBot.define do
 
     association :editable_block, factory: :editable_block
 
-    after :build do |attachment|
-      attachment.file.attach(io: File.open(Rails.root.join('test', 'test.pdf')), filename: 'test.pdf', content_type: 'application/pdf') unless attachment.file.attached?
-    end
+    file { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.pdf'), 'application/pdf') }
   end
 end
