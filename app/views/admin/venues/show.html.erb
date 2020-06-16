@@ -17,7 +17,11 @@
 
 <p>
   <b>Image:</b>
-  <%= image_tag @venue.fetch_image.variant(slideshow_variant) %>
+    <% if @venue.image.attached? && !@venue.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
+    <p><%= image_tag @venue.fetch_image.variant(slideshow_variant) %></p>
+  <% else %>
+    No image
+  <% end %>
 </p>
 
 <p>

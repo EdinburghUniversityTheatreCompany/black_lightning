@@ -66,7 +66,7 @@
 
 <p>
   <b>Image:</b>
-  <% if event.image.present? %>
+  <% if event.image.attached? && !event.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
     <p><%= image_tag event.fetch_image.variant(slideshow_variant) %></p>
   <% else %>
     No image
