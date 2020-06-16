@@ -6,9 +6,9 @@
   <% when "Yes/No" %>
     <%= f.input_field :answer, as: :select, collection: ['Yes', 'No'] %>
   <% when "File" %>
-    <% if f.object.file? %>
+    <% if f.object.file.attached? %>
       <label>Current:</label>
-      <%= link_to f.object.file.original_filename, f.object.file.url %>
+      <%= link_to f.object.file.filename, admin_answer_get_file_path(f.object) %>
 
       <br />
     <% end %>

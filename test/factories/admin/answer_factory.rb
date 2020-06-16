@@ -22,7 +22,7 @@ FactoryBot.define do
     question
 
     transient do
-      response_type { 'Long Text' }
+      response_type { question.response_type }
     end
 
     answer do
@@ -39,8 +39,8 @@ FactoryBot.define do
       end
     end
 
-    file do
-      fixture_file_upload(Rails.root.join('test', 'test.pdf'), 'application/pdf') if response_type == 'File'
-    end
+    file { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.pdf'), 'application/pdf') if response_type.downcase == 'file' }
+    
+    answerable { question.questionable }
   end
 end

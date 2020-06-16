@@ -13,8 +13,8 @@
       <b>Response:</b>
     </p>
 
-    <% if answer.question.response_type == "File" %>
-      <%= answer&.file.file? ? link_to(answer.file.original_filename, answer.file.url) : "No File Uploaded" %>
+    <% if answer&.question&.response_type&.downcase == "file" %>
+      <%= answer&.file.attached? ? link_to(answer.file.filename, admin_answer_get_file_path(answer)) : "No File Uploaded" %>
     <% else %>
       <% if answer&.answer.present? %>
         <%= render_markdown answer.answer %>

@@ -4,19 +4,29 @@ class Admin::AnswersControllerTest < ActionController::TestCase
   test 'should download answer with file' do
     sign_in users(:admin)
 
-    questionable = FactoryBot.create(:questionnaire)
-    question = questionable.questions.first
-    assert_not_nil question
-    
-    answer = FactoryBot.create(:answer, response_type: 'File', question: question, answerable: questionable)
+    question = FactoryBot.create(:question, response_type: 'File')
+    answer = FactoryBot.create(:answer, question: question)
 
     get :get_file, params: { id: answer }
+  
     assert_response :success
+
+    assert_equal 'application/pdf', response.headers["Content-Type"]
+    assert_equal "attachment; test.pdf", response.headers["Content-Disposition"]
+  end
+
+  test 'cannot download file for answer without file attached' do
+    sign_in users(:admin)
+
+    question = FactoryBot.create(:question, response_type: 'Long Text')
+    answer = FactoryBot.create(:answer, question: question)
+
+    get :get_file, params: { id: answer }
+
+    assert_response 404
   end
 
   test 'can access answer file when you can read the questionable' do
-    other_user = FactoryBot.create(:user)
-
     questionnaire = FactoryBot.create(:questionnaire)
     user = questionnaire.show.users.first
     question = FactoryBot.create(:question, questionable: questionnaire, response_type: 'File', answered: true)
@@ -28,7 +38,7 @@ class Admin::AnswersControllerTest < ActionController::TestCase
     assert_response :success
 
     sign_out user
-    sign_in other_user
+    sign_in FactoryBot.create(:user)
 
     get :get_file, params: { id: answer }
     assert_redirected_to access_denied_url

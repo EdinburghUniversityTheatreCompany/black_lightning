@@ -28,7 +28,5 @@ class Admin::Answer < ApplicationRecord
   belongs_to :question, class_name: 'Admin::Question'
   belongs_to :answerable, polymorphic: true
 
-  has_attached_file :file, url: '/admin/answer/:id/file', path: ':rails_root/uploads/answers/:id_partition/:style.:extension'
-
-  do_not_validate_attachment_file_type :file
+  has_one_attached :file
 end

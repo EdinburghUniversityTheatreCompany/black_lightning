@@ -14,6 +14,13 @@ class Admin::AnswersController < ApplicationController
     # I have no clue why this is necessary and why authorize! doesn't just work.
     raise(CanCan::AccessDenied) if current_user.cannot?(:show, answerable)
 
-    send_file @answer.file.path, x_sendfile: true, type: @answer.file.content_type, disposition: 'attachment', filename: @answer.file.original_filename
+    return redirect_to '404', status: 404 unless @answer.question.response_type.downcase == 'file'
+
+    response.headers["Content-Type"] = @answer.file.content_type
+    response.headers["Content-Disposition"] = "attachment; #{@answer.file.filename}"
+
+    @answer.file.download do |chunk|
+      response.stream.write(chunk)
+    end
   end
 end
