@@ -30,28 +30,32 @@ class Tasks::Logic::Migrations
 
         p "Migrating #{attachment} for #{instance}"
 
-        blob = ActiveStorage::Blob.create(
-          key: key(instance, attachment),
-          filename: instance.send("#{attachment}_file_name"),
-          content_type: instance.send("#{attachment}_content_type"),
-          byte_size: instance.send("#{attachment}_file_size"),
-          checksum: checksum(instance.send(attachment)),
-          created_at: instance.updated_at.iso8601
-        )
+        begin
+          blob = ActiveStorage::Blob.create(
+            key: key(instance, attachment),
+            filename: instance.send("#{attachment}_file_name"),
+            content_type: instance.send("#{attachment}_content_type"),
+            byte_size: instance.send("#{attachment}_file_size"),
+            checksum: checksum(instance.send(attachment)),
+            created_at: instance.updated_at.iso8601
+          )
 
-        self.copy_file_from_paperclip_to_storage(attachment, blob, instance)
+          self.copy_file_from_paperclip_to_storage(attachment, blob, instance)
 
-        ActiveStorage::Attachment.create(
-          name: attachment, 
-          record_type: model.name, 
-          record_id: instance.id, 
-          blob_id: blob.id, 
-          created_at: instance.updated_at.iso8601
-        )
+          ActiveStorage::Attachment.create(
+            name: attachment, 
+            record_type: model.name, 
+            record_id: instance.id, 
+            blob_id: blob.id, 
+            created_at: instance.updated_at.iso8601
+          )
+        end
+      rescue => e
+        p "FAILED for name #{instance.send("#{attachment}_file_name")} with ID #{instance.id}"
+        p e
       end
     end
   end
-
 
   private
   
