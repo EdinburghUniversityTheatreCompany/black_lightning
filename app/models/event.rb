@@ -51,6 +51,8 @@ class Event < ApplicationRecord
 
   # Relationships #
 
+  belongs_to :proposal, class_name: 'Admin::Proposals::Proposal', optional: true
+
   has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
   has_many :users, through: :team_members
   has_many :pictures, as: :gallery, dependent: :restrict_with_error

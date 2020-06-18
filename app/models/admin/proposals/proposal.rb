@@ -35,6 +35,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
   
+  has_one :event, class_name: 'Event'
+
   has_many :answers, as: :answerable
   has_many :questions, through: :answers
   has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
