@@ -29,4 +29,6 @@
   <% end %>
 <% end %>
 
+<%= f.association :proposal, collection: f.object.possible_proposals, label_method: :show_title %>
+
 <%= render '/shared/form/public_private_switch', f: f, field_symbol: :is_public %>

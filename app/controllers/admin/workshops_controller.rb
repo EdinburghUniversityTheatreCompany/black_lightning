@@ -67,7 +67,7 @@ class Admin::WorkshopsController < AdminController
   def workshop_params
     params.require(:workshop).permit(:description, :name, :slug, :tagline, :author, :venue, :venue_id, :season,
                                      :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :price,
-                                     :spark_seat_slug,
+                                     :spark_seat_slug, :proposal, :proposal_id,
                                      pictures_attributes: [:id, :_destroy, :description, :image],
                                      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal])
   end

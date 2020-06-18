@@ -138,13 +138,16 @@ class Admin::Proposals::Proposal < ApplicationRecord
     p 'Adding Team Members'
     @show.team_members << team_members.collect(&:dup)
 
+    @show.proposal = self
+
     self.successful = true
 
     # Highly unlikely situation, but you never know. I cannot deliberately cause it.
     # :nocov:
     unless save
-      p "Couldn't set the 'successful' flag on the proposal. This will need to be done manually."
-      raise ActiveRecord::RecordNotSaved, "Couldn't set the 'successful' flag on the proposal. This will need to be done manually."
+      message = "Couldn't set the 'successful' flag on the proposal, couldn't add the team members to the show, or couldn't set the show proposal to this one. This will need to be done manually."
+      p message
+      raise ActiveRecord::RecordNotSaved, message
     end
   # :nocov:
 
