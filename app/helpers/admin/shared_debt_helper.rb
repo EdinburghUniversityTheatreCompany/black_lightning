@@ -23,7 +23,8 @@ module Admin::SharedDebtHelper
 
     debts = q.result.includes(*includes)
 
-    debts = shared_debt_filter(debts, show_fulfilled, is_specific_user)
+    debts = debts.unfulfilled unless show_fulfilled
+    debts = debts.paginate(page: params[:page], per_page: 30) unless is_specific_user
 
     return debts, q, show_fulfilled, is_specific_user
   end
@@ -35,13 +36,14 @@ module Admin::SharedDebtHelper
     begin
       cookie_value = cookies["#{key}_query"]
       q_param ||= JSON.parse(cookie_value.gsub('=>', ':')) if cookie_value.present?
+    # :nocov:
     rescue JSON::ParserError => e
-      # It's not the worst thing in the world if an error happens, but logging iwll be useful.
+      # It's not the worst thing in the world if an error happens, but logging will be useful.
       # If people start to tamper with the cookie, which I don't expect to happen, 
       # and the errors become a nuisance, we can disable it.
-      # :nocov:
+      
       Honeybadger.notify(e)
-      # :nocov:
+    # :nocov:
     end
 
     q_param ||= {}
@@ -61,7 +63,7 @@ module Admin::SharedDebtHelper
       cookies["#{key}_show_fulfilled"] == 'true'
     end
 
-    cookies["#{key}_show_fulfilled"] = show_fulfilled
+    cookies["#{key}_show_fulfilled"] = show_fulfilled.to_s
 
     return show_fulfilled
   end
@@ -87,15 +89,11 @@ module Admin::SharedDebtHelper
     elsif debt_class.accessible_by(current_ability).map { |debt| debt.user.id }.uniq.count < 2
       is_specific_user = true
       show_fulfilled = true
+    else
+      is_specific_user = false
+      show_fulfilled = false
     end
 
     return show_fulfilled, is_specific_user
-  end
-
-  def shared_debt_filter(debts, show_fulfilled, is_specific_user)
-    debts = debts.unfulfilled unless show_fulfilled
-    debts = debts.paginate(page: params[:page], per_page: 30) unless is_specific_user
-
-    return debts
   end
 end
