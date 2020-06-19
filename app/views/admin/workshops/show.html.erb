@@ -2,6 +2,6 @@
 
 <%= render 'admin/events/basic_show', event: @workshop %>
 
-<%= render '/shared/gallery', pictures: @workshop.pictures.includes(image_attachment: :blob) %>
+<%= render '/shared/gallery', pictures: @workshop.pictures %>
 
 <%= render '/shared/show_actions', object: @workshop %>
