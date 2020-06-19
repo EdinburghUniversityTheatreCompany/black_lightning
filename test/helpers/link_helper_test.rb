@@ -1,34 +1,50 @@
 require 'test_helper'
 
-# I have to avoid testing the permission check because that does not work in helpers.
 class LinkHelperTest < ActionView::TestCase
   include NameHelper
 
-  test 'user_link without permission' do
-    # This will at least assert that there was a call to can?
-    assert_raises NoMethodError do
-      user_link(users(:admin), true)
-    end
+  def current_ability
+    @current_user.ability
+  end
 
-    skip 'The user link relies on a permission check. It would be very awesome if it could be tested, but I do not know how.'
+  setup do
+    @current_user = users(:admin)
+  end
+
+  test 'user_link for nil' do
+    assert_equal 'User Not Found', user_link(nil, true)
+
+    @current_user = users(:user)
+
+    assert_equal 'User Not Found', user_link(nil, false)
+  end
+
+  test 'user_link without permission' do
+    @current_user = users(:user)
+  
+    assert_equal 'Peter Peanut', user_link(users(:admin), true)
   end
 
   test 'user_link with public profile' do
-    skip 'The user link relies on a permission check. It would be very awesome if it could be tested, but I do not know how.'
+    @current_user = users(:user)
 
-    # Use public link as fallback
+    target = FactoryBot.create(:user, public_profile: true, first_name: 'Dennis', last_name: 'the Donkey')
 
-    # Do not use public link as fallback
+    assert_equal "<a href=\"/users/#{target.id}\">Dennis the Donkey</a>", user_link(target, true)
 
-    # non-public profile doesn't show
+    assert_equal 'Dennis the Donkey', user_link(target, false)
+
+    target.public_profile = false
+    assert_equal 'Dennis the Donkey', user_link(target, true)
   end
 
   test 'user_link as admin' do
-    skip 'The user link relies on a permission check. It would be very awesome if it could be tested, but I do not know how.'
+    assert_equal '<a href="/admin/users/1">Peter Peanut</a>', user_link(users(:admin), true)
   end
 
   test 'link_to_add' do
     skip "Needs a form passed, but I don't know how to create one in here. Test is not essential as every nested form will break when the function breaks, so you will notice, and it has coverage."
+    
     techie = techies(:one)
 
     simple_nested_form_for [:admin, techie] do |form|
@@ -58,7 +74,7 @@ class LinkHelperTest < ActionView::TestCase
   test 'get_link with index' do
     expected_link = '<a class="btn" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><span class="no-wrap"><i class="fa fa-th-list" aria-hidden=”true”></i> Show All</span> Fault Reports</a>'
 
-    assert_equal expected_link, get_link(FaultReport, :index, condition: true)
+    assert_equal expected_link, get_link(FaultReport, :index)
 
     assert_raises TypeError do
       get_link(FaultReport.new, :index)
@@ -69,7 +85,7 @@ class LinkHelperTest < ActionView::TestCase
     proposal_call = FactoryBot.create(:proposal_call, id: 1, name: 'Dionysia Proposals')
     expected_link = '<a class="" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
 
-    assert_equal expected_link, get_link(proposal_call, :show, condition: true)
+    assert_equal expected_link, get_link(proposal_call, :show)
 
     assert_raises TypeError do
       get_link(FaultReport, :show)
@@ -79,7 +95,7 @@ class LinkHelperTest < ActionView::TestCase
   test 'get_link with new' do
     expected_link = '<a class="btn btn-primary" title="New Maintenance Debt" data-method="get" href="/admin/maintenance_debts/new"><span class="no-wrap"><i class="fa fa-plus" aria-hidden=”true”></i> New</span> Maintenance Debt</a>'
 
-    assert_equal expected_link, get_link(Admin::MaintenanceDebt, :new, condition: true)
+    assert_equal expected_link, get_link(Admin::MaintenanceDebt, :new)
 
     assert_raises TypeError do
       get_link(Admin::MaintenanceDebt.new, :new)
@@ -90,7 +106,7 @@ class LinkHelperTest < ActionView::TestCase
     staffing = FactoryBot.create(:staffing, id: 1)
     expected_link = '<a class="btn no-wrap" title="Edit" data-method="get" href="/admin/staffings/1/edit"><span class="no-wrap"><i class="fa fa-pencil-alt" aria-hidden=”true”></i> Edit</span></a>'
 
-    assert_equal expected_link, get_link(staffing, :edit, condition: true, no_wrap: true)
+    assert_equal expected_link, get_link(staffing, :edit, no_wrap: true)
 
     assert_raises TypeError do
       get_link(Opportunity, :edit)
@@ -101,7 +117,7 @@ class LinkHelperTest < ActionView::TestCase
     news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
     expected_link = '<a class="btn btn-danger" data-confirm="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-detail="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
 
-    assert_equal expected_link, get_link(news, :destroy, condition: true)
+    assert_equal expected_link, get_link(news, :destroy)
 
     assert_raises TypeError do
       get_link(Admin::StaffingDebt, :destroy)
@@ -112,7 +128,7 @@ class LinkHelperTest < ActionView::TestCase
     news = FactoryBot.create(:opportunity, id: 1)
     expected_link = '<a class="btn btn-success" title="Approve" rel="nofollow" data-method="put" href="/admin/opportunities/1/approve">Approve</a>'
 
-    assert_equal expected_link, get_link(news, :approve, condition: true)
+    assert_equal expected_link, get_link(news, :approve)
 
     assert_raises TypeError do
       get_link(Opportunity, :approve)
@@ -123,7 +139,7 @@ class LinkHelperTest < ActionView::TestCase
     news = FactoryBot.create(:opportunity, id: 1)
     expected_link = '<a class="btn btn-danger" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
 
-    assert_equal expected_link, get_link(news, :reject, condition: true)
+    assert_equal expected_link, get_link(news, :reject)
 
     assert_raises TypeError do
       get_link(Opportunity, :reject)
@@ -134,12 +150,12 @@ class LinkHelperTest < ActionView::TestCase
     maintenance_debt = FactoryBot.create(:maintenance_debt, id: 1)
 
     assert_raises ArgumentError do
-      get_link(maintenance_debt, :convert_to_staffing_debt, condition: true)
+      get_link(maintenance_debt, :convert_to_staffing_debt)
     end
 
     expected_link = '<a class="btn" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
 
-    assert_equal expected_link, get_link(maintenance_debt, :convert_to_staffing_debt, condition: true, http_method: :put)
+    assert_equal expected_link, get_link(maintenance_debt, :convert_to_staffing_debt, http_method: :put)
   end
 
   test 'get_link requires an object' do
@@ -167,14 +183,24 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
-  test 'can overrule condition' do
-    skip 'To properly test this you need to be able to perform the permission check in the helper. It would be very awesome if it could be tested, but I do not know how.'
+  test 'can overrule using condition' do
+    @current_user = users(:user)
 
-    # Check it no longer requires permission when specifying a condition.
+    news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
+
+    assert_not @current_user.can?(:destroy, news)
+
+    expected_link = '<a class="btn btn-danger" data-confirm="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-detail="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
+
+    assert_equal expected_link, get_link(news, :destroy, condition: true)
   end
 
   test 'can specify additional condition' do
-    skip 'To properly test this you need to be able to perform the permission check in the helper. It would be very awesome if it could be tested, but I do not know how.'
+    news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
+
+    assert@current_user.can?(:destroy, news)
+
+    assert_nil get_link(news, :destroy, additional_condition: false)
   end
 
   test 'return link text when condition fails for show' do

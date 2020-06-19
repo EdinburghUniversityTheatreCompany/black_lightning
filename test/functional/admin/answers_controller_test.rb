@@ -36,9 +36,13 @@ class Admin::AnswersControllerTest < ActionController::TestCase
 
     get :get_file, params: { id: answer }
     assert_response :success
+  end
 
-    sign_out user
-    sign_in FactoryBot.create(:user)
+  test 'cannot access answer file when you cannot read the questionable' do
+    question = FactoryBot.create(:question, response_type: 'File', answered: true)
+    answer = Admin::Answer.find_by_question_id(question.id)
+
+    sign_in users(:user)
 
     get :get_file, params: { id: answer }
     assert_redirected_to access_denied_url

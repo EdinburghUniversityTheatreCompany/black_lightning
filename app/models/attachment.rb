@@ -39,10 +39,4 @@ class Attachment < ApplicationRecord
   def slug
     return name
   end
-
-  def fetch_file
-    file.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless file.attached? 
-
-    return file
-  end
 end

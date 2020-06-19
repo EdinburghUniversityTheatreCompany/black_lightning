@@ -1,30 +1,30 @@
 require 'test_helper'
 
 class EditableBlockHelperTest < ActionView::TestCase
-  test 'should display editable block' do
-    skip 'This test does not work because the helper relies on the presence of current_ability'
+  def current_ability
+    users(:admin).ability
+  end
 
+  test 'should display editable block' do
     editable_block = FactoryBot.create :editable_block
 
-    display_block editable_block.name, false
-
-    assert_response :success
+    assert_raises ActionView::Template::Error do
+      display_block(editable_block.name, false)
+    end
   end
 
   test 'displaying block on admin page should set to admin page to true' do
-    skip 'This test does not work because the helper relies on the presence of current_ability'
+    editable_block = FactoryBot.create(:editable_block, admin_page: false)
 
-    editable_block = FactoryBot.create :editable_block, admin_page: false
+    assert_raises ActionView::Template::Error do
+      display_block(editable_block.name, true)
+    end
 
-    display_block editable_block.name, true
-
-    assert editable_block.admin_page = true
+    assert editable_block.reload.admin_page
   end
 
   test 'should give warning for non-exising editable block' do
-    skip 'This test does not work because the helper relies on the presence of current_ability'
-    
-    assert_equal 'Block not defined', display_block('pineapple', false)
+    assert_equal 'Block not defined. <a href="/admin/editable_blocks/new?name=pineapple">Create Block</a>', display_block('pineapple', false)
   end
 
   test 'existing block should exist' do

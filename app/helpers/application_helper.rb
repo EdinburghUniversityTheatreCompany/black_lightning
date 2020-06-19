@@ -25,12 +25,9 @@ module ApplicationHelper
   end
 
   # It's a bit hacky, but it works.
-  # Used by the error pages to decide the layout to use
-  # Cannot be unit tested because a request needs to be present :/
-  # It does not really matter if it renders the wrong layout though.
-
-  def current_environment
-    return 'admin' if request.fullpath[0..6].include?('admin') && can?(:access, :backend)
+  # Used by the error pages and subpage layout to decide which layout to use.
+  def current_environment(path)
+    return 'admin' if path[0..6].include?('admin') && current_ability.can?(:access, :backend)
 
     return 'application'
   end
