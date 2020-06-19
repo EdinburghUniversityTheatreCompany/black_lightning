@@ -2,7 +2,8 @@ require 'test_helper'
 
 class Admin::ShowsControllerTest < ActionController::TestCase
   setup do
-    sign_in users(:admin)
+    @admin = users(:admin)
+    sign_in @admin
   end
 
   test 'should get index' do
@@ -202,6 +203,76 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_show_path(@show)
     assert_includes flash[:notice], 'Could not create Staffing obligations because the start date has not been set yet.'
+  end
+
+  test 'convert to season' do
+    show = FactoryBot.create(:show, review_count: 0)
+
+    assert_difference('Show.count', -1) do
+      assert_difference('Season.count', 1) do
+        post :convert_to_season, params: { id: show }
+      end
+    end
+
+    season = Season.find(show.id)
+
+    assert_equal season.name, show.name
+    assert_equal season.picture_ids, show.picture_ids
+    assert_equal season.team_member_ids, show.team_member_ids
+  end
+
+  test 'convert to workshop' do
+    show = FactoryBot.create(:show, review_count: 0)
+
+    assert_difference('Show.count', -1) do
+      assert_difference('Workshop.count', 1) do
+        post :convert_to_workshop, params: { id: show }
+      end
+    end
+    
+    workshop = Workshop.find(show.id)
+
+    assert_equal workshop.name, show.name
+    assert_equal workshop.picture_ids, show.picture_ids
+    assert_equal workshop.team_member_ids, show.team_member_ids
+  end
+
+  # Assuming it also will not convert to a Workshop in this case.
+  test 'cannot convert to season when there is stuff attached' do
+    show = FactoryBot.create(:show, review_count: 1)
+
+    assert_no_difference('Show.count') do
+      assert_no_difference('Season.count') do
+        post :convert_to_season, params: { id: show }
+      end
+    end
+
+    assert_equal [ "There are still attached reviews, feedbacks, or questionnaires left. You cannot convert a show with one of these attached to prevent data loss."], flash[:error]
+  end
+
+  # Assuming it also will not convert to a Season in this case.
+  test 'converting to workshop with identical slug gives error' do
+    show = FactoryBot.create(:show, review_count: 0)
+    workshop = FactoryBot.create(:workshop, slug: show.slug)
+
+    assert_no_difference('Show.count') do
+      assert_no_difference('Workshop.count') do
+        post :convert_to_workshop, params: { id: show }
+      end
+    end
+    
+    assert_equal ["Could not create Workshop '#{show.name}' from the Show '#{show.name}'. There already exists a Workshop with the slug '#{show.slug}'"], flash[:error]
+  end
+
+  test 'cannot convert without permission' do
+    sign_out @admin
+    sign_in FactoryBot.create(:committee)
+
+    show = FactoryBot.create(:show, review_count: 0)
+
+    post :convert_to_workshop, params: { id: show }
+    
+    assert_redirected_to access_denied_url
   end
 
   private

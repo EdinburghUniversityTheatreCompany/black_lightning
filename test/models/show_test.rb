@@ -1,6 +1,35 @@
 require 'test_helper'
 
 class ShowTest < ActiveSupport::TestCase
+  test 'can convert show' do
+    show = FactoryBot.create(:show, review_count: 0)
+
+    assert show.can_convert?
+  end
+
+  test 'cannot convert show with questionnaires' do
+    questionnaire = FactoryBot.create(:questionnaire)
+
+    show = questionnaire.show
+    show.reviews.clear
+
+    assert_not show.can_convert?
+  end
+
+  test 'cannot convert show with reviews' do
+    show = FactoryBot.create(:show, review_count: 1)
+
+    assert_not show.can_convert?
+  end
+
+  test 'cannot convert show with feedbacks' do
+    feedback = FactoryBot.create(:feedback)
+    show = feedback.show
+    show.reviews.clear
+
+    assert_not show.can_convert?
+  end
+
   test 'create maintenance debts' do
     due_by = Date.today
     show = FactoryBot.create(:show, maintenance_debt_start: due_by)
