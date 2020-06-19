@@ -2,12 +2,14 @@ module LinkHelper
   def user_link(user, use_public_link_as_fallback)
     return 'User Not Found' if user.nil?
 
-    if can? :read, user
-      return link_to user.name(current_user), admin_user_path(user)
-    elsif use_public_link_as_fallback && can?(:view_shows_and_bio, user)
-      return link_to user.name(current_user), user_path(user)
+    name = user.name(current_ability)
+
+    if current_ability.can?(:read, user)
+      return link_to name, admin_user_path(user)
+    elsif use_public_link_as_fallback && current_ability.can?(:view_shows_and_bio, user)
+      return link_to name, user_path(user)
     else
-      return user.name(current_user)
+      return name
     end
   end
 
@@ -53,7 +55,7 @@ module LinkHelper
       raise(TypeError, "#{additional_message}#{object} is a class and not an instance so it cannot be #{action}'ed.") if object.is_a?(Class)
     end
 
-    condition = can?(action, object) && additional_condition if condition.nil?
+    condition = current_ability.can?(action, object) && additional_condition if condition.nil?
 
     unless condition
       if return_link_text_if_no_permission || (return_link_text_if_no_permission.nil? && action == :show)

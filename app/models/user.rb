@@ -101,6 +101,7 @@ class User < ApplicationRecord
   end
 
   # Returns the name if present, and the email if the user has the permission.
+  # Can also be the current_ability instead of the current_user.
   def name(current_user = nil)
     if current_user.present? && current_user.can?(:show, self)
       return name_or_email

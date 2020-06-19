@@ -3,6 +3,7 @@ admin:
   first_name: 'Peter'
   last_name: 'Peanut'
   email: 'Peter@peanut.yum'
+  public_profile: false
 
 user:
   id: 2
