@@ -17,4 +17,4 @@
   </div>
 <% end %>
 
-<%= render template: "layouts/#{current_environment}" %>
+<%= render template: "layouts/#{current_environment(request.fullpath)}" %>

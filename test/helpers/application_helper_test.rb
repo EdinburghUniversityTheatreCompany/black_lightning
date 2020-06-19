@@ -1,6 +1,10 @@
 require 'test_helper'
 
 class ApplicationHelperTest < ActionView::TestCase
+  def current_ability
+    return @current_user.ability
+  end
+
   test 'bool_icon' do
     assert_equal '&#10004;', bool_icon(true)
     assert_equal '&#10008;', bool_icon(false)
@@ -23,8 +27,23 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal ['', ''], html_alert_info(:pineapple)
   end
 
-  test 'current environment' do
-    skip 'I do not know how. Requires a request to be present.'
+  test 'current environment should return admin for admin pages' do
+    @current_user = users(:admin)
+
+    assert_equal 'admin', current_environment('admin')
+    assert_equal 'admin', current_environment('administrator')
+    assert_equal 'admin', current_environment('/admin/shows/the-wondrous-adventures')
+
+    assert_equal 'application', current_environment('pineapple')
+  end
+
+  test 'current environment should return application in every case if the user does not have backend access' do
+    @current_user = users(:user)
+
+    assert_equal 'application', current_environment('admin')
+    assert_equal 'application', current_environment('administrator')
+    assert_equal 'application', current_environment('/admin/shows/the-wondrous-adventures')
+    assert_equal 'application', current_environment('pineapple')
   end
 
   test 'append to flash' do

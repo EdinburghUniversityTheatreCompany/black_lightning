@@ -27,7 +27,7 @@ class StaticController < ApplicationController
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     respond_to do |type|
-      type.html { render template: 'static/404', status: 404, layout: helpers.current_environment }
+      type.html { render template: 'static/404', status: 404, layout: helpers.current_environment(request.fullpath) }
       type.all  { render body: nil, status: 404 }
     end
   end
@@ -36,7 +36,7 @@ class StaticController < ApplicationController
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     respond_to do |type|
-      type.html { render template: 'static/500', status: 500, layout: helpers.current_environment }
+      type.html { render template: 'static/500', status: 500, layout: helpers.current_environment(request.fullpath) }
       type.json { render json: { error: flash[:error] }, status: 500 }
       type.all  { render body: nil, status: 500 }
     end
