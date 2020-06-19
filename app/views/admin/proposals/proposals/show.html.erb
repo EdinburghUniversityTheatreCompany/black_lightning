@@ -35,9 +35,13 @@
 
 <%= render '/shared/questions_and_answers', answers: @proposal.answers %>
 
+<% if can?(:approve, @proposal) && @proposal.approved %>
+  <p>You have to start editing the proposal to set whether or not it was successful.</p>
+<% end %>
+
 <% # You cannot use /shared/show_actions here. %>
 <%= get_link @proposal, :edit, link_target: edit_admin_proposals_call_proposal_path(@call, @proposal), html_class: 'btn btn-primary' %>
-<%= get_link @proposal, :convert, link_target: convert_admin_proposals_call_proposal_path(@call, @proposal), http_method: :put, additional_condition: @proposal.approved %>
+<%= get_link @proposal, :convert, link_target: convert_admin_proposals_call_proposal_path(@call, @proposal), http_method: :put, additional_condition: @proposal.successful %>
 <%= get_link @call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
 
 <% if can?(:approve, @proposal) && @proposal.approved.nil? %>
