@@ -22,11 +22,13 @@ FactoryBot.define do
     proposal_text  { generate(:random_text) }
     publicity_text { generate(:random_text) }
     approved       { [true, nil, false].sample }
-    call           { FactoryBot.create :proposal_call }
 
     transient do 
       team_member_count { 5 }
+      submission_deadline { 5.days.from_now }
     end
+
+    call { FactoryBot.create(:proposal_call, submission_deadline: submission_deadline) }
 
     after(:build) do |proposal, evaluator|
       proposal.team_members << FactoryBot.build_list(:team_member, evaluator.team_member_count, teamwork: proposal)
