@@ -2,6 +2,8 @@
 
 <%= render 'admin/events/basic_show', event: @show %>
 
+<%= render '/shows/reviews', reviews: @show.reviews %>
+
 <br>
 
 <%= render '/shared/show_actions', object: @show %>

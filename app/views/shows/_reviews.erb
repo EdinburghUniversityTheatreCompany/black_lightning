@@ -1,0 +1,16 @@
+<% if reviews.any? then %>
+  <hr />
+  <h3>Reviews</h3>
+
+  <% reviews.each do |review| %>
+    <article>
+      <header>
+        <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, format: :long %> <%= "for #{review.organisation}" if review.organisation? %>
+        <br />
+        <%= star_rating review.rating if review.rating && review.rating > 0 %>
+      </header>
+
+      <%= render_markdown review.body %>
+    </article>
+  <% end %>
+<% end %>
