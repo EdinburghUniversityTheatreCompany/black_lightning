@@ -8,11 +8,7 @@ class Admin::AnswersController < ApplicationController
   # permission to read the answer.
   ##
   def get_file
-    answerable = @answer&.answerable
-    authorize!(:show, answerable)
-
-    # I have no clue why this is necessary and why authorize! doesn't just work.
-    raise(CanCan::AccessDenied) if current_user.cannot?(:show, answerable)
+    authorize!(:show, @answer&.answerable)
 
     return redirect_to '404', status: 404 unless @answer.question.response_type.downcase == 'file'
 

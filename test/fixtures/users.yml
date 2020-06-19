@@ -3,3 +3,9 @@ admin:
   first_name: 'Peter'
   last_name: 'Peanut'
   email: 'Peter@peanut.yum'
+
+user:
+  id: 2
+  first_name: 'Cyclops'
+  last_name: 'Cat'
+  email: 'cyclops@cat.eye'
