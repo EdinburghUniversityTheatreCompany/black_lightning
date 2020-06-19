@@ -197,7 +197,10 @@ class User < ApplicationRecord
   # Note: This function does not have any regard for permissions.
   def team_memberships(public_only)
     team_memberships = team_membership.where(teamwork_type: 'Event')
-    team_memberships = team_memberships.select { |team_member| team_member.teamwork&.is_public } if public_only
+
+    team_memberships = team_memberships.select { |team_membership| team_membership.teamwork.present? }
+    team_memberships = team_memberships.select { |team_membership| team_membership.teamwork&.is_public } if public_only
+
     return team_memberships.sort { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
   end
 end
