@@ -15,7 +15,7 @@
   <h3>Gallery</h3>
 
   <ul class="thumbnails">
-    <% pictures.each_with_index do |picture, index| %>
+    <% pictures.includes(image_attachment: :blob).each_with_index do |picture, index| %>
       <li class="span2 gallery">
         <% img = image_tag picture.fetch_image.variant(thumb_variant) %>
         <% url = url_for(picture.fetch_image) %>

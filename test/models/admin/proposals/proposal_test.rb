@@ -75,7 +75,26 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
 
     @proposal.convert_to_show
 
-    assert Show.find_by_name(@proposal.show_title)
+    show = Show.find_by_name(@proposal.show_title)
+
+    assert show.present?
+
+    assert_equal @proposal.show_title, show.name
+    assert_equal @proposal.publicity_text, show.description
+
+    assert_not_nil show.slug
+
+    assert_equal 'TBC', show.author
+    assert_equal 'TBC', show.price
+
+    assert_equal Date.today, show.start_date
+    assert_equal Date.today, show.end_date
+    assert_not show.is_public
+
+    assert @proposal.team_members, show.team_members
+    assert @proposal, show.proposal
+
+    assert @proposal.reload.successful
   end
 
   test 'labels for successful proposal with debtors' do

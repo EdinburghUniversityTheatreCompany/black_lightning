@@ -2,24 +2,6 @@
 
 <%= render '/events/description_and_team_members', event: @show %>
 
-<% if @show.reviews.any? then %>
-  <hr />
+<%= render '/shows/reviews', reviews: @show.reviews %>
 
-  <div class="row vertical-rule">
-    <h3>Reviews</h3>
-
-    <% @show.reviews.each do |review| %>
-      <article>
-        <header>
-          <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, format: :long %> <%= "for #{review.organisation}" if review.organisation? %>
-          <br />
-          <%= star_rating review.rating if review.rating && review.rating > 0 %>
-        </header>
-
-        <%= render_markdown review.body %>
-      </article>
-    <% end %>
-  </div>
-<% end %>
-
-<%= render '/shared/gallery', pictures: @show.pictures.includes(image_attachment: :blob) %>
+<%= render '/shared/gallery', pictures: @show.pictures %>

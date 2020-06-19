@@ -39,6 +39,7 @@ FactoryBot.define do
       team_member_count { 5 }
       picture_count { rand(3) }
       attach_image { true }
+      attach_proposal { [true, false].sample }
     end
 
     image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') if attach_image }
@@ -46,6 +47,9 @@ FactoryBot.define do
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
+
+      event.proposal = FactoryBot.create(:proposal) if evaluator.attach_proposal 
+      event.save
     end
   end
 

@@ -60,6 +60,15 @@
 </p>
 
 <p>
+  <b>Proposal:</b>
+  <% if event.proposal.present? && can?(:view, event.proposal) %>
+    <%= get_link event.proposal, :show, link_target: admin_proposals_call_proposal_path(event.proposal.call, event.proposal) %>
+  <% else %>
+    No proposal linked
+  <% end %>
+</p>
+
+<p>
   <b>Tagline:</b>
   <%= event.tagline.presence || 'No tagline' %>
 </p>

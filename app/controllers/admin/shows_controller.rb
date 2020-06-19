@@ -2,7 +2,7 @@ class Admin::ShowsController < AdminController
   load_and_authorize_resource find_by: :slug
   skip_load_resource only: %i[index]
   # Those are checked for permission to create debts instead.
-  skip_authorize_resource only: %i[create_maintenance_debts create_staffing_debts]
+  skip_authorize_resource only: %i[create_maintenance_debts create_staffing_debts convert_to_season convert_to_workshop]
 
   # GET /admin/shows
   # GET /admin/shows.json
@@ -132,6 +132,28 @@ class Admin::ShowsController < AdminController
     redirect_to admin_show_path(@show)
   end
 
+  # POST admin/shows/1/convert_to_season
+  def convert_to_season
+    season = convert_to(Season)
+
+    if season.present?
+      redirect_to admin_season_path(season)
+    else
+      redirect_to admin_show_path(@show)
+    end
+  end
+
+  # POST admin/shows/1/convert_to_workshop
+  def convert_to_workshop
+    workshop = convert_to(Workshop)
+
+    if workshop.present?
+      redirect_to admin_workshop_path(workshop)
+    else
+      redirect_to admin_show_path(@show)
+    end
+  end
+
   # It is only there for legacy purposes.
   # :nocov:
   def query_xts
@@ -190,9 +212,35 @@ class Admin::ShowsController < AdminController
 
   private
 
+  # The show is never actually destroyed. The event just changes type.
+  def convert_to(target_klass)
+    authorize!(:create, target_klass)
+    authorize!(:destroy, @show)
+
+    # Preventing data duplication. Shows will not be destroyed if these are present, but the converted event will be created before that is checked.
+    # To prevent that, we do this check.
+    unless @show.can_convert?
+      helpers.append_to_flash(:error, 'There are still attached reviews, feedbacks, or questionnaires left. You cannot convert a show with one of these attached to prevent data loss.')
+      return false
+    end
+    
+    event = @show.becomes!(target_klass)
+
+    if event.save
+      helpers.append_to_flash(:success, "Converted the Show '#{@show.name}' into the #{helpers.get_object_name(event, include_class_name: true)}.")
+
+      return event
+    else
+      additional_message = "There already exists a #{target_klass.name.humanize} with the slug '#{@show.slug}'" if target_klass.find_by(slug: @show.slug)
+      helpers.append_to_flash(:error, "Could not create #{helpers.get_object_name(event, include_class_name: true)} from the Show '#{@show.name}'. #{additional_message}")
+
+      return false
+    end
+  end
+
   def show_params
     params.require(:show).permit(:maintenance_debt_start, :staffing_debt_start, :description, :name, :slug, :tagline,
-                                 :author, :venue, :venue_id, :season, :season_id, :xts_id, :is_public, :image,
+                                 :author, :venue, :venue_id, :season, :season_id, :proposal, :proposal_id, :xts_id, :is_public, :image,
                                  :start_date, :end_date, :price, :spark_seat_slug,
                                  reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
                                  pictures_attributes: [:id, :_destroy, :description, :image],

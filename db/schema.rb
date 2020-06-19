@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_06_10_070237) do
+ActiveRecord::Schema.define(version: 2020_06_16_085934) do
 
   create_table "active_storage_attachments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -253,6 +253,8 @@ ActiveRecord::Schema.define(version: 2020_06_10_070237) do
     t.string "spark_seat_slug"
     t.date "maintenance_debt_start"
     t.date "staffing_debt_start"
+    t.integer "proposal_id"
+    t.index ["proposal_id"], name: "index_events_on_proposal_id"
     t.index ["season_id"], name: "index_events_on_season_id"
     t.index ["venue_id"], name: "index_events_on_venue_id"
   end
@@ -451,5 +453,6 @@ ActiveRecord::Schema.define(version: 2020_06_10_070237) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
+  add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "membership_activation_tokens", "users"
 end

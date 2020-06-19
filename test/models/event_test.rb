@@ -49,6 +49,40 @@ class EventTest < ActionView::TestCase
     assert_includes show.simultaneous_seasons, season
   end
 
+  test 'possible proposals for new event and existing event' do
+    show = FactoryBot.build(:workshop, attach_proposal: false)
+
+    long_ago_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: -5), successful: true)
+    current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), successful: true)
+    far_future_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: 5), successful: true)
+
+    unsuccessful_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), successful: false)
+
+    assert_includes show.possible_proposals, long_ago_proposal
+    assert_includes show.possible_proposals, current_proposal
+    assert_includes show.possible_proposals, far_future_proposal
+    assert_not_includes show.possible_proposals, unsuccessful_proposal
+
+    show.save
+
+    assert_not_includes show.possible_proposals, long_ago_proposal
+    assert_includes show.possible_proposals, current_proposal
+    assert_not_includes show.possible_proposals, far_future_proposal
+    assert_not_includes show.possible_proposals, unsuccessful_proposal
+  end
+
+  test 'possible proposals for existing event with proposal attached' do
+    show = FactoryBot.create(:show, attach_proposal: false)
+
+    current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), successful: true)
+    far_future_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: 5), successful: true)
+
+    show.proposal = far_future_proposal
+
+    assert_includes show.possible_proposals, current_proposal
+    assert_includes show.possible_proposals, far_future_proposal
+  end
+
   test 'as_json' do
     @event.update!(venue: venues(:one), season: FactoryBot.create(:season))
 

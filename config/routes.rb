@@ -57,6 +57,8 @@ ChaosRails::Application.routes.draw do
         post 'create_staffing_debts', to: 'shows#create_staffing_debts'
         post 'create_maintenance_debts', to: 'shows#create_maintenance_debts'
         get 'xts_report'
+        post 'convert_to_season', to: 'shows#convert_to_season'
+        post 'convert_to_workshop', to: 'shows#convert_to_workshop'
       end
     end
 

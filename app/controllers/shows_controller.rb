@@ -28,7 +28,7 @@ class ShowsController < ApplicationController
   ##
   def show
     @title = @show.name
-    @meta[:description] = @show.description
+    @meta[:description] = helpers.render_plain(@show.description)
     @meta['og:image'] = [@base_url + @show.slideshow_image_url] + @show.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 
     respond_to do |format|

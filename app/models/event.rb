@@ -125,6 +125,23 @@ class Event < ApplicationRecord
     return Season.where('start_date <= ? and end_date >= ?', end_date, start_date)
   end
 
+  def possible_proposals
+    proposals = Admin::Proposals::Proposal.where(successful: true)
+
+    if persisted?
+      date_range = start_date.advance(years: -1)..start_date
+
+      call_ids = Admin::Proposals::Call.where(submission_deadline: date_range).ids
+
+      proposals = proposals.where(call_id: call_ids)
+
+      # The attached proposal should always be included, even if it does not fall within the range or was not successful.
+      proposals = proposals.or(Admin::Proposals::Proposal.where(id: proposal.id)) if proposal.present?
+    end
+
+    return proposals
+  end
+
   def as_json(options = {})
     defaults = {
       include: [

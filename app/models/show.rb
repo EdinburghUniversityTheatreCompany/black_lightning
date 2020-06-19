@@ -37,11 +37,17 @@ class Show < Event
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }
 
-  has_many :reviews, dependent: :destroy
-  has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :destroy
-  has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :destroy
+  has_many :reviews, dependent: :restrict_with_error
+  has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :restrict_with_error
+  has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
 
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
+
+  # If you add more fields, you might need to add to this.
+  # This is to prevent data loss from occuring when converting a Show into another type of event.
+  def can_convert?
+    return reviews.empty? && feedbacks.empty? && questionnaires.empty?
+  end
 
   def create_maintenance_debts
     users.distinct.each do |user|
