@@ -4,6 +4,8 @@
 
 <%= render '/shows/reviews', reviews: @show.reviews %>
 
+<%= render '/shared/gallery', pictures: @show.pictures %>
+
 <br>
 
 <%= render '/shared/show_actions', object: @show %>
@@ -28,7 +30,7 @@
              confirm: "Converting Show #{@show.name} into Season", detail: "Are you sure you want to convert the Show into a Season? Make sure there are no reviews, feedbacks, or questionnaires attached before proceeding. You cannot undo this action." 
 %>
 
-<% if @questionnaires.any? %>
+<% if @questionnaires.any? { |questionnaire| can?(:show, questionnaire) }%>
     <h3>Questionnaires</h3>
 
     <table class="table">
@@ -48,47 +50,52 @@
     </table>
 <% end %>
 
-<%= get_link Admin::Questionnaires::Questionnaire, :new, html_class: (@questionnaires.empty? ? 'btn' : 'btn btn-primary'), link_target: new_admin_questionnaires_questionnaire_url(show_id: @show.id) %>
+<%= get_link Admin::Questionnaires::Questionnaire, :new, 
+             html_class: (@questionnaires.empty? ? 'btn' : 'btn btn-primary'), 
+             link_target: new_admin_questionnaires_questionnaire_url(show_id: @show.id), 
+             additional_condition: @show.end_date > Date.today 
+%>
 
-<% if can? :create, Admin::MaintenanceDebt then %>
-    <h3>Maintenance Debt</h3>
-    <%= simple_form_for [:admin, @show] do |f| %>
-        <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.today()) + 14) %>
-        <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn' %>
+<% # Only show the Debt stuff if the show happens this year. %>
+<% if @show.end_date >= start_of_year %>
+    <% if can? :create, Admin::MaintenanceDebt %>
+        <h3>Maintenance Debt</h3>
+        <%= simple_form_for [:admin, @show] do |f| %>
+            <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.today()) + 14) %>
+            <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn' %>
+        <% end %>
+
+        <% if @show.maintenance_debt_start.present? %>
+            <% existing_maintenance_debt = Admin::MaintenanceDebt.where(show: @show).first %>
+            <% has_maintenance_debt = existing_maintenance_debt.present? %>
+
+            <%= get_link @show, :create_maintenance_debts, link_text: 'Create Maintenance Obligations', http_method: :post, html_class: "btn btn-primary",
+                        confirm: ('Creating Maintenance Obligations' if has_maintenance_debt),
+                        detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Adding Maintenance Debts again will result in users on the show without Maintenance Debt getting a Maintenance Debt. Users that already have a Maintenance Debt will have the due_by date updated to #{l @show.maintenance_debt_start, format: :longy}." if has_maintenance_debt) 
+            %>
+        <% end %>
     <% end %>
 
-    <% if @show.maintenance_debt_start.present? %>
-        <% existing_maintenance_debt = Admin::MaintenanceDebt.where(show: @show).first %>
-        <% has_maintenance_debt = existing_maintenance_debt.present? %>
+    <% if can? :create, Admin::StaffingDebt %>
+        <h3>Staffing Debt</h3>
+        <p>
+            When you add staffing debts, it will top up every team member's staffing debt up to the amount specified.
+            If someone already has one staffing debt and someone else has none and you select 1, now both will have 1 staffing debt.
+            This makes it easy to set staffing debt for the part of the team early on, 
+            and you can easily set it again later on when the rest of the team is added.
+        </p>
 
-        <%= get_link @show, :create_maintenance_debts, link_text: 'Create Maintenance Obligations', http_method: :post, html_class: "btn btn-primary",
-                     confirm: ('Creating Maintenance Obligations' if has_maintenance_debt),
-                     detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Adding Maintenance Debts again will result in users on the show without Maintenance Debt getting a Maintenance Debt. Users that already have a Maintenance Debt will have the due_by date updated to #{l @show.maintenance_debt_start, format: :longy}." if has_maintenance_debt) 
-        %>
-    <% end %>
-<% end %>
+        <%= simple_form_for [:admin, @show] do |f| %>
+            <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.today()) + 14) %>
+            <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn' %>
+        <% end %>
 
-<% if can? :create, Admin::StaffingDebt then %>
-    <h3>Staffing Debt</h3>
-    <p>
-        When you add staffing debts, it will top up every team member's staffing debt up to the amount specified.
-        If someone already has one staffing debt and someone else has none and you select 1, now both will have 1 staffing debt.
-        This makes it easy to set staffing debt for the part of the team early on, 
-        and you can easily set it again later on when the rest of the team is added.
-    </p>
-
-    <%= simple_form_for [:admin, @show] do |f| %>
-        <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.today()) + 14) %>
-        <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn' %>
-    <% end %>
-
-    <% if @show.staffing_debt_start.present? %>
-        <%= form_with(url: create_staffing_debts_admin_show_path(@show), method: :post, local: true, class: "form-inline") do %>
-            Total Amount of Staffing Debts: 
-            <%= number_field :number_of_slots, nil, in: 1..2 %>
-            <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>
+        <% if @show.staffing_debt_start.present? %>
+            <%= form_with(url: create_staffing_debts_admin_show_path(@show), method: :post, local: true, class: "form-inline") do %>
+                Total Amount of Staffing Debts: 
+                <%= number_field :number_of_slots, nil, in: 1..2 %>
+                <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>
+            <% end %>
         <% end %>
     <% end %>
 <% end %>
-
-<%= render '/shared/gallery', pictures: @show.pictures.includes(image_attachment: :blob) %>

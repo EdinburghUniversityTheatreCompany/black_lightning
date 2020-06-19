@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class Admin::ShowsControllerTest < ActionController::TestCase
+  include AcademicYearHelper
+
   setup do
     @admin = users(:admin)
     sign_in @admin
@@ -46,7 +48,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should get show with debt dates set' do
-    @show = FactoryBot.create(:show, is_public: true, staffing_debt_start: Date.today, maintenance_debt_start: Date.today)
+    @show = FactoryBot.create(:show, is_public: true, end_date: start_of_year, staffing_debt_start: Date.today, maintenance_debt_start: Date.today)
 
     get :show, params: { id: @show }
     assert_response :success 
