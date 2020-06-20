@@ -124,7 +124,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaire/1/answer
   ##
   def answer
-    @title = "Answering #{@questionnaire.name} for #{@questionnaire.event.name}"
+    # The title is set in the view.
 
     @questionnaire.instantiate_answers!
 

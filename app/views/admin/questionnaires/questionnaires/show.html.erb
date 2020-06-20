@@ -1,5 +1,7 @@
 <h1><%= @title%></h1>
 
+<%= render 'event_display' %>
+
 <%= render '/shared/questions_and_answers', answers: @questionnaire.answers %>
 
 <% # You cannot use the shared/show_actions here because they're all quite different %>

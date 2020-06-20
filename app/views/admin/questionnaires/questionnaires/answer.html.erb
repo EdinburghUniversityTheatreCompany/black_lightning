@@ -1,4 +1,6 @@
-<h1><%= @title %></h1>
+<h1><%= @title = "Answer #{@questionnaire.name} for #{@questionnaire.event.name}" %></h1>
+
+<%= render 'event_display' %>
 
 <%= simple_nested_form_for(@questionnaire, url: answer_admin_questionnaires_questionnaire_url) do |f| %>
   <%= f.error_notification %>

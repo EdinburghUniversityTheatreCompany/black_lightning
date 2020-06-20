@@ -1,3 +1,5 @@
-<h1><%= @title = "New Questionnaire#{" for #{@show.name}" if @show}" %></h1>
+<h1><%= @title = "Edit Questionnaire for #{@questionnaire.event.name}" %></h1>
+
+<%= render 'event_display' %>
 
 <%= render 'form' %>
