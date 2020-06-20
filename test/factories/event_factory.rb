@@ -50,7 +50,7 @@ FactoryBot.define do
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
 
-      event.proposal = FactoryBot.create(:proposal) if evaluator.attach_proposal 
+      event.proposal = FactoryBot.create(:proposal) if evaluator.attach_proposal && event.proposal.nil?
       event.save
     end
   end
