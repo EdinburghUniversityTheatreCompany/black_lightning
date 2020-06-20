@@ -15,13 +15,13 @@
 #++
 ##
 class Admin::Questionnaires::Questionnaire < ApplicationRecord
-  validates :show_id, :name, presence: true
+  validates :event, :name, presence: true
 
-  belongs_to :show
+  belongs_to :event
 
   has_many :questions, as: :questionable, dependent: :destroy
   has_many :answers, as: :answerable
-  has_many :team_members, through: :show
+  has_many :team_members, through: :event
   has_many :users, through: :team_members
 
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
