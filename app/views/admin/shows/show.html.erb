@@ -30,31 +30,7 @@
              confirm: "Converting Show #{@show.name} into Season", detail: "Are you sure you want to convert the Show into a Season? Make sure there are no reviews, feedbacks, or questionnaires attached before proceeding. You cannot undo this action." 
 %>
 
-<% if @questionnaires.any? { |questionnaire| can?(:show, questionnaire) }%>
-    <h3>Questionnaires</h3>
-
-    <table class="table">
-      <tbody>
-        <% @questionnaires.each do |questionnaire| %>
-            <tr>
-              <%= get_link questionnaire, :answer, http_method: :get, html_class: '', append_name: true, wrap_tag: 'td' %>   
-
-              <%= get_link questionnaire, :show, prefix: 'View', append_name: cannot?(:answer, questionnaire), 
-                           html_class: ('btn' if can?(:answer, questionnaire)), wrap_tag: 'td' 
-              %>
-
-              <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
-            </tr>
-        <% end %>
-      </tbody>
-    </table>
-<% end %>
-
-<%= get_link Admin::Questionnaires::Questionnaire, :new, 
-             html_class: (@questionnaires.empty? ? 'btn' : 'btn btn-primary'), 
-             link_target: new_admin_questionnaires_questionnaire_url(show_id: @show.id), 
-             additional_condition: @show.end_date > Date.today 
-%>
+<%= render 'admin/events/questionnaires', event: @show %>
 
 <% # Only show the Debt stuff if the show happens this year. %>
 <% if @show.end_date >= start_of_year %>

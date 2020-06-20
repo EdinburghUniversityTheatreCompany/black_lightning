@@ -24,7 +24,6 @@ class Admin::ShowsController < AdminController
   end
 
   def show
-    @questionnaires = @show.questionnaires.accessible_by(current_ability)
     @title = @show.name
 
     existing_staffing_debts = Admin::StaffingDebt.where(show: @show)
