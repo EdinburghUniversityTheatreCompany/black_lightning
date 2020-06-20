@@ -14,7 +14,10 @@
 FactoryBot.define do
   factory :questionnaire, class: Admin::Questionnaires::Questionnaire do
     name  { generate(:random_name) }
-    show
+
+    before(:create) do |questionnaire, _evaluator|
+      questionnaire.event = FactoryBot.create(%i[show workshop season].sample) unless questionnaire.event.present?
+    end
 
     after(:create) do |questionnaire, _evaluator|
       questions = FactoryBot.create_list(:question, 10, questionable: questionnaire)

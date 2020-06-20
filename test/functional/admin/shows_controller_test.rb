@@ -251,7 +251,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       end
     end
 
-    assert_equal [ "There are still attached reviews, feedbacks, or questionnaires left. You cannot convert a show with one of these attached to prevent data loss."], flash[:error]
+    assert_equal ["There are still attached reviews or feedbacks left. You cannot convert a show with one of these attached to prevent data loss."], flash[:error]
   end
 
   # Assuming it also will not convert to a Season in this case.

@@ -7,15 +7,6 @@ class ShowTest < ActiveSupport::TestCase
     assert show.can_convert?
   end
 
-  test 'cannot convert show with questionnaires' do
-    questionnaire = FactoryBot.create(:questionnaire)
-
-    show = questionnaire.show
-    show.reviews.clear
-
-    assert_not show.can_convert?
-  end
-
   test 'cannot convert show with reviews' do
     show = FactoryBot.create(:show, review_count: 1)
 

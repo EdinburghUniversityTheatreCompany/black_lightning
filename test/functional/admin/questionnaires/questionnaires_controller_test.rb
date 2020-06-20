@@ -10,10 +10,10 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
 
   test 'should get index' do
     old_show = FactoryBot.create(:show, start_date: Date.today.advance(years: -2), end_date: Date.today.advance(years: -2))
-    previous_year = FactoryBot.create(:questionnaire, show: old_show)
+    previous_year = FactoryBot.create(:questionnaire, event: old_show)
 
     new_show = FactoryBot.create(:show, start_date: Date.today, end_date: Date.today)
-    this_year = FactoryBot.create(:questionnaire, show: new_show)
+    this_year = FactoryBot.create(:questionnaire, event: new_show)
 
     get :index
 
@@ -37,7 +37,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     sign_out @admin
     sign_in user
 
-    questionnaires = FactoryBot.create_list(:questionnaire, 4, show: show)
+    questionnaires = FactoryBot.create_list(:questionnaire, 4, event: show)
 
     get :index
     assert_response :success
@@ -71,9 +71,9 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   test 'should not get new when there are no future shows' do
-    Show.all.delete_all
+    Event.all.delete_all
 
-    assert Show.all.empty?
+    assert Event.all.empty?
 
     get :new
     assert_redirected_to admin_questionnaires_questionnaires_path
@@ -81,7 +81,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
 
   test 'should create' do
     attributes = {
-      show_id: @questionnaire.show_id,
+      event_id: @questionnaire.event_id,
       name: 'Finbar the Viking'
     }
 
@@ -119,7 +119,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     assert_equal 'Finbar the Viking', assigns(:questionnaire).name
 
     # Test that update cannot change the show or add any answers.
-    assert assigns(:questionnaire).show_id = @questionnaire.show_id
+    assert_equal @questionnaire.event_id, assigns(:questionnaire).event_id
     assert(assigns(:questionnaire).answers.none? { |answer| answer.answer == 'Hexagon' })
 
     assert_redirected_to admin_questionnaires_questionnaire_path(@questionnaire)
@@ -158,7 +158,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     assert(assigns(:questionnaire).answers.any? { |answer| answer.answer == 'Hexagon' })
 
     # Test that answer cannot change the show, the name, and the questions.
-    assert assigns(:questionnaire).show_id = @questionnaire.show_id
+    assert_equal @questionnaire.event_id, assigns(:questionnaire).event_id
     assert_equal @questionnaire.name, assigns(:questionnaire).name
     assert(assigns(:questionnaire).questions.none? { |aquestion| aquestion.response_type == 'Testing' })
 

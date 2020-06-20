@@ -127,12 +127,18 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.end_date = Date.today
     @show.is_public = false
 
+    venue = Venue.find_by(name: 'Bedlam Theatre') || Venue.where("name like ?", "%Bedlam%").first
+    
+    raise(ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. Could not find a Venue with a name resembling 'Bedlam Theatre' or with a name that contains 'Bedlam'.") if venue.nil?
+
+    @show.venue = venue
+
     unless @show.save
       @show.errors.full_messages.each do |error|
         p error
       end
       p 'Converting the proposal to a show failed for the above reasons.'
-      raise ActiveRecord::RecordNotSaved, "Could not save the new show. #{@show.errors.full_messages.join(' ,')}"
+      raise ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. #{@show.errors.full_messages.join(' ,')}"
     end
 
     p 'Adding Team Members'

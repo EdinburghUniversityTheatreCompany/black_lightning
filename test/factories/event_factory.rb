@@ -35,6 +35,8 @@ FactoryBot.define do
     end_date     { start_date + 5.days }
     is_public    { [true, false].sample }
 
+    venue_id     { Venue.all.sample.id if venue.nil? }
+
     transient do
       team_member_count { 5 }
       picture_count { rand(3) }
@@ -48,7 +50,7 @@ FactoryBot.define do
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
 
-      event.proposal = FactoryBot.create(:proposal) if evaluator.attach_proposal 
+      event.proposal = FactoryBot.create(:proposal) if evaluator.attach_proposal && event.proposal.nil?
       event.save
     end
   end

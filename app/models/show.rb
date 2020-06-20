@@ -39,14 +39,15 @@ class Show < Event
 
   has_many :reviews, dependent: :restrict_with_error
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :restrict_with_error
-  has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
 
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
   # If you add more fields, you might need to add to this.
   # This is to prevent data loss from occuring when converting a Show into another type of event.
+  # Please also modify the error messagse in admin Show controller that is displayed when this returns false
+  # and the confirm message on the admin Shows show page for converting.
   def can_convert?
-    return reviews.empty? && feedbacks.empty? && questionnaires.empty?
+    return reviews.empty? && feedbacks.empty?
   end
 
   def create_maintenance_debts

@@ -201,7 +201,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     forbidden_actions = %I[new create update delete]
 
     questionnaire = FactoryBot.create :questionnaire
-    ability = Ability.new(questionnaire.show.team_members.first.user)
+    ability = Ability.new(questionnaire.event.team_members.first.user)
 
     helper_test_actions(questionnaire, 'a questionnaire of a show they are on', ability, allowed_actions, forbidden_actions)
 

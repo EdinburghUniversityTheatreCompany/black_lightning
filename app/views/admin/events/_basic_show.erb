@@ -31,6 +31,24 @@
 </p>
 
 <p>
+  <b>Proposal:</b>
+  <% if event.proposal.present? && can?(:view, event.proposal) %>
+    <%= get_link event.proposal, :show, link_target: admin_proposals_call_proposal_path(event.proposal.call, event.proposal) %>
+  <% else %>
+    No proposal linked
+  <% end %>
+</p>
+
+<p>
+  <b>Season:</b>
+  <% if event.season.present? %>
+    <%= get_link event.season, :show %>
+  <% else %>
+    Not part of a season
+  <% end %>
+</p>
+
+<p>
   <b>Author:</b>
   <%= event.author.presence || 'No author specified' %>
 </p>
@@ -42,30 +60,16 @@
 
 <p>
   <b>Venue:</b>
-  <%= event.venue.try(:name) || 'No venue specified' %>
+  <% if event.venue.present? %>
+    <%= get_link event.venue, :show %>
+  <% else %>
+    No Venue specified.
+  <% end %>
 </p>
 
 <p>
   <b>Price:</b>
   <%= event.price %>
-</p>
-
-<p>
-  <b>Season:</b>
-  <% if event.season.present? %>
-    <%= get_link event.season, :show, link_text: event.season.name %>
-  <% else %>
-    Not part of a season
-  <% end %>
-</p>
-
-<p>
-  <b>Proposal:</b>
-  <% if event.proposal.present? && can?(:view, event.proposal) %>
-    <%= get_link event.proposal, :show, link_target: admin_proposals_call_proposal_path(event.proposal.call, event.proposal) %>
-  <% else %>
-    No proposal linked
-  <% end %>
 </p>
 
 <p>

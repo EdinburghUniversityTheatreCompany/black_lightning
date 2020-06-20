@@ -18,8 +18,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     @show_current_term_only = q.nil?
 
     # Set the range to the current term by default.
-    @q.show_end_date_gt = helpers.start_of_term if @show_current_term_only
-    @q.show_start_date_lt = helpers.end_of_term if @show_current_term_only
+    @q.event_end_date_gt = helpers.start_of_term if @show_current_term_only
+    @q.event_start_date_lt = helpers.end_of_term if @show_current_term_only
 
     # Is this a bit hacky? Yes. Does it work? Yes. Does it work when you try to do it the normal way? No. Can I try to fix it? Of course!
     # I suspect the generated SQL query gets messed up when you try to do:
@@ -30,9 +30,9 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
 
     @questionnaires = Admin::Questionnaires::Questionnaire.where(id: result_ids)
                                                           .accessible_by(current_ability)
-                                                          .includes(:show)
+                                                          .includes(:event)
                                                           .order('id DESC')
-                                                          .group_by { |questionnaire| questionnaire.show.name }
+                                                          .group_by { |questionnaire| questionnaire.event.name }
 
     respond_to do |format|
       format.html # index.html.erb
@@ -46,7 +46,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaires/1.json
   ##
   def show
-    @title = "#{@questionnaire.name} for #{@questionnaire.show.name}"
+    @title = "#{@questionnaire.name} for #{@questionnaire.event.name}"
 
     @questionnaire.instantiate_answers!
 
@@ -71,8 +71,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     set_create_form_parameters
 
     respond_to do |format|
-      if @shows_collection.empty?
-        failure_notice = 'There are no future shows, so it is not possible to add a questionnaire at the moment.'.freeze
+      if @events_collection.empty?
+        failure_notice = 'There are no future events, so it is not possible to add a questionnaire at the moment.'.freeze
 
         format.html { redirect_to Admin::Questionnaires::Questionnaire, notice: failure_notice }
         format.json { render json: failure_notice }
@@ -124,7 +124,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # GET /admin/questionnaires/questionnaire/1/answer
   ##
   def answer
-    @title = "Answering #{@questionnaire.name} for #{@questionnaire.show.name}"
+    @title = "Answering #{@questionnaire.name} for #{@questionnaire.event.name}"
 
     @questionnaire.instantiate_answers!
 
@@ -168,7 +168,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   private
 
   def create_params
-    params.require(:admin_questionnaires_questionnaire).permit(:show_id, :name,
+    params.require(:admin_questionnaires_questionnaire).permit(:event_id, :name,
       questions_attributes: [:id, :_destroy, :question_text, :response_type])
   end
 
@@ -183,9 +183,9 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   end
 
   def set_create_form_parameters
-    @show = Show.where(id: params[:show_id]).first
-    shows = Show.future.to_a
-    shows += [@show] unless @show.nil?
-    @shows_collection = shows.collect { |show| [show.name, show.id] }
+    @event = Event.where(id: params[:event_id]).first
+    events = Event.future.to_a
+    events += [@event] unless @event.nil?
+    @events_collection = events.collect { |event| [event.name, event.id] }
   end
 end

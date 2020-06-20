@@ -8,10 +8,10 @@
 <%= render layout: '/shared/collapsible_search_form' do %>
   <h3>Search</h3>
   <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_questionnaires_questionnaires do |f| %>
-    <%= f.input_field :show_name_cont, placeholder: "Show Title",  required: false %>
+    <%= f.input_field :event_name_cont, placeholder: "Event Name",  required: false %>
 
-    <%= f.input :show_end_date_gt, as: :date, label: "Start Date", start_year: 2012, end_year: Date.today.year, include_blank: true, required: false %>
-    <%= f.input :show_start_date_lt,   as: :date, label: "End Date", start_year: 2012, end_year: Date.today.year, include_blank: true, required: false %>
+    <%= f.input :event_end_date_gt, as: :date, label: "Start Date", start_year: 2012, end_year: Date.today.year, include_blank: true, required: false %>
+    <%= f.input :event_start_date_lt,   as: :date, label: "End Date", start_year: 2012, end_year: Date.today.year, include_blank: true, required: false %>
 
     <%= f.submit :Search, class: 'btn' %>
   <% end %>
@@ -24,14 +24,14 @@
 <% end %>
 
 <div class="accordion" id="shows_current_accordion">
-  <% @questionnaires.each do |show_name, questionnaires| %>
+  <% @questionnaires.each do |event_name, questionnaires| %>
     <div class="accordion-group">
       <% # If you change the div_name, please also change the anchor for the back buttn on the questionnaire show page. %>
-      <% div_name = "#{show_name.to_url}-table" %>
+      <% div_name = "#{event_name.to_url}-table" %>
       <div class="accordion-heading">
         <h4>
           <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
-            <%= show_name %>
+            <%= event_name %>
           </a>
         </h4>
       </div>

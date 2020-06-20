@@ -19,6 +19,7 @@
 
 # Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/Fixtures.html
 
+# Please do not rename this one. It breaks the convert proposal test in proposal_test.
 one:
   name: Bedlam Theatre
   description: Brrr, cold
