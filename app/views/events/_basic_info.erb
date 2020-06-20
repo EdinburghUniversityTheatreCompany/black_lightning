@@ -14,7 +14,7 @@
 
       <% if event.venue.present?  %>
         <h4>Venue</h4>
-        <p><b><%= link_to event.venue.name, event.venue %></b></p>
+        <p><b><%= get_link event.venue, :show %></b></p>
       <% end %>
 
       <% if event.price? %>
