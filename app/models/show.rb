@@ -39,7 +39,6 @@ class Show < Event
 
   has_many :reviews, dependent: :restrict_with_error
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :restrict_with_error
-  has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
 
   accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 

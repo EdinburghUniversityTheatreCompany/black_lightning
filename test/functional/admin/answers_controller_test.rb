@@ -28,7 +28,7 @@ class Admin::AnswersControllerTest < ActionController::TestCase
 
   test 'can access answer file when you can read the questionable' do
     questionnaire = FactoryBot.create(:questionnaire)
-    user = questionnaire.show.users.first
+    user = questionnaire.event.users.first
     question = FactoryBot.create(:question, questionable: questionnaire, response_type: 'File', answered: true)
     answer = Admin::Answer.find_by_question_id(question.id)
 

@@ -11,7 +11,7 @@
     <%= f.input :name %>
 
     <% if @questionnaire.new_record? %>
-      <%= f.input :show_id, collection: @shows_collection, selected: @show %>
+      <%= f.association :event, collection: @events_collection, selected: @event %>
     <% end %>
 
     <h3>Questions</h3>

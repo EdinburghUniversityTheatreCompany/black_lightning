@@ -10,5 +10,5 @@
 
 <%= get_link @questionnaire, :destroy %>
 
-<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View All Questionnaires', anchor: "#{@questionnaire.show.name.to_url}-table" %>
+<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View All Questionnaires', anchor: "#{@questionnaire.event.name.to_url}-table" %>
 
