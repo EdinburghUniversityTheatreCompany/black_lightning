@@ -3,8 +3,10 @@
 ##
 
 class Admin::Proposals::CallsController < AdminController
+  include GenericController
+
   before_action :set_paper_trail_whodunnit
-  load_and_authorize_resource class: Admin::Proposals::Call
+  load_and_authorize_resource
 
   ##
   # GET /admin/proposals/calls
@@ -13,95 +15,8 @@ class Admin::Proposals::CallsController < AdminController
   ##
   def index
     @title = 'Proposals to the EUTC'
-    @calls = @calls.where(archived: [nil, false])
 
-    respond_to do |format|
-      format.html # index.html.erb
-      format.json { render json: @calls }
-    end
-  end
-
-  ##
-  # GET /admin/proposals/calls/1
-  #
-  # GET /admin/proposals/calls/1.json
-  ##
-  def show
-    @title = @call.name
-
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json { render json: @call }
-    end
-  end
-
-  ##
-  # GET /admin/proposals/calls/new
-  #
-  # GET /admin/proposals/calls/new.json
-  ##
-  def new
-    # The title is set in the view.
-
-    respond_to do |format|
-      format.html # new.html.erb
-      format.json { render json: @call }
-    end
-  end
-
-  ##
-  # GET /admin/proposals/calls/1/edit
-  ##
-  def edit
-    # The title is set in the view.
-  end
-
-  ##
-  # POST /admin/proposals/calls
-  #
-  # POST /admin/proposals/calls.json
-  ##
-  def create
-    respond_to do |format|
-      if @call.save
-        format.html { redirect_to @call, notice: 'Call was successfully created.' }
-        format.json { render json: @call, status: :created, location: @call }
-      else
-        format.html { render 'new', status: :unprocessable_entity }
-        format.json { render json: @call.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  ##
-  # PUT /admin/proposals/calls/1
-  #
-  # PUT /admin/proposals/calls/1.json
-  ##
-  def update
-    respond_to do |format|
-      if @call.update(call_params)
-        format.html { redirect_to @call, notice: 'Call was successfully updated.' }
-        format.json { head :no_content }
-      else
-        format.html { render 'edit', status: :unprocessable_entity }
-        format.json { render json: @call.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  ##
-  # DELETE /admin/proposals/calls/1
-  #
-  # DELETE /admin/proposals/calls/1.json
-  ##
-  def destroy
-    helpers.destroy_with_flash_message(@call)
-
-    respond_to do |format|
-      format.html { redirect_to admin_proposals_calls_path }
-      format.json { head :no_content }
-    end
+    super
   end
 
   ##
@@ -121,9 +36,19 @@ class Admin::Proposals::CallsController < AdminController
   end
 
   private
+  
+  def resource_class
+    Admin::Proposals::Call
+  end
 
-  def call_params
-    params.require(:admin_proposals_call).permit(:submission_deadline, :editing_deadline, :name, :archived,
-                                                 questions_attributes: [:id, :_destroy, :question_text, :response_type])
+  def permitted_params
+    [
+      :submission_deadline, :editing_deadline, :name, :archived,
+      questions_attributes: [:id, :_destroy, :question_text, :response_type]
+    ]
+  end
+
+  def index_query_params
+    { archived: [nil, false] }
   end
 end
