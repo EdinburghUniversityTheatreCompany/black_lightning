@@ -1,4 +1,6 @@
 class Admin::ShowsController < AdminController
+  include GenericController
+
   load_and_authorize_resource find_by: :slug
   skip_load_resource only: %i[index]
   # Those are checked for permission to create debts instead.
@@ -40,65 +42,17 @@ class Admin::ShowsController < AdminController
     end
   end
 
-  def new
-    # Title set by the view.
-  end
-
-  def create
-    respond_to do |format|
-      if @show.save
-        format.html { redirect_to admin_show_url(@show), notice: 'Show was successfully created.' }
-      else
-        format.html { render 'new', status: :unprocessable_entity }
-      end
-    end
-  end
-
-  def edit
-    # Title set by the view.
-  end
+  # New is handled by the Generic Controller.
+  # Create is handled by the Generic Controller.
+  # Edit is handled by theGeneric Controller.
 
   def update
-    previous_user_ids = @show.users.ids
+    @previous_user_ids = @show.users.ids
 
-    if @show.update(show_params)
-
-      flash[:notice] = 'The show was successfully updated.'
-
-      # Used to check any new users being added are not in debt.
-      if params[:show][:team_members_attributes]
-        parameter_user_ids = params[:show][:team_members_attributes].values.collect { |e| e[:user_id].to_i }.uniq
-        new_user_ids = parameter_user_ids - previous_user_ids
-
-        new_users = User.where(id: new_user_ids)
-        new_debtors = new_users.select(&:in_debt)
-
-        if new_debtors.any?
-          new_debtors_string = new_debtors.collect(&:name).to_sentence
-          flash[:notice] = "The show was successfully updated, but #{new_debtors_string} #{'is'.pluralize(new_debtors.count)} in debt."
-
-          ShowMailer.warn_committee_about_debtors_added_to_show(@show, new_debtors_string, @current_user).deliver_later
-        end
-      end
-
-      respond_to do |format|
-        format.html { redirect_to admin_show_url(@show) }
-      end
-    else
-      respond_to do |format|
-        format.html { render 'edit', status: :unprocessable_entity }
-      end
-    end
+    super
   end
 
-  def destroy
-    helpers.destroy_with_flash_message(@show)
-
-    respond_to do |format|
-      format.html { redirect_to admin_shows_url }
-      format.json { head :no_content }
-    end
-  end
+  # Destroy is handled by generic.
 
   # POST admin/shows/1/create_maintenance_debts
   def create_maintenance_debts
@@ -237,12 +191,43 @@ class Admin::ShowsController < AdminController
     end
   end
 
-  def show_params
-    params.require(:show).permit(:maintenance_debt_start, :staffing_debt_start, :description, :name, :slug, :tagline,
-                                 :author, :venue, :venue_id, :season, :season_id, :proposal, :proposal_id, :xts_id, :is_public, :image,
-                                 :start_date, :end_date, :price, :spark_seat_slug,
-                                 reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
-                                 pictures_attributes: [:id, :_destroy, :description, :image],
-                                 team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal, :proposal_id])
+  private
+
+  def order_args
+    # Dealt with by default scope.
+    nil
+  end
+
+  def permitted_params
+    [
+      :maintenance_debt_start, :staffing_debt_start, :description, :name, :slug, :tagline,
+      :author, :venue, :venue_id, :season, :season_id, :proposal, :proposal_id, :xts_id, :is_public, :image,
+      :start_date, :end_date, :price, :spark_seat_slug,
+      reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
+      pictures_attributes: [:id, :_destroy, :description, :image],
+      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal, :proposal_id]
+    ]
+  end
+
+  def on_update_success
+    # Should set @previous_user_ids in the update action.
+
+    # Used to check any new users being added are not in debt.
+    if params[:show][:team_members_attributes]
+      parameter_user_ids = params[:show][:team_members_attributes].values.collect { |e| e[:user_id].to_i }.uniq
+      new_user_ids = parameter_user_ids - @previous_user_ids
+
+      new_users = User.where(id: new_user_ids)
+      new_debtors = new_users.select(&:in_debt)
+
+      if new_debtors.any?
+        new_debtors_string = new_debtors.collect(&:name).to_sentence
+        flash[:notice] = "The show was successfully updated, but #{new_debtors_string} #{'is'.pluralize(new_debtors.count)} in debt."
+
+        ShowMailer.warn_committee_about_debtors_added_to_show(@show, new_debtors_string, @current_user).deliver_later
+      end
+    end
+
+    super
   end
 end

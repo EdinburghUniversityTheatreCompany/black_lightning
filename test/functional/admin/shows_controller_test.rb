@@ -94,7 +94,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     put :update, params: { id: @show, show: attributes }
 
     assert_equal attributes[:name], assigns(:show)[:name]
-    assert_equal 'The show was successfully updated.', flash[:notice]
+    assert_equal ["The Show '#{attributes[:name]}' was successfully updated."], flash[:success]
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
@@ -111,7 +111,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       put :update, params: { id: @show, show: attributes }
     end
 
-    assert_equal 'The show was successfully updated.', flash[:notice]
+    assert_equal ["The Show '#{attributes[:name]}' was successfully updated."], flash[:success]
+
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
