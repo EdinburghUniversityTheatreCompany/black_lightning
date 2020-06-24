@@ -33,6 +33,9 @@ ChaosRails::Application.routes.draw do
     end
   end
 
+  get 'marketing_creatives/sign_up', to: 'admin/marketing_creatives/profiles#sign_up'
+  # TODO: Corresponding create, maybe?
+
   get 'events/xts/:id', to: 'events#find_by_xts_id'
   get 'attachments/:slug(/:style)', to: 'attachments#file'
 
@@ -132,11 +135,22 @@ ChaosRails::Application.routes.draw do
     get  '/permissions/grid', to: 'permissions#grid', as: :permissions
     post '/permissions/grid', to: 'permissions#update_grid', as: :update_permissions
 
-    get 'techie_families', to: 'techies#index'
-
     resources :techies do
       collection do
         get 'tree'
+      end
+    end
+
+    get 'techie_families', to: 'techies#index'
+
+    namespace :marketing_creatives do
+      # Looks a bit weird but necessary to get the url to be admin/marketing_creatives.
+      resources '', controller: 'categories', as: 'categories'
+
+      resources :profiles do
+        collection do
+          get 'sign_up', to: 'profiles#sign_up'
+        end
       end
     end
 
