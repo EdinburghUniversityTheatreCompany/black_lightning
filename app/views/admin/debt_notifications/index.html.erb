@@ -3,8 +3,8 @@
 <div class="row">
     <div class="span12">
         <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debt_notifications, html: { id: "search", class: "form-search" } do |f| %>
-            <%= f.input_field :user_first_name_cont, value: @first_name, placeholder: "First Name",  required: false %>
-            <%= f.input_field :user_last_name_cont, value: @last_name, placeholder: "Last Name",   required: false %>
+            <%= f.input_field :user_first_name_cont, placeholder: "First Name",  required: false %>
+            <%= f.input_field :user_last_name_cont,  placeholder: "Last Name",   required: false %>
             <%= f.submit :Search, class: 'btn' %>
         <% end %>
     </div>
