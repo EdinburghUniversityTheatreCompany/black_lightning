@@ -1,3 +1,4 @@
+# Has been severely neglected. Can probably use the GenericController.
 class Admin::MembershipCardsController < AdminController
   load_and_authorize_resource find_by: :card_number
 
