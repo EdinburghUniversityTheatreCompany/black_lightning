@@ -8,10 +8,13 @@ class NameHelperTest < ActionView::TestCase
   end
 
   test 'format_class_name' do
-    assert_equal 'Questionnaires', format_class_name('questionnaires')
     assert_equal 'Questionnaire', format_class_name('questionnaires', true)
+    assert_equal 'Questionnaire', format_class_name('questionnaires')
+    
+    assert_equal 'Questionnaires', format_class_name('questionnaires', false)
+
     assert_equal 'Admin Team Member', format_class_name('admin_team_members', true)
-    assert_equal 'Team Members', format_class_name('Admin::Teams::TeamMembers')
+    assert_equal 'Team Members', format_class_name('Admin::Teams::TeamMembers', false)
   end
 
   test 'get_object_name for class' do

@@ -28,17 +28,19 @@ module NameHelper
   # Returns the formatted class name of the passed class or instance.
   # Admin::Questionnaires::QuestionnaireExample returns Questionnaire Example.
   # Returns nil if the object is nil.
-  def get_formatted_class_name(subject_class)
+  def get_formatted_class_name(subject_class, singular = true)
     return 'Nil' if subject_class.nil?
 
     subject_class = subject_class.class unless subject_class.is_a? Class
 
-    return format_class_name(subject_class.name)
+    return format_class_name(subject_class.name, singular)
   end
 
-  def format_class_name(name, singular = false)
+  def format_class_name(name, singular = true)
     name = name.to_s.demodulize.underscore.humanize.titleize
+
     name = name.singularize if singular
+    name = name.pluralize unless singular
 
     return name
   end
