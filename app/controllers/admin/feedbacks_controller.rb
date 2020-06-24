@@ -3,21 +3,18 @@
 ##
 
 class Admin::FeedbacksController < AdminController
-  load_and_authorize_resource class: Admin::Feedback
-
+  include GenericController
+  load_and_authorize_resource
 
   # GET /admin/feedbacks
   # GET /admin/feedbacks.json
   def index
     @show = Show.find_by_slug(params[:show_id])
-    @feedbacks = @feedbacks.where(show_id: @show.id)
 
     @title = "Feedback for #{@show.name}"
 
-    respond_to do |format|
-      format.html # index.html.erb
-      format.json { render json: @feedbacks }
-    end
+    # Sets index_query_params
+    super
   end
 
   # GET /admin/feedbacks/new
@@ -26,16 +23,15 @@ class Admin::FeedbacksController < AdminController
     @show = Show.find_by_slug(params[:show_id])
     @title = "New Feedback for #{@show.name}"
 
-    respond_to do |format|
-      format.html # new.html.erb
-      format.json { render json: @feedback }
-    end
+    super
   end
 
   # GET /admin/feedbacks/1/edit
   def edit
     @show = @feedback.show
     @title = "Feedback with ID #{@feedback.id} for #{@show.name}"
+
+    super
   end
 
   # POST /admin/feedbacks
@@ -69,15 +65,7 @@ class Admin::FeedbacksController < AdminController
   def update
     @show = @feedback.show
 
-    respond_to do |format|
-      if @feedback.update(feedback_params)
-        format.html { redirect_to admin_show_feedbacks_path(@show), notice: 'Feedback was successfully updated.' }
-        format.json { head :no_content }
-      else
-        format.html { render 'edit', status: :unprocessable_entity }
-        format.json { render json: @feedback.errors, status: :unprocessable_entity }
-      end
-    end
+    super
   end
 
   # DELETE /admin/feedbacks/1
@@ -85,17 +73,28 @@ class Admin::FeedbacksController < AdminController
   def destroy
     @show = @feedback.show
 
-    helpers.destroy_with_flash_message(@feedback)
-
-    respond_to do |format|
-      format.html { redirect_to admin_show_feedbacks_path(@show) }
-      format.json { head :no_content }
-    end
+    super
   end
 
   private
 
-  def feedback_params
-    params.require(:admin_feedback).permit(:body, :show, :show_id)
+  def resource_class
+    Admin::Feedback
+  end
+
+  def permitted_params
+    [:body, :show, :show_id]
+  end
+
+  def index_query_params
+    { show_id: @show.id }
+  end
+
+  def update_redirect_url
+    admin_show_feedbacks_path(@show)
+  end
+
+  def destroy_redirect_url
+    update_redirect_url
   end
 end
