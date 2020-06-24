@@ -4,6 +4,8 @@
 # Uses Will_Paginate for pagination.
 ##
 class ShowsController < ApplicationController
+  include GenericController
+
   load_and_authorize_resource find_by: :slug
   ##
   # GET /shows
@@ -27,13 +29,9 @@ class ShowsController < ApplicationController
   # GET /shows/1
   ##
   def show
-    @title = @show.name
     @meta[:description] = helpers.render_plain(@show.description)
     @meta['og:image'] = [@base_url + @show.slideshow_image_url] + @show.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 
-    respond_to do |format|
-      format.html
-      format.json { render json: @show, methods: [:thumb_image_url, :slideshow_image_url], include: [{ pictures: { methods: [:thumb_url, :display_url] } }, team_members: { methods: [:user_name] }] }
-    end
+    super
   end
 end
