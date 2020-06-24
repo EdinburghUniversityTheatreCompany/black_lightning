@@ -52,7 +52,6 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_equal mass_mail, assigns(:mass_mail), 'The mass mail was not assigned by the controller'
-    assert_includes assigns(:title), mass_mail.subject, 'The title does not contain the subject of the mass mail'
     assert_match 'value="Send"', response.body, 'The send button is not visibile on the create form'
   end
 
