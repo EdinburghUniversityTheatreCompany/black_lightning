@@ -14,8 +14,18 @@
 #++
 ##
 class Admin::Proposals::CallQuestionTemplate < ApplicationRecord
+  include ApplicationHelper
+
   validates :name, presence: true, uniqueness: { case_sensitive: false }
 
   has_many :questions, as: :questionable
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
+
+  def as_json(options = {})
+    defaults = { include: [:questions] }
+
+    options = merge_hash(defaults, options)
+
+    super(options)
+  end
 end
