@@ -6,18 +6,6 @@ class Admin::StaffingTemplatesController < AdminController
 
   load_and_authorize_resource
 
-  ##
-  # GET /admin/staffing_templates/1
-  #
-  # GET /admin/staffing_templates/1.json
-  ##
-  def show
-    @title = "#{@staffing_template.name} Staffing Template"
-
-
-    super
-  end
-
   private
 
   def resource_class
