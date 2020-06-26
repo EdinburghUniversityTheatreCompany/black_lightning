@@ -35,8 +35,6 @@ module GenericController
   end
 
   def create
-    #instance_variable_set("@#{resource_name}", resource_class.new(create_params))
-
     respond_to do |format|
       if get_resource.save
         on_create_success
@@ -174,7 +172,7 @@ module GenericController
                                 .accessible_by(current_ability)
                                 .order(order_args)
     # Order will not override any ordering from scopes!
-    #resources = resources.includes(*includes_args) if includes_args.any?
+
     resources = resources.paginate(page: params[:page], per_page: items_per_page) if should_paginate
 
     instance_variable_set("@#{resource_name.pluralize}", resources)
