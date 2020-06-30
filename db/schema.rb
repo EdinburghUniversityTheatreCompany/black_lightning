@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_06_19_164247) do
+ActiveRecord::Schema.define(version: 2020_06_21_105639) do
 
   create_table "active_storage_attachments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -274,6 +274,37 @@ ActiveRecord::Schema.define(version: 2020_06_19_164247) do
     t.index ["status"], name: "index_fault_reports_on_status"
   end
 
+  create_table "marketing_creatives_categories", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.string "name"
+    t.string "name_on_profile"
+    t.string "url"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["url"], name: "index_marketing_creatives_categories_on_url"
+  end
+
+  create_table "marketing_creatives_category_infos", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.bigint "profile_id"
+    t.bigint "category_id"
+    t.text "description"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["category_id"], name: "index_marketing_creatives_category_infos_on_category_id"
+    t.index ["profile_id"], name: "index_marketing_creatives_category_infos_on_profile_id"
+  end
+
+  create_table "marketing_creatives_profiles", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+    t.string "name"
+    t.string "url"
+    t.text "about"
+    t.boolean "approved"
+    t.integer "user_id"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["url"], name: "index_marketing_creatives_profiles_on_url"
+    t.index ["user_id"], name: "index_marketing_creatives_profiles_on_user_id"
+  end
+
   create_table "mass_mails", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci", force: :cascade do |t|
     t.integer "sender_id"
     t.string "subject"
@@ -454,5 +485,8 @@ ActiveRecord::Schema.define(version: 2020_06_19_164247) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
+  add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"
+  add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_profiles", column: "profile_id"
+  add_foreign_key "marketing_creatives_profiles", "users"
   add_foreign_key "membership_activation_tokens", "users"
 end
