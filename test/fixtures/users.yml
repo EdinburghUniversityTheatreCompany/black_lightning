@@ -10,3 +10,9 @@ user:
   first_name: 'Cyclops'
   last_name: 'Cat'
   email: 'cyclops@cat.eye'
+
+committee:
+  id: 3
+  first_name: 'Sophie'
+  last_name: 'Sombrero'
+  email: 'yee@haw.howdy'
