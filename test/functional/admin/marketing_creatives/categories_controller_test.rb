@@ -20,6 +20,20 @@ class Admin::MarketingCreatives::CategoriesControllerTest < ActionController::Te
     end
   end
 
+  test 'should get show' do
+    category_infos = FactoryBot.create_list(:marketing_creatives_category_info, 3, category: @category)
+
+    get :show, params: { id: @category }
+
+    assert_response :success
+
+    assert_equal category_infos.collect(&:id).sort, assigns(:category_infos).collect(&:id).sort
+
+    category_infos.each do |category_info|
+      assert_includes response.body, category_info.profile.name
+    end
+  end
+
   test 'should get new' do
     get :new
     assert_response :success

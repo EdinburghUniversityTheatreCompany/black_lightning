@@ -9,7 +9,17 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   end
 
   def show
-    # Todo
+    # We shuffle the category_infos with a different seed every day.
+    # This way, every Creative has a fair chance of ending up near the top.
+    days_since_bedlam = Date.today - Date.new(1980, 1, 30)
+
+    @category_infos = @category.category_infos
+                               .accessible_by(current_ability)
+                               .includes(image_attachment: :blob)
+                               .order(:id)
+                               .shuffle(random: Random.new(days_since_bedlam))
+
+    super
   end
 
   private
