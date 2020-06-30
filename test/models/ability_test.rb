@@ -3,7 +3,7 @@ require 'test_helper'
 # This is not actually a model, but it lives in the models folder.
 class Admin::AbilityTest < ActiveSupport::TestCase
   setup do
-    @user = FactoryBot.create :user
+    @user = users(:user)
     @ability = Ability.new @user
   end
 
@@ -13,7 +13,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     models = ApplicationRecord.descendants
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
-                  Admin::Proposals::Proposal, Admin::Proposals::Call]
+                  Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -308,6 +308,54 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(created_opportunity, 'an opportunity they created', ability, allowed_actions, forbidden_actions)
 
     helper_test_actions(other_opportunity, 'an opportuniy they did not create', ability, [], allowed_actions + forbidden_actions)
+  end
+
+  ##
+  # Marketing Creatives
+  ##
+
+  test 'users without an account can sign up and create a Marketing Creatives profile' do
+    @ability = Ability.new(nil)
+
+    allowed_actions = %I[sign_up create]
+    forbidden_actions = %I[edit update show index new delete destroy approve reject]
+
+    helper_test_actions(MarketingCreatives::Profile, 'marketing creative profile as user without account', @ability, allowed_actions, forbidden_actions)
+  end
+
+  test 'marketing_creatives profiles permissions for signed-in users without a profile' do
+    allowed_actions = %I[sign_up create show]
+    forbidden_actions = %I[index edit update new delete destroy approve reject]
+
+    helper_test_actions(MarketingCreatives::Profile, 'marketing creative profile as user with an account', @ability, allowed_actions, forbidden_actions)
+  
+    random_approved_profile = FactoryBot.create(:marketing_creatives_profile, approved: true)
+    helper_test_actions(random_approved_profile, 'someone elses approved marketing creative profile', @ability, allowed_actions, forbidden_actions)
+
+    allowed_actions = %I[sign_up create ]
+    forbidden_actions = %I[show index edit update new delete destroy approve reject]
+
+    random_rejected_profile = FactoryBot.create(:marketing_creatives_profile, approved: false)
+    helper_test_actions(random_rejected_profile, 'someone elses rejected marketing creative profile', @ability, allowed_actions, forbidden_actions)
+  end
+
+  test 'marketing_creatives profiles permissions for users with a profile' do
+    allowed_actions = %I[show edit update reject sign_up create]
+    forbidden_actions = %I[new delete destroy approve]
+
+    profile = FactoryBot.create(:marketing_creatives_profile)
+    @user.marketing_creatives_profile = profile
+
+    @ability = Ability.new @user.reload
+
+    helper_test_actions(profile, 'their own marketing creative profile', @ability, allowed_actions, forbidden_actions)
+
+    random_profile = FactoryBot.create(:marketing_creatives_profile, approved: true)
+
+    allowed_actions = %I[sign_up create]
+    forbidden_actions = %I[index edit update new delete destroy approve reject]
+
+    helper_test_actions(random_profile, 'someone elses approved marketing creative profile', @ability, allowed_actions, forbidden_actions)
   end
 
   test 'permission grid permissions work' do

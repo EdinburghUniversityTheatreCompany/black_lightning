@@ -33,3 +33,9 @@ can_sign_up_for_staffing:
   id: 7
   action: sign_up_for
   subject_class: Admin::StaffingJob
+
+# To test if only people who can manage can see certain fields.
+can_show_marketing_creative_profiles:
+  id: 8
+  action: show
+  subject_class: MarketingCreatives::Profile

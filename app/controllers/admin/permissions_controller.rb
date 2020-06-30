@@ -37,6 +37,7 @@ class Admin::PermissionsController < AdminController
   def set_models_and_roles
     @miscellaneous_permission_subject_classes = {
       'Admin::StaffingJob' => { 'sign_up_for' => 'Sign Up For Staffing' },
+      'MarketingCreative::Profile' => { 'approve' => 'Approve or Reject Marketing Creative Profiles' },
       'backend' => { 'access' => 'Access Backend' },
       'reports' => { 'read' => 'Read Reports' },
       'User' => { 'view_shows_and_bio' => 'View the public part of the user profile (Bio, avatar, and shows)' },
