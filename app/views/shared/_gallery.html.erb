@@ -10,13 +10,19 @@
     });
   </script>
 
-  <hr />
-  
-  <h3>Gallery</h3>
+  <% include_horizontal_line = true if include_horizontal_line.nil? %>
+
+  <% if include_horizontal_line %>
+    <hr />
+  <% end %>
+
+  <% header_size = 3 if header_size.nil? %>
+  <% header_tag = "h#{header_size}"%>
+  <<%= header_tag %>>Gallery</<%= header_tag %>>
 
   <ul class="thumbnails">
     <% pictures.includes(image_attachment: :blob).each_with_index do |picture, index| %>
-      <li class="span2 gallery">
+      <li class="span3 gallery">
         <% img = image_tag picture.fetch_image.variant(thumb_variant) %>
         <% url = url_for(picture.fetch_image) %>
 
