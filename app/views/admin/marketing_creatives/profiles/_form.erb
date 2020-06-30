@@ -13,6 +13,16 @@
     <% end %>
 
     <%= render "/shared/form/md_editor", f: f, field: :about, rows: 12, show_hint: true %>
+    
+    <h3>Categories</h3>
+    <p class="<%= 'alert alert-danger' if f.error(:category_infos).present? %>">
+      <%= f.full_error :category_infos %>
+    </p>
+
+    <%= f.simple_fields_for :category_infos %>
+
+    <%= link_to_add f, :category_infos, object_name: 'Category' %>
+  </div>
 
   <%= render '/shared/form/form_actions', f: f %>
 <% end %>

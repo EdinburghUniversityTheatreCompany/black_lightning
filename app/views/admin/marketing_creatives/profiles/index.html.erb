@@ -13,6 +13,8 @@
         <%= content_tag :th, sort_link(@q, :name, 'Name') %>
         <%= content_tag :th, sort_link(@q, :user_full_name, 'User') %>
         <%= content_tag :th, sort_link(@q, :approved, 'Approved') %>
+        
+        <th>Categories<th>
 
         <% if can? :edit, MarketingCreatives::Profile %>
             <th></th>
@@ -32,6 +34,7 @@
           </td>
 
           <td><%= bool_icon(profile.approved) %></td>
+          <td><%= profile.categories.collect(&:name).to_sentence %></td>
 
           <%= get_link profile, :edit, wrap_tag: 'td' %>
         </tr>
