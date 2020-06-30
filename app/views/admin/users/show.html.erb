@@ -2,33 +2,18 @@
 
 <hr />
 <h2>Details</h2>
-<p>
-    <b>Email:</b>
-    <%= @user.email %>
-</p>
-<p>
-    <b>Phone Number:</b>
-    <%= link_to @user.phone_number, "tel: #{@user.phone_number}" unless @user.phone_number.blank? %>
-</p>
-<p>
-    <b>Roles:</b>
-    <%= @user.roles.collect {|role| role.name.capitalize }.to_sentence %>
-</p>
-<p>
-    <b>Sign-in Count:</b>
-    <%= @user.sign_in_count %>
-</p>
-<p>
-    <b>Profile Visible to Public:</b>
-    <%= bool_text @user.public_profile %>
-</p>
 
-<% if false #@user&.card_number&.present? Can be re-enabled if you want to use membership card again %>
-    <p>
-        <b>Card Number:</b>
-        <%= link_to @user.card_number, admin_membership_card_path(@user.membership_card) %>
-    </p>
-<% end %>
+<% fields = {
+    email: @user.email,
+    phone_number: @user.phone_number.present? ? link_to(@user.phone_number, "tel: #{@user.phone_number}") : 'Not set',
+    roles: @user.roles.collect {|role| role.name.capitalize }.to_sentence,
+    marketing_creative_profile: @user.marketing_creatives_profile.present? ? get_link(@user.marketing_creatives_profile, :show) : 'This user has no Marketing Creative Profile.',
+    'Sign-in Count' => @user.sign_in_count,
+    profile_visible_to_public: bool_text(@user.public_profile)
+    #card_number: (link_to(@user.card_number, admin_membership_card_path(@user.membership_card))) if @user.card_number.present?
+} %>
+
+<%= render 'shared/basic_fields', fields: fields %>
 
 <% destroy_button = get_link @user, :destroy, type_confirm: @user.name,
                              detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly.<br />Please type the user's full name:"

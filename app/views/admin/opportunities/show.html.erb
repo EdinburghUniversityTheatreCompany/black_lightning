@@ -1,18 +1,13 @@
 <h1><%= @title %></h1>
 
 <div>
-  <dl>
-    <dt>Expiry Date</dt>
-    <dd><%= l @opportunity.expiry_date, format: :longy %></dd>
+  <% fields = {
+      expiry_date: l(@opportunity.expiry_date, format: :longy),
+      approved_by: (@opportunity.approver.nil? ? 'Not Approved' : @opportunity.approver.name if can?(:edit, @opportunity) || can?(:approve, @opportunity)),
+      active: @opportunity.active? ? 'This opportunity is currently active' : 'This opportunity is not active. An opportunity is only active when the expiration date has not been reached and it has been approved.'
+  } %>
 
-    <% if can?(:edit, @opportunity) || can?(:approve, @opportunity) %>
-      <dt>Approved By</dt>
-      <dd><%= @opportunity.approver.nil? ? "Not Approved" : @opportunity.approver.name %></dd>
-    <% end %>
-
-    <dt>Active</dt>
-    <dd><%= @opportunity.active? ? 'This opportunity is currently active' : 'This opportunity is not active. An opportunity is only active when the expiration date has not been reached and it has been approved.' %></dd>
-  </dl>
+  <%= render 'shared/basic_fields', fields: fields %>
 </div>
 
 <div>

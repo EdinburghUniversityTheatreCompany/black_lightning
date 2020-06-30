@@ -1,90 +1,32 @@
 <% # I cannot guarantee that all of these if's are properly tested (all cases being hit), so be careful when modifying %>
-<p>
-  <b>Slug:</b>
-  <%= event.slug %>
-</p>
 
-<% if can? :manage, event %>
-  <p>
-    <b>ID:</b>
-    <%= event.id %>
-  </p>
+<% fields = { 
+  slug: event.slug,
+  'ID' => (event.id if can?(:manage, event)),
+  'SparkSeat Slug' => (event.spark_seat_slug if event.spark_seat_slug.present?),
+  'XTS ID' => (event.xts_id if event.xts_id.present?),
+  is_public: bool_text(event.is_public),
+  proposal: 'No proposal linked',
+  season: event.season.present? ? get_link(event.season, :show) : 'Not part of a season',
+  author: event.author.presence || 'No author specified',
+  'Date(s)' => event.date_range(true),
+  venue: event.venue.present? ? get_link(event.venue, :show) : 'No Venue specified',
+  price: event.price,
+  tagline: event.tagline.presence || 'No tagline',
+  image: 'No image'
+} %>
+
+<% # Proposal %>
+<% if event.proposal.present? && can?(:view, event.proposal) %>
+  <% fields[:proposal] = get_link(event.proposal, :show, link_target: admin_proposals_call_proposal_path(event.proposal.call, event.proposal)) %>
 <% end %>
 
-<% if event.spark_seat_slug.present? %>
-  <p>
-    <b>SparkSeat Slug:</b>
-    <%= event.spark_seat_slug %>
-  </p>
+<% # Image %>
+<% if event.image.attached? && !event.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
+  <% fields[:image] = image_tag(event.fetch_image.variant(slideshow_variant)) %>
 <% end %>
 
-<% if event.xts_id.present? %>
-  <p>
-    <b>XTS ID:</b>
-    <%= event.xts_id %>
-  </p>
-<% end %>
-
-<p>
-  <b>Is Public:</b>
-  <%= bool_text event.is_public %>
-</p>
-
-<p>
-  <b>Proposal:</b>
-  <% if event.proposal.present? && can?(:view, event.proposal) %>
-    <%= get_link event.proposal, :show, link_target: admin_proposals_call_proposal_path(event.proposal.call, event.proposal) %>
-  <% else %>
-    No proposal linked
-  <% end %>
-</p>
-
-<p>
-  <b>Season:</b>
-  <% if event.season.present? %>
-    <%= get_link event.season, :show %>
-  <% else %>
-    Not part of a season
-  <% end %>
-</p>
-
-<p>
-  <b>Author:</b>
-  <%= event.author.presence || 'No author specified' %>
-</p>
-
-<p>
-  <b>Date(s):</b>
-  <%= event.date_range true %>
-</p>
-
-<p>
-  <b>Venue:</b>
-  <% if event.venue.present? %>
-    <%= get_link event.venue, :show %>
-  <% else %>
-    No Venue specified.
-  <% end %>
-</p>
-
-<p>
-  <b>Price:</b>
-  <%= event.price %>
-</p>
-
-<p>
-  <b>Tagline:</b>
-  <%= event.tagline.presence || 'No tagline' %>
-</p>
-
-<p>
-  <b>Image:</b>
-  <% if event.image.attached? && !event.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-    <p><%= image_tag event.fetch_image.variant(slideshow_variant) %></p>
-  <% else %>
-    No image
-  <% end %>
-</p>
+<%= render 'shared/basic_fields', fields: fields %>
 
 <div class="row vertical-rule">
   <div class="span<%= event.team_members.any? ? '6' : '12' %>">

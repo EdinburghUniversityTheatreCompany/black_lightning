@@ -1,14 +1,11 @@
 <h1><%= @title %></h1>
 
-<p>
-  <b>Submission Deadline:</b>
-  <%= l @call.submission_deadline, format: :longy %>
-</p>
+<% fields = {
+  submission_deadline: l(@call.submission_deadline, format: :longy),
+  editing_deadline: l(@call.editing_deadline, format: :longy),
+} %>
 
-<p>
-  <b>Editing Deadline:</b>
-  <%= l @call.editing_deadline, format: :longy %>
-</p>
+<%= render 'shared/basic_fields', fields: fields %>
 
 <hr />
 
@@ -24,15 +21,12 @@
 <h3>Questions</h3>
 
 <% @call.questions.each do |question| %>
-  <div>
-    <b>Question:</b>
-    <%= render_markdown question.question_text %>
-  </div>
+  <% fields = {
+    question: render_markdown(question.question_text),
+    type: question.response_type,
+  } %>
 
-  <p>
-    <b>Type:</b>
-    <%= question.response_type %>
-  </p>
+  <%= render 'shared/basic_fields', fields: fields %>
 
   <hr />
 <% end %>

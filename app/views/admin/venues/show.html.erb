@@ -1,32 +1,17 @@
 <h1><%= @title %></h1>
 
-<p>
-  <b>Name:</b>
-  <%= @venue.name %>
-</p>
+<% fields = {
+  name: @venue.name,
+  tagline: @venue.tagline,
+  location: @venue.location,
+  image: 'No Image',
+  description: render_markdown(@venue.description)
+} %>
 
-<p>
-  <b>Tagline:</b>
-  <%= @venue.tagline %>
-</p>
+<% if @venue.image.attached? && !@venue.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
+  <% fields[:image] = image_tag(@venue.fetch_image.variant(slideshow_variant)) %>
+<% end %>
 
-<p>
-  <b>Location:</b>
-  <%= @venue.location %>
-</p>
-
-<p>
-  <b>Image:</b>
-    <% if @venue.image.attached? && !@venue.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-    <p><%= image_tag @venue.fetch_image.variant(slideshow_variant) %></p>
-  <% else %>
-    No image
-  <% end %>
-</p>
-
-<p>
-  <b>Description:</b>
-  <%= render_markdown @venue.description %>
-</p>
+<%= render 'shared/basic_fields', fields: fields %>
 
 <%= render 'shared/show_actions', object: @venue %>

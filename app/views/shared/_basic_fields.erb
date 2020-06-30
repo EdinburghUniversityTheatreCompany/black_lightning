@@ -1,0 +1,10 @@
+<% fields.each do |label_value_pair| %>
+  <% label, value = label_value_pair %>
+  
+  <% next if value.nil? %>
+
+  <p>
+    <b><%= label.is_a?(Symbol) ? label.to_s.titleize : label %>:</b>
+    <%= value %>
+  </p>
+<% end %>

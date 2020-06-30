@@ -4,15 +4,12 @@
 <br />
 <br />
 
-<p>
-  <b>Submission Deadline:</b>
-  <%= l @call.submission_deadline, format: :longy %>
-</p>
+<% fields = {
+  submission_deadline: l(@call.submission_deadline, format: :longy),
+  editing_deadline: l(@call.editing_deadline, format: :longy),
+} %>
 
-<p>
-  <b>Editing Deadline:</b>
-  <%= l @call.editing_deadline, format: :longy %>
-</p>
+<%= render 'shared/basic_fields', fields: fields %>
 
 <table class="table">
   <tr>
