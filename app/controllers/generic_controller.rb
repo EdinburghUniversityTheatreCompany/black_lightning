@@ -72,10 +72,14 @@ module GenericController
   end
 
   def destroy
-    helpers.destroy_with_flash_message(get_resource)
+    url = unsuccessful_destroy_redirect_url
+
+    if helpers.destroy_with_flash_message(get_resource)
+      url = successful_destroy_redirect_url
+    end
 
     respond_to do |format|
-      format.html { redirect_to(destroy_redirect_url) }
+      format.html { redirect_to(url) }
       format.json { format.json { render json: flash[:error] } }
     end
   end
@@ -142,8 +146,12 @@ module GenericController
     return url_for(controller: self.controller_path, action: :show, id: get_resource)
   end
 
-  def destroy_redirect_url
+  def successful_destroy_redirect_url
     url_for(controller: self.controller_path, action: :index)
+  end
+
+  def unsuccessful_destroy_redirect_url
+    update_redirect_url
   end
 
   ##

@@ -94,7 +94,7 @@ class Admin::FeedbacksController < AdminController
     admin_show_feedbacks_path(@show)
   end
 
-  def destroy_redirect_url
+  def successful_destroy_redirect_url
     update_redirect_url
   end
 end
