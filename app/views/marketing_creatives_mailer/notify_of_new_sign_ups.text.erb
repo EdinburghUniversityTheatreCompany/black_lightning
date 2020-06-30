@@ -1,0 +1,12 @@
+Dear Marketing Manager,
+
+There were <%= @new_sign_ups.count %> new sign-ups for Marketing Creatives today.
+
+These people are:
+<% @new_sign_ups.each do |new_sign_up| %>
+  <%= new_sign_up.name %> - <%= url_for admin_marketing_creatives_profile_url(new_sign_up) %>
+<% end %>
+
+Regards,
+
+The Bedlam Theatre Team
