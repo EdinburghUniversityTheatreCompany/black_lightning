@@ -144,14 +144,15 @@ ChaosRails::Application.routes.draw do
     get 'techie_families', to: 'techies#index'
 
     namespace :marketing_creatives do
-      # Looks a bit weird but necessary to get the url to be admin/marketing_creatives.
-      resources '', controller: 'categories', as: 'categories'
-
       resources :profiles do
         collection do
           get 'sign_up', to: 'profiles#sign_up'
         end
       end
+
+      # Looks a bit weird but necessary to get the url to be admin/marketing_creatives.
+      # Needs to be after the other resources or it will try to look for a category with url "profile" for example.
+      resources '', controller: 'categories', as: 'categories'
     end
 
     resources :staffing_templates

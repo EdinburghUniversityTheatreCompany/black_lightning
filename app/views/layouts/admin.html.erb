@@ -110,6 +110,9 @@
                   <li><%= link_to 'Mass Mail', admin_mass_mails_path %></li>
                 <% end %>
 
+                <% if can? :index, MarketingCreatives::Category %>
+                  <li><%= link_to 'Marketing Creatives', admin_marketing_creatives_categories_path %></li>
+                <% end %>
 
               </ul>
             </div>
