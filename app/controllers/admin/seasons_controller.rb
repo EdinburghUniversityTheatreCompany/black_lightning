@@ -2,7 +2,6 @@ class Admin::SeasonsController < AdminController
   include GenericController
 
   load_and_authorize_resource find_by: :slug
-  skip_load_resource only: %i[index]
 
   # GET /admin/seasons
   # GET /admin/seasons.json
@@ -12,7 +11,7 @@ class Admin::SeasonsController < AdminController
     @editable_block_name = 'Seasons (Members Face)'
     @url = :admin_seasons
 
-    @q = Season.ransack(params[:q])
+    @q = @seasons.ransack(params[:q])
     @events = @q.result(distinct: true)
                 .accessible_by(current_ability)
                 .paginate(page: params[:page], per_page: 15)

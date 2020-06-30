@@ -86,7 +86,7 @@ class Admin::UsersController < AdminController
   end
   
   def load_index_resources
-    @q     = User.ransack(params[:q])
+    @q     = @users.ransack(params[:q])
     @users = @q.result(distinct: true)
 
     if params[:show_non_members] != '1'

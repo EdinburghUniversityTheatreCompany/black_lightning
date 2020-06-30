@@ -2,7 +2,6 @@ class Admin::WorkshopsController < AdminController
   include GenericController
 
   load_and_authorize_resource find_by: :slug
-  skip_load_resource only: %i[index]
 
   # GET /admin/shows
   # GET /admin/shows.json
@@ -12,7 +11,7 @@ class Admin::WorkshopsController < AdminController
     @editable_block_name = 'Workshops (Members Face)'
     @url = :admin_workshops
 
-    @q = Workshop.ransack(params[:q])
+    @q = @workshops.ransack(params[:q])
     @events = @q.result(distinct: true)
                 .accessible_by(current_ability)
                 .paginate(page: params[:page], per_page: 15)

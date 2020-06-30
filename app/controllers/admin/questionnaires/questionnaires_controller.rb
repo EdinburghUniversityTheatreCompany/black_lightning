@@ -127,7 +127,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def load_index_resources
     q = params[:q]
 
-    @q = Admin::Questionnaires::Questionnaire.ransack(q)
+    @q = @questionnaires.ransack(q)
 
     @show_current_term_only = q.nil?
 

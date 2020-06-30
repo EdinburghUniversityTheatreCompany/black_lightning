@@ -2,7 +2,6 @@ class Admin::ShowsController < AdminController
   include GenericController
 
   load_and_authorize_resource find_by: :slug
-  skip_load_resource only: %i[index]
   # Those are checked for permission to create debts instead.
   skip_authorize_resource only: %i[create_maintenance_debts create_staffing_debts convert_to_season convert_to_workshop]
 
@@ -14,7 +13,7 @@ class Admin::ShowsController < AdminController
     @editable_block_name = 'Shows (Members Face)'
     @url = :admin_shows
 
-    @q = Show.ransack(params[:q])
+    @q = @shows.ransack(params[:q])
     @events = @q.result(distinct: true)
                 .accessible_by(current_ability)
                 .paginate(page: params[:page], per_page: 15)
