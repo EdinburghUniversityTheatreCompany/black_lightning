@@ -1,0 +1,18 @@
+<%= simple_nested_form_for([:admin, @profile]) do |f| %>
+  <p>
+    <%= display_block('Marketing Creatives Profile Sign Up Instructions', true) %>
+  </p>
+
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+    <%= f.input :name %>
+
+    <% if can?(:manage, MarketingCreatives::Profile) %>
+      <%= render '/shared/form/user_field', f: f %>
+    <% end %>
+
+    <%= render "/shared/form/md_editor", f: f, field: :about, rows: 12, show_hint: true %>
+
+  <%= render '/shared/form/form_actions', f: f %>
+<% end %>

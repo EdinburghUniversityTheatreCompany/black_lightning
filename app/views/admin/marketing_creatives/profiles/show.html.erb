@@ -1,0 +1,19 @@
+<h1><%= @title %></h1>
+
+<% fields = { 
+  'ID' => (@profile.id if can?(:manage, @profile)),
+  user: (get_link(@profile.user, :show) if can?(:manage, @profile) && @profile.user.present?),
+  approved: (bool_text(@profile.approved) if can?(:reject, @profile) || !@profile.approved) 
+} %>
+
+<%= render 'shared/basic_fields', fields: fields %>
+
+<h3>About</h3>
+<%= render_markdown @profile.about %>
+
+<%= render 'shared/show_actions', object: @profile %>
+
+<%= get_link MarketingCreatives::Category, :index %>
+
+<%= get_link @profile, :approve, condition: !@profile.approved %>
+<%= get_link @profile, :reject, condition: @profile.approved, link_text: 'Hide' %>

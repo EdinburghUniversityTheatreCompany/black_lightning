@@ -148,6 +148,11 @@ ChaosRails::Application.routes.draw do
         collection do
           get 'sign_up', to: 'profiles#sign_up'
         end
+
+        member do
+          put 'approve'
+          put 'reject'
+        end
       end
 
       # Looks a bit weird but necessary to get the url to be admin/marketing_creatives.
