@@ -53,6 +53,8 @@ class User < ApplicationRecord
 
   validates :avatar, content_type: %i[png jpg jpeg gif]
 
+  has_one :marketing_creatives_profile, class_name: 'MarketingCreatives::Profile', dependent: :restrict_with_error
+
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
   accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true
