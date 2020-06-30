@@ -1,69 +1,18 @@
 # These views are very similar to those for staffing_debts, so if you have improvements for this, have a look if you can apply them there as well.
 class Admin::MaintenanceDebtsController < AdminController
+  include GenericController
+
   load_and_authorize_resource
 
-  # GET /admin/maintenance_debts
-  def index
-    @title = 'Maintenance Debts'
-
-    @maintenance_debts, @q, @show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params, [:user, :show])
-
-    respond_to do |format|
-      format.html
-      format.json { render json: @maintenance_debts }
-    end
-  end
+  ##
+  # Overrides load_index_resources
+  ##
 
   # GET /admin/maintenance_debts/1
   def show
     @title = "Maintenance Debt for #{@maintenance_debt.user.name(current_user)}"
 
-    respond_to do |format|
-      format.html
-      format.json { render json: @maintenance_debt }
-    end
-  end
-
-  # GET /admin/maintenance_debts/new
-  def new
-    respond_to do |format|
-      format.html
-      format.json { render json: @maintenance_debt }
-    end
-  end
-
-  # POST /admin/maintenance_debts
-  def create
-    respond_to do |format|
-      if @maintenance_debt.save
-        format.html { redirect_to @maintenance_debt, notice: 'The Maintenance Debt was successfully created.' }
-        format.json { head :no_content }
-      else
-        format.html { render 'new', status: :unprocessable_entity, notice: 'Failed to create new Maintenance Debt. Please try again or contact IT' }
-        format.json { render json: @maintenance_debt.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # GET /admin/maintenance_debts/1/edit
-  def edit
-    respond_to do |format|
-      format.html
-      format.json { render json: @maintenance_debt }
-    end
-  end
-
-  # PATCH/PUT /admin/maintenance_debts/1
-  def update
-    respond_to do |format|
-      if @maintenance_debt.update(maintenance_debt_params)
-        format.html { redirect_to @maintenance_debt, notice: 'The Maintenance Debt was successfully updated.' }
-        format.json { head :no_content }
-      else
-        format.html { render 'edit', status: :unprocessable_entity, notice: 'Failed to update the Maintenance Debt. Please try again or contact IT.' }
-        format.json { render json: @maintenance_debt.errors, status: :unprocessable_entity }
-      end
-    end
+    super
   end
 
   # DELETE /admin/maintenance_debts/1
@@ -97,8 +46,18 @@ class Admin::MaintenanceDebtsController < AdminController
 
   private
 
+  def resource_class
+    Admin::MaintenanceDebt
+  end
+
   # Only allow a trusted parameter "white list" through.
-  def maintenance_debt_params
-    params.require(:admin_maintenance_debt).permit(:user_id, :due_by, :show_id, :state)
+  def permitted_params
+    [:user_id, :due_by, :show_id, :state]
+  end
+
+  def load_index_resources
+    @maintenance_debts, @q, @show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params, [:user, :show])
+
+    return @maintenance_debts
   end
 end

@@ -17,6 +17,7 @@
 ##
 class Techie < ApplicationRecord
   validates :name, presence: true, length: { in: 1..32 }
+  validates :name, uniqueness: { case_sensitive: false }
 
   has_and_belongs_to_many :parents, class_name: 'Techie', foreign_key: 'child_id', association_foreign_key: 'techie_id', join_table: 'children_techies'
 
@@ -28,22 +29,25 @@ class Techie < ApplicationRecord
 
   # Because the relations are quite complicated, this breaks without this code.
   def children_attributes=(attributes)
-    attributes.each do |attribute|
-      techie = Techie.find(attribute[1][:id])
-
-      children << techie unless children.all.include?(techie)
-
-      children.delete(techie) if attribute[1][:_destroy] == '1'
-    end
+    cycle_through_attributes(attributes, children)
   end
 
   def parents_attributes=(attributes)
+    cycle_through_attributes(attributes, parents)
+  end
+
+  private
+
+  def cycle_through_attributes(attributes, collection)
     attributes.each do |attribute|
-      techie = Techie.find(attribute[1][:id])
+      id = attribute[1][:id]
+      next if id == ''
 
-      parents << techie unless parents.all.include?(techie)
+      techie = Techie.find(id)
 
-      parents.delete(techie) if attribute[1][:_destroy] == '1'
+      collection << techie unless collection.all.include?(techie)
+
+      collection.delete(techie) if attribute[1][:_destroy] == '1'
     end
   end
 end

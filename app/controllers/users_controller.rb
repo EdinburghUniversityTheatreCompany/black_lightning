@@ -2,6 +2,8 @@
 # Public controller for User. More details can be found there.
 ##
 class UsersController < ApplicationController
+  include GenericController
+
   load_resource
   ##
   # GET /users/1
@@ -15,8 +17,6 @@ class UsersController < ApplicationController
 
     @team_memberships = @user.team_memberships(true)
 
-    respond_to do |format|
-      format.html # show.html.erb
-    end
+    super
   end
 end

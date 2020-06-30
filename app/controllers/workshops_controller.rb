@@ -4,6 +4,8 @@
 # Uses Will_Paginate for pagination.
 ##
 class WorkshopsController < ApplicationController
+  include GenericController
+
   load_and_authorize_resource find_by: :slug
   ##
   # GET /workshops
@@ -28,13 +30,9 @@ class WorkshopsController < ApplicationController
   # GET /workshops/1
   ##
   def show
-    @title = @workshop.name
     @meta[:description] = helpers.render_plain(@workshop.description)
-
     @meta['og:image'] = [@base_url + @workshop.slideshow_image_url] + @workshop.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 
-    respond_to do |format|
-      format.html
-    end
+    super
   end
 end

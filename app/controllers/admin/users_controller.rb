@@ -2,28 +2,14 @@
 # Admin controller for User management.
 ##
 class Admin::UsersController < AdminController
+  include GenericController
+
   load_and_authorize_resource except: [:autocomplete_list]
   skip_load_resource only: [:create]
+
   ##
-  # GET /admin/users
+  # Overrides load_index_resources
   ##
-  def index
-    @title = 'Users'
-
-    @q     = User.ransack(params[:q])
-    @users = @q.result(distinct: true)
-
-    if params[:show_non_members] != '1'
-      @users = @users.with_role(:member)
-    end
-
-    @users = @users.paginate(page: params[:page], per_page: 15)
-
-    respond_to do |format|
-      format.html
-      format.json { render json: @users }
-    end
-  end
 
   ##
   # GET /admin/users/1
@@ -34,75 +20,25 @@ class Admin::UsersController < AdminController
     @team_memberships = @user.team_memberships(false)
     @link_to_admin_events = true
 
-    respond_to do |format|
-      format.html
-      format.json { render json: @user }
-    end
-  end
-
-  ##
-  # GET /admin/users/new
-  ##
-  def new
-    # Title is set by the view.
+    super
   end
 
   ##
   # POST /admin/users
   ##
   def create
-    @user = User.new_user(user_params)
+    # The user model has a special 'new' method that auto-generates a password if left blank.
+    @user = User.new_user(create_params)
 
-    respond_to do |format|
-      if @user.save
-        format.html { redirect_to admin_user_url(@user) }
-        format.json { render json: @user }
-      else
-        format.html { render 'new', status: :unprocessable_entity }
-        format.json { render json: @user.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  ##
-  # GET /admin/users/1/edit
-  ##
-  def edit
-    # The title is set by the view
-  end
-
-  ##
-  # PUT /admin/users/1
-  ##
-  def update
-    respond_to do |format|
-      if @user.update(user_params)
-        format.html { redirect_to admin_user_url(@user), notice: 'User was successfully updated.' }
-        format.json { head :no_content }
-      else
-        format.html { render 'edit', status: :unprocessable_entity }
-        format.json { render json: @user.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  ##
-  # DELETE /admin/users/1
-  ##
-  def destroy
-    helpers.destroy_with_flash_message(@user)
-
-    respond_to do |format|
-      format.html { redirect_to admin_users_path }
-      format.json { head :no_content }
-    end
+    super
   end
 
   def reset_password
     @user.send_reset_password_instructions
 
     respond_to do |format|
-      format.html { redirect_back fallback_location: admin_user_url(@user), notice: 'Password reset instructions sent.' }
+      flash[:succes] = 'Password reset instructions sent.'
+      format.html { redirect_back fallback_location: admin_user_url(@user) }
     end
   end
 
@@ -141,13 +77,24 @@ class Admin::UsersController < AdminController
 
   private
 
-  def user_params
-    params[:user]
-    params[:user][:password]
+  def permitted_params
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
-    return params.require(:user).permit(:email, :password, :password_confirmation, :remember_me, :first_name, :last_name,
-                                        :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: [])
+    return [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
+            :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: []]
+  end
+  
+  def load_index_resources
+    @q     = @users.ransack(params[:q])
+    @users = @q.result(distinct: true)
+
+    if params[:show_non_members] != '1'
+      @users = @users.with_role(:member)
+    end
+
+    @users = @users.paginate(page: params[:page], per_page: 15)
+
+    return @users
   end
 end

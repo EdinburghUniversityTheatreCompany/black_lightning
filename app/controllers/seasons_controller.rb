@@ -1,4 +1,6 @@
 class SeasonsController < ApplicationController
+  include GenericController
+
   load_and_authorize_resource find_by: :slug
 
   # GET /seasons/
@@ -17,11 +19,12 @@ class SeasonsController < ApplicationController
 
   # GET /seasons/1
   def show
-    @title = @season.name
     @events = @season.events.reorder(:start_date).group_by { |event| l event.start_date, format: :longy }
 
     @meta[:description] = helpers.render_plain(@season.description)
 
     @meta['og:image'] = [@base_url + @season.slideshow_image_url] + @season.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
+  
+    super
   end
 end

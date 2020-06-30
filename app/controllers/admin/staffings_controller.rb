@@ -2,6 +2,8 @@
 # Controller for Admin::Staffing. More details can be found there.
 ##
 class Admin::StaffingsController < AdminController
+  include GenericController
+
   # Those are skipped because their permission depends on :sign_up_for staffing.
   # This is checked in the action.
   load_and_authorize_resource except: %i[sign_up sign_up_confirm guidelines]
@@ -81,10 +83,7 @@ class Admin::StaffingsController < AdminController
 
     @can_sign_up = helpers.check_if_current_user_can_sign_up(current_user)
 
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json { render json: @staffing }
-    end
+    super
   end
 
   ##
@@ -95,6 +94,8 @@ class Admin::StaffingsController < AdminController
   def new
     @staffing = Admin::Staffing.new(counts_towards_debt: true)
     set_new_params
+
+    super
   end
 
   ##
@@ -173,12 +174,7 @@ class Admin::StaffingsController < AdminController
     end
   end
 
-  ##
-  # GET /admin/staffings/1/edit
-  ##
-  def edit
-    @title = "Editing staffing for #{@staffing.show_title}"
-  end
+  # Edit is handled by the generic controller
 
   ##
   # PUT /admin/staffings/1

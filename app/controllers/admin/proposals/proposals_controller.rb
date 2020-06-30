@@ -7,6 +7,8 @@
 # Please be very very very careful when editing them, or kittens may die.
 ##
 class Admin::Proposals::ProposalsController < AdminController
+  include GenericController
+
   before_action :set_paper_trail_whodunnit
   load_and_authorize_resource class: Admin::Proposals::Proposal
 
@@ -17,13 +19,9 @@ class Admin::Proposals::ProposalsController < AdminController
   ##
   def index
     @call = Admin::Proposals::Call.find(params[:call_id])
-    @proposals = @proposals.where(call: @call)
     @title = "Proposals for #{@call.name}"
 
-    respond_to do |format|
-      format.html # index.html.erb
-      format.json { render json: @proposals }
-    end
+    super
   end
 
   ##
@@ -32,16 +30,11 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1.json
   ##
   def show
-    @title = @proposal.show_title
-
     @call = @proposal.call
 
     @proposal.instantiate_answers!
 
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json { render json: @proposal }
-    end
+    super
   end
 
   ##
@@ -59,10 +52,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
     @proposal.instantiate_answers!
 
-    respond_to do |format|
-      format.html # new.html.erb
-      format.json { render json: @proposal }
-    end
+    super
   end
 
   ##
@@ -77,19 +67,10 @@ class Admin::Proposals::ProposalsController < AdminController
 
     @proposal.call = @call
 
-    respond_to do |format|
-      if @proposal.save
-        mail_team_members(@proposal.team_members, [], true)
+    super
 
-        flash[:success] = 'The proposal was successfully created.'
-
-        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
-        format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
-      else
-        format.html { render 'new', status: :unprocessable_entity }
-        format.json { render json: @proposal.errors, status: :unprocessable_entity }
-      end
-    end
+    #format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
+    #format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
   end
 
   ##
@@ -99,6 +80,8 @@ class Admin::Proposals::ProposalsController < AdminController
     @call = @proposal.call
 
     @proposal.instantiate_answers!
+
+    super
   end
 
   ##
@@ -109,35 +92,9 @@ class Admin::Proposals::ProposalsController < AdminController
   def update
     @call = @proposal.call
 
-    previous_team_member_ids = @proposal.team_member_ids
+    @previous_team_member_ids = @proposal.team_member_ids
 
-    respond_to do |format|
-      if @proposal.update(proposal_params)
-        mail_team_members(@proposal.team_members, previous_team_member_ids, false)
-
-        flash[:success] = 'The proposal was successfully updated.'
-
-        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
-        format.json { head :no_content }
-      else
-        format.html { render 'edit', status: :unprocessable_entity }
-        format.json { render json: @proposal.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  ##
-  # DELETE /admin/proposals/proposals/1
-  #
-  # DELETE /admin/proposals/proposals/1.json
-  ##
-  def destroy
-    helpers.destroy_with_flash_message(@proposal)
-
-    respond_to do |format|
-      format.html { redirect_to admin_proposals_call_proposals_url }
-      format.json { head :no_content }
-    end
+    super
   end
 
   ##
@@ -220,9 +177,31 @@ class Admin::Proposals::ProposalsController < AdminController
     end
   end
 
-  def proposal_params
-    params.require(:admin_proposals_proposal).permit(:proposal_text, :publicity_text, :show_title, :late, :approved, :successful,
-                                                     answers_attributes: %I[id _destroy answer question_id file],
-                                                     team_members_attributes: %I[id _destroy position user user_id proposal proposal_id])
+  def permitted_params
+    [
+      :proposal_text, :publicity_text, :show_title, :late, :approved, :successful,
+      answers_attributes: %I[id _destroy answer question_id file],
+      team_members_attributes: %I[id _destroy position user user_id proposal proposal_id]
+    ]
+  end
+
+  def index_query_params
+    { call: @call }
+  end
+
+  def resource_class
+    Admin::Proposals::Proposal
+  end
+
+  def on_create_success
+    mail_team_members(@proposal.team_members, [], true)
+
+    super
+  end
+  
+  def on_update_success
+    mail_team_members(@proposal.team_members, @previous_team_member_ids, false)
+
+    super
   end
 end

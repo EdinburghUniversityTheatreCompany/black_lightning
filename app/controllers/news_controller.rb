@@ -5,6 +5,8 @@
 ##
 
 class NewsController < ApplicationController
+  include GenericController
+
   load_and_authorize_resource
   ##
   # GET /news
@@ -24,16 +26,7 @@ class NewsController < ApplicationController
     end
   end
 
-  ##
-  # GET /news/1
-  #
-  # GET /news/1.json
-  ##
-  def show
-    @title = @news.title
-    respond_to do |format|
-      format.html # show.html.erb
-      format.json { render json: @news }
-    end
-  end
+    ##
+    # Show is handled by the Generic Controller.
+    ##
 end
