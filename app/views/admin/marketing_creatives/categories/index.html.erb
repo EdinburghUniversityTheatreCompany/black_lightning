@@ -1,0 +1,18 @@
+<h1><%= @title %></h1>
+
+<p>
+  <%= display_block('Marketing Creatives Category Index Description', true) %>
+</p>
+
+<ul class="thumbnails">
+  <% @categories.each do |category| %>
+    <li class="span4">
+      <% img = image_tag category.fetch_image.variant(thumb_variant), class: 'thumbnail' %>
+
+      <%= get_link category, :show, link_text: img %>
+      <%= get_link category, :show %>
+    </li>
+  <% end %>
+</ul>
+
+<%= get_link MarketingCreatives::Category, :new %>
