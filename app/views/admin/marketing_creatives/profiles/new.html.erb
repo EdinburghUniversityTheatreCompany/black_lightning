@@ -1,0 +1,9 @@
+<h1><%= @title = 'New Marketing Creative Profile' %></h1>
+
+<% if current_user.nil? %>
+  <p>
+    <%= display_block('Marketing Creatives Sign In Warning', true) %>
+  </p>
+<% end %>
+
+<%= render 'form' %>

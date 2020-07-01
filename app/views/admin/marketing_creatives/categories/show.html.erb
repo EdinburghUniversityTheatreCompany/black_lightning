@@ -1,0 +1,23 @@
+<h1><%= @title %></h1>
+
+<p>
+  <%= display_block('Marketing Creatives Category Show Description', true) %>
+</p>
+
+<p>
+  <%= display_block("Marketing Creatives Category Show #{@category.name}", true) %>
+</p>
+
+<ul class="thumbnails">
+  <% @category_infos.each do |category_info| %>
+    <li class="span4">
+      <% img = image_tag category_info.fetch_image.variant(thumb_variant), class: 'thumbnail' %>
+
+      <%= get_link category_info.profile, :show, link_text: img %>
+      <%= get_link category_info.profile, :show %>
+    </li>
+  <% end %>
+</ul>
+
+<%= render 'shared/show_actions', object: @category %>
+<%= get_link MarketingCreatives::Profile, :sign_up, http_method: :get %>

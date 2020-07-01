@@ -183,6 +183,16 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
+  test 'get_link raises an ArgumentError when the action is not a GET action' do
+    wrong_actions = [:create, :update, :delete]
+
+    wrong_actions.each do |action|
+      assert_raises ArgumentError do
+        get_link(Admin::Proposals::Proposal, action)
+      end
+    end
+  end
+
   test 'can overrule using condition' do
     @current_user = users(:user)
 

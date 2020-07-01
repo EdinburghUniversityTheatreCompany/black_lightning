@@ -61,6 +61,12 @@ class Ability
 
     # Have a specific view_shows_and_bio permission because it is a bad idea to give normal users full :read permission for users.
     can :view_shows_and_bio, User, public_profile: true
+    
+    # Even though users should not be able to sign up when they have a profile, that authorisation is handled by the controller.
+    # This way we can show a more appropriate error message.
+    can [:sign_up, :create], MarketingCreatives::Profile
+    # Only people with explicit permission can do new. Create is an alias for new, so it has to be explicitly disallowed.
+    cannot :new, MarketingCreatives::Profile
 
     # Stop if the user is not logged in.
     return if user.nil?
@@ -111,6 +117,11 @@ class Ability
     can :show, Admin::Debt, id: user.id
 
     can %I[read update], Opportunity, creator_id: user.id
+
+    # Not indexing, because the index of profiles should only be visible to certain people.
+    can :show, MarketingCreatives::Profile, approved: true
+
+    can %i[show edit update reject], MarketingCreatives::Profile, id: user.marketing_creatives_profile.id if user.marketing_creatives_profile.present?
 
     # Grant the user permissions based on the grid.
     permissions = user.roles.includes(:permissions).flat_map(&:permissions).uniq

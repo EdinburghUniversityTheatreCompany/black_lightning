@@ -37,13 +37,14 @@ class Admin::PermissionsController < AdminController
   def set_models_and_roles
     @miscellaneous_permission_subject_classes = {
       'Admin::StaffingJob' => { 'sign_up_for' => 'Sign Up For Staffing' },
+      'MarketingCreative::Profile' => { 'approve' => 'Approve or Reject Marketing Creative Profiles' },
       'backend' => { 'access' => 'Access Backend' },
       'reports' => { 'read' => 'Read Reports' },
       'User' => { 'view_shows_and_bio' => 'View the public part of the user profile (Bio, avatar, and shows)' },
       'Event' => { 'add_non_members' => 'Add non-members to events, mainly for archiving purposes' },
     }
 
-    @models = (ApplicationRecord.descendants + [Admin::Debt, Season]).uniq
+    @models = (ApplicationRecord.descendants + [Admin::Debt, Season] - [MarketingCreatives::CategoryInfo]).uniq
 
     role_exclude = ['admin', 'Proposal Checker', 'DM Trained']
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all

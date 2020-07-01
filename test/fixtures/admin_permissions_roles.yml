@@ -32,3 +32,7 @@ commitee_can_assign_roles:
 member_can_sign_up_for_staffing:
   role_id:       2
   permission_id: 7
+
+committee_can_show_marketing_creatives_profiles:
+  role_id:       2
+  permission_id: 8

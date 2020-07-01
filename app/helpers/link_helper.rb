@@ -42,17 +42,22 @@ module LinkHelper
     # Make sure the action is a symbol. This works even if the action is already a symbol.
     action = action.to_s.parameterize(separator: '_').to_sym
 
+    additional_message = 'Did you mean "new"? ' if action == :create
+    additional_message = 'Did you mean "edit"? ' if action == :update
+    additional_message = 'Did you mean "destroy"? ' if action == :delete
+
+    if additional_message.present?
+      raise(ArgumentError, "#{additional_message}. \"#{action}\" is not a valid GET action.")
+    end
+
     # TODO: Check if the action is a member and/or collection action instead of having a list like this.
-    if %I[index grid new].include? action
+    if %I[index grid new].include?(action) && !object.is_a?(Class)
       # The object has to be a class because those actions are not related to instances.
       # Grid is used as a class thing once and as an instance(or rather, slug thing) the other time.
 
-      raise(TypeError, "#{object} is an instance and not a class so it cannot be #{action}'ed. The allowed actions that are executable on classes are hard-coded, and you can modify them in the link-helper.") unless object.is_a?(Class)
-    else
-      additional_message = 'Did you mean "new"? ' if action == :create
-      additional_message = 'Did you mean "edit"? ' if action == :update
-
-      raise(TypeError, "#{additional_message}#{object} is a class and not an instance so it cannot be #{action}'ed.") if object.is_a?(Class)
+      raise(TypeError, "#{object} is an instance and not a class so it cannot be #{action}'ed. The allowed actions that are executable on classes are hard-coded, and you can modify them in the link-helper.")
+    elsif %i[edit show destroy reject approve answer create update delete].include?(action) && object.is_a?(Class)
+      raise(TypeError, "#{object} is a class and not an instance so it cannot be #{action}'ed.") 
     end
 
     condition = current_ability.can?(action, object) && additional_condition if condition.nil?
