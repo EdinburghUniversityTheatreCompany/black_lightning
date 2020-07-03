@@ -2,16 +2,18 @@
 #
 # Table name: admin_staffing_debts
 #
-#  id                    :integer          not null, primary key
-#  user_id               :integer
-#  show_id               :integer
-#  due_by                :date
-#  admin_staffing_job_id :integer
-#  created_at            :datetime         not null
-#  updated_at            :datetime         not null
-#  converted             :boolean
-#  forgiven              :boolean          default(FALSE)
-#
+# *id*::                    <tt>integer, not null, primary key</tt>
+# *user_id*::               <tt>integer</tt>
+# *show_id*::               <tt>integer</tt>
+# *due_by*::                <tt>date</tt>
+# *admin_staffing_job_id*:: <tt>integer</tt>
+# *created_at*::            <tt>datetime, not null</tt>
+# *updated_at*::            <tt>datetime, not null</tt>
+# *converted*::             <tt>boolean</tt>
+# *forgiven*::              <tt>boolean, default(FALSE)</tt>
+#--
+# == Schema Information End
+#++
 class Admin::StaffingDebt < ApplicationRecord
   validates :due_by, :show_id, :user_id, presence: true
 

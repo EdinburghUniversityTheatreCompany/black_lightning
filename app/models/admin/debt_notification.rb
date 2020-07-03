@@ -2,13 +2,15 @@
 #
 # Table name: admin_debt_notifications
 #
-#  id                :integer          not null, primary key
-#  user_id           :integer
-#  sent_on           :date
-#  created_at        :datetime         not null
-#  updated_at        :datetime         not null
-#  notification_type :integer
-#
+# *id*::                <tt>integer, not null, primary key</tt>
+# *user_id*::           <tt>integer</tt>
+# *sent_on*::           <tt>date</tt>
+# *created_at*::        <tt>datetime, not null</tt>
+# *updated_at*::        <tt>datetime, not null</tt>
+# *notification_type*:: <tt>integer</tt>
+#--
+# == Schema Information End
+#++
 class Admin::DebtNotification < ApplicationRecord
   enum notification_type: %i[initial_notification reminder]
   belongs_to :user
