@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: marketing_creatives_categories
+#
+# *id*::              <tt>bigint, not null, primary key</tt>
+# *name*::            <tt>string(255)</tt>
+# *name_on_profile*:: <tt>string(255)</tt>
+# *url*::             <tt>string(255)</tt>
+# *created_at*::      <tt>datetime, not null</tt>
+# *updated_at*::      <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 require 'test_helper'
 
 class MarketingCreatives::CategoryTest < ActionView::TestCase

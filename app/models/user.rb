@@ -21,6 +21,15 @@
 # *created_at*::             <tt>datetime, not null</tt>
 # *updated_at*::             <tt>datetime, not null</tt>
 # *phone_number*::           <tt>string(255)</tt>
+# *public_profile*::         <tt>boolean, default(TRUE)</tt>
+# *bio*::                    <tt>text(65535)</tt>
+# *avatar_file_name*::       <tt>string(255)</tt>
+# *avatar_content_type*::    <tt>string(255)</tt>
+# *avatar_file_size*::       <tt>integer</tt>
+# *avatar_updated_at*::      <tt>datetime</tt>
+# *username*::               <tt>string(255)</tt>
+# *remember_token*::         <tt>string(255)</tt>
+# *consented*::              <tt>date</tt>
 #--
 # == Schema Information End
 #++

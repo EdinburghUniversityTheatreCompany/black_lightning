@@ -1,3 +1,16 @@
+# == Schema Information
+#
+# Table name: membership_activation_tokens
+#
+# *id*::         <tt>integer, not null, primary key</tt>
+# *uid*::        <tt>string(255)</tt>
+# *token*::      <tt>string(255)</tt>
+# *user_id*::    <tt>integer</tt>
+# *created_at*:: <tt>datetime, not null</tt>
+# *updated_at*:: <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 require 'test_helper'
 
 class MembershipActivationTokenTest < ActionView::TestCase

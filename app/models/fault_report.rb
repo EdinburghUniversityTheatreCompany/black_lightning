@@ -1,3 +1,19 @@
+# == Schema Information
+#
+# Table name: fault_reports
+#
+# *id*::             <tt>integer, not null, primary key</tt>
+# *item*::           <tt>string(255)</tt>
+# *description*::    <tt>text(65535)</tt>
+# *severity*::       <tt>integer, default("annoying")</tt>
+# *status*::         <tt>integer, default("reported")</tt>
+# *reported_by_id*:: <tt>integer</tt>
+# *fixed_by_id*::    <tt>integer</tt>
+# *created_at*::     <tt>datetime, not null</tt>
+# *updated_at*::     <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 class FaultReport < ApplicationRecord
   validates :item, :description, presence: true
 

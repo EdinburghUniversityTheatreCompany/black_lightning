@@ -1,3 +1,18 @@
+# == Schema Information
+#
+# Table name: mass_mails
+#
+# *id*::         <tt>integer, not null, primary key</tt>
+# *sender_id*::  <tt>integer</tt>
+# *subject*::    <tt>string(255)</tt>
+# *body*::       <tt>text(65535)</tt>
+# *send_date*::  <tt>datetime</tt>
+# *draft*::      <tt>boolean</tt>
+# *created_at*:: <tt>datetime, not null</tt>
+# *updated_at*:: <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 require 'test_helper'
 
 class MassMailTest < ActiveSupport::TestCase

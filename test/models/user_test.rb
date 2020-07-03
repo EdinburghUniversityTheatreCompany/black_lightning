@@ -1,3 +1,35 @@
+# == Schema Information
+#
+# Table name: users
+#
+# *id*::                     <tt>integer, not null, primary key</tt>
+# *email*::                  <tt>string(255), default(""), not null</tt>
+# *encrypted_password*::     <tt>string(255), default(""), not null</tt>
+# *reset_password_token*::   <tt>string(255)</tt>
+# *reset_password_sent_at*:: <tt>datetime</tt>
+# *remember_created_at*::    <tt>datetime</tt>
+# *sign_in_count*::          <tt>integer, default(0)</tt>
+# *current_sign_in_at*::     <tt>datetime</tt>
+# *last_sign_in_at*::        <tt>datetime</tt>
+# *current_sign_in_ip*::     <tt>string(255)</tt>
+# *last_sign_in_ip*::        <tt>string(255)</tt>
+# *first_name*::             <tt>string(255)</tt>
+# *last_name*::              <tt>string(255)</tt>
+# *created_at*::             <tt>datetime, not null</tt>
+# *updated_at*::             <tt>datetime, not null</tt>
+# *phone_number*::           <tt>string(255)</tt>
+# *public_profile*::         <tt>boolean, default(TRUE)</tt>
+# *bio*::                    <tt>text(65535)</tt>
+# *avatar_file_name*::       <tt>string(255)</tt>
+# *avatar_content_type*::    <tt>string(255)</tt>
+# *avatar_file_size*::       <tt>integer</tt>
+# *avatar_updated_at*::      <tt>datetime</tt>
+# *username*::               <tt>string(255)</tt>
+# *remember_token*::         <tt>string(255)</tt>
+# *consented*::              <tt>date</tt>
+#--
+# == Schema Information End
+#++
 require 'test_helper'
 
 class Admin::UserTest < ActiveSupport::TestCase

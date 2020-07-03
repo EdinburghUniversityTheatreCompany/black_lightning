@@ -1,3 +1,15 @@
+# == Schema Information
+#
+# Table name: membership_cards
+#
+# *id*::          <tt>integer, not null, primary key</tt>
+# *card_number*:: <tt>string(255)</tt>
+# *user_id*::     <tt>integer</tt>
+# *created_at*::  <tt>datetime, not null</tt>
+# *updated_at*::  <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
 class MembershipCard < ApplicationRecord
   before_create :set_card_number
 
