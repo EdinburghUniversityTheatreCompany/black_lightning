@@ -62,6 +62,7 @@ group :development, :test do
 
   gem 'factory_bot_rails'
 
+  gem 'annotate'
 end
 
 group :test do

@@ -6,7 +6,7 @@
 # Table name: pictures
 #
 # *id*::                 <tt>integer, not null, primary key</tt>
-# *description*::        <tt>text</tt>
+# *description*::        <tt>text(65535)</tt>
 # *gallery_id*::         <tt>integer</tt>
 # *gallery_type*::       <tt>string(255)</tt>
 # *image_file_name*::    <tt>string(255)</tt>
@@ -18,7 +18,6 @@
 #--
 # == Schema Information End
 #++
-##
 
 FactoryBot.define do
   factory :picture, class: Picture do

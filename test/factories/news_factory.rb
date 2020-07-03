@@ -4,7 +4,7 @@
 #
 # *id*::                 <tt>integer, not null, primary key</tt>
 # *title*::              <tt>string(255)</tt>
-# *body*::               <tt>text</tt>
+# *body*::               <tt>text(65535)</tt>
 # *slug*::               <tt>string(255)</tt>
 # *publish_date*::       <tt>datetime</tt>
 # *show_public*::        <tt>boolean</tt>

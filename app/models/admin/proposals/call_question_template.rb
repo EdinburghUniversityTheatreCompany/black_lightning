@@ -12,7 +12,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::Proposals::CallQuestionTemplate < ApplicationRecord
   include ApplicationHelper
 

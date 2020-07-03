@@ -12,7 +12,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::Questionnaires::QuestionnaireTemplate < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
 

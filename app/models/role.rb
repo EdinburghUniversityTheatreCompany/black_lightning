@@ -8,14 +8,13 @@
 #
 # *id*::            <tt>integer, not null, primary key</tt>
 # *name*::          <tt>string(255)</tt>
-# *resource_id*::   <tt>integer</tt>
-# *resource_type*:: <tt>string(255)</tt>
 # *created_at*::    <tt>datetime, not null</tt>
 # *updated_at*::    <tt>datetime, not null</tt>
+# *resource_type*:: <tt>string(255)</tt>
+# *resource_id*::   <tt>bigint</tt>
 #--
 # == Schema Information End
 #++
-##
 class Role < ApplicationRecord
   validates :name, presence: true
   

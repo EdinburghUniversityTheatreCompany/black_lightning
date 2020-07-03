@@ -14,7 +14,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Season < Event
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.

@@ -16,7 +16,6 @@
 #--
 # == Schema Information End
 #++
-##
 class NewsletterSubscriber < ApplicationRecord
   validates :email, presence: true
 end

@@ -5,7 +5,7 @@
 # *id*::                 <tt>integer, not null, primary key</tt>
 # *name*::               <tt>string(255)</tt>
 # *tagline*::            <tt>string(255)</tt>
-# *description*::        <tt>text</tt>
+# *description*::        <tt>text(65535)</tt>
 # *location*::           <tt>string(255)</tt>
 # *image_file_name*::    <tt>string(255)</tt>
 # *image_content_type*:: <tt>string(255)</tt>

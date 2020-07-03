@@ -18,7 +18,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::Staffing < ApplicationRecord
   validates :show_title, :start_time, :end_time, presence: true
 

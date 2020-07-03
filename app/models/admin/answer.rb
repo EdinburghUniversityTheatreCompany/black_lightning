@@ -10,7 +10,7 @@
 # *id*::                <tt>integer, not null, primary key</tt>
 # *question_id*::       <tt>integer</tt>
 # *answerable_id*::     <tt>integer</tt>
-# *answer*::            <tt>text</tt>
+# *answer*::            <tt>text(65535)</tt>
 # *created_at*::        <tt>datetime, not null</tt>
 # *updated_at*::        <tt>datetime, not null</tt>
 # *answerable_type*::   <tt>string(255)</tt>
@@ -21,7 +21,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::Answer < ApplicationRecord
   validates :question_id, presence: true
 

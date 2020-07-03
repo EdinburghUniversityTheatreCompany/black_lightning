@@ -17,7 +17,6 @@
 #--
 # == Schema Information End
 #++
-##
 class TeamMember < ActiveRecord::Base
   validates :position, :user, presence: true
 

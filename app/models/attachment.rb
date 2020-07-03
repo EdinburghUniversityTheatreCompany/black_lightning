@@ -26,7 +26,6 @@
 #--
 # == Schema Information End
 #++
-##
 
 class Attachment < ApplicationRecord
   belongs_to :editable_block, class_name: 'Admin::EditableBlock'

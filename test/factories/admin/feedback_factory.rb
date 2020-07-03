@@ -4,7 +4,7 @@
 #
 # *id*::         <tt>integer, not null, primary key</tt>
 # *show_id*::    <tt>integer</tt>
-# *body*::       <tt>text</tt>
+# *body*::       <tt>text(65535)</tt>
 # *created_at*:: <tt>datetime, not null</tt>
 # *updated_at*:: <tt>datetime, not null</tt>
 #--

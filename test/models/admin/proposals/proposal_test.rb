@@ -5,8 +5,8 @@
 # *id*::             <tt>integer, not null, primary key</tt>
 # *call_id*::        <tt>integer</tt>
 # *show_title*::     <tt>string(255)</tt>
-# *publicity_text*:: <tt>text</tt>
-# *proposal_text*::  <tt>text</tt>
+# *publicity_text*:: <tt>text(65535)</tt>
+# *proposal_text*::  <tt>text(65535)</tt>
 # *created_at*::     <tt>datetime, not null</tt>
 # *updated_at*::     <tt>datetime, not null</tt>
 # *late*::           <tt>boolean</tt>

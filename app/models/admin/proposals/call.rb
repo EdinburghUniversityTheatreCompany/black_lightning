@@ -15,7 +15,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::Proposals::Call < ApplicationRecord
   validates :submission_deadline, :editing_deadline, :name, presence: true
 

@@ -10,7 +10,7 @@
 #
 # *id*::         <tt>integer, not null, primary key</tt>
 # *name*::       <tt>string(255)</tt>
-# *content*::    <tt>text</tt>
+# *content*::    <tt>text(65535)</tt>
 # *created_at*:: <tt>datetime, not null</tt>
 # *updated_at*:: <tt>datetime, not null</tt>
 # *admin_page*:: <tt>boolean</tt>
@@ -18,7 +18,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::EditableBlock < ApplicationRecord
   resourcify
 

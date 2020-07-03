@@ -15,7 +15,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Admin::StaffingJob < ApplicationRecord
   validates :name, presence: true
 

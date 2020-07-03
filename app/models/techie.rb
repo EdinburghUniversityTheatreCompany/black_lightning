@@ -14,7 +14,6 @@
 #--
 # == Schema Information End
 #++
-##
 class Techie < ApplicationRecord
   validates :name, presence: true, length: { in: 1..32 }
   validates :name, uniqueness: { case_sensitive: false }
