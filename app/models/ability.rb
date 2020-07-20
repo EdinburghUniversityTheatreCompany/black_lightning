@@ -68,6 +68,9 @@ class Ability
     # Only people with explicit permission can do new. Create is an alias for new, so it has to be explicitly disallowed.
     cannot :new, MarketingCreatives::Profile
 
+    # Everyone can create a complaint.
+    can [:create], Complaint
+  
     # Stop if the user is not logged in.
     return if user.nil?
 
