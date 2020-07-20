@@ -117,6 +117,10 @@
                 <% if can? :index, MarketingCreatives::Profile %>
                   <li><%= link_to 'Marketing Creatives Profile List', admin_marketing_creatives_profiles_path %></li>
                 <% end %>
+
+                <% if can? :index, Complaint %>
+                  <li><%= link_to 'Complaints', admin_complaints_path %></li>
+                <% end %>
               </ul>
             </div>
 

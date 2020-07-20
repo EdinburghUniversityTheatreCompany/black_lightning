@@ -1,0 +1,23 @@
+<h1><%= @title %></h1>
+
+<table class="table table-hover">
+  <tr>
+    <th>Subject</th>
+    <th>Created At</th>
+
+    <% if can? :edit, Complaint %>
+      <th></th>
+    <% end %>
+  </tr>
+
+  <% @complaints.each do |complaint| %>
+    <tr class="<%= complaint.html_class %>">
+      <td><%= link_to complaint.subject, admin_complaint_path(complaint) %></td>
+      <td><%= l complaint.created_at, format: :longy %></td>
+
+      <%= get_link complaint, :edit, wrap_tag: 'td', link_text: 'Comment' %>
+    </tr>
+  <% end %>
+</table>
+
+<%= will_paginate(@complaints) %>

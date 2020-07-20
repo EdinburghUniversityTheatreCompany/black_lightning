@@ -204,6 +204,9 @@ ChaosRails::Application.routes.draw do
       resources :questionnaire_templates
     end
 
+    resources :complaints, except: [:new, :create] do
+    end
+
     get '/reports/', to: 'reports#index', as: 'reports'
     namespace 'reports' do
       %w(roles members newsletter_subscribers staffing).each do |action|
