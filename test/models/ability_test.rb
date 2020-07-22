@@ -370,6 +370,23 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(Complaint, 'the complaint class as committee', ability, allowed_actions, forbidden_actions)
   end
 
+  test 'admins cannot do anything with complaints unless they have the correct permission' do
+    admin = users(:admin)
+    allowed_actions = %i[create new]
+    # Granted by the welfare role
+    semi_forbidden_actions = %i[read show index edit update]
+    forbidden_actions = %I[destroy delete]
+    ability = Ability.new(admin)
+
+    helper_test_actions(Complaint, 'the complaint class as an admin', ability, allowed_actions, semi_forbidden_actions + forbidden_actions)
+
+    admin.add_role('Welfare Contact')
+
+    ability = Ability.new(admin)
+
+    helper_test_actions(Complaint, 'the complaint class as an admin', ability, allowed_actions + semi_forbidden_actions, forbidden_actions)
+  end
+
   test 'permission grid permissions work' do
     # Pick classses for this that does not have any special permissions.
     # Please make sure the format of the Admin::Permission here is the same as the grid would use.

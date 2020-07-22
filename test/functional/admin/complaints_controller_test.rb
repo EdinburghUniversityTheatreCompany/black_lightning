@@ -2,7 +2,10 @@ require 'test_helper'
 
 class Admin::ComplaintsControllerTest < ActionController::TestCase
   setup do
-    sign_in users(:admin)
+    admin = users(:admin)
+    admin.add_role('Welfare Contact')
+
+    sign_in admin
 
     @complaint = FactoryBot.create(:complaint)
   end

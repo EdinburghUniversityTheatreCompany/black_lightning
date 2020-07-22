@@ -15,6 +15,20 @@
 class Ability
   include CanCan::Ability
 
+  def set_permissions_based_on_grid(user)
+    permissions = user.roles.includes(:permissions).flat_map(&:permissions).uniq
+    permissions.each do |permission|
+      # Some permissions are not associated with a class, but just with a symbol, such as :backend.
+      begin
+        subject_class = permission.subject_class.constantize
+      rescue NameError
+        subject_class = permission.subject_class.to_sym
+      ensure
+        can permission.action.to_sym, subject_class
+      end
+    end
+  end
+
   # Define the permissions for a user.
   def initialize(user)
     # The 4 CRUD actions are automatically aliased to the 7 RESTful actions.
@@ -33,8 +47,13 @@ class Ability
       can :manage, :all
 
       # Even admins should not be able to read proposals before the submission deadline has been passed.
-      cannot [:update, :read, :create, :delete, :approve, :reject, :convert], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+      cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
       can [:update, :read, :delete], Admin::Proposals::Proposal, users: { id: user.id }
+
+      cannot :manage, Complaint
+      can :create, Complaint
+      # To override restrictions if the admin has the appropriate role.
+      set_permissions_based_on_grid(user)
 
       return
     end
@@ -126,17 +145,6 @@ class Ability
 
     can %i[show edit update reject], MarketingCreatives::Profile, id: user.marketing_creatives_profile.id if user.marketing_creatives_profile.present?
 
-    # Grant the user permissions based on the grid.
-    permissions = user.roles.includes(:permissions).flat_map(&:permissions).uniq
-    permissions.each do |permission|
-      # Some permissions are not associated with a class, but just with a symbol, such as :backend.
-      begin
-        subject_class = permission.subject_class.constantize
-      rescue NameError
-        subject_class = permission.subject_class.to_sym
-      ensure
-        can permission.action.to_sym, subject_class
-      end
-    end
+    set_permissions_based_on_grid(user)
   end
 end
