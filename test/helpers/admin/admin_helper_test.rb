@@ -68,7 +68,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'destroy_with_flash_message for object with restrict_with_error does not destroy the object' do
-    @proposal = FactoryBot.create(:proposal)
+    @proposal = helper_create_proposal
 
     assert_no_difference 'Admin::Proposals::Proposal.count' do
       assert_not destroy_with_flash_message(@proposal)
@@ -78,7 +78,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'can override using condition' do
-    @proposal = FactoryBot.create(:proposal)
+    @proposal = helper_create_proposal
 
     assert_no_difference 'Admin::Proposals::Proposal.count' do
       assert_not destroy_with_flash_message(@proposal, condition: false)
@@ -88,7 +88,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'can add additional condition' do
-    @proposal = FactoryBot.create(:proposal)
+    @proposal = helper_create_proposal
 
     assert_no_difference 'Admin::Proposals::Proposal.count' do
       assert_not destroy_with_flash_message(@proposal, additional_condition: false)
@@ -134,5 +134,14 @@ class Admin::AdminHelperTest < ActionView::TestCase
     assert_not destroy_with_flash_message(@mass_mail, error_message: 'Hexagons Forever', append_errors_to_error_flash: false)
 
     assert_equal(['Hexagons Forever'], flash[:error])
+  end
+
+  private
+
+  def helper_create_proposal
+    proposal = FactoryBot.create(:proposal)
+    proposal.call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+
+    return proposal
   end
 end
