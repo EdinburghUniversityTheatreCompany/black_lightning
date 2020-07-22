@@ -17,6 +17,7 @@ gem 'simple_form'
 gem 'devise'
 gem 'cancancan'
 gem 'rolify'
+gem 'recaptcha'
 
 gem 'will_paginate'
 gem 'kramdown'

@@ -1,0 +1,19 @@
+<h1><%= @title = 'Submit Complaint or Suggestion' %></h1>
+
+<p>
+<%= display_block("Submit Complaint Help", false) %>
+</p>
+
+<%= simple_form_for(@complaint) do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+    <%= f.input :subject %>
+
+    <%= render "/shared/form/md_editor", f: f, field: :description, show_hint: true %>
+  </div>
+
+  <%= recaptcha_v3(action: 'submit_complaint') %>
+
+  <%= render '/shared/form/form_actions', f: f, include_index: false %>
+<% end %>
