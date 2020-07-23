@@ -33,6 +33,8 @@ gem 'caxlsx'
 gem 'prawn'
 gem 'rqrcode'
 
+gem 'silencer'
+
 gem 'image_processing'
 gem 'mini_magick'
 gem 'active_storage_validations'

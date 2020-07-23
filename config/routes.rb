@@ -1,3 +1,6 @@
+
+require 'silencer'
+
 ChaosRails::Application.routes.draw do
   devise_for :users
 
@@ -36,7 +39,8 @@ ChaosRails::Application.routes.draw do
   get 'marketing_creatives/sign_up', to: 'admin/marketing_creatives/profiles#sign_up'
   # TODO: Corresponding create, maybe?
 
-  %w[complaint complaints complain suggestions suggestion suggest].each do |path|
+  # Defined in the silencer initializer.
+  COMPLAINTS_ALIASES.each do |path|
     get path, to: redirect('complaints/new')
   end
 
