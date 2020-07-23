@@ -17,6 +17,7 @@ gem 'simple_form'
 gem 'devise'
 gem 'cancancan'
 gem 'rolify'
+gem 'recaptcha'
 
 gem 'will_paginate'
 gem 'kramdown'
@@ -31,6 +32,8 @@ gem 'daemons'
 gem 'caxlsx'
 gem 'prawn'
 gem 'rqrcode'
+
+gem 'silencer'
 
 gem 'image_processing'
 gem 'mini_magick'

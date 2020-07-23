@@ -151,6 +151,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should destroy admin_proposals_proposal' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, team_member_count: 0)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do

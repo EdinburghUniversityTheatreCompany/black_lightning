@@ -1,3 +1,6 @@
+
+require 'silencer'
+
 ChaosRails::Application.routes.draw do
   devise_for :users
 
@@ -35,6 +38,13 @@ ChaosRails::Application.routes.draw do
 
   get 'marketing_creatives/sign_up', to: 'admin/marketing_creatives/profiles#sign_up'
   # TODO: Corresponding create, maybe?
+
+  # Defined in the silencer initializer.
+  COMPLAINTS_ALIASES.each do |path|
+    get path, to: redirect('complaints/new')
+  end
+
+  resources :complaints, only: [:new, :create]
 
   get 'events/xts/:id', to: 'events#find_by_xts_id'
   get 'attachments/:slug(/:style)', to: 'attachments#file'
@@ -202,6 +212,10 @@ ChaosRails::Application.routes.draw do
       end
 
       resources :questionnaire_templates
+    end
+
+    resources :complaints, except: [:new, :create] do
+      get 'new', to: redirect('/complaints/new')
     end
 
     get '/reports/', to: 'reports#index', as: 'reports'

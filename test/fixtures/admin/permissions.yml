@@ -52,3 +52,13 @@ can_show_marketing_creative_profiles:
   id: 8
   action: show
   subject_class: MarketingCreatives::Profile
+
+can_read_complaint:
+  id: 9
+  action: read
+  subject_class: Complaint
+
+can_update_complaint:
+  id: 10
+  action: update
+  subject_class: Complaint

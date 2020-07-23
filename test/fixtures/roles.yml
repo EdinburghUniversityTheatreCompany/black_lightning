@@ -30,3 +30,6 @@ admin:
   id: 3
   name: "admin"
   
+welfare:
+  id: 4
+  name: "Welfare Contact"

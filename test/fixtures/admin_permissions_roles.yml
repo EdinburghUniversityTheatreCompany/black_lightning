@@ -36,3 +36,11 @@ member_can_sign_up_for_staffing:
 committee_can_show_marketing_creatives_profiles:
   role_id:       2
   permission_id: 8
+
+welfare_can_read_complaint:
+  role_id: 4
+  permission_id: 9
+
+welfare_can_update_complaint:
+  role_id: 4
+  permission_id: 10

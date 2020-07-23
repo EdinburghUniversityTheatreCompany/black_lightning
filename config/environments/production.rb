@@ -33,6 +33,9 @@ Rails.application.configure do
   # yet still be able to expire them through the digest params.
   config.assets.digest = true
 
+  # Do not log calls to assets (apart from cluttering up the logs, it also compromises anonimity for the form)
+  config.assets.quiet = true
+
   # `config.assets.precompile` and `config.assets.version` have moved to config/initializers/assets.rb
 
   # Enable serving of images, stylesheets, and JavaScripts from an asset server.

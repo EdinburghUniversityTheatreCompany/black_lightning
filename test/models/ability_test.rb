@@ -13,7 +13,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     models = ApplicationRecord.descendants
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
-                  Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile]
+                  Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, Complaint]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -356,6 +356,35 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     forbidden_actions = %I[index edit update new delete destroy approve reject]
 
     helper_test_actions(random_profile, 'someone elses approved marketing creative profile', @ability, allowed_actions, forbidden_actions)
+  end
+
+  test 'users can create complaint' do
+    allowed_actions = %I[new create]
+    forbidden_actions = %I[read show index edit update destroy]
+
+    complaint = FactoryBot.create(:complaint)
+
+    helper_test_actions(Complaint, 'the complaint class as user', @ability, allowed_actions, forbidden_actions)
+
+    ability = Ability.new(users(:committee))
+    helper_test_actions(Complaint, 'the complaint class as committee', ability, allowed_actions, forbidden_actions)
+  end
+
+  test 'admins cannot do anything with complaints unless they have the correct permission' do
+    admin = users(:admin)
+    allowed_actions = %i[create new]
+    # Granted by the welfare role
+    semi_forbidden_actions = %i[read show index edit update]
+    forbidden_actions = %I[destroy delete]
+    ability = Ability.new(admin)
+
+    helper_test_actions(Complaint, 'the complaint class as an admin', ability, allowed_actions, semi_forbidden_actions + forbidden_actions)
+
+    admin.add_role('Welfare Contact')
+
+    ability = Ability.new(admin)
+
+    helper_test_actions(Complaint, 'the complaint class as an admin', ability, allowed_actions + semi_forbidden_actions, forbidden_actions)
   end
 
   test 'permission grid permissions work' do
