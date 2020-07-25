@@ -31,4 +31,8 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   def permitted_params
     [:name, :name_on_profile, :image]
   end
+
+  def order_args
+    :name
+  end
 end
