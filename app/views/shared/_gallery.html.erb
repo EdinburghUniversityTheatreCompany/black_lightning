@@ -19,6 +19,8 @@
   <% header_size = 3 if header_size.nil? %>
   <% header_tag = "h#{header_size}"%>
   <<%= header_tag %>>Gallery</<%= header_tag %>>
+  <i>Click on a thumbnail to see the image in full-size</i>
+
 
   <ul class="thumbnails">
     <% pictures.includes(image_attachment: :blob).each_with_index do |picture, index| %>

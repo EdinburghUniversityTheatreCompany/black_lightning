@@ -12,9 +12,9 @@
 # == Schema Information End
 #++
 class MarketingCreatives::CategoryInfo < ApplicationRecord
-  validates :profile, :category, :description, :image, presence: true
+  validates :profile, :category, :image, presence: true
+
   # Validate the uniqueness of the pair of profile and category, so that every profile can only have one entry for each category.
-  # TODO: test
   validates_uniqueness_of :category, scope: [:profile]
 
   #default_scope -> { joins(:profile).order('profile.name ASC') }
