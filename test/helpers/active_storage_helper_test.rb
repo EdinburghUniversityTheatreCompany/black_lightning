@@ -61,6 +61,16 @@ class ActiveStorageHelperTest < ActionView::TestCase
   test 'thumb_variant' do
     assert thumb_variant.is_a? Hash
     assert thumb_variant.values.first.is_a? Array
+
+    dimensions_array = thumb_variant.values.first
+
+    scaler = 2
+
+    scaled_dimensions_array = thumb_variant(scaler).values.first
+
+    assert_equal scaler * dimensions_array[0], scaled_dimensions_array[0]
+    assert_equal scaler * dimensions_array[1], scaled_dimensions_array[1]
+
   end
 
   test 'square_display_variant' do
@@ -70,6 +80,14 @@ class ActiveStorageHelperTest < ActionView::TestCase
 
   test 'square_thumb_variant' do
     assert square_thumb_variant.is_a? Hash
-    assert square_thumb_variant.values.first.is_a? Array
+
+    dimensions_array = square_thumb_variant.values.first
+    assert dimensions_array.is_a? Array
+
+    assert_equal dimensions_array[0], dimensions_array[1]
+    assert_equal dimensions_array[0], 150
+
+    # Check if the dimensions are 200x200 now
+    assert_equal square_thumb_variant(200).values.first.first, 200
   end
 end

@@ -7,7 +7,7 @@
 <ul class="thumbnails">
   <% @categories.each do |category| %>
     <li class="span4">
-      <% img = image_tag category.fetch_image.variant(thumb_variant), class: 'thumbnail' %>
+      <% img = image_tag category.fetch_image.variant(square_thumb_variant(300)), class: 'thumbnail' %>
 
       <%= get_link category, :show, link_text: img %>
       <%= get_link category, :show %>
