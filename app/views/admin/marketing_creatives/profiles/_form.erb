@@ -14,6 +14,8 @@
 
     <%= render "/shared/form/md_editor", f: f, field: :about, rows: 12, show_hint: true %>
     
+    <%= render "/shared/form/md_editor", f: f, field: :contact, rows: 12, show_hint: true %>
+
     <h3>Categories</h3>
     <p class="<%= 'alert alert-danger' if f.error(:category_infos).present? %>">
       <%= f.full_error :category_infos %>

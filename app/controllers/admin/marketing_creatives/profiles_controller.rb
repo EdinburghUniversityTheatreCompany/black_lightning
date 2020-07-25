@@ -68,7 +68,7 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
   end
 
   def permitted_params
-    params = [ :name, :about, 
+    params = [ :name, :about, :contact,
       category_infos_attributes: [
         :id, :_destroy, :category_id, :image, :description,
         pictures_attributes: [:id, :_destroy, :description, :image]
