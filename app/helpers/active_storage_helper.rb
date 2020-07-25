@@ -39,8 +39,8 @@ module ActiveStorageHelper
     end
   end
 
-  def thumb_variant
-    return { resize_to_fill: [192, 100] }
+  def thumb_variant(scale_factor = 1)
+    return { resize_to_fill: [192 * scale_factor, 100 * scale_factor] }
   end
 
   def medium_variant
@@ -51,8 +51,8 @@ module ActiveStorageHelper
     return { resize_to_fill: [960, 500] }
   end
 
-  def square_thumb_variant
-    return { resize_to_fill: [150, 150] }
+  def square_thumb_variant(dimensions = 150)
+    return { resize_to_fill: [dimensions, dimensions] }
   end
 
   def square_display_variant

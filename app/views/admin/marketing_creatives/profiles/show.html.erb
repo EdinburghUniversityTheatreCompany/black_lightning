@@ -11,10 +11,16 @@
 <h3>About</h3>
 <%= render_markdown @profile.about %>
 
+<h3>Contact Details</h3>
+<%= render_markdown @profile.contact %>
+
 <% @profile.category_infos.each do |category_info| %>
   <h3><%= category_info.category.name_on_profile %></h3>
   <%= image_tag(category_info.fetch_image.variant(slideshow_variant)) %>
-  <%= render_markdown category_info.description %>
+  
+  <p>
+    <%= render_markdown category_info.description %>
+  </p>
 
   <%= render '/shared/gallery', pictures: category_info.pictures, header_size: 4, include_horizontal_line: false %>
 <% end %>

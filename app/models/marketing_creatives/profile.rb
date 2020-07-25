@@ -14,7 +14,7 @@
 # == Schema Information End
 #++
 class MarketingCreatives::Profile < ApplicationRecord
-  validates :name, :about, :url, presence: true
+  validates :name, :about, :contact, :url, presence: true
   validates :user, :name, :url, uniqueness: { case_sensitive: true }, allow_nil: true
 
   acts_as_url :name

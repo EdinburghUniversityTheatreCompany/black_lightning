@@ -18,6 +18,7 @@ FactoryBot.define do
     name { generate(:random_string) }
     url { name.to_url }
     about { generate(:random_text) }
+    contact { generate(:random_text) }
 
     approved { [true, false].sample }
 

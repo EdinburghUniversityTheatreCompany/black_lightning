@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_07_20_073243) do
+ActiveRecord::Schema.define(version: 2020_07_25_184433) do
 
   create_table "active_storage_attachments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -310,6 +310,7 @@ ActiveRecord::Schema.define(version: 2020_07_20_073243) do
     t.integer "user_id"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.text "contact"
     t.index ["url"], name: "index_marketing_creatives_profiles_on_url"
     t.index ["user_id"], name: "index_marketing_creatives_profiles_on_user_id"
   end
