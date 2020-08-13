@@ -32,7 +32,7 @@ class Admin::EditableBlocksController < AdminController
   end
 
   def permitted_params
-    [:content, :name, :url, :admin_page, :group, attachments_attributes: [:id, :_destroy, :name, :file]]
+    [:content, :name, :url, :ordering, :admin_page, :group, attachments_attributes: [:id, :_destroy, :name, :file]]
   end
 
   def update_redirect_url
