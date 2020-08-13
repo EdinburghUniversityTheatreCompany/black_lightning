@@ -30,7 +30,7 @@ module SubpageHelper
 
     subpage_editable_blocks = Admin::EditableBlock.where('url LIKE ?', "#{root_url}%")
 
-    subpage_editable_blocks = subpage_editable_blocks.order(:ordering, :url).select { |editable_block| !editable_block.url.sub("#{root_url}/", '').include?('/') }
+    subpage_editable_blocks = subpage_editable_blocks.order(:ordering, :name).select { |editable_block| !editable_block.url.sub("#{root_url}/", '').include?('/') }
 
     if subpage_editable_blocks.any?
       subpages += subpage_editable_blocks

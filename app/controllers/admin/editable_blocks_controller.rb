@@ -44,6 +44,6 @@ class Admin::EditableBlocksController < AdminController
   end
 
   def order_args
-    :url
+    :name
   end
 end
