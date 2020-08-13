@@ -252,7 +252,7 @@ ChaosRails::Application.routes.draw do
 
   post 'markdown/preview', to: 'markdown#preview'
 
-  get 'about', to: 'about#index', as: :about_index
+  get 'about', to: 'about#page', as: :about_index
   get 'about/(*page)', to: 'about#page', as: :about
 
   get 'getinvolved', to: 'get_involved#index', as: :get_involved_index
