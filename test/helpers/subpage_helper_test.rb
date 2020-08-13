@@ -15,36 +15,38 @@ class SubpageHelperTest < ActionView::TestCase
   end
 
   test 'get subpages at root' do
+    # The ordering is tested at the same time.
     subpages = [
-      FactoryBot.create(:editable_block, url: 'admin/resources'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/ball'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/producing'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/tech'),
+      FactoryBot.create(:editable_block, url: 'admin/resources',            ordering: 1),
+      FactoryBot.create(:editable_block, url: 'admin/resources/ball',       ordering: 2),
+      FactoryBot.create(:editable_block, url: 'admin/resources/producing',  ordering: 3),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech',       ordering: 4),
     ]
 
-    not_to_be_included_page       = FactoryBot.create(:editable_block, url: 'admin/resources/ball/support')
-    other_not_to_be_included_page = FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound')
+    not_to_be_included_page       = FactoryBot.create(:editable_block, url: 'admin/resources/ball/support', ordering: 0)
+    other_not_to_be_included_page = FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound',   ordering: 6)
 
-    assert_equal subpages, get_subpages('admin/resources')
+    assert_equal subpages.collect(&:url), get_subpages('admin/resources').collect(&:url)
 
     # Get the pages at the current layer when the page has no subpages.
 
-    assert_equal subpages, get_subpages('admin/resources/producing')
+    assert_equal subpages.collect(&:url), get_subpages('admin/resources/producing').collect(&:url)
   end
 
   test 'get subpages when deeper' do
     subpages = [
-      FactoryBot.create(:editable_block, url: 'admin/resources'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/tech'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/tech/lighting'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/tech/projections'),
-      FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound'),
+      FactoryBot.create(:editable_block, url: 'admin/resources',                  ordering: 3),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech',             ordering: 5),
+      # Should be able to be lower, as it is on a different layer.
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech/lighting',    ordering: 1),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech/projections', ordering: 2),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound',       ordering: 3),
     ]
 
-    not_to_be_included_page       = FactoryBot.create(:editable_block, url: 'admin/resources/ball')
-    other_not_to_be_included_page = FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound/assistants')
+    not_to_be_included_page       = FactoryBot.create(:editable_block, url: 'admin/resources/ball', ordering: 2)
+    other_not_to_be_included_page = FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound/assistants', ordering: -1)
 
-    assert_equal subpages, get_subpages('admin/resources/tech/lighting')
+    assert_equal subpages.collect(&:url), get_subpages('admin/resources/tech/lighting').collect(&:url)
   end
 
   test 'get subpage link with link_to' do
