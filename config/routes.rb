@@ -52,9 +52,9 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     get '', to: 'dashboard#index'
 
-    # The resources pages:
-    get 'resources', to: 'resources#index', as: :resources
-    get 'resources/(*page)', to: 'resources#page', as: :resources_page
+    # The resources pages:_inde
+    get 'resources', to: 'resources#page', as: :resources_index
+    get 'resources/(*page)', to: 'resources#page', as: :resources
 
     # Answer files
     get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file
@@ -252,11 +252,13 @@ ChaosRails::Application.routes.draw do
 
   post 'markdown/preview', to: 'markdown#preview'
 
-  get 'about', to: 'about#index', as: :about_index
+  get 'about', to: 'about#page', as: :about_index
   get 'about/(*page)', to: 'about#page', as: :about
 
-  get 'getinvolved', to: 'get_involved#index', as: :get_involved_index
-  get 'getinvolved/(*page)', to: 'get_involved#page', as: :get_involved
+  get 'get_involved', to: 'get_involved#page', as: :get_involved_index
+  get 'get_involved/opportunities', to: 'get_involved#opportunities', as: :get_involved_opportunities
+  get 'get_involved/(*page)', to: 'get_involved#page', as: :get_involved
+
   get 'youth', to: redirect('/getinvolved/youth_project')
 
   # ERROR PAGES - match to ensure correct response code is sent

@@ -5,11 +5,14 @@ class ComplaintsController < ApplicationController
   load_and_authorize_resource
 
   def create
+    # I do not know how to deliberately fail the captcha, as the entire check is disabled in testing.
+    # :nocov:
     unless verify_recaptcha(action: 'submit_complaint', score: 0.5)
       render 'new'
 
       return
     end
+    # :nocov:
 
     @complaint.resolved = false
     

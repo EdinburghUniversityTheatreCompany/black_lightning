@@ -1,68 +1,55 @@
 module SubpageHelper
-  def get_subpage_root_page(page)
-    return '' if page == 'overview' || page.nil?
+  def get_subpage_root_url(root_folder, root_page)
+    root_page = '' if root_page == 'overview' || root_page.nil?
 
-    return normalize_link(page)
+    root_folder = strip_url(root_folder)
+    root_page = strip_url(root_page)
+
+
+    root_url = root_page == '' ? root_folder : "#{root_folder}/#{root_page}"
+    
+    return strip_url(root_url).downcase
   end
 
-  # TODO: test that going to something like ball resources returns the standard list
-  def get_subpages(root_folder, root_page) 
-    root_folder = normalize_link(root_folder)
-    root_page = normalize_link(root_page)
-
-    subpages_dir = "#{Rails.root}/app/views/#{root_folder}/#{root_page}"
-
+  def get_subpages(root_url)
+    root_url = strip_url(root_url)
+     
     subpages = []
 
-    # Add all higher layers to the subpages (tech when you are currently at tech/lighting)
-    temporary_root_page = root_page
-    while temporary_root_page.present?
-      subpages << temporary_root_page
-      temporary_root_page = temporary_root_page.rpartition('/').first
+    # Add the current and all higher layers to the subpages (tech, tech/lightning and tech/lightning/design when you are currently at tech/lighting/design)
+    temporary_root_url = root_url
+
+    while temporary_root_url.present?
+      editable_block = Admin::EditableBlock.find_by(url: temporary_root_url)
+      subpages << editable_block if editable_block.present?
+      temporary_root_url = temporary_root_url.rpartition('/').first
     end
 
-    if File.directory?(subpages_dir)
-      Dir.foreach(subpages_dir) do |file|
-        unless File.directory?(File.join(subpages_dir, file))
-          file = file.gsub(/\.html\.erb/, '')
-          if root_page.present?
-            subpages << "#{root_page}/#{file}"
-          else
-            subpages << file
-          end
-        end
-      end
-    elsif root_page.present?
-      # If there is no folder, move one layer up when generating the subpages
-      return get_subpages(root_folder, root_page.rpartition('/').first)
+    # The most top-level page should be at the top.
+    subpages.reverse!
+
+    subpage_editable_blocks = Admin::EditableBlock.where('url LIKE ?', "#{root_url}%")
+
+    subpage_editable_blocks = subpage_editable_blocks.order(:ordering, :url).select { |editable_block| !editable_block.url.sub("#{root_url}/", '').include?('/') }
+
+    if subpage_editable_blocks.any?
+      subpages += subpage_editable_blocks
+    elsif root_url.present?
+      # If there are no subpages, move one layer up when generating the subpages. 
+      return get_subpages(root_url.rpartition('/').first)
     end
 
-
-
-    # Those are included by default by the subpage_sidebar layout.
-    subpages.delete('')
-    subpages.delete('overview')
-
-    return subpages
+    return subpages.uniq
   end
 
-  def get_subpage_link(page, controller)
-    page = normalize_link(page)
+  def get_subpage_link(controller, page)
+    page_url = page.url.sub(controller, '')
+    page_url.delete_prefix!('/')
 
-    if page.downcase == 'overview' || page == ''
-      return link_to 'Overview', controller: controller
-    else
-      @alias = {} if @alias.nil?
-      return link_to @alias[page] || page.humanize.titleize, controller: controller, action: :page, page: page
-    end
+    return link_to page.name, controller: controller, action: :page, page: page_url
   end
 
-  private
-
-  def normalize_link(page)
-    page.delete_prefix!('/')
-    page.delete_suffix!('/')
-    
-    return page.downcase
+  def strip_url(url)
+    return url.delete_prefix('/').delete_suffix('/')
   end
 end

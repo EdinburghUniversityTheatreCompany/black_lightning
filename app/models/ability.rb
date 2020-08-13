@@ -24,7 +24,11 @@ class Ability
       rescue NameError
         subject_class = permission.subject_class.to_sym
       ensure
-        can permission.action.to_sym, subject_class
+        action = permission.action.to_sym
+        can action, subject_class
+
+        # This line is ugly, but I cannot think of another way apart from putting CategoryInfo's in the grid as well, which would be confusing.
+        can :read, MarketingCreatives::CategoryInfo if subject_class == MarketingCreatives::Profile && (action == :read || action == :show)
       end
     end
   end
@@ -142,8 +146,12 @@ class Ability
 
     # Not indexing, because the index of profiles should only be visible to certain people.
     can :show, MarketingCreatives::Profile, approved: true
+    can :read, MarketingCreatives::CategoryInfo, profile: { approved: true }
 
-    can %i[show edit update reject], MarketingCreatives::Profile, id: user.marketing_creatives_profile.id if user.marketing_creatives_profile.present?
+    if user.marketing_creatives_profile.present?
+      can %i[show edit update reject], MarketingCreatives::Profile, id: user.marketing_creatives_profile.id
+      can :read, MarketingCreatives::CategoryInfo, profile: user.marketing_creatives_profile
+    end
 
     set_permissions_based_on_grid(user)
   end

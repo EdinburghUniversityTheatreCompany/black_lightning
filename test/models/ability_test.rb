@@ -13,7 +13,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     models = ApplicationRecord.descendants
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
-                  Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, Complaint]
+                  Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo, 
+                  Complaint]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -314,6 +315,9 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   # Marketing Creatives
   ##
 
+  allowed_for_category_info = %I[read show index]
+  forbidden_for_category_info = %I[edit update new create delete]
+
   test 'users without an account can sign up and create a Marketing Creatives profile' do
     @ability = Ability.new(nil)
 
@@ -323,40 +327,69 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(MarketingCreatives::Profile, 'marketing creative profile as user without account', @ability, allowed_actions, forbidden_actions)
   end
 
-  test 'marketing_creatives profiles permissions for signed-in users without a profile' do
-    allowed_actions = %I[sign_up create show]
-    forbidden_actions = %I[index edit update new delete destroy approve reject]
-
-    helper_test_actions(MarketingCreatives::Profile, 'marketing creative profile as user with an account', @ability, allowed_actions, forbidden_actions)
-  
-    random_approved_profile = FactoryBot.create(:marketing_creatives_profile, approved: true)
-    helper_test_actions(random_approved_profile, 'someone elses approved marketing creative profile', @ability, allowed_actions, forbidden_actions)
-
-    allowed_actions = %I[sign_up create ]
-    forbidden_actions = %I[show index edit update new delete destroy approve reject]
-
-    random_rejected_profile = FactoryBot.create(:marketing_creatives_profile, approved: false)
-    helper_test_actions(random_rejected_profile, 'someone elses rejected marketing creative profile', @ability, allowed_actions, forbidden_actions)
-  end
-
   test 'marketing_creatives profiles permissions for users with a profile' do
     allowed_actions = %I[show edit update reject sign_up create]
     forbidden_actions = %I[new delete destroy approve]
 
-    profile = FactoryBot.create(:marketing_creatives_profile)
+    profile = FactoryBot.create(:marketing_creatives_profile, approved: false)
     @user.marketing_creatives_profile = profile
 
     @ability = Ability.new @user.reload
 
-    helper_test_actions(profile, 'their own marketing creative profile', @ability, allowed_actions, forbidden_actions)
+    category_info = FactoryBot.create(:marketing_creatives_category_info, profile: profile)
 
-    random_profile = FactoryBot.create(:marketing_creatives_profile, approved: true)
+    helper_test_actions(profile, 'their own unapproved marketing creative profile', @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(category_info, 'a category info for their own marketing creative profile', @ability, allowed_for_category_info, forbidden_for_category_info)
 
-    allowed_actions = %I[sign_up create]
+    # Cannot use the user fixture because it is already used for @user.
+    random_ability = Ability.new(FactoryBot.create(:user))
+
+    helper_test_actions(category_info, 'a category info for a random marketing creative profile', random_ability, [], allowed_for_category_info + forbidden_for_category_info)
+  end
+
+  test 'marketing_creatives permissions for someone elses approved profile' do
+    allowed_actions = %I[sign_up create show]
     forbidden_actions = %I[index edit update new delete destroy approve reject]
 
-    helper_test_actions(random_profile, 'someone elses approved marketing creative profile', @ability, allowed_actions, forbidden_actions)
+    random_approved_profile = FactoryBot.create(:marketing_creatives_profile, approved: true)
+    category_info_for_random_approved_profile = FactoryBot.create(:marketing_creatives_category_info, profile: random_approved_profile)
+
+    helper_test_actions(random_approved_profile, 'someone elses approved marketing creative profile', @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(category_info_for_random_approved_profile, 'a category info for someone elses approved marketing creatives profile', @ability, allowed_for_category_info, forbidden_for_category_info)
   end
+
+  test 'marketing_creatives permissions for someone elses unapproved profile' do
+    allowed_actions = %I[sign_up create]
+    forbidden_actions = %I[index read show edit update new delete destroy approve reject]
+
+    random_unapproved_profile = FactoryBot.create(:marketing_creatives_profile, approved: false)
+    category_info_for_random_unapproved_profile = FactoryBot.create(:marketing_creatives_category_info, profile: random_unapproved_profile)
+
+    helper_test_actions(random_unapproved_profile, 'someone elses unapproved marketing creative profile', @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(category_info_for_random_unapproved_profile, 'a category info for someone elses unapproved marketing creatives profile', @ability, [], allowed_for_category_info + forbidden_for_category_info)
+  end
+
+  test 'marketing_creatives permissions for category_info when using the grid' do
+    # Committee has a fixture that gives show permission for Marketing Creatives profiles.
+    # This means we can test this by just testing if committee can see a category info belonging to an unapproved profile.
+
+    allowed_actions = %I[sign_up create show]
+    forbidden_actions = %I[index edit update new delete destroy approve reject]
+
+    @ability = Ability.new(users(:committee))
+  
+    random_unapproved_profile = FactoryBot.create(:marketing_creatives_profile, approved: false)
+    category_info_for_random_unapproved_profile = FactoryBot.create(:marketing_creatives_category_info, profile: random_unapproved_profile)
+
+    description = 'someone elses unapproved marketing creatives profile with show permission for the corresponding profile'
+
+    helper_test_actions(random_unapproved_profile, description, @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(category_info_for_random_unapproved_profile, 'a category info for ' + description, @ability, allowed_for_category_info, forbidden_for_category_info)
+  end
+
+  ##
+  # Complaints
+  ##
 
   test 'users can create complaint' do
     allowed_actions = %I[new create]
