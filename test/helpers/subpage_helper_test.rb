@@ -2,68 +2,71 @@ require 'test_helper'
 
 class SubpageHelperTest < ActionView::TestCase
   test 'get subpage root page' do
-    assert_equal '', get_subpage_root_page('overview')
-    assert_equal '', get_subpage_root_page(nil)
-    assert_equal '', get_subpage_root_page('')
-    assert_equal '', get_subpage_root_page('/')
-    assert_equal 'secretary', get_subpage_root_page('secretary')
-    assert_equal 'secretary', get_subpage_root_page('secretary/')
-    assert_equal 'secretary', get_subpage_root_page('/secretary/')
-    assert_equal 'secretary/minutes', get_subpage_root_page('secretary/minutes')
-    assert_equal 'secretary/minutes', get_subpage_root_page('secretary/minutes/')
-    assert_equal 'pineapple/hexagon/viking', get_subpage_root_page('pineapple/hexagon/viking')
+    assert_equal 'about', get_subpage_root_url('about', 'overview')
+    assert_equal 'about', get_subpage_root_url('about', nil)
+    assert_equal 'about', get_subpage_root_url('about', '')
+    assert_equal 'about', get_subpage_root_url('about/', '/')
+    assert_equal 'about/secretary', get_subpage_root_url('about', 'secretary')
+    assert_equal 'about/secretary', get_subpage_root_url('about', 'secretary/')
+    assert_equal 'about/secretary', get_subpage_root_url('about', '/secretary/')
+    assert_equal 'about/secretary/minutes', get_subpage_root_url('about', 'secretary/minutes')
+    assert_equal 'about/secretary/minutes', get_subpage_root_url('about', 'secretary/minutes/')
+    assert_equal 'about/pineapple/hexagon/viking', get_subpage_root_url('about', 'pineapple/hexagon/viking')
   end
 
   test 'get subpages at root' do
     subpages = [
-      'archive', 'ball', 'business', 'constitution_and_production_guidelines',
-      'library', 'marketing', 'membership_checker', 'miscellaneous', 'production_schedule',
-      'secretary', 'stage_set_and_wardrobe', 'tech'
+      FactoryBot.create(:editable_block, url: 'admin/resources'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/ball'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/producing'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech'),
     ]
 
-    assert_equal subpages, get_subpages('/admin/resources/', '')
+    not_to_be_included_page       = FactoryBot.create(:editable_block, url: 'admin/resources/ball/support')
+    other_not_to_be_included_page = FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound')
+
+    assert_equal subpages, get_subpages('admin/resources')
+
+    # Get the pages at the current layer when the page has no subpages.
+
+    assert_equal subpages, get_subpages('admin/resources/producing')
   end
 
-  test 'get subpages at something without nesting' do
+  test 'get subpages when deeper' do
     subpages = [
-      'archive', 'ball', 'business', 'constitution_and_production_guidelines',
-      'library', 'marketing', 'membership_checker', 'miscellaneous', 'production_schedule',
-      'secretary', 'stage_set_and_wardrobe', 'tech'
+      FactoryBot.create(:editable_block, url: 'admin/resources'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech/lighting'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech/projections'),
+      FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound'),
     ]
 
-    assert_equal subpages, get_subpages('admin/resources', 'ball')
+    not_to_be_included_page       = FactoryBot.create(:editable_block, url: 'admin/resources/ball')
+    other_not_to_be_included_page = FactoryBot.create(:editable_block, url: 'admin/resources/tech/sound/assistants')
+
+    assert_equal subpages, get_subpages('admin/resources/tech/lighting')
   end
 
-  test 'will include the parent when two layers deep' do
-    # For example, tech, tech/lighting & tech/sound when you're at tech/lighting.
-    subpages = %w[tech tech/lighting tech/projection tech/sound]
+  test 'get subpage link with link_to' do
+    root_folder = 'admin/resources'
 
-    assert_equal subpages, get_subpages('admin/resources', 'tech/lighting')
-  end
+    overview = FactoryBot.create(:editable_block, url: root_folder)
 
-  # Tests if the link can handle differently styled page names
-  test 'get subpages at secretary' do
-    subpages = %w[secretary secretary/current_minutes secretary/minutes_archive secretary/miscellaneous secretary/rehearsal_schedules]
+    generated_link = get_subpage_link(root_folder, overview)
 
-    root_folder = 'admin/resources/'
-
-    assert_equal subpages, get_subpages(root_folder, 'secretary')
-    assert_equal subpages, get_subpages(root_folder, '/Secretary/')
-    assert_equal subpages, get_subpages(root_folder, '/seCretAry')
-    assert_equal subpages, get_subpages(root_folder, 'secretary/')
+    assert_equal link_to(overview.name, admin_resources_index_path), generated_link
+    assert_equal link_to(overview.name, admin_resources_path), generated_link
+    assert_equal link_to(overview.name, admin_resources_path('')), generated_link
   end
 
   test 'get subpage link' do
-    assert_equal link_to('Act', get_involved_path('act')), get_subpage_link('act', 'get_involved')
-    assert_equal link_to('Overview', about_index_path), get_subpage_link('', 'about')
-    assert_equal link_to('Overview', admin_resources_path), get_subpage_link('overview', '/admin/resources')
-  end
+    root_folder = 'admin/resources'
 
-  test 'get subpage link for resources' do
-    root_folder = '/admin/resources'
-    assert_equal '<a href="/admin/resources/secretary">Secretary</a>', get_subpage_link('/secretary', root_folder)
-    assert_equal '<a href="/admin/resources/secretary/minutes">Secretary/Minutes</a>', get_subpage_link('secretary/minutes/', root_folder)
-    assert_equal '<a href="/admin/resources">Overview</a>', get_subpage_link('', root_folder)
-    assert_equal '<a href="/admin/resources">Overview</a>', get_subpage_link('OVerVieW', root_folder)
+    secretary = FactoryBot.create(:editable_block, url: root_folder + '/secretary')
+    overview = FactoryBot.create(:editable_block, url: root_folder)
+
+    assert_equal "<a href=\"/admin/resources/secretary\">#{secretary.name}</a>", get_subpage_link(root_folder, secretary)
+    assert_equal "<a href=\"/admin/resources\">#{overview.name}</a>", get_subpage_link(root_folder, overview)
+    assert_equal "<a href=\"/admin/resources\">#{overview.name}</a>", get_subpage_link(root_folder, overview)
   end
 end
