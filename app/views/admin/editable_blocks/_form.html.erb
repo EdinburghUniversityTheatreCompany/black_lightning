@@ -6,6 +6,8 @@
       <%= f.input :name %>
     <% end %>
 
+    <%= f.input :url, hint: 'The url is required to determine the location of the page for about, resources, and get involved.'%>
+
     <%= f.input :group,
                 hint: "The section which the block should be displayed under in the admin site",
                 input_html: {

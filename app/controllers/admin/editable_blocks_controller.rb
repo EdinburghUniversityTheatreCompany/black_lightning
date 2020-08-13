@@ -26,13 +26,13 @@ class Admin::EditableBlocksController < AdminController
   end
 
   def load_index_resources
-    @editable_blocks = @editable_blocks.group_by(&:group)
+    @editable_blocks = @editable_blocks.order(order_args).group_by(&:group)
 
     return @editable_blocks
   end
 
   def permitted_params
-    [:content, :name, :admin_page, :group, attachments_attributes: [:id, :_destroy, :name, :file]]
+    [:content, :name, :url, :admin_page, :group, attachments_attributes: [:id, :_destroy, :name, :file]]
   end
 
   def update_redirect_url
@@ -41,5 +41,9 @@ class Admin::EditableBlocksController < AdminController
 
   def create_redirect_url
     update_redirect_url
+  end
+
+  def order_args
+    :url
   end
 end
