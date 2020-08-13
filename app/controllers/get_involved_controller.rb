@@ -11,6 +11,8 @@ class GetInvolvedController < ApplicationController
   def opportunities
     @opportunities = Opportunity.active
 
+    @editable_block = Admin::EditableBlock.find_by(url: 'get_involved/opportunities')
+
     set_subpages
   end
 
