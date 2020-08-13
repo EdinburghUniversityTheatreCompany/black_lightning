@@ -52,9 +52,9 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     get '', to: 'dashboard#index'
 
-    # The resources pages:
-    get 'resources', to: 'resources#index', as: :resources
-    get 'resources/(*page)', to: 'resources#page', as: :resources_page
+    # The resources pages:_inde
+    get 'resources', to: 'resources#page', as: :resources_index
+    get 'resources/(*page)', to: 'resources#page', as: :resources
 
     # Answer files
     get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file

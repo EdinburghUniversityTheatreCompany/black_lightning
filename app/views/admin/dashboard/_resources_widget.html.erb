@@ -1,5 +1,5 @@
 <h3><%= link_to 'Resources', admin_resources_path %></h3>
 
-<% get_subpages('admin/resources/', '').each do |page| %>
-  <p><%= get_subpage_link(page, 'admin/resources') %></p>
+<% get_subpages('admin/resources').each do |page| %>
+  <p><%= get_subpage_link('admin/resources', page) %></p>
 <% end %>
