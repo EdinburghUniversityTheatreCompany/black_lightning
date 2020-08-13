@@ -255,8 +255,10 @@ ChaosRails::Application.routes.draw do
   get 'about', to: 'about#page', as: :about_index
   get 'about/(*page)', to: 'about#page', as: :about
 
-  get 'getinvolved', to: 'get_involved#index', as: :get_involved_index
-  get 'getinvolved/(*page)', to: 'get_involved#page', as: :get_involved
+  get 'get_involved', to: 'get_involved#page', as: :get_involved_index
+  get 'get_involved/opportunities', to: 'get_involved#opportunities', as: :get_involved_opportunities
+  get 'get_involved/(*page)', to: 'get_involved#page', as: :get_involved
+
   get 'youth', to: redirect('/getinvolved/youth_project')
 
   # ERROR PAGES - match to ensure correct response code is sent

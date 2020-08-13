@@ -1,43 +1,37 @@
 ##
 # Controller for the get_involved pages.
 #
-# No actions are defined here. It serves up the files in app/views/get_involved/* using the app/views/layouts/get_involved.html.erb layout.
+# The pages are all defined as Editable Blocks.
 ##
 class GetInvolvedController < ApplicationController
   skip_authorization_check
 
   layout 'subpage_sidebar'
 
-  def index
-    set_subpages('')
-    render 'get_involved/overview'
+  def opportunities
+    @opportunities = Opportunity.active
+
+    set_subpages
   end
 
   def page
-    @opportunities = Opportunity.active if params[:page] == 'opportunities'
+    set_subpages
 
-    if params[:page].nil? || params[:page] == '' || params[:page].downcase == 'overview'
-      index
-    else
-      set_subpages(params[:page])
-      begin
-        render 'get_involved/' + params[:page]
-      rescue ActionView::MissingTemplate
-        redirect_to '404', status: 404
-      end
+    @editable_block = Admin::EditableBlock.find_by(url: @root_url)
+
+    if @editable_block.nil?
+      redirect_to '404', status: 404
+      return
     end
   end
 
   private
 
-  def set_subpages(page)
+  def set_subpages
     @controller = 'get_involved'
 
-    @alias = {
-      'ssw' => 'Stage, Set and Wardrobe'
-    }
+    @root_url = helpers.get_subpage_root_url(@controller, params[:page])
 
-    @root_page = helpers.get_subpage_root_page(page)
-    @subpages = helpers.get_subpages(@controller, @root_page)
+    @subpages = helpers.get_subpages(@root_url)
   end
 end
