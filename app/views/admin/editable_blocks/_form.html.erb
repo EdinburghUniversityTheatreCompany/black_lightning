@@ -2,9 +2,7 @@
   <%= f.error_notification %>
 
   <div class="form-inputs">
-    <% unless @editable_block.persisted? then %>
-      <%= f.input :name %>
-    <% end %>
+    <%= f.input :name, hint: 'You should not change the name, unless the block is a page for about, resources, or get invovled. If you still change it, the site will not be able to find the Editable Block and cannot show it where necessary.' %>
 
     <%= f.input :url, hint: 'The url is required to determine the location of the page for about, resources, and get involved.'%>
 
