@@ -4,6 +4,8 @@ class GetInvolvedControllerTest < ActionController::TestCase
   include SubpageHelper
 
   test 'should get opportunities' do
+    assert_routing 'get_involved/opportunities', controller: 'get_involved', action: 'opportunities'
+
     @editable_block = FactoryBot.create(:editable_block, url: 'get_involved/opportunities')
     FactoryBot.create_list(:opportunity, 10)
 

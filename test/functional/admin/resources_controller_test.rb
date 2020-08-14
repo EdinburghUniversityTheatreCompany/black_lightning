@@ -24,6 +24,16 @@ class Admin::ResourcesControllerTest < ActionController::TestCase
     assert_equal get_subpages('admin/resources/tech'), assigns(:subpages)
   end
 
+  test 'should get membership checker' do
+    assert_routing 'admin/resources/membership_checker', controller: 'admin/resources', action: 'membership_checker'
+
+    @editable_block = FactoryBot.create(:editable_block, url: 'admin/resources/membership_checker')
+
+    get :membership_checker
+
+    assert_response :success
+  end
+
   # Test if getting a non-existent page gives a 404.
   test 'should not get non-existent page' do
     get :page, params: { page: 'this/page/does/not/exist/I/think' }

@@ -1,0 +1,55 @@
+<%= display_block(@editable_block.name, false) %>
+
+<div class="results-box">
+</div>
+
+<form action="#" style="margin-top: 20px;">
+  <input type="text" id="search" name="search" placeholder="Enter Membership Number or Member Name" class="span9" autofocus="autofocus" autocomplete="off">
+
+  <div class="form-actions">
+    <button type="submit" class="btn">Submit</button>
+  </div>
+</form>
+
+<script>
+  $form = $('form');
+  $form.submit(function (e) {
+    e.preventDefault();
+
+    $.getJSON("/admin/membership/check_membership", $form.serialize())
+      .done(function (data) {
+        showResult("success", data.response);
+        $('#search').val("").focus();
+
+        if (data.image) {
+          $('.results-box').append("<img src='" + data.image + "' style='width: 100px;' />");
+        }
+      })
+      .fail(function (xhr) {
+        showResult("alert", xhr.responseJSON.response);
+        $('#search').val("").focus();
+      });
+
+    return false;
+  });
+
+  function showResult(type, message) {
+    switch(type) {
+      case "alert":
+        alertclass = "alert-danger";
+        icon       = "fa fa-exclamation-sign";
+        break;
+      case "success":
+        alertclass = "alert-success";
+        icon       = "fa fa-ok";
+        break;
+    }
+
+    $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
+              "<i class=\"" + icon  + " fa fa-large\" aria-hidden=”true”></i> "
+              + message +
+              "</div>");
+
+    $('.results-box').empty().append($alert);
+  }
+</script>

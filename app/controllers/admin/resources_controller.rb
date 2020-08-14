@@ -1,18 +1,30 @@
 class Admin::ResourcesController < AdminController
   layout 'subpage_sidebar'
 
+  def membership_checker
+    @editable_block = Admin::EditableBlock.find_by(url: 'admin/resources/membership_checker')
+
+    set_subpages
+  end
+
   def page
-    @controller = 'admin/resources'
+    set_subpages
 
-    root_url = helpers.get_subpage_root_url(@controller, params[:page])
-
-    @editable_block = Admin::EditableBlock.find_by(url: root_url)
+    @editable_block = Admin::EditableBlock.find_by(url: @root_url)
 
     if @editable_block.nil?
       redirect_to '404', status: 404
       return
     end
+  end
 
-    @subpages = helpers.get_subpages(root_url)
+  private
+
+  def set_subpages
+    @controller = 'admin/resources'
+
+    @root_url = helpers.get_subpage_root_url(@controller, params[:page])
+
+    @subpages = helpers.get_subpages(@root_url)
   end
 end

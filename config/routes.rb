@@ -54,6 +54,7 @@ ChaosRails::Application.routes.draw do
 
     # The resources pages:_inde
     get 'resources', to: 'resources#page', as: :resources_index
+    get 'resources/membership_checker', to: 'resources#membership_checker', as: :resources_membership_checker
     get 'resources/(*page)', to: 'resources#page', as: :resources
 
     # Answer files
