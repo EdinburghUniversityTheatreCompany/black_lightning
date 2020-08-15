@@ -43,10 +43,18 @@ module SubpageHelper
   end
 
   def get_subpage_link(controller, page)
-    page_url = page.url.sub(controller, '')
-    page_url.delete_prefix!('/')
+    external_url_prefix = 'EXTERNAL_URL:'
 
-    return link_to page.name, controller: controller, action: :page, page: page_url
+    if page.content.present? && page.content.start_with?(external_url_prefix)
+      page_url = page.content.sub(external_url_prefix, '').strip
+
+      return link_to(page.name, page_url)
+    else
+      page_url = page.url.sub(controller, '')
+      page_url.delete_prefix!('/')
+
+      return link_to page.name, controller: controller, action: :page, page: page_url
+    end
   end
 
   def strip_url(url)

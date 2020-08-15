@@ -61,7 +61,7 @@ class SubpageHelperTest < ActionView::TestCase
     assert_equal link_to(overview.name, admin_resources_path('')), generated_link
   end
 
-  test 'get subpage link' do
+  test 'get subpage link for pages' do
     root_folder = 'admin/resources'
 
     secretary = FactoryBot.create(:editable_block, url: root_folder + '/secretary')
@@ -70,5 +70,16 @@ class SubpageHelperTest < ActionView::TestCase
     assert_equal "<a href=\"/admin/resources/secretary\">#{secretary.name}</a>", get_subpage_link(root_folder, secretary)
     assert_equal "<a href=\"/admin/resources\">#{overview.name}</a>", get_subpage_link(root_folder, overview)
     assert_equal "<a href=\"/admin/resources\">#{overview.name}</a>", get_subpage_link(root_folder, overview)
+  end
+
+  test 'get subpage_link for external links' do
+    root_folder = 'admin/resources'
+
+    url = 'https://wiki.bedlamtheatre.co.uk'
+    
+    external_link = FactoryBot.create(:editable_block, url: root_folder + '/wiki', content: "EXTERNAL_URL:     #{url}   ")
+    this_should_not_cause_an_error = FactoryBot.create(:editable_block, url: root_folder + '/something')
+  
+    assert_equal "<a href=\"#{url}\">#{external_link.name}</a>", get_subpage_link(root_folder, external_link)
   end
 end
