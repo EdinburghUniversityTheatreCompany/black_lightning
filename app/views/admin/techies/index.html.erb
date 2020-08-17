@@ -1,4 +1,4 @@
-<h1><%= @title%></h1>
+<h1><%= @title %></h1>
 
 <p>
   <%= link_to tree_admin_techies_url, class: 'btn' do %>
@@ -24,5 +24,8 @@
 </table>
 
 <br />
+
+
+<%= will_paginate(@techies) %>
 
 <%= get_link Techie, :new %>
