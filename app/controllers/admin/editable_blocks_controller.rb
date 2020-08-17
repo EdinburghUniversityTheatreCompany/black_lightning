@@ -7,6 +7,15 @@ class Admin::EditableBlocksController < AdminController
 
   load_and_authorize_resource
 
+  def show
+    if @editable_block.url.present? && (!@editable_block.content.present? || !@editable_block.content.start_with?(SubpageHelper::EXTERNAL_URL_PREFIX))
+      redirect_to "/#{@editable_block.url}"
+      return
+    end
+
+    super
+  end
+
   ##
   # GET /admin/editable_blocks/new
   #
@@ -33,14 +42,6 @@ class Admin::EditableBlocksController < AdminController
 
   def permitted_params
     [:content, :name, :url, :ordering, :admin_page, :group, attachments_attributes: [:id, :_destroy, :name, :file]]
-  end
-
-  def update_redirect_url
-    admin_editable_blocks_url
-  end
-
-  def create_redirect_url
-    update_redirect_url
   end
 
   def order_args

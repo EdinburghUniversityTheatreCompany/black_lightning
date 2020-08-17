@@ -1,4 +1,6 @@
 module SubpageHelper
+  EXTERNAL_URL_PREFIX = 'EXTERNAL_URL:'
+
   def get_subpage_root_url(root_folder, root_page)
     root_page = '' if root_page == 'overview' || root_page.nil?
 
@@ -43,10 +45,8 @@ module SubpageHelper
   end
 
   def get_subpage_link(controller, page)
-    external_url_prefix = 'EXTERNAL_URL:'
-
-    if page.content.present? && page.content.start_with?(external_url_prefix)
-      page_url = page.content.sub(external_url_prefix, '').strip
+    if page.content.present? && page.content.start_with?(EXTERNAL_URL_PREFIX)
+      page_url = page.content.sub(EXTERNAL_URL_PREFIX, '').strip
 
       return link_to(page.name, page_url)
     else

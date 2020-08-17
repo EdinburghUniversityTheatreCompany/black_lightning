@@ -113,7 +113,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :editable_blocks, except: [:show]
+    resources :editable_blocks
     resources :mass_mails
 
     resources :users do

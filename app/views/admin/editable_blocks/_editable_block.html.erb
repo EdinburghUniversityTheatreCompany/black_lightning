@@ -15,19 +15,13 @@
         <% if can? :edit, Admin::EditableBlock %>
           <th></th>
         <% end %>
-
-        <% if can? :delete, Admin::EditableBlock %>
-          <th></th>
-        <% end %>
       </tr>
 
       <% editable_blocks.each do |editable_block| %>
         <tr>
-          <td><%= editable_block.name %></td>
+          <%= get_link editable_block, :show, wrap_tag: 'td' %>
 
-          <%= get_link editable_block, :edit, wrap_tag: 'td' %>
-
-          <%= get_link editable_block, :destroy, wrap_tag: 'td' %>
+          <%= get_link editable_block, :edit, wrap_tag: 'td', html_class: 'btn pull-right' %>
         </tr>
       <% end %>
     </table>

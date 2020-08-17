@@ -1,0 +1,13 @@
+<h1><%= @title %></h1>
+
+<% fields = {
+  name: @editable_block.name,
+  url: @editable_block.url,
+  group: @editable_block.group,
+  ordering: @editable_block.ordering,
+  content: render_markdown(@editable_block.content)
+} %>
+
+<%= render 'shared/basic_fields', fields: fields %>
+
+<%= render 'shared/show_actions', object: @editable_block %>
