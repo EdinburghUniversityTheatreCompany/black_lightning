@@ -12,7 +12,7 @@
 
   <% @complaints.each do |complaint| %>
     <tr class="<%= complaint.html_class %>">
-      <td><%= link_to complaint.subject, admin_complaint_path(complaint) %></td>
+      <%= get_link complaint, :show, wrap_tag: 'td' %>
       <td><%= l complaint.created_at, format: :longy %></td>
 
       <%= get_link complaint, :edit, wrap_tag: 'td', link_text: 'Comment' %>

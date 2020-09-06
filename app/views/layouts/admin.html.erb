@@ -118,8 +118,16 @@
                   <li><%= link_to 'Marketing Creatives Profile List', admin_marketing_creatives_profiles_path %></li>
                 <% end %>
 
+                <% if can? :index, Techie %>
+                  <li><%= link_to 'Techies', admin_techies_path %></li>
+                <% end %>
+
                 <% if can? :index, Complaint %>
-                  <li><%= link_to 'Complaints', admin_complaints_path %></li>
+                  <li><%= link_to 'Complaints Overview', admin_complaints_path %></li>
+                <% end %>
+
+                <% if can? :create, Complaint %>
+                  <li><%= link_to 'Submit Complaint', new_complaint_path %></li>
                 <% end %>
               </ul>
             </div>
