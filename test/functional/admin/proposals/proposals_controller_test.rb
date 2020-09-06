@@ -115,6 +115,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'should update proposal' do
     sign_out @admin
+    @call.update_attribute(:editing_deadline, DateTime.now.advance(days: 1))
+    
     proposal = FactoryBot.create(:proposal, call: @call)
 
     proposal.users.first.add_role :admin
@@ -132,6 +134,24 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:proposal), 'The update function did not set a proposal. There is probably something wrong with the authentication.'
 
     assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
+  end
+
+  test 'should not email after updating when the editing deadline is passed' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -2))
+    @call.update_attribute(:editing_deadline, DateTime.now.advance(days: -1))
+
+    proposal = FactoryBot.create(:proposal, call: @call)
+
+    attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
+
+    team_members_count = 2
+    attributes[:team_members_attributes] = generate_team_member_attributes(team_members_count)
+
+    put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+
+    assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
+
+    assert_enqueued_emails 0
   end
 
   test 'should not update invalid proposal' do

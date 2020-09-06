@@ -200,7 +200,8 @@ class Admin::Proposals::ProposalsController < AdminController
   end
   
   def on_update_success
-    mail_team_members(@proposal.team_members, @previous_team_member_ids, false)
+    # Only email people if the proposal is edited before the editing deadline to prevent spamming people when tidying the archives.
+    mail_team_members(@proposal.team_members, @previous_team_member_ids, false) if @proposal.call.editing_deadline > DateTime.now
 
     super
   end
