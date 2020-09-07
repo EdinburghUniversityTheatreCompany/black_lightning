@@ -32,6 +32,7 @@ module MetaHelper
   # Creates the meta data tags.
   ##
   def meta_tags(meta)
+    meta = {} if meta.nil?
     meta['og:description'] = meta[:description] if meta['og:description'].nil?
 
     @tags = []

@@ -129,6 +129,10 @@
                 <% if can? :create, Complaint %>
                   <li><%= link_to 'Submit Complaint', new_complaint_path %></li>
                 <% end %>
+
+                <% if can? :index, Doorkeeper::Application %>
+                  <li><%= link_to 'OAuth Applications', oauth_applications_path %></li>
+                <% end %>
               </ul>
             </div>
 
