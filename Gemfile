@@ -15,6 +15,7 @@ gem 'fancybox3'
 
 gem 'simple_form'
 gem 'devise'
+gem 'doorkeeper'
 gem 'cancancan'
 gem 'rolify'
 gem 'recaptcha'

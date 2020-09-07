@@ -4,6 +4,7 @@ require 'silencer'
 ChaosRails::Application.routes.draw do
   devise_for :users
 
+  use_doorkeeper
   root to: 'static#home'
 
   match '*path', to: 'application#options', via: :options
