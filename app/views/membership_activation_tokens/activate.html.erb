@@ -17,22 +17,14 @@
       <%= f.input :password_confirmation, required: true %>
     <% end %>
 
-    <input id="consent_checkbox" name="consent" type="checkbox" required="true">
-    <label for="consent_checkbox">I give consent to the EUTC to store my:
-      <ul>
-        <li>Full name indefinitely to maintain records of shows I work on and propose</li>
-        <li>Email for up to 3 years to log in and to contact me about:
-          <ul>
-            <li>Shows I am proposing/working on</li>
-            <li>Company events including General Meetings</li>
-            <li>Staffing slots and maintenance time I may owe the company</li>
-          </ul>
-        <li>Phone number for up to 1 year to contact me about staffing I have agreed to do</li>
-      </ul>
-    </label>
+    <p>
+      <label for="consent_checkbox">
+        <%= display_block("Activation Terms", true) %>
+      </label>
 
-    <p>If you do not want to consent to any of these terms, please contact the secretary at <%= link_to 'secretary@bedlamtheatre.co.uk', 'mailto:secretary@bedlamtheatre.co.uk' %></p>
-
+      <input id="consent_checkbox" name="consent" type="checkbox" required="true">
+    </p>
+    
     <p>After activating your account you will be redirected to the sign-in page.</p>
     
     <% button_text = @user.new_record? ? 'Activate Membership' : 'Reactivate Membership' %>

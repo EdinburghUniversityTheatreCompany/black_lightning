@@ -53,12 +53,12 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'should get new' do
     # Do it with a member so we can also check the permissions.
-    get :new, params: { call_id: @call.id }
-    assert_response :success
-
     sign_out @admin
     
     sign_in users(:member)
+
+    get :new, params: { call_id: @call.id }
+    assert_response :success
   end
 
   test 'should not get new after the submission deadline' do
