@@ -1,15 +1,16 @@
 <h1><%= @title = 'Membership Activation' %></h1>
 
-<%= simple_form_for(@user, url: create_activation_admin_membership_activation_tokens_url) do |f| %>
+<%= simple_form_for(@user, url: create_activation_admin_membership_activation_tokens_url, method: :post) do |f| %>
     <%= f.error_notification %>
 
+    <p>Enter the email of a new member here to send them an activation email.</p>
     <%= f.input :email %>
     <%= f.button :submit, "Send Activation" %>
 <% end %>
 
 <p>Or activate a current user by entering their name:</p>
 
-<%= simple_form_for(@token, url: create_reactivation_admin_membership_activation_tokens_url) do |f| %>
+<%= simple_form_for(@token, url: create_reactivation_admin_membership_activation_tokens_url, method: :post) do |f| %>
     <%= f.error_notification %>
 
     <%= render '/shared/form/user_field', f: f, all_users: true %>
