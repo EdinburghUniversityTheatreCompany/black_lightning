@@ -48,3 +48,9 @@ committee:
   first_name: 'Sophie'
   last_name: 'Sombrero'
   email: 'yee@haw.howdy'
+
+member:
+  id: 4
+  first_name: 'Darren'
+  last_name: 'Dinosaur'
+  email: 'impact@yucatan.gulf'

@@ -53,6 +53,7 @@ class Ability
       # Even admins should not be able to read proposals before the submission deadline has been passed.
       cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
       can [:update, :read, :delete], Admin::Proposals::Proposal, users: { id: user.id }
+      can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
 
       cannot :manage, Complaint
       can :create, Complaint

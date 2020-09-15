@@ -9,3 +9,7 @@ committee_is_committee:
 committee_is_member:
   user_id: 3
   role_id: 1
+
+member_is_member:
+  user_id: 4
+  role_id: 1

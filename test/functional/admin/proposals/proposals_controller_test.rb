@@ -52,8 +52,13 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should get new' do
+    # Do it with a member so we can also check the permissions.
     get :new, params: { call_id: @call.id }
     assert_response :success
+
+    sign_out @admin
+    
+    sign_in users(:member)
   end
 
   test 'should not get new after the submission deadline' do
@@ -65,6 +70,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should create proposal' do
+    # Do it with a member so we can also check the permissions.
+    sign_out @admin
+    
+    sign_in users(:member)
     # This mess is to force the inclusion of team_member attributes.
     # You cannot just use attributes_for, and team_work does not actually get an user linked when using build.
     proposal = FactoryBot.build(:proposal)

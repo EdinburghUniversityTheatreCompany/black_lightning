@@ -11,6 +11,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   before_action :set_paper_trail_whodunnit
   load_and_authorize_resource class: Admin::Proposals::Proposal
+  skip_authorize_resource only: %i[new create]
 
   ##
   # GET /admin/proposals/calls/1/proposals
@@ -50,6 +51,9 @@ class Admin::Proposals::ProposalsController < AdminController
 
     @proposal.call = @call
 
+    # Has to happen here because the call of the proposal has to be set before authorizing.
+    authorize! :new, @proposal
+
     @proposal.instantiate_answers!
 
     super
@@ -66,6 +70,9 @@ class Admin::Proposals::ProposalsController < AdminController
     return call_closed_message unless @call.open?
 
     @proposal.call = @call
+
+    # Has to happen here because the call of the proposal has to be set before authorizing.
+    authorize! :create, @proposal
 
     super
 
