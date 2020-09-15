@@ -19,7 +19,7 @@ test_user.add_role :member
 
 about = Admin::EditableBlock.create!              url: 'about', name: 'About', group: 'About'
 
-get_invovled = Admin::EditableBlock.create!       url: 'get_involved',                name: 'Get Involved',   group: 'Get Involved'
+get_involved = Admin::EditableBlock.create!       url: 'get_involved',                name: 'Get Involved',   group: 'Get Involved'
 about = Admin::EditableBlock.create!              url: 'get_involved/opportunities',  name: 'Opportunities',  group: 'Get Involved'
 
 resources = Admin::EditableBlock.create!          url: 'admin/resources',                     name: 'Resources',          group: 'Resources'
