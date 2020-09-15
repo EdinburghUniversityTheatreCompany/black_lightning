@@ -40,4 +40,10 @@ namespace :users do
     p "#{phones} of users have given us their phone number."
   end
   # :nocov:
+
+  task clean_up_personal_info: :environment do
+    p 'Cleaning up personal info..'
+    count = Tasks::Logic::Users::clean_up_personal_info
+    p "Cleaned up #{count} members"
+  end
 end
