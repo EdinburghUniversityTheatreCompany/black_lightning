@@ -1,21 +1,24 @@
-<% @hide_cookie_notice = true %>
 <% @hide_alert = true %>
 
 <div style="text-align: center;">
   <p style="margin-top:20px;">
-    <b style="font-size: large; color: #dc143c;">Sorry<%= current_user.present? ? " #{current_user.first_name}, " : " ," %>there was a problem fetching this page.</b>
+    <b style="font-size: large; color: #dc143c;">
+      Sorry<%= current_user.present? ? " #{current_user.first_name}, " : " ," %>there was a problem fetching this page.
+      
+      <% if current_user&.has_role? :member %>
+        <br>
+        <br>
+        <%= @error_type %>
+      <% end %>
+    </b>
   </p>
-  <% if current_user&.has_role? :member %>
-    <p><!-- HONEYBADGER ERROR --></p>
-    <pre><%= flash[:error] %></pre>
-  <% end %>
+
+  <%= render '/layouts/alert_div', hide_alert: false %>
+
   <p>
-    We have been informed.
+    We have been informed. Please contact the IT Subcommittee at <a href="mailto:it@bedlamtheatre.co.uk">it@bedlamtheatre.co.uk</a> for assistance.
   </p>
   <p>
     HAL is sorry.
-  </p>
-  <p>
-    <!-- HONEYBADGER FEEDBACK -->
   </p>
 </div>

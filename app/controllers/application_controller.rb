@@ -44,21 +44,21 @@ class ApplicationController < ActionController::Base
   def report_500(exception)
     Honeybadger.notify(exception)
 
-    # Prevent redirect loop if 500 rendering fails.
-    if request.env['PATH_INFO'] == static_path('500')
-      Rails.logger.error 'Could not render the 500 page:'
-      Rails.logger.error exception
-
-      return render inline: 'Sorry. Something has gone very wrong. We will try to fix this asap.'
-    end
-
     Rails.logger.warn 'Caught error and redirected to 500'
     Rails.logger.error exception
     Rails.logger.error exception.backtrace
 
-    flash[:error] = exception.message.gsub Rails.root.to_s, ''
+    helpers.append_to_flash(:error, exception.message.gsub(Rails.root.to_s, ''))
 
-    return redirect_to static_path('500', params[:format])
+    @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
+
+    @error_type = exception.class
+
+    respond_to do |type|
+      type.html { render template: 'static/500', status: 500, layout: helpers.current_environment(request.fullpath) }
+      type.json { render json: { error: flash[:error] }, status: 500 }
+      type.all  { render body: nil, status: 500 }
+    end
   end
 
   private

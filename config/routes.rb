@@ -265,7 +265,6 @@ ChaosRails::Application.routes.draw do
 
   # ERROR PAGES - match to ensure correct response code is sent
   get '/404', to: 'static#render_404'
-  get '/500', to: 'static#render_500'
 
   get '/access_denied', to: 'static#access_denied'
 

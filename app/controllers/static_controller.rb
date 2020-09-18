@@ -31,14 +31,4 @@ class StaticController < ApplicationController
       type.all  { render body: nil, status: 404 }
     end
   end
-
-  def render_500
-    @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
-
-    respond_to do |type|
-      type.html { render template: 'static/500', status: 500, layout: helpers.current_environment(request.fullpath) }
-      type.json { render json: { error: flash[:error] }, status: 500 }
-      type.all  { render body: nil, status: 500 }
-    end
-  end
 end

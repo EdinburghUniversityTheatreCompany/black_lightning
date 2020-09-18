@@ -21,6 +21,7 @@ class ApplicationControllerTest < ActionController::TestCase
 
   test 'report 500' do
     skip "I don't know how to test this."
+    assert_response 500
   end
 
   test 'mobile device' do
