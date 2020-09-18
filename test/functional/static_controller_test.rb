@@ -9,21 +9,6 @@ class StaticControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test 'should get 403' do
-    get :access_denied
-    assert_response 403
-  end
-
-  test 'should get 404' do
-    get :render_404
-    assert_response 404
-  end
-
-  test 'should get 500' do
-    get :render_500
-    assert_response 500
-  end
-
   test 'should get contact' do
     get :show, params: { page: 'contact' }
     assert_response :success

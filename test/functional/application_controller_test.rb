@@ -7,7 +7,7 @@ class ApplicationControllerTest < ActionController::TestCase
   test 'access denied' do
     show = FactoryBot.create(:show, is_public: false)
     get :show, params: { id: show.slug }
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 
   test 'set globals' do
@@ -21,6 +21,12 @@ class ApplicationControllerTest < ActionController::TestCase
 
   test 'report 500' do
     skip "I don't know how to test this."
+    assert_response 500
+  end
+
+  test 'report 404' do
+    get :show, params: { id: 'finbar-the-viking-sails-the-7th-sea' }
+    assert_response 404
   end
 
   test 'mobile device' do

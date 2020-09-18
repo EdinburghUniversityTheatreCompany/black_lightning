@@ -40,6 +40,8 @@ module ApplicationHelper
     else
       flash[key] = [flash[key], message]
     end
+
+    flash[key] = flash[key].uniq
   end
 
   def merge_hash(a, b)

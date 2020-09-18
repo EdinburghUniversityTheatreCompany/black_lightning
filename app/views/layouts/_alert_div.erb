@@ -1,5 +1,7 @@
+<% hide_alert = @hide_alert if hide_alert.nil? %>
+
 <div class="alert-container">
-  <% if @hide_alert != true %>
+  <% if hide_alert != true %>
     <% flash.each do |key, message| %>
       <% if message.is_a? Enumerable %>
         <% message.each do |inner_message| %>
@@ -11,3 +13,5 @@
     <% end %>
   <% end %>
 </div>
+
+<% flash.discard %>

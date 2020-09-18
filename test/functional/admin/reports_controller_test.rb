@@ -15,7 +15,7 @@ class Admin::ReportsControllerTest < ActionController::TestCase
     sign_in FactoryBot.create(:user)
     get :index
 
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 
   test 'put membership report' do

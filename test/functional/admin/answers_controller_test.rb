@@ -45,6 +45,6 @@ class Admin::AnswersControllerTest < ActionController::TestCase
     sign_in users(:user)
 
     get :get_file, params: { id: answer }
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 end

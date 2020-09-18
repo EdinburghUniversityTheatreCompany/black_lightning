@@ -277,7 +277,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     post :convert_to_workshop, params: { id: show }
     
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 
   private

@@ -10,20 +10,11 @@ class ApplicationController < ActionController::Base
   rescue_from Exception, with: :report_500     unless Rails.env.development? || Rails.env.test?
   rescue_from StandardError, with: :report_500 unless Rails.env.development? || Rails.env.test?
 
-  rescue_from CanCan::AccessDenied do |exception|
-    redirect_to static_path('access_denied'), notice: exception.message
-  end
+  rescue_from CanCan::AccessDenied, with: :report_access_denied
 
-  unless Rails.env.development? || Rails.env.test?
-    # Unreachable, but easy to check manually.
-    # :nocov:
-    rescue_from ActiveRecord::RecordNotFound do |exception|
-      flash[:notice] = exception.message
-      raise(ActionController::RoutingError, 'Not Found')
-    end
-    # :nocov:
-  end
-
+  rescue_from ActiveRecord::RecordNotFound, with: :report_404# unless Rails.env.development? || Rails.env.test?
+  rescue_from ActionController::RoutingError, with: :report_404 
+  
   def set_globals
     @base_url = request.protocol + request.host_with_port
     # Create the @meta hash
@@ -44,24 +35,36 @@ class ApplicationController < ActionController::Base
   def report_500(exception)
     Honeybadger.notify(exception)
 
-    # Prevent redirect loop if 500 rendering fails.
-    if request.env['PATH_INFO'] == static_path('500')
-      Rails.logger.error 'Could not render the 500 page:'
-      Rails.logger.error exception
-
-      return render inline: 'Sorry. Something has gone very wrong. We will try to fix this asap.'
-    end
-
     Rails.logger.warn 'Caught error and redirected to 500'
     Rails.logger.error exception
     Rails.logger.error exception.backtrace
 
-    flash[:error] = exception.message.gsub Rails.root.to_s, ''
+    render_error_page(exception, 'errors/500', 500)
+  end
 
-    return redirect_to static_path('500', params[:format])
+  def report_access_denied(exception)
+    render_error_page(exception, 'errors/access_denied', 403)
+  end
+
+  def report_404(exception)
+    render_error_page(exception, 'errors/404', 404)
   end
 
   private
+
+  def render_error_page(exception, template, status_code)
+    @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
+
+    helpers.append_to_flash(:error, exception.message.gsub(Rails.root.to_s, ''))
+
+    @error_type = exception.class
+
+    respond_to do |type|
+      type.html { render template: template, status: status_code, layout: helpers.current_environment(request.fullpath) }
+      type.json { render json: { error: flash[:error] }, status: status_code }
+      type.all  { render body: nil, status: status_code }
+    end
+  end
 
   # Believed to match about 98% of mobile browsers. https://gist.github.com/1503252
   MOBILE_REGEX = /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/
