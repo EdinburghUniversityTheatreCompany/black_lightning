@@ -52,7 +52,7 @@ class AttachmentsControllerTest < ActionController::TestCase
 
     get :file, params: { slug: attachment.name }
 
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 
   test 'should get file for admin page' do

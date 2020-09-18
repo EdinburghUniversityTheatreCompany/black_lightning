@@ -12,7 +12,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
 
     get :new
 
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 
   test 'get new' do

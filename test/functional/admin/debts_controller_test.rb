@@ -35,6 +35,6 @@ class Admin::DebtsControllerTest < ActionController::TestCase
 
     get :show, params: { id: @admin.id }
 
-    assert_redirected_to access_denied_url
+    assert_response 403
   end
 end

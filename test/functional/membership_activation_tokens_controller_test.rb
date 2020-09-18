@@ -37,8 +37,8 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
 
     get :activate, params: { id: @token }
 
-    assert_redirected_to access_denied_url
-    assert_equal 'This token belongs to a new user, but you are already signed in.', flash[:error]
+    assert_response 403
+    assert_equal ['This token belongs to a new user, but you are already signed in.'], flash[:error]
   end
 
   test 'cannot get activate when signed in as the wrong user' do
@@ -48,8 +48,8 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
 
     get :activate, params: { id: @token }
 
-    assert_redirected_to access_denied_url
-    assert_equal 'This token belongs to a different user.', flash[:error]
+    assert_response 403
+    assert_equal ['This token belongs to a different user.'], flash[:error]
   end
 
   test 'cannot get activate when the user thatthe token belongs to is signed in as member' do
@@ -60,8 +60,8 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
 
     get :activate, params: { id: @token }
 
-    assert_redirected_to access_denied_url
-    assert_equal 'You have already activated your account.', flash[:error]
+    assert_response 403
+    assert_equal ['You have already activated your account.'], flash[:error]
   end
 
   test 'cannot submit when not signed in but the token belongs to an user' do
@@ -69,8 +69,8 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
 
     get :activate, params: { id: @token }
 
-    assert_redirected_to access_denied_url
-    assert_equal 'This token belongs to an existing user, but you are not signed in. Please sign in and try again.', flash[:error]
+    assert_response 403
+    assert_equal ['This token belongs to an existing user, but you are not signed in. Please sign in and try again.'], flash[:error]
   end
 
   test 'submit for new member' do
