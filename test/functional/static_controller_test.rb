@@ -9,11 +9,6 @@ class StaticControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test 'should get 404' do
-    get :render_404
-    assert_response 404
-  end
-
   test 'should get contact' do
     get :show, params: { page: 'contact' }
     assert_response :success

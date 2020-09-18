@@ -12,16 +12,10 @@ class ApplicationController < ActionController::Base
 
   rescue_from CanCan::AccessDenied, with: :report_access_denied
 
-  unless Rails.env.development? || Rails.env.test?
-    # Unreachable, but easy to check manually.
-    # :nocov:
-    rescue_from ActiveRecord::RecordNotFound do |exception|
-      flash[:notice] = exception.message
-      raise(ActionController::RoutingError, 'Not Found')
-    end
-    # :nocov:
-  end
 
+  rescue_from ActiveRecord::RecordNotFound, with: :report_404# unless Rails.env.development? || Rails.env.test?
+  rescue_from ActionController::RoutingError, with: :report_404 
+  
   def set_globals
     @base_url = request.protocol + request.host_with_port
     # Create the @meta hash
@@ -53,6 +47,10 @@ class ApplicationController < ActionController::Base
 
   def report_access_denied(exception)
     render_error_page(exception, 'static/access_denied', 403)
+  end
+
+  def report_404(exception)
+    render_error_page(exception, 'static/404', 404)
   end
 
   private

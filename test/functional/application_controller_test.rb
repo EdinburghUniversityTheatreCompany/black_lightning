@@ -24,6 +24,11 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_response 500
   end
 
+  test 'report 404' do
+    get :show, params: { id: 'finbar-the-viking-sails-the-7th-sea' }
+    assert_response 404
+  end
+
   test 'mobile device' do
     skip "I don't know how to test this."
   end
