@@ -10,7 +10,7 @@ class Admin::AnswersController < ApplicationController
   def get_file
     authorize!(:show, @answer&.answerable)
 
-    return redirect_to '404', status: 404 unless @answer.question.response_type.downcase == 'file'
+    raise(ActiveRecord::RecordNotFound.new('The specified answer is not a file')) unless @answer.question.response_type.downcase == 'file'
 
     response.headers["Content-Type"] = @answer.file.content_type
     response.headers["Content-Disposition"] = "attachment; #{@answer.file.filename}"

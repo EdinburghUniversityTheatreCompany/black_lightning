@@ -19,12 +19,7 @@ class GetInvolvedController < ApplicationController
   def page
     set_subpages
 
-    @editable_block = Admin::EditableBlock.find_by(url: @root_url)
-
-    if @editable_block.nil?
-      redirect_to '404', status: 404
-      return
-    end
+    @editable_block = Admin::EditableBlock.find_by!(url: @root_url)
   end
 
   private
