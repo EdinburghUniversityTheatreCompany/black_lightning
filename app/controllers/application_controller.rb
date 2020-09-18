@@ -12,7 +12,6 @@ class ApplicationController < ActionController::Base
 
   rescue_from CanCan::AccessDenied, with: :report_access_denied
 
-
   rescue_from ActiveRecord::RecordNotFound, with: :report_404# unless Rails.env.development? || Rails.env.test?
   rescue_from ActionController::RoutingError, with: :report_404 
   
@@ -40,22 +39,22 @@ class ApplicationController < ActionController::Base
     Rails.logger.error exception
     Rails.logger.error exception.backtrace
 
-    @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
-
-    render_error_page(exception, 'static/500', 500)
+    render_error_page(exception, 'errors/500', 500)
   end
 
   def report_access_denied(exception)
-    render_error_page(exception, 'static/access_denied', 403)
+    render_error_page(exception, 'errors/access_denied', 403)
   end
 
   def report_404(exception)
-    render_error_page(exception, 'static/404', 404)
+    render_error_page(exception, 'errors/404', 404)
   end
 
   private
 
   def render_error_page(exception, template, status_code)
+    @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
+
     helpers.append_to_flash(:error, exception.message.gsub(Rails.root.to_s, ''))
 
     @error_type = exception.class

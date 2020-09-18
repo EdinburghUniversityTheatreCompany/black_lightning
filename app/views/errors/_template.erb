@@ -1,0 +1,14 @@
+<% @hide_alert = true %>
+
+<div style="text-align: center;">
+  <%= image_tag "HAL9000.png", style: "width: 250px;" %>
+  <p style="margin-top:20px;">
+    <b style="font-size: large; color: #dc143c;">
+      <%= error_header %>
+    </b>
+  </p>
+
+  <%= render '/layouts/alert_div', hide_alert: false %>
+
+  <%= yield %>
+</div>

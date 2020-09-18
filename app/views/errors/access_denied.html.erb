@@ -1,16 +1,7 @@
-<% @hide_alert = true %>
+<% error_header = "I'm sorry #{current_user.present? ? current_user.first_name : ""}, I can't let you do that." %>
 
-<div style="text-align: center;">
-  <%= image_tag "HAL9000.png", style: "width: 250px;" %>
-  <p style="margin-top:20px;">
-    <b style="font-size: large; color: #dc143c;">I'm sorry <%= current_user.present? ? current_user.first_name : "" %>, I can't let you do that.</b>
-  </p>
-
-  <% if current_user&.has_role? :member %>
-    <%= render '/layouts/alert_div', hide_alert: false %>
-  <% end %>
-
-  <br>
+<%= render '/errors/template', error_header: error_header do %>
+<br>
   
   <% unless request.cookie_jar[:allow_cookies] %>
     <p>
@@ -38,10 +29,10 @@
   <br>
 
   <p>
-    If you think you have been sent here by mistake, please contact the <%= mail_to @support_email, 'Bedlam IT Systems Manager' %>.
+    If you think you have been sent here by mistake, please contact the IT Subcommittee at <%= mail_to @support_email, @support_email %>.
   </p>
 
   <p>
     HAL is Watching.
   </p>
-</div>
+<% end %>
