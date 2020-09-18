@@ -16,13 +16,6 @@ class StaticController < ApplicationController
     @last_show = Show.last_event
   end
 
-  def access_denied
-    respond_to do |format|
-      format.html { render status: 403 }
-      format.all  { render body: nil, status: 403 }
-    end
-  end
-
   def render_404
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 

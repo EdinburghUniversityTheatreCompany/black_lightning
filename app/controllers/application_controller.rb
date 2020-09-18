@@ -10,9 +10,7 @@ class ApplicationController < ActionController::Base
   rescue_from Exception, with: :report_500     unless Rails.env.development? || Rails.env.test?
   rescue_from StandardError, with: :report_500 unless Rails.env.development? || Rails.env.test?
 
-  rescue_from CanCan::AccessDenied do |exception|
-    redirect_to static_path('access_denied'), notice: exception.message
-  end
+  rescue_from CanCan::AccessDenied, with: :report_access_denied
 
   unless Rails.env.development? || Rails.env.test?
     # Unreachable, but easy to check manually.
@@ -48,20 +46,28 @@ class ApplicationController < ActionController::Base
     Rails.logger.error exception
     Rails.logger.error exception.backtrace
 
-    helpers.append_to_flash(:error, exception.message.gsub(Rails.root.to_s, ''))
-
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
+
+    render_error_page(exception, 'static/500', 500)
+  end
+
+  def report_access_denied(exception)
+    render_error_page(exception, 'static/access_denied', 403)
+  end
+
+  private
+
+  def render_error_page(exception, template, status_code)
+    helpers.append_to_flash(:error, exception.message.gsub(Rails.root.to_s, ''))
 
     @error_type = exception.class
 
     respond_to do |type|
-      type.html { render template: 'static/500', status: 500, layout: helpers.current_environment(request.fullpath) }
-      type.json { render json: { error: flash[:error] }, status: 500 }
-      type.all  { render body: nil, status: 500 }
+      type.html { render template: template, status: status_code, layout: helpers.current_environment(request.fullpath) }
+      type.json { render json: { error: flash[:error] }, status: status_code }
+      type.all  { render body: nil, status: status_code }
     end
   end
-
-  private
 
   # Believed to match about 98% of mobile browsers. https://gist.github.com/1503252
   MOBILE_REGEX = /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/
