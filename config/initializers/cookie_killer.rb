@@ -21,13 +21,14 @@ class CookieKiller
 
   ##
   # On each request, checks if cookies have been allowed or if the user is
-  # trying to sign in (/users/). If not, deletes all cookies.
+  # trying to sign in (/users/) or activate their account (/membership_activation_tokens/).
+  # If not, deletes all cookies.
   ##
   def call(env)
     status, headers, body = @app.call(env)
 
     request = ActionDispatch::Request.new(env)
-    unless request.cookie_jar[:allow_cookies] || env['PATH_INFO'].include?('/users/')
+    unless request.cookie_jar[:allow_cookies] || env['PATH_INFO'].include?('/users/') || env['PATH_INFO'].include?('/membership_activation_tokens/')
       # remove ALL cookies from the response
       headers.delete 'Set-Cookie'
     end
