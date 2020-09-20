@@ -15,8 +15,10 @@ class MembershipActivationTokensController < ApplicationController
   def submit
     @user = get_user
 
+    @user.assign_attributes(user_params)
+
     if params[:consent]
-      unless @user.update(user_params)
+      unless @user.save
         respond_to do |format|
           format.html { render 'activate', status: :unprocessable_entity }
           format.json { render json: user.errors, status: :unprocessable_entity }
