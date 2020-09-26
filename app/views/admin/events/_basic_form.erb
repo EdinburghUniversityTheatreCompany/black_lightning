@@ -11,9 +11,9 @@
 
 <%= render "/shared/form/md_editor", f: f, field: :description, show_hint: true %>
 
-<%= f.input :start_date, start_year: 1890 %>
+<%= f.input :start_date, start_year: 1890, end_year: Date.today.year + 5 %>
 
-<%= f.input :end_date, start_year: 1890 %>
+<%= f.input :end_date, start_year: 1890, end_year: Date.today.year + 5 %>
 
 <%= f.association :venue, collection: Venue.all, label_method: :name %>
 
