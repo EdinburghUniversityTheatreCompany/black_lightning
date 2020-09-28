@@ -4,9 +4,10 @@
 class Admin::TechiesController < AdminController
   include GenericController
 
-  load_and_authorize_resource
+  load_and_authorize_resource except: :tree
 
   def tree
+    authorize! :index, Techie
     @title = 'Techie Family Tree'
     @techies = Techie.all.includes(:children, :parents)
   end

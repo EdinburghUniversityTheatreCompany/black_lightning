@@ -62,3 +62,9 @@ can_update_complaint:
   id: 10
   action: update
   subject_class: Complaint
+
+can_index_techies:
+  id: 11
+  action: index
+  subject_class: Techie
+  

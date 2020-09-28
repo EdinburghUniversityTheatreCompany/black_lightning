@@ -2,7 +2,9 @@ require 'test_helper'
 
 class Admin::TechiesControllerTest < ActionController::TestCase
   setup do
-    sign_in users(:admin)
+    @admin = users(:admin)
+    sign_in @admin
+
     @techie = techies(:one)
   end
 
@@ -83,6 +85,14 @@ class Admin::TechiesControllerTest < ActionController::TestCase
   end
 
   test 'should get tree' do
+    get :tree
+    assert_response :success
+  end
+
+  test 'should get tree if you have index permission' do
+    sign_out @admin
+    sign_in users(:committee)
+
     get :tree
     assert_response :success
   end

@@ -37,6 +37,10 @@ committee_can_show_marketing_creatives_profiles:
   role_id:       2
   permission_id: 8
 
+committee_can_index_techies:
+  role_id: 2
+  permission_id: 11
+
 welfare_can_read_complaint:
   role_id: 4
   permission_id: 9
