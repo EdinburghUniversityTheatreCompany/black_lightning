@@ -53,6 +53,7 @@ class ApplicationController < ActionController::Base
   private
 
   def render_error_page(exception, template, status_code)
+    @meta = {} if @meta.nil?
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     helpers.append_to_flash(:error, exception.message.gsub(Rails.root.to_s, ''))
