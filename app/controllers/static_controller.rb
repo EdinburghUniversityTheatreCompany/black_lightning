@@ -6,6 +6,8 @@ class StaticController < ApplicationController
     begin
       render "static/#{params[:page]}"
     rescue
+      Rails.logger.error "Could not find the page at #{request.fullpath}"
+
       raise(ActionController::RoutingError.new('This page could not be found.'))
     end
   end
