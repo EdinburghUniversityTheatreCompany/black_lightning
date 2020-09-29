@@ -55,4 +55,8 @@ class TimeHelperTest < ActionView::TestCase
     assert_equal '15:17 - 16:17 Friday 15 May', time_range_string(start_time, end_time, false)
     assert_equal '15:17 - 16:17 Friday 15 May 2020', time_range_string(start_time, end_time, true)
   end
+
+  test 'max_end_year' do
+    assert_equal Date.today.year + 5, max_end_year
+  end
 end
