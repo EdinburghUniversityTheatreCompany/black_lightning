@@ -15,8 +15,7 @@
 # == Schema Information End
 #++
 class Techie < ApplicationRecord
-  validates :name, presence: true, length: { in: 1..32 }
-  validates :name, uniqueness: { case_sensitive: false }
+  validates :name, presence: true, uniqueness: { case_sensitive: false }
 
   has_and_belongs_to_many :parents, class_name: 'Techie', foreign_key: 'child_id', association_foreign_key: 'techie_id', join_table: 'children_techies'
 
