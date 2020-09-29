@@ -5,16 +5,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   include GenericController
 
   load_and_authorize_resource
-  ##
-  # GET /admin/questionnaires/questionnaires
-  #
-  # GET /admin/questionnaires/questionnaires.json
-  ##
-  def index
-    # There is an override for load_index_resources
 
-    super
-  end
+  # Index has an override for the index resources
 
   ##
   # GET /admin/questionnaires/questionnaires/1
@@ -124,7 +116,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type]]
   end
 
-  def load_index_resources
+  def base_index_query
     q = params[:q]
 
     @q = @questionnaires.ransack(q)
@@ -135,17 +127,18 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     @q.event_end_date_gt = helpers.start_of_term if @show_current_term_only
     @q.event_start_date_lt = helpers.end_of_term if @show_current_term_only
 
-    # Is this a bit hacky? Yes. Does it work? Yes. Does it work when you try to do it the normal way? No. Can I try to fix it? Of course!
-    # I suspect the generated SQL query gets messed up when you try to do:
-    # @q.result.accessible_by(current_ability)
-    # For some reason, it does work when you're an admin. Probably because accessible_by doesn't do anything in that case.
+    return @q.result
+  end
 
-    result_ids = @q.result.ids
+  def includes_args
+    [:event]
+  end
 
-    @questionnaires = Admin::Questionnaires::Questionnaire.where(id: result_ids)
-                                                          .accessible_by(current_ability)
-                                                          .includes(:event)
-                                                          .order('id DESC')
-                                                          .group_by { |questionnaire| questionnaire.event.name }
+  def order_args
+    ['id DESC']
+  end
+
+  def load_index_resources
+    @questionnaires = super.group_by { |questionnaire| questionnaire.event.name }
   end
 end

@@ -35,7 +35,7 @@ class Admin::EditableBlocksController < AdminController
   end
 
   def load_index_resources
-    @editable_blocks = @editable_blocks.order(order_args).group_by(&:group)
+    @editable_blocks = super.group_by(&:group)
 
     return @editable_blocks
   end

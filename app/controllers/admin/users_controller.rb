@@ -84,16 +84,12 @@ class Admin::UsersController < AdminController
     return [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
             :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: []]
   end
-  
-  def load_index_resources
-    @q     = @users.ransack(params[:q])
+
+  def base_index_query
+    @q = @users.ransack(params[:q])
     @users = @q.result(distinct: true)
 
-    if params[:show_non_members] != '1'
-      @users = @users.with_role(:member)
-    end
-
-    @users = @users.paginate(page: params[:page], per_page: 15)
+    @users = @users.with_role(:member) if params[:show_non_members] != '1'
 
     return @users
   end

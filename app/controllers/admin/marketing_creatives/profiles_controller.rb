@@ -80,14 +80,14 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
     return params
   end
 
-  def load_index_resources
-    @q     = @profiles.ransack(params[:q])
+  def base_index_query
+    @q = @profiles.ransack(params[:q])
     @q.sorts = ['name asc'] if @q.sorts.empty?
 
-    @profiles = @q.result(distinct: true)
-                  .includes(:user)
-                  .paginate(page: params[:page], per_page: items_per_page)
+    return @q.result(distinct: true)
+  end
 
-    return @profiles
+  def includes_args
+    [:user]
   end
 end
