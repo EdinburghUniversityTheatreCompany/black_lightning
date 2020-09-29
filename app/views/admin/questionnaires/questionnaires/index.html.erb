@@ -54,7 +54,7 @@
             <tr>
               <%= get_link questionnaire, :answer, http_method: :get, html_class: '', append_name: true, wrap_tag: 'td' %>
 
-              <%= get_link questionnaire, :show, link_text: 'View', html_class: 'btn', wrap_tag: 'td' %>
+              <%= get_link questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn', wrap_tag: 'td' %>
 
               <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
             </tr>
