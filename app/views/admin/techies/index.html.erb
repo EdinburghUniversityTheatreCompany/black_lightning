@@ -6,9 +6,17 @@
   <% end %>
 </p>
 
+<div class="row">
+    <div class="span12">
+        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_techies, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
+            <%= f.input_field :name_cont, placeholder: 'Name',  required: false %>
+        <% end %>
+    </div>
+</div>
+
 <table class="table">
   <tr>
-    <th>Name</th>
+    <%= content_tag :th, sort_link(@q, :name, 'Name') %>
     <% if can? :edit, Techie %>
       <th></th>
     <% end %>

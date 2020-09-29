@@ -21,4 +21,11 @@ class Admin::TechiesController < AdminController
   def order_args
     :name
   end
+
+  def base_index_query
+    @q = @techies.ransack(params[:q])
+    @q.sorts = ['name asc'] if @q.sorts.empty?
+
+    return @q.result(distinct: true)
+  end
 end
