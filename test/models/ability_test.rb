@@ -108,7 +108,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     situation = 'before the submission deadline'
 
     # 1A: Before the submission deadline, users can only see proposals that they are part of..
-    helper_test_actions(@proposal, "@proposal#{situation}", @admin_ability, [:create], @admin_abilities - [:create])
+    helper_test_actions(@proposal, "@proposal#{situation}", @admin_ability, [:create, :index], @admin_abilities - [:create, :index])
     # .. but proposal checkers and admins cannot read.
     helper_test_proposal(:read, @proposal, false, true, false, situation) 
     # 1B: Users edit current proposals they are on..

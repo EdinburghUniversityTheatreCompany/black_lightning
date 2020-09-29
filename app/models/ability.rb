@@ -52,11 +52,13 @@ class Ability
 
       # Even admins should not be able to read proposals before the submission deadline has been passed.
       cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+
       can [:update, :read, :delete], Admin::Proposals::Proposal, users: { id: user.id }
-      can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+      can [:index, :create], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
 
       cannot :manage, Complaint
       can :create, Complaint
+
       # To override restrictions if the admin has the appropriate role.
       set_permissions_based_on_grid(user)
 
@@ -85,7 +87,7 @@ class Ability
 
     # Have a specific view_shows_and_bio permission because it is a bad idea to give normal users full :read permission for users.
     can :view_shows_and_bio, User, public_profile: true
-    
+
     # Even though users should not be able to sign up when they have a profile, that authorisation is handled by the controller.
     # This way we can show a more appropriate error message.
     can [:sign_up, :create], MarketingCreatives::Profile
@@ -94,7 +96,7 @@ class Ability
 
     # Everyone can create a complaint.
     can [:create], Complaint
-  
+
     # Stop if the user is not logged in.
     return if user.nil?
 
@@ -114,9 +116,12 @@ class Ability
     # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
     can :read, Admin::Proposals::Proposal, approved: true
 
-    # If a user is a proposal checker, they should be able to read any call, no matter if they are approved, rejected, or awaiting, after the submission deadline.
     if user.has_role?('Proposal Checker') || user.has_role?('Committee')
+      # If the user is a proposal checker, they should be able to read any proposal after the submission deadline, no matter if they are approved, rejected, or awaiting, after the submission deadline.
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now.advance(years: -100)..DateTime.now }
+
+      # They should also be able to index every proposal.
+      can :index, Admin::Proposals::Proposal
     end
 
     can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
