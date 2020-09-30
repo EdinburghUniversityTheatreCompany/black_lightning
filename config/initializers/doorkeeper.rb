@@ -9,17 +9,19 @@ Doorkeeper.configure do
 
   # This block will be called to check whether the resource owner is authenticated or not.
   resource_owner_authenticator do
-    # Put your resource owner authentication logic here.
-    # Example implementation:
-    User.find_by(id: session[:user_id]) || redirect_to(new_user_session_url)
+    if current_user
+      current_user
+    else
+      redirect_to(new_user_session_url)
+      nil
+    end
   end
 
   resource_owner_authenticator do
-    user_id = current_user.id rescue nil
-
-    User.find_by_id(user_id) || begin
+    current_user || begin
       session['user_return_to'] = request.url
       redirect_to(new_user_session_url)
+      nil
     end
   end
 
@@ -235,7 +237,7 @@ Doorkeeper.configure do
   # https://doorkeeper.gitbook.io/guides/ruby-on-rails/scopes
   #
   # default_scopes  :public
-  # optional_scopes :write, :update
+  optional_scopes :openid # :write, :update
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.
@@ -432,9 +434,11 @@ Doorkeeper.configure do
   # so that the user skips the authorization step.
   # For example if dealing with a trusted application.
   #
-  # skip_authorization do |resource_owner, client|
-  #   client.superapp? or resource_owner.admin?
-  # end
+  skip_authorization do |resource_owner, client|
+    true
+    # Example implementation:
+    # client.superapp? or resource_owner.admin?
+  end
 
   # Configure custom constraints for the Token Introspection request.
   # By default this configuration option allows to introspect a token by another

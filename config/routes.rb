@@ -1,10 +1,11 @@
-
 require 'silencer'
 
 ChaosRails::Application.routes.draw do
   devise_for :users
 
   use_doorkeeper
+  use_doorkeeper_openid_connect
+
   root to: 'static#home'
 
   match '*path', to: 'application#options', via: :options

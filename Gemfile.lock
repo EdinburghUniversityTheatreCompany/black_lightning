@@ -60,6 +60,7 @@ GEM
       zeitwerk (~> 2.2, >= 2.2.2)
     addressable (2.7.0)
       public_suffix (>= 2.0.2, < 5.0)
+    aes_key_wrap (1.1.0)
     airbrussh (1.4.0)
       sshkit (>= 1.6.1, != 1.7.0)
     annotate (3.1.1)
@@ -71,6 +72,7 @@ GEM
       coderay (>= 1.0.0)
       erubi (>= 1.0.0)
       rack (>= 0.9.0)
+    bindata (2.4.7)
     binding_of_caller (0.8.0)
       debug_inspector (>= 0.0.1)
     bootstrap-sass (2.3.2.2)
@@ -130,6 +132,9 @@ GEM
       unf (>= 0.0.5, < 1.0.0)
     doorkeeper (5.4.0)
       railties (>= 5)
+    doorkeeper-openid_connect (1.7.4)
+      doorkeeper (>= 5.2, < 5.5)
+      json-jwt (>= 1.11.0)
     equalizer (0.0.11)
     erubi (1.9.0)
     execjs (2.7.0)
@@ -174,6 +179,10 @@ GEM
       railties (>= 4.2.0)
       thor (>= 0.14, < 2.0)
     json (1.8.5)
+    json-jwt (1.13.0)
+      activesupport (>= 4.2)
+      aes_key_wrap
+      bindata
     kramdown (2.2.1)
       rexml
     loofah (2.5.0)
@@ -383,6 +392,7 @@ DEPENDENCIES
   delayed_job_active_record
   devise
   doorkeeper
+  doorkeeper-openid_connect
   factory_bot_rails
   faker
   fancybox3
