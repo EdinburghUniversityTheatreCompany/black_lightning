@@ -1,15 +1,11 @@
 # frozen_string_literal: true
 
-raise Exception.new, 'The configuration for openid_connect is not included in the secrets.yml file' unless Rails.application.secrets.openid_connect
+raise Exception.new, 'The configuration for openid_connect is not included in the secrets.yml file' unless Rails.application.secrets.openid_connect && Rails.application.secrets.openid_connect[:issuer]
 
 Doorkeeper::OpenidConnect.configure do
   issuer Rails.application.secrets.openid_connect[:issuer]
 
-  signing_key <<~KEY
-    -----BEGIN RSA PRIVATE KEY-----
-    #{Rails.application.secrets.openid_connect[:private_key]}
-    -----END RSA PRIVATE KEY-----
-  KEY
+  signing_key File.read("#{Rails.root}/config/openid_signing_key")
 
   subject_types_supported [:public]
 

@@ -7,7 +7,7 @@ set :user, 'deploy'
 
 set :keep_releases, 4
 
-set :linked_files, %w(config/database.yml config/secrets.yml)
+set :linked_files, %w(config/database.yml config/secrets.yml config/openid_signing_key)
 set :linked_dirs, %w(log bundle tmp/pids tmp/cache tmp/sockets public/system public/assets uploads storage)
 
 # TODO: Run zeitwerk:check

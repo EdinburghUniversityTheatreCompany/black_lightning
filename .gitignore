@@ -11,8 +11,11 @@
 
 # Ignore the default SQLite database.
 /db/*.sqlite3
+
+# Ignore private config files
 /config/database.yml
 /config/secrets.yml
+/config/openid_signing_key
 
 # Ignore all logfiles and tempfiles.
 /log/*.log
