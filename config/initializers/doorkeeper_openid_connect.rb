@@ -60,8 +60,12 @@ Doorkeeper::OpenidConnect.configure do
 
   # Example claims:
   claims do
-    normal_claim :email do |resource_owner|
-      scopes.exist?(:email) ? resource_owner.email : ''
+    claim :email do |resource_owner, scopes|
+      scopes.exists?(:email) ? resource_owner.email : ''
+    end
+
+    claim :full_name do |resource_owner, scopes|
+      scopes.exists?(:profile) ? resource_owner.name_or_default : ''
     end
   end
 end
