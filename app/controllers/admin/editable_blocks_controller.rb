@@ -47,4 +47,8 @@ class Admin::EditableBlocksController < AdminController
   def order_args
     [:url, :name]
   end
+
+  def should_paginate
+    false
+  end
 end
