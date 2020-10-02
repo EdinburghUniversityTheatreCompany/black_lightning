@@ -34,6 +34,29 @@ class Techie < ApplicationRecord
     cycle_through_attributes(attributes, parents)
   end
 
+  def get_relatives(amount_of_generations, get_siblings_of_related)
+    # Make sure the amount of generations to get is at least one.
+    amount_of_generations = 1 if amount_of_generations < 1
+    amount_of_generations -= 1
+    # Load all techies to cache them.
+    Techie.all.includes(:children, :parents).load
+
+    techies = [self]
+
+    techie_parents = [self]
+    techie_children = [self]
+
+    (0..amount_of_generations).each do
+      techie_parents = techie_parents.to_a.flat_map(&:parents).uniq
+
+      techie_children = techie_children.to_a.flat_map(&:children).uniq
+
+      techies += techie_parents.to_a + techie_children.to_a
+    end
+
+    return techies.uniq
+  end
+
   private
 
   def cycle_through_attributes(attributes, collection)

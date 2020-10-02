@@ -39,7 +39,7 @@ class TechieTest < ActionView::TestCase
     parent = techies(:two)
 
     techie.parents << parent
-  
+
     assert_includes techie.parents, parent
 
     attributes = { '0' => { id: parent.id, _destroy: '1' } }
@@ -53,7 +53,7 @@ class TechieTest < ActionView::TestCase
     techie = techies(:one)
     child = techies(:two)
 
-    attributes = { 
+    attributes = {
       '0' => { id: '', _destroy: '0' },
       '1' => { id: child.id, _destroy: '0' },
     }
@@ -61,5 +61,13 @@ class TechieTest < ActionView::TestCase
     techie.children_attributes = attributes
 
     assert_includes techie.children, child
+  end
+
+  test 'get_relatives gets parents and children' do
+    created_techies = FactoryBot.create_list(:techie, 10)
+
+    base = created_techies.sample
+
+    techies = base.get_relatives(3, false)
   end
 end

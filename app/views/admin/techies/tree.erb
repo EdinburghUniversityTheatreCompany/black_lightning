@@ -6,6 +6,16 @@
   <%= get_link Techie, :new, html_class: 'btn' %>
 </div>
 
+<div class="row">
+    <div class="span12">
+        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
+            <%= f.select :id_eq, options_from_collection_for_select(Techie.all, "id", "name", @q.id_eq), include_blank: true %>
+
+            <%= f.submit :Search, class: 'btn' %>
+        <% end %>
+    </div>
+</div>
+
 <div id="canvas" style="width: 940px; height: 1500px;"></div>
 <script>
 var g = new Graph();
@@ -32,7 +42,9 @@ g.addNode("<%= techie.id %>", { render:render, label: "<%= techie.name.html_safe
 
 <% @techies.each do |techie| %>
     <% techie.children.each do |child| %>
-    g.addEdge("<%= techie.id %>", "<%= child.id %>", {directed: true});
+        <% if @techies.include?(child) %>
+            g.addEdge("<%= techie.id %>", "<%= child.id %>", {directed: true});
+        <% end %>
     <% end %>
 <% end %>
 

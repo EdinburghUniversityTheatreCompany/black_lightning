@@ -9,7 +9,19 @@ class Admin::TechiesController < AdminController
   def tree
     authorize! :index, Techie
     @title = 'Techie Family Tree'
-    @techies = Techie.all.includes(:children, :parents)
+
+    @q = Techie.ransack(params[:q])
+
+    include_siblings_of_related = false
+    amount_of_generations = 10
+
+    @base_techie = @q.result(distinct: true)
+
+    if @base_techie.size == 1
+      @techies = @base_techie.first.get_relatives(amount_of_generations, include_siblings_of_related)
+    else
+      @techies = @base_techie.includes(:children, :parents)
+    end
   end
 
   private
