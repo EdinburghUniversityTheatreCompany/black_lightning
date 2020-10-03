@@ -6,6 +6,12 @@ class Admin::TechiesController < AdminController
 
   load_and_authorize_resource except: :tree
 
+  def show
+    super
+
+    @coparents = @techie.children.flat_map(&:parents).uniq - [@techie]
+  end
+
   def tree
     authorize! :index, Techie
     @title = 'Techie Family Tree'

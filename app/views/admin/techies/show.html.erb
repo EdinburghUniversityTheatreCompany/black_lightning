@@ -16,6 +16,14 @@
   <% end %>
 </ul>
 
+<h3>Co-Parents</h3>
+<ul>
+  <% @coparents.each do |coparent| %>
+    <li><%= get_link coparent, :show %></li>
+  <% end %>
+</ul>
+
+
 <hr />
 
 <%= render '/shared/show_actions', object: @techie %>
