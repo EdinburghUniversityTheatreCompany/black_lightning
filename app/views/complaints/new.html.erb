@@ -1,7 +1,7 @@
 <h1><%= @title = 'Submit Complaint or Suggestion' %></h1>
 
 <p>
-<%= display_block("Submit Complaint Help", false) %>
+  <%= display_block("Submit Complaint Help", false) %>
 </p>
 
 <%= simple_form_for(@complaint) do |f| %>
@@ -14,6 +14,10 @@
   </div>
 
   <%= recaptcha_v3(action: 'submit_complaint') %>
+
+  <p>
+    <%= display_block("Submit Complaint Help Bottom", false) %>
+  </p>
 
   <%= render '/shared/form/form_actions', f: f, include_index: false %>
 <% end %>
