@@ -18,7 +18,7 @@ class ComplaintsController < ApplicationController
 
     super
 
-    ComplaintsMailer.new_complaint(@complaint).deliver_later
+    ComplaintsMailer.new_complaint(@complaint).deliver_later unless @complaint.new_record?
   end
 
   private
