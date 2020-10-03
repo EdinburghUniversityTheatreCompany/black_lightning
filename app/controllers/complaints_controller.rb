@@ -15,8 +15,10 @@ class ComplaintsController < ApplicationController
     # :nocov:
 
     @complaint.resolved = false
-    
+
     super
+
+    ComplaintsMailer.new_complaint(@complaint).deliver_later
   end
 
   private
