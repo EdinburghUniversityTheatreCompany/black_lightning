@@ -9,7 +9,6 @@ class ComplaintsControllerTest < ActionController::TestCase
     assert_not_includes response.body, 'Resolve'
   end
 
-
   test 'should create' do
     complaint = FactoryBot.attributes_for(:complaint)
 
@@ -18,5 +17,7 @@ class ComplaintsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to '/'
+
+    assert_enqueued_emails 1
   end
 end
