@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@rails/ujs": "^6.0.3-4",
+    "jquery": "^3.5.1",
+    "jquery-ui": "^1.12.1",
+    "jquery-ujs": "^1.2.2",
+    "moment": "^2.29.1"
+  }
+}

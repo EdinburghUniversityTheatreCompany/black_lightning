@@ -10,8 +10,9 @@
 // WARNING: THE FIRST BLANK LINE MARKS THE END OF WHAT'S TO BE PROCESSED, ANY BLANK LINE SHOULD
 // GO AFTER THE REQUIRES BELOW.
 //
-//= require jquery
-//= require jquery_ujs
+
+//= require jquery/dist/jquery
+//= require @rails/ujs
 //= require jquery_nested_form
 //= require raphael-min
 //= require dracula_graffle
@@ -19,7 +20,7 @@
 //= require bootstrap
 //= require alerts
 //= require jquery.switch
-//= require jquery-ui-1.9.2.custom
+//= require_directory ./../../../node_modules/jquery-ui/ui
 //= require slimScroll.min
 //= require activestorage
 

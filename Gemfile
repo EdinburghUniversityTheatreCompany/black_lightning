@@ -8,7 +8,6 @@ gem 'sass-rails',   '> 5.0.0'
 gem 'uglifier', '>= 1.3.0'
 
 gem 'coffee-rails'
-gem 'jquery-rails'
 gem 'bootstrap-sass', '< 3.0'
 gem 'font-awesome-sass'
 gem 'fancybox3'
