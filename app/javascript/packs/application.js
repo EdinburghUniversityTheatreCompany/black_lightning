@@ -24,6 +24,8 @@ import '../src/jquery.switch'
 import 'jquery-slimscroll'
 import '../src/alerts'
 
+import '../src/konami_code'
+
 require.context('./../../../node_modules/jquery-ui/ui')
 
 require("@rails/ujs").start()
