@@ -23,7 +23,7 @@
     }
   });
 
-  $(window).load(function() {
+  $(window).on('load', function() {
     load_end = new Date().getTime();
 
     var timeSpent = doc_ready - load_start;

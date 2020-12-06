@@ -46,7 +46,7 @@
     createCookie("dashboard_pos", value, 3600);
   }
 
-  $(window).load(function() {
+  $(window).on('load', function() {
     //Don't load gridster if the window is too small.
     if ($('body').width() < 979) {
       return
