@@ -13,7 +13,10 @@
 
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", media: "all" %>
+
+  <%= javascript_pack_tag "application" %>
   <%= javascript_include_tag "application" %>
+
   <%= csrf_meta_tags %>
 
   <%= yield :head %>
