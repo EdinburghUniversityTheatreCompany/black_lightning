@@ -12,16 +12,13 @@
 //
 
 //= require jquery/dist/jquery
-//= require @rails/ujs
 //= require jquery_nested_form
 //= require raphael-min
 //= require dracula_graffle
 //= require dracula_graph
 //= require bootstrap
-//= require alerts
-//= require jquery.switch
-//= require_directory ./../../../node_modules/jquery-ui/ui
-//= require slimScroll.min
+
+
 
 
 var konami_keys = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
