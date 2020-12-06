@@ -3,8 +3,10 @@
   <head>
     <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Admin</title>
     <%= stylesheet_link_tag    "admin", media: "all" %>
+  
+    <%= javascript_packs_with_chunks_tag "application", "admin"%>
+
     <%= javascript_include_tag "application" %>
-    <%= javascript_pack_tag "application" %>
     <%= javascript_include_tag "admin" %>
     <%= csrf_meta_tags %>
 
