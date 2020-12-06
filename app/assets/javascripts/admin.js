@@ -10,11 +10,7 @@
 // WARNING: THE FIRST BLANK LINE MARKS THE END OF WHAT'S TO BE PROCESSED, ANY BLANK LINE SHOULD
 // GO AFTER THE REQUIRES BELOW.
 //
-//= require admin/jquery.gridster.min
-//= require moment/dist/moment
-//= require admin/nested_forms
-//= require admin/md_editor
-//= require admin/shows
 
+// Has to be replaced with something more modern. Cannot be ported over easily.
 //= require admin/modal_confirmation
 
