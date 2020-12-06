@@ -22,7 +22,7 @@
 //= require jquery.switch
 //= require_directory ./../../../node_modules/jquery-ui/ui
 //= require slimScroll.min
-//= require activestorage
+
 
 var konami_keys = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
 var konami_index = 0;
