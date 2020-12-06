@@ -21,7 +21,7 @@ import 'core-js/stable'
 import 'regenerator-runtime/runtime'
 
 import '../src/jquery.switch'
-import '../src/slimScroll.min'
+import 'jquery-slimscroll'
 import '../src/alerts'
 
 require.context('./../../../node_modules/jquery-ui/ui')
