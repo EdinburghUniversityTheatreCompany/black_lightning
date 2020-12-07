@@ -72,6 +72,10 @@ module LinkHelper
 
     link_text = generate_link_text(link_text, object, action, prefix, append_name)
 
+    # You might notice that the names of the variables given do not match the parameter names defined in the function definition.
+    # We switched from data confirmation plugins, and they have a different naming convention.
+    # To prevent having to change all existing code that called this function (get_link). I left the names of the parameters of this function intact,
+    # and only changed it within the get_confirm_data function.
     confirm_data = get_confirm_data(object, action, confirm, detail, type_confirm)
 
     namespace = (object.is_a?(Class) ? object : object.class).name.split('::').first
@@ -176,20 +180,20 @@ module LinkHelper
     end
   end
 
-  def get_confirm_data(object, action, confirm, detail, type_confirm)
-    return unless action == :destroy || confirm.present? || detail.present? || type_confirm.present?
+  def get_confirm_data(object, action, title, confirm, verify)
+    return unless action == :destroy || title.present? || confirm.present? || verify.present?
 
     confirm_data = {
+      title: title,
       confirm: confirm,
-      detail: detail,
-      type_confirm: type_confirm
+      verify: verify
     }
 
     # Destroy has a default hash, that we don't want to use for other confirm dialogs because that could lead to confusion.
     if action == :destroy
       name = get_object_name(object, include_class_name: true, include_the: true)
-      confirm_data[:confirm] = confirm_data[:confirm] || "Deleting #{name}"
-      confirm_data[:detail] = confirm_data[:detail] || "Are you sure you want to delete #{name}?"
+      confirm_data[:title] ||= "Deleting #{name}"
+      confirm_data[:confirm] ||= "Are you sure you want to delete #{name}?"
     end
 
     return confirm_data

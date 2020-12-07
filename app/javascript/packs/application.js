@@ -30,3 +30,6 @@ require.context('./../../../node_modules/jquery-ui/ui')
 
 require("@rails/ujs").start()
 require("@rails/activestorage").start()
+
+// https://github.com/ifad/data-confirm-modal
+require('data-confirm-modal')

@@ -115,7 +115,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with destroy' do
     news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
-    expected_link = '<a class="btn btn-danger" data-confirm="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-detail="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
+    expected_link = '<a class="btn btn-danger" data-title="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-confirm="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
 
     assert_equal expected_link, get_link(news, :destroy)
 
@@ -200,7 +200,7 @@ class LinkHelperTest < ActionView::TestCase
 
     assert_not @current_user.can?(:destroy, news)
 
-    expected_link = '<a class="btn btn-danger" data-confirm="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-detail="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
+    expected_link = '<a class="btn btn-danger" data-title="Deleting the News &#39;Vikings have taken over the Bedlam&#39;" data-confirm="Are you sure you want to delete the News &#39;Vikings have taken over the Bedlam&#39;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fa fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
 
     assert_equal expected_link, get_link(news, :destroy, condition: true)
   end
@@ -376,9 +376,9 @@ class LinkHelperTest < ActionView::TestCase
     assert_nil get_confirm_data(object, :show, nil, nil, nil)
 
     confirm_hash = {
-      confirm: 'Hexagon',
-      detail: nil,
-      type_confirm: 'Pineapple'
+      title: 'Hexagon',
+      confirm: nil,
+      verify: 'Pineapple'
     }
 
     assert_equal confirm_hash, get_confirm_data(object, :edit, 'Hexagon', nil, 'Pineapple')
@@ -388,9 +388,9 @@ class LinkHelperTest < ActionView::TestCase
     object = FactoryBot.create(:draft_mass_mail, subject: 'We are building a Hexagon again!')
 
     default_destroy_hash_for_object_with_subject = {
-      confirm: "Deleting the Mass Mail 'We are building a Hexagon again!'",
-      detail: "Are you sure you want to delete the Mass Mail 'We are building a Hexagon again!'?",
-      type_confirm: nil
+      title: "Deleting the Mass Mail 'We are building a Hexagon again!'",
+      confirm: "Are you sure you want to delete the Mass Mail 'We are building a Hexagon again!'?",
+      verify: nil
     }
 
     assert_equal default_destroy_hash_for_object_with_subject, get_confirm_data(object, :destroy, nil, nil, nil)
@@ -398,17 +398,17 @@ class LinkHelperTest < ActionView::TestCase
     object = FactoryBot.create(:staffing_debt)
 
     default_destroy_hash = {
-      confirm: 'Deleting the Staffing Debt',
-      detail: 'Are you sure you want to delete the Staffing Debt?',
-      type_confirm: nil
+      title: 'Deleting the Staffing Debt',
+      confirm: 'Are you sure you want to delete the Staffing Debt?',
+      verify: nil
     }
 
     assert_equal default_destroy_hash, get_confirm_data(object, :destroy, nil, nil, nil)
 
     overridden_destroy_hash = {
-      confirm: 'Deleting the Staffing Debt',
-      detail: 'Pineapple',
-      type_confirm: nil
+      title:'Deleting the Staffing Debt',
+      confirm: 'Pineapple',
+      verify: nil
     }
     assert_equal overridden_destroy_hash, get_confirm_data(object, :destroy, nil, 'Pineapple', nil)
   end
