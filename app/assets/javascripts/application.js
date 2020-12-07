@@ -10,31 +10,10 @@
 // WARNING: THE FIRST BLANK LINE MARKS THE END OF WHAT'S TO BE PROCESSED, ANY BLANK LINE SHOULD
 // GO AFTER THE REQUIRES BELOW.
 //
-//= require jquery
-//= require jquery_ujs
+
+//= require jquery/dist/jquery
 //= require jquery_nested_form
 //= require raphael-min
 //= require dracula_graffle
 //= require dracula_graph
 //= require bootstrap
-//= require alerts
-//= require jquery.switch
-//= require jquery-ui-1.9.2.custom
-//= require slimScroll.min
-//= require activestorage
-
-var konami_keys = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65];
-var konami_index = 0;
-$(document).keydown(function(e){
-    if(e.keyCode === konami_keys[konami_index++]){
-        if(konami_index === konami_keys.length){
-            $(document).unbind('keydown', arguments.callee);
-            $.getScript('https://www.cornify.com/js/cornify.js',function(){
-                cornify_add();
-                $(document).keydown(cornify_add);
-            });
-        }
-    }else{
-        konami_index = 0;
-    }
-});

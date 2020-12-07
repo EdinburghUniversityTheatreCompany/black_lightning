@@ -16,8 +16,8 @@
   <div class="form-actions">
     <% if @mass_mail.persisted? %>
       <%= submit_tag :Send, name: 'send', class: "btn btn-primary", 
-                    data: { confirm: "Send Mass Mail",
-                            detail: """
+                    data: { title: "Send Mass Mail",
+                            confirm: """
                                     Are you sure you wish to continue? The mass mail will be send at the time specified.<br><br>
                                     Even if you have delayed sending this message, you will not be able to edit it (or remove it) once you confirm.
                                     """ 

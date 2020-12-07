@@ -18,8 +18,10 @@
 /config/openid_signing_key
 
 # Ignore all logfiles and tempfiles.
-/log/*.log
-/tmp
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
 
 #Ignore paperclip image store:
 /public/system
@@ -49,3 +51,13 @@ version
 #Don't ignore .htaccess files
 !/public/assets/.htaccess
 !/public/system/.htaccess
+
+# Ignore master key for decrypting credentials and more.
+/config/master.key
+
+/public/packs
+/public/packs-test
+/node_modules
+/yarn-error.log
+yarn-debug.log*
+.yarn-integrity

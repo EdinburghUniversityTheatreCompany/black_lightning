@@ -32,9 +32,8 @@ class Admin::ShowsController < AdminController
       amount_of_debts = existing_staffing_debts.where(user: existing_staffing_debts.first.user).count
 
       @staffing_confirm_data = {
-        confirm: 'Creating Staffing Obligation',
-        detail: "This show already has #{helpers.pluralize(amount_of_debts, 'Staffing obligation')} set for
-         #{l existing_staffing_debts.first.due_by, format: :longy}. Are you sure you want to add more?"
+        title: 'Creating Staffing Obligation',
+        confirm: "This show already has #{helpers.pluralize(amount_of_debts, 'Staffing obligation')} set for #{l existing_staffing_debts.first.due_by, format: :longy}. Are you sure you want to add more?"
       }
     else
       @staffing_confirm_data = {}
