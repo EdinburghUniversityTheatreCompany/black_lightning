@@ -1,4 +1,6 @@
 module Admin::SharedDebtHelper
+  include CookieHelper
+  
   def shared_debt_load(debts, params, includes)
     debt_class = debts.klass
     key = debt_class.table_name
@@ -39,16 +41,16 @@ module Admin::SharedDebtHelper
     # :nocov:
     rescue JSON::ParserError => e
       # It's not the worst thing in the world if an error happens, but logging will be useful.
-      # If people start to tamper with the cookie, which I don't expect to happen, 
+      # If people start to tamper with the cookie, which I don't expect to happen,
       # and the errors become a nuisance, we can disable it.
-      
+
       Honeybadger.notify(e)
     # :nocov:
     end
 
     q_param ||= {}
 
-    cookies["#{key}_query"] = q_param
+    set_cookie("#{key}_query", q_param)
 
     return q_param
   end
@@ -63,14 +65,14 @@ module Admin::SharedDebtHelper
       cookies["#{key}_show_fulfilled"] == 'true'
     end
 
-    cookies["#{key}_show_fulfilled"] = show_fulfilled.to_s
+    set_cookie("#{key}_show_fulfilled", show_fulfilled.to_s)
 
     return show_fulfilled
   end
 
   def shared_debt_clear_params(key)
-    cookies.delete("#{key}_query")
-    cookies.delete("#{key}_show_fulfilled")
+    delete_cookie("#{key}_query")
+    delete_cookie("#{key}_show_fulfilled")
   end
 
   def shared_debt_ransack(debts, q_param)
