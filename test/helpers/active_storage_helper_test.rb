@@ -50,7 +50,7 @@ class ActiveStorageHelperTest < ActionView::TestCase
     user.avatar.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png')
     
     assert user.avatar.attached?
-    assert_equal 'The message next to the button is wrong. Current file: test.png', get_file_attached_hint(user.avatar)
+    assert_equal 'Current file: test.png', get_file_attached_hint(user.avatar)
   end
 
   test 'slideshow_variant' do

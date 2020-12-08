@@ -32,7 +32,7 @@ module ActiveStorageHelper
       if filename.starts_with?(PREFIX) 
         hint = nil
       else 
-        hint = "The message next to the button is wrong. Current file: #{filename}" 
+        hint = "Current file: #{filename}" 
       end
     else
       hint = nil
