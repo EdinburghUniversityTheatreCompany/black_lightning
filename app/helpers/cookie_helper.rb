@@ -1,8 +1,9 @@
 module CookieHelper
   COOKIE_DOMAIN = :all
 
-  def set_cookie(name, value)
-    cookies[name] = { value: value, domain: COOKIE_DOMAIN, secure: true }
+  def set_cookie(name, value, options: {})
+    options[:same_site] ||= :lax
+    cookies[name] = { value: value, domain: COOKIE_DOMAIN, **options }
   end
 
   def delete_cookie(name)

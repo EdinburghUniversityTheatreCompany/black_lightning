@@ -12,8 +12,7 @@
         $('#accept_cookies_btn').click(function () {
           var expiration_date = new Date((new Date).getTime() + 1000 * 60 * 60 * 24 * 365 * 10);
           document.cookie="allow_cookies=true"
-                        + ";expires=" + expiration_date.toGMTString()
-                        + ';secure'
+                        + ";expires=" + expiration_date.toGMTString() + ';samesite=lax';
           $('#cookie_notice').slideUp();
         });
       });
