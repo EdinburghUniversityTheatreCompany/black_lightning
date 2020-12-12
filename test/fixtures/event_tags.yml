@@ -1,0 +1,24 @@
+# == Schema Information
+#
+# Table name: event_tags
+#
+# *id*::          <tt>bigint, not null, primary key</tt>
+# *name*::        <tt>string(255)</tt>
+# *description*:: <tt>text(65535)</tt>
+# *created_at*::  <tt>datetime, not null</tt>
+# *updated_at*::  <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
+
+mainterm:
+  name: Mainterm.
+  description: One of the main type of shows. A longer run with a higher budget.
+
+lunchtime:
+  name: Lunchtime
+  description: One of the main type of shows. A shorter run with a lower budget.
+
+new_writing:
+  name: New Writing
+  description: A tag used for new writing plays. Usually written by Bedlam members.
