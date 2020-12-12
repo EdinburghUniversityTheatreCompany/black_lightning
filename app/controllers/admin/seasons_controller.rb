@@ -30,11 +30,7 @@ class Admin::SeasonsController < AdminController
   end
 
   def permitted_params
-    [
-      :name, :tagline, :slug, :description, :start_date, :end_date, :image,
-      :venue_id, :proposal, :proposal_id, :is_public, :author, :price, event_tag_ids: [],
-      pictures_attributes: [:id, :_destroy, :description, :image],
-      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
+    return Event.base_permitted_params + [
       event_ids: []
     ]
   end

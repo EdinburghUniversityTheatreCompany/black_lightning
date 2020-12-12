@@ -174,7 +174,7 @@ class Admin::ShowsController < AdminController
       helpers.append_to_flash(:error, 'There are still attached reviews or feedbacks left. You cannot convert a show with one of these attached to prevent data loss.')
       return false
     end
-    
+
     event = @show.becomes!(target_klass)
 
     if event.save
@@ -197,13 +197,9 @@ class Admin::ShowsController < AdminController
   end
 
   def permitted_params
-    [
-      :maintenance_debt_start, :staffing_debt_start, :description, :name, :slug, :tagline,
-      :author, :venue, :venue_id, :season, :season_id, :proposal, :proposal_id, :xts_id, :is_public, :image,
-      :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
+    return Event.base_permitted_params + [
+      :maintenance_debt_start, :staffing_debt_start,
       reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
-      pictures_attributes: [:id, :_destroy, :description, :image],
-      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal, :proposal_id]
     ]
   end
 
