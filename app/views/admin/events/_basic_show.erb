@@ -13,7 +13,8 @@
   venue: event.venue.present? ? get_link(event.venue, :show) : 'No Venue specified',
   price: event.price,
   tagline: event.tagline.presence || 'No tagline',
-  image: 'No image'
+  image: 'No image',
+  event_tags: event.event_tags.accessible_by(current_ability).collect{ |event_tag| get_link(event_tag, :show, link_text: event_tag.name, target: :blank )}.join('; ').presence&.html_safe() || 'There are no tags set for this event.'
 } %>
 
 <% # Proposal %>
