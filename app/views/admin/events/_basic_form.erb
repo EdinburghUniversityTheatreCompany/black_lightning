@@ -31,4 +31,19 @@
 
 <%= f.association :proposal, collection: f.object.possible_proposals, label_method: :show_title %>
 
+<div class="form-horizontal">
+  <h3>Tags</h3>
+  <% if f.object.errors[:event_tags].present? then %>
+    <p id="event_tags_errors" class="alert alert-error">
+      <%= f.error :event_tags %>
+    </p>
+  <% end %>
+
+  <%= f.collection_check_boxes(:event_tag_ids, EventTag.accessible_by(current_ability), :id, ->(event_tag) { get_link event_tag, :show, link_text: event_tag.name, target: :blank }) do |checkbox| %>
+    <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe } %>
+  <% end %>
+
+  <%= render '/shared/form/sections/gallery', f: f %>
+</div>
+
 <%= render '/shared/form/public_private_switch', f: f, field_symbol: :is_public %>

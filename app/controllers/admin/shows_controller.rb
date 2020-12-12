@@ -200,7 +200,7 @@ class Admin::ShowsController < AdminController
     [
       :maintenance_debt_start, :staffing_debt_start, :description, :name, :slug, :tagline,
       :author, :venue, :venue_id, :season, :season_id, :proposal, :proposal_id, :xts_id, :is_public, :image,
-      :start_date, :end_date, :price, :spark_seat_slug,
+      :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
       reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
       pictures_attributes: [:id, :_destroy, :description, :image],
       team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal, :proposal_id]

@@ -102,6 +102,8 @@ ChaosRails::Application.routes.draw do
     resources :news
     resources :fault_reports
 
+    resources :event_tags
+
     resources :opportunities do
       member do
         put 'approve'

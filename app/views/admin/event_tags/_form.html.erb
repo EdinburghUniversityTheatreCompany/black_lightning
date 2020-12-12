@@ -1,0 +1,11 @@
+<%= simple_form_for [:admin, @event_tag] do |f| %>
+  <%= f.error_notification %>
+
+  <div class="form-inputs">
+    <%= f.input :name %>
+
+    <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12, show_hint: true %>
+  </div>
+
+  <%= render '/shared/form/form_actions', f: f %>
+<% end %>
