@@ -1,0 +1,27 @@
+<h1><%= @title %></h1>
+
+<p>
+  <%= display_block("Event Tags Description", true) %>
+</p>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+
+    <% if can? :edit, EventTag %>
+      <th></th>
+    <% end %>
+  </tr>
+
+<% @event_tags.each do |event_tag| %>
+  <tr>
+    <td><%= get_link event_tag, :show %></td>
+
+    <%= get_link event_tag, :edit, wrap_tag: 'td' %>
+  </tr>
+<% end %>
+</table>
+
+<%= will_paginate(@event_tags) %>
+
+<%= get_link EventTag, :new %>

@@ -1,0 +1,14 @@
+<h1><%= @title %></h1>
+
+<% fields = { 
+  name: @event_tag.name
+} %>
+
+<%= render 'shared/basic_fields', fields: fields %>
+
+<p>
+  <h3>Description</h3>
+  <%= render_markdown @event_tag.description %>
+</p>
+
+<%= render '/shared/show_actions', object: @event_tag %>
