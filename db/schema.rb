@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2020_12_12_111658) do
+ActiveRecord::Schema.define(version: 2020_12_12_212037) do
 
   create_table "active_storage_attachments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -197,7 +197,6 @@ ActiveRecord::Schema.define(version: 2020_12_12_111658) do
   end
 
   create_table "attachments", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci", force: :cascade do |t|
-    t.integer "editable_block_id"
     t.string "name"
     t.string "file_file_name"
     t.string "file_content_type"
@@ -205,7 +204,9 @@ ActiveRecord::Schema.define(version: 2020_12_12_111658) do
     t.datetime "file_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["editable_block_id"], name: "index_attachments_on_editable_block_id"
+    t.string "item_type"
+    t.bigint "item_id"
+    t.index ["item_type", "item_id"], name: "index_attachments_on_item_type_and_item_id"
   end
 
   create_table "children_techies", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci", force: :cascade do |t|

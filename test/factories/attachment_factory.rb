@@ -19,8 +19,13 @@ FactoryBot.define do
   factory :attachment do
     name { generate(:random_string) }
 
-    association :editable_block, factory: :editable_block
-
     file { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.pdf'), 'application/pdf') }
+
+  factory :editable_block_attachment, parent: :attachment do
+    association :item, factory: :editable_block
+  end
+
+  factory :show_attachment, parent: :attachment do
+    association :item, factory: :show
   end
 end

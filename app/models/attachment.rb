@@ -28,7 +28,7 @@
 #++
 
 class Attachment < ApplicationRecord
-  belongs_to :editable_block, class_name: 'Admin::EditableBlock'
+  belongs_to :item, polymorphic: true
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :file, attached: true

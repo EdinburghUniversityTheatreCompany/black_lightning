@@ -40,6 +40,7 @@
 class Event < ApplicationRecord
   include TimeHelper
   include ApplicationHelper
+  include AttachmentItem
 
   resourcify
 
@@ -164,7 +165,8 @@ class Event < ApplicationRecord
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
       pictures_attributes: [:id, :_destroy, :description, :image],
-      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal]
+      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
+      attachments_attributes: [:id, :_destroy, :name, :file]
     ]
   end
 end

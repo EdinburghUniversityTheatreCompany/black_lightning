@@ -1,0 +1,11 @@
+<% include_header = true if include_header.nil? %>
+
+<% if include_header %>
+  <h3>Attachments</h3>
+<% end %>
+
+<div class="form-inline">
+  <%= f.simple_fields_for :attachments %>
+
+  <p><%= link_to_add(f, :attachments) %></p>
+</div>

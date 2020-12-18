@@ -18,7 +18,7 @@ require 'test_helper'
 
 class AttachmentTest < ActionView::TestCase
   test 'slug' do
-    attachment = FactoryBot.create(:attachment)
+    attachment = FactoryBot.create(:show_attachment)
     assert_equal attachment.name, attachment.slug
   end
 end

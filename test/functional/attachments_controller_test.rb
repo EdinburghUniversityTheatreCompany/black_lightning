@@ -1,10 +1,12 @@
 require 'test_helper'
 
 class AttachmentsControllerTest < ActionController::TestCase
+  setup do
+    @editable_block = admin_editable_blocks(:public)
+  end
+
   test 'should get file' do
-    eb = admin_editable_blocks(:public)
-    FactoryBot.create(:attachment)
-    attachment = FactoryBot.create(:attachment, editable_block: eb)
+    attachment = FactoryBot.create(:attachment, item: @editable_block)
 
     get :file, params: { slug: attachment.name }
 
@@ -16,9 +18,7 @@ class AttachmentsControllerTest < ActionController::TestCase
 
   # Should not return a thumbnail, but just a file link.
   test 'should get pdf file as thumb' do
-    eb = admin_editable_blocks(:public)
-    FactoryBot.create(:attachment)
-    attachment = FactoryBot.create(:attachment, editable_block: eb)
+    attachment = FactoryBot.create(:attachment, item: @editable_block)
 
     get :file, params: { slug: attachment.name, style: 'ThUmb' }
 
@@ -29,9 +29,7 @@ class AttachmentsControllerTest < ActionController::TestCase
   end
 
   test 'should get image file as thumb' do
-    eb = admin_editable_blocks(:public)
-    FactoryBot.create(:attachment)
-    attachment = FactoryBot.create(:attachment, editable_block: eb)
+    attachment = FactoryBot.create(:attachment, item: @editable_block)
     attachment.file.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png')
 
     assert attachment.file.image?
@@ -46,19 +44,19 @@ class AttachmentsControllerTest < ActionController::TestCase
     # It would be nice to check the dimensions of the response.
   end
 
-  test 'should not get file for admin page when not signed in' do
-    eb = admin_editable_blocks(:admin)
-    attachment = FactoryBot.create(:attachment, editable_block: eb)
+  test 'should not get file for admin page editable_block when not signed in' do
+    admin_editable_block = admin_editable_blocks(:admin)
+    attachment = FactoryBot.create(:attachment, item: admin_editable_block)
 
     get :file, params: { slug: attachment.name }
 
     assert_response 403
   end
 
-  test 'should get file for admin page' do
+  test 'should get file for admin page editable_block when signed in as admin' do
     sign_in users(:admin)
-    eb = admin_editable_blocks(:admin)
-    attachment = FactoryBot.create(:attachment, editable_block: eb)
+    admin_editable_block = admin_editable_blocks(:admin)
+    attachment = FactoryBot.create(:attachment, item: admin_editable_block)
 
     get :file, params: { slug: attachment.name }
     assert_response :success
