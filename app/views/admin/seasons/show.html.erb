@@ -9,6 +9,8 @@
 
 <%= render '/shared/gallery', pictures: @season.pictures %>
 
+<%= render 'shared/attachments_gallery', attachments: @season.attachments.accessible_by(current_ability) %>
+
 <%= render '/shared/show_actions', object: @season %>
 
 <%= render 'admin/events/questionnaires', event: @season %>

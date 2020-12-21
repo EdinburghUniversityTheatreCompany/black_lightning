@@ -4,6 +4,8 @@
 
 <%= render '/shared/gallery', pictures: @workshop.pictures %>
 
+<%= render 'shared/attachments_gallery', attachments: @workshop.attachments.accessible_by(current_ability) %>
+
 <%= render '/shared/show_actions', object: @workshop %>
 
 <%= render 'admin/events/questionnaires', event: @workshop %>

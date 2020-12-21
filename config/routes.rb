@@ -49,7 +49,7 @@ ChaosRails::Application.routes.draw do
   resources :complaints, only: [:new, :create]
 
   get 'events/xts/:id', to: 'events#find_by_xts_id'
-  get 'attachments/:slug(/:style)', to: 'attachments#file'
+  get 'attachments/:slug(/:style)', to: 'attachments#file', as: 'attachment'
 
   namespace :admin do
     get '', to: 'dashboard#index'
