@@ -1,0 +1,33 @@
+<h1><%= @title %></h1>
+
+<p>
+  <%= display_block("Attachment Tags Description", true) %>
+</p>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+
+    <% if can? :index, Attachment %>
+      <th></th>
+    <% end %>
+
+    <% if can? :edit, AttachmentTag %>
+      <th></th>
+    <% end %>
+  </tr>
+
+  <% @attachment_tags.each do |attachment_tag| %>
+    <tr>
+      <td><%= get_link attachment_tag, :show %></td>
+
+      <td><%= get_link_to_attachments_for_tag(attachment_tag) %></td>
+
+      <%= get_link attachment_tag, :edit, wrap_tag: 'td' %>
+    </tr>
+  <% end %>
+</table>
+
+<%= will_paginate(@attachment_tags) %>
+
+<%= get_link AttachmentTag, :new %>

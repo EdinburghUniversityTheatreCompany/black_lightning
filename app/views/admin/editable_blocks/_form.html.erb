@@ -22,9 +22,7 @@
     <%= render "/shared/form/md_editor", f: f, field: :content, rows: 12, show_hint: true %>
 
     <div class="well form-inline">
-      <%= f.simple_fields_for :attachments %>
-
-      <p><%= link_to_add(f, :attachments) %></p>
+      <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
 
       <br />
 

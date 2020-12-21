@@ -6,6 +6,8 @@
 
 <%= render '/shared/gallery', pictures: @show.pictures %>
 
+<%= render 'shared/attachments_gallery', attachments: @show.attachments.accessible_by(current_ability) %>
+
 <br>
 
 <%= render '/shared/show_actions', object: @show %>

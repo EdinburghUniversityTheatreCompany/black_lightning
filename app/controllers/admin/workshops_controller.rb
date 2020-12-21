@@ -30,12 +30,6 @@ class Admin::WorkshopsController < AdminController
   end
 
   def permitted_params
-    [
-      :description, :name, :slug, :tagline, :author, :venue, :venue_id, :season,
-      :season_id, :xts_id, :is_public, :image, :start_date, :end_date, :price,
-      :spark_seat_slug, :proposal, :proposal_id, event_tag_ids: [],
-      pictures_attributes: [:id, :_destroy, :description, :image],
-      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal]
-    ]
+    return Event.base_permitted_params
   end
 end

@@ -318,6 +318,24 @@ class LinkHelperTest < ActionView::TestCase
     end
   end
 
+  test 'get_namespace_for_link for model not in admin namespace' do
+    object = roles(:member)
+
+    assert_nil get_namespace_for_link(object, false)
+
+    assert_equal(:admin, get_namespace_for_link(object, true))
+  end
+
+  test 'get_namespace_for_link for model in admin namespace' do
+    object = admin_questions(:questionnaire_template_question_one)
+
+    # Should return nil because the admin is already included in the object name.
+
+    assert_nil get_namespace_for_link(object, false)
+
+    assert_nil get_namespace_for_link(object, true)
+  end
+
   test 'get_default_http_method' do
     hash = {
       show: :get,

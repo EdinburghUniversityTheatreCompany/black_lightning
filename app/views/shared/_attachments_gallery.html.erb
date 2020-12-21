@@ -1,0 +1,58 @@
+<% # UPDATE NOTICE: This is very ugly and hacky at the moment, mainly because we are on an old Bootstrap version. %>
+<% # Please fix this when you update bootstrap %>
+
+<% include_item_link = false unless include_item_link.present? %>
+<% include_header = true unless include_header.present? %>
+
+<% if attachments.any? then %>
+  <% content_for :head do %>
+    <%= stylesheet_link_tag 'jquery.fancybox' %>
+    <%= javascript_include_tag 'jquery.fancybox' %>
+  <% end %>
+
+  <% if include_header%>
+    <h3>Attachments</h3>
+  <% end %>
+
+  <li class="thumbnails">
+    <% attachments.each_with_index do |attachment, index| %>
+      <% if index % 4 == 0 %>
+        <div class="row span12">
+      <% end %>
+
+      <ul class="span2 gallery well">
+        <% url = attachment_path(attachment.slug) %>
+
+        <% begin %>
+          <% img = image_tag attachment.file.variant(thumb_variant) %>
+          <% fullsize_url = url_for(attachment.file) %>
+
+          <div> 
+            <%= link_to img, fullsize_url, class: "thumbnail fancybox", rel: 'group', title: attachment.name, 'data-title' => attachment.name %>
+          </div>
+        <% rescue ActiveStorage::InvariableError %>
+          <% # It is impossible to create a thumbnail, so do nothing. %>
+        <% end %>
+
+        <%= link_to attachment.name, url, rel: 'group', title: attachment.name %>
+      
+        <% if include_item_link && attachment.item.present? %>
+          <hr class="m-0" style="margin: 0px">
+          <% item_url = get_url_for_attachment_item(attachment) %>
+
+          <%= link_to attachment.item_name, item_url %>
+        <% end %>
+
+        <% if attachment.attachment_tags.present? %>
+          <hr class="m-0" style="margin: 0px">
+          <%= attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }.to_sentence.html_safe %>
+        <% end %>
+      </ul>
+
+      <% # Close the row. %>
+      <% if index % 4 == 3 %>
+        </div>
+      <% end %>
+    <% end %>
+  </li>
+<% end %>

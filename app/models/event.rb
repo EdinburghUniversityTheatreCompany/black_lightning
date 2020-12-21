@@ -40,6 +40,7 @@
 class Event < ApplicationRecord
   include TimeHelper
   include ApplicationHelper
+  include AttachmentItem
 
   resourcify
 
@@ -154,5 +155,18 @@ class Event < ApplicationRecord
     options = merge_hash(defaults, options)
 
     super(options)
+  end
+
+  # Returns a hash with base permitted params to prevent accidentally omitting one.
+  def self.base_permitted_params
+    return [
+      :description, :name, :slug, :tagline,
+      :author, :venue, :venue_id, :season, :season_id,
+      :xts_id, :is_public, :image, :proposal, :proposal_id,
+      :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
+      pictures_attributes: [:id, :_destroy, :description, :image],
+      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
+      attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
+    ]
   end
 end

@@ -1,8 +1,3 @@
-##
-# Defines attachments for Admin::EditableBlock.
-#
-#--
-# TODO: Possibly should be moved to Admin namespace?
 #++
 #
 # See AttachmentController for fetching of attachments.
@@ -28,14 +23,31 @@
 #++
 
 class Attachment < ApplicationRecord
-  belongs_to :editable_block, class_name: 'Admin::EditableBlock'
+  include NameHelper
+
+  belongs_to :item, polymorphic: true
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :file, attached: true
+  validates :access_level, presence: true
+
+  has_and_belongs_to_many :attachment_tags, optional: true
 
   has_one_attached :file
 
+  default_scope -> { order('name ASC') }
+
+  ACCESS_LEVELS = [
+    ['Grid-Based', 0],
+    ['Member', 1],
+    ['Everyone', 2]
+  ].freeze
+
   def slug
     return name
+  end
+
+  def item_name
+    return get_object_name(item)
   end
 end

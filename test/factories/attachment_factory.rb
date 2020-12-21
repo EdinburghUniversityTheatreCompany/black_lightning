@@ -19,8 +19,24 @@ FactoryBot.define do
   factory :attachment do
     name { generate(:random_string) }
 
-    association :editable_block, factory: :editable_block
+    access_level { [0, 1, 2].sample }
 
     file { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.pdf'), 'application/pdf') }
+
+    transient do
+      tag_count { 1 }
+    end
+
+    after(:create) do |attachment, evaluator|
+      attachment.attachment_tags << AttachmentTag.all.sample(evaluator.tag_count)
+    end
+  end
+
+  factory :editable_block_attachment, parent: :attachment do
+    association :item, factory: :editable_block
+  end
+
+  factory :show_attachment, parent: :attachment do
+    association :item, factory: :show
   end
 end

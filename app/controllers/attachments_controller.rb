@@ -6,20 +6,19 @@ class AttachmentsController < ApplicationController
   ##
   # Returns the file associated with the attachment.
   #
-  # If the attachments EditableBlock has the admin_page attribute set to
-  # true, ensures the user has access to the backend first.
+  # Checks permission based on access to the attachment itself and to the attached item.
   ##
   def file
     @attachment = Attachment.find_by_name!(params[:slug])
 
-    authorize!(:access, :backend) if @attachment.editable_block.admin_page
+    authorize!(:show, @attachment)
+
+    authorize!(:show, @attachment.item)
 
     return 'There is no file attached' unless @attachment.file.attached?
 
-    response.headers["Content-Type"] = @attachment.file.content_type
-    response.headers["Content-Disposition"] = "inline; #{@attachment.file.filename}"
-    
-    representation = nil
+    response.headers['Content-Type'] = @attachment.file.content_type
+    response.headers['Content-Disposition'] = "inline; #{@attachment.file.filename}"
 
     if params[:style]&.to_s&.downcase == 'thumb' && @attachment.file.image?
       variant = @attachment.file.blob.variant(helpers.thumb_variant).processed

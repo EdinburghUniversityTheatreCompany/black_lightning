@@ -1,0 +1,25 @@
+<div class="job control-group <%= "error" if (f.error(:name).present? || f.error(:file).present?) %>">
+    <%= f.error :name %>
+    <%= f.error :file %>
+
+    <%= f.input :name, placeholder: "Attachment Name" %>
+
+    <%= f.input_field :file %>
+
+    <%= link_to_remove f %>
+
+    <% if f.object.file.attached? %>
+        <br />
+        <%= get_file_attached_hint(f.object.file) %>
+    <% end %>
+
+    <br>
+
+    <%= f.input :access_level, collection: Attachment::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.' %>
+
+    <br>
+
+    <%= f.collection_check_boxes(:attachment_tag_ids, AttachmentTag.accessible_by(current_ability), :id, ->(attachment_tag) { get_link attachment_tag, :show, link_text: attachment_tag.name, target: :blank }) do |checkbox| %>
+        <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe} %>
+    <% end %>
+</div>
