@@ -43,6 +43,5 @@ class Picture < ApplicationRecord
   ##
   def display_url
     return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.square_display_variant).processed, only_path: true)
-
   end
 end

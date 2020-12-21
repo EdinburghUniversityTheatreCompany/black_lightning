@@ -16,6 +16,4 @@ class EventTag < ApplicationRecord
 
   has_and_belongs_to_many :events, optional: true
 
-  def link
-  end
 end
