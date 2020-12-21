@@ -6,7 +6,7 @@ class AttachmentsControllerTest < ActionController::TestCase
   end
 
   test 'should get file' do
-    attachment = FactoryBot.create(:attachment, item: @editable_block)
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
 
     get :file, params: { slug: attachment.name }
 
@@ -18,7 +18,7 @@ class AttachmentsControllerTest < ActionController::TestCase
 
   # Should not return a thumbnail, but just a file link.
   test 'should get pdf file as thumb' do
-    attachment = FactoryBot.create(:attachment, item: @editable_block)
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
 
     get :file, params: { slug: attachment.name, style: 'ThUmb' }
 
@@ -29,7 +29,7 @@ class AttachmentsControllerTest < ActionController::TestCase
   end
 
   test 'should get image file as thumb' do
-    attachment = FactoryBot.create(:attachment, item: @editable_block)
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
     attachment.file.attach(io: File.open(Rails.root.join('test', 'test.png')), filename: 'test.png', content_type: 'image/png')
 
     assert attachment.file.image?
@@ -46,7 +46,7 @@ class AttachmentsControllerTest < ActionController::TestCase
 
   test 'should not get file for admin page editable_block when not signed in' do
     admin_editable_block = admin_editable_blocks(:admin)
-    attachment = FactoryBot.create(:attachment, item: admin_editable_block)
+    attachment = FactoryBot.create(:attachment, item: admin_editable_block, access_level: 2)
 
     get :file, params: { slug: attachment.name }
 

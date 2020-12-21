@@ -14,7 +14,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo, 
-                  Complaint, Doorkeeper::Application]
+                  Complaint, Doorkeeper::Application, Attachment]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -309,6 +309,42 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(created_opportunity, 'an opportunity they created', ability, allowed_actions, forbidden_actions)
 
     helper_test_actions(other_opportunity, 'an opportuniy they did not create', ability, [], allowed_actions + forbidden_actions)
+  end
+
+  ##
+  # Attachments
+  ##
+
+  test 'everyone can see public attachments' do
+    allowed_actions = %I[show]
+    forbidden_actions = %I[read index edit update new create delete destroy]
+
+    public_attachment = FactoryBot.create(:show_attachment, access_level: 2)
+
+    helper_test_actions(public_attachment, 'a public attachment', @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(public_attachment, 'a public attachment as member', Ability.new(users(:member)), allowed_actions, forbidden_actions)
+    helper_test_actions(public_attachment, 'a public attachment as admin', Ability.new(users(:admin)), allowed_actions + forbidden_actions, [])
+  end
+
+  test 'members can see member-only attachments' do
+    allowed_actions = %I[show]
+    forbidden_actions = %I[read index edit update new create delete destroy]
+
+    members_only_attachment = FactoryBot.create(:editable_block_attachment, access_level: 1)
+
+    helper_test_actions(members_only_attachment, 'a members-only attachment', @ability, [], allowed_actions + forbidden_actions)
+    helper_test_actions(members_only_attachment, 'a members-only attachment as member', Ability.new(users(:member)), allowed_actions, forbidden_actions)
+    helper_test_actions(members_only_attachment, 'a members-only attachment as admin', Ability.new(users(:admin)), allowed_actions + forbidden_actions, [])
+  end
+
+  test 'admins can see grid-based attachments' do
+    forbidden_actions = %I[show read index edit update new create delete destroy]
+
+    grid_based_attachment = FactoryBot.create(:show_attachment, access_level: 0)
+
+    helper_test_actions(grid_based_attachment, 'a grid-based attachment', @ability, [], forbidden_actions)
+    helper_test_actions(grid_based_attachment, 'a grid-based attachment as member', Ability.new(users(:member)), [], forbidden_actions)
+    helper_test_actions(grid_based_attachment, 'a grid-based attachment as admin', Ability.new(users(:admin)), forbidden_actions, [])
   end
 
   ##

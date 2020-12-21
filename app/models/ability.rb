@@ -97,6 +97,8 @@ class Ability
     # Everyone can create a complaint.
     can [:create], Complaint
 
+    can :show, Attachment, access_level: 2
+
     # Stop if the user is not logged in.
     return if user.nil?
 
@@ -160,5 +162,10 @@ class Ability
     end
 
     set_permissions_based_on_grid(user)
+
+    # Fix at the same time as has_role? :member
+    can :show, Attachment, access_level: 1 if can? :access, :backend
+
+    # TODO: Should only be allowed to see attachments if the user can also see the object they are related to. Remember that also goes for non-logged in users.
   end
 end

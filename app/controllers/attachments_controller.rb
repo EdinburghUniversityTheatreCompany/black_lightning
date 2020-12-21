@@ -6,17 +6,14 @@ class AttachmentsController < ApplicationController
   ##
   # Returns the file associated with the attachment.
   #
-  # If the attachment's Editable Block has the admin_page attribute set to
-  # true, ensures the user has access to the backend first.
-  # 
-  # If the attachment is connected to something else....
+  # Checks permission based on access to the attachment itself and to the attached item.
   ##
   def file
     @attachment = Attachment.find_by_name!(params[:slug])
 
-    if @attachment.item.class == Admin::EditableBlock
-      authorize!(:access, :backend) if @attachment.item.admin_page
-    end
+    authorize!(:show, @attachment)
+
+    authorize!(:show, @attachment.item)
 
     return 'There is no file attached' unless @attachment.file.attached?
 

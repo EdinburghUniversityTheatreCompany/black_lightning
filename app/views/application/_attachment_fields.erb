@@ -15,6 +15,10 @@
 
     <br>
 
+    <%= f.input :access_level, collection: Attachment::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.' %>
+
+    <br>
+
     <%= f.collection_check_boxes(:attachment_tag_ids, AttachmentTag.accessible_by(current_ability), :id, ->(attachment_tag) { get_link attachment_tag, :show, link_text: attachment_tag.name, target: :blank }) do |checkbox| %>
         <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe} %>
     <% end %>
