@@ -58,6 +58,10 @@
                   <li><%= link_to 'Event Tags', admin_event_tags_path %></li>
                 <% end %>
 
+                <% if can? :index, Attachment %>
+                <li><%= link_to 'Attachments', admin_attachments_path %></li>
+                <% end %>
+
                 <% if can? :index, News %>
                 <li><%= link_to 'News', admin_news_index_path %></li>
                 <% end %>

@@ -28,6 +28,8 @@
 #++
 
 class Attachment < ApplicationRecord
+  include NameHelper
+
   belongs_to :item, polymorphic: true
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
@@ -37,7 +39,13 @@ class Attachment < ApplicationRecord
 
   has_one_attached :file
 
+  default_scope -> { order('name ASC') }
+
   def slug
     return name
+  end
+
+  def item_name
+    return get_object_name(item)
   end
 end

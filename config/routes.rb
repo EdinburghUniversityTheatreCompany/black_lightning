@@ -104,6 +104,8 @@ ChaosRails::Application.routes.draw do
 
     resources :event_tags
 
+    resources :attachments, only: [:index]
+
     resources :opportunities do
       member do
         put 'approve'
