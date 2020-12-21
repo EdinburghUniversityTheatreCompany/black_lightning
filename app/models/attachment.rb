@@ -33,6 +33,8 @@ class Attachment < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :file, attached: true
 
+  has_and_belongs_to_many :attachment_tags, optional: true
+
   has_one_attached :file
 
   def slug
