@@ -23,7 +23,7 @@
 
 
   <ul class="thumbnails">
-    <% pictures.includes(image_attachment: :blob).each_with_index do |picture, index| %>
+    <% pictures.includes(image_attachment: :blob).each do |picture| %>
       <li class="span3 gallery">
         <% img = image_tag picture.fetch_image.variant(thumb_variant) %>
         <% url = url_for(picture.fetch_image) %>
