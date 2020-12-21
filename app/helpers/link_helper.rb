@@ -78,11 +78,9 @@ module LinkHelper
     # and only changed it within the get_confirm_data function.
     confirm_data = get_confirm_data(object, action, confirm, detail, type_confirm)
 
-    namespace = (object.is_a?(Class) ? object : object.class).name.split('::').first
+    namespace = get_namespace_for_link(object, admin)
 
-    controller = admin && namespace != 'Admin' ? :admin : nil
-
-    link_target = get_default_link_target(object, action, controller, anchor) if link_target.nil?
+    link_target = get_default_link_target(object, action, namespace, anchor) if link_target.nil?
     http_method = get_default_http_method(action) if http_method.nil?
     html_class = get_default_html_class(action) if html_class.nil?
 
@@ -100,6 +98,14 @@ module LinkHelper
 
   def wrap_in_tags(content, wrap_tag)
     return "<#{wrap_tag}>#{content}</#{wrap_tag}>".html_safe
+  end
+
+  def get_namespace_for_link(object, is_admin)
+    model_namespace = (object.is_a?(Class) ? object : object.class).name.split('::').first
+
+    namespace = is_admin && model_namespace != 'Admin' ? :admin : nil
+
+    return namespace
   end
 
   private
@@ -166,14 +172,14 @@ module LinkHelper
     end
   end
 
-  def get_default_link_target(object, action, controller, anchor)
+  def get_default_link_target(object, action, namespace, anchor)
     case action
     # For index, object is a class, so it returns the index. For show, it returns the show page.
     when :show, :index, :destroy
-      return url_for([controller, object, anchor: anchor])
+      return url_for([namespace, object, anchor: anchor])
     else
       begin
-        return url_for([controller, object, action: action, anchor: anchor])
+        return url_for([namespace, object, action: action, anchor: anchor])
       rescue StandardError => e
         raise(ArgumentError, "There is no default link target for the specified action #{action}. #{e.message.upcase_first}")
       end
