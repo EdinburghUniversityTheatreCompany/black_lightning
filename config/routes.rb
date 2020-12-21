@@ -103,6 +103,7 @@ ChaosRails::Application.routes.draw do
     resources :fault_reports
 
     resources :event_tags
+    resources :attachment_tags
 
     resources :attachments, only: [:index]
 
