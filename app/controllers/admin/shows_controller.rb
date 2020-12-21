@@ -214,7 +214,8 @@ class Admin::ShowsController < AdminController
       new_users = User.where(id: new_user_ids)
       new_debtors = new_users.select(&:in_debt)
 
-      if new_debtors.any?
+      # Only notify debtors if the start date is after the start of the current academic year.
+      if new_debtors.any? && @show.start_date > helpers.start_of_year
         new_debtors_string = new_debtors.collect(&:name).to_sentence
         flash[:notice] = "The show was successfully updated, but #{new_debtors_string} #{'is'.pluralize(new_debtors.count)} in debt."
 
