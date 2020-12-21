@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class NewsHelperTest <p ActionView::TestCase
+class NewsHelperTest < ActionView::TestCase
   test 'generate preview' do
     wisdom = 'The world is like a pineapple. Very tough to get inside and it tries to eat you.'
     assert_equal wisdom, generate_preview(wisdom)
