@@ -30,10 +30,13 @@ class Venue < ApplicationRecord
   has_many :pictures, as: :gallery
 
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
-  
+
   has_one_attached :image
 
   validates :image, content_type: %i[png jpg jpeg gif]
+
+  default_scope -> { order('name ASC') }
+
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob('bedlam.png')) unless image.attached? 
 
