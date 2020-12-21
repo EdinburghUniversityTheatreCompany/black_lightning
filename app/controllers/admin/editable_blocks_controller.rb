@@ -41,7 +41,10 @@ class Admin::EditableBlocksController < AdminController
   end
 
   def permitted_params
-    [:content, :name, :url, :ordering, :admin_page, :group, attachments_attributes: [:id, :_destroy, :name, :file]]
+    [
+      :content, :name, :url, :ordering, :admin_page, :group, 
+      attachments_attributes: [:id, :_destroy, :name, :file, attachment_tag_ids: []]
+    ]
   end
 
   def order_args

@@ -166,7 +166,7 @@ class Event < ApplicationRecord
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
       pictures_attributes: [:id, :_destroy, :description, :image],
       team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
-      attachments_attributes: [:id, :_destroy, :name, :file]
+      attachments_attributes: [:id, :_destroy, :name, :file, attachment_tag_ids: []]
     ]
   end
 end
