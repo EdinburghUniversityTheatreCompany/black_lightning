@@ -14,7 +14,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo, 
-                  Complaint, Doorkeeper::Application, Attachment]
+                  Complaint, Doorkeeper::Application, Attachment, Admin::EditableBlock]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -345,6 +345,34 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(grid_based_attachment, 'a grid-based attachment', @ability, [], forbidden_actions)
     helper_test_actions(grid_based_attachment, 'a grid-based attachment as member', Ability.new(users(:member)), [], forbidden_actions)
     helper_test_actions(grid_based_attachment, 'a grid-based attachment as admin', Ability.new(users(:admin)), forbidden_actions, [])
+  end
+
+  ##
+  # Editable Blocks
+  ##
+
+  test 'everyone can see non-admin site editable blocks' do
+    allowed_actions = %I[show]
+    forbidden_actions = %I[read index edit update new create delete destroy]
+
+    public_editable_block = admin_editable_blocks(:public)
+
+    public_editable_block.admin_page = [nil, false].sample
+
+    helper_test_actions(public_editable_block, 'a public editable block', @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(public_editable_block, 'a public editable block as member', Ability.new(users(:member)), allowed_actions, forbidden_actions)
+    helper_test_actions(public_editable_block, 'a public editable block as admin', Ability.new(users(:admin)), allowed_actions + forbidden_actions, [])
+  end
+
+  test 'members and admins can see non-admin site editable blocks' do
+    allowed_actions = %I[show]
+    forbidden_actions = %I[read index edit update new create delete destroy]
+
+    admin_editable_block = admin_editable_blocks(:admin)
+
+    helper_test_actions(admin_editable_block, 'a admin editable block', @ability, [], allowed_actions + forbidden_actions)
+    helper_test_actions(admin_editable_block, 'a admin editable block as member', Ability.new(users(:member)), allowed_actions, forbidden_actions)
+    helper_test_actions(admin_editable_block, 'a admin editable block as admin', Ability.new(users(:admin)), allowed_actions + forbidden_actions, [])
   end
 
   ##
