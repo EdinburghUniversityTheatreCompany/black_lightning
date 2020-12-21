@@ -29,7 +29,7 @@ class Attachment < ApplicationRecord
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :file, attached: true
-  #validates :access_level, presence: true
+  validates :access_level, presence: true
 
   has_and_belongs_to_many :attachment_tags, optional: true
 
