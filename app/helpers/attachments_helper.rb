@@ -2,8 +2,12 @@ module AttachmentsHelper
   include LinkHelper
 
   def get_url_for_attachment_item(attachment)
-    namespace = get_namespace_for_link(attachment.item, true)
+    if attachment.item_type == 'Admin::Answer'
+      return url_for(attachment.item.answerable)
+    else
+      namespace = get_namespace_for_link(attachment.item, true)
 
-    return url_for([namespace, attachment.item])
+      url_for([namespace, attachment.item])
+    end
   end
 end

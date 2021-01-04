@@ -48,6 +48,12 @@ class Attachment < ApplicationRecord
   end
 
   def item_name
-    return get_object_name(item)
+    if item_type == 'Admin::Answer'
+      return "#{get_object_name(item&.answerable)} for #{get_object_name(item&.answerable&.event)}"
+    else
+      return get_object_name(item)
+    end
+  end
+
   end
 end

@@ -149,6 +149,12 @@ class Event < ApplicationRecord
     return proposals
   end
 
+  def all_attachments
+    answers = Admin::Answer.where(answerable: questionnaires).or(Admin::Answer.where(answerable: proposal))
+
+    return attachments.or(Attachment.where(item: answers))
+  end
+
   def as_json(options = {})
     defaults = { methods: [:thumb_image_url, :slideshow_image_url], include: [:venue, { pictures: { methods: [:thumb_url, :display_url] } }, team_members: { methods: [:user_name] }] }
 
