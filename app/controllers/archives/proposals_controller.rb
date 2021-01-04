@@ -16,8 +16,7 @@ class Archives::ProposalsController < AdminController
     call_ids = @proposals.collect(&:call_id).uniq
 
     @calls = Admin::Proposals::Call.where(id: call_ids)
-                                   .unscoped
-                                   .order('submission_deadline DESC')
+                                   .reorder('submission_deadline DESC')
                                    .paginate(page: params[:page], per_page: 20)
 
     @proposals = @proposals.where(call_id: @calls.ids)
