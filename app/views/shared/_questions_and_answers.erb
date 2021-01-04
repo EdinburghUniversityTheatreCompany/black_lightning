@@ -12,15 +12,22 @@
     <p>
       <b>Response:</b>
     </p>
+  
+    <% if answer.attachments.present? %>
+      <% # There should not be more than 1, but it is technically possible. This is just in case. %>
+      <div>
+        <% if answer.attachments.count == 1 %>
+          <%= render 'shared/show_attachment', attachment: answer.attachments.first %>
+        <% else %>
+          <%= render 'shared/attachments_gallery', attachments: answer.attachments %>
+        <% end %>
+      </div>
+    <% end %>
 
-    <% if answer&.question&.response_type&.downcase == "file" %>
-      <%= answer&.file.attached? ? link_to(answer.file.filename, admin_answer_get_file_path(answer)) : "No File Uploaded" %>
-    <% else %>
-      <% if answer&.answer.present? %>
-        <%= render_markdown answer.answer %>
-      <% else %>
-        <p>This question has not been answered.</p>
-      <% end %>
+    <% if answer&.answer.present? %>
+      <%= render_markdown answer.answer %>
+    <% elsif answer.attachments.empty? %>
+      <p>This question has not been answered.</p>
     <% end %>
   </div>
 

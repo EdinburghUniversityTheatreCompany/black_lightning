@@ -187,7 +187,10 @@ class Admin::Proposals::ProposalsController < AdminController
   def permitted_params
     [
       :proposal_text, :publicity_text, :show_title, :late, :approved, :successful,
-      answers_attributes: %I[id _destroy answer question_id file],
+      answers_attributes: [
+        :id, :_destroy, :answer, :question_id, 
+        attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
+      ],
       team_members_attributes: %I[id _destroy position user user_id proposal proposal_id]
     ]
   end

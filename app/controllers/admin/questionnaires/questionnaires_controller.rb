@@ -90,7 +90,12 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   private
 
   def answer_params
-    resource_params.permit(answers_attributes: [:id, :_destroy, :answer, :question_id, :file])
+    resource_params.permit(
+      answers_attributes: [
+        :id, :_destroy, :answer, :question_id,
+        attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
+      ]
+    )
   end
 
   def set_create_form_parameters
