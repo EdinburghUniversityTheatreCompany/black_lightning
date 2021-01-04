@@ -28,4 +28,7 @@ class Admin::Answer < ApplicationRecord
   belongs_to :answerable, polymorphic: true
 
   has_one_attached :file
+
+    # To hold files, if necessary.
+  include AttachmentItem
 end
