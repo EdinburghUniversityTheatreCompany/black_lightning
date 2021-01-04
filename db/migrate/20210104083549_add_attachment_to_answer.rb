@@ -42,6 +42,8 @@ class AddAttachmentToAnswer < ActiveRecord::Migration[6.0]
         name = "#{date.to_s} #{answerable_title} #{item_name}"
 
 
+        name = "#{name} #{answer.id}" if Attachment.find_by(name: name).present?
+
         p "Created new attachment called '#{name}'"
 
         attributes = {
