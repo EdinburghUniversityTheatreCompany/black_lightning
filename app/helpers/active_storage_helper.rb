@@ -13,29 +13,23 @@ module ActiveStorageHelper
       begin
         blob = ActiveStorage::Blob.create_after_upload!(
           io: File.open(Rails.root.join('app', 'assets', 'images', 'defaults', default_image_filename)),
-          filename: key_filename, 
-          content_type: 'image/png'  
+          filename: key_filename,
+          content_type: 'image/png'
         )
       rescue Errno::ENOENT => e
         raise ArgumentError, "There is no default file named #{default_image_filename} in the assets/images/defaults folder"
       end
     end
-    
+
     return blob
   end
 
   def get_file_attached_hint(file)
     # nil because the message next to the button also displays 'No file chosen'
-    if file.attached? 
+    if file.attached?
       filename = file.filename.to_s
 
-      if filename.starts_with?(PREFIX) 
-        hint = nil
-      else 
-        hint = "Current file: #{filename}" 
-      end
-    else
-      hint = nil
+      return "Current file: #{link_to filename, url_for(file)}".html_safe unless filename.starts_with?(PREFIX) 
     end
   end
 
