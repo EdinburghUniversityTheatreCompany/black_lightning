@@ -141,4 +141,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def load_index_resources
     @questionnaires = super.group_by { |questionnaire| questionnaire.event.name }
   end
+
+  def should_paginate
+    false
+  end
 end
