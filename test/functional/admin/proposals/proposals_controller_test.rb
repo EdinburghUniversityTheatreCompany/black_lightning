@@ -22,7 +22,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     proposal.users.first.add_role :admin
     sign_in proposal.users.first
 
-    get :show, params: { call_id: @call.id, id: proposal }
+    get :show, params: { id: proposal }
     assert_response :success
   end
 
@@ -41,7 +41,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     sign_in user
 
-    get :show, params: { call_id: @call.id, id: proposal }
+    get :show, params: { id: proposal }
 
     assert_response :success
 
@@ -54,7 +54,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'should get new' do
     # Do it with a member so we can also check the permissions.
     sign_out @admin
-    
+
     sign_in users(:member)
 
     get :new, params: { call_id: @call.id }
@@ -72,7 +72,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'should create proposal' do
     # Do it with a member so we can also check the permissions.
     sign_out @admin
-    
+
     sign_in users(:member)
     # This mess is to force the inclusion of team_member attributes.
     # You cannot just use attributes_for, and team_work does not actually get an user linked when using build.
@@ -89,14 +89,14 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     assert_enqueued_emails team_members_count
 
-    assert_redirected_to admin_proposals_call_proposal_path(@call, assigns(:proposal))
+    assert_redirected_to admin_proposals_proposal_path(assigns(:proposal))
   end
 
   test 'should not create invalid proposal' do
-    attributes = FactoryBot.attributes_for(:proposal, show_title: nil)
+    attributes = FactoryBot.attributes_for(:proposal, show_title: nil, call_id: @call.id)
 
     assert_no_difference('Admin::Proposals::Proposal.count') do
-      post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
+      post :create, params: { admin_proposals_proposal: attributes }
     end
 
     assert_response :unprocessable_entity
@@ -104,10 +104,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'should not create after the submission deadline' do
     @call.update_attribute(:submission_deadline, DateTime.now.advance(hours: -1))
-    attributes = FactoryBot.attributes_for(:proposal)
+    attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
 
     assert_no_difference('Admin::Proposals::Proposal.count') do
-      post :create, params: { call_id: @call.id, admin_proposals_proposal: attributes }
+      post :create, params: { admin_proposals_proposal: attributes }
     end
 
     assert_includes flash[:error], "The submission deadline for #{@call.name} has been passed"
@@ -118,14 +118,14 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call)
 
-    get :edit, params: { call_id: @call.id, id: proposal }
+    get :edit, params: { id: proposal }
     assert_response :success
   end
 
   test 'should update proposal' do
     sign_out @admin
     @call.update_attribute(:editing_deadline, DateTime.now.advance(days: 1))
-    
+
     proposal = FactoryBot.create(:proposal, call: @call)
 
     proposal.users.first.add_role :admin
@@ -136,13 +136,13 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     team_members_count = 2
     attributes[:team_members_attributes] = generate_team_member_attributes(team_members_count)
 
-    put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+    put :update, params: { id: proposal, admin_proposals_proposal: attributes }
 
     assert_enqueued_emails team_members_count
 
     assert_not_nil assigns(:proposal), 'The update function did not set a proposal. There is probably something wrong with the authentication.'
 
-    assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
+    assert_redirected_to admin_proposals_proposal_path(assigns(:proposal))
   end
 
   test 'should not email after updating when the editing deadline is passed' do
@@ -156,9 +156,9 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     team_members_count = 2
     attributes[:team_members_attributes] = generate_team_member_attributes(team_members_count)
 
-    put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+    put :update, params: { id: proposal, admin_proposals_proposal: attributes }
 
-    assert_redirected_to admin_proposals_call_proposal_path(@call.id, assigns(:proposal))
+    assert_redirected_to admin_proposals_proposal_path(assigns(:proposal))
 
     assert_enqueued_emails 0
   end
@@ -170,9 +170,9 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     proposal.users.first.add_role :admin
     sign_in proposal.users.first
 
-    attributes = FactoryBot.attributes_for(:proposal, publicity_text: nil)
+    attributes = FactoryBot.attributes_for(:proposal, publicity_text: nil, call_id: @call.id)
 
-    put :update, params: { call_id: @call.id, id: proposal, admin_proposals_proposal: attributes }
+    put :update, params: { id: proposal, admin_proposals_proposal: attributes }
 
     assert proposal.show_title, assigns(:proposal).show_title
 
@@ -184,7 +184,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     proposal = FactoryBot.create(:proposal, call: @call, team_member_count: 0)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do
-      delete :destroy, params: { call_id: @call.id, id: proposal }
+      delete :destroy, params: { id: proposal }
     end
 
     assert_redirected_to admin_proposals_call_proposals_url(@call)
@@ -194,10 +194,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call)
 
-    put :approve, params: { call_id: @call.id, id: proposal.id }
+    put :approve, params: { id: proposal.id }
 
     assert assigns(:proposal).approved
-    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_redirected_to admin_proposals_proposal_path(proposal)
     assert_equal "#{proposal.show_title} has been marked as approved", flash[:success]
   end
 
@@ -205,10 +205,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call)
 
-    put :reject, params: { call_id: @call.id, id: proposal.id }
+    put :reject, params: { id: proposal.id }
 
     assert_not assigns(:proposal).approved
-    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_redirected_to admin_proposals_proposal_path(proposal)
     assert_equal "#{proposal.show_title} has been marked as rejected", flash[:success]
   end
 
@@ -217,11 +217,11 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     proposal = FactoryBot.create(:proposal, call: @call, successful: true)
 
     assert_difference 'Show.count' do
-      put :convert, params: { call_id: @call.id, id: proposal.id }
+      put :convert, params: { id: proposal.id }
     end
 
     assert Show.where(name: proposal.show_title).any?
-    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_redirected_to admin_proposals_proposal_path(proposal)
     assert_includes flash[:notice], 'is queued to be converted'
   end
 
@@ -230,10 +230,10 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     proposal = FactoryBot.create(:proposal, call: @call)
 
     assert_no_difference 'Show.count' do
-      put :convert, params: { call_id: @call.id, id: proposal.id }
+      put :convert, params: { id: proposal.id }
     end
 
-    assert_redirected_to admin_proposals_call_proposal_path(@call, proposal)
+    assert_redirected_to admin_proposals_proposal_path(proposal)
     assert_equal ['This proposal was not successful'], flash[:error]
   end
 

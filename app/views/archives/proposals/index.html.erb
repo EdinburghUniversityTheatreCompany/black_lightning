@@ -38,7 +38,7 @@
           <div id="<%= div_name %>" class="accordion-body collapse">
             <% proposals.each do |proposal| %>
               <div style="margin: 3px 15px;">
-                <%= get_link proposal, :show, link_target: admin_proposals_call_proposal_path(call, proposal) %>
+                <%= get_link proposal, :show %>
                 <%= proposal.labels true %>
               </div>
             <% end %>

@@ -1,13 +1,14 @@
-<% if @proposal.persisted? then url = admin_proposals_call_proposal_url else url = admin_proposals_call_proposals_url end %>
-<%= simple_nested_form_for([@call, @proposal], url: url) do |f| %>
+<%= simple_nested_form_for(@proposal) do |f| %>
 
   <%= f.error_notification %>
 
   <div class="form-inputs">
 
     <p>
-      <b>Proposal for: <%= @call.name %></b>
+      <b>Proposal for: <%= @proposal.call.name %></b>
     </p>
+
+    <%= f.hidden_field :call_id %>
 
     <% if can?(:approve, @proposal) %>
       <% if @proposal.successful.nil? && !@proposal.approved.nil? %>
@@ -41,8 +42,8 @@
   <div class="form-actions">
     <%= f.button :submit, class: "btn btn-primary" %>
     <% if @proposal.persisted?%>
-      <%= get_link f.object, :show, link_target: admin_proposals_call_proposal_path(@call, @proposal), link_text: 'View', html_class: 'btn', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
+      <%= get_link f.object, :show, link_text: 'View', html_class: 'btn', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
     <% end %>
-    <%= get_link @call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
+    <%= get_link @proposal.call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@proposal.call) , http_method: 'get' %>
   </div>
 <% end %>

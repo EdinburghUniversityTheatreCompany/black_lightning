@@ -197,12 +197,14 @@ ChaosRails::Application.routes.draw do
           put 'archive'
         end
 
-        resources :proposals do
-          member do
-            put 'approve'
-            put 'reject'
-            put 'convert'
-          end
+        resources :proposals, only: :index
+      end
+
+      resources :proposals, except: :index do
+        member do
+          put 'approve'
+          put 'reject'
+          put 'convert'
         end
       end
 

@@ -19,7 +19,7 @@
 
 <% # Proposal %>
 <% if event.proposal.present? && can?(:view, event.proposal) %>
-  <% fields[:proposal] = get_link(event.proposal, :show, link_target: admin_proposals_call_proposal_path(event.proposal.call, event.proposal)) %>
+  <% fields[:proposal] = get_link(event.proposal, :show, link_target: admin_proposals_proposal_path(event.proposal)) %>
 <% end %>
 
 <% # Image %>

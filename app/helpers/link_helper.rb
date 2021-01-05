@@ -36,7 +36,7 @@ module LinkHelper
     return "<i class=\"fa fa-trash\" aria-hidden=\"true\"></i> #{text}".html_safe
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false)
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
     raise(ArgumentError, 'The object is nil') if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -80,7 +80,7 @@ module LinkHelper
 
     namespace = get_namespace_for_link(object, admin)
 
-    link_target = get_default_link_target(object, action, namespace, anchor) if link_target.nil?
+    link_target = get_default_link_target(object, action, namespace, anchor, query_params) if link_target.nil?
     http_method = get_default_http_method(action) if http_method.nil?
     html_class = get_default_html_class(action) if html_class.nil?
 
@@ -172,17 +172,16 @@ module LinkHelper
     end
   end
 
-  def get_default_link_target(object, action, namespace, anchor)
-    case action
+  def get_default_link_target(object, action, namespace, anchor, query_params)
+    query_params.merge(anchor: anchor) if anchor.present?
+
+    params = [namespace, object]
+
     # For index, object is a class, so it returns the index. For show, it returns the show page.
-    when :show, :index, :destroy
-      return url_for([namespace, object, anchor: anchor])
+    if %i[show index destroy].include?(action)
+      return polymorphic_path(params, query_params)
     else
-      begin
-        return url_for([namespace, object, action: action, anchor: anchor])
-      rescue StandardError => e
-        raise(ArgumentError, "There is no default link target for the specified action #{action}. #{e.message.upcase_first}")
-      end
+      return polymorphic_path_for_action(action, params, query_params)
     end
   end
 

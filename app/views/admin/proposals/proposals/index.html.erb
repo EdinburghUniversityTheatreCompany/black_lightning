@@ -23,17 +23,17 @@
   <% @proposals.each do |proposal| %>
     <tr>
       <td>
-        <%= get_link proposal, :show, link_target: admin_proposals_call_proposal_path(@call, proposal) %>
+        <%= get_link proposal, :show, link_target: admin_proposals_proposal_path(proposal) %>
         <%= proposal.labels true %>
       </td>
 
-      <%= get_link proposal, :edit, link_target: edit_admin_proposals_call_proposal_path(@call, proposal), wrap_tag: 'td' %>
+      <%= get_link proposal, :edit, link_target: edit_admin_proposals_proposal_path(proposal), wrap_tag: 'td' %>
     </tr>
   <% end %>
 </table>
 
 <br />
 
-<%= get_link Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_call_proposal_path, additional_condition: @call.open? %>
+<%= get_link Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id } %>
 <%= get_link @call, :edit, append_name: true %>
 <%= get_link Admin::Proposals::Call, :index, link_text: 'Back To Calls' %>

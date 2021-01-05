@@ -31,8 +31,6 @@ class Admin::Proposals::ProposalsController < AdminController
   # GET /admin/proposals/proposals/1.json
   ##
   def show
-    @call = @proposal.call
-
     @proposal.instantiate_answers!
 
     super
@@ -47,7 +45,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def new
     @call = Admin::Proposals::Call.find(params[:call_id])
 
-    return call_closed_message unless @call.open?
+    return call_closed_message(@call) unless @call.open?
 
     @proposal.call = @call
 
@@ -65,27 +63,18 @@ class Admin::Proposals::ProposalsController < AdminController
   # POST /admin/proposals/proposals.json
   ##
   def create
-    @call = Admin::Proposals::Call.find(params[:call_id])
-
-    return call_closed_message unless @call.open?
-
-    @proposal.call = @call
+    return call_closed_message(@proposal.call) unless @proposal.call.open?
 
     # Has to happen here because the call of the proposal has to be set before authorizing.
     authorize! :create, @proposal
 
     super
-
-    #format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal), notice: 'Proposal was successfully created.' }
-    #format.json { render json: @proposal, status: :created, location: admin_proposals_call_proposal_path(@call, proposal) }
   end
 
   ##
   # GET /admin/proposals/proposals/1/edit
   ##
   def edit
-    @call = @proposal.call
-
     @proposal.instantiate_answers!
 
     super
@@ -97,8 +86,6 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1.json
   ##
   def update
-    @call = @proposal.call
-
     @previous_team_member_ids = @proposal.team_member_ids
 
     super
@@ -110,15 +97,13 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1/approve.json
   ##
   def approve
-    @call = @proposal.call
-
     @proposal.approved = true
     @proposal.save!
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as approved"
 
-      format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
+      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
       format.json { head :no_content }
     end
   end
@@ -129,15 +114,13 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1/reject.json
   ##
   def reject
-    @call = @proposal.call
-
     @proposal.approved = false
     @proposal.save!
 
     respond_to do |format|
       flash[:success] = "#{@proposal.show_title} has been marked as rejected"
 
-      format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
+      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
       format.json { head :no_content }
     end
   end
@@ -149,7 +132,6 @@ class Admin::Proposals::ProposalsController < AdminController
   ##
   def convert
     @proposal = Admin::Proposals::Proposal.find(params[:id])
-    @call = @proposal.call
 
     begin
       @proposal.convert_to_show
@@ -159,7 +141,7 @@ class Admin::Proposals::ProposalsController < AdminController
       helpers.append_to_flash(:error, e.message)
     ensure
       respond_to do |format|
-        format.html { redirect_to admin_proposals_call_proposal_path(@call, @proposal) }
+        format.html { redirect_to admin_proposals_proposal_path(@proposal) }
         format.json { head :no_content }
       end
     end
@@ -171,9 +153,9 @@ class Admin::Proposals::ProposalsController < AdminController
 
   private
 
-  def call_closed_message
-    flash[:error] = "Sorry. The submission deadline for #{@call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call."
-    redirect_to admin_proposals_call_proposals_path(@call)
+  def call_closed_message(call)
+    flash[:error] = "Sorry. The submission deadline for #{call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call."
+    redirect_to admin_proposals_call_proposals_path(call)
     return
   end
 
@@ -186,7 +168,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   def permitted_params
     [
-      :proposal_text, :publicity_text, :show_title, :late, :approved, :successful,
+      :proposal_text, :publicity_text, :show_title, :late, :approved, :successful, :call, :call_id,
       answers_attributes: [
         :id, :_destroy, :answer, :question_id, 
         attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
@@ -208,11 +190,15 @@ class Admin::Proposals::ProposalsController < AdminController
 
     super
   end
-  
+
   def on_update_success
     # Only email people if the proposal is edited before the editing deadline to prevent spamming people when tidying the archives.
     mail_team_members(@proposal.team_members, @previous_team_member_ids, false) if @proposal.call.editing_deadline > DateTime.now
 
     super
+  end
+
+  def successful_destroy_redirect_url
+    admin_proposals_call_proposals_path(get_resource.call)
   end
 end
