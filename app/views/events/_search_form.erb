@@ -3,6 +3,7 @@
     <%= f.input_field :name_cont,            placeholder: "Title",  required: false %>
     <%= f.input_field :description_cont,     placeholder: "Description", required: false %>
     <%= f.input_field :users_full_name_cont, placeholder: "Person Name", required: false %>
+    <%= f.input_field :author_cont,          placeholder: "Author", required: false %>
     <%= f.input_field :venue_id_eq,          collection: Venue.accessible_by(current_ability) %>
     <%= f.input_field :event_tags_id_eq,     collection: EventTag.accessible_by(current_ability) %>
     <br>
