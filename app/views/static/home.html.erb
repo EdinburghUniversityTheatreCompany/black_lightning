@@ -3,26 +3,26 @@
     <div id="showSlider" class="carousel slide" <%= "data-interval=false" if mobile_device? %>>
 
       <div class="carousel-inner <%= "carousel-inner-mobile" if mobile_device? %>">
-        <% @shows.each do |show| %>
-
-          <div class="<%= "active" if show == @shows.first %> item">
+        <% @events.each do |event| %>
+          <% event_path = url_for(event) %>
+          <div class="<%= "active" if event == @events.first %> item">
             <% if mobile_device? %>
               <div style="margin: 0 70px;" class="mobile-carousel">
-                <%= link_to "<h4>#{show.name}</h4>".html_safe, show_path(show) %>
-                <p><%= show.tagline %> - <b><span class="show-date"><%= show.date_range true %></span></b></p>
+                <%= link_to "<h4>#{event.name}</h4>".html_safe, event_path %>
+                <p><%= event.tagline %> - <b><span class="show-date"><%= event.date_range true %></span></b></p>
               </div>
             <% else %>
-              <%= link_to (image_tag show.fetch_image.variant(slideshow_variant)).html_safe, show_path(show) %>
+              <%= link_to (image_tag event.fetch_image.variant(slideshow_variant)).html_safe,  event_path %>
               <div class="carousel-caption">
                 <%
-                  caption_text = "<h4>#{show.name}</h4>"
-                  caption_text += " by #{show.author}" if show.author?
+                  caption_text = "<h4>#{event.name}</h4>"
+                  caption_text += " by #{event.author}" if event.author?
                 %>
-                <%= link_to caption_text.html_safe, show_path(show) %>
+                <%= link_to caption_text.html_safe,  event_path %>
                 <p>
-                  <%= "#{show.tagline} - " if show.tagline? %>
-                  <b><span class="show-date"><%= show.date_range true %></span></b>
-                  <%= " - #{show.price}" if show.price? %>
+                  <%= "#{event.tagline} - " if event.tagline? %>
+                  <b><span class="show-date"><%= event.date_range true %></span></b>
+                  <%= " - #{event.price}" if event.price? %>
                 </p>
               </div>
             <% end %>
@@ -30,7 +30,7 @@
 
         <% end %>
 
-        <% if @shows.empty? && !(mobile_device?) then %>
+        <% if @events.empty? && !(mobile_device?) then %>
           <%# between 1st June and 1st September, advertise Bedlam Fringe %>
           <% year = Date.today.year %>
           <% if (Date.new(year, 6, 01)..Date.new(year, 9, 01)).include? Date.today then %>
@@ -45,7 +45,7 @@
       </div>
 
       <!-- Carousel nav -->
-      <% if @shows.count > 1 then %>
+      <% if @events.count > 1 then %>
           <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
           <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
       <% end %>
@@ -96,10 +96,10 @@
     <hr />
 
     <h3><%= link_to "Archives", archives_index_path %></h3>
-    <% if @last_show %>
-      <%= link_to @last_show.name, @last_show %>
-      <% image = image_tag @last_show.fetch_image.variant(medium_variant) %>
-      <%= link_to image, @last_show, class: "thumbnail" unless mobile_device? %>
+    <% if @last_event %>
+      <%= link_to @last_event.name, @last_event %>
+      <% image = image_tag @last_event.fetch_image.variant(medium_variant) %>
+      <%= link_to image, @last_event, class: "thumbnail" unless mobile_device? %>
     <% end %>
   </div>
 </div>
