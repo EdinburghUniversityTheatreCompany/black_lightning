@@ -271,9 +271,6 @@ ChaosRails::Application.routes.draw do
 
   get 'youth', to: redirect('/getinvolved/youth_project')
 
-  # ERROR PAGES - match to ensure correct response code is sent
-  get '/404', to: 'static#render_404'
-
   # Use bedlamtheatre.co.uk/:slug to find a season
   get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
 
