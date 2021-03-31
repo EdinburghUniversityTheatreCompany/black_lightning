@@ -3,18 +3,16 @@ class StaticController < ApplicationController
   
   # This is a catch-all for the pages that do not have explicitly defined routes.
   def show
+    if params[:page] == 'committee' && (current_user.nil? || !current_user.has_role?('Committee'))
+      raise(CanCan::AccessDenied, 'You are not on committee')
+      return
+    end
     begin
       render "static/#{params[:page]}"
     rescue
       Rails.logger.error "Could not find the page at #{request.fullpath}"
 
       raise(ActionController::RoutingError.new('This page could not be found.'))
-    end
-  end
-
-  def committee
-   unless current_user.present? && current_user.has_role?('Committee')
-      raise(CanCan::AccessDenied, 'You are not on committee')
     end
   end
 

@@ -247,7 +247,7 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    get 'committee', to: '/static#committee', as: :static_committee
+    get 'committee', to: '/static#committee', as: :static_committee, page: 'committee'
 
     # Test route
     if Rails.env.test? || Rails.env.development?
