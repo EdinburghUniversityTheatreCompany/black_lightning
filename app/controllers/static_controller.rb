@@ -12,6 +12,12 @@ class StaticController < ApplicationController
     end
   end
 
+  def committee
+   unless current_user.present? && current_user.has_role?('Committee')
+      raise(CanCan::AccessDenied, 'You are not on committee')
+    end
+  end
+
   def home
     @news = News.accessible_by(current_ability).includes(image_attachment: :blob).order('publish_date DESC').first(2)
     @events = Event.includes(image_attachment: :blob).current.order('start_date ASC')

@@ -247,6 +247,8 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    get 'committee', to: '/static#committee', as: :static_committee
+
     # Test route
     if Rails.env.test? || Rails.env.development?
       get 'dashboard/widget/:widget_name', to: 'dashboard#widget'

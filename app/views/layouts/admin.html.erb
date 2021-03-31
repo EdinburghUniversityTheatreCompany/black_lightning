@@ -147,6 +147,10 @@
                 <% if can? :index, Doorkeeper::Application %>
                   <li><%= link_to 'OAuth Applications', oauth_applications_path %></li>
                 <% end %>
+
+                <% if current_user.has_role? 'Committee' %>
+                  <li><%= link_to 'Committee', admin_static_committee_path %></li>
+                <% end %>
               </ul>
             </div>
 
