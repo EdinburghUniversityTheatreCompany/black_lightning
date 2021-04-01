@@ -213,4 +213,9 @@ class User < ApplicationRecord
 
     return team_memberships.sort { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
   end
+
+  # Overrides an existing method that doesn't work.
+  def remove_role(role)
+    roles.delete(role)
+  end
 end

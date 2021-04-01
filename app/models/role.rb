@@ -17,11 +17,18 @@
 #++
 class Role < ApplicationRecord
   validates :name, presence: true
-  
+
   has_and_belongs_to_many :users, join_table: :users_roles
   has_and_belongs_to_many :permissions, class_name: 'Admin::Permission'
 
   belongs_to :resource, polymorphic: true, optional: true
 
   scopify
+
+  # Removes all users from the role.
+  def purge
+    User.with_role(name).all.each do |user|
+      user.remove_role(self)
+    end
+  end
 end

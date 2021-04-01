@@ -2,7 +2,7 @@ class Admin::RolesController < AdminController
   include GenericController
 
   load_and_authorize_resource
-  
+
   def show
     @q = @role.users.ransack(params[:q])
 
@@ -32,6 +32,14 @@ class Admin::RolesController < AdminController
     else
       helpers.append_to_flash(:error, 'This user does not exist.')
     end
+
+    redirect_to admin_role_url(@role)
+  end
+
+  def purge
+    @role.purge
+
+    helpers.append_to_flash(:success, "All users have been removed from the Role '#{@role.name}'")
 
     redirect_to admin_role_url(@role)
   end

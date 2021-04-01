@@ -132,4 +132,19 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_equal ['This user does not exist.'], flash[:error]
     assert_redirected_to admin_role_url(@role)
   end
+
+  test 'purge should remove all users but keep the role' do
+    user = FactoryBot.create(:user)
+
+    user.add_role(@role.name)
+
+    assert User.with_role(@role.name).any?
+
+    delete :purge, params: { id: @role }
+
+    assert User.with_role(@role.name).empty?
+    assert @role.persisted?
+
+    assert_redirected_to admin_role_url(@role)
+  end
 end
