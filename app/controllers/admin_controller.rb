@@ -4,6 +4,13 @@ class AdminController < ApplicationController
 
   layout 'admin'
 
+  def committee
+    unless (current_user.present? && current_user.has_role?('Committee'))
+      raise(CanCan::AccessDenied, 'You are not on committee')
+      return
+    end
+  end
+
   private
 
   def authorize_backend!
