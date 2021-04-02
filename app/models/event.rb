@@ -41,6 +41,7 @@ class Event < ApplicationRecord
   include TimeHelper
   include ApplicationHelper
   include AttachmentItem
+  include MdHelper
 
   resourcify
 

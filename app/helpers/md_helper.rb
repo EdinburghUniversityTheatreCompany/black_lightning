@@ -10,10 +10,10 @@ module MdHelper
   def render_plain(md)
     return '' if md.nil?
 
-    return strip_tags(Kramdown::Document.new(md, input: 'BKramdown').to_html)
+    return ActionController::Base.helpers.strip_tags(Kramdown::Document.new(md, input: 'BKramdown').to_html)
   end
 
   def truncate_markdown(content, length = 100)
-    return truncate(render_plain(content).strip, length: length)
+    return ActionController::Base.helpers.truncate(render_plain(content).strip, length: length)
   end
 end
