@@ -67,6 +67,9 @@ group :development, :test do
 
   gem 'factory_bot_rails'
 
+  gem 'tzinfo-data'
+  gem 'coffee-script-source', '1.8.0'
+
   gem 'annotate'
 end
 
@@ -74,7 +77,6 @@ group :test do
   gem 'simplecov'
   gem 'simplecov-rcov'
   gem 'faker'
-  gem 'ruby-prof'
   gem 'html_acceptance'
 end
 
