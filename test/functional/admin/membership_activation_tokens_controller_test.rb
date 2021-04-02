@@ -34,7 +34,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
         end
       end
 
-      assert_equal "Activation Mail send to #{email}", flash[:success]
+      assert_equal ["Activation Mail sent to #{email}"], flash[:success]
 
       assert assigns(:token).present?
       assert_nil assigns(:token).user
@@ -55,7 +55,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
         end
       end
 
-      expected_notice = "The email #{user.email} is already in use by #{user.name(@admin)}. They will be send a reactivation mail."
+      expected_notice = ["The email #{user.email} is already in use by #{user.name(@admin)}. They will be send a reactivation mail.", "Activation Mail sent to #{user.email}"]
 
       assert_equal expected_notice, flash[:success]
 
@@ -73,7 +73,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
 
       post :create_activation, params: { user: { email: member.email } }
 
-      expected_notice = "The email #{member.email} is already in use by #{member.name(@admin)} and they already are a member. They will not be send an activation mail."
+      expected_notice = ["The email #{member.email} is already in use by #{member.name(@admin)} and they already are a member. They will not be send an activation mail."]
       assert_equal expected_notice, flash[:error]
 
       assert_response :unprocessable_entity
@@ -98,7 +98,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
         end
       end
 
-      assert_equal "Reactivation Mail send to #{user.name(@admin)} at #{user.email}", flash[:success]
+      assert_equal ["Reactivation Mail sent to #{user.name(@admin)} at #{user.email}"], flash[:success]
       assert_equal user, assigns(:token).user
       assert_redirected_to new_admin_membership_activation_token_path
 
@@ -114,7 +114,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
 
       post :create_reactivation, params: { membership_activation_token: { user_id: user.id } }
 
-      assert_includes flash[:error], 'This user had their email removed or was exported from the old website.'
+      assert_includes flash[:error][0], 'This user had their email removed or was exported from the old website.'
 
       assert_response :unprocessable_entity
 
@@ -128,7 +128,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
 
       post :create_reactivation, params: { membership_activation_token: { user_id: member.id } }
 
-      expected_notice = "#{member.name(users(:admin))} already is a member and will not be send a reactivation mail."
+      expected_notice = ["#{member.name(users(:admin))} already is a member and will not be send a reactivation mail."]
       assert_equal expected_notice, flash[:error]
 
       assert_response :unprocessable_entity
@@ -141,7 +141,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
     assert_no_difference 'MembershipActivationToken.count' do
       post :create_reactivation, params: { membership_activation_token: { user_id: -1, user_name_field: 'Finbar the Viking' } }
 
-      expected_notice = "There is no user with the specified ID. Are you sure the name 'Finbar the Viking' is correct?"
+      expected_notice = ["There is no user with the specified ID. Are you sure the name 'Finbar the Viking' is correct?"]
       assert_equal expected_notice, flash[:error]
 
       assert_response :unprocessable_entity

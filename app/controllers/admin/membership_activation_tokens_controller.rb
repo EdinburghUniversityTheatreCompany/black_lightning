@@ -19,12 +19,12 @@ class Admin::MembershipActivationTokensController < AdminController
       base_message = "The email #{email} is already in use by #{@user.name(current_user)}"
 
       if @user.has_role? :member
-        flash[:error] = "#{base_message} and they already are a member. They will not be send an activation mail."
+        helpers.append_to_flash(:error, "#{base_message} and they already are a member. They will not be send an activation mail.")
 
         return render_on_fail
       end
 
-      flash[:success] = "#{base_message}. They will be send a reactivation mail."
+      helpers.append_to_flash(:success, "#{base_message}. They will be send a reactivation mail.")
 
       return unless add_user_to_token
     end
@@ -32,7 +32,8 @@ class Admin::MembershipActivationTokensController < AdminController
     @token.save
     MembershipActivationTokenMailer.send_activation(email, @token).deliver_later
 
-    flash[:success] ||= "Activation Mail send to #{email}"
+    helpers.append_to_flash(:success, "Activation Mail sent to #{email}")
+
     redirect_to new_admin_membership_activation_token_path
   end
 
@@ -44,13 +45,13 @@ class Admin::MembershipActivationTokensController < AdminController
     begin
       @user = User.find(user_id)
     rescue ActiveRecord::RecordNotFound
-      flash[:error] = "There is no user with the specified ID. Are you sure the name '#{params[:membership_activation_token][:user_name_field]}' is correct?"
+      helpers.append_to_flash(:error, "There is no user with the specified ID. Are you sure the name '#{params[:membership_activation_token][:user_name_field]}' is correct?")
 
       return render_on_fail
     end
 
     if @user.has_role? :member
-      flash[:error] = "#{@user.name(current_user)} already is a member and will not be send a reactivation mail."
+      helpers.append_to_flash(:error, "#{@user.name(current_user)} already is a member and will not be send a reactivation mail.")
 
       return render_on_fail
     end
@@ -58,7 +59,7 @@ class Admin::MembershipActivationTokensController < AdminController
     email = @user.email
 
     if email.downcase.include?('bedlamtheatre.co.uk') && email.downcase.include?('unknown')
-      flash[:error] = 'This user had their email removed or was exported from the old website. Please ask them for their email, update their user record with the email they give you, and try again. Do not create a new account for them, but reactivate their old one instead.'
+      helpers.append_to_flash(:error, 'This user had their email removed or was exported from the old website. Please ask them for their email, update their user record with the email they give you, and try again. Do not create a new account for them, but reactivate their old one instead.')
 
       return render_on_fail
     end
@@ -67,7 +68,8 @@ class Admin::MembershipActivationTokensController < AdminController
     @token.save
     MembershipActivationTokenMailer.send_activation(@user.email, @token).deliver_later
 
-    flash[:success] = "Reactivation Mail send to #{@user.name(current_user)} at #{@user.email}"
+    helpers.append_to_flash(:success, "Reactivation Mail sent to #{@user.name(current_user)} at #{@user.email}")
+
     redirect_to new_admin_membership_activation_token_path
   end
 
@@ -77,7 +79,7 @@ class Admin::MembershipActivationTokensController < AdminController
     unless @token.update_attribute(:user, @user)
       # This will probably not happen, but here is a nice error just in case.
       # :nocov:
-      flash[:error] = 'There was an error assigning the user to the token'
+      helpers.append_to_flash(:error, 'There was an error assigning the user to the token')
 
       render_on_fail
 
