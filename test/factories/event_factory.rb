@@ -35,7 +35,7 @@ FactoryBot.define do
     name         { generate(:random_name) }
     slug         { name.to_url }
     tagline      { "The tagline for #{name}" }
-    description  { "And a description for #{name}" }
+    publicity_text { "And a publicity text for #{name}" }
     start_date   { generate(:random_date) }
     end_date     { start_date + 5.days }
     is_public    { [true, false].sample }

@@ -36,7 +36,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
   end
 
   test 'should not create invalid workshop' do
-    attributes = FactoryBot.attributes_for(:workshop, description: nil)
+    attributes = FactoryBot.attributes_for(:workshop, publicity_text: nil)
 
     assert_no_difference('Workshop.count') do
       post :create, params: { workshop: attributes }
@@ -65,7 +65,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
 
   test 'should not update invalid workshop' do
     @workshop = FactoryBot.create(:workshop)
-    attributes = FactoryBot.attributes_for(:workshop, description: nil)
+    attributes = FactoryBot.attributes_for(:workshop, publicity_text: nil)
 
     put :update, params: { id: @workshop, workshop: attributes }
 

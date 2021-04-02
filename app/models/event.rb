@@ -50,8 +50,7 @@ class Event < ApplicationRecord
   end
 
   # Validations #
-
-  validates :name, :slug, :description, :start_date, :end_date, presence: true
+  validates :name, :slug, :publicity_text, :start_date, :end_date, presence: true
 
   # Relationships #
 
@@ -74,6 +73,7 @@ class Event < ApplicationRecord
   has_one_attached :image
 
   validates :image, content_type: %i[png jpg jpeg gif]
+
   # Scopes #
 
   scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
@@ -128,6 +128,10 @@ class Event < ApplicationRecord
     return time_range_string(start_date, end_date, include_year, format)
   end
 
+  def short_blurb
+    (tagline.presence || truncate_markdown(publicity_text, 120)).html_safe
+  end
+
   def simultaneous_seasons
     return Season.where('start_date <= ? and end_date >= ?', end_date, start_date)
   end
@@ -166,7 +170,7 @@ class Event < ApplicationRecord
   # Returns a hash with base permitted params to prevent accidentally omitting one.
   def self.base_permitted_params
     return [
-      :description, :name, :slug, :tagline,
+      :publicity_text, :name, :slug, :tagline,
       :author, :venue, :venue_id, :season, :season_id,
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],

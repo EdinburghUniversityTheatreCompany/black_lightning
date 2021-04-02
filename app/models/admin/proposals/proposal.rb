@@ -115,7 +115,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     @show = Show.new
     @show.name = show_title
-    @show.description = publicity_text
+    @show.publicity_text = publicity_text
 
     @show.slug = @show.name&.to_url
 

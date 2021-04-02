@@ -29,7 +29,7 @@ class ShowsController < ApplicationController
   # GET /shows/1
   ##
   def show
-    @meta[:description] = helpers.render_plain(@show.description)
+    @meta[:description] = helpers.render_plain(@show.publicity_text)
     @meta['og:image'] = [@base_url + @show.slideshow_image_url] + @show.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 
     super

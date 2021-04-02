@@ -12,7 +12,7 @@
             <h4 class="media-heading"><%= link_to event.name, event %></h4>
           </header>  
           <p><span class="date"><%= event.date_range true %></span></p>
-          <p><%= event.tagline.presence || truncate_markdown(event.description) %></p>
+          <p><%= event.short_blurb %></p>
           <p><%= link_to 'View Details', event %></p>
         </div>
       </article>

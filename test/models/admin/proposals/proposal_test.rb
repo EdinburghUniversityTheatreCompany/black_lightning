@@ -80,7 +80,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert show.present?
 
     assert_equal @proposal.show_title, show.name
-    assert_equal @proposal.publicity_text, show.description
+    assert_equal @proposal.publicity_text, show.publicity_text
 
     assert_not_nil show.slug
 

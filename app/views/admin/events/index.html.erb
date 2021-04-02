@@ -20,7 +20,7 @@
               <%= get_link event, :show, wrap_tag: 'td' %>
 
               <td><%= event.date_range true, :short %>
-              <td><%= event.tagline.present? ? event.tagline : truncate_markdown(event.description) %></td>
+              <td><%= event.short_blurb %></td>
 
               <%= get_link event, :edit, wrap_tag: 'td' %>
           </tr>

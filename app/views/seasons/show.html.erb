@@ -1,6 +1,6 @@
 <%= render '/events/basic_info', event: @season, event_name: 'festival' %>
 
-<%= render '/events/description_and_team_members', event: @season%>
+<%= render '/events/publicity_text_and_team_members', event: @season %>
 
 <hr>
 
@@ -29,7 +29,7 @@
 
             <p><i><%= event.tagline %></i></p>
             
-            <%= render_markdown event.description.truncate(120) %>
+            <%= event.short_blurb %>
 
             <% if event.type == "Show" %>
               <%= xts_widget event.xts_id if event.xts_id %>

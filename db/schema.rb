@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_01_04_083549) do
+ActiveRecord::Schema.define(version: 2021_04_02_175609) do
 
   create_table "active_storage_attachments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -216,7 +216,6 @@ ActiveRecord::Schema.define(version: 2021_01_04_083549) do
     t.datetime "file_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "editable_block_id"
     t.string "item_type"
     t.bigint "item_id"
     t.integer "access_level", default: 1, null: false
@@ -272,7 +271,7 @@ ActiveRecord::Schema.define(version: 2021_01_04_083549) do
     t.string "name"
     t.string "tagline"
     t.string "slug"
-    t.text "description"
+    t.text "publicity_text"
     t.integer "xts_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false

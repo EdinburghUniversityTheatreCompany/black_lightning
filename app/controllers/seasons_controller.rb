@@ -21,7 +21,7 @@ class SeasonsController < ApplicationController
   def show
     @events = @season.events.reorder(:start_date).group_by { |event| l event.start_date, format: :longy }
 
-    @meta[:description] = helpers.render_plain(@season.description)
+    @meta[:description] = helpers.render_plain(@season.publicity_text)
 
     @meta['og:image'] = [@base_url + @season.slideshow_image_url] + @season.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
   

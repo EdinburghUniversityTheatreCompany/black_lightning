@@ -30,7 +30,7 @@ class WorkshopsController < ApplicationController
   # GET /workshops/1
   ##
   def show
-    @meta[:description] = helpers.render_plain(@workshop.description)
+    @meta[:description] = helpers.render_plain(@workshop.publicity_text)
     @meta['og:image'] = [@base_url + @workshop.slideshow_image_url] + @workshop.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 
     super
