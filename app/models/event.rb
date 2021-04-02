@@ -165,7 +165,7 @@ class Event < ApplicationRecord
   end
 
   def set_default_members_only_text
-    return if members_only_text.present?
+    return if !has_attribute?(:members_only_text) || members_only_text.present?
 
     editable_block = Admin::EditableBlock.find_by(name: 'Event Members-Only Text Default')
 
