@@ -6,7 +6,8 @@
 # *name*::                   <tt>string(255)</tt>
 # *tagline*::                <tt>string(255)</tt>
 # *slug*::                   <tt>string(255)</tt>
-# *description*::            <tt>text(65535)</tt>
+# *publicity_text*::         <tt>text(65535)</tt>
+# *members_onlu_text*::      <tt>text(65535)</tt>
 # *xts_id*::                 <tt>integer</tt>
 # *created_at*::             <tt>datetime, not null</tt>
 # *updated_at*::             <tt>datetime, not null</tt>
