@@ -216,6 +216,10 @@ class User < ApplicationRecord
 
   # Overrides an existing method that doesn't work.
   def remove_role(role)
-    roles.delete(role)
+    if role.class == Symbol
+      super #.remove_role(role)
+    else
+      roles.delete(role)
+    end
   end
 end
