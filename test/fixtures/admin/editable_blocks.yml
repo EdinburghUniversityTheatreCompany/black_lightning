@@ -21,3 +21,7 @@ admin:
   name: "Admin Content"
   content: "Welcome to our admin page"
   admin_page: true
+
+event_members_only_text_default:
+  name: "Event Members-Only Text Default"
+  content: "This is the default text for the members-only text field."

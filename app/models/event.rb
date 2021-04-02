@@ -51,7 +51,7 @@ class Event < ApplicationRecord
   end
 
   # Validations #
-  validates :name, :slug, :publicity_text, :start_date, :end_date, presence: true
+  validates :name, :slug, :publicity_text, :members_only_text, :start_date, :end_date, presence: true
 
   # Relationships #
 
@@ -83,6 +83,9 @@ class Event < ApplicationRecord
 
   # Events are generally ordered with the most recent/upcoming ones first.
   default_scope -> { order('end_date DESC') }
+
+  # Callbacks
+  after_initialize :set_default_members_only_text
 
   # Returns the last event to have finished.
   def self.last_event
@@ -160,6 +163,14 @@ class Event < ApplicationRecord
     return attachments.or(Attachment.where(item: answers))
   end
 
+  def set_default_members_only_text
+    return if members_only_text.present?
+
+    editable_block = Admin::EditableBlock.find_by(name: 'Event Members-Only Text Default')
+
+    self.members_only_text = editable_block.present? ? editable_block.content : ''
+  end
+
   def as_json(options = {})
     defaults = { methods: [:thumb_image_url, :slideshow_image_url], include: [:venue, { pictures: { methods: [:thumb_url, :display_url] } }, team_members: { methods: [:user_name] }] }
 
@@ -171,7 +182,7 @@ class Event < ApplicationRecord
   # Returns a hash with base permitted params to prevent accidentally omitting one.
   def self.base_permitted_params
     return [
-      :publicity_text, :name, :slug, :tagline,
+      :publicity_text, :members_only_text, :name, :slug, :tagline,
       :author, :venue, :venue_id, :season, :season_id,
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],

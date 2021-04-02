@@ -123,4 +123,10 @@ class EventTest < ActionView::TestCase
     assert json.key? 'venue'
     assert json.key? 'season'
   end
+
+  test 'sets default members-only text field' do
+    event = Event.new
+
+    assert_equal 'This is the default text for the members-only text field.', event.members_only_text
+  end
 end

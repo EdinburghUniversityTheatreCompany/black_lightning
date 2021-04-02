@@ -9,8 +9,6 @@
 
 <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the image that appears in the slideshow on the frontpage, and as the header image on your event page. The apect ratio should be approximately 48/25.' %>
 
-<%= render "/shared/form/md_editor", f: f, field: :publicity_text, show_hint: true %>
-
 <%= f.input :start_date, start_year: 1890, end_year: max_end_year %>
 
 <%= f.input :end_date, start_year: 1890, end_year: max_end_year %>
@@ -32,6 +30,10 @@
 <%= f.association :proposal, collection: f.object.possible_proposals, label_method: :show_title %>
 
 <%= render '/shared/form/public_private_switch', f: f, field_symbol: :is_public %>
+
+<%= render "/shared/form/md_editor", f: f, field: :publicity_text, show_hint: true %>
+
+<%= render "/shared/form/md_editor", f: f, field: :members_only_text, show_hint: true %>
 
 <div class="form-horizontal">
   <h3>Tags</h3>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_02_175609) do
+ActiveRecord::Schema.define(version: 2021_04_02_192423) do
 
   create_table "active_storage_attachments", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -216,6 +216,7 @@ ActiveRecord::Schema.define(version: 2021_04_02_175609) do
     t.datetime "file_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "editable_block_id"
     t.string "item_type"
     t.bigint "item_id"
     t.integer "access_level", default: 1, null: false
@@ -291,6 +292,7 @@ ActiveRecord::Schema.define(version: 2021_04_02_175609) do
     t.date "maintenance_debt_start"
     t.date "staffing_debt_start"
     t.integer "proposal_id"
+    t.text "members_only_text"
     t.index ["proposal_id"], name: "index_events_on_proposal_id"
     t.index ["season_id"], name: "index_events_on_season_id"
     t.index ["venue_id"], name: "index_events_on_venue_id"
