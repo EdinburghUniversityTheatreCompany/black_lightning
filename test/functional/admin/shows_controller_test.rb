@@ -117,7 +117,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should update show with new debtors' do
-    @show = FactoryBot.create(:show)
+    @show = FactoryBot.create(:show, start_date: Date.today.advance(days: 1))
     users = FactoryBot.create_list(:user, 5)
     attributes = FactoryBot.attributes_for(:show, team_members_attributes: team_members_attributes(users))
 
