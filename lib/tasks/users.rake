@@ -46,4 +46,18 @@ namespace :users do
     count = Tasks::Logic::Users::clean_up_personal_info
     p "Cleaned up #{count} members"
   end
+
+  desc 'Lists the amount of users who were involved in a show during each academic year.'
+  task determine_active_users_by_shows: :environment do
+    (1890..Date.today.year).each do |start_year|
+      start_date = Date.new(start_year, 9, 1)
+      end_date = Date.new(start_year + 1, 8, 31)
+
+      events = Event.where('start_date <= ? and end_date >= ?', end_date, start_date)
+
+      ids = events.flat_map { |event| event.users.ids }.uniq
+
+      p("#{start_date.year}-#{end_date.year}: #{ids.size} members")
+    end
+  end
 end
