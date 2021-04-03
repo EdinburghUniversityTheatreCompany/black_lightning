@@ -20,6 +20,6 @@ FactoryBot.define do
     reviewer     { Faker::Name.name }
     body         { generate(:random_text) }
     review_date  { generate(:random_date) }
-    rating       { Random.rand(0.0..5.0)  }
+    rating       { Random.rand(0.1..5.0)  }
   end
 end

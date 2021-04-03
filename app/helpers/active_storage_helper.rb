@@ -11,7 +11,7 @@ module ActiveStorageHelper
 
     if blob.nil?
       begin
-        blob = ActiveStorage::Blob.create_after_upload!(
+        blob = ActiveStorage::Blob.create_and_upload!(
           io: File.open(Rails.root.join('app', 'assets', 'images', 'defaults', default_image_filename)),
           filename: key_filename,
           content_type: 'image/png'

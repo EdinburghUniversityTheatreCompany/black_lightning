@@ -21,9 +21,9 @@ class ActiveStorageHelperTest < ActionView::TestCase
   end
 
   test 'default_image_blob with invalid image filename' do
-    assert_raises ArgumentError do
-      assert_no_difference('ActiveStorage::Attachment.count') do
-        assert_no_difference('ActiveStorage::Blob.count') do
+    assert_no_difference('ActiveStorage::Attachment.count') do
+      assert_no_difference('ActiveStorage::Blob.count') do
+        assert_raises ArgumentError do
           default_image_blob('pineapple.png')
         end
       end

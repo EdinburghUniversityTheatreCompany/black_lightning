@@ -28,7 +28,7 @@ class Complaint < ApplicationRecord
   private
 
   def stop_destroy
-    self.errors[:base] << 'Complaints cannot be deleted'
+    self.errors.add(:base, 'Complaints cannot be deleted')
     throw :abort
   end
 end

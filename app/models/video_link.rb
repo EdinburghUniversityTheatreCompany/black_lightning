@@ -50,8 +50,6 @@ class VideoLink < ApplicationRecord
              "src=\"https://www.youtube-nocookie.com/embed/#{id}\""
            when :facebook
              "src=\"https://www.facebook.com/plugins/post.php?href=#{id}&width=#{VIDEO_EMBED_WIDTH}&show_text=true&height=#{VIDEO_EMBED_HEIGHT}&appId\" style=\"border:none;overflow:hidden\" scrolling=\"no\""
-           else
-             nil
            end
   end
 
