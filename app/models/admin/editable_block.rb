@@ -1,4 +1,9 @@
 ##
+# Represents a section in a page that can be edited using the Admin pages.
+#
+# IMPORTANT: The admin_page property is used to ensure that visitors that are not logged in
+# cannot access any Attachment belonging to this block.
+#
 # == Schema Information
 #
 # Table name: admin_editable_blocks
@@ -15,11 +20,7 @@
 #--
 # == Schema Information End
 #++
-# Represents a section in a page that can be edited using the Admin pages.
-#
-# IMPORTANT: The admin_page property is used to ensure that visitors that are not logged in
-# cannot access any Attachment belonging to this block.
-##
+
 class Admin::EditableBlock < ApplicationRecord
   resourcify
 
