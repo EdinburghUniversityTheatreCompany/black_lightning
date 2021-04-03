@@ -42,6 +42,7 @@ class Event < ApplicationRecord
   include TimeHelper
   include ApplicationHelper
   include AttachmentItem
+  include VideoLinkItem
   include MdHelper
 
   resourcify
@@ -189,7 +190,8 @@ class Event < ApplicationRecord
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
       pictures_attributes: [:id, :_destroy, :description, :image],
       team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
-      attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
+      attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []],
+      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :ordering]
     ]
   end
 end

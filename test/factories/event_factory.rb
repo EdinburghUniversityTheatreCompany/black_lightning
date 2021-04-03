@@ -45,6 +45,7 @@ FactoryBot.define do
 
     transient do
       team_member_count { 5 }
+      video_link_count { rand(3) }
       picture_count { rand(3) }
       attach_image { true }
       attach_proposal { [true, false].sample }
@@ -55,6 +56,7 @@ FactoryBot.define do
 
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
+      create_list(:video_link, evaluator.video_link_count, item: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
 
       event.event_tags << EventTag.all.sample(evaluator.tag_count)
