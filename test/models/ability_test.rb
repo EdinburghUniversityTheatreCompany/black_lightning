@@ -14,7 +14,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo, 
-                  Complaint, Doorkeeper::Application, Attachment, Admin::EditableBlock]
+                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)

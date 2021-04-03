@@ -1,0 +1,10 @@
+<% include_header = true if include_header.nil? %>
+
+<% if include_header %>
+  <h3>Video Links</h3>
+<% end %>
+
+<div class="form-inline">
+  <%= f.simple_fields_for :video_links %>
+  <p><%= link_to_add(f, :video_links) %></p>
+</div>

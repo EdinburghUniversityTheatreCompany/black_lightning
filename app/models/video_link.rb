@@ -20,14 +20,20 @@ class VideoLink < ApplicationRecord
   validate :link_is_valid
   validates :name, :link, :access_level, presence: true
 
+  default_scope -> { order(order: :asc) }
+
   # They're the same, so why not?
   ACCESS_LEVELS = Attachment::ACCESS_LEVELS
 
   VIDEO_EMBED_WIDTH = 560
   VIDEO_EMBED_HEIGHT = 315
 
+  YOUTUBE_ID_REGEX = %r/^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/
+
   def youtube_video_id
-    link =~ %r/(?:https?:\/{2})?(?:w{3}\.)?youtu(?:be)?\.(?:com|be)(?:\/watch\?v=|\/)([^\s&]+)/
+    id = YOUTUBE_ID_REGEX.match(link)
+
+    return id[1] if id.present?
   end
 
   def embed_code

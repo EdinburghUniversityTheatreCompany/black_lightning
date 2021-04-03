@@ -99,8 +99,9 @@ class Ability
 
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
-    
+
     can :show, Attachment, access_level: 2
+    can :show, VideoLink, access_level: 2
 
     # Stop if the user is not logged in.
     return if user.nil?
@@ -170,6 +171,7 @@ class Ability
 
     # Fix at the same time as has_role? :member
     can :show, Attachment, access_level: 1 if can? :access, :backend
+    can :show, VideoLink, access_level: 1 if can? :access, :backend
 
     # TODO: Should only be allowed to see attachments if the user can also see the object they are related to. Remember that also goes for non-logged in users.
   end

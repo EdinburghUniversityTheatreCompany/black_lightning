@@ -43,3 +43,5 @@
 <% end %>
 
 <%= render '/shared/gallery', pictures: @season.pictures %>
+
+<%= render 'shared/video_link_gallery', video_links: @show.video_links.accessible_by(current_ability) %>

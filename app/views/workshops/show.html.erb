@@ -3,3 +3,5 @@
 <%= render '/events/publicity_text_and_team_members', event: @workshop %>
 
 <%= render '/shared/gallery', pictures: @workshop.pictures %>
+
+<%= render 'shared/video_link_gallery', video_links: @show.video_links.accessible_by(current_ability) %>

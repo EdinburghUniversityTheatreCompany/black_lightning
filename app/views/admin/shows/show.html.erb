@@ -8,6 +8,8 @@
 
 <%= render 'shared/attachments_gallery', attachments: @show.all_attachments.accessible_by(current_ability) %>
 
+<%= render 'shared/video_link_gallery', video_links: @show.video_links.accessible_by(current_ability) %>
+
 <br>
 
 <%= render '/shared/show_actions', object: @show %>

@@ -1,0 +1,11 @@
+<% include_header = true unless include_header.present? %>
+
+<% if video_links.any? then %>
+  <% if include_header%>
+    <h3>Videos</h3>
+    <% video_links.each do |video_link| %>
+    <h4><%= video_link.name %></h4>
+    <%= video_link.embed_code %>
+    <% end %>
+  <% end %>
+<% end %>
