@@ -28,23 +28,42 @@ class VideoLink < ApplicationRecord
   VIDEO_EMBED_WIDTH = 560
   VIDEO_EMBED_HEIGHT = 315
 
+  SHARED_ATTRIBUTES = "width=\"#{VIDEO_EMBED_WIDTH}\" height=\"#{VIDEO_EMBED_HEIGHT}\" frameborder=\"0\" allowfullscreen=\"true\" allow=\"autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share\""
+
   YOUTUBE_ID_REGEX = %r/^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/
 
-  def youtube_video_id
+  def video_id
     id = YOUTUBE_ID_REGEX.match(link)
 
-    return id[1] if id.present?
+    return :youtube, id[1] if id.present?
+
+    return :facebook, CGI.escape(link) if link.include?('fb.watch') || link.include?('facebook.')
+
+    return nil
+  end
+
+  def generate_specific_embed
+    service, id = video_id
+
+    return case service
+           when :youtube
+             "src=\"https://www.youtube-nocookie.com/embed/#{id}\""
+           when :facebook
+             "src=\"https://www.facebook.com/plugins/post.php?href=#{id}&width=#{VIDEO_EMBED_WIDTH}&show_text=true&height=#{VIDEO_EMBED_HEIGHT}&appId\" style=\"border:none;overflow:hidden\" scrolling=\"no\""
+           else
+             nil
+           end
   end
 
   def embed_code
-    id = youtube_video_id
+    specific_part = generate_specific_embed
 
-    return 'The video link is not valid.' if id.nil?
+    return 'The video link is not valid.' if specific_part.nil?
 
-    return "<iframe width=\"#{VIDEO_EMBED_WIDTH}\" height=\"#{VIDEO_EMBED_HEIGHT}\" src=\"https://www.youtube-nocookie.com/embed/#{id}\" frameborder=\"0\" allow=\"autoplay; encrypted-media\" allowfullscreen></iframe>".html_safe
+    return "<iframe #{specific_part} #{SHARED_ATTRIBUTES}></iframe>".html_safe
   end
 
   def link_is_valid
-    errors.add(:link, 'is not a valid YouTube link') if youtube_video_id.nil?
+    errors.add(:link, 'is not a valid YouTube or Facebook video link') if video_id.nil?
   end
 end

@@ -34,5 +34,13 @@ class VideoLinkTest < ActionView::TestCase
     video_link = FactoryBot.create(:video_link)
 
     assert_not_equal 'The video link is not valid.', video_link.embed_code
+    assert_includes video_link.embed_code, 'youtube-nocookie.com'
+  end
+
+  test 'embedding Facebook link' do
+    video_link = FactoryBot.create(:video_link, link: 'https://fb.watch/4Eo-S1p6H9/')
+
+    assert_not_equal 'The video link is not valid.', video_link.embed_code
+    assert_includes video_link.embed_code, 'facebook.com'
   end
 end
