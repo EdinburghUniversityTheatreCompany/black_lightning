@@ -5,7 +5,7 @@
 <br />
 <br />
 
-<%= render layout: '/shared/collapsible_search_form' do %>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
   <h3>Search</h3>
   <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_questionnaires_questionnaires do |f| %>
     <%= f.input_field :event_name_cont, placeholder: "Event Name",  required: false %>

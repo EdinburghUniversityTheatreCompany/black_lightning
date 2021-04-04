@@ -1,4 +1,4 @@
-<%= render layout: '/shared/collapsible_search_form' do %>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
   <% search_form_for @q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "form-search" } do |f| %>
     <%= f.input_field :name_cont,            placeholder: "Title",  required: false %>
     <%= f.input_field :publicity_text_or_tagline_cont,  placeholder: "Publicity Text", required: false %>

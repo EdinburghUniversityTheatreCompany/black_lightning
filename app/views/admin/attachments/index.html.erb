@@ -1,6 +1,6 @@
 <h1><%= @title %></h1>
 
-<%= render layout: '/shared/collapsible_search_form' do %>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
     <% search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_attachments, html: { id: "search", class: "form-search" } do |f| %>
     <%= f.input_field :name_cont,              placeholder: "Name",  required: false %>
 
