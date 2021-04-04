@@ -1,0 +1,23 @@
+<div class="form-horizontal">
+  <h3>Tags</h3>
+
+  <% no_event_tags = f.object.event_tags.empty? %>
+
+  <% if no_event_tags %>
+    <div id="no_event_tags_warning" class="alert alert-danger">
+    You have not set any tags for this Event.
+    </div>
+  <% end %>
+
+  <%= render layout: '/shared/collapsible_section', locals: { title: 'Tags', start_open: no_event_tags } do %>
+    <% if f.object.errors[:event_tags].present? then %>
+      <p id="event_tags_errors" class="alert alert-error">
+        <%= f.error :event_tags %>
+      </p>
+    <% end %>
+
+    <%= f.collection_check_boxes(:event_tag_ids, EventTag.accessible_by(current_ability), :id, ->(event_tag) { get_link event_tag, :show, link_text: event_tag.name, target: :blank }) do |checkbox| %>
+      <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe } %>
+    <% end %>
+  <% end %>
+</div>
