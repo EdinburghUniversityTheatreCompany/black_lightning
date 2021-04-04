@@ -4,7 +4,9 @@
   <h3>Video Links</h3>
 <% end %>
 
-<div class="form-inline">
-  <%= f.simple_fields_for :video_links %>
-  <p><%= link_to_add(f, :video_links) %></p>
-</div>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Video Links' } do %>
+  <div class="form-inline">
+    <%= f.simple_fields_for :video_links %>
+    <p><%= link_to_add(f, :video_links) %></p>
+  </div>
+<% end %>

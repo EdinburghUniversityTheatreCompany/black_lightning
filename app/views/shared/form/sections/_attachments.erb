@@ -4,7 +4,9 @@
   <h3>Attachments</h3>
 <% end %>
 
-<div class="form-inline">
-  <%= f.simple_fields_for :attachments %>
-  <p><%= link_to_add(f, :attachments) %></p>
-</div>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Attachments' } do %>
+  <div class="form-inline">
+    <%= f.simple_fields_for :attachments %>
+    <p><%= link_to_add(f, :attachments) %></p>
+  </div>
+<% end %>

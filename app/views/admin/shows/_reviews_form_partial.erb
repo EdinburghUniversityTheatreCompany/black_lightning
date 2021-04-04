@@ -1,5 +1,6 @@
 <h3>Reviews</h3>
 
-<%= f.simple_fields_for :reviews %>
-
-<%= link_to_add f, :reviews %>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Reviews' } do %>
+  <%= f.simple_fields_for :reviews %>
+  <%= link_to_add f, :reviews %>
+<% end %>

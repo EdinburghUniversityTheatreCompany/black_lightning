@@ -11,21 +11,23 @@
       <% if @season.new_record? %>
         You can add events after creating the season.
       <% else%>
-        <% if f.object.errors[:events].present? then %>
-          <p id="events_errors" class="alert alert-error">
-            <%= f.error :events %>
-          </p>
-        <% end %>
+        <%= render layout: '/shared/collapsible_section', locals: { title: 'Events' } do %>
+          <% if f.object.errors[:events].present? then %>
+            <p id="events_errors" class="alert alert-error">
+              <%= f.error :events %>
+            </p>
+          <% end %>
 
-        <p>
-          The list of events that can be added to the season will not automatically update after changing the start or end date.
-          You have to save the season and start editing it again to refresh the list.
-        </p>
-        
-        <%= f.collection_check_boxes(:event_ids, @season.simultaneous_events, :id, ->(event) { render 'event_label', event: event }) do |b| %>
-          <%= b.label { "#{b.check_box}   #{b.text}".html_safe } %>
-        <% end %>
-      <% end%>
+          <p>
+            The list of events that can be added to the season will not automatically update after changing the start or end date.
+            You have to save the season and start editing it again to refresh the list.
+          </p>
+          
+          <%= f.collection_check_boxes(:event_ids, @season.simultaneous_events, :id, ->(event) { render 'event_label', event: event }) do |b| %>
+            <%= b.label { "#{b.check_box}   #{b.text}".html_safe } %>
+          <% end %>
+        <% end%>
+      <% end %>
     </div>
 
     <%= render '/shared/form/form_actions', f: f %>
