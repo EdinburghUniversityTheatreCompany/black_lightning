@@ -26,6 +26,8 @@ import '../src/alerts'
 
 import '../src/konami_code'
 
+import "dropzone";
+
 require.context('./../../../node_modules/jquery-ui/ui')
 
 require("@rails/ujs").start()
