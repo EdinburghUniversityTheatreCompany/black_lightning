@@ -11,6 +11,10 @@
 
     <%= f.simple_fields_for :pictures %>
 
-    <%= link_to_add f, :pictures %>
+    <div>
+      <%= link_to_add f, :pictures %>
+    </div>
+
+    <%= render 'shared/form/dropzone', f: f, id: :pictures %>
   <% end %>
 </div>
