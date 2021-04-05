@@ -17,6 +17,8 @@
     <%= f.input :start_date_gt, as: :date, label: "Start Date", start_year: 1890, end_year: max_end_year, include_blank: true, required: false %>
     <%= f.input :end_date_lt,   as: :date, label: "End Date", start_year: 1890, end_year: max_end_year,   include_blank: true, required: false %>
 
-    <%= f.submit :Search, class: 'btn' %>
+    <%= f.submit :Search, class: 'btn btn-primary' %>
+
+    <%= f.submit :Random, class: 'btn' %>
   <% end %>
 <% end %>

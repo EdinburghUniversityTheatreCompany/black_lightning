@@ -1,32 +1,17 @@
-class Admin::ShowsController < AdminController
-  include GenericController
-
-  load_and_authorize_resource find_by: :slug
+class Admin::ShowsController < Admin::EventsController
   # Those are checked for permission to create debts instead.
   skip_authorize_resource only: %i[create_maintenance_debts create_staffing_debts convert_to_season convert_to_workshop]
 
   # GET /admin/shows
   # GET /admin/shows.json
   def index
-    @title = 'Shows'
-
     @editable_block_name = 'Shows (Members Face)'
     @url = :admin_shows
 
-    @q = @shows.ransack(params[:q])
-    @events = @q.result(distinct: true)
-                .accessible_by(current_ability)
-                .paginate(page: params[:page], per_page: 15)
-
-    respond_to do |format|
-      format.html { render 'admin/events/index' }
-      format.json { render json: @events }
-    end
+    super
   end
 
   def show
-    @title = @show.name
-
     existing_staffing_debts = Admin::StaffingDebt.where(show: @show)
     if existing_staffing_debts.any?
       amount_of_debts = existing_staffing_debts.where(user: existing_staffing_debts.first.user).count
@@ -189,15 +174,8 @@ class Admin::ShowsController < AdminController
     end
   end
 
-  private
-
-  def order_args
-    # Dealt with by default scope.
-    nil
-  end
-
   def permitted_params
-    return Event.base_permitted_params + [
+    return super + [
       :maintenance_debt_start, :staffing_debt_start,
       reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
     ]
