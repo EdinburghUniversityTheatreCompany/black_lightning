@@ -13,8 +13,6 @@ class Admin::NewsController < AdminController
   # GET /admin/news/1.json
   ##
   def show
-    @title = @news.title
-
     respond_to do |format|
       # This one just renders the non-admin news, so not generic.
       format.html { render 'news/show' }

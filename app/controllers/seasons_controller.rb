@@ -9,8 +9,6 @@ class SeasonsController < ApplicationController
                       .paginate(page: params[:page], per_page: 10)
                       .current
 
-    @title = 'Seasons'
-
     respond_to do |format|
       format.html { render '/events/index' }
       format.json { render json: @workshops }
@@ -24,7 +22,6 @@ class SeasonsController < ApplicationController
     @meta[:description] = helpers.render_plain(@season.publicity_text)
 
     @meta['og:image'] = [@base_url + @season.slideshow_image_url] + @season.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
-  
     super
   end
 end

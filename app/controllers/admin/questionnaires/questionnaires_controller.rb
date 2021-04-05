@@ -150,4 +150,12 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def should_paginate
     false
   end
+
+  def create_title
+    "New Questionnaire#{" for #{@show.name}" if @show.present?}"
+  end
+
+  def edit_title
+    "Edit Questionnaire for #{@questionnaire.event.name}" 
+  end
 end

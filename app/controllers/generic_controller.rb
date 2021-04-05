@@ -26,7 +26,7 @@ module GenericController
   end
 
   def new
-    # The title should be set by the view so it doesn't have to be set in both new and create.
+    @title = create_title
 
     respond_to do |format|
       format.html # new.html.erb
@@ -53,14 +53,14 @@ module GenericController
   end
 
   def edit
-    # The title should be set by the view so it doesn't have to be set in both edit and update.
+    @title = edit_title
 
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: get_resource }
     end
   end
-  
+
   def update
     check_for_dropzone
 
@@ -71,6 +71,8 @@ module GenericController
         format.html { redirect_to(update_redirect_url) }
         format.json { render json: [:admin, get_resource], status: :updated }
       else
+        @title = edit_title
+
         format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: get_resource.errors, status: :unprocessable_entity }
       end
@@ -141,6 +143,18 @@ module GenericController
   end
 
   ##
+  # Page Titles
+  ##
+
+  def create_title
+    return "New #{helpers.get_object_name(get_resource.class, include_class_name: true)}"
+  end
+
+  def edit_title
+    return "Edit #{helpers.get_object_name(get_resource, include_class_name: true)}"
+  end
+
+  ##
   # Redirection urls
   ##
 
@@ -177,7 +191,11 @@ module GenericController
   ##
 
   def base_index_query
-    return instance_variable_get("@#{resource_name.pluralize}")
+    @q = resource_class.ransack(ransack_query_param)
+
+    @q.sorts = ransack_default_sorts if ransack_default_sorts.present? && @q.sorts.nil?
+
+    return @q.result(distinct: distinct_for_ransack)
   end
 
   def load_index_resources
@@ -201,7 +219,7 @@ module GenericController
   def index_query_params
     {}
   end
-  
+
   def order_args
     :created_at
   end
@@ -212,6 +230,22 @@ module GenericController
 
   def items_per_page
     30
+  end
+
+  ##
+  # Ransack
+  ##
+
+  def distinct_for_ransack
+    true
+  end
+
+  def ransack_query_param
+    params[:q]
+  end
+
+  def ransack_default_sorts
+    nil
   end
 
   ##
@@ -232,8 +266,14 @@ module GenericController
   # to anything that has an attachment point even when you shouldn't be able to.
   # In practice, this is never an issue.
   def check_for_dropzone
+    return if params.nil?
+
+    resource_params = params[resource_name]
+
+    return if resource_params.nil?
+
     # Look for the params on the resource and see if there is a dropzone list.
-    params[resource_name].each do |key, value|
+    resource_params.each do |key, value|
       next unless key.include?(DROPZONE_IDENTIFIER)
 
       # Assume dropzones are only used for has_many's.

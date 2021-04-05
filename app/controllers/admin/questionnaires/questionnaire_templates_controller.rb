@@ -25,4 +25,8 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   def permitted_params
     [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type]]
   end
+
+  def edit_title
+    "Edit #{@questionnaire_template.name}"
+  end
 end

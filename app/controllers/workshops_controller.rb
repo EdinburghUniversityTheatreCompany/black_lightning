@@ -18,8 +18,6 @@ class WorkshopsController < ApplicationController
                         .current
                         .order('start_date ASC')
 
-    @title = 'Workshops'
-
     respond_to do |format|
       format.html { render '/events/index' }
       format.json { render json: @workshops }

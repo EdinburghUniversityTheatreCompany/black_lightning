@@ -5,14 +5,11 @@ class Admin::DebtNotificationsController < AdminController
 
   private
 
-  def base_index_query
-    @q = Admin::DebtNotification.ransack(params[:q])
-    @q.sorts = ['sent_on desc', 'user_full_name asc'] if @q.sorts.empty?
-
-    return @q.result(distinct: true).includes(:user)
-  end
-
   def resource_class
     Admin::DebtNotification
+  end
+
+  def ransack_default_sorts
+    ['sent_on desc', 'user_full_name asc']
   end
 end
