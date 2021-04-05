@@ -26,7 +26,7 @@ import '../src/alerts'
 
 import '../src/konami_code'
 
-import "dropzone";
+import "controllers"
 
 require.context('./../../../node_modules/jquery-ui/ui')
 
