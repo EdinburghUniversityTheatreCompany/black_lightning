@@ -29,4 +29,8 @@ class Admin::EventsController < AdminController
   def permitted_params
     return Event.base_permitted_params
   end
+
+  def should_paginate
+    params.nil? || params[:commit] != 'Random'
+  end
 end
