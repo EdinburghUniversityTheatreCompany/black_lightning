@@ -40,10 +40,7 @@ class Admin::TechiesController < AdminController
     :name
   end
 
-  def base_index_query
-    @q = @techies.ransack(params[:q])
-    @q.sorts = ['name asc'] if @q.sorts.empty?
-
-    return @q.result(distinct: true)
+  def ransack_default_sorts
+    ['name asc']
   end
 end

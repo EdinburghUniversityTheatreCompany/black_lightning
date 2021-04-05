@@ -4,11 +4,6 @@ class Admin::RolesController < AdminController
   load_and_authorize_resource
 
   def show
-    @q = @role.users.ransack(params[:q])
-
-    @users = @q.result
-               .accessible_by(current_ability)
-
     # Using a token is not the nicest way of handling the adding, but it works.
     # It's a bit annoying because /shared/form/user_field needs a model to work.
     @token = MembershipActivationToken.new

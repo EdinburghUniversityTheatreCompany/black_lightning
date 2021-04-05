@@ -80,14 +80,11 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
     return params
   end
 
-  def base_index_query
-    @q = @profiles.ransack(params[:q])
-    @q.sorts = ['name asc'] if @q.sorts.empty?
-
-    return @q.result(distinct: true)
-  end
-
   def includes_args
     [:user]
+  end
+
+  def ransack_default_sorts
+    ['name asc']
   end
 end
