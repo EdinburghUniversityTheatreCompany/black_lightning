@@ -13,8 +13,6 @@ class ShowsController < ApplicationController
   # GET /shows.json
   ##
   def index
-    @title = 'Shows'
-
     @events = @shows.includes(image_attachment: :blob)
                     .current
                     .paginate(page: params[:page], per_page: 5)

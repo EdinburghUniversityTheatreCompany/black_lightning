@@ -201,4 +201,8 @@ class Admin::Proposals::ProposalsController < AdminController
   def successful_destroy_redirect_url
     admin_proposals_call_proposals_path(get_resource.call)
   end
+
+  def edit_title
+    "Editing Proposal for #{@proposal.show_title}"
+  end
 end

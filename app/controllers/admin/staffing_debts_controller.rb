@@ -86,4 +86,8 @@ class Admin::StaffingDebtsController < AdminController
 
     return @staffing_debts
   end
+
+  def edit_title
+    "Edit Staffing Debt for #{@staffing_debt.user.name(current_user)}"
+  end
 end

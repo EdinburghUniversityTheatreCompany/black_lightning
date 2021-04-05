@@ -51,4 +51,8 @@ class Admin::Proposals::CallsController < AdminController
   def index_query_params
     { archived: [nil, false] }
   end
+
+  def create_title
+    'New Proposal Call'
+  end
 end

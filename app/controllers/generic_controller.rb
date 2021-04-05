@@ -26,7 +26,7 @@ module GenericController
   end
 
   def new
-    # The title should be set by the view so it doesn't have to be set in both new and create.
+    @title = create_title
 
     respond_to do |format|
       format.html # new.html.erb
@@ -53,14 +53,14 @@ module GenericController
   end
 
   def edit
-    # The title should be set by the view so it doesn't have to be set in both edit and update.
+    @title = edit_title
 
     respond_to do |format|
       format.html # new.html.erb
       format.json { render json: get_resource }
     end
   end
-  
+
   def update
     check_for_dropzone
 
@@ -71,6 +71,8 @@ module GenericController
         format.html { redirect_to(update_redirect_url) }
         format.json { render json: [:admin, get_resource], status: :updated }
       else
+        @title = edit_title
+
         format.html { render 'edit', status: :unprocessable_entity }
         format.json { render json: get_resource.errors, status: :unprocessable_entity }
       end
@@ -141,6 +143,18 @@ module GenericController
   end
 
   ##
+  # Page Titles
+  ##
+
+  def create_title
+    return "New #{helpers.get_object_name(get_resource.class, include_class_name: true)}"
+  end
+
+  def edit_title
+    return "Edit #{helpers.get_object_name(get_resource, include_class_name: true)}"
+  end
+
+  ##
   # Redirection urls
   ##
 
@@ -201,7 +215,7 @@ module GenericController
   def index_query_params
     {}
   end
-  
+
   def order_args
     :created_at
   end

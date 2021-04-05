@@ -34,4 +34,8 @@ class ComplaintsController < ApplicationController
   def on_create_success
     helpers.append_to_flash(:success, 'Your Complaint or Suggestion has been successfully submitted. Thank you.')
   end
+
+  def create_title
+    'Submit Complaint or Suggestion'
+  end
 end

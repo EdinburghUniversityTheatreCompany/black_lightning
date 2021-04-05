@@ -6,8 +6,6 @@ class Admin::SeasonsController < AdminController
   # GET /admin/seasons
   # GET /admin/seasons.json
   def index
-    @title = 'Seasons'
-
     @editable_block_name = 'Seasons (Members Face)'
     @url = :admin_seasons
 
