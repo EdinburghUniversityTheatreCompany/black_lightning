@@ -191,7 +191,11 @@ module GenericController
   ##
 
   def base_index_query
-    return instance_variable_get("@#{resource_name.pluralize}")
+    @q = resource_class.ransack(ransack_query_param)
+
+    @q.sorts = ransack_default_sorts if ransack_default_sorts.present? && @q.sorts.nil?
+
+    return @q.result(distinct: distinct_for_ransack)
   end
 
   def load_index_resources
@@ -226,6 +230,22 @@ module GenericController
 
   def items_per_page
     30
+  end
+
+  ##
+  # Ransack
+  ##
+
+  def distinct_for_ransack
+    true
+  end
+
+  def ransack_query_param
+    params[:q]
+  end
+
+  def ransack_default_sorts
+    nil
   end
 
   ##
