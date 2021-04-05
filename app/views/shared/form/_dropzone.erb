@@ -1,7 +1,7 @@
 <br>
 <div class="mb-6">
   <div class="dropzone dropzone-default dz-clickable" data-controller="dropzone">
-    <%= f.file_field "dropzone_#{id}".to_sym, direct_upload: true, multiple: true, data: { target: 'dropzone.input' } %>
+    <%= f.file_field "dropzone_#{id}".to_sym, direct_upload: true, multiple: true, data: { 'dropzone-target' => 'input' } %>
     <div class="dropzone-msg dz-message needsclick text-gray-600">
       <h3 class="dropzone-msg-title">Drag here to upload or click here to browse</h3>
       
