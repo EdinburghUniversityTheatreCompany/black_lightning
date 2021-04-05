@@ -246,8 +246,14 @@ module GenericController
   # to anything that has an attachment point even when you shouldn't be able to.
   # In practice, this is never an issue.
   def check_for_dropzone
+    return if params.nil?
+
+    resource_params = params[resource_name]
+
+    return if resource_params.nil?
+
     # Look for the params on the resource and see if there is a dropzone list.
-    params[resource_name].each do |key, value|
+    resource_params.each do |key, value|
       next unless key.include?(DROPZONE_IDENTIFIER)
 
       # Assume dropzones are only used for has_many's.
