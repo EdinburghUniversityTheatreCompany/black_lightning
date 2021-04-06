@@ -16,6 +16,17 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:events)
   end
 
+  test 'should get random show' do
+    FactoryBot.create_list(:show, 10)
+
+    get :index, params: { commit: 'Random' }
+
+    # Due to the randomness, can't get it to be more specific than
+    # checking for a redirect.
+    assert_response :redirect
+    assert_not_nil assigns(:events)
+  end
+
   test 'should get show' do
     @show = FactoryBot.create(:show)
 
