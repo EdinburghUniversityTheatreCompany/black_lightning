@@ -10,7 +10,9 @@
 
   <%= f.input :show_non_members, label: "Show Non-Members", input_html: { id: "show_non_members", checked: params[:show_non_members] == "1" ? true : false, name: "show_non_members" }, as: :boolean %>
   
-  <%= submit_tag "Search", class: 'btn' %>
+  <%= f.submit :Search, class: 'btn btn-primary' %>
+
+  <%= f.submit :Random, class: 'btn' %>
 <% end %>
 
 <table class="table">
