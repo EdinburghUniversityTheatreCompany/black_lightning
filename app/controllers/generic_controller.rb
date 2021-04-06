@@ -10,8 +10,10 @@ module GenericController
 
     resources = load_index_resources
 
+    return if return_random
+
     respond_to do |format|
-      format.html # index.html.erb
+      format.html { render index_filename }
       format.json { render json: resources }
     end
   end
@@ -176,7 +178,7 @@ module GenericController
 
   ##
   # On Success
-  ## 
+  ##
 
   def on_create_success
     helpers.append_to_flash(:success, "The #{helpers.get_object_name(get_resource, include_class_name: true)} was successfully created.")
@@ -225,7 +227,9 @@ module GenericController
   end
 
   def should_paginate
-    true
+    # Do not paginate for random as that will break the pluck.
+    # If you override this, you should use super && <your custom condition>
+    params.nil? || params[:commit] != 'Random'
   end
 
   def items_per_page
@@ -254,6 +258,17 @@ module GenericController
 
   def include_class_name_in_show_page_title
     false
+  end
+
+  def index_filename
+    'index'
+  end
+
+  def return_random
+    return unless  params[:commit] == 'Random'
+
+    redirect_to(resource_class.find(load_index_resources.pluck(:id).sample))
+    return true
   end
 
   ##

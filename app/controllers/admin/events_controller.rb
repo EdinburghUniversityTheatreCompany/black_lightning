@@ -8,15 +8,7 @@ class Admin::EventsController < AdminController
   def index
     @events = load_index_resources
 
-    if params[:commit] == 'Random'
-      redirect_to(Event.find(@events.pluck(:id).sample))
-      return
-    end
-
-    respond_to do |format|
-      format.html { render 'admin/events/index' }
-      format.json { render json: @events }
-    end
+    super
   end
 
   def update
@@ -33,12 +25,22 @@ class Admin::EventsController < AdminController
     nil
   end
 
-  def permitted_params
-    return Event.base_permitted_params
+  def index_filename
+    'admin/events/index'
   end
 
-  def should_paginate
-    params.nil? || params[:commit] != 'Random'
+  def permitted_params
+    # Returns a hash with base permitted params to prevent accidentally omitting one.
+    return [
+      :publicity_text, :members_only_text, :name, :slug, :tagline,
+      :author, :venue, :venue_id, :season, :season_id,
+      :xts_id, :is_public, :image, :proposal, :proposal_id,
+      :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
+      pictures_attributes: [:id, :_destroy, :description, :image],
+      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
+      attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []],
+      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :ordering]
+    ]
   end
 
   def on_update_success
