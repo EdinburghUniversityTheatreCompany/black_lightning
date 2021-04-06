@@ -9,7 +9,9 @@
     <%= f.input :call_submission_deadline_gt, as: :date, label: "Start Date", start_year: 2013, include_blank: true, required: false %>
     <%= f.input :call_editing_deadline_lt,    as: :date, label: "End Date",   start_year: 2013, include_blank: true, required: false %>
 
-    <%= f.submit :Search, class: 'btn' %>
+    <%= f.submit :Search, class: 'btn btn-primary' %>
+
+    <%= f.submit :Random, class: 'btn' %>
   <% end %>
 <% end %>
 

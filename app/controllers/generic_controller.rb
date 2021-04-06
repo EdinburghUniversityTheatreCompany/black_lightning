@@ -6,11 +6,11 @@ module GenericController
   # You can use load_and_authorize_resource.
 
   def index
+    return if return_random
+
     @title ||= helpers.get_formatted_class_name(resource_class, false)
 
     resources = load_index_resources
-
-    return if return_random
 
     response.headers['X-Total-Count'] = resources.count.to_s
 
@@ -266,10 +266,18 @@ module GenericController
     'index'
   end
 
-  def return_random
-    return unless  params[:commit] == 'Random'
+  ##
+  # Random
+  ##
 
-    redirect_to(resource_class.find(load_index_resources.pluck(:id).sample))
+  def random_resources
+    load_index_resources
+  end
+
+  def return_random
+    return unless params[:commit] == 'Random'
+
+    redirect_to(resource_class.find(random_resources.pluck(:id).sample))
     return true
   end
 
