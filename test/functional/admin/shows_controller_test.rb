@@ -276,7 +276,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
         post :convert_to_workshop, params: { id: show }
       end
     end
-    
+
     assert_equal ["Could not create Workshop '#{show.name}' from the Show '#{show.name}'. There already exists a Workshop with the slug '#{show.slug}'"], flash[:error]
   end
 
@@ -287,8 +287,39 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     show = FactoryBot.create(:show, review_count: 0)
 
     post :convert_to_workshop, params: { id: show }
-    
+
     assert_response 403
+  end
+
+  test 'upload pictures using dropzone' do
+    attributes = FactoryBot.attributes_for(:show)
+
+    file_data = [
+      fixture_file_upload(Rails.root.join('test', 'test.png'), 'image/png')
+    ]
+
+    attributes[:dropzone_pictures] = file_data
+
+    assert_difference('Show.count') do
+      assert_difference('Picture.count', file_data.size) do
+        post :create, params: { show: attributes }
+      end
+    end
+
+    assert assigns(:show).pictures.count, file_data.size
+
+    assert_redirected_to admin_show_path(assigns(:show))
+  end
+
+  test 'raises error when dropzoning something random' do
+    assert_raises ArgumentError do
+      @show = FactoryBot.create(:show)
+      attributes = FactoryBot.attributes_for(:show)
+
+      attributes[:dropzone_finbar] = ['the', 'content', 'should', 'not', 'matter']
+
+      put :update, params: { id: @show, show: attributes }
+    end
   end
 
   private
