@@ -1,6 +1,6 @@
 require 'test_helper'
 
-class AdminControllerTest < ActionController::TestCase
+class Admin::StaticControllerTest < ActionController::TestCase
   test 'committee can get committee' do
     get :committee
   end
