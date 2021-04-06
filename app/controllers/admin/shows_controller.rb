@@ -70,6 +70,9 @@ class Admin::ShowsController < Admin::EventsController
 
   # POST admin/shows/1/convert_to_season
   def convert_to_season
+    authorize! :convert, @show
+    authorize! :create, Season
+
     season = convert_to(Season)
 
     if season.present?
@@ -81,6 +84,9 @@ class Admin::ShowsController < Admin::EventsController
 
   # POST admin/shows/1/convert_to_workshop
   def convert_to_workshop
+    authorize! :convert, @show
+    authorize! :create, Workshop
+
     workshop = convert_to(Workshop)
 
     if workshop.present?
