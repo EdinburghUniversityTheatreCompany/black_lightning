@@ -3,13 +3,18 @@
 <% url = attachment_path(attachment.slug) %>
 
 <% begin %>
-  <% img = image_tag attachment.file.variant(thumb_variant) %>
+  <% if attachment.file.previewable? %>
+    <% img = image_tag attachment.file.preview(thumb_variant) %>
+  <% else %>
+    <% img = image_tag attachment.file.variant(thumb_variant) %>
+  <% end %>
+
   <% fullsize_url = url_for(attachment.file) %>
 
   <div> 
     <%= link_to img, fullsize_url, class: "thumbnail fancybox", rel: 'group', title: attachment.name, 'data-title' => attachment.name %>
   </div>
-<% rescue ActiveStorage::InvariableError %>
+<% rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable %>
   <% # It is impossible to create a thumbnail, so do nothing. %>
 <% end %>
 
