@@ -1,17 +1,13 @@
 class Archives::ShowsController < ArchivesController
-  def index
-    @q = Show.ransack(params[:q])
-    @shows = @q.result(distinct: true)
-               .includes(image_attachment: :blob)
-               .where(is_public: true)
+  include GenericController
 
-    response.headers['X-Total-Count'] = @shows.count.to_s
+  private
 
-    @shows = @shows.paginate(page: params[:page], per_page: 5)
+  def includes_args
+    [image_attachment: :blob]
+  end
 
-    respond_to do |format|
-      format.html # index.html.erb
-      format.json { render json: @shows, methods: [:thumb_image_url, :slideshow_image_url] }
-    end
+  def items_per_page
+    15
   end
 end

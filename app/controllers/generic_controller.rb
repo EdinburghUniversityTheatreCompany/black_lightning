@@ -12,6 +12,8 @@ module GenericController
 
     return if return_random
 
+    response.headers['X-Total-Count'] = resources.count.to_s
+
     respond_to do |format|
       format.html { render index_filename }
       format.json { render json: resources }
