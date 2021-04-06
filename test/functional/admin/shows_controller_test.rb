@@ -138,7 +138,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     assert_enqueued_emails 1
 
-    assert_equal "The show was successfully updated, but #{users.first.name} is in debt.", flash[:notice]
+    assert_equal ["The show was successfully updated, but #{users.first.name} is in debt."], flash[:notice]
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
