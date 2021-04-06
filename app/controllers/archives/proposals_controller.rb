@@ -1,16 +1,19 @@
 class Archives::ProposalsController < AdminController
-  def index
-    authorize! :index, Admin::Proposals::Proposal
+  include GenericController
 
+  def index
     @title = 'Proposal Archive'
 
+    super
+  end
+
+  private
+
+  def load_index_resources
     # The next chapter in hacky solutions to accessible by errors.
     # Because accessible_by and the search both need the team_members table, it errors when you search for a person name.
 
-    @q = Admin::Proposals::Proposal.ransack(params[:q])
-
-    @proposals = @q.result(distinct: true)
-    result_ids = @proposals.ids
+    result_ids = base_index_query.ids
 
     @proposals = Admin::Proposals::Proposal.where(id: result_ids).accessible_by(current_ability)
     call_ids = @proposals.collect(&:call_id).uniq
@@ -23,5 +26,9 @@ class Archives::ProposalsController < AdminController
                            .includes(:call, team_members: [user: [:admin_maintenance_debts, :admin_staffing_debts]])
                            .order('admin_proposals_calls.submission_deadline DESC')
                            .group_by(&:call)
+  end
+
+  def resource_class
+    Admin::Proposals::Proposal
   end
 end
