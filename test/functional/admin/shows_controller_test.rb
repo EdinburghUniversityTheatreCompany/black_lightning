@@ -128,9 +128,9 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should update show with new debtors' do
-    @show = FactoryBot.create(:show, start_date: Date.today.advance(days: 1))
+    @show = FactoryBot.create(:show)
     users = FactoryBot.create_list(:user, 5)
-    attributes = FactoryBot.attributes_for(:show, team_members_attributes: team_members_attributes(users))
+    attributes = FactoryBot.attributes_for(:show, team_members_attributes: team_members_attributes(users), start_date: start_of_year.advance(days: 1))
 
     FactoryBot.create(:overdue_staffing_debt, user: users.first)
 
