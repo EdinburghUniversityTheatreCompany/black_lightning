@@ -40,6 +40,7 @@ gem 'silencer'
 gem 'image_processing'
 gem 'mini_magick'
 gem 'active_storage_validations'
+gem 'aws-sdk-s3', require: false
 
 gem 'chronic'
 gem 'ransack'
