@@ -1,0 +1,20 @@
+# == Schema Information
+#
+# Table name: picture_tags
+#
+# *id*::          <tt>bigint, not null, primary key</tt>
+# *name*::        <tt>string(255)</tt>
+# *description*:: <tt>text(65535)</tt>
+# *created_at*::  <tt>datetime, not null</tt>
+# *updated_at*::  <tt>datetime, not null</tt>
+#--
+# == Schema Information End
+#++
+
+performance:
+  name: Performance
+  description: Pictures of a performance.
+
+set:
+  name: Set
+  description: Pictures of the performance of a show.

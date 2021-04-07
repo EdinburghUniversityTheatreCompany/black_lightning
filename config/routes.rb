@@ -104,8 +104,10 @@ ChaosRails::Application.routes.draw do
 
     resources :event_tags
     resources :attachment_tags
+    resources :picture_tags
 
     resources :attachments, only: [:index]
+    resources :pictures, only: [:index]
 
     resources :opportunities do
       member do

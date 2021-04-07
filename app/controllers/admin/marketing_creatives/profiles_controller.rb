@@ -81,7 +81,7 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
   end
 
   def includes_args
-    [:user]
+    [:user, :categories, :category_infos]
   end
 
   def ransack_default_sorts

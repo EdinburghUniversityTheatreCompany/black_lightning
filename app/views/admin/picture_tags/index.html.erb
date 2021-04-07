@@ -1,0 +1,33 @@
+<h1><%= @title %></h1>
+
+<p>
+  <%= display_block("Picture Tags Description", true) %>
+</p>
+
+<table class="table">
+  <tr>
+    <th>Name</th>
+
+    <% if can? :index, Picture%>
+      <th></th>
+    <% end %>
+
+    <% if can? :edit, PictureTag %>
+      <th></th>
+    <% end %>
+  </tr>
+
+  <% @picture_tags.each do |picture_tag| %>
+    <tr>
+      <td><%= get_link picture_tag, :show %></td>
+
+      <td><%= get_link_to_pictures_for_tag(picture_tag) %></td>
+
+      <%= get_link picture_tag, :edit, wrap_tag: 'td' %>
+    </tr>
+  <% end %>
+</table>
+
+<%= will_paginate(@picture_tags) %>
+
+<%= get_link PictureTag, :new %>

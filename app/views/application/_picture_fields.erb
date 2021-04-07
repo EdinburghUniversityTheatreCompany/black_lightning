@@ -8,4 +8,18 @@
     <%= f.input :description, input_html: { rows: 3 } %>
 
     <%= link_to_remove f %>
+
+    <% if f.object.image.attached? %>
+        <br />
+        <%= get_file_attached_hint(f.object.image) %>
+    <% end %>
+
+    <br>
+
+    <%= f.input :access_level, collection: Picture::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>
+
+    <h5>Tags<h5>
+    <%= f.collection_check_boxes(:picture_tag_ids, PictureTag.accessible_by(current_ability), :id, ->(picture_tag) { get_link picture_tag, :show, link_text: picture_tag.name, target: :blank }) do |checkbox| %>
+        <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe} %>
+    <% end %>
 </div>

@@ -293,12 +293,8 @@ module GenericController
   def check_for_dropzone
     return if params.nil?
 
-    resource_params = params[resource_name]
-
-    return if resource_params.nil?
-
     # Look for the params on the resource and see if there is a dropzone list.
-    resource_params.each do |key, value|
+    params.each do |key, data|
       next unless key.include?(DROPZONE_IDENTIFIER)
 
       # Assume dropzones are only used for has_many's.
@@ -306,16 +302,27 @@ module GenericController
 
       destination = key.split(DROPZONE_IDENTIFIER)[1]
 
-      upload_dropzone(destination, value)
+      upload_dropzone(destination, data)
     end
   end
 
   def upload_dropzone(destination, upload_data)
     # If you're ever extending this, you can figure out how to genericise it.
     # I am aware that I am probably writing this to myself.
+
     if destination == 'pictures'
-      upload_data.each do |file_data|
-        Picture.create(image: file_data, gallery: get_resource)
+      # This check should happen after the destination check, otherwise
+      # it won't throw an error if the files are nil.
+      return if upload_data[:files].nil?
+
+      attributes = upload_data.permit(:access_level, picture_tag_ids: [])
+
+      attributes[:gallery] = get_resource
+
+      upload_data[:files].each do |file_data|
+        attributes[:image] = file_data
+
+        Picture.create(attributes)
       end
     else
       raise ArgumentError.new, 'The destination specified for the dropzone is not valid.'

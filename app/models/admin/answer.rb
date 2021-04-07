@@ -31,4 +31,6 @@ class Admin::Answer < ApplicationRecord
 
     # To hold files, if necessary.
   include AttachmentItem
+
+  default_scope { includes(:question, :attachments) }
 end

@@ -71,6 +71,8 @@ group :development, :test do
   gem 'coffee-script-source', '1.8.0'
 
   gem 'annotate'
+
+  gem 'bullet'
 end
 
 group :test do

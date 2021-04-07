@@ -24,6 +24,8 @@ FactoryBot.define do
     association :gallery, factory: :show
     description { generate(:random_text) }
 
+    access_level { [0, 1, 2].sample }
+
     transient do
       attach_image { true }
     end

@@ -59,9 +59,9 @@ class Event < ApplicationRecord
 
   belongs_to :proposal, class_name: 'Admin::Proposals::Proposal', optional: true
 
-  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
+  has_many :team_members, -> { includes(:user) }, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
   has_many :users, through: :team_members
-  has_many :pictures, as: :gallery, dependent: :restrict_with_error
+  has_many :pictures, -> { includes(:picture_tags, :picture_tags_pictures, { image_attachment: :blob} ) }, as: :gallery, dependent: :restrict_with_error
   has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
 
   belongs_to :venue

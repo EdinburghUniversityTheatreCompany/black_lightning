@@ -1,0 +1,23 @@
+<h1><%= @title %></h1>
+
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
+    <% search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_pictures, html: { id: "search", class: "form-search" } do |f| %>
+    <%= f.input_field :description_cont, placeholder: 'Description',  required: false %>
+
+    <% # If, for whatever reason, the symbol of this field changes, you also have to change the link generated in the picture_tags_helper. %>
+    <%= f.input_field :picture_tags_id_eq, collection: PictureTag.accessible_by(current_ability) %>
+
+    <br>
+    <br>
+
+    <% # TODO: Generic date thing for pictures and attachments %>
+
+    <%= f.submit :Search, class: 'btn btn-primary' %>
+
+    <%= f.submit :Random, class: 'btn' %>
+  <% end %>
+<% end %>
+
+<%= render 'shared/gallery', pictures: @pictures, include_item_link: true, include_header: false %>
+
+<%= will_paginate(@pictures) %>

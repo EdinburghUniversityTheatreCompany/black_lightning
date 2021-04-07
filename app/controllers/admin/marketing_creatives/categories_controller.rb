@@ -35,4 +35,8 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   def order_args
     :name
   end
+
+  def includes_args
+    [image_attachment: :blob]
+  end
 end
