@@ -44,6 +44,12 @@ class Picture < ApplicationRecord
     return 'No Gallery'
   end
 
+  def filename
+    return image.blob.filename if image.attached?
+  
+    return 'No Filename'
+  end
+
   ##
   # Returns the url of the slideshow image
   ##

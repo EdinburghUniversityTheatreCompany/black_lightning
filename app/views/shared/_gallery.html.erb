@@ -30,12 +30,13 @@
 
         <%= link_to img, url, class: "thumbnail fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
         
-        <% name = picture.gallery_name %>
+        <% gallery_name = picture.gallery_name %>
         <% begin %>
-          <%= link_to(name, picture.gallery) %>
+          <%= link_to(gallery_name, picture.gallery) %>
         <% rescue NoMethodError %>
-          <%= name%>
+          <%= gallery_name %>
         <% end %>
+        - <%= picture.filename %>
       </li>
     <% end %>
   </ul>
