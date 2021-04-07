@@ -2,6 +2,8 @@
 
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
     <% search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_pictures, html: { id: "search", class: "form-search" } do |f| %>
+    <%= f.input_field :image_blob_filename_cont, placeholder: 'Filename',  required: false %>
+
     <%= f.input_field :gallery_of_Event_type_name_or_gallery_of_Venue_type_name_cont, placeholder: 'Gallery Name',  required: false %>
 
     <%= f.input_field :description_cont, placeholder: 'Description',  required: false %>

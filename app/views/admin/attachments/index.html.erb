@@ -4,6 +4,8 @@
     <% search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_attachments, html: { id: "search", class: "form-search" } do |f| %>
     <%= f.input_field :name_cont,              placeholder: "Name",  required: false %>
 
+    <%= f.input_field :file_blob_filename_cont, placeholder: 'Filename',  required: false %>
+
     <% # If, for whatever reason, the symbol of this field changes, you also have to change the link generated in the attachment_tags_helper. %>
     <%= f.input_field :attachment_tags_id_eq, collection: AttachmentTag.accessible_by(current_ability) %>
 
