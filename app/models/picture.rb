@@ -19,6 +19,8 @@
 # == Schema Information End
 #++
 class Picture < ApplicationRecord
+  include NameHelper
+
   belongs_to :gallery, polymorphic: true
 
   has_one_attached :image

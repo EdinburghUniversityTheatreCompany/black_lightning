@@ -277,7 +277,7 @@ module GenericController
   def return_random
     return unless params[:commit] == 'Random'
 
-    redirect_to(resource_class.find(random_resources.pluck(:id).sample))
+    redirect_to(resource_class.find_by(id: random_resources.pluck(:id).sample))
     return true
   end
 
