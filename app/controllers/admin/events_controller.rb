@@ -36,10 +36,10 @@ class Admin::EventsController < AdminController
       :author, :venue, :venue_id, :season, :season_id,
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
-      pictures_attributes: [:id, :_destroy, :description, :image],
+      pictures_attributes: [:id, :_destroy, :description, :image, :access_level, picture_tag_ids: []],
       team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
       attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []],
-      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :ordering]
+      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :order]
     ]
   end
 
