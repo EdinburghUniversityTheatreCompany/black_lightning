@@ -29,6 +29,13 @@
         <% url = url_for(picture.fetch_image) %>
 
         <%= link_to img, url, class: "thumbnail fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
+        
+        <% name = picture.gallery_name %>
+        <% begin %>
+          <%= link_to(name, picture.gallery) %>
+        <% rescue NoMethodError %>
+          <%= name%>
+        <% end %>
       </li>
     <% end %>
   </ul>

@@ -36,6 +36,12 @@ class Picture < ApplicationRecord
     return image
   end
 
+  def gallery_name
+    return get_object_name(gallery) if gallery.present?
+
+    return 'No Gallery'
+  end
+
   ##
   # Returns the url of the slideshow image
   ##
