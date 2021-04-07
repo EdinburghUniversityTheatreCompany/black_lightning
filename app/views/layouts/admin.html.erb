@@ -66,6 +66,10 @@
                   <li><%= link_to 'Attachment Tags', admin_attachment_tags_path %></li>
                 <% end %>
 
+                <% if can? :index, Picture %>
+                  <li><%= link_to 'Pictures', admin_pictures_path %></li>
+                <% end %>
+
                 <% if can? :index, PictureTag %>
                   <li><%= link_to 'Picture Tags', admin_picture_tags_path %></li>
                 <% end %>
