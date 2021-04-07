@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_07_090713) do
+ActiveRecord::Schema.define(version: 2021_04_07_095937) do
 
   create_table "active_storage_attachments", charset: "utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -223,6 +223,7 @@ ActiveRecord::Schema.define(version: 2021_04_07_090713) do
     t.datetime "file_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "editable_block_id"
     t.string "item_type"
     t.bigint "item_id"
     t.integer "access_level", default: 1, null: false
@@ -486,6 +487,7 @@ ActiveRecord::Schema.define(version: 2021_04_07_090713) do
     t.datetime "image_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "access_level", default: 1, null: false
     t.index ["gallery_id"], name: "index_pictures_on_gallery_id"
     t.index ["gallery_type"], name: "index_pictures_on_gallery_type"
   end

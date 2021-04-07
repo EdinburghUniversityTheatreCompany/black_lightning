@@ -24,11 +24,14 @@ class Picture < ApplicationRecord
   has_one_attached :image
 
   validates :image, content_type: %i[png jpg jpeg gif], attached: true
+  validates :access_level, presence: true
 
   has_and_belongs_to_many :picture_tags, optional: true
 
+  ACCESS_LEVELS = Attachment::ACCESS_LEVELS
+
   def fetch_image
-    image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached? 
+    image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached?
 
     return image
   end
