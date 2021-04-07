@@ -223,7 +223,6 @@ ActiveRecord::Schema.define(version: 2021_04_07_095937) do
     t.datetime "file_updated_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.integer "editable_block_id"
     t.string "item_type"
     t.bigint "item_id"
     t.integer "access_level", default: 1, null: false
