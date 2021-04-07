@@ -307,13 +307,14 @@ module GenericController
   end
 
   def upload_dropzone(destination, upload_data)
-    p upload_data
-
-    return if upload_data[:files].nil?
     # If you're ever extending this, you can figure out how to genericise it.
     # I am aware that I am probably writing this to myself.
 
     if destination == 'pictures'
+      # This check should happen after the destination check, otherwise
+      # it won't throw an error if the files are nil.
+      return if upload_data[:files].nil?
+
       attributes = upload_data.permit(:access_level, picture_tag_ids: [])
 
       attributes[:gallery] = get_resource
