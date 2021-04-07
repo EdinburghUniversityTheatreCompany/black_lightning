@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_03_183255) do
+ActiveRecord::Schema.define(version: 2021_04_07_090713) do
 
   create_table "active_storage_attachments", charset: "utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -462,6 +462,18 @@ ActiveRecord::Schema.define(version: 2021_04_03_183255) do
     t.date "expiry_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "picture_tags", charset: "utf8", force: :cascade do |t|
+    t.string "name"
+    t.text "description"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+  end
+
+  create_table "picture_tags_pictures", id: false, charset: "utf8", force: :cascade do |t|
+    t.bigint "picture_id", null: false
+    t.bigint "picture_tag_id", null: false
   end
 
   create_table "pictures", id: :integer, charset: "utf8", collation: "utf8_unicode_ci", force: :cascade do |t|
