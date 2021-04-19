@@ -16,7 +16,6 @@ class StaticController < ApplicationController
     @news = News.accessible_by(current_ability).includes(image_attachment: :blob).order('publish_date DESC').first(2)
     @events = Event.includes(image_attachment: :blob).current.order('start_date ASC')
 
-    p Event.current
     @last_event = Event.last_event
   end
 end
