@@ -18,4 +18,9 @@ class StaticControllerTest < ActionController::TestCase
     get :show, params: { page: 'pineapples_and_the_hexagon_a_memoir' }
     assert_response 404
   end
+
+  test 'should get privacy policy' do
+    get :show, params: { page: 'privacy_policy' }
+    assert_response :success
+  end
 end
