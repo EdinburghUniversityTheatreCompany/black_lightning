@@ -17,3 +17,5 @@
 <%= render '/shared/gallery', pictures: @venue.pictures %>
 
 <%= render 'shared/show_actions', object: @venue %>
+
+<%= get_link Show, :index, link_text: 'All Shows in Venue', query_params: { 'q[venue_id_eq]' => @venue.id } %>

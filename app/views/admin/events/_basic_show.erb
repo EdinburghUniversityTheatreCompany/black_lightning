@@ -1,5 +1,7 @@
 <% # I cannot guarantee that all of these if's are properly tested (all cases being hit), so be careful when modifying %>
 
+<% # Note: If you update the ransack search form, this has some things with q that need to be changed. %>
+
 <% fields = { 
   slug: event.slug,
   'ID' => (event.id if can?(:manage, event)),
@@ -8,13 +10,13 @@
   is_public: bool_text(event.is_public),
   proposal: 'No proposal linked',
   season: event.season.present? ? get_link(event.season, :show) : 'Not part of a season',
-  author: event.author.presence || 'No author specified',
+  author: event.author.present? ? link_to(event.author, admin_shows_url('q[author_cont]' => event.author)) : 'No author specified',
   'Date(s)' => event.date_range(true),
-  venue: event.venue.present? ? get_link(event.venue, :show) : 'No Venue specified',
+  venue: event.venue.present? ? link_to(event.venue.name, admin_shows_url('q[venue_id_eq]' => event.venue.id)) : 'No Venue specified',
   price: event.price,
   tagline: event.tagline.presence || 'No tagline',
   image: 'No image',
-  event_tags: event.event_tags.accessible_by(current_ability).collect{ |event_tag| get_link(event_tag, :show, link_text: event_tag.name, target: :blank )}.join('; ').presence&.html_safe() || 'There are no tags set for this event.'
+  event_tags: event.event_tags.accessible_by(current_ability).collect{ |event_tag| link_to(event_tag.name, admin_shows_url('q[event_tags_id_eq]' => event_tag.id))}.join('; ').presence&.html_safe() || 'There are no tags set for this event.'
 } %>
 
 <% # Proposal %>

@@ -14,7 +14,7 @@
 
       <% if event.venue.present?  %>
         <h4>Venue</h4>
-        <p><b><%= get_link event.venue, :show %></b></p>
+        <p><b><%= link_to(event.venue.name, archives_shows_index_url('q[venue_id_eq]' => event.venue.id)) %></b></p>
       <% end %>
 
       <% if event.price? %>
@@ -24,7 +24,7 @@
 
       <% if event.author.present? %>
         <h4>Author</h4>
-        <p><b><%= event.author %></b></p>
+        <p><b><%= link_to(event.author, archives_shows_index_url('q[author_cont]' => event.author)) %></b></p>
       <% end %>
 
       <% if event.season.present? %>

@@ -12,3 +12,5 @@
 </p>
 
 <%= render '/shared/show_actions', object: @event_tag %>
+
+<%= get_link Show, :index, link_text: 'All Shows With Tag', query_params: { 'q[event_tags_id_eq]' => @event_tag.id } %>
