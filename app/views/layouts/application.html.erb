@@ -73,13 +73,9 @@
 
     <%= render "layouts/ie_notice" %>
 
-    <%= render "layouts/cookie_notice" %>
-
     <%= render '/layouts/alert_div' %>
 
     <%= content_for?(:content) ? yield(:content) : yield %>
-
-    <%= render "layouts/google_analytics" %>
   </div>
 
   <%= render "layouts/footer" %>
