@@ -33,7 +33,10 @@ class ApplicationController < ActionController::Base
   end
 
   def report_500(exception)
-    Honeybadger.notify(exception)
+    Honeybadger.notify(exception, context: {
+      user_email: current_user&.email,
+      user_name: current_user&.name_or_email
+    })
 
     Rails.logger.warn 'Caught error and redirected to 500'
     Rails.logger.error exception
