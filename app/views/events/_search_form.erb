@@ -20,6 +20,8 @@
     <%= f.input :start_date_gt, as: :date, label: "Start Date", start_year: 1890, end_year: max_end_year, include_blank: true, required: false %>
     <%= f.input :end_date_lt,   as: :date, label: "End Date", start_year: 1890, end_year: max_end_year,   include_blank: true, required: false %>
 
+    <%= f.input :show_public_only, label: "Show Public Only", input_html: { id: "show_public_only", checked: params[:show_public_only] == "1" ? true : false, name: "show_public_only" }, as: :boolean %>
+
     <%= f.submit :Search, class: 'btn btn-primary' %>
 
     <%= f.submit :Random, class: 'btn' %>

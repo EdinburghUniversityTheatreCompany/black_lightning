@@ -65,4 +65,8 @@ class Admin::EventsController < AdminController
 
     super
   end
+
+  def index_query_params
+    { is_public: true } if params[:show_public_only] == '1'
+  end
 end
