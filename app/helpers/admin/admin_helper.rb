@@ -33,7 +33,7 @@ module Admin::AdminHelper
     else
       append_to_flash(:error, error_message || "#{name.upcase_first} could not be destroyed.")
       if append_errors_to_error_flash
-        object.errors.messages[:destroy].each do |message|
+        (object.errors.messages[:destroy] + object.errors.messages[:base]).each do |message|
           append_to_flash(:error, message)
         end
       end
