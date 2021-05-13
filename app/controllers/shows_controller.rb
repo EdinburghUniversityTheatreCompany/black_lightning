@@ -3,33 +3,11 @@
 #
 # Uses Will_Paginate for pagination.
 ##
-class ShowsController < ApplicationController
-  include GenericController
+class ShowsController < GenericEventsController
+  
+  private
 
-  load_and_authorize_resource find_by: :slug
-  ##
-  # GET /shows
-  #
-  # GET /shows.json
-  ##
-  def index
-    @events = @shows.includes(image_attachment: :blob)
-                    .current
-                    .paginate(page: params[:page], per_page: 5)
-
-    respond_to do |format|
-      format.html { render '/events/index' }
-      format.json { render json: @shows }
-    end
-  end
-
-  ##
-  # GET /shows/1
-  ##
-  def show
-    @meta[:description] = helpers.render_plain(@show.publicity_text)
-    @meta['og:image'] = [@base_url + @show.slideshow_image_url] + @show.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
-
-    super
+  def load_index_resources
+    return super.current
   end
 end

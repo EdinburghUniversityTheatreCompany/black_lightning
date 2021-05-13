@@ -1,6 +1,12 @@
+<h1><%= @title %></h1>
+
+<% if @search_url.present? %>
+  <%= render '/events/search_form', url: @search_url %>
+<% end %>
+
 <div class="row">
   <div class="span12">
-    <h1><%= @title %></h1>
+
     <hr />
 
     <% @events.each do |event| %>
