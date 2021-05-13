@@ -1,13 +1,9 @@
-class Archives::WorkshopsController < ArchivesController
-  include GenericController
+class Archives::WorkshopsController < Archives::GenericEventsController
+  def index
+    @title = 'Workshops and Events'
 
-  private
+    @search_url = :archives_workshops_index
 
-  def includes_args
-    [image_attachment: :blob]
-  end
-
-  def items_per_page
-    15
+    super
   end
 end

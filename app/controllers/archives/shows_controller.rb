@@ -1,13 +1,7 @@
-class Archives::ShowsController < ArchivesController
-  include GenericController
+class Archives::ShowsController < Archives::GenericEventsController
+  def index
+    @search_url = :archives_shows_index
 
-  private
-
-  def includes_args
-    [image_attachment: :blob]
-  end
-
-  def items_per_page
-    15
+    super
   end
 end
