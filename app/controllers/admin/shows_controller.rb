@@ -23,6 +23,8 @@ class Admin::ShowsController < Admin::EventsController
     else
       @staffing_confirm_data = {}
     end
+
+    super
   end
 
   # New is handled by the Generic Controller.
