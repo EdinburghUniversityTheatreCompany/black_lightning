@@ -18,5 +18,7 @@ module GenericestEventsController
 
   def base_index_query
     return super.on_date(Date.today) if params[:commit] == 'On this day'
+  
+    return super
   end
 end
