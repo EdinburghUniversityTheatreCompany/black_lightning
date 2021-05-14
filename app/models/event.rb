@@ -83,6 +83,10 @@ class Event < ApplicationRecord
   scope :future, -> { where(['end_date >= ?', Date.current]) }
   scope :this_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
 
+  # ONLY LOOKS AT DAY AND MONTH! NOT AT YEAR.
+  # Excludes shows that go into a new year (imps, candlewasters, the old ones we only know the year off, etc) because complicated logic and it wasn't very relevant.
+  scope :on_date, ->(date) { where('(MONTH(start_date) < :month OR (MONTH(start_date) = :month AND DAY(start_date) <= :day)) AND (MONTH(end_date) > :month OR (MONTH(end_date) = :month AND DAY(END_DATE) >= :day))', { day: date.day, month: date.month}) }
+
   # Events are generally ordered with the most recent/upcoming ones first.
   default_scope -> { order('end_date DESC') }
 

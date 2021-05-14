@@ -15,4 +15,8 @@ module GenericestEventsController
     # Dealt with by default scope.
     nil
   end
+
+  def base_index_query
+    return super.on_date(Date.today) if params[:commit] == 'On this day'
+  end
 end
