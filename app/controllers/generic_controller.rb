@@ -231,7 +231,7 @@ module GenericController
   def should_paginate
     # Do not paginate for random as that will break the pluck.
     # If you override this, you should use super && <your custom condition>
-    params.nil? || params[:commit] != 'Random'
+    params.nil? || !should_return_random
   end
 
   def items_per_page
@@ -274,8 +274,12 @@ module GenericController
     load_index_resources
   end
 
+  def should_return_random
+    params[:commit] == 'Random'
+  end
+
   def return_random
-    return unless params[:commit] == 'Random'
+    return unless should_return_random
 
     redirect_to(resource_class.find_by(id: random_resources.pluck(:id).sample))
     return true
