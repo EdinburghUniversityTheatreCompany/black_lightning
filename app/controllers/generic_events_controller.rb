@@ -1,14 +1,9 @@
 # For the few things that are shared between the controllers of the events.
 
 class GenericEventsController < ApplicationController
-  include GenericController
+  include GenericestEventsController
 
   load_and_authorize_resource find_by: :slug
-
-  def index
-    @events = load_index_resources
-    super
-  end
 
   def show
     @meta[:description] = helpers.render_plain(get_resource.publicity_text)
@@ -18,11 +13,6 @@ class GenericEventsController < ApplicationController
   end
 
   private
-
-  def order_args
-    # Dealt with by default scope.
-    nil
-  end
 
   def index_filename
     '/events/index'

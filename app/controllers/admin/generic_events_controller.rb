@@ -1,15 +1,9 @@
 # For the few things that are shared between the controllers of the events.
 
-class Admin::EventsController < AdminController
-  include GenericController
+class Admin::GenericEventsController < AdminController
+  include GenericestEventsController
 
   load_and_authorize_resource find_by: :slug
-
-  def index
-    @events = load_index_resources
-
-    super
-  end
 
   def update
     # Set the previous user ids to see who the NEW debtors are.
@@ -19,11 +13,6 @@ class Admin::EventsController < AdminController
   end
 
   private
-
-  def order_args
-    # Dealt with by default scope.
-    nil
-  end
 
   def index_filename
     'admin/events/index'

@@ -1,4 +1,4 @@
-class Admin::SeasonsController < Admin::EventsController
+class Admin::SeasonsController < Admin::GenericEventsController
   # GET /admin/seasons
   # GET /admin/seasons.json
   def index

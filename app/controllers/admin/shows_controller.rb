@@ -1,4 +1,4 @@
-class Admin::ShowsController < Admin::EventsController
+class Admin::ShowsController < Admin::GenericEventsController
   # Those are checked for permission to create debts instead.
   skip_authorize_resource only: %i[create_maintenance_debts create_staffing_debts convert_to_season convert_to_workshop]
 
