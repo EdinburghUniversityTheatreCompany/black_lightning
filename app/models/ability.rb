@@ -85,6 +85,9 @@ class Ability
     can :read, News, show_public: true
     can :read, Event, is_public: true
 
+    # Guests can see all Event Tags.
+    can :read, EventTag
+
     # Have a specific view_shows_and_bio permission because it is a bad idea to give normal users full :read permission for users.
     can :view_shows_and_bio, User, public_profile: true
 
