@@ -30,4 +30,4 @@
 
 <%= will_paginate(@events) %>
 
-<%= get_link @events.klass, :new %>
+<%= (get_link @events.klass, :new) if @events.klass != Event %>

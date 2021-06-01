@@ -30,6 +30,10 @@
                 <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
                 <% end %>
 
+                <% if can? :index, Event %>
+                <li><%= link_to 'Events', admin_events_path %></li>
+                <% end %>
+
                 <% if can? :index, Show %>
                 <li><%= link_to 'Shows', admin_shows_path %></li>
                 <% end %>

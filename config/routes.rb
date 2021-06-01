@@ -62,6 +62,8 @@ ChaosRails::Application.routes.draw do
     # Answer files
     get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file
 
+    get 'events', to: 'events#index', as: :events
+
     resources :shows do
       resources :feedbacks, except: [:show]
 
