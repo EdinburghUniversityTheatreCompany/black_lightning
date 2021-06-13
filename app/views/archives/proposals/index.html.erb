@@ -1,5 +1,5 @@
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
-  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :archives_proposals_index do |f| %>
+  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :archives_proposals do |f| %>
     <%= f.input :show_title_cont,      label: "Proposal Title", required: false %>
     <%= f.input :users_full_name_cont, label: "Person Name",    required: false %>
 

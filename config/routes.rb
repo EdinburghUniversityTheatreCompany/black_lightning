@@ -48,7 +48,6 @@ ChaosRails::Application.routes.draw do
 
   resources :complaints, only: [:new, :create]
 
-  get 'events/xts/:id', to: 'events#find_by_xts_id'
   get 'attachments/:slug(/:style)', to: 'attachments#file', as: 'attachment'
 
   namespace :admin do
@@ -62,7 +61,11 @@ ChaosRails::Application.routes.draw do
     # Answer files
     get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file
 
-    get 'events', to: 'events#index', as: :events
+    resources :events, only: [:index, :show] do
+      member do
+        get 'xts', to: 'events#find_by_xts_id'
+      end
+    end
 
     resources :shows do
       resources :feedbacks, except: [:show]
@@ -262,10 +265,10 @@ ChaosRails::Application.routes.draw do
 
   get 'archives', to: 'archives#index', as: :archives_index
   namespace :archives do
-    get 'events', to: 'events#index', as: :events_index
-    get 'shows', to: 'shows#index', as: :shows_index
-    get 'workshops', to: 'workshops#index', as: :workshops_index
-    get 'proposals', to: 'proposals#index', as: :proposals_index
+    get 'events', to: 'events#index', as: :events
+    get 'shows', to: 'shows#index', as: :shows
+    get 'workshops', to: 'workshops#index', as: :workshops
+    get 'proposals', to: 'proposals#index', as: :proposals
   end
 
   post 'markdown/preview', to: 'markdown#preview'
