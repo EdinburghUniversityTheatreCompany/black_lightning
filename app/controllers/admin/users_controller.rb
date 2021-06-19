@@ -85,12 +85,10 @@ class Admin::UsersController < AdminController
             :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: []]
   end
 
-  def base_index_query
-    @q = @users.ransack(params[:q])
-    @users = @q.result(distinct: true)
+  # TEST
+  def base_index_database_query
+    return super.with_role(:member) if params[:show_non_members] != '1'
 
-    @users = @users.with_role(:member) if params[:show_non_members] != '1'
-
-    return @users
+    return super
   end
 end

@@ -13,7 +13,7 @@ class Archives::ProposalsController < AdminController
   # Because accessible_by and the search both need the team_members table, it errors when you search for a person name.
 
   def proposal_search_result
-    result_ids = base_index_query.ids
+    result_ids = base_index_ransack_query.ids
 
     # These are the proposals that are the result of the search.
     return Admin::Proposals::Proposal.where(id: result_ids).accessible_by(current_ability)

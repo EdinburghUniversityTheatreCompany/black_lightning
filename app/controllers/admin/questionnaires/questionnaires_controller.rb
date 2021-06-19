@@ -121,7 +121,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type]]
   end
 
-  def base_index_query
+  def base_index_ransack_query
     q = params[:q]
 
     @q = @questionnaires.ransack(q)

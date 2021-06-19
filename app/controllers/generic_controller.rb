@@ -194,7 +194,7 @@ module GenericController
   # Index Query
   ##
 
-  def base_index_query
+  def base_index_ransack_query
     @q = resource_class.ransack(ransack_query_param)
 
     @q.sorts = ransack_default_sorts if ransack_default_sorts.present? && @q.sorts.nil?
@@ -202,11 +202,15 @@ module GenericController
     return @q.result(distinct: distinct_for_ransack)
   end
 
+  def base_index_database_query
+    return base_index_ransack_query.includes(*includes_args)
+                                   .where(index_query_params)
+                                   .accessible_by(current_ability)
+                                   .order(order_args)
+  end
+
   def load_index_resources
-    resources = base_index_query.includes(*includes_args)
-                                .where(index_query_params)
-                                .accessible_by(current_ability)
-                                .order(order_args)
+    resources = base_index_database_query
     # Order will not override any ordering from scopes!
 
     resources = resources.paginate(page: params[:page], per_page: items_per_page) if should_paginate
@@ -229,9 +233,7 @@ module GenericController
   end
 
   def should_paginate
-    # Do not paginate for random as that will break the pluck.
-    # If you override this, you should use super && <your custom condition>
-    params.nil? || !should_return_random
+    true
   end
 
   def items_per_page
@@ -271,7 +273,7 @@ module GenericController
   ##
 
   def random_resources
-    load_index_resources
+    base_index_database_query
   end
 
   def should_return_random
@@ -279,7 +281,12 @@ module GenericController
   end
 
   def return_random
-    return unless should_return_random
+    return false unless should_return_random
+
+    unless random_resources.present?
+      helpers.append_to_flash(:error, 'There are no results from the search, so I could not select a random instance. HAL is sorry.')
+      return false
+    end 
 
     redirect_to(resource_class.find_by(id: random_resources.pluck(:id).sample))
     return true
