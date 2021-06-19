@@ -5,3 +5,5 @@
 <%= render '/shared/gallery', pictures: @workshop.pictures %>
 
 <%= render 'shared/video_link_gallery', video_links: @workshop.video_links.accessible_by(current_ability) %>
+
+<%= render '/shared/show_actions', object: @workshop, index_link_params: { link_target: archives_workshops_path } %>

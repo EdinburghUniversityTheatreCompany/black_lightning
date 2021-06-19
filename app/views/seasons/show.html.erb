@@ -6,7 +6,7 @@
 
 <h3>Events</h3>
 <% if @events.empty? %>
-  There are no events attached to this festival.
+  <p>There are no events attached to this festival.</p>
 <% else %>
   <div class="accordion seasons-accordion" id="accordion2">
     <% @events.each do |day, events_by_day|%>
@@ -45,3 +45,5 @@
 <%= render '/shared/gallery', pictures: @season.pictures %>
 
 <%= render 'shared/video_link_gallery', video_links: @season.video_links.accessible_by(current_ability) %>
+
+<%= render '/shared/show_actions', object: @season, index_link_params: { link_target: seasons_path } %>

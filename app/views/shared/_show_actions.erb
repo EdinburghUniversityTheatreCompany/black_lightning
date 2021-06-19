@@ -1,11 +1,14 @@
 <% custom_destroy ||= false %>
+<% index_link_params = nil if index_link_params.nil? %>
 
-<%= get_link object, :edit, html_class: 'btn btn-primary' %>
+<div>
+  <%= get_link object, :edit, html_class: 'btn btn-primary' %>
 
-<% if custom_destroy == false %>
-  <%= get_link object, :destroy %>
-<% else %>
-  <%= custom_destroy %>
-<% end %>
+  <% if custom_destroy == false %>
+    <%= get_link object, :destroy %>
+  <% else %>
+    <%= custom_destroy %>
+  <% end %>
 
-<%= get_link object.class, :index %>
+  <%= get_link object.class, :index, index_link_params %>
+</div>
