@@ -2,13 +2,6 @@
 
 <%= render '/errors/template', error_header: error_header do %>
 <br>
-  
-  <% unless request.cookie_jar[:allow_cookies] %>
-    <p>
-      <b>You have not accepted cookies. Please accept them first using the banner at the top and refresh the page.</b>
-    <p>
-  <% end %>
-
   <% if current_user.present? %>
     <% if current_user.has_role?(:member) %>
       <p>
