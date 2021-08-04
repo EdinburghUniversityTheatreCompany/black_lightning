@@ -1,4 +1,6 @@
 class ReportsMailer < ApplicationMailer
+  default reply_to: 'IT <it@bedlamtheatre.co.uk>'
+
   def send_report(user, report)
     @user = user
 
