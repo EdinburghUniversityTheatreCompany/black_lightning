@@ -1,20 +1,7 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-  </head>
-  <body>
-    <p>
-      Dear <%= @user.first_name %>,
-    </p>
-    <p>
-      You are due to be staffing for <%= @staffing.show_title %> at <%= l @staffing.start_time, :format => :time_only %>
-    </p>
-    <p>
-      Regards,
-    </p>
-    <p>
-      The Bedlam Theatre Team
-    </p>
-  </body>
-</html>
+<p>Dear <%= @user.first_name %>,</p>
+
+<p>You are due to be staffing for <%= @staffing.show_title %> at <%= @start_time %></p>
+
+<p>Regards,</p>
+
+<p>The Bedlam Theatre Team</p>

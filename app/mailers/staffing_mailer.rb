@@ -5,7 +5,8 @@ class StaffingMailer < ApplicationMailer
 
     return if @user.nil?
 
-    @subject = 'Bedlam Theatre Staffing'
+    @start_time = l @staffing.start_time, format: :long
+    @subject = "Bedlam Theatre Staffing at #{@start_time}"
 
     mail(to: @user.email, subject: @subject)
   end
