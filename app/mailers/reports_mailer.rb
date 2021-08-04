@@ -8,6 +8,8 @@ class ReportsMailer < ApplicationMailer
 
     attachments['report.xlsx'] = report.to_stream.read
 
-    mail(to: @user.email, subject: 'Bedlam Theatre Report')
+    @subject = 'Bedlam Theatre Report'
+
+    mail(to: @user.email, subject: @subject)
   end
 end

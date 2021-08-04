@@ -4,10 +4,10 @@ class DebtMailer < ApplicationMailer
     @user = user
     @new_debtor = new_debtor
 
-    subject = new_debtor ? 'Notification of Debt' : 'Reminder of Debt'
+    @subject = new_debtor ? 'Notification of Debt' : 'Reminder of Debt'
     notification_type = new_debtor ? :initial_notification : :reminder
 
     Admin::DebtNotification.create(user: @user, sent_on: Date.today, notification_type: notification_type)
-    return mail(to: @user.email, subject: subject)
+    return mail(to: @user.email, subject: @subject)
   end
 end

@@ -3,6 +3,8 @@ class UsersMailer < ApplicationMailer
     @user = user
     @reset_password = reset_password
 
-    mail(to: @user.email, subject: 'Welcome to Bedlam Theatre')
+    @subject = 'Welcome to Bedlam Theatre'
+
+    mail(to: @user.email, subject: @subject)
   end
 end

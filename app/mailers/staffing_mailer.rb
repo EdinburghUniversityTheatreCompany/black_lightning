@@ -5,6 +5,8 @@ class StaffingMailer < ApplicationMailer
 
     return if @user.nil?
 
-    mail(to: @user.email, subject: 'Bedlam Theatre Staffing')
+    @subject = 'Bedlam Theatre Staffing'
+
+    mail(to: @user.email, subject: @subject)
   end
 end

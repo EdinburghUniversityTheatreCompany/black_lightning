@@ -8,6 +8,8 @@ class ProposalsMailer < ApplicationMailer
 
     @new = new
     
-    mail(to: @user.email, subject: "Bedlam Theatre Proposals - #{proposal.show_title}")
+    @subject = "Bedlam Theatre Proposals - #{proposal.show_title}"
+
+    mail(to: @user.email, subject: @subject)
   end
 end

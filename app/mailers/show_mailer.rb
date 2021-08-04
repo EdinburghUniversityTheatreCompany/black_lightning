@@ -4,6 +4,8 @@ class ShowMailer < ApplicationMailer
     @show = show
     @new_debtors_string = new_debtors_string
 
-    mail(to: 'productions@bedlamtheatre.co.uk', subject: "New debtors added to #{@show.name}")
+    @subject = "New debtors added to #{@show.name}"
+
+    mail(to: 'productions@bedlamtheatre.co.uk', subject: @subject)
   end
 end
