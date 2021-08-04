@@ -14,7 +14,11 @@ class ShowMailerTest < ActionMailer::TestCase
 
     assert_equal ['productions@bedlamtheatre.co.uk'], mail.to
     assert_equal "New debtors added to #{show.name}", mail.subject
-    assert_includes mail.body.to_s, new_debtors_string
-    assert_includes mail.body.to_s, user.name
+
+    assert_includes mail.html_part.to_s, new_debtors_string
+    assert_includes mail.html_part.to_s, user.name
+
+    assert_includes mail.text_part.to_s, new_debtors_string
+    assert_includes mail.text_part.to_s, user.name
   end
 end

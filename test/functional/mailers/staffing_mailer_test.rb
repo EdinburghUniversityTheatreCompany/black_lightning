@@ -23,7 +23,7 @@ class StaffingMailerTest < ActionMailer::TestCase
 
         # Test the body of the sent email contains what we expect it to
         assert_equal [job.user.email], email.to
-        assert_equal 'Bedlam Theatre Staffing', email.subject
+        assert_includes email.subject, 'Bedlam Theatre Staffing'
       else
         assert_no_difference 'ActionMailer::Base.deliveries.count' do
           assert_nil StaffingMailer.staffing_reminder(job).deliver_now
