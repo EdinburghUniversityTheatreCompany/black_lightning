@@ -1,10 +1,4 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta content='text/html; charset=UTF-8' http-equiv='Content-Type'/>
-</head>
-<body>
-
+<%= render partial: "shared/mail_header", locals: {subject: 'New Debt notification'} %>
 <p>
   Dear <%= @user.name_or_email %>,
 </p>
@@ -27,6 +21,9 @@
 <p>
 Bedlam Committee
 </p>
-</body>
-</html>
+
+<%= render partial: "shared/mail_cta", locals: {cta_url: admin_staffings_url, cta_text: 'View debt'}  %>
+<%= render partial: "shared/mail_footer_no_unsub" %>
+
+
 
