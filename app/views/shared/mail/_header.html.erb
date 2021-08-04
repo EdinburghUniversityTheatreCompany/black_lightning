@@ -2,9 +2,9 @@
 
 We also store the CSS here, because it cannot be passed as a separate stylesheet for mail clients.
 
-It MUST be passed 'subject' as a local.
+It MUST be passed @subject as a global variable, defined in the mailers.
 
-Note that there is NO equivalent text header, as this is not required and text versions of emails should not contain a reference to a header partial-->
+Note that there is an equivalent text header, but this is just empty, as this is not required.-->
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
@@ -16,7 +16,7 @@ Note that there is NO equivalent text header, as this is not required and text v
 	<!--[if !mso]><!-->
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<!--<![endif]-->
-	<title><%= subject %></title>
+	<title><%= @subject %></title>
 	<!--[if !mso]><!-->
 	<!--<![endif]-->
 	<style type="text/css">
@@ -160,7 +160,7 @@ Note that there is NO equivalent text header, as this is not required and text v
 											<table cellpadding="0" cellspacing="0" role="presentation" width="100%" style="table-layout: fixed; vertical-align: top; border-spacing: 0; border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt;" valign="top">
 												<tr style="vertical-align: top;" valign="top">
 													<td style="word-break: break-word; vertical-align: top; padding-bottom: 0px; padding-left: 0px; padding-right: 0px; padding-top: 0px; text-align: center; width: 100%;" width="100%" align="center" valign="top">
-														<h1 style="color:#555555;direction:ltr;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:23px;font-weight:normal;letter-spacing:normal;line-height:120%;text-align:center;margin-top:0;margin-bottom:0;"><strong><%= subject %></strong></h1>
+														<h1 style="color:#555555;direction:ltr;font-family:Arial, Helvetica Neue, Helvetica, sans-serif;font-size:23px;font-weight:normal;letter-spacing:normal;line-height:120%;text-align:center;margin-top:0;margin-bottom:0;"><strong><%= @subject %></strong></h1>
 													</td>
 												</tr>
 											</table>
