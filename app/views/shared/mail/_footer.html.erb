@@ -60,7 +60,7 @@
 														<% if @can_unsubscribe %>
 															Changed your mind? You can <a href="{$unsubscribe}" target="_blank" style="color: #c0c0c0;" rel="noopener">unsubscribe</a> at any time.
 														<% else %>
-														These emails form part of your account's effective operation and so cannot be unsubscribed from. To remove your account from the Bedlam Theatre website, please contact secretary@bedlamtheatre.co.uk with the words GDPR REQUEST in the subject line.
+														These emails form part of your account's effective operation and so cannot be unsubscribed from. To remove your account from the Bedlam Theatre website, please contact <%= mail_to 'secretary@bedlamtheatre.co.uk' %> with the words GDPR REQUEST in the subject line.
 														<% end %>
 													</span></p>
 												</div>
