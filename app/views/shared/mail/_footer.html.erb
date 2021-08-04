@@ -56,7 +56,13 @@
 													<p style="margin: 0; font-size: 12px; line-height: 1.2; text-align: center; word-break: break-word; mso-line-height-alt: 14px; margin-top: 0; margin-bottom: 0;"><span style="color: #C0C0C0;">11b Bristo Place</span></p>
 													<p style="margin: 0; font-size: 12px; line-height: 1.2; text-align: center; word-break: break-word; mso-line-height-alt: 14px; margin-top: 0; margin-bottom: 0;"><span style="color: #C0C0C0;">Edinburgh</span></p>
 													<p style="margin: 0; font-size: 12px; line-height: 1.2; text-align: center; word-break: break-word; mso-line-height-alt: 14px; margin-top: 0; margin-bottom: 0;"><span style="color: #C0C0C0;">EH3 9RU</span></p>
-													<p style="margin: 0; font-size: 12px; line-height: 1.2; text-align: center; word-break: break-word; mso-line-height-alt: 14px; margin-top: 0; margin-bottom: 0;"><span style="color: #C0C0C0;">Scotland<br><br>Changed your mind? You can <a href="{$unsubscribe}" target="_blank" style="color: #c0c0c0;" rel="noopener">unsubscribe</a> at any time.</span></p>
+													<p style="margin: 0; font-size: 12px; line-height: 1.2; text-align: center; word-break: break-word; mso-line-height-alt: 14px; margin-top: 0; margin-bottom: 0;"><span style="color: #C0C0C0;">Scotland<br><br>
+														<% if @can_unsubscribe %>
+															Changed your mind? You can <a href="{$unsubscribe}" target="_blank" style="color: #c0c0c0;" rel="noopener">unsubscribe</a> at any time.
+														<% else %>
+														These emails form part of your account's effective operation and so cannot be unsubscribed from. To remove your account from the Bedlam Theatre website, please contact secretary@bedlamtheatre.co.uk with the words GDPR REQUEST in the subject line.
+														<% end %>
+													</span></p>
 												</div>
 											</div>
 											<!--[if mso]></td></tr></table><![endif]-->
