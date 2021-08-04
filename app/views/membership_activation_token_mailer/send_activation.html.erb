@@ -1,28 +1,11 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-  </head>
-  <body>
+<p>Welcome to Bedlam!</p>
 
-    <p>Welcome to Bedlam!</p>
+<%= link_to('Click here to complete your registration', activate_membership_activation_token_url(@token, protocol: "https")) %>
 
-    <%= link_to('Click here to complete your registration', activate_membership_activation_token_url(@token, protocol: "https")) %>
+<p>
+  Kind Regards,
+</p>
 
-    <p>
-      Kind Regards,
-    </p>
-
-    <p>
-      Bedlam Theatre Committee and The Project Black Lightning Team
-    </p>
-
-    <hr>
-    <p>
-      Bedlam Theatre<br />
-      11b Bristo Place<br />
-      Edinburgh<br />
-      EH1 1EZ<br />
-    </p>
-  </body>
-</html>
+<p>
+  The Bedlam Theatre Committee and The Project Black Lightning Team
+</p>
