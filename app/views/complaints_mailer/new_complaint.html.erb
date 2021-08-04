@@ -1,0 +1,15 @@
+<%= render partial: "shared/mail_header", locals: {subject: 'New Complaint'} %>
+
+Dear Welfare Contacts,
+<br /><br />
+Someone submitted a complaint using the form on <%= @creation_time_string %>.
+<br /><br />
+You can view it at <%= link_to 'this link', admin_complaint_url(@complaint) %>.
+<br /><br />
+Regards,
+<br /><br />
+The Black Lightning Team
+
+<%= render partial: "shared/mail_cta", locals: {cta_text: 'View Complaint', cta_url: admin_complaint_url(@complaint)} %>
+
+<%= render partial: "shared/mail_footer_no_unsub" %>
