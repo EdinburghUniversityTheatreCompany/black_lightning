@@ -1,31 +1,24 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
-  </head>
-  <body>
-    <p>
-      Dear <%= @user.first_name %>,
-    </p>
-    <p>
-      You have been added as <%= @team_member.position %> to the proposal "<%= @proposal.show_title %>".
-    </p>
-    <p>
-      <% if @new %>
-        The proposal was submitted by <%= @updater.name %>.
-      <% else %>
-        You have been added by <%= @updater.name %>.
-      <% end %>
-    </p>
-    <p>
-    <% url = admin_proposals_proposal_url(@proposal) %>
-      You can view the proposal by visiting <%= link_to url, url %>.
-    </p>
-    <p>
-      Regards,
-    </p>
-    <p>
-      The Bedlam Theatre Team
-    </p>
-  </body>
-</html>
+<% url = admin_proposals_proposal_url(@proposal) %>
+
+<p>Dear <%= @user.first_name %>,</p>
+
+<p>You have been added as <%= @team_member.position %> to the proposal "<%= @proposal.show_title %>".</p>
+
+<p>
+  <% if @new %>
+    The proposal was submitted by <%= @updater.name %>.
+  <% else %>
+    You have been added by <%= @updater.name %>.
+  <% end %>
+</p>
+
+<p>
+  You can view the proposal by visiting <%= link_to url, url %>.
+</p>
+
+<p>Regards,</p>
+
+<p>The Bedlam Theatre Committee</p>
+
+<%= render partial: "shared/mail/call_to_action", locals: { text: 'View Proposal', cta_url: url } %>
+

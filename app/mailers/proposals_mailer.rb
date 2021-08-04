@@ -7,8 +7,8 @@ class ProposalsMailer < ApplicationMailer
     @user = team_member.user
 
     @new = new
-    
-    @subject = "Bedlam Theatre Proposals - #{proposal.show_title}"
+
+    @subject = "Added to Bedlam Theatre Proposal - #{proposal.show_title}"
 
     mail(to: @user.email, subject: @subject)
   end
