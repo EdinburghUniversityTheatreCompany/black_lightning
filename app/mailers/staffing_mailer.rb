@@ -1,6 +1,4 @@
-class StaffingMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class StaffingMailer < ApplicationMailer
   def staffing_reminder(job)
     @staffing = job.staffable
     @user = job.user

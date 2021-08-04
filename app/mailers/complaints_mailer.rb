@@ -1,6 +1,4 @@
-class ComplaintsMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class ComplaintsMailer < ApplicationMailer
   def new_complaint(complaint)
     @complaint = complaint
 

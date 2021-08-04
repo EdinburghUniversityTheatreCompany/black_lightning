@@ -1,6 +1,4 @@
-class ShowMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class ShowMailer < ApplicationMailer
   def warn_committee_about_debtors_added_to_show(show, new_debtors_string, editor)
     @editor = editor
     @show = show

@@ -1,8 +1,6 @@
 # This mailer is currently completely unused.
 # :nocov:
-class MembershipMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class MembershipMailer < ApplicationMailer
   def new_member(user)
     @user = user
     @card = user.membership_card

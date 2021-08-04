@@ -1,7 +1,5 @@
 # Not directly tested, but the debt task is, so it is covered.
-class DebtMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class DebtMailer < ApplicationMailer
   def mail_debtor(user, new_debtor)
     @user = user
     @new_debtor = new_debtor

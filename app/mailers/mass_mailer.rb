@@ -1,5 +1,4 @@
-class MassMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
+class MassMailer < ApplicationMailer
   helper(MdHelper)
 
   def send_mail(mass_mail, recipient)

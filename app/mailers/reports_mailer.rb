@@ -1,6 +1,4 @@
-class ReportsMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class ReportsMailer < ApplicationMailer
   def send_report(user, report)
     @user = user
 
