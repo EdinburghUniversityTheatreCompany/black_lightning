@@ -13,7 +13,7 @@ class ProposalsMailerTest < ActionMailer::TestCase
 
         # Test the body of the sent email contains what we expect it to
         assert_equal [team_member.user.email], email.to
-        assert_equal "Bedlam Theatre Proposals - #{proposal.show_title}", email.subject
+        assert_equal "Added to Bedlam Theatre Proposal - #{proposal.show_title}", email.subject
 
         assert_match "The proposal was submitted by #{updater.name}", email.text_part.to_s
         assert_match "The proposal was submitted by #{updater.name}", email.html_part.to_s

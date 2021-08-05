@@ -1,6 +1,4 @@
-class ProposalsMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class ProposalsMailer < ApplicationMailer
   def added_to_proposal(proposal, updater, team_member, new)
     @proposal = proposal
     @updater = updater
@@ -9,7 +7,9 @@ class ProposalsMailer < ActionMailer::Base
     @user = team_member.user
 
     @new = new
-    
-    mail(to: @user.email, subject: "Bedlam Theatre Proposals - #{proposal.show_title}")
+
+    @subject = "Added to Bedlam Theatre Proposal - #{proposal.show_title}"
+
+    mail(to: @user.email, subject: @subject)
   end
 end

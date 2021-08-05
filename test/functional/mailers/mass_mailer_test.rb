@@ -15,6 +15,7 @@ class MassMailerTest < ActionMailer::TestCase
 
     assert_equal [recipient.email], mail.to
     assert_equal "Bedlam Theatre - #{mass_mail.subject}", mail.subject
-    assert_equal render_markdown(mass_mail.body), mail.html_part.body.to_s
+    assert_includes mail.html_part.body, render_markdown(mass_mail.body).strip
+    assert_includes mail.text_part.body, render_plain(mass_mail.body).strip
   end
 end

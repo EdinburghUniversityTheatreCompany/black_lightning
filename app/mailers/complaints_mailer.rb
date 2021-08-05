@@ -1,6 +1,4 @@
-class ComplaintsMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class ComplaintsMailer < ApplicationMailer
   def new_complaint(complaint)
     @complaint = complaint
 
@@ -8,6 +6,8 @@ class ComplaintsMailer < ActionMailer::Base
 
     receiver = ['welfare@bedlamtheatre.co.uk', 'president@bedlamtheatre.co.uk']
 
-    mail(to: receiver, subject: "New Complaint Submitted on #{@creation_time_string}")
+    @subject = "New Complaint Submitted on #{@creation_time_string}"
+
+    mail(to: receiver, subject: @subject)
   end
 end

@@ -13,9 +13,9 @@ class MarketingCreativesTaskTest < ActiveSupport::TestCase
     mail = ActionMailer::Base.deliveries.last
     assert_includes mail.subject, '2'
 
-    assert_includes mail.body, '2'
-    assert_includes mail.body, profile.name.html_safe
-    assert_includes mail.body, older_profile.name.html_safe
+    assert_includes mail.html_part.body, '2'
+    assert_includes mail.html_part.body, profile.name.html_safe
+    assert_includes mail.html_part.body, older_profile.name.html_safe
   end
 
   test 'should not notify sign-ups older than 25 hours' do

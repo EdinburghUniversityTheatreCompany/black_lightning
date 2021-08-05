@@ -1,0 +1,13 @@
+------------
+<% # This is a partial for the mail footer. You can enable the unsubscribe link where applicable using the global variable. %>
+Bedlam Theatre is operated by the Edinburgh University Theatre Company (EUTC), at 11b Bristo Pl, Edinburgh, EH3 9RU, Scotland.
+
+<% if @can_unsubscribe %>
+
+If you want to stop receiving emails from us, you can unsubscribe using the link below.
+
+{$unsubscribe}
+
+<% else %>
+These emails form part of your account's effective operation and so cannot be unsubscribed from. To remove your account from the Bedlam Theatre website, please contact secretary@bedlamtheatre.co.uk with the words GDPR REQUEST in the subject line.
+<% end %>

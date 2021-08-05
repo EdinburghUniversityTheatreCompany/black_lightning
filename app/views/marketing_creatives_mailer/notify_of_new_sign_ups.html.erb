@@ -1,0 +1,13 @@
+<p>Dear Marketing Manager,</p>
+
+<p>There were <%= @new_sign_ups.count %> new sign-ups for Marketing Creatives today.</p>
+
+<p>These people are:</p>
+<ul>
+  <% @new_sign_ups.each do |new_sign_up| %>
+    <li><%= link_to new_sign_up.name, admin_marketing_creatives_profile_url(new_sign_up) %></li>
+  <% end %>
+</ul>
+<p>Regards,</p>
+
+<p>The Black Lightning Team</p>

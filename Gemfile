@@ -74,12 +74,14 @@ group :development, :test do
   gem 'annotate'
 
   gem 'bullet'
+
+  gem 'faker'
 end
 
 group :test do
   gem 'simplecov'
   gem 'simplecov-rcov'
-  gem 'faker'
+
   gem 'html_acceptance'
 end
 

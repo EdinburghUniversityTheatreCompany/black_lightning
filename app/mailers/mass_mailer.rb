@@ -1,6 +1,7 @@
-class MassMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
+class MassMailer < ApplicationMailer
   helper(MdHelper)
+
+  # TODO: Enable unsubscribing from mass mails. However, this is currently unused, so not urgent.
 
   def send_mail(mass_mail, recipient)
     @body    = mass_mail.body

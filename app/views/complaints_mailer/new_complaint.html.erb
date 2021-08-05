@@ -1,5 +1,3 @@
-<%= render partial: "shared/mail_header", locals: {subject: 'New Complaint'} %>
-
 Dear Welfare Contacts,
 <br /><br />
 Someone submitted a complaint using the form on <%= @creation_time_string %>.
@@ -10,6 +8,4 @@ Regards,
 <br /><br />
 The Black Lightning Team
 
-<%= render partial: "shared/mail_cta", locals: {cta_text: 'View Complaint', cta_url: admin_complaint_url(@complaint)} %>
-
-<%= render partial: "shared/mail_footer_no_unsub" %>
+<%= render partial: "shared/mail/call_to_action", locals: { text: 'View Complaint', cta_url: admin_complaint_url(@complaint) } %>

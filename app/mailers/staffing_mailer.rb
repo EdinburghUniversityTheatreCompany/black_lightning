@@ -1,12 +1,13 @@
-class StaffingMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
-
+class StaffingMailer < ApplicationMailer
   def staffing_reminder(job)
     @staffing = job.staffable
     @user = job.user
 
     return if @user.nil?
 
-    mail(to: @user.email, subject: 'Bedlam Theatre Staffing')
+    @start_time = l @staffing.start_time, format: :long
+    @subject = "Bedlam Theatre Staffing at #{@start_time}"
+
+    mail(to: @user.email, subject: @subject)
   end
 end

@@ -1,5 +1,5 @@
-class ReportsMailer < ActionMailer::Base
-  default from: 'Bedlam Theatre <no-reply@bedlamtheatre.co.uk>'
+class ReportsMailer < ApplicationMailer
+  default reply_to: 'IT <it@bedlamtheatre.co.uk>'
 
   def send_report(user, report)
     @user = user
@@ -10,6 +10,8 @@ class ReportsMailer < ActionMailer::Base
 
     attachments['report.xlsx'] = report.to_stream.read
 
-    mail(to: @user.email, subject: 'Bedlam Theatre Report')
+    @subject = 'Bedlam Theatre Report'
+
+    mail(to: @user.email, subject: @subject)
   end
 end

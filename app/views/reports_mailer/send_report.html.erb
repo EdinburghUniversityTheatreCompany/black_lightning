@@ -1,0 +1,18 @@
+<p>Hello <%= @user.first_name %>,</p>
+
+<p>Your report, as requested.</p>
+<% if @errors.any? %>
+<p>These errors occured while generating your report</p>
+
+<ul>
+  <li> 
+    <%= @errors.join('</li><li>') %>
+  </li>
+</ul>
+
+<p>I am very sorry. Please forward a copy of this report to <%= mail_to 'it@bedlamtheatre.co.uk' %> so the IT subcommittee can see what went wrong.</p>
+<% end %>
+
+<p>Your humble servant,</p>
+
+<p>Pineapple</p>
