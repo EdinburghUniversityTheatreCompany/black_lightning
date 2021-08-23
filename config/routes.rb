@@ -282,6 +282,10 @@ ChaosRails::Application.routes.draw do
 
   get 'youth', to: redirect('/getinvolved/youth_project')
 
+  get 'welcomeweek', to: redirect('/welcome_week')
+  get 'welcome_week/parapicnic_in_the_park', to: redirect('/welcome_week')
+  get 'welcome_week/catching_up', to: redirect('/welcome_week')
+
   # Use bedlamtheatre.co.uk/:slug to find a season
   get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
 
@@ -291,6 +295,7 @@ ChaosRails::Application.routes.draw do
     !request.path.starts_with?('/rails/active_storage') && !request.path.starts_with?('/assets')
   }
 
+  
   # The priority is based upon order of creation:
   # first created -> highest priority.
 
