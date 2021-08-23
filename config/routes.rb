@@ -286,6 +286,8 @@ ChaosRails::Application.routes.draw do
   get 'welcome_week/parapicnic_in_the_park', to: redirect('/welcome_week')
   get 'welcome_week/catching_up', to: redirect('/welcome_week')
 
+  get 'welcome_week', to: redirect('get_involved/welcome_week')
+
   # Use bedlamtheatre.co.uk/:slug to find a season
   get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
 
