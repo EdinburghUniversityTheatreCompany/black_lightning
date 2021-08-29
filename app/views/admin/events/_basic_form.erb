@@ -9,9 +9,9 @@
 
 <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the image that appears in the slideshow on the frontpage, and as the header image on your event page. The apect ratio should be approximately 48/25.' %>
 
-<%= f.input :start_date, start_year: 1890, end_year: max_end_year %>
+<%= f.input :start_date, start_year: Rails.configuration.start_year, end_year: max_end_year %>
 
-<%= f.input :end_date, start_year: 1890, end_year: max_end_year %>
+<%= f.input :end_date, start_year: Rails.configuration.start_year, end_year: max_end_year %>
 
 <%= f.association :venue, collection: Venue.all, label_method: :name %>
 

@@ -66,5 +66,7 @@ module ChaosRails
         config.api_key = Rails.application.secrets.honeybadger[:api_key]
       end
     end
+
+    config.start_year = 1871
   end
 end
