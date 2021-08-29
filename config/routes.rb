@@ -283,8 +283,8 @@ ChaosRails::Application.routes.draw do
   get 'youth', to: redirect('/getinvolved/youth_project')
 
   get 'welcomeweek', to: redirect('/welcome_week')
-  get 'welcome_week/parapicnic_in_the_park', to: redirect('/welcome_week')
-  get 'welcome_week/catching_up', to: redirect('/welcome_week')
+  get 'welcome_week/parapicnic_in_the_park', to: redirect('https://theatreparadok.co.uk/events/2021_09_parapicnic/')
+  get 'welcome_week/catching_up', to: redirect('https://theatreparadok.co.uk/events/catching-up-fringe-show-performance-screening-for-welcome-week/')
 
   get 'welcome_week', to: redirect('get_involved/welcome_week')
 
@@ -297,7 +297,6 @@ ChaosRails::Application.routes.draw do
     !request.path.starts_with?('/rails/active_storage') && !request.path.starts_with?('/assets')
   }
 
-  
   # The priority is based upon order of creation:
   # first created -> highest priority.
 
