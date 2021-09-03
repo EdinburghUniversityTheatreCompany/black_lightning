@@ -63,16 +63,24 @@ Doorkeeper::OpenidConnect.configure do
     claim :email do |resource_owner, scopes|
       scopes.exists?(:email) ? resource_owner.email : ''
     end
+    
+    claim :email_verified do |resource_owner, scopes|
+      scopes.exists?(:email) ? true : ''
+    end
 
     claim :full_name do |resource_owner, scopes|
       scopes.exists?(:profile) ? resource_owner.name_or_default : ''
     end
     
-    claim :last_name do |resource_owner, scopes|
+    claim :name do |resource_owner, scopes|
+      scopes.exists?(:profile) ? resource_owner.name_or_default : ''
+    end
+    
+    claim :family_name do |resource_owner, scopes|
       scopes.exists?(:profile) ? resource_owner.last_name : ''
     end
     
-    claim :first_name do |resource_owner, scopes|
+    claim :given_name do |resource_owner, scopes|
       scopes.exists?(:profile) ? resource_owner.first_name : ''
     end
   end
