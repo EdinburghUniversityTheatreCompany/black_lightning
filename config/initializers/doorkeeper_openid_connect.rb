@@ -67,5 +67,13 @@ Doorkeeper::OpenidConnect.configure do
     claim :full_name do |resource_owner, scopes|
       scopes.exists?(:profile) ? resource_owner.name_or_default : ''
     end
+    
+    claim :last_name do |resource_owner, scopes|
+      scopes.exists?(:profile) ? resource_owner.last_name : ''
+    end
+    
+    claim :first_name do |resource_owner, scopes|
+      scopes.exists?(:profile) ? resource_owner.first_name : ''
+    end
   end
 end
