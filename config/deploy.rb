@@ -1,5 +1,6 @@
 set :application, 'BlackLightning'
-set :repo_url,    'git@bitbucket.org:bedlamtheatre/black_lightning.git'
+set :repo_url,    'git@github.com:EdinburghUniversityTheatreCompany/black_lightning.git'
+set :branch,      'main'
 
 set :rails_env, 'production' # added for delayed job
 

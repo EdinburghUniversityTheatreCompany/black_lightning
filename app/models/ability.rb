@@ -143,7 +143,7 @@ class Ability
     # Because otherwise you also cannot read the proposals due to the url structure.
     can :read, Admin::Proposals::Call
 
-    can %I[read answer], Admin::Questionnaires::Questionnaire, users: { id: user.id }
+    can %I[read answer set_answers], Admin::Questionnaires::Questionnaire, users: { id: user.id }
 
     can :read, Admin::Feedback, show: { users: { id: user.id } }
 
