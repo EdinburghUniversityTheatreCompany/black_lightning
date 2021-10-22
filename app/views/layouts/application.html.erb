@@ -43,11 +43,13 @@
         <li><a href="http://instagram.com/eutc.bedlamtheatre/" target="_blank"><i class="fab fa-instagram"></i></a></li>
         <li><a href="http://twitter.com/bedlamtheatre" target="_blank"><i class="fab fa-twitter"></i></a></li>
         <li><a href="https://www.youtube.com/channel/UCXxyhjT8bPvnl1oVAdRJW1Q" target="_blank"><i class="fab fa-youtube"></i></a></li>
+        <li><%= link_to 'EUTC Wiki','https://wiki.bedlamtheatre.co.uk', target: '_blank', title: 'Wiki' %></li>
         <li><%= link_to 'FoB', 'http://friendsofbedlam.co.uk', target: '_blank', title: 'Friends of Bedlam' %></li>
         <li><%= link_to 'Student Theatre', static_path('student_theatre') %></li>
         <li><%= link_to 'Press',    static_path('press')        %></li>
         <li><%= link_to 'Archives', archives_index_path         %></li>
         <li><%= link_to 'Members',  admin_path                  %></li>
+        <li><%= link_to 'Training','https://training.bedlamtheatre.co.uk', target: '_blank', title: 'Training' %></li>
         <li><%= link_to 'Find Us', static_path('find_us')        %></li>
         <li><%= link_to "Log Out", destroy_user_session_path, method: :delete if user_signed_in? %></li>
       </ul>
