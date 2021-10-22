@@ -10,7 +10,11 @@
     doc_ready = null;
     load_end = null;
   </script>
-
+    
+  <!-- add pretix classes -->
+  <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
+  <script type="text/javascript" src="https://pretix.eu/widget/v1.en.js" async></script>
+    
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", media: "all" %>
 
