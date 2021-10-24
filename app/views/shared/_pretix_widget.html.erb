@@ -1,6 +1,7 @@
 <% content_for :head do %>
-<link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
-<script type="text/javascript" src="https://tickets.bedlamtheatre.co.uk/widget/v1.en.js" async></script><%end%>
+   <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
+   <script type="text/javascript" src="https://tickets.bedlamtheatre.co.uk/widget/v1.en.js" async></script>
+<% end %>
 
 <pretix-widget event="https://tickets.bedlamtheatre.co.uk/<%= event.pretix_slug %>/" style="<%= event.pretix_view %>"></pretix-widget>
 <noscript>
