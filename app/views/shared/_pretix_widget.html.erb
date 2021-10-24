@@ -1,0 +1,12 @@
+<% content_for :head do %>
+<link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
+<script type="text/javascript" src="https://tickets.bedlamtheatre.co.uk/widget/v1.en.js" async></script><%end%>
+
+<pretix-widget event="https://tickets.bedlamtheatre.co.uk/<%= event.pretix_slug %>/" style="<%= event.pretix_view %>"></pretix-widget>
+<noscript>
+   <div class="pretix-widget">
+        <div class="pretix-widget-info-message">
+            JavaScript is disabled in your browser. To access our ticket shop without JavaScript, please <a target="_blank" rel="noopener" href="https://tickets.bedlamtheatre.co.uk/<%= event.pretix_slug %>/">click here</a>.
+        </div>
+    </div>
+</noscript>
