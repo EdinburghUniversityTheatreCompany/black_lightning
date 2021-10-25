@@ -132,11 +132,10 @@ class EventTest < ActionView::TestCase
   end
 
   test 'pretix slug override works' do
-    event = Event.new
-    event.slug = 'foo'
-    assert_equal 'foo', event.pretix_slug
+    @event.slug = 'foo'
+    assert_equal 'foo', @event.pretix_slug
 
-    event.pretix_slug_override = 'bar'
-    assert_equal 'bar', event.pretix_slug
+    @event.pretix_slug_override = 'bar'
+    assert_equal 'bar', @event.pretix_slug
   end
 end
