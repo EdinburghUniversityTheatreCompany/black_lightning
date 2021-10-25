@@ -186,10 +186,6 @@ class Event < ApplicationRecord
   end
 
   def pretix_slug
-    if !has_attribute?(:pretix_slug_override) || pretix_slug_override.present?
-      return pretix_slug_override
-    else
-      return slug
-    end
+    pretix_sulg_override || slug
   end
 end

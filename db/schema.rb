@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_04_07_095937) do
+ActiveRecord::Schema.define(version: 2021_10_24_183601) do
 
   create_table "active_storage_attachments", charset: "utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -300,6 +300,9 @@ ActiveRecord::Schema.define(version: 2021_04_07_095937) do
     t.date "staffing_debt_start"
     t.integer "proposal_id"
     t.text "members_only_text"
+    t.boolean "pretix_shown"
+    t.string "pretix_slug_override"
+    t.string "pretix_view"
     t.index ["proposal_id"], name: "index_events_on_proposal_id"
     t.index ["season_id"], name: "index_events_on_season_id"
     t.index ["venue_id"], name: "index_events_on_venue_id"
@@ -601,7 +604,7 @@ ActiveRecord::Schema.define(version: 2021_04_07_095937) do
     t.datetime "updated_at", precision: 6, null: false
     t.index ["item_type", "item_id"], name: "index_video_links_on_item_type_and_item_id"
   end
-
+  
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
