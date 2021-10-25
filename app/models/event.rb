@@ -186,6 +186,6 @@ class Event < ApplicationRecord
   end
 
   def pretix_slug
-    pretix_slug_override || slug
+    pretix_slug_override.presence || slug
   end
 end
