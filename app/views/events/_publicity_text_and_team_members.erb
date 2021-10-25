@@ -2,6 +2,9 @@
   <div class="span<%= event.team_members.any? ? '8' : '12' %>">
     <h3>Details</h3>
     <%= render_markdown event.publicity_text %>
+      <% if event.pretix_shown %>
+  <%= render 'shared/pretix_widget', event: @show %>
+  <%end%>
   </div>
 
   <% if event.team_members.any? %>
