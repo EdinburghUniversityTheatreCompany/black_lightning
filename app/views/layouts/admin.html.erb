@@ -32,143 +32,149 @@
 
             <div class="nav-collapse collapse">
               <ul class="nav">
-                <% if can? :index, Admin::Proposals::Call %>
-                <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
-                <% end %>
+                <% if current_user.present? %>
+                  <% if can? :index, Admin::Proposals::Call %>
+                  <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
+                  <% end %>
 
-                <% if can? :index, Event %>
-                <li><%= link_to 'Events', admin_events_path %></li>
-                <% end %>
+                  <% if can? :index, Event %>
+                  <li><%= link_to 'Events', admin_events_path %></li>
+                  <% end %>
 
-                <% if can? :index, Show %>
-                <li><%= link_to 'Shows', admin_shows_path %></li>
-                <% end %>
+                  <% if can? :index, Show %>
+                  <li><%= link_to 'Shows', admin_shows_path %></li>
+                  <% end %>
 
-                <% if can? :index, Workshop %>
-                <li><%= link_to 'Workshops', admin_workshops_path %></li>
-                <% end %>
+                  <% if can? :index, Workshop %>
+                  <li><%= link_to 'Workshops', admin_workshops_path %></li>
+                  <% end %>
 
-                <% if can? :index, Opportunity %>
-                <li><%= link_to 'Opportunities', admin_opportunities_path %></li>
-                <% end %>
+                  <% if can? :index, Opportunity %>
+                  <li><%= link_to 'Opportunities', admin_opportunities_path %></li>
+                  <% end %>
 
-                <% if can? :index, Admin::Questionnaires::Questionnaire %>
-                <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
-                <% end %>
+                  <% if can? :index, Admin::Questionnaires::Questionnaire %>
+                  <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
+                  <% end %>
 
-                <% if can? :index, Venue %>
-                <li><%= link_to 'Venues', admin_venues_path %></li>
-                <% end %>
+                  <% if can? :index, Venue %>
+                  <li><%= link_to 'Venues', admin_venues_path %></li>
+                  <% end %>
 
-                <% if can? :index, Season %>
-                <li><%= link_to 'Seasons', admin_seasons_path %></li>
-                <% end %>
+                  <% if can? :index, Season %>
+                  <li><%= link_to 'Seasons', admin_seasons_path %></li>
+                  <% end %>
 
-                <% if can? :index, EventTag %>
-                  <li><%= link_to 'Event Tags', admin_event_tags_path %></li>
-                <% end %>
+                  <% if can? :index, EventTag %>
+                    <li><%= link_to 'Event Tags', admin_event_tags_path %></li>
+                  <% end %>
 
-                <% if can? :index, Attachment %>
-                <li><%= link_to 'Attachments', admin_attachments_path %></li>
-                <% end %>
+                  <% if can? :index, Attachment %>
+                  <li><%= link_to 'Attachments', admin_attachments_path %></li>
+                  <% end %>
 
-                <% if can? :index, AttachmentTag %>
-                  <li><%= link_to 'Attachment Tags', admin_attachment_tags_path %></li>
-                <% end %>
+                  <% if can? :index, AttachmentTag %>
+                    <li><%= link_to 'Attachment Tags', admin_attachment_tags_path %></li>
+                  <% end %>
 
-                <% if can? :index, Picture %>
-                  <li><%= link_to 'Pictures', admin_pictures_path %></li>
-                <% end %>
+                  <% if can? :index, Picture %>
+                    <li><%= link_to 'Pictures', admin_pictures_path %></li>
+                  <% end %>
 
-                <% if can? :index, PictureTag %>
-                  <li><%= link_to 'Picture Tags', admin_picture_tags_path %></li>
-                <% end %>
+                  <% if can? :index, PictureTag %>
+                    <li><%= link_to 'Picture Tags', admin_picture_tags_path %></li>
+                  <% end %>
 
-                <% if can? :index, News %>
-                <li><%= link_to 'News', admin_news_index_path %></li>
-                <% end %>
+                  <% if can? :index, News %>
+                  <li><%= link_to 'News', admin_news_index_path %></li>
+                  <% end %>
 
-                <% if can? :index, Admin::Staffing %>
-                <li><%= link_to 'Staffing', admin_staffings_path %></li>
-                <% end %>
+                  <% if can? :index, Admin::Staffing %>
+                  <li><%= link_to 'Staffing', admin_staffings_path %></li>
+                  <% end %>
 
-                <% if can? :index, FaultReport %>
-                <li><%= link_to 'Fault Reports', admin_fault_reports_path %></li>
-                <% end %>
+                  <% if can? :index, FaultReport %>
+                  <li><%= link_to 'Fault Reports', admin_fault_reports_path %></li>
+                  <% end %>
 
-                <% if can? :index, Admin::EditableBlock %>
-                <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
-                <% end %>
+                  <% if can? :index, Admin::EditableBlock %>
+                  <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
+                  <% end %>
 
-                <% if can? :index, User %>
-                <li><%= link_to 'Users', admin_users_path %></li>
-                <% end %>
+                  <% if can? :index, User %>
+                  <li><%= link_to 'Users', admin_users_path %></li>
+                  <% end %>
 
-                <% if can? :index, Role %>
-                <li><%= link_to 'Roles', admin_roles_path %></li>
-                <% end %>
+                  <% if can? :index, Role %>
+                  <li><%= link_to 'Roles', admin_roles_path %></li>
+                  <% end %>
 
-                <% if can? :index, Admin::Permission %>
-                <li><%= link_to 'Permissions', admin_permissions_path %></li>
-                <% end %>
+                  <% if can? :index, Admin::Permission %>
+                  <li><%= link_to 'Permissions', admin_permissions_path %></li>
+                  <% end %>
 
-                <% if can? :manage, :jobs %>
-                <li><%= link_to 'Jobs', admin_jobs_overview_path %></li>
-                <% end %>
+                  <% if can? :manage, :jobs %>
+                  <li><%= link_to 'Jobs', admin_jobs_overview_path %></li>
+                  <% end %>
 
-                <% if can? :index, Admin::MaintenanceDebt %>
-                <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
-                <%end%>
+                  <% if can? :index, Admin::MaintenanceDebt %>
+                  <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
+                  <%end%>
 
-                <% if can? :index, Admin::StaffingDebt %>
-                  <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
-                <%end%>
+                  <% if can? :index, Admin::StaffingDebt %>
+                    <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
+                  <%end%>
 
-                <% if can? :index, Admin::Debt %>
-                  <li> <%= link_to 'Debt', admin_debts_path %></li>
-                <% else %>
-                  <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
-                <% end %>
+                  <% if can? :index, Admin::Debt %>
+                    <li> <%= link_to 'Debt', admin_debts_path %></li>
+                  <% elsif can? :show, Admin::Debt %>
+                    <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
+                  <% end %>
 
-                <% if can? :index, Admin::DebtNotification %>
-                  <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
-                <% end %>
+                  <% if can? :index, Admin::DebtNotification %>
+                    <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
+                  <% end %>
 
-                <% if can? :create, MembershipActivationToken %>
-                  <li><%= link_to 'Membership Activation', new_admin_membership_activation_token_path %></li>
-                <% end %>
+                  <% if can? :create, MembershipActivationToken %>
+                    <li><%= link_to 'Membership Activation Requests', admin_membership_index_path %></li>
+                  <% end %>
 
-                <% if can? :index, MassMail %>
-                  <li><%= link_to 'Mass Mail', admin_mass_mails_path %></li>
-                <% end %>
+                  <% if can? :create, MembershipActivationToken %>
+                    <li><%= link_to 'Membership Activation Tokens', new_admin_membership_activation_token_path %></li>
+                  <% end %>
 
-                <% if can? :index, MarketingCreatives::Category %>
-                  <li><%= link_to 'Marketing Creatives', admin_marketing_creatives_categories_path %></li>
-                <% end %>
+                  <% if can? :index, MassMail %>
+                    <li><%= link_to 'Mass Mail', admin_mass_mails_path %></li>
+                  <% end %>
 
-                <% if can? :index, MarketingCreatives::Profile %>
-                  <li><%= link_to 'Marketing Creatives Profile List', admin_marketing_creatives_profiles_path %></li>
-                <% end %>
+                  <% if can? :index, MarketingCreatives::Category %>
+                    <li><%= link_to 'Marketing Creatives', admin_marketing_creatives_categories_path %></li>
+                  <% end %>
 
-                <% if can? :index, Techie %>
-                  <li><%= link_to 'Techies', admin_techies_path %></li>
-                <% end %>
+                  <% if can? :index, MarketingCreatives::Profile %>
+                    <li><%= link_to 'Marketing Creatives Profile List', admin_marketing_creatives_profiles_path %></li>
+                  <% end %>
 
-                <% if can? :index, Complaint %>
-                  <li><%= link_to 'Complaints Overview', admin_complaints_path %></li>
-                <% end %>
+                  <% if can? :index, Techie %>
+                    <li><%= link_to 'Techies', admin_techies_path %></li>
+                  <% end %>
 
-                <% if can? :create, Complaint %>
-                  <li><%= link_to 'Submit Complaint', new_complaint_path %></li>
-                <% end %>
+                  <% if can? :index, Complaint %>
+                    <li><%= link_to 'Complaints Overview', admin_complaints_path %></li>
+                  <% end %>
 
-                <% if can? :index, Doorkeeper::Application %>
-                  <li><%= link_to 'OAuth Applications', oauth_applications_path %></li>
-                <% end %>
+                  <% if can? :create, Complaint %>
+                    <li><%= link_to 'Submit Complaint', new_complaint_path %></li>
+                  <% end %>
 
-                <% if current_user.has_role? 'Committee' %>
-                  <li><%= link_to 'Committee', admin_committee_path %></li>
-                <% end %>
+                  <% if can? :index, Doorkeeper::Application %>
+                    <li><%= link_to 'OAuth Applications', oauth_applications_path %></li>
+                  <% end %>
+
+                  <% if current_user.has_role?('Committee') %>
+                    <li><%= link_to 'Committee', admin_committee_path %></li>
+                  <% end %>
+                <% end%>
               </ul>
             </div>
 
