@@ -26,17 +26,19 @@ class MembershipActivationTokensController < ApplicationController
         return
       end
 
-      @user.add_role :member
+      @user.activate
       @user.touch(:consented)
+
       sign_out
 
       @membership_activation_token.destroy
 
-      flash[:success] = 'You have successfully (re)-activated your account! Please log in to continue.'
+      helpers.append_to_flash(:success, 'You have successfully (re)-activated your account! Please log in to continue.')
 
       redirect_to admin_url
     else
-      flash[:error] = 'You need to give consent before you can create an account.'
+      helpers.append_to_flash(:error, 'You need to give consent before you can create an account.')
+
       render 'activate', status: :unprocessable_entity
     end
   end
@@ -58,6 +60,6 @@ class MembershipActivationTokensController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:email, :first_name, :last_name, :phone_number, :password, :password_confirmation)
+    params.require(:user).permit(:email, :first_name, :last_name, :phone_number, :password, :public_profile)
   end
 end
