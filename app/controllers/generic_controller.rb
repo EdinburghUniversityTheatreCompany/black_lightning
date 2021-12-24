@@ -203,6 +203,10 @@ module GenericController
   end
 
   def base_index_database_query
+    # Use reorder to override the default ordering in the scope.
+    # We want this because we expect the default ordering to be ignored when we specify something new.
+    # Use where instead of rewhere because a where in the default scope is only used for things that should never be visible.
+    
     return base_index_ransack_query.includes(*includes_args)
                                    .where(index_query_params)
                                    .accessible_by(current_ability)
@@ -211,7 +215,6 @@ module GenericController
 
   def load_index_resources
     resources = base_index_database_query
-    # Order will not override any ordering from scopes!
 
     resources = resources.paginate(page: params[:page], per_page: items_per_page) if should_paginate
 
