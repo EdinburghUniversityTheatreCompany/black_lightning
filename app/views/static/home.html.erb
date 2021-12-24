@@ -33,7 +33,7 @@
         <% if @events.empty? && !(mobile_device?) then %>
           <%# between 1st June and 1st September, advertise Bedlam Fringe %>
           <% year = Date.today.year %>
-          <% if (Date.new(year, 6, 01)..Date.new(year, 9, 01)).include? Date.today then %>
+          <% if (Date.new(year, 6, 01)..Date.new(year, 8, 30)).include? Date.today then %>
             <a href="http://www.bedlamfringe.co.uk">
               <img src="/images/fringe.png" />
             </a>
