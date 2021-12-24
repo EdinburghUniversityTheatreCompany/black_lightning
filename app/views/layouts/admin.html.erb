@@ -136,11 +136,7 @@
                   <% end %>
 
                   <% if can? :create, MembershipActivationToken %>
-                    <li><%= link_to 'Membership Activation Requests', admin_membership_index_path %></li>
-                  <% end %>
-
-                  <% if can? :create, MembershipActivationToken %>
-                    <li><%= link_to 'Membership Activation Tokens', new_admin_membership_activation_token_path %></li>
+                    <li><%= link_to 'Membership Activation', new_admin_membership_activation_token_path %></li>
                   <% end %>
 
                   <% if can? :index, MassMail %>
