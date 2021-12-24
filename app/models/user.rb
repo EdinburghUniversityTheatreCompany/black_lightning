@@ -80,7 +80,7 @@ class User < ApplicationRecord
 
   # Also change the method 'consented'
   def self.not_consented
-    where(Date.today.advance(years: -100)..Date.today.advance(years: -1))
+    where(consented: Date.today.advance(years: -100)..Date.today.advance(years: -1))
   end
   
   def self.by_first_name
