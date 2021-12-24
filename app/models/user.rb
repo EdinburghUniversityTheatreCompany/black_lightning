@@ -49,11 +49,9 @@ class User < ApplicationRecord
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
-  # devise :ldap_authenticatable, :recoverable, :rememberable,
-  #        :trackable, :registerable
+  # devise :ldap_authenticatable, :recoverable, :rememberable, :trackable, :registerable
 
-  devise :database_authenticatable,
-         :recoverable, :rememberable, :validatable
+  devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
 
   # set our own validations
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
@@ -67,7 +65,7 @@ class User < ApplicationRecord
   delegate :card_number, to: :membership_card, allow_nil: true
   accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true
 
-  has_many :team_membership, class_name: 'TeamMember', dependent: :restrict_with_error 
+  has_many :team_membership, class_name: 'TeamMember', dependent: :restrict_with_error
   has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
   has_many :staffing_jobs, class_name: 'Admin::StaffingJob', dependent: :restrict_with_error 
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
@@ -216,10 +214,13 @@ class User < ApplicationRecord
 
   # Overrides an existing method that doesn't work.
   def remove_role(role)
-    if role.class == Symbol
+    if role.instance_of?(Symbol)
       super #.remove_role(role)
     else
       roles.delete(role)
     end
+  end
+  def activate
+    add_role :member
   end
 end
