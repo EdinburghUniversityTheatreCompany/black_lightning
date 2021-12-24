@@ -1,9 +1,6 @@
 class Tasks::Logic::Users
   def self.clean_up_personal_info
-    consented_date_range = Date.today.advance(years: -100)..Date.today.advance(years: -1)
-    
-    users = User.where(consented: consented_date_range)
-                .where.not(phone_number: nil)
+    users = User.not_consented.where.not(phone_number: nil)
 
     users.each do |user|
       user.phone_number = nil

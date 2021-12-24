@@ -33,6 +33,10 @@ ChaosRails::Application.routes.draw do
   end
 
   resources :users, only: [:show] do
+    member do
+      put 'consent'
+    end
+  
     collection do
       get 'current', to: 'users#current'
     end

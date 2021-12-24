@@ -204,4 +204,12 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     assert_includes teamworks, events.first
   end
+
+  test 'consented' do
+    user.consented = Date.today
+    assert user.consented?
+
+    user.consented = Date.today.advance(years: -2)
+    assert_not user.consented?
+  end
 end

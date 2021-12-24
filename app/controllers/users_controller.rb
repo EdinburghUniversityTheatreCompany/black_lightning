@@ -19,4 +19,12 @@ class UsersController < ApplicationController
 
     super
   end
+
+  def consent
+    authorize! :edit, @user
+
+    @user.touch(:consented)
+
+    redirect_to(admin_path)
+  end
 end

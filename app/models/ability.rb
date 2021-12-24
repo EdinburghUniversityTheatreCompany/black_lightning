@@ -110,7 +110,8 @@ class Ability
     return if user.nil?
 
     # All users can edit and see themselves.
-    can %I[show debt_status update edit], User, id: user.id
+    # All users can consent for themselves.
+    can %I[show debt_status update edit consent], User, id: user.id
 
     # People can see debt status for users on proposals they are on.
     # It is disabled because it is currently more efficient to just do this on the proposal show thing.

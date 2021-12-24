@@ -4,6 +4,7 @@ class MembershipActivationTokensController < ApplicationController
   load_resource find_by: :token
 
   def activate
+    @title = 'Activate Membership'
     @user = get_user
 
     if current_user&.has_role? :member
@@ -60,6 +61,6 @@ class MembershipActivationTokensController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:email, :first_name, :last_name, :phone_number, :password, :public_profile)
+    params.require(:user).permit(:email, :first_name, :last_name, :phone_number, :password, :public_profile, :bio, :avatar)
   end
 end

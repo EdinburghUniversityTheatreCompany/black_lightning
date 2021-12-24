@@ -78,6 +78,11 @@ class User < ApplicationRecord
 
   default_scope -> { order('last_name ASC') }
 
+  # Also change the method 'consented'
+  def self.not_consented
+    where(Date.today.advance(years: -100)..Date.today.advance(years: -1))
+  end
+  
   def self.by_first_name
     reorder('first_name ASC')
   end
@@ -222,5 +227,11 @@ class User < ApplicationRecord
   end
   def activate
     add_role :member
+  end
+
+  # If you change this, you must also update the scope.
+  def consented?
+    # Check if the user has consented less than a year ago.
+    consented&.after?(Date.today.advance(years: -1))
   end
 end
