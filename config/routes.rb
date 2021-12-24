@@ -164,6 +164,8 @@ ChaosRails::Application.routes.draw do
     resources :techies do
       collection do
         get 'tree'
+        get 'bush'
+        get 'tree_data'
       end
     end
 

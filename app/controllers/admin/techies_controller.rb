@@ -1,6 +1,7 @@
 ##
 # Responsible for the techie family tree.
 ##
+# Source for some of the tree: https://gist.github.com/markjlorenz/3744338
 class Admin::TechiesController < AdminController
   include GenericController
 
@@ -14,7 +15,26 @@ class Admin::TechiesController < AdminController
 
   def tree
     authorize! :index, Techie
+
+    @q = Techie.ransack(params[:q])
+
     @title = 'Techie Family Tree'
+  end
+
+  def tree_data
+    nodes = @techies.select(:id, :name)
+    edges = @techies.includes(:children).map { |techie| techie.children.ids.uniq.map { |child_id| [techie.id, child_id] } }.flatten(1)
+
+    json = { edges: edges, nodes: nodes }.to_json
+
+    render json: json
+  end
+
+  # Remember to remove Dracula and stuff when you finally get rid of this one.
+  def bush
+    authorize! :index, Techie
+
+    @title = 'Techie Family Tree - Old'
 
     @q = Techie.ransack(params[:q])
 
