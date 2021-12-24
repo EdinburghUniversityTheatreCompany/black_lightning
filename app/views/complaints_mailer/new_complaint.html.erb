@@ -1,11 +1,11 @@
-Dear Welfare Contacts,
-<br /><br />
-Someone submitted a complaint using the form on <%= @creation_time_string %>.
-<br /><br />
-You can view it at <%= link_to 'this link', admin_complaint_url(@complaint) %>.
-<br /><br />
-Regards,
-<br /><br />
-The Black Lightning Team
+<p>Dear Welfare Contacts,</p>
+
+<p>Someone submitted a complaint using the form on <%= @creation_time_string %>.</p>
+
+<p>You can view it at <%= link_to 'this link', admin_complaint_url(@complaint) %>.</p>
+
+<p>Regards,</p>
+
+<p>The Black Lightning Team</p>
 
 <%= render partial: "shared/mail/call_to_action", locals: { text: 'View Complaint', cta_url: admin_complaint_url(@complaint) } %>
