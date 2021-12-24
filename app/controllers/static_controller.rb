@@ -14,7 +14,7 @@ class StaticController < ApplicationController
 
   def home
     @news = News.accessible_by(current_ability).includes(image_attachment: :blob).order('publish_date DESC').first(2)
-    @events = Event.includes(image_attachment: :blob).current.order('start_date ASC')
+    @events = Event.includes(image_attachment: :blob).current.reorder('start_date ASC')
 
     @last_event = Event.last_event
   end
