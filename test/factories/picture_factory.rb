@@ -26,10 +26,6 @@ FactoryBot.define do
 
     access_level { [0, 1, 2].sample }
 
-    transient do
-      attach_image { true }
-    end
-
-    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') if attach_image }
+    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') }
   end
 end
