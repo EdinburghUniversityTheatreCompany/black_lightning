@@ -6,7 +6,7 @@
     <%= f.input_field :name_cont,            placeholder: "Title",  required: false %>
     <%= f.input_field :publicity_text_or_tagline_cont,  placeholder: "Publicity Text", required: false %>
 
-    <% if current_user.present? && current_user.has_role?(:member) %>
+    <% if current_user.present? && current_user.has_role?('Member') %>
       <%= f.input_field :members_only_text_cont,  placeholder: "Members-Only Text", required: false %>
     <% end %>
 

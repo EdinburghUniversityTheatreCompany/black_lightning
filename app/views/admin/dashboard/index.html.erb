@@ -89,7 +89,7 @@
         </li>
       <% end %>
 
-      <% if current_user.has_role?(:committee) || can?(:manage, Admin::Staffing) %>
+      <% if current_user.has_role?('Committee') || can?(:manage, Admin::Staffing) %>
         <li data-row="3" data-col="2" data-sizex="1" data-sizey="2">
           <%= dashboard_widget('committee_staffing') %>
         </li>

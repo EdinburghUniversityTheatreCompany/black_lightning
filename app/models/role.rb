@@ -18,8 +18,8 @@
 class Role < ApplicationRecord
   # The roles that are referenced directly in the code.
   # Changing the name would break the website, so this list is used to prevent name changes for these roles.
-  HARDCODED_NAMES = ['admin', 'member', 'Committee', 'DM Trained', 'Business Manager'].freeze
-  
+  HARDCODED_NAMES = ['Admin', 'Member', 'Committee', 'DM Trained', 'Business Manager'].freeze
+
   validates :name, presence: true
   validate :name_not_hardcoded
 

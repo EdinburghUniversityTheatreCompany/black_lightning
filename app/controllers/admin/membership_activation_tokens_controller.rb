@@ -18,7 +18,7 @@ class Admin::MembershipActivationTokensController < AdminController
     if @user.present?
       base_message = "The email #{email} is already in use by #{@user.name(current_user)}"
 
-      if @user.has_role? :member
+      if @user.has_role?('Member')
         helpers.append_to_flash(:error, "#{base_message} and they already are a member. They will not be send an activation mail.")
 
         return render_on_fail
@@ -50,7 +50,7 @@ class Admin::MembershipActivationTokensController < AdminController
       return render_on_fail
     end
 
-    if @user.has_role? :member
+    if @user.has_role?('Member')
       helpers.append_to_flash(:error, "#{@user.name(current_user)} already is a member and will not be send a reactivation mail.")
 
       return render_on_fail

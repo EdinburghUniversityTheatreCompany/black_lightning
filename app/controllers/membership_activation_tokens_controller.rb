@@ -7,7 +7,7 @@ class MembershipActivationTokensController < ApplicationController
     @title = 'Activate Membership'
     @user = get_user
 
-    if current_user&.has_role? :member
+    if current_user&.has_role?('Member')
       flash[:error] = 'You have already activated your account.'
       raise(CanCan::AccessDenied, flash[:error])
     end

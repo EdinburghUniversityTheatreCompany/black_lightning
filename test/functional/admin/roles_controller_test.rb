@@ -111,9 +111,9 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
 
-    assert user.has_role? :member
+    assert user.has_role?('Member')
 
-    assert_equal ['Finbar the Viking has been added to the role of member'], flash[:success]
+    assert_equal ['Finbar the Viking has been added to the role of Member'], flash[:success]
     assert_redirected_to admin_role_url(@role)
   end
 
@@ -122,9 +122,9 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
 
-    assert user.has_role? :member
+    assert user.has_role?('Member')
 
-    assert_equal ['Dennis the Donkey already has the role of member'], flash[:success]
+    assert_equal ['Dennis the Donkey already has the role of Member'], flash[:success]
     assert_redirected_to admin_role_url(@role)
   end
 

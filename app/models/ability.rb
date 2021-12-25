@@ -42,7 +42,7 @@ class Ability
     # :delete is not mapped to :destroy, that's done manually.
     # :manage -> every action
 
-    if user&.has_role?(:admin)
+    if user&.has_role?('Admin')
       ##############################################
       #              ADMIN PERMISSIONS             #
       ##############################################
