@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::TestCase
+  include AcademicYearHelper
+
   setup do
     @admin = users(:admin)
     sign_in @admin
@@ -9,27 +11,22 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   test 'should get index' do
-    old_show = FactoryBot.create(:show, start_date: Date.today.advance(years: -2), end_date: Date.today.advance(years: -2))
-    previous_year = FactoryBot.create(:questionnaire, event: old_show)
+    get_index_process
+  end
 
-    new_show = FactoryBot.create(:show, start_date: Date.today, end_date: Date.today)
-    this_year = FactoryBot.create(:questionnaire, event: new_show)
+  test 'should get index on Christmas' do
+    # Christmas is an edge case where the terms swap over. It should still work on this day.
+    travel_to Time.zone.local(2021, 12, 25)
 
-    get :index
+    assert Date.current, end_of_term
 
-    assert_response :success
-    assert_not_nil assigns(:questionnaires)
+    get_index_process
 
-    assert_match 'only includes questionnaires from the current semester', response.body
-
-    questionnaire_ids = assigns(:questionnaires).values.flatten.collect(&:id)
-
-    assert_includes questionnaire_ids, this_year.id
-    assert_not_includes questionnaire_ids, previous_year.id
+    travel_back
   end
 
   test 'should get index as normal user' do
-    show = FactoryBot.create(:show, start_date: Date.today, end_date: Date.today)
+    show = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current)
     user = show.users.first
 
     assert_not_nil user
@@ -59,13 +56,13 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   test 'should get new' do
-    FactoryBot.create(:show, start_date: Date.today.advance(days: 5))
+    FactoryBot.create(:show, start_date: Date.current.advance(days: 5))
     get :new
     assert_response :success
   end
 
   test 'should get new with show' do
-    show = FactoryBot.create(:show, start_date: Date.today.advance(days: 5))
+    show = FactoryBot.create(:show, start_date: Date.current.advance(days: 5))
     get :new, params: { show_id: show.id }
     assert_response :success
   end
@@ -184,6 +181,26 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   private
+
+  def get_index_process
+    old_show = FactoryBot.create(:show, start_date: Date.current.advance(years: -2), end_date: Date.current.advance(years: -2))
+    previous_year = FactoryBot.create(:questionnaire, event: old_show)
+
+    new_show = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current)
+    this_year = FactoryBot.create(:questionnaire, event: new_show)
+
+    get :index
+
+    assert_response :success
+    assert_not_nil assigns(:questionnaires)
+
+    assert_match 'only includes questionnaires from the current semester', response.body
+
+    questionnaire_ids = assigns(:questionnaires).values.flatten.collect(&:id)
+
+    assert_includes questionnaire_ids, this_year.id
+    assert_not_includes questionnaire_ids, previous_year.id
+  end
 
   def get_attributes
     return {
