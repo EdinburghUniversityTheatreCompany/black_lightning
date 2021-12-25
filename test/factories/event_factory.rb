@@ -40,6 +40,8 @@ FactoryBot.define do
     start_date   { generate(:random_date) }
     end_date     { start_date + 5.days }
     is_public    { [true, false].sample }
+    pretix_shown { [true, false].sample }
+    pretix_view  { ['list', 'week','month'].sample}
 
     venue_id     { Venue.all.sample.id if venue.nil? }
 
