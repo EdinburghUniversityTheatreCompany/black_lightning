@@ -2,7 +2,9 @@
   <%= f.error_notification %>
 
     <div class="form-inputs">
-        <%= f.input :name %>
+      <% name_disabled = Role::HARDCODED_NAMES.include?(@role.name)%>
+
+      <%= f.input :name, disabled: name_disabled, hint: name_disabled ? 'You cannot change the name of this role.' : '' %>
     </div>
     
     <%= render '/shared/form/form_actions', f: f %>

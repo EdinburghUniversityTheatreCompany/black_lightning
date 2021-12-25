@@ -16,7 +16,12 @@
 # == Schema Information End
 #++
 class Role < ApplicationRecord
+  # The roles that are referenced directly in the code.
+  # Changing the name would break the website, so this list is used to prevent name changes for these roles.
+  HARDCODED_NAMES = ['admin', 'member', 'Committee', 'DM Trained' 'Business Manager'].freeze
+  
   validates :name, presence: true
+  validate :name_not_hardcoded
 
   has_and_belongs_to_many :users, join_table: :users_roles
   has_and_belongs_to_many :permissions, class_name: 'Admin::Permission'
@@ -30,5 +35,9 @@ class Role < ApplicationRecord
     User.with_role(name).all.each do |user|
       user.remove_role(self)
     end
+  end
+
+  def name_not_hardcoded
+    errors.add(:name, 'is hardcoded and cannot be altered') if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
   end
 end
