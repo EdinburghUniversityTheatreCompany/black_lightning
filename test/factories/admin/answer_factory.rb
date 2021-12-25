@@ -39,8 +39,14 @@ FactoryBot.define do
       end
     end
 
-    file { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.pdf'), 'application/pdf') if response_type.downcase == 'file' }
-    
     answerable { question.questionable }
+
+    after(:create) do |answer, evaluator|
+      if evaluator.response_type.present?
+        answer.question.update(response_type: evaluator.response_type)
+
+        FactoryBot.create(:attachment, item: answer) if answer.attachments.empty?
+      end
+    end
   end
 end

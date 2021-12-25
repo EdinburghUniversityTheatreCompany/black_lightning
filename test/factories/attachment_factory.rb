@@ -39,4 +39,8 @@ FactoryBot.define do
   factory :show_attachment, parent: :attachment do
     association :item, factory: :show
   end
+
+  factory :answer_attachment, parent: :attachment do
+    association :item, factory: :answer
+  end
 end

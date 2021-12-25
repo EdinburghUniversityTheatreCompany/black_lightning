@@ -25,7 +25,7 @@ FactoryBot.define do
     end
 
     after(:create) do |question, evaluator|
-      if evaluator.answered
+      if evaluator.answered && question.answers.empty?
         FactoryBot.create(:answer, question_id: question.id, response_type: question.response_type, answerable: question.questionable)
       end
     end
