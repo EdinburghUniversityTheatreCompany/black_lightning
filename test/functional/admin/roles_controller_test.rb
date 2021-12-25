@@ -80,18 +80,31 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should get edit' do
+  test 'should get edit for hardcoded role' do
     get :edit, params: { id: @role }
     assert_response :success
+
+    # @role is member, which is hardcoded.
+    assert_match 'You cannot change the name of this role', response.body
   end
 
   test 'should update role' do
-    put :update, params: { id: @role, role: { name: 'Viking' } }
+    role = FactoryBot.create(:role)
+
+    put :update, params: { id: role, role: { name: 'Viking' } }
 
     assert 'Viking', assigns(:role).name
-    assert_redirected_to admin_role_path(@role)
+    assert_redirected_to admin_role_path(role)
   end
-  
+
+  test 'should not update hardcoded role' do
+    put :update, params: { id: @role, role: { name: 'Viking' } }
+
+    assert_response :unprocessable_entity
+
+    assert_equal 'Member', Role.find(@role.id).name
+  end
+
   test 'should not update invalid role' do
     put :update, params: { id: @role, role: { name: nil } }
 
