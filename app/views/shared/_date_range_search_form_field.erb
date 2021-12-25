@@ -1,0 +1,7 @@
+<% end_year = max_end_year if end_year.nil? %>
+<% start_year = Rails.configuration.start_year if start_year.nil? %>
+<% start_date_attribute = 'start_date' if start_date_attribute.nil? %>
+<% end_date_attribute = 'end_date' if end_date_attribute.nil? %>
+
+<%= f.input "#{end_date_attribute}_gteq",   	as: :date, label: "Start Date", start_year: 2012, end_year: max_end_year, include_blank: true, required: false %>
+<%= f.input "#{start_date_attribute}_lteq",   as: :date, label: "End Date",   start_year: 2012, end_year: max_end_year, include_blank: true, required: false %>

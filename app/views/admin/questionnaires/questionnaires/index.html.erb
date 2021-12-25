@@ -10,8 +10,7 @@
   <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_questionnaires_questionnaires do |f| %>
     <%= f.input_field :event_name_cont, placeholder: "Event Name",  required: false %>
 
-    <%= f.input :event_end_date_gteq, as: :date, label: "Start Date", start_year: 2012, end_year: max_end_year, include_blank: true, required: false %>
-    <%= f.input :event_start_date_lteq,   as: :date, label: "End Date", start_year: 2012, end_year: max_end_year, include_blank: true, required: false %>
+    <%= render 'shared/date_range_search_form_field', f: f, start_year: 2012, start_date_attribute: 'event_start_date', end_date_attribute: 'event_end_date' %>
 
     <%= f.submit :Search, class: 'btn' %>
   <% end %>
