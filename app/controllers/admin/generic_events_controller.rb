@@ -21,7 +21,8 @@ class Admin::GenericEventsController < AdminController
   def permitted_params
     # Returns a hash with base permitted params to prevent accidentally omitting one.
     return [
-      :publicity_text, :members_only_text, :name, :slug, :tagline,
+      :publicity_text, :members_only_text, :name, :slug, :tagline, 
+      :pretix_slug_override, :pretix_shown, :pretix_view,
       :author, :venue, :venue_id, :season, :season_id,
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],

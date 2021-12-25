@@ -42,3 +42,24 @@
 <%= render 'shared/form/sections/attachments', f: f %>
 
 <%= render 'shared/form/sections/video_links', f: f %>
+
+<h3>Pretix Widget Configuration</h3>
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Pretix Widget Configuration' } do %>
+  <div class="form-inline">
+<% on_label ||= 'Enabled' %>
+<% off_label ||= 'Disabled' %>
+<% off_colour ||= 'danger' %>
+
+<div class="control-group">
+<h5>Pretix Widget Shown</h5>
+  <div class="controls switch" data-on="success" data-on-label="<%= on_label %>" data-off="<%= off_colour %>" data-off-label="<%= off_label %>" style="width: 200px;">
+    <%= f.input_field :pretix_shown, boolean_style: :inline %>
+  </div>
+</div>
+
+<br><h5>Override Pretix Slug</h5>
+<%= f.input :pretix_slug_override, label: false, hint: ' Leave blank to use the slug for this event as the pretix slug' %>
+<br><h5>Pretix Widget Format</h5>
+<%= f.input :pretix_view, label: false, collection: ['list','week','month'], default: 'list', hint: "See pretix's documentation for examples" %>
+  </div>
+<% end %>

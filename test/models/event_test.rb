@@ -130,4 +130,12 @@ class EventTest < ActionView::TestCase
 
     assert_equal 'This is the default text for the members-only text field.', event.members_only_text
   end
+
+  test 'pretix slug override works' do
+    @event.slug = 'foo'
+    assert_equal 'foo', @event.pretix_slug
+
+    @event.pretix_slug_override = 'bar'
+    assert_equal 'bar', @event.pretix_slug
+  end
 end
