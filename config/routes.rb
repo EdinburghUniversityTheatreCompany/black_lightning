@@ -303,6 +303,11 @@ ChaosRails::Application.routes.draw do
     !request.path.starts_with?('/rails/active_storage') && !request.path.starts_with?('/assets')
   }
 
+  # Test route
+  if Rails.env.test? || Rails.env.development?
+    get 'shows/test_report_500', to: 'shows#test_report_500'
+  end
+
   # The priority is based upon order of creation:
   # first created -> highest priority.
 
