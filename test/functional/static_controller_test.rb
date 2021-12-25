@@ -7,6 +7,10 @@ class StaticControllerTest < ActionController::TestCase
 
     get :home
     assert_response :success
+
+    get :home, params: { mobile: 'true' }
+    assert_response :success
+    assert session[:mobile_param], 'true'
   end
 
   test 'should get contact' do
