@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class Admin::RolesControllerTest < ActionController::TestCase
+  include ERB::Util
+
   setup do
     @admin = users(:admin)
     sign_in @admin
@@ -28,10 +30,10 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_response :success
 
     members.each do |member|
-      assert_match member.name_or_email.html_safe, response.body
+      assert_match html_escape(member.name_or_email), response.body
     end
 
-    assert_no_match user.name_or_email.html_safe, response.body
+    assert_no_match html_escape(user.name_or_email), response.body
 
     assert_match 'Please add members from the membership activation page', response.body
   end
