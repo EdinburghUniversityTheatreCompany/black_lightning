@@ -34,7 +34,7 @@ require 'test_helper'
 
 class Admin::UserTest < ActiveSupport::TestCase
   setup do
-    @user = FactoryBot.create :user
+    @user = users(:user)
   end
 
   test 'sort by first name' do
@@ -206,10 +206,11 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test 'consented' do
-    user.consented = Date.today
-    assert user.consented?
+    @user.consented = Date.today
+    assert @user.consented?
 
-    user.consented = Date.today.advance(years: -2)
-    assert_not user.consented?
+    @user.consented = Date.today.advance(years: -2)
+    @user.save
+    assert_not @user.consented?
   end
 end

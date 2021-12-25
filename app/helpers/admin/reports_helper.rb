@@ -16,6 +16,6 @@ module Admin::ReportsHelper
   end
 
   def get_report_link(report, report_name)
-    return link_to report_name, url_for(['admin_reports', report]), method: :put
+    return link_to report_name, url_for([:admin_reports, report]), method: :put
   end
 end
