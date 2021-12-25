@@ -62,9 +62,6 @@ ChaosRails::Application.routes.draw do
     get 'resources/membership_checker', to: 'resources#membership_checker', as: :resources_membership_checker
     get 'resources/(*page)', to: 'resources#page', as: :resources
 
-    # Answer files
-    get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file
-
     resources :events, only: [:index, :show] do
       member do
         get 'xts', to: 'events#find_by_xts_id'
