@@ -37,7 +37,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_not_nil user
     assert_not_equal user, debtor, 'The debtor is the same as the current user. This means the test will not be accurate. Did you add more than 1 person to the proposal?'
 
-    FactoryBot.create(:maintenance_debt, user: debtor, due_by: Date.today.advance(days: -1))
+    FactoryBot.create(:maintenance_debt, user: debtor, due_by: Date.current.advance(days: -1))
 
     sign_in user
 

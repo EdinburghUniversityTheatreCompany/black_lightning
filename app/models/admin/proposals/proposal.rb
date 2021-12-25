@@ -122,8 +122,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.author = 'TBC'
     @show.price = 'TBC'
 
-    @show.start_date = Date.today
-    @show.end_date = Date.today
+    @show.start_date = Date.current
+    @show.end_date = Date.current
     @show.is_public = false
 
     venue = Venue.find_by(name: 'Bedlam Theatre') || Venue.where("name like ?", "%Bedlam%").first

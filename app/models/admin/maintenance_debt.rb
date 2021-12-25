@@ -35,7 +35,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
     save!
   end
 
-  def status(on_date = Date.today)
+  def status(on_date = Date.current)
     case state
     when 'converted'
       return :converted

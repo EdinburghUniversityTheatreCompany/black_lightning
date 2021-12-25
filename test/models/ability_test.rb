@@ -53,7 +53,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users can read active opportunities' do
-    active_opportunity = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.today.advance(days: 1))
+    active_opportunity = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current.advance(days: 1))
     inactive_opportunity = FactoryBot.create(:opportunity, approved: false)
 
     allowed_actions = %I[show read index]

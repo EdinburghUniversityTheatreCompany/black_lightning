@@ -23,5 +23,5 @@
 <%= get_link Admin::Questionnaires::Questionnaire, :new, 
              html_class: (questionnaires.empty? ? 'btn' : 'btn btn-primary'), 
              link_target: new_admin_questionnaires_questionnaire_url(event_id: event.id), 
-             additional_condition: event.end_date > Date.today 
+             additional_condition: event.end_date > Date.current 
 %>

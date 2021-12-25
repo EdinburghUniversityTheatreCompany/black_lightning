@@ -4,13 +4,13 @@ require 'rake'
 # Tests the debt rake tasks.
 class DebtTaskTest < ActiveSupport::TestCase
   test 'Should notify new debtors' do
-    new_debts = FactoryBot.create_list(:overdue_maintenance_debt, 2, due_by: Date.today.advance(days: -1))
-    new_debts += FactoryBot.create_list(:overdue_staffing_debt, 3, due_by: Date.today.advance(days: -1))
+    new_debts = FactoryBot.create_list(:overdue_maintenance_debt, 2, due_by: Date.current.advance(days: -1))
+    new_debts += FactoryBot.create_list(:overdue_staffing_debt, 3, due_by: Date.current.advance(days: -1))
 
     # Older debts. Create notifications so they are not included in the unrepentant debts.
-    older_debts = FactoryBot.create_list(:overdue_maintenance_debt, 4, due_by: Date.today.advance(days: -2))
+    older_debts = FactoryBot.create_list(:overdue_maintenance_debt, 4, due_by: Date.current.advance(days: -2))
     older_debts.each do |older_debt|
-      FactoryBot.create(:reminder_debt_notification, user: older_debt.user, sent_on: Date.today.advance(days: -3))
+      FactoryBot.create(:reminder_debt_notification, user: older_debt.user, sent_on: Date.current.advance(days: -3))
     end
 
     assert_difference 'Admin::DebtNotification.where(notification_type: :initial_notification).count', new_debts.count do
@@ -24,17 +24,17 @@ class DebtTaskTest < ActiveSupport::TestCase
   end
 
   test 'Should notify unrepentant debtors' do
-    unrepentant_debts = FactoryBot.create_list(:overdue_maintenance_debt, 2, due_by: Date.today.advance(days: -15))
-    unrepentant_debts += FactoryBot.create_list(:overdue_staffing_debt, 3, due_by: Date.today.advance(days: -15))
+    unrepentant_debts = FactoryBot.create_list(:overdue_maintenance_debt, 2, due_by: Date.current.advance(days: -15))
+    unrepentant_debts += FactoryBot.create_list(:overdue_staffing_debt, 3, due_by: Date.current.advance(days: -15))
 
     unrepentant_debts.each do |unrepentant_debt|
-      FactoryBot.create(:initial_debt_notification, user: unrepentant_debt.user, sent_on: Date.today.advance(days: -15))
+      FactoryBot.create(:initial_debt_notification, user: unrepentant_debt.user, sent_on: Date.current.advance(days: -15))
     end
 
     # Add some debts with debtors that have already been notified in the past days.
-    already_notified_debts = [FactoryBot.create(:overdue_maintenance_debt, due_by: Date.today.advance(days: -2)), FactoryBot.create(:overdue_maintenance_debt, due_by: Date.today.advance(days: -12))]
+    already_notified_debts = [FactoryBot.create(:overdue_maintenance_debt, due_by: Date.current.advance(days: -2)), FactoryBot.create(:overdue_maintenance_debt, due_by: Date.current.advance(days: -12))]
     already_notified_debts.each do |already_notified_debt|
-      FactoryBot.create(:initial_debt_notification, user: already_notified_debt.user, sent_on: Date.today.advance(days: -3))
+      FactoryBot.create(:initial_debt_notification, user: already_notified_debt.user, sent_on: Date.current.advance(days: -3))
     end
 
     assert_difference 'Admin::DebtNotification.where(notification_type: :reminder).count', unrepentant_debts.count do

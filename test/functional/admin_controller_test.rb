@@ -30,7 +30,7 @@ class AdminControllerTest < ActionController::TestCase
 
   test 'should deny access if consented is more than a year ago' do
     user = users(:member)
-    user.consented = Date.today.advance(days: -1, years: -1)
+    user.consented = Date.current.advance(days: -1, years: -1)
     user.save
 
     sign_in user

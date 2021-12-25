@@ -41,7 +41,7 @@
     <% if can? :create, Admin::MaintenanceDebt %>
         <h3>Maintenance Debt</h3>
         <%= simple_form_for [:admin, @show] do |f| %>
-            <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.today()) + 14) %>
+            <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
             <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn' %>
         <% end %>
 
@@ -66,7 +66,7 @@
         </p>
 
         <%= simple_form_for [:admin, @show] do |f| %>
-            <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.today()) + 14) %>
+            <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
             <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn' %>
         <% end %>
 

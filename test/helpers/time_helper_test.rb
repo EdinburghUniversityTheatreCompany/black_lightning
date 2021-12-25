@@ -57,6 +57,6 @@ class TimeHelperTest < ActionView::TestCase
   end
 
   test 'max_end_year' do
-    assert_equal Date.today.year + 5, max_end_year
+    assert_equal Date.current.year + 5, max_end_year
   end
 end

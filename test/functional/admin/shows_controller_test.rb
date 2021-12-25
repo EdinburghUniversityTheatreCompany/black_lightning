@@ -59,7 +59,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should get show with debt dates set' do
-    @show = FactoryBot.create(:show, is_public: true, end_date: start_of_year, staffing_debt_start: Date.today, maintenance_debt_start: Date.today)
+    @show = FactoryBot.create(:show, is_public: true, end_date: start_of_year, staffing_debt_start: Date.current, maintenance_debt_start: Date.current)
 
     get :show, params: { id: @show }
     assert_response :success 
@@ -173,7 +173,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should create maintenance debts' do
-    @show = FactoryBot.create(:show, maintenance_debt_start: Date.today)
+    @show = FactoryBot.create(:show, maintenance_debt_start: Date.current)
 
     assert_difference 'Admin::MaintenanceDebt.count', @show.team_members.count do
       post :create_maintenance_debts, params: { id: @show.slug }
@@ -195,7 +195,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'should create staffing debts' do
-    @show = FactoryBot.create(:show, staffing_debt_start: Date.today)
+    @show = FactoryBot.create(:show, staffing_debt_start: Date.current)
 
     assert_difference 'Admin::StaffingDebt.count', @show.team_members.count * 2 do
       post :create_staffing_debts, params: { id: @show.slug, number_of_slots: 2 }

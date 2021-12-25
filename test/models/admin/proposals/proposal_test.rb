@@ -87,8 +87,8 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal 'TBC', show.author
     assert_equal 'TBC', show.price
 
-    assert_equal Date.today, show.start_date
-    assert_equal Date.today, show.end_date
+    assert_equal Date.current, show.start_date
+    assert_equal Date.current, show.end_date
     assert_not show.is_public
 
     assert_equal @proposal.user_ids.sort, show.user_ids.sort

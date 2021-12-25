@@ -80,7 +80,7 @@ class User < ApplicationRecord
 
   # Also change the method 'consented'
   def self.not_consented
-    where(consented: Date.today.advance(years: -100)..Date.today.advance(years: -1))
+    where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
   end
   
   def self.by_first_name
@@ -160,23 +160,23 @@ class User < ApplicationRecord
   end
 
   # The current and upcoming function share code, so please check them both if you change things.
-  def debt_causing_maintenance_debts(on_date = Date.today)
+  def debt_causing_maintenance_debts(on_date = Date.current)
     return Admin::MaintenanceDebt.where(user: self).where('due_by < ?', on_date).unfulfilled
   end
 
-  def upcoming_maintenance_debts(from_date = Date.today)
+  def upcoming_maintenance_debts(from_date = Date.current)
     return Admin::MaintenanceDebt.where(user: self).where('due_by >= ?', from_date).unfulfilled
   end
   
-  def debt_causing_staffing_debts(on_date = Date.today)
+  def debt_causing_staffing_debts(on_date = Date.current)
     return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by < ?', on_date).where(admin_staffing_job: nil, forgiven: false)
   end
 
-  def upcoming_staffing_debts(from_date = Date.today)
+  def upcoming_staffing_debts(from_date = Date.current)
     return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by >= ?', from_date).where(admin_staffing_job: nil, forgiven: false)
   end
 
-  def debt_message_suffix(on_date = Date.today)
+  def debt_message_suffix(on_date = Date.current)
     in_maintenance_debt = debt_causing_maintenance_debts(on_date).any?
     in_staffing_debt = debt_causing_staffing_debts(on_date).any?
 
@@ -193,11 +193,11 @@ class User < ApplicationRecord
 
   # Returns true if the user is in debt
   # Rename to in debt?
-  def in_debt(on_date = Date.today)
+  def in_debt(on_date = Date.current)
     return debt_causing_maintenance_debts(on_date).any? || debt_causing_staffing_debts(on_date).any?
   end
 
-  def self.in_debt(on_date = Date.today)
+  def self.in_debt(on_date = Date.current)
     in_debt_ids = find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
     return where(id: in_debt_ids)
   end
@@ -232,6 +232,6 @@ class User < ApplicationRecord
   # If you change this, you must also update the scope.
   def consented?
     # Check if the user has consented less than a year ago.
-    consented&.after?(Date.today.advance(years: -1))
+    consented&.after?(Date.current.advance(years: -1))
   end
 end

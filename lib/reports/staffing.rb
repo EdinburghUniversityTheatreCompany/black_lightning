@@ -32,8 +32,8 @@ class Reports::Staffing
         sheet.add_row(['Firstname', 'Surname', 'Email', 'Staffing', 'Past Shows', 'Upcoming Shows'])
 
         User.with_role(:member).each do |user|
-          past_show_count = user.shows.where(['end_date < ? AND end_date >= ? AND end_date < ?', Date.today, current_date, next_date]).count
-          upcoming_show_count = user.shows.where(['end_date >= ? AND end_date >= ? AND end_date < ?', Date.today, current_date, next_date]).count
+          past_show_count = user.shows.where(['end_date < ? AND end_date >= ? AND end_date < ?', Date.current, current_date, next_date]).count
+          upcoming_show_count = user.shows.where(['end_date >= ? AND end_date >= ? AND end_date < ?', Date.current, current_date, next_date]).count
 
           staffing_count = user.staffings.joins(:staffing_jobs).where(['start_time >= ? AND start_time < ?', current_date, next_date]).distinct.count
 

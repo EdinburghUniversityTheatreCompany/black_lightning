@@ -163,7 +163,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test 'test notified since returns only users who are in debt and have not received a notification' do
-    date = Date.today.advance(days: -7)
+    date = Date.current.advance(days: -7)
 
     # No notification.
     user_one = FactoryBot.create(:user)
@@ -206,10 +206,10 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test 'consented' do
-    @user.consented = Date.today
+    @user.consented = Date.current
     assert @user.consented?
 
-    @user.consented = Date.today.advance(years: -2)
+    @user.consented = Date.current.advance(years: -2)
     @user.save
     assert_not @user.consented?
   end
