@@ -280,7 +280,7 @@ module GenericController
   end
 
   def should_return_random
-    params[:commit] == 'Random'
+    params[:commit]&.upcase == 'RANDOM'
   end
 
   def return_random
@@ -289,7 +289,7 @@ module GenericController
     unless random_resources.present?
       helpers.append_to_flash(:error, 'There are no results from the search, so I could not select a random instance. HAL is sorry.')
       return false
-    end 
+    end
 
     redirect_to(resource_class.find_by(id: random_resources.pluck(:id).sample))
     return true
