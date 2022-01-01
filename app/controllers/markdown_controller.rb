@@ -5,6 +5,7 @@
 # to be rendered.
 ##
 
+# TODO: Feels quite insecure
 class MarkdownController < ApplicationController
   include MdHelper
 
@@ -12,7 +13,7 @@ class MarkdownController < ApplicationController
 
   def preview
     body = ActiveSupport::JSON.decode(request.body.read)
-    input_html = URI.unescape(body['input_html'])
+    input_html = CGI.unescape(body['input_html'])
 
     response = { rendered_md: render_markdown(input_html) }
 
