@@ -36,7 +36,8 @@
 class User < ApplicationRecord
   before_save :unify_numbers
   rolify
-
+  has_paper_trail limit: 6
+  
   ###############
   # Permissions
   ###############
