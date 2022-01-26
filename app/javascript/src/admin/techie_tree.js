@@ -3,10 +3,9 @@
 
 import * as Viva from 'vivagraphjs/dist/vivagraph.js'
 
-function DrawTree(json) {
-  // How to use a container: https://stackoverflow.com/questions/29137856/how-to-avoid-vivagraph-renders-the-graph-outside-of-the-container
+let techieTreeContainerId = 'techie-tree-container';
 
-  var container = document.getElementById('techie-tree-container')
+function DrawTree(json, container) {
   var graph = Viva.Graph.graph();
 
   // add a simple node
@@ -72,11 +71,19 @@ function DrawTree(json) {
 
 
 window.addEventListener('load', function() {
+  // How to use a container: https://stackoverflow.com/questions/29137856/how-to-avoid-vivagraph-renders-the-graph-outside-of-the-container
+  var container = document.getElementById(techieTreeContainerId);
+
+  if(container == null)
+  {
+    return;
+  }
+
   // https://stackoverflow.com/questions/12460378/how-to-get-json-from-url-in-javascript
   fetch('/admin/techies/tree_data.json')
   .then(res => res.json())
   .then(out =>
-    DrawTree(out)
+    DrawTree(out, container)
   ); 
 })
 
