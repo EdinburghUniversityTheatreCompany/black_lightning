@@ -5,7 +5,6 @@
 # to be rendered.
 ##
 
-# TODO: Feels quite insecure
 class MarkdownController < ApplicationController
   include MdHelper
 
