@@ -110,7 +110,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     patch :submit, params: { id: @token, user: user_attributes }
 
     assert_response :unprocessable_entity
-    assert_equal ['You need to give consent before you can create an account.'], flash[:error]
+    assert_equal ['You need to accept the Terms and Conditions before continuing.'], flash[:error]
 
     assert_not_nil assigns(:user)
     assert_not assigns(:user).persisted?

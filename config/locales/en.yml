@@ -43,3 +43,5 @@ en:
       shorty:          ! '%d/%m/%y'
       long:            ! '%A %d %B'
       longy:           ! '%A %d %B %Y'
+  errors:
+    not_consented: 'You need to accept the Terms and Conditions before continuing. If you have accepted them before, there may have been an update.'

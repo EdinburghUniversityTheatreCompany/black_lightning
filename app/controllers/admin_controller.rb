@@ -15,7 +15,7 @@ class AdminController < ApplicationController
   def check_consented!
     return if current_user.consented?
 
-    exception = CanCan::AccessDenied.new('You have not consented to the terms and conditions')
+    exception = CanCan::AccessDenied.new(t('errors.not_consented'))
 
     render_error_page(exception, 'errors/not_consented', 403)
     return false

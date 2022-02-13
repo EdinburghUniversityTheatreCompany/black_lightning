@@ -38,7 +38,7 @@ class MembershipActivationTokensController < ApplicationController
 
       redirect_to admin_url
     else
-      helpers.append_to_flash(:error, 'You need to give consent before you can create an account.')
+      helpers.append_to_flash(:error, 'You need to accept the Terms and Conditions before continuing.')
 
       render 'activate', status: :unprocessable_entity
     end
