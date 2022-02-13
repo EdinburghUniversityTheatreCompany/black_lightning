@@ -53,7 +53,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users can read active opportunities' do
-    active_opportunity = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.today.advance(days: 1))
+    active_opportunity = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current.advance(days: 1))
     inactive_opportunity = FactoryBot.create(:opportunity, approved: false)
 
     allowed_actions = %I[show read index]
@@ -72,7 +72,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'test users have the correct permissions for users' do
-    allowed_actions = %I[show debt_status update edit]
+    allowed_actions = %I[show debt_status update edit consent]
     forbidden_actions = %I[index read create assign_roles check_membership destroy]
 
     helper_test_actions(@user, 'itself', @ability, allowed_actions + [:view_shows_and_bio], forbidden_actions)

@@ -15,20 +15,17 @@ module AcademicYearHelper
   end
 
   def next_year_start
-    d1 = Date.new(Date.current.year, 9, 1)
-    return d1 unless d1.past?
-
-    return Date.new(Date.current.year + 1, 9, 1)
+    return start_of_year.advance(years: 1)
   end
 
   def start_of_term
-    return christmas unless christmas > Date.current
+    return christmas if christmas < Date.current
 
     return start_of_year
   end
 
   def end_of_term
-    return christmas unless christmas < Date.current
+    return christmas if christmas >= Date.current
 
     return next_year_start
   end

@@ -89,6 +89,28 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test 'should get tree data' do
+    get :tree_data
+
+    assert_response :success
+
+    json = JSON.parse(response.body)
+
+    assert json.is_a? Hash
+    assert json.key? 'nodes'
+    assert json.key? 'edges'
+  end
+
+  test 'should get bush' do
+    get :bush
+    assert_response :success
+  end
+
+  test 'should get bush with one base techie' do
+    get :bush, params: { q: { id_eq: Techie.all.last } }
+    assert_response :success
+  end
+
   test 'should get tree if you have index permission' do
     sign_out @admin
     sign_in users(:committee)

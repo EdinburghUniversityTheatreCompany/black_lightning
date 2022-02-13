@@ -55,7 +55,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
   end
 
   test 'should get new' do
-    FactoryBot.create(:show, start_date: Date.today)
+    FactoryBot.create(:show, start_date: Date.current)
     get :new
     assert_response :success
   end
@@ -64,7 +64,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
     attributes = {
       user_id: FactoryBot.create(:member).id,
       show_id: FactoryBot.create(:show).id,
-      due_by: Date.today.advance(days: -1)
+      due_by: Date.current.advance(days: -1)
     }
     
     assert_difference('Admin::StaffingDebt.count') do

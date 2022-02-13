@@ -11,7 +11,7 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   def show
     # We shuffle the category_infos with a different seed every day.
     # This way, every Creative has a fair chance of ending up near the top.
-    days_since_bedlam = Date.today - Date.new(1980, 1, 30)
+    days_since_bedlam = Date.current - Date.new(1980, 1, 30)
 
     @category_infos = @category.category_infos
                                .accessible_by(current_ability)

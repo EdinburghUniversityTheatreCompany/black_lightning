@@ -82,7 +82,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
       patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
 
       assert_not_nil assigns(:user)
-      assert assigns(:user).has_role? :member
+      assert assigns(:user).has_role?('Member')
       assert assigns(:user).consented.present?
     end
   end
@@ -99,7 +99,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
       patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
 
       assert_not_nil assigns(:user)
-      assert assigns(:user).has_role? :member
+      assert assigns(:user).has_role?('Member')
       assert assigns(:user).consented.present?
     end
   end
@@ -110,7 +110,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     patch :submit, params: { id: @token, user: user_attributes }
 
     assert_response :unprocessable_entity
-    assert_match 'You need to give consent', flash[:error]
+    assert_equal ['You need to accept the Terms and Conditions before continuing.'], flash[:error]
 
     assert_not_nil assigns(:user)
     assert_not assigns(:user).persisted?

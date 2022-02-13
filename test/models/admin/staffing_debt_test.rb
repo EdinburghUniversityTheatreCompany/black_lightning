@@ -73,12 +73,12 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     staffing_debt = FactoryBot.create :staffing_debt
 
     # Not signed up before deadline
-    staffing_debt.due_by = Date.today.advance(days: 1)
+    staffing_debt.due_by = Date.current.advance(days: 1)
     assert_equal :not_signed_up, staffing_debt.status
     assert_equal 'warning', staffing_debt.css_class
 
     # Not signed up after debt deadline -> causing debt
-    staffing_debt.due_by = Date.today.advance(days: -1)
+    staffing_debt.due_by = Date.current.advance(days: -1)
     assert_equal :causing_debt, staffing_debt.status
     assert_equal 'error', staffing_debt.css_class
 
@@ -90,14 +90,14 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     user = FactoryBot.create(:user)
     staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, end_time: DateTime.now.advance(days: 3))
     staffed_job = FactoryBot.create(:unstaffed_staffing_job, user: user, staffable: staffing)
-    other_staffing_debt = FactoryBot.create(:staffing_debt, user: user, due_by: Date.today.advance(days: 1), admin_staffing_job: staffed_job)
+    other_staffing_debt = FactoryBot.create(:staffing_debt, user: user, due_by: Date.current.advance(days: 1), admin_staffing_job: staffed_job)
 
     # Awaiting staffing before debt deadline
     assert_equal :awaiting_staffing, other_staffing_debt.status
     assert_equal '', other_staffing_debt.css_class
 
     # Awaiting staffing after debt deadline
-    other_staffing_debt.update_attribute(:due_by, Date.today.advance(days: -1))
+    other_staffing_debt.update_attribute(:due_by, Date.current.advance(days: -1))
     assert_equal :awaiting_staffing, other_staffing_debt.status
     assert_equal '', other_staffing_debt.css_class
 

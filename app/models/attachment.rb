@@ -48,11 +48,20 @@ class Attachment < ApplicationRecord
   end
 
   def item_name
+    return 'No Item' if item.nil?
+
     if item_type == 'Admin::Answer'
-      return "#{get_object_name(item&.answerable)} for #{get_object_name(item&.answerable&.event)}"
+      return 'No Answerable for Item' if item.answerable.nil?
+
+      extra = if item.answerable.event.present?
+                " for #{get_object_name(item.answerable.event)}"
+              else
+                ''
+              end
+
+      return "#{get_object_name(item.answerable)}#{extra}"
     else
       return get_object_name(item)
     end
   end
-
-  end
+end

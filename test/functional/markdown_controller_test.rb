@@ -7,7 +7,7 @@ class MarkdownControllerTest < ActionController::TestCase
 
     assert_not_nil markdown
 
-    post :preview, body: { input_html: markdown }.to_json
+    post :preview, body: { input_html: CGI.escape(markdown) }.to_json
     assert_response :success
 
     response_html = ActiveSupport::JSON.decode(response.body)['rendered_md']

@@ -4,6 +4,7 @@ class Admin::MembershipControllerTest < ActionController::TestCase
   setup do
     sign_in users(:admin)
   end
+
   test 'returns nothing for empty search' do
     get :check_membership, params: { search: nil }
     assert_response :not_found
@@ -35,13 +36,13 @@ class Admin::MembershipControllerTest < ActionController::TestCase
   end
 
   test 'search for a DM Trained user' do
-    user = FactoryBot.create(:user, first_name: 'Finbar', last_name: 'the Viking')
+    user = FactoryBot.create(:user, first_name: 'Membership', last_name: 'DM Trained and Member')
 
     user.add_role 'DM Trained'
     user.add_role :member
 
     get :check_membership, params: { search: user.first_name }
-    assert_match 'Finbar the Viking is a current member and is DM trained', response.body
+    assert_match 'Membership DM Trained and Member is a current member and is DM trained', response.body
   end
 
   test 'search for invalid user' do

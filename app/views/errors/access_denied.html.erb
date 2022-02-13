@@ -3,7 +3,7 @@
 <%= render '/errors/template', error_header: error_header do %>
 <br>
   <% if current_user.present? %>
-    <% if current_user.has_role?(:member) %>
+    <% if current_user.has_role?('Member') %>
       <p>
         If you've recently renewed your membership, you might need to <%= link_to "log out", destroy_user_session_path, method: :delete %> and log back in again to regain access to members only pages.
       </p>

@@ -45,10 +45,10 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     helper_compare_css_class 'success', :completed
     helper_compare_css_class 'success', :converted
 
-    @maintenance_debt.due_by = Date.today.advance(days: 1)
+    @maintenance_debt.due_by = Date.current.advance(days: 1)
     helper_compare_css_class'warning', :unfulfilled
 
-    @maintenance_debt.due_by = Date.today.advance(days: -1)
+    @maintenance_debt.due_by = Date.current.advance(days: -1)
     helper_compare_css_class 'error', :unfulfilled
   end
 

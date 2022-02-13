@@ -27,6 +27,6 @@ module TimeHelper
   end
 
   def max_end_year
-    return Date.today.year + 5
+    return Date.current.year + 5
   end
 end

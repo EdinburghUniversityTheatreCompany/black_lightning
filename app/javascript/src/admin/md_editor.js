@@ -8,10 +8,15 @@ const addHandlers = () => jQuery("a[href$=\"preview\"]").on("shown", function(e)
 
   $("#" + id + "_preview").html('<b>Please Wait</b>');
 
+  var token = $('meta[name="csrf-token"]').attr('content');
+
   return $.ajax({
     type: 'POST',
     url: '/markdown/preview.json',
     data: JSON.stringify({ input_html: encodeURIComponent(input.val()) }),
+    beforeSend: function (xhr) {
+      xhr.setRequestHeader('X-CSRF-Token', token)
+    },
     success(data) {
       const preview = $("#" + id + "_preview");
       preview.html(data.rendered_md);
@@ -23,7 +28,9 @@ const addHandlers = () => jQuery("a[href$=\"preview\"]").on("shown", function(e)
 <pre>${error_data.error}</pre>\
 `;
       return $("#" + id + "_preview").html(error_html);
-    }
+    },
+    contentType: false,
+    processData: false
   });
 });
 

@@ -27,9 +27,7 @@ class Admin::Answer < ApplicationRecord
   belongs_to :question, class_name: 'Admin::Question'
   belongs_to :answerable, polymorphic: true
 
-  has_one_attached :file
-
-    # To hold files, if necessary.
+  # To hold files, if necessary.
   include AttachmentItem
 
   default_scope { includes(:question, :attachments) }

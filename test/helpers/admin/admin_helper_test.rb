@@ -72,8 +72,8 @@ class Admin::AdminHelperTest < ActionView::TestCase
 
     assert_no_difference 'Admin::Proposals::Proposal.count' do
       assert_not destroy_with_flash_message(@proposal)
-
-      assert_equal ["The Proposal \"#{@proposal.show_title}\" could not be destroyed."] + @proposal.errors.messages[:destroy], flash[:error]
+  
+      assert_equal ["The Proposal \"#{@proposal.show_title}\" could not be destroyed."] + @proposal.errors.messages[:base], flash[:error]
     end
   end
 

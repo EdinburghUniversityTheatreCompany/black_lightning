@@ -12,6 +12,12 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test 'should get index with non_members' do
+    get :index, params: { show_non_members: 1 }
+
+    assert_response :success
+  end
+
   test 'should get show' do
     get :show, params: { id: @user }
     assert_response :success

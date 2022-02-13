@@ -39,12 +39,13 @@ FactoryBot.define do
     phone_number          { '12345' }
     password              { :random_password }
     password_confirmation { password }
-
+    consented             { 5.day.ago.to_s(:db) }
+  
     factory :member do
       after(:create) do |user, _evaluator|
         user.add_role :member
       end
-      
+
       factory :member_with_phone_number do
         phone_number { rand(10**9..10**10).to_s }
       end

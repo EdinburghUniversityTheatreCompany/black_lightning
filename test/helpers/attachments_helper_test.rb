@@ -12,4 +12,11 @@ class AttachmentsHelperTest < ActionView::TestCase
 
     assert_equal "/admin/shows/#{show_attachment.item.slug}", get_url_for_attachment_item(show_attachment)
   end
+
+  test 'get link for answer' do
+    attachment = FactoryBot.create(:answer_attachment)
+
+    assert attachment.item.answerable.is_a?(Admin::Questionnaires::Questionnaire)
+    assert_equal "/admin/questionnaires/questionnaires/#{attachment.item.answerable.id}", get_url_for_attachment_item(attachment)
+  end
 end

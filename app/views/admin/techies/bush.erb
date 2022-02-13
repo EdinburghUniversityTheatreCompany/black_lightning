@@ -1,0 +1,58 @@
+<h1><%= @title %></h1>
+
+<div>
+  <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
+
+  <%= get_link Techie, :new, html_class: 'btn' %>
+</div>
+
+<div class="row">
+    <div class="span12">
+        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
+            <%= f.select :id_eq, options_from_collection_for_select(Techie.all, "id", "name", @q.id_eq), include_blank: true %>
+
+            <%= f.submit :Search, class: 'btn' %>
+        <% end %>
+    </div>
+</div>
+
+<div id="canvas" style="width: 940px; height: 1500px;"></div>
+<script>
+var g = new Graph();
+
+var render = function(renderer, node) {
+        /* the Raphael set is obligatory, containing all you want to display */
+        var text = renderer.text(node.point[0] + 10, node.point[1] + 10, node.label);
+        var dimensions = text.getBBox();
+
+        var set = renderer.set().push(
+            /* custom objects go here */
+            renderer.rect(node.point[0] - (dimensions.width)/2, node.point[1], dimensions.width + 20, dimensions.height + 10).attr({"fill": "#feb", r : "12px", "stroke-width" : node.distance == 0 ? "3px" : "1px" })).push(
+              text
+            );
+
+        text.toFront();
+        return set;
+    };
+
+/* add a simple node */
+<% @techies.each do |techie| %>
+g.addNode("<%= techie.id %>", { render:render, label: "<%= techie.name.html_safe %>" });
+<% end %>
+
+<% @techies.each do |techie| %>
+    <% techie.children.each do |child| %>
+        <% if @techies.include?(child) %>
+            g.addEdge("<%= techie.id %>", "<%= child.id %>", {directed: true});
+        <% end %>
+    <% end %>
+<% end %>
+
+/* layout the graph using the Spring layout implementation */
+var layouter = new Graph.Layout.Spring(g);
+layouter.layout();
+
+/* draw the graph using the RaphaelJS draw implementation */
+var renderer = new Graph.Renderer.Raphael('canvas', g, 940, 1500);
+renderer.draw();
+</script>

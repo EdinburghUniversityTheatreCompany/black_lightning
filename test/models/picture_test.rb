@@ -24,6 +24,7 @@ class PictureTest < ActionView::TestCase
     picture.save(validate: false)
 
     assert_equal 'active_storage_default-missing.png', picture.fetch_image.filename.to_s
+    assert_equal 'active_storage_default-missing.png', picture.filename.to_s
   end
 
   test 'thumb url' do
@@ -34,5 +35,13 @@ class PictureTest < ActionView::TestCase
   test 'display url' do
     picture = FactoryBot.create(:picture)
     assert_includes picture.display_url, 'test.png'
+  end
+
+  test 'get gallery name for no gallery' do
+    picture = FactoryBot.create(:picture)
+    picture.gallery = nil
+    picture.save(validate: false)
+
+    assert_equal 'No Gallery', picture.gallery_name
   end
 end

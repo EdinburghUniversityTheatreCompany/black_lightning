@@ -33,6 +33,10 @@ ChaosRails::Application.routes.draw do
   end
 
   resources :users, only: [:show] do
+    member do
+      put 'consent'
+    end
+  
     collection do
       get 'current', to: 'users#current'
     end
@@ -57,9 +61,6 @@ ChaosRails::Application.routes.draw do
     get 'resources', to: 'resources#page', as: :resources_index
     get 'resources/membership_checker', to: 'resources#membership_checker', as: :resources_membership_checker
     get 'resources/(*page)', to: 'resources#page', as: :resources
-
-    # Answer files
-    get 'answer/:id/file', to: 'answers#get_file', as: :answer_get_file
 
     resources :events, only: [:index, :show] do
       member do
@@ -164,6 +165,8 @@ ChaosRails::Application.routes.draw do
     resources :techies do
       collection do
         get 'tree'
+        get 'bush'
+        get 'tree_data'
       end
     end
 
@@ -296,6 +299,11 @@ ChaosRails::Application.routes.draw do
     # Exclude active_storage paths from being redirected to the 404 page.
     !request.path.starts_with?('/rails/active_storage') && !request.path.starts_with?('/assets')
   }
+
+  # Test route
+  if Rails.env.test? || Rails.env.development?
+    get 'shows/test_report_500', to: 'shows#test_report_500'
+  end
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

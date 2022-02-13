@@ -36,7 +36,8 @@
 class User < ApplicationRecord
   before_save :unify_numbers
   rolify
-
+  has_paper_trail limit: 6
+  
   ###############
   # Permissions
   ###############
@@ -49,11 +50,9 @@ class User < ApplicationRecord
   # Include default devise modules. Others available are:
   # :token_authenticatable, :confirmable,
   # :lockable, :timeoutable and :omniauthable
-  # devise :ldap_authenticatable, :recoverable, :rememberable,
-  #        :trackable, :registerable
+  # devise :ldap_authenticatable, :recoverable, :rememberable, :trackable, :registerable
 
-  devise :database_authenticatable,
-         :recoverable, :rememberable, :validatable
+  devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
 
   # set our own validations
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
@@ -67,7 +66,7 @@ class User < ApplicationRecord
   delegate :card_number, to: :membership_card, allow_nil: true
   accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true
 
-  has_many :team_membership, class_name: 'TeamMember', dependent: :restrict_with_error 
+  has_many :team_membership, class_name: 'TeamMember', dependent: :restrict_with_error
   has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
   has_many :staffing_jobs, class_name: 'Admin::StaffingJob', dependent: :restrict_with_error 
   has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
@@ -80,6 +79,11 @@ class User < ApplicationRecord
 
   default_scope -> { order('last_name ASC') }
 
+  # Also change the method 'consented'
+  def self.not_consented
+    where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
+  end
+  
   def self.by_first_name
     reorder('first_name ASC')
   end
@@ -157,23 +161,23 @@ class User < ApplicationRecord
   end
 
   # The current and upcoming function share code, so please check them both if you change things.
-  def debt_causing_maintenance_debts(on_date = Date.today)
+  def debt_causing_maintenance_debts(on_date = Date.current)
     return Admin::MaintenanceDebt.where(user: self).where('due_by < ?', on_date).unfulfilled
   end
 
-  def upcoming_maintenance_debts(from_date = Date.today)
+  def upcoming_maintenance_debts(from_date = Date.current)
     return Admin::MaintenanceDebt.where(user: self).where('due_by >= ?', from_date).unfulfilled
   end
   
-  def debt_causing_staffing_debts(on_date = Date.today)
+  def debt_causing_staffing_debts(on_date = Date.current)
     return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by < ?', on_date).where(admin_staffing_job: nil, forgiven: false)
   end
 
-  def upcoming_staffing_debts(from_date = Date.today)
+  def upcoming_staffing_debts(from_date = Date.current)
     return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by >= ?', from_date).where(admin_staffing_job: nil, forgiven: false)
   end
 
-  def debt_message_suffix(on_date = Date.today)
+  def debt_message_suffix(on_date = Date.current)
     in_maintenance_debt = debt_causing_maintenance_debts(on_date).any?
     in_staffing_debt = debt_causing_staffing_debts(on_date).any?
 
@@ -190,11 +194,11 @@ class User < ApplicationRecord
 
   # Returns true if the user is in debt
   # Rename to in debt?
-  def in_debt(on_date = Date.today)
+  def in_debt(on_date = Date.current)
     return debt_causing_maintenance_debts(on_date).any? || debt_causing_staffing_debts(on_date).any?
   end
 
-  def self.in_debt(on_date = Date.today)
+  def self.in_debt(on_date = Date.current)
     in_debt_ids = find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
     return where(id: in_debt_ids)
   end
@@ -216,10 +220,19 @@ class User < ApplicationRecord
 
   # Overrides an existing method that doesn't work.
   def remove_role(role)
-    if role.class == Symbol
+    if role.instance_of?(Symbol)
       super #.remove_role(role)
     else
       roles.delete(role)
     end
+  end
+  def activate
+    add_role :member
+  end
+
+  # If you change this, you must also update the scope.
+  def consented?
+    # Check if the user has consented less than a year ago.
+    consented&.after?(Date.current.advance(years: -1))
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2021_10_24_183601) do
+ActiveRecord::Schema.define(version: 2021_10_24_160958) do
 
   create_table "active_storage_attachments", charset: "utf8", force: :cascade do |t|
     t.string "name", null: false
@@ -604,7 +604,7 @@ ActiveRecord::Schema.define(version: 2021_10_24_183601) do
     t.datetime "updated_at", precision: 6, null: false
     t.index ["item_type", "item_id"], name: "index_video_links_on_item_type_and_item_id"
   end
-  
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"

@@ -129,8 +129,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     @show_current_term_only = q.nil?
 
     # Set the range to the current term by default.
-    @q.event_end_date_gt = helpers.start_of_term if @show_current_term_only
-    @q.event_start_date_lt = helpers.end_of_term if @show_current_term_only
+    @q.event_end_date_gteq = helpers.start_of_term if @show_current_term_only
+    @q.event_start_date_lteq = helpers.end_of_term if @show_current_term_only
 
     return @q.result
   end

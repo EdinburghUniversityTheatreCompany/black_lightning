@@ -20,16 +20,17 @@ class ApplicationControllerTest < ActionController::TestCase
   end
 
   test 'report 500' do
-    skip "I don't know how to test this."
+    sign_in users(:admin)
+  
+    get 'test_report_500'
+
     assert_response 500
+    assert_match 'We have been informed.', response.body
+    assert_equal ['This is a test error.'], flash[:error]
   end
 
   test 'report 404' do
     get :show, params: { id: 'finbar-the-viking-sails-the-7th-sea' }
     assert_response 404
-  end
-
-  test 'mobile device' do
-    skip "I don't know how to test this."
   end
 end

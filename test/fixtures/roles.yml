@@ -18,7 +18,7 @@
 # This makes it possible to use member to test the 'default' settings.
 member:
    id: 1
-   name: "member"
+   name: "Member"
 
 # Committee has extra permissions and can thus be used for testing.
 # You can also give committee extra permissions using the fixtures for testing.
@@ -28,7 +28,7 @@ committee:
 
 admin:
   id: 3
-  name: "admin"
+  name: "Admin"
   
 welfare:
   id: 4

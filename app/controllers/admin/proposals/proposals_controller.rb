@@ -65,7 +65,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def create
     return call_closed_message(@proposal.call) unless @proposal.call.open?
 
-    # Has to happen here because the call of the proposal has to be set before authorizing.
+    # Has to happen here because the call_closed_message has to be shown before checking permission.
     authorize! :create, @proposal
 
     super

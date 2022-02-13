@@ -38,7 +38,7 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_match 'There are no upcoming shows', response.body
 
     FactoryBot.create_list(:show, 3)
-    FactoryBot.create(:show, end_date: Date.today.advance(days: 1))
+    FactoryBot.create(:show, end_date: Date.current.advance(days: 1))
     assert_widget_does_not_error 'shows'
     assert_match Show.future.first.name, response.body
   end

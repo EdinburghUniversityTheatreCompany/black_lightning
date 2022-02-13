@@ -41,7 +41,7 @@ class EventTest < ActionView::TestCase
 
   test 'last_event' do
     old_season = FactoryBot.create(:show, start_date: @event.start_date.advance(years: -3))
-    last_workshop = FactoryBot.create(:workshop, start_date: Date.today.advance(weeks: -3), is_public: true)
+    last_workshop = FactoryBot.create(:workshop, start_date: Date.current.advance(weeks: -3), is_public: true)
     assert_equal last_workshop, Event.last_event
     assert_equal last_workshop, Workshop.last_event
   end
@@ -51,9 +51,9 @@ class EventTest < ActionView::TestCase
   end
 
   test 'this_year' do
-    this_year_show = FactoryBot.create(:show, start_date: Date.today)
+    this_year_show = FactoryBot.create(:show, start_date: Date.current)
     old_show = FactoryBot.create(:show, start_date: @event.start_date.advance(years: -3))
-    future_workshop = FactoryBot.create(:workshop, start_date: Date.today.advance(years: 1))
+    future_workshop = FactoryBot.create(:workshop, start_date: Date.current.advance(years: 1))
 
     assert_includes Event.this_year, this_year_show
     assert_not_includes Event.this_year, old_show

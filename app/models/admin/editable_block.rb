@@ -23,6 +23,7 @@
 
 class Admin::EditableBlock < ApplicationRecord
   resourcify
+  has_paper_trail limit: 10
 
   include AttachmentItem
 

@@ -36,21 +36,25 @@ admin:
   last_name: 'Peanut'
   email: 'Peter@peanut.yum'
   public_profile: false
+  consented: <%= 5.day.ago.to_s(:db) %>
 
 user:
   id: 2
   first_name: 'Cyclops'
   last_name: 'Cat'
   email: 'cyclops@cat.eye'
+  consented: <%= 5.day.ago.to_s(:db) %>
 
 committee:
   id: 3
   first_name: 'Sophie'
   last_name: 'Sombrero'
   email: 'yee@haw.howdy'
+  consented: <%= 5.day.ago.to_s(:db) %>
 
 member:
   id: 4
   first_name: 'Darren'
   last_name: 'Dinosaur'
   email: 'impact@yucatan.gulf'
+  consented: <%= 5.day.ago.to_s(:db) %>

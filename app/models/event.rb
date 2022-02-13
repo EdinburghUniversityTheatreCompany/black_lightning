@@ -45,6 +45,7 @@ class Event < ApplicationRecord
   include VideoLinkItem
   include MdHelper
 
+  has_paper_trail limit: 6
   resourcify
 
   # Use the format slug for urls. e.g. /events/myshow

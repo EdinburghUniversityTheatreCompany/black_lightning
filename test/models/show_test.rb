@@ -54,7 +54,7 @@ class ShowTest < ActiveSupport::TestCase
   end
 
   test 'create maintenance debts' do
-    due_by = Date.today
+    due_by = Date.current
     show = FactoryBot.create(:show, maintenance_debt_start: due_by)
 
     show.create_maintenance_debts
@@ -66,7 +66,7 @@ class ShowTest < ActiveSupport::TestCase
     end
 
     # Test that the date changes, but the amount stays 1. 
-    new_due_by = Date.today.advance(days: 5)
+    new_due_by = Date.current.advance(days: 5)
     show.update_attribute(:maintenance_debt_start, new_due_by)
     
     FactoryBot.create(:team_member, teamwork: show)
@@ -91,7 +91,7 @@ class ShowTest < ActiveSupport::TestCase
   end
 
   test 'create staffing debts' do
-    due_by = Date.today
+    due_by = Date.current
     show = FactoryBot.create(:show, staffing_debt_start: due_by)
 
     show.create_staffing_debts(1)

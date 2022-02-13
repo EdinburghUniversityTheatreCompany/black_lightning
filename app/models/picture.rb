@@ -45,9 +45,7 @@ class Picture < ApplicationRecord
   end
 
   def filename
-    return image.blob.filename if image.attached?
-  
-    return 'No Filename'
+    return fetch_image.blob.filename
   end
 
   ##

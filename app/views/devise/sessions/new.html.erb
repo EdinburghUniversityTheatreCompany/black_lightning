@@ -1,5 +1,5 @@
 <% content_for :head do %>
-  <%= stylesheet_link_tag "login", :media => "all" %>
+  <%= stylesheet_link_tag "login", media: "all" %>
 <% end %>
 
 <div class="container">
@@ -26,24 +26,25 @@
 <%= render "devise/shared/links" %>
 
 <p style="font-size: x-small; line-height: normal;">
-        By signing in, you agree that this website may store both a session
-        cookie to allow you to log in, and any other cookies including tracking cookies.
+        By signing in, you agree that this website may store both a session cookie to allow you to log in, and any other cookies including tracking cookies.
         <br />
-        For more information, please contact the <%= mail_to @support_email, 'Bedlam IT Systems Manager' %>.
+        For more information, please see the <%= link_to 'Privacy Policy', static_path('privacy_policy')%>.
       </p>
     </div>
 
     <div class="span6 well">
       <h2>New Members</h2>
 
-      <h3>
-        Please buy membership at the box office or from our 
-        <a href="https://www.eusa.ed.ac.uk/activities/societies/society/bedlamtheatre/">EUSA society page</a>.
-      </h3>
+      <p>
+        Please buy membership at the box office or from our <a href="https://www.eusa.ed.ac.uk/activities/view/bedlam">EUSA society page</a>.
+      </p>
 
       <p>
-        If you already have membership, but do not have an account for this website, please contact a member
-        of committee.
+        Afterwards, you will receive an email to activate your account. If you do not receive this email within a day, please email the Secretary.
+      </p>
+
+      <p>
+        If you encounter have any issues (re)activating your account, please email the secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>.
       </p>
     </div>
   </div>

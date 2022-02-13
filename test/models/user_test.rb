@@ -34,7 +34,7 @@ require 'test_helper'
 
 class Admin::UserTest < ActiveSupport::TestCase
   setup do
-    @user = FactoryBot.create :user
+    @user = users(:user)
   end
 
   test 'sort by first name' do
@@ -163,7 +163,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test 'test notified since returns only users who are in debt and have not received a notification' do
-    date = Date.today.advance(days: -7)
+    date = Date.current.advance(days: -7)
 
     # No notification.
     user_one = FactoryBot.create(:user)
@@ -203,5 +203,14 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal 1, teamworks.count
 
     assert_includes teamworks, events.first
+  end
+
+  test 'consented' do
+    @user.consented = Date.current
+    assert @user.consented?
+
+    @user.consented = Date.current.advance(years: -2)
+    @user.save
+    assert_not @user.consented?
   end
 end

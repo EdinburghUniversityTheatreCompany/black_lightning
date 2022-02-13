@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class Admin::RolesControllerTest < ActionController::TestCase
+  include ERB::Util
+
   setup do
     @admin = users(:admin)
     sign_in @admin
@@ -28,10 +30,10 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_response :success
 
     members.each do |member|
-      assert_match member.name_or_email.html_safe, response.body
+      assert_match html_escape(member.name_or_email), response.body
     end
 
-    assert_no_match user.name_or_email.html_safe, response.body
+    assert_no_match html_escape(user.name_or_email), response.body
 
     assert_match 'Please add members from the membership activation page', response.body
   end
@@ -78,18 +80,31 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should get edit' do
+  test 'should get edit for hardcoded role' do
     get :edit, params: { id: @role }
     assert_response :success
+
+    # @role is member, which is hardcoded.
+    assert_match 'You cannot change the name of this role', response.body
   end
 
   test 'should update role' do
-    put :update, params: { id: @role, role: { name: 'Viking' } }
+    role = FactoryBot.create(:role)
+
+    put :update, params: { id: role, role: { name: 'Viking' } }
 
     assert 'Viking', assigns(:role).name
-    assert_redirected_to admin_role_path(@role)
+    assert_redirected_to admin_role_path(role)
   end
-  
+
+  test 'should not update hardcoded role' do
+    put :update, params: { id: @role, role: { name: 'Viking' } }
+
+    assert_response :unprocessable_entity
+
+    assert_equal 'Member', Role.find(@role.id).name
+  end
+
   test 'should not update invalid role' do
     put :update, params: { id: @role, role: { name: nil } }
 
@@ -109,9 +124,9 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
 
-    assert user.has_role? :member
+    assert user.has_role?('Member')
 
-    assert_equal ['Finbar the Viking has been added to the role of member'], flash[:success]
+    assert_equal ['Finbar the Viking has been added to the role of Member'], flash[:success]
     assert_redirected_to admin_role_url(@role)
   end
 
@@ -120,9 +135,9 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
 
-    assert user.has_role? :member
+    assert user.has_role?('Member')
 
-    assert_equal ['Dennis the Donkey already has the role of member'], flash[:success]
+    assert_equal ['Dennis the Donkey already has the role of Member'], flash[:success]
     assert_redirected_to admin_role_url(@role)
   end
 

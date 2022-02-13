@@ -28,7 +28,7 @@ class Admin::StaffingDebt < ApplicationRecord
   # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
   # If you change this, please also change the functions that return upcoming debts in the user model.
   # Yes, that's not very DRY but now the functions in user.rb can be a database query instead of something with select.
-  def status(on_date = Date.today)
+  def status(on_date = Date.current)
     # note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
     return :forgiven if forgiven
     return :completed_staffing if admin_staffing_job.try(:completed?)

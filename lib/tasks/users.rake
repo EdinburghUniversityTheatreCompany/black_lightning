@@ -50,7 +50,7 @@ namespace :users do
   desc 'Lists the amount of users who were involved in an event or listed on a proposal during each academic year.'
   task determine_active_users_by_involvement: :environment do
     p 'Academic Year, Total Members, Fresher\'s Play Only, Proposal Only'
-    (1890..Date.today.year).each do |start_year|
+    (Rails.configuration.start_year..Date.current.year).each do |start_year|
       start_date = Date.new(start_year, 9, 1)
       end_date = Date.new(start_year + 1, 8, 31)
 

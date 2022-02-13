@@ -29,7 +29,6 @@ import '../src/konami_code'
 import "controllers"
 
 require.context('./../../../node_modules/jquery-ui/ui')
-
 require("@rails/ujs").start()
 require("@rails/activestorage").start()
 

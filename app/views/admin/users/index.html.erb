@@ -8,7 +8,7 @@
   <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
   <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
 
-  <%= f.input :show_non_members, label: "Show Non-Members", input_html: { id: "show_non_members", checked: params[:show_non_members] == "1" ? true : false, name: "show_non_members" }, as: :boolean %>
+  <%= render 'shared/boolean_search_form_field', f: f, name: :show_non_members, label: 'Show Non-Members' %>
   
   <%= f.submit :Search, class: 'btn btn-primary' %>
 
