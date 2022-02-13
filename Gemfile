@@ -25,7 +25,7 @@ gem 'will_paginate'
 gem 'kramdown'
 gem 'nested_form'
 gem 'twitter'
-gem 'json', '1.8.5'
+gem 'json', '2.3.0'
 gem 'rails_autolink'
 
 gem 'delayed_job_active_record'
