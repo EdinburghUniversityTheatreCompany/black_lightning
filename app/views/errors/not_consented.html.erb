@@ -6,7 +6,7 @@
   <%= simple_form_for(current_user, method: :put, url: consent_user_path(current_user)) do |f| %>
     <%= f.error_notification %>
     <%= render 'shared/consent' %>
-    <%= f.button :submit, 'Submit Consent' %>
+    <%= f.button :submit, 'Agree' %>
   <% end %>
 
   <p>
