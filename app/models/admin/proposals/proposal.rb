@@ -126,9 +126,9 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.end_date = Date.current
     @show.is_public = false
 
-    venue = Venue.find_by(name: 'Bedlam Theatre') || Venue.where("name like ?", "%Bedlam%").first
-    
-    raise(ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. Could not find a Venue with a name resembling 'Bedlam Theatre' or with a name that contains 'Bedlam'.") if venue.nil?
+    venue = Venue.find_by(name: 'Unknown').presence || Venue.where('name like ?', '%unknown').first.presence || Venue.find_by(name: 'Bedlam Theatre').presence || Venue.where('name like ?', '%Bedlam%').first.presence
+
+    raise(ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. Could not find a Venue with a name resembling 'Unknown', resembling 'Bedlam Theatre' or with a name that contains 'Bedlam'.") if venue.nil?
 
     @show.venue = venue
 
