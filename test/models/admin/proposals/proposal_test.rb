@@ -94,7 +94,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal @proposal.user_ids.sort, show.user_ids.sort
     assert_equal @proposal, show.proposal
 
-    assert_equal venues(:one), show.venue
+    assert_equal venues(:unknown), show.venue
 
     assert @proposal.reload.successful
   end

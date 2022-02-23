@@ -27,3 +27,8 @@ one:
 two:
   name: Pleasance Theatre
   description: They have a descending rig!
+
+unknown:
+  name: Unknown
+  description: For when the venue isn't know yet.
+  
