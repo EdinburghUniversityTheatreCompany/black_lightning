@@ -1,0 +1,37 @@
+<% url = '/' + controller_path if url.nil? %>
+
+<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "form-search" } do |f| %>
+  <% input_fields.each do |key, params| %>
+    <% if params.key?(:label) %>
+      <% label = params[:label] %>
+    <% elsif params.key?(:slug) %>
+      <% label = t("simple_form.labels.#{params[:slug]}") %>
+    <% else %>
+      <% label = key.to_s.humanize %>
+    <% end %>
+  
+    <% params[:label] = label %>
+
+    <% if params.key?(:type) && params[:type] != :text %>
+      <% if params[:type] == :boolean %>
+        <% # If it is a boolean, just render the boolean field and continue the loop. %>
+        <%= render 'shared/boolean_search_form_field', f: f, name: key, label: params.fetch(:label, key.to_s.humanize) %>
+        <% next %>
+      <% elsif params[:type] == :select %>
+        <% params[:include_blank] = true %>
+        <%= f.select key, params[:choices], params %>
+        <% next %>
+      <% end %>
+    <% else %>
+      <% # If there is no key, text is implied. %>
+      <% if params.key?(:slug) %>
+        <% params.merge!({ label: false, placeholder: label }) %>
+      <% end %>
+    <% end %>
+
+    <% params = params.except!([:type, :slug]) %>
+    <%= f.input_field key, params %>
+  <% end %>
+
+  <p><p><%= f.submit :Search, class: 'btn btn-primary' %></p></p>
+<% end %>
