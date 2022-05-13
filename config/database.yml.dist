@@ -19,8 +19,8 @@ test:
   encoding: utf8
   database: bedlam_blacklightning_test
   pool:     5
-  username: root
-  password: 
+  username: lightning
+  password: Bl@ack2017
 
 production:
   adapter:  mysql2
@@ -28,5 +28,5 @@ production:
   encoding: utf8
   database: bedlam_blacklightning_production
   pool:     5
-  username: root
-  password: 
+  username: lightning
+  password: Bl@ack2017
