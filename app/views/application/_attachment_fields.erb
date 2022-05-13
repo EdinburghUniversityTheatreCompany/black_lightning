@@ -1,7 +1,8 @@
-<div class="job control-group <%= "error" if (f.error(:name).present? || f.error(:file).present?) %>">
-    <%= f.error :name %>
-    <%= f.error :file %>
-
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+        f: f,
+        div_class_additions: 'job',
+        attributes: [:name, :file, :access_level, :attachment_tag_ids]
+    } do %>
     <%= f.input :name, placeholder: "Attachment Name" %>
 
     <%= f.input_field :file %>
@@ -22,4 +23,4 @@
     <%= f.collection_check_boxes(:attachment_tag_ids, AttachmentTag.accessible_by(current_ability), :id, ->(attachment_tag) { get_link attachment_tag, :show, link_text: attachment_tag.name, target: :blank }) do |checkbox| %>
         <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe} %>
     <% end %>
-</div>
+<% end %>

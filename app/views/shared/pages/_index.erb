@@ -1,0 +1,22 @@
+<% show_new_button = true if show_new_button.nil? %>
+<% search_fields = nil if search_fields.nil? %>
+<% include_edit_button = true if include_edit_button.nil? %>
+
+<h1><%= @title %></h1>
+<p>
+  <%= display_block("#{resource_class.to_s.titleize} Admin Description", false) %>
+</p>
+
+<% if search_fields.present? %>
+  <%= render 'shared/search_form', input_fields: search_fields %>
+<% end %>
+
+<%= will_paginate(resources) %>
+
+<%= render 'shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, resource_class: resource_class %>
+
+<% if show_new_button %>
+  <%= get_link resource_class, :new %>
+<% end %>
+
+<%= will_paginate(resources) %>

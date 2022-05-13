@@ -3,6 +3,12 @@
   
   <% next if value.nil? %>
 
+  <% # Check peersupport (ask Mick) for a way to incorporate localisation. %>
+
+  <% if [true, false].include?(value) %>
+    <% value = bool_text(value) %>
+  <% end %>
+
   <p>
     <b><%= label.is_a?(Symbol) ? label.to_s.titleize : label %>:</b>
     <%= value %>

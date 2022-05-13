@@ -1,0 +1,4 @@
+one:
+  <%- attributes.each do |attribute| -%>
+    <%= attribute.name %>:
+  <%- end -%>

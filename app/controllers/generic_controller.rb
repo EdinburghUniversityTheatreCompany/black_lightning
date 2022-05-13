@@ -197,7 +197,7 @@ module GenericController
   def base_index_ransack_query
     @q = resource_class.ransack(ransack_query_param)
 
-    @q.sorts = ransack_default_sorts if ransack_default_sorts.present? && @q.sorts.nil?
+    @q.sorts = order_args unless @q.sorts.present?
 
     return @q.result(distinct: distinct_for_ransack)
   end
@@ -206,11 +206,10 @@ module GenericController
     # Use reorder to override the default ordering in the scope.
     # We want this because we expect the default ordering to be ignored when we specify something new.
     # Use where instead of rewhere because a where in the default scope is only used for things that should never be visible.
-    
+
     return base_index_ransack_query.includes(*includes_args)
                                    .where(index_query_params)
                                    .accessible_by(current_ability)
-                                   .order(order_args)
   end
 
   def load_index_resources
@@ -232,7 +231,7 @@ module GenericController
   end
 
   def order_args
-    :created_at
+    ['created_at']
   end
 
   def should_paginate
@@ -253,10 +252,6 @@ module GenericController
 
   def ransack_query_param
     params[:q]
-  end
-
-  def ransack_default_sorts
-    nil
   end
 
   ##

@@ -22,7 +22,9 @@ class TeamMember < ActiveRecord::Base
 
   default_scope -> { order('position ASC') }
 
-  belongs_to :teamwork, polymorphic: true
+  # It should not be optional, but otherwise this fails on creation when immediately attaching team members.
+  # A little bit annoying, definitely.
+  belongs_to :teamwork, polymorphic: true, optional: true
   belongs_to :user
 
   delegate :name, to: :user, prefix: true

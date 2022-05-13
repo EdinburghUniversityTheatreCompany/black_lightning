@@ -12,10 +12,10 @@ module NameHelper
 
     return get_formatted_class_name(object) if object.is_a?(Class)
 
-    output = object.try(:name) || object.try(:title) || object.try(:subject) || object.try(:show_title) || default
+    output = object.try(:to_label) || object.try(:name) || object.try(:title) || object.try(:subject) || object.try(:show_title) || default
 
     if output.present? && include_class_name
-      output = "#{get_formatted_class_name object} '#{output}'"
+      output = "#{get_formatted_class_name object} \"#{output}\""
     end
 
     output ||= get_formatted_class_name(object)

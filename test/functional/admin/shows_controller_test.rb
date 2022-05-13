@@ -105,7 +105,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     put :update, params: { id: @show, show: attributes }
 
     assert_equal attributes[:name], assigns(:show)[:name]
-    assert_equal ["The Show '#{attributes[:name]}' was successfully updated."], flash[:success]
+    assert_equal ["The Show \"#{attributes[:name]}\" was successfully updated."], flash[:success]
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
@@ -122,7 +122,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       put :update, params: { id: @show, show: attributes }
     end
 
-    assert_equal ["The Show '#{attributes[:name]}' was successfully updated."], flash[:success]
+    assert_equal ["The Show \"#{attributes[:name]}\" was successfully updated."], flash[:success]
 
     assert_redirected_to admin_show_path(assigns(:show))
   end
@@ -246,6 +246,8 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       end
     end
     
+    assert_equal ["Converted the Show \"#{show.name}\" into the Workshop \"#{show.name}\"."], flash[:success]
+
     workshop = Workshop.find(show.id)
 
     assert_equal workshop.name, show.name
@@ -277,7 +279,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       end
     end
 
-    assert_equal ["Could not create Workshop '#{show.name}' from the Show '#{show.name}'. There already exists a Workshop with the slug '#{show.slug}'"], flash[:error]
+    assert_equal ["Could not create Workshop \"#{show.name}\" from the Show \"#{show.name}\". There already exists a Workshop with the slug \"#{show.slug}\""], flash[:error]
   end
 
   test 'cannot convert without permission' do

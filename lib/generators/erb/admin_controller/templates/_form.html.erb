@@ -1,0 +1,11 @@
+<%%= simple_form_for([:admin, @<%= resource_name %>]) do |f| %>
+  <%%= f.error_notification %>
+
+  <div class="form-inputs">
+    <%- attributes.each do |attribute| -%>
+      <%%= f.<%= attribute.reference? ? :association : :input %> :<%= attribute.name %> %>
+    <%- end -%>
+  </div>
+
+  <%%= render '/shared/form/form_actions', f: f %>
+<%% end %>

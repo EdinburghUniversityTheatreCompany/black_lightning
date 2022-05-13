@@ -54,11 +54,11 @@ class NameHelperTest < ActionView::TestCase
 
   test 'get_object_name with class name' do
     venue = venues(:one)
-    assert_equal "Venue '#{venue.name}'", get_object_name(venue, include_class_name: true)
+    assert_equal "Venue \"#{venue.name}\"", get_object_name(venue, include_class_name: true)
   end
 
   test 'get_object_name with class name with "the"' do
     venue = venues(:one)
-    assert_equal "the Venue '#{venue.name}'", get_object_name(venue, include_class_name: true, include_the: true)
+    assert_equal "the Venue \"#{venue.name}\"", get_object_name(venue, include_class_name: true, include_the: true)
   end
 end

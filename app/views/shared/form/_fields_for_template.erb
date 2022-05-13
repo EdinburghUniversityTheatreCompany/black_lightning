@@ -1,0 +1,9 @@
+<% has_error = attributes.map {|attribute| f.error(attribute).present? }.any? %>
+
+<div class="<%= div_class_additions %> control-group fields <%= 'error' if has_error %>">
+    <%= yield %>
+
+    <% if has_error %>
+        <%= render '/shared/form/errors_for_fields_for', f: f, attributes: attributes %>
+    <% end %>
+</div>

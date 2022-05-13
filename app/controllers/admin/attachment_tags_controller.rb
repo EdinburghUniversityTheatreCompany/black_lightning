@@ -13,6 +13,6 @@ class Admin::AttachmentTagsController < AdminController
   end
 
   def order_args
-    :name
+    ['name']
   end
 end
