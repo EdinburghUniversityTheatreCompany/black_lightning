@@ -1,6 +1,8 @@
-<% error = f.error(:position).present? || f.error(:user).present?%>
-
-<div class="team_member control-group fields <%= "error" if error %>">
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+        f: f,
+        div_class_additions: 'team_member',
+        attributes: [:position, :user]
+    } do %>
     <%= f.hidden_field :id %>
 
     <% position_field = [f.input_field(:position, placeholder: 'Position', autocomplete: 'off', data: { provide: "typeahead", source: position_typeahead })] %>
@@ -8,11 +10,4 @@
     <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: position_field %>
 
     <%= link_to_remove f %>
-
-    <% if error %>
-        <p>
-            <%= f.full_error :position %>
-            <%= f.full_error :user %>
-        </p>
-    <% end %>
-</div>
+<% end %>

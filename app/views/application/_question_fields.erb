@@ -1,8 +1,12 @@
-<div class="question control-group fields">
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+        f: f,
+        div_class_additions: 'question',
+        attributes: [:question_text, :response_type]
+    } do %>
     <%= render layout: '/shared/form/md_editor', locals: { f: f, field: :question_text, rows: 6 } do %>
       <%= f.input :response_type, collection: Admin::Question.response_types %>
 
       <%= link_to_remove f %>
     <% end %>
     <hr />
-</div>
+<% end %>

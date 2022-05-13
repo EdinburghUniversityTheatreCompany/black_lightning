@@ -1,4 +1,8 @@
-<div class="picture control-group fields span4">
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+        f: f,
+        div_class_additions: 'budget_line span4',
+        attributes: [:description, :image, :access_level, :picture_tag_ids]
+    } do %>
     <%= image_tag f.object.fetch_image.variant(thumb_variant), class: "thumbnail" %>
 
     <br />
@@ -22,4 +26,4 @@
     <%= f.collection_check_boxes(:picture_tag_ids, PictureTag.accessible_by(current_ability), :id, ->(picture_tag) { get_link picture_tag, :show, link_text: picture_tag.name, target: :blank }) do |checkbox| %>
         <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe} %>
     <% end %>
-</div>
+<% end %>
