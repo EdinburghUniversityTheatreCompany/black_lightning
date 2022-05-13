@@ -164,12 +164,12 @@ class Admin::ShowsController < Admin::GenericEventsController
     event = @show.becomes!(target_klass)
 
     if event.save
-      helpers.append_to_flash(:success, "Converted the Show '#{@show.name}' into the #{helpers.get_object_name(event, include_class_name: true)}.")
+      helpers.append_to_flash(:success, "Converted the Show \"#{@show.name}\" into the #{helpers.get_object_name(event, include_class_name: true)}.")
 
       return event
     else
-      additional_message = "There already exists a #{target_klass.name.humanize} with the slug '#{@show.slug}'" if target_klass.find_by(slug: @show.slug)
-      helpers.append_to_flash(:error, "Could not create #{helpers.get_object_name(event, include_class_name: true)} from the Show '#{@show.name}'. #{additional_message}")
+      additional_message = "There already exists a #{target_klass.name.humanize} with the slug \"#{@show.slug}\"" if target_klass.find_by(slug: @show.slug)
+      helpers.append_to_flash(:error, "Could not create #{helpers.get_object_name(event, include_class_name: true)} from the Show \"#{@show.name}\". #{additional_message}")
 
       return false
     end

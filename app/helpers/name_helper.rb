@@ -15,7 +15,7 @@ module NameHelper
     output = object.try(:name) || object.try(:title) || object.try(:subject) || object.try(:show_title) || default
 
     if output.present? && include_class_name
-      output = "#{get_formatted_class_name object} '#{output}'"
+      output = "#{get_formatted_class_name object} \"#{output}\""
     end
 
     output ||= get_formatted_class_name(object)
