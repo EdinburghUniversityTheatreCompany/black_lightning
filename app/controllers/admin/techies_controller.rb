@@ -5,7 +5,7 @@
 class Admin::TechiesController < AdminController
   include GenericController
 
-  load_and_authorize_resource except: :tree
+  load_and_authorize_resource except: [ :tree, :bush ]
 
   def show
     super
@@ -13,12 +13,12 @@ class Admin::TechiesController < AdminController
     @coparents = @techie.children.flat_map(&:parents).uniq - [@techie]
   end
 
-  def tree
+  def bush
     authorize! :index, Techie
 
     @q = Techie.ransack(params[:q])
 
-    @title = 'Techie Family Tree'
+    @title = 'Techie Family Tree - New but sucks'
   end
 
   def tree_data
@@ -31,10 +31,10 @@ class Admin::TechiesController < AdminController
   end
 
   # Remember to remove Dracula and stuff when you finally get rid of this one.
-  def bush
+  def tree
     authorize! :index, Techie
 
-    @title = 'Techie Family Tree - Old'
+    @title = 'Techie Family Tree'
 
     @q = Techie.ransack(params[:q])
 
