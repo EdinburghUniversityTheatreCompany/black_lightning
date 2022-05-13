@@ -11,11 +11,6 @@ module GenericestEventsController
 
   private
 
-  def order_args
-    # Dealt with by default scope.
-    nil
-  end
-
   def base_index_database_query
     return super.on_date(Date.current) if params[:commit] == 'On this day'
 

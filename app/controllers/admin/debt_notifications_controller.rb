@@ -9,7 +9,7 @@ class Admin::DebtNotificationsController < AdminController
     Admin::DebtNotification
   end
 
-  def ransack_default_sorts
+  def order_args
     ['sent_on desc', 'user_full_name asc']
   end
 end

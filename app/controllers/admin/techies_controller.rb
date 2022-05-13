@@ -57,10 +57,6 @@ class Admin::TechiesController < AdminController
   end
 
   def order_args
-    :name
-  end
-
-  def ransack_default_sorts
     ['name asc']
   end
 end

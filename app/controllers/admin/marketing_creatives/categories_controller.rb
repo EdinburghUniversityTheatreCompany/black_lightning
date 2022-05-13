@@ -33,7 +33,7 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   end
 
   def order_args
-    :name
+    ['name']
   end
 
   def includes_args

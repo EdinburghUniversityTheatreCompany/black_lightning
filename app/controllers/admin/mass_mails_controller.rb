@@ -87,7 +87,7 @@ class Admin::MassMailsController < AdminController
   end
 
   def order_args
-    :send_date
+    ['send_date']
   end
 
   def send_mail(mail)

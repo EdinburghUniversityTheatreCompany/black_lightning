@@ -84,7 +84,7 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
     [:user, :categories, :category_infos]
   end
 
-  def ransack_default_sorts
-    ['name asc']
+  def order_args
+    ['name']
   end
 end
