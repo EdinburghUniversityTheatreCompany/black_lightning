@@ -30,7 +30,7 @@ module ChaosRails
     # the framework and any gems in your application.
 
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 6.0
+    config.load_defaults 6.1
 
     # Custom directories with classes and modules you want to be autoloadable.
     config.eager_load_paths << "#{config.root}/lib"
