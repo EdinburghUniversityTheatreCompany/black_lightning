@@ -1,13 +1,10 @@
 # Project Black Lightning
 
-The aim of this project is to build a new website for Bedlam Theatre.
-But not just that! It is to build a stable platform upon which new
-heights can be reached.
+This version of the Bedlam website (named Project BlackLightning) was built primarily during semester 1 of the 2012/13 academic year.
 
-There is (apparently) some more information in the `doc/` directory.
-You can generate documentation about the code using `rake doc:app`.
+It got a big upgrade in the summer of 2020 to Rails 6 and some useful features got added, such as wiki login integration.
 
-You may also find some information on the [project wiki](https://bitbucket.org/bedlamtheatre/black_lightning/wiki/browse/) - especially if you're interested in hacking.
+If you would like to get involved in editing/running the Bedlam website, please contact the EUTC's IT Subcommittee (it@bedlamtheatre.co.uk). You can find a guide at https://wiki.bedlamtheatre.co.uk/en/docs/it/website/development.
 
 ## The Fine Print
 
@@ -17,6 +14,10 @@ This project is the work of Team Adjective-Noun, comprising:
 * Tom Turner <tom@tomturner.org.uk>
 * Craig Snowden <craig@craigsnowden.com>
 * Lewis Eason <me@lewiseason.co.uk>
+
+With further additions by
+* Kyle Cooke (? - ?)
+* Mick Zijdel (2020 - 2022) <mick.zijdel@bedlamtheatre.co.uk>
 
 with support of the EUTC and is licensed under The MIT License as follows:
 
