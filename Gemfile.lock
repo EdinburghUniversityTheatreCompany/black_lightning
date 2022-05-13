@@ -261,7 +261,7 @@ GEM
     psych (4.0.3)
       stringio
     public_suffix (4.0.6)
-    puma (4.3.10)
+    puma (4.3.12)
       nio4r (~> 2.0)
     racc (1.6.0)
     rack (2.2.3)
@@ -482,7 +482,7 @@ DEPENDENCIES
   nokogiri
   paper_trail
   prawn
-  puma (~> 4.1)
+  puma (~> 4.3)
   rack-cors
   rails (~> 6.0)
   rails-controller-testing
