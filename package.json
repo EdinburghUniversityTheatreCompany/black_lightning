@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "@rails/activestorage": "^6.0.3-4",
-    "@rails/ujs": "^6.0.3-4",
+    "@rails/activestorage": "^7.0.3-4",
+    "@rails/ujs": "^7.0.3-4",
     "@rails/webpacker": "5.2.1",
     "data-confirm-modal": "^1.6.2",
     "dropzone": "^5.9.2",

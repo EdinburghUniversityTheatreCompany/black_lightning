@@ -1,12 +1,13 @@
 source 'http://rubygems.org'
 
-gem 'rails', '~> 6.0'
+gem 'rails', '~> 7.0'
 
 gem 'mysql2'
 
 gem 'sass-rails',   '> 5.0.0'
 gem 'uglifier', '>= 1.3.0'
 gem 'webpacker', '~> 5.x'
+gem "sprockets-rails"
 
 gem 'coffee-rails'
 gem 'bootstrap-sass', '< 3.0'
@@ -25,7 +26,7 @@ gem 'will_paginate'
 gem 'kramdown'
 gem 'nested_form'
 gem 'twitter'
-gem 'json', '1.8.5'
+gem 'json'
 gem 'rails_autolink'
 
 gem 'delayed_job_active_record'
