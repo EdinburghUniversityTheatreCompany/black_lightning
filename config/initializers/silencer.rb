@@ -1,4 +1,4 @@
-require 'silencer/logger'
+require 'silencer/rails/logger'
 
 COMPLAINTS_ALIASES = %w[/complaint /complaints /complain /suggestions /suggestion /suggest]
 
