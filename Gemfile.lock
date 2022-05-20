@@ -81,7 +81,7 @@ GEM
       rake (>= 10.4, < 14.0)
     ast (2.4.2)
     aws-eventstream (1.2.0)
-    aws-partitions (1.588.0)
+    aws-partitions (1.589.0)
     aws-sdk-core (3.131.0)
       aws-eventstream (~> 1, >= 1.0.2)
       aws-partitions (~> 1, >= 1.525.0)
@@ -272,10 +272,6 @@ GEM
     parallel (1.22.1)
     parser (3.1.2.0)
       ast (~> 2.4.1)
-    pdf-core (0.9.0)
-    prawn (2.4.0)
-      pdf-core (~> 0.9.0)
-      ttfunk (~> 1.7)
     psych (4.0.4)
       stringio
     public_suffix (4.0.7)
@@ -415,7 +411,6 @@ GEM
     thread_safe (0.3.6)
     tilt (2.0.10)
     timeout (0.2.0)
-    ttfunk (1.7.0)
     twitter (7.0.0)
       addressable (~> 2.3)
       buftok (~> 0.2.0)
@@ -498,7 +493,6 @@ DEPENDENCIES
   nested_form
   nokogiri
   paper_trail
-  prawn
   puma (~> 4.1)
   rack-cors
   rails (~> 7.0)
