@@ -190,6 +190,7 @@ GEM
       i18n (>= 1.8.11, < 2)
     fancybox3 (0.1.1)
       rails (>= 5.0)
+    ffi (1.15.5)
     ffi (1.15.5-x64-mingw-ucrt)
     ffi-compiler (1.0.1)
       ffi (>= 1.0.0)
@@ -261,6 +262,8 @@ GEM
     net-ssh (6.1.0)
     nio4r (2.5.8)
     nokogiri (1.13.6-x64-mingw-ucrt)
+      racc (~> 1.4)
+    nokogiri (1.13.6-x86_64-linux)
       racc (~> 1.4)
     orm_adapter (0.5.0)
     paper_trail (12.3.0)
@@ -456,6 +459,7 @@ GEM
 
 PLATFORMS
   x64-mingw-ucrt
+  x86_64-linux
 
 DEPENDENCIES
   active_storage_validations
