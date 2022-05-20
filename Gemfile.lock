@@ -407,6 +407,8 @@ GEM
     stringex (2.8.5)
     stringio (3.0.2)
     strscan (3.0.3)
+    terser (1.1.9)
+      execjs (>= 0.3.0, < 3)
     thor (1.2.1)
     thread_safe (0.3.6)
     tilt (2.0.10)
@@ -426,8 +428,6 @@ GEM
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2022.1)
       tzinfo (>= 1.0.0)
-    uglifier (4.2.0)
-      execjs (>= 0.3.0, < 3)
     unf (0.1.4)
       unf_ext
     unf_ext (0.0.8.1)
@@ -514,9 +514,9 @@ DEPENDENCIES
   spring
   sprockets-rails
   stringex
+  terser
   twitter
   tzinfo-data
-  uglifier (>= 1.3.0)
   webdrivers
   webpacker (~> 5.x)
   will_paginate
