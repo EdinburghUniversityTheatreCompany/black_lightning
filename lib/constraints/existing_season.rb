@@ -1,3 +1,5 @@
+require "#{Rails.root}/lib/constraints"
+
 # The constraint is tested in the (non-admin) seasons controller test.
 class Constraints::ExistingSeason
   def get_season_slugs

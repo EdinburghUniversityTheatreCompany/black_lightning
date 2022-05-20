@@ -4,7 +4,7 @@
 <div>
   <%= get_link object, :edit, html_class: 'btn btn-primary' %>
 
-  <%= get_link object, :destroy, destroy_link_params %>
+  <%= get_link object, :destroy, **destroy_link_params %>
 
-  <%= get_link object.class, :index, index_link_params %>
+  <%= get_link object.class, :index, **index_link_params %>
 </div>

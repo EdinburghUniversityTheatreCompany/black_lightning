@@ -16,4 +16,8 @@ module GenericestEventsController
 
     return super
   end
+
+  def order_args
+   ['end_date DESC']
+  end
 end
