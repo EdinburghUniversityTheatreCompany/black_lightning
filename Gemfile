@@ -5,9 +5,9 @@ gem 'rails', '~> 7.0'
 gem 'mysql2'
 
 gem 'sass-rails',   '> 5.0.0'
-gem 'uglifier', '>= 1.3.0'
 gem 'webpacker', '~> 5.x'
 gem "sprockets-rails"
+gem "terser"
 
 gem 'coffee-rails'
 gem 'bootstrap-sass', '< 3.0'
