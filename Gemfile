@@ -33,7 +33,6 @@ gem 'delayed_job_active_record'
 gem 'daemons'
 
 gem 'caxlsx'
-gem 'prawn'
 gem 'rqrcode'
 
 gem 'silencer'
