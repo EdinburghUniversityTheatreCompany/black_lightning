@@ -3,7 +3,7 @@ server 'pineapple.eusa.ed.ac.uk', roles: %w(web app db), user: fetch(:user), pas
 set :stage, :eusa
 set :deploy_to, '/srv/black_lightning'
 
-set :rvm_ruby_string, '2.2.1@blacklightning'
+set :rvm_ruby_string, '3.1.2@blacklightning'
 set :rvm_type, :system
 set :rvm_path, '/usr/local/rvm'
 
