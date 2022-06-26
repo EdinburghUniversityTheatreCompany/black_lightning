@@ -319,16 +319,19 @@ module GenericController
     # If you're ever extending this, you can figure out how to genericise it.
     # I am aware that I am probably writing this to myself.
 
+    files = upload_data[:files]
+    files.delete_if(&:empty?)
+
     if destination == 'pictures'
       # This check should happen after the destination check, otherwise
       # it won't throw an error if the files are nil.
-      return if upload_data[:files].nil?
+      return if files.empty?
 
       attributes = upload_data.permit(:access_level, picture_tag_ids: [])
 
       attributes[:gallery] = get_resource
 
-      upload_data[:files].each do |file_data|
+      files.each do |file_data|
         attributes[:image] = file_data
 
         Picture.create(attributes)
