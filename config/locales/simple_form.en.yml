@@ -10,6 +10,21 @@ en:
       # html: '<abbr title="required">*</abbr>'
     error_notification:
       default_message: "Please review the problems below:"
+    labels:
+      defaults:
+        active: 'Is Active'
+        code: 'Code'
+        comments: 'Comments'
+        created_at: 'Created At'
+        description: 'Description'
+        event: 'Event'
+        hint: 'Hint'
+        name: 'Name'
+        notes: 'Notes'
+        status: 'Status'
+        title: 'Title'
+        user: 'User'
+
     # Labels and hints examples
     # labels:
     #   defaults:
