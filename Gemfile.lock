@@ -104,8 +104,6 @@ GEM
     bindata (2.4.10)
     binding_of_caller (1.0.0)
       debug_inspector (>= 0.0.1)
-    bootstrap-sass (2.3.2.2)
-      sass (~> 3.2)
     buftok (0.2.0)
     builder (3.2.4)
     bullet (7.0.1)
@@ -195,8 +193,6 @@ GEM
     ffi-compiler (1.0.1)
       ffi (>= 1.0.0)
       rake
-    font-awesome-sass (6.1.1)
-      sassc (~> 2.0)
     globalid (1.0.0)
       activesupport (>= 5.0)
     honeybadger (4.12.1)
@@ -323,9 +319,6 @@ GEM
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
       i18n
-    rb-fsevent (0.11.1)
-    rb-inotify (0.10.1)
-      ffi (~> 1.0)
     rdoc (6.4.0)
       psych (>= 4.0.0)
     recaptcha (5.10.0)
@@ -360,11 +353,6 @@ GEM
     ruby-vips (2.1.4)
       ffi (~> 1.12)
     rubyzip (2.3.2)
-    sass (3.7.4)
-      sass-listen (~> 4.0.0)
-    sass-listen (4.0.0)
-      rb-fsevent (~> 0.9, >= 0.9.4)
-      rb-inotify (~> 0.9, >= 0.9.7)
     sass-rails (6.0.0)
       sassc-rails (~> 2.1, >= 2.1.1)
     sassc (2.4.0)
@@ -482,7 +470,6 @@ DEPENDENCIES
   factory_bot_rails
   faker
   fancybox3
-  font-awesome-sass
   honeybadger (~> 4.0)
   html_acceptance
   image_processing
