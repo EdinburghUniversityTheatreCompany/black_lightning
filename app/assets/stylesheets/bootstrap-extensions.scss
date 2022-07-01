@@ -1,67 +1,21 @@
-// Core variables and mixins
-@import "bootstrap/variables";
-@import "bootstrap/mixins";
+.pull-right {
+  @extend .float-end !optional;
+}
 
-// CSS Reset
-@import "bootstrap/reset";
+.pull-right {
+  @extend .float-start !optional;
+}
 
-// Grid system and page structure
-@import "bootstrap/scaffolding";
-@import "bootstrap/grid";
-@import "bootstrap/layouts";
-
-// Base CSS
-@import "bootstrap/type";
-@import "bootstrap/code";
-@import "bootstrap/forms";
-@import "bootstrap/tables";
-
-// Components: common
-@import "bootstrap/wells";
-@import "bootstrap/component-animations";
-@import "bootstrap/dropdowns";
-@import "bootstrap/close";
-
-// Components: Buttons & Alerts
-@import "bootstrap/buttons";
-@import "bootstrap/button-groups";
-@import "bootstrap/alerts";
-
-// Components: Nav
-@import "bootstrap/navs";
-@import "bootstrap/navbar";
-@import "bootstrap/pagination";
-
-// Components: Popovers
-@import "bootstrap/modals";
-
-// Components: Misc
-@import "bootstrap/thumbnails";
-@import "bootstrap/media";
-@import "bootstrap/labels-badges";
-@import "bootstrap/accordion";
-@import "bootstrap/carousel";
-
-// Utility classes
-@import "bootstrap/utilities"; // Has to be last to override when necessary
-
-@import "bootstrap/responsive-767px-max";
-@import "bootstrap/responsive-768px-979px";
-@import "bootstrap/responsive-navbar";
-@import "bootstrap/responsive-utilities";
-
-/* Primarily for use in markdown */
+/* Primarily for use in markdown  */
 .float-left {
-  @extend .pull-left;
-
+  @extend .float-start !optional;
   margin-top: 10px;
   margin-right: 10px;
   margin-bottom: 10px;
 }
 
 .float-right {
-  @extend .pull-right;
-
+  @extend .float-end !optional;
   margin-top: 10px;
   margin-left: 10px;
   margin-bottom: 10px;
@@ -77,7 +31,7 @@
 }
 
 img.float-left, img.float-right {
-  @extend .img-polaroid;
+  @extend .img-fluid !optional;
   max-width: 192px;
 }
 
@@ -131,7 +85,6 @@ form .help-block {
 
 .footer {
     line-height: normal;
-    font-size: x-small;
 }
 
 .footer a{

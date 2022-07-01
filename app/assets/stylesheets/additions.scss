@@ -1,9 +1,21 @@
 /* From Bootstrap Century */
 $sansFontFamily: Helvetica, Arial;
-$headingsColor:  #dc143c;
-$linkColor:      #dc143c;
+$headingsColor:  #ba0204;
+$linkColor:      #ba0204;
+$danger: #ba0204;
+$theme-colors: (
+    "danger" : #ba0204
+);
 
-@import "bootstrap-extensions";
+html {
+    font-size: 12px;
+}
+
+
+/* BOOTSTRAP: Possible confusion of danger being the same colour as one of the primary colours of the website? */
+
+/* BOOTSTRAP: Remove? 
+@import "bootstrap-extensions"; */
 
 @import url(https://fonts.googleapis.com/css?family=Gafata);
 
@@ -17,10 +29,11 @@ $linkColor:      #dc143c;
     //background-color: white;
 }
 
-h1,h2,h3,h4,g5,h6 {
+/*
+h1,h2,h3,h4,h5,h6 {
     font-family: Gafata, Arial
 }
-
+*/
 h3 {
     font-size: 20px;
 }
@@ -33,6 +46,11 @@ h3 {
 .content {
     margin-top: 20px;
 }
+
+html {
+    font-size: 12px;
+}
+
 
 #nav {
     margin: 0 -12px -25px -12px;
@@ -82,6 +100,7 @@ h3 {
     padding: 0;
 }
 
+/* BOOTSTRAP: See what happens when these carousel are removed. 
 .carousel-caption h4 {
     display: inline-block;
 }
@@ -105,12 +124,12 @@ h3 {
 .mobile-carousel p {
     color: white;
     line-height: 20px;
-}
+}*/
 
 .tweet-date {
     float: right;
 
-    color: $grayLight;
+    color: #D1D1D1;
     font-size: 0.8em;
 }
 

@@ -15,10 +15,21 @@
 // const images = require.context('../images', true)
 // const imagePath = (name) => images(name, true)
 
-console.log('Hello World from Webpacker')
+require("@popperjs/core")
+
+// BOOTSTRAP: Does this need?
+//import 'jquery'
+//const jQuery = $
+
+import "bootstrap"
+
+// Import the specific modules you may need (Modal, Alert, etc)
+ import { Tooltip, Popover, Modal } from "bootstrap"
 
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
+
+//import "@fortawesome/fontawesome-free/js/all"
 
 import '../src/jquery.switch'
 import 'jquery-slimscroll'
@@ -28,9 +39,12 @@ import '../src/konami_code'
 
 import "controllers"
 
+// BOOTSTRAP: Does it need the below?
 require.context('./../../../node_modules/jquery-ui/ui')
 require("@rails/ujs").start()
 require("@rails/activestorage").start()
 
-// https://github.com/ifad/data-confirm-modal
+// https://github.com/ifad/data-confirm-modal after require('@rails/ujs').start():
 require('data-confirm-modal')
+
+
