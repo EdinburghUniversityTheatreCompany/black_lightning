@@ -259,6 +259,7 @@ ChaosRails::Application.routes.draw do
     end
 
     get 'committee', to: 'static#committee', as: :committee
+    get 'bootstrap_test', to: 'static#bootstrap_test', as: :bootstrap_test
 
     # Test route
     if Rails.env.test? || Rails.env.development?
