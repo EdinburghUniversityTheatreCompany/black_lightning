@@ -1,6 +1,9 @@
 <% fields.each do |label_value_pair| %>
   <% label, value = label_value_pair %>
   
+  <% # TODO: What about doing a 'Not Specified" if nil instead? %>
+  <%# value = 'Not Specified' unless value.present? %>
+
   <% next if value.nil? %>
 
   <% # Check peersupport (ask Mick) for a way to incorporate localisation. %>
