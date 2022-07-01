@@ -38,13 +38,13 @@
           });	
         });	
       </script>	
-      <a id="add_date" class="btn"><i class="fa fa-plus" aria-hidden=”true”></i> Add Date</a>
+      <a id="add_date" class="btn btn-secondary"><i class="fa fa-plus" aria-hidden=”true”></i> Add Date</a>
     </div>
   </div>
   
   <div class="form-actions">
     <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
-    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
+    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#template_modal">Load Template</button>
   </div>
 <% end %>
 

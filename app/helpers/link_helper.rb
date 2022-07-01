@@ -14,7 +14,7 @@ module LinkHelper
   end
 
   def link_to_add(form, attribute_name, object_name: nil, html_class: nil)
-    html_class ||= 'btn'
+    html_class ||= 'btn btn-secondary'
     object_name ||= format_class_name(attribute_name.to_s, true)
 
     return form.link_to_add add_button_text(object_name), attribute_name, class: html_class

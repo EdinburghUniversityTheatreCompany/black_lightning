@@ -49,4 +49,4 @@
 </table>
 
 <%= render '/shared/show_actions', object: @staffing %>
-<%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn') %>
+<%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn btn-secondary') %>

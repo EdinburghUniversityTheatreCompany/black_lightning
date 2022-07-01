@@ -16,7 +16,7 @@
 <div>
   <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
 
-  <%= get_link Techie, :new, html_class: 'btn' %>
+  <%= get_link Techie, :new, html_class: 'btn btn-secondary' %>
 </div>
 
 <div class="row">
@@ -24,7 +24,7 @@
         <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
             <%= f.select :id_eq, options_from_collection_for_select(Techie.all, "id", "name", @q.id_eq), include_blank: true %>
 
-            <%= f.submit :Search, class: 'btn' %>
+            <%= f.submit :Search, class: 'btn btn-secondary' %>
         <% end %>
     </div>
 </div>

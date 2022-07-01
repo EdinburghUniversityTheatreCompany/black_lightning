@@ -6,8 +6,8 @@
 
 <% # There are some form actions, mainly in proposals, that don't use these. %>
 <% # Please check if they need manual updates. They have been tagged with /shared/form/form_actions %>
-<%= f.button :submit, class: "btn btn-primary" %>
-<%= get_link f.object, :show, link_text: 'View', html_class: 'btn', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
+<%= f.button :submit, input_html: { class: "btn btn-primary" } %>
+<%= get_link f.object, :show, link_text: 'View', html_class: 'btn btn-secondary', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
 <%= get_link(f.object.class, :index) if include_index %>
 
 <% if wrap_tags %>

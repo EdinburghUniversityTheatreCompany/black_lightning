@@ -12,7 +12,7 @@
 
     <%= render 'shared/date_range_search_form_field', f: f, start_year: 2012, start_date_attribute: 'event_start_date', end_date_attribute: 'event_end_date' %>
 
-    <%= f.submit :Search, class: 'btn' %>
+    <%= f.submit :Search, class: 'btn btn-secondary' %>
   <% end %>
 <% end %>
 
@@ -53,7 +53,7 @@
             <tr>
               <%= get_link questionnaire, :answer, http_method: :get, html_class: '', append_name: true, wrap_tag: 'td' %>
 
-              <%= get_link questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn', wrap_tag: 'td' %>
+              <%= get_link questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn btn-secondary', wrap_tag: 'td' %>
 
               <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
             </tr>

@@ -9,7 +9,7 @@
             <% # If you're interested in knowing. This cannot be an input field because ransack does not have a method called show_in_debt_only. %>
             <% # We cannot use a ransack built-in because the choice is between: false and (false or true) and not between true/false. %>
             <%= f.input :show_in_debt_only, label: 'Show In Debt Only', input_html: {id: 'show_in_debt_only', checked: params[:show_in_debt_only] == '1' ? true : false, name: 'show_in_debt_only' }, as: :boolean %>
-            <%= f.submit :Search, class: 'btn' %>
+            <%= f.submit :Search, class: 'btn btn-secondary' %>
         <% end %>
     </div>
 </div>

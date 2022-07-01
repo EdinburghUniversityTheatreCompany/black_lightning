@@ -12,6 +12,6 @@
   
   <div class="form-actions">
     <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
-    <%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn') %>
+    <%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn btn-secondary') %>
   </div>
 <% end %>

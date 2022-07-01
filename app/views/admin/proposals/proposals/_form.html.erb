@@ -42,7 +42,7 @@
   <div class="form-actions">
     <%= f.button :submit, class: "btn btn-primary" %>
     <% if @proposal.persisted?%>
-      <%= get_link f.object, :show, link_text: 'View', html_class: 'btn', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
+      <%= get_link f.object, :show, link_text: 'View', html_class: 'btn btn-secondary', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
     <% end %>
     <%= get_link @proposal.call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@proposal.call) , http_method: 'get' %>
   </div>
