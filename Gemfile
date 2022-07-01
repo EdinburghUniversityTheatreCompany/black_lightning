@@ -20,7 +20,7 @@ gem 'cancancan'
 gem 'rolify'
 gem 'recaptcha'
 
-gem 'will_paginate'
+gem 'kaminari'
 gem 'kramdown'
 gem 'nested_form'
 gem 'twitter'
