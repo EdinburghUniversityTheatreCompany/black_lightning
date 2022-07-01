@@ -14,7 +14,7 @@
 
 <%= paginate(resources) %>
 
-<%= render 'shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, resource_class: resource_class %>
+<%= table_content.present? ? table_content : render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, resource_class: resource_class) %>
 
 <% if show_new_button %>
   <%= get_link resource_class, :new %>
