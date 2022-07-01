@@ -1,12 +1,7 @@
-<div class="carousel">
-  <!-- Carousel items -->
-  <div class="carousel-inner">
-    <div class="active item">
-      <%= image_tag event.fetch_image.variant(slideshow_variant) %>
-      <div class="carousel-caption">
-        <h1><%= event.name %></h1>
-        <p> <%= event.tagline %>
-      </div>
-    </div>
-  </div>
-</div>
+<% # Used for events and venues. %>
+<h1><%= item.name %></h1>
+
+<figure class="figure">
+  <%= image_tag(item.fetch_image.variant(slideshow_variant)) %>
+  <figcaption class="figure-caption"><%= item.tagline %></figcaption>
+</figure>
