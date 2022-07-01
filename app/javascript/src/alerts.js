@@ -4,7 +4,7 @@ function showAlert(level, body) {
 
   switch (level) {
     case 'alert':
-      alertclass = "alert-error";
+      alertclass = "alert-danger";
       icon       = "icon-exclamation-sign";
       break;
     case 'success':

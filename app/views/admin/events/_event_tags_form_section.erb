@@ -11,7 +11,7 @@
 
   <%= render layout: '/shared/collapsible_section', locals: { title: 'Tags', start_open: no_event_tags } do %>
     <% if f.object.errors[:event_tags].present? then %>
-      <p id="event_tags_errors" class="alert alert-error">
+      <p id="event_tags_errors" class="alert alert-danger">
         <%= f.error :event_tags %>
       </p>
     <% end %>

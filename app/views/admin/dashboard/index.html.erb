@@ -23,7 +23,7 @@
 
   <% if can? :manage, :jobs %>
     <% unless delayed_job_running? then %>
-      <div class="alert alert-error">
+      <div class="alert alert-danger">
         <strong>Oh Dear</strong>
         <p>
           The DelayedJob daemon doesn't seem to be running. It may have
@@ -33,7 +33,7 @@
     <% end %>
 
     <% if delayed_jobs(:failed).count > 0 then %>
-      <div class="alert alert-error">
+      <div class="alert alert-danger">
         <strong>Stop. This is important</strong>
         <p>
           A DelayedJob has failed. Please review <%= link_to 'failed jobs', controller: "admin/job_control", action: "failed" %>.
