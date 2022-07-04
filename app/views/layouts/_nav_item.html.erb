@@ -1,0 +1,25 @@
+<% items.each do |item| %>
+    <% is_active_category = @current_path == item.children.?include[:path] %>
+
+<li class="nav-item <%= 'menu-open' if is_active_category %>">
+    <a href="#" class="nav-link <%= 'active' if is_active_category %>">
+        <i class="nav-icon fas <%= item[:fa_icon] %>"></i>
+        <p>
+            <%= item[:title] %>
+            <i class="right fas fa-angle-left"></i>
+        </p>
+    </a>
+    <ul class="nav nav-treeview">
+        <% item[:children].each do |item|%>
+        <% is_active_item = @current_path == item[:path]%>
+        <li class="nav-item">
+            <a href="<%=item[:path]%>" class="nav-link <%= 'active' if is_active_item%>">
+                <i class="far <%= item[:fa_icon] %> nav-icon"></i>
+                <p><%= item[:title] %></p>
+            </a>
+        </li>
+        <% end %>
+    </ul>
+</li>
+
+<% end %>
