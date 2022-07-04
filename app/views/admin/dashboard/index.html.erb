@@ -1,45 +1,67 @@
 <% content_for :head do %>
-  <%= stylesheet_link_tag "admin/dashboard", media: "all" %>
+<%= stylesheet_link_tag "admin/dashboard", media: "all" %>
 <% end %>
 
 <%# show an alert if the user hasn't filled in their name or phone number %>
 <% if !current_user.name? %>
-  <p class="alert">
-    <i class="fa fa-exclamation-sign fa-large" aria-hidden=”true”></i>
-    You haven't set your name yet. Please click <%= link_to 'here', edit_admin_user_path(current_user) %>.
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-  </p>
+<div class="container-fluid">
+<div class="alert alert-info alert-dismissible fade show">
+  <i class="fa fa-exclamation-sign fa-large" aria-hidden=”true”></i>
+  You haven't set your name yet. Please click <%= link_to 'here', edit_admin_user_path(current_user) %>.
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+</div>
 <% elsif !(current_user.phone_number) || current_user.phone_number.empty? %>
-  <p class="alert">
-    <i class="fa fa-exclamation-sign fa-large" aria-hidden=”true”></i>
-    You haven't set your phone number yet. Please click <%= link_to 'here', edit_admin_user_path(current_user) %>.
-    <button type="button" class="close" data-dismiss="alert">&times;</button>
-  </p>
+<div class="alert-container">
+<div class="alert alert-info alert-dismissible fade show">
+  <i class="fa fa-exclamation-sign fa-large" aria-hidden=”true”></i>
+  You haven't set your phone number yet. Please click <%= link_to 'here', edit_admin_user_path(current_user) %>.
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
+</div>
 <% end %>
 
-<h1>Bedlam Dashboard</h1>
+<div class="content-header">
+  <div class="container-fluid">
+    <div class="row mb-2">
+      <div class="col-sm-6">
+        <h1 class="m-0">Bedlam Dashboard</h1>
+      </div><!-- /.col -->
+      <div class="col-sm-6">
+        <ol class="breadcrumb float-sm-right">
+          <li class="breadcrumb-item active">Home</li>
+        </ol>
+      </div><!-- /.col -->
+    </div><!-- /.row -->
+  </div><!-- /.container-fluid -->
+</div>
 
 <div class="dashboard">
 
   <% if can? :manage, :jobs %>
-    <% unless delayed_job_running? then %>
-      <div class="alert alert-error">
-        <strong>Oh Dear</strong>
-        <p>
-          The DelayedJob daemon doesn't seem to be running. It may have
-          crashed (again).
-        </p>
-      </div>
-    <% end %>
+  <% unless delayed_job_running? then %>
+  <div class="alert alert-error">
+    <strong>Oh Dear</strong>
+    <p>
+      The DelayedJob daemon doesn't seem to be running. It may have
+      crashed (again).
+    </p>
+  </div>
+  <% end %>
 
-    <% if delayed_jobs(:failed).count > 0 then %>
-      <div class="alert alert-error">
-        <strong>Stop. This is important</strong>
-        <p>
-          A DelayedJob has failed. Please review <%= link_to 'failed jobs', controller: "admin/job_control", action: "failed" %>.
-        </p>
-      </div>
-    <% end %>
+  <% if delayed_jobs(:failed).count > 0 then %>
+  <div class="alert alert-error">
+    <strong>Stop. This is important</strong>
+    <p>
+      A DelayedJob has failed. Please review
+      <%= link_to 'failed jobs', controller: "admin/job_control", action: "failed" %>.
+    </p>
+  </div>
+  <% end %>
   <% end %>
 
   <div class="gridster">
@@ -70,29 +92,29 @@
 
       <% # Can be re-enabled once membership cards are used again. %>
       <% #<li data-row="3" data-col="2" data-sizex="1" data-sizey="2"> %>
-        <% #dashboard_widget('card_number') %>
-     <% #</li> %>
+      <% #dashboard_widget('card_number') %>
+      <% #</li> %>
 
       <li data-row="3" data-col="3" data-sizex="1" data-sizey="1">
         <%= dashboard_widget('debt') %>
       </li>
 
       <% if can? :manage, Delayed::Backend::ActiveRecord::Job %>
-        <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
-          <%= dashboard_widget('delayed_jobs') %>
-        </li>
+      <li data-row="4" data-col="1" data-sizex="1" data-sizey="1">
+        <%= dashboard_widget('delayed_jobs') %>
+      </li>
       <% end %>
 
       <% if can? :read, :reports %>
-        <li data-row="4" data-col="2" data-sizex="1" data-sizey="1">
-          <%= dashboard_widget('reports') %>
-        </li>
+      <li data-row="4" data-col="2" data-sizex="1" data-sizey="1">
+        <%= dashboard_widget('reports') %>
+      </li>
       <% end %>
 
       <% if current_user.has_role?('Committee') || can?(:manage, Admin::Staffing) %>
-        <li data-row="3" data-col="2" data-sizex="1" data-sizey="2">
-          <%= dashboard_widget('committee_staffing') %>
-        </li>
+      <li data-row="3" data-col="2" data-sizex="1" data-sizey="2">
+        <%= dashboard_widget('committee_staffing') %>
+      </li>
       <% end %>
     </ul>
   </div>
