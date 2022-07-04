@@ -1,5 +1,5 @@
 <% items.each do |item| %>
-    <% is_active_category = @current_path == item.children.?include[:path] %>
+<% is_active_category = @current_path == item.children[:path].?include %>
 
 <li class="nav-item <%= 'menu-open' if is_active_category %>">
     <a href="#" class="nav-link <%= 'active' if is_active_category %>">
@@ -10,12 +10,12 @@
         </p>
     </a>
     <ul class="nav nav-treeview">
-        <% item[:children].each do |item|%>
-        <% is_active_item = @current_path == item[:path]%>
+        <% item[:children].each do |subitem|%>
+        <% is_active_item = @current_path == subitem[:path]%>
         <li class="nav-item">
-            <a href="<%=item[:path]%>" class="nav-link <%= 'active' if is_active_item%>">
+            <a href="<%=subitem[:path]%>" class="nav-link <%= 'active' if is_active_item%>">
                 <i class="far <%= item[:fa_icon] %> nav-icon"></i>
-                <p><%= item[:title] %></p>
+                <p><%= subitem[:title] %></p>
             </a>
         </li>
         <% end %>
