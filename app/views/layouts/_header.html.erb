@@ -1,0 +1,27 @@
+<%= link_to image_tag('Header.png', class: "img-fluid"), root_url %>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="<%= root_url %>">
+      Bedlam Theatre
+    </a>
+    
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><%= link_to 'Shows', shows_path, class: "nav-link" %></li>
+
+        <% if WorkshopCounter.workshop_count > 0 %>
+        <li class="nav-item"><%= link_to 'Workshops', workshops_path , class: "nav-link" %></li>
+        <% end %>
+
+        <li class="nav-item"><%= link_to 'News', news_index_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to 'About', about_index_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to 'Get Involved', get_involved_index_path, class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to 'Accessibility', static_path('accessibility'), class: "nav-link" %></li>
+        <li class="nav-item"><%= link_to 'Contact', static_path('contact'), class: "nav-link" %></li>
+    </div>
+  </div>
+</nav>
