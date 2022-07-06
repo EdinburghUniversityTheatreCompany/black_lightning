@@ -17,7 +17,7 @@ class NewsController < ApplicationController
     @title = 'Bedlam News'
     @news = @news.includes(image_attachment: :blob)
                  .order('publish_date DESC')
-                 .paginate(page: params[:page], per_page: 5)
+                 .page(params[:page]).per(5)
 
     respond_to do |format|
       format.html # index.html.erb

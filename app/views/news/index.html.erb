@@ -1,29 +1,28 @@
-<% # BOOTSTRAP: span 12....%>
-<div class="row">
-  <div class="span12">
-    <h1><%= @title %></h1>
+<% # BOOTSTRAP: Thumbnails and image sizes do not match but not sure how to fix. %>
 
-    <hr />
+<h1><%= @title %></h1>
 
-    <% @news.each do |news| %>
-    <article class="media">
-      <% image = image_tag news.fetch_image.variant(thumb_variant), class: "media-object" %>
-      <%= link_to image, news, class: "pull-left thumbnail" %>
-      <div class="media-body">
-        <header class="media-heading">
-            <h4 class="media-heading"><%= link_to news.title, news %></h4>
-        </header>
-        <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, format: :longy %></time></p>
-        <%= raw generate_preview render_markdown news.body %>
-        <p><%= link_to 'View Full Article', news %></p>
-      </div>
-    </article>
-    <hr />
-    <% end %>
+<hr />
 
-    <%= will_paginate(@news) %>
+<% @news.each do |news| %>
+<div class="d-flex">
+  <% image = image_tag news.fetch_image.variant(thumb_variant), class: "flex-shrink-0" %>
+  <%= link_to image, news, class: "img-thumbnail" %>
+  <div class="flex-grow-1 ms-3">
+    <header class="media-heading">
+        <h4 class="media-heading"><%= link_to news.title, news %></h4>
+    </header>
+    <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, format: :longy %></time></p>
+   
+    <%= raw generate_preview render_markdown news.body %>
 
-    <% rss_icon = 'RSS Feed: <i class="fa fa-rss" aria-hidden=”true”></i>' %>
-    <%= link_to rss_icon.html_safe, news_index_path(format: :rss) %>
+    <p><%= link_to 'View Full Article', news %></p>
   </div>
 </div>
+<hr />
+<% end %>
+
+<%= paginate(@news) %>
+
+<% rss_icon = 'RSS Feed: <i class="fa fa-rss" aria-hidden=”true”></i>' %>
+<%= link_to rss_icon.html_safe, news_index_path(format: :rss) %>
