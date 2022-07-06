@@ -26,29 +26,27 @@ class AdminController < ApplicationController
 
     # Propose
     children =[]
-    children << { title: 'Proposals', path: admin_proposals_calls_path, fa_icon: "fa-info"} if can? :index, Admin::Proposals::Call
-    @navbar_categories << {title: 'Propose', children: children, fa_icon: "fa-info"}
+    children << { title: 'Proposals', path: admin_proposals_calls_path, fa_icon: "fa-clipboard" } if can? :index, Admin::Proposals::Call
+    @navbar_categories << {title: 'Propose', children: children, fa_icon: "fa-chalkboard" }
 
     # Productions
     children =[]
-    children << { title: 'Events', path: admin_events_path, fa_icon: "fa-info"} if can? :index, Event
-    children << { title: 'Shows', path: admin_shows_path, fa_icon: "fa-info"} if can? :index, Show
-    children << { title: 'Workshops', path: admin_workshops_path, fa_icon: "fa-info"} if can? :index, Workshop
-    children << { title: 'Questionnaires', path: admin_questionnaires_questionnaires_path, fa_icon: "fa-info"} if can? :index, Admin::Questionnaires::Questionnaire
-    children << { title: 'Venues', path: admin_venues_path, fa_icon: "fa-info"} if can? :index, Venue
-    children << { title: 'Festivals & Seasons', path: admin_seasons_path, fa_icon: "fa-info"} if can? :index, Season
-    @navbar_categories << {title: 'Productions', children: children, fa_icon: "fa-info"}
+    children << { title: 'Events', path: admin_events_path, fa_icon: "fa-calendar"} if can? :index, Event
+    children << { title: 'Shows', path: admin_shows_path, fa_icon: "fa-theater-masks"} if can? :index, Show
+    children << { title: 'Workshops', path: admin_workshops_path, fa_icon: "fa-hammer"} if can? :index, Workshop
+    children << { title: 'Questionnaires', path: admin_questionnaires_questionnaires_path, fa_icon: "fa-clipboard-list"} if can? :index, Admin::Questionnaires::Questionnaire
+    children << { title: 'Venues', path: admin_venues_path, fa_icon: "fa-building"} if can? :index, Venue
+    children << { title: 'Festivals & Seasons', path: admin_seasons_path, fa_icon: "fa-shop"} if can? :index, Season
+    @navbar_categories << {title: 'Productions', children: children, fa_icon: "fa-industry"}
 
     # Staffing & Debt
     children =[]
-    children << { title: 'Debt Admin', path: admin_debts_path, fa_icon: "fa-info"} if can? :index, Admin::Debt
-    children << { title: 'My Debts', path: admin_debts_path(current_user), fa_icon: "fa-info"} if can? :show, Admin::Debt 
-    children << { title: 'Debt Notifications', path: admin_debt_notifications_path,  fa_icon: "fa-info"} if can? :index, Admin::DebtNotification
-    children << { title: 'Proposals', path: admin_proposals_calls_path,  fa_icon: "fa-info"} if can? :index, Admin::Proposals::Call
-    children << { title: 'Staffing', path: admin_staffings_path,  fa_icon: "fa-info"} if can? :index, Admin::Staffing
-    children << { title: 'Staffing Debt', path: admin_staffing_debts_path,  fa_icon: "fa-info"} if can? :index, Admin::StaffingDebt
-    children << { title: 'Maintenance Debt', path: admin_maintenance_debts_path,  fa_icon: "fa-info"} if can? :index, Admin::MaintenanceDebt
-    @navbar_categories << {title: 'Staffing & Debt', children: children, fa_icon: "fa-info"}
+    children << { title: 'Debt Admin', path: admin_debts_path, fa_icon: "fa-book-skull"} if can? :index, Admin::Debt
+    children << { title: 'Debt Notifications', path: admin_debt_notifications_path,  fa_icon: "fa-receipt"} if can? :index, Admin::DebtNotification
+    children << { title: 'Staffing', path: admin_staffings_path,  fa_icon: "fa-people-group"} if can? :index, Admin::Staffing
+    children << { title: 'Staffing Debt', path: admin_staffing_debts_path,  fa_icon: "fa-people-robbery"} if can? :index, Admin::StaffingDebt
+    children << { title: 'Maintenance Debt', path: admin_maintenance_debts_path,  fa_icon: "fa-toolbox"} if can? :index, Admin::MaintenanceDebt
+    @navbar_categories << {title: 'Staffing & Debt', children: children, fa_icon: "fa-person"}
 
     # Opportunities
     children =[]
@@ -84,11 +82,14 @@ class AdminController < ApplicationController
     @navbar_categories << {title: 'Users', children: children, fa_icon: "fa-info"}
 
     # Apps
+    children =[]
     children << { title: 'OAuth', path: oauth_applications_path,  fa_icon: "fa-info"} if can? :index, Doorkeeper::Application
     
     @navbar_categories << {title: 'Apps', children: children, fa_icon: "fa-info"}
 
-    #@navbar_categories.reject! {|category| category.children.empty? }
+    @navbar_categories.reject! {|category| category[:children].empty? }
+
+    @current_path = request.fullpath
 # to do - unsorted things
   end
 end

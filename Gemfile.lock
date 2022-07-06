@@ -195,8 +195,6 @@ GEM
     ffi-compiler (1.0.1)
       ffi (>= 1.0.0)
       rake
-    font-awesome-sass (6.1.1)
-      sassc (~> 2.0)
     globalid (1.0.0)
       activesupport (>= 5.0)
     honeybadger (4.12.1)
@@ -486,7 +484,6 @@ DEPENDENCIES
   factory_bot_rails
   faker
   fancybox3
-  font-awesome-sass
   honeybadger (~> 4.0)
   html_acceptance
   image_processing
