@@ -1,3 +1,5 @@
+# This is all more convoluted than it should be. Not sure how to fix it unfortunately while keeping the nesting intact.
+
 module SubpageHelper
   EXTERNAL_URL_PREFIX = 'EXTERNAL_URL:'
 
@@ -32,28 +34,32 @@ module SubpageHelper
 
     subpage_editable_blocks = Admin::EditableBlock.where('url LIKE ?', "#{root_url}%")
 
-    subpage_editable_blocks = subpage_editable_blocks.order(:ordering, :name).select { |editable_block| !editable_block.url.sub("#{root_url}/", '').include?('/') }
+    subpage_editable_blocks = subpage_editable_blocks.order(:ordering, :name).reject { |editable_block| editable_block.url.sub("#{root_url}/", '').include?('/') }
 
     if subpage_editable_blocks.any?
       subpages += subpage_editable_blocks
     elsif root_url.present?
-      # If there are no subpages, move one layer up when generating the subpages. 
+      # If there are no subpages, move one layer up when generating the subpages.
       return get_subpages(root_url.rpartition('/').first)
     end
 
     return subpages.uniq
   end
 
-  def get_subpage_link(controller, page)
+  def get_subpage_link(controller, page, active)
+    link_to page.name, get_subpage_url(controller, page), class: "nav-link #{'active' if active}"
+  end
+
+  def get_subpage_url(controller, page)
     if page.content.present? && page.content.start_with?(EXTERNAL_URL_PREFIX)
       page_url = page.content.sub(EXTERNAL_URL_PREFIX, '').strip
 
-      return link_to(page.name, page_url)
+      return page_url
     else
       page_url = page.url.sub(controller, '')
       page_url.delete_prefix!('/')
 
-      return link_to page.name, controller: controller, action: :page, page: page_url
+      return url_for({ controller: controller, action: :page, page: page_url })
     end
   end
 
