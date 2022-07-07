@@ -3,7 +3,7 @@
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Admin</title>
   <%= stylesheet_link_tag    "admin", media: "all" %>
-  <script src="https://kit.fontawesome.com/5b2ae334f1.js" crossorigin="anonymous"></script>
+  <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
   <%= javascript_packs_with_chunks_tag "application", "admin"%>
 
@@ -14,198 +14,139 @@
 
   <meta name="viewport" content="initial-scale = 1.0" />
 </head>
+<body class="hold-transition sidebar-mini layout-fixed ">
+  <div class="wrapper">
+    <div class="preloader flex-column justify-content-center align-items-center">
+      <img class="animation__shake" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
+        alt="Bedlam Theatre EUTC Logo" height="120" />
+      <p><br /><br />Loading...</p>
+    </div>
 
-<body class="d-flex flex-column min-vh-100">
-  <header class="mb-4">
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-      <div class="container-fluid  d-flex flex-wrap">
-        <%= link_to image_tag("https://eutc.azureedge.net/img/logos/bedlam-eutc/bedlam-eutc-lateral-black.svg", height: "40"), admin_path, class: "navbar-brand" %>
-        <ul id="login_menu" class="navbar-nav d-none d-xs-none d-sm-none d-md-none d-lg-flex d-xl-flex pt-2 mt-0">
-          <li class="nav-item">
-            <p class="navbar-text ">Welcome
-              <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { title: 'Edit Account' , class: "text-primary"} %>
-            </p>
-          </li>
-          <li class="nav-item "><%= link_to "Main Site", root_path , class: "btn btn-secondary ms-2 me-1" %></li>
-          <li class="nav-item ">
-            <%= link_to "Sign Out", destroy_user_session_path, method: :delete , class: "btn btn-danger mx-1" %></li>
-        </ul>
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light fixed-top">
+      <!-- Left navbar links -->
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" data-widget="pushmenu" href="#" role="button" data-enable-remember="true"><i
+              class="fas fa-bars"></i></a>
+        </li>
+        <li class="nav-item d-none d-sm-inline-block">
+          <a href="/" class="nav-link">Back to Main Site</a>
+        </li>
+        <li class="nav-item d-none d-sm-inline-block">
+          <a href="#" class="nav-link">Contact</a>
+        </li>
+      </ul>
 
+      <!-- Right navbar links -->
+      <ul class="navbar-nav ml-auto">
+        <!-- Notifications Dropdown Menu -->
+        <li class="nav-item dropdown">
+          <% @user = current_user %>
+          <a class="nav-link" data-toggle="dropdown" href="#">
+            <i class="far fa-bell"></i>
+            <span class="badge badge-danger navbar-badge <%= 'd-none' if @user.debt_message_suffix == "not in Debt" %> ">!!</span>
+          </a>
+          <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+            <span class="dropdown-header">Notifications</span>
 
+            <a href="/admin/debts/<%= @user.id %>" class="dropdown-item">
+              <i
+                class="fas <%= 'fa-check' if @user.debt_message_suffix == "not in Debt" %> <%= 'fa-circle-exclamation' if @user.debt_message_suffix != "not in Debt" %> mr-2"></i>
+              <%= unless @user.debt_message_suffix == "in staffing and maintenance Debt" then "You are #{@user.debt_message_suffix}" else "You are in Debt" end %>
+            </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-widget="fullscreen" href="#" role="button">
+            <i class="fas fa-expand-arrows-alt"></i>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-widget="control-sidebar" data-slide="true" href="#" role="button">
+            <i class="fas fa-th-large"></i>
+          </a>
+        </li>
+      </ul>
+    </nav>
+    <!-- /.navbar -->
 
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-          <ul class="navbar-nav d-flex flex-wrap ">
-            <% if can? :index, Admin::Proposals::Call %>
-            <li class="nav-item p-2"><%= link_to 'Proposals', admin_proposals_calls_path , class: "nav-link" %></li>
-            <% end %>
+    <!-- Main Sidebar Container -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+      <!-- Brand Logo -->
+      <div class="brand-link d-flex align-items-center">
+        <a href="/admin/" class="brand-link logo-switch">
+          <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_square-white.png"
+            alt="Bedlam Theatre Square Small Logo" class="brand-image-xl logo-xs">
+          <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_single-line-white-for-red.png"
+            alt="Bedlam Theatre EUTC Logo" class="brand-image-xs logo-xl" style="left: 12px">
+        </a>
+      </div>
 
-            <% if can? :index, Event %>
-            <li class="nav-item p-2"><%= link_to 'Events', admin_events_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Show %>
-            <li class="nav-item p-2"><%= link_to 'Shows', admin_shows_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Workshop %>
-            <li class="nav-item p-2"><%= link_to 'Workshops', admin_workshops_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Opportunity %>
-            <li class="nav-item p-2"><%= link_to 'Opportunities', admin_opportunities_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Admin::Questionnaires::Questionnaire %>
-            <li class="nav-item p-2">
-              <%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Venue %>
-            <li class="nav-item p-2"><%= link_to 'Venues', admin_venues_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Season %>
-            <li class="nav-item p-2"><%= link_to 'Seasons', admin_seasons_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, EventTag %>
-            <li class="nav-item p-2"><%= link_to 'Event Tags', admin_event_tags_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Attachment %>
-            <li class="nav-item p-2"><%= link_to 'Attachments', admin_attachments_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, AttachmentTag %>
-            <li class="nav-item p-2"><%= link_to 'Attachment Tags', admin_attachment_tags_path , class: "nav-link" %>
-            </li>
-            <% end %>
-
-            <% if can? :index, Picture %>
-            <li class="nav-item p-2"><%= link_to 'Pictures', admin_pictures_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, PictureTag %>
-            <li class="nav-item p-2"><%= link_to 'Picture Tags', admin_picture_tags_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, News %>
-            <li class="nav-item p-2"><%= link_to 'News', admin_news_index_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Admin::Staffing %>
-            <li class="nav-item p-2"><%= link_to 'Staffing', admin_staffings_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, FaultReport %>
-            <li class="nav-item p-2"><%= link_to 'Fault Reports', admin_fault_reports_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Admin::EditableBlock %>
-            <li class="nav-item p-2"><%= link_to 'Editable Block', admin_editable_blocks_path , class: "nav-link" %>
-            </li>
-            <% end %>
-
-            <% if can? :index, User %>
-            <li class="nav-item p-2"><%= link_to 'Users', admin_users_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Role %>
-            <li class="nav-item p-2"><%= link_to 'Roles', admin_roles_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Admin::Permission %>
-            <li class="nav-item p-2"><%= link_to 'Permissions', admin_permissions_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :manage, :jobs %>
-            <li class="nav-item p-2"><%= link_to 'Jobs', admin_jobs_overview_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Admin::MaintenanceDebt %>
-            <li class="nav-item p-2"><%= link_to 'Maintenance Debt', admin_maintenance_debts_path , class: "nav-link" %>
-            </li>
-            <%end%>
-
-            <% if can? :index, Admin::StaffingDebt %>
-            <li class="nav-item p-2"><%= link_to 'Staffing Debt', admin_staffing_debts_path , class: "nav-link" %></li>
-            <%end%>
-
-            <% if can? :index, Admin::Debt %>
-            <li class="nav-item p-2"> <%= link_to 'Debt', admin_debts_path , class: "nav-link" %></li>
-            <% else %>
-            <li class="nav-item p-2"> <%= link_to 'Debt', admin_debt_path(current_user) , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Admin::DebtNotification %>
-            <li class="nav-item p-2">
-              <%= link_to 'Debt Notifications', admin_debt_notifications_path, class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :create, MembershipActivationToken %>
-            <li class="nav-item p-2">
-              <%= link_to 'Membership Activation', new_admin_membership_activation_token_path , class: "nav-link" %>
-            </li>
-            <% end %>
-
-            <% if can? :index, MassMail %>
-            <li class="nav-item p-2"><%= link_to 'Mass Mail', admin_mass_mails_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, MarketingCreatives::Category %>
-            <li class="nav-item p-2">
-              <%= link_to 'Marketing Creatives', admin_marketing_creatives_categories_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, MarketingCreatives::Profile %>
-            <li class="nav-item p-2">
-              <%= link_to 'Marketing Creatives Profile List', admin_marketing_creatives_profiles_path , class: "nav-link" %>
-            </li>
-            <% end %>
-
-            <% if can? :index, Techie %>
-            <li class="nav-item p-2"><%= link_to 'Techies', admin_techies_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Complaint %>
-            <li class="nav-item p-2"><%= link_to 'Complaints Overview', admin_complaints_path , class: "nav-link" %>
-            </li>
-            <% end %>
-
-            <% if can? :create, Complaint %>
-            <li class="nav-item p-2"><%= link_to 'Submit Complaint', new_complaint_path , class: "nav-link" %></li>
-            <% end %>
-
-            <% if can? :index, Doorkeeper::Application %>
-            <li class="nav-item p-2"><%= link_to 'OAuth Applications', oauth_applications_path , class: "nav-link" %>
-            </li>
-            <% end %>
-
-            <% if current_user.has_role? 'Committee' %>
-            <li class="nav-item p-2"><%= link_to 'Committee', admin_committee_path , class: "nav-link" %></li>
-            <% end %>
-          </ul>
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Sidebar user panel optional) -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+          <div class="image">
+            <img src="/images/userdef.png" class="img-circle elevation-2" alt="User Image">
+          </div>
+          <div class="info text-white">
+            <span>Welcome,
+              <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { title: 'Edit Account' } %></span>
+          </div>
         </div>
 
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu"
+            data-accordion="false">
+            <li class="nav-item">
+              <a href="/admin/" class="nav-link <%='active' if request.fullpath == "/admin" %>">
+                <i class="far fa-home %> nav-icon"></i>
+                <p>Home</p>
+              </a>
+            </li>
+            <%= render 'layouts/nav_item', items: @navbar_categories %>
+            <!-- <li class="nav-item">
+              <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-th"></i>
+                <p>
+                  Simple Link
+                  <span class="right badge badge-danger">New</span>
+                </p>
+              </a>
+            </li> -->
+          </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
 
-        <button class="navbar-toggler bedlam-nav-button" type="button" data-bed-target="#navbarNavDropdown"
-          aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
       </div>
-    </nav>
+      <!-- /.sidebar -->
+    </aside>
 
-  </header>
-  <main class="flex-shrink-0 max-w-95">
-    <div class="container position-relative">
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper" style="padding-top: 57px;">
       <%= render '/layouts/alert_div' %>
-
       <%= content_for?(:content) ? yield(:content) : yield %>
     </div>
-</main>
-    <%= render "layouts/footer" %>
+    <!-- /.content-wrapper -->
+
+    <!-- Control Sidebar -->
+    <aside class="control-sidebar control-sidebar-dark">
+      <!-- Control sidebar content goes here -->
+      <div class="p-3">
+        <h5>Title</h5>
+        <p>Sidebar content</p>
+      </div>
+    </aside>
+    <!-- /.control-sidebar -->
+
+    <!-- Main Footer -->
+    <footer class="main-footer">
+      <%= render "layouts/footer" %>
+    </footer>
+  </div>
+  <!-- ./wrapper -->
+  <script src="https://code.jquery.com/jquery-migrate-3.4.0.js"></script>
 </body>
 
-
 </html>
-

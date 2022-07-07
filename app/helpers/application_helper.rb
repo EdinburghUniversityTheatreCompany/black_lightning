@@ -20,7 +20,7 @@ module ApplicationHelper
     when :notice
       return 'alert-info', 'fas fa-info-circle'
     else
-      return '', ''
+      return 'alert-info', 'fas fa-info-circle'
     end
   end
 

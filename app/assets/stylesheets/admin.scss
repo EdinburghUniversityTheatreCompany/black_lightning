@@ -1,6 +1,11 @@
-@import 'base';
 
+//@import 'font-awesome';
+//@import 'vendor/fontawesome-free/css/all.css';
 @import 'admin/jquery.gridster.min';
 
 @import 'admin/shows';
 @import 'admin/additions';
+@import 'shared_additions';
+@import 'dropzone/dist/min/dropzone.min';
+@import 'dropzone/dist/min/basic.min';
+@import 'vendor/adminlte.min.css';

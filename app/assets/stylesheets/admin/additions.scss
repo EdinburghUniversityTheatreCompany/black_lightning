@@ -1,3 +1,13 @@
+div.datetime select {
+    width: 100px;
+}
+
+.alert-custombd {
+    padding: 10px;
+}
+
+select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !important;}
+
 .container {
     padding-bottom:10px;
 }
