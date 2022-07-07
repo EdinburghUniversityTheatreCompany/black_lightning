@@ -24,6 +24,7 @@ import '../src/jquery.switch'
 import 'jquery-slimscroll'
 import '../src/alerts'
 
+
 import '../src/konami_code'
 
 import "controllers"
@@ -33,4 +34,7 @@ require("@rails/ujs").start()
 require("@rails/activestorage").start()
 
 // https://github.com/ifad/data-confirm-modal
-require('data-confirm-modal')
+//require('data-confirm-modal')
+
+import "sweetalert"
+

@@ -16,6 +16,7 @@
     "moment": "^2.29.2",
     "popper": "^1.0.1",
     "stimulus": "^2.0.0",
+    "sweetalert2": "^11.4.20",
     "turbolinks": "^5.2.0",
     "vivagraphjs": "^0.12.0"
   },
