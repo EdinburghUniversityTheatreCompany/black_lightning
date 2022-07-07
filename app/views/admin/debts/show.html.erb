@@ -8,12 +8,12 @@
   <% end %>
 <%= "</h#{header_size}>".html_safe %>
 
-<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn' %> 
+<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn btn-secondary' %> 
 <br>
 <%= "(#{@user.debt_causing_maintenance_debts.count} now) (#{@user.upcoming_maintenance_debts.count} upcoming)"%>
 <br>
 <br>
-<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn' %>
+<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn btn-secondary' %>
 <br>
 <%= "(#{@user.debt_causing_staffing_debts.count} now) (#{@user.upcoming_staffing_debts.count} upcoming)"%>
 <br>

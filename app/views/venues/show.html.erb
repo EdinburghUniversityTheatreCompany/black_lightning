@@ -1,16 +1,4 @@
-<div class="carousel">
-  <!-- Carousel items -->
-  <div class="carousel-inner">
-    <div class="active item">
-      <%= image_tag(@venue.fetch_image.variant(slideshow_variant)) %>
-      <div class="carousel-caption">
-        <h1><%= @venue.name %></h1>
-        <p><%= @venue.tagline %></p>
-      </div>
-    </div>
-  </div>
-</div>
-
+<%= render '/events/image_and_name', item: @venue %>
 
 <%= render_markdown @venue.description %>
 

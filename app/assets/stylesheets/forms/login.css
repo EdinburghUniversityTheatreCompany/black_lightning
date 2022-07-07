@@ -19,3 +19,23 @@
     display: block;
   }
 }
+
+/* Responsive */
+/* BOOTSTRAP: Probably remove when updating navbar? */
+@media (max-width: 400px) {
+  .brand {
+      float: none !important;
+  }
+
+  #login_menu {
+      float: none;
+  }
+
+  #login_menu li {
+      float: none;
+  }
+
+  #login_menu a {
+      padding: 0;
+  }
+}

@@ -32,22 +32,3 @@ select[id$="minute"], select[id$="hour"], select[id$="day"]{ width: 60px !import
     border: 1px solid #e5e5e5;
     border-radius: 5px;
 }
-
-/* Responsive */
-@media (max-width: 400px) {
-    .brand {
-        float: none !important;
-    }
-
-    #login_menu {
-        float: none;
-    }
-
-    #login_menu li {
-        float: none;
-    }
-
-    #login_menu a {
-        padding: 0;
-    }
-}

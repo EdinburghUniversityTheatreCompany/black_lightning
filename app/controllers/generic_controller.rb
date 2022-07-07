@@ -215,7 +215,7 @@ module GenericController
   def load_index_resources
     resources = base_index_database_query
 
-    resources = resources.paginate(page: params[:page], per_page: items_per_page) if should_paginate
+    resources = resources.page(params[:page]).per(items_per_page) if should_paginate
 
     instance_variable_set("@#{resource_name.pluralize}", resources)
 

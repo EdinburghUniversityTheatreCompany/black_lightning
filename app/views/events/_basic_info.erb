@@ -1,8 +1,9 @@
 <%= render '/events/happened_message', event: event, event_name: event_name %>
 
+<% # BOOTSTRAP: grid different %>
 <div class="row" style="position: relative;">
   <div class="span9">
-    <%= render '/events/image_and_name', event: event %>
+    <%= render '/events/image_and_name', item: event %>
   </div>
 
   <div class="span3 show-info-box">

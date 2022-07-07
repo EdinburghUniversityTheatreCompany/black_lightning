@@ -1,6 +1,6 @@
 <% # Note: If you update this search form, this has some things with q that need to be changed. %>
 <% # Definitely in _basic_show for events. Do a ctrl+f for the others. %>
-
+<% # TODO: Search form %>
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
   <% search_form_for @q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "form-search" } do |f| %>
     <%= f.input_field :name_cont,            placeholder: "Title",  required: false %>
@@ -23,7 +23,7 @@
 
     <%= f.submit :Search, class: 'btn btn-primary' %>
 
-    <%= f.submit :Random, class: 'btn' %>
-    <%= f.submit 'On this day', class: 'btn' %>
+    <%= f.submit :Random, class: 'btn btn-secondary' %>
+    <%= f.submit 'On this day', class: 'btn btn-secondary' %>
   <% end %>
 <% end %>

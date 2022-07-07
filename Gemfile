@@ -10,7 +10,6 @@ gem "sprockets-rails"
 gem "terser"
 
 gem 'coffee-rails'
-gem 'bootstrap-sass', '< 3.0'
 gem 'fancybox3'
 
 gem 'simple_form'
@@ -21,7 +20,7 @@ gem 'cancancan'
 gem 'rolify'
 gem 'recaptcha'
 
-gem 'will_paginate'
+gem 'kaminari'
 gem 'kramdown'
 gem 'nested_form'
 gem 'twitter'

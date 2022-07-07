@@ -15,12 +15,12 @@
 <%= render '/shared/show_actions', object: @show %>
 
 <% if @show.xts_id && can?(:edit, @show) %>
-    <%= link_to xts_report_admin_show_path(@show), class: "btn" do %>
+    <%= link_to xts_report_admin_show_path(@show), class: "btn btn-secondary" do %>
         <i class='fa fa-shopping-cart' aria-hidden=”true”></i> XTS Report
     <% end %>
 <% end %>
 
-<%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn' %>
+<%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn btn-secondary' %>
 
 <%= get_link Admin::Feedback, :index, link_text: 'Show Feedback', link_target: admin_show_feedbacks_path(@show), 
              additional_condition: @show.feedbacks.any? 
@@ -42,7 +42,7 @@
         <h3>Maintenance Debt</h3>
         <%= simple_form_for [:admin, @show] do |f| %>
             <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
-            <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn' %>
+            <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn btn-secondary' %>
         <% end %>
 
         <% if @show.maintenance_debt_start.present? %>
@@ -67,7 +67,7 @@
 
         <%= simple_form_for [:admin, @show] do |f| %>
             <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
-            <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn' %>
+            <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn btn-secondary' %>
         <% end %>
 
         <% if @show.staffing_debt_start.present? %>

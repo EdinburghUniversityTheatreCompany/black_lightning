@@ -8,4 +8,7 @@ class Admin::StaticController < AdminController
       return
     end
   end
+
+  def bootstrap_test
+  end
 end

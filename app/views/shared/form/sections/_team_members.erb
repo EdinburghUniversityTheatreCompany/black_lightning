@@ -15,7 +15,7 @@
 
   <%= render layout: '/shared/collapsible_section', locals: { title: 'Team Members' } do %>
     <% if f.object.errors[:team_members].present? then %>
-    <p id="team_errors" class="alert alert-error">
+    <p id="team_errors" class="alert alert-danger">
         <%= f.error :team_members %>
     </p>
     <% end %>

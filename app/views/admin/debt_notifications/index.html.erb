@@ -5,7 +5,7 @@
         <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debt_notifications, html: { id: "search", class: "form-search" } do |f| %>
             <%= f.input_field :user_first_name_cont, placeholder: "First Name",  required: false %>
             <%= f.input_field :user_last_name_cont,  placeholder: "Last Name",   required: false %>
-            <%= f.submit :Search, class: 'btn' %>
+            <%= f.submit :Search, class: 'btn btn-secondary' %>
         <% end %>
     </div>
 </div>
@@ -35,3 +35,14 @@
 
   <%= will_paginate(@debt_notifications) %>
 <% end %>
+
+<% # headers = [:name, :user, :sent_on, :notifcation_type] %>
+
+<% # field_sets = @debt_notifcations.map { |debt_notifcation| [
+  # debt_notifcation,  
+  #user_link(debt_notification.user, false),
+  #debt_notification.sent_on,
+  #debt_notification.notification_type
+#] }%>
+
+<% #= render 'shared/pages/index', resource_class: Admin::DebtNotification, resources: @debt_notifcations, headers: headers, field_sets: field_sets, search_fields: search_fields %>

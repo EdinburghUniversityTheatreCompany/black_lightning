@@ -35,7 +35,7 @@
 
             <td>
               <% if maintenance_debt.unfulfilled? %>
-                  <%= get_link maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing', html_class: 'btn', http_method: :put, 
+                  <%= get_link maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing', html_class: 'btn btn-secondary', http_method: :put, 
                                                   confirm: "Converting the Maintenance Debt to Staffing Debt", 
                                                   detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a staffing debt?" 
                   %>

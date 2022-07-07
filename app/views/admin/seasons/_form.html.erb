@@ -13,7 +13,7 @@
       <% else%>
         <%= render layout: '/shared/collapsible_section', locals: { title: 'Events' } do %>
           <% if f.object.errors[:events].present? then %>
-            <p id="events_errors" class="alert alert-error">
+            <p id="events_errors" class="alert alert-danger">
               <%= f.error :events %>
             </p>
           <% end %>

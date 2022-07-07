@@ -1,16 +1,26 @@
 <%= display_block(@editable_block.name, false) %>
 
-<div class="results-box">
+<div class="row">
+  <div class="col">
+    <form class="mt-3">
+      <% # BOOSTRAP: This form %>
+      <div class="form-floating mb-3">
+        <input type="text" class="form-control" id="membershipSearch" name="search" placeholder="Finbar the Viking" autofocus="autofocus">
+        <label for="membershipSearch">Membership Number or Member Name</label>
+      </div>
+
+      <button type="submit" class="btn btn-secondary">Submit</button>
+    </form>
+  </div>
 </div>
 
-<form action="#" style="margin-top: 20px;">
-  <input type="text" id="search" name="search" placeholder="Enter Membership Number or Member Name" class="span9" autofocus="autofocus" autocomplete="off">
-
-  <div class="form-actions">
-    <button type="submit" class="btn">Submit</button>
+<div class="row">
+  <div class="col">
+    <div class="results-box"></div>
   </div>
-</form>
+</div>
 
+<% # BOOTSTRAP: Display the picture inside the alert. %>
 <script>
   $form = $('form');
   $form.submit(function (e) {
@@ -22,7 +32,7 @@
         $('#search').val("").focus();
 
         if (data.image) {
-          $('.results-box').append("<img src='" + data.image + "' style='width: 100px;' />");
+          $('.results-box').append("<img src='" + data.image + "' class=\"img-thumbnail float-end\" style='width: 100px;' />");
         }
       })
       .fail(function (xhr) {
@@ -45,6 +55,7 @@
         break;
     }
 
+  // BOOTSTRAP: This script probs should not live here, and if it does, this alert should be created using the form script
     $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
               "<i class=\"" + icon  + " fa fa-large\" aria-hidden=”true”></i> "
               + message +

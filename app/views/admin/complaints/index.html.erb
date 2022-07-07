@@ -1,23 +1,14 @@
-<h1><%= @title %></h1>
+<% headers = [:subject, :created_at] %>
 
-<table class="table table-hover">
-  <tr>
-    <th>Subject</th>
-    <th>Created At</th>
+<% field_sets = @complaints.map { |complaint| [
+  complaint,  
+  l(complaint.created_at, format: :longy)
+] }%>
 
-    <% if can? :edit, Complaint %>
-      <th></th>
-    <% end %>
-  </tr>
+<% search_fields = {
+    subject_cont:     { slug: 'defaults.subject' },
+    description_cont: { slug: 'defaults.description'},
+    comments_cont:    { slug: 'defaults.comments'},
+} %>
 
-  <% @complaints.each do |complaint| %>
-    <tr class="<%= complaint.html_class %>">
-      <%= get_link complaint, :show, wrap_tag: 'td' %>
-      <td><%= l complaint.created_at, format: :longy %></td>
-
-      <%= get_link complaint, :edit, wrap_tag: 'td', link_text: 'Comment' %>
-    </tr>
-  <% end %>
-</table>
-
-<%= will_paginate(@complaints) %>
+<%= render 'shared/pages/index', resource_class: Complaint, resources: @complaints, headers: headers, field_sets: field_sets, search_fields: search_fields %>

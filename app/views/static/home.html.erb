@@ -2,6 +2,7 @@
   <div class="span8">
     <div id="showSlider" class="carousel slide" <%= "data-interval=false" if mobile_device? %>>
 
+      <% # BOOTSTRAP: Carousel updated guidance here: https://getbootstrap.com/docs/5.1/components/carousel/ %>
       <div class="carousel-inner <%= "carousel-inner-mobile" if mobile_device? %>">
         <% @events.each do |event| %>
           <% event_path = url_for(event) %>
@@ -76,8 +77,10 @@
   </div>
 
   <!-- SIDEBAR -->
+  <% # BOOTSTRAP: visible-phone is deprecated in version 4. %>
   <hr class="visible-phone" />
 
+<% # BOOTSTRAP: If you end up removing this, also remove the tweet-date css thing in additions.scss %>
   <div class="span4">
     <h3><%= link_to '@BedlamTheatre', 'https://twitter.com/bedlamtheatre' %></h3>
     <div>

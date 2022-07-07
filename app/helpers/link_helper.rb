@@ -14,14 +14,14 @@ module LinkHelper
   end
 
   def link_to_add(form, attribute_name, object_name: nil, html_class: nil)
-    html_class ||= 'btn'
+    html_class ||= 'btn btn-secondary'
     object_name ||= format_class_name(attribute_name.to_s, true)
 
     return form.link_to_add add_button_text(object_name), attribute_name, class: html_class
   end
 
   def add_button_text(object_name)
-    return "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add #{object_name}".html_safe
+    return generate_icon_prefix('plus', "Add #{object_name}")
   end
 
   def link_to_remove(form, link_text: nil, html_class: nil)
@@ -33,7 +33,8 @@ module LinkHelper
   def remove_button_text(text = nil)
     text ||= 'Remove'
 
-    return "<i class=\"fa fa-trash\" aria-hidden=\"true\"></i> #{text}".html_safe
+    # TEST
+    return generate_icon_prefix('trash', text)
   end
 
   def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
@@ -155,7 +156,7 @@ module LinkHelper
     when :approve
       'btn btn-success'
     else
-      'btn'
+      'btn btn-secondary'
     end
   end
 

@@ -72,7 +72,7 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'get_link with index' do
-    expected_link = '<a class="btn" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><span class="no-wrap"><i class="fa fa-th-list" aria-hidden=”true”></i> Show All</span> Fault Reports</a>'
+    expected_link = '<a class="btn btn-secondary" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><span class="no-wrap"><i class="fa fa-th-list" aria-hidden=”true”></i> Show All</span> Fault Reports</a>'
 
     assert_equal expected_link, get_link(FaultReport, :index)
 
@@ -153,7 +153,7 @@ class LinkHelperTest < ActionView::TestCase
       get_link(maintenance_debt, :convert_to_staffing_debt)
     end
 
-    expected_link = '<a class="btn" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
+    expected_link = '<a class="btn btn-secondary" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
 
     assert_equal expected_link, get_link(maintenance_debt, :convert_to_staffing_debt, http_method: :put)
   end
@@ -305,12 +305,12 @@ class LinkHelperTest < ActionView::TestCase
       show: '',
       new: 'btn btn-primary',
       destroy: 'btn btn-danger',
-      edit: 'btn',
-      index: 'btn',
+      edit: 'btn btn-secondary',
+      index: 'btn btn-secondary',
       approve: 'btn btn-success',
       reject: 'btn btn-danger',
-      answer: 'btn',
-      hexagon: 'btn',
+      answer: 'btn btn-secondary',
+      hexagon: 'btn btn-secondary',
     }
 
     hash.each do |action, html_class|

@@ -1,15 +1,16 @@
-<div class="footer-container">
-  <footer class="footer clearfix">
-    <span class="pull-left">
+<footer class="footer mt-auto py-4 bg-light">
+  <div class="container d-flex">
+    <span class="text-muted w-50 text-start">
       Bedlam Theatre is run by the Edinburgh University Theatre Company (EUTC). The EUTC is formally associated with the Edinburgh University Students Association, registered charity number SC015800. Banner Artwork by <%= link_to 'Bronwen Bender', 'http://cargocollective.com/bronwenbender' %>. Logo by Alexander Morzeria-Davis
     </span>
 
-    <span class="pull-right">
+    <span class="text-muted w-50 text-end">
       <%= link_to 'Project BlackLightning', static_path('black_lightning') %> Version: <%= version %>
       -
       <%= link_to 'Report Bug', 'https://bitbucket.org/bedlamtheatre/black_lightning/issues' %>
       | <%= link_to 'Contact Us', static_path('contact') %>
       | <%= link_to 'Privacy Policy', static_path('privacy_policy') %>
     </span>
-  </footer>
-</div>
+  </div>
+</footer>
+

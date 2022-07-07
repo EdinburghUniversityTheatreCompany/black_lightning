@@ -1,8 +1,9 @@
 <% display_edit = true if display_edit.nil? %>
 
-<div>
-  <%= get_link @editable_block, :edit, html_class: 'btn pull-right', additional_condition: display_edit %>
-  
-  <%= render_markdown(@editable_block.content) %>
-  <div style="clear: both;"></div>
+<div class="row">
+  <div class="col">
+    <%= render_markdown(@editable_block.content) %>
+
+    <%= get_link @editable_block, :edit, html_class: 'btn btn-secondary float-end', additional_condition: display_edit %>
+  </div>
 </div>
