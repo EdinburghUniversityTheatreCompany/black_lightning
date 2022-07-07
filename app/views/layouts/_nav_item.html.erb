@@ -14,7 +14,7 @@
         <% is_active = @current_path == subitem[:path] %>
         <li class="nav-item">
             <a href="<%=subitem[:path]%>" class="nav-link <%='active' if is_active %>">
-                <i class="far <%= subitem[:fa_icon] %> nav-icon"></i>
+                <i class="fas <%= subitem[:fa_icon] %> nav-icon"></i>
                 <p><%= subitem[:title] %></p>
             </a>
         </li>

@@ -89,7 +89,29 @@ class AdminController < ApplicationController
 
     @navbar_categories.reject! {|category| category[:children].empty? }
 
-    @current_path = request.fullpath
-# to do - unsorted things
+    @current_path = request.path
+
+    # to do - unsorted things
+
+    add_breadcrumb 'Home', :admin_path
+
+  
+    path_array = @current_path.split("/")[2..-1]
+    full_working_path = "/admin"
+
+    if path_array.is_a? Array
+      path_array.each do |working_path|
+        current_path_title = working_path.gsub(Regexp.union('_'), ' ')
+        current_path_title = working_path.titleize
+        full_working_path += "/"+working_path
+
+        add_breadcrumb current_path_title, full_working_path
+      end
+    elsif path_array.is_a? String
+      path_title = path_array.gsub(Regexp.union('_'), ' ')
+      path_title = path_title.titleize
+
+      add_breadcrumb path_title, @current_path
+    end
   end
 end

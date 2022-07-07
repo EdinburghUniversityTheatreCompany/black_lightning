@@ -4,41 +4,12 @@
 
 <% # TODO: These alerts should be set in the controller instead, as should the ones below. Remember also close has been renamed to btn-close %>
 <%# show an alert if the user hasn't filled in their name or phone number %>
-<% if !current_user.name? %>
-<div class="container-fluid">
-  <div class="alert alert-info alert-dismissible fade show">
-    <i class="fa fa-exclamation-sign fa-large" aria-hidden=”true”></i>
-    You haven't set your name yet. Please click <%= link_to 'here', edit_admin_user_path(current_user) %>.
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-      <span aria-hidden="true">&times;</span>
-    </button>
-  </div>
-</div>
-<% elsif !(current_user.phone_number) || current_user.phone_number.empty? %>
-<div class="alert-container">
-  <div class="alert alert-info alert-dismissible fade show">
-    <i class="fa fa-exclamation-sign fa-large" aria-hidden=”true”></i>
-    You haven't set your phone number yet. Please click <%= link_to 'here', edit_admin_user_path(current_user) %>.
-    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-      <span aria-hidden="true">&times;</span>
-    </button>
-  </div>
-</div>
-<% end %>
 
 
-<div class="content-header">
+<%= render('shared/admin_page_header', title: 'Bedlam Dashboard' ) %>
+
+<div class="content">
   <div class="container-fluid">
-    <div class="row mb-2">
-      <div class="col-sm-6">
-        <h1 class="m-0">Bedlam Dashboard</h1>
-      </div><!-- /.col -->
-      <div class="col-sm-6">
-        <ol class="breadcrumb float-sm-right">
-          <li class="breadcrumb-item active">Home</li>
-        </ol>
-      </div><!-- /.col -->
-    </div><!-- /.row -->
     <div class="row"> <% if can? :manage, :jobs %>
       <% unless delayed_job_running? then %>
       <div class="alert alert-danger">
@@ -49,7 +20,7 @@
         </p>
       </div>
       <% end %>
-    <% if delayed_jobs(:failed).count > 0 then %>
+      <% if delayed_jobs(:failed).count > 0 then %>
       <div class="alert alert-danger">
         <strong>Stop. This is important</strong>
         <p>
@@ -75,6 +46,6 @@
         <%= render 'card_widget', card_title: "Staffing", card_partial: "staffings_widget", card_class: "" %>
         <%= render 'card_widget', card_title: "Committee Staffing", card_partial: "committee_staffing_widget", card_class: "" %>
       </div>
-    </div>
-  </div><!-- /.container-fluid -->
+    </div><!-- /.container-fluid -->
+  </div>
 </div>

@@ -1,7 +1,7 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html>
 <head>
-  <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Admin</title>
+  <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
   <%= stylesheet_link_tag    "admin", media: "all" %>
   <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
@@ -14,7 +14,7 @@
 
   <meta name="viewport" content="initial-scale = 1.0" />
 </head>
-<body class="hold-transition sidebar-mini layout-fixed ">
+<body class="hold-transition sidebar-mini layout-fixed">
   <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
       <img class="animation__shake" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
@@ -33,9 +33,6 @@
         <li class="nav-item d-none d-sm-inline-block">
           <a href="/" class="nav-link">Back to Main Site</a>
         </li>
-        <li class="nav-item d-none d-sm-inline-block">
-          <a href="#" class="nav-link">Contact</a>
-        </li>
       </ul>
 
       <!-- Right navbar links -->
@@ -44,7 +41,7 @@
         <li class="nav-item dropdown">
           <% @user = current_user %>
           <a class="nav-link" data-toggle="dropdown" href="#">
-            <i class="far fa-bell"></i>
+            <i class="fas fa-bell"></i>
             <span class="badge badge-danger navbar-badge <%= 'd-none' if @user.debt_message_suffix == "not in Debt" %> ">!!</span>
           </a>
           <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
@@ -101,7 +98,7 @@
             data-accordion="false">
             <li class="nav-item">
               <a href="/admin/" class="nav-link <%='active' if request.fullpath == "/admin" %>">
-                <i class="far fa-home %> nav-icon"></i>
+                <i class="fas fa-home nav-icon"></i>
                 <p>Home</p>
               </a>
             </li>
@@ -124,9 +121,10 @@
     </aside>
 
     <!-- Content Wrapper. Contains page content -->
-    <div class="content-wrapper" style="padding-top: 57px;">
+    <div class="content-wrapper" style="padding-top: 4rem;">
       <%= render '/layouts/alert_div' %>
       <%= content_for?(:content) ? yield(:content) : yield %>
+
     </div>
     <!-- /.content-wrapper -->
 
@@ -141,7 +139,7 @@
     <!-- /.control-sidebar -->
 
     <!-- Main Footer -->
-    <footer class="main-footer">
+          <footer class="main-footer">
       <%= render "layouts/footer" %>
     </footer>
   </div>

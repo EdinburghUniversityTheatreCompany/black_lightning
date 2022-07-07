@@ -19,12 +19,12 @@ require("@popperjs/core")
 
 // BOOTSTRAP: Does this need?
 //import 'jquery'
-//const jQuery = $
+// const jQuery = $
 
 import "bootstrap"
 
 // Import the specific modules you may need (Modal, Alert, etc)
- import { Tooltip, Popover, Modal } from "bootstrap"
+// import { Tooltip, Popover, Modal } from "bootstrap"
 
 import 'core-js/stable'
 import 'regenerator-runtime/runtime'
@@ -41,7 +41,7 @@ import '../src/konami_code'
 import "controllers"
 
 // BOOTSTRAP: Does it need the below?
-require.context('./../../../node_modules/jquery-ui/ui')
+//require.context('./../../../node_modules/jquery-ui/ui')
 require("@rails/ujs").start()
 require("@rails/activestorage").start()
 

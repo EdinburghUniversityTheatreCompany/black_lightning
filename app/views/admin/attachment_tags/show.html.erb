@@ -1,4 +1,4 @@
-<h1><%= @title %></h1>
+<%= render('shared/admin_page_header', title: @title ) %>
 
 <% fields = { 
   name: @attachment_tag.name

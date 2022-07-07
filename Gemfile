@@ -11,7 +11,7 @@ gem "terser"
 
 gem 'coffee-rails'
 gem 'fancybox3'
-
+gem 'breadcrumbs_on_rails'
 gem 'simple_form'
 gem 'devise'
 gem 'doorkeeper'

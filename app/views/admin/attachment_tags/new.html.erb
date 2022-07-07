@@ -1,3 +1,7 @@
-<h1><%= @title %></h1>
+<%= render('shared/admin_page_header', title: @title ) %>
 
-<%= render 'form' %>
+<div class="content">
+    <div class="container-fluid">
+        <%= render 'form' %>
+    </div>
+</div>
