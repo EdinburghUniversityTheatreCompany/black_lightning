@@ -15,7 +15,7 @@
 # Use this setup block to configure all options available in SimpleForm.
 SimpleForm.setup do |config|
   # Default class for buttons
-  config.button_class = 'btn btn-secondary'
+  config.button_class = 'btn'
 
   # Define the default class of the input wrapper of the boolean input.
   config.boolean_label_class = 'form-check-label'
@@ -437,11 +437,4 @@ SimpleForm.setup do |config|
   #   range:         :custom_range,
   #   time:          :custom_multi_select
   # }
-  class DateTimeInput < SimpleForm::Inputs::DateTimeInput
-    private
-  
-    def use_html5_inputs?
-      input_options.fetch(:html5, true)
-    end
-  end
 end

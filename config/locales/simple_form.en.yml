@@ -25,7 +25,7 @@ en:
         status: 'Status'
         title: 'Title'
         user: 'User'
-
+    # Examples
     # labels:
     #   defaults:
     #     password: 'Password'

@@ -5,24 +5,42 @@
 <%= render('shared/admin_page_header', title: @title ) %>
 <div class="content">
   <div class="container-fluid">
-<p>
-  <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
-  <%= display_block("#{resource_class.to_s.titleize} Admin Description", false) %>
-</p>
+    <div class="row">
+      <div class="col-md-7">
+        <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Information</span>
+          </div>
+          <div class="card-body">
+            <%= display_block("#{resource_class.to_s.titleize} Admin Description", false) %>
+          </div>
+        </div>
+      </div>
+      <div class="col">
 
-<% if search_fields.present? %>
-  <%= render 'shared/search_form', input_fields: search_fields %>
-<% end %>
-
-<%= paginate(resources) %>
-
-<%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, resource_class: resource_class) %>
-
-<% if show_new_button %>
-  <%= get_link resource_class, :new %>
-<% end %>
-
-<%= paginate(resources) %>
-
+        <% if search_fields.present? %>
+        <%= render 'shared/search_form', input_fields: search_fields %>
+        <% end %>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Quick actions</span>
+          </div>
+          <div class="card-body">
+            <% if show_new_button %>
+            <%= get_link resource_class, :new %>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <p>
+          <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, resource_class: resource_class, resources: resources, search_fields: search_fields) %>
+        </p>
+      </div>
+    </div>
+  </div>
 </div>
-</div>
+

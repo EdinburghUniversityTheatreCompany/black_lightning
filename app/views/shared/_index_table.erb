@@ -10,4 +10,4 @@
     <% fields[0] = get_link(fields[0], :show) %>
 <% end %>
 
-<%= render 'shared/table', headers: headers, field_sets: field_sets %>
+<%= render 'shared/table', headers: headers, field_sets: field_sets, resources: resources, search_fields: search_fields%>
