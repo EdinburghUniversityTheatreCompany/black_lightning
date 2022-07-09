@@ -1,3 +1,5 @@
+<div class="card">
+<div class="card-header">
 <% fields.each do |label_value_pair| %>
   <% label, value = label_value_pair %>
   
@@ -12,8 +14,9 @@
     <% value = bool_text(value) %>
   <% end %>
 
-  <p>
+
     <b><%= label.is_a?(Symbol) ? label.to_s.titleize : label %>:</b>
     <%= value %>
-  </p>
+
 <% end %>
+</div>

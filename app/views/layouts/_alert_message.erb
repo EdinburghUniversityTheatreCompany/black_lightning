@@ -1,9 +1,39 @@
-<% alert_class, icon = html_alert_info(key) %>
+<% alert_type = swal_alert_info(key) %>
 
 <% # Link in alert should have the 'alert-link' class on their <a>'s to automatically colour match them. %>
 <% # Same goes for alert-heading on a heading.%>
-<div id="<%= key %>" class="alert <%= alert_class %> alert-dismissible fade show" role="alert">
-  <i class="<%= icon %> fa-large" aria-hidden=”true”></i>
-  <%= " #{message}" %>
-  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
+<% case alert_type %>
+<% when 'success','info' %>
+<script type="text/javascript">
+  Toast.fire({
+    icon: '<%= alert_type %>',
+    title: '<%= " #{message}" %>'
+  })
+</script>
+<% when 'warning' %>
+<script type="text/javascript">
+  PersistentToast.fire({
+    icon: '<%= alert_type %>',
+    title: '<%= " #{message}" %>'
+  })
+</script>
+<% when 'error' %>
+<script type="text/javascript">
+  Swal.fire({
+    icon: 'error',
+    title: 'Oops...',
+    text: '<%= " #{message}" %>',
+    allowOutsideClick: () => {
+      const popup = Swal.getPopup()
+      popup.classList.remove('swal2-show')
+      setTimeout(() => {
+        popup.classList.add('animate__animated', 'animation__shake')
+      })
+      setTimeout(() => {
+        popup.classList.remove('animate__animated', 'animation__shake')
+      }, 500)
+      return false
+    }
+  })
+</script>
+<% end %>

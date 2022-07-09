@@ -1,4 +1,4 @@
-import 'admin-lte'
+import '../src/vendor/adminlte.js'
 //import 'jQuery'
 import '../src/admin/cookies'
 

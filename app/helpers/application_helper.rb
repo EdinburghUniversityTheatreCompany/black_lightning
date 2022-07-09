@@ -24,6 +24,21 @@ module ApplicationHelper
     end
   end
 
+  def swal_alert_info(key)
+    case key.to_sym
+    when :error
+      return 'error'
+    when :alert
+      return 'warning'
+    when :success
+      return 'success'
+    when :notice
+      return 'info'
+    else
+      return 'info'
+    end
+  end
+
   # It's a bit hacky, but it works.
   # Used by the error pages and subpage layout to decide which layout to use.
   def current_environment(path)

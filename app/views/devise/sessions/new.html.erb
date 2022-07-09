@@ -1,51 +1,57 @@
 <% content_for :head do %>
-  <%= stylesheet_link_tag "login", media: "all" %>
+<%= stylesheet_link_tag "admin", media: "all" %>
 <% end %>
 
 <div class="container">
-  <div id="login_form" class="row">
-    <div class="span5 well">
-      <h2>Existing Members</h2>
+  <div class="row">
+    <div id="login_form">
+      <div class="col">
+        <h2>Existing Members</h2>
 
-<%= simple_form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
-  <%= f.error_notification %>
+        <%= simple_form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
+        <%= f.error_notification %>
 
-  <div class="form-inputs">
-    <%= f.input :email, required: false, autofocus: true %>
-    <%= f.input :password, required: false %>
-    <%= f.input :remember_me, as: :boolean if devise_mapping.rememberable? %>
-  </div>
+        <div class="form-inputs">
+          <%= f.input :email, required: false, autofocus: true %>
+          <%= f.input :password, required: false %>
+          <%= f.input :remember_me, as: :boolean if devise_mapping.rememberable? %>
+        </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, "Log in" %>
-  </div>
-<% end %>
+        <div class="form-actions">
+          <%= f.button :submit, "Log in", class: "btn btn-primary"%>
+        </div>
+        <% end %>
 
-<hr />
+        <hr />
 
-<%= render "devise/shared/links" %>
+        <%= render "devise/shared/links" %>
 
-<p style="font-size: x-small; line-height: normal;">
-        By signing in, you agree that this website may store both a session cookie to allow you to log in, and any other cookies including tracking cookies.
-        <br />
-        For more information, please see the <%= link_to 'Privacy Policy', static_path('privacy_policy')%>.
-      </p>
-    </div>
+        <p style="font-size: x-small; line-height: normal;">
+          By signing in, you agree that this website may store both a session cookie to allow you to log in, and any
+          other cookies including tracking cookies.
+          <br />
+          For more information, please see the <%= link_to 'Privacy Policy', static_path('privacy_policy')%>.
+        </p>
+      </div>
 
-    <div class="span6 well">
-      <h2>New Members</h2>
+      <!-- <div class="col">
+        <h5>New Members</h5>
 
-      <p>
-        Please buy membership at the box office or from our <a href="https://www.eusa.ed.ac.uk/activities/view/bedlam">EUSA society page</a>.
-      </p>
+        <p>
+          Please buy membership at the box office or from our <a
+            href="https://www.eusa.ed.ac.uk/activities/view/bedlam">EUSA society page</a>.
+        </p>
 
-      <p>
-        Afterwards, you will receive an email to activate your account. If you do not receive this email within a day, please email the Secretary.
-      </p>
+        <p>
+          Afterwards, you will receive an email to activate your account. If you do not receive this email within a day,
+          please email the Secretary.
+        </p>
 
-      <p>
-        If you encounter have any issues (re)activating your account, please email the secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>.
-      </p>
+        <p>
+          If you encounter have any issues (re)activating your account, please email the secretary at <a
+            href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a>.
+        </p>
+      </div>-->
     </div>
   </div>
 </div>

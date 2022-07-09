@@ -1,7 +1,7 @@
 ##
 # Public controller for Show. More details can be found there.
 #
-# Uses Will_Paginate for pagination.
+# Uses paginate for pagination.
 ##
 class ShowsController < GenericEventsController
   def test_report_500

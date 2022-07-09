@@ -1,5 +1,36 @@
-import swal from "sweetalert2";
+import swal from 'sweetalert2/dist/sweetalert2.js'
 import Rails from "@rails/ujs";
+window.Swal = swal;
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 4500,
+  customClass: {
+    popup: 'colored-toast'
+  },
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.addEventListener('mouseenter', Swal.stopTimer)
+    toast.addEventListener('mouseleave', Swal.resumeTimer)
+  },
+  iconColor: 'white'
+})
+
+const PersistentToast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: true,
+  timerProgressBar: false,
+  customClass: {
+    popup: 'colored-toast'
+  },
+  iconColor: 'white'
+})
+
+window.Toast = Toast;
+window.PersistentToast = PersistentToast;
 
 Rails.confirm = function (message, element) {
   const swalWithBootstrap = swal.mixin({
@@ -8,6 +39,7 @@ Rails.confirm = function (message, element) {
 
   swalWithBootstrap
     .fire({
+      icon: 'warning',
       html: message,
       title: "Are you sure?",
       showCancelButton: true,
@@ -21,4 +53,5 @@ Rails.confirm = function (message, element) {
         element.click();
       }
     });
-};
+}
+

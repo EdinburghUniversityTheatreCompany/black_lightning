@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
   <%= stylesheet_link_tag    "admin", media: "all" %>
@@ -14,12 +15,15 @@
 
   <meta name="viewport" content="initial-scale = 1.0" />
 </head>
+
 <body class="hold-transition sidebar-mini layout-fixed">
   <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
-      <img class="animation__shake" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
-        alt="Bedlam Theatre EUTC Logo" height="120" />
-      <p><br /><br />Loading...</p>
+      <img class="" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
+        alt="Bedlam Theatre EUTC Logo" height="120" /><br />
+      <div class="spinner-border" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
     </div>
 
     <!-- Navbar -->
@@ -39,18 +43,19 @@
       <ul class="navbar-nav ml-auto">
         <!-- Notifications Dropdown Menu -->
         <li class="nav-item dropdown">
-          <% @user = current_user %>
+          <% @header_user = current_user %>
           <a class="nav-link" data-toggle="dropdown" href="#">
             <i class="fas fa-bell"></i>
-            <span class="badge badge-danger navbar-badge <%= 'd-none' if @user.debt_message_suffix == "not in Debt" %> ">!!</span>
+            <span
+              class="badge badge-danger navbar-badge <%= 'd-none' if @header_user.debt_message_suffix == "not in Debt" %> ">!!</span>
           </a>
           <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
             <span class="dropdown-header">Notifications</span>
 
-            <a href="/admin/debts/<%= @user.id %>" class="dropdown-item">
+            <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
               <i
-                class="fas <%= 'fa-check' if @user.debt_message_suffix == "not in Debt" %> <%= 'fa-circle-exclamation' if @user.debt_message_suffix != "not in Debt" %> mr-2"></i>
-              <%= unless @user.debt_message_suffix == "in staffing and maintenance Debt" then "You are #{@user.debt_message_suffix}" else "You are in Debt" end %>
+                class="fas <%= 'fa-check' if @header_user.debt_message_suffix == "not in Debt" %> <%= 'fa-circle-exclamation' if @header_user.debt_message_suffix != "not in Debt" %> mr-2"></i>
+              <%= unless @header_user.debt_message_suffix == "in staffing and maintenance Debt" then "You are #{@header_user.debt_message_suffix}" else "You are in Debt" end %>
             </a>
         </li>
         <li class="nav-item">
@@ -84,11 +89,19 @@
         <!-- Sidebar user panel optional) -->
         <div class="user-panel mt-3 pb-3 mb-3 d-flex">
           <div class="image">
-            <img src="/images/userdef.png" class="img-circle elevation-2" alt="User Image">
+            <button href="#" id="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
+              data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
+              data-destroy-path='/users/sign_out'>
+              <% if @header_user.avatar.present? %>
+              <%= image_tag @header_user.avatar.variant(square_thumb_variant), class: "img-circle elevation-2" %>
+              <% else %>
+              <img src="/images/userdef.png" class="img-circle elevation-2" alt="User Image">
+              <% end %>
+            </button>
           </div>
           <div class="info text-white">
             <span>Welcome,
-              <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { title: 'Edit Account' } %></span>
+              <%= link_to current_user.first_name.presence || current_user.email, admin_user_path(current_user), { title: 'Edit Account' } %></span>
           </div>
         </div>
 
@@ -139,12 +152,58 @@
     <!-- /.control-sidebar -->
 
     <!-- Main Footer -->
-          <footer class="main-footer">
+    <footer class="main-footer">
       <%= render "layouts/footer" %>
     </footer>
   </div>
   <!-- ./wrapper -->
-  <script src="https://code.jquery.com/jquery-migrate-3.4.0.js"></script>
+
+  <script>
+    userModal = function (title, message, userLink, destroyLink) {
+      Swal.fire({
+        icon: 'question',
+        title: title,
+        text: message,
+        showConfirmButton: true,
+        confirmButtonText: 'View User Profile',
+        showCloseButton: true,
+        showCancelButton: true,
+        cancelButtonText: "Close",
+        showDenyButton: true,
+        denyButtonText: 'Sign Out'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          location.assign(userLink)
+        } else if (result.isDenied) {
+          $.ajax({
+            url: '/users/sign_out',
+            type: "DELETE",
+            headers: {
+              'X-CSRF-Token': $('meta[name=csrf-token]').attr('content')
+            }
+          }).done(function(){Swal.fire({
+            icon: 'success',
+            title: 'Signed out',
+            text: 'You were successfully signed out. See you soon!'
+          }).then(() => {
+            location.assign('/')
+          })});
+
+        }
+      })
+    }
+
+    var triggerUserModalEl = document.getElementById('triggerUserModal');
+    var currentUserPath = triggerUserModalEl.dataset.currentUserPath;
+    var nameAttr = triggerUserModalEl.dataset.nameAttr;
+    var destroyUserPath = triggerUserModalEl.dataset.destroyUserPath;
+
+    triggerUserModalEl.onclick = function () {
+      userModal(nameAttr,
+        "You're currently signed in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
+        currentUserPath, destroyUserPath)
+    };
+  </script>
 </body>
 
 </html>

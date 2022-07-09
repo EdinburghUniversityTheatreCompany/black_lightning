@@ -173,4 +173,11 @@ SimpleForm.setup do |config|
   # Defines validation classes to the input_field. By default it's nil.
   # config.input_field_valid_class = 'is-valid'
   # config.input_field_error_class = 'is-invalid'
+  class DateTimeInput < SimpleForm::Inputs::DateTimeInput
+    private
+  
+    def use_html5_inputs?
+      input_options.fetch(:html5, true)
+    end
+  end
 end

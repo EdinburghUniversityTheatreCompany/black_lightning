@@ -1,16 +1,19 @@
 <%= render('shared/admin_page_header', title: @title ) %>
-
+<div class="content">
 <% fields = { 
   name: @attachment_tag.name
 } %>
 
 <%= render 'shared/basic_fields', fields: fields %>
 
-<p>
-  <h3>Description</h3>
+<div class="card-body">
+  <h4>Description</h4>
   <%= render_markdown(@attachment_tag.description) %>
-</p>
-
-<%= get_link_to_attachments_for_tag(@attachment_tag)%>
+</div>
+<div class="card-footer">
+<p><%= get_link_to_attachments_for_tag(@attachment_tag)%></p>
 
 <%= render '/shared/show_actions', object: @attachment_tag %>
+</div>
+</div>
+</div>
