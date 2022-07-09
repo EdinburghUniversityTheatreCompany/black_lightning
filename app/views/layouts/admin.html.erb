@@ -89,7 +89,7 @@
         <!-- Sidebar user panel optional) -->
         <div class="user-panel mt-3 pb-3 mb-3 d-flex">
           <div class="image">
-            <button href="#" id="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
+            <a href="#" class="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
               data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
               data-destroy-path='/users/sign_out'>
               <% if @header_user.avatar.present? %>
@@ -97,11 +97,13 @@
               <% else %>
               <img src="/images/userdef.png" class="img-circle elevation-2" alt="User Image">
               <% end %>
-            </button>
+            </a>
           </div>
           <div class="info text-white">
             <span>Welcome,
-              <%= link_to current_user.first_name.presence || current_user.email, admin_user_path(current_user), { title: 'Edit Account' } %></span>
+              <a href="#" class="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
+                data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
+                data-destroy-path='/users/sign_out'><%=  current_user.first_name.presence || current_user.email %></a></span>
           </div>
         </div>
 
@@ -181,24 +183,33 @@
             headers: {
               'X-CSRF-Token': $('meta[name=csrf-token]').attr('content')
             }
-          }).done(function(){Swal.fire({
-            icon: 'success',
-            title: 'Signed out',
-            text: 'You were successfully signed out. See you soon!'
-          }).then(() => {
-            location.assign('/')
-          })});
+          }).done(function () {
+            Swal.fire({
+              icon: 'success',
+              title: 'Signed out',
+              text: 'You were successfully signed out. See you soon!'
+            }).then(() => {
+              location.assign('/')
+            })
+          });
 
         }
       })
     }
 
-    var triggerUserModalEl = document.getElementById('triggerUserModal');
-    var currentUserPath = triggerUserModalEl.dataset.currentUserPath;
-    var nameAttr = triggerUserModalEl.dataset.nameAttr;
-    var destroyUserPath = triggerUserModalEl.dataset.destroyUserPath;
+    var triggerUserModalEl = document.getElementsByClassName('triggerUserModal');
+    var firstTriggerUserModalEl = triggerUserModalEl[0];
+    var secondTriggerUserModalEl = triggerUserModalEl[1];
+    var currentUserPath = firstTriggerUserModalEl.dataset.currentUserPath;
+    var nameAttr = firstTriggerUserModalEl.dataset.nameAttr;
+    var destroyUserPath = firstTriggerUserModalEl.dataset.destroyUserPath;
 
-    triggerUserModalEl.onclick = function () {
+    firstTriggerUserModalEl.onclick = function () {
+      userModal(nameAttr,
+        "You're currently signed in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
+        currentUserPath, destroyUserPath)
+    };
+    secondTriggerUserModalEl.onclick = function () {
       userModal(nameAttr,
         "You're currently signed in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
         currentUserPath, destroyUserPath)

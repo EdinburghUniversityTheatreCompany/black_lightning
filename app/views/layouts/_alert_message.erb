@@ -1,5 +1,7 @@
 <% alert_type = swal_alert_info(key) %>
-
+<% if message == 'You need to sign in or sign up before continuing.' then alert_type='info' end %>
+<% if message == 'Invalid email or password.' then alert_type='error' end %>
+<% if message == 'Signed in successfully.' || message == 'Signed out successfully.' then alert_type='success' end %>
 <% # Link in alert should have the 'alert-link' class on their <a>'s to automatically colour match them. %>
 <% # Same goes for alert-heading on a heading.%>
 <% case alert_type %>
@@ -14,7 +16,8 @@
 <script type="text/javascript">
   PersistentToast.fire({
     icon: '<%= alert_type %>',
-    title: '<%= " #{message}" %>'
+    title: '<%= " #{message}" %>',
+    position: 'top'
   })
 </script>
 <% when 'error' %>
