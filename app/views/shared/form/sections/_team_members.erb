@@ -29,7 +29,7 @@
       Additionally, try to have one entry per person and prefer combining the roles using a slash rather than having two entries.
     </p>
 
-    <%= f.simple_fields_for :team_members, wrapper: false %>
+    <%= f.simple_fields_for :team_members %>
 
     <%= link_to_add f, :team_members %>
   <% end %>

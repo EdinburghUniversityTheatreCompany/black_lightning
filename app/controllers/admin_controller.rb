@@ -87,6 +87,12 @@ class AdminController < ApplicationController
     
     @navbar_categories << {title: 'Apps', children: children, fa_icon: "fa-info"}
 
+    # Welfare Contact
+    children =[]
+    children << { title: 'Complaints Overview', path: admin_complaints_path,  fa_icon: "fa-info"} if can? :index, Doorkeeper::Application
+    
+    @navbar_categories << {title: 'Welfare Contact', children: children, fa_icon: "fa-info"}
+
     @navbar_categories.reject! {|category| category[:children].empty? }
 
     @current_path = request.path

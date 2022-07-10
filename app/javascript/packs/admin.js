@@ -1,4 +1,4 @@
-import '../src/vendor/adminlte.js'
+import '../src/vendor/adminlte.customised.js'
 //import 'jQuery'
 import '../src/admin/cookies'
 
