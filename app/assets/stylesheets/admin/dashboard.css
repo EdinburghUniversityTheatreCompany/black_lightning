@@ -10,19 +10,3 @@
 .dashboard h3 > a:hover {
     text-decoration: none;
 }
-
-.gridster > ul {
-    list-style: none;
-}
-
-.gridster li {
-    border: 1px solid #dddddd;
-    border-radius: 5px;
-    background-color: #FFFFFF;
-    padding: 10px;
-}
-
-.gridster .preview-holder {
-    border: none!important;
-    background: #000000!important;
-}

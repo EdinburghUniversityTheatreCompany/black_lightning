@@ -1,5 +1,6 @@
 import '../src/vendor/adminlte.customised.js'
-//import 'jQuery'
+import 'jquery'
+
 import '../src/admin/cookies'
 
 import '../src/admin/nested_forms'

@@ -18,8 +18,9 @@
 require("@popperjs/core")
 
 // BOOTSTRAP: Does this need?
-//import 'jquery'
-// const jQuery = $
+require("jquery")
+
+import "corejs-typeahead";
 
 import "bootstrap"
 
