@@ -5,7 +5,7 @@ gem 'rails', '~> 7.0'
 gem 'mysql2'
 
 gem 'sass-rails',   '> 5.0.0'
-gem 'webpacker', '~> 5.x'
+gem 'webpacker', '~> 6.rc'
 gem "sprockets-rails"
 gem "terser"
 
