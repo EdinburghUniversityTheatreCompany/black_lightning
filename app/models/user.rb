@@ -94,6 +94,17 @@ class User < ApplicationRecord
 
   delegate :can?, :cannot?, to: :ability
 
+  # Returns the name if present, and the email if the user has the permission.
+  # Can also be the current_ability instead of the current_user.
+  # Should be your primary option of displaying a name
+  def name(current_user = nil)
+    if current_user.present? && current_user.can?(:show, self)
+      return name_or_email
+    else
+      return name_or_default
+    end
+  end
+
   # Returns true if the users first_name and last_name are set.
   def name?
     return first_name.present? && last_name.present?
@@ -114,15 +125,7 @@ class User < ApplicationRecord
     return email
   end
 
-  # Returns the name if present, and the email if the user has the permission.
-  # Can also be the current_ability instead of the current_user.
-  def name(current_user = nil)
-    if current_user.present? && current_user.can?(:show, self)
-      return name_or_email
-    else
-      return name_or_default
-    end
-  end
+
 
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
   def unify_numbers
