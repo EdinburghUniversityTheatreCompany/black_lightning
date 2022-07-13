@@ -1,3 +1,7 @@
+<% # TODO: Cache the carousel %>
+<% # TODO: Cache the news %>
+<% # TODO: Cache the what's on %>
+<% # TODO: In general, cache editable blocks %>
 
 <div class="row">
   <div class="col">
@@ -41,12 +45,10 @@
             <% url = item %>
             <%= link_to img, url %>
 
-            <div div class="card-body">
+            <div class="card-body">
               <%= link_to truncate(item.name, length: 30), url, class: 'card-title' %>
 
-              <p class="card-text"><small class="text-muted">
-                <%= item.date_range(true) %>
-              </small></p>
+              <p class="card-text"><small class="text-muted"><%= item.date_range(true) %></small></p>
 
               <p class="card-text"><%= item.short_blurb %></p>
 
@@ -71,7 +73,7 @@
 
             <p class="card-text"><%= truncate_markdown(news_item.body, 140) %></p>
 
-            <%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %>
+            <p class="card-text"><%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %></p>
           </li>
         <% end %>
       </ul>
