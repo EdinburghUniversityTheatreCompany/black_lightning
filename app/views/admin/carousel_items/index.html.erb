@@ -1,0 +1,22 @@
+<% headers = [:title, :tagline, :carousel_name, :is_active, :ordering] %>
+
+<% # BOOTSTRAP: This could be done in the same way as editable block where they are organised by carousel rather than in a big list. %>
+<% # TODO: It would be nice if you could reorder a carousel by dragging around the order rather than having to change the integer... %>
+
+<% field_sets = @carousel_items.map { |carousel_item| [
+  carousel_item, 
+  carousel_item.tagline,
+  carousel_item.carousel_name,
+  bool_icon(carousel_item.is_active),
+  carousel_item.ordering
+] }%>
+
+<% search_fields = {
+    title_cont:       { slug: 'defaults.title' },
+    tagline_cont:     { slug: 'defaults.tagline' },
+    carousel_name_eq: { slug: 'defaults.carouse_name', type: :select, choices: CarouselItem::CAROUSEL_NAMES },
+    # BOOTSTRAP: How to do this again...
+    is_active_eq:     { slug: 'defaults.is_active' },
+} %>
+
+<%= render 'shared/pages/index', resource_class: CarouselItem, resources: @carousel_items, headers: headers, field_sets: field_sets, search_fields: search_fields %>
