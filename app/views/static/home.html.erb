@@ -9,3 +9,52 @@
   </div>
 </div>
 
+<div class="row">
+  <div class="col-md-8">
+    <% # Note that this mt-3 is repeated on the col that has the news so that they both have equal margins and so that on mobile there is still a margin between what's on and news. %>
+    <div class="row mt-3">
+      <div class="col">
+        <%= display_block("Home", false) %>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <h3>What's On</h3>
+      </div>
+    </div>
+    
+    <% # Very similar to the user show page. Can maybe be genericised but the grid and the text is slightly different. %>
+
+    <% # If there are less than 3 events on, decrease the amount of columns to give them more space. %>
+    <% amount_of_events = @events.size %>
+
+    <% # If there are 4 events, 2x2 is nicer than 3x1 + 1 %>
+    <% amount_of_events = 2 if amount_of_events == 4 %>
+
+    <div class="row row-cols-auto row-cols-1 row-cols-md-<%= [2, amount_of_events].min %> row-cols-lg-<%= [3, amount_of_events].min %> g-3">
+      <% @events.each_with_index do |item, i| %>
+        <div class="col">
+          <div class="card h-100">
+            <% img = image_tag(item.fetch_image.variant(medium_variant), class: 'card-img-top') %>
+
+            <% url = item %>
+            <%= link_to img, url %>
+
+            <div div class="card-body">
+              <%= link_to truncate(item.name, length: 30), url, class: 'card-title' %>
+
+              <p class="card-text"><small class="text-muted">
+                <%= item.date_range(true) %>
+              </small></p>
+
+              <p class="card-text"><%= item.short_blurb %></p>
+
+              <p class="card-text"><%= link_to 'View Details', item %></p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
