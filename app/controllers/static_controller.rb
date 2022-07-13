@@ -13,8 +13,8 @@ class StaticController < ApplicationController
   end
 
   def home
-    @news = News.accessible_by(current_ability).includes(image_attachment: :blob).order('publish_date DESC').first(2)
     @events = Event.includes(image_attachment: :blob).current.reorder('start_date ASC')
+    @news = News.accessible_by(current_ability).includes(image_attachment: :blob).order('publish_date DESC').first(4)
 
     @carousel_items = CarouselItem.where(carousel_name: 'Home').active_and_ordered.includes(image_attachment: :blob)
   end

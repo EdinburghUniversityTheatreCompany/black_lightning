@@ -57,4 +57,28 @@
       <% end %>
     </div>
   </div>
+
+  <div class="col-md">
+    <div class="card mt-3">
+      <h3 class="card-header">News</h3>
+
+      <ul class="list-group list-group-flush">
+        <% @news.each do |news_item| %>
+          <li class="list-group-item">
+            <h5 class="card-title"><%= link_to news_item.title, news_path(news_item) %></h5>
+
+            <p class="card-text"><small class="text-muted"><%= l(news_item.publish_date, format: :longy) %> - By <%= news_item.author.name(@current_user) %></small></p>
+
+            <p class="card-text"><%= truncate_markdown(news_item.body, 140) %></p>
+
+            <%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %>
+          </li>
+        <% end %>
+      </ul>
+
+      <div class="card-footer">
+        <%= link_to 'Read all news', news_index_path %>
+      </div>
+    </div>
+  </div>
 </div>
