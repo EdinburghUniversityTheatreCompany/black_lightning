@@ -17,5 +17,6 @@ class StaticController < ApplicationController
     @events = Event.includes(image_attachment: :blob).current.reorder('start_date ASC')
 
     @last_event = Event.last_event
+    @carousel_items = CarouselItem.where(carousel_name: 'Home').active_and_ordered.includes(image_attachment: :blob)
   end
 end
