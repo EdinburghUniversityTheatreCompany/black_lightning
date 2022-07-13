@@ -10,34 +10,46 @@
     });
   </script>
 
-  <% include_horizontal_line = true if include_horizontal_line.nil? %>
+<div class="row">
+  <div class="col">
+    <% include_horizontal_line = true if include_horizontal_line.nil? %>
 
-  <% if include_horizontal_line %>
-    <hr />
-  <% end %>
-
-  <% header_size = 3 if header_size.nil? %>
-  <% header_tag = "h#{header_size}"%>
-  <<%= header_tag %>>Gallery</<%= header_tag %>>
-  <i>Click on a thumbnail to see the image in full-size</i>
-
-
-  <ul class="thumbnails">
-    <% pictures.includes(image_attachment: :blob).each do |picture| %>
-      <li class="span3 gallery">
-        <% img = image_tag picture.fetch_image.variant(thumb_variant) %>
-        <% url = url_for(picture.fetch_image) %>
-
-        <%= link_to img, url, class: "thumbnail fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
-        
-        <% gallery_name = picture.gallery_name %>
-        <% begin %>
-          <%= link_to(gallery_name, picture.gallery) %>
-        <% rescue NoMethodError %>
-          <%= gallery_name %>
-        <% end %>
-        - <%= picture.filename %>
-      </li>
+    <% if include_horizontal_line %>
+      <hr />
     <% end %>
-  </ul>
+
+    <% header_size = 3 if header_size.nil? %>
+    <% header_tag = "h#{header_size}"%>
+    <<%= header_tag %>>Gallery</<%= header_tag %>>
+    <i>Click on a thumbnail to see the image in full-size</i>
+
+    <% # BOOTSTRAP: Make sure the image takes up the same amount of space / the text of the card starts at the same point for all cards in a row. %>
+    <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+      <% pictures.includes(image_attachment: :blob).each do |picture| %>
+        <div class="col">
+          <div class="card h-100">
+            <% img = image_tag(picture.fetch_image.variant(medium_variant), class: 'card-img-top') %>
+            <% url = url_for(picture.fetch_image) %>
+
+            <%= link_to img, url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
+            
+            <div class="card-body">
+              <p class="card-text">
+                <% gallery_name = picture.gallery_name %>
+                <% begin %>
+                  <%= link_to(gallery_name, picture.gallery) %>
+                <% rescue NoMethodError %>
+                  <%= gallery_name %>
+                <% end %>
+                - <%= picture.filename %>
+              <p>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
 <% end %>
+
+<% # BOOTSTRAP: Margin below? %>
