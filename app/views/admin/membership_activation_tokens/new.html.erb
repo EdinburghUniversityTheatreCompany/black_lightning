@@ -5,7 +5,7 @@
 
     <p>Enter the email of a new member here to send them an activation email.</p>
     <%= f.input :email %>
-    <%= f.button :submit, "Send Activation" %>
+    <%= f.button :submit, "Send Activation", class: 'btn btn-primary' %>
 <% end %>
 
 <p>Or activate a current user by entering their name:</p>
@@ -15,5 +15,5 @@
 
     <%= render '/shared/form/user_field', f: f, all_users: true %>
 
-    <%= f.button :submit, "Send Re-activation" %>
+    <%= f.button :submit, "Send Re-activation", class: 'btn btn-primary' %>
 <% end %>
