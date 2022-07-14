@@ -5,28 +5,29 @@
 <% end %>
 
 <div class="row">
-  <div class="span12">
+  <div class="col">
+    <% if @events.empty? %>
+    There are no upcoming ...
+    <% else %>
+      <ul class="list-group list-group-flush">
+        <% @events.each do |event| %>
+          <li class="list-group-item">
+            <% # BOOTSTRAP: Prevent content from moving after the image loads. %>
+            <% image = image_tag event.fetch_image.variant(thumb_variant), class: 'img-fluid' %>
+            <%= link_to image, event, class: "float-start img-thumbnail me-3 h-100" %>
 
-    <hr />
+            <h4 class="card-title"><%= link_to event.name, event %></h4>
 
-    <% @events.each do |event| %>
-      <article class="media">
-        <% image = image_tag event.fetch_image.variant(thumb_variant), class: "media-object" %>
-        <%= link_to image, event, class: "pull-left thumbnail" %>
-        <div class="media-body">
-          <header class="media-heading">
-            <h4 class="media-heading"><%= link_to event.name, event %></h4>
-          </header>  
-          <p><span class="date"><%= event.date_range true %></span></p>
-          <p><%= event.short_blurb %></p>
-          <p><%= link_to 'View Details', event %></p>
-        </div>
-      </article>
+            <p class="card-text"><small class="text-muted"><%= event.date_range true %></small></p>
 
-      <hr />
+            <p class="card-text"><%= event.short_blurb %></p>
 
+            <p><%= link_to 'View Details', event, class: 'btn btn-primary' %></p>
+          </li>
+        <% end %>
+      </ul>
+
+      <%= paginate(@events) %>
     <% end %>
-
-    <%= paginate(@events) %>
   </div>
 </div>

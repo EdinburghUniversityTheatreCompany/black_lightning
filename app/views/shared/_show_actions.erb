@@ -1,7 +1,8 @@
+
 <% destroy_link_params = {} if destroy_link_params.nil? %>
 <% index_link_params = {} if index_link_params.nil? %>
 
-<div>
+<div class="mb-3">
   <%= get_link object, :edit, html_class: 'btn btn-primary' %>
 
   <%= get_link object, :destroy, **destroy_link_params %>

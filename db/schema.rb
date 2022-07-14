@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_05_19_130421) do
+ActiveRecord::Schema[7.0].define(version: 2022_07_13_140518) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -227,6 +227,16 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_19_130421) do
     t.bigint "item_id"
     t.integer "access_level", default: 1, null: false
     t.index ["item_type", "item_id"], name: "index_attachments_on_item_type_and_item_id"
+  end
+
+  create_table "carousel_items", charset: "utf8mb3", force: :cascade do |t|
+    t.string "title"
+    t.text "tagline"
+    t.boolean "is_active"
+    t.string "carousel_name"
+    t.integer "ordering"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "children_techies", id: :integer, charset: "utf8mb3", collation: "utf8_unicode_ci", force: :cascade do |t|
@@ -604,13 +614,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_05_19_130421) do
     t.index ["item_type", "item_id"], name: "index_video_links_on_item_type_and_item_id"
   end
 
-  create_table "vouchers", charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
-    t.string "voucher"
-    t.boolean "is_active"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-  end
-
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"

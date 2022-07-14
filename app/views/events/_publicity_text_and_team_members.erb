@@ -1,17 +1,27 @@
-<div class="row vertical-rule">
-  <div class="span<%= event.team_members.any? ? '8' : '12' %>">
-    <h3>Details</h3>
-    <%= render_markdown event.publicity_text %>
+<div class="row">
+  <div class="col-md-<%= event.team_members.any? ? '8' : '12' %>">
+    <div class="card mb-3">
+      <h3 class="card-header">Details</h3>
 
-    <% if event.pretix_shown %>
-      <%= render 'shared/pretix_widget', event: event %>
-    <%end%>
+      <div class="card-body">
+        <%= render_markdown event.publicity_text %>
+
+        <% if event.pretix_shown %>
+          <%= render 'shared/pretix_widget', event: event %>
+        <% end %>
+      </div>
+    </div>
   </div>
 
   <% if event.team_members.any? %>
-    <div class="span4">
-      <h3>Cast and Crew</h3>
-      <%= render '/shared/show_team_members', team_members: event.team_members, admin_view: true %>
+    <div class="col-md-4">
+      <div class="card mb-3">
+        <h3 class="card-header">Cast and Crew</h3>
+        
+        <div class="card-body">
+          <%= render '/shared/show_team_members', team_members: event.team_members, admin_view: true %>
+        </div>
+      </div>
     </div>
   <% end %>
 </div>

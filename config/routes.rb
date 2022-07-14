@@ -18,6 +18,7 @@ ChaosRails::Application.routes.draw do
   #   post 'users/reactivate/stripe', to: 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
   # end
 
+  resources :events,      only: [:index]
   resources :shows,       only: [:index, :show]
   resources :workshops,   only: [:index, :show]
   resources :news,        only: [:index, :show]
@@ -129,6 +130,7 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :editable_blocks
+    resources :carousel_items
     resources :mass_mails
 
     resources :users do

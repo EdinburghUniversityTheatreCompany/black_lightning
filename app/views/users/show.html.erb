@@ -13,9 +13,10 @@
 
 
 <h3>Projects</h3>
-<div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-1">
+<div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
   <% @team_memberships.each_with_index do |item, i| %>
   <div class="col">
+    <% # BOOTSTRAP: Figure out how to keep h at 100 while simultaneously allowing for gutters.. Applies to the same system on the home page and gallery and videolinks too. %>
     <div class="card h-100">
       <% img = image_tag(item.teamwork.fetch_image.variant(medium_variant), class: 'card-img-top') %>
       <% url = @link_to_admin_events ? [:admin, item.teamwork] : item.teamwork %>
@@ -23,7 +24,7 @@
       <%= link_to img, url %>
 
       <div div class="card-body">
-        <%= link_to truncate(item.teamwork.name, length: 30), url, class: 'card-title' %><br />
+        <%= link_to item.teamwork.name, url, class: 'card-title' %><br />
         <p class="card-text">
           <%= item.teamwork.date_range true %><br />
           <%= item.position %>

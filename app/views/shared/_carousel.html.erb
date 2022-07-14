@@ -1,0 +1,36 @@
+<div id="<%= id %>" class="carousel carousel-dark slide" data-bs-ride="carousel">
+  <div class="carousel-indicators">
+    <% carousel_items.each_with_index do |item, index| %>
+      <button type="button" data-bs-target="#<%= id %>" data-bs-slide-to="<%= index %>" aria-label="<%= item.title %>" <%= 'class="active" aria-current="true"'.html_safe if index == 0 %>></button>
+    <% end %>
+  </div>
+
+  <div class="carousel-inner">
+    <% carousel_items.each_with_index do |item, index| %>
+      <div class="carousel-item <%= 'active' if index == 0 %>" data-bs-interval="3500">
+        <% # BOOTSTRAP: Variant this? %>
+        <% # BOOTSTRAP: Stop content jumps: https://itnext.io/how-to-stop-content-jumping-when-images-load-7c915e47f576 %>
+
+        <% #div style="width: <%= item.image.metadata['width'] px; height: <%= item.image.metadata['height']px" %>   
+        <% # <div class="d-block w-100" style="height: <%= item.image.metadata['height'] px;"> %>
+        <%= image_tag(item.image, class: "d-block w-100") %>
+  
+        <div class="carousel-caption-below d-block card w-100">
+          <div class="card-body">
+            <h5><%= item.title %></h5>
+            <p><%= item.tagline %></p>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <button class="carousel-control-prev" type="button" data-bs-target="#<%= id %>" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Previous</span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#<%= id %>" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Next</span>
+  </button>
+</div>

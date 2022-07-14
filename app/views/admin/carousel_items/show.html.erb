@@ -1,0 +1,13 @@
+<h1><%= @title %></h1>
+
+<% fields = { 
+  title: @carousel_item.title,
+  tagline: @carousel_item.tagline,
+  carousel_name: @carousel_item.carousel_name,
+  is_active: @carousel_item.is_active,
+  order: @carousel_item.ordering
+} %>
+
+<%= render 'shared/basic_fields', fields: fields %>
+
+<%= render '/shared/show_actions', object: @carousel_item %>
