@@ -13,6 +13,7 @@ en:
 
     labels:
       defaults:
+        author: 'Author'
         active: 'Is Active'
         code: 'Code'
         comments: 'Comments'
@@ -25,6 +26,8 @@ en:
         status: 'Status'
         title: 'Title'
         user: 'User'
+        publish_date_gteq: 'Published After'
+        publish_date_lteq: 'Published Before'
     # Examples
     # labels:
     #   defaults:

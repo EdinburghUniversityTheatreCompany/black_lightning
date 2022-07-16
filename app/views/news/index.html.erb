@@ -1,4 +1,13 @@
-<% search_form = nil %>
+<% # BOOTSTRAP: The date fields are currently not working. %>
+<% search_fields = {
+    title_cont:             { slug: 'defaults.name' },
+    body_cont:              { slug: 'defaults.description'},
+    author_full_name_cont:  { slug: 'defaults.author'},
+    publish_date_gteq:      { slug: 'defaults.publish_date_gteq'},
+    publish_date_lteq:      { slug: 'defaults.publish_date_lteq'},
+} %>
+
+<% search_form = render('shared/pages/public/partials/search_form', search_fields: search_fields) %>
 
 <% items = @news.collect { |news| { 
   url: url_for(news),
