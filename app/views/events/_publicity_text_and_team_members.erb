@@ -1,7 +1,7 @@
 <div class="row">
   <div class="col-md-<%= event.team_members.any? ? '8' : '12' %>">
     <div class="card mb-3">
-      <h3 class="card-header">Details</h3>
+      <h3 class="card-header">Description</h3>
 
       <div class="card-body">
         <%= render_markdown event.publicity_text %>
