@@ -36,7 +36,7 @@
 							</li>
 						<% else %>
 							<% # Render normal link %>
-							<li class="nav-item"><%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link bedlam-nav-text#{' active' if @current_path == navbar_item[:path]}") %></li>
+							<li class="nav-item <%= navbar_item[:item_class] %>"><%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]} ") %></li>
 						<% end %>
 					</div>
 				<% end %>
