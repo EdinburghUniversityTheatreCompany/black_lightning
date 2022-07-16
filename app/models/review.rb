@@ -22,4 +22,6 @@ class Review < ApplicationRecord
   validates :rating, numericality: { greater_than: 0 }
 
   belongs_to :show
+
+  # TOOD: Include link to the original review
 end
