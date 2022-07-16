@@ -1,0 +1,33 @@
+<div class="row">
+  <div class="col">
+  <h1><%= header %></h1>
+  </div>
+</div>
+
+
+<% # BOOTSTRAP: How to do margins as well as making sure the height is the same? Same goes or the publicity text one.%>
+<div class="row">
+  <div class="col-md-8">
+    <div class="card mb-3">
+      <%= image_tag(image.variant(slideshow_variant), class: 'card-img-top') %>
+      
+      <% tagline = nil unless tagline.present? %>
+      <% if tagline.present? %>
+        <div class="card-body">
+          <p class="card-text"><%= tagline %></p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="card mb-3">
+      <div class="card-body">
+        <% details.each do |detail| %>
+          <h4><%= detail[:key] %></h4>
+          <p><%= detail[:value] %></p>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
