@@ -37,6 +37,10 @@ module ActiveStorageHelper
     return { resize_to_fill: [192 * scale_factor, 100 * scale_factor] }
   end
 
+  def thumb_variant_public(scale_factor = 1)
+    return thumb_variant(1.1 * scale_factor)
+  end
+
   def medium_variant
     return { resize_to_fill: [576, 300] }
   end

@@ -1,26 +1,14 @@
-<% # BOOTSTRAP: pull-left and row.%>
-<div class="row">
-  <h1><%= @title %></h1>
-  <hr />
+<% search_form = nil %>
 
-  <% @venues.each do |venue| %>
-  <article class="media">
-    <% image = image_tag venue.fetch_image.variant(thumb_variant), class: "media-object" %>
-    <%= link_to image, venue, class: "pull-left thumbnail" %>
-    <div class="media-body">
-      <header class="media-heading">
-        <h4 class="media-heading"><%= link_to venue.name, venue %></h4>
-      </header>
-      <p>
-        <%= venue.tagline %>
-      </p>
-      <p><%= link_to 'View Details', venue %></p>
-    </div>
-  </article>
-  <hr />
+<% items = @venues.collect { |venue| { 
+  url: url_for(venue),
+  image: venue.fetch_image,
+  header: venue.name,
+  paragraphs: [
+    { content: venue.tagline }
+  ],
+  button_text: 'View Details'
+  } }
+%>
 
-  <% end %>
-
-  <%= paginate(@venues) %>
-
-</div>
+<%= render 'shared/pages/public/index', search_form: search_form, items: items, resources: @venues %>
