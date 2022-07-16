@@ -5,7 +5,6 @@ class ApplicationController < ActionController::Base
   before_action :set_paper_trail_whodunnit
 
   before_action :set_globals
-  before_action :prepare_for_mobile
   before_action :set_navbar
 
   check_authorization unless: :devise_controller?
@@ -92,24 +91,4 @@ class ApplicationController < ActionController::Base
       type.all  { render body: nil, status: status_code }
     end
   end
-
-  # Believed to match about 98% of mobile browsers. https://gist.github.com/1503252
-  MOBILE_REGEX = /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/
-
-  ##
-  # Mobile device detection
-  ##
-  def mobile_device?
-    if session[:mobile_param]
-      session[:mobile_param] == 'true'
-    else
-      request.user_agent =~ MOBILE_REGEX
-    end
-  end
-  helper_method :mobile_device?
-
-  def prepare_for_mobile
-    session[:mobile_param] = params[:mobile] if params[:mobile]
-  end
-
 end
