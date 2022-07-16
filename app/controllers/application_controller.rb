@@ -26,7 +26,7 @@ class ApplicationController < ActionController::Base
       'og:image' => @base_url + helpers.image_path('BedlamLogoBW.png'),
       'og:title' => @title ? "#{@title} - Bedlam Theatre" : 'Bedlam Theatre',
 
-      'viewport' => 'initial-scale = 1.0,maximum-scale = 1.0'
+      'viewport' => 'width=device-width, initial-scale=1'
     }
 
     @support_email = 'it@bedlamtheatre.co.uk'
