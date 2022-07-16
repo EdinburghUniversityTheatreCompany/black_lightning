@@ -1,9 +1,12 @@
 class ApplicationController < ActionController::Base
+  include SubpageHelper
+
   protect_from_forgery with: :exception
   before_action :set_paper_trail_whodunnit
 
   before_action :set_globals
   before_action :prepare_for_mobile
+  before_action :set_navbar
 
   check_authorization unless: :devise_controller?
 
@@ -14,7 +17,7 @@ class ApplicationController < ActionController::Base
 
   rescue_from ActiveRecord::RecordNotFound, with: :report_404# unless Rails.env.development? || Rails.env.test?
   rescue_from ActionController::RoutingError, with: :report_404 
-  
+
   def set_globals
     @base_url = request.protocol + request.host_with_port
     # Create the @meta hash
@@ -30,6 +33,26 @@ class ApplicationController < ActionController::Base
     }
 
     @support_email = 'it@bedlamtheatre.co.uk'
+  end
+
+  def set_navbar
+    @navbar_items = [
+      { title: 'Events',        path: events_path },
+      { title: 'About',         children: get_navbar_children('about') },
+      { title: 'Get Involved',  children: get_navbar_children('get_involved') },
+      { title: 'Archives',      children: get_navbar_children('archives') },
+      { title: 'Contact',       path: static_path('contact') },
+      { title: 'Accessibility', path: static_path('accessibility') }
+    ]
+
+    # Display the login link if the user is not signed in yet, otherwise display a link to the admin site and a link to log out.
+    if user_signed_in?
+      @navbar_items << { title: 'Members', path: admin_path }
+      @navbar_items << { title: 'Log Out', path: destroy_user_session_path, method: :delete }
+    else
+      # Use admin_path rather than user_session_path so someone is automatically redirected to the admin site after signing in.
+      @navbar_items << { title: 'Log In', path: admin_path }
+    end
   end
 
   def report_500(exception)

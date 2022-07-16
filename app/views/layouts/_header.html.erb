@@ -1,27 +1,37 @@
+
 <%= link_to image_tag('Header.png', class: "img-fluid"), root_url %>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="<%= root_url %>">
-      Bedlam Theatre
-    </a>
-    
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+<% # NICETOHAVE: On mobile, the hambuger should be on the right of the header. %>
+
+<% # TODO: Indicate the current item by using aria-current="page" for the current page or aria-current="true" for the current item in a set.%>
+<nav class="navbar navbar-expand-lg navbar-light ">
+  <div class="container d-flex justify-content-between">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTop" aria-controls="navbarTop" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><%= link_to 'Shows', shows_path, class: "nav-link" %></li>
-
-        <% if WorkshopCounter.workshop_count > 0 %>
-        <li class="nav-item"><%= link_to 'Workshops', workshops_path , class: "nav-link" %></li>
-        <% end %>
-
-        <li class="nav-item"><%= link_to 'News', news_index_path, class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'About', about_index_path, class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'Get Involved', get_involved_index_path, class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'Accessibility', static_path('accessibility'), class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'Contact', static_path('contact'), class: "nav-link" %></li>
+    <div class="collapse navbar-collapse" id="navbarTop">
+			<ul class="navbar-nav me-auto mb-2 mb-lg-0 d-flex ">
+				<% @navbar_items.each do |navbar_item| %>
+					<% if navbar_item[:children].present? %>
+						<% # Render Dropdown %>
+						<li class="nav-item flex-fill dropdown">
+							<a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" href="#"><%= navbar_item[:title] %></a>
+							<ul class="dropdown-menu">
+								<% navbar_item[:children].each do |child_item| %>
+									<% if child_item[:title].include?('Divider') %>
+										<li><hr class="dropdown-divider"></li>
+									<% else %>
+										<li><a class="dropdown-item" href="<%= child_item[:path] %>"><%= child_item[:title] %></a></li>
+									<% end %>
+								<% end %>
+							</ul>
+						</li>
+					<% else %>
+						<% # Render normal link%>
+						<li class="nav-item flex-fill"><%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link") %></li>
+					<% end %>
+				<% end %>
+			</ul>
     </div>
   </div>
 </nav>

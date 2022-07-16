@@ -21,7 +21,7 @@ class AdminController < ApplicationController
     return false
   end
 
-  def set_globals
+  def set_navbar
     @navbar_categories = []
 
     # Propose
