@@ -11,9 +11,7 @@
     <% else %>
         <% items.each do |item| %>
           <div class="d-flex">
-
-            <% # BOOTSTRAP: The image does not quite fill its box. %>
-            <% image = image_tag(item[:image].variant(thumb_variant_public), class: 'flex-fill', style: "width: #{thumb_variant_public[:resize_to_fill][0]}px; height: #{thumb_variant_public[:resize_to_fill][1]}px") %>
+            <% image = image_tag(item[:image].variant(thumb_variant_public), class: 'flex-fill', style: generate_scaffold_style(thumb_variant_public)) %>
             <%= link_to(image, item[:url], class: "img-thumbnail h-100") %>
 
             <div class="flex-fill ms-3">

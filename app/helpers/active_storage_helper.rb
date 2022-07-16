@@ -56,4 +56,8 @@ module ActiveStorageHelper
   def square_display_variant
     return { resize_to_fill: [700, 700] }
   end
+
+  def generate_scaffold_style(variant)
+    return "width: #{variant[:resize_to_fill][0]}px; height: #{variant[:resize_to_fill][1]}px" 
+  end
 end
