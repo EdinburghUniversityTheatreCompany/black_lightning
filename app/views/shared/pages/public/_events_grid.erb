@@ -3,9 +3,6 @@
 <% # If there are less than the maximum amount of events on, decrease the amount of columns to give them more space. %>
 <% amount_of_events = items.size %>
 
-
-
-
 <% if amount_of_events > 0 %>
   <% if col_size == 8 %>
     <% # If there are 4 events, 2x2 is nicer than 3x1 + 1 %>
@@ -28,6 +25,7 @@
       <div class="col">
         <div class="card h-100">
           <% url = link_to_admin_events ? [:admin, item[:event]] : item[:event] %>
+          <% # BOOTSTRAP: Prevent content jumping here. %>
           <% img = image_tag(item[:event].fetch_image.variant(medium_variant), class: 'card-img-top') %>
           <%= link_to(img, url) %>
 
