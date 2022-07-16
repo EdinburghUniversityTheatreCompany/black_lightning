@@ -96,8 +96,6 @@ class AdminController < ApplicationController
 
     @navbar_categories.reject! { |category| category[:children].empty? }
 
-    @current_path = request.path
-
     # to do - unsorted things
 
     add_breadcrumb 'Home', :admin_path

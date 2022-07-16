@@ -1,36 +1,46 @@
+<div class="container">
+	<%= link_to image_tag('Header.png', class: "img-fluid"), root_url %>
+</div>
+<% # NICETOHAVE: The hamburger should be on the right of the header when it appears.. %>
 
-<%= link_to image_tag('Header.png', class: "img-fluid"), root_url %>
-
-<% # NICETOHAVE: On mobile, the hambuger should be on the right of the header. %>
-
-<% # TODO: Indicate the current item by using aria-current="page" for the current page or aria-current="true" for the current item in a set.%>
-<nav class="navbar navbar-expand-lg navbar-light ">
-  <div class="container d-flex justify-content-between">
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTop" aria-controls="navbarTop" aria-expanded="false" aria-label="Toggle navigation">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mx-2 mb-3">
+  <div class="container">
+		<% # BOOTSTRAP: The whole hamburger should be white. %>
+    <button class="navbar-toggler bedlam-nav-text" style="border-color: rgba(255, 255, 255, 1);" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTop" aria-controls="navbarTop" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarTop">
-			<ul class="navbar-nav me-auto mb-2 mb-lg-0 d-flex ">
-				<% @navbar_items.each do |navbar_item| %>
-					<% if navbar_item[:children].present? %>
-						<% # Render Dropdown %>
-						<li class="nav-item flex-fill dropdown">
-							<a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" href="#"><%= navbar_item[:title] %></a>
-							<ul class="dropdown-menu">
-								<% navbar_item[:children].each do |child_item| %>
-									<% if child_item[:title].include?('Divider') %>
-										<li><hr class="dropdown-divider"></li>
-									<% else %>
-										<li><a class="dropdown-item" href="<%= child_item[:path] %>"><%= child_item[:title] %></a></li>
-									<% end %>
-								<% end %>
-							</ul>
-						</li>
-					<% else %>
-						<% # Render normal link%>
-						<li class="nav-item flex-fill"><%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link") %></li>
+			<ul class="navbar-nav mb-2 mb-lg-0 w-100">
+				<div class="row w-100 g-0">
+
+				<% @navbar_items.each_with_index do |navbar_item, index| %>
+					<% # Add in columns to pad the auto to make sure the full width of the row is taken up, which a row of only col-auto's won't do%>
+					<% if index > 0 %>
+						<div class="col"></div>
 					<% end %>
+
+					<div class="col-lg-auto">
+						<% if navbar_item[:children].present? %>
+							<% # Render Dropdown %>
+							<li class="nav-item dropdown">
+								<a class="nav-link dropdown-toggle bedlam-nav-text" role="button" data-bs-toggle="dropdown" href="#"><%= navbar_item[:title] %></a>
+								<ul class="dropdown-menu">
+									<% navbar_item[:children].each do |child_item| %>
+										<% if child_item[:title].include?('Divider') %>
+											<li><hr class="dropdown-divider"></li>
+										<% else %>
+											<li><a class="dropdown-item" href="<%= child_item[:path] %>"><%= child_item[:title] %></a></li>
+										<% end %>
+									<% end %>
+								</ul>
+							</li>
+						<% else %>
+							<% # Render normal link %>
+							<li class="nav-item"><%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link bedlam-nav-text#{' active' if @current_path == navbar_item[:path]}") %></li>
+						<% end %>
+					</div>
 				<% end %>
+				</div>
 			</ul>
     </div>
   </div>

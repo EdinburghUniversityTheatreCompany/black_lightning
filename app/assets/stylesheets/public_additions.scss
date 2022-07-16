@@ -1,0 +1,14 @@
+@import "custom_bootstrap";
+
+// START HEADER
+.bedlam-nav-text {
+  @extend .text-white;
+  @extend .text-lg-center;
+  
+  font-weight: bold;
+}
+
+.navbar-bedlam {
+  background-color: $red;
+}
+// END HEADER

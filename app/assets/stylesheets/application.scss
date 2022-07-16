@@ -1,7 +1,20 @@
-// Note that things placed here do not work for the backend.
-@import 'base';
+// NOTE THAT THINGS PLACED HERE DO NOT WORK FOR THE BACKEND
+@import 'custom_bootstrap';
 
+//$fa-font-path: '@fortawesome/fontawesome-free/webfonts';
+//@import '@fortawesome/fontawesome-free/scss/fontawesome';
+//@import '@fortawesome/fontawesome-free/scss/solid';
+//@import '@fortawesome/fontawesome-free/scss/regular';
+//@import '@fortawesome/fontawesome-free/scss/brands';
+//@import '@fortawesome/fontawesome-free/scss/v4-shims';
+
+@import 'form_additions';
+@import 'shared_additions';
+
+// BOOTSTRAP: I think bootstrap-extensions should be merged with the rest. _everything_ is Bootstrap.
+@import 'bootstrap-extensions';
+
+// BOOTSTRAP: This file does not exist. Did you mean @import 'admin/swalCustomTheme.css';
 @import 'vendor/swalCustomTheme.css';
-@import 'admin/customisations.scss';
 
-@import 'additions';
+@import 'public_additions';
