@@ -69,5 +69,8 @@ module ChaosRails
     end
 
     config.start_year = 1871
+
+    # Set image loading to lazy.
+    config.action_view.image_loading = "lazy"
   end
 end
