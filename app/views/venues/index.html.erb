@@ -1,4 +1,9 @@
-<% search_form = nil %>
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' },
+    description_cont: { slug: 'defaults.description'}
+} %>
+
+<% search_form = render('shared/pages/public/partials/search_form', search_fields: search_fields) %>
 
 <% items = @venues.collect { |venue| { 
   url: url_for(venue),
