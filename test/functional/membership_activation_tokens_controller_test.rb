@@ -13,7 +13,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_response :success
 
     # I was not quite sure how to best test that the user form is present, so I'm just testing if the hint is present.
-    assert_match 'If you already have an account, please sign in instead of completing this form twice.', response.body
+    assert_match 'If you already have an account, please log in instead of completing this form twice.', response.body
     assert_not assigns(:user).persisted?
   end
 
@@ -70,7 +70,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['This token belongs to an existing user, but you are not signed in. Please sign in and try again.'], flash[:error]
+    assert_equal ['This token belongs to an existing user, but you are not signed in. Please log in and try again.'], flash[:error]
   end
 
   test 'submit for new member' do
@@ -116,7 +116,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_not assigns(:user).persisted?
 
     # The user form has to be present, even though a user is passed, but this user has not persisted yet.
-    assert_match 'If you already have an account, please sign in instead of completing this form twice.', response.body
+    assert_match 'If you already have an account, please og in instead of completing this form twice.', response.body
   end
 
   test 'cannot submit with invalid user attributes' do

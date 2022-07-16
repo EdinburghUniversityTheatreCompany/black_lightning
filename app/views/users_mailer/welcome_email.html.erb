@@ -2,9 +2,9 @@
 
 <p>As a member of the EUTC, an account has been created for you on the Bedlam Theatre website. This is the place for you to propose shows, sign up for staffing, read news, and access resources. </p>
 
-<p>We're really excited to get you started on the site, so <% if @reset_password then %>to sign in, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %><% else %>click <%= link_to 'here to sign in', new_user_session_url %><% end %>.</p>
+<p>We're really excited to get you started on the site, so <% if @reset_password then %>to login, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %><% else %>click <%= link_to 'here to log in', new_user_session_url %><% end %>.</p>
 <p>
-You'll be able to access the members site from <a href="http://www.bedlamtheatre.co.uk">www.bedlamtheatre.co.uk</a> just click "members" in the top right. If you have any problems with signing in or suggestions about the website, please let us know on <a href="mailto:it@bedlamtheatre.co.uk">it@bedlamtheatre.co.uk</a> as soon as possible.</p>
+You'll be able to access the members site from <a href="http://www.bedlamtheatre.co.uk">www.bedlamtheatre.co.uk</a> just click "members" in the top right. If you have any problems with logging in or suggestions about the website, please let us know on <a href="mailto:it@bedlamtheatre.co.uk">it@bedlamtheatre.co.uk</a> as soon as possible.</p>
 
 <p>Kind Regards,</p>
 
