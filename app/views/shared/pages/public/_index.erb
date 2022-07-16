@@ -18,15 +18,10 @@
 
             <div class="flex-fill ms-3">
               <h4 class="media-heading"><%= link_to item[:header], item[:url] %></h4>
-              <% item[:paragraphs].each do |paragraph| %>
-                <p class="card-text">
-                  <%= '<small class="text-muted">'.html_safe if paragraph[:small] %>
-                  <%= paragraph[:content] %>
-                  <%= '</small>'.html_safe if paragraph[:small] %>
-                </p>
-              <% end %>
+              
+              <%= render('shared/pages/public/partials/card_paragraphs', paragraphs: item[:paragraphs]) %>
 
-              <p><%= link_to item[:button_text], item[:url], class: 'btn btn-primary' %></p>
+              <p class="card-text"><%= link_to item[:button_text], item[:url], class: 'btn btn-primary' %></p>
             </div>
           </div>
           <hr />

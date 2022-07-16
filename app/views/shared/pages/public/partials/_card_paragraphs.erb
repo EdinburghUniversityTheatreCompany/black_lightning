@@ -1,0 +1,7 @@
+<% paragraphs.each do |paragraph| %>
+  <p class="card-text">
+    <%= '<small class="text-muted">'.html_safe if paragraph[:small] %>
+    <%= paragraph[:content] %>
+    <%= '</small>'.html_safe if paragraph[:small] %>
+  </p>
+<% end %>
