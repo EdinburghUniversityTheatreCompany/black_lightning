@@ -9,6 +9,8 @@
       <%= f.input :ordering, hint: 'The lower the number, the earlier it will appear.' %>
 
       <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'The aspect ratio should be the same for all items in the same carousel.' %>
+
+      <%= f.input :url, hint: 'URL for the destination when clicking the carousel image.'%>
   </div>
 
   <%= render '/shared/form/form_actions', f: f %>

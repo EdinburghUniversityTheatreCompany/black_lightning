@@ -1,28 +1,28 @@
-<% # BOOTSTRAP: Thumbnails and image sizes do not match but not sure how to fix. %>
+<% # BOOTSTRAP: The date fields are currently not working. %>
+<% search_fields = {
+    title_cont:             { slug: 'defaults.name' },
+    body_cont:              { slug: 'defaults.description'},
+    author_full_name_cont:  { slug: 'defaults.author'},
+    publish_date_gteq:      { slug: 'defaults.publish_date_gteq'},
+    publish_date_lteq:      { slug: 'defaults.publish_date_lteq'},
+} %>
 
-<h1><%= @title %></h1>
+<% search_form = render('shared/pages/public/partials/search_form', search_fields: search_fields) %>
 
-<hr />
+<% items = @news.collect { |news| { 
+  url: url_for(news),
+  image: news.fetch_image,
+  header: news.title,
+  paragraphs: [
+    { content: l(news.publish_date, format: :longy), small: true },
+    { content: news.preview }
+  ],
+  button_text: 'Read Full Article'
+  } }
+%>
 
-<% @news.each do |news| %>
-<div class="d-flex">
-  <% image = image_tag news.fetch_image.variant(thumb_variant), class: "flex-shrink-0" %>
-  <%= link_to image, news, class: "img-thumbnail" %>
-  <div class="flex-grow-1 ms-3">
-    <header class="media-heading">
-        <h4 class="media-heading"><%= link_to news.title, news %></h4>
-    </header>
-    <p><time datetime="<%= news.publish_date.strftime("%FT%T%:z") %>"><%= l news.publish_date, format: :longy %></time></p>
-   
-    <%= raw generate_preview render_markdown news.body %>
+<%= render 'shared/pages/public/index', search_form: search_form, items: items, resources: @news %>
 
-    <p><%= link_to 'View Full Article', news %></p>
-  </div>
-</div>
-<hr />
-<% end %>
 
-<%= paginate(@news) %>
-
-<% rss_icon = 'RSS Feed: <i class="fa fa-rss" aria-hidden=”true”></i>' %>
-<%= link_to rss_icon.html_safe, news_index_path(format: :rss) %>
+<% rss_icon = '<i class="fa fa-rss" aria-hidden=”true”></i> RSS Feed' %>
+<%= link_to(rss_icon.html_safe, news_index_path(format: :rss), class: 'btn btn-secondary') %>

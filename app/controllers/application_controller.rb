@@ -1,9 +1,11 @@
 class ApplicationController < ActionController::Base
+  include SubpageHelper
+
   protect_from_forgery with: :exception
   before_action :set_paper_trail_whodunnit
 
   before_action :set_globals
-  before_action :prepare_for_mobile
+  before_action :set_navbar
 
   check_authorization unless: :devise_controller?
 
@@ -14,9 +16,11 @@ class ApplicationController < ActionController::Base
 
   rescue_from ActiveRecord::RecordNotFound, with: :report_404# unless Rails.env.development? || Rails.env.test?
   rescue_from ActionController::RoutingError, with: :report_404 
-  
+
   def set_globals
     @base_url = request.protocol + request.host_with_port
+    @current_path = request.path
+  
     # Create the @meta hash
     @meta = {
       description: 'The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.',
@@ -26,10 +30,30 @@ class ApplicationController < ActionController::Base
       'og:image' => @base_url + helpers.image_path('BedlamLogoBW.png'),
       'og:title' => @title ? "#{@title} - Bedlam Theatre" : 'Bedlam Theatre',
 
-      'viewport' => 'initial-scale = 1.0,maximum-scale = 1.0'
+      'viewport' => 'width=device-width, initial-scale=1'
     }
 
     @support_email = 'it@bedlamtheatre.co.uk'
+  end
+
+  def set_navbar
+    @navbar_items = [
+      { title: 'Events',        path: events_path },
+      { title: 'About',         children: get_navbar_children('about') },
+      { title: 'Get Involved',  children: get_navbar_children('get_involved') },
+      { title: 'Archives',      children: get_navbar_children('archives') },
+      { title: 'Contact',       path: static_path('contact') },
+      { title: 'Accessibility', path: static_path('accessibility') }
+    ]
+
+    # Display the login link if the user is not signed in yet, otherwise display a link to the admin site and a link to log out.
+    if user_signed_in?
+      @navbar_items << { title: 'Members', path: admin_path }
+      @navbar_items << { title: 'Log Out', path: destroy_user_session_path, method: :delete, item_class: 'border border-white rounded-3' }
+    else
+      # Use admin_path rather than user_session_path so someone is automatically redirected to the admin site after loggingg in.
+      @navbar_items << { title: 'Log In', path: admin_path, item_class: 'border border-white rounded-3' }
+    end
   end
 
   def report_500(exception)
@@ -69,24 +93,4 @@ class ApplicationController < ActionController::Base
       type.all  { render body: nil, status: status_code }
     end
   end
-
-  # Believed to match about 98% of mobile browsers. https://gist.github.com/1503252
-  MOBILE_REGEX = /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|NetFront|Silk-Accelerated|(hpw|web)OS|Fennec|Minimo|Opera M(obi|ini)|Blazer|Dolfin|Dolphin|Skyfire|Zune/
-
-  ##
-  # Mobile device detection
-  ##
-  def mobile_device?
-    if session[:mobile_param]
-      session[:mobile_param] == 'true'
-    else
-      request.user_agent =~ MOBILE_REGEX
-    end
-  end
-  helper_method :mobile_device?
-
-  def prepare_for_mobile
-    session[:mobile_param] = params[:mobile] if params[:mobile]
-  end
-
 end

@@ -1,16 +1,23 @@
-<% if reviews.any? then %>
-  <hr />
+<% if reviews.any? %>
   <h3>Reviews</h3>
+  
+  <div class="row row-cols-auto row-cols-1 row-cols-lg-2 g-3">
+    <% reviews.each do |review| %>
+      <div class="col">
+        <div class="card h-100">
+            <h4 class="card-header">
+              <b><%= review.organisation.presence || review.reviewer %></b><%= " - <span class=\"no-wrap\">#{star_rating review.rating if review.rating && review.rating > 0 }</span>".html_safe %>
+            </h4>
+          
+          <div class="card-body">
+            <p class="card-text"><small class="text-muted"><%= l review.review_date, format: :long %><%= " - By #{review.reviewer}" if review.organisation? %></small></p>
 
-  <% reviews.each do |review| %>
-    <article>
-      <header>
-        <span class="author"><%= review.reviewer %></span> on <%= l review.review_date, format: :long %> <%= "for #{review.organisation}" if review.organisation? %>
-        <br />
-        <%= star_rating review.rating if review.rating && review.rating > 0 %>
-      </header>
-
-      <%= render_markdown review.body %>
-    </article>
-  <% end %>
+            <%= render_markdown review.body %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
 <% end %>
+
+<div class="mb-3"></div>

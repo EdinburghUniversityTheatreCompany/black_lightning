@@ -21,7 +21,7 @@ class AdminController < ApplicationController
     return false
   end
 
-  def set_globals
+  def set_navbar
     @navbar_categories = []
 
     # Propose
@@ -95,8 +95,6 @@ class AdminController < ApplicationController
     @navbar_categories << { title: 'Welfare Contact', children: children, fa_icon: 'fa-info' }
 
     @navbar_categories.reject! { |category| category[:children].empty? }
-
-    @current_path = request.path
 
     # to do - unsorted things
 

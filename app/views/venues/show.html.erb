@@ -1,62 +1,75 @@
-<%= render '/events/image_and_name', item: @venue %>
+<%= render 'shared/pages/public/basic_info', header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [] %>
 
-<%= render_markdown @venue.description %>
-
-<% if @venue.location %>
-  <h3>Map</h3>
-
-  <%# don't load the map unless we have to as we're only allowed to do so 25,000 times a day %>
-  <%# Is this still true? %>
-  <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh3mh3Lt0ymci2MV_KDHn9CFZRG0bppcE&sensor=false">
-  </script>
-
-  <div id="map_canvas" style="width:100%; height:300px"></div>
-
-  <script type="text/javascript">
-    var lat  = <%= @venue.location.split(",").first %>;
-    var long = <%= @venue.location.split(",").last %>;
-    function initialize() {
-      var venue = new google.maps.LatLng(lat, long);
-      var mapOptions = {
-        center: venue,
-        zoom: 16,
-        mapTypeId: google.maps.MapTypeId.ROADMAP
-      };
-      var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
-
-      var marker = new google.maps.Marker({
-        position: venue,
-        map: map,
-        icon: {
-          path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-          scale: 6,
-          fillColor: "green",
-          fillOpacity: 0.8,
-          strokeColor: "black",
-          strokeWeight: 2
-        },
-        animation: google.maps.Animation.DROP,
-        title:"<%= @venue.name %>"
-      });
-    }
-    initialize();
-  </script>
-<% end %>
-
-<% if @current_shows.any? then %>
-  <h3>Shows at <%= @venue.name %></h3>
-
-  <div class="row">
-  <% @current_shows.each do |show| %>
-    <div class="span4">
-      <div>
-        <%= link_to (image_tag show.fetch_image.variant(medium_variant)), show_path(show) %>
-        <h4><%= link_to show.name, show_path(show) %></h4>
-        <p><%= show.tagline %> <%= link_to 'Read More', show_path(show) %></p>
+<div class="row">
+  <div class="col">
+    <div class="card mb-3">
+      <div class="card-body">
+        <%= render_markdown @venue.description %>
       </div>
     </div>
+
+    <% if @venue.location %>
+      <div class="card mb-3">
+        <h3 class="card-header">Map</h3>
+        <div class="card-body">
+          <%# don't load the map unless we have to as we're only allowed to do so 25,000 times a day %>
+          <%# TODO: Is this still true? %>
+          <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh3mh3Lt0ymci2MV_KDHn9CFZRG0bppcE&sensor=false">
+          </script>
+
+          <div id="map_canvas" style="width:100%; height:300px"></div>
+
+          <script type="text/javascript">
+            var lat  = <%= @venue.location.split(",").first %>;
+            var long = <%= @venue.location.split(",").last %>;
+            function initialize() {
+              var venue = new google.maps.LatLng(lat, long);
+              var mapOptions = {
+                center: venue,
+                zoom: 16,
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+              };
+              var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
+
+              var marker = new google.maps.Marker({
+                position: venue,
+                map: map,
+                icon: {
+                  path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                  scale: 6,
+                  fillColor: "green",
+                  fillOpacity: 0.8,
+                  strokeColor: "black",
+                  strokeWeight: 2
+                },
+                animation: google.maps.Animation.DROP,
+                title:"<%= @venue.name %>"
+              });
+            }
+            initialize();
+          </script>
+        </div>
+      </div>
     <% end %>
   </div>
+</div>
+
+<h3>Shows at <%= @venue.name %></h3>
+
+<% if @current_shows.empty? %>
+  <p>There are no upcoming EUTC shows at <%= @venue.name %>.</p>
+<% else %>
+  <% items = @current_shows.collect { |event| {
+    event: event,
+    paragraphs: [
+      { content: event.date_range(true), small: true },
+      { content: event.short_blurb },
+      { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto'}
+    ] } } %>
+
+  <%= render('shared/pages/public/events_grid', items: items, col_size: 12) %>
 <% end %>
+
+<p class="mb-3"><%= link_to('View Past Shows', archives_events_url('q[venue_id_eq]' => @venue.id)) %>
 
 <%= render '/shared/gallery', pictures: @venue.pictures %>

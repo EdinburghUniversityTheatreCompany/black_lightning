@@ -1,0 +1,13 @@
+// Override the default Bootstrap colours.
+// This is only for front end, so we are neglecting the possible confusion of primary being red instead of danger being red.
+$red: #ba0204;
+
+$primary: $red;
+$secondary: #fdc5b6;
+// Value of gray-900 which is used for -dark.
+$danger: #212529;
+
+$link-color: $red;
+$headings-color: $red;
+
+@import "bootstrap/scss/bootstrap";

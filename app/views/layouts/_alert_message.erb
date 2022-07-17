@@ -1,7 +1,8 @@
 <% alert_type = swal_alert_info(key) %>
-<% if message == 'You need to sign in or sign up before continuing.' then alert_type='info' end %>
+<% # BOOTSTRAP: Can we please specify this rather than matching this to the messages? %>
+<% if message == 'You need to log in or sign up before continuing.' then alert_type='info' end %>
 <% if message == 'Invalid email or password.' then alert_type='error' end %>
-<% if message == 'Signed in successfully.' || message == 'Signed out successfully.' then alert_type='success' end %>
+<% if message == 'Logged in successfully.' || message == 'Logged out successfully.' then alert_type='success' end %>
 <% # Link in alert should have the 'alert-link' class on their <a>'s to automatically colour match them. %>
 <% # Same goes for alert-heading on a heading.%>
 <% case alert_type %>

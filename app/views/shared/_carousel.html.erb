@@ -9,12 +9,15 @@
     <% carousel_items.each_with_index do |item, index| %>
       <div class="carousel-item <%= 'active' if index == 0 %>" data-bs-interval="3500">
         <% # BOOTSTRAP: Variant this? %>
-        <% # BOOTSTRAP: Stop content jumps: https://itnext.io/how-to-stop-content-jumping-when-images-load-7c915e47f576 %>
 
-        <% #div style="width: <%= item.image.metadata['width'] px; height: <%= item.image.metadata['height']px" %>   
-        <% # <div class="d-block w-100" style="height: <%= item.image.metadata['height'] px;"> %>
-        <%= image_tag(item.image, class: "d-block w-100") %>
-  
+        <% # Do not lazy load carousel images or the images will appear from blank on slide changes. %>
+        <% img = image_tag(item.image, { loading: 'eager', class: 'w-100 h-auto' }.merge(base_width_and_height_html(item.image))) %>
+        <% if item.url.present? %>
+          <%= link_to(img, item.url) %>
+        <% else %>
+          <%= img %>
+        <% end %>
+
         <div class="carousel-caption-below d-block card w-100">
           <div class="card-body">
             <h5><%= item.title %></h5>

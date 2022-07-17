@@ -1,50 +1,9 @@
 <%= render '/events/happened_message', event: event, event_type: event_type %>
 
-<div class="row">
-  <div class="col">
-  <h1><%= event.name %></h1>
-  </div>
-</div>
+<% details = [ {  key: "Date#{'s' if event.start_date != event.end_date}", value: event.date_range(true) }] %>
+<% details << {   key: 'Venue',   value: link_to(event.venue.name, event.venue) } if event.venue.present? %>
+<% details << {   key: 'Price',   value: event.price } if event.price? %>
+<% details << {   key: 'Author',  value: link_to(event.author, archives_events_url('q[author_cont]' => event.author)) } if event.author? %>
+<% details << {   key: 'Season',  value: link_to(event.season.name, event.season) } if event.season.present?  %>
 
-<% # BOOTSTRAP: How to do margins as well as making sure the height is the same? Same goes or the publicity text one.%>
-<div class="row">
-  <div class="col-md-8">
-    <div class="card mb-3">
-      <%= image_tag(event.fetch_image.variant(slideshow_variant), class: 'card-img-top') %>
-      
-      <% if event.tagline.present? %>
-        <div class="card-body">
-          <p class="card-text"><%= event.tagline %></p>
-        </div>
-      <% end %>
-    </div>
-  </div>
-
-  <div class="col-md-4">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h4>Date<%= 's' if event.start_date != event.end_date %></h4>
-        <p><b><%= event.date_range true %></b></p>
-
-        <% if event.venue.present?  %>
-          <h4>Venue</h4>
-          <p><b><%= link_to(event.venue.name, archives_events_url('q[venue_id_eq]' => event.venue.id)) %></b></p>
-        <% end %>
-
-        <% if event.price? %>
-          <h4>Price</h4>
-          <p><b><%= event.price %></b></p>
-        <% end %>
-
-        <% if event.author.present? %>
-          <h4>Author</h4>
-          <p><b><%= link_to(event.author, archives_events_url('q[author_cont]' => event.author)) %></b></p>
-        <% end %>
-
-        <% if event.season.present? %>
-        <p>Part of <%= link_to event.season.name, event.season %></p>
-        <% end %>
-      </div>
-    </div>
-  </div>
-</div>
+<%= render 'shared/pages/public/basic_info', header: event.name, image: event.fetch_image, tagline: event.tagline, details: details %>

@@ -8,38 +8,33 @@
 <% if @events.empty? %>
   <p>There are no events attached to this festival.</p>
 <% else %>
-  <div class="accordion seasons-accordion" id="accordion2">
-    <% @events.each do |day, events_by_day|%>
-    <p><h4><%= day %></h4><p>
-    
-      <% events_by_day.each do |event|%>
-      <div class="accordion-group">
-        <div class="accordion-heading clearfix">
-          <% image = image_tag event.fetch_image.variant(thumb_variant) %>
-          <%= link_to image, event, class: "pull-right thumbnail" %>
+  <% @events.each do |day, events_by_day|%>
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3><%= day %></h3>
+      </div>
+      <ul class="list-group list-group-flush">
+        <% events_by_day.each do |event|%>
+          <li class="list-group-item">
+            <% image = image_tag event.fetch_image.variant(thumb_variant_public) %>
+            <%= link_to image, event, class: "float-start img-thumbnail me-3 h-100" %>
 
-          <h4><%= link_to event.name, event %></h4>
+            <h4><%= link_to event.name, event %></h4>
 
-          <div>
             <p>
               <% if event.start_date != event.end_date %>
                 <b><%= event.date_range false %></b>
               <% end %>
             </p>
 
-            <p><i><%= event.tagline %></i></p>
+            <p><%= event.short_blurb %></p>
             
-            <%= event.short_blurb %>
-
-            <% if event.type == "Show" %>
-              <%= xts_widget event.xts_id if event.xts_id %>
-            <% end %>
-          </div>
-        </div>
-      </div>
-      <% end %>
-    <% end %>
-  </div>
+            <p><%= link_to 'View Details', event, class: 'btn btn-primary' %></p>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
 <% end %>
 
 <%= render '/shared/gallery', pictures: @season.pictures %>

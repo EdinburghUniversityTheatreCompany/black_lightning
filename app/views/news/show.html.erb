@@ -1,26 +1,14 @@
-<% # BOOTSTRAP: This can look a bit better. This is a bit meh. %>
-<article>
-    <header>
-        <h2><%= @title %></h2>
-        <p>
-          <time datetime="<%= @news.publish_date.strftime("%FT%T%:z") %>"><%= l @news.publish_date, format: :longy %></time>
-          by <span class="author"><%= @news.author.name %></span>
-        </p>
-    </header>
+<h1><%= @title %></h1>
+<p><small class="text-muted"><%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %></small></p>
 
-    <%= image_tag @news.fetch_image.variant(medium_variant), class: "float-right span3" %>
+<div class="card mb-3">
+  <%= image_tag @news.fetch_image.variant(medium_variant), {class: "card-img-top h-auto"}.merge(variant_width_and_height_html(medium_variant)) %>
 
-    <div><%= render_markdown @news.body %></div>
+  <div class="card-body">
+    <%= render_markdown @news.body %>
 
-    <% if @news.publish_date != @news.updated_at %>
-    <p>
-      <small>
-        Last updated:
-        <%= l @news.updated_at, format: :longy %>
-      </small>
-    </p>
+    <% if @news.created_at != @news.updated_at %>
+      <p class="card-text"><small class="text-muted">Last updated: <%= l @news.updated_at, format: :longy %></small></p>
     <% end %>
-
-</article>
-
-<%= link_to 'Back', :back %><% if can? :edit, @news %> | <%= link_to 'Edit', edit_admin_news_path(@news) %><% end %>
+  </div>
+</div>

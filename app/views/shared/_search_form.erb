@@ -34,6 +34,7 @@
     <% # If it is a boolean, just render the boolean field and continue the loop. %>
     <%= render 'shared/boolean_search_form_field', f: f, name: key, label: params.fetch(:label, key.to_s.humanize) %>
     <% next %>
+    <% # TODO: This is now broken. See carousel items index. %>
     <% elsif params[:type] == :select %>
     <% params[:include_blank] = true %>
     <%= f.select key, params[:choices], params %>

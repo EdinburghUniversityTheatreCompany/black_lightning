@@ -50,9 +50,9 @@ class MembershipActivationTokensController < ApplicationController
     return @membership_activation_token.user || User.new if current_user == @membership_activation_token.user
 
     if @membership_activation_token.user.nil?
-      flash[:error] = 'This token belongs to a new user, but you are already signed in.'
+      flash[:error] = 'This token belongs to a new user, but you are already logged in.'
     elsif current_user.nil?
-      flash[:error] = 'This token belongs to an existing user, but you are not signed in. Please sign in and try again.'
+      flash[:error] = 'This token belongs to an existing user, but you are not logged in. Please log in and try again.'
     else
       flash[:error] = 'This token belongs to a different user.'
     end

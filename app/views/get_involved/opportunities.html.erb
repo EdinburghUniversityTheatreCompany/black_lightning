@@ -1,26 +1,29 @@
 <h1>Opportunities</h1>
 
-<%= display_block(@editable_block.name, false) %>
+<div class="mb-3">
+  <%= display_block(@editable_block.name, false) %>
+</div>
 
 <% if @opportunities.count == 0 %>
-  <hr />
   <%= display_block("No Opportunities", false) %>
+<% else %>
+  <div class="card mb-3">
+    <ul class="list-group list-group-flush">
+    <% @opportunities.each do |opportunity| %>
+        <li class="list-group-item">
+          <h4><%= opportunity.title %></h4>
+          
+          <p><small class="text-muted">This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
+          
+          <p> <%= render_markdown opportunity.description %></p>
+
+          <% if opportunity.show_email %>
+            <p>Please contact <%= opportunity.creator.name %> by clicking <%= mail_to opportunity.creator.email, 'here' %>.</p>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
 <% end %>
 
-<% @opportunities.each do |opportunity| %>
-  <hr   />
-
-  <article>
-    <h3><%= opportunity.title %></h3>
-    <p><small>This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
-    <div>
-      <%= render_markdown opportunity.description %>
-    </div>
-
-    <% if opportunity.show_email %>
-      <p>
-        Please contact <%= opportunity.creator.name %> by clicking <%= mail_to opportunity.creator.email, 'here' %>.
-      </p>
-    <% end %>
-  </article>
-<% end %>
+<div class="mb-3"></div>

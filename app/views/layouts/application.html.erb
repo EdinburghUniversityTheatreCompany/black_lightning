@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <%# Include the opengraph namespaces: %>
   <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
   <meta charset="UTF-8">
 
   <!-- measure page load time -->
+  <!-- BOOTSTRAP: I think this can go? -->
   <script type="text/javascript">
     load_start = new Date().getTime();
     doc_ready = null;
@@ -32,11 +33,13 @@
 
     <%= render "layouts/ie_notice" %>
 
-    <%= render '/layouts/alert_div' %>
+    <%= render 'layouts/alert_div' %>
 
-    <%= content_for?(:content) ? yield(:content) : yield %>
+    <div class="container">
+      <%= content_for?(:content) ? yield(:content) : yield %>
+    </div>
+
+    <%= render "layouts/footer" %>
   </div>
-
-  <%= render "layouts/footer" %>
 </body>
 </html>

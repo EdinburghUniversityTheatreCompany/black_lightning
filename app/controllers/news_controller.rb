@@ -14,19 +14,35 @@ class NewsController < ApplicationController
   # GET /news.json
   ##
   def index
-    @title = 'Bedlam News'
-    @news = @news.includes(image_attachment: :blob)
-                 .order('publish_date DESC')
-                 .page(params[:page]).per(5)
-
-    respond_to do |format|
-      format.html # index.html.erb
-      format.json { render json: @news }
-      format.rss { render layout: false }
+    # Generic Controller does not handle rss, so check if this is an rss request first.
+    if request.format.symbol == :rss
+      respond_to do |format|
+        format.rss { render layout: false }
+      end
+      
+      return
     end
+
+    super
+
+    @title = 'Bedlam News'
   end
 
     ##
     # Show is handled by the Generic Controller.
     ##
+
+    private
+
+    def includes_args
+      [image_attachment: :blob]
+    end
+
+    def order_args
+      ['publish_date DESC']
+    end
+
+    def items_per_page
+      10
+    end
 end

@@ -3,16 +3,8 @@
 ##
 class AboutController < ApplicationController
   skip_authorization_check
-  
-  layout 'subpage_sidebar'
 
   def page
-    @controller = 'about'
-
-    root_url = helpers.get_subpage_root_url(@controller, params[:page])
-
-    @editable_block = Admin::EditableBlock.find_by!(url: root_url)
-
-    @subpages = helpers.get_subpages(root_url)
+    @editable_block = Admin::EditableBlock.find_by!(url: @current_path.delete_prefix('/'))
   end
 end

@@ -1,27 +1,49 @@
-<%= link_to image_tag('Header.png', class: "img-fluid"), root_url %>
+<div class="container">
+	<%= link_to image_tag('Header.png', class: "img-fluid", width: 1873, height: 300), root_url %>
+</div>
+<% # NICETOHAVE: The hamburger should be on the right of the header when it appears.. %>
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <div class="container-fluid">
-    <a class="navbar-brand" href="<%= root_url %>">
-      Bedlam Theatre
-    </a>
-    
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+<% # mx-2 is too little margin, mx-3 is too much, so they are specified like this. %>
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3" style="margin-left: 12px; margin-right: 12px">
+  <div class="container">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTop" aria-controls="navbarTop" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><%= link_to 'Shows', shows_path, class: "nav-link" %></li>
+    <div class="collapse navbar-collapse" id="navbarTop">
+			<ul class="navbar-nav mb-2 mb-lg-0 w-100">
+				<div class="row w-100 g-0">
 
-        <% if WorkshopCounter.workshop_count > 0 %>
-        <li class="nav-item"><%= link_to 'Workshops', workshops_path , class: "nav-link" %></li>
-        <% end %>
+				<% @navbar_items.each_with_index do |navbar_item, index| %>
+					<% # Add in columns to pad the auto to make sure the full width of the row is taken up, which a row of only col-auto's won't do%>
+					<% if index > 0 %>
+						<div class="col"></div>
+					<% end %>
 
-        <li class="nav-item"><%= link_to 'News', news_index_path, class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'About', about_index_path, class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'Get Involved', get_involved_index_path, class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'Accessibility', static_path('accessibility'), class: "nav-link" %></li>
-        <li class="nav-item"><%= link_to 'Contact', static_path('contact'), class: "nav-link" %></li>
+					<div class="col-lg-auto">
+						<% if navbar_item[:children].present? %>
+							<% # Render Dropdown %>
+							<li class="nav-item dropdown">
+								<a class="nav-link dropdown-toggle bedlam-nav-text mx-1 ms-0-lg" role="button" data-bs-toggle="dropdown" href="#"><%= navbar_item[:title] %></a>
+								<ul class="dropdown-menu">
+									<% navbar_item[:children].each do |child_item| %>
+										<% if child_item[:title].include?('Divider') %>
+											<li><hr class="dropdown-divider"></li>
+										<% else %>
+											<li><a class="dropdown-item" href="<%= child_item[:path] %>"><%= child_item[:title] %></a></li>
+										<% end %>
+									<% end %>
+								</ul>
+							</li>
+						<% else %>
+							<% # Render normal link %>
+							<li class="nav-item <%= "#{navbar_item[:item_class]}"%>">
+								<%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link mx-1 ms-0-lg #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]} ") %>
+							</li>
+						<% end %>
+					</div>
+				<% end %>
+				</div>
+			</ul>
     </div>
   </div>
 </nav>
