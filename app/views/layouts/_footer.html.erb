@@ -1,9 +1,9 @@
 <div class="container-fluid <%= @admin_site ? 'p-0' : 'mt-3' %>">
-  <footer class="bg-primary py-1 px-2">
+  <footer class="bg-primary pt-3 px-2">
     <div class="row">
     </div>
 
-    <div class="row my-1">
+    <div class="row">
       <% social_media_icons = [
         { icon: 'facebook-f', url: 'https://facebook.com/bedlamtheatre.ed' },
         { icon: 'instagram',  url: 'https://instagram.com/eutc.bedlamtheatre' },
@@ -18,22 +18,24 @@
       <div class="col"></div>
     </div>
 
-    <div class="row my-1">
+    <div class="row mt-3">
       <div class="col d-flex align-items-end">
-        <small class="text-light">
-          Bedlam Theatre is run by the Edinburgh University Theatre Company (EUTC). The EUTC is formally associated with
-          the Edinburgh University Students Association, registered charity number SC015800. 
-          
-          <br class="d-md-none">
-          Banner Artwork by <%= link_to 'Bronwen Bender', 'http://cargocollective.com/bronwenbender', class: 'text-reset' %>. Logo by Alexander Morzeria-Davis. 
+        <small class="text-light text-center">
+          <p>
+            Bedlam Theatre is run by the Edinburgh University Theatre Company (EUTC). The EUTC is formally associated with
+            the Edinburgh University Students Association, registered charity number SC015800. 
+            
+            <br class="d-md-none">
+            Banner Artwork by <%= link_to 'Bronwen Bender', 'http://cargocollective.com/bronwenbender', class: 'text-reset' %>. Logo by Alexander Morzeria-Davis. 
+          </p>
 
-          <br class="d-md-none">
-
-          <%= link_to 'Project BlackLightning', static_path('black_lightning'), class: 'text-reset' %> Version: <%= version %>
-          -
-          <%= link_to 'Report Issue', 'https://github.com/EdinburghUniversityTheatreCompany/black_lightning/issues', class: 'text-reset' %>
-          | <%= link_to 'Contact Us', static_path('contact'), class: 'text-reset' %>
-          | <%= link_to 'Privacy Policy', static_path('privacy_policy'), class: 'text-reset' %>
+          <p>
+            <%= link_to 'Project BlackLightning', static_path('black_lightning'), class: 'text-reset' %> Version: <%= version %>
+            -
+            <%= link_to 'Report Issue', 'https://github.com/EdinburghUniversityTheatreCompany/black_lightning/issues', class: 'text-reset' %>
+            | <%= link_to 'Contact Us', static_path('contact'), class: 'text-reset' %>
+            | <%= link_to 'Privacy Policy', static_path('privacy_policy'), class: 'text-reset' %>
+          </p>
         </small>
       </div>
     </div>
