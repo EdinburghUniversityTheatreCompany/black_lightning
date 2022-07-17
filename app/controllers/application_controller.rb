@@ -20,7 +20,7 @@ class ApplicationController < ActionController::Base
   def set_globals
     @base_url = request.protocol + request.host_with_port
     @current_path = request.path
-  
+
     # Create the @meta hash
     @meta = {
       description: 'The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.',
@@ -34,6 +34,8 @@ class ApplicationController < ActionController::Base
     }
 
     @support_email = 'it@bedlamtheatre.co.uk'
+
+    @admin_site = false
   end
 
   def set_navbar

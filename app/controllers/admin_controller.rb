@@ -20,6 +20,12 @@ class AdminController < ApplicationController
     render_error_page(exception, 'errors/not_consented', 403)
     return false
   end
+  
+  def set_globals
+    super
+
+    @admin_site = true
+  end
 
   def set_navbar
     @navbar_categories = []

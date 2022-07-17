@@ -1,22 +1,43 @@
-
-<% # BOOTSTRAP: Redesign %>
-<div class="container-fluid">
+<div class="container-fluid <%= @admin_site ? 'p-0' : 'mt-3' %>">
+  <footer class="bg-primary py-1 px-2">
     <div class="row">
-      <div class="col">
-        <span class="text-muted">
+    </div>
+
+    <div class="row my-1">
+      <% social_media_icons = [
+        { icon: 'facebook-f', url: 'https://facebook.com/bedlamtheatre.ed' },
+        { icon: 'instagram',  url: 'https://instagram.com/eutc.bedlamtheatre' },
+        { icon: 'twitter',    url: 'https://twitter.com/bedlamtheatre' },
+        { icon: 'youtube',    url: 'https://www.youtube.com/channel/UCXxyhjT8bPvnl1oVAdRJW1Q' }
+      ] %>
+
+      <div class="col"></div>
+      <% social_media_icons.each do |icon| %>
+        <div class="col-auto"><a href="<%= icon[:url] %>" target="_blank"><i class="fab fa-<%= icon[:icon] %> fa-inverse fs-2"></i></a></div>
+      <% end %>
+      <div class="col"></div>
+    </div>
+
+    <div class="row my-1">
+      <div class="col d-flex align-items-end">
+        <small class="text-light">
           Bedlam Theatre is run by the Edinburgh University Theatre Company (EUTC). The EUTC is formally associated with
-          the Edinburgh University Students Association, registered charity number SC015800. Banner Artwork by
-          <%= link_to 'Bronwen Bender', 'http://cargocollective.com/bronwenbender' %>. Logo by Alexander Morzeria-Davis
-        </span>
-      </div>
-      <div class="col">
-        <span class="text-muted text-end">
-          <%= link_to 'Project BlackLightning', static_path('black_lightning') %> Version: <%= version %>
+          the Edinburgh University Students Association, registered charity number SC015800. 
+          
+          <br class="d-md-none">
+          Banner Artwork by <%= link_to 'Bronwen Bender', 'http://cargocollective.com/bronwenbender', class: 'text-reset' %>. Logo by Alexander Morzeria-Davis. 
+
+          <br class="d-md-none">
+
+          <%= link_to 'Project BlackLightning', static_path('black_lightning'), class: 'text-reset' %> Version: <%= version %>
           -
-          <%= link_to 'Report Bug', 'https://bitbucket.org/bedlamtheatre/black_lightning/issues' %>
-          | <%= link_to 'Contact Us', static_path('contact') %>
-          | <%= link_to 'Privacy Policy', static_path('privacy_policy') %>
-        </span>
+          <%= link_to 'Report Issue', 'https://github.com/EdinburghUniversityTheatreCompany/black_lightning/issues', class: 'text-reset' %>
+          | <%= link_to 'Contact Us', static_path('contact'), class: 'text-reset' %>
+          | <%= link_to 'Privacy Policy', static_path('privacy_policy'), class: 'text-reset' %>
+        </small>
       </div>
     </div>
-  </div>
+      <div class="row">
+    </div>
+  </footer>
+</div>

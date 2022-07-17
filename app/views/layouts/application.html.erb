@@ -14,7 +14,9 @@
     
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", media: "all" %>
-  <script src="https://kit.fontawesome.com/5b2ae334f1.js" crossorigin="anonymous"></script>
+
+  <% # BOOTSTRAP: Loading font-awesome %>
+  <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
   <%= javascript_pack_tag "application" %>
   <%= javascript_include_tag "application" %>
