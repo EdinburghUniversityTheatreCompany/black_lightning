@@ -16,7 +16,7 @@ class Admin::CarouselItemsController < AdminController
   def permitted_params
     # Make sure that references have _id appended to the end of them.
     # Check existing controllers for inspiration.
-    [:title, :tagline, :carousel_name, :ordering, :is_active, :image]
+    [:title, :tagline, :carousel_name, :ordering, :is_active, :image, :url]
   end
 
   def order_args
