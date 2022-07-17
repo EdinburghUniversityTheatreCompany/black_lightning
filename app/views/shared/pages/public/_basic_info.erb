@@ -4,11 +4,10 @@
   </div>
 </div>
 
-
-<% # BOOTSTRAP: How to do margins as well as making sure the height is the same? Same goes or the publicity text one.%>
 <div class="row">
   <div class="col<%='-md-8' if details.any? %>">
-    <div class="card mb-3">
+    <% # This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
+    <div class="card mb-3 mb-md-0">
       <%= image_tag(image.variant(slideshow_variant), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(slideshow_variant))) %>
       
       <% tagline = nil unless tagline.present? %>
@@ -22,7 +21,7 @@
 
   <% if details.any? %>
     <div class="col-md-4">
-      <div class="card mb-3">
+      <div class="card h-100">
         <div class="card-body">
           <% details.each do |detail| %>
             <h4><%= detail[:key] %></h4>
@@ -33,3 +32,6 @@
     </div>
   <% end %>
 </div>
+
+<% # Margin here so it does not mess with the h-100 on the details card. %>
+<div class="mb-3"></div>

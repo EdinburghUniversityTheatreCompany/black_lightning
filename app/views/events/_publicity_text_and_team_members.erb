@@ -1,6 +1,7 @@
 <div class="row">
   <div class="col-md-<%= event.team_members.any? ? '8' : '12' %>">
-    <div class="card mb-3">
+    <% # This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
+    <div class="card h-md-100 mb-3 mb-md-0">
       <h3 class="card-header">Description</h3>
 
       <div class="card-body">
@@ -15,7 +16,7 @@
 
   <% if event.team_members.any? %>
     <div class="col-md-4">
-      <div class="card mb-3">
+      <div class="card h-100">
         <h3 class="card-header">Cast and Crew</h3>
         
         <div class="card-body">
@@ -25,3 +26,6 @@
     </div>
   <% end %>
 </div>
+
+<% # Margin here so it does not mess with the h-100 on the cards. %>
+<div class="mb-3"></div>
