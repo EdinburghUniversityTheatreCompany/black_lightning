@@ -9,7 +9,7 @@
 <div class="row">
   <div class="col<%='-md-8' if details.any? %>">
     <div class="card mb-3">
-      <%= image_tag(image.variant(slideshow_variant), class: 'card-img-top') %>
+      <%= image_tag(image.variant(slideshow_variant), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(slideshow_variant))) %>
       
       <% tagline = nil unless tagline.present? %>
       <% if tagline.present? %>

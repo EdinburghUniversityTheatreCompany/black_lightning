@@ -39,7 +39,7 @@ module ActiveStorageHelper
   end
 
   def thumb_variant_public(scale_factor = 1)
-    return thumb_variant(1.1 * scale_factor)
+    return thumb_variant(1.5 * scale_factor)
   end
 
   def medium_variant
@@ -58,7 +58,11 @@ module ActiveStorageHelper
     return { resize_to_fill: [700, 700] }
   end
 
-  def generate_scaffold_style(variant)
-    return "width: #{variant[:resize_to_fill][0]}px; height: #{variant[:resize_to_fill][1]}px" 
+  def variant_width_and_height_html(variant)
+    return { width: variant[:resize_to_fill][0], height: variant[:resize_to_fill][1] }
+  end
+
+  def base_width_and_height_html(image)
+    return { width: image.metadata['width'], height: image.metadata['height'] }
   end
 end
