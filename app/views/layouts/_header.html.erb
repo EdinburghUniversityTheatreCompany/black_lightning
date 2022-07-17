@@ -3,11 +3,11 @@
 </div>
 <% # NICETOHAVE: The hamburger should be on the right of the header when it appears.. %>
 
-<% # mx-2 is too little margin, mx-3 is too much, so they are specified like this.%>
+<% # mx-2 is too little margin, mx-3 is too much, so they are specified like this. %>
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-3" style="margin-left: 12px; margin-right: 12px">
   <div class="container">
 		<% # BOOTSTRAP: The whole hamburger should be white. %>
-    <button class="navbar-toggler bedlam-nav-text" style="border-color: rgba(255, 255, 255, 1);" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTop" aria-controls="navbarTop" aria-expanded="false" aria-label="Toggle navigation">
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarTop" aria-controls="navbarTop" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarTop">
@@ -24,7 +24,7 @@
 						<% if navbar_item[:children].present? %>
 							<% # Render Dropdown %>
 							<li class="nav-item dropdown">
-								<a class="nav-link dropdown-toggle bedlam-nav-text" role="button" data-bs-toggle="dropdown" href="#"><%= navbar_item[:title] %></a>
+								<a class="nav-link dropdown-toggle bedlam-nav-text mx-1 ms-0-lg" role="button" data-bs-toggle="dropdown" href="#"><%= navbar_item[:title] %></a>
 								<ul class="dropdown-menu">
 									<% navbar_item[:children].each do |child_item| %>
 										<% if child_item[:title].include?('Divider') %>
@@ -37,7 +37,9 @@
 							</li>
 						<% else %>
 							<% # Render normal link %>
-							<li class="nav-item <%= navbar_item[:item_class] %>"><%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]} ") %></li>
+							<li class="nav-item <%= "#{navbar_item[:item_class]}"%>">
+								<%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link mx-1 ms-0-lg #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]} ") %>
+							</li>
 						<% end %>
 					</div>
 				<% end %>
