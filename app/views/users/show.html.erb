@@ -18,7 +18,7 @@
         paragraphs: [
           { content: team_membership.teamwork.date_range(true), small: true },
           { content: team_membership.teamwork.short_blurb },
-          { content: "<b>Position</b>: #{team_membership.position}".html_safe }
+          { content: "<b>Position</b>: #{team_membership.position}".html_safe, class: 'mt-auto' }
         ] } } %>
 
 <%= render('shared/pages/public/events_grid', items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>
