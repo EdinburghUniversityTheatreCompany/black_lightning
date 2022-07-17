@@ -78,6 +78,7 @@ module SubpageHelper
 
     # Collect the blocks into a has with title and path.
     # If the item links to an external url, set that as the path, otherwise just set the path to the editable block path
-    return subpage_editable_blocks.collect { |eb| { title: eb.name, path: eb.content&.start_with?(EXTERNAL_URL_PREFIX) ? eb.content.sub(EXTERNAL_URL_PREFIX, '').strip : eb.url } }
+    # We need to add a / to the path to make it absolute to the root url (bedlamtheatre.co.uk) rather than relative to the current page url.
+    return subpage_editable_blocks.collect { |eb| { title: eb.name, path: eb.content&.start_with?(EXTERNAL_URL_PREFIX) ? eb.content.sub(EXTERNAL_URL_PREFIX, '').strip : "/#{eb.url}" } }
   end
 end
