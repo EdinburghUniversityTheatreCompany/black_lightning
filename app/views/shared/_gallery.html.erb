@@ -17,12 +17,11 @@
     <<%= header_tag %>>Gallery</<%= header_tag %>>
     <i>Click on a thumbnail to see the image in full-size</i>
 
-    <% # BOOTSTRAP: Make sure the image takes up the same amount of space / the text of the card starts at the same point for all cards in a row. %>
     <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
       <% pictures.includes(image_attachment: :blob).each do |picture| %>
         <div class="col">
           <div class="card h-100">
-            <% img = image_tag(picture.fetch_image.variant(medium_variant), class: 'card-img-top') %>
+            <% img = image_tag(picture.fetch_image.variant(medium_variant), { class: "card-img-top h-auto" }.merge(variant_width_and_height_html(medium_variant))) %>
             <% url = url_for(picture.fetch_image) %>
 
             <%= link_to img, url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
