@@ -20,14 +20,21 @@ en:
         created_at: 'Created At'
         description: 'Description'
         event: 'Event'
+        event_tags: 'Event Tags'
         hint: 'Hint'
+        members_only_text: 'Members-Only Text'
         name: 'Name'
         notes: 'Notes'
-        status: 'Status'
-        title: 'Title'
-        user: 'User'
+        publicity_text: 'Publicity Text'
         publish_date_gteq: 'Published After'
         publish_date_lteq: 'Published Before'
+        show_private_only: 'Show Private Only'
+        status: 'Status'
+        title: 'Title'
+        url: 'URL'
+        user: 'User'
+        venue: 'Venue'
+     
     # Examples
     # labels:
     #   defaults:

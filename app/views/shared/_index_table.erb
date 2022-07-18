@@ -1,4 +1,5 @@
 <% include_edit_button = true if include_edit_button.nil? %>
+<% include_link_to_item = true if include_link_to_item.nil? %>
 
 <% headers << '' if can?(:edit, resource_class) && include_edit_button %>
 
@@ -7,7 +8,11 @@
   <% # Assumes the first item is the instance.%>
   <% fields << get_link(fields[0], :edit) if can?(:edit, fields[0]) && include_edit_button %>
 
+  <% if include_link_to_item %>
     <% fields[0] = get_link(fields[0], :show) %>
+  <% else %>
+    <% fields.delete_at(0) %>
+  <% end %>
 <% end %>
 
-<%= render 'shared/table', headers: headers, field_sets: field_sets, resources: resources, search_fields: search_fields%>
+<%= render 'shared/table', headers: headers, field_sets: field_sets %>
