@@ -110,7 +110,7 @@ module LinkHelper
   end
 
   def generate_icon_prefix(icon_name, prefix)
-    return "<span class=\"no-wrap\"><i class=\"fa fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
+    return "<span class=\"no-wrap\"><i class=\"fas fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
   end
 
   private
