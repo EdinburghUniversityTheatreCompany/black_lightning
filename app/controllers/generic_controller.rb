@@ -275,7 +275,7 @@ module GenericController
   end
 
   def should_return_random
-    params[:commit]&.upcase == 'RANDOM'
+    helpers.strip_tags(params[:commit].presence || '').strip.upcase == 'RANDOM'
   end
 
   def return_random
@@ -286,7 +286,11 @@ module GenericController
       return false
     end
 
-    redirect_to(resource_class.find_by(id: random_resources.pluck(:id).sample))
+    url = resource_class.find_by(id: random_resources.pluck(:id).sample)
+    url = [:admin, url] if @admin_site
+
+    redirect_to(url)
+
     return true
   end
 
