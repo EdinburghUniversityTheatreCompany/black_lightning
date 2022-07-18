@@ -1,22 +1,12 @@
-<h1><%= @title %></h1>
+<% quick_actions = get_link Admin::Proposals::Call, :index, link_text: 'Back to Proposal Calls' %>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
+<% headers = [:name] %>
 
-    <% if can? :edit, Admin::Proposals::CallQuestionTemplate %>
-      <th></th>
-    <% end %>
-  </tr>
+<% field_sets = @call_question_templates.map { |template| [template] }%>
 
-  <% @call_question_templates.each do |template| %>
-    <tr>
-      <%= get_link template, :show, wrap_tag: 'td '%>
+<% search_fields = {
+    name_cont: { slug: 'defaults.name' }
+} %>
 
-      <%= get_link template, :edit, wrap_tag: 'td'%>
-    </tr>
-  <% end %>
-</table>
-
-<%= get_link Admin::Proposals::CallQuestionTemplate, :new %>
-<%= get_link Admin::Proposals::Call, :index, link_text: 'Back to Proposal Calls'%>
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::CallQuestionTemplate, resources: @call_question_templates, headers: headers, field_sets: field_sets, search_fields: search_fields,
+  quick_actions: quick_actions %>
