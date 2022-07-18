@@ -1,22 +1,12 @@
-<h1><%= @title %></h1>
+<% quick_actions = get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'Back to Questionnaires'%>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
+<% headers = [:name] %>
 
-    <% if can? :edit, Admin::Questionnaires::QuestionnaireTemplate %>
-      <th></th>
-    <% end %>
-  </tr>
+<% field_sets = @questionnaire_templates.map { |questionnaire_template| [questionnaire_template] } %>
 
-  <% @questionnaire_templates.each do |template| %>
-    <tr>
-      <%= get_link template, :show,  wrap_tag: 'td' %>
+<% search_fields = {
+    name_cont: { slug: 'defaults.name' }
+} %>
 
-      <%= get_link template, :edit, wrap_tag: 'td' %>
-    </tr>
-  <% end %>
-</table>
-
-<%= get_link Admin::Questionnaires::QuestionnaireTemplate, :new %>
-<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'Back to Questionnaires'%>
+<%= render 'shared/pages/index', resource_class: Admin::Questionnaires::QuestionnaireTemplate, resources: @questionnaire_templates, headers: headers, field_sets: field_sets, search_fields: search_fields,
+  quick_actions: quick_actions %>

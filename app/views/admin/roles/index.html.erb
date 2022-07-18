@@ -1,24 +1,9 @@
-<h1><%= @title %></h1>
+<% headers = [:name, 'Amount of Users'] %>
 
-<table class="table">
-    <tbody>
-        <tr>
-            <th>Name</th>
-            <th>Amount of Users</th>
+<% field_sets = @roles.map { |role| [role, role.users.size] }%>
 
-            <% if can? :edit, Role %>
-                <th></th>
-            <% end %>
-        </tr>
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' }
+} %>
 
-        <% @roles.each do |role| %>
-            <tr>
-                <%= get_link role, :show, wrap_tag: 'td' %>
-                <td><%= role.users.count %></td>
-                <%= get_link role, :edit, wrap_tag: 'td' %>
-            </tr>
-        <% end %>
-    </tbody>
-</table>
-
-<%= get_link Role, :new %>
+<%= render 'shared/pages/index', resource_class: Role, resources: @roles, headers: headers, field_sets: field_sets, search_fields: search_fields %>

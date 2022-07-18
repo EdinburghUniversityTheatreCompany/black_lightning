@@ -1,48 +1,19 @@
-<h1><%= @title %></h1>
+<% # INDEX: Bring back CSS classing the table rows that's in fault_report.css_class%>
+<% # = opportunity.css_class if can?(:manage, Opportunity) %>
 
-<%= display_block("Opportunities (Members Face)", true) %>
+<% headers = [:title, :creator_full_name, :expiry_date, :approved] %>
 
-<br />
-<br />
+<% field_sets = @opportunities.map { | opportunity| [
+   opportunity,
+   user_link(opportunity.creator, false),
+   l(opportunity.expiry_date, format: :longy),
+   bool_icon(opportunity.approved)
+] } %>
 
-<table class="table">
-  <tr>
-    <th>Title</th>
-    <th>Creator</th>
-    <th>Expiry Date</th>
+<% search_fields = {
+    title_cont:             { slug: 'defaults.title' },
+    description_cont:       { slug: 'defaults.description' },
+    creator_full_name_cont: { slug: 'defaults.creator' }
+} %>
 
-    <th>Approved</th>
-  	
-    <% # The column with the edit button is always visible, because it is very irregular who can edit opportunities. %>
-    <th></th>
-  </tr>
-
-<% @opportunities.each do |opportunity| %>
-  <tr <%= opportunity.css_class if can?(:manage, Opportunity) %>>
-    <%= get_link opportunity, :show, wrap_tag: 'td' %>
-
-    <td><%= user_link opportunity.creator, false %></td>
-    
-    <td><%= l opportunity.expiry_date, format: :longy %></td>
-
-    <td>
-      <%= bool_icon opportunity.approved %>
-    </td>
-
-    <td>
-      <%= get_link opportunity, :edit %>
-    </td>
-  </tr>
-<% end %>
-</table>
-
-<%= paginate(@opportunities) %>
-
-<br />
-
-<%= get_link Opportunity, :new %>
-<% if can? :approve, Opportunity %>
-  <br />
-  <br />
-  <p>You can approve or reject an opportunity by viewing the details.</p>
-<% end %>
+<%= render 'shared/pages/index', resource_class: Opportunity, resources: @opportunities, headers: headers, field_sets: field_sets, search_fields: search_fields %>

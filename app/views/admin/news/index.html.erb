@@ -1,32 +1,14 @@
-<h1><%= @title %></h1>
+<% headers = [:title, :publish_date, :show_public] %>
 
-<%= display_block("News (Members Face)", true) %>
+<% field_sets = @news.map { |news| [
+  news,
+  l(news.publish_date, format: :short),
+  bool_icon(news.show_public)
+] }%>
 
-<br />
-<br />
+<% search_fields = {
+    title_cont: { slug: 'defaults.title' },
+    body_cont:  { slug: 'defaults.body' }
+} %>
 
-<table class="table">
-  <tr>
-    <th>Title</th>
-    <th>Publish Date</th>
-    <th>Show public</th>
-    
-    <% if can? :edit, News %>
-      <th></th>
-    <% end %>
-  </tr>
-
-<% @news.each do |news| %>
-  <tr>
-    <td><%= get_link news, :show %></td>
-    <td><%= l news.publish_date, format: :short %></td>
-    <td><%= bool_icon news.show_public %></td>
-
-    <%= get_link news, :edit, wrap_tag: 'td' %>
-  </tr>
-<% end %>
-</table>
-
-<%= paginate(@news) %>
-
-<%= get_link News, :new %>
+<%= render 'shared/pages/index', resource_class: News, resources: @news, headers: headers, field_sets: field_sets, search_fields: search_fields %>

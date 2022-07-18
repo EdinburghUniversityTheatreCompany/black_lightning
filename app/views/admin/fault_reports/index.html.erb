@@ -1,42 +1,21 @@
-<h1><%= @title %></h1>
 
-<%= display_block("Fault Reports", true) %>
+<% # INDEX: Bring back CSS classing the table rows that's in fault_report.css_class%>
+<% headers = [:item, :severity, :status, :reported_by, :created_at, :updated_at] %>
 
-<br />
-<br />
+<% field_sets = @fault_reports.map { |fault_report| [
+  fault_report,
+  fault_report.severity.humanize,
+  fault_report.status.humanize,
+  fault_report.reported_by_name,
+  l(fault_report.created_at, format: :short),
+  l(fault_report.updated_at, format: :short)
+] } %>
 
-<% if @fault_reports.empty? %>
-  <p>HAL could not find any fault reports.</p>
-<% else %>
-  <table class="table table-hover">
-    <tr>
-      <th>Item</th>
-      <th>Severity</th>
-      <th>Status</th>
-      <th>Reported by</th>
-      <th>Date reported</th>
-      <th>Last updated</th>
+<% search_fields = {
+    item_cont:          { slug: 'defaults.item' },
+    description_cont:   { slug: 'defaults.description' },
+    severity_eq:        { slug: 'defaults.severity' },
+    status_eq:          { slug: 'defaults.status' }
+} %>
 
-      <% if can? :edit, FaultReport %>
-        <th></th>
-      <% end %>
-    </tr>
-
-    <% @fault_reports.each do |fault_report| %>
-      <tr class="<%= fault_report.css_class %>">
-        <td><%= link_to fault_report.item, admin_fault_report_path(fault_report) %></td>
-        <td><%= fault_report.severity.humanize %></td>
-        <td><%= fault_report.status.humanize %></td>
-        <td><%= fault_report.reported_by_name %></td>
-        <td><%= l fault_report.created_at, format: :short %></td>
-        <td><%= l fault_report.updated_at, format: :short %></td>
-
-        <%= get_link fault_report, :edit, wrap_tag: 'td' %>
-      </tr>
-    <% end %>
-  </table>
-
-  <%= paginate(@fault_reports) %>
-<% end %>
-
-<%= get_link FaultReport, :new %>
+<%= render 'shared/pages/index', resource_class: FaultReport, resources: @fault_reports, headers: headers, field_sets: field_sets, search_fields: search_fields %>
