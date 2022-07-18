@@ -1,0 +1,27 @@
+<% headers = [:name, ''] %>
+<% headers << '' if can?(:read, Admin::Questionnaires::Questionnaire) %>
+
+
+<% if @show_current_term_only %>
+  <p>By default, this display only includes questionnaires for shows taking place during the current semester. Please use the search form if you want to view older questionnaires.</p>
+<% end %>
+
+<div class="accordion" id="questionnairesAccordion">
+  <% @questionnaires.each do |event_name, questionnaires| %>
+    <div class="card">
+      <div class="card-header">
+        <% # If you change the anchor_id, please also change the anchor for the back button on the questionnaire show page. %>
+        <h3><a id="<%= "#{event_name.to_url}-table" %>"><%= event_name %></a></h3>
+      </div>
+      <div class="card-body">
+        <% field_sets = questionnaires.map { |questionnaire| [
+          questionnaire, 
+          get_link(questionnaire, :answer, http_method: :get, html_class: '', append_name: true),
+          get_link(questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn btn-secondary')
+        ] } %>
+
+        <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Questionnaires::Questionnaire) %>
+      </div>
+    </div>
+  <% end %>
+</div>

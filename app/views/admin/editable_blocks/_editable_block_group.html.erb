@@ -1,0 +1,22 @@
+<% headers = ['Editable Blocks'] %>
+<% group = group.presence ? group : 'No Group' %>
+<% group_stripped = group.downcase.gsub(/[^a-zA-Z0-9\-]/,'') %>
+<% div_id = "editable_blocks_" + group_stripped + "_collapse" %>
+<% heading_id = "editable_blocks_" + group_stripped + "_heading" %>
+
+<div class="card">
+  <div class="card-header" id="<%= group %>_heading">
+    <h3 class="mb-0">
+      <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#<%= div_id %>" aria-expanded="true" aria-controls="<%= div_id %>">
+        <%= group %>
+      </button>
+    </h3>
+  </div>
+
+  <div id="<%= div_id %>" class="collapse" aria-labelledby="<%= heading_id %>">
+    <div class="card-body">
+      <% field_sets = editable_blocks.map { |editable_block| [editable_block] } %>
+        <%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: Admin::EditableBlock, include_edit_button: true, include_link_to_item: true, include_headers: false) %>
+    </div>
+  </div>
+</div>
