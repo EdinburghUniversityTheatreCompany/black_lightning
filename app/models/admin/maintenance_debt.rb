@@ -53,13 +53,13 @@ class Admin::MaintenanceDebt < ApplicationRecord
   def css_class
     case status
     when :unfulfilled
-      'warning'
+      'table-warning'
     when :converted
-      'success'
+      'table-success'
     when :completed
-      'success'
+      'table-uccess'
     when :causing_debt
-      'error'
+      'table-danger'
     end
   end
 end

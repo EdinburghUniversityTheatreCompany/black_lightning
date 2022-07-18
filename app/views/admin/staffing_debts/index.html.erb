@@ -1,6 +1,3 @@
-<% # INDEX: CSS class on rows. %>
-<% # <tr class="<%= staffing_debt.css_class %>
-
 <% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'Staffing Job'] %>
 <% headers << '' if can?(:unassign, Admin::StaffingDebt) %>
 <% headers << '' if can?(:edit, Admin::StaffingDebt) %>
@@ -27,7 +24,8 @@
       get_link(staffing_debt, :unassign, additional_condition: staffing_debt.admin_staffing_job_id.present?, http_method: :put),
       get_link(staffing_debt, :edit, link_text: 'Change Deadline', additional_condition: staffing_debt.status != :forgiven),
       render('forgive_button', staffing_debt: staffing_debt)
-    ]
+    ],
+    class: staffing_debt.css_class
   }
 end %>
 

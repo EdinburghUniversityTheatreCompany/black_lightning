@@ -13,9 +13,9 @@
     "#{user.debt_causing_maintenance_debts.size} / #{user.upcoming_maintenance_debts.size}",
     "#{user.debt_causing_staffing_debts.size} / #{user.upcoming_staffing_debts.size}",
     user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.size 
-  ] } } %>
-
-<% # INDEX: Mark people in debt with a CSS class on the table. %>
+  ], 
+  class: user.in_debt ? 'table-danger' : ''
+} } %>
 
 <%= render 'shared/pages/index', resource_class: Admin::Debt, resources: @users, headers: headers, field_sets: field_sets, search_fields: search_fields, 
   show_new_button: false, include_edit_button: false, include_link_to_item: false %>

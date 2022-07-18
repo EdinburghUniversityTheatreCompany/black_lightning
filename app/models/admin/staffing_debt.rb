@@ -62,13 +62,13 @@ class Admin::StaffingDebt < ApplicationRecord
   def css_class
     case status.to_sym
     when :not_signed_up
-      'warning'
+      'table-warning'
     when :awaiting_staffing
       ''
     when :completed_staffing, :forgiven
-      'success'
+      'table-success'
     when :causing_debt
-      'error'
+      'table-danger'
     end
   end
 

@@ -1,6 +1,3 @@
-<% # INDEX: CSS class on rows. %>
-<% # <tr class="<%= maintenance_debt.css_class %>
-
 <% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'maintenance Job'] %>
 <% headers << '' if can?(:delete, Admin::MaintenanceDebt) %>
 <% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
@@ -22,13 +19,15 @@
       detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a Staffing Debt?" 
     ) : '' ,
     render('complete_button', maintenance_debt: maintenance_debt)
-  ] }
+  ],
+  class: maintenance_debt.css_class
+}
 end %>
 
 <% if @is_specific_user
   search_fields = {
-      user_full_name_cont: { slug: 'defaults.user' },
-      show_name_cont: { slug: 'defaults.show_name' },
+      user_full_name_cont:  { slug: 'defaults.user' },
+      show_name_cont:       { slug: 'defaults.show_name' },
       show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean }
   } 
 else 
