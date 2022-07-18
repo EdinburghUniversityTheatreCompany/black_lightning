@@ -1,35 +1,34 @@
-<h1><%= @title %></h1>
+<% 
+headers = [:name, :start_date, :tagline]
 
-<%= display_block(@editable_block_name, true) %> 
+field_sets = @events.map { |event| [
+  event,
+  event.date_range(true, :short),
+  event.short_blurb
+] }
 
-<%= render '/events/search_form', url: @url %>
+if current_user.present? && current_user.has_role?('Member')
+  members_only_text_entry = { slug: 'defaults.members_only_text' }
+else
+  members_only_text_entry = nil
+end
 
-<table class="table">
-    <tbody>
-        <tr>
-          <th>Name</th>
-          <th>Dates</th>
-          <th>Tagline</th>
-          <% if can? :edit, Show %>
-            <th></th>
-          <% end %>
-        </tr>
+search_fields = {
+  name_cont:                      { slug: 'defaults.name' },
+  publicity_text_or_tagline_cont: { slug: 'defaults.publicity_text' },
+  members_only_text_cont:         members_only_text_entry,
+  users_full_name_cont:           { slug: 'defaults.user' },
+  author_cont:                    { slug: 'defaults.author' },
 
-        <% @events.each do |event| %>
-          <tr>
-              <%= get_link event, :show, wrap_tag: 'td' %>
+  venue_id_eq:                    { slug: 'defaults.venue', type: :select, collection: Venue.accessible_by(current_ability) },
+  event_tags_id_eq:               { slug: 'defaults.event_tags', type: :select, collection: EventTag.accessible_by(current_ability) },
+  date_range:                     { type: :date_range, options: {  start_date_attribute: 'start_date', end_date_attribute: 'end_date'} },
+  show_private_only:              { slug: 'defaults.show_private_only', type: :boolean },
 
-              <td><%= event.date_range true, :short %>
-              <td><%= event.short_blurb %></td>
+  random_button:      { type: :submit_button, action: :Random },
+  on_this_day_button: { type: :submit_button, action: 'On This Day' }
+} 
+%>
 
-              <%= get_link event, :edit, wrap_tag: 'td' %>
-          </tr>
-        <% end %>
-    </tbody>
-</table>
-
-<%= paginate(@events) %>
-
-<%= (get_link @events.klass, :new) if @events.klass != Event %>
-
-
+<%= render 'shared/pages/index', resource_class: @events.klass, resources: @events, headers: headers, field_sets: field_sets, search_fields: search_fields,
+  show_new_button: @events.klass != Event %>
