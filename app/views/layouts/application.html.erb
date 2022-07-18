@@ -28,17 +28,16 @@
   <%= meta_tags(@meta).html_safe %>
 </head>
 
-<% # BOOTSTRAP: There is a lot of css for the nav in additions.scss that you can probably remove/at least look at. %>
 <body>
-  <div class="container">
+  <div class="container-no-padding">
     <%= render "layouts/header" %>
 
-    <%= render "layouts/ie_notice" %>
-
-    <% # BOOTSTRAP: Can this be removed now that we have sweetalert, Alex? %>
-    <%= render 'layouts/alert_div' %>
-
     <div class="container">
+      <%= render "layouts/ie_notice" %>
+
+      <% # BOOTSTRAP: Can this be removed now that we have sweetalert, Alex? %>
+      <%= render 'layouts/alert_div' %>
+
       <%= content_for?(:content) ? yield(:content) : yield %>
     </div>
 

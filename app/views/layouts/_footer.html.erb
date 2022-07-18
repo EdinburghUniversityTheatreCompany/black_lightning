@@ -1,9 +1,10 @@
-<div class="container-fluid <%= @admin_site ? 'p-0' : 'mt-3' %>">
-  <footer class="bg-primary pt-3 px-2">
+<div class="container-no-padding">
+  <footer class="bg-primary px-2">
+    <% # Exists only so the next row has something to margin against.%>
     <div class="row">
     </div>
 
-    <div class="row">
+    <div class="row my-3">
       <% social_media_icons = [
         { icon: 'facebook-f', url: 'https://facebook.com/bedlamtheatre.ed' },
         { icon: 'instagram',  url: 'https://instagram.com/eutc.bedlamtheatre' },
@@ -18,14 +19,13 @@
       <div class="col"></div>
     </div>
 
-    <div class="row mt-3">
-      <div class="col d-flex align-items-end">
+    <div class="row">
+      <div class="col">
         <small class="text-light text-center">
-          <p>
+          <p class="text-center">
             Bedlam Theatre is run by the Edinburgh University Theatre Company (EUTC). The EUTC is formally associated with
             the Edinburgh University Students Association, registered charity number SC015800. 
             
-            <br class="d-md-none">
             Banner Artwork by <%= link_to 'Bronwen Bender', 'http://cargocollective.com/bronwenbender', class: 'text-reset' %>. Logo by Alexander Morzeria-Davis. 
           </p>
 
@@ -38,8 +38,6 @@
           </p>
         </small>
       </div>
-    </div>
-      <div class="row">
     </div>
   </footer>
 </div>
