@@ -54,7 +54,7 @@
 
             <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
               <i
-                class="fas <%= 'fa-check' if @header_user.debt_message_suffix == "not in Debt" %> <%= 'fa-circle-exclamation' if @header_user.debt_message_suffix != "not in Debt" %> mr-2"></i>
+                class="fas <%= 'fa-check' if @header_user.debt_message_suffix == "not in Debt" %> <%= 'fa-exclamation-circle' if @header_user.debt_message_suffix != "not in Debt" %> mr-2"></i>
               <%= unless @header_user.debt_message_suffix == "in staffing and maintenance Debt" then "You are #{@header_user.debt_message_suffix}" else "You are in Debt" end %>
             </a>
         </li>
@@ -154,7 +154,7 @@
     <!-- /.control-sidebar -->
 
     <!-- Main Footer -->
-    <footer class="main-footer">
+    <footer class="main-footer p-0">
       <%= render "layouts/footer" %>
     </footer>
   </div>

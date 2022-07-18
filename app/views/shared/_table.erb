@@ -1,3 +1,4 @@
+<% include_headers = true if include_headers.nil? %>
 <% new_headers = [] %>
 
 <% headers = headers.each do |header|
@@ -15,33 +16,23 @@ end %>
 
 <% table_class = 'table-hover' if table_class.nil? %>
 
-<div class="card">
-  <div class="card-header">
-  <h3 class="card-title""><%=@title%></h3>
-    <div class="card-tools"> <%= paginate resources %>
-    </div>
-  </div>
-  <div class="card-body">
-    <table class="table  <%= table_class %>">
-      <thead>
-        <tr>
-          <% new_headers.each do |header| %>
+<table class="table  <%= table_class %>">
+  <% if include_headers %>
+    <thead>
+      <tr>
+        <% new_headers.each do |header| %>
           <th scope="col"><%= header %></th>
-          <% end %>
-        </tr>
-      </thead>
-      <tbody>
-        <% field_sets.each do |fields| %>
-        <tr>
-          <% fields.each do |field| %>
-          <td> <%= field %> </td>
-          <% end %>
-        </tr>
         <% end %>
-      </tbody>
-    </table>
-  </div>
-  <div class="card-footer clearfix">
-    <%= paginate(resources) %>
-  </div>
-</div>
+      </tr>
+    </thead>
+  <% end %>
+  <tbody>
+    <% field_sets.each do |field_set| %>
+      <tr class="<%= field_set[:class]%>">
+        <% field_set[:fields].each do |field| %>
+        <td> <%= field %> </td>
+        <% end %>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

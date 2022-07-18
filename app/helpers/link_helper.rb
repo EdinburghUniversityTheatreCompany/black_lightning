@@ -109,6 +109,10 @@ module LinkHelper
     return namespace
   end
 
+  def generate_icon_prefix(icon_name, prefix)
+    return "<span class=\"no-wrap\"><i class=\"fas fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
+  end
+
   private
 
   def generate_link_text(link_text, object, action, prefix, append_name)
@@ -139,10 +143,6 @@ module LinkHelper
     link_text ||= "#{prefix}#{" #{name}" if append_name}".html_safe
 
     return link_text.to_s
-  end
-
-  def generate_icon_prefix(icon_name, prefix)
-    return "<span class=\"no-wrap\"><i class=\"fa fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
   end
 
   def get_default_html_class(action)

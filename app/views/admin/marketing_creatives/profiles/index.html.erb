@@ -1,45 +1,16 @@
-<h1><%= @title %></h1>
+<% headers = [:name, :user_full_name, :approved, 'Categories'] %>
 
-<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_marketing_creatives_profiles, html: { id: "search", class: "form-search form-inline" } do |f| %>
-  <%= f.input_field :name_cont,  placeholder: "Name",  required: false %>
-  <%= f.input_field :about_cont, placeholder: "About", required: false %>
+<% field_sets = @profiles.map { |profile| {
+  fields: [
+    profile,  
+    profile.user.present? ? user_link(profile.user, true) : 'No User',
+    bool_icon(profile.approved),
+    profile.categories.collect(&:name).to_sentence
+  ] } } %>
 
-  <%= submit_tag "Search", class: 'btn btn-secondary' %>
-<% end %>
+<% search_fields = {
+    name_cont:  { slug: 'defaults.name' },
+    about_cont: { slug: 'defaults.about'}
+} %>
 
-<table class="table">
-  <tbody>
-      <tr>
-        <%= content_tag :th, sort_link(@q, :name, 'Name') %>
-        <%= content_tag :th, sort_link(@q, :user_full_name, 'User') %>
-        <%= content_tag :th, sort_link(@q, :approved, 'Approved') %>
-        
-        <th>Categories<th>
-
-        <% if can? :edit, MarketingCreatives::Profile %>
-            <th></th>
-        <% end %>
-      </tr>
-
-      <% @profiles.each do |profile| %>
-        <tr>
-          <%= get_link profile, :show, wrap_tag: 'td' %>
-
-          <td>
-            <% if profile.user.present? %>
-              <%= get_link profile.user, :show %>
-            <% else %>
-              No User
-            <% end%>
-          </td>
-
-          <td><%= bool_icon(profile.approved) %></td>
-          <td><%= profile.categories.collect(&:name).to_sentence %></td>
-
-          <%= get_link profile, :edit, wrap_tag: 'td' %>
-        </tr>
-      <% end %>
-  </tbody>
-</table>
-
-<%= get_link MarketingCreatives::Profile, :new %>
+<%= render 'shared/pages/index', resource_class: MarketingCreatives::Profile, resources: @profiles, headers: headers, field_sets: field_sets, search_fields: search_fields %>

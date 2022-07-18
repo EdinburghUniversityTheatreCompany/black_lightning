@@ -1,74 +1,43 @@
-<h1><%= @title %></h1>
+<% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'Staffing Job'] %>
+<% headers << '' if can?(:unassign, Admin::StaffingDebt) %>
+<% headers << '' if can?(:edit, Admin::StaffingDebt) %>
+<% headers << '' if can?(:delete, Admin::StaffingDebt) %>
 
-<%= render 'admin/shared_debt/search_form', is_specific_user: @is_specific_user, url: :admin_staffing_debts %>
+<% field_sets = [] %>
+<% @staffing_debts.each do |staffing_debt|
+    if staffing_debt.admin_staffing_job.present?
+      staffing_job_content = render('position_and_staffing', staffing_job: staffing_debt.admin_staffing_job)
+    elsif staffing_debt.status == :forgiven
+      staffing_job_content = 'Forgiven'
+    else
+      staffing_job_content = get_link(staffing_debt, :show, link_text: 'Assign Job', additional_condition: can?(:assign, staffing_debt), html_class: 'btn btn-secondary')
+    end
 
-<% if @staffing_debts.empty? %>
-  <p>No Staffing Debts found.</p>
-<% else %>
-  <table class="table">
-    <tbody>
-    <tr>
-      <%= content_tag :th, sort_link(@q, :user_full_name, 'User Name') %>
-      <%= content_tag :th, sort_link(@q, :show_name, 'Show Name') %>
-      <%= content_tag :th, sort_link(@q, :due_by, 'Due By') %>
-      <th>Converted</th>
-      <th>Staffing Job</th>
+  field_sets << { 
+    fields: [
+      staffing_debt,
+      user_link(staffing_debt.user, false),
+      staffing_debt.show.name,
+      staffing_debt.due_by,
+      bool_icon(staffing_debt.converted),
+      staffing_job_content,
+      get_link(staffing_debt, :unassign, additional_condition: staffing_debt.admin_staffing_job_id.present?, http_method: :put),
+      get_link(staffing_debt, :edit, link_text: 'Change Deadline', additional_condition: staffing_debt.status != :forgiven),
+      render('forgive_button', staffing_debt: staffing_debt)
+    ],
+    class: staffing_debt.css_class
+  }
+end %>
 
-      <% if can? :unassign, Admin::StaffingDebt %>
-        <th></th>
-      <% end %>
+<% if @is_specific_user
+  search_fields = nil
+else
+  search_fields = {
+      user_full_name_cont:  { slug: 'defaults.user' },
+      show_name_cont:       { slug: 'defaults.show_name' },
+      show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean }
+  } 
+end %>
 
-      <% if can? :edit, Admin::StaffingDebt %>
-        <th></th>
-      <% end %>
-
-      <% if can? :delete, Admin::StaffingDebt %>
-        <th></th>
-      <% end%>
-    </tr>
-
-    <% @staffing_debts.each do |staffing_debt| %>
-        <tr class="<%= staffing_debt.css_class %>">
-          <td><%= user_link(staffing_debt.user, false) %></td>
-          <td><%= staffing_debt.show.name %></td>
-          <td><%= staffing_debt.due_by %></td>
-          <td><%= bool_icon staffing_debt.converted %></td>
-
-          <td>
-            <% if staffing_debt.admin_staffing_job.present? %>
-              <%= render 'position_and_staffing', staffing_job: staffing_debt.admin_staffing_job %>
-            <% elsif staffing_debt.status == :forgiven %>
-              Forgiven
-            <% else %>
-              <%= get_link staffing_debt, :show, link_text: 'Assign Job', additional_condition: can?(:assign, staffing_debt), html_class: 'btn btn-secondary' %>
-            <% end %>
-          </td>
-
-          <% if can? :unassign, Admin::StaffingDebt %>
-            <td>
-              <%= get_link staffing_debt, :unassign, additional_condition: staffing_debt.admin_staffing_job_id.present?, http_method: :put %>
-            </td>
-          <% end %>
-
-          <% if can? :edit, Admin::StaffingDebt  %>
-            <td>
-              <%= get_link staffing_debt, :edit, link_text: 'Change Deadline', additional_condition: staffing_debt.status != :forgiven %>
-            </td>
-          <% end %>
-
-          <% if can? :delete, Admin::StaffingDebt %>
-            <td>
-              <%= render 'forgive_button', staffing_debt: staffing_debt %>
-            </td>
-          <% end %>
-        </tr>
-    <% end %>
-    </tbody>
-  </table>
-
-  <% unless @is_specific_user %>
-    <%= paginate(@staffing_debts) %>
-  <% end %>
-<% end %>
-
-<%= get_link Admin::StaffingDebt, :new %>
+<%= render 'shared/pages/index', resource_class: Admin::StaffingDebt, resources: @staffing_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
+  include_edit_button: false, include_link_to_item: false %>

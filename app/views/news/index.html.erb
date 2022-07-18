@@ -24,5 +24,5 @@
 <%= render 'shared/pages/public/index', search_form: search_form, items: items, resources: @news %>
 
 
-<% rss_icon = '<i class="fa fa-rss" aria-hidden=”true”></i> RSS Feed' %>
+<% rss_icon = '<i class="fas fa-rss-square" aria-hidden=”true”></i> RSS Feed' %>
 <%= link_to(rss_icon.html_safe, news_index_path(format: :rss), class: 'btn btn-secondary') %>

@@ -1,9 +1,10 @@
 <% headers = [:subject, :created_at] %>
 
-<% field_sets = @complaints.map { |complaint| [
-  complaint,  
-  l(complaint.created_at, format: :longy)
-] }%>
+<% field_sets = @complaints.map { |complaint| { 
+  fields: [
+    complaint,  
+    l(complaint.created_at, format: :longy)
+  ] } } %>
 
 <% search_fields = {
     subject_cont:     { slug: 'defaults.subject' },

@@ -1,39 +1,15 @@
-<h1><%= @title %></h1>
-<%= display_block("Proposal Calls", true) %>
+<% # BOOTSTRAP: These buttons are very packed together right now. Not sure why. %>
+<% quick_actions = get_link(Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id })  %>
+<% quick_actions += get_link(@call, :edit, append_name: true) %>
+<% quick_actions += get_link(Admin::Proposals::Call, :index, link_text: 'Back To Calls') %>
 
-<br />
-<br />
+<% content = render('admin/proposals/proposals/index_content') %>
 
-<% fields = {
-  submission_deadline: l(@call.submission_deadline, format: :longy),
-  editing_deadline: l(@call.editing_deadline, format: :longy),
+<% search_fields = {
+    show_title_cont:      { slug: 'defaults.show' },
+    proposal_text_cont:   { slug: 'defaults.proposal_text'},
+    publicity_text_cont:  { slug: 'defaults.proposal_text'}
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
-
-<table class="table">
-  <tr>
-    <th>Show title</th>
-
-    <% if can? :edit, Admin::Proposals::Proposal %>
-      <th></th>
-    <% end %>
-  </tr>
-
-  <% @proposals.each do |proposal| %>
-    <tr>
-      <td>
-        <%= get_link proposal, :show, link_target: admin_proposals_proposal_path(proposal) %>
-        <%= proposal.labels true %>
-      </td>
-
-      <%= get_link proposal, :edit, link_target: edit_admin_proposals_proposal_path(proposal), wrap_tag: 'td' %>
-    </tr>
-  <% end %>
-</table>
-
-<br />
-
-<%= get_link Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id } %>
-<%= get_link @call, :edit, append_name: true %>
-<%= get_link Admin::Proposals::Call, :index, link_text: 'Back To Calls' %>
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Proposal, resources: @proposals, content: content, 
+  show_new_button: false, quick_actions: quick_actions %>

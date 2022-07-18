@@ -14,7 +14,9 @@
     
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", media: "all" %>
-  <script src="https://kit.fontawesome.com/5b2ae334f1.js" crossorigin="anonymous"></script>
+
+  <% # BOOTSTRAP: Loading font-awesome %>
+  <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
   <%= javascript_pack_tag "application" %>
   <%= javascript_include_tag "application" %>
@@ -26,16 +28,16 @@
   <%= meta_tags(@meta).html_safe %>
 </head>
 
-<% # BOOTSTRAP: There is a lot of css for the nav in additions.scss that you can probably remove/at least look at. %>
 <body>
-  <div class="container">
+  <div class="container-no-padding">
     <%= render "layouts/header" %>
 
-    <%= render "layouts/ie_notice" %>
-
-    <%= render 'layouts/alert_div' %>
-
     <div class="container">
+      <%= render "layouts/ie_notice" %>
+
+      <% # BOOTSTRAP: Can this be removed now that we have sweetalert, Alex? %>
+      <%= render 'layouts/alert_div' %>
+
       <%= content_for?(:content) ? yield(:content) : yield %>
     </div>
 

@@ -1,8 +1,6 @@
 <% headers = [:name] %>
 
-<% field_sets = @event_tags.map { |event_tag| [
-  event_tag
-] }%>
+<% field_sets = @event_tags.map { |event_tag| { fields: [event_tag] } } %>
 
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },

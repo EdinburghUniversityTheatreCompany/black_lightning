@@ -1,39 +1,12 @@
-<h1><%= @title %></h1>
+<% quick_actions = link_to tree_admin_techies_url, class: 'btn btn-secondary' do %>
+  <i class="fas fa-tree-alt" aria-hidden=”true”></i> Tree
+<% end %>
 
-<p>
-  <%= link_to tree_admin_techies_url, class: 'btn btn-secondary' do %>
-    <i class="fa fa-bar-chart" aria-hidden=”true”></i> Tree
-  <% end %>
-</p>
+<% headers = [:name] %>
 
-<div class="row">
-    <div class="span12">
-        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_techies, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
-            <%= f.input_field :name_cont, placeholder: 'Name',  required: false %>
-        <% end %>
-    </div>
-</div>
+<% field_sets = @techies.map { |techie| {fields: [techie] } } %>
 
-<table class="table">
-  <tr>
-    <%= content_tag :th, sort_link(@q, :name, 'Name') %>
-    <% if can? :edit, Techie %>
-      <th></th>
-    <% end %>
-  </tr>
+<% search_fields = { name_cont: { slug: 'defaults.name' } } %>
 
-  <% @techies.each do |techie| %>
-    <tr>
-      <%= get_link techie, :show, wrap_tag: 'td' %>
-
-      <%= get_link techie, :edit, wrap_tag: 'td' %>
-    </tr>
-  <% end %>
-</table>
-
-<br />
-
-
-<%= paginate(@techies) %>
-
-<%= get_link Techie, :new %>
+<%= render 'shared/pages/index', resource_class: Techie, resources: @techies, headers: headers, field_sets: field_sets, search_fields: search_fields,
+  quick_actions: quick_actions %>

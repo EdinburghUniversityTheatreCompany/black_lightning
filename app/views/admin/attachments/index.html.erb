@@ -1,39 +1,15 @@
-<h1><%= @title %></h1>
+<% # BOOTSTRAP: Alex, can you check if this looks like you want it to look or if bits that are currently in the _table partial need to be moved to the generic index partial? %>
 
-<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
-    <% search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_attachments, html: { id: "search", class: "form-search" } do |f| %>
-    <%= f.input_field :name_cont,              placeholder: "Name",  required: false %>
+<% # TODO: Generic date thing which works for all types of attachments... TEST IT BEFORE CONTINUING %>
+<% #= render 'shared/date_range_search_form_field', f: f %>
 
-    <%= f.input_field :file_blob_filename_cont, placeholder: 'Filename',  required: false %>
+<% search_fields = {
+    name_cont: { slug: 'defaults.name' },
+    file_blob_filename_cont: { slug: 'defaults.file_name' },
+    attachment_tags_id_eq: { slug: 'defaults.attachment_tags', type: :select, collection: AttachmentTag.accessible_by(current_ability) }
+} %>
 
-    <% # If, for whatever reason, the symbol of this field changes, you also have to change the link generated in the attachment_tags_helper. %>
-    <%= f.input_field :attachment_tags_id_eq, collection: AttachmentTag.accessible_by(current_ability) %>
+<% content = render('admin/attachments/index_content', q: @q, attachments: @attachments) %>
 
-    <br>
-    <br>
-
-  
-
-    <% # TODO: Generic date thing which works for all types of attachments... TEST IT BEFORE CONTINUING %>
-    <% #= render 'shared/date_range_search_form_field', f: f %>
-
-    <%= f.submit :Search, class: 'btn btn-primary' %>
-  <% end %>
-<% end %>
-
-<% # TODO: Genericise %>
-<% # TODO: How to include the sort by... %>
-<p>
-  Sort By: 
-  <% fields = %i[name start_date end_date] %>
-  <% fields.each_with_index do |field, i| %>
-    <%= sort_link(@q, field) %>
-    <% if i < fields.length - 1 %>
-    -
-    <% end %>
-  <% end %>
-</p>
-
-<%= render 'shared/attachments_gallery', attachments: @attachments, include_item_link: true, include_header: false %>
-
-<%= paginate(@attachments) %>
+<%= render 'shared/pages/index', resource_class: Attachment, resources: @attachments, content: content, search_fields: search_fields, 
+  show_new_button: false %>

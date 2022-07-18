@@ -1,34 +1,15 @@
-<h1><%= @title %></h1>
+<% headers = [:name, :submission_deadline, :editing_deadline, ''] %>
 
-<%= display_block("Proposal Calls", true) %>
+<% field_sets = @calls.map { |call| { 
+  fields: [
+    call,
+    l(call.submission_deadline, format: :longy),
+    l(call.editing_deadline, format: :longy),
+    get_link(call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn btn-secondary', return_link_text_if_no_permission: false)
+  ] } } %>
 
-<br />
-<br />
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' }
+} %>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
-    <th>Submission Deadline</th>
-    <th>Editing Deadline</th>
-
-    <% if can? :edit, Admin::Proposals::Call %>
-      <th></th>
-      <th></th>
-    <% end %>
-  </tr>
-
-<% @calls.each do |call| %>
-  <tr>
-    <%= get_link call, :show, link_target: admin_proposals_call_proposals_path(call), wrap_tag: 'td' %>
-
-    <td><%= l call.submission_deadline, format: :longy %></td>
-    <td><%= l call.editing_deadline, format: :longy %></td>
-
-    <%= get_link call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn btn-secondary', wrap_tag: 'td', return_link_text_if_no_permission: false %>
-
-    <%= get_link call, :edit, wrap_tag: 'td' %>
-  </tr>
-<% end %>
-</table>
-
-<%= get_link Admin::Proposals::Call, :new %>
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, headers: headers, field_sets: field_sets, search_fields: search_fields %>

@@ -47,17 +47,17 @@
     switch(type) {
       case "alert":
         alertclass = "alert-danger";
-        icon       = "fa fa-exclamation-sign";
+        icon       = "fa-exclamation";
         break;
       case "success":
         alertclass = "alert-success";
-        icon       = "fa fa-ok";
+        icon       = "fa-check";
         break;
     }
 
   // BOOTSTRAP: This script probs should not live here, and if it does, this alert should be created using the form script
     $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
-              "<i class=\"" + icon  + " fa fa-large\" aria-hidden=”true”></i> "
+              "<i class=\"" + icon  + " fas fa-large\" aria-hidden=”true”></i> "
               + message +
               "</div>");
 

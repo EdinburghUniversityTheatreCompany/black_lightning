@@ -1,31 +1,15 @@
-<h1><%= @title %></h1>
+<% headers = [:subject, :draft, :send_date] %>
 
-<table class="table">
-  <tr>
-    <th>Subject</th>
-    <th>Is Send</th>
-    <th>Send Date</th>
-    <% if can?(:edit, MassMail) %>
-      <th></th>
-    <% end %>
-  </tr>
+<% field_sets = @mass_mails.map { |mass_mail| { 
+  fields: [
+    mass_mail,  
+    bool_icon(mass_mail.draft),
+    get_send_date(mass_mail)
+  ] } } %>
 
-<% @mass_mails.each do |mass_mail| %>
-  <tr>
-    <%= get_link mass_mail, :show, link_text: get_subject(mass_mail), wrap_tag: 'td' %>
+<% search_fields = {
+    subject_cont: { slug: 'defaults.subject' },
+    body_cont:    { slug: 'defaults.description' }
+} %>
 
-    <td><%= bool_icon(!mass_mail.draft) %></td>
-    <td><%= get_send_date(mass_mail) %></td>
-    
-    <% if can? :edit, mass_mail %>
-      <td>
-        <%= get_link mass_mail, :edit, additional_condition: mass_mail.draft %>
-      </td>
-    <% end %>
-  </tr>
-<% end %>
-</table>
-
-<%= paginate(@mass_mails) %>
-
-<%= get_link MassMail, :new %>
+<%= render 'shared/pages/index', resource_class: MassMail, resources: @mass_mails, headers: headers, field_sets: field_sets, search_fields: search_fields %>

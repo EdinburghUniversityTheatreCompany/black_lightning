@@ -1,61 +1,38 @@
-<h1><%= @title %></h1>
+<% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'maintenance Job'] %>
+<% headers << '' if can?(:delete, Admin::MaintenanceDebt) %>
+<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
+<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
 
+<% field_sets = @maintenance_debts.map do |maintenance_debt| { 
+  fields: [
+    maintenance_debt,
+    user_link(maintenance_debt.user, false),
+    maintenance_debt.show.name,
+    maintenance_debt.due_by,
+    bool_icon(maintenance_debt.converted?),
+    maintenance_job_content,
+    get_link(maintenance_debt, :edit, link_text: 'Change Deadline', additional_condition: maintenance_debt.status != :forgiven),
+    maintenance_debt.unfulfilled? ? get_link(
+      maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing',
+      html_class: 'btn btn-secondary', http_method: :put, 
+      confirm: "Converting the Maintenance Debt to Staffing Debt", 
+      detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a Staffing Debt?" 
+    ) : '' ,
+    render('complete_button', maintenance_debt: maintenance_debt)
+  ],
+  class: maintenance_debt.css_class
+}
+end %>
 
-<%= render 'admin/shared_debt/search_form', is_specific_user: @is_specific_user, url: :admin_maintenance_debts %>
+<% if @is_specific_user
+  search_fields = {
+      user_full_name_cont:  { slug: 'defaults.user' },
+      show_name_cont:       { slug: 'defaults.show_name' },
+      show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean }
+  } 
+else 
+  search_fields = nil
+end %>
 
-<% if @maintenance_debts.empty? %>
-  <p>No Maintenance Debts found.</p>
-<% else %>
-  <table class="table">
-    <tbody>
-    <tr>
-      <%= content_tag :th, sort_link(@q, :user_full_name, 'User Name') %>
-      <%= content_tag :th, sort_link(@q, :show_name, 'Show Name') %>
-      <%= content_tag :th, sort_link(@q, :due_by, 'Due By') %>
-
-      <% if can? :edit, Admin::MaintenanceDebt %>
-        <th></th>
-        <th></th>
-      <% end %>
-
-      <% if can? :delete, Admin::MaintenanceDebt %>
-        <th></th>
-      <% end%>
-    </tr>
-    <% @maintenance_debts.each do |maintenance_debt| %>
-        <tr class="<%= maintenance_debt.css_class %>">
-          <td><%= user_link(maintenance_debt.user, false) %></td>
-          <td><%= maintenance_debt.show.name %></td>
-          <td><%= get_link maintenance_debt, :show, link_text: maintenance_debt.due_by %></td>
-
-          <% if can? :edit, maintenance_debt %>
-            <td>
-              <%= get_link maintenance_debt, :edit, link_text: 'Change Deadline', condition: maintenance_debt.unfulfilled? %>
-            </td>
-
-            <td>
-              <% if maintenance_debt.unfulfilled? %>
-                  <%= get_link maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing', html_class: 'btn btn-secondary', http_method: :put, 
-                                                  confirm: "Converting the Maintenance Debt to Staffing Debt", 
-                                                  detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a staffing debt?" 
-                  %>
-              <% end %>
-            </td>
-          <% end %>
-
-          <% if can? :delete, maintenance_debt %>
-            <td>
-              <%= render 'complete_button', maintenance_debt: maintenance_debt %>
-            </td>
-          <% end %>
-        </tr>
-    <% end %>
-    </tbody>
-  </table>
-
-  <% unless @is_specific_user %>
-    <%= paginate(@maintenance_debts) %>
-  <% end %>
-<% end %>
-
-<%= get_link Admin::MaintenanceDebt, :new %>
+<%= render 'shared/pages/index', resource_class: Admin::MaintenanceDebt, resources: @maintenance_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
+  include_edit_button: false, include_link_to_item: false %>

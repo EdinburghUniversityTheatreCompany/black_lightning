@@ -1,33 +1,42 @@
+<% # BOOTSTRAP: Fix the absence of vetical margins -> Probably because this is bootstrap 4 and we are using h-100... %>
+<% # BOOTSTRAP: Thumbnails do not take up the full width. %>
+
 <% include_item_link = false unless include_item_link.present? %>
 
 <% url = attachment_path(attachment.slug) %>
 
-<% begin %>
-  <% if attachment.file.previewable? %>
-    <% img = image_tag attachment.file.preview(thumb_variant) %>
-  <% else %>
-    <% img = image_tag attachment.file.variant(thumb_variant) %>
+<div class="card h-100">
+  <% begin %>
+    <% if attachment.file.previewable? %>
+      <% img = image_tag attachment.file.preview(thumb_variant) %>
+    <% else %>
+      <% img = image_tag attachment.file.variant(thumb_variant) %>
+    <% end %>
+
+    <% fullsize_url = url_for(attachment.file) %>
+
+    <%= link_to(img, fullsize_url, { class: "card-img-top h-auto", rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant)))  %>
+  <% rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable %>
+    <% # It is impossible to create a thumbnail, so do nothing. %>
   <% end %>
 
-  <% fullsize_url = url_for(attachment.file) %>
+  <div class="card-body">
+    <p class="card-text">
+      <%= link_to attachment.name, url, rel: 'group', title: attachment.name %>
+      <% if include_item_link && attachment.item.present? %>
+        <hr class="m-0">
+        <% item_url = get_url_for_attachment_item(attachment) %>
 
-  <div> 
-    <%= link_to img, fullsize_url, class: "thumbnail fancybox", rel: 'group', title: attachment.name, 'data-title' => attachment.name %>
+        <%= link_to attachment.item_name, item_url %>
+      <% end %>
+
+      <% if attachment.attachment_tags.present? %>
+        <hr class="m-0">
+        <%= attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }.to_sentence.html_safe %>
+      <% end %>
+    <p>
   </div>
-<% rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable %>
-  <% # It is impossible to create a thumbnail, so do nothing. %>
-<% end %>
+</div>
 
-<%= link_to attachment.name, url, rel: 'group', title: attachment.name %>
 
-<% if include_item_link && attachment.item.present? %>
-  <hr class="m-0" style="margin: 0px">
-  <% item_url = get_url_for_attachment_item(attachment) %>
 
-  <%= link_to attachment.item_name, item_url %>
-<% end %>
-
-<% if attachment.attachment_tags.present? %>
-  <hr class="m-0" style="margin: 0px">
-  <%= attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }.to_sentence.html_safe %>
-<% end %>

@@ -1,44 +1,18 @@
-<% content_for :head do %>
-  <%= javascript_include_tag "admin/users" %>
-<% end %>
+<% headers = [:name, :email] %>
 
-<h1><%= @title %></h1>
+<% field_sets = @users.map { |user| { 
+  fields: [
+    user,  
+    user.email
+  ] } } %>
 
-<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_users, html: { id: "search", class: "form-search form-inline" } do |f| %>
-  <%= f.input_field :full_name_cont, placeholder: "Name",  required: false %>
-  <%= f.input_field :email_cont,     placeholder: "Email", required: false %>
+<% search_fields = {
+    full_name_cont:   { slug: 'defaults.name' },
+    email_cont:       { slug: 'defaults.email' },
+    bio_cont:         { slug: 'defaults.bio' },
+    show_non_members: { slug: 'defaults.show_non_members', type: :boolean },
+    
+    random_button:    { slug: 'defaults.random_button', type: :submit_button, action: :Random }
+} %>
 
-  <%= render 'shared/boolean_search_form_field', f: f, name: :show_non_members, label: 'Show Non-Members' %>
-  
-  <%= f.submit :Search, class: 'btn btn-primary' %>
-
-  <%= f.submit :Random, class: 'btn btn-secondary' %>
-<% end %>
-
-<table class="table">
-    <tbody>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-
-          <% if can? :edit, User%>
-            <th></th>
-          <% end %>
-        </tr>
-        <% @users.each do |user| %>
-          <tr>
-            <td><%= user_link(user, true) %></td>
-            <td><%= user.email %></td>
-              
-            <%= get_link user, :edit, wrap_tag: 'td' %>
-          </tr>
-        <% end %>
-    </tbody>
-</table>
-
-<% # This paginate_holder is used by the user script so it knows where to place the updated pagination, so please leave it in place. %>
-<div class="paginate_holder">
-  <%= paginate(@users) %>
-</div>
-
-<%= get_link User, :new %>
+<%= render 'shared/pages/index', resource_class: User, resources: @users, headers: headers, field_sets: field_sets, search_fields: search_fields %>

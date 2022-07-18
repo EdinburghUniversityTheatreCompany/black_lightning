@@ -1,3 +1,4 @@
+<% # EMAIL: Rewrite %>
 <p>Welcome to Bedlam!</p>
 
 <%= render partial: "shared/mail/call_to_action", locals: { text: 'Click here to complete your registration', cta_url: activate_membership_activation_token_url(@token, protocol: "https") } %>

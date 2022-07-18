@@ -1,21 +1,15 @@
-<h1><%= @title %></h1>
+<% headers = [:name, :tagline] %>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
+<% field_sets = @venues.map { |venue| { 
+  fields: [
+  venue,  
+  venue.tagline
+] } } %>
 
-    <% if can? :edit, Venue %>
-      <th></th>
-    <% end %>
-  </tr>
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' },
+    tagline_cont:     { slug: 'defaults.tagline' },
+    description_cont: { slug: 'defaults.description'}
+} %>
 
-  <% @venues.each do |venue| %>
-    <tr>
-        <%= get_link venue, :show, wrap_tag: 'td' %>
-
-        <%= get_link venue, :edit, wrap_tag: 'td' %>
-    </tr>
-  <% end %>
-</table>
-
-<%= get_link Venue, :new %>
+<%= render 'shared/pages/index', resource_class: Venue, resources: @venues, headers: headers, field_sets: field_sets, search_fields: search_fields %>

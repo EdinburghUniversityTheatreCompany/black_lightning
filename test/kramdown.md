@@ -113,7 +113,7 @@ images:
 Further Tests
 =============
 
-{::captioned_image .float-left}
+{::captioned_image .float-start}
 ![Image Description](/attachments/myimage)
 
 This is a caption

@@ -1,43 +1,21 @@
-<% prefix = params[:commit] == 'Search' ? 'Searching' : 'Listing' %>
+<% search_fields = {
+  full_name_cont:     { slug: 'defaults.name' },
+  email_cont:         { slug: 'defaults.email' },
+  show_in_debt_only:  { slug: 'defaults.show_in_debt_only', type: :boolean}
+} %>
 
-<h1><%= prefix %> All Members</h1>
-<div class="row">
-    <div class="span12">
-        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debts, html: { id: 'search', class: 'form-search form-inline'} do |f| %>
-            <%= f.input_field :full_name_cont, placeholder: 'Name',  required: false %>
-            <%= f.input_field :email_cont,     placeholder: 'Email', required: false %>
-            <% # If you're interested in knowing. This cannot be an input field because ransack does not have a method called show_in_debt_only. %>
-            <% # We cannot use a ransack built-in because the choice is between: false and (false or true) and not between true/false. %>
-            <%= f.input :show_in_debt_only, label: 'Show In Debt Only', input_html: {id: 'show_in_debt_only', checked: params[:show_in_debt_only] == '1' ? true : false, name: 'show_in_debt_only' }, as: :boolean %>
-            <%= f.submit :Search, class: 'btn btn-secondary' %>
-        <% end %>
-    </div>
-</div>
+<% headers = [:name, :maintenance_debts, :staffing_debts, :unassociated_staffing_slots] %>
 
-<% if @users.empty? %>
-  <p>HAL could not find any users.</p>
-<% else %>
-  The display is formatted using (current debts) / (uncleared debts with a deadline in the future)
-  <table class="table">
-    <tbody>
-    <tr>
-      <th>Name</th>
-      <th>Maintenance Debts</th>
-      <th>Staffing Debts</th>
-      <th>Unassociated Staffing Slots</th>
-    </tr>
-    <% @users.each do |user| %>
-        <tr <%= 'class="error"'.html_safe if user.in_debt %>>
-          <td><%= link_to user.name(current_user), admin_debt_path(user) %></td>
-          <td><%= "#{user.debt_causing_maintenance_debts.count} / #{user.upcoming_maintenance_debts.count}" %></td>
-          <td><%= "#{user.debt_causing_staffing_debts.count} / #{user.upcoming_staffing_debts.count}" %></td>
-          <td><%= user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.count %></td>
-        </tr>
-    <% end %>
-    </tbody>
-  </table>
+<% field_sets = @users.map { |user| { 
+  fields: [
+    user,
+    link_to(user.name(current_user), admin_debt_path(user)),
+    "#{user.debt_causing_maintenance_debts.size} / #{user.upcoming_maintenance_debts.size}",
+    "#{user.debt_causing_staffing_debts.size} / #{user.upcoming_staffing_debts.size}",
+    user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.size 
+  ], 
+  class: user.in_debt ? 'table-danger' : ''
+} } %>
 
-  <%= paginate(@users) %>
-<% end %>
-
-<% # TODO: Genericise %>
+<%= render 'shared/pages/index', resource_class: Admin::Debt, resources: @users, headers: headers, field_sets: field_sets, search_fields: search_fields, 
+  show_new_button: false, include_edit_button: false, include_link_to_item: false %>

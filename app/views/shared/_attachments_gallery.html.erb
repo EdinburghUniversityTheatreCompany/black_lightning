@@ -14,20 +14,13 @@
     <h3>Attachments</h3>
   <% end %>
 
-  <li class="thumbnails">
-    <% attachments.each_with_index do |attachment, index| %>
-      <% if index % 4 == 0 %>
-        <div class="row span12">
-      <% end %>
-
-      <ul class="span2 gallery well">
+  <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+    <% attachments.each do |attachment| %>
+      <div class="col">
         <%= render 'shared/show_attachment', attachment: attachment, include_item_link: include_item_link %>
-      </ul>
-
-      <% # Close the row. %>
-      <% if index % 4 == 3 %>
-        </div>
-      <% end %>
+      </div>
     <% end %>
-  </li>
+  </div>
 <% end %>
+
+<div class="mb-3"></div>

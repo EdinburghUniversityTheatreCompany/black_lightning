@@ -1,0 +1,5 @@
+<div class="accordion" id="editableBlockAccordion">
+<% @editable_blocks.each do |group, editable_blocks| %>
+  <%= render 'editable_block_group', group: group, editable_blocks: editable_blocks %>
+<% end %>
+</div>

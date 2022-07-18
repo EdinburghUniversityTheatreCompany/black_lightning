@@ -7,7 +7,7 @@ class Admin::MembershipCardsController < AdminController
   ##
   def index
     @title = 'Membership Cards'
-    @cards = @membership_cards.paginate(page: params[:page], per_page: 15)
+    @cards = @membership_cards.page(params[:page]).per(15)
   end
 
   ##
