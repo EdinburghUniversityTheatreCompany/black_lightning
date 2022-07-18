@@ -1,9 +1,10 @@
 <% headers = [:card_number, :member_name] %>
 
-<% field_sets = @news.map { |news| [
-  card,
-  user_link(card.user, false)
-] } %>
+<% field_sets = @news.map { |news| {
+  fields: [
+    card,
+    user_link(card.user, false)
+  ] } } %>
 
 <% search_fields = {
     card_number_cont: { slug: 'defaults.card_number' },

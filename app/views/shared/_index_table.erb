@@ -3,15 +3,15 @@
 
 <% headers << '' if can?(:edit, resource_class) && include_edit_button %>
 
-<% field_sets.each_with_index do |fields, i| %>
+<% field_sets.each_with_index do |field_set, i| %>
   <% # Add an edit link to the end if the current user can edit the current instance.  %>
   <% # Assumes the first item is the instance.%>
-  <% fields << get_link(fields[0], :edit) if can?(:edit, fields[0]) && include_edit_button %>
+  <% field_set[:fields] << get_link(field_set[:fields][0], :edit) if can?(:edit, field_set[:fields][0]) && include_edit_button %>
 
   <% if include_link_to_item %>
-    <% fields[0] = get_link(fields[0], :show) %>
+    <% field_set[:fields][0] = get_link(field_set[:fields][0], :show) %>
   <% else %>
-    <% fields.delete_at(0) %>
+    <% field_set[:fields].delete_at(0) %>
   <% end %>
 <% end %>
 

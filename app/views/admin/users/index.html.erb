@@ -1,9 +1,10 @@
 <% headers = [:name, :email] %>
 
-<% field_sets = @users.map { |user| [
-  user,  
-  user.email
-] }%>
+<% field_sets = @users.map { |user| { 
+  fields: [
+    user,  
+    user.email
+  ] } } %>
 
 <% search_fields = {
     full_name_cont:   { slug: 'defaults.name' },

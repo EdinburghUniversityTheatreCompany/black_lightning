@@ -1,11 +1,12 @@
 <% headers = [:name, :user_full_name, :approved, 'Categories'] %>
 
-<% field_sets = @profiles.map { |profile| [
-  profile,  
-  profile.user.present? ? user_link(profile.user, true) : 'No User',
-  bool_icon(profile.approved),
-  profile.categories.collect(&:name).to_sentence
-] }%>
+<% field_sets = @profiles.map { |profile| {
+  fields: [
+    profile,  
+    profile.user.present? ? user_link(profile.user, true) : 'No User',
+    bool_icon(profile.approved),
+    profile.categories.collect(&:name).to_sentence
+  ] } } %>
 
 <% search_fields = {
     name_cont:  { slug: 'defaults.name' },

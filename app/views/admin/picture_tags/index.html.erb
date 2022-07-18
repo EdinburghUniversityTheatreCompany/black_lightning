@@ -1,9 +1,10 @@
 <% headers = [:name, ''] %>
 
-<% field_sets = @picture_tags.map { |picture_tag| [
-  picture_tag,  
-  get_link_to_pictures_for_tag(picture_tag)
-] }%>
+<% field_sets = @picture_tags.map { |picture_tag| { 
+  fields: [
+    picture_tag,  
+    get_link_to_pictures_for_tag(picture_tag)
+  ] } } %>
 
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },

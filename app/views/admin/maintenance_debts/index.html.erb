@@ -6,7 +6,8 @@
 <% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
 <% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
 
-<% field_sets = @maintenance_debts.map do |maintenance_debt| [
+<% field_sets = @maintenance_debts.map do |maintenance_debt| { 
+  fields: [
     maintenance_debt,
     user_link(maintenance_debt.user, false),
     maintenance_debt.show.name,
@@ -21,7 +22,7 @@
       detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a Staffing Debt?" 
     ) : '' ,
     render('complete_button', maintenance_debt: maintenance_debt)
-  ]
+  ] }
 end %>
 
 <% if @is_specific_user

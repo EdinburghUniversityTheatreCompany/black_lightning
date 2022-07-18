@@ -3,12 +3,13 @@
 
 <% headers = [:title, :creator_full_name, :expiry_date, :approved] %>
 
-<% field_sets = @opportunities.map { | opportunity| [
+<% field_sets = @opportunities.map { | opportunity| { 
+  fields: [
    opportunity,
    user_link(opportunity.creator, false),
    l(opportunity.expiry_date, format: :longy),
    bool_icon(opportunity.approved)
-] } %>
+] } } %>
 
 <% search_fields = {
     title_cont:             { slug: 'defaults.title' },

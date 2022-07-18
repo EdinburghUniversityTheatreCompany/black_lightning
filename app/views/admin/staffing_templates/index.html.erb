@@ -2,7 +2,7 @@
 
 <% headers = [:name] %>
 
-<% field_sets = @staffing_templates.map { |staffing_template| [staffing_template] }%>
+<% field_sets = @staffing_templates.map { |staffing_template| {fields: [staffing_template] } } %>
 
 <% search_fields = {
     name_cont: { slug: 'defaults.name' }

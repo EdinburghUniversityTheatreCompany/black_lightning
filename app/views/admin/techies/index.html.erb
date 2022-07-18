@@ -4,7 +4,7 @@
 
 <% headers = [:name] %>
 
-<% field_sets = @techies.map { |techie| [techie] } %>
+<% field_sets = @techies.map { |techie| {fields: [techie] } } %>
 
 <% search_fields = { name_cont: { slug: 'defaults.name' } } %>
 

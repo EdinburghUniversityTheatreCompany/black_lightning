@@ -1,10 +1,11 @@
 <% headers = [:subject, :draft, :send_date] %>
 
-<% field_sets = @mass_mails.map { |mass_mail| [
-  mass_mail,  
-  bool_icon(mass_mail.draft),
-  get_send_date(mass_mail)
-] }%>
+<% field_sets = @mass_mails.map { |mass_mail| { 
+  fields: [
+    mass_mail,  
+    bool_icon(mass_mail.draft),
+    get_send_date(mass_mail)
+  ] } } %>
 
 <% search_fields = {
     subject_cont: { slug: 'defaults.subject' },

@@ -1,6 +1,6 @@
 <% headers = [:name, 'Amount of Users'] %>
 
-<% field_sets = @roles.map { |role| [role, role.users.size] }%>
+<% field_sets = @roles.map { |role| { fields: [role, role.users.size] } } %>
 
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' }

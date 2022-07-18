@@ -2,12 +2,13 @@
 
 <% headers = [:user, :sent_on, :notifcation_type] %>
 
-<% field_sets = @debt_notifications.map { |debt_notification| [
-  debt_notification,  
-  user_link(debt_notification.user, false),
-  debt_notification.sent_on,
-  debt_notification.notification_type
-] }%>
+<% field_sets = @debt_notifications.map { |debt_notification| { 
+  fields: [
+    debt_notification,  
+    user_link(debt_notification.user, false),
+    debt_notification.sent_on,
+    debt_notification.notification_type
+  ] } } %>
 
 <%= render 'shared/pages/index', resource_class: Admin::DebtNotification, resources: @debt_notifications, headers: headers, field_sets: field_sets, search_fields: search_fields, 
   show_new_button: false, include_edit_button: false, include_link_to_item: false %>

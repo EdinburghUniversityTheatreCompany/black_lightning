@@ -1,10 +1,11 @@
 <% headers = [:title, :publish_date, :show_public] %>
 
-<% field_sets = @news.map { |news| [
-  news,
-  l(news.publish_date, format: :short),
-  bool_icon(news.show_public)
-] }%>
+<% field_sets = @news.map { |news| { 
+  fields: [
+    news,
+    l(news.publish_date, format: :short),
+    bool_icon(news.show_public)
+  ] } } %>
 
 <% search_fields = {
     title_cont: { slug: 'defaults.title' },

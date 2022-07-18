@@ -2,7 +2,7 @@
 
 <% headers = [:name] %>
 
-<% field_sets = @call_question_templates.map { |template| [template] }%>
+<% field_sets = @call_question_templates.map { |template| { fields: [template] } } %>
 
 <% search_fields = {
     name_cont: { slug: 'defaults.name' }

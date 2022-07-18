@@ -14,11 +14,12 @@
         <h3><a id="<%= "#{event_name.to_url}-table" %>"><%= event_name %></a></h3>
       </div>
       <div class="card-body">
-        <% field_sets = questionnaires.map { |questionnaire| [
-          questionnaire, 
-          get_link(questionnaire, :answer, http_method: :get, html_class: '', append_name: true),
-          get_link(questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn btn-secondary')
-        ] } %>
+        <% field_sets = questionnaires.map { |questionnaire| { 
+          fields: [
+            questionnaire, 
+            get_link(questionnaire, :answer, http_method: :get, html_class: '', append_name: true),
+            get_link(questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn btn-secondary')
+          ] } } %>
 
         <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Questionnaires::Questionnaire) %>
       </div>

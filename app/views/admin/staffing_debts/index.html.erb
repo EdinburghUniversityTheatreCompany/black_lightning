@@ -16,17 +16,19 @@
       staffing_job_content = get_link(staffing_debt, :show, link_text: 'Assign Job', additional_condition: can?(:assign, staffing_debt), html_class: 'btn btn-secondary')
     end
 
-  field_sets << [
-    staffing_debt,
-    user_link(staffing_debt.user, false),
-    staffing_debt.show.name,
-    staffing_debt.due_by,
-    bool_icon(staffing_debt.converted),
-    staffing_job_content,
-    get_link(staffing_debt, :unassign, additional_condition: staffing_debt.admin_staffing_job_id.present?, http_method: :put),
-    get_link(staffing_debt, :edit, link_text: 'Change Deadline', additional_condition: staffing_debt.status != :forgiven),
-    render('forgive_button', staffing_debt: staffing_debt)
-  ]
+  field_sets << { 
+    fields: [
+      staffing_debt,
+      user_link(staffing_debt.user, false),
+      staffing_debt.show.name,
+      staffing_debt.due_by,
+      bool_icon(staffing_debt.converted),
+      staffing_job_content,
+      get_link(staffing_debt, :unassign, additional_condition: staffing_debt.admin_staffing_job_id.present?, http_method: :put),
+      get_link(staffing_debt, :edit, link_text: 'Change Deadline', additional_condition: staffing_debt.status != :forgiven),
+      render('forgive_button', staffing_debt: staffing_debt)
+    ]
+  }
 end %>
 
 <% if @is_specific_user

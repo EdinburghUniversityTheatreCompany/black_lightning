@@ -15,7 +15,7 @@
 
   <div id="<%= div_id %>" class="collapse" aria-labelledby="<%= heading_id %>">
     <div class="card-body">
-      <% field_sets = editable_blocks.map { |editable_block| [editable_block] } %>
+      <% field_sets = editable_blocks.map { |editable_block| { fields: [editable_block] } } %>
         <%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: Admin::EditableBlock, include_edit_button: true, include_link_to_item: true, include_headers: false) %>
     </div>
   </div>

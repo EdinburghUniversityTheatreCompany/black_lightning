@@ -1,11 +1,12 @@
 <% 
 headers = [:name, :start_date, :tagline]
 
-field_sets = @events.map { |event| [
-  event,
-  event.date_range(true, :short),
-  event.short_blurb
-] }
+field_sets = @events.map { |event| { 
+  fields: [
+    event,
+    event.date_range(true, :short),
+    event.short_blurb
+  ] } }
 
 if current_user.present? && current_user.has_role?('Member')
   members_only_text_entry = { slug: 'defaults.members_only_text' }

@@ -1,9 +1,10 @@
 <% headers = [:name, ''] %>
 
-<% field_sets = @attachment_tags.map { |attachment_tag| [
-  attachment_tag,  
-  get_link_to_attachments_for_tag(attachment_tag)
-] }%>
+<% field_sets = @attachment_tags.map { |attachment_tag| { 
+  fields: [
+    attachment_tag,  
+    get_link_to_attachments_for_tag(attachment_tag)
+  ] } } %>
 
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },

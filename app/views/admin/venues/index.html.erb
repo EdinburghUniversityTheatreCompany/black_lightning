@@ -1,9 +1,10 @@
 <% headers = [:name, :tagline] %>
 
-<% field_sets = @venues.map { |venue| [
+<% field_sets = @venues.map { |venue| { 
+  fields: [
   venue,  
   venue.tagline
-] }%>
+] } } %>
 
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },

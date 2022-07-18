@@ -27,9 +27,9 @@ end %>
     </thead>
   <% end %>
   <tbody>
-    <% field_sets.each do |fields| %>
-      <tr>
-        <% fields.each do |field| %>
+    <% field_sets.each do |field_set| %>
+      <tr class="<%= field_set[:class]%>">
+        <% field_set[:fields].each do |field| %>
         <td> <%= field %> </td>
         <% end %>
       </tr>

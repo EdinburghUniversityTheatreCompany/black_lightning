@@ -2,14 +2,15 @@
 <% # INDEX: Bring back CSS classing the table rows that's in fault_report.css_class%>
 <% headers = [:item, :severity, :status, :reported_by, :created_at, :updated_at] %>
 
-<% field_sets = @fault_reports.map { |fault_report| [
-  fault_report,
-  fault_report.severity.humanize,
-  fault_report.status.humanize,
-  fault_report.reported_by_name,
-  l(fault_report.created_at, format: :short),
-  l(fault_report.updated_at, format: :short)
-] } %>
+<% field_sets = @fault_reports.map { |fault_report| {
+  fields: [
+    fault_report,
+    fault_report.severity.humanize,
+    fault_report.status.humanize,
+    fault_report.reported_by_name,
+    l(fault_report.created_at, format: :short),
+    l(fault_report.updated_at, format: :short)
+  ] } } %>
 
 <% search_fields = {
     item_cont:          { slug: 'defaults.item' },

@@ -1,11 +1,12 @@
 <% headers = [:name, :submission_deadline, :editing_deadline, ''] %>
 
-<% field_sets = @calls.map { |call| [
-  call,
-  l(call.submission_deadline, format: :longy),
-  l(call.editing_deadline, format: :longy),
-  get_link(call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn btn-secondary', return_link_text_if_no_permission: false)
-] } %>
+<% field_sets = @calls.map { |call| { 
+  fields: [
+    call,
+    l(call.submission_deadline, format: :longy),
+    l(call.editing_deadline, format: :longy),
+    get_link(call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn btn-secondary', return_link_text_if_no_permission: false)
+  ] } } %>
 
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' }

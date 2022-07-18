@@ -2,7 +2,7 @@
 
 <% headers = [:name] %>
 
-<% field_sets = @questionnaire_templates.map { |questionnaire_template| [questionnaire_template] } %>
+<% field_sets = @questionnaire_templates.map { |questionnaire_template| { fields: [questionnaire_template] } } %>
 
 <% search_fields = {
     name_cont: { slug: 'defaults.name' }
