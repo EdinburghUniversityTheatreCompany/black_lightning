@@ -51,54 +51,54 @@ class AdminController < ApplicationController
     children << { title: 'Debt Notifications', path: admin_debt_notifications_path, fa_icon: 'fa-receipt' }   if can? :index, Admin::DebtNotification
     children << { title: 'Staffing', path: admin_staffings_path, fa_icon: 'fa-people-group' }                 if can? :index, Admin::Staffing
     children << { title: 'Staffing Debt', path: admin_staffing_debts_path, fa_icon: 'fa-people-robbery' }     if can? :index, Admin::StaffingDebt
-    children << { title: 'Maintenance Debt', path: admin_maintenance_debts_path, fa_icon: 'fa-toolbox' }      if can? :index, Admin::MaintenanceDebt
+    children << { title: 'Maintenance Debt', path: admin_maintenance_debts_path, fa_icon: 'fa-wrench' }      if can? :index, Admin::MaintenanceDebt
     @navbar_categories << { title: 'Staffing & Debt', children: children, fa_icon: 'fa-person' }
 
     # Opportunities
     children = []
-    children << { title: 'Opportunities', path: admin_opportunities_path, fa_icon: 'fa-info' }                                    if can? :index, Opportunity
-    children << { title: 'Marketing Creatives', path: admin_marketing_creatives_categories_path, fa_icon: 'fa-info' }             if can? :index, MarketingCreatives::Category
-    children << { title: 'Marketing Creatives Profile List', path: admin_marketing_creatives_profiles_path, fa_icon: 'fa-info' }  if can? :index, MarketingCreatives::Profile
+    children << { title: 'Opportunities', path: admin_opportunities_path, fa_icon: 'fa-lightbulb' }                                    if can? :index, Opportunity
+    children << { title: 'Marketing Creatives', path: admin_marketing_creatives_categories_path, fa_icon: 'fa-wand-magic-sparkles' }             if can? :index, MarketingCreatives::Category
+    children << { title: 'Marketing Creatives Profile List', path: admin_marketing_creatives_profiles_path, fa_icon: 'fa-users-rectangle' }  if can? :index, MarketingCreatives::Profile
 
-    @navbar_categories << { title: 'Opportunities', children: children, fa_icon: 'fa-info' }
+    @navbar_categories << { title: 'Opportunities', children: children, fa_icon: 'fa-lightbulb' }
 
     # Archives
     children = []
-    children << { title: 'Event Tags', path: admin_event_tags_path, fa_icon: 'fa-info' }            if can? :index, EventTag
-    children << { title: 'Attachments', path: admin_attachments_path, fa_icon: 'fa-info' }          if can? :index, Attachment
-    children << { title: 'Attachment Tags', path: admin_attachment_tags_path, fa_icon: 'fa-info' }  if can? :index, AttachmentTag
-    children << { title: 'Pictures', path: admin_pictures_path, fa_icon: 'fa-info' }                if can? :index, Picture
-    children << { title: 'Picture Tags', path: admin_picture_tags_path, fa_icon: 'fa-info' }        if can? :index, PictureTag
-    @navbar_categories << { title: 'Archives', children: children, fa_icon: 'fa-info' }
+    children << { title: 'Event Tags', path: admin_event_tags_path, fa_icon: 'fa-calendar-week' }            if can? :index, EventTag
+    children << { title: 'Attachments', path: admin_attachments_path, fa_icon: 'fa-paperclip' }          if can? :index, Attachment
+    children << { title: 'Attachment Tags', path: admin_attachment_tags_path, fa_icon: 'fa-rectangle-list' }  if can? :index, AttachmentTag
+    children << { title: 'Pictures', path: admin_pictures_path, fa_icon: 'fa-photo-film' }                if can? :index, Picture
+    children << { title: 'Picture Tags', path: admin_picture_tags_path, fa_icon: 'fa-sliders' }        if can? :index, PictureTag
+    @navbar_categories << { title: 'Archives', children: children, fa_icon: 'fa-book-bookmark' }
 
     # Website Admin
     children = []
-    children << { title: 'Editable Blocks', path: admin_editable_blocks_path, fa_icon: 'fa-info' }  if can? :index, Admin::EditableBlock
-    children << { title: 'Carousel Items', path: admin_carousel_items_path, fa_icon: 'fa-info' }   if can? :index, CarouselItem
-    children << { title: 'Roles', path: admin_roles_path, fa_icon: 'fa-info' }                      if can? :index, Role
-    children << { title: 'Permissions', path: admin_permissions_path, fa_icon: 'fa-info' }          if can? :index, Admin::Permission
-    children << { title: 'Jobs', path: admin_jobs_overview_path, fa_icon: 'fa-info' }               if can? :manage, :jobs
-    @navbar_categories << { title: 'Website Admin', children: children, fa_icon: 'fa-info' }
+    children << { title: 'Editable Blocks', path: admin_editable_blocks_path, fa_icon: 'fa-pen-to-square' }  if can? :index, Admin::EditableBlock
+    children << { title: 'Carousel Items', path: admin_carousel_items_path, fa_icon: 'fa-camera-rotate' }   if can? :index, CarouselItem
+    children << { title: 'Roles', path: admin_roles_path, fa_icon: 'fa-id-card' }                      if can? :index, Role
+    children << { title: 'Permissions', path: admin_permissions_path, fa_icon: 'fa-unlock' }          if can? :index, Admin::Permission
+    children << { title: 'Jobs', path: admin_jobs_overview_path, fa_icon: 'fa-user-tie' }               if can? :manage, :jobs
+    @navbar_categories << { title: 'Website Admin', children: children, fa_icon: 'fa-laptop-code' }
 
     # Users
     children = []
-    children << { title: 'Users', path: admin_users_path, fa_icon: 'fa-info' }                      if can? :index, User
-    children << { title: 'Membership Activation', path: new_admin_membership_activation_token_path, fa_icon: 'fa-info' } if can? :create, MembershipActivationToken
-    children << { title: 'Techies', path: admin_techies_path, fa_icon: 'fa-info' }                  if can? :index, Techie
+    children << { title: 'Users', path: admin_users_path, fa_icon: 'fa-circle-user' }                      if can? :index, User
+    children << { title: 'Membership Activation', path: new_admin_membership_activation_token_path, fa_icon: 'fa-circle-check' } if can? :create, MembershipActivationToken
+    children << { title: 'Techies', path: admin_techies_path, fa_icon: 'fa-toolbox' }                  if can? :index, Techie
 
-    @navbar_categories << { title: 'Users', children: children, fa_icon: 'fa-info' }
+    @navbar_categories << { title: 'Users', children: children, fa_icon: 'fa-circle-user' }
 
     # Apps
     children = []
-    children << { title: 'OAuth', path: oauth_applications_path, fa_icon: 'fa-info' } if can? :index, Doorkeeper::Application
+    children << { title: 'OAuth', path: oauth_applications_path, fa_icon: 'fa-person-circle-question' } if can? :index, Doorkeeper::Application
 
-    @navbar_categories << { title: 'Apps', children: children, fa_icon: 'fa-info' }
+    @navbar_categories << { title: 'Apps', children: children, fa_icon: 'fa-square-envelope' }
 
     # Welfare Contact
     children = []
-    children << { title: 'Complaints Overview', path: admin_complaints_path, fa_icon: 'fa-info' } if can? :index, Complaint
+    children << { title: 'Complaints Overview', path: admin_complaints_path, fa_icon: 'fa-face-frown' } if can? :index, Complaint
 
-    @navbar_categories << { title: 'Welfare Contact', children: children, fa_icon: 'fa-info' }
+    @navbar_categories << { title: 'Welfare Contact', children: children, fa_icon: 'fa-user-doctor' }
 
     @navbar_categories.reject! { |category| category[:children].empty? }
 
