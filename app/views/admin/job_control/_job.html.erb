@@ -5,7 +5,7 @@
       <a data-toggle="collapse" data-parent="#jobs_accordion" href="#job_<%= job.id %>">
         Job #<%= job.id %><%= " - #{job.description}" if job.description %>
       </a>
-      <span class="pull-right">
+      <span class="float-right">
         <%= link_to 'Retry', admin_jobs_retry_path(:id => job.id), :class => "btn btn-secondary btn-small" %>
         <%= link_to 'Remove', admin_jobs_remove_path(:id => job.id), :class => "btn btn-small btn-danger" %>
       </span>

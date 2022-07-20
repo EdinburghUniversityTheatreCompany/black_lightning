@@ -3,13 +3,6 @@ BOOTSTRAP: Replace all uses of pull and float with the new float-end and float-s
 BOOTSTRAP: Merge with additions
 BOOTSTRAP: Throw out useless additions, such as the one referencing span2.
 */
-.pull-right {
-  @extend .float-end !optional;
-}
-
-.pull-right {
-  @extend .float-start !optional;
-}
 
 /* Primarily for use in markdown  */
 .float-left {

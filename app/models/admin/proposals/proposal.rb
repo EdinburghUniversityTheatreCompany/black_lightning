@@ -86,7 +86,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
     labels << generate_label(:danger, 'Has Debtors', pull_right) if has_debtors
 
     if pull_right
-      # Bcause the highest pull-right will be farthest to the right, the order has to be reversed.
+      # Bcause the highest float-right will be farthest to the right, the order has to be reversed.
       return "#{labels.reverse.join("\n")}\n<div style=\"clear: both;\"></div>".html_safe
     else
       return labels.join("\n").html_safe
