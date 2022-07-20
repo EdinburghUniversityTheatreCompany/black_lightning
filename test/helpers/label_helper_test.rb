@@ -30,8 +30,8 @@ class LabelHelperTest < ActionView::TestCase
     assert_equal '<span style="margin-right: 5px;" class="label label-important">It\'s dangerous to go alone!</span>', label
   end
 
-  test 'returns label with pull-right' do
+  test 'returns label with float-right' do
     label = generate_label(:success, 'You did it!', true)
-    assert_equal '<span style="margin-right: 5px;" class="label label-success pull-right">You did it!</span>', label
+    assert_equal '<span style="margin-right: 5px;" class="label label-success float-right">You did it!</span>', label
   end
 end

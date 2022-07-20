@@ -17,9 +17,8 @@
 }
 // END HEADER
 
-.container-no-padding {
-  @extend .container-fluid;
-  padding-right: 0px;
-  padding-left: 0px;
-  overflow: hidden;
+// START FORMS
+.form-group {
+  @extend .mb-2;
 }
+// END FORMS

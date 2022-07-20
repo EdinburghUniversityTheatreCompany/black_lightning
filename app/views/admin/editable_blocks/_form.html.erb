@@ -4,7 +4,7 @@
   <div class="form-inputs">
     <%= f.input :name, hint: 'You should not change the name, unless the block is a page for about, resources, or get involved. If you still change it, the site will not be able to find the Editable Block and cannot show it where necessary.' %>
 
-    <%= f.input :url, hint: 'The url is required to determine the location of the page for about, resources, and get involved.'%>
+    <%= f.input :url, hint: 'The url is required to determine the location of the page for about, archives, resources, and get involved.', input_html: { type: 'text' } %>
 
     <%= f.input :group,
                 hint: "The section which the block should be displayed under in the admin site",

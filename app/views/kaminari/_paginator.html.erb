@@ -1,6 +1,6 @@
 <%= paginator.render do %>
-  <nav aria-label="Page Navigation">
-    <ul class="pagination pagination-sm m-0 float-right">
+  <nav aria-label="Page Navigation" class="mb-3">
+    <ul class="pagination pagination-sm m-0 <%= 'float-right' if @admin_site %>">
       <%= first_page_tag %>
       <%= prev_page_tag %>
       <% each_page do |page| %>

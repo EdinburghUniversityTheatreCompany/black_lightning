@@ -1,20 +1,16 @@
-<% # BOOTSTRAP: Update to Bootstrap 4. %>
 <% id = "#{title.to_url}_container" %>
 <% start_open = false if start_open.nil? %>
 
-<div class="row">
-  <div class="span12">
-    <div class="accordion-group">
-      <div class="accordion-heading">
-        <a class="accordion-toggle" data-toggle="collapse" href="#<%= id %>">
-          <i class="fas fa-chevron-down" aria-hidden=”true”></i> <%= title %>
-        </a>
-      </div>
-      <div id="<%= id %>" class="accordion-body collapse<%= ' in ' if start_open%>">
-        <div class="accordion-inner">
-          <%= yield %>
-        </div>
-      </div>
+<div class="card">
+  <div class="card-header">
+    <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#<%= id %>" role="button" aria-expanded="false" aria-controls="#<%= id %>">
+      <%= generate_icon_prefix('chevron-down', title) %>
+    </button>
+  </div>
+
+    <div class="collapse<%= ' show' if start_open %>" id="<%= id %>">
+      <div class="card-body" >
+    <%= yield %>
     </div>
   </div>
 </div>

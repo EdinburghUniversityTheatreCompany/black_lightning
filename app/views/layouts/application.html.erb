@@ -29,19 +29,17 @@
 </head>
 
 <body>
-  <div class="container-no-padding">
-    <%= render "layouts/header" %>
+  <%= render "layouts/header" %>
 
-    <div class="container">
-      <%= render "layouts/ie_notice" %>
+  <div class="container">
+    <%= render "layouts/ie_notice" %>
 
-      <% # BOOTSTRAP: Can this be removed now that we have sweetalert, Alex? %>
-      <%= render 'layouts/alert_div' %>
+    <% # BOOTSTRAP: Can this be removed now that we have sweetalert, Alex? %>
+    <%= render 'layouts/alert_div' %>
 
-      <%= content_for?(:content) ? yield(:content) : yield %>
-    </div>
-
-    <%= render "layouts/footer" %>
+    <%= content_for?(:content) ? yield(:content) : yield %>
   </div>
+
+  <%= render "layouts/footer" %>
 </body>
 </html>
