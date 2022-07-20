@@ -262,7 +262,9 @@ ChaosRails::Application.routes.draw do
 
     get 'committee', to: 'static#committee', as: :committee
     get 'bootstrap_test', to: 'static#bootstrap_test', as: :bootstrap_test
-
+    # Catch all 404's on the admin site.
+    get '*page', to: 'static#error', as: :static
+    
     # Test route
     if Rails.env.test? || Rails.env.development?
       get 'dashboard/widget/:widget_name', to: 'dashboard#widget'

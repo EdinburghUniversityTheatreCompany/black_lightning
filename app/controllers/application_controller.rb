@@ -82,7 +82,6 @@ class ApplicationController < ActionController::Base
   private
 
   def render_error_page(exception, template, status_code)
-    # BOOTSTRAP: BUG When this page is called, it always called set_navbar and set_globals in this controllr, neot in admin, even when rendering the admin layout, which then breaks the layout...
     @meta = {} if @meta.nil?
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
