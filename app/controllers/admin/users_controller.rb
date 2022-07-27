@@ -91,4 +91,10 @@ class Admin::UsersController < AdminController
 
     return super
   end
+
+  def on_create_success
+    super
+
+    @user.send_welcome_email
+  end
 end

@@ -36,6 +36,8 @@ class MembershipActivationTokensController < ApplicationController
 
       helpers.append_to_flash(:success, 'You have successfully (re)-activated your account! Please log in to continue.')
 
+      @user.send_welcome_email
+
       redirect_to admin_url
     else
       helpers.append_to_flash(:error, 'You need to accept the Terms and Conditions before continuing.')

@@ -1,13 +1,3 @@
-Hi <%= @user.first_name.presence || @user.email  %>,
+Hi <%= @user.first_name.presence || @user.email  %>!
 
-As a member of the EUTC, an account has been created for you on the Bedlam Theatre website. This is the place for you to propose shows, sign up for staffing, read news, and access resources.
-
-We're really excited to get you started on the site, so <% if @reset_password then %>to log in, first set your password by clicking <%= link_to 'here', edit_password_url(@user, :reset_password_token => @user.reset_password_token, :initial => true) %><% else %>click <%= link_to 'here to log in', new_user_session_url %><% end %>.
-
-You'll be able to access the members site from http://www.bedlamtheatre.co.uk, just click "members" in the top right. If you have any problems with logging in or suggestions about the website, please let us know on it@bedlamtheatre.co.uk as soon as possible.
-
-Kind Regards,
-
-Bedlam Theatre Committee and The Project Black Lightning Team
-
-
+<%= render_plain(@editable_block.content) %>
