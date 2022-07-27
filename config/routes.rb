@@ -299,6 +299,8 @@ ChaosRails::Application.routes.draw do
   # Use bedlamtheatre.co.uk/:slug to find a season
   get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
 
+  post 'contact/send', to: 'static#contact_form_send', as: :contact_form_send
+
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.
   get '/*page', to: 'static#show', as: :static, constraints: lambda { |request|
     # Exclude active_storage paths from being redirected to the 404 page.
