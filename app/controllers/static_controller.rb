@@ -26,7 +26,7 @@ class StaticController < ApplicationController
     subject = params[:contact][:subject]
     message = params[:contact][:message]
 
-    ContactFormMailer.contact_form_mail(sender_email, recipient_email, name, subject, message).deliver_now
+    ContactFormMailer.contact_form_mail(sender_email, recipient_email, name, subject, message).deliver_later
 
     success_message = "Email with subject \"#{subject}\" has been successfully sent to #{recipient_email}"
     helpers.append_to_flash(:success, success_message)
