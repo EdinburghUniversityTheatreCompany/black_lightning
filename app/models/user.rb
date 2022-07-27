@@ -35,6 +35,7 @@
 #++
 class User < ApplicationRecord
   before_save :unify_numbers
+
   rolify
   has_paper_trail limit: 6
   
@@ -237,5 +238,10 @@ class User < ApplicationRecord
   def consented?
     # Check if the user has consented less than a year ago.
     consented&.after?(Date.current.advance(years: -1))
+  end
+
+  def send_welcome_email
+    # TEST: It is not tested if the membership_activation_tokens controller and users controller calls to this method actually work.
+    UsersMailer.welcome_email(self).deliver_later unless email.ends_with?('@bedlamtheatre.co.uk')
   end
 end

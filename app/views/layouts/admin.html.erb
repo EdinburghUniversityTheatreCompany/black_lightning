@@ -186,8 +186,8 @@
           }).done(function () {
             Swal.fire({
               icon: 'success',
-              title: 'Signed out',
-              text: 'You were successfully signed out. See you soon!'
+              title: 'Logged out',
+              text: 'You were successfully logged out. See you soon!'
             }).then(() => {
               location.assign('/')
             })
@@ -206,12 +206,12 @@
 
     firstTriggerUserModalEl.onclick = function () {
       userModal(nameAttr,
-        "You're currently signed in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
+        "You're currently logged in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
         currentUserPath, destroyUserPath)
     };
     secondTriggerUserModalEl.onclick = function () {
       userModal(nameAttr,
-        "You're currently signed in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
+        "You're currently logged in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
         currentUserPath, destroyUserPath)
     };
   </script>

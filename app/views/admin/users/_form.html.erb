@@ -5,14 +5,15 @@
     <fieldset class="fieldset form-horizontal">
       <legend>User Details</legend>
 
-      <%= f.input :email %>
+      <% email_hint = 'Creating an user will send them a welcome email, unless the email ends in @bedlamtheatre.co.uk' if @user.new_record? %>
+      <%= f.input :email, hint: email_hint %>
       <%= f.input :first_name %>
       <%= f.input :last_name %>
       <%= f.input :phone_number %>
 
-      <% hint = "Leave blank to generate random password" if @user.new_record? %>
+      <% password_hint = "Leave blank to generate random password" if @user.new_record? %>
 
-      <%= f.input :password, hint: hint %>
+      <%= f.input :password, hint: password_hint %>
       <%= f.input :password_confirmation %>
 
       <% if can? :assign_roles, @user %>

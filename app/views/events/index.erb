@@ -14,7 +14,7 @@ search_fields = {
   on_this_day_button: { type: :submit_button, action: 'On This Day' }
 } 
 
-search_form = render '/shared/search_form', search_fields
+search_form = render '/shared/pages/public/partials/search_form', search_fields: search_fields
 %>
 
 

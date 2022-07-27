@@ -3,9 +3,9 @@
 
 <div class="card">
   <div class="card-header">
-    <button class="btn btn-secondary" type="button" data-toggle="collapse" data-target="#<%= id %>" role="button" aria-expanded="false" aria-controls="#<%= id %>">
+    <a class="btn btn-link stretched-link" type="button" data-toggle="collapse" data-target="#<%= id %>" role="button" aria-expanded="false" aria-controls="#<%= id %>">
       <%= generate_icon_prefix('chevron-down', title) %>
-    </button>
+    </a>
   </div>
 
     <div class="collapse<%= ' show' if start_open %>" id="<%= id %>">
