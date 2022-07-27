@@ -6,6 +6,7 @@
 <% content = nil if content.nil? %>
 <% include_pagination = true if include_pagination.nil? %>
 
+<% # BOOTSTRAP: Why not put this partial in the admin layout, Alex? %>
 <%= render('shared/admin_page_header', title: @title ) %>
 <div class="content">
   <div class="container-fluid">
