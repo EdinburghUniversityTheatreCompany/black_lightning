@@ -9,8 +9,6 @@ Doorkeeper::OpenidConnect.configure do
   signing_key File.read("#{Rails.root}/config/openid_signing_key")
 
   subject_types_supported [:public]
-  
-  optional_scopes :profile, :email
 
   resource_owner_from_access_token do |access_token|
     # Example implementation:
