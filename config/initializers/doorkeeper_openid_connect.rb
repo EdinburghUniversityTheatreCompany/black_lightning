@@ -3,11 +3,16 @@
 raise Exception.new, 'The configuration for openid_connect is not included in the secrets.yml file' unless Rails.application.secrets.openid_connect && Rails.application.secrets.openid_connect[:issuer]
 
 Doorkeeper::OpenidConnect.configure do
+  
   issuer Rails.application.secrets.openid_connect[:issuer]
 
   signing_key File.read("#{Rails.root}/config/openid_signing_key")
 
   subject_types_supported [:public]
+  
+  default_scopes :openid
+  
+  option_scopes :profile, :email
 
   resource_owner_from_access_token do |access_token|
     # Example implementation:
