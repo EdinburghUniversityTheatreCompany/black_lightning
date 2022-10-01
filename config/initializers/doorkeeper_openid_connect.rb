@@ -10,7 +10,7 @@ Doorkeeper::OpenidConnect.configure do
 
   subject_types_supported [:public]
   
-  option_scopes :profile, :email
+  optional_scopes :profile, :email
 
   resource_owner_from_access_token do |access_token|
     # Example implementation:
