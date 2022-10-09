@@ -10,6 +10,8 @@
 
     <%= f.hidden_field :call_id %>
 
+    <%= display_block("Proposals - Help on Form", true) %>
+
     <% if can?(:approve, @proposal) %>
       <% if @proposal.successful.nil? && !@proposal.approved.nil? %>
         <%= f.input :approved, as: :select, blank: true %>
