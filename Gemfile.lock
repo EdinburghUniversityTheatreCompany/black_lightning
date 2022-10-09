@@ -193,6 +193,7 @@ GEM
     fancybox3 (0.1.1)
       rails (>= 5.0)
     ffi (1.15.5)
+    ffi (1.15.5-x64-mingw-ucrt)
     ffi (1.15.5-x64-unknown)
     ffi-compiler (1.0.1)
       ffi (>= 1.0.0)
@@ -273,6 +274,8 @@ GEM
       timeout
     net-ssh (6.1.0)
     nio4r (2.5.8)
+    nokogiri (1.13.6-x64-mingw-ucrt)
+      racc (~> 1.4)
     nokogiri (1.13.6-x64-unknown)
       racc (~> 1.4)
     nokogiri (1.13.6-x86_64-darwin)
@@ -458,6 +461,7 @@ GEM
     zeitwerk (2.5.4)
 
 PLATFORMS
+  x64-mingw-ucrt
   x64-unknown
   x86_64-darwin-20
   x86_64-darwin-21

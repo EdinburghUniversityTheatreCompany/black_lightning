@@ -4,42 +4,52 @@
 <% # TODO: In general, cache editable blocks %>
 
 <div class="row">
-  <div class="col">
-    <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: @carousel_items %>
-  </div>
-</div>
-
-<div class="row">
   <div class="col-md-8">
-    <% # Note that this mt-3 is repeated on the col that has the news so that they both have equal margins and so that on mobile there is still a margin between what's on and news. %>
-    <div class="row mt-3">
-      <div class="col">
+    <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: @carousel_items %>
+
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text">
         <%= display_block("Home", false) %>
+        </p>
       </div>
     </div>
 
-    <div class="row">
-      <div class="col">
-        <h3>What's On</h3>
+    <div class="card mt-3">
+      <div class="card-body">
+        <h3 class="card-title">What's On</h3>
+        <p class="card-text">
+         <% if @events.empty? %>
+          <%= display_block("Home - No Events On", false) %>
+        <% else %>
+          <% items = @events.collect { |event| {
+            event: event,
+            paragraphs: [
+              { content: event.date_range(true), small: true },
+              { content: event.short_blurb },
+              { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
+            ] } } %>
+
+          <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
+        <% end %>
+        </p>
       </div>
     </div>
-    
-    <% if @events.empty? %>
-      <%= display_block("Home - No Events On", false) %>
-    <% else %>
-      <% items = @events.collect { |event| {
-        event: event,
-        paragraphs: [
-          { content: event.date_range(true), small: true },
-          { content: event.short_blurb },
-          { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
-        ] } } %>
-
-      <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
-    <% end %>
   </div>
 
-  <div class="col-md">
+  <div class="col-md-4">
+      <div class="card mt-md-0 mt-sm-3">
+        <div class="card-body">
+          <h3 class="card-title">Book Now</h3>
+          <p class="card-text">
+            Please note only some events are shown below. Events in some other venues might be available on their own booking sites. If in doubt, please check the event page directly!
+            <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
+            <script type="text/javascript" src="https://pretix.eu/widget/v1.en.js" async></script>
+            <pretix-widget event="https://tickets.bedlamtheatre.co.uk/" style="list"></pretix-widget>
+          </p>
+        </div>
+      </div>
+
     <div class="card mt-3">
       <h3 class="card-header">News</h3>
 

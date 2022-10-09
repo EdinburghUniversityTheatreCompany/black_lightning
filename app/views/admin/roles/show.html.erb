@@ -13,21 +13,21 @@
     <% end %>
   <% else %>
     <% # Using a token is not the nicest way of handling it, but it works and is quite clean. %>
-    <%= simple_form_for(@token, url: add_user_admin_role_url(@role), html: { class: 'form-inline' }) do |f| %>
-        <%= f.error_notification %>
+    <%= simple_form_for(@token, url: add_user_admin_role_url(@role), html: { class: 'form-inline mb-3' }) do |f| %>
+      <%= f.error_notification %>
 
-        <%= render '/shared/form/user_field', f: f, include_label: false %>
+      <%= render '/shared/form/user_field', f: f, include_label: false %>
 
-        <%= f.button :submit, 'Add User To Role' %>
+      <%= submit_tag "Add User to Role", class: 'btn btn-secondary mx-2' %>
     <% end %>
   <% end %>
 <% end %>
 
 <h3>Users (<%= @users.count %>)</h3>
-<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: admin_role_url(@role), html: { id: 'search', class: 'form-search form-inline' } do |f| %>
-  <%= f.input_field :full_name_cont, placeholder: 'User Name', required: false %>
+<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: admin_role_url(@role), html: { id: 'search', class: 'simple_form form-search form-inline mb-3' } do |f| %>
+  <%= f.input_field :full_name_cont, placeholder: 'User Name', required: false, class: 'form-control' %>
 
-  <%= submit_tag "Search", class: 'btn btn-secondary' %>
+  <%= submit_tag "Search", class: 'btn btn-secondary mx-2' %>
 <% end %>
 
 <table class="table">
@@ -54,6 +54,7 @@
   </tbody>
 </table>
 
-<%= render '/shared/show_actions', object: @role %>
+<%= render '/shared/show_actions', object: @role do %>
 <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
  confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
+ <% end %>
