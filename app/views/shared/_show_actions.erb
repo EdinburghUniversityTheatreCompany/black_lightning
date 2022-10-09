@@ -8,4 +8,6 @@
   <%= get_link object, :destroy, **destroy_link_params %>
 
   <%= get_link object.class, :index, **index_link_params %>
+
+  <%= yield %>
 </div>
