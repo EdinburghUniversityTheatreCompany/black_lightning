@@ -1,13 +1,1 @@
-<h1><%= @title %></h1>
-
-<%= render 'admin/events/basic_show', event: @workshop %>
-
-<%= render '/shared/gallery', pictures: @workshop.pictures %>
-
-<%= render 'shared/attachments_gallery', attachments: @workshop.all_attachments.accessible_by(current_ability) %>
-
-<%= render 'shared/video_link_gallery', video_links: @workshop.video_links.accessible_by(current_ability) %>
-
-<%= render '/shared/show_actions', object: @workshop %>
-
-<%= render 'admin/events/questionnaires', event: @workshop %>
+<%= render('admin/events/basic_show', event: @workshop, extra_fields: extra_fields) %>
