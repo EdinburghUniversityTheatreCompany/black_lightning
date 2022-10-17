@@ -1,0 +1,11 @@
+<%= simple_horizontal_form_for debt do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <% unless debt.persisted? %>
+      <%= render '/shared/form/user_field', f: f %>
+
+      <%= f.input :show_id, collection: Show.this_year.selection_collection %>
+    <% end %>
+
+    <%= f.input :due_by %>
+  <% end %>
+<% end %>
