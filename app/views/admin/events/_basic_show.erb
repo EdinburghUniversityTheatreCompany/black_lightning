@@ -2,21 +2,46 @@
 
 <% # Note: If you update the ransack search form, this has some things with q that need to be changed. %>
 
+<% extra_fields = {} if extra_fields.nil? %>
+
+<%= content_for :publicity_and_members do %>
+  <div class="row vertical-rule">
+    <div class="col-<%= event.team_members.any? ? 'xl-6' : '12' %>">
+      <p>
+        <h3>Publicity Text</h3>
+        <%= render_markdown event.publicity_text %>
+      </p>
+    </div>
+
+    <% if event.team_members.any? %>
+      <div class="col-xl-6">
+          <%= render '/shared/admin_show_team_members', team_members: event.team_members %>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
 <% fields = { 
-  slug: event.slug,
-  'ID' => (event.id if can?(:manage, event)),
+  slug:           event.slug,
+  'ID' =>         (event.id if can?(:manage, event)),
   'SparkSeat Slug' => (event.spark_seat_slug if event.spark_seat_slug.present?),
-  'XTS ID' => (event.xts_id if event.xts_id.present?),
-  is_public: bool_text(event.is_public),
-  proposal: 'No proposal linked',
-  season: event.season.present? ? get_link(event.season, :show) : 'Not part of a season',
-  author: event.author.present? ? link_to(event.author, admin_events_url('q[author_cont]' => event.author)) : 'No author specified',
-  'Date(s)' => event.date_range(true),
-  venue: event.venue.present? ? link_to(event.venue.name, admin_events_url('q[venue_id_eq]' => event.venue.id)) : 'No Venue specified',
-  price: event.price,
-  tagline: event.tagline.presence || 'No tagline',
-  image: 'No image',
-  event_tags: event.event_tags.accessible_by(current_ability).collect{ |event_tag| link_to(event_tag.name, admin_events_url('q[event_tags_id_eq]' => event_tag.id))}.join('; ').presence&.html_safe() || 'There are no tags set for this event.'
+  'XTS ID' =>     (event.xts_id if event.xts_id.present?),
+  is_public:      bool_text(event.is_public),
+  proposal:       'No proposal linked',
+  season:         event.season.present? ? get_link(event.season, :show) : 'Not part of a season',
+  author:         event.author.present? ? link_to(event.author, admin_events_url('q[author_cont]' => event.author)) : 'No author specified',
+  'Date(s)' =>    event.date_range(true),
+  venue:          event.venue.present? ? link_to(event.venue.name, admin_events_url('q[venue_id_eq]' => event.venue.id)) : 'No Venue specified',
+  price:          event.price,
+  tagline:        event.tagline.presence || 'No tagline',
+  event_tags:     event.event_tags.accessible_by(current_ability).collect{ |event_tag| link_to(event_tag.name, admin_events_url('q[event_tags_id_eq]' => event_tag.id))}.join('; ').presence&.html_safe() || 'There are no tags set for this event.',
+  image:          { type: 'image', image: event.image, variant: slideshow_variant },
+  publicity_and_members: { type: 'content', content: yield(:publicity_and_members) },
+  members_only_text: { type: 'markdown', markdown: event.members_only_text },
+  gallery:        { type: 'content', content: render('/shared/gallery', pictures: event.pictures) },
+  attachments:    { type: 'content', content: render('shared/attachments_gallery', attachments: event.all_attachments.accessible_by(current_ability)) },
+  video_links:    { type: 'content', content: render('shared/video_link_gallery', video_links: event.video_links.accessible_by(current_ability)) },
+  questionnaires: { type: 'content', content: render('admin/events/questionnaires', event: event) }
 } %>
 
 <% # Proposal %>
@@ -24,27 +49,6 @@
   <% fields[:proposal] = get_link(event.proposal, :show, link_target: admin_proposals_proposal_path(event.proposal)) %>
 <% end %>
 
-<% # Image %>
-<% if event.image.attached? && !event.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-  <% fields[:image] = image_tag(event.fetch_image.variant(slideshow_variant)) %>
-<% end %>
+<% fields = fields.merge(extra_fields) %>
 
-<%= render 'shared/basic_fields', fields: fields %>
-
-<div class="row vertical-rule">
-  <div class="span<%= event.team_members.any? ? '6' : '12' %>">
-    <p>
-      <h3>Publicity Text</h3>
-      <%= render_markdown event.publicity_text %>
-    </p>
-  </div>
-
-  <% if event.team_members.any? %>
-    <div class="span6">
-        <%= render '/shared/admin_show_team_members', team_members: event.team_members %>
-    </div>
-  <% end %>
-</div>
-
-<h3>Members-Only Text</h3>
-<%= render_markdown event.members_only_text %>
+<%= render('shared/pages/show', object: event, fields: fields) %>

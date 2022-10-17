@@ -1,22 +1,10 @@
-<%= simple_nested_form_for @editable_block, html: { multipart: true} do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+<%= simple_horizontal_form_for [@editable_block] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name, hint: 'You should not change the name, unless the block is a page for about, resources, or get involved. If you still change it, the site will not be able to find the Editable Block and cannot show it where necessary.' %>
 
     <%= f.input :url, hint: 'The url is required to determine the location of the page for about, archives, resources, and get involved.', input_html: { type: 'text' } %>
 
-    <%= f.input :group,
-                hint: "The section which the block should be displayed under in the admin site",
-                input_html: {
-                    data: {
-                        # BOOTSTRAP: Make sure this works
-                       provide: "typeahead",
-                       source: Admin::EditableBlock.groups
-                    },
-                    autocomplete: "off",
-                } 
-    %>
+    <%= f.input :group, collection: Admin::EditableBlock.groups, as: :select2, include_blank: false, allow_custom_input: true, hint: "The section which the block should be displayed under in the admin site" %>
 
     <%= f.input :ordering, hint: 'The ordering in the subpage layer. Unused in other situations. From low to high.'%>
 
@@ -36,5 +24,5 @@
     </div>
   </div>
 
-  <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>

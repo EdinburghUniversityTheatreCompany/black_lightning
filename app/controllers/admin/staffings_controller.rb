@@ -106,8 +106,6 @@ class Admin::StaffingsController < AdminController
   def create
     creation_params = staffing_params
 
-    invalid_user_names = helpers.sanitize_user_typeahead_attributes!(creation_params[:staffing_jobs_attributes], true)
-
     # Has to be called @staffing in case it is passed to the 'new' form again.
     @staffing = Admin::Staffing.new(creation_params)
 
@@ -183,8 +181,6 @@ class Admin::StaffingsController < AdminController
   ##
   def update
     changes_params = staffing_params
-
-    invalid_user_names = helpers.sanitize_user_typeahead_attributes!(changes_params[:staffing_jobs_attributes], true)
 
     @staffing.assign_attributes(changes_params)
 

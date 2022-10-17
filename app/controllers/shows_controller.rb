@@ -13,6 +13,6 @@ class ShowsController < GenericEventsController
   private
 
   def load_index_resources
-    return super.current
+    return super.current.reorder('start_date ASC')
   end
 end

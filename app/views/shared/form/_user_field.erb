@@ -3,7 +3,7 @@
 <div class="control-group fields <%= "error" if f.error(:user).present? %>">
   <%= f.label(:user_id) if include_label %>
   <%= render 'shared/form/user_typeahead_field', f: f %>
-  <p><%= f.full_error :user %></p>
+  <%= f.full_error(:user) if f.error(:user).present? %>
 
   <% content_for :head do %>
     <% if all_users %>

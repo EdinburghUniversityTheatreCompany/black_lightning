@@ -1,52 +1,59 @@
 <%= javascript_include_tag "admin/staffings" %>
 
-<h1><%= @title %></h1>
-<h3><%= time_range_string(@staffing.start_time, @staffing.end_time, true) %></h3>
+<% # BOOTSTRAP: use shared/table %>
+<% content_for :jobs_table do %>
+  <% # Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
+  <% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
 
-<%= display_block("Staffing", true) %>
-
-<%= render 'phone_number_warning' %>
-
-<% # Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
-<% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
-
-<table class="table table-hover">
-  <thead>
-    <tr>
-      <th>Staffing Job</th>
-      <th>Staffed By</th>
-
-      <% if show_phone_number_column %>
-        <th>Phone Number</th>
-      <% end %>
-    </tr>
-  </thead>
-  <tbody>
-    <% @staffing.staffing_jobs.each do |staffing_job| %>
+  <table class="table table-hover">
+    <thead>
       <tr>
-        <td><%= staffing_job.name %></td>
-
-        <% user = staffing_job.user %>
-
-        <td>
-          <% if user.present? %>
-            <%= user_link(user, false) %>
-          <% elsif @can_sign_up %>
-            <%= render 'sign_up_button', job: staffing_job %>
-          <% end %>
-        </td>
+        <th>Staffing Job</th>
+        <th>Staffed By</th>
 
         <% if show_phone_number_column %>
-          <td>
-            <% if can? :read, user %>
-              <%= user&.phone_number %>
-            <% end %>
-          </td>
+          <th>Phone Number</th>
         <% end %>
       </tr>
-    <% end %>
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      <% @staffing.staffing_jobs.each do |staffing_job| %>
+        <tr>
+          <td><%= staffing_job.name %></td>
 
-<%= render '/shared/show_actions', object: @staffing %>
-<%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn btn-secondary') %>
+          <% user = staffing_job.user %>
+
+          <td>
+            <% if user.present? %>
+              <%= user_link(user, false) %>
+            <% elsif @can_sign_up %>
+              <%= render 'sign_up_button', job: staffing_job %>
+            <% end %>
+          </td>
+
+          <% if show_phone_number_column %>
+            <td>
+              <% if can? :read, user %>
+                <%= user&.phone_number %>
+              <% end %>
+            </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<%- # BOOTSTRAP: This alert needs to be done differently, Set in the controller probably. %>
+<% fields = {
+  date_and_time: time_range_string(@staffing.start_time, @staffing.end_time, true),
+  info: { type: 'content', content: display_block("Staffing", true) + render('phone_number_warning') },
+  jobs_table: { type: 'content', content: yield(:jobs_table) }
+} %>
+
+<% # TODO %>
+<% # content_for :extra_show_actions do %>
+  <% #=  render('staffings_grid_link', @staffing) %>
+<% #end %>
+
+<%= render('shared/pages/show', object: @staffing, fields: fields) %>

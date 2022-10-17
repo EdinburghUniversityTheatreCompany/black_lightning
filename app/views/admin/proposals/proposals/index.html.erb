@@ -1,7 +1,8 @@
-<% # BOOTSTRAP: These buttons are very packed together right now. Not sure why. %>
-<% quick_actions = get_link(Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id })  %>
+<% quick_actions = get_link(Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id }).presence || '' %>
 <% quick_actions += get_link(@call, :edit, append_name: true) %>
 <% quick_actions += get_link(Admin::Proposals::Call, :index, link_text: 'Back To Calls') %>
+
+<% quick_actions = quick_actions.html_safe %>
 
 <% content = render('admin/proposals/proposals/index_content') %>
 
@@ -13,3 +14,5 @@
 
 <%= render 'shared/pages/index', resource_class: Admin::Proposals::Proposal, resources: @proposals, content: content, 
   show_new_button: false, quick_actions: quick_actions %>
+
+<% # BOOTSTRAP: Bottom bar is broken on this page. %>

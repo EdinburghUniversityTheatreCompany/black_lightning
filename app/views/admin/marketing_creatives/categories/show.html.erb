@@ -1,29 +1,28 @@
-<h1><%= @title %></h1>
+<% content_for :profiles_gallery do %>
+  <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+    <% @category_infos.each do |category_info| %>
+      <div class="col">
+        <div class="card h-100">
+          <% img = image_tag category_info.fetch_image.variant(thumb_variant(2)), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(thumb_variant(2))) %>
+          <%= get_link category_info.profile, :show, link_text: img %>
 
-<p>
-  <%= display_block('Marketing Creatives Category Show Description', true) %>
-</p>
-
-<p>
-  <%= display_block("Marketing Creatives Category Show #{@category.name}", true) %>
-</p>
-
-<div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
-  <% @category_infos.each do |category_info| %>
-    <div class="col">
-      <div class="card h-100">
-        <% img = image_tag category_info.fetch_image.variant(thumb_variant(2)), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(thumb_variant(2))) %>
-        <%= get_link category_info.profile, :show, link_text: img %>
-
-        <div class="card-body">
-          <p class="card-text"><%= get_link category_info.profile, :show %></p>
+          <div class="card-body">
+            <p class="card-text"><%= get_link category_info.profile, :show %></p>
+          </div>
         </div>
       </div>
-    </div>
-  <% end %>
-</div>
+    <% end %>
+  </div>
+<% end %>
 
-<div class="mb-3"></div>
+<% fields = {
+  marketing_creatives_general_description: { type: 'content', content: display_block('Marketing Creatives Category Show Description', true) },
+  marketing_creatives_category_description: { type: 'content', content: display_block("Marketing Creatives Category Show #{@category.name}", true) },
+  profiles_gallery: { type: 'content', header: 'Profiles', content: yield(:profiles_gallery) }
+} %>
 
-<%= render 'shared/show_actions', object: @category %>
-<%= get_link MarketingCreatives::Profile, :sign_up, http_method: :get %>
+<% content_for :extra_show_actions do %>
+  <%= get_link MarketingCreatives::Profile, :sign_up, http_method: :get %>
+<% end %>
+
+<%= render('shared/pages/show', object: @category, fields: fields) %>

@@ -3,4 +3,5 @@
 
 <%= get_link event, :show, link_text: event_label, target: :blank, admin: admin %>
 
-<span class="label"><%= event.type.presence || "Unknown Type" %></span>
+<span class="badge badge-secondary"><%= event.type.presence || "Unknown Type" %></span>
+

@@ -1,8 +1,3 @@
-<h1><%= @title %></h1>
+<% args = { destroy_link_params: render('complete_button', maintenance_debt: @maintenance_debt) } %>
 
-<%= render 'admin/shared_debt/basic_info', debt: @maintenance_debt %>
-
-<% # No /shared/show_actions because the destroy button is a little different %>
-<%= get_link @maintenance_debt, :edit, html_class: 'btn btn-primary' %>
-<%= get_link @maintenance_debt.class, :index %>
-<%= render 'complete_button', maintenance_debt: @maintenance_debt %>
+<%= render 'admin/shared_debt/basic_info', debt: @maintenance_debt, show_actions_args: args %>

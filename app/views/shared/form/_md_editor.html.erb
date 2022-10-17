@@ -1,25 +1,36 @@
+<% input_field_args = {} if input_field_args.nil? %>
+
 <div class="tab-container md-editor">
 
   <% require 'securerandom' %>
   <% id = SecureRandom.uuid %>
 
   <div class="row">
-    <div class="col-md-9">
+    <div class="tab-content col-md-9">
       <div id="<%= id %>_input_field" class="tab-pane active">
         <% rows ||= '10' %>
         <% md_notice = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
-        <%= f.input field, input_html: { class: "md field", rows: rows }, hint: md_notice %>
+        <%= f.input field, input_html: { class: "md field", rows: rows }, hint: md_notice, **input_field_args %>
+      </div>
+
+      <div id="<%= id %>_preview" class="tab-pane">
       </div>
     </div>
+
     <div class="col">
+      <ul class="nav nav-pills">
+        <li><a href="#<%= id %>_preview" data-toggle="tab" data-preview-id="<%= id %>">Preview</a></li>
+        <li class="active"><a href="#<%= id %>_input_field" data-toggle="tab">Input</a></li>
+      </ul>
+  
       <div class="yield">
         <% show_hint ||= false %>
         <% if show_hint %>
-        <%= render "shared/form/md_hints" %>
+          <%= render "shared/form/md_hints" %>
         <% end %>
+
         <%= yield %>
       </div>
     </div>
   </div>
-</div>
 </div>

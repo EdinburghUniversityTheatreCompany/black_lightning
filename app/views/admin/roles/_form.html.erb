@@ -1,11 +1,7 @@
 <%= simple_form_for [:admin, @role] do |f| %>
-  <%= f.error_notification %>
-
-    <div class="form-inputs">
+  <%= render('shared/pages/form', f: f) do %>
       <% name_disabled = Role::HARDCODED_NAMES.include?(@role.name)%>
 
       <%= f.input :name, disabled: name_disabled, hint: name_disabled ? 'You cannot change the name of this role.' : '' %>
-    </div>
-    
-    <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>

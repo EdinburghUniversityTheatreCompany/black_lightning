@@ -1,0 +1,13 @@
+<% variant = nil if variant.nil? %>
+<% eager_load = true if eager_load.nil? %>
+<% image_options = {} if image_options.nil? %>
+
+<% if eager_load %>
+  <% image_options = image_options.merge({ loading: 'eager', class: 'w-100 h-auto' }).merge(base_width_and_height_html(image)) %>
+<% end %>
+
+<% if variant.present? %>
+  <% image = image.variant(variant) %>
+<% end %>
+
+<%= image_tag(image, image_options) %>

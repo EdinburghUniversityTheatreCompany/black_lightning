@@ -1,7 +1,10 @@
 <h1><%= @title %></h1>
-<p><small class="text-muted"><%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %></small></p>
 
 <div class="card mb-3">
+  <div class="card-header">
+    <small class="text-muted"><%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %></small>
+  </div>
+
   <%= image_tag @news.fetch_image.variant(medium_variant), {class: "card-img-top h-auto"}.merge(variant_width_and_height_html(medium_variant)) %>
 
   <div class="card-body">

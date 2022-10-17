@@ -1,37 +1,29 @@
 <%= simple_form_for [:admin, @user] do |f| %>
-  <%= f.error_notification %>
+  <%= render('shared/pages/form', f: f) do %>
+    <h3>User Details</h3>
 
-  <div class="form-inputs">
-    <fieldset class="fieldset form-horizontal">
-      <legend>User Details</legend>
+    <% email_hint = 'Creating an user will send them a welcome email, unless the email ends in @bedlamtheatre.co.uk' if @user.new_record? %>
+    <%= f.input :email, hint: email_hint %>
+    <%= f.input :first_name %>
+    <%= f.input :last_name %>
+    <%= f.input :phone_number %>
 
-      <% email_hint = 'Creating an user will send them a welcome email, unless the email ends in @bedlamtheatre.co.uk' if @user.new_record? %>
-      <%= f.input :email, hint: email_hint %>
-      <%= f.input :first_name %>
-      <%= f.input :last_name %>
-      <%= f.input :phone_number %>
+    <% password_hint = "Leave blank to generate random password" if @user.new_record? %>
 
-      <% password_hint = "Leave blank to generate random password" if @user.new_record? %>
+    <%= f.input :password, hint: password_hint %>
+    <%= f.input :password_confirmation %>
 
-      <%= f.input :password, hint: password_hint %>
-      <%= f.input :password_confirmation %>
+    <% if can? :assign_roles, @user %>
+      <% # BOOTSTRAP: This is a bit botched now. Check if it still is later. %>
+      <%= f.association :roles, as: :check_boxes %>
+    <% end %>
 
-      <% if can? :assign_roles, @user %>
-        <% # BOOTSTRAP: This is a bit botched now. Check if it still is later. %>
-        <%= f.association :roles, as: :check_boxes %>
-      <% end %>
-    </fieldset>
+    <h3>Public Profile</h3>
+    
+    <%= render '/shared/form/public_private_switch', f: f, field_symbol: :public_profile %>
 
-    <fieldset class="fieldset">
-      <legend>Public Profile</legend>
-      
-      <%= render '/shared/form/public_private_switch', f: f, field_symbol: :public_profile %>
+    <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
 
-      <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
-
-      <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
-    </fieldset>
-  </div>
-
-  <%= render '/shared/form/form_actions', f: f %>
+    <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+  <% end %>
 <% end %>

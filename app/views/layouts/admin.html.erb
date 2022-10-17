@@ -4,12 +4,13 @@
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
   <%= stylesheet_link_tag    "admin", media: "all" %>
-  <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
-  <%= javascript_packs_with_chunks_tag "application", "admin"%>
+  <%= javascript_packs_with_chunks_tag "admin", "shared" %>
 
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
+
+  <%= render('layouts/cdn_includes') %>
 
   <%= yield :head %>
 
@@ -27,7 +28,7 @@
     </div>
 
     <!-- Navbar -->
-    <nav class="main-header navbar navbar-expand navbar-white navbar-light fixed-top">
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
       <!-- Left navbar links -->
       <ul class="navbar-nav">
         <li class="nav-item">
@@ -136,10 +137,16 @@
     </aside>
 
     <!-- Content Wrapper. Contains page content -->
-    <div class="content-wrapper" style="padding-top: 4rem;">
-      <%= render '/layouts/alert_div' %>
-      <%= content_for?(:content) ? yield(:content) : yield %>
+    <div class="content-wrapper">
+      <%= content_for?(:content_header) ? yield(:content_header) : render('shared/admin_page_header', title: @title) %>
 
+      <%= render '/layouts/alert_div' %>
+      
+      <div class="content">
+        <div class="container-fluid">
+          <%= content_for?(:content) ? yield(:content) : yield %>
+        </div>
+      </div>
     </div>
     <!-- /.content-wrapper -->
 

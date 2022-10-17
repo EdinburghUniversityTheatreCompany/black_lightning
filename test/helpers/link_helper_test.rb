@@ -47,7 +47,7 @@ class LinkHelperTest < ActionView::TestCase
     
     techie = techies(:one)
 
-    simple_nested_form_for [:admin, techie] do |form|
+    simple_horizontal_form_for [:admin, techie] do |form|
       assert_equal '', link_to_add(form, :parents)
     end
   end
@@ -57,7 +57,7 @@ class LinkHelperTest < ActionView::TestCase
 
     techie = techies(:one)
 
-    simple_nested_form_for [:admin, techie] do |form|
+    simple_horizontal_form_for [:admin, techie] do |form|
       assert_equal '', link_to_remove(form, :parents)
     end
   end

@@ -10,8 +10,8 @@
       <div class="carousel-item <%= 'active' if index == 0 %>" data-bs-interval="3500">
         <% # BOOTSTRAP: Variant this? %>
 
-        <% # Do not lazy load carousel images or the images will appear from blank on slide changes. %>
-        <% img = image_tag(item.image, { loading: 'eager', class: 'w-100 h-auto' }.merge(base_width_and_height_html(item.image))) %>
+        <% img = render('shared/image', image: item.image) %>
+
         <% if item.url.present? %>
           <%= link_to(img, item.url) %>
         <% else %>

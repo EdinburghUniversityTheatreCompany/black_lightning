@@ -17,7 +17,7 @@ class Admin::RolesController < AdminController
   end
 
   def add_user
-    user_id = params[:membership_activation_token][:user_id]
+    user_id = params[:add_user_details][:user_id]
 
     user = User.find_by(id: user_id)
 

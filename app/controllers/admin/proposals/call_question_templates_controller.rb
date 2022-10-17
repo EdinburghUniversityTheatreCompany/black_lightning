@@ -22,6 +22,10 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     [:name, questions_attributes: %I[question_text response_type _destroy id]]
   end
 
+  def edit_title
+    "Edit #{@call_question_template.name} Template"
+  end
+
   def create_title
     'New Proposal Call Question Template'
   end

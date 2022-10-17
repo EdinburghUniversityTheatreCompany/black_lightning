@@ -1,58 +1,37 @@
-<h1><%= @title %></h1>
-
-<div>
-  <%= @proposal.labels false %>
+<% content_for :deadlines do %>
+  <i>Submission Deadline:</i> <%= l @proposal.call.submission_deadline, format: :longy %>
   <br>
-  <br>
-</div>
-
-<div>
-  <b>Call:</b>
-  <div>
-    <%= get_link @proposal.call, :show %>
-
-    <p>
-      <i>Submission Deadline:</i> <%= l @proposal.call.submission_deadline, format: :longy %>
-      <br>
-      <i>Editing Deadline:</i> <%= l @proposal.call.editing_deadline, format: :longy %>
-    </p>
-  </div>
-</div>
+  <i>Editing Deadline:</i> <%= l @proposal.call.editing_deadline, format: :longy %>
+<% end %>
 
 <% fields = {
+  proposal_labels: { type: 'content', content: @proposal.labels(false) },
+  call: get_link(@proposal.call, :show),
+  deadlines: { type: 'content', content: yield(:deadlines) },
   publicity_text: render_markdown(@proposal.publicity_text),
   proposal_text: render_markdown(@proposal.proposal_text),
+  team_members: { type: 'content', content: render('/shared/admin_show_team_members', team_members: @proposal.team_members, deadline: @proposal.call.editing_deadline, can_see_if_fellow_team_members_are_in_debt: true) },
+  questions_and_answers: { type: 'content', header: 'Questions' content: render('/shared/questions_and_answers', answers: @proposal.answers) }
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
-
-<%= render '/shared/admin_show_team_members', team_members: @proposal.team_members, deadline: @proposal.call.editing_deadline, can_see_if_fellow_team_members_are_in_debt: true %>
-
-<hr/>
-
-<%= render '/shared/questions_and_answers', answers: @proposal.answers %>
-
 <% if can?(:approve, @proposal) && @proposal.approved %>
-  <p>You have to start editing the proposal to set whether or not it was successful.</p>
+  <% fields[:approval_notice] = { type: 'content', content: "You have to start editing the proposal to set whether or not it was successful." } %>
 <% end %>
 
-<% # You cannot use /shared/show_actions here. %>
-<%= get_link @proposal, :edit, html_class: 'btn btn-primary' %>
-<%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful %>
-<%= get_link Admin::Proposals::Proposal, :index, link_text: 'View Other Proposals', link_target: admin_proposals_call_proposals_path(@proposal.call), http_method: 'get' %>
+<% content_for :extra_show_actions do %>
+  <%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful %>
+  <%= get_link Admin::Proposals::Proposal, :index, link_text: 'View Other Proposals', link_target: admin_proposals_call_proposals_path(@proposal.call), http_method: 'get' %>
 
-<% if can?(:approve, @proposal) && @proposal.approved.nil? %>
-    <br/>
-    <br/>
+  <% if can?(:approve, @proposal) && @proposal.approved.nil? %>
+      <% if @proposal.has_debtors %>
+        <% confirm = "Approving #{ @proposal.show_title}" %>
+        <% detail = "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm" %>
+        <% type_confirm = 'Ignoring Debt' %>
+      <% end %>
 
-    <% if @proposal.has_debtors %>
-      <% confirm = "Approving #{ @proposal.show_title}" %>
-      <% detail = "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm" %>
-      <% type_confirm = 'Ignoring Debt' %>
-    <% end %>
-
-    <%= get_link @proposal, :approve, confirm: confirm, detail: detail, type_confirm: type_confirm 
-    %>
-    
-    <%= get_link @proposal, :reject %>
+      <%= get_link @proposal, :approve, confirm: confirm, detail: detail, type_confirm: type_confirm %>
+      <%= get_link @proposal, :reject %>
+  <% end %>
 <% end %>
+
+<%= render('shared/pages/show', object: @proposal, fields: fields) %>

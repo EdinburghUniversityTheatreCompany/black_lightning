@@ -1,81 +1,77 @@
-<h1><%= @title %></h1>
-
-<%= render 'admin/events/basic_show', event: @show %>
-
-<%= render '/shows/reviews', reviews: @show.reviews %>
-
-<%= render '/shared/gallery', pictures: @show.pictures %>
-
-<%= render 'shared/attachments_gallery', attachments: @show.all_attachments.accessible_by(current_ability) %>
-
-<%= render 'shared/video_link_gallery', video_links: @show.video_links.accessible_by(current_ability) %>
-
-<br>
-
-<%= render '/shared/show_actions', object: @show %>
-
-<% if @show.xts_id && can?(:edit, @show) %>
-    <%= link_to xts_report_admin_show_path(@show), class: "btn btn-secondary" do %>
-        <i class='fas fa-shopping-basket' aria-hidden=”true”></i> XTS Report
+<% content_for :extra_show_actions do %>
+    <% if @show.xts_id && can?(:edit, @show) %>
+        <%= link_to xts_report_admin_show_path(@show), class: "btn btn-secondary" do %>
+            <i class='fas fa-shopping-basket' aria-hidden=”true”></i> XTS Report
+        <% end %>
     <% end %>
+
+    <%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn btn-secondary' %>
+
+    <%= get_link Admin::Feedback, :index, link_text: 'Show Feedback', link_target: admin_show_feedbacks_path(@show), 
+                additional_condition: @show.feedbacks.any? 
+    %>
+
+    <%= get_link @show, :convert_to_season, condition: can?(:create, Season) && can?(:destroy, @show), http_method: :post,
+                confirm: "Converting Show #{@show.name} into Season", detail: "Are you sure you want to convert the Show into a Season? Make sure there are no reviews or feedbacks attached before proceeding. You cannot undo this action." 
+    %>
+
+    <%= get_link @show, :convert_to_workshop, condition: can?(:create, Workshop) && can?(:destroy, @show), http_method: :post,
+                confirm: "Converting Show #{@show.name} into Season", detail: "Are you sure you want to convert the Show into a Workshop? Make sure there are no reviews or feedbacks attached before proceeding. You cannot undo this action." 
+    %>
 <% end %>
 
-<%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn btn-secondary' %>
+<% extra_fields = {
+  reviews:   { type: 'content', header: 'Reviews', content: render('/shows/reviews', reviews: @show.reviews) }
+} %>
 
-<%= get_link Admin::Feedback, :index, link_text: 'Show Feedback', link_target: admin_show_feedbacks_path(@show), 
-             additional_condition: @show.feedbacks.any? 
-%>
-
-<%= get_link @show, :convert_to_season, condition: can?(:create, Season) && can?(:destroy, @show), http_method: :post,
-             confirm: "Converting Show #{@show.name} into Season", detail: "Are you sure you want to convert the Show into a Season? Make sure there are no reviews or feedbacks attached before proceeding. You cannot undo this action." 
-%>
-
-<%= get_link @show, :convert_to_workshop, condition: can?(:create, Workshop) && can?(:destroy, @show), http_method: :post,
-             confirm: "Converting Show #{@show.name} into Season", detail: "Are you sure you want to convert the Show into a Workshop? Make sure there are no reviews or feedbacks attached before proceeding. You cannot undo this action." 
-%>
-
-<%= render 'admin/events/questionnaires', event: @show %>
-
-<% # Only show the Debt stuff if the show happens this year. %>
+<% # Only show the Debt stuff if the show happens this year or later. %>
 <% if @show.end_date >= start_of_year %>
     <% if can? :create, Admin::MaintenanceDebt %>
-        <h3>Maintenance Debt</h3>
-        <%= simple_form_for [:admin, @show] do |f| %>
-            <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
-            <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn btn-secondary' %>
+        <% content_for :maintenance_debt do %>
+            <%= simple_horizontal_form_for [:admin, @show] do |f| %>
+                <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
+                <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn btn-secondary' %>
+            <% end %>
+
+            <% if @show.maintenance_debt_start.present? %>
+                <% existing_maintenance_debt = Admin::MaintenanceDebt.where(show: @show).first %>
+                <% has_maintenance_debt = existing_maintenance_debt.present? %>
+
+                <%= get_link @show, :create_maintenance_debts, link_text: 'Create Maintenance Obligations', http_method: :post, html_class: "btn btn-primary",
+                            confirm: ('Creating Maintenance Obligations' if has_maintenance_debt),
+                            detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Adding Maintenance Debts again will result in users on the show without Maintenance Debt getting a Maintenance Debt. Users that already have a Maintenance Debt will have the due_by date updated to #{l @show.maintenance_debt_start, format: :longy}." if has_maintenance_debt) 
+                %>
+            <% end %>
         <% end %>
 
-        <% if @show.maintenance_debt_start.present? %>
-            <% existing_maintenance_debt = Admin::MaintenanceDebt.where(show: @show).first %>
-            <% has_maintenance_debt = existing_maintenance_debt.present? %>
-
-            <%= get_link @show, :create_maintenance_debts, link_text: 'Create Maintenance Obligations', http_method: :post, html_class: "btn btn-primary",
-                        confirm: ('Creating Maintenance Obligations' if has_maintenance_debt),
-                        detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Adding Maintenance Debts again will result in users on the show without Maintenance Debt getting a Maintenance Debt. Users that already have a Maintenance Debt will have the due_by date updated to #{l @show.maintenance_debt_start, format: :longy}." if has_maintenance_debt) 
-            %>
-        <% end %>
+        <% extra_fields[:maintenance_debt] = { type: 'content', header: 'Maintenance Debt', content: yield(:maintenance_debt)  } %>
     <% end %>
 
     <% if can? :create, Admin::StaffingDebt %>
-        <h3>Staffing Debt</h3>
-        <p>
-            When you add staffing debts, it will top up every team member's staffing debt up to the amount specified.
-            If someone already has one staffing debt and someone else has none and you select 1, now both will have 1 staffing debt.
-            This makes it easy to set staffing debt for the part of the team early on, 
-            and you can easily set it again later on when the rest of the team is added.
-        </p>
+        <% content_for :staffing_debt do %>
+            <p>
+                When you add staffing debts, it will top up every team member's staffing debt up to the amount specified.
+                If someone already has one staffing debt and someone else has none and you select 1, now both will have 1 staffing debt.
+                This makes it easy to set staffing debt for the part of the team early on, 
+                and you can easily set it again later on when the rest of the team is added.
+            </p>
 
-        <%= simple_form_for [:admin, @show] do |f| %>
-            <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
-            <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn btn-secondary' %>
-        <% end %>
+            <%= simple_horizontal_form_for [:admin, @show] do |f| %>
+                <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
+                <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn btn-secondary' %>
+            <% end %>
 
-        <% if @show.staffing_debt_start.present? %>
-            <%= form_with(url: create_staffing_debts_admin_show_path(@show), method: :post, local: true, class: "form-inline") do %>
-                Total Amount of Staffing Debts: 
-                <%= number_field :number_of_slots, nil, in: 1..2 %>
-                <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>
+            <% if @show.staffing_debt_start.present? %>
+                <%= form_with(url: create_staffing_debts_admin_show_path(@show), method: :post, local: true, class: "form-inline") do %>
+                    Total Amount of Staffing Debts: 
+                    <%= number_field :number_of_slots, nil, in: 1..2 %>
+                    <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>
+                <% end %>
             <% end %>
         <% end %>
+
+        <% extra_fields[:staffing_debt] = { type: 'content', header: 'Staffing Debt', content: yield(:staffing_debt) }%>
     <% end %>
 <% end %>
+
+<%= render('admin/events/basic_show', event: @show, extra_fields: extra_fields) %>

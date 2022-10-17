@@ -1,9 +1,9 @@
-<h1><%= @title %></h1>
-
 <% if current_user.nil? %>
-  <p>
-    <%= display_block('Marketing Creatives Sign In Warning', true) %>
-  </p>
+  <div class="card">
+    <div class="card-body">
+      <%= display_block('Marketing Creatives Profile Sign Up Instructions', true) %>
+    </div>
+  </div>
 <% end %>
 
 <%= render 'form' %>

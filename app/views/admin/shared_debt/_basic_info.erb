@@ -1,14 +1,9 @@
-<p>
-  <strong>User:</strong>
-  <%= user_link(debt.user, false) %>
-</p>
+<% fields = { 
+  user: user_link(debt.user, false),
+  due_by: debt.due_by,
+  show: get_link(debt.show, :show)
+} %>
 
-<p>
-  <strong>Due By:</strong>
-  <%= debt.due_by %>
-</p>
+<% fields = fields.merge(extra_fields) %>
 
-<p>
-  <strong>Show:</strong>
-  <%= debt.show.name %>
-</p>
+<%= render('shared/pages/show', object: debt, fields: fields, show_actions_args: show_actions_args) %>

@@ -13,3 +13,17 @@
 
   <%= render '/shared/form/form_actions', f: f %>
 <% end %>
+
+<%= render 'form' %>
+
+<%= simple_horizontal_form_for [@maintenance_debt] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <% unless @maintenance_debt.persisted? %>
+      <%= render '/shared/form/user_field', f: f %>
+
+      <%= f.input :show_id, collection: Show.this_year.selection_collection %>
+    <% end %>
+
+    <%= f.input :due_by %>
+  <% end %>
+<% end %>

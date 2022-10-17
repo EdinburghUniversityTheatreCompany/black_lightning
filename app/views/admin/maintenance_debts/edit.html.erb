@@ -1,11 +1,1 @@
-<h1><%= @title %></h1>
-
-<%= simple_form_for(@maintenance_debt) do |f| %>
-    <%= f.error_notification %>
-
-    <div class="form-inputs">
-      <%= f.input :due_by %>
-    </div>
-
-    <%= render '/shared/form/form_actions', f: f %>
-<% end %>
+<%= render 'form' %>

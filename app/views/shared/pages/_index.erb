@@ -6,10 +6,6 @@
 <% content = nil if content.nil? %>
 <% include_pagination = true if include_pagination.nil? %>
 
-<% # BOOTSTRAP: Why not put this partial in the admin layout, Alex? %>
-<%= render('shared/admin_page_header', title: @title ) %>
-<div class="content">
-  <div class="container-fluid">
     <div class="row">
       <div class="col-md-7">
         <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
@@ -32,7 +28,6 @@
             <span class="card-title">Quick actions</span>
           </div>
           <div class="card-body">
-            <% # BOOTSTRAP: There is no vertical spacing between these buttons here.%>
             <% if show_new_button %>
               <%= get_link resource_class, :new %>
             <% end %>
@@ -68,6 +63,3 @@
         </div>
       </div>
     </div>
-  </div>
-</div>
-

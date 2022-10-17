@@ -1,9 +1,4 @@
-<h1><%= @title %></h1>
-
-<%= render 'admin/shared_debt/basic_info', debt: @staffing_debt %>
-
-<p>
-  <strong>Staffing job:</strong>
+<% content_for :staffing_job do %>
   <% if @staffing_debt.admin_staffing_job.present? %>
     <%= render 'position_and_staffing', staffing_job: @staffing_debt.admin_staffing_job %>
 
@@ -11,46 +6,30 @@
   <% else %>
     There is no Staffing Job associated with this debt.
   <% end %>
-</p>
-
-<% if @jobs.empty? %>
-  <p>This user has not staffed any jobs that are not associated with any Debt.</p>
-<% else %>
-  <h3>Unassociated Jobs</h3>
-
-  <% can_assign_job = can?(:assign, @staffing_debt) && !@staffing_debt.fulfilled && !@staffing_debt.admin_staffing_job.present? %>
-
-  <table class="table">
-    <tbody>
-    <tr>
-      <th>Job</th>
-      <th>Date</th>
-      <% if can_assign_job %>
-        <th></th>
-      <% end %>
-    </tr>
-
-
-
-    <% @jobs.each do |job| %>
-        <tr>
-          <td>
-            <%= render 'position_and_staffing', staffing_job: job %>
-          </td>
-
-          <td><%= job.staffable.start_time.to_s(:long_ordinal)%></td>
-
-          <td>
-            <%= get_link job, :assign, link_target: assign_admin_staffing_debt_path(id: @staffing_debt.id, job_id: job),
-                         http_method: :put, condition: can_assign_job %>
-          </td>
-        </tr>
-    <% end %>
-    </tbody>
-  </table>
 <% end %>
 
-<% # No /shared/show_actions because the destroy button is a little different %>
-<%= get_link @staffing_debt, :edit, html_class: 'btn btn-primary' %>
-<%= get_link @staffing_debt.class, :index %>
-<%= render 'forgive_button', staffing_debt: @staffing_debt %>
+<% content_for :assign_job do %>
+  <% if @jobs.empty? %>
+    <p>This user has not staffed any jobs that are not associated with any Debt.</p>
+  <% else %>
+    <% can_assign_job = can?(:assign, @staffing_debt) && !@staffing_debt.fulfilled && !@staffing_debt.admin_staffing_job.present? %>
+
+    <% headers = [:job, :date, ''] %>
+    <% field_sets = @jobs.map { |job| { fields: [
+      job,
+      job.staffable.start_time.to_s(:long_ordinal),
+      get_link(job, :assign, link_target: assign_admin_staffing_debt_path(id: @staffing_debt.id, job_id: job), http_method: :put, condition: can_assign_job)
+    ] } } %>
+
+    <%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: Admin::StaffingJob, include_edit_button: false, include_link_to_item: false) %>
+  <% end %>
+<% end %>
+
+<% args = { destroy_link_params: render('forgive_button', staffing_debt: @staffing_debt) } %>
+
+<% extra_fields = {
+  staffing_job: yield(:staffing_job),
+  assign_job: { type: 'content', header: 'Unassociated Jobs', content: yield(:assign_job) }
+  } %>
+
+<%= render 'admin/shared_debt/basic_info', debt: @staffing_debt, show_actions_args: args, extra_fields: extra_fields %>

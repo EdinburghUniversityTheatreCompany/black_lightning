@@ -1,5 +1,3 @@
-<h1><%= @title %></h1>
-
 <%= display_block("Staffing", true) %>
 
 <br />
@@ -19,3 +17,5 @@
   <h3>Old Positions</h3>
   <%= render 'staffing_index_row', staffings_hash: @archived_staffings, archived: true %>
 <% end %>
+
+<% # BOOTSTRAP: Bring staffing index ore in line with the other indices%>
