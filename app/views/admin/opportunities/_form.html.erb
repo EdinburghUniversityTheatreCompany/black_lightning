@@ -1,7 +1,5 @@
-<%= simple_form_for [:admin, @opportunity] do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+<%= simple_horizontal_form_for [:admin, @opportunity] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
     <% if @opportunity.approved %>
       <small>
         <% if can? :approve, @opportunity %>
@@ -24,7 +22,5 @@
       Turning this on will result in your email (<%= current_user.email %>) being publicly visible. 
       If you do not want this, please include an alternative method to contact you in the description.
     </p>
-  </div>
-
-  <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>
