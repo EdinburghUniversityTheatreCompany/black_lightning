@@ -1,4 +1,5 @@
 module LinkHelper
+  # BOOTSTRAP: The 'my-1 mr-1' should be made more generic.
   def user_link(user, use_public_link_as_fallback)
     return 'User Not Found' if user.nil?
 
@@ -14,7 +15,7 @@ module LinkHelper
   end
 
   def link_to_add(form, attribute_name, object_name: nil, html_class: nil)
-    html_class ||= 'btn btn-secondary'
+    html_class ||= 'btn btn-secondary my-1 mr-1'
     object_name ||= format_class_name(attribute_name.to_s, true)
 
     # Important 'link_to_add_association"-fact: It goes up two divs, and then adds it to the end. This is why it is wrapped in a div here.
@@ -31,7 +32,7 @@ module LinkHelper
   end
 
   def link_to_remove(form, link_text: nil, html_class: nil)
-    html_class ||= 'btn btn-danger'
+    html_class ||= 'btn btn-danger my-1 mr-1'
 
     return link_to_remove_association remove_button_text(link_text), form, class: html_class
   end
@@ -43,7 +44,7 @@ module LinkHelper
     return generate_icon_prefix('trash', text)
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, margins: true, query_params: {})
     raise(ArgumentError, 'The object is nil') if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -92,7 +93,8 @@ module LinkHelper
     html_class = get_default_html_class(action) if html_class.nil?
 
     html_class = "#{html_class} no-wrap" if no_wrap
-
+    html_class = "#{html_class} my-1 mr-1" if margins
+  
     # Removes prepending pencil tags and such.
     title ||= strip_tags(link_text).strip
 
