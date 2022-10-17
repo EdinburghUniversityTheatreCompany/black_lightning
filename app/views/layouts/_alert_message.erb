@@ -1,5 +1,5 @@
 <% alert_type = swal_alert_info(key) %>
-<% # BOOTSTRAP: Can we please specify this rather than matching this to the messages? %>
+<% # BOOTSTRAP NICETOHAVE: Can we please specify this rather than matching this to the messages? %>
 <% if message == 'You need to log in or sign up before continuing.' then alert_type='info' end %>
 <% if message == 'Invalid email or password.' then alert_type='error' end %>
 <% if message == 'Logged in successfully.' || message == 'Logged out successfully.' then alert_type='success' end %>

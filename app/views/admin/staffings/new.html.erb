@@ -12,7 +12,7 @@
   <%= render('shared/pages/form', f: f) do %>
     <%= render 'form_base', f: f %>
 		
-    <% # BOOTSTRAP: Modernise the dates. %>
+    <% # BOOTSTRAP NICETOHAVE: Modernise the dates. Proposal call has an example. %>
     <div id="dates_container">	
       <h3>Dates</h3>	
       <script type="text/javascript">	
@@ -50,7 +50,6 @@
 <%= render '/shared/form/template_modal', header: 'Select Jobs from Template', template_model: Admin::StaffingTemplate %>
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
-  <% # BOOTSTRAP: Ugly dates %>
   <%= select_datetime(@default_start_time, { prefix: "start" } ) %> to <%= select_time(@default_end_time, prefix: "end")%>
   <a class="btn btn-danger"><%= remove_button_text %></a>
 </div>

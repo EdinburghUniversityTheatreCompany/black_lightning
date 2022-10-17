@@ -14,7 +14,7 @@
     <%= f.input :password_confirmation %>
 
     <% if can? :assign_roles, @user %>
-      <% # BOOTSTRAP: This is a bit botched now. Check if it still is later. %>
+      <% # BOOTSTRAP TODO: How does this look? %>
       <%= f.association :roles, as: :check_boxes %>
     <% end %>
 

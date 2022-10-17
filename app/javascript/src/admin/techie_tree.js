@@ -11,12 +11,12 @@ function DrawTree(json, container) {
   // add a simple node
 
   for (var techie of json.nodes) {
-    // TODO: Names and stff. Check this https://stackoverflow.com/questions/29137856/how-to-avoid-vivagraph-renders-the-graph-outside-of-the-container
+    // TODO: Names and stuff. Check this https://stackoverflow.com/questions/29137856/how-to-avoid-vivagraph-renders-the-graph-outside-of-the-container
     graph.addNode(techie.id, { "label": techie.name } );
   }
 
   for (var edge of json.edges) {
-    // TOOD: Direction https://github.com/anvaka/VivaGraphJS/blob/master/demos/tutorial_svg/05%20-%20Edges%20With%20Arrows.html
+    // TODO: Direction https://github.com/anvaka/VivaGraphJS/blob/master/demos/tutorial_svg/05%20-%20Edges%20With%20Arrows.html
     graph.addLink(edge[0], edge[1], { directed: true });
   }
 

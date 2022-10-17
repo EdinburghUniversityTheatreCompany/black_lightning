@@ -1,3 +1,7 @@
+/*  BOOTSTRAP ALEX: Is this use by your login form or can it be removed?
+    BOOTSTRAP ALEX: In similar vein, which of [devise/passwords/edit, devise/passwords/new, devise/sessions/new] are actually in use right now?
+*/
+
 #login_form {
   display: -webkit-flex;
   display:    -mos-flex;

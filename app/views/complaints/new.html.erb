@@ -10,7 +10,6 @@
   <div class="form-inputs">
     <%= f.input :subject %>
 
-    <% # BOOTSTRAP: There is no margin here. Not touching it in case this gets fixed more generally, but could easily fix it with a <div class="mb3"></div> or something. %>
     <%= render "/shared/form/md_editor", f: f, field: :description, show_hint: true %>
   </div>
 

@@ -9,7 +9,7 @@ environment.plugins.prepend(
     $: 'jquery',
     jQuery: 'jquery',
     Popper: ['popper.js', 'default']  // Not a typo, we're still using popper.js here
-    // BOOTSTRAP: Should this be
+    // BOOTSTRAP CHECK: Should this be
     // Popper: ['@popperjs/core', 'default']
   })
 )
