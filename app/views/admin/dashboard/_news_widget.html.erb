@@ -1,7 +1,6 @@
 <h3><%= link_to 'News', admin_news_index_path %></h3>
 
-<% # BOOTSTRAP: Copy from the home page. %>
-<% current_news = News.accessible_by(current_ability).current.order('publish_date DESC').first(4)%>
+<% current_news = News.accessible_by(current_ability).includes(:author).order('publish_date DESC').first(4) %>
 
 <% current_news.first(4).each do |news| %>
   <p><%= link_to news.title, admin_news_path(news) %> <%= "<span class='label label-important'>Members</span>".html_safe if !news.show_public%></p>
