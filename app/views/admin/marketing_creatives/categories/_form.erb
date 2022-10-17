@@ -1,12 +1,8 @@
-<%= simple_form_for [:admin, @category] do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+<%= simple_horizontal_form_for [:admin, @category] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
       <%= f.input :name %>
       <%= f.input :name_on_profile, hint: 'This is the name used on the profile as the section header.' %>
 
       <%= render 'shared/form/file_field', f: f, field_name: :image %>
-  </div>
-  
-  <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>
