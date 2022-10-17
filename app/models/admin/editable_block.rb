@@ -31,6 +31,6 @@ class Admin::EditableBlock < ApplicationRecord
   validates :url, uniqueness: { case_sensitive: false }, if: :url?
 
   def self.groups
-    select('`group`').distinct.map(&:group)
+    select('`group`').distinct.map(&:group).reject(&:blank?)
   end
 end
