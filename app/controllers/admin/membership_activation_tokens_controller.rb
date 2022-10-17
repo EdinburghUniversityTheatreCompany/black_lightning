@@ -5,9 +5,10 @@ class Admin::MembershipActivationTokensController < AdminController
   def new
     @user = User.new
     @token = MembershipActivationToken.new
-    # Title is set by the view.
+    @title = 'Membership Activation'
   end
 
+  # TODO: This should be abstracted into a model so this can also be called from other logic things in case of a mass reactivation.
   def create_activation
     @token = MembershipActivationToken.new
 
@@ -26,6 +27,7 @@ class Admin::MembershipActivationTokensController < AdminController
 
       helpers.append_to_flash(:success, "#{base_message}. They will be send a reactivation mail.")
 
+      # TODO: Why is this add_user_to_token? I don't think this works because when I reactivated max hanover I think it send two emails?
       return unless add_user_to_token
     end
 
