@@ -1,5 +1,3 @@
-<h1><%= @title %></h1>
-
 <% fields = { 
   title: @carousel_item.title,
   tagline: @carousel_item.tagline,
@@ -7,14 +5,7 @@
   is_active: @carousel_item.is_active,
   order: @carousel_item.ordering,
   url: @carousel_item.url,
-  image: 'No image',
+  image: { type: 'image', image: @carousel_item.image, variant: slideshow_variant },
 } %>
 
-<% # Image %>
-<% if @carousel_item.image.attached? && !@carousel_item.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-  <% fields[:image] = image_tag(@carousel_item.image.variant(slideshow_variant)) %>
-<% end %>
-
-<%= render 'shared/basic_fields', fields: fields %>
-
-<%= render '/shared/show_actions', object: @carousel_item %>
+<%= render('shared/pages/show', object: @carousel_item, fields: fields) %>
