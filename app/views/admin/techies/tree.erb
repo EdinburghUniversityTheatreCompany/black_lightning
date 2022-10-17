@@ -1,17 +1,14 @@
-<h1><%= @title %></h1>
-
-<div>
+<%= render('shared/quick_actions_card') do %>
   <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
-
   <%= get_link Techie, :new, html_class: 'btn btn-secondary' %>
-</div>
+<% end %>
 
-<% # BOOTSTRAP: Make sure the techie tree and search form look good. %>
 <div class="row">
     <div class="col">
         <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies, html: { id: 'search', class: 'form-search form-inline mt-3'} do |f| %>
-            <%= f.select :id_eq, options_from_collection_for_select(Techie.all, "id", "name", @q.id_eq), include_blank: true %>
-
+            <% #= f.select :id_eq, options_from_collection_for_select(Techie.all, "id", "name", @q.id_eq), include_blank: true, as: :select2 %>
+            <%= f.input :id_eq, collection: Techie.all.select('id', 'name'), include_blank: true, as: :select2, label: 'Techie Name' %>
+            <div class="mr-2"></div>
             <%= f.submit :Search, class: 'btn btn-secondary' %>
         <% end %>
     </div>
