@@ -1,60 +1,44 @@
-<h1><%= @title %></h1>
+<% fields = { } %>
 
 <% if can? :assign_roles, User %>
-  <h3>Add User</h3>
-
-  <% if @role.name.downcase == 'member' %>
-    <% if can? :new, MembershipActivationToken %>
-      Please add members from the membership activation page.
-      <br>
-      <%= get_link MembershipActivationToken, :new, link_text: '(Re)-activate Membership' %>
+  <% content_for :add_user do %>
+    <% if @role.name.downcase == 'member' %>
+      <% if can? :new, MembershipActivationToken %>
+        Please add members from the membership activation page.
+        <br>
+        <%= get_link MembershipActivationToken, :new, link_text: '(Re)-activate Membership' %>
+      <% else %>
+        You are not allowed to add members. Please ask the secretary to add new members.
+      <% end %>
     <% else %>
-      You are not allowed to add members. Please ask the secretary to add new members.
-    <% end %>
-  <% else %>
-    <% # Using a token is not the nicest way of handling it, but it works and is quite clean. %>
-    <%= simple_form_for(@token, url: add_user_admin_role_url(@role), html: { class: 'form-inline mb-3' }) do |f| %>
-      <%= f.error_notification %>
+      <%= simple_horizontal_form_for(:add_user_details, url: add_user_admin_role_url(@role), html: { class: 'form-inline' }) do |f| %>
+        <%= f.error_notification %>
 
-      <%= render '/shared/form/user_field', f: f, include_label: false %>
+        <%= render '/shared/form/user_field', f: f, include_label: false %>
 
-      <%= submit_tag "Add User to Role", class: 'btn btn-secondary mx-2' %>
+        <%= submit_tag "Add User to Role", class: 'btn btn-secondary mx-2' %>
+      <% end %>
     <% end %>
   <% end %>
+
+  <% fields[:add_user] = { type: 'content', header: 'Add User', content: yield(:add_user) } %>
 <% end %>
 
-<h3>Users (<%= @users.count %>)</h3>
-<%= search_form_for @q, builder: SimpleForm::FormBuilder, url: admin_role_url(@role), html: { id: 'search', class: 'simple_form form-search form-inline mb-3' } do |f| %>
-  <%= f.input_field :full_name_cont, placeholder: 'User Name', required: false, class: 'form-control' %>
+<% content_for :users do %>
+  <% search_fields = { full_name_cont:   { slug: 'defaults.name' } } %>
+  <%= render('shared/search_form', input_fields: search_fields, url: admin_role_url(@role)) %>
 
-  <%= submit_tag "Search", class: 'btn btn-secondary mx-2' %>
+  <% headers = [:name] %>
+  <% field_sets = @users.map { |user| { fields: [user] } } %>
+  <%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: User) %>
 <% end %>
 
-<table class="table">
-  <tbody>
-    <tr>
-      <%= content_tag :th, sort_link(@q, :user_full_name, 'User Name') %>
+<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: yield(:users) } %>
 
-      <% if can? :assign_roles, User %>
-        <th></th>
-      <% end%>
-    </tr>
 
-    <% @users.each do |user| %>
-      <tr>
-        <td><%= user_link(user, true) %></td>
+<% content_for :extra_show_actions do %>
+  <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
+    confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
+<% end %>
 
-        <% if can? :assign_roles, user %>
-          <td>
-            <%= get_link user, :edit %>
-          </td>
-        <% end %>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-
-<%= render '/shared/show_actions', object: @role do %>
-<%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
- confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
- <% end %>
+<%= render('shared/pages/show', object: @role, fields: fields) %>
