@@ -1,7 +1,7 @@
-<h1><%= @title %></h1>
+<% fields = {} %>
 
 <% @call_question_template.questions.each do |question| %>
-  <%= render '/shared/question_template_show', question: question %>
+  <% fields[question.id] = { type: 'content', content: render('/shared/question_template_show', question: question) } %>
 <% end %>
 
-<%= render 'shared/show_actions', object: @call_question_template %>
+<%= render('shared/pages/show', object: @call_question_template, fields: fields) %>
