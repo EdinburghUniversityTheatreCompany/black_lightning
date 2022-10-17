@@ -1,0 +1,9 @@
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+  f: f,
+  div_class_additions: 'form-inline'
+} do %>
+  <% # BOOTSTRAP: Select2 this properly. %>
+  <%= f.input_field :id, collection: Techie.where.not(id: @techie.id), as: :select2 %>
+
+  <%= link_to_remove f %>
+<% end %>
