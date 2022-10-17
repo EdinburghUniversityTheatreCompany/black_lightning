@@ -1,4 +1,7 @@
-<h1><%= @title %></h1>
+<% display_title = true if display_title.nil? %>
+<% if display_title %>
+  <h1><%= @title %></h1>
+<% end %>
 
 <div class="card">
   <div class="card-body">
@@ -10,6 +13,7 @@
 
     <%= get_link @user, :edit, html_class: 'btn btn-primary' %>
   </div>
+  +
 </div>
 
 <h3>Projects</h3>
