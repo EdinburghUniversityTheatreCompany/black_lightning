@@ -17,7 +17,13 @@ module LinkHelper
     html_class ||= 'btn btn-secondary'
     object_name ||= format_class_name(attribute_name.to_s, true)
 
-    return form.link_to_add add_button_text(object_name), attribute_name, class: html_class
+    # Important 'link_to_add_association"-fact: It goes up two divs, and then adds it to the end. This is why it is wrapped in a div here.
+    # If you want to put it in a div yourself for whatever reason, you have to make that wrapping optional.
+    # There are some further specifics you should definitely check out here:
+    # https://github.com/nathanvda/cocoon#link_to_add_association
+    button = link_to_add_association add_button_text(object_name), form, attribute_name, class: html_class
+  
+    return "<div>#{button}</div>".html_safe
   end
 
   def add_button_text(object_name)
@@ -27,7 +33,7 @@ module LinkHelper
   def link_to_remove(form, link_text: nil, html_class: nil)
     html_class ||= 'btn btn-danger'
 
-    return form.link_to_remove remove_button_text(link_text), class: html_class
+    return link_to_remove_association remove_button_text(link_text), form, class: html_class
   end
 
   def remove_button_text(text = nil)
