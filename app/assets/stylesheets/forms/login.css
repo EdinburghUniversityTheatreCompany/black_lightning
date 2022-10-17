@@ -1,3 +1,7 @@
+/*  BOOTSTRAP ALEX: Is this use by your login form or can it be removed?
+    BOOTSTRAP ALEX: In similar vein, which of [devise/passwords/edit, devise/passwords/new, devise/sessions/new] are actually in use right now?
+*/
+
 #login_form {
   display: -webkit-flex;
   display:    -mos-flex;
@@ -17,25 +21,5 @@
 @media (max-width: 767px) {
   #login_form {
     display: block;
-  }
-}
-
-/* Responsive */
-/* BOOTSTRAP: Probably remove when updating navbar? */
-@media (max-width: 400px) {
-  .brand {
-      float: none !important;
-  }
-
-  #login_menu {
-      float: none;
-  }
-
-  #login_menu li {
-      float: none;
-  }
-
-  #login_menu a {
-      padding: 0;
   }
 }

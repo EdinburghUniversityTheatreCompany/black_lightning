@@ -23,7 +23,7 @@
 
         <% # Check if the image is attached and if it is not a default image. If so, display the image.%>
         <% if value[:image].attached? && !value[:image].filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-          <% # BOOTSTRAP: Does this need a maximum size or something? %>
+          <% # BOOTSTRAP NICETOHAVE: Does this need a maximum size or something? %>
           <%= render('shared/image', image: value[:image], variant: value[:variant]) %>
         <% else %>
           No Image
@@ -42,7 +42,7 @@
         <% value = bool_text(value) %>
       <% end %>
 
-      <% # TODO: If we are doing columns it probably needs some finetuning. %>
+      <% # BOOTSTRAP TODO: If we are doing columns it probably needs some finetuning. %>
       <div class="row">
         <div class="col-sm-3">
           <b><%= title %>:</b> 

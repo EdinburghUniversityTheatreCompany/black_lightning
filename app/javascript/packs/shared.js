@@ -12,7 +12,7 @@ import '../src/konami_code'
 
 import "controllers"
 
-// BOOTSTRAP: Does it need the below?
+// BOOTSTRAP TODO: Does it need the below?
 //require.context('./../../../node_modules/jquery-ui/ui')
 require("@rails/ujs").start()
 require("@rails/activestorage").start()

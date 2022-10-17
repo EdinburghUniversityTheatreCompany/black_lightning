@@ -17,8 +17,6 @@
     radio_buttons: :horizontal_collection,
     range:         :horizontal_range,
     time:          :horizontal_multi_select,
-    # BOOTSTRAP: To Alex: This one does not exist, so I commented it out , and it still works.
-    #select:        :horizontal_select
   } do |f| %>
     <div class="card-body">
       <% input_fields.each do |key, params| %>
@@ -55,7 +53,7 @@
             <% buttons << f.submit(params[:action], class: 'btn btn-secondary') %>
             <% next %>
 
-            <% # BOOTSTRAP: Exclude email fields from validation. %>
+            <% # BOOTSTRAP TODO: Exclude email fields from validation. %>
           <% end %>
         <% end %>
 

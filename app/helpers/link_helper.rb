@@ -1,5 +1,5 @@
 module LinkHelper
-  # BOOTSTRAP: The 'my-1 mr-1' should be made more generic.
+  # BOOTSTRAP NICETOHAVE: The 'my-1 mr-1' should be made more generic.
   def user_link(user, use_public_link_as_fallback)
     return 'User Not Found' if user.nil?
 

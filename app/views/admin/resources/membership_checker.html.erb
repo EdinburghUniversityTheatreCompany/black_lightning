@@ -3,7 +3,7 @@
 <div class="row">
   <div class="col">
     <form class="mt-3">
-      <% # BOOSTRAP: This form %>
+      <% # BOOSTRAP NICETOHAVE: This form %>
       <div class="form-floating mb-3">
         <input type="text" class="form-control" id="membershipSearch" name="search" placeholder="Finbar the Viking" autofocus="autofocus">
         <label for="membershipSearch">Membership Number or Member Name</label>
@@ -20,7 +20,7 @@
   </div>
 </div>
 
-<% # BOOTSTRAP: Display the picture inside the alert. %>
+<% # BOOTSTRAP NICETOHAVE: Display the picture inside the alert. %>
 <script>
   $form = $('form');
   $form.submit(function (e) {
@@ -55,7 +55,7 @@
         break;
     }
 
-  // BOOTSTRAP: This script probs should not live here, and if it does, this alert should be created using the form script
+  // BOOTSTRAP NICETOHAVE: This script probs should not live here, and if it does, this alert should be created using the form script
     $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
               "<i class=\"" + icon  + " fas fa-large\" aria-hidden=”true”></i> "
               + message +

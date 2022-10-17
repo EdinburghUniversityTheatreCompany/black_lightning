@@ -1,18 +1,18 @@
-
-<div class="accordion-group">
-  <div class="accordion-heading">
-    <div class="accordion-toggle clearfix">
-      <a data-toggle="collapse" data-parent="#jobs_accordion" href="#job_<%= job.id %>">
+<div class="card">
+  <div class="card-header" id="jobHeading<%= index %>">
+    <h2 class="mb-0">
+      <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#jobCollapse<%= index %>" aria-expanded="true" aria-controls="jobCollapse<%= index %>">
         Job #<%= job.id %><%= " - #{job.description}" if job.description %>
-      </a>
-      <span class="float-right">
-        <%= link_to 'Retry', admin_jobs_retry_path(:id => job.id), :class => "btn btn-secondary btn-small" %>
-        <%= link_to 'Remove', admin_jobs_remove_path(:id => job.id), :class => "btn btn-small btn-danger" %>
-      </span>
-    </div>
+
+        <span class="float-right">
+          <%= link_to 'Retry', admin_jobs_retry_path(id: job.id), class: "btn btn-secondary btn-small mx-2" %>
+          <%= link_to 'Remove', admin_jobs_remove_path(id: job.id), class: "btn btn-small btn-danger" %>
+        </span>
+      </button>
+    </h2>
   </div>
-  <div id="job_<%= job.id %>" class="accordion-body collapse">
-    <div class="accordion-inner">
+  <div id="jobCollapse<%= index %>" class="collapse" aria-labelledby="jobHeading<%= index %>" data-parent="#jobsEnqueued">
+    <div class="card-body">
       <dl>
         <dt>Priority</dt>
         <dd><%= job.priority %></dd>

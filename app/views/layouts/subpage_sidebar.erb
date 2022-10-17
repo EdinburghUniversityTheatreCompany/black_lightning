@@ -1,12 +1,10 @@
 <% # Inspiration from https://getbootstrap.com/docs/5.0/examples/sidebars/ %>
-<% # BOOTSTRAP: Navbar breaks when it gets too cramped..... %>
-
+<% # Currently unused :( %>
 
 <% content_for :content do %>
   <div class="row">
     <div class="col-3">
       <div class="d-flex flex-column flex-shrink-0 p-3 bg-light card h-100">
-        <% # BOOTSTRAP: Properly center the header here. %>
         <a href="<%= get_subpage_url(@controller, @subpages[0]) %>" class="d-flex mb-3 mb-md-0 me-md-auto text-decoration-none">
           <h3><%= @subpages[0].name %></h3>
         </a>
