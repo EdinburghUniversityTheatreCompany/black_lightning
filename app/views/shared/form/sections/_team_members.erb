@@ -1,13 +1,6 @@
 <% # BOOTSTRAP TODO: How to do the all_users with select2. %>
 <% all_users = can?(:add_non_members, f.object) if all_users.nil? %>
 
-<% content_for :head do %>
-  <% if all_users %>
-    <meta name="all-users" content="true" />
-  <% end %>
-  <%= javascript_include_tag "admin/user_typeahead_field.js" %>
-<% end %>
-
 <input type="hidden" name="autocomplete_users_list" value="true">
 
 <div class="form-horizontal">

@@ -5,13 +5,5 @@
   <%= render 'shared/form/user_typeahead_field', f: f %>
   <%= f.full_error(:user) if f.error(:user).present? %>
 
-  <% content_for :head do %>
-    <% if all_users %>
-      <meta name="all-users" content="true" />
-    <% end %>
-
-    <%= javascript_include_tag "admin/user_typeahead_field.js" %>
-  <% end %>
-
   <input type="hidden" name="autocomplete_users_list" value="true">
 </div>
