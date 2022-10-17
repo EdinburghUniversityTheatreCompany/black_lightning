@@ -3,14 +3,6 @@
   <%# Include the opengraph namespaces: %>
   <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
   <meta charset="UTF-8">
-
-  <!-- measure page load time -->
-  <!-- BOOTSTRAP: I think this can go? -->
-  <script type="text/javascript">
-    load_start = new Date().getTime();
-    doc_ready = null;
-    load_end = null;
-  </script>
     
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", media: "all" %>
