@@ -54,6 +54,8 @@
           <% elsif params[:type] == :submit_button %>
             <% buttons << f.submit(params[:action], class: 'btn btn-secondary') %>
             <% next %>
+
+            <% # BOOTSTRAP: Exclude email fields from validation. %>
           <% end %>
         <% end %>
 
