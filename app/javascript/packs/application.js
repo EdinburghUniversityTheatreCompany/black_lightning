@@ -20,8 +20,6 @@ require("@popperjs/core")
 // BOOTSTRAP: Does this need?
 require("jquery")
 
-import "corejs-typeahead";
-
 import "bootstrap"
 
 // Import the specific modules you may need (Modal, Alert, etc)

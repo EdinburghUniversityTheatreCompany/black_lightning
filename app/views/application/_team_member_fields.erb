@@ -5,7 +5,7 @@
     } do %>
     <%= f.hidden_field :id %>
 
-    <% position_field = [f.input_field(:position, placeholder: 'Position', autocomplete: 'off', data: { provide: "typeahead", source: position_typeahead })] %>
+    <% position_field = [f.input_field(:position, collection: position_typeahead, placeholder: 'Position', include_blank: false, allow_custom_input: true )] %>
  
     <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: position_field %>
 
