@@ -1,0 +1,19 @@
+<% show_actions_args = {} if show_actions_args.nil? %>
+
+<% # BOOTSTRAP: Finish this %>
+<div class="card">
+  <div class="card-body m-0 p-1">
+    Quick actions
+    <div class="float-right">
+      <% if content_for?(:custom_show_actions) %>
+        <% yield :custom_show_actions %>
+      <% else %>
+        <%= render '/shared/show_actions', object: object, **show_actions_args %>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <%= render 'shared/basic_fields', fields: fields %>
+</div>
