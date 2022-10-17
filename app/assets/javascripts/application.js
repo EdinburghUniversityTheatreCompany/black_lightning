@@ -11,7 +11,6 @@
 // GO AFTER THE REQUIRES BELOW.
 //
 
-//= require jquery_nested_form
 //= require raphael-min
 //= require dracula_graffle
 //= require dracula_graph

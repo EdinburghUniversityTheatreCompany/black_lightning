@@ -22,8 +22,7 @@ gem 'recaptcha'
 
 gem 'kaminari'
 gem 'kramdown'
-gem 'nested_form'
-gem 'twitter'
+gem 'cocoon'
 gem 'json'
 gem 'rails_autolink'
 
