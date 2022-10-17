@@ -1,12 +1,10 @@
-<%= simple_nested_form_for(@proposal) do |f| %>
+<%= simple_horizontal_form_for(@proposal) do |f| %>
+  <% content_for :extra_form_actions do %>
+    <%= get_link @proposal.call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@proposal.call) , http_method: 'get' %>
+  <% end %>
 
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
-
-    <p>
-      <b>Proposal for: <%= @proposal.call.name %></b>
-    </p>
+  <%= render('shared/pages/form', f: f) do %>
+    <p><b>Proposal for: <%= get_link @proposal.call, :show %></b></p>
 
     <%= f.hidden_field :call_id %>
 
@@ -14,11 +12,12 @@
 
     <% if can?(:approve, @proposal) %>
       <% if @proposal.successful.nil? && !@proposal.approved.nil? %>
-        <%= f.input :approved, as: :select, blank: true %>
+        <%= f.input :approved, as: :select2, blank: true %>
       <% end %>
 
       <% if @proposal.approved %>
-        <%= f.input :successful, as: :select, blank: true %>
+        <% # BOOTSTRAP: Not very wide select2 box... %>
+        <%= f.input :successful, as: :select2, blank: true %>
       <% end %>
     <% end %>
 
@@ -29,23 +28,14 @@
 
     <%= render "/shared/form/md_editor", f: f, field: :proposal_text, rows: 12, show_hint: true %>
 
-    <div>
+    <div id="answers">
       <h3>Questions</h3>
 
-      <%= f.simple_fields_for :answers %>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields') %>
     </div>
 
     <%= render '/shared/form/sections/team_members', f: f %>
-  </div>
 
-  <div>By submitting this form you agree that this proposal (including the names of the team members) may be shared with Friends of Bedlam</div>
-  
-  <% # This cannot use /shared/form/form_actions because the links are so different %>
-  <div class="form-actions">
-    <%= f.button :submit, class: "btn btn-primary" %>
-    <% if @proposal.persisted?%>
-      <%= get_link f.object, :show, link_text: 'View', html_class: 'btn btn-secondary', additional_condition: f.object.persisted?, return_link_text_if_no_permission: false %>
-    <% end %>
-    <%= get_link @proposal.call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@proposal.call) , http_method: 'get' %>
-  </div>
+    <div>By submitting this form you agree that this proposal (including the names of the team members) may be shared with Friends of Bedlam</div>
+  <% end %>
 <% end %>
