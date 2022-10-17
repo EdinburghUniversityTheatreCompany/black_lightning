@@ -4,12 +4,13 @@
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
   <%= stylesheet_link_tag    "admin", media: "all" %>
-  <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
-  <%= javascript_packs_with_chunks_tag "application", "admin"%>
+  <%= javascript_packs_with_chunks_tag "admin", "shared" %>
 
   <%= javascript_include_tag "application" %>
   <%= csrf_meta_tags %>
+
+  <%= render('layouts/cdn_includes') %>
 
   <%= yield :head %>
 
