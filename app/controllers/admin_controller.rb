@@ -15,6 +15,7 @@ class AdminController < ApplicationController
   def check_consented!
     return if current_user.consented?
 
+    # BOOTSTRAP VERYNICETOHAVE: It would be nice if this page does not display both an alert and the text on the webpage itself. It's a bit redundant.
     exception = CanCan::AccessDenied.new(t('errors.not_consented'))
 
     render_error_page(exception, 'errors/not_consented', 403)

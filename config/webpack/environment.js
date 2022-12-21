@@ -8,8 +8,9 @@ environment.plugins.prepend(
   new webpack.ProvidePlugin({
     $: 'jquery',
     jQuery: 'jquery',
-    Popper: ['popper.js', 'default']  // Not a typo, we're still using popper.js here
-    // BOOTSTRAP CHECK: Should this be
+    Popper: ['popper.js', 'default']  
+    // Not a typo, we're still using popper.js here because that is what adminlte requires.
+    // BOOTSTRAP 5: Replace with the below once upgrading adminlte
     // Popper: ['@popperjs/core', 'default']
   })
 )
