@@ -1,13 +1,14 @@
 <%= render layout: '/shared/form/fields_for_template', locals: { 
         f: f,
-        div_class_additions: 'team_member',
+        div_class_additions: 'team_member form-inline',
         attributes: [:position, :user]
     } do %>
     <%= f.hidden_field :id %>
 
-    <% position_field = [f.input_field(:position, collection: position_typeahead, placeholder: 'Position', include_blank: false, allow_custom_input: true )] %>
+    <%- # BOOTSTRAP CHECK: is this a select2 that starts with blank? %>
+    <%= f.input_field(:position, collection: position_typeahead, placeholder: 'Position', include_blank: false, allow_custom_input: true) %>
  
-    <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: position_field %>
+    <%= f.input :user, collection: User.all %>
 
     <%= link_to_remove f %>
 <% end %>

@@ -1,4 +1,5 @@
 <%# Based on the very similar _team_member_fields.erb file %>
+<% # BOOTSTRAP NICETOHAVE: Margins between the fields. Also for other form-inlines %>
 
 <%= render layout: '/shared/form/fields_for_template', locals: { 
   f: f,
@@ -6,9 +7,9 @@
 } do %>
     <%= f.hidden_field :id %>
 
-    <% name_field = [f.input(:name, placeholder: 'Job', label: false)] %>
+    <%= f.input(:name, placeholder: 'Job', label: false) %>
 
-    <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: name_field %>
+    <%= f.input_field :user, collection: User.all %>
 
     <%= link_to_remove f %>
 <% end %>
