@@ -35,16 +35,18 @@
         <% # Reassign label back to params in case it gets passed through to an input. %>
         <% params[:label] = label %>
 
+
+        <%- # Render specific input fields for some types. %>
         <% if params.key?(:type) && params[:type] != :text %>
           <% if params[:type] == :boolean %>
             <% # If it is a boolean, just render the boolean field and continue the loop. %>
             <%= render 'shared/boolean_search_form_field', f: f, name: key, label: label %>
             <% next %>
           <% elsif params[:type] == :select %>
-            <% # By default, you need to select someone, while usually, you want to have the filtering using a select be optional. %>
+            <% # By default, you need to select an item, while usually, you want to have the filtering using a select be optional. %>
             <% params[:include_blank] = true if params[:include_blank].nil? %>
 
-            <% # Just go on to render a normal input, but with the above parameter set. %>
+            <% # No `next`. Just go on to render a normal select input, but with the above parameter set. %>
           <% elsif params[:type] == :date_range %>
             <% # Render a date range with options specified. %>
             <%= render 'shared/date_range_search_form_field', { f: f }.merge(params[:options]) %>
@@ -52,12 +54,15 @@
           <% elsif params[:type] == :submit_button %>
             <% buttons << f.submit(params[:action], class: 'btn btn-secondary') %>
             <% next %>
-
-            <% # BOOTSTRAP TODO: Exclude email fields from validation. %>
           <% end %>
         <% end %>
 
         <% # If there is no type key, text is implied, and we just render an input. %>
+
+        <%- # Set email fields to render as text fields to prevent email validations, unless there is already an as in the params %>
+        <% if !params.key?(:as) && key.to_s.include?('email') %>
+          <% params[:as] = 'string' %>
+        <% end %>
 
         <% # By default, the fields are required, so override that and set them to not required unless explicitly stated. %>
         <% params[:required] = false if params[:required].nil? %>
