@@ -32,7 +32,7 @@ class Admin::Staffing < ApplicationRecord
   scope :future, -> { where(['end_time >= ?', DateTime.now]) }
   scope :past, -> { where(['end_time < ?', DateTime.now]) }
 
-  has_many :staffing_jobs, -> { includes(:user) }, as: :staffable, class_name: 'Admin::StaffingJob', dependent: :destroy
+  has_many :staffing_jobs, as: :staffable, class_name: 'Admin::StaffingJob', dependent: :destroy
   has_many :users, through: :staffing_jobs
 
   # Having this as a belongs_to feels wrong, but since the id of the job needs to be stored in the staffing it is necessary.
