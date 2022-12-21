@@ -1,12 +1,3 @@
-<% # BOOTSTRAP CHECK: Uh. Double? (see new) %>
-<% if current_user.nil? %>
-  <div class="card">
-    <div class="card-body">
-      <%= display_block('Marketing Creatives Sign In Warning', true) %>
-    </div>
-  </div>
-<% end %>
-
 <%= simple_horizontal_form_for [:admin, @profile] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
