@@ -1,4 +1,7 @@
-class Select2Input < SimpleForm::Inputs::CollectionSelectInput
+# Override the default select method to use select2. 
+# See https://github.com/heartcombo/simple_form#custom-inputs
+
+class CollectionSelectInput < SimpleForm::Inputs::CollectionSelectInput
   def input(wrapper_options = nil)
     label_method, value_method = detect_collection_methods
 

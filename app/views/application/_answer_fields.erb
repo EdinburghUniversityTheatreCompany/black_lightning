@@ -12,7 +12,7 @@
         <% when "Number" %>
           <%= f.input :answer, as: :decimal, label: question_text %>
         <% when "Yes/No" %>
-          <%= f.input :answer, as: :select2, collection: ['Yes', 'No'], label: question_text %>
+          <%= f.input :answer, collection: ['Yes', 'No'], label: question_text, as: :radio_buttons %>
         <% when "File" %>
           <%= f.label :answer, question_text %>
           <%= render 'shared/form/sections/attachments', f: f, include_header: false %>

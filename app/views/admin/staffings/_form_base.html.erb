@@ -1,6 +1,6 @@
 <input type="hidden" name="autocomplete_users_list" value="true">
 
-<%= f.input :show_title, collection: Show.future, as: :select2, include_blank: false, allow_custom_input: true %>
+<%= f.input :show_title, collection: Show.future, include_blank: false, allow_custom_input: true %>
 
 <%= f.input :counts_towards_debt, label: 'Does the staffing count towards debt?'%>
 
