@@ -9,7 +9,7 @@
 
     <%= f.input(:name, placeholder: 'Job', label: false) %>
 
-    <%= f.input_field :user, collection: User.all %>
+    <%= f.association :user, collection: User.all, label: false %>
 
     <%= link_to_remove f %>
 <% end %>

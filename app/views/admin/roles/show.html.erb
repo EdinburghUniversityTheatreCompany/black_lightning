@@ -14,7 +14,6 @@
       <%= simple_horizontal_form_for(:add_user_details, url: add_user_admin_role_url(@role), html: { class: 'form-inline' }) do |f| %>
         <%= f.error_notification %>
 
-        <% # BOOTSTRAP CHECK %>
         <%= f.input :user_id, collection: User.all %>
 
         <%= submit_tag "Add User to Role", class: 'btn btn-secondary mx-2' %>

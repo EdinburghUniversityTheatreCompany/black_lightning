@@ -14,7 +14,7 @@
             <%= f.error_notification %>
 
             <% # BOOTSTRAP TODO all_users always %>
-            <%= f.input :user, collection: User.all %>
+            <%= f.input :association, collection: User.all %>
 
             <%= f.button :submit, "Send Re-activation", class: 'btn btn-primary' %>
         <% end %>

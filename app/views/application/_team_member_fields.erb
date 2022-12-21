@@ -8,7 +8,7 @@
     <%- # BOOTSTRAP CHECK: is this a select2 that starts with blank? %>
     <%= f.input_field(:position, collection: position_typeahead, placeholder: 'Position', include_blank: false, allow_custom_input: true) %>
  
-    <%= f.input :user, collection: User.all %>
+    <%= f.association :user, collection: User.all %>
 
     <%= link_to_remove f %>
 <% end %>
