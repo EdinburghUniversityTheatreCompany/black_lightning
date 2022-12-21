@@ -5,12 +5,21 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css">
 
+<%- # BOOTSTRAP TODO: This should be a separate script somewhere. %>
 <script>
+  // Add select2 fields to fields that exist on document load.
   $(document).ready(function() {
-    // BOOTSTRAP TODO: Select2 with cocoon breaks... 
-    // Adding fields with cocoons should retrigger these things within the added field, and the validation.
-    // There's something in typeahead
-    $('.simple-select2').select2({theme: 'bootstrap4' });
-    $('.simple-select2-with-tags').select2({theme: 'bootstrap4', tags: true});
+    activateSelect2Fields($(document));
   });
+
+  // Add Select2fields after adding a cocoon field.
+  $(document)
+    .on('cocoon:after-insert', function(e, insertedItem, originalEvent) {
+      activateSelect2Fields(insertedItem);
+    })
+
+  function activateSelect2Fields(parentElement){
+      parentElement.find('.simple-select2').select2({theme: 'bootstrap4', width: 'resolve' });
+      parentElement.find('.simple-select2-with-tags').select2({theme: 'bootstrap4', width: 'resolve', tags: true});
+  }
 </script>
