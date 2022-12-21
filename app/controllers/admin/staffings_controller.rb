@@ -114,11 +114,6 @@ class Admin::StaffingsController < AdminController
 
     slug = ''
 
-    if invalid_user_names.any?
-      # The error is already added to the flash by the sanitize function.
-      failure = true
-    end
-
     if start_times.nil? || end_times.nil?
       helpers.append_to_flash(:error, 'You have not specified any start and end times.')
       failure = true
