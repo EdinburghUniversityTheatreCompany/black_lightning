@@ -180,7 +180,7 @@ class Admin::StaffingsController < AdminController
     @staffing.assign_attributes(changes_params)
 
     respond_to do |format|
-      if invalid_user_names.empty? && @staffing.save
+      if @staffing.save
         flash[:success] = 'Staffing was successfully updated.'
         format.html { redirect_to admin_staffing_path(@staffing) }
         format.json { head :no_content }
