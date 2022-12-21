@@ -5,9 +5,6 @@
 <% # BOOTSTRAP NICETOHAVE: These alerts should be set in the controller instead, as should the ones below. Remember also close has been renamed to btn-close %>
 <%# show an alert if the user hasn't filled in their name or phone number %>
 
-
-<%= render('shared/admin_page_header', title: 'Bedlam Dashboard' ) %>
-
 <div class="content">
   <div class="container-fluid">
     <div class="row"> <% if can? :manage, :jobs %>
