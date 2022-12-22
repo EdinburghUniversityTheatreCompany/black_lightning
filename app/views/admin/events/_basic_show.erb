@@ -7,10 +7,8 @@
 <%= content_for :publicity_and_members do %>
   <div class="row vertical-rule">
     <div class="col-<%= event.team_members.any? ? 'xl-6' : '12' %>">
-      <p>
-        <h3>Publicity Text</h3>
-        <%= render_markdown event.publicity_text %>
-      </p>
+      <h3>Publicity Text</h3>
+      <%= render_markdown event.publicity_text %>
     </div>
 
     <% if event.team_members.any? %>
