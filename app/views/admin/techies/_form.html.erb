@@ -4,24 +4,10 @@
     
     <%- # parent_fields and child_fields are a wrapper around relations_field that needs to exist so link_to_add works properly. %>
 
-    <div id="parents">
-      <h3>Parents</h3>
-      
-      <%= f.simple_fields_for :parents do |parent| %>
-        <%= render 'parent_fields', f: parent %>
-      <% end %>
+    <h3>Parents</h3>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :parents, partial_name: 'parent_fields') %>
 
-      <%= link_to_add f, :parents %>
-    </div>
-
-    <div id="childrens">
-      <h3>Children</h3>
-
-      <%= f.simple_fields_for :children do |child| %>
-        <%= render 'child_fields', f: child %>
-      <% end %>
-
-      <%= link_to_add f, :children %>
-    </div>
+    <h3>Children</h3>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :children, partial_name: 'children_fields') %>
   <% end %>
 <% end %>
