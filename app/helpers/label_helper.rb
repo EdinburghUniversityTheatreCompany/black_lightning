@@ -12,7 +12,7 @@ module LabelHelper
 
     message = ActionController::Base.helpers.sanitize message
 
-    # BOOTSTRAP CHECK: Do we need the margin?
+    # BOOTSTRAP TODO: Do we need the margin?
     return "<span style=\"margin-right: 5px;\" class=\"badge bg-#{label_class}#{' float-right' if pull_right}\">#{message}</span>".html_safe
   end
 end

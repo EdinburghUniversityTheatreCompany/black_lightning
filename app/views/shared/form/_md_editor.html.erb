@@ -1,7 +1,5 @@
 <% input_field_args = {} if input_field_args.nil? %>
 
-<%- # BOOTSTRAP NICETOHAVE: Make this work in the Bootstrap 5 environment (activating accounts and complaints). https://getbootstrap.com/docs/5.2/components/navs-tabs/ %>
-
 <div class="row">
   <div class="col-sm-3">
     <%= f.label field %>
@@ -41,6 +39,7 @@
 
       <div class="col-md-auto">
         <ul class="nav nav-tabs">
+        <%- # BOOTSTRAP 5: Remove the data-toggle things. %>
           <li class="nav-item"><a class="nav-link preview-toggle" href="#<%= id %>_preview"     data-toggle="tab" data-bs-toggle="tab" data-bs-target="#<%= id %>_preview"      type="button" role="tab" data-preview-id="<%= id %>">Preview</a></li>
           <li class="nav-item"><a class="nav-link active"         href="#<%= id %>_input_field" data-toggle="tab" data-bs-toggle="tab" data-bs-target="#<%= id %>_input_field"  type="button" role="tab">Input</a></li>
         </ul>
