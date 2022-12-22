@@ -6,7 +6,6 @@ import 'regenerator-runtime/runtime'
 import 'jquery-slimscroll'
 
 import '../src/alerts'
-import '../src/admin/md_editor'
 import '../src/konami_code'
 
 import "controllers"

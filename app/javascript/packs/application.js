@@ -20,3 +20,4 @@ require("@popperjs/core")
 require("jquery")
 
 import "bootstrap"
+import '../src/admin/md_editor'
