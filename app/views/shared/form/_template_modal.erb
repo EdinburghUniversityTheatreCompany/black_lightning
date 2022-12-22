@@ -19,6 +19,7 @@
     </form>
       </div>
       <div class="modal-footer">
+        <%- # BOOTSTRAP 5: float-start instead of float-left. %>
         <%= get_link(template_model, :index, link_text: 'Edit Templates', html_class: 'btn btn-secondary float-left') %>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         <button type="button" class="btn btn-primary disabled" id="template_load">Load Template</button>

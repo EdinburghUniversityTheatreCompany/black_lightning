@@ -25,7 +25,7 @@
   <div class="container">
     <%= render "layouts/ie_notice" %>
 
-    <% # BOOTSTRAP ALEX: Can this be removed now that we have sweetalert, Alex? %>
+    <% # BOOTSTRAP NICETOHAVE: Can this (and the file) be removed now that we have sweetalert, Alex? %>
     <%= render 'layouts/alert_div' %>
 
     <%= content_for?(:content) ? yield(:content) : yield %>
