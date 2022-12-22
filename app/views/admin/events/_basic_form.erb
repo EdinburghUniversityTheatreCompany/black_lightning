@@ -45,20 +45,8 @@
 
 <h3>Pretix Widget Configuration</h3>
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Pretix Widget Configuration' } do %>
-  <div class="form-inline">
-    <% on_label ||= 'Enabled' %>
-    <% off_label ||= 'Disabled' %>
-    <% off_colour ||= 'danger' %>
-
-    <% # BOOTSTRAP VERYNICETOHAVE: This is messy. %>
-    <div class="control-group">
-    <h5>Pretix Widget Shown</h5>
-      <%= f.input :pretix_shown, boolean_style: :inline %>
-    </div>
-
-    <br><h5>Override Pretix Slug</h5>
-    <%= f.input :pretix_slug_override, label: false, hint: ' Leave blank to use the slug for this event as the pretix slug' %>
-    <br><h5>Pretix Widget Format</h5>
-    <%= f.input :pretix_view, label: false, collection: ['list','week','month'], default: 'list', hint: "See pretix's documentation for examples" %>
+    <%= f.input :pretix_shown, hint: 'Display the Pretix widget for this event.' %>
+    <%= f.input :pretix_slug_override, hint: ' Leave blank to use the slug for this event as the Pretix slug' %>
+    <%= f.input :pretix_view, collection: ['list','week','month'], default: 'list', hint: "See Pretix's documentation for examples" %>
   </div>
 <% end %>
