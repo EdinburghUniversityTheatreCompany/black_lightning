@@ -26,15 +26,10 @@
       <%= f.input :password_confirmation, required: true %>
     <% end %>
 
-    <h3>Profile</h3>
-
-    <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
-    <%= f.input :bio %>
-    <%= render 'shared/form/file_field', f: f, field_name: :avatar %>
-
-    <div div class="control-group">
-      <%= f.label "User Profile" %>
-
+     <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
+        <%- # BOOTSTRAP NICETOHAVE: This duplicates the user form. %>
+        <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+        <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
         <%= f.input :public_profile, label: 'Enable Public Profle', hint: 'Display your profile on the public website as well as than just the members-only part?' %>
   </div>
 
