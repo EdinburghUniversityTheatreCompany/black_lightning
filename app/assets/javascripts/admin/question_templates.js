@@ -42,9 +42,6 @@ var template_items = null;
 
     // After adding all the items, set the item back to null so adding a new field will add an empty field.
     template_item = null;
-
-    // BOOTSTRAP TODO: This does not work. Likely some loading of the bootstrap modal thing error.
-    //$('#template_modal').modal().hide();
   }
 
   function getTemplate() {
