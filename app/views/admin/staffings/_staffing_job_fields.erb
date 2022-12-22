@@ -1,15 +1,11 @@
 <%# Based on the very similar _team_member_fields.erb file %>
-<% # BOOTSTRAP NICETOHAVE: Margins between the fields. Also for other form-inlines %>
 
-<%= render layout: '/shared/form/fields_for_template', locals: { 
+<%= render '/shared/form/inline_fields_for_template', 
   f: f,
-  div_class_additions: 'job form-inline'
-} do %>
-    <%= f.hidden_field :id %>
-
-    <%= f.input(:name, placeholder: 'Job', label: false) %>
-
-    <%= f.association :user, collection: User.all, label: false %>
-
-    <%= link_to_remove f %>
-<% end %>
+  div_class_additions: 'job',
+  fields: [
+    f.hidden_field(:id) + 
+    f.input(:name, placeholder: 'Job', label: false),
+    f.association(:user, collection: User.all, label: false),
+    link_to_remove(f)
+  ] %>

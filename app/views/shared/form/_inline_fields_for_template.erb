@@ -1,0 +1,16 @@
+<%- div_class_additions = '' if div_class_additions.nil? %>
+<%- # Wrap a row around the columns which will also be on the outer wrapper div of the nested fields. %>
+<%- div_class_additions = div_class_additions + ' row' %>
+
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+  f: f,
+  div_class_additions: div_class_additions + ' form-inline'
+} do %>
+    <% fields.each do |field| %>
+        <div class="col">
+            <%= field %>
+        </div>
+    <% end %>
+    <%- # If you need further customisation, you can add it with yield. %>
+    <%- #= yield %>
+<% end %>
