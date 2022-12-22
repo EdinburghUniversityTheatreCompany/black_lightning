@@ -5,7 +5,6 @@ import 'regenerator-runtime/runtime'
 
 import 'jquery-slimscroll'
 
-import '../src/jquery.switch'
 import '../src/alerts'
 import '../src/admin/md_editor'
 import '../src/konami_code'

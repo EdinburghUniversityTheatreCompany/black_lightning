@@ -16,11 +16,6 @@
 
     <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12, show_hint: true %>
 
-    <%= render '/shared/form/public_private_switch', f: f, field_symbol: :show_email, off_colour: 'danger', off_label: 'No Email' %>
-    
-    <p>
-      Turning this on will result in your email (<%= current_user.email %>) being publicly visible. 
-      If you do not want this, please include an alternative method to contact you in the description.
-    </p>
+    <%= f.input :show_email, hint: "Turning this on will result in your email (#{current_user.email}) being publicly visible. If you do not want this, please include an alternative method to contact you in the description." %>
   <% end %>
 <% end %>

@@ -29,7 +29,7 @@
 
 <%= f.association :proposal, collection: f.object.possible_proposals, label_method: :show_title %>
 
-<%= render '/shared/form/public_private_switch', f: f, field_symbol: :is_public %>
+<%= f.input :is_public, hint: 'Display this event on the publicly visible part of the website?' %>
 
 <%= render "/shared/form/md_editor", f: f, field: :publicity_text, show_hint: true %>
 
@@ -53,9 +53,7 @@
     <% # BOOTSTRAP VERYNICETOHAVE: This is messy. %>
     <div class="control-group">
     <h5>Pretix Widget Shown</h5>
-      <div class="controls switch" data-on="success" data-on-label="<%= on_label %>" data-off="<%= off_colour %>" data-off-label="<%= off_label %>" style="width: 200px;">
-        <%= f.input_field :pretix_shown, boolean_style: :inline %>
-      </div>
+      <%= f.input :pretix_shown, boolean_style: :inline %>
     </div>
 
     <br><h5>Override Pretix Slug</h5>
