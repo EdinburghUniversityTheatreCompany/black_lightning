@@ -1,6 +1,6 @@
 <% @title = "Answer #{@questionnaire.name} for #{@questionnaire.event.name}" %>
 
-<%= simple_form_for(@questionnaire, url: answer_admin_questionnaires_questionnaire_url) do |f| %>
+<%= simple_horizontal_form_for(@questionnaire, url: answer_admin_questionnaires_questionnaire_url) do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <div id="answers">
       <h3>Questions</h3>
