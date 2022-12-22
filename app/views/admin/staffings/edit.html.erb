@@ -1,7 +1,7 @@
 
 <%= simple_horizontal_form_for @staffing do |f| %>
   <% content_for :extra_form_actions do %>
-    <%= render('staffings_grid_link', @staffing) %>
+    <%= render('staffings_grid_link', staffing: @staffing) %>
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>

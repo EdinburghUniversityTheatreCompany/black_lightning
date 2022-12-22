@@ -51,9 +51,8 @@
   jobs_table: { type: 'content', content: yield(:jobs_table) }
 } %>
 
-<% # BOOTSTRAP TODO: Let this link work again. %>
-<% # content_for :extra_show_actions do %>
-  <% #=  render('staffings_grid_link', @staffing) %>
-<% #end %>
+<% content_for :extra_show_actions do %>
+  <%= render('staffings_grid_link', staffing: @staffing) %>
+<% end %>
 
 <%= render('shared/pages/show', object: @staffing, fields: fields) %>
