@@ -1,46 +1,4 @@
-<div class="container">
-  <div class="span12">
-    <h1><%= @title = 'Register' %></h1>
+<%- # Currently unused! %>
+<%= render('membership_activation_tokens/activate.html') %>
 
-    <p>
-      <%= display_block("Registration Help", false) %>
-    </p>
-
-    <%= simple_form_for(resource, as: resource_name, url: registration_path(resource_name)) do |f| %>
-      <%= f.error_notification %>
-
-      <div class="form-inputs">
-        <%= f.input :email, required: true, autofocus: true %>
-
-        <%= f.input :first_name, required: true %>
-        <%= f.input :last_name, required: true %>
-
-        <%= f.input :phone_number, hint: 'It is not mandatory to enter your phone number. A phone number is only required once you want to sign up for staffing slots.' %>
-
-        <%= f.input :password, required: true %>
-        <%= f.input :password_confirmation, required: true %>
-
-        <section>
-          <h3>Profile</h3>
-
-          <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
-          <%- # BOOTSTRAP NICETOHAVE: This duplicates the user form but less nicely, I think. %>
-          <%= f.input :bio %>
-          <%= f.input :avatar %>
-          <%= f.input :public_profile %>
-        </section>
-
-      </div>
-
-      <%= render 'shared/consent' %>
-
-      <div class="form-actions">
-        <%= f.button :submit, "Register" %>
-      </div>
-
-    <% end %>
-
-  <%= render "devise/shared/links" %>
-
-  </div>
-</div>
+<%= render "devise/shared/links" %>
