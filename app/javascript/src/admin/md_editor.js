@@ -1,10 +1,25 @@
 // Converted from CoffeeSript using decaffeinate
+// Bootstrap 5: Remove the jQuery bits and keep just the Bootstrap 5.
 $(document).ready(function() {
+  // Bootstrap 4 jQuery method.
   jQuery(() => addHandlers());
+
+  // Bootstrap 5 JS method.
+  const tabEl = document.querySelector('.preview-toggle');
+  tabEl.addEventListener('shown.bs.tab', event => {
+    generatePreview(event);
+  });
 });
 
+
 // https://getbootstrap.com/docs/4.6/components/navs/#events see here for how tabs and javascrip work.
+// and for Bootstrap 5: https://getbootstrap.com/docs/5.2/components/navs-tabs/
 const addHandlers = () => $(document).find(".preview-toggle").on("show.bs.tab", function(e) {
+ generatePreview(e);
+});
+
+function generatePreview(e)
+{
   let id = undefined;
   let input = undefined;
   id = $(e.currentTarget).data("preview-id");
@@ -36,7 +51,7 @@ const addHandlers = () => $(document).find(".preview-toggle").on("show.bs.tab", 
     contentType: false,
     processData: false
   });
-});
+}
 
 $(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
   const new_id = new Date().getTime();
