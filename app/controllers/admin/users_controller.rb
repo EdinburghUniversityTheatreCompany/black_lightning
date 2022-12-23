@@ -42,16 +42,24 @@ class Admin::UsersController < AdminController
     end
   end
 
+  # BOOTSTRAP NICETOHAVE: Authentication....
   def autocomplete_list
     response.headers.delete('Content-Length')
     response.headers['Cache-Control'] = 'no-cache'
     response.headers['Content-Type'] = 'application/json'
 
-    @users = User.all
+    # Use the base_index_ransack_query to easily support ransacking the users.
+    @users = base_index_ransack_query
 
     @users = @users.with_role(:member) if params[:all_users].nil?
 
-    @users = @users.select(['id', :first_name, :last_name])
+    @users = @users.select(['id', :first_name, :last_name]).reorder(:first_name, :last_name)
+    
+    self.response_body = @users.map { |user| { id: user.id, text: user.name_or_default }}.to_json
+
+    # Stop here. The old method is below.
+    return
+    # BOOTSTRAP NICETOHAVE: Figure out a way to use the below method, but while also retaining ordering since find_each ignores the order.
 
     # This... erm... thing... builds the response up one
     # user at a time, which saves loading the whole lot into
@@ -68,7 +76,7 @@ class Admin::UsersController < AdminController
           output << ','
         end
 
-        output << u.to_json
+        output << "{\"id\":\"#{u.id}\",\"text\":\"#{u.name_or_default}\"}"
       end
 
       output << ']'

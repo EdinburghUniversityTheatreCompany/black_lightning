@@ -6,6 +6,6 @@
   fields: [
     f.hidden_field(:id) + 
     f.input(:name, placeholder: 'Job', label: false),
-    f.association(:user, collection: User.all, label: false),
+    render('shared/form/user_field', f: f, label: false),
     link_to_remove(f)
   ] %>

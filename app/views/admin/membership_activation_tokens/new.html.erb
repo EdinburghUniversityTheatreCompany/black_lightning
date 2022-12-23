@@ -13,8 +13,7 @@
         <%= simple_horizontal_form_for(@token, url: create_reactivation_admin_membership_activation_tokens_url, method: :post) do |f| %>
             <%= f.error_notification %>
 
-            <% # BOOTSTRAP TODO all_users always. Maybe even only non-activated users. %>
-            <%= f.association :user, collection: User.all %>
+            <%= render('shared/form/user_field', f: f, all_users: true) %>
 
             <%= f.button :submit, "Send Re-activation", class: 'btn btn-primary' %>
         <% end %>
