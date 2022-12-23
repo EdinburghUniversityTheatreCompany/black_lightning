@@ -2,8 +2,7 @@
     f: f,
     div_class_additions: 'team_member',
     fields: [
-        f.hidden_field(:id) + 
-        f.input_field(:position, collection: position_typeahead, allow_custom_input: true),
-        render('shared/form/user_field', f: f, all_users: true, label: false),
-        link_to_remove(f)
+        { field: f.hidden_field(:id) + f.input_field(:position, collection: position_typeahead, allow_custom_input: true, wrapper: :inline_form) },
+        { field: render('shared/form/user_field', f: f, wrapper: :inline_form) },
+        { field: link_to_remove(f), col_modifier: 'auto' },
 ] %>

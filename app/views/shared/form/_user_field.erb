@@ -1,8 +1,9 @@
 <% all_users = can?(:add_non_members, f.object) if all_users.nil? %>
 <% field = :user if field.nil? %>
 <% label = nil if label.nil? %>
+<% wrapper = nil if wrapper.nil? %>
 
 <%- # Enables ajax calls on the select2 to get the user names. %>
 <%- # Tries to get the current value of the field and make it the only item in the collection so the default is shown. %>
 <% coll = User.where(id: f.object.send(field).try(:id)) %>
-<%= f.association(field, collection: coll, label: label, input_html: { 'remote-source' => '/admin/users/autocomplete_list', 'all-users' => all_users ? '1' : nil}) %>
+<%= f.association(field, collection: coll, label: label, wrapper: wrapper, input_html: { 'remote-source' => '/admin/users/autocomplete_list', 'all-users' => all_users ? '1' : nil}) %>

@@ -6,9 +6,10 @@
   f: f,
   div_class_additions: div_class_additions + ' form-inline'
 } do %>
-    <% fields.each do |field| %>
-        <div class="col">
-            <%= field %>
+    <% fields.each_with_index do |field, i| %>
+        <% col_modifier = field[:col_modifier] %>
+        <div class="col<%= "-#{col_modifier}" if col_modifier %>">
+            <%= field[:field] %>
         </div>
     <% end %>
     <%- # If you need further customisation, you can add it with yield. %>
