@@ -124,15 +124,27 @@ class Admin::StaffingsController < AdminController
       failure = true
     end
 
+    unless @staffing.valid?
+      @staffing.errors.full_messages.each { |error_message| helpers.append_to_flash(:error, error_message) }
+      failure = true
+    end
+
     first_pass = true
     unless failure
       start_times.values.zip(end_times.values).each do |start_time, end_time|
         staffing = @staffing.dup
 
-        # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
+        # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day. 
+        # If end_time < start_time, it ends the next day.
+
         staffing.start_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
         staffing.end_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i)
-
+        
+        # BOOTSTRAP NICETOHAVE: Test
+        if staffing.end_time < staffing.start_time
+          staffing.end_time = staffing.end_time.advance(days: 1)
+        end
+  
         unless staffing.save
           failure = true
 

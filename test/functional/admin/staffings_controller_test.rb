@@ -149,10 +149,8 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
   test 'should not create with invalid staffing jobs attributes' do
     staffing_jobs_attributes = {
-      '0' => { id: '', name: 'High Priest',    user_name_field: 'Finbar', user_id: '2', _destroy: 'false' },
-      '1' => { id: '', name: 'Lackey',         user_name_field: 'Evil',   user_id: '',  _destroy: 'false' },
-      '2' => { id: '', name: 'Dinner',         user_name_field: 'Dennis', user_id: '',  _destroy: 'false' },
-      '3' => { id: '', name: 'Dungeon Master', user_name_field: '',       user_id: '',  _destroy: 'false' }
+      '0' => { id: '', name: 'High Priest', user_name_field: 'Finbar', user_id: '2', _destroy: 'false' },
+      '1' => { id: '', name: '',            user_name_field: 'Finbar', user_id: '2', _destroy: 'false' }
     }
 
     attributes = FactoryBot.attributes_for(:staffing, staffing_jobs_attributes: staffing_jobs_attributes)
@@ -160,7 +158,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_no_difference('Admin::Staffing.count') do
       post :create, params: { admin_staffing: attributes, start_times: @start_times, end_times: @end_times }
       
-      assert_match 'There was a typo entering the name of the users Evil and Dennis. Their previous name has been restored.', response.body
+      assert_match 'Staffing jobs name must not be blank.', response.body
     end
   end
 
@@ -198,7 +196,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_no_difference('Admin::Staffing.count') do
       post :create, params: { admin_staffing: attributes, start_times: @start_times, end_times: @end_times }
 
-      assert_equal ['There is an issue with the form.', 'Show title must not be blank.'], flash[:error]
+      assert_equal ['Show title must not be blank.'], flash[:error]
     end
   end
 
