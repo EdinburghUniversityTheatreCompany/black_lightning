@@ -42,4 +42,8 @@ class Archives::ProposalsController < AdminController
   def resource_class
     Admin::Proposals::Proposal
   end
+
+  def distinct_for_ransack
+    false
+  end
 end

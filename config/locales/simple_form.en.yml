@@ -48,6 +48,8 @@ en:
         name: 'Name'
         notes: 'Notes'
         picture_tags: 'Picture Tags'
+        proposal_text: 'Proposal Text'
+        proposal_title: 'Proposal Title'
         publicity_text: 'Publicity Text'
         publish_date: 'Publish Date'
         publish_date_gteq: 'Published After'
