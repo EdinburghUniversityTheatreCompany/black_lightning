@@ -159,8 +159,8 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     assert_no_difference('Admin::Staffing.count') do
       post :create, params: { admin_staffing: attributes, start_times: @start_times, end_times: @end_times }
-
-      assert_equal ['There was a typo entering the name of the users Evil and Dennis. Their previous name has been restored.'], flash[:error]
+      
+      assert_match 'There was a typo entering the name of the users Evil and Dennis. Their previous name has been restored.', response.body
     end
   end
 

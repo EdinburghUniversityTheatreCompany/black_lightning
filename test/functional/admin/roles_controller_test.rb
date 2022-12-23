@@ -54,7 +54,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     get :show, params: { id: @role }
     assert_response :success
 
-    assert_match 'Add User To Role', response.body
+    assert_match 'Add User to Role', response.body
   end
 
   test 'should get new' do

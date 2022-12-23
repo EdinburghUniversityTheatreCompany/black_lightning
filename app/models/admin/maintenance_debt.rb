@@ -55,7 +55,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
     when :converted
       'table-success'
     when :completed
-      'table-uccess'
+      'table-success'
     when :causing_debt
       'table-danger'
     end

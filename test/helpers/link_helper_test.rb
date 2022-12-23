@@ -63,16 +63,16 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'remove_button_text' do
-    default_remove_button_text = '<i class="fasfa-trash" aria-hidden="true"></i> Remove'.html_safe
+    default_remove_button_text = '<span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Remove</span>'.html_safe
     assert_equal default_remove_button_text, remove_button_text
 
-    other_remove_button_text = '<i class="fasfa-trash" aria-hidden="true"></i> Pineapple'.html_safe
+    other_remove_button_text = '<span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Pineapple</span>'.html_safe
 
     assert_equal other_remove_button_text, remove_button_text('Pineapple')
   end
 
   test 'get_link with index' do
-    expected_link = '<a class="btn btn-secondary" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><span class="no-wrap"><i class="fasfa-th-list" aria-hidden=”true”></i> Show All</span> Fault Reports</a>'
+    expected_link = '<a class="btn btn-secondary my-1 mr-1" title="Show All Fault Reports" data-method="get" href="/admin/fault_reports"><span class="no-wrap"><i class="fas fa-th-list" aria-hidden=”true”></i> Show All</span> Fault Reports</a>'
 
     assert_equal expected_link, get_link(FaultReport, :index)
 
@@ -82,8 +82,9 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'get_link with show' do
+    # BOOTSTRAP TODO: Should this have the margins things for a show?
     proposal_call = FactoryBot.create(:proposal_call, id: 1, name: 'Dionysia Proposals')
-    expected_link = '<a class="" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
+    expected_link = '<a class=" my-1 mr-1" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
 
     assert_equal expected_link, get_link(proposal_call, :show)
 
@@ -93,7 +94,7 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'get_link with new' do
-    expected_link = '<a class="btn btn-primary" title="New Maintenance Debt" data-method="get" href="/admin/maintenance_debts/new"><span class="no-wrap"><i class="fasfa-plus" aria-hidden=”true”></i> New</span> Maintenance Debt</a>'
+    expected_link = '<a class="btn btn-primary my-1 mr-1" title="New Maintenance Debt" data-method="get" href="/admin/maintenance_debts/new"><span class="no-wrap"><i class="fas fa-plus" aria-hidden=”true”></i> New</span> Maintenance Debt</a>'
 
     assert_equal expected_link, get_link(Admin::MaintenanceDebt, :new)
 
@@ -104,7 +105,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with edit with no_wrap' do
     staffing = FactoryBot.create(:staffing, id: 1)
-    expected_link = '<a class="btn no-wrap" title="Edit" data-method="get" href="/admin/staffings/1/edit"><span class="no-wrap"><i class="fasfa-pencil-alt" aria-hidden=”true”></i> Edit</span></a>'
+    expected_link = '<a class="btn btn-secondary no-wrap my-1 mr-1" title="Edit" data-method="get" href="/admin/staffings/1/edit"><span class="no-wrap"><i class="fas fa-pencil-alt" aria-hidden=”true”></i> Edit</span></a>'
 
     assert_equal expected_link, get_link(staffing, :edit, no_wrap: true)
 
@@ -115,7 +116,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with destroy' do
     news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
-    expected_link = '<a class="btn btn-danger" data-title="Deleting the News &quot;Vikings have taken over the Bedlam&quot;" data-confirm="Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fasfa-trash" aria-hidden=”true”></i> Destroy</span></a>'
+    expected_link = '<a class="btn btn-danger my-1 mr-1" data-title="Deleting the News &quot;Vikings have taken over the Bedlam&quot;" data-confirm="Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
 
     assert_equal expected_link, get_link(news, :destroy)
 
@@ -126,7 +127,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with approve' do
     news = FactoryBot.create(:opportunity, id: 1)
-    expected_link = '<a class="btn btn-success" title="Approve" rel="nofollow" data-method="put" href="/admin/opportunities/1/approve">Approve</a>'
+    expected_link = '<a class="btn btn-success my-1 mr-1" title="Approve" rel="nofollow" data-method="put" href="/admin/opportunities/1/approve">Approve</a>'
 
     assert_equal expected_link, get_link(news, :approve)
 
@@ -137,7 +138,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with reject' do
     news = FactoryBot.create(:opportunity, id: 1)
-    expected_link = '<a class="btn btn-danger" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
+    expected_link = '<a class="btn btn-danger my-1 mr-1" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
 
     assert_equal expected_link, get_link(news, :reject)
 
@@ -153,7 +154,7 @@ class LinkHelperTest < ActionView::TestCase
       get_link(maintenance_debt, :convert_to_staffing_debt)
     end
 
-    expected_link = '<a class="btn btn-secondary" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
+    expected_link = '<a class="btn btn-secondary my-1 mr-1" title="Convert To Staffing Debt" rel="nofollow" data-method="put" href="/admin/maintenance_debts/1/convert_to_staffing_debt">Convert To Staffing Debt</a>'
 
     assert_equal expected_link, get_link(maintenance_debt, :convert_to_staffing_debt, http_method: :put)
   end
@@ -200,7 +201,7 @@ class LinkHelperTest < ActionView::TestCase
 
     assert_not @current_user.can?(:destroy, news)
 
-    expected_link = '<a class="btn btn-danger" data-title="Deleting the News &quot;Vikings have taken over the Bedlam&quot;" data-confirm="Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fasfa-trash" aria-hidden=”true”></i> Destroy</span></a>'
+    expected_link = '<a class="btn btn-danger my-1 mr-1" data-title="Deleting the News &quot;Vikings have taken over the Bedlam&quot;" data-confirm="Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?" title="Destroy" rel="nofollow" data-method="delete" href="/admin/news/1-vikings-have-taken-over-the-bedlam"><span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Destroy</span></a>'
 
     assert_equal expected_link, get_link(news, :destroy, condition: true)
   end
@@ -225,7 +226,7 @@ class LinkHelperTest < ActionView::TestCase
 
     assert_nil get_link(staffing, :edit, condition: false)
 
-    assert_equal '<span class="no-wrap"><i class="fasfa-pencil-alt" aria-hidden=”true”></i> Edit</span>', get_link(staffing, :edit, condition: false, return_link_text_if_no_permission: true)
+    assert_equal '<span class="no-wrap"><i class="fas fa-pencil-alt" aria-hidden=”true”></i> Edit</span>', get_link(staffing, :edit, condition: false, return_link_text_if_no_permission: true)
   end
 
   test 'wrap_in_tags' do
@@ -240,8 +241,8 @@ class LinkHelperTest < ActionView::TestCase
 
     instance_hash = {
       show: 'The Wondrous Adventures of Finbar the Viking',
-      edit: '<span class="no-wrap"><i class="fasfa-pencil-alt" aria-hidden=”true”></i> Edit</span>',
-      destroy: '<span class="no-wrap"><i class="fasfa-trash" aria-hidden=”true”></i> Destroy</span>',
+      edit: '<span class="no-wrap"><i class="fas fa-pencil-alt" aria-hidden=”true”></i> Edit</span>',
+      destroy: '<span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Destroy</span>',
       answer: 'Answer'
     }
 
@@ -255,8 +256,8 @@ class LinkHelperTest < ActionView::TestCase
 
     instance_hash = {
       show: 'Show Fault Report',
-      edit: '<span class="no-wrap"><i class="fasfa-pencil-alt" aria-hidden=”true”></i> Edit</span>',
-      destroy: '<span class="no-wrap"><i class="fasfa-trash" aria-hidden=”true”></i> Destroy</span>',
+      edit: '<span class="no-wrap"><i class="fas fa-pencil-alt" aria-hidden=”true”></i> Edit</span>',
+      destroy: '<span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Destroy</span>',
       approve: 'Approve'
     }
 
@@ -269,8 +270,8 @@ class LinkHelperTest < ActionView::TestCase
     object = Admin::MaintenanceDebt
 
     class_hash = {
-      index: '<span class="no-wrap"><i class="fasfa-th-list" aria-hidden=”true”></i> Show All</span> Maintenance Debts',
-      new: '<span class="no-wrap"><i class="fasfa-plus" aria-hidden=”true”></i> New</span> Maintenance Debt',
+      index: '<span class="no-wrap"><i class="fas fa-th-list" aria-hidden=”true”></i> Show All</span> Maintenance Debts',
+      new: '<span class="no-wrap"><i class="fas fa-plus" aria-hidden=”true”></i> New</span> Maintenance Debt',
     }
 
     class_hash.each do |action, link_text|
