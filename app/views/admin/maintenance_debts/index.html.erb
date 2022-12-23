@@ -1,16 +1,15 @@
-<% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'maintenance Job'] %>
-<% headers << '' if can?(:delete, Admin::MaintenanceDebt) %>
-<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
-<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
+<% headers = [:user_full_name, :show_name, :due_by] %>
+<% headers << '' #if can?(:delete, Admin::MaintenanceDebt) %>
+<% headers << '' #if can?(:edit, Admin::MaintenanceDebt) %>
+<% headers << '' #if can?(:edit, Admin::MaintenanceDebt) %>
+<%- # BOOTSTRAP NICETOHAVE: Fix the conditionally visible buttons and make sure they are conditionally visible. %>
 
 <% field_sets = @maintenance_debts.map do |maintenance_debt| { 
   fields: [
     maintenance_debt,
     user_link(maintenance_debt.user, false),
-    maintenance_debt.show.name,
+    maintenance_debt.show.name, # BOOTSTRAP CHECK: link?
     maintenance_debt.due_by,
-    bool_icon(maintenance_debt.converted?),
-    maintenance_job_content,
     get_link(maintenance_debt, :edit, link_text: 'Change Deadline', additional_condition: maintenance_debt.status != :forgiven),
     maintenance_debt.unfulfilled? ? get_link(
       maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing',
