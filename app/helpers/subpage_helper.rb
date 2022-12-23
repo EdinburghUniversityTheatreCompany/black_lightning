@@ -16,6 +16,7 @@ module SubpageHelper
     return strip_url(root_url).downcase
   end
 
+  # TODO: Is this still used?
   def get_subpages(root_url)
     root_url = strip_url(root_url)
      

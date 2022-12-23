@@ -40,7 +40,6 @@ module LinkHelper
   def remove_button_text(text = nil)
     text ||= 'Remove'
 
-    # TEST
     return generate_icon_prefix('trash', text)
   end
 
@@ -92,6 +91,7 @@ module LinkHelper
     http_method = get_default_http_method(action) if http_method.nil?
     html_class = get_default_html_class(action) if html_class.nil?
 
+    # BOOTSTRAP NICETOHAVE: Make sure there is no double wrapping...
     html_class = "#{html_class} no-wrap" if no_wrap
     html_class = "#{html_class} my-1 mr-1" if margins
   
