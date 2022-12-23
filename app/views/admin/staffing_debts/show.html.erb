@@ -17,7 +17,7 @@
     <% headers = [:job, :date, ''] %>
     <% field_sets = @jobs.map { |job| { fields: [
       job,
-      job.staffable.start_time.to_s(:long_ordinal),
+      job.staffable.start_time.to_fs(:long_ordinal),
       get_link(job, :assign, link_target: assign_admin_staffing_debt_path(id: @staffing_debt.id, job_id: job), http_method: :put, condition: can_assign_job)
     ] } } %>
 
