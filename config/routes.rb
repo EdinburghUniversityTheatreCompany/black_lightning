@@ -196,7 +196,6 @@ ChaosRails::Application.routes.draw do
     resources :staffings do
       collection do
         get ':slug/grid', to: 'staffings#grid', format: :html, as: :grid
-        get 'guidelines'
       end
     end
 

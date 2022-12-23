@@ -69,7 +69,6 @@ class Ability
     alias_action :reject, to: :approve
     # Alias grid to read
     alias_action :grid, to: :read
-    alias_action :guidelines, to: :read
     alias_action :debt_status, to: :read
     # Alias :delete to :destroy because they're easy to mix up and
     # because the current permission actions use :delete and the controller actions use :destroy

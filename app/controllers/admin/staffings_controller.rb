@@ -6,7 +6,7 @@ class Admin::StaffingsController < AdminController
 
   # Those are skipped because their permission depends on :sign_up_for staffing.
   # This is checked in the action.
-  load_and_authorize_resource except: %i[sign_up sign_up_confirm guidelines]
+  load_and_authorize_resource except: %i[sign_up sign_up_confirm]
 
   skip_load_resource only: %i[create]
 
@@ -262,10 +262,6 @@ class Admin::StaffingsController < AdminController
       format.html { redirect_to admin_staffings_url }
       format.json { head :no_content }
     end
-  end
-
-  def guidelines
-    @title = 'Staffing Guidelines'
   end
 
   private

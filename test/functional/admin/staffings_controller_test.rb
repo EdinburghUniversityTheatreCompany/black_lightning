@@ -337,10 +337,4 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
-
-  test 'guidelines' do
-    get :guidelines
-
-    assert_response :success
-  end
 end

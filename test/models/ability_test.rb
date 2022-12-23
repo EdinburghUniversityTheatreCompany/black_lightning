@@ -24,7 +24,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   test 'aliases' do
     # The action on the left is granted if the action on the right is granted.
     # For example: If you can delete, you can destroy, but if you can destroy, you can't necessarily delete.
-    aliases = { destroy: :delete, edit: :update, grid: :read, reject: :approve, guidelines: :read }
+    aliases = { destroy: :delete, edit: :update, grid: :read, reject: :approve }
 
     aliases.each do |action, action_alias|
       # The aliases for action method is private, but we need to access it for this test.
