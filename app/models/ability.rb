@@ -102,9 +102,8 @@ class Ability
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
 
-    can :show, Attachment, access_level: 2
-    can :show, VideoLink, access_level: 2
-
+    can :read, Attachment, access_level: 2
+    can :read, VideoLink, access_level: 2
     # Stop if the user is not logged in.
     return if user.nil?
 
