@@ -58,6 +58,7 @@ en:
         reported_by: 'Reported By'
         send_date: 'Send Date'
         severity: 'Severity'
+        show: 'Show'
         show_fulfilled: 'Show Fulfilled'
         show_in_debt_only: 'Show In Debt Only'
         show_name: 'Show Name'
