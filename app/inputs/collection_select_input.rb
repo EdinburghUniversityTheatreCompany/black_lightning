@@ -7,16 +7,10 @@ class CollectionSelectInput < SimpleForm::Inputs::CollectionSelectInput
 
     merged_input_options = merge_wrapper_options(input_html_options, wrapper_options)
 
-    if input_options.key?(:allow_custom_input) && input_options[:allow_custom_input]
-      merged_input_options = merged_input_options.merge({ class: 'simple-select2-with-tags' })
-    else
-      merged_input_options = merged_input_options.merge({ class: 'simple-select2' })
-    end
+    merged_input_options = merged_input_options.merge({ class: 'simple-select2' })
 
-    # Set the width to 100% for select2 fields if they have no width set so they do not shrink unreasonably.
-    # This means inline fields need to have their width specified or be columned.
-    style = merged_input_options[:style]
-    merged_input_options[:style] =  "width: 100%; #{style}" if style.present? && !style.include?('width:')
+    # If it allows custom input, set the 'select2-with-tags' attribute to true so it will be recognised by the script that instantiates the select2 fields.
+    merged_input_options['select2-with-tags'] = 'true' if input_options.try(:allow_custom_input)
 
     @builder.collection_select(
       attribute_name, collection, value_method, label_method,
