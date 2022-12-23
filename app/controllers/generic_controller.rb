@@ -30,7 +30,7 @@ module GenericController
   end
 
   def new
-    @title = create_title
+    @title = new_title
 
     respond_to do |format|
       format.html # new.html.erb
@@ -150,7 +150,7 @@ module GenericController
   # Page Titles
   ##
 
-  def create_title
+  def new_title
     return "New #{helpers.get_object_name(get_resource.class, include_class_name: true)}"
   end
 

@@ -151,7 +151,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     false
   end
 
-  def create_title
+  def new_title
     "New Questionnaire#{" for #{@show.name}" if @show.present?}"
   end
 
