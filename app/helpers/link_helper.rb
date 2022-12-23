@@ -43,7 +43,7 @@ module LinkHelper
     return generate_icon_prefix('trash', text)
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, margins: true, query_params: {})
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, margins: nil, query_params: {})
     raise(ArgumentError, 'The object is nil') if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -93,6 +93,8 @@ module LinkHelper
 
     # BOOTSTRAP NICETOHAVE: Make sure there is no double wrapping...
     html_class = "#{html_class} no-wrap" if no_wrap
+
+    margins = action != :show if margins.nil?
     html_class = "#{html_class} my-1 mr-1" if margins
   
     # Removes prepending pencil tags and such.
