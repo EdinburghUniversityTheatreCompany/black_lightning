@@ -20,9 +20,7 @@
           You have to save the season and start editing it again to refresh the list.
         </p>
         
-        <%= f.collection_check_boxes(:event_ids, @season.simultaneous_events, :id, ->(event) { render 'event_label', event: event }) do |b| %>
-          <%= b.label { "#{b.check_box}   #{b.text}".html_safe } %><br>
-        <% end %>
+        <%= f.input(:event_ids, collection: @season.simultaneous_events, as: :check_boxes, label: false, label_method: ->(event) { render('event_label', event: event) }) %>
       <% end%>
     <% end %>
   <% end %>
