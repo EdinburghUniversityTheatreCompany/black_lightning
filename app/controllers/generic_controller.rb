@@ -329,7 +329,6 @@ module GenericController
     # I am aware that I am probably writing this to myself.
 
     files = upload_data[:files]
-    files.delete_if(&:empty?)
 
     if destination == 'pictures'
       # This check should happen after the destination check, otherwise
