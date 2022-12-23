@@ -36,9 +36,9 @@
   image:          { type: 'image', image: event.image, variant: slideshow_variant },
   publicity_and_members: { type: 'content', content: yield(:publicity_and_members) },
   members_only_text: { type: 'markdown', markdown: event.members_only_text },
-  attachments:    { type: 'content', content: render('shared/attachments_gallery', attachments: event.all_attachments.accessible_by(current_ability)) },
-  video_links:    { type: 'content', content: render('shared/video_link_gallery', video_links: event.video_links.accessible_by(current_ability)) },
   gallery:        { type: 'content', content: render('/shared/gallery', pictures: event.pictures.accessible_by(current_ability, :show)) },
+  attachments:    { type: 'content', content: render('shared/attachments_gallery', attachments: event.all_attachments.accessible_by(current_ability, :show)) },
+  video_links:    { type: 'content', content: render('shared/video_link_gallery', video_links: event.video_links.accessible_by(current_ability, :show)) },
   questionnaires: { type: 'content', content: render('admin/events/questionnaires', event: event) }
 } %>
 

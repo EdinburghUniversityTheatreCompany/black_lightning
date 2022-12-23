@@ -6,6 +6,6 @@
 
 <%= render '/shared/gallery', pictures: @show.pictures.accessible_by(current_ability, :show) %>
 
-<%= render 'shared/video_link_gallery', video_links: @show.video_links.accessible_by(current_ability) %>
+<%= render 'shared/video_link_gallery', video_links: @show.video_links.accessible_by(current_ability, :show) %>
 
 <%= render '/shared/show_actions', object: @show, index_link_params: { link_target: archives_shows_path } %>

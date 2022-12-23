@@ -105,8 +105,8 @@ class Ability
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
 
-    can :read, Attachment, access_level: 2
-    can :read, VideoLink, access_level: 2
+    can :show, Attachment, access_level: 2
+    can :show, VideoLink, access_level: 2
     # BOOTSTRAP NICETOHAVE: Test picture permission
     can :show, Picture, access_level: 2 
   
