@@ -121,20 +121,6 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type]]
   end
 
-  def base_index_ransack_query
-    q = params[:q]
-
-    @q = @questionnaires.ransack(q)
-
-    @show_current_term_only = q.nil?
-
-    # Set the range to the current term by default.
-    @q.event_end_date_gteq = helpers.start_of_term if @show_current_term_only
-    @q.event_start_date_lteq = helpers.end_of_term if @show_current_term_only
-
-    return @q.result
-  end
-
   def includes_args
     [:event]
   end
@@ -145,6 +131,16 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
 
   def load_index_resources
     @questionnaires = super.group_by { |questionnaire| questionnaire.event.name }
+  end
+
+  def process_q_before_getting_result(q)
+    @show_current_term_only = ransack_query_param.nil?
+
+    # Set the range to the current term by default.
+    q.event_end_date_gteq = helpers.start_of_term if @show_current_term_only
+    q.event_start_date_lteq = helpers.end_of_term if @show_current_term_only
+
+    return q
   end
 
   def should_paginate

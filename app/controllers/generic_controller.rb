@@ -199,6 +199,8 @@ module GenericController
 
     @q.sorts = order_args unless @q.sorts.present?
 
+    @q = process_q_before_getting_result(@q)
+
     return @q.result(distinct: distinct_for_ransack)
   end
 
@@ -254,6 +256,9 @@ module GenericController
     params[:q]
   end
 
+  def process_q_before_getting_result(q)
+    q
+  end
   ##
   # Miscellaneous
   ##
