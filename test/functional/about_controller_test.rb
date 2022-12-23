@@ -17,8 +17,6 @@ class AboutControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_equal 'Acting', assigns(:editable_block).name
-
-    assert_equal get_subpages('about/acting'), assigns(:subpages)
   end
 
   # Test if getting a non-existent page gives a 404.
