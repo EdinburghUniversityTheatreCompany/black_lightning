@@ -8,7 +8,7 @@
 } do %>
     <% fields.each_with_index do |field, i| %>
         <% col_modifier = field[:col_modifier] %>
-        <div class="col<%= "-#{col_modifier}" if col_modifier %>">
+        <div class="col-sm<%= "-#{col_modifier}" if col_modifier %>">
             <%= field[:field] %>
         </div>
     <% end %>
