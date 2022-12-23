@@ -82,9 +82,8 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test 'get_link with show' do
-    # BOOTSTRAP TODO: Should this have the margins things for a show?
     proposal_call = FactoryBot.create(:proposal_call, id: 1, name: 'Dionysia Proposals')
-    expected_link = '<a class=" my-1 mr-1" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
+    expected_link = '<a class="" title="Dionysia Proposals" data-method="get" href="/admin/proposals/calls/1">Dionysia Proposals</a>'
 
     assert_equal expected_link, get_link(proposal_call, :show)
 

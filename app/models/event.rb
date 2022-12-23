@@ -143,6 +143,24 @@ class Event < ApplicationRecord
     (tagline.presence || truncate_markdown(publicity_text, 120)).html_safe
   end
 
+  # Returns the name and author in one string, or just the name if no author is specified.
+  def name_and_author
+    if author.present?
+      "\"#{name}\"#{" by #{author}"}"
+    else
+      name
+    end
+  end
+
+  # Returns the date and price in one string, or just the date if no price is specified.
+  def date_and_price
+    if price.present?
+      "#{date_range(false)} - #{price}"
+    else
+      date_range(false)
+    end
+  end
+
   def simultaneous_seasons
     return Season.where('start_date <= ? and end_date >= ?', end_date, start_date)
   end

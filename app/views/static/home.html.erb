@@ -1,6 +1,6 @@
 <div class="row">
   <div class="col-md-8">
-    <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: @carousel_items %>
+    <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items) %>
 
     <div class="card">
       <div class="card-body">
@@ -13,21 +13,19 @@
     <div class="card mt-3">
       <div class="card-body">
         <h3 class="card-title">What's On</h3>
-        <p class="card-text">
-         <% if @events.empty? %>
+        <% if @events.empty? %>
           <%= display_block("Home - No Events On", false) %>
         <% else %>
           <% items = @events.collect { |event| {
             event: event,
             paragraphs: [
-              { content: event.date_range(true), small: true },
+              { content: event.date_and_price, small: true },
               { content: event.short_blurb },
               { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
             ] } } %>
 
           <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
         <% end %>
-        </p>
       </div>
     </div>
   </div>
