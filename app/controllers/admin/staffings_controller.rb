@@ -276,7 +276,7 @@ class Admin::StaffingsController < AdminController
 
   def staffing_params
     params.require(:admin_staffing).permit(:show_title, :start_time, :end_time, :counts_towards_debt,
-                                           staffing_jobs_attributes: [:id, :_destroy, :name, :user_name_field, :user, :user_id])
+                                           staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
   end
 
   def edit_title
