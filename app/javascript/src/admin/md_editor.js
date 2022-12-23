@@ -5,10 +5,16 @@ $(document).ready(function() {
   jQuery(() => addHandlers());
 
   // Bootstrap 5 JS method.
+  // BOOTSTRAP 5: Does this find all preview toggles or the first?
   const tabEl = document.querySelector('.preview-toggle');
-  tabEl.addEventListener('shown.bs.tab', event => {
-    generatePreview(event);
-  });
+
+  // Stop if no preview toggle was found.
+  if(tabEl)
+  {
+    tabEl.addEventListener('shown.bs.tab', event => {
+      generatePreview(event);
+    });
+  }
 });
 
 
