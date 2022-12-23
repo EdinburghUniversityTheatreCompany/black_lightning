@@ -291,12 +291,20 @@ module GenericController
       return false
     end
 
-    url = resource_class.find_by(id: random_resources.pluck(:id).sample)
-    url = [:admin, url] if @admin_site
+    instance = resource_class.find_by(id: random_resources.pluck(:id).sample)
+ 
+    # Primarily so the test works.
+    instance_variable_set("@#{resource_name}", instance)
+
+    url = url_for(controller: random_redirect_controller, action: :show, id: instance.id)
 
     redirect_to(url)
 
     return true
+  end
+
+  def random_redirect_controller
+    self.controller_path
   end
 
   ##

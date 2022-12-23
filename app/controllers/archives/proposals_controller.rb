@@ -46,4 +46,8 @@ class Archives::ProposalsController < AdminController
   def distinct_for_ransack
     false
   end
+
+  def random_redirect_controller
+    'admin/proposals/proposals'
+  end
 end
