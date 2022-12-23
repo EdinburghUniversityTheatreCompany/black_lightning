@@ -271,7 +271,7 @@ module GenericController
   ##
 
   def random_resources
-    base_index_database_query
+    base_index_database_query.reorder('')
   end
 
   def should_return_random
