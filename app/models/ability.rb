@@ -84,7 +84,7 @@ class Ability
     can :read, News, show_public: true
     can :read, Event, is_public: true
     # BOOTSTRAP NICETOHAVE: Test review permissions.
-    # BOOTSTRAP VERYNICETOHAVE: Properly add review permissions based on the attached event.
+    # BOOTSTRAP SOMEWHATNICETOHAVE: Properly add review permissions based on the attached event.
     can :read, Review
 
     # Guests can see all Event Tags.

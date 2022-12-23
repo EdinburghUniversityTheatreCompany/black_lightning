@@ -4,7 +4,7 @@
         attributes: [:description, :image, :access_level, :picture_tag_ids]
     } do %>
     <%= image_tag f.object.fetch_image.variant(thumb_variant), class: "img-thumbnail" %>
-    <% # BOOTSTRAP VERYNICETOHAVE: Update picture fields to display in a 3-per-row grid again. %>
+    <% # BOOTSTRAP SOMEWHATNICETOHAVE: Update picture fields to display in a 3-per-row grid again. %>
     <br />
 
     <%= render 'shared/form/file_field', f: f, field_name: :image %>

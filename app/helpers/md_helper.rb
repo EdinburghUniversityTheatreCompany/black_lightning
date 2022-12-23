@@ -4,7 +4,7 @@ module MdHelper
   def render_markdown(md)
     return '' if md.nil?
 
-    # BOOTSTRAP VERYNICETOHAVE: Get rid of the bottom margin in rendered markdown. If you can add a mb-0 class to the wrapping <p> tag you're fine
+    # BOOTSTRAP SOMEWHATNICETOHAVE: Get rid of the bottom margin in rendered markdown. If you can add a mb-0 class to the wrapping <p> tag you're fine
     return Kramdown::Document.new(md, input: 'BKramdown').to_html.html_safe
   end
 
