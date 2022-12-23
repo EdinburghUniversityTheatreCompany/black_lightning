@@ -34,7 +34,9 @@ class StaticControllerTest < ActionController::TestCase
     }
 
     assert_difference 'ActionMailer::Base.deliveries.count' do
-      post :contact_form_send, params: { contact: params }
+      perform_enqueued_jobs do
+        post :contact_form_send, params: { contact: params }
+      end
 
       mail = ActionMailer::Base.deliveries.last
 
