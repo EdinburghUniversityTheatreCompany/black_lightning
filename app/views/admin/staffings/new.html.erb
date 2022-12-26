@@ -1,16 +1,19 @@
-<h1><%= @title %></h1>
-
 <% content_for :head do %>
-  <%= javascript_include_tag "admin/staffing_templates.js" %>
+  <meta name="templates-base-url" content="/admin/staffing_templates" />
+  <meta name="templates-items-type" content="jobs" />
+  <%= javascript_include_tag "admin/question_templates.js" %>
 <% end %>
 
-<%= simple_nested_form_for @staffing do |f| %>
-  <%= f.error_notification %>
-  
-  <div class="form-inputs">
+<%= simple_horizontal_form_for @staffing do |f| %>
+  <% content_for :extra_form_actions do %>
+    <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#template_modal">Load Template</button>
+  <% end %>
+
+  <%= render('shared/pages/form', f: f) do %>
     <%= render 'form_base', f: f %>
 		
-    <div id="dates_container" class="well form-horizontal">	
+    <% # BOOTSTRAP NICETOHAVE: Modernise the dates. Proposal call has an example. %>
+    <div id="dates_container">	
       <h3>Dates</h3>	
       <script type="text/javascript">	
         $(function () {
@@ -38,14 +41,10 @@
           });	
         });	
       </script>	
-      <a id="add_date" class="btn"><i class="fa fa-plus" aria-hidden=”true”></i> Add Date</a>
+      <a id="add_date" class="btn btn-secondary"><i class="fas fa-calendar-plus" aria-hidden=”true”></i> Add Date</a>
     </div>
   </div>
-  
-  <div class="form-actions">
-    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
-    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
-  </div>
+  <% end %>
 <% end %>
 
 <%= render '/shared/form/template_modal', header: 'Select Jobs from Template', template_model: Admin::StaffingTemplate %>

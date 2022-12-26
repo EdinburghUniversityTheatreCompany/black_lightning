@@ -6,7 +6,7 @@ class Admin::StaffingsController < AdminController
 
   # Those are skipped because their permission depends on :sign_up_for staffing.
   # This is checked in the action.
-  load_and_authorize_resource except: %i[sign_up sign_up_confirm guidelines]
+  load_and_authorize_resource except: %i[sign_up sign_up_confirm]
 
   skip_load_resource only: %i[create]
 
@@ -106,8 +106,6 @@ class Admin::StaffingsController < AdminController
   def create
     creation_params = staffing_params
 
-    invalid_user_names = helpers.sanitize_user_typeahead_attributes!(creation_params[:staffing_jobs_attributes], true)
-
     # Has to be called @staffing in case it is passed to the 'new' form again.
     @staffing = Admin::Staffing.new(creation_params)
 
@@ -115,11 +113,6 @@ class Admin::StaffingsController < AdminController
     end_times = params[:end_times]
 
     slug = ''
-
-    if invalid_user_names.any?
-      # The error is already added to the flash by the sanitize function.
-      failure = true
-    end
 
     if start_times.nil? || end_times.nil?
       helpers.append_to_flash(:error, 'You have not specified any start and end times.')
@@ -131,15 +124,27 @@ class Admin::StaffingsController < AdminController
       failure = true
     end
 
+    unless @staffing.valid?
+      @staffing.errors.full_messages.each { |error_message| helpers.append_to_flash(:error, error_message) }
+      failure = true
+    end
+
     first_pass = true
     unless failure
       start_times.values.zip(end_times.values).each do |start_time, end_time|
         staffing = @staffing.dup
 
-        # right now I'm assuming staffings end on the same day as they begin. Makes the UI cleaner
+        # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day. 
+        # If end_time < start_time, it ends the next day.
+
         staffing.start_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
         staffing.end_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i)
-
+        
+        # BOOTSTRAP NICETOHAVE: Test
+        if staffing.end_time < staffing.start_time
+          staffing.end_time = staffing.end_time.advance(days: 1)
+        end
+  
         unless staffing.save
           failure = true
 
@@ -184,12 +189,10 @@ class Admin::StaffingsController < AdminController
   def update
     changes_params = staffing_params
 
-    invalid_user_names = helpers.sanitize_user_typeahead_attributes!(changes_params[:staffing_jobs_attributes], true)
-
     @staffing.assign_attributes(changes_params)
 
     respond_to do |format|
-      if invalid_user_names.empty? && @staffing.save
+      if @staffing.save
         flash[:success] = 'Staffing was successfully updated.'
         format.html { redirect_to admin_staffing_path(@staffing) }
         format.json { head :no_content }
@@ -273,10 +276,6 @@ class Admin::StaffingsController < AdminController
     end
   end
 
-  def guidelines
-    @title = 'Staffing Guidelines'
-  end
-
   private
 
   def set_new_params
@@ -289,7 +288,7 @@ class Admin::StaffingsController < AdminController
 
   def staffing_params
     params.require(:admin_staffing).permit(:show_title, :start_time, :end_time, :counts_towards_debt,
-                                           staffing_jobs_attributes: [:id, :_destroy, :name, :user_name_field, :user, :user_id])
+                                           staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
   end
 
   def edit_title

@@ -30,7 +30,7 @@ module GenericController
   end
 
   def new
-    @title = create_title
+    @title = new_title
 
     respond_to do |format|
       format.html # new.html.erb
@@ -150,7 +150,7 @@ module GenericController
   # Page Titles
   ##
 
-  def create_title
+  def new_title
     return "New #{helpers.get_object_name(get_resource.class, include_class_name: true)}"
   end
 
@@ -199,6 +199,8 @@ module GenericController
 
     @q.sorts = order_args unless @q.sorts.present?
 
+    @q = process_q_before_getting_result(@q)
+
     return @q.result(distinct: distinct_for_ransack)
   end
 
@@ -215,7 +217,7 @@ module GenericController
   def load_index_resources
     resources = base_index_database_query
 
-    resources = resources.paginate(page: params[:page], per_page: items_per_page) if should_paginate
+    resources = resources.page(params[:page]).per(items_per_page) if should_paginate
 
     instance_variable_set("@#{resource_name.pluralize}", resources)
 
@@ -254,6 +256,9 @@ module GenericController
     params[:q]
   end
 
+  def process_q_before_getting_result(q)
+    q
+  end
   ##
   # Miscellaneous
   ##
@@ -271,11 +276,11 @@ module GenericController
   ##
 
   def random_resources
-    base_index_database_query
+    base_index_database_query.reorder('')
   end
 
   def should_return_random
-    params[:commit]&.upcase == 'RANDOM'
+    helpers.strip_tags(params[:commit].presence || '').strip.upcase == 'RANDOM'
   end
 
   def return_random
@@ -286,8 +291,20 @@ module GenericController
       return false
     end
 
-    redirect_to(resource_class.find_by(id: random_resources.pluck(:id).sample))
+    instance = resource_class.find_by(id: random_resources.pluck(:id).sample)
+ 
+    # Primarily so the test works.
+    instance_variable_set("@#{resource_name}", instance)
+
+    url = url_for(controller: random_redirect_controller, action: :show, id: instance.id)
+
+    redirect_to(url)
+
     return true
+  end
+
+  def random_redirect_controller
+    self.controller_path
   end
 
   ##
@@ -320,8 +337,10 @@ module GenericController
     # I am aware that I am probably writing this to myself.
 
     files = upload_data[:files]
-    files.delete_if(&:empty?)
 
+    # BOOTSTRAP NICETOHAVE: Test that a dropzone passed as '' is filtered out properly.
+    # Have to use this weird try 
+    files.select! {|file| file.present? }
     if destination == 'pictures'
       # This check should happen after the destination check, otherwise
       # it won't throw an error if the files are nil.

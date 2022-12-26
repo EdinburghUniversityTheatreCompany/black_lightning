@@ -1,6 +1,7 @@
-<% error = f.error(:image).present? || f.error(:gallery).present? || f.error(:description).present? %>
-
-<div class="control-group fields well <%= "error" if error %>">
+<%= render layout: '/shared/form/fields_for_template', locals: { 
+        f: f,
+        attributes: [:image, :gallery, :description]
+    } do %>
     <%= f.hidden_field :id %>
 
     <%= f.association :category %>
@@ -13,7 +14,5 @@
     <%= render '/shared/form/sections/gallery', f: f %>
 
     <br>
-    <%= link_to_remove f, link_text: 'Remove category' %>
-    <hr>
-</div>
-
+    <%= link_to_remove f, link_text: 'Remove Category' %>
+<% end %>

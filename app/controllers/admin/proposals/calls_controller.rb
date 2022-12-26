@@ -52,7 +52,7 @@ class Admin::Proposals::CallsController < AdminController
     { archived: [nil, false] }
   end
 
-  def create_title
+  def new_title
     'New Proposal Call'
   end
 end

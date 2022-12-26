@@ -35,6 +35,7 @@
 #++
 class User < ApplicationRecord
   before_save :unify_numbers
+
   rolify
   has_paper_trail limit: 6
   
@@ -94,6 +95,17 @@ class User < ApplicationRecord
 
   delegate :can?, :cannot?, to: :ability
 
+  # Returns the name if present, and the email if the user has the permission.
+  # Can also be the current_ability instead of the current_user.
+  # Should be your primary option of displaying a name
+  def name(current_user = nil)
+    if current_user.present? && current_user.can?(:show, self)
+      return name_or_email
+    else
+      return name_or_default
+    end
+  end
+
   # Returns true if the users first_name and last_name are set.
   def name?
     return first_name.present? && last_name.present?
@@ -114,15 +126,7 @@ class User < ApplicationRecord
     return email
   end
 
-  # Returns the name if present, and the email if the user has the permission.
-  # Can also be the current_ability instead of the current_user.
-  def name(current_user = nil)
-    if current_user.present? && current_user.can?(:show, self)
-      return name_or_email
-    else
-      return name_or_default
-    end
-  end
+
 
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
   def unify_numbers
@@ -234,5 +238,10 @@ class User < ApplicationRecord
   def consented?
     # Check if the user has consented less than a year ago.
     consented&.after?(Date.current.advance(years: -1))
+  end
+
+  def send_welcome_email
+    # TEST: It is not tested if the membership_activation_tokens controller and users controller calls to this method actually work.
+    UsersMailer.welcome_email(self).deliver_later unless email.ends_with?('@bedlamtheatre.co.uk')
   end
 end

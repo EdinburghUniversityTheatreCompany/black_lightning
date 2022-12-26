@@ -1,23 +1,20 @@
-<%= render template:'users/show' %>
-
-<hr />
-<h2>Details</h2>
-
 <% fields = {
     email: @user.email,
     phone_number: @user.phone_number.present? ? link_to(@user.phone_number, "tel: #{@user.phone_number}") : 'Not set',
     roles: @user.roles.collect {|role| role.name.capitalize }.to_sentence,
     marketing_creative_profile: @user.marketing_creatives_profile.present? ? get_link(@user.marketing_creatives_profile, :show) : 'This user has no Marketing Creative Profile.',
     'Sign-in Count' => @user.sign_in_count,
-    profile_visible_to_public: bool_text(@user.public_profile)
+    profile_visible_to_public: bool_text(@user.public_profile),
     #card_number: (link_to(@user.card_number, admin_membership_card_path(@user.membership_card))) if @user.card_number.present?
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
+<%= content_for :extra_show_actions do %>
+    <%= get_link @user, :reset_password, http_method: :post %>
+<% end %>
 
-<%= render '/shared/show_actions', object: @user, destroy_link_params: { 
+<%= render('shared/pages/show', object: @user, fields: fields, show_actions_args: { destroy_link_params: { 
     type_confirm: @user.name,
     detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:" 
-} %>
+} } ) %>
 
-<%= get_link @user, :reset_password, http_method: :post %>
+<%= render(template:'users/show', locals: { display_title: false }) %>

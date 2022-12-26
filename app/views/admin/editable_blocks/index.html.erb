@@ -1,20 +1,11 @@
-<h1><%= @title %></h1>
+<% search_fields = {
+    name_cont:    { slug: 'defaults.name' },
+    content_cont: { slug: 'defaults.content' },
+    url_cont:     { slug: 'defaults.url' }
+} %>
 
-<%= display_block("Editable Blocks", true) %>
+<% content = render('admin/editable_blocks/index_content') %>
 
-<br />
-<br />
+<%= render 'shared/pages/index', resource_class: Admin::EditableBlock, content: content, search_fields: search_fields, 
+  include_pagination: false %>
 
-<div class="accordion" id="ediable_block_accordion">
-<% @editable_blocks.each do |group, editable_blocks| %>
-  <%= render 'editable_block', group: group, editable_blocks: editable_blocks %>
-<% end %>
-</div>
-
-<% if can? :new, Admin::EditableBlock %>
-  <%= get_link Admin::EditableBlock, :new %>
-<% else %>
-  <p class="help-block">
-    To create new pages, please contact the <%= link_to 'IT subcommittee', 'mailto:it@bedlamtheatre.co.uk' %>.
-  </p>
-<% end %>

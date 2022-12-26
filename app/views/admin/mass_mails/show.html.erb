@@ -1,26 +1,7 @@
-<h1><%= @title %></h2>
+<% fields = { 
+  send_date: get_send_date(@mass_mail),
+  sent_by: get_sender_name(@mass_mail),
+  body: { type: 'markdown', markdown: @mass_mail.body }
+} %>
 
-<div>
-  <dl>
-    <dt>Send Date</dt>
-    <dd><%= get_send_date(@mass_mail) %></dd>
-
-    <% if @mass_mail.draft %>
-      <dt>Status</dt>
-      <dd>Draft Mail</dd>
-    <% else %>
-      <dt>Sent By</dt>
-      <dd><%= get_sender_name(@mass_mail) %></dd>
-    <% end %>
-  </dl>
-</div>
-
-<dt>Body</dt>
-<div>
-  <%= render_markdown @mass_mail.body %>
-</div>
-
-<% # The normal /shared/show_actions does not work for this one %>
-<%= get_link @mass_mail, :edit, html_class: 'btn btn-primary', additional_condition: @mass_mail.draft %>
-<%= get_link @mass_mail, :destroy, additional_condition: @mass_mail.draft %>
-<%= get_link MassMail, :index %>
+<%= render('shared/pages/show', object: @mass_mail, fields: fields) %>

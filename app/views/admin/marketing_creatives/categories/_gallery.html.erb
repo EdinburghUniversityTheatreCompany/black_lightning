@@ -1,0 +1,16 @@
+<div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+  <% categories.each do |category| %>
+    <div class="col">
+      <div class="card h-100">
+        <% img = image_tag category.fetch_image.variant(square_thumb_variant(300)), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(square_thumb_variant(300))) %>
+        <%= get_link category, :show, link_text: img %>
+
+        <div class="card-body">
+          <p class="card-text"><%= get_link category, :show %></p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>
+
+<div class="mb-3"></div>

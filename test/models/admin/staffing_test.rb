@@ -66,12 +66,12 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   test 'update_reminder runs on creation' do
     # Very far in the future, because it has to be bigger than the current time
     start_time = DateTime.now.advance(days: 10)
-    start_time = start_time.change(offset: '+0100')
+    start_time = start_time.change(hour: 18, min: 0)
 
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: start_time)
 
     assert_includes staffing.reminder_job.description, "Reminder for Staffing #{staffing.id}"
-    # The partition bit is necessary because the hour behaves weird. It's one hour of sometimes.
+    # The partition bit is necessary because the hour behaves weird. It's one hour off sometimes.
     # It does not matter for the functionality, but it causes the test to fail sometimes.
     assert_includes staffing.reminder_job.description, I18n.l(start_time, format: :short).rpartition(':').last
   end

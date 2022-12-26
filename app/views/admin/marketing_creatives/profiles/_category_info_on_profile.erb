@@ -1,0 +1,6 @@
+<h3><%= category_info.category.name_on_profile %></h3>
+<%= image_tag(category_info.fetch_image.variant(slideshow_variant)) %>
+
+<p><%= render_markdown category_info.description %></p>
+
+<%= render '/shared/gallery', pictures: category_info.pictures.includes(:gallery).accessible_by(current_ability), header_size: 4 %>

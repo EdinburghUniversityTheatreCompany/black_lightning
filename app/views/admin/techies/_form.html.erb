@@ -1,26 +1,13 @@
-<%= simple_nested_form_for [:admin, @techie] do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+<%= simple_horizontal_form_for [:admin, @techie] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
+    
+    <%- # parent_fields and child_fields are a wrapper around relations_field that needs to exist so link_to_add works properly. %>
 
     <h3>Parents</h3>
-    
-    <%= f.simple_fields_for :parents do |parent| %>
-      <%= render 'relation_field', relation: parent %>
-    <% end %>
-
-    <%= link_to_add f, :parents %>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :parents, partial_name: 'parent_fields') %>
 
     <h3>Children</h3>
-
-    <%= f.simple_fields_for :children do |child| %>
-      <%= render 'relation_field', relation: child %>
-    <% end %>
-
-    <%= link_to_add f, :children %>
-
-  </div>
-  
-  <%= render '/shared/form/form_actions', f: f %>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :children, partial_name: 'children_fields') %>
+  <% end %>
 <% end %>

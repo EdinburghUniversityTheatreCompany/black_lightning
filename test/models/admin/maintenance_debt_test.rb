@@ -42,14 +42,14 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
   end
 
   test 'should return the correct css class' do
-    helper_compare_css_class 'success', :completed
-    helper_compare_css_class 'success', :converted
+    helper_compare_css_class 'table-success', :completed
+    helper_compare_css_class 'table-success', :converted
 
     @maintenance_debt.due_by = Date.current.advance(days: 1)
-    helper_compare_css_class'warning', :unfulfilled
+    helper_compare_css_class 'table-warning', :unfulfilled
 
     @maintenance_debt.due_by = Date.current.advance(days: -1)
-    helper_compare_css_class 'error', :unfulfilled
+    helper_compare_css_class 'table-danger', :unfulfilled
   end
 
   def helper_compare_css_class(expected_class, state)

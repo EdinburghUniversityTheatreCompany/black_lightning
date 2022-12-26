@@ -1,7 +1,0 @@
-.gallery-form .fields {
-  display: inline-block
-}
-
-.gallery-form .fields [class*="span"] {
-  margin-left: 0;
-}

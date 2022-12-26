@@ -1,16 +1,10 @@
-<h1><%= @title%></h1>
+<% fields = {
+  event: get_link(:event, :show),
+  questions_and_answers: { type: 'content', header: 'Questions', content: render('/shared/questions_and_answers', answers: @questionnaire.answers) }
+} %>
 
-<%= render 'event_display' %>
+<% content_for :extra_show_actions do %>
+  <%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary' %>
+<% end %>
 
-<%= render '/shared/questions_and_answers', answers: @questionnaire.answers %>
-
-<% # You cannot use the shared/show_actions here because they're all quite different %>
-
-<%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary' %>
-
-<%= get_link @questionnaire, :edit %>
-
-<%= get_link @questionnaire, :destroy %>
-
-<%= get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'View All Questionnaires', anchor: "#{@questionnaire.event.name.to_url}-table" %>
-
+<%= render('shared/pages/show', object: @questionnaire, fields: fields) %>

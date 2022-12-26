@@ -1,30 +1,34 @@
+<%- # Very similar to proposals call _form. %>
 <% content_for :head do %>
   <meta name="templates-base-url" content="/admin/questionnaires/questionnaire_templates" />
+  <meta name="templates-items-type" content="questions" />
   <%= javascript_include_tag "admin/question_templates.js" %>
 <% end %>
 
-<%= simple_nested_form_for(@questionnaire) do |f| %>
-  <%= f.error_notification %>
+<%= simple_horizontal_form_for(@questionnaire) do |f| %>
+  <% content_for :extra_form_actions do %>
+    <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#template_modal">Load Template</button>
+  <% end %>
 
-  <div class="form-inputs">
+  <%= render('shared/pages/form', f: f) do %>
+    <% if @questionnaire.persisted? %>
+      <p>
+        <b>Event:</b> <%= get_link @questionnaire.event, :show %>
+      </p>
+    <% else %>
+      <%= f.association :event, collection: @events_collection, selected: @event, disabled: @questionnaire.persisted? %>
+    <% end %>
 
     <%= f.input :name %>
 
-    <% if @questionnaire.new_record? %>
-      <%= f.association :event, collection: @events_collection, selected: @event %>
-    <% end %>
+    <div id="questions">
+      <h3>Questions</h3>
 
-    <h3>Questions</h3>
-
-    <%= f.simple_fields_for :questions %>
-
-    <%= link_to_add f, :questions %>
-  </div>
-
-  <div class="form-actions">
-    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
-    <a href="#template_modal" role="button" class="btn" data-toggle="modal">Load Template</a>
-  </div>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :questions, partial_name: 'question_fields') %>
+    </div>
+  <% end %>
 <% end %>
+
+<% # BOOTSTRAP NICETOHAVE: Loading seems to not load the response type. %>
 
 <%= render '/shared/form/template_modal', header: 'Select Questions from Template', template_model: Admin::Questionnaires::QuestionnaireTemplate %>

@@ -1,52 +1,27 @@
-<h1><%= @title %></h1>
+<% display_title = true if display_title.nil? %>
+<% if display_title %>
+  <h1><%= @title %></h1>
+<% end %>
 
-<hr />
-
-<div class="row vertical-rule">
-  <div class="span<%= @user.avatar.attached? ? '9' : '12' %>">
-    <%= render_markdown @user.bio %>
-  </div>
-  <% if @user.avatar.attached? %>
-    <div class="span3">
-      <% # not a fetch_avatar call.%>
-      <%= image_tag @user.avatar.variant(square_thumb_variant), class: "thumbnail zoomable" %>
-    </div>
-  <% end%>
-</div>
-
-<hr />
-
-<h2>Projects</h2>
-
-<div class="row">
-  <div class="carousel slide span12" id="show-carousel">
-    <div class="carousel-inner">
-      <% @team_memberships.each_with_index do |item, i| %>
-        <% if i.modulo(4) == 0 %>
-          <div class="item <%= 'active' if i == 0 %>">
-            <ul class="thumbnails">
-        <% end %>
-              <li class="span3">
-                <div class="thumbnail">
-                  <% img = image_tag item.teamwork.fetch_image.variant(medium_variant) %>
-                  <% url = @link_to_admin_events ? [:admin, item.teamwork] : item.teamwork %>
-
-                  <%= link_to img, url %>
-                  <%= link_to truncate(item.teamwork.name, length: 30), url %><br />
-                  <%= item.teamwork.date_range true %><br />
-                  <%= item.position %>
-                </div>
-              </li>
-        <% if i.modulo(4) == 3 || i == (@team_memberships.size - 1) %>
-            </ul>
-          </div>
-        <% end %>
-      <% end %>
-    </div>
-
-    <% if @team_memberships.size > 4 %>
-      <a data-slide="prev" href="#show-carousel" class="left carousel-control">‹</a>
-      <a data-slide="next" href="#show-carousel" class="right carousel-control">›</a>
+<div class="card">
+  <div class="card-body">
+    <% if @user.avatar.present? %>
+      <%= image_tag @user.avatar.variant(square_thumb_variant), { class: "img-thumbnail zoomable float-end ms-3 mb-3" }.merge(variant_width_and_height_html(square_thumb_variant)) %>
     <% end %>
+
+    <%= render_markdown @user.bio %>
+
+    <%= get_link @user, :edit, html_class: 'btn btn-primary' %>
   </div>
 </div>
+
+<h3>Projects</h3>
+<% items = @team_memberships.collect { |team_membership| {
+        event: team_membership.teamwork,
+        paragraphs: [
+          { content: team_membership.teamwork.date_range(true), small: true },
+          { content: team_membership.teamwork.short_blurb },
+          { content: "<b>Position</b>: #{team_membership.position}".html_safe, class: 'mt-auto' }
+        ] } } %>
+
+<%= render('shared/pages/public/events_grid', items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>

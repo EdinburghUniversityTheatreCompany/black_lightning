@@ -1,0 +1,13 @@
+<%= simple_horizontal_form_for [:admin, @carousel_item] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <%= f.input :title %>
+    <%= render "/shared/form/md_editor", f: f, field: :tagline, show_hint: true %>
+    <%= f.input :carousel_name, collection: CarouselItem::CAROUSEL_NAMES, include_blank: false %>
+    <%= f.input :is_active %>
+    <%= f.input :ordering, hint: 'The lower the number, the earlier it will appear.' %>
+
+    <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'The aspect ratio should be the same for all items in the same carousel.' %>
+
+    <%= f.input :url, hint: 'URL for the destination when clicking the carousel image.'%>
+  <% end %>
+<% end %>

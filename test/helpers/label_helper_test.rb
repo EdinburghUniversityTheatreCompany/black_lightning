@@ -22,16 +22,16 @@ class LabelHelperTest < ActionView::TestCase
   test 'sanitizes html' do
     message = '<faketag>Finbar<div> the <p></p>Viking'
     label = generate_label('info', message)
-    assert_equal '<span style="margin-right: 5px;" class="label label-info">Finbar<div> the <p></p>Viking</div></span>', label
+    assert_equal '<span class="badge bg-info text-dark">Finbar<div> the <p></p>Viking</div></span>', label
   end
 
   test 'returns label' do
     label = generate_label('danger', "It's dangerous to go alone!")
-    assert_equal '<span style="margin-right: 5px;" class="label label-important">It\'s dangerous to go alone!</span>', label
+    assert_equal '<span class="badge bg-danger">It\'s dangerous to go alone!</span>', label
   end
 
-  test 'returns label with pull-right' do
+  test 'returns label with float-right' do
     label = generate_label(:success, 'You did it!', true)
-    assert_equal '<span style="margin-right: 5px;" class="label label-success pull-right">You did it!</span>', label
+    assert_equal '<span class="badge bg-success float-right">You did it!</span>', label
   end
 end

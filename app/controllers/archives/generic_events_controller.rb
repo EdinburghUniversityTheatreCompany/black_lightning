@@ -2,5 +2,4 @@
 
 class Archives::GenericEventsController < GenericEventsController
   skip_authorization_check
-  layout 'archives'
 end

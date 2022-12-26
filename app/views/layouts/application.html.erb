@@ -1,21 +1,16 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <%# Include the opengraph namespaces: %>
   <head prefix="og: http://ogp.me/ns# fb: http://ogp.me/ns/fb# website: http://ogp.me/ns/website#">
   <meta charset="UTF-8">
-
-  <!-- measure page load time -->
-  <script type="text/javascript">
-    load_start = new Date().getTime();
-    doc_ready = null;
-    load_end = null;
-  </script>
     
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
   <%= stylesheet_link_tag    "application", media: "all" %>
 
-  <%= javascript_pack_tag "application" %>
+  <%= javascript_pack_tag "application", "shared" %>
   <%= javascript_include_tag "application" %>
+
+  <%= render('layouts/cdn_includes') %>
 
   <%= csrf_meta_tags %>
 
@@ -23,59 +18,15 @@
 
   <%= meta_tags(@meta).html_safe %>
 </head>
+
 <body>
+  <%= render "layouts/header" %>
+
   <div class="container">
-    <!-- START HEADER SECTION -->
-    <div class="row">
-    <div class="span12 header">
-      <%= link_to image_tag('BedlamLogoBW.png'), root_url, class: "visible-phone", style: "margin-left: 10px; width: 120px; border: 1px solid #000000;" %>
-
-      <ul id="nav_collapse" class="nav nav-pills visible-phone">
-        <li>
-          <a data-toggle="collapse" data-target=".nav-collapse">
-            Menu
-          </a>
-        </li>
-      </ul>
-
-      <ul id="nav_minor" class="pull-right nav nav-pills nav-collapse collapse">
-        <li><a href="http://facebook.com/bedlamtheatre.ed" target="_blank"><i class="fab fa-facebook-f"></i></a></li>
-        <li><a href="http://instagram.com/eutc.bedlamtheatre/" target="_blank"><i class="fab fa-instagram"></i></a></li>
-        <li><a href="http://twitter.com/bedlamtheatre" target="_blank"><i class="fab fa-twitter"></i></a></li>
-        <li><a href="https://www.youtube.com/channel/UCXxyhjT8bPvnl1oVAdRJW1Q" target="_blank"><i class="fab fa-youtube"></i></a></li>
-        <li><%= link_to 'EUTC Wiki','https://wiki.bedlamtheatre.co.uk', target: '_blank', title: 'Wiki' %></li>
-        <li><%= link_to 'Tickets','https://tickets.bedlamtheatre.co.uk', target: '_blank', title: 'Training' %></li>
-        <li><%= link_to 'FoB', 'http://friendsofbedlam.co.uk', target: '_blank', title: 'Friends of Bedlam' %></li>
-        <li><%= link_to 'Student Theatre', static_path('student_theatre') %></li>
-        <li><%= link_to 'Press',    static_path('press')        %></li>
-        <li><%= link_to 'Archives', archives_index_path         %></li>
-        <li><%= link_to 'Members',  admin_path                  %></li>
-        <li><%= link_to 'Find Us', static_path('find_us')        %></li>
-        <li><%= link_to "Log Out", destroy_user_session_path, method: :delete if user_signed_in? %></li>
-      </ul>
-
-      <%= link_to image_tag('Header.png'), root_url, class: "hidden-phone" unless mobile_device? %>
-
-      <ul id="nav" class="nav nav-pills">
-        <li><%= link_to 'Shows', shows_path %></li>
-
-        <% if WorkshopCounter.workshop_count > 0 %>
-          <li><%= link_to 'Workshops', workshops_path %></li>
-        <% end %>
-
-        <li><%= link_to 'News', news_index_path %></li>
-        <li><%= link_to 'About', about_index_path %></li>
-        <li><%= link_to 'Get Involved', get_involved_index_path %></li>
-        <li><%= link_to 'Accessibility', static_path('accessibility') %></li>
-        <li><%= link_to 'Contact', static_path('contact') %></li>
-      </ul>
-    </div>
-    </div>
-    <!-- END HEADER -->
-
     <%= render "layouts/ie_notice" %>
 
-    <%= render '/layouts/alert_div' %>
+    <% # BOOTSTRAP NICETOHAVE: Can this (and the file) be removed now that we have sweetalert, Alex? %>
+    <%= render 'layouts/alert_div' %>
 
     <%= content_for?(:content) ? yield(:content) : yield %>
   </div>

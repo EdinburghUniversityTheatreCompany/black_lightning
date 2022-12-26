@@ -1,35 +1,26 @@
-<%= simple_form_for [:admin, @user] do |f| %>
-  <%= f.error_notification %>
+<%= simple_horizontal_form_for [:admin, @user] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <h3>User Details</h3>
 
-  <div class="form-inputs">
-    <fieldset class="fieldset form-horizontal">
-      <legend>User Details</legend>
+    <% email_hint = 'Creating an user will send them a welcome email, unless the email ends in @bedlamtheatre.co.uk' if @user.new_record? %>
+    <%= f.input :email, hint: email_hint %>
+    <%= f.input :first_name %>
+    <%= f.input :last_name %>
+    <%= f.input :phone_number %>
 
-      <%= f.input :email %>
-      <%= f.input :first_name %>
-      <%= f.input :last_name %>
-      <%= f.input :phone_number %>
+    <% password_hint = "Leave blank to generate random password" if @user.new_record? %>
 
-      <% hint = "Leave blank to generate random password" if @user.new_record? %>
+    <%= f.input :password, hint: password_hint %>
+    <%= f.input :password_confirmation %>
 
-      <%= f.input :password, hint: hint %>
-      <%= f.input :password_confirmation %>
+    <% if can? :assign_roles, @user %>
+      <% # BOOTSTRAP VERYNIECTOHAVE: This is not bold while all labels are. Fix? %>
+      <%= f.association :roles, as: :check_boxes %>
+    <% end %>
 
-      <% if can? :assign_roles, @user %>
-        <%= f.association :roles, as: :check_boxes %>
-      <% end %>
-    </fieldset>
-
-    <fieldset class="fieldset">
-      <legend>Public Profile</legend>
-      
-      <%= render '/shared/form/public_private_switch', f: f, field_symbol: :public_profile %>
-
-      <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
-
-      <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
-    </fieldset>
-  </div>
-
-  <%= render '/shared/form/form_actions', f: f %>
+    <h3>Public Profile</h3>
+    <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+    <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
+    <%= f.input :public_profile, label: 'Enable Public Profle', hint: 'Display your profile on the public website as well as than just the members-only part?' %>
+  <% end %>
 <% end %>

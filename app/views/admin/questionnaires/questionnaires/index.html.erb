@@ -1,68 +1,12 @@
-<h1><%= @title %></h1>
+<% quick_actions = get_link(Admin::Questionnaires::QuestionnaireTemplate, :index) %>
 
-<%= display_block('Questionnaires', true) %>
+<% content = render('admin/questionnaires/questionnaires/index_content') %>
 
-<br />
-<br />
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' },
+    event_name_cont:  { slug: 'defaults.event_name'},
+    date_range:       { type: :date_range, options: { start_year: 2012, start_date_attribute: 'event_start_date', end_date_attribute: 'event_end_date'} }
+} %>
 
-<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
-  <h3>Search</h3>
-  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_questionnaires_questionnaires do |f| %>
-    <%= f.input_field :event_name_cont, placeholder: "Event Name",  required: false %>
-
-    <%= render 'shared/date_range_search_form_field', f: f, start_year: 2012, start_date_attribute: 'event_start_date', end_date_attribute: 'event_end_date' %>
-
-    <%= f.submit :Search, class: 'btn' %>
-  <% end %>
-<% end %>
-
-<% if @show_current_term_only %>
-  <p>
-    By default, this display only includes questionnaires from the current semester. Please use the search form if you want to view older questionnaires.
-  </p>
-<% end %>
-
-<div class="accordion" id="shows_current_accordion">
-  <% @questionnaires.each do |event_name, questionnaires| %>
-    <div class="accordion-group">
-      <% # If you change the div_name, please also change the anchor for the back buttn on the questionnaire show page. %>
-      <% div_name = "#{event_name.to_url}-table" %>
-      <div class="accordion-heading">
-        <h4>
-          <a href="#<%= div_name %>" class="accordion-toggle" data-toggle="collapse" style="display: inline-block;">
-            <%= event_name %>
-          </a>
-        </h4>
-      </div>
-
-      <div id="<%= div_name %>" class="accordion-body collapse" style="padding: 0px 10px;">
-        <table class="table">
-          <tr>
-            <th>Questionnaires</th>
-
-            <% if can? :read, Admin::Questionnaires::Questionnaire %>
-              <th></th>
-            <% end %>
-
-            <% if can? :edit, Admin::Questionnaires::Questionnaire %>
-              <th></th>
-            <% end %>
-          </tr>
-
-          <% questionnaires.each do |questionnaire| %>
-            <tr>
-              <%= get_link questionnaire, :answer, http_method: :get, html_class: '', append_name: true, wrap_tag: 'td' %>
-
-              <%= get_link questionnaire, :show, link_text: can?(:answer, questionnaire) ? 'View' : nil, html_class: 'btn', wrap_tag: 'td' %>
-
-              <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
-            </tr>
-          <% end %>
-        </table>
-      </div>
-    </div>
-  <% end %>
-</div>
-
-<%= get_link Admin::Questionnaires::Questionnaire, :new %>
-<%= get_link Admin::Questionnaires::QuestionnaireTemplate, :index %>
+<%= render 'shared/pages/index', resource_class: Admin::Questionnaires::Questionnaire, resources: @questionnaires, content: content, search_fields: search_fields,
+  quick_actions: quick_actions, include_pagination: false %>

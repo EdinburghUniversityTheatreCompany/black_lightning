@@ -26,4 +26,8 @@ class VenuesController < ApplicationController
   def includes_args
     [image_attachment: :blob]
   end
+
+  def order_args
+    ['name']
+  end
 end

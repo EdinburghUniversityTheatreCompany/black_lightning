@@ -1,16 +1,56 @@
-<% fields.each do |label_value_pair| %>
-  <% label, value = label_value_pair %>
-  
-  <% next if value.nil? %>
+<ul class="list-group list-group-flush">
+  <% fields.each do |label_value_pair| %>
+    <% label, value = label_value_pair %>
+    
+    <% # TODO: What about doing a 'Not Specified" if nil instead? %>
+    <%# value = 'Not Specified' unless value.present? %>
 
-  <% # Check peersupport (ask Mick) for a way to incorporate localisation. %>
+    <% next if value.nil? %>
 
-  <% if [true, false].include?(value) %>
-    <% value = bool_text(value) %>
+    <% # Check peersupport (ask Mick) for a way to incorporate localisation. %>
+
+    <% title = label.is_a?(Symbol) ? label.to_s.titleize : label %>
+
+    <li class="list-group-item py-2">
+    <%- # If the value is a hash, it is a special kind of field, so render a heading and a hash. %>
+    <% if value.is_a?(Hash) %>
+      <% if value[:type] == 'markdown' %>
+        <h3><%= title %></h3>
+
+        <%= render_markdown(value[:markdown]) %>
+      <% elsif value[:type] == 'image' %>
+        <h3><%= title %></h3>
+
+        <% # Check if the image is attached and if it is not a default image. If so, display the image.%>
+        <% if value[:image].attached? && !value[:image].filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
+          <% # BOOTSTRAP NICETOHAVE: Does this need a maximum size or something? %>
+          <%= render('shared/image', image: value[:image], variant: value[:variant]) %>
+        <% else %>
+          No Image
+        <% end %>
+      <% elsif value[:type] == 'content' %>
+        <% if value.key?(:header) %>
+          <h3><%= value[:header] %></h3>
+        <% end %>
+
+        <%= value[:content] %>
+      <% end %>
+    <%- # If not a hash, just render a normal key-value pair. %>
+    <% else %>
+      <%- # If a boolean, render a nice text rather than true or false. %>
+      <% if [true, false].include?(value) %>
+        <% value = bool_text(value) %>
+      <% end %>
+
+      <div class="row">
+        <div class="col-xl-2 col-sm-3">
+          <b><%= title %>:</b> 
+        </div>
+        <div class="col-xl-10 col-sm-9">
+          <%= value %>
+        </div>
+      </div>
+    <% end %>
+    </li>
   <% end %>
-
-  <p>
-    <b><%= label.is_a?(Symbol) ? label.to_s.titleize : label %>:</b>
-    <%= value %>
-  </p>
-<% end %>
+</ul>

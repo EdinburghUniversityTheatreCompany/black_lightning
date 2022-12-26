@@ -69,7 +69,6 @@ class Ability
     alias_action :reject, to: :approve
     # Alias grid to read
     alias_action :grid, to: :read
-    alias_action :guidelines, to: :read
     alias_action :debt_status, to: :read
     # Alias :delete to :destroy because they're easy to mix up and
     # because the current permission actions use :delete and the controller actions use :destroy
@@ -84,6 +83,9 @@ class Ability
     # Guests can see public events, news, and user profiles.
     can :read, News, show_public: true
     can :read, Event, is_public: true
+    # BOOTSTRAP NICETOHAVE: Test review permissions.
+    # BOOTSTRAP SOMEWHATNICETOHAVE: Properly add review permissions based on the attached event.
+    can :read, Review
 
     # Guests can see all Event Tags.
     can :read, EventTag
@@ -105,7 +107,9 @@ class Ability
 
     can :show, Attachment, access_level: 2
     can :show, VideoLink, access_level: 2
-
+    # BOOTSTRAP NICETOHAVE: Test picture permission
+    can :show, Picture, access_level: 2 
+  
     # Stop if the user is not logged in.
     return if user.nil?
 
@@ -176,6 +180,7 @@ class Ability
     # Fix at the same time as has_role? :member
     can :show, Attachment, access_level: 1 if can? :access, :backend
     can :show, VideoLink, access_level: 1 if can? :access, :backend
+    can :show, Picture, access_level: 1 if can? :access, :backend
 
     # TODO: Should only be allowed to see attachments if the user can also see the object they are related to. Remember that also goes for non-logged in users.
   end

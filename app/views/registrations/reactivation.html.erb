@@ -1,6 +1,8 @@
+<% # This page is currently unused and has no route leading to it. %>
+
 <div class="container">
   <div class="row">
-    <div class="span12">
+    <div class="col">
       <h1>Your Membership Has Expired</h1>
 
       <p>
@@ -10,13 +12,13 @@
   </div>
 
   <div class="row">
-    <div class="span6">
+    <div class="col-6">
       <h2>Renew Online</h2>
 
       Coming Soon...
     </div>
 
-    <div class="span6">
+    <div class="col-6">
       <h2>Reactivate Membership</h2>
 
       <p>
@@ -36,7 +38,7 @@
           <%= f.input :card_number, required: true %>
 
           <div class="form-actions">
-            <%= button_tag(type: 'submit', class: "btn") do %>
+            <%= button_tag(type: 'submit', class: "btn btn-secondary") do %>
               Activate
             <% end %>
           </div>

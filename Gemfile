@@ -10,10 +10,8 @@ gem "sprockets-rails"
 gem "terser"
 
 gem 'coffee-rails'
-gem 'bootstrap-sass', '< 3.0'
-gem 'font-awesome-sass'
 gem 'fancybox3'
-
+gem 'breadcrumbs_on_rails'
 gem 'simple_form'
 gem 'devise'
 gem 'doorkeeper'
@@ -22,10 +20,9 @@ gem 'cancancan'
 gem 'rolify'
 gem 'recaptcha'
 
-gem 'will_paginate'
+gem 'kaminari'
 gem 'kramdown'
-gem 'nested_form'
-gem 'twitter'
+gem 'cocoon'
 gem 'json'
 gem 'rails_autolink'
 
@@ -85,6 +82,8 @@ group :development, :test do
   gem 'bullet'
 
   gem 'faker'
+
+  gem 'test-prof'
 end
 
 group :test do
@@ -98,3 +97,6 @@ end
 gem 'capistrano-rails'
 gem 'capistrano-rvm'
 gem 'capistrano3-delayed-job'
+
+gem 'ed25519'
+gem 'bcrypt_pbkdf'

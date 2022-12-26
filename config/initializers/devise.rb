@@ -209,7 +209,7 @@ Devise.setup do |config|
   config.reset_password_within = 7.days
 
   # When set to false, does not sign a user in automatically after their password is
-  # reset. Defaults to true, so a user is signed in automatically after a reset.
+  # reset. Defaults to true, so a user is logged in automatically after a reset.
   # config.sign_in_after_reset_password = true
 
   # ==> Configuration for :encryptable

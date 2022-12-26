@@ -1,32 +1,18 @@
-<h1><%= @title %></h1>
-
 <% fields = {
   submission_deadline: l(@call.submission_deadline, format: :longy),
   editing_deadline: l(@call.editing_deadline, format: :longy),
+  questions: { type: 'content', header: 'Questions', conntent: nil }
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
-
-<hr />
-
-<%= render 'shared/show_actions', object: @call %>
-
-<%= get_link @call, :view_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
-<%= get_link @call, :archive, wrap_tag: 'td', http_method: 'put', additional_condition: DateTime.now > @call.editing_deadline,
-              confirm: "Archiving #{@call.name}", detail: 'Please confirm that you want to archive this proposal call.' 
-%>
-
-<hr />
-
-<h3>Questions</h3>
-
 <% @call.questions.each do |question| %>
-  <% fields = {
-    question: render_markdown(question.question_text),
-    type: question.response_type,
-  } %>
-
-  <%= render 'shared/basic_fields', fields: fields %>
-
-  <hr />
+  <% fields[question.id] = { type: 'content', content: render('/shared/question_template_show', question: question) } %>
 <% end %>
+
+<% content_for :extra_show_actions do %>
+  <%= get_link @call, :view_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
+  <%= get_link @call, :archive, wrap_tag: 'td', http_method: 'put', additional_condition: DateTime.now > @call.editing_deadline,
+                confirm: "Archiving #{@call.name}", detail: 'Please confirm that you want to archive this proposal call.' 
+  %>
+<% end %>
+
+<%= render('shared/pages/show', object: @call, fields: fields) %>

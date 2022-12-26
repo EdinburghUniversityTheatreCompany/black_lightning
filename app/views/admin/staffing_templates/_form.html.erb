@@ -1,17 +1,10 @@
-<%= simple_nested_form_for(@staffing_template) do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
-
+<%= simple_horizontal_form_for [@staffing_template] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
 
-    <div class="well form-horizontal">
+    <div id="staffing-jobs">
       <h3>Jobs</h3>
-      <%= f.simple_fields_for :staffing_jobs %>
-
-      <%= link_to_add f, :staffing_jobs %>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :staffing_jobs, partial_name: 'staffing_job_fields') %>
     </div>
-  </div>
-
-  <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>

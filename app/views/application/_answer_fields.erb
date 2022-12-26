@@ -4,12 +4,24 @@
         div_class_additions: 'question',
         attributes: [:answer]
     } do %>
-      <%= f.label :answer, render_markdown(f.object.question.question_text) %>
+      <% question_text = render_markdown(f.object.question.question_text) %>
+
+      <% case f.object.question.response_type %>
+        <% when "Long Text" %>
+          <%= render "/shared/form/md_editor", f: f, field: :answer, input_field_args: { label: question_text }  %>
+        <% when "Number" %>
+          <%= f.input :answer, as: :decimal, label: question_text %>
+        <% when "Yes/No" %>
+          <%= f.input :answer, collection: ['Yes', 'No'], label: question_text, as: :radio_buttons %>
+        <% when "File" %>
+          <%= f.label :answer, question_text %>
+          <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
+        <% else %>
+          <%= f.input :answer, as: :string, label: question_text %>
+      <% end %>
 
       <%= f.input_field :question_id, value: f.object.question.id, as: :hidden %>
-
-      <p>
-        <%= render '/shared/form/answer_field', f: f %>
-      </p>
   <% end %>
 <% end %>
+
+<hr>

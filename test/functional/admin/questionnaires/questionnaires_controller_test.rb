@@ -194,7 +194,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     assert_response :success
     assert_not_nil assigns(:questionnaires)
 
-    assert_match 'only includes questionnaires from the current semester', response.body
+    assert_match 'By default, this display only includes questionnaires for events taking place during the current semester', response.body
 
     questionnaire_ids = assigns(:questionnaires).values.flatten.collect(&:id)
 

@@ -56,4 +56,32 @@ class News < ApplicationRecord
 
     return image
   end
+
+  # Display the body up to the first line break after 140 characters.
+  def preview
+    content = body
+
+    begin
+      preview = ''
+
+      while content.present?
+        partition = content.partition(/(\n)|(<\/p>)/)
+
+        preview = preview.concat(partition.first)
+
+        if preview.length < 140 && partition[2].present?
+          preview = preview.concat(partition[1])
+          content = partition[2]
+        else
+          break
+        end
+      end
+
+      return preview
+    rescue
+      # :nocov:
+      return 'There was an error rendering a preview for this news item.'
+      # :nocov:
+    end
+  end
 end

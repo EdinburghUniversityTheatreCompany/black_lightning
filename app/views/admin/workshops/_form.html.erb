@@ -1,11 +1,7 @@
-<%= simple_nested_form_for [:admin, @workshop] do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+<%= simple_horizontal_form_for [:admin, @workshop] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
     <%= render 'admin/events/basic_form', f: f %>
 
     <%= render '/shared/form/sections/team_members', f: f %>
-  </div>
-
-  <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>

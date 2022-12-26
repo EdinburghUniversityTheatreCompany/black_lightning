@@ -10,9 +10,9 @@ module Admin::SharedDebtHelper
     if is_specific_user
       # In this case, the debts should not be searched. Clear the cookies to prevent a query from being loaded the next time the index is opened.
       shared_debt_clear_params(key)
-      
+
       debts = debts.where(user_id:params[:user_id]) if params[:user_id].present?
-    
+
       q_param = {}
       # Show fulfilled is already set.
     else
@@ -26,7 +26,7 @@ module Admin::SharedDebtHelper
     debts = q.result.includes(*includes)
 
     debts = debts.unfulfilled unless show_fulfilled
-    debts = debts.paginate(page: params[:page], per_page: 30) unless is_specific_user
+    debts = debts.page(params[:page]).per(30)
 
     return debts, q, show_fulfilled, is_specific_user
   end
@@ -86,8 +86,8 @@ module Admin::SharedDebtHelper
   def shared_debt_is_specific_user(debt_class, user_id)
     if user_id.present?
       # If we are just displaying one user, also display the fulfilled debts even if the box was not ticked.
-      show_fulfilled = true
       is_specific_user = true
+      show_fulfilled = true
     elsif debt_class.accessible_by(current_ability).map { |debt| debt.user.id }.uniq.count < 2
       is_specific_user = true
       show_fulfilled = true

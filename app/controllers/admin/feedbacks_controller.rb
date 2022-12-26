@@ -97,4 +97,12 @@ class Admin::FeedbacksController < AdminController
   def successful_destroy_redirect_url
     update_redirect_url
   end
+
+  def new_title
+    "Submit feedback for #{@show.name}"
+  end
+
+  def edit_title
+    "Edit feedback for #{@show.name}"
+  end
 end

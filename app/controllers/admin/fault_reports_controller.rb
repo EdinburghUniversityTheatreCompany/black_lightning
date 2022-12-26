@@ -43,4 +43,8 @@ class Admin::FaultReportsController < AdminController
   def permitted_params
     [:item, :description, :severity, :status, :reported_by_id, :fixed_by_id]
   end
+
+  def edit_title
+    "Edit Fault Report for #{@fault_report.item}"
+  end
 end

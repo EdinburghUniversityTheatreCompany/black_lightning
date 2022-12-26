@@ -54,7 +54,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     get :show, params: { id: @role }
     assert_response :success
 
-    assert_match 'Add User To Role', response.body
+    assert_match 'Add User to Role', response.body
   end
 
   test 'should get new' do
@@ -122,7 +122,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test 'should add user' do
     user = FactoryBot.create(:user, first_name: 'Finbar', last_name: 'the Viking')
 
-    post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
+    post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }
 
     assert user.has_role?('Member')
 
@@ -133,7 +133,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
   test 'should not add user who already has the role' do
     user = FactoryBot.create(:member, first_name: 'Dennis', last_name: 'the Donkey')
 
-    post :add_user, params: { id: @role, membership_activation_token: { user_id: user.id } }
+    post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }
 
     assert user.has_role?('Member')
 
@@ -142,7 +142,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should not add user that does not exist' do
-    post :add_user, params: { id: @role, membership_activation_token: { user_id: -1 } }
+    post :add_user, params: { id: @role, add_user_details: { user_id: -1 } }
 
     assert_equal ['This user does not exist.'], flash[:error]
     assert_redirected_to admin_role_url(@role)

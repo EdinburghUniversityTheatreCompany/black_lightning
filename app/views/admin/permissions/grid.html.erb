@@ -1,5 +1,3 @@
-<h1><%= @title %></h1>
-
 <%= form_with(url: admin_permissions_path.to_s, method: 'post', local: true) do %>
 <table class="table table-hover">
   <colgroup>
@@ -39,26 +37,27 @@
         <% end %>
       </tr>
     <% end %>
-    <tr>
-        <td>Miscellaneous</td>
-        <% @roles.each do |role| %>
-          <td colspan="<%= @actions.count %>">
-            <% @miscellaneous_permission_subject_classes.each do |subject_class, actions| %>
-              <% actions.each do |action, description| %>
-                <% permission = role.permissions.select{ |p| p.subject_class == subject_class } %>
+    <% @miscellaneous_permission_subject_classes.each do |subject_class, actions| %>
+      <tr>
+        <% actions.each do |action, description| %>
+          <td><%= description %></td>
+          
+          <% @roles.each do |role| %>
+            <td colspan="<%= @actions.count %>">
+              <% # Check if there is an instance of the permission model for this role with the correct subject_class and action. %>
+              <% # If so, that means the box should start off as ticked. %>
+              <% checked = role.permissions.select{ |p| p.subject_class == subject_class && p.action == action }.any? %>
 
-                <% checked = permission&.any? { |p| p.action == action } %>
-
-                <%= label_tag("[#{role.name}][#{subject_class}]#{action}", description) %>
-                <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", "#{action}", checked, title: description %>
-              <% end %>
-            <% end %>
-          </td>
+              <% # Render the tickbox for this role/action combination. %>
+              <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", "#{action}", checked, title: description %>
+            </td>
+          <% end %>
         <% end %>
       </tr>
+    <% end %>
   </tbody>
 </table>
 
-<%= submit_tag("Update") %>
+<%= submit_tag("Update", class: 'btn btn-secondary') %>
 
 <% end %>

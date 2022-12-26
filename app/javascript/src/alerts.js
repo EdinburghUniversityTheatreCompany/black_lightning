@@ -4,7 +4,7 @@ function showAlert(level, body) {
 
   switch (level) {
     case 'alert':
-      alertclass = "alert-error";
+      alertclass = "alert-danger";
       icon       = "icon-exclamation-sign";
       break;
     case 'success':
@@ -17,6 +17,7 @@ function showAlert(level, body) {
       break;
   }
 
+  // BOOTSTRAP NICETOHAVE: Copy from alert_message.erb to make sure it is appropriate.
   var alert = $(
     '<p id="' + level + '" class="alert ' + alertclass + '">' +
       '<i class="' + icon + ' icon-large" aria-hidden=”true”></i>' +

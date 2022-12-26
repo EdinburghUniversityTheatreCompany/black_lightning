@@ -5,8 +5,5 @@
 <% end %>
 
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Attachments' } do %>
-  <div class="form-inline">
-    <%= f.simple_fields_for :attachments %>
-    <p><%= link_to_add(f, :attachments) %></p>
-  </div>
+  <%= render('shared/form/sections/nested_fields', f: f, association_name: :attachments, partial_name: 'attachment_fields') %>
 <% end %>
