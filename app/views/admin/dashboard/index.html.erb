@@ -37,7 +37,9 @@
       </div>
       <div class="col-xl">
         <%= render 'card_widget', card_title: "Staffing", card_partial: "staffings_widget", card_class: "" %>
+        <% if current_user.has_role?('Committee') || can?(:manage, Admin::Staffing) %>
         <%= render 'card_widget', card_title: "Committee Staffing", card_partial: "committee_staffing_widget", card_class: "" %>
+        <% end %>
       </div>
     </div><!-- /.container-fluid -->
   </div>
