@@ -18,6 +18,7 @@ This project is the work of Team Adjective-Noun, comprising:
 With further additions by
 * Kyle Cooke (? - ?)
 * Mick Zijdel (2020 - 2022) <mick.zijdel@bedlamtheatre.co.uk>
+* Alexander Morzeria-Davis (2020-2023) <alexander@bedlamtheatre.co.uk> / <me+git@alexandermohan.com>
 
 with support of the EUTC and is licensed under The MIT License as follows:
 
