@@ -9,7 +9,7 @@
 
       <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
       <% if remaining_positions > 0 %>
-        <span class="badge badge-important pull-right" title="Remaining positions"><%= remaining_positions %></span>
+        <%= generate_label('danger', remaining_positions.to_s, rounded=true) %>
       <% end %>
     </p>
   <% end %>

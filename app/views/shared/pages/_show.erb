@@ -1,0 +1,13 @@
+<% show_actions_args = {} if show_actions_args.nil? %>
+
+<%= render('shared/quick_actions_card') do %>
+  <% if content_for?(:custom_show_actions) %>
+    <% yield :custom_show_actions %>
+  <% else %>
+    <%= render '/shared/show_actions', object: object, **show_actions_args %>
+  <% end %>
+<% end %>
+
+<div class="card">
+  <%= render 'shared/basic_fields', fields: fields %>
+</div>

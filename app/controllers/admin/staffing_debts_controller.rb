@@ -82,7 +82,9 @@ class Admin::StaffingDebtsController < AdminController
   end
 
   def load_index_resources
-    @staffing_debts, @q, @show_fulfilled, @is_specific_user = helpers.shared_debt_load(@staffing_debts, params, [:user, :admin_staffing_job])
+    @staffing_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@staffing_debts, params, [:user, :admin_staffing_job])
+
+    params[:show_fulfilled] = show_fulfilled ? '1' : '0'
 
     return @staffing_debts
   end

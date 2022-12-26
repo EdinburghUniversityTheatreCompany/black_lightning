@@ -8,4 +8,14 @@ class Admin::StaticController < AdminController
       return
     end
   end
+
+  def bootstrap_test
+  end
+
+  # This is a catch-all for the pages that do not have explicitly defined routes.
+  def error
+    Rails.logger.error "ADMIN: Could not find the page at #{request.fullpath}"
+
+    raise(ActionController::RoutingError.new('This page could not be found.'))
+  end
 end

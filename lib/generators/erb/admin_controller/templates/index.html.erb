@@ -1,11 +1,12 @@
 <%% headers = ['View', <%= attributes.map{ |attribute| ":#{attribute.name}" }.join(', ') %>] %>
 
-<%% field_sets = @<%= resource_name.pluralize %>.map { |<%= resource_name %>| [
-  <%= resource_name %>,  
-<%- attributes.each do |attribute| -%>
-  <%= "#{resource_name}.#{attribute.name}," %>
-<%- end -%>
-] }%>
+<%% field_sets = @<%= resource_name.pluralize %>.map { |<%= resource_name %>| {
+  fields: [
+    <%= resource_name %>,  
+  <%- attributes.each do |attribute| -%>
+    <%= "#{resource_name}.#{attribute.name}," %>
+  <%- end -%>
+  ] } } %>
 
 <%% search_fields = {
   <%- attributes.each do |attribute| -%>

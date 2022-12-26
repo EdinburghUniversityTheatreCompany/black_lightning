@@ -18,6 +18,7 @@ ChaosRails::Application.routes.draw do
   #   post 'users/reactivate/stripe', to: 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
   # end
 
+  resources :events,      only: [:index]
   resources :shows,       only: [:index, :show]
   resources :workshops,   only: [:index, :show]
   resources :news,        only: [:index, :show]
@@ -129,6 +130,7 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :editable_blocks
+    resources :carousel_items
     resources :mass_mails
 
     resources :users do
@@ -194,7 +196,6 @@ ChaosRails::Application.routes.draw do
     resources :staffings do
       collection do
         get ':slug/grid', to: 'staffings#grid', format: :html, as: :grid
-        get 'guidelines'
       end
     end
 
@@ -259,7 +260,10 @@ ChaosRails::Application.routes.draw do
     end
 
     get 'committee', to: 'static#committee', as: :committee
-
+    get 'bootstrap_test', to: 'static#bootstrap_test', as: :bootstrap_test
+    # Catch all 404's on the admin site.
+    get '*page', to: 'static#error', as: :static
+    
     # Test route
     if Rails.env.test? || Rails.env.development?
       get 'dashboard/widget/:widget_name', to: 'dashboard#widget'
@@ -293,6 +297,8 @@ ChaosRails::Application.routes.draw do
 
   # Use bedlamtheatre.co.uk/:slug to find a season
   get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
+
+  post 'contact/send', to: 'static#contact_form_send', as: :contact_form_send
 
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.
   get '/*page', to: 'static#show', as: :static, constraints: lambda { |request|

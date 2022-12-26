@@ -1,0 +1,33 @@
+<h1><%= @title %></h1>
+
+<div class="mb-3">
+  <%= display_block("Public Index - #{@title}", false) %>
+</div>
+
+<%= search_form %>
+
+<div class="row">
+  <div class="col">
+    <% if items.empty? %>
+      <%= display_block("Public Index - #{@title} - Empty", false) %>
+    <% else %>
+        <% items.each do |item| %>
+          <div class="d-flex">
+            <% image = image_tag(item[:image].variant(thumb_variant_public),{ class: 'flex-fill' }.merge(variant_width_and_height_html(thumb_variant_public))) %>
+            <%= link_to(image, item[:url], class: "img-thumbnail h-100") %>
+
+            <div class="flex-fill ms-3">
+              <h4 class="media-heading"><%= link_to item[:header], item[:url] %></h4>
+              
+              <%= render('shared/pages/public/partials/card_paragraphs', paragraphs: item[:paragraphs]) %>
+
+              <p class="card-text"><%= link_to item[:button_text], item[:url], class: 'btn btn-primary' %></p>
+            </div>
+          </div>
+          <hr />
+        <% end %>
+
+      <%= paginate(resources) %>
+    <% end %>
+  </div>
+</div>

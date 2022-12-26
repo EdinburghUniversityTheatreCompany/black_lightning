@@ -1,16 +1,16 @@
 <% # Not quite sure why the form can't figure it out himself, but this next line is necessary %>
-<% if @feedback.persisted? then url = admin_show_feedback_url else url = admin_show_feedbacks_url end %>
+<% url = @feedback.persisted? ? admin_show_feedback_url : admin_show_feedbacks_url %>
 
-<%= simple_form_for([@show, @feedback], url: url) do |f| %>
-  <%= f.error_notification %>
+<%= simple_horizontal_form_for([@show, @feedback], url: url) do |f| %>
+  <% content_for :override_card_footer do %>
+    <%- # You cannot use the form actions for this one. %>
+    <div class="form-actions">
+      <%= f.button :submit, class: "btn btn-primary" %>
+      <%= get_link @show, :show, link_text: 'Back to Show', html_class: 'btn btn-secondary' %>
+    </div>
+  <% end %>
 
-  <div class="form-inputs">
+  <%= render('shared/pages/form', f: f) do %>
     <%= render "/shared/form/md_editor", f: f, field: :body, show_hint: true %>
-  </div>
-
-  <% # You cannot use the form actions ofr this one. %>
-  <div class="form-actions">
-    <%= f.button :submit, class: "btn btn-primary" %>
-    <%= get_link @show, :show, link_text: 'Back to Show', html_class: 'btn' %>
-  </div>
+  <% end %>
 <% end %>

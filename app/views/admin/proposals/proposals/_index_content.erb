@@ -1,0 +1,17 @@
+<% headers = [:show_title] %>
+
+<% field_sets = @proposals.map { |proposal| { 
+  fields: [
+    proposal,
+    "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal.labels(true)}".html_safe 
+  ] } } %>
+
+<% call_info_fields = {
+  submission_deadline: l(@call.submission_deadline, format: :longy),
+  editing_deadline: l(@call.editing_deadline, format: :longy),
+} %>
+
+<%= render 'shared/basic_fields', fields: call_info_fields %>
+
+<% # BOOTSTRAP SOMEWHATNICETOHAVE: Some rows edit buttons do not render a blank cell when some rows can be edited and some not. %>
+<%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal) %>

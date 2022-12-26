@@ -4,12 +4,6 @@ class Admin::ShowsController < Admin::GenericEventsController
 
   # GET /admin/shows
   # GET /admin/shows.json
-  def index
-    @editable_block_name = 'Shows (Members Face)'
-    @url = :admin_shows
-
-    super
-  end
 
   def show
     existing_staffing_debts = Admin::StaffingDebt.where(show: @show)

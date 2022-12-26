@@ -1,193 +1,207 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Admin</title>
-    <%= stylesheet_link_tag    "admin", media: "all" %>
-  
-    <%= javascript_packs_with_chunks_tag "application", "admin"%>
 
-    <%= javascript_include_tag "application" %>
-    <%= csrf_meta_tags %>
+<head>
+  <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
+  <%= stylesheet_link_tag    "admin", media: "all" %>
 
-    <%= yield :head %>
+  <%= javascript_packs_with_chunks_tag "admin", "shared" %>
 
-    <meta name="viewport" content="initial-scale = 1.0" />
-  </head>
-  <body>
-    <div class="navbar">
-        <div class="navbar-inner">
-            <%= link_to 'Bedlam Theatre Admin', admin_path, class: "brand" %>
+  <%= javascript_include_tag "application" %>
+  <%= csrf_meta_tags %>
 
-            <ul id="login_menu" class="nav pull-right">
-              	<% if user_signed_in? %>
-                  <li><p class="navbar-text">Welcome <%= link_to current_user.first_name.presence || current_user.email, edit_admin_user_path(current_user), { title: 'Edit Account' } %></p></li>
-                  <li><%= link_to "Sign Out", destroy_user_session_path, method: :delete %></li>
-                <% else %>
-                  <li><%= link_to 'Sign In', new_user_session_path %></li>
-                <% end %>
-                
-                <li><%= link_to 'Training','https://training.bedlamtheatre.co.uk', target: '_blank', title: 'Training' %></li>
-                <li><%= link_to 'Shared Mail','https://mail.bedlamtheatre.co.uk', target: '_blank', title: 'Zammad' %></li>
-                <li><%= link_to 'Wiki','https://wiki.bedlamtheatre.co.uk', target: '_blank', title: 'Wiki' %></li>
-                <li><%= link_to "Main Site", root_path %></li>
-            </ul>
+  <%= render('layouts/cdn_includes') %>
 
-            <div class="nav-collapse collapse">
-              <ul class="nav">
-                <% if current_user.present? %>
-                  <% if can? :index, Admin::Proposals::Call %>
-                  <li><%= link_to 'Proposals', admin_proposals_calls_path %></li>
-                  <% end %>
+  <%= yield :head %>
 
-                  <% if can? :index, Event %>
-                  <li><%= link_to 'Events', admin_events_path %></li>
-                  <% end %>
+  <meta name="viewport" content="initial-scale = 1.0" />
+</head>
 
-                  <% if can? :index, Show %>
-                  <li><%= link_to 'Shows', admin_shows_path %></li>
-                  <% end %>
+<body class="hold-transition sidebar-mini layout-fixed">
+  <div class="wrapper">
+    <div class="preloader flex-column justify-content-center align-items-center">
+      <img class="" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
+        alt="Bedlam Theatre EUTC Logo" height="120" /><br />
+      <div class="spinner-border" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+    </div>
 
-                  <% if can? :index, Workshop %>
-                  <li><%= link_to 'Workshops', admin_workshops_path %></li>
-                  <% end %>
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+      <!-- Left navbar links -->
+      <ul class="navbar-nav">
+        <li class="nav-item">
+          <a class="nav-link" data-widget="pushmenu" href="#" role="button" data-enable-remember="true"><i
+              class="fas fa-bars"></i></a>
+        </li>
+        <li class="nav-item d-none d-sm-inline-block">
+          <a href="/" class="nav-link">Back to Main Site</a>
+        </li>
+      </ul>
 
-                  <% if can? :index, Opportunity %>
-                  <li><%= link_to 'Opportunities', admin_opportunities_path %></li>
-                  <% end %>
+      <!-- Right navbar links -->
+      <ul class="navbar-nav ml-auto">
+        <!-- Notifications Dropdown Menu -->
+        <li class="nav-item dropdown">
+          <% @header_user = current_user %>
+          <a class="nav-link" data-toggle="dropdown" href="#">
+            <i class="fas fa-bell"></i>
+            <span
+              class="badge badge-danger navbar-badge <%= 'd-none' if @header_user.debt_message_suffix == "not in Debt" %> ">!!</span>
+          </a>
+          <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+            <span class="dropdown-header">Notifications</span>
 
-                  <% if can? :index, Admin::Questionnaires::Questionnaire %>
-                  <li><%= link_to 'Questionnaires', admin_questionnaires_questionnaires_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Venue %>
-                  <li><%= link_to 'Venues', admin_venues_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Season %>
-                  <li><%= link_to 'Seasons', admin_seasons_path %></li>
-                  <% end %>
-
-                  <% if can? :index, EventTag %>
-                    <li><%= link_to 'Event Tags', admin_event_tags_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Attachment %>
-                  <li><%= link_to 'Attachments', admin_attachments_path %></li>
-                  <% end %>
-
-                  <% if can? :index, AttachmentTag %>
-                    <li><%= link_to 'Attachment Tags', admin_attachment_tags_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Picture %>
-                    <li><%= link_to 'Pictures', admin_pictures_path %></li>
-                  <% end %>
-
-                  <% if can? :index, PictureTag %>
-                    <li><%= link_to 'Picture Tags', admin_picture_tags_path %></li>
-                  <% end %>
-
-                  <% if can? :index, News %>
-                  <li><%= link_to 'News', admin_news_index_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Admin::Staffing %>
-                  <li><%= link_to 'Staffing', admin_staffings_path %></li>
-                  <% end %>
-
-                  <% if can? :index, FaultReport %>
-                  <li><%= link_to 'Fault Reports', admin_fault_reports_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Admin::EditableBlock %>
-                  <li><%= link_to 'Editable Block', admin_editable_blocks_path %></li>
-                  <% end %>
-
-                  <% if can? :index, User %>
-                  <li><%= link_to 'Users', admin_users_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Role %>
-                  <li><%= link_to 'Roles', admin_roles_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Admin::Permission %>
-                  <li><%= link_to 'Permissions', admin_permissions_path %></li>
-                  <% end %>
-
-                  <% if can? :manage, :jobs %>
-                  <li><%= link_to 'Jobs', admin_jobs_overview_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Admin::MaintenanceDebt %>
-                  <li><%= link_to 'Maintenance Debt', admin_maintenance_debts_path %></li>
-                  <%end%>
-
-                  <% if can? :index, Admin::StaffingDebt %>
-                    <li><%= link_to 'Staffing Debt', admin_staffing_debts_path %></li>
-                  <%end%>
-
-                  <% if can? :index, Admin::Debt %>
-                    <li> <%= link_to 'Debt', admin_debts_path %></li>
-                  <% elsif can? :show, Admin::Debt %>
-                    <li> <%= link_to 'Debt', admin_debt_path(current_user) %></li>
-                  <% end %>
-
-                  <% if can? :index, Admin::DebtNotification %>
-                    <li><%= link_to 'Debt Notifications', admin_debt_notifications_path%></li>
-                  <% end %>
-
-                  <% if can? :create, MembershipActivationToken %>
-                    <li><%= link_to 'Membership Activation', new_admin_membership_activation_token_path %></li>
-                  <% end %>
-
-                  <% if can? :index, MassMail %>
-                    <li><%= link_to 'Mass Mail', admin_mass_mails_path %></li>
-                  <% end %>
-
-                  <% if can? :index, MarketingCreatives::Category %>
-                    <li><%= link_to 'Marketing Creatives', admin_marketing_creatives_categories_path %></li>
-                  <% end %>
-
-                  <% if can? :index, MarketingCreatives::Profile %>
-                    <li><%= link_to 'Marketing Creatives Profile List', admin_marketing_creatives_profiles_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Techie %>
-                    <li><%= link_to 'Techies', admin_techies_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Complaint %>
-                    <li><%= link_to 'Complaints Overview', admin_complaints_path %></li>
-                  <% end %>
-
-                  <% if can? :create, Complaint %>
-                    <li><%= link_to 'Submit Complaint', new_complaint_path %></li>
-                  <% end %>
-
-                  <% if can? :index, Doorkeeper::Application %>
-                    <li><%= link_to 'OAuth Applications', oauth_applications_path %></li>
-                  <% end %>
-
-                  <% if current_user.has_role?('Committee') %>
-                    <li><%= link_to 'Committee', admin_committee_path %></li>
-                  <% end %>
-                <% end%>
-              </ul>
-            </div>
-
-            <a class="btn hidden-desktop" data-toggle="collapse" data-target=".nav-collapse">
-              Menu
+            <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
+              <i
+                class="fas <%= 'fa-check' if @header_user.debt_message_suffix == "not in Debt" %> <%= 'fa-exclamation-circle' if @header_user.debt_message_suffix != "not in Debt" %> mr-2"></i>
+              <%= unless @header_user.debt_message_suffix == "in staffing and maintenance Debt" then "You are #{@header_user.debt_message_suffix}" else "You are in Debt" end %>
             </a>
+        </li>
+      </ul>
+    </nav>
+    <!-- /.navbar -->
+
+    <!-- Main Sidebar Container -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+      <!-- Brand Logo -->
+      <div class="brand-link d-flex align-items-center">
+        <a href="/admin/" class="brand-link logo-switch">
+          <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_square-white.png"
+            alt="Bedlam Theatre Square Small Logo" class="brand-image-xl logo-xs">
+          <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_single-line-white-for-red.png"
+            alt="Bedlam Theatre EUTC Logo" class="brand-image-xs logo-xl" style="left: 12px">
+        </a>
+      </div>
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <!-- Sidebar user panel optional) -->
+        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+          <div class="image">
+            <a href="#" class="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
+              data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
+              data-destroy-path='/users/sign_out'>
+              <% if @header_user.avatar.present? %>
+              <%= image_tag @header_user.avatar.variant(square_thumb_variant), class: "img-circle elevation-2" %>
+              <% else %>
+              <img src="/images/userdef.png" class="img-circle elevation-2" alt="User Image">
+              <% end %>
+            </a>
+          </div>
+          <div class="info text-white">
+            <span>Welcome,
+              <a href="#" class="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
+                data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
+                data-destroy-path='/users/sign_out'><%=  current_user.first_name.presence || current_user.email %></a></span>
+          </div>
         </div>
-    </div>
 
-    <div class="container">
+        <!-- Sidebar Menu -->
+        <nav class="mt-2">
+          <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu"
+            data-accordion="false">
+            <li class="nav-item">
+              <a href="/admin/" class="nav-link <%='active' if request.fullpath == "/admin" %>">
+                <i class="fas fa-home nav-icon"></i>
+                <p>Home</p>
+              </a>
+            </li>
+            <%= render 'layouts/nav_item', items: @navbar_categories %>
+            <!-- <li class="nav-item">
+              <a href="#" class="nav-link">
+                <i class="nav-icon fas fa-th"></i>
+                <p>
+                  Simple Link
+                  <span class="right badge badge-danger">New</span>
+                </p>
+              </a>
+            </li> -->
+          </ul>
+        </nav>
+        <!-- /.sidebar-menu -->
+
+      </div>
+      <!-- /.sidebar -->
+    </aside>
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+      <%= content_for?(:content_header) ? yield(:content_header) : render('shared/admin_page_header', title: @title) %>
+
       <%= render '/layouts/alert_div' %>
-
-      <%= content_for?(:content) ? yield(:content) : yield %>
+      
+      <div class="content">
+        <div class="container-fluid">
+          <%= content_for?(:content) ? yield(:content) : yield %>
+        </div>
+      </div>
     </div>
+    <!-- /.content-wrapper -->
 
-    <%= render "layouts/footer" %>
-  </body>
+    <!-- Main Footer -->
+    <footer class="main-footer p-0">
+      <%= render "layouts/footer" %>
+    </footer>
+  </div>
+  <!-- ./wrapper -->
+
+  <script>
+    userModal = function (title, message, userLink, destroyLink) {
+      Swal.fire({
+        icon: 'question',
+        title: title,
+        text: message,
+        showConfirmButton: true,
+        confirmButtonText: 'View User Profile',
+        showCloseButton: true,
+        showCancelButton: true,
+        cancelButtonText: "Close",
+        showDenyButton: true,
+        denyButtonText: 'Log Out'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          location.assign(userLink)
+        } else if (result.isDenied) {
+          $.ajax({
+            url: '/users/sign_out',
+            type: "DELETE",
+            headers: {
+              'X-CSRF-Token': $('meta[name=csrf-token]').attr('content')
+            }
+          }).done(function () {
+            Swal.fire({
+              icon: 'success',
+              title: 'Logged out',
+              text: 'You were successfully logged out. See you soon!'
+            }).then(() => {
+              location.assign('/')
+            })
+          });
+
+        }
+      })
+    }
+
+    var triggerUserModalEl = document.getElementsByClassName('triggerUserModal');
+    var firstTriggerUserModalEl = triggerUserModalEl[0];
+    var secondTriggerUserModalEl = triggerUserModalEl[1];
+    var currentUserPath = firstTriggerUserModalEl.dataset.currentUserPath;
+    var nameAttr = firstTriggerUserModalEl.dataset.nameAttr;
+    var destroyUserPath = firstTriggerUserModalEl.dataset.destroyUserPath;
+
+    firstTriggerUserModalEl.onclick = function () {
+      userModal(nameAttr,
+        "You're currently logged in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
+        currentUserPath, destroyUserPath)
+    };
+    secondTriggerUserModalEl.onclick = function () {
+      userModal(nameAttr,
+        "You're currently logged in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
+        currentUserPath, destroyUserPath)
+    };
+  </script>
+</body>
+
 </html>

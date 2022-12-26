@@ -15,22 +15,9 @@
 // const images = require.context('../images', true)
 // const imagePath = (name) => images(name, true)
 
-console.log('Hello World from Webpacker')
+require("@popperjs/core")
 
-import 'core-js/stable'
-import 'regenerator-runtime/runtime'
+require("jquery")
 
-import '../src/jquery.switch'
-import 'jquery-slimscroll'
-import '../src/alerts'
-
-import '../src/konami_code'
-
-import "controllers"
-
-require.context('./../../../node_modules/jquery-ui/ui')
-require("@rails/ujs").start()
-require("@rails/activestorage").start()
-
-// https://github.com/ifad/data-confirm-modal
-require('data-confirm-modal')
+import "bootstrap"
+import '../src/admin/md_editor'

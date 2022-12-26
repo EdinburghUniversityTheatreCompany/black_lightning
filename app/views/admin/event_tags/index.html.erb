@@ -1,27 +1,10 @@
-<h1><%= @title %></h1>
+<% headers = [:name] %>
 
-<p>
-  <%= display_block("Event Tags Description", true) %>
-</p>
+<% field_sets = @event_tags.map { |event_tag| { fields: [event_tag] } } %>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' },
+    description_cont: { slug: 'defaults.description'}
+} %>
 
-    <% if can? :edit, EventTag %>
-      <th></th>
-    <% end %>
-  </tr>
-
-<% @event_tags.each do |event_tag| %>
-  <tr>
-    <td><%= get_link event_tag, :show %></td>
-
-    <%= get_link event_tag, :edit, wrap_tag: 'td' %>
-  </tr>
-<% end %>
-</table>
-
-<%= will_paginate(@event_tags) %>
-
-<%= get_link EventTag, :new %>
+<%= render 'shared/pages/index', resource_class: EventTag, resources: @event_tags, headers: headers, field_sets: field_sets, search_fields: search_fields %>

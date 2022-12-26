@@ -25,7 +25,7 @@ class Archives::ProposalsController < AdminController
 
     @calls = Admin::Proposals::Call.where(id: call_ids)
                                    .reorder('submission_deadline DESC')
-                                   .paginate(page: params[:page], per_page: 20)
+                                   .page(params[:page]).per(20)
 
     @proposals = result_proposals.where(call_id: @calls.ids)
                                  .includes(:call, team_members: [user: [:admin_maintenance_debts, :admin_staffing_debts]])
@@ -41,5 +41,13 @@ class Archives::ProposalsController < AdminController
 
   def resource_class
     Admin::Proposals::Proposal
+  end
+
+  def distinct_for_ransack
+    false
+  end
+
+  def random_redirect_controller
+    'admin/proposals/proposals'
   end
 end

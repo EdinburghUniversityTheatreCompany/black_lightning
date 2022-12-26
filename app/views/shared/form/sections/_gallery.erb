@@ -1,19 +1,8 @@
 <div class="gallery-form">
-
   <h3>Gallery</h3>
 
   <%= render layout: '/shared/collapsible_section', locals: { title: 'Gallery' } do %>
-    <% if f.object.errors[:pictures].present? then %>
-      <p id="picture_errors" class="alert alert-error">
-        <%= f.error :pictures %>
-      </p>
-    <% end %>
-
-    <%= f.simple_fields_for :pictures %>
-
-    <div>
-      <%= link_to_add f, :pictures %>
-    </div>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :pictures, partial_name: 'picture_fields') %>
 
     <%= render 'shared/form/dropzone/dropzone_pictures' %>
   <% end %>

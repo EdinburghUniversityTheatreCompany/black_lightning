@@ -1,32 +1,34 @@
-<h1><%= @title %></h1>
+<% 
+# Essentially the same as in the admin events index, so likely edit that too if you edit this.
+# BOOTSTRP: Do not display this on the non-archive page.
+search_fields = {
+  name_cont:                      { slug: 'defaults.name' },
+  publicity_text_or_tagline_cont: { slug: 'defaults.publicity_text' },
+  users_full_name_cont:           { slug: 'defaults.user' },
+  author_cont:                    { slug: 'defaults.author' },
 
-<% if @url.present? %>
-  <%= render '/events/search_form', url: @url %>
-<% end %>
+  venue_id_eq:                    { slug: 'defaults.venue', type: :select, collection: Venue.accessible_by(current_ability) },
+  event_tags_id_eq:               { slug: 'defaults.event_tags', type: :select, collection: EventTag.accessible_by(current_ability) },
+  date_range:                     { type: :date_range, options: {  start_date_attribute: 'start_date', end_date_attribute: 'end_date'} },
 
-<div class="row">
-  <div class="span12">
+  random_button:      { type: :submit_button, action: :Random },
+  on_this_day_button: { type: :submit_button, action: 'On This Day' }
+} 
 
-    <hr />
+search_form = render '/shared/pages/public/partials/search_form', search_fields: search_fields
+%>
 
-    <% @events.each do |event| %>
-      <article class="media">
-        <% image = image_tag event.fetch_image.variant(thumb_variant), class: "media-object" %>
-        <%= link_to image, event, class: "pull-left thumbnail" %>
-        <div class="media-body">
-          <header class="media-heading">
-            <h4 class="media-heading"><%= link_to event.name, event %></h4>
-          </header>  
-          <p><span class="date"><%= event.date_range true %></span></p>
-          <p><%= event.short_blurb %></p>
-          <p><%= link_to 'View Details', event %></p>
-        </div>
-      </article>
 
-      <hr />
+<% items = @events.collect { |event| { 
+  url: url_for(event),
+  image: event.fetch_image,
+  header: event.name,
+  paragraphs: [
+    { content: event.date_range(true), small: true },
+    { content: event.short_blurb }
+  ],
+  button_text: 'View Details'
+  } }
+%>
 
-    <% end %>
-
-    <%= will_paginate(@events) %>
-  </div>
-</div>
+<%= render 'shared/pages/public/index', search_form: search_form, items: items, resources: @events %>

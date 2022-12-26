@@ -14,7 +14,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     exclusions = [Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt, 
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo, 
-                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag]
+                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -24,7 +24,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   test 'aliases' do
     # The action on the left is granted if the action on the right is granted.
     # For example: If you can delete, you can destroy, but if you can destroy, you can't necessarily delete.
-    aliases = { destroy: :delete, edit: :update, grid: :read, reject: :approve, guidelines: :read }
+    aliases = { destroy: :delete, edit: :update, grid: :read, reject: :approve }
 
     aliases.each do |action, action_alias|
       # The aliases for action method is private, but we need to access it for this test.

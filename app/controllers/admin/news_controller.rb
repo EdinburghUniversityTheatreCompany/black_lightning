@@ -8,19 +8,6 @@ class Admin::NewsController < AdminController
   load_and_authorize_resource
 
   ##
-  # GET /admin/news/1
-  #
-  # GET /admin/news/1.json
-  ##
-  def show
-    respond_to do |format|
-      # This one just renders the non-admin news, so not generic.
-      format.html { render 'news/show' }
-      format.json { render json: @news }
-    end
-  end
-
-  ##
   # POST /admin/news
   #
   # POST /admin/news.json

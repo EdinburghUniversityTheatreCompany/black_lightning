@@ -11,6 +11,8 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
   def sign_up
     return if check_if_the_current_user_has_a_profile
 
+    @title = 'Sign-Up As Marketing Creative'
+  
     # If you don't specify this, it will try to load a profile with ID nothing.
     @profile = MarketingCreatives::Profile.new
 

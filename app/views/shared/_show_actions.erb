@@ -4,7 +4,14 @@
 <div>
   <%= get_link object, :edit, html_class: 'btn btn-primary' %>
 
-  <%= get_link object, :destroy, **destroy_link_params %>
+  <%- # Allows passing a whole replacement button (or '') to destroy_link_params to replace the button. %>
+  <% if destroy_link_params.is_a?(Hash) %>
+    <%= get_link object, :destroy, **destroy_link_params %>
+  <% else %>
+    <%= destroy_link_params %>
+  <% end %>
 
   <%= get_link object.class, :index, **index_link_params %>
+
+  <%= yield :extra_show_actions %>
 </div>

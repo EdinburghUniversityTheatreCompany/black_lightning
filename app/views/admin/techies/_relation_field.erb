@@ -1,5 +1,0 @@
-<div class="control-group fields"> 
-  <%= relation.input_field :id, collection: Techie.where.not(id: @techie.id) %>
-
-  <%= link_to_remove relation %>
-</div>

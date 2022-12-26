@@ -33,9 +33,9 @@ class Opportunity < ApplicationRecord
     return '' unless expiry_date > Time.now
 
     if active?
-      return 'class="success"'.html_safe
+      return 'table-success'.html_safe
     else
-      return 'class="error"'.html_safe
+      return 'table-danger'.html_safe
     end
   end
 end

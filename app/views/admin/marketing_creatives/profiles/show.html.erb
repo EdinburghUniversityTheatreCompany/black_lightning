@@ -1,33 +1,20 @@
-<h1><%= @title %></h1>
-
 <% fields = { 
   'ID' => (@profile.id if can?(:manage, @profile)),
   user: (get_link(@profile.user, :show) if can?(:manage, @profile) && @profile.user.present?),
-  approved: (bool_text(@profile.approved) if can?(:reject, @profile) || !@profile.approved) 
+  approved: (bool_text(@profile.approved) if can?(:reject, @profile) || !@profile.approved),
+  about: { type: 'markdown', markdown: @profile.about },
+  contact_details: { type: 'markdown', markdown: @profile.contact },
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
-
-<h3>About</h3>
-<%= render_markdown @profile.about %>
-
-<h3>Contact Details</h3>
-<%= render_markdown @profile.contact %>
-
 <% @profile.category_infos.each do |category_info| %>
-  <h3><%= category_info.category.name_on_profile %></h3>
-  <%= image_tag(category_info.fetch_image.variant(slideshow_variant)) %>
-  
-  <p>
-    <%= render_markdown category_info.description %>
-  </p>
-
-  <%= render '/shared/gallery', pictures: category_info.pictures, header_size: 4, include_horizontal_line: false %>
+  <% fields[category_info.category.name] = { type: 'content', content: render('category_info_on_profile', category_info: category_info) } %>
 <% end %>
 
-<%= render 'shared/show_actions', object: @profile %>
+<% content_for :extra_show_actions do %>
+  <%= get_link MarketingCreatives::Category, :index %>
 
-<%= get_link MarketingCreatives::Category, :index %>
+  <%= get_link @profile, :approve, condition: !@profile.approved %>
+  <%= get_link @profile, :reject, condition: @profile.approved, link_text: 'Hide' %>
+<% end %>
 
-<%= get_link @profile, :approve, condition: !@profile.approved %>
-<%= get_link @profile, :reject, condition: @profile.approved, link_text: 'Hide' %>
+<%= render('shared/pages/show', object: @profile, fields: fields) %>

@@ -20,7 +20,22 @@ module ApplicationHelper
     when :notice
       return 'alert-info', 'fas fa-info-circle'
     else
-      return '', ''
+      return 'alert-info', 'fas fa-info-circle'
+    end
+  end
+
+  def swal_alert_info(key)
+    case key.to_sym
+    when :error
+      return 'error'
+    when :alert
+      return 'warning'
+    when :success
+      return 'success'
+    when :notice
+      return 'info'
+    else
+      return 'info'
     end
   end
 

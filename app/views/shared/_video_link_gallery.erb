@@ -1,11 +1,24 @@
+<% # BOOTSTRAP NICETOHAVE: The Facebook renders now get a weird cut-off description. Probably should be fixed.%>
+
 <% include_header = true unless include_header.present? %>
 
 <% if video_links.any? then %>
   <% if include_header%>
     <h3>Videos</h3>
-    <% video_links.each do |video_link| %>
-    <h4><%= video_link.name %></h4>
-    <%= video_link.embed_code %>
-    <% end %>
   <% end %>
+
+  <div class="row row-cols-auto row-cols-1 row-cols-lg-2 g-3">
+    <% video_links.each do |video_link| %>
+      <div class="col">
+        <div class="card h-100">
+          <h4 class="card-header"><%= video_link.name %></h4>
+          <div class="card-body">
+            <%= video_link.embed_code %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
 <% end %>
+
+<div class="mb-3"></div>

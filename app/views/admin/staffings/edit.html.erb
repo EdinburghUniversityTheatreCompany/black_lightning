@@ -1,17 +1,13 @@
-<h1><%= @title %></h1>
 
-<%= simple_nested_form_for @staffing do |f| %>
-  <%= f.error_notification %>
+<%= simple_horizontal_form_for @staffing do |f| %>
+  <% content_for :extra_form_actions do %>
+    <%= render('staffings_grid_link', staffing: @staffing) %>
+  <% end %>
 
-  <div class="form-inputs">
+  <%= render('shared/pages/form', f: f) do %>
     <%= render 'form_base', f: f %>
 
     <%= f.input :start_time %>
     <%= f.input :end_time %>
-  </div>
-  
-  <div class="form-actions">
-    <%= render '/shared/form/form_actions', f: f, wrap_tags: false %>
-    <%= link_to('View Staffings Grid for this Show', grid_admin_staffings_path(@staffing.slug, archived: @staffing.end_time < Time.now), class: 'btn') %>
-  </div>
+  <% end %>
 <% end %>

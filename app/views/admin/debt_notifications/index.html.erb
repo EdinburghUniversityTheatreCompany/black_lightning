@@ -1,37 +1,14 @@
-<h1><%= @title %></h1>
+<% search_fields = { user_full_name_cont: { slug: 'defaults.name' } } %>
 
-<div class="row">
-    <div class="span12">
-        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_debt_notifications, html: { id: "search", class: "form-search" } do |f| %>
-            <%= f.input_field :user_first_name_cont, placeholder: "First Name",  required: false %>
-            <%= f.input_field :user_last_name_cont,  placeholder: "Last Name",   required: false %>
-            <%= f.submit :Search, class: 'btn' %>
-        <% end %>
-    </div>
-</div>
+<% headers = [:user, :sent_on, :notifcation_type] %>
 
-<% if @debt_notifications.empty? %>
-  <p>HAL could not find any debt notifications.</p>
-<% else %>
-  <table class='table'>
-    <thead>
-      <tr>
-      <%= content_tag :th, sort_link(@q, :user_full_name, 'User Name') %>
-      <%= content_tag :th, sort_link(@q, :sent_on, 'Sent On') %>
-      <%= content_tag :th, sort_link(@q, :notification_type, 'Notification Type') %>
-      </tr>
-    </thead>
+<% field_sets = @debt_notifications.map { |debt_notification| { 
+  fields: [
+    debt_notification,  
+    user_link(debt_notification.user, false),
+    debt_notification.sent_on,
+    debt_notification.notification_type
+  ] } } %>
 
-    <tbody>
-      <% @debt_notifications.each do |debt_notification| %>
-        <tr>
-          <td><%= user_link(debt_notification.user, false) %></td>
-          <td><%= debt_notification.sent_on %></td>
-          <td><%= debt_notification.notification_type %></td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-
-  <%= will_paginate(@debt_notifications) %>
-<% end %>
+<%= render 'shared/pages/index', resource_class: Admin::DebtNotification, resources: @debt_notifications, headers: headers, field_sets: field_sets, search_fields: search_fields, 
+  show_new_button: false, include_edit_button: false, include_link_to_item: false %>

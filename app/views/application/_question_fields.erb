@@ -1,8 +1,7 @@
 <%= render layout: '/shared/form/fields_for_template', locals: { 
-        f: f,
-        div_class_additions: 'question',
-        attributes: [:question_text, :response_type]
-    } do %>
+  f: f,
+  div_class_additions: 'question'
+} do %>
     <%= render layout: '/shared/form/md_editor', locals: { f: f, field: :question_text, rows: 6 } do %>
       <%= f.input :response_type, collection: Admin::Question.response_types %>
 

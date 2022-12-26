@@ -1,7 +1,0 @@
-<ul>
-  <%- attributes.each do |attribute| %>
-    <%- if f.error(attribute).present? %>
-      <li><%= f.full_error attribute %></li>
-    <% end %>
-  <%- end%>
-</ul>

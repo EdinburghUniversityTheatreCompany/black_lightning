@@ -1,0 +1,40 @@
+<% link_to_admin_events = false if link_to_admin_events.nil? %>
+
+<% # If there are less than the maximum amount of events on, decrease the amount of columns to give them more space. %>
+<% amount_of_events = items.size %>
+
+<% if amount_of_events > 0 %>
+  <% if col_size == 8 %>
+    <% # If there are 4 events, 2x2 is nicer than 3x1 + 1 %>
+    <% amount_of_events = 2 if amount_of_events == 4 %>
+
+    <% num_cols = {
+      md: [2, amount_of_events].min,
+      lg: [3, amount_of_events].min
+    } %>
+  <% elsif col_size == 12 %>
+    <% num_cols = {
+    sm: [2, amount_of_events].min,
+    md: [3, amount_of_events].min,
+    lg: [4, [2, amount_of_events].max].min
+  } %>
+  <% end %>
+
+  <div class="row g-3 row-cols-auto row-cols-1 <%= num_cols.map { |type, num| "row-cols-#{type}-#{num}" }.join(' ') %>">
+    <% items.each do |item| %>
+      <div class="col">
+        <div class="card h-100">
+          <% url = link_to_admin_events ? [:admin, item[:event]] : item[:event] %>
+          <% img = image_tag(item[:event].fetch_image.variant(medium_variant), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(thumb_variant_public))) %>
+          <%= link_to(img, url) %>
+
+          <div class="card-body d-flex flex-column">
+            <%= link_to(item[:event].name_and_author, url, class: 'card-title') %>
+
+            <%= render('shared/pages/public/partials/card_paragraphs', paragraphs: item[:paragraphs]) %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

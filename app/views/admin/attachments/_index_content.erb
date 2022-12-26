@@ -1,0 +1,14 @@
+<p>
+  Sort By: 
+  <% fields = %i[name start_date end_date] %>
+  <% fields.each_with_index do |field, i| %>
+    <%= sort_link(q, field) %>
+    <% if i < fields.length - 1 %>
+    -
+    <% end %>
+  <% end %>
+</p>
+
+<%= render('shared/attachments_gallery', attachments: attachments, include_item_link: true, include_header: false) %>
+
+<%=paginate(attachments) %>

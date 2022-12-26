@@ -1,7 +1,7 @@
 <% @hide_alert = true %>
 
 <% content_for :head do %>
-  <%= stylesheet_link_tag "login", media: "all" %>
+  <%= stylesheet_link_tag "admin", media: "all" %>
 <% end %>
 
 <div class="container">
@@ -19,8 +19,8 @@
   </div>
 
   <div class="">
-    <%= button_tag(type: 'submit', class: "btn") do %>
-      <i class="fa fa-ok" aria-hidden=”true”></i> Reset Password
+    <%= button_tag(type: 'submit', class: "btn btn-secondary") do %>
+      <i class="fas fa-check" aria-hidden=”true”></i> Reset Password
     <% end %>
     <%#= render "devise/shared/links" %>
   </div>

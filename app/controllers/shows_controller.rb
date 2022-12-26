@@ -1,7 +1,7 @@
 ##
 # Public controller for Show. More details can be found there.
 #
-# Uses Will_Paginate for pagination.
+# Uses paginate for pagination.
 ##
 class ShowsController < GenericEventsController
   def test_report_500
@@ -13,6 +13,6 @@ class ShowsController < GenericEventsController
   private
 
   def load_index_resources
-    return super.current
+    return super.current.reorder('start_date ASC')
   end
 end

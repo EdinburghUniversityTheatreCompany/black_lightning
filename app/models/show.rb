@@ -55,7 +55,7 @@ class Show < Event
   end
 
   def create_maintenance_debts
-    users.distinct.each do |user|
+    users.select(:id, :position, :last_name).distinct.each do |user|
       debts = user.admin_maintenance_debts.where(show_id: id)
 
       if debts.empty?
@@ -74,7 +74,7 @@ class Show < Event
   end
 
   def create_staffing_debts(total_amount)
-    users.distinct.each do |user|
+    users.select(:id, :position, :last_name).distinct.each do |user|
       amount = total_amount - user.admin_staffing_debts.where(show_id: id, converted: false).count
       amount.times do
         Admin::StaffingDebt.create!(

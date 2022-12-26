@@ -1,16 +1,10 @@
-<h1><%= @title %></h1>
-
 <% fields = { 
-  name: @event_tag.name
+  name: @event_tag.name,
+  description: { type: 'markdown', markdown: @event_tag.description } 
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
+<% content_for :extra_show_actions do %>
+  <%= get_link(Show, :index, link_text: 'View All Shows With Tag', query_params: { 'q[event_tags_id_eq]' => @event_tag.id } ) %>
+<% end %>
 
-<p>
-  <h3>Description</h3>
-  <%= render_markdown @event_tag.description %>
-</p>
-
-<%= render '/shared/show_actions', object: @event_tag %>
-
-<%= get_link Show, :index, link_text: 'All Shows With Tag', query_params: { 'q[event_tags_id_eq]' => @event_tag.id } %>
+<%= render('shared/pages/show', object: @event_tag, fields: fields) %>

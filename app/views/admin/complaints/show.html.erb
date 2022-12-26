@@ -1,12 +1,8 @@
-<h1><%= @title %></h1>
-
 <% fields = { 
   resolved: bool_text(@complaint.resolved),
   created_at: l(@complaint.created_at, format: :longy),
-  description: render_markdown(@complaint.description),
-  comments: render_markdown(@complaint.comments)
+  description: { type: 'markdown', markdown: @complaint.description },
+  comments: { type: 'markdown', markdown: @complaint.comments }
 } %>
 
-<%= render '/shared/basic_fields', fields: fields %>
-
-<%= render '/shared/show_actions', object: @complaint %>
+<%= render('shared/pages/show', object: @complaint, fields: fields) %>

@@ -28,8 +28,6 @@ class GetInvolvedControllerTest < ActionController::TestCase
     assert_nil assigns(:opportunities)
 
     assert_equal 'Acting', assigns(:editable_block).name
-
-    assert_equal get_subpages('get_involved/acting'), assigns(:subpages)
   end
 
   test 'should get 404' do

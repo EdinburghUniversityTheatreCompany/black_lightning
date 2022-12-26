@@ -1,57 +1,44 @@
-<div class="container">
-  <div class="span12">
-    <h1><%= @title = 'Register' %></h1>
+<h1><%= @title %></h1>
 
-    <p>
-      <%= display_block("Registration Help", false) %>
-    </p>
+<% # BOOTSTRAP NICETOHAVE: Might need some additional form rework. It looks pretty good. %>
 
-    <%= simple_form_for(@user, method: :patch, url: submit_membership_activation_token_path(@membership_activation_token)) do |f| %>      <%= f.error_notification %>
+<p>
+  <%= display_block("Registration Help", false) %>
+</p>
 
-      <% unless @user.persisted? %>
-        <p>If you already have an account, please sign in instead of completing this form twice. If you have problems signing in, please contact the Secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a></p>
-      <% end %>
+<%= simple_horizontal_form_for(@user, method: :patch, url: submit_membership_activation_token_path(@membership_activation_token)) do |f| %>
+  <%= f.error_notification %>
 
-      <div class="form-inputs">
-        <%= f.input :email, required: true, autofocus: true %>
+  <% unless @user.persisted? %>
+    <p>If you already have an account, please log in instead of completing this form twice. If you have problems logging in, please contact the Secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a></p>
+  <% end %>
 
-        <%= f.input :first_name, required: true %>
-        <%= f.input :last_name, required: true %>
+  <div class="form-inputs">
+    <%= f.input :email, required: true, autofocus: true %>
 
-        <%= f.input :phone_number, hint: 'It is not mandatory to enter your phone number. A phone number is only required once you want to sign up for staffing slots.' %>
+    <%= f.input :first_name, required: true %>
+    <%= f.input :last_name, required: true %>
 
-        <% unless @user.persisted? %>
-          <%= f.input :password, required: true %>
-          <%= f.input :password_confirmation, required: true %>
-        <% end %>
+    <%= f.input :phone_number, hint: 'It is not mandatory to enter your phone number. A phone number is only required once you want to sign up for staffing slots.' %>
 
-        <section>
-          <h3>Profile</h3>
-
-          <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
-          <%= f.input :bio %>
-          <%= f.input :avatar %>
-
-          <div div class="control-group">
-            <%= f.label "User Profile" %>
-
-            <div class="controls switch" data-on="success" data-on-label="Public" data-off="danger" data-off-label="Private" style="width: 200px;">
-              <%= f.input_field :public_profile, boolean_style: :inline %>
-            </div>
-          </div>
-        </section>
-
-      </div>
-
-      <%= render 'shared/consent' %>
-
-      <p>After activating your account you will be redirected to the sign-in page.</p>
-
-      <div class="form-actions">
-        <% button_text = @user.persisted? ? 'Reactivate Membership' : 'Activate Membership' %>
-        <%= f.button :submit, button_text %>
-      </div>
-
+    <% unless @user.persisted? %>
+      <%= f.input :password, required: true %>
+      <%= f.input :password_confirmation, required: true %>
     <% end %>
+
+     <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
+        <%- # BOOTSTRAP NICETOHAVE: This duplicates the user form. %>
+        <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+        <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
+        <%= f.input :public_profile, label: 'Enable Public Profle', hint: 'Display your profile on the public website as well as than just the members-only part?' %>
   </div>
-</div>
+
+  <%= render 'shared/consent' %>
+
+  <p>After activating your account, you will be redirected to the sign-in page.</p>
+
+  <div class="form-actions mb-3">
+    <% button_text = @user.persisted? ? 'Reactivate Membership' : 'Activate Membership' %>
+    <%= f.button :submit, button_text, class: 'btn btn-primary' %>
+  </div>
+<% end %>

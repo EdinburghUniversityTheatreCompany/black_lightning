@@ -33,8 +33,13 @@ module ActiveStorageHelper
     end
   end
 
+  # BOOTSTRAP NICETOHAVE: Look into the apropriateness of these dimensions.
   def thumb_variant(scale_factor = 1)
     return { resize_to_fill: [192 * scale_factor, 100 * scale_factor] }
+  end
+
+  def thumb_variant_public(scale_factor = 1)
+    return thumb_variant(1.5 * scale_factor)
   end
 
   def medium_variant
@@ -51,5 +56,13 @@ module ActiveStorageHelper
 
   def square_display_variant
     return { resize_to_fill: [700, 700] }
+  end
+
+  def variant_width_and_height_html(variant)
+    return { width: variant[:resize_to_fill][0], height: variant[:resize_to_fill][1] }
+  end
+
+  def base_width_and_height_html(image)
+    return { width: image.metadata['width'], height: image.metadata['height'] }
   end
 end

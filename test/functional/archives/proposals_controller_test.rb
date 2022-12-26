@@ -10,6 +10,6 @@ class Archives::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
 
     get :index, params: { commit: 'Random' }
-    assert_response 302
+    assert_redirected_to admin_proposals_proposal_path(assigns(:proposal))
   end
 end
