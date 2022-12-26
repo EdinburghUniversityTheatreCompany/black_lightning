@@ -16,7 +16,7 @@
     "jquery-ujs": "^1.2.2",
     "moment": "^2.29.4",
     "popper": "^1.0.1",
-    "stimulus": "^2.0.0",
+    "stimulus": "^3.2.1",
     "sweetalert2": "^11.4.20",
     "turbolinks": "^5.2.0",
     "vivagraphjs": "^0.12.0",
