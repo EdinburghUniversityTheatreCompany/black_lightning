@@ -1,13 +1,18 @@
 <% include_edit_button = true if include_edit_button.nil? %>
+<% include_link_to_item = true if include_link_to_item.nil? %>
 
 <% headers << '' if can?(:edit, resource_class) && include_edit_button %>
 
-<% field_sets.each_with_index do |fields, i| %>
+<% field_sets.each_with_index do |field_set, i| %>
   <% # Add an edit link to the end if the current user can edit the current instance.  %>
   <% # Assumes the first item is the instance.%>
-  <% fields << get_link(fields[0], :edit) if can?(:edit, fields[0]) && include_edit_button %>
+  <% field_set[:fields] << get_link(field_set[:fields][0], :edit) if can?(:edit, field_set[:fields][0]) && include_edit_button %>
 
-    <% fields[0] = get_link(fields[0], :show) %>
+  <% if include_link_to_item %>
+    <% field_set[:fields][0] = get_link(field_set[:fields][0], :show) %>
+  <% else %>
+    <% field_set[:fields].delete_at(0) %>
+  <% end %>
 <% end %>
 
 <%= render 'shared/table', headers: headers, field_sets: field_sets %>

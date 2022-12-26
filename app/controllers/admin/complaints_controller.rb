@@ -13,4 +13,8 @@ class Admin::ComplaintsController < AdminController
   def order_args
     ['resolved ASC', 'created_at DESC']
   end
+
+  def edit_title
+    "Comment on Complaint '#{@complaint.subject}'"
+  end
 end

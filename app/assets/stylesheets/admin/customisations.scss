@@ -1,0 +1,27 @@
+.btn-tool {
+    padding: 1rem .5rem !important;
+}
+
+.preloader{
+    opacity: 1;
+    transition: opacity 200ms linear;
+}
+// IF THE FOOTER POSITIONING BREAKS, uncomment this block, it will work
+// First port of call, check that <!doctype html> is present. Don't know why that fixes it but it does!
+
+/* .wrapper {
+    min-height: 100%;
+    height: auto !important;
+    position: absolute;
+}
+.content-wrapper{
+    bottom: 50px;
+    position: block;
+    top: 50px;
+}
+.main-footer{
+    bottom: 0px;
+    position: block;
+ } */
+
+//This fixes content hiding behind the fixed navbar

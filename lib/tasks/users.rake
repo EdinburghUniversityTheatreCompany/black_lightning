@@ -35,7 +35,7 @@ namespace :users do
     all = User.all.count
     p "We have #{User.all.count} users, of which #{User.with_role(:member).count} are members"
     percentage = 1 - (User.where(['sign_in_count = ?', 0]).count.to_f / all)
-    p "#{percentage} of users have set a password and signed in at least once."
+    p "#{percentage} of users have set a password and logged in at least once."
     phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
     p "#{phones} of users have given us their phone number."
   end

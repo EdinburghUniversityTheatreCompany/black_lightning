@@ -1,34 +1,27 @@
-<%= simple_nested_form_for [:admin, @season] do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+<%= simple_horizontal_form_for [:admin, @season] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
     <%= render 'admin/events/basic_form', f: f %>
 
     <%= render '/shared/form/sections/team_members', f: f %>
 
-    <div class="form-horizontal">
-      <h3>Events</h3>
-      <% if @season.new_record? %>
-        You can add events after creating the season.
-      <% else%>
-        <%= render layout: '/shared/collapsible_section', locals: { title: 'Events' } do %>
-          <% if f.object.errors[:events].present? then %>
-            <p id="events_errors" class="alert alert-error">
-              <%= f.error :events %>
-            </p>
-          <% end %>
-
-          <p>
-            The list of events that can be added to the season will not automatically update after changing the start or end date.
-            You have to save the season and start editing it again to refresh the list.
+    <h3>Events</h3>
+    <% if @season.new_record? %>
+      You can add events after creating the season.
+    <% else%>
+      <%= render layout: '/shared/collapsible_section', locals: { title: 'Events' } do %>
+        <% if f.object.errors[:events].present? then %>
+          <p id="events_errors" class="alert alert-danger">
+            <%= f.error :events %>
           </p>
-          
-          <%= f.collection_check_boxes(:event_ids, @season.simultaneous_events, :id, ->(event) { render 'event_label', event: event }) do |b| %>
-            <%= b.label { "#{b.check_box}   #{b.text}".html_safe } %>
-          <% end %>
-        <% end%>
-      <% end %>
-    </div>
+        <% end %>
 
-    <%= render '/shared/form/form_actions', f: f %>
+        <p>
+          The list of events that can be added to the season will not automatically update after changing the start or end date.
+          You have to save the season and start editing it again to refresh the list.
+        </p>
+        
+        <%= f.input(:event_ids, collection: @season.simultaneous_events, as: :check_boxes, label: false, label_method: ->(event) { render('event_label', event: event) }) %>
+      <% end%>
+    <% end %>
+  <% end %>
 <% end %>

@@ -8,8 +8,8 @@
 
 <% archived ||= nil %>  
   
-<% # TODO: Styling it using Bootstrap does not work. It might work better in Bootstrap 4. %>
-  <table class="table">
+<% # BOOTSTRAP NICETOHAVE: Shared table? %>
+  <table class="table table-hover">
     <thead>
         <tr>
           <th scope="col" style="width: 48%;">Name</th>
@@ -24,7 +24,7 @@
           <% dates = staffings.collect {|staffing| staffing.start_time.to_date } .sort %>
           <% date_range = time_range_string dates.first, dates.last, true, :short %>
 
-          <% # Yes, this looks messy, but we got passed an array and not an object, so there is not much choice. %>
+          <% # Yes, this looks messy, but we got passed an array and not a query result, so there is not much choice. %>
           <% filled_positions = 0 %>
           <% unfilled_positions = 0 %>
 
@@ -46,7 +46,3 @@
       <% end %>
     </tbody>
 </table>
-
-
-
-

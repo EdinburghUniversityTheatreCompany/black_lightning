@@ -9,15 +9,11 @@ class Admin::RolesController < AdminController
     @users = @q.result
                .accessible_by(current_ability)
 
-    # Using a token is not the nicest way of handling the adding, but it works.
-    # It's a bit annoying because /shared/form/user_field needs a model to work.
-    @token = MembershipActivationToken.new
-
     super
   end
 
   def add_user
-    user_id = params[:membership_activation_token][:user_id]
+    user_id = params[:add_user_details][:user_id]
 
     user = User.find_by(id: user_id)
 

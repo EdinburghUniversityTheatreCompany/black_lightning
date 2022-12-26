@@ -1,7 +1,7 @@
 ##
 # Public controller for Workshop. More details can be found there.
 #
-# Uses Will_Paginate for pagination.
+# Uses paginate for pagination.
 ##
 class WorkshopsController < GenericEventsController
 

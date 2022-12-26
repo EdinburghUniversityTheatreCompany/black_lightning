@@ -6,14 +6,14 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
   end
 
   test 'get activate for new user' do
-    # Should not be signed in.
+    # Should not be logged in.
 
     get :activate, params: { id: @token }
 
     assert_response :success
 
     # I was not quite sure how to best test that the user form is present, so I'm just testing if the hint is present.
-    assert_match 'If you already have an account, please sign in instead of completing this form twice.', response.body
+    assert_match 'If you already have an account, please log in instead of completing this form twice.', response.body
     assert_not assigns(:user).persisted?
   end
 
@@ -32,16 +32,16 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert assigns(:user).persisted?
   end
 
-  test 'cannot get activate when signed in while the token does not have an user' do
+  test 'cannot get activate when logged in while the token does not have an user' do
     sign_in FactoryBot.create(:member)
 
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['This token belongs to a new user, but you are already signed in.'], flash[:error]
+    assert_equal ['This token belongs to a new user, but you are already logged in.'], flash[:error]
   end
 
-  test 'cannot get activate when signed in as the wrong user' do
+  test 'cannot get activate when logged in as the wrong user' do
     @token.update_attribute(:user, FactoryBot.create(:user))
 
     sign_in FactoryBot.create(:user)
@@ -52,7 +52,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_equal ['This token belongs to a different user.'], flash[:error]
   end
 
-  test 'cannot get activate when the user thatthe token belongs to is signed in as member' do
+  test 'cannot get activate when the user thatthe token belongs to is logged in as member' do
     member = FactoryBot.create(:member)
     sign_in member
 
@@ -64,13 +64,13 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_equal ['You have already activated your account.'], flash[:error]
   end
 
-  test 'cannot submit when not signed in but the token belongs to an user' do
+  test 'cannot submit when not logged in but the token belongs to an user' do
     @token.update_attribute(:user, FactoryBot.create(:user))
 
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['This token belongs to an existing user, but you are not signed in. Please sign in and try again.'], flash[:error]
+    assert_equal ['This token belongs to an existing user, but you are not logged in. Please log in and try again.'], flash[:error]
   end
 
   test 'submit for new member' do
@@ -116,7 +116,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_not assigns(:user).persisted?
 
     # The user form has to be present, even though a user is passed, but this user has not persisted yet.
-    assert_match 'If you already have an account, please sign in instead of completing this form twice.', response.body
+    assert_match 'If you already have an account, please log in instead of completing this form twice.', response.body
   end
 
   test 'cannot submit with invalid user attributes' do

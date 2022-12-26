@@ -1,0 +1,11 @@
+<% fields = { 
+  title: @carousel_item.title,
+  tagline: @carousel_item.tagline,
+  carousel_name: @carousel_item.carousel_name,
+  is_active: @carousel_item.is_active,
+  order: @carousel_item.ordering,
+  url: @carousel_item.url,
+  image: { type: 'image', image: @carousel_item.image, variant: slideshow_variant },
+} %>
+
+<%= render('shared/pages/show', object: @carousel_item, fields: fields) %>

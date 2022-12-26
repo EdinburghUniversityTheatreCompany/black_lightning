@@ -23,8 +23,6 @@ class Admin::StaffingDebt < ApplicationRecord
 
   before_create :associate_staffing_debt_with_existing_staffing_job
 
-  default_scope { includes(:user) }
-
   # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
   # If you change this, please also change the functions that return upcoming debts in the user model.
   # Yes, that's not very DRY but now the functions in user.rb can be a database query instead of something with select.
@@ -62,13 +60,13 @@ class Admin::StaffingDebt < ApplicationRecord
   def css_class
     case status.to_sym
     when :not_signed_up
-      'warning'
+      'table-warning'
     when :awaiting_staffing
       ''
     when :completed_staffing, :forgiven
-      'success'
+      'table-success'
     when :causing_debt
-      'error'
+      'table-danger'
     end
   end
 

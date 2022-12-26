@@ -5,22 +5,14 @@
     } do %>
     <%= f.input :name, placeholder: "Attachment Name" %>
 
-    <%= f.input_field :file %>
+    <% # BOOTSTRAP NICETOHAVE: This is currently not formatted great. %>
 
-    <%= link_to_remove f %>
-
-    <% if f.object.file.attached? %>
-        <br />
-        <%= get_file_attached_hint(f.object.file) %>
-    <% end %>
-
-    <br>
+    <%= render 'shared/form/file_field', f: f, field_name: :file %>
 
     <%= f.input :access_level, collection: Attachment::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>
 
-    <br>
+    <%= f.input(:attachment_tag_ids, collection: AttachmentTag.accessible_by(current_ability), as: :check_boxes, label: 'Tags', label_method: ->(attachment_tag) { get_link(attachment_tag, :show, link_text: attachment_tag.name, target: :blank) }) %>
 
-    <%= f.collection_check_boxes(:attachment_tag_ids, AttachmentTag.accessible_by(current_ability), :id, ->(attachment_tag) { get_link attachment_tag, :show, link_text: attachment_tag.name, target: :blank }) do |checkbox| %>
-        <%= checkbox.label { "#{checkbox.check_box}   #{checkbox.text}".html_safe} %>
-    <% end %>
+    <%= link_to_remove f %>
+    <hr />
 <% end %>

@@ -8,7 +8,7 @@ class Admin::DebtsController < AdminController
 
     @users = @users.in_debt if params[:show_in_debt_only] == '1'
 
-    @users = @users.paginate(page: params[:page], per_page: 15)
+    @users = @users.page(params[:page]).per(15)
 
     respond_to do |format|
       format.html

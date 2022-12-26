@@ -1,20 +1,30 @@
-<div class="modal hide" id="template_modal" role="dialog" aria-labelledby="template_modal_header" aria-hidden="true">
-  <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-    <h3 id="template_modal_header"><%= header %></h3>
-  </div>
-  <div class="modal-body">
+<!-- Modal -->
+<div class="modal fade" id="template_modal" tabindex="-1" aria-labelledby="template_modal_header" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="template_modal_header"><%= header %></h5>
+        <% # BOOTSTRAP 5: Needs upgrading. %>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
     <form id="template_selector">
-      <select id="template_list">
+      <select id="template_list" class="form-control simple-select2">
         <option></option>
       </select>
       <div id="template_summary">
       </div>
     </form>
-  </div>
-  <div class="modal-footer">
-    <%= get_link(template_model, :index, link_text: 'Edit Templates', html_class: 'btn pull-left') %>
-    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-    <button id="template_load" class="btn btn-primary disabled">Load template</button>
+      </div>
+      <div class="modal-footer">
+        <%- # BOOTSTRAP 5: float-start instead of float-left and remove the data-dismiss (without bs) %>
+        <%= get_link(template_model, :index, link_text: 'Edit Templates', html_class: 'btn btn-secondary float-left') %>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" data-bs-dismiss="modal">Close</button>
+        <%- # Has a data-dismiss as well so it dismisses after/during loading. Doing it with JS code does not want to work, but this works fine too. %>
+        <button type="button" class="btn btn-primary disabled" id="template_load" data-dismiss="modal" data-bs-dismiss="modal">Load Template</button>
+      </div>
+    </div>
   </div>
 </div>

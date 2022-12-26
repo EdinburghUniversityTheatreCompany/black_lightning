@@ -1,105 +1,68 @@
 <div class="row">
-  <div class="span8">
-    <div id="showSlider" class="carousel slide" <%= "data-interval=false" if mobile_device? %>>
+  <div class="col-md-8">
+    <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items) %>
 
-      <div class="carousel-inner <%= "carousel-inner-mobile" if mobile_device? %>">
-        <% @events.each do |event| %>
-          <% event_path = url_for(event) %>
-          <div class="<%= "active" if event == @events.first %> item">
-            <% if mobile_device? %>
-              <div style="margin: 0 70px;" class="mobile-carousel">
-                <%= link_to "<h4>#{event.name}</h4>".html_safe, event_path %>
-                <p><%= event.tagline %> - <b><span class="show-date"><%= event.date_range true %></span></b></p>
-              </div>
-            <% else %>
-              <%= link_to (image_tag event.fetch_image.variant(slideshow_variant)).html_safe,  event_path %>
-              <div class="carousel-caption">
-                <%
-                  caption_text = "<h4>#{event.name}</h4>"
-                  caption_text += " by #{event.author}" if event.author?
-                %>
-                <%= link_to caption_text.html_safe,  event_path %>
-                <p>
-                  <%= "#{event.tagline} - " if event.tagline? %>
-                  <b><span class="show-date"><%= event.date_range true %></span></b>
-                  <%= " - #{event.price}" if event.price? %>
-                </p>
-              </div>
-            <% end %>
-          </div>
-
-        <% end %>
-
-        <% if @events.empty? && !(mobile_device?) then %>
-          <%# between 1st June and 1st September, advertise Bedlam Fringe %>
-          <% year = Date.current.year %>
-          <% if (Date.new(year, 6, 01)..Date.new(year, 8, 30)).include? Date.current then %>
-            <a href="http://www.bedlamfringe.co.uk">
-              <img src="/images/fringe.png" />
-            </a>
-          <% else %>
-            <img src="/images/no-shows.png" />
-          <% end %>
-        <% end %>
-
+    <div class="card">
+      <div class="card-body">
+        <p class="card-text">
+        <%= display_block("Home", false) %>
+        </p>
       </div>
-
-      <!-- Carousel nav -->
-      <% if @events.count > 1 then %>
-          <a class="carousel-control left" href="#showSlider" data-slide="prev">&lsaquo;</a>
-          <a class="carousel-control right" href="#showSlider" data-slide="next">&rsaquo;</a>
-      <% end %>
     </div>
 
-    <div class="row">
-      <% if block_exists("Home") %>
-        <div class="span8">
-          <%= display_block("Home", false) %>
-        </div>
-      <% else %>
-        <div class="span8"></div>
-      <% end %>
-    </div>
+    <div class="card mt-3">
+      <div class="card-body">
+        <h3 class="card-title">What's On</h3>
+        <% if @events.empty? %>
+          <%= display_block("Home - No Events On", false) %>
+        <% else %>
+          <% items = @events.collect { |event| {
+            event: event,
+            paragraphs: [
+              { content: event.date_and_price, small: true },
+              { content: event.short_blurb },
+              { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
+            ] } } %>
 
-    <div class="row content">
-      <% @news.each do |news| %>
-      <div class="span4">
-        <div>
-          <%= link_to (image_tag news.fetch_image.variant(medium_variant)), news_path(news) unless mobile_device? %>
-          <h4><%= link_to news.title, news_path(news) %></h4>
-          <%= truncate_markdown(news.body, 140) %>
-          <%= link_to 'Read More', news_path(news) %>
-        </div>
+          <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
+        <% end %>
       </div>
-      <% end %>
     </div>
   </div>
 
-  <!-- SIDEBAR -->
-  <hr class="visible-phone" />
+  <div class="col-md-4">
+      <div class="card mt-md-0 mt-sm-3">
+        <div class="card-body">
+          <h3 class="card-title">Book Now</h3>
+          <p class="card-text">
+            Please note only some events are shown below. Events in some other venues might be available on their own booking sites. If in doubt, please check the event page directly!
+            <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
+            <script type="text/javascript" src="https://pretix.eu/widget/v1.en.js" async></script>
+            <pretix-widget event="https://tickets.bedlamtheatre.co.uk/" style="list"></pretix-widget>
+          </p>
+        </div>
+      </div>
 
-  <div class="span4">
-    <h3><%= link_to '@BedlamTheatre', 'https://twitter.com/bedlamtheatre' %></h3>
-    <div>
-      <% twitter_timeline.each do |tweet| %>
-        <p>
-          <small>
-            <%= auto_link_tweet(tweet) %>
-            <span class="tweet-date">
-              <%= l tweet.created_at, format: :short if tweet.created_at %>
-            </span>
-          </small>
-        </p>
-      <% end %>
+    <div class="card mt-3">
+      <h3 class="card-header">News</h3>
+
+      <ul class="list-group list-group-flush">
+        <% @news.each do |news_item| %>
+          <li class="list-group-item">
+            <h5 class="card-title"><%= link_to news_item.title, news_path(news_item) %></h5>
+
+            <p class="card-text"><small class="text-muted"><%= l(news_item.publish_date, format: :longy) %> by <%= news_item.author.name(@current_user) %></small></p>
+
+            <p class="card-text"><%= truncate_markdown(news_item.body, 140) %></p>
+
+            <p class="card-text"><%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %></p>
+          </li>
+        <% end %>
+      </ul>
+
+      <div class="card-footer">
+        <%= link_to 'Read all news', news_index_path %>
+      </div>
     </div>
-
-    <hr />
-
-    <h3><%= link_to "Archives", archives_index_path %></h3>
-    <% if @last_event %>
-      <%= link_to @last_event.name, @last_event %>
-      <% image = image_tag @last_event.fetch_image.variant(medium_variant) %>
-      <%= link_to image, @last_event, class: "thumbnail" unless mobile_device? %>
-    <% end %>
   </div>
 </div>

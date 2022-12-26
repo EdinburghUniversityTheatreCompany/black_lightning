@@ -1,4 +1,4 @@
-<h1><%= @title %></h1>
+<%- # It is a bit ugly, but currently unused. You can use a card list style, or a whole index page. %>
 
 <% @feedbacks.each do |feedback| %>
   <hr />
@@ -10,5 +10,5 @@
     <div>
       <%= get_link feedback, :edit, link_target: edit_admin_show_feedback_path(@show, feedback) %>
     </div>
-  </tr>
+  </div>
 <% end %>

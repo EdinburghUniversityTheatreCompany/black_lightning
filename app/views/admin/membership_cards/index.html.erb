@@ -1,26 +1,14 @@
-<%= @title = 'Membership Cards' %>
+<% headers = [:card_number, :member_name] %>
 
-<h1>Membership Cards</h1>
+<% field_sets = @news.map { |news| {
+  fields: [
+    card,
+    user_link(card.user, false)
+  ] } } %>
 
-<table class="table">
-  <tr>
-    <th>Card Number</th>
-    <th>Member Name</th>
-  </tr>
+<% search_fields = {
+    card_number_cont: { slug: 'defaults.card_number' },
+    user_full_name_cont:  { slug: 'defaults.name' }
+} %>
 
-<% @cards.each do |card| %>
-  <tr>
-    <td>
-      <%= get_link card, :show, link_text: card.card_number %>
-    </td>
-
-    <td>
-      <%= user_link(card.user, false) %>
-    </td>
-  </tr>
-<% end %>
-</table>
-
-<%= will_paginate(@cards) %>
-
-<%= get_link MembershipCard, :new %>
+<%= render 'shared/pages/index', resource_class: MembershipCard, resources: @cards, headers: headers, field_sets: field_sets, search_fields: search_fields %>

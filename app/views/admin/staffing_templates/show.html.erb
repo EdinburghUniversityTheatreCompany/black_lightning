@@ -1,9 +1,7 @@
-<h1><%= @title %></h1>
+<% fields = {} %>
 
-<ul>
-  <% @staffing_template.staffing_jobs.each do |job| %>
-    <li><%= job.name %></li>
-  <% end %>
-</ul>
+<% @staffing_template.staffing_jobs.each do |job| %>
+  <% fields[job.id] = { type: 'content', content: job.name } %>
+<% end %>
 
-<%= render '/shared/show_actions', object: @staffing_template %>
+<%= render('shared/pages/show', object: @staffing_template, fields: fields) %>

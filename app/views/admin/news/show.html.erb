@@ -1,0 +1,12 @@
+<% fields = { 
+  title: @news.title,
+  slug: @news.slug,
+  publish_date: l(@news.publish_date, format: :longy),
+  updated_at: l(@news.updated_at, format: :longy),
+  author: link_to(@news.author.name(@current_user), admin_news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))),
+  show_public: @news.show_public,
+  image: { type: 'image', image: @news.image },
+  body: { type: 'markdown', markdown: @news.body }
+} %>
+
+<%= render('shared/pages/show', object: @news, fields: fields) %>

@@ -1,20 +1,10 @@
 <%# Based on the very similar _team_member_fields.erb file %>
 
-<% error = f.error(:name).present? || f.error(:user).present? %>
-
-<div class="job control-group fields <%= "error" if error %>">
-    <%= f.hidden_field :id %>
-
-    <% name_field = [f.input_field(:name, placeholder: 'Job')] %>
-
-    <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: name_field %>
-
-    <%= link_to_remove f %>
-
-    <% if error %>
-        <p>
-            <%= f.full_error :name %>
-            <%= f.full_error :user %>
-        </p>
-    <% end %>
-</div>
+<%= render '/shared/form/inline_fields_for_template', 
+  f: f,
+  div_class_additions: 'job',
+  fields: [
+    { field: f.hidden_field(:id) + f.input(:name, placeholder: 'Job', wrapper: :inline_form), col_modifier: 'auto' },
+    { field: render('shared/form/user_field', f: f, wrapper: :inline_form) },
+    { field: link_to_remove(f), col_modifier: 'auto' },
+  ] %>

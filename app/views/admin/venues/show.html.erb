@@ -1,21 +1,15 @@
-<h1><%= @title %></h1>
-
 <% fields = {
   name: @venue.name,
   tagline: @venue.tagline,
   location: @venue.location,
   image: 'No Image',
-  description: render_markdown(@venue.description)
+  description: render_markdown(@venue.description),
+  image: { type: 'image', image: @venue.fetch_image, variant: slideshow_variant },
+  gallery: { type: 'content', content: render('/shared/gallery', pictures: @venue.pictures.accessible_by(current_ability, :show)) }
 } %>
 
-<% if @venue.image.attached? && !@venue.image.filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-  <% fields[:image] = image_tag(@venue.fetch_image.variant(slideshow_variant)) %>
+<% content_for :extra_show_actions do %>
+  <%= get_link Show, :index, link_text: 'All Shows in Venue', query_params: { 'q[venue_id_eq]' => @venue.id } %>
 <% end %>
 
-<%= render 'shared/basic_fields', fields: fields %>
-
-<%= render '/shared/gallery', pictures: @venue.pictures %>
-
-<%= render 'shared/show_actions', object: @venue %>
-
-<%= get_link Show, :index, link_text: 'All Shows in Venue', query_params: { 'q[venue_id_eq]' => @venue.id } %>
+<%= render('shared/pages/show', object: @venue, fields: fields) %>

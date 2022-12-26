@@ -1,33 +1,14 @@
-<h1><%= @title %></h1>
+<% headers = [:name, ''] %>
 
-<p>
-  <%= display_block("Picture Tags Description", true) %>
-</p>
+<% field_sets = @picture_tags.map { |picture_tag| { 
+  fields: [
+    picture_tag,  
+    get_link_to_pictures_for_tag(picture_tag)
+  ] } } %>
 
-<table class="table">
-  <tr>
-    <th>Name</th>
+<% search_fields = {
+    name_cont:        { slug: 'defaults.name' },
+    description_cont: { slug: 'defaults.description'}
+} %>
 
-    <% if can? :index, Picture%>
-      <th></th>
-    <% end %>
-
-    <% if can? :edit, PictureTag %>
-      <th></th>
-    <% end %>
-  </tr>
-
-  <% @picture_tags.each do |picture_tag| %>
-    <tr>
-      <td><%= get_link picture_tag, :show %></td>
-
-      <td><%= get_link_to_pictures_for_tag(picture_tag) %></td>
-
-      <%= get_link picture_tag, :edit, wrap_tag: 'td' %>
-    </tr>
-  <% end %>
-</table>
-
-<%= will_paginate(@picture_tags) %>
-
-<%= get_link PictureTag, :new %>
+<%= render 'shared/pages/index', resource_class: PictureTag, resources: @picture_tags, headers: headers, field_sets: field_sets, search_fields: search_fields %>

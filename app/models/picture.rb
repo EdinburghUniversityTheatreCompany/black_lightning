@@ -32,6 +32,10 @@ class Picture < ApplicationRecord
 
   ACCESS_LEVELS = Attachment::ACCESS_LEVELS
 
+  def self.include_images
+    return self.includes({ image_attachment: :blob} )
+  end
+
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached?
 

@@ -44,7 +44,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     # It would be nice to check the dimensions of the response.
   end
 
-  test 'should not get file for admin page editable_block when not signed in' do
+  test 'should not get file for admin page editable_block when not logged in' do
     admin_editable_block = admin_editable_blocks(:admin)
     attachment = FactoryBot.create(:attachment, item: admin_editable_block, access_level: 2)
 
@@ -53,7 +53,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     assert_response 403
   end
 
-  test 'should get file for admin page editable_block when signed in as admin' do
+  test 'should get file for admin page editable_block when logged in as admin' do
     sign_in users(:admin)
     admin_editable_block = admin_editable_blocks(:admin)
     attachment = FactoryBot.create(:attachment, item: admin_editable_block)

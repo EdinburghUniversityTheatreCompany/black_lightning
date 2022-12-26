@@ -1,29 +1,10 @@
-<h1><%= @title %></h1>
+<% fields = { 
+  item: @fault_report.item,
+  severity: @fault_report.severity.humanize,
+  status: @fault_report.status.humanize,
+  reported_by: @fault_report.reported_by_name,
+  fixed_by: @fault_report.fixed_by_name,
+  description: { type: 'markdown', markdown: @fault_report.description }
+} %>
 
-<div>
-  <dl>
-    <dt>Item</dt>
-    <dd><%= @fault_report.item %></dd>
-  <dl>
-    <dt>Severity</dt>
-    <dd><%= @fault_report.severity.humanize %></dd>
-  </dl>
-  <dl>
-    <dt>Status</dt>
-    <dd><%= @fault_report.status.humanize %></dd>
-  </dl>
-  <dl>
-    <dt>Reported by</dt>
-    <dd><%= @fault_report.reported_by_name %></dd>
-  </dl>
-  <dl>
-    <dt>Fixed by</dt>
-    <dd><%= @fault_report.fixed_by_name %></dd>
-  </dl>
-</div>
-<hr />
-<div>
-  <%= render_markdown @fault_report.description %>
-</div>
-
-<%= render 'shared/show_actions', object: @fault_report %>
+<%= render('shared/pages/show', object: @fault_report, fields: fields) %>

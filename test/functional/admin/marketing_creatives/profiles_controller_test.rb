@@ -167,13 +167,13 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     get :edit, params: { id: @profile }
     assert_response :success
 
-    assert_not_includes response.body, '<input class="user_id"'
+    assert_not_includes response.body, 'id="marketing_creatives_profile_user_id"'
   end
 
   test 'should show user field if the user can manage' do
     get :edit, params: { id: @profile }
 
-    assert_includes response.body, '<input class="user_id"'
+    assert_includes response.body, 'id="marketing_creatives_profile_user_id"'
   end
 
   test 'should update profile' do

@@ -25,3 +25,7 @@ admin:
 event_members_only_text_default:
   name: "Event Members-Only Text Default"
   content: "This is the default text for the members-only text field."
+
+welcome email:
+  name: "Email - Welcome Email"
+  content: "This is the test welcome email content"

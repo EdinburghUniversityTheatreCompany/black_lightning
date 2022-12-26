@@ -17,7 +17,6 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
 
     assert_not_nil assigns(:staffing_debts)
     assert_not assigns(:is_specific_user)
-    assert_not assigns(:show_fulfilled)
   end
 
   # Members can by default only see their own debts.
@@ -31,7 +30,6 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
     assert_equal [other_staffing_debt], assigns(:staffing_debts).to_a
     assert_not_includes assigns(:staffing_debts), @staffing_debt
     assert assigns(:is_specific_user)
-    assert assigns(:show_fulfilled)
   end
 
   test 'should get index with user ID' do
@@ -42,7 +40,6 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
 
     assert_equal [@staffing_debt], assigns(:staffing_debts).to_a
     assert assigns(:is_specific_user)
-    assert assigns(:show_fulfilled)
   end
 
   test 'should get show' do

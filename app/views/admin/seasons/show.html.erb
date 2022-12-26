@@ -1,18 +1,17 @@
-<h1><%= @title %></h1>
-
-<%= render 'admin/events/basic_show', event: @season %>
-
-<h3>Events</h3>
-<% @season.events.reorder(:start_date).each do |event| %>
-  <p><%= render 'event_label', event: event %></p>
+<% content_for :event_labels do %>  
+  <ul class="list-group list-group-flush">
+    <% @season.events.reorder(:start_date).each do |event| %>
+      <li class="list-group-item py-1">
+        <div class="row">
+          <%= render 'event_label', event: event %>
+        </div>
+      </li>
+    <% end %>
+  </ul>
 <% end %>
 
-<%= render '/shared/gallery', pictures: @season.pictures %>
+<% extra_fields = {
+  event_labels:   { type: 'content', header: 'Events', content: yield(:event_labels) }
+} %>
 
-<%= render 'shared/attachments_gallery', attachments: @season.all_attachments.accessible_by(current_ability) %>
-
-<%= render 'shared/video_link_gallery', video_links: @season.video_links.accessible_by(current_ability) %>
-
-<%= render '/shared/show_actions', object: @season %>
-
-<%= render 'admin/events/questionnaires', event: @season %>
+<%= render('admin/events/basic_show', event: @season, extra_fields: extra_fields) %>

@@ -1,25 +1,11 @@
-<h1><%= @title %></h1>
+<% search_fields = {
+    image_blob_filename_cont: { slug: 'defaults.filename' },
+    gallery_of_Event_type_name_or_gallery_of_Venue_type_name_cont: { slug: 'defaults.gallery' },
+    description_cont: { slug: 'defaults.description' },
+    picture_tags_id_eq: { slug: 'defaults.picture_tags', type: :select, collection: PictureTag.accessible_by(current_ability) }
+} %>
 
-<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
-    <% search_form_for @q, builder: SimpleForm::FormBuilder, url: :admin_pictures, html: { id: "search", class: "form-search" } do |f| %>
-    <%= f.input_field :image_blob_filename_cont, placeholder: 'Filename',  required: false %>
+<% content = render('admin/pictures/index_content', pictures: @pictures) %>
 
-    <%= f.input_field :gallery_of_Event_type_name_or_gallery_of_Venue_type_name_cont, placeholder: 'Gallery Name',  required: false %>
-
-    <%= f.input_field :description_cont, placeholder: 'Description',  required: false %>
-
-    <% # If, for whatever reason, the symbol of this field changes, you also have to change the link generated in the picture_tags_helper. %>
-    <%= f.input_field :picture_tags_id_eq, collection: PictureTag.accessible_by(current_ability) %>
-
-    <br>
-    <br>
-
-    <% # TODO: Generic date thing for pictures and attachments %>
-
-    <%= f.submit :Search, class: 'btn btn-primary' %>
-  <% end %>
-<% end %>
-
-<%= render 'shared/gallery', pictures: @pictures, include_item_link: true, include_header: false %>
-
-<%= will_paginate(@pictures) %>
+<%= render 'shared/pages/index', resource_class: Picture, resources: @pictures, content: content, search_fields: search_fields, 
+  show_new_button: false %>

@@ -1,17 +1,9 @@
-<% all_users ||= false %>
-<% include_label = true  if include_label.nil? %>
-<div class="control-group fields <%= "error" if f.error(:user).present? %>">
-  <%= f.label(:user_id) if include_label %>
-  <%= render 'shared/form/user_typeahead_field', f: f %>
-  <p><%= f.full_error :user %></p>
+<% all_users = can?(:add_non_members, f.object) if all_users.nil? %>
+<% field = :user if field.nil? %>
+<% label = nil if label.nil? %>
+<% wrapper = nil if wrapper.nil? %>
 
-  <% content_for :head do %>
-    <% if all_users %>
-      <meta name="all-users" content="true" />
-    <% end %>
-
-    <%= javascript_include_tag "admin/user_typeahead_field.js" %>
-  <% end %>
-
-  <input type="hidden" name="autocomplete_users_list" value="true">
-</div>
+<%- # Enables ajax calls on the select2 to get the user names. %>
+<%- # Tries to get the current value of the field and make it the only item in the collection so the default is shown. %>
+<% coll = User.where(id: f.object.send(field).try(:id)) %>
+<%= f.association(field, collection: coll, label: label, wrapper: wrapper, input_html: { 'remote-source' => '/admin/users/autocomplete_list', 'all-users' => all_users ? '1' : nil}) %>

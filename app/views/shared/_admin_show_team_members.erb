@@ -1,6 +1,5 @@
-
 <% deadline = nil if deadline.nil? %>
-
+<% team_members = team_members.includes(:user) %>
 <% user_is_part_of_proposal = team_members.collect(&:user).include?(current_user) %>
 
 <h3>Team</h3>
@@ -8,7 +7,7 @@
 <% team_members.each do |team_member| %>
   <% continue if team_member.nil? %>
 
-  <p>
+  <p class="py-0 my-0">
     <b><%= team_member.position %></b>
 
     <%= user_link(team_member.user, true) %>
@@ -21,7 +20,7 @@
       <% if team_member.user.in_debt %>
         <% debt_message = team_member.user.debt_message_suffix.upcase_first %>
 
-        <%= link_to debt_message, admin_debt_path(team_member.user), class: "label label-important" %>
+        <%= generate_label :danger, link_to(debt_message, admin_debt_path(team_member.user)) %>
       <% end %>
 
       <% if deadline.present? && team_member.user.in_debt(deadline) %>
@@ -30,10 +29,9 @@
         <% # Only show the deadline message if the debt on the deadline is different. %>
         <% if on_deadline_debt_message != debt_message %>
           <% on_deadline_debt_message = "#{on_deadline_debt_message} on the editing deadline" %>
-          <%= link_to on_deadline_debt_message, admin_debt_path(team_member.user), class: "label label-warning" %>
+          <%= generate_label :danger, link_to(on_deadline_debt_message, admin_debt_path(team_member.user)) %>
         <% end %>    
       <% end %>
     <% end %>
   </p>
 <% end %>
-

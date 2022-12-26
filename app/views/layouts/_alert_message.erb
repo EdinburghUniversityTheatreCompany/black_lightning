@@ -1,7 +1,43 @@
-<% alert_class, icon = html_alert_info(key) %>
-
-<p id="<%= key %>" class="alert <%= alert_class %>">
-  <i class="<%= icon %> fa-large" aria-hidden=”true”></i>
-  <%= " #{message}" %>
-  <button type="button" class="close" data-dismiss="alert">&times;</button>
-</p>
+<% alert_type = swal_alert_info(key) %>
+<% # BOOTSTRAP NICETOHAVE: Can we please specify this rather than matching this to the messages? %>
+<% if message == 'You need to log in or sign up before continuing.' then alert_type='info' end %>
+<% if message == 'Invalid email or password.' then alert_type='error' end %>
+<% if message == 'Logged in successfully.' || message == 'Logged out successfully.' then alert_type='success' end %>
+<% # Link in alert should have the 'alert-link' class on their <a>'s to automatically colour match them. %>
+<% # Same goes for alert-heading on a heading.%>
+<% case alert_type %>
+<% when 'success','info' %>
+<script type="text/javascript">
+  Toast.fire({
+    icon: '<%= alert_type %>',
+    title: '<%= " #{message}" %>'
+  })
+</script>
+<% when 'warning' %>
+<script type="text/javascript">
+  PersistentToast.fire({
+    icon: '<%= alert_type %>',
+    title: '<%= " #{message}" %>',
+    position: 'top'
+  })
+</script>
+<% when 'error' %>
+<script type="text/javascript">
+  Swal.fire({
+    icon: 'error',
+    title: 'Oops...',
+    text: '<%= " #{message}" %>',
+    allowOutsideClick: () => {
+      const popup = Swal.getPopup()
+      popup.classList.remove('swal2-show')
+      setTimeout(() => {
+        popup.classList.add('animate__animated', 'animation__shake')
+      })
+      setTimeout(() => {
+        popup.classList.remove('animate__animated', 'animation__shake')
+      }, 500)
+      return false
+    }
+  })
+</script>
+<% end %>

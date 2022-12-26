@@ -1,29 +1,29 @@
-<h1><%= @title%></h1>
+<% content_for :parents do %>
+  <ul>
+    <% @techie.parents.each do |parent| %>
+      <li><%= get_link parent, :show %></li>
+    <% end %>
+  </ul>
+<% end %>
 
-<h3>Parents</h3>
+<% content_for :children do %>
+  <ul>
+    <% @techie.children.each do |child| %>
+      <li><%= get_link child, :show %></li>
+    <% end %>
+  </ul>
+<% end %>
 
-<ul>
-  <% @techie.parents.each do |parent| %>
-    <li><%= get_link parent, :show %></li>
-  <% end %>
-</ul>
+<% content_for :co_parents do %>
+  <ul>
+    <% @coparents.each do |coparent| %>
+      <li><%= get_link coparent, :show %></li>
+    <% end %>
+  </ul>
+<% end %>
 
-<h3>Children</h3>
+<% fields = { } %>
+<% [:parents, :children, :co_parents].each { |relation| fields[relation] = { type: 'content', header: relation.to_s.dasherize.titleize, content: yield(relation) } } %>
 
-<ul>
-  <% @techie.children.each do |child| %>
-    <li><%= get_link child, :show %></li>
-  <% end %>
-</ul>
-
-<h3>Co-Parents</h3>
-<ul>
-  <% @coparents.each do |coparent| %>
-    <li><%= get_link coparent, :show %></li>
-  <% end %>
-</ul>
-
-
-<hr />
-
-<%= render '/shared/show_actions', object: @techie %>
+<% #type: 'content', header: titleize(relation), content: yield(relation) %>
+<%= render('shared/pages/show', object: @techie, fields: fields) %>

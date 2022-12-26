@@ -1,0 +1,15 @@
+<% display_link_to_add = true if display_link_to_add.nil? %>
+
+<% if f.object.errors[association_name].present? then %>
+  <p id="<%= association_name %>_errors" class="alert alert-danger">
+    <%= f.error association_name %>
+  </p>
+<% end %>
+
+<%= f.simple_fields_for(association_name) do |nested_f| %>
+  <% render partial_name, f: nested_f %>
+<% end %>
+
+<% if display_link_to_add %>
+  <%= link_to_add f, association_name %>
+<% end %>

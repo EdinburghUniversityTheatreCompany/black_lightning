@@ -34,11 +34,11 @@ class FaultReport < ApplicationRecord
   def css_class
     case status.to_sym
     when :in_progress, :on_hold
-      return 'warning'
+      return 'table-warning'
     when :cant_fix, :wont_fix
-      return 'error'
+      return 'table-danger'
     when :completed
-      return 'success'
+      return 'table-success'
     else
       return ''
     end

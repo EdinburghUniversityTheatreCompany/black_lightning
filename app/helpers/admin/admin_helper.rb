@@ -45,4 +45,9 @@ module Admin::AdminHelper
   def destroy_with_flash_message!(object, condition: nil, additional_condition: true, name: nil, success_message: nil, error_message: nil, append_errors_to_error_flash: true)
     raise(ActiveRecord::RecordNotDestroyed, flash[:error]) unless destroy_with_flash_message(object, condition: condition, additional_condition: additional_condition, name: name, success_message: success_message, error_message: error_message, append_errors_to_error_flash: append_errors_to_error_flash)
   end
+
+  # def is_active(action)       
+  #   params[:action] == action ? "active" : nil        
+  # end
+  
 end

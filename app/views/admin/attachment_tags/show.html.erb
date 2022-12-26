@@ -1,16 +1,10 @@
-<h1><%= @title %></h1>
-
 <% fields = { 
-  name: @attachment_tag.name
+  name: @attachment_tag.name,
+  description: { type: 'markdown', markdown: @attachment_tag.description } 
 } %>
 
-<%= render 'shared/basic_fields', fields: fields %>
+<% content_for :extra_show_actions do %>
+  <%= get_link_to_attachments_for_tag(@attachment_tag) %>
+<% end %>
 
-<p>
-  <h3>Description</h3>
-  <%= render_markdown(@attachment_tag.description) %>
-</p>
-
-<%= get_link_to_attachments_for_tag(@attachment_tag)%>
-
-<%= render '/shared/show_actions', object: @attachment_tag %>
+<%= render('shared/pages/show', object: @attachment_tag, fields: fields) %>
