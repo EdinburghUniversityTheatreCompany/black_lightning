@@ -154,7 +154,7 @@ GEM
     coffee-script (2.4.1)
       coffee-script-source
       execjs
-    coffee-script-source (1.8.0)
+    coffee-script-source (1.12.2)
     concurrent-ruby (1.1.10)
     crass (1.0.6)
     daemons (1.4.1)
@@ -455,7 +455,7 @@ DEPENDENCIES
   chronic
   cocoon
   coffee-rails
-  coffee-script-source (= 1.8.0)
+  coffee-script-source (= 1.12.2)
   daemons
   delayed_job_active_record
   devise
