@@ -1,11 +1,11 @@
 <% @title = "Answer #{@questionnaire.name} for #{@questionnaire.event.name}" %>
 
-<%= simple_form_for(@questionnaire, url: answer_admin_questionnaires_questionnaire_url) do |f| %>
+<%= simple_horizontal_form_for(@questionnaire, url: answer_admin_questionnaires_questionnaire_url) do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <div id="answers">
       <h3>Questions</h3>
 
-      <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields') %>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields', display_link_to_add: false) %>
     </div>
   <% end %>
 <% end %>

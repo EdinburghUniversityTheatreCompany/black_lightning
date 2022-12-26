@@ -29,7 +29,7 @@
           <%= link_to(img, url) %>
 
           <div class="card-body d-flex flex-column">
-            <%= link_to(item[:event].name, url, class: 'card-title') %>
+            <%= link_to(item[:event].name_and_author, url, class: 'card-title') %>
 
             <%= render('shared/pages/public/partials/card_paragraphs', paragraphs: item[:paragraphs]) %>
           </div>
@@ -37,6 +37,4 @@
       </div>
     <% end %>
   </div>
-
-  <div class="mb-3"></div>
 <% end %>

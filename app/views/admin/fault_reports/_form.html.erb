@@ -13,8 +13,8 @@
               selected: FaultReport.statuses.keys[@fault_report[:status].to_i],
               input_html: { autocomplete: 'off' } %>
 
-      <%= f.association :reported_by, as: :select2 %>
-      <%= f.association :fixed_by, as: :select2 %>
+      <%= f.association :reported_by %>
+      <%= f.association :fixed_by %>
     <% end %>
   <% end %>
 <% end %>

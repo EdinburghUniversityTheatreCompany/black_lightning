@@ -5,7 +5,7 @@
   image: 'No Image',
   description: render_markdown(@venue.description),
   image: { type: 'image', image: @venue.fetch_image, variant: slideshow_variant },
-  gallery: { type: 'content', content: render('/shared/gallery', pictures: @venue.pictures) }
+  gallery: { type: 'content', content: render('/shared/gallery', pictures: @venue.pictures.accessible_by(current_ability, :show)) }
 } %>
 
 <% content_for :extra_show_actions do %>

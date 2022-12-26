@@ -1,4 +1,4 @@
-<%= simple_form_for [:admin, @user] do |f| %>
+<%= simple_horizontal_form_for [:admin, @user] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <h3>User Details</h3>
 
@@ -14,16 +14,13 @@
     <%= f.input :password_confirmation %>
 
     <% if can? :assign_roles, @user %>
-      <% # BOOTSTRAP TODO: How does this look? %>
+      <% # BOOTSTRAP VERYNIECTOHAVE: This is not bold while all labels are. Fix? %>
       <%= f.association :roles, as: :check_boxes %>
     <% end %>
 
     <h3>Public Profile</h3>
-    
-    <%= render '/shared/form/public_private_switch', f: f, field_symbol: :public_profile %>
-
-    <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
-
     <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+    <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
+    <%= f.input :public_profile, label: 'Enable Public Profle', hint: 'Display your profile on the public website as well as than just the members-only part?' %>
   <% end %>
 <% end %>

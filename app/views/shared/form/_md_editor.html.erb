@@ -1,36 +1,56 @@
 <% input_field_args = {} if input_field_args.nil? %>
 
-<% # BOOTSTRAP TODO: Figure out how to columnise this. %>
-<div class="tab-container md-editor">
+<div class="row">
+  <div class="col-sm-3">
+    <%= f.label field %>
+  </div>
 
-  <% require 'securerandom' %>
-  <% id = SecureRandom.uuid %>
+  <div class="col-sm-9 tab-container md-editor">
+    <% require "securerandom" %>
+    <% id = SecureRandom.uuid %>
+    <% show_hint = true if show_hint.nil? %>
+    <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe if show_hint %>
+    <% rows ||= '10' %>
 
-  <div class="row">
-    <div class="tab-content col-md-9">
-      <div id="<%= id %>_input_field" class="tab-pane active">
-        <% rows ||= '10' %>
-        <% md_notice = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
-        <%= f.input field, input_html: { class: "md field", rows: rows }, hint: md_notice, **input_field_args %>
+    <div class="row">
+      <div class="col-md">
+        <div class="tab-content" id="<%= id %>_tab_content">
+          <div id="<%= id %>_input_field" class="tab-pane active" role="tabpanel">
+            <div class="form-group row">
+              <div class="col">
+                <%= f.input_field field, class: "form-control text md field", rows: rows,  **input_field_args %>
+                <%= f.hint field, hint: hint %>
+
+                <div class="invalid-feedback">
+                  <%= f.full_error field %>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="<%= id %>_preview" class="tab-pane" role="tabpanel">
+            <div class="card">
+              <div class="card-body p-1" id="<%= id %>_preview_placeholder">
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div id="<%= id %>_preview" class="tab-pane">
-      </div>
-    </div>
+      <div class="col-md-auto">
+        <ul class="nav nav-tabs">
+        <%- # BOOTSTRAP 5: Remove the data-toggle things. %>
+          <li class="nav-item"><a class="nav-link preview-toggle" href="#<%= id %>_preview"     data-toggle="tab" data-bs-toggle="tab" data-bs-target="#<%= id %>_preview"      type="button" role="tab" data-preview-id="<%= id %>">Preview</a></li>
+          <li class="nav-item"><a class="nav-link active"         href="#<%= id %>_input_field" data-toggle="tab" data-bs-toggle="tab" data-bs-target="#<%= id %>_input_field"  type="button" role="tab">Input</a></li>
+        </ul>
 
-    <div class="col">
-      <ul class="nav nav-pills">
-        <li><a href="#<%= id %>_preview" data-toggle="tab" data-preview-id="<%= id %>">Preview</a></li>
-        <li class="active"><a href="#<%= id %>_input_field" data-toggle="tab">Input</a></li>
-      </ul>
-  
-      <div class="yield">
-        <% show_hint ||= false %>
-        <% if show_hint %>
-          <%= render "shared/form/md_hints" %>
-        <% end %>
+        <div class="yield">
+          <% if show_hint %>
+            <%= render "shared/form/md_hints" %>
+          <% end %>
 
-        <%= yield %>
+          <%= yield %>
+        </div>
       </div>
     </div>
   </div>

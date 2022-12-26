@@ -82,6 +82,8 @@ group :development, :test do
   gem 'bullet'
 
   gem 'faker'
+
+  gem 'test-prof'
 end
 
 group :test do

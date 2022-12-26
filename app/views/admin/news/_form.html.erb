@@ -9,9 +9,9 @@
 
     <%= f.input :slug, input_html: { id: 'event_slug' } %>
 
-    <%= f.input :publish_date %>
+    <%= f.input :publish_date, hint: 'The dashboard and frontpage will only display this news item after the publish date.' %>
 
-    <%= render '/shared/form/public_private_switch', f: f, field_symbol: :show_public %>
+    <%= f.input :show_public, hint: 'Display this news item on the publicly visible part of the website?' %>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image %>
   <% end %>

@@ -72,4 +72,4 @@
 
 <p class="mb-3"><%= link_to('View Past Shows', archives_events_url('q[venue_id_eq]' => @venue.id)) %>
 
-<%= render '/shared/gallery', pictures: @venue.pictures %>
+<%= render '/shared/gallery', pictures: @venue.pictures.accessible_by(current_ability, :show) %>

@@ -1,12 +1,37 @@
 // Converted from CoffeeSript using decaffeinate
+// Bootstrap 5: Remove the jQuery bits and keep just the Bootstrap 5.
+$(document).ready(function() {
+  // Bootstrap 4 jQuery method.
+  jQuery(() => addHandlers());
 
-const addHandlers = () => jQuery("a[href$=\"preview\"]").on("shown", function(e) {
+  // Bootstrap 5 JS method.
+  // BOOTSTRAP 5: Does this find all preview toggles or the first?
+  const tabEl = document.querySelector('.preview-toggle');
+
+  // Stop if no preview toggle was found.
+  if(tabEl)
+  {
+    tabEl.addEventListener('shown.bs.tab', event => {
+      generatePreview(event);
+    });
+  }
+});
+
+
+// https://getbootstrap.com/docs/4.6/components/navs/#events see here for how tabs and javascrip work.
+// and for Bootstrap 5: https://getbootstrap.com/docs/5.2/components/navs-tabs/
+const addHandlers = () => $(document).find(".preview-toggle").on("show.bs.tab", function(e) {
+ generatePreview(e);
+});
+
+function generatePreview(e)
+{
   let id = undefined;
   let input = undefined;
   id = $(e.currentTarget).data("preview-id");
   input = $("#" + id + "_input_field textarea");
 
-  $("#" + id + "_preview").html('<b>Please Wait</b>');
+  $("#" + id + "_preview_placeholder").html('<b>Please Wait. Loading Preview...</b>');
 
   var token = $('meta[name="csrf-token"]').attr('content');
 
@@ -18,7 +43,7 @@ const addHandlers = () => jQuery("a[href$=\"preview\"]").on("shown", function(e)
       xhr.setRequestHeader('X-CSRF-Token', token)
     },
     success(data) {
-      const preview = $("#" + id + "_preview");
+      const preview = $("#" + id + "_preview_placeholder");
       preview.html(data.rendered_md);
     },
     error(jqXHR, textStatus, errorThrown) {
@@ -27,26 +52,28 @@ const addHandlers = () => jQuery("a[href$=\"preview\"]").on("shown", function(e)
 <b>There was an error rendering your kramdown.</b>
 <pre>${error_data.error}</pre>\
 `;
-      return $("#" + id + "_preview").html(error_html);
+      return $("#" + id + "_preview_placeholder").html(error_html);
     },
     contentType: false,
     processData: false
   });
-});
+}
 
-
-jQuery(() => addHandlers());
-
-$(document).on("nested:fieldAdded", function(event) {
+$(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
   const new_id = new Date().getTime();
-
+  console.log('hello?')
   /*
-    Slightly hacky way of making all the ids unique and updating the necessary anchors.
+    Slightly hacky way of making all the ids unique and updating the necessary anchors
+    BOOTSTRAP NICETOHAVE: This is not called. Fix it and check if md_editor still work properly on dynamic fields (creatives)
   */
-  jQuery(event.field).find('[id$="_input_field"]').attr('id', new_id + '_input_field');
-  jQuery(event.field).find('[href$="_input_field"]').attr('href', '#' + new_id + '_input_field');
-  jQuery(event.field).find('[id$="_preview"]').attr('id', new_id + '_preview');
-  jQuery(event.field).find('[href$="_preview"]').attr('href', '#' + new_id + '_preview').attr('data-preview-id', new_id);
+  jQuery(insertedItem).find('[id$="_input_field"]').attr('id', new_id + '_input_field');
+  jQuery(insertedItem).find('[href$="_input_field"]').attr('href', '#' + new_id + '_input_field');
+
+  jQuery(insertedItem).find('[id$="_preview"]').attr('id', new_id + '_preview');
+  jQuery(insertedItem).find('[href$="_preview"]').attr('href', '#' + new_id + '_preview').attr('data-preview-id', new_id);
+
+  jQuery(insertedItem).find('[id$="_preview_placeholder"]').attr('id', new_id + '_preview_placeholder');
+  jQuery(insertedItem).find('[href$="_preview_placeholder"]').attr('href', '#' + new_id + '_preview_placeholder');
 
   return addHandlers();
 });

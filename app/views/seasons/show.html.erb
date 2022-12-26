@@ -37,8 +37,8 @@
   <% end %>
 <% end %>
 
-<%= render '/shared/gallery', pictures: @season.pictures %>
+<%= render '/shared/gallery', pictures: @season.pictures.accessible_by(current_ability, :show) %>
 
-<%= render 'shared/video_link_gallery', video_links: @season.video_links.accessible_by(current_ability) %>
+<%= render 'shared/video_link_gallery', video_links: @season.video_links.accessible_by(current_ability, :show) %>
 
 <%= render '/shared/show_actions', object: @season, index_link_params: { link_target: seasons_path } %>

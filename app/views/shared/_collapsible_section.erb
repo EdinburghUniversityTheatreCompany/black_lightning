@@ -1,15 +1,20 @@
-<% id = "#{title.to_url}_container" %>
+<% body_class = '' if body_class.nil? %>
+<% header_class = '' if header_class.nil? %>
+<% title_right = '' if title_right.nil? %>
+
+<% id = "#{title.to_url}_container" if id.nil? %>
 <% start_open = false if start_open.nil? %>
 
 <div class="card">
-  <div class="card-header">
+  <div class="card-header <%= header_class %>">
     <a class="btn btn-link stretched-link" type="button" data-toggle="collapse" data-target="#<%= id %>" role="button" aria-expanded="false" aria-controls="#<%= id %>">
       <%= generate_icon_prefix('chevron-down', title) %>
     </a>
+    <%= title_right %>
   </div>
 
     <div class="collapse<%= ' show' if start_open %>" id="<%= id %>">
-      <div class="card-body" >
+      <div class="card-body <%= body_class %>" >
     <%= yield %>
     </div>
   </div>

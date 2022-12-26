@@ -18,8 +18,6 @@ class Admin::MaintenanceDebt < ApplicationRecord
 
   validates :due_by, :show_id, :user_id, presence: true
 
-  default_scope { includes(:user) }
-
   enum state: %i[unfulfilled converted completed]
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
@@ -57,7 +55,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
     when :converted
       'table-success'
     when :completed
-      'table-uccess'
+      'table-success'
     when :causing_debt
       'table-danger'
     end

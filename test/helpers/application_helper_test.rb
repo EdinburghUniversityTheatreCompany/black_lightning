@@ -24,7 +24,7 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal ['alert-danger', 'fas fa-exclamation-circle'], html_alert_info(:error)
     assert_equal ['alert-success', 'fas fa-check-circle'], html_alert_info(:success)
     assert_equal ['alert-info', 'fas fa-info-circle'], html_alert_info(:notice)
-    assert_equal ['', ''], html_alert_info(:pineapple)
+    assert_equal ['alert-info', 'fas fa-info-circle'], html_alert_info(:pineapple)
   end
 
   test 'current environment should return admin for admin pages' do

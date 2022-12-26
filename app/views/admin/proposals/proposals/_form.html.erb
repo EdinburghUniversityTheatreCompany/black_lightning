@@ -12,12 +12,11 @@
 
     <% if can?(:approve, @proposal) %>
       <% if @proposal.successful.nil? && !@proposal.approved.nil? %>
-        <%= f.input :approved, as: :select2, blank: true %>
+        <%= f.input :approved, blank: true %>
       <% end %>
 
       <% if @proposal.approved %>
-        <% # BOOTSTRAP TODO: Not very wide select2 box... There are also a few others like this. %>
-        <%= f.input :successful, as: :select2, blank: true %>
+        <%= f.input :successful, blank: true %>
       <% end %>
     <% end %>
 
@@ -30,8 +29,7 @@
 
     <div id="answers">
       <h3>Questions</h3>
-
-      <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields') %>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields', display_link_to_add: false) %>
     </div>
 
     <%= render '/shared/form/sections/team_members', f: f %>

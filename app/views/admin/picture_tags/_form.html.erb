@@ -1,4 +1,4 @@
-<%= simple_form_for [:admin, @picture_tag] do |f| %>
+<%= simple_horizontal_form_for [:admin, @picture_tag] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
     <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12, show_hint: true %>

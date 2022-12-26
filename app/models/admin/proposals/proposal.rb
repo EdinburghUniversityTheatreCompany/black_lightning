@@ -87,7 +87,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     if pull_right
       # Bcause the highest float-right will be farthest to the right, the order has to be reversed.
-      return "#{labels.reverse.join("\n")}\n<div style=\"clear: both;\"></div>".html_safe
+      return "#{labels.reverse.join("\n")}".html_safe
     else
       return labels.join("\n").html_safe
     end

@@ -1,4 +1,4 @@
-<%= simple_form_for [:admin, @role] do |f| %>
+<%= simple_horizontal_form_for [:admin, @role] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
       <% name_disabled = Role::HARDCODED_NAMES.include?(@role.name)%>
 

@@ -1,6 +1,10 @@
 require 'test_helper'
 
 class SubpageHelperTest < ActionView::TestCase
+  setup do
+    skip 'No longer used in the same way.'
+  end
+
   test 'get subpage root page' do
     assert_equal 'about', get_subpage_root_url('about', 'overview')
     assert_equal 'about', get_subpage_root_url('about', nil)
@@ -81,5 +85,9 @@ class SubpageHelperTest < ActionView::TestCase
     this_should_not_cause_an_error = FactoryBot.create(:editable_block, url: root_folder + '/something')
   
     assert_equal "<a href=\"#{url}\">#{external_link.name}</a>", get_subpage_link(root_folder, external_link)
+  end
+
+  test 'get_navbar_children' do
+    assert false
   end
 end

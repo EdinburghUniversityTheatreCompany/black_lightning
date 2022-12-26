@@ -1,8 +1,8 @@
 <% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'Staffing Job'] %>
-<% headers << '' if can?(:unassign, Admin::StaffingDebt) %>
-<% headers << '' if can?(:edit, Admin::StaffingDebt) %>
-<% headers << '' if can?(:delete, Admin::StaffingDebt) %>
-
+<% headers << '' #if can?(:unassign, Admin::StaffingDebt) %>
+<% headers << '' #if can?(:edit, Admin::StaffingDebt) %>
+<% headers << '' #if can?(:delete, Admin::StaffingDebt) %>
+<%- # BOOTSTRAP NICETOHAVE: Fix the conditionally visible buttons and make sure they are conditionally visible. %>
 <% field_sets = [] %>
 <% @staffing_debts.each do |staffing_debt|
     if staffing_debt.admin_staffing_job.present?

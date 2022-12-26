@@ -5,8 +5,5 @@
 <% end %>
 
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Video Links' } do %>
-  <div class="form-inline">
-    <%= f.simple_fields_for :video_links %>
-    <p><%= link_to_add(f, :video_links) %></p>
-  </div>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :video_links, partial_name: 'video_link_fields') %>
 <% end %>

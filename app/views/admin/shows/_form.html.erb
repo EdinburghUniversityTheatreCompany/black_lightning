@@ -1,13 +1,9 @@
 <%= simple_horizontal_form_for [:admin, @show] do |f| %>
-  <%= f.error_notification %>
-
-  <div class="form-inputs">
+  <%= render('shared/pages/form', f: f) do %>
     <%= render 'admin/events/basic_form', f: f %>
 
     <%= render '/shared/form/sections/team_members', f: f %>
 
     <%= render 'reviews_form_partial', f: f %>
-  </div>
-
-  <%= render '/shared/form/form_actions', f: f %>
+  <% end %>
 <% end %>

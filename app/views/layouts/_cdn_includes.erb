@@ -4,13 +4,5 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css">
-
-<script>
-  $(document).ready(function() {
-    // BOOTSTRAP TODO: Select2 with cocoon breaks... 
-    // Adding fields with cocoons should retrigger these things within the added field, and the validation.
-    // There's something in typeahead
-    $('.simple-select2').select2({theme: 'bootstrap4' });
-    $('.simple-select2-with-tags').select2({theme: 'bootstrap4', tags: true});
-  });
-</script>
+<%- # BOOTSTRAP SOMEWHATNICETOHAVE: The below script should only be included on pages with a form. %>
+<%= javascript_include_tag "select2.js" %>

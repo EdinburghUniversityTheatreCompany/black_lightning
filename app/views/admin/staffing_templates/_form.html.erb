@@ -4,11 +4,7 @@
 
     <div id="staffing-jobs">
       <h3>Jobs</h3>
-      <%= f.simple_fields_for(:staffing_jobs) do |staffing_job| %>
-        <% render 'staffing_job_fields', f: staffing_job %>
-      <% end %>
-
-      <%= link_to_add f, :staffing_jobs %>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :staffing_jobs, partial_name: 'staffing_job_fields') %>
     </div>
   <% end %>
 <% end %>

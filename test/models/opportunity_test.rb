@@ -41,10 +41,10 @@ class Admin::OpportunityTest < ActionView::TestCase
     opportunity.expiry_date = Date.current.advance(days: 1)
     opportunity.approved = false
 
-    assert_equal 'class="error"'.html_safe, opportunity.css_class
+    assert_equal 'table-danger'.html_safe, opportunity.css_class
 
     opportunity.approved = true
 
-    assert_equal 'class="success"'.html_safe, opportunity.css_class
+    assert_equal 'table-success'.html_safe, opportunity.css_class
   end
 end

@@ -1,6 +1,5 @@
-<% # BOOTSTRAP %>
 <% deadline = nil if deadline.nil? %>
-
+<% team_members = team_members.includes(:user) %>
 <% user_is_part_of_proposal = team_members.collect(&:user).include?(current_user) %>
 
 <h3>Team</h3>
@@ -8,7 +7,7 @@
 <% team_members.each do |team_member| %>
   <% continue if team_member.nil? %>
 
-  <p>
+  <p class="py-0 my-0">
     <b><%= team_member.position %></b>
 
     <%= user_link(team_member.user, true) %>
@@ -36,4 +35,3 @@
     <% end %>
   </p>
 <% end %>
-

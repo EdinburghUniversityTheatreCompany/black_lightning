@@ -21,19 +21,22 @@
       <div class="col">
 
         <% if search_fields.present? %>
-        <%= render 'shared/search_form', input_fields: search_fields %>
+          <%= render 'shared/search_form', input_fields: search_fields %>
         <% end %>
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Quick actions</span>
+
+        <% if (show_new_button && can?(:new, resource_class)) || quick_actions.present? %>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Quick actions</span>
+            </div>
+            <div class="card-body">
+              <% if show_new_button %>
+                <%= get_link resource_class, :new %>
+              <% end %>
+              <%= quick_actions %>
+            </div>
           </div>
-          <div class="card-body">
-            <% if show_new_button %>
-              <%= get_link resource_class, :new %>
-            <% end %>
-            <%= quick_actions %>
-          </div>
-        </div>
+        <% end %>
       </div>
     </div>
     <div class="row">

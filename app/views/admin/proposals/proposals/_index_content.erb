@@ -13,5 +13,5 @@
 
 <%= render 'shared/basic_fields', fields: call_info_fields %>
 
-<% # BOOTSTRAP VERYNICETOHAVE: Some rows edit buttons do not render a blank cell when some rows can be edited and some not. %>
+<% # BOOTSTRAP SOMEWHATNICETOHAVE: Some rows edit buttons do not render a blank cell when some rows can be edited and some not. %>
 <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal) %>

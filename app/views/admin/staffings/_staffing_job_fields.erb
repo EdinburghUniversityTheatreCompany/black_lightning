@@ -1,14 +1,10 @@
 <%# Based on the very similar _team_member_fields.erb file %>
 
-<%= render layout: '/shared/form/fields_for_template', locals: { 
+<%= render '/shared/form/inline_fields_for_template', 
   f: f,
-  div_class_additions: 'job form-inline'
-} do %>
-    <%= f.hidden_field :id %>
-
-    <% name_field = [f.input(:name, placeholder: 'Job', label: false)] %>
-
-    <%= render 'shared/form/user_typeahead_field', f: f, insert_fields: name_field %>
-
-    <%= link_to_remove f %>
-<% end %>
+  div_class_additions: 'job',
+  fields: [
+    { field: f.hidden_field(:id) + f.input(:name, placeholder: 'Job', wrapper: :inline_form), col_modifier: 'auto' },
+    { field: render('shared/form/user_field', f: f, wrapper: :inline_form) },
+    { field: link_to_remove(f), col_modifier: 'auto' },
+  ] %>

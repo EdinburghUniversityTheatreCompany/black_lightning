@@ -1,55 +1,34 @@
-<%= render layout: '/shared/collapsible_section', locals: { title: 'Search Form' } do %>
-  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :archives_proposals do |f| %>
-    <%= f.input :show_title_cont,      label: "Proposal Title", required: false %>
-    <%= f.input :users_full_name_cont, label: "Person Name",    required: false %>
+<% 
+search_fields = {
+  show_title_cont:      { slug: 'defaults.proposal_title' },
+  users_full_name_cont: { slug: 'defaults.user' },
+  
+  proposal_text_cont:   { slug: 'defaults.proposal_text' },
+  publicity_text_cont:  { slug: 'defaults.publicity_text' },
 
-    <%= f.input :proposal_text_cont,   label: "Proposal Text",  required: false %>
-    <%= f.input :publicity_text_cont,  label: "Publicity Text", required: false %>
+  date_range:           { type: :date_range, options: {  start_date_attribute: 'call_submission_deadline', end_date_attribute: 'call_editing_deadline'} },
 
-    <%= render 'shared/date_range_search_form_field', f: f, start_year: 2013, start_date_attribute: 'call_submission_deadline', end_date_attribute: 'call_editing_deadline' %>
+  random_button:        { type: :submit_button, action: :Random },
+} 
 
-    <%= f.submit :Search, class: 'btn btn-primary' %>
+search_form = render('/shared/pages/public/partials/search_form', search_fields: search_fields)
+%>
 
-    <%= f.submit :Random, class: 'btn btn-secondary' %>
+<% content_for :proposal_archive_content do %>
+  <% @proposals.each do |call, proposals| %>
+    <% div_name = "call_" + call.id.to_s + "_proposals" %>
+    <% title_right = "<span class=\"float-right mt-2 mr-1\">Submission Deadline: #{l call.submission_deadline, format: :short } | Editing Deadline: #{l call.editing_deadline, format: :short }</span>".html_safe %>
+
+    <%= render layout: '/shared/collapsible_section', locals: { id: div_name, title: call.name, title_right: title_right, header_class: 'p-0', body_class: "pt-1 pb-0" } do %>
+      <% proposals.each do |proposal| %>
+        <div>
+          <%= get_link proposal, :show %>
+          <%= proposal.labels true %>
+        </div>
+      <% end %>
+    <% end %>
   <% end %>
 <% end %>
 
-<% # BOOTSTRAP TODO: Redesign the proposal archive. %>
-
-<div class="row">
-  <div class="span12">
-    <h1><%= @title %></h1>
-
-    <div class="accordion" id="calls_accordion">
-      <% @proposals.each do |call, proposals| %>
-        <% div_name = "call_" + call.id.to_s + "_proposals" %>
-
-        <div class="accordion-group">
-          <div class="accordion-heading">
-            <div class="accordion-toggle">
-              <a href="#<%= div_name %>" data-toggle="collapse" style="display: inline-block;">
-                <%= call.name %>
-              </a>
-              <span class="float-right">
-                Submission Deadline: <%= l call.submission_deadline, format: :short %>
-                |
-                Editing Deadline: <%= l call.editing_deadline, format: :short %>
-              </span>
-              <div style="clear: both;"></div>
-            </div>
-          </div>
-          <div id="<%= div_name %>" class="accordion-body collapse">
-            <% proposals.each do |proposal| %>
-              <div style="margin: 3px 15px;">
-                <%= get_link proposal, :show %>
-                <%= proposal.labels true %>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
-    </div>
-  </div>
-</div>
-
-<%= paginate(@calls) %>
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, content: yield(:proposal_archive_content), 
+  show_new_button: false, search_fields: search_fields %>

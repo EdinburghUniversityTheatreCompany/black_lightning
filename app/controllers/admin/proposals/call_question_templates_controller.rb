@@ -26,7 +26,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
     "Edit #{@call_question_template.name} Template"
   end
 
-  def create_title
+  def new_title
     'New Proposal Call Question Template'
   end
 end

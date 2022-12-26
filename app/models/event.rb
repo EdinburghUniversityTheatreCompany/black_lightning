@@ -60,9 +60,9 @@ class Event < ApplicationRecord
 
   belongs_to :proposal, class_name: 'Admin::Proposals::Proposal', optional: true
 
-  has_many :team_members, -> { includes(:user) }, class_name: '::TeamMember', as: :teamwork, dependent: :destroy
+  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :destroy
   has_many :users, through: :team_members
-  has_many :pictures, -> { includes(:picture_tags, :picture_tags_pictures, { image_attachment: :blob} ) }, as: :gallery, dependent: :restrict_with_error
+  has_many :pictures, as: :gallery, dependent: :restrict_with_error
   has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
 
   belongs_to :venue
@@ -141,6 +141,24 @@ class Event < ApplicationRecord
 
   def short_blurb
     (tagline.presence || truncate_markdown(publicity_text, 120)).html_safe
+  end
+
+  # Returns the name and author in one string, or just the name if no author is specified.
+  def name_and_author
+    if author.present?
+      "\"#{name}\"#{" by #{author}"}"
+    else
+      name
+    end
+  end
+
+  # Returns the date and price in one string, or just the date if no price is specified.
+  def date_and_price
+    if price.present?
+      "#{date_range(false)} - #{price}"
+    else
+      date_range(false)
+    end
   end
 
   def simultaneous_seasons
