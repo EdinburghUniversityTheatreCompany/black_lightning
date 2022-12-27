@@ -1,4 +1,3 @@
-<h3><%= link_to 'Proposals', admin_proposals_calls_path %></h3>
 <% open_calls = Admin::Proposals::Call.open %>
 <% open_calls.each do |call| %>
   <p><%= link_to call.name, admin_proposals_call_proposals_path(call) %></p>
