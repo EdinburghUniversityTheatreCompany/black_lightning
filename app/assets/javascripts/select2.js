@@ -25,6 +25,7 @@
       if(el.attr('select2-with-tags') == 'true')
       {
         attributes['tags'] = true;
+        attributes['placeholder'] = "Select option or enter custom value...";
       }
 
       // If there is a remote-source specified, set up this select2 element for ajax.
