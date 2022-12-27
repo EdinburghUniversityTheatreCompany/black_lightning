@@ -1,8 +1,0 @@
-<% # BOOTSTRAP NICETOHAVE: Look into double-columning this. Also look at putting role and name on the same line? Both could work. %>
-<dl>
-  <% team_members.includes(:user).each do |team_member| %>
-    <dt><b><%= team_member&.position %></b></dt>
-
-    <dd><%= user_link(team_member&.user, true) %></dd>
-  <% end %>
-</dl>
