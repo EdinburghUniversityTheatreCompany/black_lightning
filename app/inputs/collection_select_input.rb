@@ -3,7 +3,7 @@
 
 class CollectionSelectInput < SimpleForm::Inputs::CollectionSelectInput
   def input(wrapper_options = nil)
-    label_method, value_method = detect_collection_methods
+    label_method, value_method =                                                                  detect_collection_methods
 
     merged_input_options = merge_wrapper_options(input_html_options, wrapper_options)
 
