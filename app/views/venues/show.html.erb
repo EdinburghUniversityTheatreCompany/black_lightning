@@ -1,4 +1,6 @@
-<%= render 'shared/pages/public/basic_info', header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [] %>
+<%= render 'shared/pages/public/basic_info', header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [
+  { key: 'Address', value: render_markdown(@venue.address) }
+] %>
 
 <div class="row">
   <div class="col">

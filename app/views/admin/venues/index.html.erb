@@ -9,7 +9,8 @@
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },
     tagline_cont:     { slug: 'defaults.tagline' },
-    description_cont: { slug: 'defaults.description'}
+    description_cont: { slug: 'defaults.description'},
+    address_cont:     { slug: 'defaults.address'}
 } %>
 
 <%= render 'shared/pages/index', resource_class: Venue, resources: @venues, headers: headers, field_sets: field_sets, search_fields: search_fields %>

@@ -9,7 +9,7 @@ class Admin::VenuesController < AdminController
   private
 
   def permitted_params
-    [:description, :image, :location, :name, :tagline, pictures_attributes: %I[id _destroy description image]]
+    [:description, :image, :location, :address, :name, :tagline, pictures_attributes: %I[id _destroy description image]]
   end
 
   def order_args
