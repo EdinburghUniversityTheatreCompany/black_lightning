@@ -1,5 +1,3 @@
-<h3><%= link_to 'Resources', admin_resources_path %></h3>
+<% subpages = get_navbar_children('admin/resources') %>
 
-<% get_subpages('admin/resources').each do |page| %>
-  <p><%= get_subpage_link('admin/resources', page) %></p>
-<% end %>
+<%= render 'layouts/sidebar_links', subpages: subpages %>
