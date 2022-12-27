@@ -59,8 +59,8 @@
 
         <% # If there is no type key, text is implied, and we just render an input. %>
 
-        <%- # Set email fields to render as text fields to prevent email validations, unless there is already an as in the params %>
-        <% if !params.key?(:as) && key.to_s.include?('email') %>
+        <%- # Set email fields to render as text fields to prevent email and url validations, unless there is already an as in the params %>
+        <% if !params.key?(:as) && (key.to_s.include?('email') || key.to_s.include?('url')) %>
           <% params[:as] = 'string' %>
         <% end %>
 
