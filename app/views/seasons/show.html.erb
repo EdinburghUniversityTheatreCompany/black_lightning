@@ -2,17 +2,15 @@
 
 <%= render '/events/publicity_text_and_team_members', event: @season %>
 
-<hr>
 
-<h3>Events</h3>
-<% if @events.empty? %>
-  <p>There are no events attached to this festival.</p>
-<% else %>
-  <% @events.each do |day, events_by_day|%>
-    <div class="card mb-3">
-      <div class="card-header">
-        <h3><%= day %></h3>
-      </div>
+<% @events.each do |day, events_by_day|%>
+  <div class="card mb-3">
+    <div class="card-header">
+      <h4 class="card-title"><%= day %></h4>
+    </div>
+    <% if @events.empty? %>
+      <div class="card-body">There are no events attached to this festival.</div>
+    <% else %>
       <ul class="list-group list-group-flush">
         <% events_by_day.each do |event|%>
           <li class="list-group-item">
@@ -33,8 +31,8 @@
           </li>
         <% end %>
       </ul>
-    </div>
-  <% end %>
+    <% end %>
+  </div>
 <% end %>
 
 <%= render '/shared/gallery', pictures: @season.pictures.accessible_by(current_ability, :show) %>

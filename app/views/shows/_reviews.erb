@@ -3,9 +3,11 @@
     <% reviews.each do |review| %>
       <div class="col">
         <div class="card h-100">
-            <h4 class="card-header">
-              <b><%= review.organisation.presence || review.reviewer %></b><%= " - <span class=\"no-wrap\">#{star_rating review.rating if review.rating && review.rating > 0 }</span>".html_safe %>
-            </h4>
+            <div class="card-header">
+              <h4>
+                <%= review.organisation.presence || review.reviewer %></b><%= " - <span class=\"no-wrap\">#{star_rating review.rating if review.rating && review.rating > 0 }</span>".html_safe %>
+              </h4>
+            </div>
           
           <div class="card-body">
             <p class="card-text"><small class="text-muted"><%= l review.review_date, format: :long %><%= " - By #{review.reviewer}" if review.organisation? %></small></p>
