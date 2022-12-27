@@ -1,0 +1,11 @@
+draft_mass_mail:
+  subject: "A new website has launhed!"
+  body: "Rejoice after a decade of Bootstrap 3!"
+  draft: true
+  send_date: 2022-12-27
+
+sent_mass_mail:
+  subject: "Can you wait for the new website?"
+  body: "Make sure to stock up on pineapples!"
+  draft: false
+  send_date: 2023-01-10
