@@ -40,12 +40,12 @@ class ApplicationController < ActionController::Base
 
   def set_navbar
     @navbar_items = [
-      { title: 'Events',        path: events_path },
-      { title: 'About',         children: get_navbar_children('about') },
-      { title: 'Get Involved',  children: get_navbar_children('get_involved') },
-      { title: 'Archives',      children: get_navbar_children('archives') },
-      { title: 'Contact',       path: static_path('contact') },
-      { title: 'Accessibility', path: static_path('accessibility') }
+      { title: 'Events',                path: events_path },
+      { title: 'About',                 children: get_navbar_children('about') },
+      { title: 'Get Involved',          children: get_navbar_children('get_involved') },
+      { title: 'Archives',              children: get_navbar_children('archives') },
+      { title: 'Contact',               path: static_path('contact') },
+      { title: 'Accessibility/Find Us', path: static_path('accessibility') }
     ]
 
     # Display the login link if the user is not signed in yet, otherwise display a link to the admin site and a link to log out.
