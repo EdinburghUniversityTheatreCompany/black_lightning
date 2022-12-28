@@ -24,13 +24,13 @@
 end %>
 
 <% if @is_specific_user
-  search_fields = {
-      user_full_name_cont:  { slug: 'defaults.user' },
-      show_name_cont:       { slug: 'defaults.show_name' },
-      show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean }
-  } 
-else 
   search_fields = nil
+else 
+  search_fields = {
+    user_full_name_cont:  { slug: 'defaults.user' },
+    show_name_cont:       { slug: 'defaults.show_name' },
+    show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean }
+} 
 end %>
 
 <%= render 'shared/pages/index', resource_class: Admin::MaintenanceDebt, resources: @maintenance_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
