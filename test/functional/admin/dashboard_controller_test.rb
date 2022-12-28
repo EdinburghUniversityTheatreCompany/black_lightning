@@ -82,21 +82,9 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_match extra_committee.first_name, response.body
   end
 
-  test 'delayed_jobs widget' do
-    assert_widget_does_not_error 'delayed_jobs'
-    assert_match 'Enqueued Jobs', response.body
-    assert_match 'Working Jobs', response.body
-    assert_match 'Pending Jobs', response.body
-    assert_match 'Failed Jobs', response.body
-  end
-
   test 'opportunities widget' do
     FactoryBot.create_list(:opportunity, 7)
     assert_widget_does_not_error 'opportunities'
-  end
-
-  test 'reports widget' do
-    assert_widget_does_not_error 'reports'
   end
 
   test 'non-existent widget' do
