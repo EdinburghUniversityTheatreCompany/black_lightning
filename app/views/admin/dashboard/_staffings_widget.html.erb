@@ -1,18 +1,16 @@
-<div style="height: 210px; overflow: hidden;">
-  <% upcoming_staffing = Admin::Staffing.accessible_by(current_ability).future.order('start_time ASC').first(5) %>
-  
-  <% upcoming_staffing.each do |staffing| %>
-    <p>
-      <%= link_to (l staffing.start_time, format: :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
+<% upcoming_staffing = Admin::Staffing.accessible_by(current_ability).future.order('start_time ASC').first(5) %>
 
-      <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
-      <% if remaining_positions > 0 %>
-        <%= generate_label('danger', remaining_positions.to_s, rounded=true) %>
-      <% end %>
-    </p>
-  <% end %>
+<% upcoming_staffing.each do |staffing| %>
+  <p>
+    <%= link_to (l staffing.start_time, format: :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
 
-  <% if upcoming_staffing.empty? then %>
-    <p>There are no upcoming staffing slots.</p>
-  <% end %>
-</div>
+    <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
+    <% if remaining_positions > 0 %>
+      <%= generate_label('danger', remaining_positions.to_s, rounded=true) %>
+    <% end %>
+  </p>
+<% end %>
+
+<% if upcoming_staffing.empty? then %>
+  <p>There are no upcoming staffing slots.</p>
+<% end %>
