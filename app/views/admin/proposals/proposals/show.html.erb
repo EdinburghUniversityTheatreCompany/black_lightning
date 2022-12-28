@@ -20,7 +20,6 @@
 
 <% content_for :extra_show_actions do %>
   <%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful %>
-  <%= get_link Admin::Proposals::Proposal, :index, link_text: 'View Other Proposals', link_target: admin_proposals_call_proposals_path(@proposal.call), http_method: 'get' %>
 
   <% if can?(:approve, @proposal) && @proposal.approved.nil? %>
       <% if @proposal.has_debtors %>
@@ -34,4 +33,5 @@
   <% end %>
 <% end %>
 
-<%= render('shared/pages/show', object: @proposal, fields: fields) %>
+<% show_actions_args = { index_link_params: { link_text: 'View Other Proposals', link_target: admin_proposals_call_proposals_path(@proposal.call)} } %>
+<%= render('shared/pages/show', object: @proposal, fields: fields, show_actions_args: show_actions_args ) %>
