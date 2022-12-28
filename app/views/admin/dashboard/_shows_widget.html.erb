@@ -1,4 +1,4 @@
-<% future_shows = Show.future.first(5) %>
+<% future_shows = Show.future.reorder('start_date ASC').first(5) %>
 <% future_shows.each do |show| %>
   <p><%= link_to show.name, admin_show_path(show) %></p>
 <% end %>
