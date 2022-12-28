@@ -48,15 +48,15 @@
           <a class="nav-link" data-toggle="dropdown" href="#">
             <i class="fas fa-bell"></i>
             <span
-              class="badge badge-danger navbar-badge <%= 'd-none' if @header_user.debt_message_suffix == "not in Debt" %> ">!!</span>
+              class="badge badge-danger navbar-badge <%= 'd-none' unless @header_user.in_debt %> ">!!</span>
           </a>
           <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
             <span class="dropdown-header">Notifications</span>
 
             <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
-              <i
-                class="fas <%= 'fa-check' if @header_user.debt_message_suffix == "not in Debt" %> <%= 'fa-exclamation-circle' if @header_user.debt_message_suffix != "not in Debt" %> mr-2"></i>
-              <%= unless @header_user.debt_message_suffix == "in staffing and maintenance Debt" then "You are #{@header_user.debt_message_suffix}" else "You are in Debt" end %>
+              <% debt_icon = @header_user.in_debt ? 'fa-exclamation-circle' : 'fa-check' %>
+              <i class="fas <%= debt_icon %> mr-2"></i>
+              You are <%= @header_user.debt_message_suffix %>
             </a>
         </li>
       </ul>
