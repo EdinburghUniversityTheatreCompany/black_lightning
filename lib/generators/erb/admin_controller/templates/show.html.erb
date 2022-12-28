@@ -1,11 +1,7 @@
-<h1><%%= @title %></h1>
-
 <%% fields = { 
 <%- attributes.each do |attribute| -%>
   <%= "#{attribute.name}: @#{resource_name}.#{attribute.name}," %>
 <%- end -%>
 } %>
 
-<%%= render 'shared/basic_fields', fields: fields %>
-
-<%%= render '/shared/show_actions', object: @<%= resource_name %> %>
+<%%= render('shared/pages/show', object: @<%= resource_name, fields: fields) %>

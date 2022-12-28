@@ -1,6 +1,8 @@
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },
-    description_cont: { slug: 'defaults.description'}
+    tagline_cont:     { slug: 'defaults.tagline' },
+    description_cont: { slug: 'defaults.description'},
+    address_cont:     { slug: 'defaults.address'}
 } %>
 
 <% search_form = render('shared/pages/public/partials/search_form', search_fields: search_fields) %>

@@ -1,12 +1,8 @@
 <% # BOOTSTRAP NICETOHAVE: Probably have a look. Should at least be carded. Figure out how much is shared with the widget though.%>
 <% header_size ||= 1 %>
-<% header_is_link ||= false %>
+
 <%= "<h#{header_size}>".html_safe %>
-  <% if header_is_link %>
-    <%= link_to @message, admin_debt_path(@user.id) %>
-  <% else %>
-    <%= @message %>
-  <% end %>
+  <%= @message %>
 <%= "</h#{header_size}>".html_safe %>
 
 <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn btn-secondary' %> 

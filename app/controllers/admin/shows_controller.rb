@@ -44,10 +44,12 @@ class Admin::ShowsController < Admin::GenericEventsController
   def create_staffing_debts
     authorize! :create, Admin::StaffingDebt
 
-    if params[:number_of_slots].nil?
+    number_of_slots = params[:create_show_staffing_debts].try(:[], :number_of_slots)
+  
+    if number_of_slots.nil?
       flash[:notice] = 'You have to specify the amount of Staffing slots you want to create.'
     elsif @show.staffing_debt_start.present?
-      amount = params[:number_of_slots].first.to_i
+      amount = number_of_slots.first.to_i
       @show.create_staffing_debts(amount)
       flash[:notice] = "#{helpers.pluralize(amount, 'Staffing obligation slot')} created for every team member."
     else

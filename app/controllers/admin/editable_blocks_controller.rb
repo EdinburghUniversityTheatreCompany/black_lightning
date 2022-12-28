@@ -22,7 +22,7 @@ class Admin::EditableBlocksController < AdminController
   # GET /admin/editable_blocks/new.json
   ##
   def new
-    # The title is set by the view.
+    # The title is set by the view, sometimes.
     @editable_block.name = params[:name]
 
     super
@@ -34,12 +34,6 @@ class Admin::EditableBlocksController < AdminController
     Admin::EditableBlock
   end
 
-  def load_index_resources
-    @editable_blocks = super.group_by(&:group)
-
-    return @editable_blocks
-  end
-
   def permitted_params
     [
       :content, :name, :url, :ordering, :admin_page, :group, 
@@ -48,10 +42,6 @@ class Admin::EditableBlocksController < AdminController
   end
 
   def order_args
-    ['url', 'name']
-  end
-
-  def should_paginate
-    false
+    ['group', 'name']
   end
 end

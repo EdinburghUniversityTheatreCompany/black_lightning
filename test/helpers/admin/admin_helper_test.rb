@@ -31,7 +31,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'Can destroy_with_flash_message with name' do
-    @mass_mail = FactoryBot.create(:draft_mass_mail)
+    @mass_mail = mass_mails(:draft_mass_mail)
 
     destroy_with_flash_message(@mass_mail, name: 'The All-Mighty Hexagon')
 
@@ -39,7 +39,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'Can destroy_with_flash_message with custom success message' do
-    @mass_mail = FactoryBot.create(:draft_mass_mail)
+    @mass_mail = mass_mails(:draft_mass_mail)
 
     destroy_with_flash_message(@mass_mail, success_message: 'Finbar the Viking is Watching')
 
@@ -59,7 +59,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'destroy_with_flash_message for invalid object adds errors to flash' do
-    @mass_mail = FactoryBot.create(:sent_mass_mail)
+    @mass_mail = mass_mails(:sent_mass_mail)
 
     assert_not destroy_with_flash_message(@mass_mail)
 
@@ -100,7 +100,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
 
   test 'cannot destroy without permission' do
     @current_user = users(:user)
-    @mass_mail = FactoryBot.create(:draft_mass_mail)
+    @mass_mail = mass_mails(:draft_mass_mail)
 
     assert_no_difference 'MassMail.count' do
       assert_not destroy_with_flash_message(@mass_mail)
@@ -111,7 +111,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'destroy_with_flash_message! for invalid object raises an error' do
-    @mass_mail = FactoryBot.create(:sent_mass_mail)
+    @mass_mail = mass_mails(:sent_mass_mail)
 
     assert_raise ActiveRecord::RecordNotDestroyed do
       destroy_with_flash_message!(@mass_mail)
@@ -122,14 +122,14 @@ class Admin::AdminHelperTest < ActionView::TestCase
   end
 
   test 'destroy_with_flash_message for invalid object adds a custom error' do
-    @mass_mail = FactoryBot.create(:sent_mass_mail)
+    @mass_mail = mass_mails(:sent_mass_mail)
 
     assert_not destroy_with_flash_message(@mass_mail, error_message: 'Hexagons Forever')
     assert_equal(['Hexagons Forever', *@mass_mail.errors.messages[:destroy]], flash[:error])
   end
 
   test 'destroy_with_flash_message for invalid object adds a custom error without errors appended' do
-    @mass_mail = FactoryBot.create(:sent_mass_mail)
+    @mass_mail = mass_mails(:sent_mass_mail)
 
     assert_not destroy_with_flash_message(@mass_mail, error_message: 'Hexagons Forever', append_errors_to_error_flash: false)
 

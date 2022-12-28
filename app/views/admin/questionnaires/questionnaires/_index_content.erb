@@ -9,7 +9,7 @@
   <div class="card">
     <div class="card-header">
       <% # If you change the anchor_id, please also change the anchor for the back button on the questionnaire show page. %>
-      <h3 class="card-title"><a id="<%= "#{event_name.to_url}-table" %>"><%= event_name %></a></h3>
+      <span class="card-title"><a id="<%= "#{event_name.to_url}-table" %>"><%= event_name %></a></span>
     </div>
     <div class="card-body">
       <% field_sets = questionnaires.map { |questionnaire| { 

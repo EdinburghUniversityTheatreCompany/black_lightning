@@ -1,9 +1,3 @@
-<% if can? :read, Opportunity %>
-    <h3><%= link_to 'Opportunities', admin_opportunities_path %></h3>
-<% else %>
-    <h3><%= "Opportunities" %></h3>
-<% end %>
-
 <% displayed_opportunities_count = 5 %>
 <% opportunities = Opportunity.active %>
 

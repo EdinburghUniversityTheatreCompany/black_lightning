@@ -2,8 +2,9 @@
   <div class="col-md-<%= event.team_members.any? ? '8' : '12' %>">
     <% # This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
     <div class="card mb-3 mb-md-0">
-      <h3 class="card-header">Description</h3>
-
+      <div class="card-header">
+        <h4 class="card-title">Description</span>
+      </div>
       <div class="card-body">
         <%= render_markdown event.publicity_text %>
 
@@ -17,10 +18,11 @@
   <% if event.team_members.any? %>
     <div class="col-md-4">
       <div class="card h-100">
-        <h3 class="card-header">Cast and Crew</h3>
-        
+        <div class="card-header">
+          <h4 class="card-title">Cast and Crew</span>
+        </div>
         <div class="card-body">
-          <%= render '/shared/show_team_members', team_members: event.team_members, admin_view: true %>
+          <%= render '/shared/admin_show_team_members', team_members: event.team_members  %>
         </div>
       </div>
     </div>

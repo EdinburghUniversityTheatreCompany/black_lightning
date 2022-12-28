@@ -4,20 +4,14 @@
 <% content_for :content do %>
   <div class="row">
     <div class="col-3">
-      <div class="d-flex flex-column flex-shrink-0 p-3 bg-light card h-100">
-        <a href="<%= get_subpage_url(@controller, @subpages[0]) %>" class="d-flex mb-3 mb-md-0 me-md-auto text-decoration-none">
-          <h3><%= @subpages[0].name %></h3>
-        </a>
-        <hr>
-        <ul class="nav nav-pills flex-column mb-auto">
-          <% @subpages.drop(1).each do |subpage| %>
-            <li class="nav-item"><%= get_subpage_link(@controller, subpage, subpage==@editable_block) %></li>
-          <% end %>
-        </ul>
-      </div>
+      <%= render('layouts/sidebar', title: @sidebar_title, subpages: @subpages) %>
     </div>
     <div class="col-9">
-      <%= yield %>
+      <div class="card">
+        <div class="card-body">
+          <%= yield %>
+        </div>
+      </div>
     </div>
   </div>
 <% end %>

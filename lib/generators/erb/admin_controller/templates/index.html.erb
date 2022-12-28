@@ -1,3 +1,4 @@
+<%% # GENERATED CHEC: Check if the first header should be name or that something like "Name" or "Title" is more apt. %>
 <%% headers = ['View', <%= attributes.map{ |attribute| ":#{attribute.name}" }.join(', ') %>] %>
 
 <%% field_sets = @<%= resource_name.pluralize %>.map { |<%= resource_name %>| {
@@ -7,6 +8,8 @@
     <%= "#{resource_name}.#{attribute.name}," %>
   <%- end -%>
   ] } } %>
+
+<%% # GENERATED CHECK: These very likely should not all be _cont. %>
 
 <%% search_fields = {
   <%- attributes.each do |attribute| -%>

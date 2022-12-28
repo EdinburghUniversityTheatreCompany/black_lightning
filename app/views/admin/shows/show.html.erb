@@ -62,9 +62,11 @@
             <% end %>
 
             <% if @show.staffing_debt_start.present? %>
-                <%= form_with(url: create_staffing_debts_admin_show_path(@show), method: :post, local: true, class: "form-inline") do %>
-                    Total Amount of Staffing Debts: 
-                    <%= number_field :number_of_slots, nil, in: 1..2 %>
+                <%= simple_horizontal_form_for(:create_show_staffing_debts, url: create_staffing_debts_admin_show_path(@show)) do |f| %>
+                    <%= f.error_notification %>
+
+                    <%= f.input :number_of_slots, label: 'Total Amount of Staffing Debts', as: :integer, min: 1, max: 3 %>
+
                     <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>
                 <% end %>
             <% end %>

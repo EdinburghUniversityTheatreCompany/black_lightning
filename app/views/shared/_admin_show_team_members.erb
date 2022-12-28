@@ -8,9 +8,7 @@
   <% continue if team_member.nil? %>
 
   <p class="py-0 my-0">
-    <b><%= team_member.position %></b>
-
-    <%= user_link(team_member.user, true) %>
+    <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
     <% if team_member.user.present? && (user_is_part_of_proposal || can?(:show, team_member.user)) %>
       <% if team_member.user.has_role? 'DM Trained' %>

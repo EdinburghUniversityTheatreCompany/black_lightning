@@ -1,11 +1,15 @@
+<% headers = [:name, :group] %>
+
+<% field_sets = @editable_blocks.map { |editable_block| { 
+  fields: [
+  editable_block,  
+  editable_block.group,
+] } } %>
+
 <% search_fields = {
     name_cont:    { slug: 'defaults.name' },
     content_cont: { slug: 'defaults.content' },
     url_cont:     { slug: 'defaults.url' }
 } %>
 
-<% content = render('admin/editable_blocks/index_content') %>
-
-<%= render 'shared/pages/index', resource_class: Admin::EditableBlock, content: content, search_fields: search_fields, 
-  include_pagination: false %>
-
+<%= render 'shared/pages/index', resource_class: Admin::EditableBlock, resources: @editable_blocks, headers: headers, field_sets: field_sets, search_fields: search_fields %>

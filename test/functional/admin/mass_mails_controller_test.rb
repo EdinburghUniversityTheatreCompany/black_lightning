@@ -3,14 +3,10 @@ require 'test_helper'
 class Admin::MassMailsControllerTest < ActionController::TestCase
   setup do
     sign_in users(:admin)
-
-    # There has to be at least one member who can receive the email
-    FactoryBot.create(:member)
   end
 
   test 'should get index' do
-    FactoryBot.create_list(:draft_mass_mail, 10)
-    FactoryBot.create_list(:sent_mass_mail, 10)
+    assert MassMail.all.count > 0, "There are no mass mails loaded."
 
     get :index
     assert_response :success
@@ -19,7 +15,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should get show for draft mail' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
 
     get :show, params: { id: mass_mail }
 
@@ -29,7 +25,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should get show for sent mail' do
-    mass_mail = FactoryBot.create(:sent_mass_mail)
+    mass_mail = mass_mails(:sent_mass_mail)
 
     get :show, params: { id: mass_mail }
 
@@ -45,7 +41,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should get edit' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
 
     get :edit, params: { id: mass_mail }
 
@@ -56,7 +52,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'cannot edit a mail that is already sent' do
-    mass_mail = FactoryBot.create(:sent_mass_mail)
+    mass_mail = mass_mails(:sent_mass_mail)
 
     get :edit, params: { id: mass_mail }
 
@@ -97,7 +93,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should update mass mail without sending' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
     put :update, params: { id: mass_mail, mass_mail: attributes }
@@ -107,7 +103,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should update mass mail with sending' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
 
     put :update, params: { id: mass_mail, mass_mail: attributes, send: true }
@@ -120,7 +116,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should not update mass mail that is invalid' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
     attributes = FactoryBot.attributes_for(:draft_mass_mail, subject: '')
 
     put :update, params: { id: mass_mail, mass_mail: attributes }
@@ -129,7 +125,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should destroy draft admin_mass_mail' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
 
     assert_difference('MassMail.count', -1) do
       delete :destroy, params: { id: mass_mail }
@@ -139,7 +135,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'should not destroy sent admin_mass_mail' do
-    mass_mail = FactoryBot.create(:sent_mass_mail)
+    mass_mail = mass_mails(:sent_mass_mail)
 
     assert_no_difference('MassMail.count') do
       delete :destroy, params: { id: mass_mail }
@@ -147,20 +143,20 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   end
 
   test 'Should not send mail that has already been sent' do
-    mass_mail = FactoryBot.create(:sent_mass_mail)
+    mass_mail = mass_mails(:sent_mass_mail)
 
     helper_test_send_mail_with_errors(mass_mail)
   end
 
   test 'Should not send mail that has a send date in the past' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
     mass_mail.update_attribute :send_date, DateTime.now.advance(days: -1)
 
     helper_test_send_mail_with_errors(mass_mail)
   end
 
   test 'Should not send mail when there are no members' do
-    mass_mail = FactoryBot.create(:draft_mass_mail)
+    mass_mail = mass_mails(:draft_mass_mail)
 
     members = User.with_role(:member)
 

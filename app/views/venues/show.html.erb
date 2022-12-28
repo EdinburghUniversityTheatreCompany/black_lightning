@@ -1,4 +1,6 @@
-<%= render 'shared/pages/public/basic_info', header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [] %>
+<%= render 'shared/pages/public/basic_info', header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [
+  { key: 'Address', value: render_markdown(@venue.address) }
+] %>
 
 <div class="row">
   <div class="col">
@@ -10,7 +12,7 @@
 
     <% if @venue.location %>
       <div class="card mb-3">
-        <h3 class="card-header">Map</h3>
+        <div class="card-header"><h4>Map</h4></div>
         <div class="card-body">
           <%# don't load the map unless we have to as we're only allowed to do so 25,000 times a day %>
           <%# TODO: Is this still true? %>
