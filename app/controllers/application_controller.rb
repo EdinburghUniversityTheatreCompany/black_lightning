@@ -40,7 +40,7 @@ class ApplicationController < ActionController::Base
 
   def set_navbar
     @navbar_items = [
-      { title: 'Events',                path: events_path },
+      { title: "What's On",             path: events_path },
       { title: 'About',                 children: get_navbar_children('about') },
       { title: 'Get Involved',          children: get_navbar_children('get_involved') },
       { title: 'Archives',              children: get_navbar_children('archives') },
