@@ -1,21 +1,25 @@
 <% 
-# Essentially the same as in the admin events index, so likely edit that too if you edit this.
-# BOOTSTRP: Do not display this on the non-archive page.
-search_fields = {
-  name_cont:                      { slug: 'defaults.name' },
-  publicity_text_or_tagline_cont: { slug: 'defaults.publicity_text' },
-  users_full_name_cont:           { slug: 'defaults.user' },
-  author_cont:                    { slug: 'defaults.author' },
+if @show_search_form
+  # Essentially the same as in the admin events index, so likely edit that too if you edit this.
+  # BOOTSTRAP TODO: Do not display this on the non-archive page.
+  search_fields = {
+    name_cont:                      { slug: 'defaults.name' },
+    publicity_text_or_tagline_cont: { slug: 'defaults.publicity_text' },
+    users_full_name_cont:           { slug: 'defaults.user' },
+    author_cont:                    { slug: 'defaults.author' },
 
-  venue_id_eq:                    { slug: 'defaults.venue', type: :select, collection: Venue.accessible_by(current_ability) },
-  event_tags_id_eq:               { slug: 'defaults.event_tags', type: :select, collection: EventTag.accessible_by(current_ability) },
-  date_range:                     { type: :date_range, options: {  start_date_attribute: 'start_date', end_date_attribute: 'end_date'} },
+    venue_id_eq:                    { slug: 'defaults.venue', type: :select, collection: Venue.accessible_by(current_ability) },
+    event_tags_id_eq:               { slug: 'defaults.event_tags', type: :select, collection: EventTag.accessible_by(current_ability) },
+    date_range:                     { type: :date_range, options: {  start_date_attribute: 'start_date', end_date_attribute: 'end_date'} },
 
-  random_button:      { type: :submit_button, action: :Random },
-  on_this_day_button: { type: :submit_button, action: 'On This Day' }
-} 
+    random_button:      { type: :submit_button, action: :Random },
+    on_this_day_button: { type: :submit_button, action: 'On This Day' }
+  } 
 
-search_form = render '/shared/pages/public/partials/search_form', search_fields: search_fields
+  search_form = render '/shared/pages/public/partials/search_form', search_fields: search_fields
+else
+  search_form = nil
+end
 %>
 
 
