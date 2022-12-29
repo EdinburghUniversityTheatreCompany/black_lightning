@@ -42,9 +42,9 @@ class AdminController < ApplicationController
     children << { title: 'Events', path: admin_events_path, fa_icon: 'fa-calendar' }             if can? :index, Event
     children << { title: 'Shows', path: admin_shows_path, fa_icon: 'fa-theater-masks' }          if can? :index, Show
     children << { title: 'Workshops', path: admin_workshops_path, fa_icon: 'fa-hammer' }         if can? :index, Workshop
+    children << { title: 'Festivals & Seasons', path: admin_seasons_path, fa_icon: 'fa-shop' }   if can? :index, Season
     children << { title: 'Questionnaires', path: admin_questionnaires_questionnaires_path, fa_icon: 'fa-clipboard-list' } if can? :index, Admin::Questionnaires::Questionnaire
     children << { title: 'Venues', path: admin_venues_path, fa_icon: 'fa-building' }             if can? :index, Venue
-    children << { title: 'Festivals & Seasons', path: admin_seasons_path, fa_icon: 'fa-shop' }   if can? :index, Season
     @navbar_categories << { title: 'Productions', children: children, fa_icon: 'fa-industry' }
 
     # Staffing & Debt
