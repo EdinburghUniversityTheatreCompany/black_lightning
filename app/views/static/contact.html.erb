@@ -1,5 +1,4 @@
 <%= display_block("Contact Us", false) %>
-
 <% 
 emails = [
   ['The Committee',               'committee@bedlamtheatre.co.uk'],
@@ -25,13 +24,4 @@ emails = [
   ['Engagement Subcommittee',     'engagement@bedlamtheatre.co.uk']
 ]
 %>
-
-<%= simple_form_for(:contact, url: contact_form_send_url ) do |f| %>
-  <%= f.input :name %>
-  <%= f.input :email, label: 'Your Contact Email' %>
-  <%= f.input :recipient, collection: emails %>
-  <%= f.input :subject %>
-  <%= f.input :message, as: :text %>
-
-  <%= f.submit 'Send Message', class: 'btn btn-primary' %>
 <% end %>
