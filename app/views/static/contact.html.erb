@@ -33,5 +33,7 @@ emails = [
   <%= f.input :subject %>
   <%= f.input :message, as: :text %>
 
+  <%= recaptcha_v3(action: 'submit_contact_form') %>
+
   <%= f.submit 'Send Message', class: 'btn btn-primary' %>
 <% end %>
