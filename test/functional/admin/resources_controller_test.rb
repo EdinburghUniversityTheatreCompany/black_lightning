@@ -20,8 +20,6 @@ class Admin::ResourcesControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_equal 'Tech', assigns(:editable_block).name
-
-    assert_equal get_subpages('admin/resources/tech'), assigns(:subpages)
   end
 
   test 'should get membership checker' do

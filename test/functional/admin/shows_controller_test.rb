@@ -198,7 +198,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     @show = FactoryBot.create(:show, staffing_debt_start: Date.current)
 
     assert_difference 'Admin::StaffingDebt.count', @show.team_members.count * 2 do
-      post :create_staffing_debts, params: { id: @show.slug, number_of_slots: 2 }
+      post :create_staffing_debts, params: { id: @show.slug, create_show_staffing_debts: { number_of_slots: 2 } }
     end
 
     assert_redirected_to admin_show_path(@show)
@@ -215,7 +215,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_redirected_to admin_show_path(@show)
     assert_includes flash[:notice], 'specify the amount'
 
-    post :create_staffing_debts, params: { id: @show.slug, number_of_slots: 2 }
+    post :create_staffing_debts, params: { id: @show.slug, create_show_staffing_debts: { number_of_slots: 2 } }
 
     assert_redirected_to admin_show_path(@show)
     assert_includes flash[:notice], 'Could not create Staffing obligations because the start date has not been set yet.'

@@ -112,7 +112,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal.late = true
     @proposal.approved = false
 
-    expected_labels = "<span class=\"badge bg-danger float-right\">Late</span>\n<span class=\"badge bg-danger float-right\">Rejected</span>"
+    expected_labels = "<div class=\"float-right\"><span class=\"badge bg-danger\">Rejected</span>\n<span class=\"badge bg-danger\">Late</span></div>"
 
     assert_equal expected_labels, @proposal.labels(true)
   end
@@ -140,7 +140,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   test 'labels for unsuccessful proposal with pull right' do
     @proposal.successful = false
 
-    expected_labels = "<span class=\"badge bg-danger float-right\">Unsuccessful</span>"
+    expected_labels = "<div class=\"float-right\"><span class=\"badge bg-danger\">Unsuccessful</span></div>"
 
     assert_equal expected_labels, @proposal.labels(true)
   end

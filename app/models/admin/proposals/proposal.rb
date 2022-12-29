@@ -68,29 +68,31 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     labels << case successful
               when true
-                generate_label(:success, 'Successful', pull_right)
+                generate_label(:success, 'Successful')
               when false
-                generate_label(:danger, 'Unsuccessful', pull_right)
+                generate_label(:danger, 'Unsuccessful')
               else
                 case approved
                 when true
-                  generate_label(:success, 'Approved', pull_right)
+                  generate_label(:success, 'Approved')
                 when false
-                  generate_label(:danger, 'Rejected', pull_right)
+                  generate_label(:danger, 'Rejected')
                 else
-                  generate_label(:warning, 'Waiting for Approval', pull_right)
+                  generate_label(:warning, 'Waiting for Approval')
                 end
               end
 
-    labels << generate_label(:danger, 'Late', pull_right) if late
-    labels << generate_label(:danger, 'Has Debtors', pull_right) if has_debtors
+    labels << generate_label(:danger, 'Late') if late
+    labels << generate_label(:danger, 'Has Debtors') if has_debtors
 
+    labels_html = labels.join("\n").html_safe
+
+    # Wrap the whole list of labels in a float right so that the margins stay preserved.
     if pull_right
-      # Bcause the highest float-right will be farthest to the right, the order has to be reversed.
-      return "#{labels.reverse.join("\n")}".html_safe
-    else
-      return labels.join("\n").html_safe
+      return "<div class=\"float-right\">#{labels_html}</div>".html_safe
     end
+
+    return labels_html
   end
 
   ##
