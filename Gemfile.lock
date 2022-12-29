@@ -143,7 +143,6 @@ GEM
       marcel (~> 1.0)
       nokogiri (~> 1.10, >= 1.10.4)
       rubyzip (>= 1.3.0, < 3)
-    childprocess (4.1.0)
     chronic (0.10.2)
     chunky_png (1.4.0)
     cocoon (1.2.15)
@@ -272,7 +271,7 @@ GEM
     psych (4.0.6)
       stringio
     public_suffix (5.0.0)
-    puma (4.3.12)
+    puma (6.0.1)
       nio4r (~> 2.0)
     racc (1.6.2)
     rack (2.2.4)
@@ -366,8 +365,7 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
-    selenium-webdriver (4.5.0)
-      childprocess (>= 0.5, < 5.0)
+    selenium-webdriver (4.7.1)
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 3.0)
       websocket (~> 1.0)
@@ -475,7 +473,7 @@ DEPENDENCIES
   mysql2
   nokogiri
   paper_trail
-  puma (~> 4.1)
+  puma (~> 6.0)
   rack-cors
   rails (~> 7.0)
   rails-controller-testing
@@ -501,6 +499,9 @@ DEPENDENCIES
   tzinfo-data
   webdrivers
   webpacker (~> 5.x)
+
+RUBY VERSION
+   ruby 3.1.2p20
 
 BUNDLED WITH
    2.3.7

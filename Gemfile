@@ -1,5 +1,7 @@
 source 'http://rubygems.org'
 
+ruby File.read(".ruby-version").strip
+
 gem 'rails', '~> 7.0'
 
 gem 'mysql2'
@@ -53,7 +55,7 @@ gem 'honeybadger', '~> 4.0'
 
 group :development, :test do
   # Use Puma as the app server
-  gem 'puma', '~> 4.1'
+  gem 'puma', '~> 6.0'
 
   gem 'byebug'
   gem 'spring'

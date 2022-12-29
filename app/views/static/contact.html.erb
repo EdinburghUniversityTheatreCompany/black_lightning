@@ -1,5 +1,4 @@
 <%= display_block("Contact Us", false) %>
-
 <% 
 emails = [
   ['The Committee',               'committee@bedlamtheatre.co.uk'],
@@ -36,4 +35,5 @@ emails = [
   <%= recaptcha_v3(action: 'submit_contact_form') %>
 
   <%= f.submit 'Send Message', class: 'btn btn-primary' %>
+
 <% end %>
