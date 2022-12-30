@@ -4,6 +4,6 @@ module MapHelper
     end
 
     def venue_map(venue)
-        return map(center: { latlng: venue.latlng, zoom: 16 }, markers: [venue.marker_info])
+        return map(center: { latlng: venue.latlng, zoom: 16 }, markers: [venue.marker_info(true)])
     end
 end

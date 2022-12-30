@@ -49,11 +49,12 @@ class Venue < ApplicationRecord
     return "#{id}-#{name.to_url}"
   end
 
-  def marker_info
+  def marker_info(open_popup=false)
     if location.present?
       return {
         latlng: latlng,
-        popup: popup_description
+        popup: popup_description,
+        open_popup: open_popup
       }
     else
       return nil
