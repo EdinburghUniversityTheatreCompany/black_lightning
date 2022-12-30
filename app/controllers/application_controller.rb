@@ -5,7 +5,6 @@ class ApplicationController < ActionController::Base
   before_action :set_paper_trail_whodunnit
 
   before_action :set_globals
-  before_action :set_navbar
 
   check_authorization unless: :devise_controller?
 
@@ -36,26 +35,6 @@ class ApplicationController < ActionController::Base
     @support_email = 'it@bedlamtheatre.co.uk'
 
     @admin_site = false
-  end
-
-  def set_navbar
-    @navbar_items = [
-      { title: "What's On",             path: events_path },
-      { title: 'About',                 children: get_navbar_children('about') },
-      { title: 'Get Involved',          children: get_navbar_children('get_involved') },
-      { title: 'Archives',              children: get_navbar_children('archives') },
-      { title: 'Contact',               path: static_path('contact') },
-      { title: 'Accessibility/Find Us', path: static_path('accessibility') }
-    ]
-
-    # Display the login link if the user is not signed in yet, otherwise display a link to the admin site and a link to log out.
-    if user_signed_in?
-      @navbar_items << { title: 'Members', path: admin_path }
-      @navbar_items << { title: 'Log Out', path: destroy_user_session_path, method: :delete, item_class: 'border border-white rounded-3' }
-    else
-      # Use admin_path rather than user_session_path so someone is automatically redirected to the admin site after loggingg in.
-      @navbar_items << { title: 'Log In', path: admin_path, item_class: 'border border-white rounded-3' }
-    end
   end
 
   def report_500(exception)
