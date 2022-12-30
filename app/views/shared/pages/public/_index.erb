@@ -12,9 +12,9 @@
       <%= display_block("Public Index - #{@title} - Empty", false) %>
     <% else %>
         <% items.each do |item| %>
-          <div class="d-flex">
-            <% image = image_tag(item[:image].variant(thumb_variant_public),{ class: 'flex-fill' }.merge(variant_width_and_height_html(thumb_variant_public))) %>
-            <%= link_to(image, item[:url], class: "img-thumbnail h-100") %>
+          <div class="d-flex flex-column flex-md-row">
+            <% image = image_tag(item[:image].variant(thumb_variant_public),{ class: 'h-100 w-100' }.merge(variant_width_and_height_html(thumb_variant_public))) %>
+            <%= link_to(image, item[:url], class: "img-thumbnail") %>
 
             <div class="flex-fill ms-3">
               <h4 class="media-heading"><%= link_to item[:header], item[:url] %></h4>

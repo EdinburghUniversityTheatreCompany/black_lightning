@@ -8,15 +8,16 @@
 
 <div class="card <%= card_class %>">
   <div class="card-header <%= header_class %>">
-    <a class="btn btn-link stretched-link" type="button" data-toggle="collapse" data-target="#<%= id %>" role="button" aria-expanded="false" aria-controls="#<%= id %>">
+    <% # BOOTSTRAP 5: Remove the data-toggle and data-target (without bs) attributes. %>
+    <a class="btn btn-link" type="button" data-toggle="collapse" data-target="#<%= id %>" data-bs-toggle="collapse" data-bs-target="#<%= id %>"  role="button" aria-expanded="false" aria-controls="#<%= id %>" aria-expanded="false" aria-controls="collapseExample">
       <%= generate_icon_prefix('chevron-down', title) %>
     </a>
     <%= title_right %>
   </div>
 
-    <div class="collapse<%= ' show' if start_open %>" id="<%= id %>">
-      <div class="card-body <%= body_class %>" >
-    <%= yield %>
+  <div class="collapse<%= ' show' if start_open %>" id="<%= id %>">
+    <div class="card-body <%= body_class %>" >
+      <%= yield %>
     </div>
   </div>
 </div>
