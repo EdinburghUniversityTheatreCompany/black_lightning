@@ -2,7 +2,7 @@ require 'test_helper'
 
 class Admin::VenuesControllerTest < ActionController::TestCase
   setup do
-    @venue = venues(:one)
+    @venue = venues(:two)
 
     sign_in users(:admin)
   end
@@ -11,6 +11,16 @@ class Admin::VenuesControllerTest < ActionController::TestCase
     get :index
     assert_response :success
     assert_not_nil assigns(:venues)
+  end
+
+  test 'should get map' do
+    get :map
+    assert_response :success
+
+    # Assert venues with locations are included and venues without locations are not.
+    assert_match 'Bedlam Theatre', response.body
+    assert_match 'Pleasance Theatre', response.body
+    assert_no_match 'Roxy Central', response.body
   end
 
   test 'should get new' do
