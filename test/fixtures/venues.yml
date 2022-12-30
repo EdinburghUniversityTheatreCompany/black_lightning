@@ -23,10 +23,17 @@
 one:
   name: Bedlam Theatre
   description: Brrr, cold
+  location: "55.946324, -3.190721"
+  address: 11b Bristo Place, EH1 1EZ
 
 two:
   name: Pleasance Theatre
   description: They have a descending rig!
+  location: "55.94753901949639, -3.1815457437588446"
+
+roxy:
+  name: Roxy Central
+  description: Nice but expensive.
 
 unknown:
   name: Unknown

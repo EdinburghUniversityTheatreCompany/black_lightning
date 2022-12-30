@@ -45,11 +45,11 @@ class Admin::GenericEventsController < AdminController
       new_debtors = new_users.select(&:in_debt)
 
       # Only notify debtors if the start date is after the start of the current academic year.
-      if new_debtors.any? && @show.start_date > helpers.start_of_year
+      if new_debtors.any? && get_resource.start_date > helpers.start_of_year
         new_debtors_string = new_debtors.collect(&:name).to_sentence
         helpers.append_to_flash(:notice, "The show was successfully updated, but #{new_debtors_string} #{'is'.pluralize(new_debtors.count)} in debt.")
 
-        ShowMailer.warn_committee_about_debtors_added_to_show(@show, new_debtors_string, @current_user).deliver_later
+        ShowMailer.warn_committee_about_debtors_added_to_show(get_resource, new_debtors_string, @current_user).deliver_later
       end
     end
 

@@ -33,6 +33,7 @@ gem 'daemons'
 
 gem 'caxlsx'
 gem 'rqrcode'
+gem 'leaflet-rails'
 
 gem 'silencer'
 

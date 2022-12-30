@@ -26,6 +26,17 @@ class StaticController < ApplicationController
   end
 
   def contact_form_send
+    # I do not know how to deliberately fail the captcha, as the entire check is disabled in testing.
+    # :nocov:
+    unless verify_recaptcha(action: 'submit_contact_form', score: 0.5)
+      render 'contact'
+
+      return
+    end
+    # :nocov:
+
+    # If it passed the captcha, send the email.
+  
     sender_email = params[:contact][:email]
     name = params[:contact][:name]
     recipient_email = params[:contact][:recipient]

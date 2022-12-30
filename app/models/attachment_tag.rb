@@ -15,4 +15,6 @@ class AttachmentTag < ApplicationRecord
   validates :name, uniqueness: { case_sensitive: false }
 
   has_and_belongs_to_many :attachments, optional: true
+
+  default_scope { order(:ordering) }
 end

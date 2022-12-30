@@ -2,4 +2,10 @@
 
 class Archives::GenericEventsController < GenericEventsController
   skip_authorization_check
+
+  def index
+    @show_search_form = true
+
+    super
+  end
 end

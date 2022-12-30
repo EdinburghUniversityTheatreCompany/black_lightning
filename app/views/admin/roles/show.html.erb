@@ -11,12 +11,12 @@
         You are not allowed to add members. Please ask the secretary to add new members.
       <% end %>
     <% else %>
-      <%= simple_horizontal_form_for(:add_user_details, url: add_user_admin_role_url(@role), html: { class: 'form-inline' }) do |f| %>
+      <%= simple_horizontal_form_for(:add_user_details, url: add_user_admin_role_url(@role)) do |f| %>
         <%= f.error_notification %>
 
         <%= f.input :user_id, collection: User.all %>
 
-        <%= submit_tag "Add User to Role", class: 'btn btn-secondary mx-2' %>
+        <%= submit_tag "Add User to Role", class: 'btn btn-secondary' %>
       <% end %>
     <% end %>
   <% end %>

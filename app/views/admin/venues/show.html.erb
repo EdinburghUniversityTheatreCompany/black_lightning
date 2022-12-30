@@ -5,11 +5,12 @@
   address: @venue.address,
   description: render_markdown(@venue.description),
   image: { type: 'image', image: @venue.fetch_image, variant: slideshow_variant },
+  map:  { type: 'content', content: "<h3>Map</h3>\n#{venue_map(@venue)}".html_safe },
   gallery: { type: 'content', content: render('/shared/gallery', pictures: @venue.pictures.accessible_by(current_ability, :show)) }
 } %>
 
 <% content_for :extra_show_actions do %>
-  <%= get_link Show, :index, link_text: 'All Shows in Venue', query_params: { 'q[venue_id_eq]' => @venue.id } %>
+  <%= get_link Event, :index, link_text: 'All Events in Venue', query_params: { 'q[venue_id_eq]' => @venue.id } %>
 <% end %>
 
 <%= render('shared/pages/show', object: @venue, fields: fields) %>

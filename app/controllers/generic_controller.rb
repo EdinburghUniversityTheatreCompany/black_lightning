@@ -12,6 +12,8 @@ module GenericController
 
     resources = load_index_resources
 
+    instance_variable_set("@#{resource_name.pluralize}", resources)
+
     response.headers['X-Total-Count'] = resources.count.to_s
 
     respond_to do |format|
@@ -204,6 +206,7 @@ module GenericController
     return @q.result(distinct: distinct_for_ransack)
   end
 
+  # This is what is passed to random as well, so do any extra filtering here.
   def base_index_database_query
     # Use reorder to override the default ordering in the scope.
     # We want this because we expect the default ordering to be ignored when we specify something new.
@@ -214,12 +217,11 @@ module GenericController
                                    .accessible_by(current_ability)
   end
 
+  # This is what is only used by the index action.
   def load_index_resources
     resources = base_index_database_query
 
     resources = resources.page(params[:page]).per(items_per_page) if should_paginate
-
-    instance_variable_set("@#{resource_name.pluralize}", resources)
 
     return resources
   end

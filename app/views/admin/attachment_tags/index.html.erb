@@ -1,8 +1,9 @@
-<% headers = [:name, ''] %>
+<% headers = [:name, :ordering, ''] %>
 
 <% field_sets = @attachment_tags.map { |attachment_tag| { 
   fields: [
-    attachment_tag,  
+    attachment_tag,
+    attachment_tag.ordering,
     get_link_to_attachments_for_tag(attachment_tag)
   ] } } %>
 

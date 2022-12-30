@@ -9,10 +9,10 @@ class Admin::EventTagsController < AdminController
   private
 
   def permitted_params
-    [:name, :description]
+    [:name, :ordering, :description]
   end
 
   def order_args
-    ['name']
+    'ordering ASC'
   end
 end

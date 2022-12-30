@@ -49,6 +49,7 @@ en:
         members_only_text: 'Members-Only Text'
         name: 'Name'
         notes: 'Notes'
+        ordering: 'Ordering'
         picture_tags: 'Picture Tags'
         proposal_text: 'Proposal Text'
         proposal_title: 'Proposal Title'

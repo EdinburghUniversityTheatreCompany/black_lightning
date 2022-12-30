@@ -1,36 +1,8 @@
+<h1>Accessibility/Find Us</h1>
+
+<%= map(
+  center: { latlng: bedlam_latlng, zoom: 16 },
+  markers: [ latlng: bedlam_latlng, popup: '<b>Bedlam Theatre</b><br><br>11b Bristo Place<br>EH1 1EZ', open_popup: true]) 
+  %>
+
 <%= display_block("Accessibility", false) %>
-
-<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh3mh3Lt0ymci2MV_KDHn9CFZRG0bppcE&amp;sensor=false">
-  </script>
-
-  <div id="map_canvas" style="width:100%; height:300px"></div>
-
-  <script type="text/javascript">
-    var lat  = 55.946324;
-    var long = -3.190721;
-    function initialize() {
-      var venue = new google.maps.LatLng(lat, long);
-      var mapOptions = {
-        center: venue,
-        zoom: 16,
-        mapTypeId: google.maps.MapTypeId.ROADMAP
-      };
-      var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
-
-      var marker = new google.maps.Marker({
-        position: venue,
-        map: map,
-        icon: {
-          path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-          scale: 6,
-          fillColor: "green",
-          fillOpacity: 0.8,
-          strokeColor: "black",
-          strokeWeight: 2
-        },
-        animation: google.maps.Animation.DROP,
-        title:"Bedlam Theatre"
-      });
-    }
-    initialize();
-  </script>

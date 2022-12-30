@@ -1,3 +1,4 @@
+<% card_class = '' if card_class.nil? %>
 <% body_class = '' if body_class.nil? %>
 <% header_class = '' if header_class.nil? %>
 <% title_right = '' if title_right.nil? %>
@@ -5,7 +6,7 @@
 <% id = "#{title.to_url}_container" if id.nil? %>
 <% start_open = false if start_open.nil? %>
 
-<div class="card">
+<div class="card <%= card_class %>">
   <div class="card-header <%= header_class %>">
     <a class="btn btn-link stretched-link" type="button" data-toggle="collapse" data-target="#<%= id %>" role="button" aria-expanded="false" aria-controls="#<%= id %>">
       <%= generate_icon_prefix('chevron-down', title) %>

@@ -1,84 +1,30 @@
 <% url = '/' + controller_path if url.nil? %>
 
-<% buttons = [] %>
-
 <div class="card">
   <div class="card-header">
     <span class="card-title">Search</span>
   </div>
 
-  <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search" },   wrapper: :horizontal_form,
-  wrapper_mappings: {
-    boolean:       :horizontal_boolean,
-    check_boxes:   :horizontal_collection,
-    date:          :horizontal_multi_select,
-    datetime:      :horizontal_multi_select,
-    file:          :horizontal_file,
-    radio_buttons: :horizontal_collection,
-    range:         :horizontal_range,
-    time:          :horizontal_multi_select,
-  } do |f| %>
-    <div class="card-body pb-0">
-      <% input_fields.each do |key, params| %>
-        <% if params.nil? %>
-          <% next %>
+  <% input_fields_in_collapse, input_fields_outside_collapse, button_params = split_search_form_input_fields(input_fields) %>
+
+  <%= search_form_for(@q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search" }, **horizontal_form_options) do |f| %>
+    <div class="card-body">
+      <%= render_search_form_fields(f, input_fields_outside_collapse) %>
+
+      <% if input_fields_in_collapse.present? %>
+        <%= render layout: '/shared/collapsible_section', locals: { card_class: 'mb-0', title: 'More' } do %>
+          <%= render_search_form_fields(f, input_fields_in_collapse) %>
         <% end %>
-
-        <% if params.key?(:label) %>
-          <% label = params[:label] %>
-        <% elsif params.key?(:slug) %>
-          <% label = t("simple_form.labels.#{params[:slug]}") %>
-        <% else %>
-          <% label = key.to_s.humanize %>
-        <% end %>
-
-        <% # Reassign label back to params in case it gets passed through to an input. %>
-        <% params[:label] = label %>
-
-
-        <%- # Render specific input fields for some types. %>
-        <% if params.key?(:type) && params[:type] != :text %>
-          <% if params[:type] == :boolean %>
-            <% # If it is a boolean, just render the boolean field and continue the loop. %>
-            <%= render 'shared/boolean_search_form_field', f: f, name: key, label: label %>
-            <% next %>
-          <% elsif params[:type] == :select %>
-            <% # By default, you need to select an item, while usually, you want to have the filtering using a select be optional. %>
-            <% params[:include_blank] = true if params[:include_blank].nil? %>
-
-            <% # No `next`. Just go on to render a normal select input, but with the above parameter set. %>
-          <% elsif params[:type] == :date_range %>
-            <% # Render a date range with options specified. %>
-            <%= render 'shared/date_range_search_form_field', { f: f }.merge(params[:options]) %>
-            <% next %>
-          <% elsif params[:type] == :submit_button %>
-            <% buttons << f.submit(params[:action], class: 'btn btn-secondary') %>
-            <% next %>
-          <% end %>
-        <% end %>
-
-        <% # If there is no type key, text is implied, and we just render an input. %>
-
-        <%- # Set email fields to render as text fields to prevent email and url validations, unless there is already an as in the params %>
-        <% if !params.key?(:as) && (key.to_s.include?('email') || key.to_s.include?('url')) %>
-          <% params[:as] = 'string' %>
-        <% end %>
-
-        <% # By default, the fields are required, so override that and set them to not required unless explicitly stated. %>
-        <% params[:required] = false if params[:required].nil? %>
-
-        <% params = params.except!([:type, :slug]) %>
-
-        <%= f.input key, params %>
       <% end %>
     </div>
+
     <div class="card-footer">
       <%= f.button :button, class: 'btn btn-primary', name: 'commit' do %>
         <%= generate_icon_prefix('magnifying-glass', 'Search').html_safe %>
       <% end %>
 
-      <% buttons.each do |button| %>
-        <%= button %>
+      <% button_params.each do |key, params| %>
+        <%= f.submit(params[:action], class: 'btn btn-secondary') %>
       <% end %>
     </div>
   <% end %>
