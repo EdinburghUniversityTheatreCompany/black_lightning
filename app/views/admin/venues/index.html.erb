@@ -13,4 +13,6 @@
     address_cont:     { slug: 'defaults.address'}
 } %>
 
-<%= render 'shared/pages/index', resource_class: Venue, resources: @venues, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<% quick_actions = get_link(Venue, :map, http_method: :get) %>
+
+<%= render 'shared/pages/index', resource_class: Venue, resources: @venues, headers: headers, field_sets: field_sets, search_fields: search_fields, quick_actions: quick_actions %>

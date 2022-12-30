@@ -104,7 +104,12 @@ ChaosRails::Application.routes.draw do
 
     resources :debts
 
-    resources :venues
+    resources :venues do
+      collection do 
+        get 'map'
+      end
+    end
+  
     resources :seasons
     resources :news
     resources :fault_reports
