@@ -16,4 +16,5 @@ class EventTag < ApplicationRecord
 
   has_and_belongs_to_many :events, optional: true
 
+  default_scope { order(:ordering) }
 end
