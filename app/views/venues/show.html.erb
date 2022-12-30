@@ -3,60 +3,26 @@
 ] %>
 
 <div class="row">
-  <div class="col">
-    <div class="card mb-3">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h4>Description</h4></div>
       <div class="card-body">
         <%= render_markdown @venue.description %>
       </div>
     </div>
+  </div>
 
+  <div class="col-md-6">
     <% if @venue.location %>
-      <div class="card mb-3">
+      <div class="card">
         <div class="card-header"><h4>Map</h4></div>
-        <div class="card-body">
-          <%# don't load the map unless we have to as we're only allowed to do so 25,000 times a day %>
-          <%# TODO: Is this still true? %>
-          <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAh3mh3Lt0ymci2MV_KDHn9CFZRG0bppcE&sensor=false">
-          </script>
-
-          <div id="map_canvas" style="width:100%; height:300px"></div>
-
-          <script type="text/javascript">
-            var lat  = <%= @venue.location.split(",").first %>;
-            var long = <%= @venue.location.split(",").last %>;
-            function initialize() {
-              var venue = new google.maps.LatLng(lat, long);
-              var mapOptions = {
-                center: venue,
-                zoom: 16,
-                mapTypeId: google.maps.MapTypeId.ROADMAP
-              };
-              var map = new google.maps.Map(document.getElementById("map_canvas"), mapOptions);
-
-              var marker = new google.maps.Marker({
-                position: venue,
-                map: map,
-                icon: {
-                  path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
-                  scale: 6,
-                  fillColor: "green",
-                  fillOpacity: 0.8,
-                  strokeColor: "black",
-                  strokeWeight: 2
-                },
-                animation: google.maps.Animation.DROP,
-                title:"<%= @venue.name %>"
-              });
-            }
-            initialize();
-          </script>
-        </div>
+        <%= venue_map(@venue) %>
       </div>
     <% end %>
   </div>
 </div>
 
-<h3>Shows at <%= @venue.name %></h3>
+<h3 class="mt-3">Shows at <%= @venue.name %></h3>
 
 <% if @current_shows.empty? %>
   <p>There are no upcoming EUTC shows at <%= @venue.name %>.</p>

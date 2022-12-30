@@ -24,6 +24,8 @@
 # == Schema Information End
 #++
 class Venue < ApplicationRecord
+  include FormattingHelper
+
   validates :name, :description, presence: true
 
   has_many :shows
@@ -45,5 +47,28 @@ class Venue < ApplicationRecord
 
   def to_param
     return "#{id}-#{name.to_url}"
+  end
+
+  def marker_info
+    if location.present?
+      return {
+        latlng: latlng,
+        popup: popup_description
+      }
+    else
+      return nil
+    end
+  end
+
+  def latlng
+    if location.present?
+      return location.split(',')
+    else
+      return nil
+    end
+  end
+
+  def popup_description
+    return "<b>#{name}</b><br><br>#{escape_line_breaks(address)}".html_safe
   end
 end

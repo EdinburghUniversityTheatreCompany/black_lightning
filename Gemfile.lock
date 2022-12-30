@@ -228,6 +228,8 @@ GEM
     kaminari-core (1.2.2)
     kramdown (2.4.0)
       rexml
+    leaflet-rails (1.9.2)
+      rails (>= 4.2.0)
     loofah (2.19.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
@@ -471,6 +473,7 @@ DEPENDENCIES
   json
   kaminari
   kramdown
+  leaflet-rails
   mini_magick
   mysql2
   nokogiri
