@@ -1,6 +1,6 @@
 <% deadline = nil if deadline.nil? %>
 <% team_members = team_members.includes(:user) %>
-<% user_is_part_of_proposal = team_members.collect(&:user).include?(current_user) %>
+<% current_user_is_part_of_teamwork = team_members.collect(&:user).include?(current_user) %>
 
 <h3>Team</h3>
 
@@ -10,10 +10,14 @@
   <p class="py-0 my-0">
     <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
-    <% if team_member.user.present? && (user_is_part_of_proposal || can?(:show, team_member.user)) %>
-      <% if team_member.user.has_role? 'DM Trained' %>
-        <%= generate_label :info, 'DM Trained' %>
+    <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user)) %>
+      <% if team_member.user.has_role?('DM Trained') %>
+        <%= generate_label(:info, 'DM Trained')%>
       <% end %>
+
+      <% if team_member.user.has_role?('First Aid Trained') %>
+        <%= generate_label(:success, 'First Aid Trained') %>
+      <% end %> 
 
       <% if team_member.user.in_debt %>
         <% debt_message = team_member.user.debt_message_suffix.upcase_first %>
