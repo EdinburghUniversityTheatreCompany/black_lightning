@@ -51,12 +51,10 @@ class ApplicationController < ActionController::Base
   end
 
   def report_access_denied(exception)
-    # BOOTSTRAP NICETOHAVE: Do not give an alert for access_denied errors.
     render_error_page(exception, 'errors/access_denied', 403)
   end
 
   def report_404(exception)
-    # BOOTSTRAP NICETOHAVE: Do not give an alert for 404 errors.
     render_error_page(exception, 'errors/404', 404)
   end
 

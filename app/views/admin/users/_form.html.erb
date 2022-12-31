@@ -14,7 +14,6 @@
     <%= f.input :password_confirmation %>
 
     <% if can? :assign_roles, @user %>
-      <% # BOOTSTRAP VERYNIECTOHAVE: This is not bold while all labels are. Fix? %>
       <%= f.association :roles, as: :check_boxes %>
     <% end %>
 

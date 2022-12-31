@@ -340,7 +340,6 @@ module GenericController
 
     files = upload_data[:files]
 
-    # BOOTSTRAP NICETOHAVE: Test that a dropzone passed as '' is filtered out properly.
     # Have to use this weird try 
     files.select! {|file| file.present? }
     if destination == 'pictures'

@@ -20,7 +20,6 @@
   </div>
 </div>
 
-<% # BOOTSTRAP NICETOHAVE: Display the picture inside the alert. %>
 <script>
   $form = $('form');
   $form.submit(function (e) {
@@ -55,7 +54,6 @@
         break;
     }
 
-  // BOOTSTRAP NICETOHAVE: This script probs should not live here, and if it does, this alert should be created using the form script
     $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
               "<i class=\"" + icon  + " fas fa-large\" aria-hidden=”true”></i> "
               + message +

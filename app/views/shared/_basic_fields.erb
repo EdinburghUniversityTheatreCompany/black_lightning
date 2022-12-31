@@ -23,8 +23,7 @@
 
         <% # Check if the image is attached and if it is not a default image. If so, display the image.%>
         <% if value[:image].attached? && !value[:image].filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
-          <% # BOOTSTRAP NICETOHAVE: Does this need a maximum size or something? %>
-          <%= render('shared/image', image: value[:image], variant: value[:variant]) %>
+          <%= render('shared/image', image: value[:image], variant: value[:variant]) # TODO: Think this is an eager load!!! %>
         <% else %>
           No Image
         <% end %>
