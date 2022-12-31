@@ -56,7 +56,6 @@
           }
         };
 
-        // BOOTSTRAP NICETOHAVE: Pagination
         attributes['ajax'] = ajax_attributes;
       }
 

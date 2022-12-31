@@ -5,8 +5,6 @@
     } do %>
     <%= f.input :name, placeholder: "Attachment Name" %>
 
-    <% # BOOTSTRAP NICETOHAVE: This is currently not formatted great. %>
-
     <%= render 'shared/form/file_field', f: f, field_name: :file %>
 
     <%= f.input :access_level, collection: Attachment::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>

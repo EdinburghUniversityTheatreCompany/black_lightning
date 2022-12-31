@@ -1,32 +1,32 @@
-<% # BOOTSTRAP NICETOHAVE: These alerts should be set in the controller instead, as should the ones below. Remember also close has been renamed to btn-close %>
-<%# show an alert if the user hasn't filled in their name or phone number %>
-
 <div class="content">
   <div class="container-fluid">
-    <div class="row"> <% if can? :manage, :jobs %>
-      <% unless delayed_job_running? then %>
-      <div class="alert alert-danger">
-        <strong>Oh Dear</strong>
-        <p>
-          The DelayedJob daemon doesn't seem to be running. It may have
-          crashed (again).
-        </p>
-      </div>
+    <div class="row"> 
+      <% if can?(:manage, :jobs) %>
+        <% unless delayed_job_running? %>
+          <div class="alert alert-danger">
+            <strong>Oh Dear</strong>
+            <p>
+              The DelayedJob daemon doesn't seem to be running. It may have crashed (again).
+            </p>
+          </div>
+        <% end %>
+
+        <% if delayed_jobs(:failed).count > 0%>
+          <div class="alert alert-danger">
+            <strong>Stop. This is important</strong>
+            <p>
+              A DelayedJob has failed. Please review <%= link_to 'failed jobs', controller: "admin/job_control", action: "failed" %>.
+            </p>
+          </div>
+        <% end %>
       <% end %>
-      <% if delayed_jobs(:failed).count > 0 then %>
-      <div class="alert alert-danger">
-        <strong>Stop. This is important</strong>
-        <p>
-          A DelayedJob has failed. Please review
-          <%= link_to 'failed jobs', controller: "admin/job_control", action: "failed" %>.
-        </p>
-      </div>
-      <% end %>
-      <% end %></div>
+    </div>
+  
     <div class="row">
       <div class="col-md">
-        <% if current_user.debt_message_suffix == "not in Debt" then debt_card_class = "card-success" else debt_card_class = "card-danger" %><% end %>
-        <%= render 'card_widget', card_title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), card_partial: "debt_widget", card_class: debt_card_class %>
+        <%= render 'card_widget', card_title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), 
+          card_partial: "debt_widget", card_class: current_user.in_debt ? 'card-danger' :  'card-success' 
+        %>
         <%= render 'card_widget', card_title: link_to('Opportunities', admin_opportunities_path), card_partial: "opportunities_widget", card_class: "" %>
         <%= render 'card_widget', card_title: 'Resources', card_partial: "resources_widget", card_class: "" %>
       </div>

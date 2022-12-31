@@ -1,7 +1,5 @@
 <% headers = [:title, :tagline, :carousel_name, :is_active, :ordering] %>
 
-<% # TODO: It would be nice if you could reorder a carousel by dragging around the order rather than having to change the integer... %>
-
 <% field_sets = @carousel_items.map { |carousel_item| { 
   fields: [
     carousel_item, 

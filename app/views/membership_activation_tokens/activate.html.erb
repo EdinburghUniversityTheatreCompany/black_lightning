@@ -1,7 +1,5 @@
 <h1><%= @title %></h1>
 
-<% # BOOTSTRAP NICETOHAVE: Might need some additional form rework. It looks pretty good. %>
-
 <p>
   <%= display_block("Registration Help", false) %>
 </p>
@@ -27,7 +25,6 @@
     <% end %>
 
      <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
-        <%- # BOOTSTRAP NICETOHAVE: This duplicates the user form. %>
         <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
         <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
         <%= f.input :public_profile, label: 'Enable Public Profile', hint: 'Display your profile on the public website as well as than just the members-only part?' %>

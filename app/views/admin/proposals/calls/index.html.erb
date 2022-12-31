@@ -9,8 +9,7 @@
   ] } } %>
 
 <% search_fields = {
-    name_cont:        { slug: 'defaults.name' }
+    name_cont: { slug: 'defaults.name' }
 } %>
 
-<% # BOOTSTRAP NICETOHAVE: The main link should link to all proposals %>
 <%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, headers: headers, field_sets: field_sets, search_fields: search_fields %>

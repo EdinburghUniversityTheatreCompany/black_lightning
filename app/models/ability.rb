@@ -83,8 +83,7 @@ class Ability
     # Guests can see public events, news, and user profiles.
     can :read, News, show_public: true
     can :read, Event, is_public: true
-    # BOOTSTRAP NICETOHAVE: Test review permissions.
-    # BOOTSTRAP SOMEWHATNICETOHAVE: Properly add review permissions based on the attached event.
+   
     can :read, Review
 
     # Guests can see all Event Tags.
@@ -107,7 +106,6 @@ class Ability
 
     can :show, Attachment, access_level: 2
     can :show, VideoLink, access_level: 2
-    # BOOTSTRAP NICETOHAVE: Test picture permission
     can :show, Picture, access_level: 2 
   
     # Stop if the user is not logged in.

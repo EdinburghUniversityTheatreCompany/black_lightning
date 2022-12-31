@@ -1,6 +1,5 @@
 <%= javascript_include_tag "admin/staffings" %>
 
-<% # BOOTSTRAP NICETOHAVE: use shared/table %>
 <% content_for :jobs_table do %>
   <% # Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
   <% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
@@ -44,7 +43,6 @@
   </table>
 <% end %>
 
-<%- # BOOTSTRAP NICETOHAVE: This alert needs to be done differently, Set in the controller probably. %>
 <% fields = {
   date_and_time: time_range_string(@staffing.start_time, @staffing.end_time, true),
   info: { type: 'content', content: display_block("Staffing", true) + render('phone_number_warning') },

@@ -42,7 +42,6 @@ class Admin::UsersController < AdminController
     end
   end
 
-  # BOOTSTRAP NICETOHAVE: Authentication....
   def autocomplete_list
     response.headers.delete('Content-Length')
     response.headers['Cache-Control'] = 'no-cache'
@@ -59,7 +58,6 @@ class Admin::UsersController < AdminController
 
     # Stop here. The old method is below.
     return
-    # BOOTSTRAP NICETOHAVE: Figure out a way to use the below method, but while also retaining ordering since find_each ignores the order.
 
     # This... erm... thing... builds the response up one
     # user at a time, which saves loading the whole lot into

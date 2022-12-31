@@ -8,7 +8,6 @@
     
     <%= render "/shared/form/md_editor", f: f, field: :contact, rows: 12, show_hint: true %>
 
-    <%- # BOOTSTRAP NICETOHAVE: Maybe display this as a card with ul like in the basic show? Also, margins %>
     <div class="categories">
       <h3>Categories</h3>
       <%= render('shared/form/sections/nested_fields', f: f, association_name: :category_infos, partial_name: 'category_info_fields') %>
