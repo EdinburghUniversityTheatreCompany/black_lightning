@@ -10,7 +10,13 @@ If you would like to get involved in editing/running the Bedlam website, please 
 
 ## The Fine Print
 
-This project is the work of Team Adjective-Noun, comprising:
+The website is currently maintained by:
+
+* Mick Zijdel (2020 - 2022) <mick.zijdel@bedlamtheatre.co.uk>
+* Alexander Morzeria-Davis (2020 - 2023) <alexander@bedlamtheatre.co.uk> / <me+git@alexandermohan.com>
+* Lewis Eggeling (2022 - ?) <lewis.eggeling@bedlamtheatre.co.uk>
+
+Based on the original project, the work of Team Adjective-Noun, comprising:
 
 * Hayden Ball <hayden@haydenball.me.uk>
 * Tom Turner <tom@tomturner.org.uk>
@@ -19,14 +25,12 @@ This project is the work of Team Adjective-Noun, comprising:
 
 With further additions by
 * Kyle Cooke (? - ?)
-* Mick Zijdel (2020 - 2022) <mick.zijdel@bedlamtheatre.co.uk>
-* Alexander Morzeria-Davis (2020-2023) <alexander@bedlamtheatre.co.uk> / <me+git@alexandermohan.com>
 
 with support of the EUTC and is licensed under The MIT License as follows:
 
 > The MIT License (MIT)
 >
-> Copyright (c) 2015-22 The Authors of the Site (Team Adjective-Noun and members of the EUTC)
+> Copyright (c) 2015-23 The Authors of the Site (Team Adjective-Noun and members of the EUTC)
 >
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
