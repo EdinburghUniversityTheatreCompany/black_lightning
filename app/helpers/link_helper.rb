@@ -1,5 +1,4 @@
 module LinkHelper
-  # BOOTSTRAP NICETOHAVE: The 'my-1 mr-1' should be made more generic.
   def user_link(user, use_public_link_as_fallback)
     return 'User Not Found' if user.nil?
 
@@ -91,7 +90,6 @@ module LinkHelper
     http_method = get_default_http_method(action) if http_method.nil?
     html_class = get_default_html_class(action) if html_class.nil?
 
-    # BOOTSTRAP NICETOHAVE: Make sure there is no double wrapping...
     html_class = "#{html_class} no-wrap" if no_wrap
 
     margins = action != :show if margins.nil?

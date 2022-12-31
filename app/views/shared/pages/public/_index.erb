@@ -1,7 +1,7 @@
 <h1><%= @title %></h1>
 
 <div class="mb-3">
-  <%= display_block("Public Index - #{@title}", false) %>
+  <%= display_block("Public Index - #{controller.class.to_s.underscore}", false) %>
 </div>
 
 <%= search_form %>

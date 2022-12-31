@@ -33,7 +33,6 @@ module ActiveStorageHelper
     end
   end
 
-  # BOOTSTRAP NICETOHAVE: Look into the apropriateness of these dimensions.
   def thumb_variant(scale_factor = 1)
     return { resize_to_fill: [192 * scale_factor, 100 * scale_factor] }
   end

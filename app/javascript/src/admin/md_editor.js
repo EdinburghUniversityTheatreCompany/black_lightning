@@ -64,7 +64,7 @@ $(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
   console.log('hello?')
   /*
     Slightly hacky way of making all the ids unique and updating the necessary anchors
-    BOOTSTRAP NICETOHAVE: This is not called. Fix it and check if md_editor still work properly on dynamic fields (creatives)
+    TODO: This is not called right now and should be fixed! Fix it and check if md_editor still work properly on dynamic fields (creatives)
   */
   jQuery(insertedItem).find('[id$="_input_field"]').attr('id', new_id + '_input_field');
   jQuery(insertedItem).find('[href$="_input_field"]').attr('href', '#' + new_id + '_input_field');
