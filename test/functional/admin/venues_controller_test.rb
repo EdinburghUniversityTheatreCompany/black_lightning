@@ -49,6 +49,11 @@ class Admin::VenuesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test 'should show venue without location specified' do
+    get :show, params: { id: venues(:roxy)}
+    assert_response :success
+  end
+
   test 'should get edit' do
     get :edit, params: { id: @venue}
     assert_response :success
