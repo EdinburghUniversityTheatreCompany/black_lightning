@@ -24,7 +24,7 @@ Based on the original project, the work of Team Adjective-Noun, comprising:
 * Lewis Eason <me@lewiseason.co.uk>
 
 With further additions by
-* Kyle Cooke (? - ?)
+* Kyle Cooke
 
 with support of the EUTC and is licensed under The MIT License as follows:
 
