@@ -139,8 +139,7 @@ class Admin::StaffingsController < AdminController
 
         staffing.start_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
         staffing.end_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i)
-        
-        # BOOTSTRAP NICETOHAVE: Test
+
         if staffing.end_time < staffing.start_time
           staffing.end_time = staffing.end_time.advance(days: 1)
         end
