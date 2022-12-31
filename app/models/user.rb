@@ -76,6 +76,8 @@ class User < ApplicationRecord
   has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification', dependent: :destroy
   has_many :membership_activation_tokens, class_name: 'MembershipActivationToken', dependent: :destroy
 
+  has_many :notifications, as: :recipient, dependent: :destroy
+
   has_one_attached :avatar
 
   default_scope -> { order('last_name ASC') }

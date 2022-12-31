@@ -103,3 +103,5 @@ gem 'capistrano3-delayed-job'
 
 gem 'ed25519'
 gem 'bcrypt_pbkdf'
+
+gem "noticed", "~> 1.6"

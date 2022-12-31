@@ -170,6 +170,8 @@ GEM
       responders
       warden (~> 1.2.3)
     docile (1.4.0)
+    domain_name (0.5.20190701)
+      unf (>= 0.0.5, < 1.0.0)
     doorkeeper (5.6.0)
       railties (>= 5)
     doorkeeper-openid_connect (1.8.2)
@@ -195,11 +197,22 @@ GEM
     faraday-net_http (3.0.1)
     ffi (1.15.5)
     ffi (1.15.5-x64-mingw-ucrt)
+    ffi-compiler (1.0.1)
+      ffi (>= 1.0.0)
+      rake
     globalid (1.0.0)
       activesupport (>= 5.0)
     honeybadger (4.12.2)
     html_acceptance (0.1.19)
     htmlentities (4.3.4)
+    http (5.1.1)
+      addressable (~> 2.8)
+      http-cookie (~> 1.0)
+      http-form_data (~> 2.2)
+      llhttp-ffi (~> 0.4.0)
+    http-cookie (1.0.5)
+      domain_name (~> 0.5)
+    http-form_data (2.3.0)
     i18n (1.12.0)
       concurrent-ruby (~> 1.0)
     image_processing (1.12.2)
@@ -229,6 +242,9 @@ GEM
       rexml
     leaflet-rails (1.9.2)
       rails (>= 4.2.0)
+    llhttp-ffi (0.4.0)
+      ffi-compiler (~> 1.0)
+      rake (~> 13.0)
     loofah (2.19.1)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
@@ -263,6 +279,9 @@ GEM
       racc (~> 1.4)
     nokogiri (1.13.10-x86_64-linux)
       racc (~> 1.4)
+    noticed (1.6.0)
+      http (>= 4.0.0)
+      rails (>= 5.2.0)
     orm_adapter (0.5.0)
     paper_trail (13.0.0)
       activerecord (>= 5.2)
@@ -407,6 +426,10 @@ GEM
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2022.7)
       tzinfo (>= 1.0.0)
+    unf (0.1.4)
+      unf_ext
+    unf_ext (0.0.8.2)
+    unf_ext (0.0.8.2-x64-mingw-ucrt)
     unicode-display_width (2.3.0)
     uniform_notifier (1.16.0)
     warden (1.2.9)
@@ -475,6 +498,7 @@ DEPENDENCIES
   mini_magick
   mysql2
   nokogiri
+  noticed (~> 1.6)
   paper_trail
   puma (~> 6.0)
   rack-cors
