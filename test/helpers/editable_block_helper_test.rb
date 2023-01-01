@@ -24,15 +24,15 @@ class EditableBlockHelperTest < ActionView::TestCase
   end
 
   test 'should give warning for non-exising editable block' do
-    assert_equal 'Block not defined. <a href="/admin/editable_blocks/new?name=pineapple">Create Block</a>', display_block('pineapple', false)
+    assert_equal 'Block not defined. <a class="btn btn-primary my-1 mr-1" title="Create Editable Block" data-method="get" href="/admin/editable_blocks/new?name=pineapple"><span class="no-wrap"><i class="fas fa-align-left" aria-hidden=”true”></i> Create Editable Block</span></a>', display_block('pineapple', false)
   end
 
   test 'existing block should exist' do
     editable_block = FactoryBot.create :editable_block
-    assert block_exists(editable_block.name)
+    assert block_exists?(editable_block.name)
   end
 
   test 'non-existing block should not exist' do
-    assert_not block_exists('hexagon')
+    assert_not block_exists?('hexagon')
   end
 end

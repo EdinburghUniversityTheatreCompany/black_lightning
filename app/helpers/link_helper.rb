@@ -68,15 +68,16 @@ module LinkHelper
 
     condition = current_ability.can?(action, object) && additional_condition if condition.nil?
 
+    link_text = generate_link_text(link_text, object, action, prefix, append_name)
+
+    # If the condition is not true, return either the link_text or nothing.
     unless condition
       if return_link_text_if_no_permission || (return_link_text_if_no_permission.nil? && action == :show)
-        return generate_link_text(link_text, object, action, prefix, append_name)
+        return link_text
       else
-        return unless condition
+        return nil
       end
     end
-
-    link_text = generate_link_text(link_text, object, action, prefix, append_name)
 
     # You might notice that the names of the variables given do not match the parameter names defined in the function definition.
     # We switched from data confirmation plugins, and they have a different naming convention.

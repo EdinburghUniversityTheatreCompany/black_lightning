@@ -3,6 +3,8 @@
 
 <% if @show_current_term_only %>
   <p>By default, this display only includes questionnaires for events taking place during the current semester. Please use the search form if you want to view older questionnaires.</p>
+<% elsif @questionnaires.empty? %>
+  <p>There are no questionnaires matching this search. Have you expanded the date range?</p>
 <% end %>
 
 <% @questionnaires.each do |event_name, questionnaires| %>

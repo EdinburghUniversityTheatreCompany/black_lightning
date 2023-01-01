@@ -1,7 +1,7 @@
 <h1><%= @title %></h1>
 
 <div class="mb-3">
-  <%= display_block("Public Index - #{controller.class.to_s.underscore}", false) %>
+  <%= display_block(@editable_block_name, false) %>
 </div>
 
 <%= search_form %>
@@ -9,7 +9,7 @@
 <div class="row">
   <div class="col">
     <% if items.empty? %>
-      <%= display_block("Public Index - #{@title} - Empty", false) %>
+      <%= display_block("#{@editable_block_name} - No Resources", false) %>
     <% else %>
         <% items.each do |item| %>
           <div class="d-flex flex-column flex-md-row">
