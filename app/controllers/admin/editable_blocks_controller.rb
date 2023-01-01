@@ -7,15 +7,6 @@ class Admin::EditableBlocksController < AdminController
 
   load_and_authorize_resource
 
-  def show
-    if @editable_block.url.present? && (!@editable_block.content.present? || !@editable_block.content.start_with?(SubpageHelper::EXTERNAL_URL_PREFIX))
-      redirect_to "/#{@editable_block.url}"
-      return
-    end
-
-    super
-  end
-
   ##
   # GET /admin/editable_blocks/new
   #

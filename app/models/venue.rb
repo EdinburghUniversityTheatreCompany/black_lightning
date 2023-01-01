@@ -49,10 +49,14 @@ class Venue < ApplicationRecord
     return "#{id}-#{name.to_url}"
   end
 
+  # Returns the marker info for use on maps. This includes hte latitude
+  # If there is no location data,
   def marker_info(open_popup=false)
-    if location.present?
+    latlng_array = latlng
+  
+    if latlng_array.present?
       return {
-        latlng: latlng,
+        latlng: latlng_array,
         popup: popup_description,
         open_popup: open_popup
       }
@@ -61,8 +65,17 @@ class Venue < ApplicationRecord
     end
   end
 
+  # Returns an array with the latitude and longitude of the venue, based on the location.
+  # Returns nil if the location data is not valid.
   def latlng
     if location.present?
+      latlng_array = location.split(',')
+
+      # If the location does not contain any arrays, or more than 2, just return nil as it is invalid.
+      # Does not check if the resulting values are numeric. This can be done, but the map rendering will fail in the JavaScript
+      # and not in Rails, which is less critical and will not produce a Rails error blocking the web page.
+      return nil unless latlng_array.length == 2
+
       return location.split(',')
     else
       return nil

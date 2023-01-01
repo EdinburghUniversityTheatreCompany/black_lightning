@@ -29,3 +29,8 @@ event_members_only_text_default:
 welcome email:
   name: "Email - Welcome Email"
   content: "This is the test welcome email content"
+
+about:
+  name: about
+  url: about
+  content: 'This is the about page'

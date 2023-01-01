@@ -61,4 +61,38 @@ class AttachmentsControllerTest < ActionController::TestCase
     get :file, params: { slug: attachment.name }
     assert_response :success
   end
+
+  # The following two tests should be identical apart from if the proposal is approved or not.
+  # One should be forbidden, one should be success, as normal users not on proposals can only see 
+  # attachments after they can see the proposal (so when they are approved and past the editing deadline)
+  test 'someone not on the proposal should NOT be able to view an attachment on not approved proposal after the editing deadline' do
+    sign_in users(:member)
+    proposal = FactoryBot.create(:proposal, approved: false, submission_deadline: -1.days.from_now )
+    
+    question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: 'File')
+    attachment = question.answers.first.attachments.first
+    attachment.save(access_level: 1)
+
+    assert_not_nil attachment
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :forbidden
+  end
+
+  test 'someone not on the proposal should be able to view an attachment on an approved proposal after the editing deadline' do
+    sign_in users(:member)
+
+    proposal = FactoryBot.create(:proposal, approved: true, submission_deadline: -1.days.from_now )
+    
+    question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: 'File')
+    attachment = question.answers.first.attachments.first
+    attachment.save(access_level: 1)
+
+    assert_not_nil attachment
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :success
+  end
 end
