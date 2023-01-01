@@ -1,4 +1,6 @@
 module EditableBlockHelper
+  include LinkHelper
+
   def display_block(name, admin_page, display_edit = true)
     @editable_block = Admin::EditableBlock.find_by_name(name)
 
