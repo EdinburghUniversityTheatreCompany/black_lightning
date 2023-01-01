@@ -15,7 +15,7 @@ search_form = render('/shared/pages/public/partials/search_form', search_fields:
 %>
 
 <% content_for :proposal_archive_content do %>
-  <% if @proposals.present? %>
+  <% if @proposals.any? %>
     <% @proposals.each do |call, proposals| %>
       <% div_name = "call_" + call.id.to_s + "_proposals" %>
       <% title_right = "<span class=\"float-right mt-2 mr-1\">Submission Deadline: #{l call.submission_deadline, format: :short } | Editing Deadline: #{l call.editing_deadline, format: :short }</span>".html_safe %>
