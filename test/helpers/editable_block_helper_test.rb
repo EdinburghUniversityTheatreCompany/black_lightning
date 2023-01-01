@@ -29,10 +29,10 @@ class EditableBlockHelperTest < ActionView::TestCase
 
   test 'existing block should exist' do
     editable_block = FactoryBot.create :editable_block
-    assert block_exists(editable_block.name)
+    assert block_exists?(editable_block.name)
   end
 
   test 'non-existing block should not exist' do
-    assert_not block_exists('hexagon')
+    assert_not block_exists?('hexagon')
   end
 end

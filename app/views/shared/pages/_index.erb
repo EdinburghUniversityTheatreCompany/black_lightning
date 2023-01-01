@@ -11,17 +11,23 @@
 <% end %>
 
     <div class="row">
-      <div class="col-md-7">
-        <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Information</span>
-          </div>
-          <div class="card-body">
-            <%= display_block(@editable_block_name, true) %>
+      <% if block_exists?(@editable_block_name) %>
+        <div class="col-md-7">
+          <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Information</span>
+            </div>
+            <div class="card-body">
+              <%= display_block(@editable_block_name, true) %>
+            </div>
           </div>
         </div>
-      </div>
+        <% # Slightly bad to put it here, but essentially, if not rendering the block, add an "Create Block" button to the quick actions.%>
+      <% else %>
+        <% quick_actions << link_to_create_block(@editable_block_name) %>
+      <% end %>
+
       <div class="col">
 
         <% if search_fields.present? %>
