@@ -15,4 +15,9 @@ class VenuesControllerTest < ActionController::TestCase
     get :show, params: { id: @venue }
     assert_response :success
   end
+
+  test 'should show venue without location specified' do
+    get :show, params: { id: venues(:roxy)}
+    assert_response :success
+  end
 end
