@@ -1,6 +1,6 @@
 <% content = render('admin/marketing_creatives/categories/gallery', categories: @categories) %>
 
-<% quick_actions = get_link(MarketingCreatives::Profile, :sign_up, http_method: :get) %>
+<% quick_actions = [get_link(MarketingCreatives::Profile, :sign_up, http_method: :get)] %>
 
 <% search_fields = {
     name_cont: { slug: 'defaults.name' }

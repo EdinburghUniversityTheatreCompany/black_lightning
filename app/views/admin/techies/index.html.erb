@@ -1,6 +1,4 @@
-<% quick_actions = link_to tree_admin_techies_url, class: 'btn btn-secondary' do %>
-  <i class="fas fa-tree-alt" aria-hidden=”true”></i> Tree
-<% end %>
+<% quick_actions = [link_to(generate_icon_prefix('tree', 'Tree'), tree_admin_techies_url, class: 'btn btn-secondary')] %>
 
 <% headers = [:name] %>
 

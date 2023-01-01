@@ -2,9 +2,13 @@
 <% search_fields = nil if search_fields.nil? %>
 <% include_edit_button = true if include_edit_button.nil? %>
 <% include_link_to_item = true if include_link_to_item.nil? %>
-<% quick_actions = nil if quick_actions.nil? %>
+<% quick_actions = [] if quick_actions.nil? %>
 <% content = nil if content.nil? %>
 <% include_pagination = true if include_pagination.nil? %>
+
+<% if show_new_button && can?(:new, resource_class) %>
+  <% quick_actions << get_link(resource_class, :new) %>
+<% end %>
 
     <div class="row">
       <div class="col-md-7">
@@ -24,16 +28,15 @@
           <%= render 'shared/search_form', input_fields: search_fields %>
         <% end %>
 
-        <% if (show_new_button && can?(:new, resource_class)) || quick_actions.present? %>
+        <% if quick_actions.present? %>
           <div class="card">
             <div class="card-header">
               <span class="card-title">Quick actions</span>
             </div>
             <div class="card-body">
-              <% if show_new_button %>
-                <%= get_link resource_class, :new %>
+              <% quick_actions.each do |quick_action| %>
+                <%= quick_action %>
               <% end %>
-              <%= quick_actions %>
             </div>
           </div>
         <% end %>
