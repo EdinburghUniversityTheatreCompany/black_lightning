@@ -19,7 +19,7 @@ module SearchFormHelper
       input_fields_in_collapse = Hash[input_fields.to_a[NUMBER_OUTSIDE_COLLAPSE * columns, input_fields.length]]
     else
       input_fields_outside_collapse = input_fields
-      input_fields_in_collapse = nil
+      input_fields_in_collapse = []
     end
 
     return input_fields_in_collapse, input_fields_outside_collapse, button_params

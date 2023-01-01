@@ -7,11 +7,14 @@
 
   <% input_fields_in_collapse, input_fields_outside_collapse, button_params = split_search_form_input_fields(input_fields, columns) %>
 
+  <% # If there are less fields than columns, set the amount of columns to the amount of fields to optimise screen space. %>
+  <% columns = input_fields_outside_collapse.count if input_fields_in_collapse.empty? && input_fields_outside_collapse.count < columns %>
+
   <%= search_form_for(@q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search" }, **horizontal_form_options) do |f| %>
     <div class="card-body">
       <%= render_search_form_fields(f, input_fields_outside_collapse, columns) %>
 
-      <% if input_fields_in_collapse.present? %>
+      <% if input_fields_in_collapse.any? %>
         <%= render layout: '/shared/collapsible_section', locals: { card_class: 'mb-0', title: 'More' } do %>
           <%= render_search_form_fields(f, input_fields_in_collapse, columns) %>
         <% end %>
