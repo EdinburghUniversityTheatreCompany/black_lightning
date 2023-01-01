@@ -31,7 +31,7 @@
       <div class="col">
 
         <% if search_fields.present? %>
-          <%= render 'shared/search_form', input_fields: search_fields %>
+          <%= render 'shared/search_form', input_fields: search_fields, columns: block_exists?(@editable_block_name) ? 1 : 2 %>
         <% end %>
 
         <% if quick_actions.present? %>
