@@ -1,4 +1,4 @@
-<% quick_actions = get_link Admin::Questionnaires::Questionnaire, :index, link_text: 'Back to Questionnaires'%>
+<% quick_actions = [get_link(Admin::Questionnaires::Questionnaire, :index, link_text: 'Back to Questionnaires')] %>
 
 <% headers = [:name] %>
 

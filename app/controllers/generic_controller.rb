@@ -16,6 +16,8 @@ module GenericController
 
     response.headers['X-Total-Count'] = resources.count.to_s
 
+    @editable_block_name = index_editable_block_name
+
     respond_to do |format|
       format.html { render index_filename }
       format.json { render json: resources }
@@ -271,6 +273,10 @@ module GenericController
 
   def index_filename
     'index'
+  end
+
+  def index_editable_block_name
+    "Index - #{@current_path.titleize} Description"
   end
 
   ##

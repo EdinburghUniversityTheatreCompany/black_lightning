@@ -34,6 +34,7 @@ two:
 roxy:
   name: Roxy Central
   description: Nice but expensive.
+  location: ""
 
 unknown:
   name: Unknown

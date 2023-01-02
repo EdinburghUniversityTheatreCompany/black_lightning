@@ -17,7 +17,8 @@ class AttachmentsController < ApplicationController
     # TODO: Make this better. It should preferably go into the ability but it's a bit fiddly to have it there.
     attachment_item = @attachment.item
 
-    attachent_item = attachment_item.answerable if attachment_item.is_a?(Admin::Answer)
+    attachment_item = attachment_item.answerable if attachment_item.is_a?(Admin::Answer)
+
     authorize!(:show, attachment_item)
 
     return 'There is no file attached' unless @attachment.file.attached?

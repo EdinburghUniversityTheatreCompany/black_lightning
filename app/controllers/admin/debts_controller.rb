@@ -3,6 +3,8 @@ class Admin::DebtsController < AdminController
     authorize! :index, Admin::Debt
     @title = 'All Debts'
 
+    @editable_block_name = "Index - /Admin/Debt Description"
+
     @q     = User.ransack(params[:q])
     @users = @q.result(distinct: true).with_role(:member)
 

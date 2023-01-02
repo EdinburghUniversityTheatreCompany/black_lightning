@@ -6,4 +6,6 @@
   content: { type: 'markdown', markdown: @editable_block.content }
 } %>
 
+<% content_for(:extra_show_actions, link_to("View Block on Website", "#{'/' unless @editable_block.url[0] == '/'}#{@editable_block.url}", class: 'btn btn-secondary'))  if @editable_block.url.present? %>
+
 <%= render('shared/pages/show', object: @editable_block, fields: fields) %>

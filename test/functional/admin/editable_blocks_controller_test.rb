@@ -19,19 +19,8 @@ class Admin::EditableBlocksControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test 'should redirect to url when page has an url' do
-    @editable_block.update_attribute(:url, 'admin/resources/secretary')
-
-    get :show, params: { id: @editable_block }
-
-    assert_redirected_to admin_resources_path('secretary')
-  end
-
-  test 'should not redirect to url when the page has an external url' do
-    @editable_block.update_attribute(:url, 'admin/resources/secretary')
-    @editable_block.update_attribute(:content, 'EXTERNAL_URL:wiki.bedlamtheatre.co.uk')
-
-    get :show, params: { id: @editable_block }
+  test 'should show with url' do
+    get :show, params: { id: admin_editable_blocks(:about).id }
 
     assert_response :success
   end

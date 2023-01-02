@@ -2,38 +2,47 @@
 <% search_fields = nil if search_fields.nil? %>
 <% include_edit_button = true if include_edit_button.nil? %>
 <% include_link_to_item = true if include_link_to_item.nil? %>
-<% quick_actions = nil if quick_actions.nil? %>
+<% quick_actions = [] if quick_actions.nil? %>
 <% content = nil if content.nil? %>
 <% include_pagination = true if include_pagination.nil? %>
 
+<% if show_new_button && can?(:new, resource_class) %>
+  <% quick_actions << get_link(resource_class, :new) %>
+<% end %>
+
     <div class="row">
-      <div class="col-md-7">
-        <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Information</span>
-          </div>
-          <div class="card-body">
-            <%= display_block("#{resource_class.to_s.titleize} Admin Description", false) %>
+      <% if block_exists?(@editable_block_name) %>
+        <div class="col-md-7">
+          <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Information</span>
+            </div>
+            <div class="card-body">
+              <%= display_block(@editable_block_name, true) %>
+            </div>
           </div>
         </div>
-      </div>
+        <% # Slightly bad to put it here, but essentially, if not rendering the block, add an "Create Block" button to the quick actions.%>
+      <% else %>
+        <% quick_actions << link_to_create_block(@editable_block_name) %>
+      <% end %>
+
       <div class="col">
 
         <% if search_fields.present? %>
-          <%= render 'shared/search_form', input_fields: search_fields %>
+          <%= render 'shared/search_form', input_fields: search_fields, columns: block_exists?(@editable_block_name) ? 1 : 2 %>
         <% end %>
 
-        <% if (show_new_button && can?(:new, resource_class)) || quick_actions.present? %>
+        <% if quick_actions.present? %>
           <div class="card">
             <div class="card-header">
               <span class="card-title">Quick actions</span>
             </div>
             <div class="card-body">
-              <% if show_new_button %>
-                <%= get_link resource_class, :new %>
+              <% quick_actions.each do |quick_action| %>
+                <%= quick_action %>
               <% end %>
-              <%= quick_actions %>
             </div>
           </div>
         <% end %>
