@@ -24,5 +24,9 @@
   },
   "devDependencies": {
     "webpack-dev-server": "3"
-  }
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/EdinburghUniversityTheatreCompany/black_lightning#readme",
+  "name": "black_lightning"
+
 }
