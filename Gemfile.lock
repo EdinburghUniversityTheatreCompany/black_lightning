@@ -270,7 +270,7 @@ GEM
     parallel (1.22.1)
     parser (3.1.3.0)
       ast (~> 2.4.1)
-    psych (4.0.6)
+    psych (5.0.1)
       stringio
     public_suffix (5.0.0)
     puma (6.0.1)
@@ -321,7 +321,7 @@ GEM
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
       i18n
-    rdoc (6.4.0)
+    rdoc (6.5.0)
       psych (>= 4.0.0)
     recaptcha (5.12.3)
       json
@@ -396,7 +396,7 @@ GEM
       net-scp (>= 1.1.2)
       net-ssh (>= 2.8.0)
     stringex (2.8.5)
-    stringio (3.0.2)
+    stringio (3.0.4)
     terser (1.1.12)
       execjs (>= 0.3.0, < 3)
     test-prof (1.1.0)
