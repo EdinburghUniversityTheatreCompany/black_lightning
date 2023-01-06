@@ -13,8 +13,7 @@
     <% else %>
         <% items.each do |item| %>
           <div class="d-flex flex-column flex-md-row">
-            <% image = image_tag(item[:image].variant(thumb_variant_public),{ class: 'h-100 w-100' }.merge(variant_width_and_height_html(thumb_variant_public))) %>
-            <%= link_to(image, item[:url], class: "img-thumbnail") %>
+            <%= render('shared/image', image: item[:image], variant: thumb_variant_public, eager_load: false, image_options: { class: 'img-thumbnail'}) %>
 
             <div class="flex-fill ms-3">
               <h4 class="media-heading"><%= link_to item[:header], item[:url] %></h4>
