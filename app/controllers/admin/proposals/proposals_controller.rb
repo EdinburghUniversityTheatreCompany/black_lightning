@@ -186,7 +186,11 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   def on_create_success
+    # Mail all team members to notify them that they are included in the current proposal.
     mail_team_members(@proposal.team_members, [], true)
+
+    # If the current user is not on the proposal (silly, they forgot to add themselves), add them with the position of proposer.
+    TeamMember.create(position: 'Proposer', user: current_user, teamwork: @proposal) unless @proposal.users.include?(current_user)
 
     super
   end
