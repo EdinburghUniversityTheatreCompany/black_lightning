@@ -1,4 +1,5 @@
 <% quick_actions = [get_link(Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id })] %>
+<% quick_actions << get_link(@call, :show, prefix: 'View Details of ', append_name: true, html_class: 'btn btn-secondary') %>
 <% quick_actions << get_link(@call, :edit, append_name: true) %>
 <% quick_actions << get_link(Admin::Proposals::Call, :index, link_text: 'Back To Calls') %>
 
