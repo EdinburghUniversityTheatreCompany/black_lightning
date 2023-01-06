@@ -13,6 +13,8 @@
   <%= get_link @call, :archive, wrap_tag: 'td', http_method: 'put', additional_condition: DateTime.now > @call.editing_deadline,
                 confirm: "Archiving #{@call.name}", detail: 'Please confirm that you want to archive this proposal call.' 
   %>
+  <%- # Render a button to create a new proposal.%>
+  <%= get_link(Admin::Proposals::Proposal, :new, additional_condition: @call.open?, query_params: { call_id: @call.id }) %>
 <% end %>
 
 <%= render('shared/pages/show', object: @call, fields: fields) %>
