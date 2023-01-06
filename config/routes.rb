@@ -281,6 +281,7 @@ ChaosRails::Application.routes.draw do
     get 'shows', to: 'shows#index', as: :shows
     get 'workshops', to: 'workshops#index', as: :workshops
     get 'proposals', to: 'proposals#index', as: :proposals
+    get 'seasons',    to: 'seasons#index',    as: :seasons
   end
 
   post 'markdown/preview', to: 'markdown#preview'
