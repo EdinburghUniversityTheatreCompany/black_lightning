@@ -115,11 +115,10 @@ module GenericController
     @resource_params ||= params.require(resource_class.name.underscore.gsub('/', '_'))
   end
 
+  # permitted_params should be explicitly defined in each controller that includes this Generic Controller!
+
   def permitted_params
-    # I don't know why it thinks this one is not covered.
-    # :nocov:
-    return []
-    # :nocov:
+    raise(NoMethodError.new("The controller #{self.controller_path} should define permitted_params, or permitted_create_params and permitted_update_params directly."))
   end
 
   def permitted_create_params
