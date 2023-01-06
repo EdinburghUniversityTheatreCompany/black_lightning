@@ -309,10 +309,6 @@ module GenericController
     return true
   end
 
-  def random_redirect_controller
-    self.controller_path
-  end
-
   # Hash with the instance and :admin if the url should go to the admin site.
   # Used by the return_random method above.
   def instance_url_hash(instance)

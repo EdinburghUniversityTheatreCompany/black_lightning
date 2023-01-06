@@ -47,7 +47,8 @@ class Archives::ProposalsController < AdminController
     false
   end
 
-  def random_redirect_controller
-    'admin/proposals/proposals'
+  # Only exists in admin form, and is in the admin namespace so does not need :admin prepended.
+  def instance_url_hash(instance)
+    return instance
   end
 end
