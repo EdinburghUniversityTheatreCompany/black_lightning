@@ -304,15 +304,23 @@ module GenericController
     # Primarily so the test works.
     instance_variable_set("@#{resource_name}", instance)
 
-    url = url_for(controller: random_redirect_controller, action: :show, id: instance.id)
-
-    redirect_to(url)
+    redirect_to(url_for(instance_url_hash(instance)))
 
     return true
   end
 
   def random_redirect_controller
     self.controller_path
+  end
+
+  # Hash with the instance and :admin if the url should go to the admin site.
+  # Used by the return_random method above.
+  def instance_url_hash(instance)
+    instance_url_hash = if @admin_site
+      [:admin, instance]
+    else
+      instance
+    end
   end
 
   ##

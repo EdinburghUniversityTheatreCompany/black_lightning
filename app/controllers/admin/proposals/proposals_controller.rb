@@ -205,4 +205,9 @@ class Admin::Proposals::ProposalsController < AdminController
   def edit_title
     "Editing Proposal for #{@proposal.show_title}"
   end
+
+  # Only exists in admin form, and is in the admin namespace so does not need :admin prepended.
+  def instance_url_hash(instance)
+    return instance
+  end
 end
