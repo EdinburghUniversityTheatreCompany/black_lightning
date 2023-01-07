@@ -6,7 +6,7 @@ Displays the amount of committee rep slots staffed per semester for each committ
   <div class="row">
     <div class="col-auto"><b><%= person.name %></b></div>
 
-    <div class="col-auto">
+    <div class="col">
     <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(start_of_year,christmas)}.count %>
     /
     <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(christmas,next_year_start)}.count %>

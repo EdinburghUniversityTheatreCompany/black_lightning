@@ -14,8 +14,7 @@ module NavigationHelper
       navbar_items << { title: 'Members', path: admin_path }
       navbar_items << { title: 'Log Out', path: destroy_user_session_path, method: :delete, item_class: 'border border-white rounded-3' }
     else
-      # Use admin_path rather than user_session_path so someone is automatically redirected to the admin site after loggingg in.
-      navbar_items << { title: 'Log In', path: admin_path, item_class: 'border border-white rounded-3' }
+      navbar_items << { title: 'Log In', path: new_user_session_path, item_class: 'border border-white rounded-3' }
     end
 
     return navbar_items

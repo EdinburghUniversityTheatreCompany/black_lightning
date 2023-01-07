@@ -2,9 +2,20 @@
 <% eager_load = true if eager_load.nil? %>
 <% image_options = {} if image_options.nil? %>
 
+<% width_and_height = if variant.present? 
+  variant_width_and_height_html(variant)
+else
+  base_width_and_height_html(image)
+end
+%>
+
+<% image_options = image_options.merge(width_and_height) %>
+
 <% if eager_load %>
-  <% image_options = image_options.merge({ loading: 'eager', class: 'w-100 h-auto' }).merge(base_width_and_height_html(image)) %>
+  <% # I am not entirely sure it actually needs these classes. %>
+  <% image_options = image_options.merge({ loading: 'eager', class: "w-100 h-auto #{image_options[:class]}" }) %>
 <% end %>
+
 
 <% if variant.present? %>
   <% image = image.variant(variant) %>

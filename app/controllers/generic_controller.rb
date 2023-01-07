@@ -115,11 +115,10 @@ module GenericController
     @resource_params ||= params.require(resource_class.name.underscore.gsub('/', '_'))
   end
 
+  # permitted_params should be explicitly defined in each controller that includes this Generic Controller!
+
   def permitted_params
-    # I don't know why it thinks this one is not covered.
-    # :nocov:
-    return []
-    # :nocov:
+    raise(NoMethodError.new("The controller #{self.controller_path} should define permitted_params, or permitted_create_params and permitted_update_params directly."))
   end
 
   def permitted_create_params
@@ -304,15 +303,19 @@ module GenericController
     # Primarily so the test works.
     instance_variable_set("@#{resource_name}", instance)
 
-    url = url_for(controller: random_redirect_controller, action: :show, id: instance.id)
-
-    redirect_to(url)
+    redirect_to(url_for(instance_url_hash(instance)))
 
     return true
   end
 
-  def random_redirect_controller
-    self.controller_path
+  # Hash with the instance and :admin if the url should go to the admin site.
+  # Used by the return_random method above.
+  def instance_url_hash(instance)
+    instance_url_hash = if @admin_site
+      [:admin, instance]
+    else
+      instance
+    end
   end
 
   ##

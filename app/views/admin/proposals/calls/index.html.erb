@@ -5,7 +5,7 @@
     call,
     l(call.submission_deadline, format: :longy),
     l(call.editing_deadline, format: :longy),
-    get_link(call, :show, link_text: 'View Details', additional_condition: can?(:edit, call), html_class: 'btn btn-secondary', return_link_text_if_no_permission: false)
+    get_link(call, :show, link_target: admin_proposals_call_proposals_path(call), link_text: 'View Proposals', html_class: 'btn btn-secondary')
   ] } } %>
 
 <% search_fields = {

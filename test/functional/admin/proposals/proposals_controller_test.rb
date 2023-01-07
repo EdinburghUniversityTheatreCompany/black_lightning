@@ -122,6 +122,20 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test 'md_editor should render the question as the label' do
+    question_text = 'This is definitely not a duplicate question'
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.questions.first.update(response_type: 'Long Text', question_text: question_text)
+
+    proposal = FactoryBot.create(:proposal, call: @call)
+
+    get :edit, params: { id: proposal }
+    assert_response :success
+
+    # The label bit is necessary because otherwise it will find the attribute and always match, even when the label is not visibly rendered
+    assert_match "\"><p>#{question_text}</p></label>", response.body
+  end
+
   test 'should update proposal' do
     sign_out @admin
     @call.update_attribute(:editing_deadline, DateTime.now.advance(days: 1))
