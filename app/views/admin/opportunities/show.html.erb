@@ -1,10 +1,12 @@
 <% fields = {
     expiry_date: l(@opportunity.expiry_date, format: :longy),
     approved_by: (@opportunity.approver.nil? ? 'Not Approved' : @opportunity.approver.name if can?(:edit, @opportunity) || can?(:approve, @opportunity)),
+    created_by: @opportunity.creator.name(@current_user),
     active: @opportunity.active? ? 'This opportunity is currently active' : 'This opportunity is not active. An opportunity is only active when the expiration date has not been reached and it has been approved.',
     description: { type: 'markdown', markdown: @opportunity.description },
-    contact: { type: 'content', content: "You can contact #{@opportunity.creator.name} by emailing them at #{mail_to @opportunity.creator.email}.".html_safe }
 } %>
+
+<% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.creator.name} by emailing them at #{mail_to @opportunity.creator.email}.".html_safe } if @opportunity.show_email %>
 
 <% content_for :extra_show_actions do %>
   <%= get_link @opportunity, :approve, condition: !@opportunity.approved %>
