@@ -13,12 +13,12 @@
         <li class="list-group-item">
           <h4><%= opportunity.title %></h4>
           
-          <p><small class="text-muted">This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
+          <p><small class="text-muted"><%= opportunity.creator.name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
           
           <p> <%= render_markdown opportunity.description %></p>
 
           <% if opportunity.show_email %>
-            <p>Please contact <%= opportunity.creator.name %> by clicking <%= mail_to opportunity.creator.email, 'here' %>.</p>
+            <p>Please contact <%= opportunity.creator.name(@current_user) %> by clicking <%= mail_to opportunity.creator.email, 'here' %>.</p>
           <% end %>
         </li>
       <% end %>
