@@ -2,16 +2,10 @@
   <div class="col-md-8">
     <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items) %>
 
-    <div class="card">
-      <div class="card-body">
-        <p class="card-text">
-        <%= display_block("Home", false) %>
-        </p>
-      </div>
-    </div>
-
     <div class="card mt-3">
-      <div class="card-header"><h4>What's On</h4></div>
+      <div class="card-header">
+        <h4>What's On</h4>
+      </div>
       <div class="card-body">
         <% if @events.empty? %>
           <%= display_block("Home - No Events On", false) %>
@@ -44,7 +38,10 @@
       </div>
 
     <div class="card mt-3">
-      <div class="card-header"><h4>News</h4></div>
+      <div class="card-header">
+        <h4>News</h4>
+        <%= display_block("Home - News", false) %>
+      </div>
 
       <ul class="list-group list-group-flush">
         <% @news.each do |news_item| %>
