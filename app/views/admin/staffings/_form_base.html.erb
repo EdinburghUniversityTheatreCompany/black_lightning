@@ -1,4 +1,4 @@
-<%= f.input :show_title, collection: Show.future, include_blank: false, allow_custom_input: true %>
+<%= f.input :show_title, collection: Event.future.pluck(:name), include_blank: true, allow_custom_input: true %>
 
 <%= f.input :counts_towards_debt, label: 'Does the staffing count towards debt?'%>
 
