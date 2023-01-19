@@ -104,8 +104,6 @@ class Admin::StaffingsController < AdminController
   # POST /admin/staffings/create
   ##
   def create
-    creation_params = staffing_params
-
     # Has to be called @staffing in case it is passed to the 'new' form again.
     @staffing = Admin::Staffing.new(creation_params)
 
@@ -124,7 +122,7 @@ class Admin::StaffingsController < AdminController
       failure = true
     end
 
-    unless @staffing.valid?
+    unless @staffing.valid?(:pre_mass_create)
       @staffing.errors.full_messages.each { |error_message| helpers.append_to_flash(:error, error_message) }
       failure = true
     end
@@ -186,9 +184,7 @@ class Admin::StaffingsController < AdminController
   # PUT /admin/staffings/1.json
   ##
   def update
-    changes_params = staffing_params
-
-    @staffing.assign_attributes(changes_params)
+    @staffing.assign_attributes(update_params)
 
     respond_to do |format|
       if @staffing.save
@@ -285,9 +281,14 @@ class Admin::StaffingsController < AdminController
     @default_end_time = @default_start_time + 3.hours
   end
 
-  def staffing_params
-    params.require(:admin_staffing).permit(:show_title, :start_time, :end_time, :counts_towards_debt,
+  def creation_params
+    params.require(:admin_staffing).permit(:show_title, :counts_towards_debt,
                                            staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
+  end
+
+  def update_params
+    params.require(:admin_staffing).permit(:show_title, :start_time, :end_time, :counts_towards_debt,
+                                            staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
   end
 
   def edit_title

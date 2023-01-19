@@ -22,7 +22,8 @@
 # == Schema Information End
 #++
 class Admin::Staffing < ApplicationRecord
-  validates :show_title, :start_time, :end_time, presence: true
+  validates :show_title, presence: true
+  validates :start_time, :end_time, presence: true, on: [:create, :update]
 
   after_save     :update_reminder
   before_destroy :reminder_cleanup
