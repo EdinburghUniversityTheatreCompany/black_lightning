@@ -2,16 +2,10 @@
   <div class="col-md-8">
     <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items) %>
 
-    <div class="card">
-      <div class="card-body">
-        <p class="card-text">
-        <%= display_block("Home", false) %>
-        </p>
-      </div>
-    </div>
-
     <div class="card mt-3">
-      <div class="card-header"><h4>What's On</h4></div>
+      <div class="card-header">
+        <h4>What's On</h4>
+      </div>
       <div class="card-body">
         <% if @events.empty? %>
           <%= display_block("Home - No Events On", false) %>
@@ -23,7 +17,6 @@
               { content: event.short_blurb },
               { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
             ] } } %>
-
           <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
         <% end %>
       </div>
@@ -44,9 +37,14 @@
       </div>
 
     <div class="card mt-3">
-      <div class="card-header"><h4>News</h4></div>
+      <div class="card-header">
+        <h4>News</h4>
+      </div>
 
       <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+          <%= display_block("Home - News", false) %>
+        </li>
         <% @news.each do |news_item| %>
           <li class="list-group-item">
             <h5 class="card-title"><%= link_to news_item.title, news_path(news_item) %></h5>
