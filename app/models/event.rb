@@ -197,7 +197,7 @@ class Event < ApplicationRecord
   end
 
   def as_json(options = {})
-    defaults = { methods: [:thumb_image_url, :slideshow_image_url], include: [:venue, { pictures: { methods: [:thumb_image_url, :display_image_url] } }, team_members: { methods: [:user_name] }] }
+    defaults = { methods: [:thumb_image_url, :slideshow_image_url], include: [:venue, { pictures: { methods: [:thumb_url, :display_url] } }, team_members: { methods: [:user_name] }] }
 
     options = merge_hash(defaults, options)
 

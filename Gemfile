@@ -64,6 +64,7 @@ group :development, :test do
   gem 'better_errors'
   gem 'binding_of_caller'
 
+  gem 'rdoc'
   gem 'rubocop'
   gem 'rubocop-faker'
   gem 'rails-controller-testing'

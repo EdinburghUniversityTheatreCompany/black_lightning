@@ -29,7 +29,6 @@ class PictureTest < ActionView::TestCase
 
   test 'thumb url' do
     picture = FactoryBot.create(:picture)
-    p picture.thumb_url
     assert_includes picture.thumb_url, 'test.png'
   end
 
