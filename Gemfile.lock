@@ -198,7 +198,7 @@ GEM
     ffi (1.15.5-x64-mingw-ucrt)
     globalid (1.0.1)
       activesupport (>= 5.0)
-    honeybadger (4.12.2)
+    honeybadger (5.0.2)
     html_acceptance (0.1.19)
     htmlentities (4.3.4)
     i18n (1.12.0)
@@ -469,7 +469,7 @@ DEPENDENCIES
   factory_bot_rails
   faker
   fancybox3
-  honeybadger (~> 4.0)
+  honeybadger
   html_acceptance
   image_processing
   json
@@ -480,7 +480,7 @@ DEPENDENCIES
   mysql2
   nokogiri
   paper_trail
-  puma (~> 6.0)
+  puma
   rack-cors
   rails (~> 7.0)
   rails-controller-testing
