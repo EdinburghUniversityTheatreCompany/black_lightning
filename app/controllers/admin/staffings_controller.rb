@@ -201,9 +201,9 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/job/1/sign_up
   ##
   def sign_up_confirm
-    @title = 'Confirm Staffing'
-
     @job = Admin::StaffingJob.find(params[:id])
+
+    @title = "Confirm staffing as #{@job.name} for #{@job.staffable.show_title}"
 
     @can_sign_up = helpers.check_if_current_user_can_sign_up(current_user)
 
