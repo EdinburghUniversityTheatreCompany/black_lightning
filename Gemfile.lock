@@ -154,7 +154,7 @@ GEM
       coffee-script-source
       execjs
     coffee-script-source (1.12.2)
-    concurrent-ruby (1.1.10)
+    concurrent-ruby (1.2.0)
     crass (1.0.6)
     daemons (1.4.1)
     date (3.3.3)
@@ -307,7 +307,7 @@ GEM
     rails-dom-testing (2.0.3)
       activesupport (>= 4.2.0)
       nokogiri (>= 1.6)
-    rails-html-sanitizer (1.4.4)
+    rails-html-sanitizer (1.5.0)
       loofah (~> 2.19, >= 2.19.1)
     rails_autolink (1.1.7)
       rails (> 3.1)
@@ -368,13 +368,13 @@ GEM
       sprockets (> 3.0)
       sprockets-rails
       tilt
-    selenium-webdriver (4.7.1)
+    selenium-webdriver (4.8.0)
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 3.0)
       websocket (~> 1.0)
     semantic_range (3.0.0)
     silencer (2.0.0)
-    simple_form (5.1.0)
+    simple_form (5.2.0)
       actionpack (>= 5.2)
       activemodel (>= 5.2)
     simplecov (0.22.0)
@@ -403,7 +403,7 @@ GEM
     thor (1.2.1)
     tilt (2.0.11)
     timeout (0.3.1)
-    tzinfo (2.0.5)
+    tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     tzinfo-data (1.2022.7)
       tzinfo (>= 1.0.0)
