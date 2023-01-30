@@ -288,6 +288,7 @@ ChaosRails::Application.routes.draw do
     get 'proposals', to: 'proposals#index', as: :proposals
     get 'seasons',    to: 'seasons#index',    as: :seasons
   end
+  get 'archives/(*page)', to: 'archives#page', as: :archives
 
   post 'markdown/preview', to: 'markdown#preview'
 
