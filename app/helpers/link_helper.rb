@@ -123,7 +123,7 @@ module LinkHelper
   end
 
   def view_page_on_main_site_button
-    new_url = request.original_fullpath.sub('admin/', '')
+    new_url = request.original_fullpath.delete_prefix('/admin')
     link_to("View on Main Site", new_url, class: 'btn btn-secondary') if new_url != request.original_fullpath
   end
 
