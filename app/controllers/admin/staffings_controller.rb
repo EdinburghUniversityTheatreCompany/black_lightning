@@ -277,8 +277,8 @@ class Admin::StaffingsController < AdminController
     @shows = Show.future.pluck(:name)
 
     now = Time.now
-    @default_start_time = Time.new(now.year, now.month, now.day, 18, 0, 0)
-    @default_end_time = @default_start_time + 3.hours
+    @default_start_time = Time.new(now.year, now.month, now.day, 18, 30, 0)
+    @default_end_time = Time.new(now.year, now.month, now.day, 22, 00, 0)
   end
 
   def creation_params
