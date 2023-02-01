@@ -122,6 +122,11 @@ module LinkHelper
     return "<span class=\"no-wrap\"><i class=\"fas fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
   end
 
+  def view_page_on_main_site_button
+    new_url = request.original_fullpath.delete_prefix('/admin')
+    link_to("View on Main Site", new_url, class: 'btn btn-secondary') if new_url != request.original_fullpath
+  end
+
   private
 
   def generate_link_text(link_text, object, action, prefix, append_name)

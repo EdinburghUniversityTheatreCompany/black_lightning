@@ -135,13 +135,9 @@ class Admin::StaffingsController < AdminController
         # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day. 
         # If end_time < start_time, it ends the next day.
 
-        staffing.start_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, start_time[:hour].to_i, start_time[:minute].to_i)
-        staffing.end_time = Time.zone.local(start_time[:year].to_i, start_time[:month].to_i, start_time[:day].to_i, end_time[:hour].to_i, end_time[:minute].to_i)
+        staffing.start_time = DateTime.parse(start_time)
+        staffing.end_time = DateTime.parse(end_time)
 
-        if staffing.end_time < staffing.start_time
-          staffing.end_time = staffing.end_time.advance(days: 1)
-        end
-  
         unless staffing.save
           failure = true
 
@@ -205,9 +201,9 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings/job/1/sign_up
   ##
   def sign_up_confirm
-    @title = 'Confirm Staffing'
-
     @job = Admin::StaffingJob.find(params[:id])
+
+    @title = "Confirm staffing as #{@job.name} for #{@job.staffable.show_title}"
 
     @can_sign_up = helpers.check_if_current_user_can_sign_up(current_user)
 
@@ -277,8 +273,8 @@ class Admin::StaffingsController < AdminController
     @shows = Show.future.pluck(:name)
 
     now = Time.now
-    @default_start_time = Time.new(now.year, now.month, now.day, 18, 0, 0)
-    @default_end_time = @default_start_time + 3.hours
+    @default_start_time = Time.new(now.year, now.month, now.day, 18, 30, 0)
+    @default_end_time = Time.new(now.year, now.month, now.day, 22, 00, 0)
   end
 
   def creation_params

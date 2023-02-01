@@ -18,24 +18,24 @@
         $(function () {
           var counter = 0;
           $('#add_date').click(function () {
+            // Clone the blueprint, show it, and remove the blueprint id.
             var item = $('#date_blueprint').clone();
             $(item).show();
             $(item).removeAttr('id');
-            
-            types = ['start', 'end']
-            subdivisions = ['day', 'month', 'year', 'hour', 'minute']
               
-            for (i = 0; i < types.length; i++) {
-              for (j = 0; j < subdivisions.length; j++) {
-                item.find('select[name*="' + types[i] + '[' + subdivisions[j] + '"]').attr('name', types[i] + '_times[' + counter + '][' + subdivisions[j] + ']');
-              }
-            }
+            // Rename the newly-added item so the params are formatted correctly.
+            item.find('#start_datetime').attr('name', 'start_times[' + counter + ']');
+            item.find('#end_time').attr('name', 'end_times[' + counter + ']');
 
+            // Remove the current row if clicked.
             item.find('a').click(function () {	
               $(item).remove();	
             });	
+
+            // Add one to the counter for the ids
             counter++;	
   
+            // Add the newly-generated item right before the add_date button.
             $('#add_date').before(item);	
           });	
         });	
@@ -49,6 +49,15 @@
 <%= render '/shared/form/template_modal', header: 'Select Jobs from Template', template_model: Admin::StaffingTemplate %>
 
 <div id="date_blueprint" style="display: none" class="control-group datetime">
-  <%= select_datetime(@default_start_time, { prefix: "start" } ) %> to <%= select_time(@default_end_time, prefix: "end")%>
-  <a class="btn btn-danger"><%= remove_button_text %></a>
+  <div class="row">
+    <div class="col-md">
+      <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_start_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="start_datetime">
+    </div>
+    <div class="col-md">
+      <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="end_time">
+    </div>
+    <div class="col-md-auto">
+    <a class="btn btn-danger mb-2"><%= remove_button_text %></a>
+    </div>
+  </div>  
 </div>

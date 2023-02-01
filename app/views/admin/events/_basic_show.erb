@@ -49,4 +49,8 @@
 
 <% fields = fields.merge(extra_fields) %>
 
+<% content_for :extra_show_actions do %>
+  <%= view_page_on_main_site_button if event.is_public %>
+<% end %>
+
 <%= render('shared/pages/show', object: event, fields: fields) %>
