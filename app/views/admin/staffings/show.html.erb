@@ -45,7 +45,7 @@
 
 <% fields = {
   date_and_time: time_range_string(@staffing.start_time, @staffing.end_time, true),
-  info: { type: 'content', content: (display_block("Staffing", true) + render('phone_number_warning')).html_safe },
+  info: { type: 'content', content: display_block("Staffing", true) + render('phone_number_warning') },
   jobs_table: { type: 'content', content: yield(:jobs_table) }
 } %>
 

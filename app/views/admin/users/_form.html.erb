@@ -20,6 +20,6 @@
     <h3>Public Profile</h3>
     <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
     <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
-    <%= f.input :public_profile, label: 'Enable Public Profle', hint: 'Display your profile on the public website as well as the members-only part?' %>
+    <%= f.input :public_profile, label: 'Enable Public Profle', hint: 'Display your profile on the public website as well as than just the members-only part?' %>
   <% end %>
 <% end %>

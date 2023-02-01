@@ -8,37 +8,30 @@
     <div class="card-header">
       <h4 class="card-title"><%= day %></h4>
     </div>
-    <div class="card-body">
-      <% if @events.empty? %>
-        There are no events attached to this festival.
-      <% else %>
+    <% if @events.empty? %>
+      <div class="card-body">There are no events attached to this festival.</div>
+    <% else %>
+      <ul class="list-group list-group-flush">
         <% events_by_day.each do |event|%>
-            <div class="d-flex flex-column flex-md-row">
-            <%= render('shared/image', image: event.fetch_image, variant: thumb_variant_public, eager_load: false, image_options: { class: 'img-thumbnail'}) %>
+          <li class="list-group-item">
+            <% image = image_tag event.fetch_image.variant(thumb_variant_public) %>
+            <%= link_to image, event, class: "float-start img-thumbnail me-3 h-100" %>
 
-            <div class="flex-fill ms-3">
-              <h4 class="media-heading"><%= link_to event.name, event %></h4>
-              
-              <p>
-                <% if event.start_date != event.end_date %>
-                  <b><%= event.date_range false %></b>
-                <% end %>
-              </p>
+            <h4><%= link_to event.name, event %></h4>
 
-              <p>
-               <%= event.short_blurb %>
-              </p>
-              <p class="card-text"><%= link_to 'View Details', event, class: 'btn btn-primary' %></p>
-            </div>
-          </div>
+            <p>
+              <% if event.start_date != event.end_date %>
+                <b><%= event.date_range false %></b>
+              <% end %>
+            </p>
 
-          <% # Add a separator unless this is the last element. %>
-          <% if event.id != events_by_day.last.id %>
-            <hr />
-          <% end %>
+            <p><%= event.short_blurb %></p>
+            
+            <p><%= link_to 'View Details', event, class: 'btn btn-primary' %></p>
+          </li>
         <% end %>
-      <% end %>
-    </div>
+      </ul>
+    <% end %>
   </div>
 <% end %>
 

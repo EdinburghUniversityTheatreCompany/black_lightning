@@ -1,5 +1,5 @@
 <% fields = {
-  event: get_link(@questionnaire.event, :show),
+  event: get_link(:event, :show),
   questions_and_answers: { type: 'content', header: 'Questions', content: render('/shared/questions_and_answers', answers: @questionnaire.answers) }
 } %>
 
