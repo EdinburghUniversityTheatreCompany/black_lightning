@@ -11,15 +11,15 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     }
 
     @start_times = {
-      '0' => '2023-01-30T18:00',
-      '1' => '2023-02-01T18:00',
-      '2' => '2023-02-04T18:00',
+      '0' => { year: '2020', month: '5', day: '18', hour: '18', minute: '00' },
+      '1' => { year: '2020', month: '5', day: '19', hour: '18', minute: '00' },
+      '2' => { year: '2020', month: '5', day: '20', hour: '18', minute: '00' }
     }
 
     @end_times = {
-      '0' => '2023-01-30T22:00',
-      '1' => '2023-02-01T22:00',
-      '2' => '2023-02-04T22:00',
+      '0' => { hour: '21', minute: '00' },
+      '1' => { hour: '21', minute: '00' },
+      '2' => { hour: '21', minute: '00' }
     }
 
     # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
@@ -145,6 +145,25 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
       # If this fails, you will have to find another way to get the corresponding url (it's called slug in the create function), or just remove this check.
       assert_redirected_to grid_admin_staffings_path(attributes[:show_title].to_url)
     end
+  end
+
+  test 'should create with end date happening the next date' do
+    attributes = FactoryBot.attributes_for(:staffing, staffing_jobs_attributes: @staffing_jobs_attributes)
+    
+    start_times = { '0' => { year: '2020', month: '5', day: '18', hour: '18', minute: '00' }}
+
+    end_times = { '0' => { hour: '6', minute: '00' } }
+
+    assert_difference('Admin::Staffing.count', start_times.count) do
+      post :create, params: { admin_staffing: attributes, start_times: start_times, end_times: end_times }
+
+      assert_nil flash[:error]
+
+      # If this fails, you will have to find another way to get the corresponding url (it's called slug in the create function), or just remove this check.
+      assert_redirected_to grid_admin_staffings_path(attributes[:show_title].to_url)
+    end
+
+    assert Admin::Staffing.last.end_time.day > Admin::Staffing.last.start_time.day, 'End time is not on the next day of the start time, despite the end time (hour&minute) being before the start time (hour&minute).'
   end
 
   test 'should not create with invalid staffing jobs attributes' do

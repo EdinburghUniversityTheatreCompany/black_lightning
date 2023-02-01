@@ -21,16 +21,6 @@ class VenuesController < ApplicationController
     super
   end
 
-  def map
-    @title = 'Venues Map'
-
-    @venues_marker_info = Venue.accessible_by(current_ability).map(&:marker_info).compact
-
-    respond_to do |format|
-      format.html # map.html.erb
-    end
-  end
-
   private 
   
   def includes_args

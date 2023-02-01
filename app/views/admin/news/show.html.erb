@@ -9,8 +9,4 @@
   body: { type: 'markdown', markdown: @news.body }
 } %>
 
-<% content_for :extra_show_actions do %>
-  <%= view_page_on_main_site_button if @news.show_public %>
-<% end %>
-
 <%= render('shared/pages/show', object: @news, fields: fields) %>

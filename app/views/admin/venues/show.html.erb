@@ -11,7 +11,6 @@
 
 <% content_for :extra_show_actions do %>
   <%= get_link Event, :index, link_text: 'All Events in Venue', query_params: { 'q[venue_id_eq]' => @venue.id } %>
-  <%= view_page_on_main_site_button %>
 <% end %>
 
 <%= render('shared/pages/show', object: @venue, fields: fields) %>
