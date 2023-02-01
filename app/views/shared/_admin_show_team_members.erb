@@ -10,7 +10,7 @@
   <p class="py-0 my-0">
     <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
-    <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user)) %>
+    <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
       <% if team_member.user.has_role?('DM Trained') %>
         <%= generate_label(:info, 'DM Trained')%>
       <% end %>
