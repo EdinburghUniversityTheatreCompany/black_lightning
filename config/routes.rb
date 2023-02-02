@@ -21,9 +21,14 @@ ChaosRails::Application.routes.draw do
   resources :events,      only: [:index]
   resources :shows,       only: [:index, :show]
   resources :workshops,   only: [:index, :show]
-  resources :news,        only: [:index, :show]
-  resources :venues,      only: [:index, :show]
   resources :seasons,     only: [:index, :show]
+  resources :news,        only: [:index, :show]
+  resources :venues,      only: [:index, :show] do
+    collection do 
+      get 'map'
+    end
+  end
+
 
   resources :membership_activation_tokens, only: [] do
     member do
@@ -283,6 +288,7 @@ ChaosRails::Application.routes.draw do
     get 'proposals', to: 'proposals#index', as: :proposals
     get 'seasons',    to: 'seasons#index',    as: :seasons
   end
+  get 'archives/(*page)', to: 'archives#page', as: :archives
 
   post 'markdown/preview', to: 'markdown#preview'
 

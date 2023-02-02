@@ -37,6 +37,9 @@ class ApplicationController < ActionController::Base
     @admin_site = false
   end
 
+  ##
+  # Error Reporting
+  ##
   def report_500(exception)
     Honeybadger.notify(exception, context: {
       user_email: current_user&.email,

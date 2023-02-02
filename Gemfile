@@ -52,11 +52,11 @@ gem 'paper_trail'
 
 gem 'stringex'
 
-gem 'honeybadger', '~> 4.0'
+gem 'honeybadger'
 
 group :development, :test do
   # Use Puma as the app server
-  gem 'puma', '~> 6.0'
+  gem 'puma'
 
   gem 'byebug'
   gem 'spring'
