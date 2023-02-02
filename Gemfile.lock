@@ -275,6 +275,8 @@ GEM
     parallel (1.22.1)
     parser (3.2.0.0)
       ast (~> 2.4.1)
+    psych (5.0.2)
+      stringio
     public_suffix (5.0.1)
     puma (6.0.2)
       nio4r (~> 2.0)
@@ -324,6 +326,8 @@ GEM
       activerecord (>= 6.1.5)
       activesupport (>= 6.1.5)
       i18n
+    rdoc (6.5.0)
+      psych (>= 4.0.0)
     recaptcha (5.12.3)
       json
     regexp_parser (2.6.1)
@@ -397,6 +401,7 @@ GEM
       net-scp (>= 1.1.2)
       net-ssh (>= 2.8.0)
     stringex (2.8.5)
+    stringio (3.0.4)
     terser (1.1.13)
       execjs (>= 0.3.0, < 3)
     test-prof (1.1.0)
@@ -482,6 +487,7 @@ DEPENDENCIES
   rails-controller-testing
   rails_autolink
   ransack
+  rdoc
   recaptcha
   rolify
   rqrcode
