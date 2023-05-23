@@ -34,7 +34,7 @@ Doorkeeper.configure do
     if current_user
       raise CanCan::AccessDenied unless current_user.can?(:manage, Doorkeeper::Application)
     else
-      redirect_to sign_in_url
+      redirect_to(new_user_session_url)
     end
   end
 
@@ -435,7 +435,7 @@ Doorkeeper.configure do
   # For example if dealing with a trusted application.
   #
   skip_authorization do |resource_owner, client|
-    true
+    true # TODO: Should this always be skipped? Probably not.
     # Example implementation:
     # client.superapp? or resource_owner.admin?
   end
