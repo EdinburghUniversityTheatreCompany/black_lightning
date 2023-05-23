@@ -78,7 +78,7 @@ class Ability
     can :read, Opportunity, approved: true, expiry_date: Time.now..DateTime::Infinity.new
 
     # Guests can see all venues.
-    can :read, Venue
+    can [:read, :map], Venue
 
     # Guests can see public events, news, and user profiles.
     can :read, News, show_public: true
