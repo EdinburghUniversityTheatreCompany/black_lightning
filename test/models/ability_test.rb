@@ -64,8 +64,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(inactive_opportunity, 'an inactive opportunity', @ability, [], allowed_actions + forbidden_actions)
   end
 
-  test 'guests can read venues' do
-    allowed_actions = %I[show read index]
+  test 'guests can read and map venues' do
+    allowed_actions = %I[show read index map]
     forbidden_actions = %I[update new create delete destroy]
 
     helper_test_actions(venues(:one), 'a venue', @ability, allowed_actions, forbidden_actions)
