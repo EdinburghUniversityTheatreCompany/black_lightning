@@ -1,0 +1,22 @@
+<% headers = [:title, :show, :reviewer, :rating, :review_date] %>
+
+<% field_sets = @reviews.map { |review| { 
+  fields: [
+  review,
+  get_link(review.event, :show),
+  review.reviewer_with_organisation,
+  star_rating(review.rating),
+  l(review.review_date, format: :longy)
+] } } %>
+
+<% search_fields = {
+    title_cont:         { slug: 'defaults.title' },
+    body_cont:          { slug: 'defaults.body' },
+    reviewer_cont:      { slug: 'defaults.reviewer' },
+    organisation_cont:  { slug: 'defaults.organisation' },
+    rating_eq:          { slug: 'defaults.rating' },
+    event_id_eq:        { slug: 'defaults.event', type: :select, collection: Event.accessible_by(current_ability).select{ |event| event.reviews.any? } }
+} %>
+
+
+<%= render 'shared/pages/index', resource_class: Review, resources: @reviews, headers: headers, field_sets: field_sets, search_fields: search_fields %>

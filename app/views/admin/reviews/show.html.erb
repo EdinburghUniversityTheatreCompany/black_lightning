@@ -1,0 +1,10 @@
+<% fields = {
+  reviewer: @review.reviewer_with_organisation,
+  rating: star_rating(@review.rating),
+  review_date: l(@review.review_date, format: :longy),
+  event: get_link(@review.event, :show),
+  original_review: @review.url.present? ? link_to(@review.url) : nil,
+  body: render_markdown(@review.body),
+} %>
+
+<%= render('shared/pages/show', object: @review, fields: fields) %>
