@@ -2,7 +2,11 @@ module StarHelper
   def star_rating(rating)
     rating = rating.to_f
 
-    half_star = rating.floor != rating
+    return '' unless rating.present? && rating.positive?
+
+    rating_decimal = rating - rating.floor
+    
+    half_star = rating_decimal >= 0.5
 
     stars = ''
 
@@ -14,6 +18,8 @@ module StarHelper
     if half_star
       stars << '<i class="fas fa-star-half-alt" aria-hidden=”true”></i>'
     end
+
+    stars << " (#{rating})" if (rating_decimal != 0.0 && rating_decimal != 0.5)
 
     return stars.html_safe
   end
