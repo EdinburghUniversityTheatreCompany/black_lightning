@@ -52,6 +52,7 @@ FactoryBot.define do
       attach_image { true }
       attach_proposal { [true, false].sample }
       tag_count { 1 }
+      review_count { 3 }
     end
 
     image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') if attach_image }
@@ -60,6 +61,8 @@ FactoryBot.define do
       create_list(:team_member, evaluator.team_member_count, teamwork: event)
       create_list(:video_link, evaluator.video_link_count, item: event)
       create_list(:picture, evaluator.picture_count, gallery: event)
+
+      create_list(:review, evaluator.review_count, event: event)
 
       event.event_tags << EventTag.all.sample(evaluator.tag_count)
 
@@ -71,14 +74,6 @@ FactoryBot.define do
   factory :show, parent: :event, class: Show do
     author { generate(:random_name) }
     price { generate(:random_name) }
-
-    transient do
-      review_count { 3 }
-    end
-
-    after(:create) do |show, evaluator|
-      create_list(:review, evaluator.review_count, show: show)
-    end
   end
 
   factory :workshop, parent: :event, class: Workshop do

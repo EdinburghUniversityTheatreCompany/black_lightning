@@ -73,7 +73,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
   end
 
   test 'should destroy workshop' do
-    @workshop = FactoryBot.create(:workshop, team_member_count: 0, picture_count: 0)
+    @workshop = FactoryBot.create(:workshop, team_member_count: 0, picture_count: 0, review_count: 0)
 
     assert_difference('Workshop.count', -1) do
       delete :destroy, params: { id: @workshop }

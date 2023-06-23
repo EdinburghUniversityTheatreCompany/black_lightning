@@ -17,6 +17,7 @@
 
 FactoryBot.define do
   factory :review do
+    title        { Faker::Name.name + "'s review" }
     reviewer     { Faker::Name.name }
     body         { generate(:random_text) }
     review_date  { generate(:random_date) }

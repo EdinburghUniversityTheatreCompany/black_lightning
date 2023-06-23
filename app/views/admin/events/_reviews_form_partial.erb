@@ -1,0 +1,5 @@
+<h3>Reviews</h3>
+
+<%= render layout: '/shared/collapsible_section', locals: { title: 'Reviews' } do %>
+  <%= render('shared/form/sections/nested_fields', f: f, association_name: :reviews, partial_name: 'admin/events/review_fields') %>
+<% end %>

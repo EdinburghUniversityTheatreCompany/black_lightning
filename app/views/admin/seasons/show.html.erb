@@ -11,7 +11,8 @@
 <% end %>
 
 <% extra_fields = {
-  event_labels:   { type: 'content', header: 'Events', content: yield(:event_labels) }
+  event_labels:   { type: 'content', header: 'Events', content: yield(:event_labels) },
+  reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @season.reviews) }
 } %>
 
 <%= render('admin/events/basic_show', event: @season, extra_fields: extra_fields) %>

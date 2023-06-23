@@ -2,7 +2,6 @@
 
 <%= render '/events/publicity_text_and_team_members', event: @season %>
 
-
 <% @events.each do |day, events_by_day|%>
   <div class="card mb-3">
     <div class="card-header">
@@ -41,6 +40,8 @@
     </div>
   </div>
 <% end %>
+
+<%= render '/admin/events/reviews', reviews: @season.reviews.accessible_by(current_ability) %>
 
 <%= render '/shared/gallery', pictures: @season.pictures.accessible_by(current_ability, :show) %>
 

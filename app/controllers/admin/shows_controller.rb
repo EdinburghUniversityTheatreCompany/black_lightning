@@ -173,8 +173,7 @@ class Admin::ShowsController < Admin::GenericEventsController
 
   def permitted_params
     return super + [
-      :maintenance_debt_start, :staffing_debt_start,
-      reviews_attributes: [:id, :_destroy, :body, :rating, :review_date, :organisation, :reviewer, :show_id],
+      :maintenance_debt_start, :staffing_debt_start
     ]
   end
 end

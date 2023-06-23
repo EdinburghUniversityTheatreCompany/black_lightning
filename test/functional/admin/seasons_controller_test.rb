@@ -77,7 +77,7 @@ class Admin::SeasonsControllerTest < ActionController::TestCase
   end
 
   test 'should destroy season' do
-    @season = FactoryBot.create(:season, team_member_count: 0, picture_count: 0)
+    @season = FactoryBot.create(:season, team_member_count: 0, picture_count: 0, review_count: 0)
 
     assert_difference('Season.count', -1) do
       delete :destroy, params: { id: @season }

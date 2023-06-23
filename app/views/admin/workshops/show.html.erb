@@ -1,1 +1,5 @@
-<%= render('admin/events/basic_show', event: @workshop) %>
+<% extra_fields = {
+  reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @workshop.reviews) }
+} %>
+
+<%= render('admin/events/basic_show', event: @workshop, extra_fields: extra_fields) %>
