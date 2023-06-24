@@ -5,7 +5,7 @@ class Admin::DebtsController < AdminController
 
     @editable_block_name = "Index - /Admin/Debt Description"
 
-    @q     = User.ransack(params[:q])
+    @q     = User.ransack(params[:q], auth_object: current_ability)
     @users = @q.result(distinct: true).with_role(:member)
 
     @users = @users.in_debt if params[:show_in_debt_only] == '1'

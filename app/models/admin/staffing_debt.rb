@@ -23,6 +23,14 @@ class Admin::StaffingDebt < ApplicationRecord
 
   before_create :associate_staffing_debt_with_existing_staffing_job
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[admin_staffing_job_id converted due_by forgiven show_id user_id]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[admin_staffing_job show user]
+  end
+
   # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
   # If you change this, please also change the functions that return upcoming debts in the user model.
   # Yes, that's not very DRY but now the functions in user.rb can be a database query instead of something with select.

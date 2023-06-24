@@ -39,6 +39,10 @@ class Venue < ApplicationRecord
 
   default_scope -> { order('name ASC') }
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[address description location name tagline]
+  end
+  
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob('bedlam.png')) unless image.attached? 
 

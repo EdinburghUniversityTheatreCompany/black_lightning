@@ -106,6 +106,14 @@ class Event < ApplicationRecord
     return pluck(:name, :id)
   end
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[author end_date is_public maintenance_debt_start members_only_text name pretix_shown price proposal_id publicity_text season_id slug staffing_debt_start start_date tagline type venue_id users_full_name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    ["attachments", "event_tags", "pictures", "proposal", "questionnaires", "reviews", "roles", "season", "team_members", "users", "venue", "versions", "video_links"]
+  end
+
   ##
   # Generates a default image for the event. If extra artwork is added, increase the base of the modulo call.
   #

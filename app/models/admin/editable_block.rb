@@ -33,4 +33,8 @@ class Admin::EditableBlock < ApplicationRecord
   def self.groups
     select('`group`').distinct.map(&:group).reject(&:blank?)
   end
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[admin_page content group name ordering url]
+  end
 end

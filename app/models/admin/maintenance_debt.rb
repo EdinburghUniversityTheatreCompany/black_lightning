@@ -22,6 +22,14 @@ class Admin::MaintenanceDebt < ApplicationRecord
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[created_at due_by show_id state user_id user show]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[show user]
+  end
+
   def convert_to_staffing_debt
     staffing_debt = Admin::StaffingDebt.new
     staffing_debt.due_by = due_by

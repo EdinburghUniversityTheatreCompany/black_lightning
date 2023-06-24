@@ -23,6 +23,10 @@ class FaultReport < ApplicationRecord
   enum severity: %I[annoying probably_worth_fixing show_impeding dangerous]
   enum status: %I[reported in_progress cant_fix wont_fix on_hold completed]
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[description fixed_by_id item reported_by_id severity status created_at updated_at]
+  end
+
   def reported_by_name
     return reported_by.try(:name) || 'Unknown'
   end

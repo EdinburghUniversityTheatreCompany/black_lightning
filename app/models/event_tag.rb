@@ -17,4 +17,8 @@ class EventTag < ApplicationRecord
   has_and_belongs_to_many :events, optional: true
 
   default_scope { order(:ordering) }
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[description id name ordering]
+  end
 end

@@ -15,4 +15,12 @@ class PictureTag < ApplicationRecord
   validates :name, uniqueness: { case_sensitive: false }
 
   has_and_belongs_to_many :pictures, optional: true
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[description name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[pictures]
+  end
 end

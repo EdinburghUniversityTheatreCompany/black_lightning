@@ -53,6 +53,8 @@ class Admin::SharedDebtHelperTest < ActionView::TestCase
     debt_ids = FactoryBot.create_list(:maintenance_debt, 3).collect(&:id)
     debts = Admin::MaintenanceDebt.where(id: debt_ids)
 
+    @current_user = users(:admin)
+
     q_param = { user_full_name_cont: debts.first.user.name(users(:admin)) }
 
     q = shared_debt_ransack(debts, q_param)

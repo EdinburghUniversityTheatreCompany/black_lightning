@@ -35,4 +35,8 @@ class Workshop < Event
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }
+
+  def self.ransackable_associations(auth_object = nil)
+    super
+  end
 end

@@ -3,7 +3,8 @@
 
 <% search_fields = {
     name_cont: { slug: 'defaults.name' },
-    file_blob_filename_cont: { slug: 'defaults.file_name' },
+    # Until you can figure out how to add 'ransackable_attributes' to ActiveStorage::Blob, this will have to be renamed.
+    # file_blob_filename_cont: { slug: 'defaults.file_name' },
     attachment_tags_id_eq: { slug: 'defaults.attachment_tags', type: :select, collection: AttachmentTag.accessible_by(current_ability) }
 } %>
 

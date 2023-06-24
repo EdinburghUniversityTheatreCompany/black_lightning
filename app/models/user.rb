@@ -89,6 +89,18 @@ class User < ApplicationRecord
     reorder('first_name ASC')
   end
 
+  def self.ransackable_attributes(auth_object = nil)
+    attributes = []
+    attributes += %w[bio email first_name full_name last_name  public_profile] if auth_object.can?(:read, User)
+    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count] if auth_object.can?(:manage, User)
+
+    return attributes
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    ["admin_debt_notifications", "admin_maintenance_debts", "admin_staffing_debts", "marketing_creatives_profile", "roles", "shows", "staffing_jobs", "staffings", "versions"]
+  end
+
   def ability
     @ability ||= Ability.new(self)
   end
@@ -203,7 +215,8 @@ class User < ApplicationRecord
   end
 
   def self.in_debt(on_date = Date.current)
-    in_debt_ids = find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
+    in_debt_ids = includes(:admin_maintenance_debts, :admin_staffing_debts).find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
+    
     return where(id: in_debt_ids)
   end
 

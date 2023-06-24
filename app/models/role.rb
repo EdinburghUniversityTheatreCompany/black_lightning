@@ -30,6 +30,10 @@ class Role < ApplicationRecord
 
   scopify
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[name]
+  end
+
   # Removes all users from the role.
   def purge
     User.with_role(name).all.each do |user|

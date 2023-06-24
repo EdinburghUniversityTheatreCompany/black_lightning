@@ -26,6 +26,14 @@ class Admin::Questionnaires::Questionnaire < ApplicationRecord
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :answers, reject_if: :all_blank, allow_destroy: true
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[event]
+  end
+
   def instantiate_answers!
     questions.each do |question|
       next if question.answers.where(answerable: self).any?

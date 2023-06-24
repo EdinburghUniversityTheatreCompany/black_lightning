@@ -34,15 +34,15 @@ require 'test_helper'
 
 class ShowTest < ActiveSupport::TestCase
   test 'can convert show' do
-    show = FactoryBot.create(:show, review_count: 0)
+    show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
 
     assert show.can_convert?
   end
 
-  test 'cannot convert show with reviews' do
-    show = FactoryBot.create(:show, review_count: 1)
+  test 'convert show with reviews and no feedbacks' do
+    show = FactoryBot.create(:show, review_count: 1, feedback_count: 0)
 
-    assert_not show.can_convert?
+    assert show.can_convert?
   end
 
   test 'cannot convert show with feedbacks' do

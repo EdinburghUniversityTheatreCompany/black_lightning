@@ -43,6 +43,10 @@ class Show < Event
 
   has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :restrict_with_error
 
+  def self.ransackable_associations(auth_object = nil)
+    super
+  end
+
   # If you add more fields, you might need to add to this.
   # This is to prevent data loss from occuring when converting a Show into another type of event.
   # Please also modify the error messagse in admin Show controller that is displayed when this returns false

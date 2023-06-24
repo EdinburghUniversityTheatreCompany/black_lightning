@@ -32,6 +32,14 @@ class Admin::Proposals::Call < ApplicationRecord
   # TODO: Maybe revise what open means?
   scope :open, -> { where(submission_deadline: DateTime.now..DateTime::Infinity.new) }
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[archived editing_deadline name submission_deadline]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[proposals questions versions]
+  end
+
   def open?
     return submission_deadline > DateTime.now
   end

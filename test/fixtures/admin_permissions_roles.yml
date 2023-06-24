@@ -14,6 +14,10 @@ committee_access_backend:
   role_id:       2
   permission_id: 1
 
+committee_read_users:
+  role_id: 2
+  permission_id: 12
+
 update_opportunities:
   role_id:       2
   permission_id: 3

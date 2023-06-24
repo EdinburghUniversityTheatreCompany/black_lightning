@@ -1,5 +1,6 @@
 <% search_fields = {
-    image_blob_filename_cont: { slug: 'defaults.filename' },
+    # Until you can figure out how to add 'ransackable_attributes' to ActiveStorage::Blob, this will have to be renamed.
+    # image_blob_filename_cont: { slug: 'defaults.filename' },
     gallery_of_Event_type_name_or_gallery_of_Venue_type_name_cont: { slug: 'defaults.gallery' },
     description_cont: { slug: 'defaults.description' },
     picture_tags_id_eq: { slug: 'defaults.picture_tags', type: :select, collection: PictureTag.accessible_by(current_ability) }

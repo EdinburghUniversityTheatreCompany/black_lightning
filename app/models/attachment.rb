@@ -47,6 +47,14 @@ class Attachment < ApplicationRecord
     return name
   end
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[editable_block_id name attachment_tags_id]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[editable_block attachment_tags file_blob]
+  end
+
   def item_name
     return 'No Item' if item.nil?
 

@@ -153,7 +153,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
 
   test 'should destroy show' do
-    @show = FactoryBot.create(:show, team_member_count: 0, picture_count: 0, review_count: 0)
+    @show = FactoryBot.create(:show, team_member_count: 0, picture_count: 0, review_count: 0, feedback_count: 0)
   
     assert_difference('Show.count', -1) do
       delete :destroy, params: { id: @show }
@@ -222,7 +222,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'convert to season' do
-    show = FactoryBot.create(:show, review_count: 0)
+    show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
 
     assert_difference('Show.count', -1) do
       assert_difference('Season.count', 1) do
@@ -238,7 +238,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test 'convert to workshop' do
-    show = FactoryBot.create(:show, review_count: 0)
+    show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
 
     assert_difference('Show.count', -1) do
       assert_difference('Workshop.count', 1) do
@@ -257,7 +257,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
   # Assuming it also will not convert to a Workshop in this case.
   test 'cannot convert to season when there is stuff attached' do
-    show = FactoryBot.create(:show, review_count: 1)
+    show = FactoryBot.create(:show, feedback_count: 1)
 
     assert_no_difference('Show.count') do
       assert_no_difference('Season.count') do
@@ -265,12 +265,12 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       end
     end
 
-    assert_equal ["There are still attached reviews or feedbacks left. You cannot convert a show with one of these attached to prevent data loss."], flash[:error]
+    assert_equal ["There are still attached feedbacks left. You cannot convert a show with one of these attached to prevent data loss."], flash[:error]
   end
 
   # Assuming it also will not convert to a Season in this case.
   test 'converting to workshop with identical slug gives error' do
-    show = FactoryBot.create(:show, review_count: 0)
+    show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
     workshop = FactoryBot.create(:workshop, slug: show.slug)
 
     assert_no_difference('Show.count') do
@@ -286,7 +286,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     sign_out @admin
     sign_in FactoryBot.create(:committee)
 
-    show = FactoryBot.create(:show, review_count: 0)
+    show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
 
     post :convert_to_workshop, params: { id: show }
 

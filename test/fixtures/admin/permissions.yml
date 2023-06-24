@@ -68,3 +68,7 @@ can_index_techies:
   action: index
   subject_class: Techie
   
+can_read_users:
+  id: 12
+  action: read
+  subject_class: User

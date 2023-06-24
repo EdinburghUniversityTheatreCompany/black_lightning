@@ -17,4 +17,12 @@ class AttachmentTag < ApplicationRecord
   has_and_belongs_to_many :attachments, optional: true
 
   default_scope { order(:ordering) }
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[description name ordering]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[attachments]
+  end
 end

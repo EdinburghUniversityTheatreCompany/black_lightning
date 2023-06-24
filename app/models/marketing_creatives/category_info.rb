@@ -28,6 +28,14 @@ class MarketingCreatives::CategoryInfo < ApplicationRecord
   has_one_attached :image
   validates :image, content_type: %i[png jpg jpeg gif]
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[profile_id category_id description]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[profile category]
+  end
+
   ##
   # Display kittens if the image for whatever reason does not exist.
   ##

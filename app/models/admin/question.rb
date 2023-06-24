@@ -34,4 +34,12 @@ class Admin::Question < ApplicationRecord
   def self.response_types
     ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File']
   end
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[question_text response_type]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[questionable]
+  end
 end
