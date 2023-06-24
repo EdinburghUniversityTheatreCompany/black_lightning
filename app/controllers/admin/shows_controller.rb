@@ -153,7 +153,7 @@ class Admin::ShowsController < Admin::GenericEventsController
     # Preventing data duplication. Shows will not be destroyed if these are present, but the converted event will be created before that is checked.
     # To prevent that, we do this check.
     unless @show.can_convert?
-      helpers.append_to_flash(:error, 'There are still attached reviews or feedbacks left. You cannot convert a show with one of these attached to prevent data loss.')
+      helpers.append_to_flash(:error, 'There are still attached feedbacks left. You cannot convert a show with one of these attached to prevent data loss.')
       return false
     end
 

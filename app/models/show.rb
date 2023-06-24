@@ -52,7 +52,7 @@ class Show < Event
   # Please also modify the error messagse in admin Show controller that is displayed when this returns false
   # and the confirm message on the admin Shows show page for converting.
   def can_convert?
-    return reviews.empty? && feedbacks.empty?
+    return feedbacks.empty?
   end
 
   def create_maintenance_debts
