@@ -84,7 +84,11 @@ class Event < ApplicationRecord
 
   scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
   scope :future, -> { where(['end_date >= ?', Date.current]) }
-  scope :this_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
+  scope :this_academic_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
+
+  def this_academic_year?
+    return end_date >= ApplicationController.helpers.start_of_year && start_date < ApplicationController.helpers.next_year_start
+  end
 
   # ONLY LOOKS AT DAY AND MONTH! NOT AT YEAR.
   # Excludes shows that go into a new year (imps, candlewasters, the old ones we only know the year off, etc) because complicated logic and it wasn't very relevant.
