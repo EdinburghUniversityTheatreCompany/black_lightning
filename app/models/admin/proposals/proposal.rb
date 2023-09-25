@@ -30,7 +30,14 @@ class Admin::Proposals::Proposal < ApplicationRecord
   include LabelHelper
   has_paper_trail
 
-  validates :show_title, :proposal_text, :publicity_text, :call_id, presence: true
+  validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
+
+  enum status: {
+    awaiting_approval: 0,
+    approved: 1,
+    unsuccessful: 2,
+    failed: 2,
+  }
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
   

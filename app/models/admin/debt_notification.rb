@@ -12,7 +12,11 @@
 # == Schema Information End
 #++
 class Admin::DebtNotification < ApplicationRecord
-  enum notification_type: %i[initial_notification reminder]
+  enum notification_type: {
+    initial_notification: 0,
+    reminder: 1
+  }
+
   belongs_to :user
 
   DISABLED_PERMISSIONS = %w[create update delete manage].freeze
