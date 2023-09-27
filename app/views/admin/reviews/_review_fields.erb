@@ -1,10 +1,10 @@
 <%= f.input :title %>
-<%= f.input :url %>
+<%= f.input :url, hint: 'Enter "https://print.publication" if this review only appeared in print.' %>
 <%= f.input :reviewer %>
 <%= f.input :organisation %>
 <%= f.input :review_date, order: [:day, :month, :year] %>
 
-<% rating_help = 'Rating should be positive. Decimal numbers are allowed, but whole and halves are preferred.' %>
+<% rating_help = 'Rating should be positive. Decimal numbers are allowed, but stars will only display in wholes and halves.' %>
 <%= f.input :rating, label: "Rating", hint: rating_help %>
 
 <%= render "/shared/form/md_editor", f: f, field: :body %>
