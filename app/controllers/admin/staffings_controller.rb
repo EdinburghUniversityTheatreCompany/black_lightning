@@ -135,8 +135,8 @@ class Admin::StaffingsController < AdminController
         # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day. 
         # If end_time < start_time, it ends the next day.
 
-        staffing.start_time = DateTime.parse(start_time)
-        staffing.end_time = DateTime.parse(end_time)
+        staffing.start_time = start_time
+        staffing.end_time = end_time
 
         unless staffing.save
           failure = true
