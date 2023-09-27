@@ -24,7 +24,8 @@ class FaultReport < ApplicationRecord
     annoying: 0,
     probably_worth_fixing: 1,
     show_impeding: 2,
-    dangerous: 3
+    dangerous: 3,
+    no_fault: 4
   }
 
   enum status: {
