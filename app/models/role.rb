@@ -36,7 +36,7 @@ class Role < ApplicationRecord
 
   # Removes all users from the role.
   def purge
-    return if name.downcase.strip == 'Member'
+    return if name.downcase.strip == 'member'
 
     User.with_role(name).all.each do |user|
       user.remove_role(self)
