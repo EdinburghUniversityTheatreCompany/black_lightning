@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2022_12_30_180336) do
+ActiveRecord::Schema[7.0].define(version: 2023_06_23_102207) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -508,7 +508,7 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_30_180336) do
   end
 
   create_table "reviews", id: :integer, charset: "utf8mb3", collation: "utf8_unicode_ci", force: :cascade do |t|
-    t.integer "show_id"
+    t.integer "event_id"
     t.string "reviewer"
     t.text "body"
     t.decimal "rating", precision: 2, scale: 1
@@ -516,6 +516,8 @@ ActiveRecord::Schema[7.0].define(version: 2022_12_30_180336) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.string "organisation"
+    t.string "title"
+    t.string "url"
   end
 
   create_table "roles", id: :integer, charset: "utf8mb3", collation: "utf8_unicode_ci", force: :cascade do |t|

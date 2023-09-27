@@ -1,0 +1,10 @@
+<%= f.input :title %>
+<%= f.input :url %>
+<%= f.input :reviewer %>
+<%= f.input :organisation %>
+<%= f.input :review_date, order: [:day, :month, :year] %>
+
+<% rating_help = 'Rating should be positive. Decimal numbers are allowed, but whole and halves are preferred.' %>
+<%= f.input :rating, label: "Rating", hint: rating_help %>
+
+<%= render "/shared/form/md_editor", f: f, field: :body %>

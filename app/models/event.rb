@@ -64,6 +64,7 @@ class Event < ApplicationRecord
   has_many :users, through: :team_members
   has_many :pictures, as: :gallery, dependent: :restrict_with_error
   has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
+  has_many :reviews, dependent: :restrict_with_error
 
   belongs_to :venue
   belongs_to :season, optional: true
@@ -72,6 +73,7 @@ class Event < ApplicationRecord
 
   accepts_nested_attributes_for :team_members, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :pictures, reject_if: :all_blank, allow_destroy: true
+  accepts_nested_attributes_for :reviews, reject_if: :all_blank, allow_destroy: true
 
   # ActiveStorage #
   has_one_attached :image

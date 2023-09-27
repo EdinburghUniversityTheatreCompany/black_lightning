@@ -29,7 +29,8 @@ class Admin::GenericEventsController < AdminController
       pictures_attributes: [:id, :_destroy, :description, :image, :access_level, picture_tag_ids: []],
       team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
       attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []],
-      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :order]
+      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :order],
+      reviews_attributes: [:id, :_destroy, :title, :url, :body, :rating, :review_date, :organisation, :reviewer, :event_id],
     ]
   end
 

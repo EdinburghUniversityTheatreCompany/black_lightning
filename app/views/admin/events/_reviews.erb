@@ -1,0 +1,21 @@
+<% if reviews.any? %>
+  <div class="row row-cols-auto g-3 row-cols-1 <%= 'row-cols-lg-2' if reviews.count > 1 %> ">
+    <% reviews.each do |review| %>
+      <div class="col">
+        <div class="card h-100">
+            <div class="card-header">
+              <h4>
+                <%= review.title %><%= " - <span class=\"no-wrap\">#{star_rating(review.rating)}</span>".html_safe %>
+              </h4>
+            </div>
+          
+          <div class="card-body">
+            <p class="card-text"><small class="text-muted"><%= l review.review_date, format: :long %><%= " - By #{review.reviewer_with_organisation}"%></small></p>
+
+            <%= render_markdown review.body %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

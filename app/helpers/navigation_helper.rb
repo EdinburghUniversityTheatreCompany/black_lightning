@@ -63,6 +63,7 @@ module NavigationHelper
     children << { title: 'Attachment Tags', path: admin_attachment_tags_path, fa_icon: 'fa-rectangle-list' }  if can? :index, AttachmentTag
     children << { title: 'Pictures', path: admin_pictures_path, fa_icon: 'fa-photo-film' }                if can? :index, Picture
     children << { title: 'Picture Tags', path: admin_picture_tags_path, fa_icon: 'fa-sliders' }        if can? :index, PictureTag
+    children << { title: 'Reviews', path: admin_reviews_path, fa_icon: 'fa-newspaper'} if can? :index, Review
     navbar_categories << { title: 'Archives', children: children, fa_icon: 'fa-book-bookmark' }
 
     # Website Admin

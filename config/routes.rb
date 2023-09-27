@@ -164,6 +164,8 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    resources :reviews
+  
     resources :roles do
       member do
         post 'add_user', to: 'roles#add_user'

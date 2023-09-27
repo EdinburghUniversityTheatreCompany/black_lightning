@@ -1,0 +1,11 @@
+<%- # Mind that there is also a review form directly on events. called _review_fields %>
+
+<%= simple_horizontal_form_for [:admin, @review] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <%= render('admin/reviews/review_fields', f: f) %>
+
+    <% events =  Event.accessible_by(current_ability) %>
+    <% events = @review.review_date.present? ? events.on_date(@review.review_date) + [@review.event] : events %>
+    <%= f.association :event, collection: events, label_method: :name %>
+  <% end %>
+<% end %>

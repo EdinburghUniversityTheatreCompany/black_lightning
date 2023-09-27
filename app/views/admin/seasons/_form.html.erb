@@ -4,6 +4,8 @@
 
     <%= render '/shared/form/sections/team_members', f: f %>
 
+    <%= render '/admin/events/reviews_form_partial', f: f %>
+
     <h3>Events</h3>
     <% if @season.new_record? %>
       You can add events after creating the season.

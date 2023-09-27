@@ -2,7 +2,7 @@
 
 <%= render '/events/publicity_text_and_team_members', event: @show %>
 
-<%= render '/shows/reviews', reviews: @show.reviews.accessible_by(current_ability) %>
+<%= render '/admin/events/reviews', reviews: @show.reviews.accessible_by(current_ability) %>
 
 <%= render '/shared/gallery', pictures: @show.pictures.accessible_by(current_ability, :show) %>
 

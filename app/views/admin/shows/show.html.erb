@@ -21,7 +21,7 @@
 <% end %>
 
 <% extra_fields = {
-  reviews:   { type: 'content', header: 'Reviews', content: render('/shows/reviews', reviews: @show.reviews) }
+  reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @show.reviews) }
 } %>
 
 <% # Only show the Debt stuff if the show happens this year or later. %>
