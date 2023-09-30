@@ -28,4 +28,8 @@ class TeamMember < ActiveRecord::Base
   belongs_to :user
 
   delegate :name, to: :user, prefix: true
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[position user_id teamwork_id teamwork_type]
+  end
 end

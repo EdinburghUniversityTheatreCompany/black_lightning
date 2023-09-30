@@ -1,3 +1,22 @@
+# == Schema Information
+#
+# Table name: venues
+#
+# *id*::                 <tt>integer, not null, primary key</tt>
+# *name*::               <tt>string(255)</tt>
+# *tagline*::            <tt>string(255)</tt>
+# *description*::        <tt>text(65535)</tt>
+# *location*::           <tt>string(255)</tt>
+# *image_file_name*::    <tt>string(255)</tt>
+# *image_content_type*:: <tt>string(255)</tt>
+# *image_file_size*::    <tt>integer</tt>
+# *image_updated_at*::   <tt>datetime</tt>
+# *created_at*::         <tt>datetime, not null</tt>
+# *updated_at*::         <tt>datetime, not null</tt>
+# *address*::            <tt>text(65535)</tt>
+#--
+# == Schema Information End
+#++
 require 'test_helper'
 
 class VenueTest < ActiveSupport::TestCase

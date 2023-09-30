@@ -198,7 +198,7 @@ module GenericController
   ##
 
   def base_index_ransack_query
-    @q = resource_class.ransack(ransack_query_param)
+    @q = resource_class.ransack(ransack_query_param, auth_object: current_ability)
 
     @q.sorts = order_args unless @q.sorts.present?
 

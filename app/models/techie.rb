@@ -25,6 +25,14 @@ class Techie < ApplicationRecord
 
   default_scope -> { order('name ASC') }
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[id name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[children parents]
+  end
+
   # Because the relations are quite complicated, this breaks without this code.
   def children_attributes=(attributes)
     cycle_through_attributes(attributes, children)

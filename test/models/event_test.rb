@@ -50,14 +50,19 @@ class EventTest < ActionView::TestCase
     assert_equal [[@event.name, @event.id]], Event.selection_collection
   end
 
-  test 'this_year' do
+  test 'this_academic_year' do
     this_year_show = FactoryBot.create(:show, start_date: Date.current)
     old_show = FactoryBot.create(:show, start_date: @event.start_date.advance(years: -3))
     future_workshop = FactoryBot.create(:workshop, start_date: Date.current.advance(years: 1))
 
-    assert_includes Event.this_year, this_year_show
-    assert_not_includes Event.this_year, old_show
-    assert_not_includes Event.this_year, future_workshop
+    assert_includes Event.this_academic_year, this_year_show
+    assert this_year_show.this_academic_year?
+
+    assert_not_includes Event.this_academic_year, old_show
+    assert_not old_show.this_academic_year?
+
+    assert_not_includes Event.this_academic_year, future_workshop
+    assert_not future_workshop.this_academic_year?
   end
 
   test 'thumb_image_url' do

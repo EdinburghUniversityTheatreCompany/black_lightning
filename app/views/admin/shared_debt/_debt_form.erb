@@ -3,7 +3,7 @@
     <% unless debt.persisted? %>
       <%= render('shared/form/user_field', f: f, all_users: true) %>
 
-      <%= f.input :show_id, collection: Show.this_year.selection_collection %>
+      <%= f.input :show_id, collection: Show.this_academic_year.selection_collection %>
     <% end %>
 
     <%= f.input :due_by %>

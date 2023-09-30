@@ -12,12 +12,24 @@
 # == Schema Information End
 #++
 class Admin::DebtNotification < ApplicationRecord
-  enum notification_type: %i[initial_notification reminder]
+  enum notification_type: {
+    initial_notification: 0,
+    reminder: 1
+  }
+
   belongs_to :user
 
   DISABLED_PERMISSIONS = %w[create update delete manage].freeze
 
   def self.default_scope
     order('sent_on DESC')
+  end
+
+  def self.ransackable_attributes(auth_object = nil)
+    ["notification_type", "sent_on", "user_id"]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    ["user"]
   end
 end

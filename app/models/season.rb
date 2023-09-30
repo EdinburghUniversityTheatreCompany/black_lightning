@@ -38,6 +38,10 @@ class Season < Event
 
   has_many :events
 
+  def self.ransackable_associations(auth_object = nil)
+    super
+  end
+
   def simultaneous_events
     return (Event.where('end_date >= ? and start_date <= ?', start_date, end_date).or(Event.where(season: self)).reorder('start_date ASC') - [self]).uniq
   end

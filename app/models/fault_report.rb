@@ -20,8 +20,26 @@ class FaultReport < ApplicationRecord
   belongs_to :reported_by,  class_name: 'User'
   belongs_to :fixed_by,     class_name: 'User', optional: true
 
-  enum severity: %I[annoying probably_worth_fixing show_impeding dangerous]
-  enum status: %I[reported in_progress cant_fix wont_fix on_hold completed]
+  enum severity: {
+    annoying: 0,
+    probably_worth_fixing: 1,
+    show_impeding: 2,
+    dangerous: 3,
+    no_fault: 4
+  }
+
+  enum status: {
+    reported: 0,
+    in_progress: 1,
+    cant_fix: 2,
+    wont_fix: 3,
+    on_hold: 4,
+    completed: 5
+  }
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[description fixed_by_id item reported_by_id severity status created_at updated_at]
+  end
 
   def reported_by_name
     return reported_by.try(:name) || 'Unknown'

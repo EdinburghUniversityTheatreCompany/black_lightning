@@ -22,6 +22,10 @@ class MassMail < ApplicationRecord
 
   before_destroy :check_if_mail_has_been_sent
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[body draft send_date sender_id subject]
+  end
+
   def send_date_is_not_in_the_past
     errors.add(:send_date, 'cannot be in the past') if send_date_is_in_the_past?
   end

@@ -74,6 +74,14 @@ FactoryBot.define do
   factory :show, parent: :event, class: Show do
     author { generate(:random_name) }
     price { generate(:random_name) }
+
+    transient do
+      feedback_count { 1 }
+    end
+
+    after(:create) do |show, evaluator|
+      create_list(:feedback, evaluator.feedback_count, show: show)
+    end
   end
 
   factory :workshop, parent: :event, class: Workshop do

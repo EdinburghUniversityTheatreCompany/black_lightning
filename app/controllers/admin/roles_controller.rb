@@ -4,7 +4,7 @@ class Admin::RolesController < AdminController
   load_and_authorize_resource
 
   def show
-    @q = @role.users.ransack(params[:q])
+    @q = @role.users.ransack(params[:q], auth_object: current_ability)
 
     @users = @q.result
                .accessible_by(current_ability)

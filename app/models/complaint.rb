@@ -25,6 +25,17 @@ class Complaint < ApplicationRecord
     return 'error' unless resolved
   end
 
+  def self.ransackable_attributes(auth_object = nil)
+    # By default, there should be an accessible_by call on this, but just to be safe, I am also including it here.
+    return unless auth_object.can?(:index, Complaint)
+    
+    %w[subject description comments]
+  end
+  
+  def self.ransackable_associations(auth_object = nil)
+    ["versions"]
+  end
+
   private
 
   def stop_destroy

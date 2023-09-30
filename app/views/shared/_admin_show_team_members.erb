@@ -4,35 +4,17 @@
 
 <h3>Team</h3>
 
+<% # Loop over each team_member (user and position) on this teamwork (usually, event or proposal). %>
 <% team_members.each do |team_member| %>
   <% continue if team_member.nil? %>
 
   <p class="py-0 my-0">
     <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
+    <% # Show the badges if the current team_member has a user, AND if the currently signed-in user is part of the team for the teamwork OR can view users, AND we are on the admin site. %>
     <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
-      <% if team_member.user.has_role?('DM Trained') %>
-        <%= generate_label(:info, 'DM Trained')%>
-      <% end %>
-
-      <% if team_member.user.has_role?('First Aid Trained') %>
-        <%= generate_label(:success, 'First Aid Trained') %>
-      <% end %> 
-
-      <% if team_member.user.in_debt %>
-        <% debt_message = team_member.user.debt_message_suffix.upcase_first %>
-
-        <%= generate_label :danger, link_to(debt_message, admin_debt_path(team_member.user)) %>
-      <% end %>
-
-      <% if deadline.present? && team_member.user.in_debt(deadline) %>
-        <% on_deadline_debt_message = team_member.user.debt_message_suffix(deadline).upcase_first %>
-
-        <% # Only show the deadline message if the debt on the deadline is different. %>
-        <% if on_deadline_debt_message != debt_message %>
-          <% on_deadline_debt_message = "#{on_deadline_debt_message} on the editing deadline" %>
-          <%= generate_label :danger, link_to(on_deadline_debt_message, admin_debt_path(team_member.user)) %>
-        <% end %>    
+      <% team_member_labels_for(team_member, deadline).each do |label| %>
+        <%= generate_label(label[:label_class], label[:text]) %>
       <% end %>
     <% end %>
   </p>

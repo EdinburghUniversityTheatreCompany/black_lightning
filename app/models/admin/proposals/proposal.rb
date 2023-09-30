@@ -30,7 +30,14 @@ class Admin::Proposals::Proposal < ApplicationRecord
   include LabelHelper
   has_paper_trail
 
-  validates :show_title, :proposal_text, :publicity_text, :call_id, presence: true
+  validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
+
+  enum status: {
+    awaiting_approval: 0,
+    approved: 1,
+    unsuccessful: 2,
+    failed: 2,
+  }
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
   
@@ -46,6 +53,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
   # Reading is completely managed by ability.rb because it is so complicated and dependent on the call.
   DISABLED_PERMISSIONS = %w[read].freeze
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[approved call_id proposal_text publicity_text show_title successful users_full_name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[call users]
+  end
   ##
   # Creates an instance of Admin::Answer for every question in the call.
   ##

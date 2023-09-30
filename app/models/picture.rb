@@ -36,6 +36,14 @@ class Picture < ApplicationRecord
     return self.includes({ image_attachment: :blob} )
   end
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[access_level description gallery_id gallery_type picture_tags_id]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[gallery image_attachment image_blob picture_tags]
+  end
+
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached?
 

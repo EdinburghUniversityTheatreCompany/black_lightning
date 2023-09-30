@@ -32,6 +32,10 @@ class VideoLink < ApplicationRecord
 
   YOUTUBE_ID_REGEX = %r/^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/
 
+  def self.ransackable_attributes(auth_object = nil)
+    ["name", "link", "access_level", "order", "item_type", "item_id"]
+  end
+
   def video_id
     id = YOUTUBE_ID_REGEX.match(link)
 

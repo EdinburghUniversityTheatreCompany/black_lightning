@@ -135,8 +135,8 @@ class Admin::StaffingsController < AdminController
         # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day. 
         # If end_time < start_time, it ends the next day.
 
-        staffing.start_time = DateTime.parse(start_time)
-        staffing.end_time = DateTime.parse(end_time)
+        staffing.start_time = start_time
+        staffing.end_time = end_time
 
         unless staffing.save
           failure = true
@@ -211,7 +211,8 @@ class Admin::StaffingsController < AdminController
       if helpers.check_if_current_user_can_sign_up(current_user, @job.name)
         format.html # render sign_up_confirm.html.erb
       else
-        helpers.append_to_flash(:error, 'You cannot sign up for staffings. Have you set a phone number?')
+        helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].blank?
+        
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         format.json { render json: @job.errors, status: :unprocessable_entity }
       end
@@ -236,17 +237,15 @@ class Admin::StaffingsController < AdminController
       helpers.append_to_flash(:error, 'You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.')
     end
 
-    unless helpers.check_if_current_user_can_sign_up(current_user, @job.name)
-      helpers.append_to_flash(:error, 'You cannot sign up for staffings. Have you set a phone number?')
-    end
-
     respond_to do |format|
-      if flash[:error].blank? && @job.save
+      if helpers.check_if_current_user_can_sign_up(current_user, @job.name) && @job.save && flash[:error].blank?
         helpers.append_to_flash(:success, "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name} on #{(l @job.staffable.start_time, format: :short)}.")
+
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
       else
-        helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].nil?
+        helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].blank?
+
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         format.json { render json: @job.errors, status: :unprocessable_entity }
       end

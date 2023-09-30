@@ -1,18 +1,5 @@
-<% header_size ||= 1 %>
-
-<%= "<h#{header_size}>".html_safe %>
-  <%= @message %>
-<%= "</h#{header_size}>".html_safe %>
-
-<%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn btn-secondary' %> 
-<br>
-<%= "(#{@user.debt_causing_maintenance_debts.count} now) (#{@user.upcoming_maintenance_debts.count} upcoming)"%>
-<br>
-<br>
-<%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn btn-secondary' %>
-<br>
-<%= "(#{@user.debt_causing_staffing_debts.count} now) (#{@user.upcoming_staffing_debts.count} upcoming)"%>
-<br>
-<br>
-<% unassociated_job_count = @user.staffing_jobs.includes(:staffable).unassociated_staffing_jobs_that_count_towards_debt.count%>
-<%= "#{(@user == current_user) ? "You have": "#{@user.name(current_user)} has"} staffed #{pluralize(unassociated_job_count, 'staffing slot that is', 'staffings slots that are')} not associated with any Debt." %>
+<div class="card">
+  <div class="card-body">
+    <%= render 'admin/debts/show_content' %>
+  </div>
+</div>

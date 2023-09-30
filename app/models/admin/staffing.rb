@@ -43,6 +43,10 @@ class Admin::Staffing < ApplicationRecord
 
   acts_as_url :show_title, url_attribute: :slug, sync_url: true, allow_duplicates: true
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[start_time show_title reminder_job_id end_time counts_towards_debt slug]
+  end
+
   ##
   # Returns the number of jobs that have been filled
   ##

@@ -37,8 +37,12 @@
 
 
 <% content_for :extra_show_actions do %>
-  <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
-    confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
+  <% if @role.name.downcase.strip == 'member' %>
+  <p>You cannot remove all users from the 'Member' role. Instead, please rename this role to 'Members 20xx/20yy' and create a new 'Members' role for the upcoming academic year.</p>
+  <% else %>
+    <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
+      confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
+  <% end %>
 <% end %>
 
 <%= render('shared/pages/show', object: @role, fields: fields) %>

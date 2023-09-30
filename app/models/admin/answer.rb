@@ -31,4 +31,8 @@ class Admin::Answer < ApplicationRecord
   include AttachmentItem
 
   default_scope { includes(:question, :attachments) }
+
+  def self.ransackable_attributes(auth_object = nil)
+    []
+  end
 end

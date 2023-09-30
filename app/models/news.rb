@@ -45,6 +45,14 @@ class News < ApplicationRecord
 
   validates :image, content_type: %i[png jpg jpeg gif]
 
+  def self.ransackable_attributes(auth_object = nil)
+    %w[author_id body publish_date show_public slug title author_full_name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[author image_attachment image_blob roles]
+  end
+
   ##
   # Generates a default image for the news item. If extra artwork is added, increase the base of the modulo call.
   #

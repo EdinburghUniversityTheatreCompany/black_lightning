@@ -28,4 +28,8 @@ class MarketingCreatives::Profile < ApplicationRecord
   def to_param
     url
   end
+
+  def self.ransackable_attributes(auth_object = nil)
+    ["about", "approved", "contact","name", "url", "user_id"]
+  end
 end

@@ -25,4 +25,12 @@ class Admin::StaffingTemplate < ApplicationRecord
 
     super(options)
   end
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[name]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    %w[staffing_jobs]
+  end
 end

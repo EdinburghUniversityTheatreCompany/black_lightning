@@ -28,4 +28,8 @@ class Review < ApplicationRecord
   def reviewer_with_organisation
     return "#{reviewer}#{" for #{organisation}" if organisation.present?}"
   end
+
+  def self.ransackable_attributes(auth_object = nil)
+    %w[body event_id organisation rating review_date reviewer title url]
+  end
 end

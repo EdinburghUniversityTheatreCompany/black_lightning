@@ -76,7 +76,7 @@ module Admin::SharedDebtHelper
   end
 
   def shared_debt_ransack(debts, q_param)
-    q = debts.ransack(q_param)
+    q = debts.ransack(q_param, auth_object: current_ability)
 
     q.sorts = ['due_by asc', 'show_name asc', 'user_full_name asc'] if q.sorts.empty?
 

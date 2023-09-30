@@ -16,7 +16,7 @@ class Admin::TechiesController < AdminController
   def bush
     authorize! :index, Techie
 
-    @q = Techie.ransack(params[:q])
+    @q = Techie.ransack(params[:q], auth_object: current_ability)
 
     @title = 'Techie Family Tree - New but sucks'
   end
@@ -36,7 +36,7 @@ class Admin::TechiesController < AdminController
 
     @title = 'Techie Family Tree'
 
-    @q = Techie.ransack(params[:q])
+    @q = Techie.ransack(params[:q], auth_object: current_ability)
 
     include_siblings_of_related = false
     amount_of_generations = 10

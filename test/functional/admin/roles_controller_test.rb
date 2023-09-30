@@ -81,10 +81,10 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should get edit for hardcoded role' do
-    get :edit, params: { id: @role }
+    get :edit, params: { id: roles(:admin) }
     assert_response :success
 
-    # @role is member, which is hardcoded.
+    # The role is admin, which is hardcoded.
     assert_match 'You cannot change the name of this role', response.body
   end
 
@@ -98,7 +98,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test 'should not update hardcoded role' do
-    put :update, params: { id: @role, role: { name: 'Viking' } }
+    put :update, params: { id: roles(:admin), role: { name: 'Viking' } }
 
     assert_response :unprocessable_entity
 
