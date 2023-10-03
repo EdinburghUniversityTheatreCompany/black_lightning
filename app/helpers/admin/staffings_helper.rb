@@ -18,7 +18,7 @@ module Admin::StaffingsHelper
     end
 
     unless user.phone_number.present?
-      helpers.append_to_flash(:error, 'You need to provide your phone number before you can sign up to staff. ')
+      append_to_flash(:error, 'You need to provide your phone number before you can sign up to staff. ')
       can_sign_up = false
     end
 
