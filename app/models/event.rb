@@ -111,7 +111,7 @@ class Event < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[author end_date is_public maintenance_debt_start members_only_text name pretix_shown price proposal_id publicity_text season_id slug staffing_debt_start start_date tagline type venue_id users_full_name]
+    %w[author end_date is_public maintenance_debt_start members_only_text name pretix_shown price proposal_id publicity_text season_id slug staffing_debt_start start_date tagline type venue_id]
   end
 
   def self.ransackable_associations(auth_object = nil)

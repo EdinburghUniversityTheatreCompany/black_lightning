@@ -90,8 +90,8 @@ class User < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    attributes = []
-    attributes += %w[bio email first_name full_name last_name  public_profile] if auth_object.can?(:read, User)
+    attributes = %w[first_name last_name full_name]
+    attributes += %w[bio email public_profile] if auth_object.can?(:read, User)
     attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count] if auth_object.can?(:manage, User)
 
     return attributes
@@ -151,8 +151,12 @@ class User < ApplicationRecord
     end
   end
 
-  ransacker :full_name do |parent|
-    Arel::Nodes::NamedFunction.new('concat_ws', [Arel::Nodes.build_quoted(' '), parent.table[:first_name], parent.table[:last_name]])
+  ransacker :full_name, formatter: proc { |v| v.mb_chars.downcase.to_s } do |parent|
+    # Alternative
+    #Arel.sql("CONCAT_WS(' ', users.first_name, users.last_name)")
+    Arel::Nodes::NamedFunction.new('LOWER',
+      [Arel::Nodes::NamedFunction.new('concat_ws',
+        [Arel::Nodes::SqlLiteral.new("' '"), parent.table[:first_name], parent.table[:last_name]])])
   end
 
   ##

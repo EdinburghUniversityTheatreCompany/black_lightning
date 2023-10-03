@@ -32,6 +32,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
 
+  # TODO: use this
   enum status: {
     awaiting_approval: 0,
     approved: 1,
@@ -54,7 +55,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   DISABLED_PERMISSIONS = %w[read].freeze
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[approved call_id proposal_text publicity_text show_title successful users_full_name]
+    %w[approved call_id proposal_text publicity_text show_title successful]
   end
 
   def self.ransackable_associations(auth_object = nil)
