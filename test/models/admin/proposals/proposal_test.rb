@@ -83,6 +83,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal @proposal.publicity_text, show.publicity_text
 
     assert_not_nil show.slug
+    assert show.slug.end_with?("-#{Date.current.year}")
 
     assert_equal 'TBC', show.author
     assert_equal 'TBC', show.price
@@ -97,6 +98,19 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal venues(:unknown), show.venue
 
     assert @proposal.reload.successful
+  end
+
+  test 'convert proposal to show with duplicate slug' do
+    preexisting_show = FactoryBot.create(:show)
+    preexisting_show.update(slug: "#{preexisting_show.slug}-#{Date.current.year}")
+
+    @proposal.update(successful: true, show_title: preexisting_show.name)
+
+    @proposal.convert_to_show
+
+    show = Show.where(name: @proposal.show_title).last
+
+    assert show.slug.end_with?('-2')
   end
 
   test 'labels for successful proposal with debtors' do

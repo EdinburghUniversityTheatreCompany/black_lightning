@@ -134,7 +134,21 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.name = show_title
     @show.publicity_text = publicity_text
 
-    @show.slug = @show.name&.to_url
+    @show.slug = "#{@show.name&.to_url}-#{Date.current.year}"
+
+    # Check if the slug already exists on an event
+    if Event.find_by(slug: @show.slug).present?
+      p "Found a show with the same slug, which is #{@show.slug}."
+      original_slug = @show.slug
+      number = 2
+
+      # If so, append a number, and keep upping it until this Event's slug is unique.
+      while Event.find_by(slug: @show.slug).present? do
+        @show.slug = "#{original_slug}-#{number}"
+        number += 1
+      end
+    end
+
 
     @show.author = 'TBC'
     @show.price = 'TBC'
