@@ -108,9 +108,11 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
 
     @proposal.convert_to_show
 
-    show = Show.where(name: @proposal.show_title).last
+    # Try to find if a show exists with the preexisting show's slug with the -2 added.
+    # If so, it works.
+    show = Show.where(slug: "#{preexisting_show.slug}-2")
 
-    assert show.slug.end_with?('-2')
+    assert show.present?
   end
 
   test 'labels for successful proposal with debtors' do

@@ -140,12 +140,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
     if Event.find_by(slug: @show.slug).present?
       p "Found a show with the same slug, which is #{@show.slug}."
       original_slug = @show.slug
-      number = 2
 
       # If so, append a number, and keep upping it until this Event's slug is unique.
-      while Event.find_by(slug: @show.slug).present? do
+      # Caps at 100. If it hits 100, something has gone very very wrong.
+      for number in 2..100 do
         @show.slug = "#{original_slug}-#{number}"
-        number += 1
+
+        break unless Event.find_by(slug: @show.slug).present?
       end
     end
 
