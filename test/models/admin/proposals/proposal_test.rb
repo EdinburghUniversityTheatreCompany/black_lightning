@@ -115,6 +115,20 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert show.present?
   end
 
+  test 'convert proposal to show with loads of duplicate slugs' do
+    # Get a proposal
+    @proposal.update(successful: true)
+
+    # Now try converting the same proposal many times and at some point, expect a RecordNotSaved error.
+    exception = assert_raises ActiveRecord::RecordNotSaved do
+      for i in 0..101 do
+        @proposal.convert_to_show
+      end
+    end
+
+    assert_includes exception.message, "The number appended at the end of the slug has hit"
+  end
+
   test 'labels for successful proposal with debtors' do
     @proposal.approved = true
     @proposal.successful = true
