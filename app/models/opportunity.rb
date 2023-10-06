@@ -26,7 +26,7 @@ class Opportunity < ApplicationRecord
   scope :active, -> { where('approved = true AND expiry_date > ?', Time.now).order('expiry_date ASC') }
 
   def self.ransackable_attributes(auth_object = nil)
-    ["approved", "approver_id", "creator_id", "description", "expiry_date", "show_email", "title"]
+    ["approved", "description", "expiry_date", "show_email", "title"]
   end
 
   def self.ransackable_associations(auth_object = nil)

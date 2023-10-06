@@ -46,7 +46,7 @@ class Admin::PermissionsController < AdminController
 
     @models = (ApplicationRecord.descendants + [Admin::Debt, Season, Doorkeeper::Application] - [MarketingCreatives::CategoryInfo]).uniq
 
-    role_exclude = ['admin', 'Proposal Checker', 'DM Trained']
-    @roles = Role.includes(:permissions).where.not(name: role_exclude).all
+    role_exclude = ['admin', 'Proposal Checker']
+    @roles = Role.includes(:permissions).where.not(name: role_exclude).all.left_joins(:permissions).group(:id).order('COUNT(admin_permissions.id) DESC')
   end
 end

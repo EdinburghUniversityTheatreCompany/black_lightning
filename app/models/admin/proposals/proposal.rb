@@ -32,6 +32,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
 
+  # TODO: use this
   enum status: {
     awaiting_approval: 0,
     approved: 1,
@@ -54,7 +55,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   DISABLED_PERMISSIONS = %w[read].freeze
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[approved call_id proposal_text publicity_text show_title successful users_full_name]
+    %w[approved call_id proposal_text publicity_text show_title successful]
   end
 
   def self.ransackable_associations(auth_object = nil)
@@ -133,7 +134,26 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.name = show_title
     @show.publicity_text = publicity_text
 
-    @show.slug = @show.name&.to_url
+    @show.slug = "#{@show.name&.to_url}-#{Date.current.year}"
+
+    # Check if the slug already exists on an event
+    if Event.find_by(slug: @show.slug).present?
+      p "Found a show with the same slug, which is #{@show.slug}."
+      original_slug = @show.slug
+
+      max_number = 30
+      # If so, append a number, and keep upping it until this Event's slug is unique.
+      for number in 2..max_number do
+        @show.slug = "#{original_slug}-#{number}"
+
+        # If it hits 30, something has gone very very wrong, as there would be 30 duplicate events in the same year, so throw an error.
+        raise(ActiveRecord::RecordNotSaved, "The number appended at the end of the slug has hit the maximum when converting the proposal \"#{show_title}\" with id \"#{id}\". Check what other events there are with their slug starting with \"#{original_slug}\".") if number == max_number
+
+        # Break if there are no duplicate events with this slug anymore.
+        break unless Event.find_by(slug: @show.slug).present?
+      end
+    end
+
 
     @show.author = 'TBC'
     @show.price = 'TBC'

@@ -83,6 +83,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal @proposal.publicity_text, show.publicity_text
 
     assert_not_nil show.slug
+    assert show.slug.end_with?("-#{Date.current.year}")
 
     assert_equal 'TBC', show.author
     assert_equal 'TBC', show.price
@@ -97,6 +98,35 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal venues(:unknown), show.venue
 
     assert @proposal.reload.successful
+  end
+
+  test 'convert proposal to show with duplicate slug' do
+    preexisting_show = FactoryBot.create(:show)
+    preexisting_show.update(slug: "#{preexisting_show.slug}-#{Date.current.year}")
+
+    @proposal.update(successful: true, show_title: preexisting_show.name)
+
+    @proposal.convert_to_show
+
+    # Try to find if a show exists with the preexisting show's slug with the -2 added.
+    # If so, it works.
+    show = Show.where(slug: "#{preexisting_show.slug}-2")
+
+    assert show.present?
+  end
+
+  test 'convert proposal to show with loads of duplicate slugs' do
+    # Get a proposal
+    @proposal.update(successful: true)
+
+    # Now try converting the same proposal many times and at some point, expect a RecordNotSaved error.
+    exception = assert_raises ActiveRecord::RecordNotSaved do
+      for i in 0..101 do
+        @proposal.convert_to_show
+      end
+    end
+
+    assert_includes exception.message, "The number appended at the end of the slug has hit"
   end
 
   test 'labels for successful proposal with debtors' do

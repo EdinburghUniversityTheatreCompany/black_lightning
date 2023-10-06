@@ -26,7 +26,7 @@ class Admin::DebtNotification < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    ["notification_type", "sent_on", "user_id"]
+    ["notification_type", "sent_on"]
   end
 
   def self.ransackable_associations(auth_object = nil)

@@ -46,7 +46,7 @@ class News < ApplicationRecord
   validates :image, content_type: %i[png jpg jpeg gif]
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[author_id body publish_date show_public slug title author_full_name]
+    %w[body publish_date show_public slug title]
   end
 
   def self.ransackable_associations(auth_object = nil)
