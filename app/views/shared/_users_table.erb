@@ -1,0 +1,6 @@
+<% search_fields = { full_name_cont:   { slug: 'defaults.name' } } %>
+<%= render('shared/search_form', input_fields: search_fields, url: url, columns: 1) %>
+
+<% headers = [:name] %>
+<% field_sets = users.map { |user| { fields: [user] } } %>
+<%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: User) %>

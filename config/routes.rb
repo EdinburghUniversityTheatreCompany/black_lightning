@@ -109,6 +109,9 @@ ChaosRails::Application.routes.draw do
 
     resources :debts
 
+    resources :maintenance_sessions
+    resources :maintenance_attendances
+  
     resources :venues do
       collection do 
         get 'map'

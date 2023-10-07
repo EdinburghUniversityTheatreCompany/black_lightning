@@ -75,6 +75,7 @@ class User < ApplicationRecord
   has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt', dependent: :restrict_with_error 
   has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification', dependent: :destroy
   has_many :membership_activation_tokens, class_name: 'MembershipActivationToken', dependent: :destroy
+  has_many :maintenance_attendances, class_name: 'MaintenanceAttendance', dependent: :restrict_with_error
 
   has_one_attached :avatar
 

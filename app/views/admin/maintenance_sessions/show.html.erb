@@ -1,0 +1,6 @@
+<% fields = { 
+  date: @maintenance_session.date,
+  users: { type: 'content', header: "Attendees", content: render('shared/users_table', users: @users, url: admin_maintenance_session_url(@maintenance_session)) }
+} %>
+
+<%= render('shared/pages/show', object: @maintenance_session, fields: fields) %>

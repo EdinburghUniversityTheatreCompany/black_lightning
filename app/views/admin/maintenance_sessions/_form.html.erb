@@ -1,0 +1,8 @@
+<%= simple_horizontal_form_for([:admin, @maintenance_session]) do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <%= f.input :date %>
+
+    <% p "In Maintenance Session Form #{f.object}" %>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :maintenance_attendances, partial_name: 'maintenance_attendance_fields') %>
+  <% end %>
+<% end %>

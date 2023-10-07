@@ -15,7 +15,8 @@
 class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show
-
+  belongs_to :maintenance_attendance
+  
   validates :due_by, :show_id, :user_id, presence: true
 
   enum state: %i[unfulfilled converted completed]

@@ -1,0 +1,14 @@
+<% headers = ['View', :date] %>
+
+<% field_sets = @maintenance_sessions.map { |maintenance_session| {
+  fields: [
+    maintenance_session,  
+    maintenance_session.date,
+  ] } } %>
+
+<% search_fields = {
+    date_cont: { slug: 'defaults.date' },
+    
+} %>
+
+<%= render 'shared/pages/index', resource_class: MaintenanceSession, resources: @maintenance_sessions, headers: headers, field_sets: field_sets, search_fields: search_fields %>

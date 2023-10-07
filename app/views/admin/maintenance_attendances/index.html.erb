@@ -1,0 +1,14 @@
+<% headers = ['View', :date, :user] %>
+
+<% field_sets = @maintenance_attendances.map { |maintenance_attendance| {
+  fields: [
+    maintenance_attendance,
+    get_link(maintenance_attendance.maintenance_session, :show),
+    user_link(maintenance_attendance.user, false),
+  ] } } %>
+
+<% search_fields = {
+    user_full_name_cont: { slug: 'defaults.user_full_name' }
+} %>
+
+<%= render 'shared/pages/index', resource_class: MaintenanceAttendance, resources: @maintenance_attendances, headers: headers, field_sets: field_sets, search_fields: search_fields %>

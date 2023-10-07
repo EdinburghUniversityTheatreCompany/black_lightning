@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2023_06_23_102207) do
+ActiveRecord::Schema[7.0].define(version: 2023_10_07_095731) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -90,6 +90,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_23_102207) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.integer "state", default: 0
+    t.bigint "maintenance_attendance_id_id"
+    t.bigint "maintenance_attendance_id"
+    t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
+    t.index ["maintenance_attendance_id_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id_id"
   end
 
   create_table "admin_permissions", id: :integer, charset: "utf8mb3", collation: "utf8_unicode_ci", force: :cascade do |t|
@@ -333,6 +337,21 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_23_102207) do
     t.index ["reported_by_id"], name: "index_fault_reports_on_reported_by_id"
     t.index ["severity"], name: "index_fault_reports_on_severity"
     t.index ["status"], name: "index_fault_reports_on_status"
+  end
+
+  create_table "maintenance_attendances", charset: "utf8mb3", force: :cascade do |t|
+    t.bigint "maintenance_session_id", null: false
+    t.integer "user_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["maintenance_session_id"], name: "index_maintenance_attendances_on_maintenance_session_id"
+    t.index ["user_id"], name: "index_maintenance_attendances_on_user_id"
+  end
+
+  create_table "maintenance_sessions", charset: "utf8mb3", force: :cascade do |t|
+    t.date "date"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "marketing_creatives_categories", charset: "utf8mb3", force: :cascade do |t|
@@ -623,7 +642,10 @@ ActiveRecord::Schema[7.0].define(version: 2023_06_23_102207) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
+  add_foreign_key "admin_maintenance_debts", "maintenance_attendances"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
+  add_foreign_key "maintenance_attendances", "maintenance_sessions"
+  add_foreign_key "maintenance_attendances", "users"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_profiles", column: "profile_id"
   add_foreign_key "marketing_creatives_profiles", "users"
