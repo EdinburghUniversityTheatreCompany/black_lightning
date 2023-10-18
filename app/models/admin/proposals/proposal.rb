@@ -30,7 +30,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   include LabelHelper
   has_paper_trail
 
-  validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
+  validates :show_title, :proposal_text, :publicity_text, :call_id, presence: true
 
   # TODO: use this
   enum status: {
