@@ -86,7 +86,7 @@ class ShowTest < ActiveSupport::TestCase
 
     assert_equal new_due_by, maintenance_debt.due_by
     assert_equal show.users.first, maintenance_debt.user
-    assert_equal 'unfulfilled', maintenance_debt.state
+    assert_equal 'normal', maintenance_debt.state
     assert_equal show, maintenance_debt.show
   end
 

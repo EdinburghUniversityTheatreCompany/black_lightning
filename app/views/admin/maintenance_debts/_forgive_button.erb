@@ -1,6 +1,6 @@
 <% if maintenance_debt.unfulfilled? %>
   <%= get_link maintenance_debt, :destroy, link_text: 'Forgive',
                confirm: "Forgiving " + maintenance_debt.user.name(current_user)+ "'s debt",
-               detail: "If you forgive an unfulfilled debt a theatre manager fairy will be squished by a pineapple."
+               detail: "If you forgive a debt a theatre manager fairy will be squished by a pineapple."
   %>
 <% end %>

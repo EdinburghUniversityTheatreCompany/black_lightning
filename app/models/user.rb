@@ -139,8 +139,6 @@ class User < ApplicationRecord
     return email
   end
 
-
-
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
   def unify_numbers
     return unless phone_number
@@ -181,21 +179,25 @@ class User < ApplicationRecord
     return user
   end
 
+  ##
+  # Debt
+  ## 
+
   # The current and upcoming function share code, so please check them both if you change things.
   def debt_causing_maintenance_debts(on_date = Date.current)
-    return Admin::MaintenanceDebt.where(user: self).where('due_by < ?', on_date).unfulfilled
+    return admin_maintenance_debts.where('due_by < ?', on_date).unfulfilled
   end
 
   def upcoming_maintenance_debts(from_date = Date.current)
-    return Admin::MaintenanceDebt.where(user: self).where('due_by >= ?', from_date).unfulfilled
+    return admin_maintenance_debts.where('due_by >= ?', from_date).unfulfilled
   end
   
   def debt_causing_staffing_debts(on_date = Date.current)
-    return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by < ?', on_date).where(admin_staffing_job: nil, forgiven: false)
+    return admin_staffing_debts.where('due_by < ?', on_date).unfulfilled
   end
 
   def upcoming_staffing_debts(from_date = Date.current)
-    return Admin::StaffingDebt.where(user: self, admin_staffing_job_id: nil).where('due_by >= ?', from_date).where(admin_staffing_job: nil, forgiven: false)
+    return admin_staffing_debts.where('due_by >= ?', from_date).unfulfilled
   end
 
   def debt_message_suffix(on_date = Date.current)

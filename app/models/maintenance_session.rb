@@ -22,7 +22,7 @@ class MaintenanceSession < ApplicationRecord
     end
 
     def self.ransackable_associations(auth_object = nil)
-        %w[maintenance_attendances]
+        %w[maintenance_attendances users]
     end
 
     def to_label

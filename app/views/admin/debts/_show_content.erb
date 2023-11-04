@@ -11,7 +11,8 @@
     </li>
 
     <li class="list-group-item px-0 pt-2 pb-0">
-        <% unassociated_job_count = @user.staffing_jobs.includes(:staffable).unassociated_staffing_jobs_that_count_towards_debt.count %>
-        <%= "#{(@user == current_user) ? "You have": "#{@user.name(current_user)} has"} staffed #{pluralize(unassociated_job_count, 'staffing slot that is', 'staffings slots that are')} not associated with any Debt." %>
+        <% unassociated_job_count = @user.staffing_jobs.includes(:staffable).unassociated_staffing_jobs_that_count_towards_debt.size %>
+        <% unassociated_sessions_count = @user.maintenance_attendances.unassociated.size %>
+        <%= "#{(@user == current_user) ? "You have": "#{@user.name(current_user)} has"} staffed #{pluralize(unassociated_job_count, 'staffing slot', 'staffing slots')} and attendended #{pluralize(unassociated_job_count, 'maintenance session', 'maintenance sessions')} that are not associated with any Debt." %>
     </li>
 </ul>

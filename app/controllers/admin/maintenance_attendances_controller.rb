@@ -22,6 +22,6 @@ class Admin::MaintenanceAttendancesController < AdminController
   end
 
   def includes_args
-    [:user, :maintenance_session]
+    [:user, :maintenance_session, :maintenance_debt]
   end
 end

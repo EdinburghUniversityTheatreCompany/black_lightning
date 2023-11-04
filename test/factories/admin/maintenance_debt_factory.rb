@@ -18,6 +18,14 @@ FactoryBot.define do
     association :show, factory: :show
     due_by { Date.current + 1 }
 
+    transient do
+      with_attendance { false }
+    end
+
+    after(:create) do |maintenance_debt, evaluator|
+      FactoryBot.create(:maintenance_attendance, maintenance_debt: maintenance_debt, user: evaluator.user) if evaluator.with_attendance
+    end
+
     factory :overdue_maintenance_debt do
       due_by { Date.current - 1 }
     end

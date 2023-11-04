@@ -28,4 +28,8 @@ class Admin::MaintenanceSessionsController < AdminController
   def order_args
     ['date']
   end
+
+  def include_class_name_in_show_page_title
+    true
+  end
 end

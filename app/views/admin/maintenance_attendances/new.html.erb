@@ -1,16 +1,1 @@
-<%= simple_horizontal_form_for([:admin, @maintenance_attendance]) do |f| %>
-  <%= f.input :date %>
-
-  <%= f.input :date %>
-
-  <div id="users">
-    <%= f.simple_fields_for :maintenance_attendance_users do |user_form| %>
-      <%= render 'user_fields', f: user_form %>
-    <% end %>
-    <div class="links">
-      <%= link_to_add_association 'Add User', f, :maintenance_attendance_users %>
-    </div>
-  </div>
-
-  <%= f.submit 'Create Maintenance Attendances' %>
-<% end %>
+<%= render 'form' %>

@@ -17,7 +17,7 @@ class Admin::MaintenanceDebtsController < AdminController
 
   # DELETE /admin/maintenance_debts/1
   def destroy
-    @maintenance_debt.state = :completed
+    @maintenance_debt.forgive
 
     if @maintenance_debt.save
       flash[:success] = 'The Maintenance Debt has been successfully marked as completed.'

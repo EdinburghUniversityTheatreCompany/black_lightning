@@ -64,7 +64,7 @@ class Show < Event
           show: self,
           user: user,
           due_by: maintenance_debt_start,
-          state: :unfulfilled
+          state: :normal
         )
       else
         debts.each do |debt| 

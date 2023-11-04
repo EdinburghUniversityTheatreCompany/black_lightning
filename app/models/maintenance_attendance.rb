@@ -16,7 +16,7 @@ class MaintenanceAttendance < ApplicationRecord
   belongs_to :user
   belongs_to :maintenance_session
 
-  has_one :maintenance_debt, class_name: 'Admin::MaintenanceDebt'
+  has_one :maintenance_debt, class_name: 'Admin::MaintenanceDebt', dependent: :nullify
   delegate :date, to: :maintenance_session
   
   def self.ransackable_attributes(auth_object = nil)
