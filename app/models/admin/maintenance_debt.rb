@@ -19,6 +19,9 @@ class Admin::MaintenanceDebt < ApplicationRecord
 
   validates :due_by, :show_id, :user_id, presence: true
 
+  after_save :associate_with_attendance
+  after_destroy { associate_with_attendance(true) }
+
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
   enum state: {
@@ -95,5 +98,17 @@ class Admin::MaintenanceDebt < ApplicationRecord
     when :causing_debt
       'table-danger'
     end
+  end
+
+  # Associates itself with the soonest upcoming Maintenance Attendance
+  def associate_with_attendance(skip_check = false)
+    relevant_keys = previous_changes.keys.excluding('created_at', 'updated_at')
+
+    # Clear the attendance if the state has changed, just in case.
+    # Otherwise, setting a debt with an attached attendance to forgiven or converted
+    # will keep the attendance attached.
+    update(maintenance_attendance: nil) if relevant_keys.include?('state')
+
+    user.reallocate_maintenance_debts if skip_check || relevant_keys != ['maintenance_attendance_id']
   end
 end

@@ -242,6 +242,24 @@ class User < ApplicationRecord
     return team_memberships.sort { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
   end
 
+  # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
+  # It then matches all the soonest debt with attendances. 
+  def reallocate_maintenance_debts
+    debts = admin_maintenance_debts.reload.where('due_by >= ? ', Date.current).or(admin_maintenance_debts.where(maintenance_attendance: nil)).where(state: :normal).order(due_by: :asc)
+    attendances = maintenance_attendances.reload.includes(:maintenance_debt).where(admin_maintenance_debts: { id: [nil] + debts.ids })
+
+    amount_of_pairs = [debts.size, attendances.size].min
+
+    # Link them as far as there are pairs.
+    for i in 0...amount_of_pairs do
+      debts[i].update(maintenance_attendance: attendances[i]) if debts[i].maintenance_attendance != attendances[i]
+    end
+
+    for i in amount_of_pairs...debts.size do
+      debts[i].update(maintenance_attendance: nil) if debts[i].maintenance_attendance.present?
+    end
+  end
+
   # Overrides an existing method that doesn't work.
   def remove_role(role)
     if role.instance_of?(Symbol)
