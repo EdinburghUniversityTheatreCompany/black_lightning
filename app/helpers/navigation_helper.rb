@@ -45,6 +45,8 @@ module NavigationHelper
     children << { title: 'Debt Notifications', path: admin_debt_notifications_path, fa_icon: 'fa-receipt' }   if can? :index, Admin::DebtNotification
     children << { title: 'Staffing', path: admin_staffings_path, fa_icon: 'fa-people-group' }                 if can? :index, Admin::Staffing
     children << { title: 'Staffing Debt', path: admin_staffing_debts_path, fa_icon: 'fa-people-robbery' }     if can? :index, Admin::StaffingDebt
+    children << { title: 'Maintenance Attendance', path: admin_maintenance_attendances_path, fa_icon: 'fa-broom' }  if can? :index, MaintenanceAttendance
+    children << { title: 'Maintenance Sessions', path: admin_maintenance_sessions_path, fa_icon: 'fa-hand-sparkles' }  if can? :index, MaintenanceSession
     children << { title: 'Maintenance Debt', path: admin_maintenance_debts_path, fa_icon: 'fa-wrench' }      if can? :index, Admin::MaintenanceDebt
     navbar_categories << { title: 'Staffing & Debt', children: children, fa_icon: 'fa-person' }
 

@@ -1,0 +1,8 @@
+<% p f.object %>
+<%= render '/shared/form/inline_fields_for_template',
+    f: f,
+    div_class_additions: 'maintenance_attendance',
+    fields: [
+        { field: f.hidden_field(:id) + render('shared/form/user_field', f: f, wrapper: :inline_form) },
+        { field: link_to_remove(f), col_modifier: 'auto' },
+] %>

@@ -1,22 +1,25 @@
-<% headers = [:user_full_name, :show_name, :due_by] %>
-<% headers << '' #if can?(:delete, Admin::MaintenanceDebt) %>
-<% headers << '' #if can?(:edit, Admin::MaintenanceDebt) %>
-<% headers << '' #if can?(:edit, Admin::MaintenanceDebt) %>
+<% headers = [:user_full_name, :show_name, :due_by, :status] %>
+<% headers << '' if can?(:delete, Admin::MaintenanceDebt) %>
+<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
+<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
 
 <% field_sets = @maintenance_debts.map do |maintenance_debt| { 
   fields: [
     maintenance_debt,
     user_link(maintenance_debt.user, false),
-    maintenance_debt.show.name,
+    get_link(maintenance_debt.show, :show),
     maintenance_debt.due_by,
-    get_link(maintenance_debt, :edit, link_text: 'Change Deadline', additional_condition: maintenance_debt.status != :forgiven),
+    # Make the attendance into a link if the user has permission, and there is an attendance.
+    maintenance_debt.maintenance_attendance.present? ? get_link(maintenance_debt.maintenance_attendance, :show, link_text: maintenance_debt.formatted_status) : maintenance_debt.formatted_status,
+    # Only makes sense to want to change the deadline
+    get_link(maintenance_debt, :edit),
     maintenance_debt.unfulfilled? ? get_link(
       maintenance_debt, :convert_to_staffing_debt, link_text: 'Convert To Staffing',
       html_class: 'btn btn-secondary', http_method: :put, 
       confirm: "Converting the Maintenance Debt to Staffing Debt", 
       detail: "Are you sure you want to convert #{maintenance_debt.user.name current_user}'s debt into a Staffing Debt?" 
     ) : '' ,
-    render('complete_button', maintenance_debt: maintenance_debt)
+    render('forgive_button', maintenance_debt: maintenance_debt)
   ],
   class: maintenance_debt.css_class
 }
@@ -28,7 +31,7 @@ else
   search_fields = {
     user_full_name_cont:  { slug: 'defaults.user' },
     show_name_cont:       { slug: 'defaults.show_name' },
-    show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean }
+    show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean },
 } 
 end %>
 

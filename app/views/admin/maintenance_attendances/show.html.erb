@@ -1,0 +1,6 @@
+<% fields = { 
+  session: get_link(@maintenance_attendance.maintenance_session, :show),
+  user: user_link(@maintenance_attendance.user, false),
+} %>
+
+<%= render('shared/pages/show', object: @maintenance_attendance, fields: fields) %>

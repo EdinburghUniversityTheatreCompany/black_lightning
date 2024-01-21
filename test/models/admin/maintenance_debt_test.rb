@@ -19,6 +19,9 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     @maintenance_debt = FactoryBot.create(:maintenance_debt)
   end
 
+  ##
+  # Other
+  ##
   test 'can convert to staffing debt' do
     assert_difference('Admin::MaintenanceDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::MaintenanceDebt.count') do
@@ -30,30 +33,29 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     assert Admin::StaffingDebt.last.converted?
   end
 
-  test 'get status' do
+  test 'get status and CSS class' do
     @maintenance_debt.state = :converted
     assert_equal :converted, @maintenance_debt.status
-    @maintenance_debt.state = :completed
-    assert_equal :completed, @maintenance_debt.status
+    assert_equal 'Converted', @maintenance_debt.formatted_status
+    assert_equal 'table-success', @maintenance_debt.css_class
 
-    @maintenance_debt.state = :unfulfilled
+    @maintenance_debt.state = :forgiven
+    assert_equal :forgiven, @maintenance_debt.status
+    assert_equal 'Forgiven', @maintenance_debt.formatted_status
+    assert_equal 'table-success', @maintenance_debt.css_class
+
+    @maintenance_debt.state = :normal
     assert_equal :unfulfilled, @maintenance_debt.status(@maintenance_debt.due_by.advance(days: -1))
+    assert_equal 'Unfulfilled', @maintenance_debt.formatted_status(@maintenance_debt.due_by.advance(days: -1))
+    assert_equal 'table-warning', @maintenance_debt.css_class(@maintenance_debt.due_by.advance(days: -1))
+
     assert_equal :causing_debt, @maintenance_debt.status(@maintenance_debt.due_by.advance(days: 1))
-  end
+    assert_equal 'Causing Debt', @maintenance_debt.formatted_status(@maintenance_debt.due_by.advance(days: 1))
+    assert_equal 'table-danger', @maintenance_debt.css_class(@maintenance_debt.due_by.advance(days: 1))
 
-  test 'should return the correct css class' do
-    helper_compare_css_class 'table-success', :completed
-    helper_compare_css_class 'table-success', :converted
-
-    @maintenance_debt.due_by = Date.current.advance(days: 1)
-    helper_compare_css_class 'table-warning', :unfulfilled
-
-    @maintenance_debt.due_by = Date.current.advance(days: -1)
-    helper_compare_css_class 'table-danger', :unfulfilled
-  end
-
-  def helper_compare_css_class(expected_class, state)
-    @maintenance_debt.state = state
-    assert_equal expected_class, @maintenance_debt.css_class
+    @maintenance_debt.maintenance_attendance = FactoryBot.create(:maintenance_attendance, user: @maintenance_debt.user)
+    assert_equal :completed, @maintenance_debt.status
+    assert_equal "Completed on #{@maintenance_debt.maintenance_attendance.date}", @maintenance_debt.formatted_status
+    assert_equal 'table-success', @maintenance_debt.css_class
   end
 end

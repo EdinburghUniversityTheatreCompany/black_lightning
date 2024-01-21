@@ -106,9 +106,9 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   # Debt
   test 'debt causing and upcoming maintenance debts' do
-    debt_causing_debt =      FactoryBot.create :maintenance_debt,         user: @user, state: :unfulfilled
-    future_debt =            FactoryBot.create :maintenance_debt,         user: @user, state: :unfulfilled, due_by: debt_causing_debt.due_by.advance(days: 2)
-    _non_debt_causing_debt = FactoryBot.create :overdue_maintenance_debt, user: @user, state: :completed
+    debt_causing_debt =      FactoryBot.create(:maintenance_debt,         user: @user)
+    future_debt =            FactoryBot.create(:maintenance_debt,         user: @user, due_by: debt_causing_debt.due_by.advance(days: 2))
+    _non_debt_causing_debt = FactoryBot.create(:overdue_maintenance_debt, user: @user, with_attendance: true)
 
     from_date = debt_causing_debt.due_by.advance(days: 2)
     assert_equal [debt_causing_debt], @user.debt_causing_maintenance_debts(from_date).to_a

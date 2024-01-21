@@ -24,17 +24,7 @@
   <% fields[:add_user] = { type: 'content', header: 'Add User', content: yield(:add_user) } %>
 <% end %>
 
-<% content_for :users do %>
-  <% search_fields = { full_name_cont:   { slug: 'defaults.name' } } %>
-  <%= render('shared/search_form', input_fields: search_fields, url: admin_role_url(@role), columns: 1) %>
-
-  <% headers = [:name] %>
-  <% field_sets = @users.map { |user| { fields: [user] } } %>
-  <%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: User) %>
-<% end %>
-
-<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: yield(:users) } %>
-
+<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: render('shared/users_table', users: @users, url: admin_role_url(@role)) } %>
 
 <% content_for :extra_show_actions do %>
   <% if @role.name.downcase.strip == 'member' %>

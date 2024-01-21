@@ -1,0 +1,6 @@
+<%= simple_horizontal_form_for([:admin, @maintenance_attendance]) do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <%= f.association :maintenance_session %>
+    <%= f.association :user %>
+  <% end %>
+<% end %>

@@ -58,3 +58,9 @@ member:
   last_name: 'Dinosaur'
   email: 'impact@yucatan.gulf'
   consented: <%= 5.day.ago.to_fs(:db) %>
+
+iolanthe_faerie:
+  first_name: 'Iolianthe'
+  last_name: 'Faerie'
+  email: 'iolanthe@faerie.peer'
+  consented: <%= 5.day.ago.to_fs(:db) %>

@@ -100,7 +100,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
       end
     end
 
-    assert assigns(:maintenance_debt).status == :completed
+    assert assigns(:maintenance_debt).status == :forgiven
 
     assert_redirected_to admin_maintenance_debts_path
   end

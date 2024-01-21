@@ -15,12 +15,20 @@
 class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show
+  belongs_to :maintenance_attendance, optional: true
 
   validates :due_by, :show_id, :user_id, presence: true
 
-  enum state: %i[unfulfilled converted completed]
+  after_save :associate_with_attendance
+  after_destroy { associate_with_attendance(true) }
+
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
+  enum state: {
+    normal: 0,
+    converted: 1,
+    forgiven: 2
+  }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[created_at due_by show_id state user_id user show]
@@ -30,42 +38,77 @@ class Admin::MaintenanceDebt < ApplicationRecord
     %w[show user]
   end
 
+  # A maintenance debt is fulfilled if it is either: attended, converted, or forgiven. Otherwise, it is not fulfilled.
+  # Or phrased differently, if the state is normal and there is no maintenance attendance, it is not fulfilled yet.
+  def self.unfulfilled
+    where(state: 0).where.missing(:maintenance_attendance)
+  end
+
+  # See above for an explanation.
+  def unfulfilled?
+    state == 'normal' && maintenance_attendance.nil?
+  end
+
   def convert_to_staffing_debt
-    staffing_debt = Admin::StaffingDebt.new
-    staffing_debt.due_by = due_by
-    staffing_debt.show_id = show_id
-    staffing_debt.user_id = user_id
-    staffing_debt.converted = true
-    staffing_debt.save!
-    self.state = :converted
-    save!
+    ActiveRecord::Base.transaction do
+      Admin::StaffingDebt.create(due_by: due_by, show_id: show_id, user_id: user_id, converted: true)
+      update(state: :converted)
+    end
+  end
+
+  def forgive
+    return update(state: :forgiven)
   end
 
   def status(on_date = Date.current)
     case state
+    when 'forgiven'
+      return :forgiven
     when 'converted'
       return :converted
-    when 'completed'
-      return :completed
-    when 'unfulfilled' then
+    else
+      if maintenance_attendance.present?
+        return :completed
+      end
+
       if due_by < on_date
-        :causing_debt
+        return :causing_debt
       else
-        :unfulfilled
+        return :unfulfilled
       end
     end
   end
 
-  def css_class
-    case status
+  def formatted_status(on_date = Date.current)
+    local_status = status(on_date)
+
+    if local_status == :completed && maintenance_attendance.present?
+      return "Completed on #{maintenance_attendance.date}"
+    else
+      return local_status.to_s.titleize
+    end
+  end
+
+  def css_class(on_date = Date.current)
+    case status(on_date)
     when :unfulfilled
       'table-warning'
-    when :converted
-      'table-success'
-    when :completed
+    when :converted, :completed, :forgiven
       'table-success'
     when :causing_debt
       'table-danger'
     end
+  end
+
+  # Associates itself with the soonest upcoming Maintenance Attendance
+  def associate_with_attendance(skip_check = false)
+    relevant_keys = previous_changes.keys.excluding('created_at', 'updated_at')
+
+    # Clear the attendance if the state has changed, just in case.
+    # Otherwise, setting a debt with an attached attendance to forgiven or converted
+    # will keep the attendance attached.
+    update(maintenance_attendance: nil) if relevant_keys.include?('state')
+
+    user.reallocate_maintenance_debts if skip_check || relevant_keys != ['maintenance_attendance_id']
   end
 end

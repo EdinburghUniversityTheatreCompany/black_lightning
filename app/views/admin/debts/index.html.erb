@@ -4,13 +4,14 @@
   show_in_debt_only:  { slug: 'defaults.show_in_debt_only', type: :boolean}
 } %>
 
-<% headers = [:name, :maintenance_debts, :staffing_debts, :unassociated_staffing_slots] %>
+<% headers = [:name, :maintenance_debts, :unassociated_maintenance_attendances, :staffing_debts, :unassociated_staffing_slots] %>
 
 <% field_sets = @users.map { |user| { 
   fields: [
     user,
     link_to(user.name(current_user), admin_debt_path(user)),
     "#{user.debt_causing_maintenance_debts.size} / #{user.upcoming_maintenance_debts.size}",
+    user.maintenance_attendances.unassociated.size,
     "#{user.debt_causing_staffing_debts.size} / #{user.upcoming_staffing_debts.size}",
     user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.size 
   ], 

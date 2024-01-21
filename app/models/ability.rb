@@ -159,6 +159,8 @@ class Ability
     can :read, Admin::StaffingDebt, user_id: user.id
     # Only grant the :show action for Admin::Debt so that normal users do not have access to the index page which is useless for them.
     can :show, Admin::Debt, id: user.id
+    # Users can see their own maintenance attendance, but not edit them.
+    can :read, MaintenanceAttendance, user_id: user.id
 
     can %I[read update], Opportunity, creator_id: user.id
 
