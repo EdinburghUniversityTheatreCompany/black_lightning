@@ -13,3 +13,7 @@ committee_is_member:
 member_is_member:
   user_id: 4
   role_id: 1
+
+member_with_phone_number_is_member:
+  user_id: 5
+  role_id: 1

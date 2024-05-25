@@ -59,6 +59,14 @@ member:
   email: 'impact@yucatan.gulf'
   consented: <%= 5.day.ago.to_fs(:db) %>
 
+member_with_phone_number:
+  id: 5
+  first_name: 'Trin'
+  last_name: 'Acria'
+  email: 'sicily@island.sea'
+  phone_number: '123456789'
+  consented: <%= 5.day.ago.to_fs(:db) %>
+
 iolanthe_faerie:
   first_name: 'Iolianthe'
   last_name: 'Faerie'

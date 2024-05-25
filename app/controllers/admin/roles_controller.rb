@@ -32,10 +32,25 @@ class Admin::RolesController < AdminController
     redirect_to admin_role_url(@role)
   end
 
+  # Purge removes all users currently on the role from the role, while leaving the role and permissions intact.
   def purge
-    @role.purge
+    if @role.purge
+      helpers.append_to_flash(:success, "All users have been removed from the Role '#{@role.name}'")
+    else
+      helpers.append_to_flash(:error, "Something went wrong removing all users from '#{@role.name}'")
+    end
 
-    helpers.append_to_flash(:success, "All users have been removed from the Role '#{@role.name}'")
+    redirect_to admin_role_url(@role)
+  end
+
+  # Archive moves all users currently on the role to a role labelled with the current academic year.
+  # For example 'Members' -> 'Members 23/24'. The new role has no permissions, and the old role keeps all permissions.
+  def archive
+    if @role.archive(helpers.academic_year_shorthand)
+      helpers.append_to_flash(:success, "Archived all users with the Role '#{@role.name}'")
+    else
+      helpers.append_to_flash(:error, "Something went wrong archiving all users with the Role '#{@role.name}'")
+    end
 
     redirect_to admin_role_url(@role)
   end
