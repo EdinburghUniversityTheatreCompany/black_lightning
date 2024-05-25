@@ -18,9 +18,7 @@ class StaticController < ApplicationController
 
     @carousel_events = @events
     # If there are too many carousel events, filter out workshops, and limit to 3.
-    if @carousel_events.count > 3
-      @carousel_events = @carousel_events.where.not(type: 'Workshop').first(3)
-    end
+    @carousel_events = @carousel_events.where.not(type: 'Workshop').first(3)
 
     @standard_carousel_items = CarouselItem.where(carousel_name: 'Home').active_and_ordered.includes(image_attachment: :blob)
   end
