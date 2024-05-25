@@ -173,6 +173,7 @@ ChaosRails::Application.routes.draw do
       member do
         post 'add_user', to: 'roles#add_user'
         delete 'purge', to: 'roles#purge'
+        put 'archive', to: 'roles#archive'
       end
     end
 
