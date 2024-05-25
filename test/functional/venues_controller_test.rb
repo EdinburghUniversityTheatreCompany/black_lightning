@@ -20,4 +20,9 @@ class VenuesControllerTest < ActionController::TestCase
     get :show, params: { id: venues(:roxy)}
     assert_response :success
   end
+
+  test 'should get map' do
+    get :map
+    assert_response :success
+  end
 end
