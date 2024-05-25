@@ -73,7 +73,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
   test 'test users have the correct permissions for users' do
     allowed_actions = %I[show debt_status update edit consent]
-    forbidden_actions = %I[index read create assign_roles check_membership destroy]
+    forbidden_actions = %I[index read create check_membership destroy]
 
     helper_test_actions(@user, 'itself', @ability, allowed_actions + [:view_shows_and_bio], forbidden_actions)
 
@@ -90,7 +90,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     skip 'This permission is no longer granted, but the test is still there for future reference.'
     allowed_actions = %I[debt_status]
     # show edit update destroy
-    forbidden_actions = %I[index read create assign_roles check_membership]
+    forbidden_actions = %I[index read create check_membership]
 
     proposal = FactoryBot.create(:proposal)
     user = proposal.team_members.first.user

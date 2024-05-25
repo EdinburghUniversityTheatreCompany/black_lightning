@@ -54,6 +54,26 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test 'role checkboxes should not be visible for non-admin users' do
+    non_admin_user = users(:committee)
+    sign_in(non_admin_user)
+
+    get :edit, params: { id: @user }
+    assert_response :success
+
+    assert_no_match "name=\"user[role_ids][]\"", response.body
+  end
+
+  test 'role checkboxes should be visible for admin users' do
+    admin_user = users(:admin)
+    sign_in(admin_user)
+
+    get :edit, params: { id: @user }
+    assert_response :success
+
+    assert_match "name=\"user[role_ids][]\"", response.body
+  end
+
   test 'should update user' do
     attributes = FactoryBot.attributes_for(:user)
 
