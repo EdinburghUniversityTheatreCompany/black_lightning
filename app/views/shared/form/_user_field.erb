@@ -1,4 +1,4 @@
-<% all_users = can?(:add_non_members, f.object) if all_users.nil? %>
+<% all_users = can?(:add_non_members, Event) if all_users.nil? %>
 <% field = :user if field.nil? %>
 <% label = nil if label.nil? %>
 <% wrapper = nil if wrapper.nil? %>
