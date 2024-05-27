@@ -11,4 +11,15 @@ class Admin::AttachmentsControllerTest < ActionController::TestCase
 
     assert_equal 'Attachments', assigns(:title)
   end
+
+  test 'should ransack on attachment tags' do
+    sign_in users(:admin)
+
+    attachment_tag_id = AttachmentTag.all.first
+
+    get :index, params: { q: { attachment_tags_id_eq: attachment_tag_id } }
+
+    assert_response :success
+    assert_not_nil assigns(:attachments)
+  end
 end
