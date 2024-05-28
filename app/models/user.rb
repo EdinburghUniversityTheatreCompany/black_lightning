@@ -126,9 +126,13 @@ class User < ApplicationRecord
 
   # A quick way of getting the user's full name.
   def name_or_default
-    return "#{first_name} #{last_name}" if name?
+    return full_name unless full_name.blank?
 
     return 'No Name Set'
+  end
+
+  def full_name
+    return "#{first_name} #{last_name}".strip
   end
 
   # A quick way to get the user's full name, if they have a name, or their email.
