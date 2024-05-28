@@ -59,6 +59,10 @@ class Ability
       cannot :manage, Complaint
       can :create, Complaint
 
+      # Do not allow admins to add non members to event by default to avoid cluttering their select boxes.
+      # They can give themselves a role with the permission enabled if they want it.
+      cannot :add_non_members, Event
+
       # To override restrictions if the admin has the appropriate role.
       set_permissions_based_on_grid(user)
 
