@@ -12,6 +12,6 @@ class ReportsMailer < ApplicationMailer
 
     @subject = 'Bedlam Theatre Report'
 
-    mail(to: @user.email, subject: @subject)
+    mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end
 end

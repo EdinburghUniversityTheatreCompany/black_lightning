@@ -8,6 +8,6 @@ class UsersMailer < ApplicationMailer
     @subject = 'Welcome to Bedlam Theatre'
     @editable_block = Admin::EditableBlock.find_by_name('Email - Welcome Email')
 
-    mail(to: @user.email, subject: @subject)
+    mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end
 end
