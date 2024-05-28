@@ -154,7 +154,7 @@ class Ability
 
     can :read, Admin::Feedback, show: { users: { id: user.id } }
 
-    team_member_roles_that_can_update_shows = %w[Director Producer]
+    team_member_roles_that_can_update_shows = %w[Director Producer Co-Producer Assistant Producer]
     team_member_roles_that_can_update_shows.each do |role|
       can %I[read update], Show, team_members: { position: role, user_id: user.id }
     end
