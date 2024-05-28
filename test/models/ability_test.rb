@@ -137,17 +137,17 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(@proposal, "proposal #{situation}", @admin_ability, @admin_abilities, [])
   end
 
-  test 'users have the correct proposal permissions after the editing deadline' do
+  test 'users have the correct proposal permissions after the editing deadline for proposals awaiting approval' do
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
     helper_set_up_proposal
-    @proposal.approved = false
+    @proposal.status = :awaiting_approval
 
-    situation = 'after the editing deadline'
+    situation = 'after the editing deadline when it is awaiting approval'
 
-    # 3A: After the editing deadline, users can only read proposals if they are a Proposal Checker or the ones that they are part of..
+    # 3A: After the editing deadline while proposals are awaiting approval, users can only read proposals if they are a Proposal Checker or the ones that they are part of.
     helper_test_proposal(:read, @proposal, true, true, false, situation)
-    # 3B: .. including when they have been rejected.
-    @proposal.approved = false
+    # 3B: This is also the case when they have been rejected.
+    @proposal.status = :rejected
     helper_test_proposal(:read, @proposal, true, true, false, situation)
   end
 
@@ -155,9 +155,31 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
     helper_set_up_proposal
 
-    @proposal.approved = true
-
     situation = "after the editing deadline, but that is approved"
+
+    @proposal.status = :approved
+
+    # 4A: Everyone can see proposals that have been approved...
+    helper_test_proposal(:read, @proposal, true, true, true, situation)
+    # 4B: ...and can no longer update proposals.
+    helper_test_proposal(:update, @proposal, false, false, false, situation)
+
+    # Same for successful and unsuccessful
+
+    situation = "after the editing deadline, but that is successful"
+
+    @proposal.status = :successful
+
+    # 4A: Everyone can see proposals that have been approved...
+    helper_test_proposal(:read, @proposal, true, true, true, situation)
+    # 4B: ...and can no longer update proposals.
+    helper_test_proposal(:update, @proposal, false, false, false, situation)
+
+
+
+    situation = "after the editing deadline, but that is unsuccessful"
+
+    @proposal.status = :unsuccessful
 
     # 4A: Everyone can see proposals that have been approved...
     helper_test_proposal(:read, @proposal, true, true, true, situation)
@@ -169,13 +191,13 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     @call = FactoryBot.create(:proposal_call, archived: true, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
     helper_set_up_proposal
 
-    @proposal.approved = true
+    @proposal.status = :approved
 
     # 5A: People can see all archived proposals that are approved...
     # (Archiving only happens after both deadlines have passed)
     helper_test_proposal(:read, @proposal, true, true, true, 'that is archived and approved')
     # 5B: ...or rejected ones that they were a part of...
-    @proposal.approved = false
+    @proposal.status = :rejected
     helper_test_proposal(:read, @proposal, true, true, false, 'that is archived but not approved')
     # 5C: ...and no one can edit archived proposals.
     helper_test_proposal(:update, @proposal, false, false, false, 'that is archived but not approved')
@@ -566,7 +588,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     @random_ability = Ability.new(FactoryBot.create(:user))
 
     @proposal = @call.proposals.sample
-    @proposal.approved = false
+    @proposal.status = :rejected
 
     @on_proposal_ability = Ability.new(@proposal.users.sample)
   end

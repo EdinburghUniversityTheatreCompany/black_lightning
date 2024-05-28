@@ -6,6 +6,7 @@
 
 <% fields = {
   proposal_labels: { type: 'content', content: @proposal.labels(false) },
+  status: @proposal.formatted_status,
   call: get_link(@proposal.call, :show),
   deadlines: { type: 'content', content: yield(:deadlines) },
   publicity_text: render_markdown(@proposal.publicity_text),
@@ -14,14 +15,14 @@
   questions_and_answers: { type: 'content', header: 'Questions', content: render('/shared/questions_and_answers', answers: @proposal.answers) }
 } %>
 
-<% if can?(:approve, @proposal) && @proposal.approved %>
+<% if can?(:approve, @proposal) && @proposal.approved? %>
   <% fields[:approval_notice] = { type: 'content', content: "You have to start editing the proposal to set whether or not it was successful." } %>
 <% end %>
 
 <% content_for :extra_show_actions do %>
-  <%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful %>
+  <%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful? %>
 
-  <% if can?(:approve, @proposal) && @proposal.approved.nil? %>
+  <% if can?(:approve, @proposal) && @proposal.status == 'awaiting_approval' %>
       <% if @proposal.has_debtors %>
         <% confirm = "Approving #{ @proposal.show_title}" %>
         <% detail = "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm" %>
