@@ -57,19 +57,19 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   test 'name or default' do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name_or_default
-    @user.update_attribute(:first_name, '')
+    @user.update(first_name: '', last_name: '')
     assert_equal 'No Name Set', @user.name_or_default
   end
 
   test 'name or email' do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name_or_email
-    @user.update_attribute(:last_name, '')
+    @user.update(first_name: '', last_name: '')
     assert_equal @user.email, @user.name_or_email
   end
 
   test 'name' do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name
-    @user.update_attribute(:first_name, '')
+    @user.update(first_name: '', last_name: '')
     assert_equal 'No Name Set', @user.name
 
     admin = FactoryBot.create(:admin)
