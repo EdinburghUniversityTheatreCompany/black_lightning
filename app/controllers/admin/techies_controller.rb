@@ -5,7 +5,7 @@
 class Admin::TechiesController < AdminController
   include GenericController
 
-  load_and_authorize_resource except: [ :tree, :bush ]
+  load_and_authorize_resource except: [ :tree, :bush, :mass_new, :mass_create]
 
   def show
     super
@@ -47,6 +47,24 @@ class Admin::TechiesController < AdminController
       @techies = @base_techie.first.get_relatives(amount_of_generations, include_siblings_of_related)
     else
       @techies = @base_techie.includes(:children, :parents)
+    end
+  end
+
+  def mass_new
+    authorize! :new, Techie
+  end
+
+  def mass_create
+    authorize! :create, Techie
+
+    relationships_data = params[:techie][:relationships_data]
+
+    if Techie.mass_create(relationships_data)
+      helpers.append_to_flash(:success, "The mass create of techies was successfull.")
+
+      redirect_to(admin_techies_url)
+    else
+      render 'mass_new', status: :unprocessable_entity
     end
   end
 

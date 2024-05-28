@@ -70,4 +70,12 @@ class TechieTest < ActionView::TestCase
 
     techies = base.get_relatives(3, false)
   end
+
+  test 'create relationships returns false if the line does not contain a >, and no techies are created.' do
+    assert_no_difference('Techie.count') do
+      assert_raises(NoMethodError) do
+        Techie.mass_create("name_1, name_2\n")
+      end
+    end
+  end
 end
