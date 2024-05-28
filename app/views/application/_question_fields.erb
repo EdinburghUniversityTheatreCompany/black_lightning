@@ -2,7 +2,7 @@
   f: f,
   div_class_additions: 'question'
 } do %>
-    <%= render layout: '/shared/form/md_editor', locals: { f: f, field: :question_text, rows: 6 } do %>
+    <%= render layout: '/shared/form/md_editor', locals: { f: f, field: :question_text, rows: 6, show_hint: false } do %>
       <%= f.input :response_type, collection: Admin::Question.response_types, horizontal_form: false, wrapper: :vertical_form %>
       
       <%= link_to_remove f %>

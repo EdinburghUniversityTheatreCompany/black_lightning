@@ -4,6 +4,7 @@
 
     <div name="questions">
       <h3>Questions</h3>
+      <%= render('shared/form/md_hints') %>
 
       <%= render('shared/form/sections/nested_fields', f: f, association_name: :questions, partial_name: 'question_fields') %>
     </div>
