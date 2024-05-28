@@ -20,7 +20,7 @@ class DebtTaskTest < ActiveSupport::TestCase
     end
 
     mail_sample = ActionMailer::Base.deliveries.last
-    assert 'Notification of Debt', mail_sample.subject
+    assert_equal 'Notification of Debt', mail_sample.subject
   end
 
   test 'Should notify unrepentant debtors' do
