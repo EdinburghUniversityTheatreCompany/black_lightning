@@ -15,7 +15,7 @@
 
 <%= f.association :venue, collection: Venue.all, label_method: :name %>
 
-<%= f.input :author %>
+<%= f.input :author, collection: Event.author_name_list, allow_custom_input: true %>
 
 <%= f.input :price %>
 

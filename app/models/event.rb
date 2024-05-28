@@ -48,6 +48,8 @@ class Event < ApplicationRecord
   has_paper_trail limit: 6
   resourcify
 
+  AUTHOR_NAME_LIST_CACHE_KEY = "Event/author_name_list".freeze
+
   # Use the format slug for urls. e.g. /events/myshow
   def to_param
     slug
@@ -99,6 +101,7 @@ class Event < ApplicationRecord
 
   # Callbacks
   after_initialize :set_default_members_only_text
+  after_update :recache_author_list_if_changed
 
   # Returns the last event to have finished.
   def self.last_event
@@ -180,7 +183,7 @@ class Event < ApplicationRecord
   end
 
   def possible_proposals
-    proposals = Admin::Proposals::Proposal.where(successful: true)
+    proposals = Admin::Proposals::Proposal.where(status: :successful)
 
     if persisted?
       date_range = start_date.advance(years: -1)..start_date
@@ -220,5 +223,21 @@ class Event < ApplicationRecord
 
   def pretix_slug
     pretix_slug_override.presence || slug
+  end
+
+  # Returns a list of the all authors for every event.
+  def self.author_name_list
+    return Rails.cache.fetch(AUTHOR_NAME_LIST_CACHE_KEY, expires_in: 12.hours) do
+      Event.where.not(author: nil).pluck(:author).uniq.sort
+    end 
+  end
+
+  private
+
+  def recache_author_list_if_changed
+    if saved_change_to_author?
+      # Clear the cache for the author_name_list so it regenerates.
+      Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
+    end
   end
 end

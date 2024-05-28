@@ -143,4 +143,16 @@ class EventTest < ActionView::TestCase
     @event.pretix_slug_override = 'bar'
     assert_equal 'bar', @event.pretix_slug
   end
+
+  test 'get author name list' do
+    show_1 = FactoryBot.create(:show, author: 'Author 2')
+    show_2 = FactoryBot.create(:show, author: 'Author 1')
+
+    assert_equal(['Author 1', 'Author 2'], Event.author_name_list)
+
+    # Updating an author should clear the cache and return the new list.
+    show_1.update!(author: 'Author 3')
+
+    assert_equal(['Author 1', 'Author 3'], Event.author_name_list)
+  end
 end
