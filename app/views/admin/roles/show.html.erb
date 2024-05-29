@@ -27,9 +27,11 @@
 <% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: render('shared/users_table', users: @users, url: admin_role_url(@role)) } %>
 
 <% content_for :extra_show_actions do %>
-  <% if @role.name.downcase.strip == 'member' %>
-  <p>You cannot remove all users from the 'Member' role. Instead, please rename this role to 'Members 20xx/20yy' and create a new 'Members' role for the upcoming academic year.</p>
-  <% else %>
+  <%= get_link @role, :archive, link_text: 'Archive Role', http_method: :put, html_class: 'btn btn-secondary',
+      confirm: "Archiving #{@role.name}", detail: "This will create a new role labelled with the current academic year ('#{@role.name} #{academic_year_shorthand}') and will move all users to it, while leaving all permissions on this role." %>
+  
+  <% # Only show the purge button if this role can be purged. %>
+  <% if !Role::NON_PURGEABLE_ROLES.include?(@role.name.downcase.strip) %>
     <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
       confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
   <% end %>
