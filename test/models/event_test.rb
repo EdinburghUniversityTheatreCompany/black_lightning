@@ -89,17 +89,19 @@ class EventTest < ActionView::TestCase
   test 'possible proposals for new event and existing event' do
     show = FactoryBot.build(:workshop, attach_proposal: false)
 
-    long_ago_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: -5), successful: true)
-    current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), successful: true)
-    far_future_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: 5), successful: true)
+    long_ago_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: -5), status: :successful)
+    current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), status: :successful)
+    far_future_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: 5), status: :successful)
 
-    unsuccessful_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), successful: false)
+    unsuccessful_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), status: :unsuccessful)
 
+    # Before the show has dates, the possible proposals should be all successful proposals.
     assert_includes show.possible_proposals, long_ago_proposal
     assert_includes show.possible_proposals, current_proposal
     assert_includes show.possible_proposals, far_future_proposal
     assert_not_includes show.possible_proposals, unsuccessful_proposal
 
+    # After the show has been saved and has dates, the dropdown should limit itself to proposals within one year of the start date.
     show.save
 
     assert_not_includes show.possible_proposals, long_ago_proposal
@@ -111,8 +113,8 @@ class EventTest < ActionView::TestCase
   test 'possible proposals for existing event with proposal attached' do
     show = FactoryBot.create(:show, attach_proposal: false)
 
-    current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), successful: true)
-    far_future_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: 5), successful: true)
+    current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), status: :successful)
+    far_future_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: 5), status: :successful)
 
     show.proposal = far_future_proposal
 
