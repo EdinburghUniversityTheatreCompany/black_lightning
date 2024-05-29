@@ -75,10 +75,32 @@ class Admin::UsersControllerTest < ActionController::TestCase
   end
 
   test 'should update user' do
-    attributes = FactoryBot.attributes_for(:user)
+    role = Role.all.first
+    attributes = FactoryBot.attributes_for(:user, role_ids: [role.id])
+
+    # Explicitly test roles as they are only added to permitted_parms for admins.
+    assert_not @user.has_role?(role), 'User should not have the role yet before the test.'
 
     put :update, params: { id: @user, user: attributes }
 
+    assert_redirected_to admin_user_path(@user)
+    assert @user.has_role?(role), 'Role was not assigned to the test'
+  end
+
+  # Only admins should be able to update roles, so make sure that committee (who do have edit permission) cannot.
+  test 'committee cannot update roles on user' do
+    sign_out users(:admin)
+    sign_in users(:committee)
+
+    role = Role.all.first
+    attributes = FactoryBot.attributes_for(:user, role_ids: [role.id])
+
+    # Explicitly test roles as they are only added to permitted_parms for admins.
+    assert_not @user.has_role?(role), 'User should not have the role yet before the test.'
+
+    put :update, params: { id: @user, user: attributes }
+
+    assert_not @user.has_role?(role), 'Role was assigned by a committee member when they should not be able to do that.'
     assert_redirected_to admin_user_path(@user)
   end
 
