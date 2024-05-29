@@ -1,6 +1,8 @@
 require 'test_helper'
 
 class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
+  include NameHelper
+
   setup do
     @call = FactoryBot.create(:proposal_call, question_count: 5, submission_deadline: DateTime.now.advance(days: 5))
 
@@ -65,7 +67,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     @call.update_attribute(:submission_deadline, DateTime.now.advance(hours: -1))
     get :new, params: { call_id: @call.id }
 
-    assert_includes flash[:error], "The submission deadline for #{@call.name} has been passed"
+    assert_includes flash[:error].first, "The submission deadline for #{@call.name} has been passed"
     assert_redirected_to admin_proposals_call_proposals_path(@call)
   end
 
@@ -110,7 +112,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
       post :create, params: { admin_proposals_proposal: attributes }
     end
 
-    assert_includes flash[:error], "The submission deadline for #{@call.name} has been passed"
+    assert_includes flash[:error].first, "The submission deadline for #{@call.name} has been passed"
     assert_redirected_to admin_proposals_call_proposals_path(@call)
   end
 
@@ -206,29 +208,55 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'approve' do
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
     put :approve, params: { id: proposal.id }
 
-    assert assigns(:proposal).approved
+    assert assigns(:proposal).approved?, 'The proposal is not approved after requesting the approve action.'
     assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal "#{proposal.show_title} has been marked as approved", flash[:success]
+    assert_equal ["The #{get_object_name(proposal, include_class_name: true)} has been marked as approved."], flash[:success]
   end
 
   test 'reject' do
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
     put :reject, params: { id: proposal.id }
 
-    assert_not assigns(:proposal).approved
+    assert assigns(:proposal).rejected?, 'The proposal is not rejected after requesting the reject action.'
+    assert_not assigns(:proposal).approved?, 'The proposal is approved after requesting the reject action'
     assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_equal "#{proposal.show_title} has been marked as rejected", flash[:success]
+    assert_equal ["The #{get_object_name(proposal, include_class_name: true)} has been marked as rejected."], flash[:success]
+  end
+
+  test 'approve already approved proposal' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+
+    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    put :approve, params: { id: proposal.id }
+
+    assert assigns(:proposal).approved?
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal ["The #{get_object_name(proposal, include_class_name: true)} is not currently awaiting approval."], flash[:error]
+  end
+
+  test 'reject already successful proposal' do
+    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+
+    proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
+
+    put :reject, params: { id: proposal.id }
+
+    assert assigns(:proposal).successful?
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal ["The #{get_object_name(proposal, include_class_name: true)} is not currently awaiting approval."], flash[:error]
+
   end
 
   test 'convert' do
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, successful: true)
+    proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
 
     assert_difference 'Show.count' do
       put :convert, params: { id: proposal.id }
@@ -236,12 +264,12 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     assert Show.where(name: proposal.show_title).any?
     assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_includes flash[:notice], 'is queued to be converted'
+    assert_includes flash[:notice].first, 'is queued to be converted'
   end
 
   test 'should not convert when the proposal has not been approved' do
     @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, call: @call, status: [:awaiting_approval, :rejected].sample)
 
     assert_no_difference 'Show.count' do
       put :convert, params: { id: proposal.id }

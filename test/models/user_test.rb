@@ -57,19 +57,19 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   test 'name or default' do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name_or_default
-    @user.update_attribute(:first_name, '')
+    @user.update(first_name: '', last_name: '')
     assert_equal 'No Name Set', @user.name_or_default
   end
 
   test 'name or email' do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name_or_email
-    @user.update_attribute(:last_name, '')
+    @user.update(first_name: '', last_name: '')
     assert_equal @user.email, @user.name_or_email
   end
 
   test 'name' do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name
-    @user.update_attribute(:first_name, '')
+    @user.update(first_name: '', last_name: '')
     assert_equal 'No Name Set', @user.name
 
     admin = FactoryBot.create(:admin)
@@ -213,4 +213,33 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user.save
     assert_not @user.consented?
   end
+
+  test 'add_role override' do
+    role = Role.find_by(name: :member)
+
+    assert_not @user.has_role?(role.name), 'The user already has the role at the start, so the tests cannot be completed properly.'
+
+    @user.add_role(role)
+    assert @user.has_role?(:member), 'User does not have the role that was added as class instance'
+  end
+
+  test 'has_role override' do
+    role = Role.find_by(name: :member)
+    @user.add_role(role.name)
+
+    assert @user.has_role?(role.name), 'Basemark check if the user has the member role failed'
+
+    assert @user.has_role?(role), 'The has_role? method override for the Role class does not work'
+  end
+
+  test 'remove_role override' do
+    role = Role.find_by(name: :member)
+    @user.add_role(role.name)
+
+    assert @user.has_role?(role.name), 'Basemark check if the user has the member role failed'
+
+    @user.remove_role(role)
+    assert_not @user.has_role?(role.name), 'The remove_role override for the Role class does not work.'
+  end
 end
+

@@ -33,6 +33,10 @@ class Techie < ApplicationRecord
     %w[children parents]
   end
 
+  def self.mass_create(relationships_data)
+    TechiesMassRelationshipCreator.new.create_relationships(relationships_data)
+  end
+
   # Because the relations are quite complicated, this breaks without this code.
   def children_attributes=(attributes)
     cycle_through_attributes(attributes, children)

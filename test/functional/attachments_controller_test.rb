@@ -67,7 +67,8 @@ class AttachmentsControllerTest < ActionController::TestCase
   # attachments after they can see the proposal (so when they are approved and past the editing deadline)
   test 'someone not on the proposal should NOT be able to view an attachment on not approved proposal after the editing deadline' do
     sign_in users(:member)
-    proposal = FactoryBot.create(:proposal, approved: false, submission_deadline: -1.days.from_now )
+
+    proposal = FactoryBot.create(:proposal, status: :awaiting_approval, submission_deadline: -1.days.from_now )
     
     question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: 'File')
     attachment = question.answers.first.attachments.first
@@ -83,7 +84,7 @@ class AttachmentsControllerTest < ActionController::TestCase
   test 'someone not on the proposal should be able to view an attachment on an approved proposal after the editing deadline' do
     sign_in users(:member)
 
-    proposal = FactoryBot.create(:proposal, approved: true, submission_deadline: -1.days.from_now )
+    proposal = FactoryBot.create(:proposal, status: :approved, submission_deadline: -1.days.from_now )
     
     question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: 'File')
     attachment = question.answers.first.attachments.first

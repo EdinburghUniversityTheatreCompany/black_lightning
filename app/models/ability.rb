@@ -59,6 +59,10 @@ class Ability
       cannot :manage, Complaint
       can :create, Complaint
 
+      # Do not allow admins to add non members to event by default to avoid cluttering their select boxes.
+      # They can give themselves a role with the permission enabled if they want it.
+      cannot :add_non_members, Event
+
       # To override restrictions if the admin has the appropriate role.
       set_permissions_based_on_grid(user)
 
@@ -126,7 +130,7 @@ class Ability
     # Show all proposals that an user is on, even if they are not approved / the submission deadline has not been reached.
     can :read, Admin::Proposals::Proposal, users: { id: user.id }
     # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
-    can :read, Admin::Proposals::Proposal, approved: true
+    can :read, Admin::Proposals::Proposal, status: [:approved, :successful, :unsuccessful]
 
     if user.has_role?('Proposal Checker') || user.has_role?('Committee')
       # If the user is a proposal checker, they should be able to read any proposal after the submission deadline, no matter if they are approved, rejected, or awaiting, after the submission deadline.
@@ -150,7 +154,7 @@ class Ability
 
     can :read, Admin::Feedback, show: { users: { id: user.id } }
 
-    team_member_roles_that_can_update_shows = %w[Director Producer]
+    team_member_roles_that_can_update_shows = %w[Director Producer Co-Producer Assistant Producer]
     team_member_roles_that_can_update_shows.each do |role|
       can %I[read update], Show, team_members: { position: role, user_id: user.id }
     end

@@ -21,9 +21,9 @@ FactoryBot.define do
     show_title     { generate(:random_string) }
     proposal_text  { generate(:random_text) }
     publicity_text { generate(:random_text) }
-    approved       { [true, nil, false].sample }
+    status         { Admin::Proposals::Proposal.statuses.keys.sample }
 
-    transient do 
+    transient do
       team_member_count { 5 }
       submission_deadline { 5.days.from_now }
     end

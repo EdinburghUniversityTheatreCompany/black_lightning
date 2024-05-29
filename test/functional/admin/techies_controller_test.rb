@@ -23,6 +23,12 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+
+  test 'should get mass new' do
+    get :mass_new
+    assert_response :success
+  end
+
   # Also tests if the association stuff works.
   test 'should create' do
     child = techies(:one)
@@ -52,6 +58,42 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     end
 
     assert_response :unprocessable_entity
+  end
+
+  test 'should mass create' do
+    relationships_data = "parent_1, parent_2 > child_1, child_2, child_3\nFinbar the Viking > child_4, child_5"
+
+    # Should create all parents and children except for Finbar, who already exists.
+    assert_difference('Techie.count', 7) do
+      post :mass_create, params: { techie: { relationships_data: relationships_data } }
+    end
+
+    parent_1 = Techie.find_by(name: 'parent_1')
+    parent_2 = Techie.find_by(name: 'parent_2')
+    parent_3 = Techie.find_by(name: 'Finbar the Viking')
+    child_1 = Techie.find_by(name: 'child_1')
+    child_2 = Techie.find_by(name: 'child_2')
+    child_3 = Techie.find_by(name: 'child_3')
+    child_4 = Techie.find_by(name: 'child_4')
+    child_5 = Techie.find_by(name: 'child_5')
+
+    assert_not_nil parent_1
+    assert_not_nil parent_2
+    assert_not_nil parent_3
+    assert_not_nil child_1
+    assert_not_nil child_2
+    assert_not_nil child_3
+    assert_not_nil child_4
+    assert_not_nil child_5
+
+    assert_includes parent_1.children, child_1
+    assert_includes parent_1.children, child_2
+    assert_includes parent_1.children, child_3
+    assert_includes parent_2.children, child_1
+    assert_includes parent_2.children, child_2
+    assert_includes parent_2.children, child_3
+    assert_includes parent_3.children, child_4
+    assert_includes parent_3.children, child_5
   end
 
   test 'should get edit' do

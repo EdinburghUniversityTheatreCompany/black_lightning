@@ -19,7 +19,7 @@ class AttachmentTag < ApplicationRecord
   default_scope { order(:ordering) }
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[description name ordering]
+    %w[description name ordering id]
   end
 
   def self.ransackable_associations(auth_object = nil)

@@ -28,7 +28,7 @@
         <div class="card-header"><h4>Book Now</h4></div>
         <div class="card-body">
           <p class="card-text">
-            Please note only some events are shown below. Events in some other venues might be available on their own booking sites. If in doubt, please check the event page directly!
+            <%= display_block("Home - Book Now", false) %>
             <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
             <script type="text/javascript" src="https://pretix.eu/widget/v1.en.js" async></script>
             <pretix-widget event="https://tickets.bedlamtheatre.co.uk/" style="list"></pretix-widget>

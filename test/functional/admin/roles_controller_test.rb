@@ -2,6 +2,7 @@ require 'test_helper'
 
 class Admin::RolesControllerTest < ActionController::TestCase
   include ERB::Util
+  include AcademicYearHelper
 
   setup do
     @admin = users(:admin)
@@ -45,7 +46,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     get :show, params: { id: @role }
     assert_response :success
 
-    assert_match 'You are not allowed to add members', response.body
+    assert_no_match 'You are not allowed to add members', response.body, "Committee members can see a message about adding users to roles when they do not have permission to do so."
   end
 
   test 'should get committee role' do
@@ -148,18 +149,69 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
   end
 
+  test 'should not add user as committee' do
+    sign_out @admin
+    sign_in users(:committee)
+
+    user = FactoryBot.create(:user, first_name: 'Finbar', last_name: 'the Viking')
+
+    post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }
+
+    assert_not user.has_role?('Member'), 'The user was added to the role even though non-admins should not be able to do so.'
+
+    assert_equal ['You cannot add users to roles. Only admins can do this. Please contact the IT subcommittee.'], flash[:error]
+    assert_redirected_to admin_role_url(@role)
+  end
+
   test 'purge should remove all users but keep the role' do
+    role = roles(:committee)
+
     user = FactoryBot.create(:user)
 
-    user.add_role(@role.name)
+    user.add_role(role.name)
 
+    assert User.with_role(role.name).any?
+
+    delete :purge, params: { id: role }
+
+    assert User.with_role(role.name).empty?
+    assert role.persisted?
+
+    assert_redirected_to admin_role_url(role)
+
+    assert_match 'All users have been removed from the Role', flash[:success].first
+  end
+
+  test 'cannot purge members' do
     assert User.with_role(@role.name).any?
 
     delete :purge, params: { id: @role }
 
-    assert User.with_role(@role.name).empty?
-    assert @role.persisted?
+    assert User.with_role(@role.name).any?
 
     assert_redirected_to admin_role_url(@role)
+    assert_match 'Something went wrong removing all users from', flash[:error].first
+  end
+
+  test 'archive' do
+    user = FactoryBot.create(:user)
+
+    user.add_role(@role.name)
+
+    assert @role.users.any?
+
+    put :archive, params: { id: @role }
+
+    assert @role.users.empty?, 'There are still users attached to the old role.'
+    assert @role.persisted?
+
+    new_role = Role.find_by(name: "#{@role.name} #{academic_year_shorthand}")
+    assert new_role.present?
+    assert new_role.users.include?(user), 'The user did not get moved to the new role.'
+
+    assert_redirected_to admin_role_url(@role)
+
+    assert_match 'Archived all users with the Role', flash[:success].first
+
   end
 end

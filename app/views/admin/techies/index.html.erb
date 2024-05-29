@@ -1,4 +1,7 @@
-<% quick_actions = [link_to(generate_icon_prefix('tree', 'Tree'), tree_admin_techies_url, class: 'btn btn-secondary')] %>
+<% quick_actions = [
+  link_to(generate_icon_prefix('tree', 'Tree'), tree_admin_techies_url, class: 'btn btn-secondary'),
+  link_to(generate_icon_prefix('user-group', 'Mass Add Techies'), mass_new_admin_techies_url, class: 'btn btn-secondary'),
+] %>
 
 <% headers = [:name] %>
 

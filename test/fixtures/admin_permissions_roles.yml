@@ -26,14 +26,10 @@ show_staffing:
   role_id:       2
   permission_id: 4
 
-commitee_read_roles:
+commitee_manage_roles:
   role_id:       2
   permission_id: 5
 
-commitee_can_assign_roles:
-  role_id:       2
-  permission_id: 6
-  
 committee_can_sign_up_for_staffing:
   role_id:       2
   permission_id: 7
@@ -45,6 +41,10 @@ committee_can_show_marketing_creatives_profiles:
 committee_can_index_techies:
   role_id: 2
   permission_id: 11
+
+committee_can_manage_users:
+  role_id: 2
+  permission_id: 13
 
 welfare_can_read_complaint:
   role_id: 4

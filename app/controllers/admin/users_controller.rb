@@ -87,8 +87,12 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
-    return [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
-            :phone_number, :card_number, :public_profile, :bio, :avatar, :username, role_ids: []]
+    perm_parms = [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
+            :phone_number, :card_number, :public_profile, :bio, :avatar, :username]
+
+    perm_params = perm_parms.push(role_ids: []) if current_user.has_role?(:admin)
+      
+    return perm_parms
   end
 
   # TEST

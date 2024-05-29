@@ -51,8 +51,8 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert @proposal.has_debtors
   end
 
-  test 'convert unsuccesful proposal to show' do
-    @proposal.update_attribute(:successful, false)
+  test 'convert unsuccessful proposal to show' do
+    @proposal.update_attribute(:status, :unsuccessful)
 
     exception = assert_raise(ArgumentError) do
       @proposal.convert_to_show
@@ -62,7 +62,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   end
 
   test 'convert invalid proposal to show' do
-    @proposal.update_attribute(:successful, true)
+    @proposal.update_attribute(:status, :successful)
     @proposal.update_attribute(:show_title, nil)
 
     assert_raises ActiveRecord::RecordNotSaved do
@@ -70,8 +70,8 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     end
   end
 
-  test 'convert succesful proposal to show' do
-    @proposal.update_attribute(:successful, true)
+  test 'convert successful proposal to show' do
+    @proposal.update(status: :successful)
 
     @proposal.convert_to_show
 
@@ -97,14 +97,14 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
 
     assert_equal venues(:unknown), show.venue
 
-    assert @proposal.reload.successful
+    assert @proposal.reload.successful?
   end
 
   test 'convert proposal to show with duplicate slug' do
     preexisting_show = FactoryBot.create(:show)
     preexisting_show.update(slug: "#{preexisting_show.slug}-#{Date.current.year}")
 
-    @proposal.update(successful: true, show_title: preexisting_show.name)
+    @proposal.update(status: :successful, show_title: preexisting_show.name)
 
     @proposal.convert_to_show
 
@@ -117,7 +117,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
 
   test 'convert proposal to show with loads of duplicate slugs' do
     # Get a proposal
-    @proposal.update(successful: true)
+    @proposal.update(status: :successful)
 
     # Now try converting the same proposal many times and at some point, expect a RecordNotSaved error.
     exception = assert_raises ActiveRecord::RecordNotSaved do
@@ -130,8 +130,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   end
 
   test 'labels for successful proposal with debtors' do
-    @proposal.approved = true
-    @proposal.successful = true
+    @proposal.status = :successful
     _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
     expected_labels = "<span class=\"badge bg-success\">Successful</span>\n<span class=\"badge bg-danger\">Has Debtors</span>"
 
@@ -140,7 +139,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
 
   test 'labels for rejected proposal that was late with pull right' do
     @proposal.late = true
-    @proposal.approved = false
+    @proposal.status = :rejected
 
     expected_labels = "<div class=\"float-right\"><span class=\"badge bg-danger\">Rejected</span>\n<span class=\"badge bg-danger\">Late</span></div>"
 
@@ -148,27 +147,25 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   end
 
   test 'labels for proposal awaiting approval with debtors that was late' do
-    @proposal.approved = nil
-    @proposal.successful = nil
+    @proposal.status = :awaiting_approval
     @proposal.late = true
     _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
 
-    expected_labels = "<span class=\"badge bg-warning text-dark\">Waiting for Approval</span>\n<span class=\"badge bg-danger\">Late</span>\n<span class=\"badge bg-danger\">Has Debtors</span>"
+    expected_labels = "<span class=\"badge bg-warning text-dark\">Awaiting Approval</span>\n<span class=\"badge bg-danger\">Late</span>\n<span class=\"badge bg-danger\">Has Debtors</span>"
 
     assert_equal expected_labels, @proposal.labels(false)
   end
 
   test 'labels for approved proposal' do
-    @proposal.approved = true
-    @proposal.successful = nil
+    @proposal.status = :approved
 
-    expected_labels = '<span class="badge bg-success">Approved</span>'
+    expected_labels = '<span class="badge bg-info text-dark">Approved</span>'
 
     assert_equal expected_labels, @proposal.labels(false)
-  end
+end
 
   test 'labels for unsuccessful proposal with pull right' do
-    @proposal.successful = false
+    @proposal.status = :unsuccessful
 
     expected_labels = "<div class=\"float-right\"><span class=\"badge bg-danger\">Unsuccessful</span></div>"
 

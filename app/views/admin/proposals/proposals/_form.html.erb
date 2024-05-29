@@ -11,19 +11,12 @@
     <%= display_block("Proposals - Help on Form", true) %>
 
     <% if can?(:approve, @proposal) %>
-      <% if @proposal.successful.nil? && !@proposal.approved.nil? %>
-        <%= f.input :approved, blank: true %>
-      <% end %>
-
-      <% if @proposal.approved %>
-        <%= f.input :successful, blank: true %>
-      <% end %>
+      <%= f.input :status %>
     <% end %>
 
     <%= f.input :show_title %>
 
     <%= render "/shared/form/md_editor", f: f, field: :publicity_text, rows: 12, show_hint: true %>
-
 
     <%= render "/shared/form/md_editor", f: f, field: :proposal_text, rows: 12, show_hint: true %>
 

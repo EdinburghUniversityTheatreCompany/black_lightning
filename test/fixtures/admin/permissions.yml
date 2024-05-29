@@ -31,16 +31,11 @@ show_staffing:
   subject_class: Admin::Staffing
 
 # To test if the Role show page displays the correct message when not having the permission to create membership activation tokens.
-read_roles:
+# and to make sure committee cannot add_user to roles even if they have manage permission.
+manage_roles:
   id: 5
-  action: show
+  action: manage
   subject_class: Role
-
-# To test if the Role show page displays the correct message when not having the permission to create membership activation tokens.
-assign_roles:
-  id: 6
-  action: assign_roles
-  subject_class: User
 
 can_sign_up_for_staffing:
   id: 7
@@ -71,4 +66,9 @@ can_index_techies:
 can_read_users:
   id: 12
   action: read
+  subject_class: User
+
+can_manage_users:
+  id: 13
+  action: manage
   subject_class: User

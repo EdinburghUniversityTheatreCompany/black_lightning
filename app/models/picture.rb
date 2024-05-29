@@ -37,7 +37,7 @@ class Picture < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[access_level description gallery_id gallery_type picture_tags_id]
+    %w[access_level description gallery_id gallery_type]
   end
 
   def self.ransackable_associations(auth_object = nil)

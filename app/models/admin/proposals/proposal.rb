@@ -1,14 +1,6 @@
 ##
 # Represents a proposal.
 #
-# NOTE
-#
-# If a proposal has the approved attribute set to false, it has been REJECTED.
-#
-# A proposal still waiting for approval should have approved set to NULL
-#
-# (Yes, we are using a boolean for something that has three possible values).
-#
 # == Schema Information
 #
 # Table name: admin_proposals_proposals
@@ -30,14 +22,14 @@ class Admin::Proposals::Proposal < ApplicationRecord
   include LabelHelper
   has_paper_trail
 
-  validates :show_title, :proposal_text, :publicity_text, :call_id, presence: true
+  validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
 
-  # TODO: use this
   enum status: {
     awaiting_approval: 0,
     approved: 1,
-    unsuccessful: 2,
-    failed: 2,
+    rejected: 2,
+    successful: 3,
+    unsuccessful: 4,
   }
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
@@ -55,15 +47,14 @@ class Admin::Proposals::Proposal < ApplicationRecord
   DISABLED_PERMISSIONS = %w[read].freeze
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[approved call_id proposal_text publicity_text show_title successful]
+    %w[approved proposal_text publicity_text show_title successful]
   end
 
   def self.ransackable_associations(auth_object = nil)
     %w[call users]
   end
-  ##
+
   # Creates an instance of Admin::Answer for every question in the call.
-  ##
   def instantiate_answers!
     call.questions&.each do |question|
       next if question.answers.where(answerable: self).any?
@@ -75,28 +66,30 @@ class Admin::Proposals::Proposal < ApplicationRecord
     end
   end
 
-  ##
+  #   
+  def formatted_status
+    return status.to_s.titleize
+  end
+
+  # 
+  def label_css_class
+    case status
+    when 'awaiting_approval'
+      :warning
+    when 'approved'
+      :info
+    when 'successful'
+      :success
+    when 'rejected', 'unsuccessful'
+      :danger
+    end
+  end
+
   # Generates a list of html labels with info about the proposal.
-  ##
   def labels(pull_right)
     labels = []
 
-    labels << case successful
-              when true
-                generate_label(:success, 'Successful')
-              when false
-                generate_label(:danger, 'Unsuccessful')
-              else
-                case approved
-                when true
-                  generate_label(:success, 'Approved')
-                when false
-                  generate_label(:danger, 'Rejected')
-                else
-                  generate_label(:warning, 'Waiting for Approval')
-                end
-              end
-
+    labels << generate_label(label_css_class, formatted_status)
     labels << generate_label(:danger, 'Late') if late
     labels << generate_label(:danger, 'Has Debtors') if has_debtors
 
@@ -123,8 +116,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
   # Throws an error if the proposal has not been approved.
   ##
   def convert_to_show
-    unless successful
-      p "The proposal #{show_title} was not succesful and cannot be converted to a show"
+    unless successful?
+      p "The proposal #{show_title} was not successful and cannot be converted to a show"
       raise ArgumentError, 'This proposal was not successful'
     end
 
@@ -180,8 +173,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
     @show.team_members << team_members.collect(&:dup)
 
     @show.proposal = self
-
-    self.successful = true
 
     # Highly unlikely situation, but you never know. I cannot deliberately cause it.
     # :nocov:

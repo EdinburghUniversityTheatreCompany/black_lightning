@@ -97,11 +97,14 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1/approve.json
   ##
   def approve
-    @proposal.approved = true
-    @proposal.save!
+    if @proposal.awaiting_approval?
+      @proposal.update!(status: 'approved')
+      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as approved.")
+    else
+      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently awaiting approval.")
+    end
 
     respond_to do |format|
-      flash[:success] = "#{@proposal.show_title} has been marked as approved"
 
       format.html { redirect_to admin_proposals_proposal_path(@proposal) }
       format.json { head :no_content }
@@ -114,11 +117,14 @@ class Admin::Proposals::ProposalsController < AdminController
   # PUT /admin/proposals/proposals/1/reject.json
   ##
   def reject
-    @proposal.approved = false
-    @proposal.save!
+    if @proposal.awaiting_approval?
+      @proposal.update!(status: 'rejected')
+      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as rejected.")
+    else
+      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently awaiting approval.")
+    end
 
     respond_to do |format|
-      flash[:success] = "#{@proposal.show_title} has been marked as rejected"
 
       format.html { redirect_to admin_proposals_proposal_path(@proposal) }
       format.json { head :no_content }
@@ -136,7 +142,7 @@ class Admin::Proposals::ProposalsController < AdminController
     begin
       @proposal.convert_to_show
 
-      flash[:notice] = "#{@proposal.show_title} is queued to be converted. Please remember to check the automatically entered show info, enter the rest of the show info, and to publicise the show."
+      helpers.append_to_flash(:notice, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is queued to be converted. Please remember to check the automatically entered show info, enter the rest of the show info, and to publicise the show.")
     rescue ArgumentError => e
       helpers.append_to_flash(:error, e.message)
     ensure
@@ -154,7 +160,7 @@ class Admin::Proposals::ProposalsController < AdminController
   private
 
   def call_closed_message(call)
-    flash[:error] = "Sorry. The submission deadline for #{call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call."
+    helpers.append_to_flash(:error, "Sorry. The submission deadline for #{call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call.")
     redirect_to admin_proposals_call_proposals_path(call)
     return
   end
@@ -168,7 +174,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   def permitted_params
     [
-      :proposal_text, :publicity_text, :show_title, :late, :approved, :successful, :call, :call_id,
+      :proposal_text, :publicity_text, :show_title, :late, :status, :call, :call_id,
       answers_attributes: [
         :id, :_destroy, :answer, :question_id, 
         attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]

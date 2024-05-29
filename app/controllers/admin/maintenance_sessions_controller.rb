@@ -26,7 +26,7 @@ class Admin::MaintenanceSessionsController < AdminController
   end
 
   def order_args
-    ['date']
+    ['date DESC']
   end
 
   def include_class_name_in_show_page_title

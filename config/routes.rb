@@ -173,6 +173,7 @@ ChaosRails::Application.routes.draw do
       member do
         post 'add_user', to: 'roles#add_user'
         delete 'purge', to: 'roles#purge'
+        put 'archive', to: 'roles#archive'
       end
     end
 
@@ -184,6 +185,8 @@ ChaosRails::Application.routes.draw do
         get 'tree'
         get 'bush'
         get 'tree_data'
+        get 'mass_new'
+        post 'mass_create'
       end
     end
 

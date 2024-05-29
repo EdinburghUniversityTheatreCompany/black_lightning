@@ -48,4 +48,10 @@ class AcademicYearHelperTest < ActionView::TestCase
 
     travel_back
   end
+
+  test 'get year shorthand' do
+    travel_to Time.zone.local(2023, 11, 1, 7, 53, 24)
+
+    assert_equal '23/24', academic_year_shorthand
+  end
 end

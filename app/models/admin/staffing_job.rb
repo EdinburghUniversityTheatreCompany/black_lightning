@@ -25,6 +25,8 @@ class Admin::StaffingJob < ApplicationRecord
   before_save :check_if_the_user_has_changed
   after_save :associate_staffing_job_with_oldest_outstanding_debt
 
+  has_paper_trail limit: 6
+
   # The functions that use staffable don't check if it's a staffing instead of a template.
   # They should just hard-fail when the staffable is a template. That situation should simply not occur.
 

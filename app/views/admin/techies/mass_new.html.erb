@@ -1,0 +1,17 @@
+<%= simple_horizontal_form_for :techie, url: mass_create_admin_techies_url do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <p>
+        To add multiple techies at once, enter the data in the following format. One 'family' per line:<br>
+       (name of parent 1), (name of parent 2), (etc etc) &gt; (name of child 1), (name of child 2), (etc etc)
+    </p>
+    <p>
+        For example:<br>
+        Alice, Bob &gt; Charlie, Derek, Elise<br>
+        Alice, &gt; Francis, George
+    </p>
+    <p>
+    <b>Make sure that you use the exact names of the existing techies as they appear in the index, or you will create duplicate techies, which is messy!</b>
+    </p>
+    <%= f.input :relationships_data, as: :text, input_html: { rows: 20 } %>
+  <% end %>
+<% end %>

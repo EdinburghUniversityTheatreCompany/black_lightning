@@ -48,7 +48,7 @@ class Attachment < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[editable_block_id name attachment_tags_id]
+    %w[editable_block_id name]
   end
 
   def self.ransackable_associations(auth_object = nil)

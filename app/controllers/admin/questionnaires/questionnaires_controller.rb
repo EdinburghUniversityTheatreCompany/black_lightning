@@ -126,7 +126,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   end
 
   def order_args
-    ['id DESC']
+    ['event.end_date DESC']
   end
 
   def load_index_resources

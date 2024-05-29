@@ -12,6 +12,6 @@ class DebtMailer < ApplicationMailer
     @debt_moment = Admin::Debt.users_oldest_debt(@user.id) || '|||ERROR: No moment of debt found. Please email it@bedlamtheatre.co.uk|||'
 
     Admin::DebtNotification.create(user: @user, sent_on: Date.current, notification_type: notification_type)
-    return mail(to: @user.email, subject: @subject)
+    return mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end
 end
