@@ -26,7 +26,7 @@ show_staffing:
   role_id:       2
   permission_id: 4
 
-commitee_read_roles:
+commitee_manage_roles:
   role_id:       2
   permission_id: 5
 

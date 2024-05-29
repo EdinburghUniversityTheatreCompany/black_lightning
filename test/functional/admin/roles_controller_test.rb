@@ -149,6 +149,20 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
   end
 
+  test 'should not add user as committee' do
+    sign_out @admin
+    sign_in users(:committee)
+
+    user = FactoryBot.create(:user, first_name: 'Finbar', last_name: 'the Viking')
+
+    post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }
+
+    assert_not user.has_role?('Member'), 'The user was added to the role even though non-admins should not be able to do so.'
+
+    assert_equal ['You cannot add users to roles. Only admins can do this. Please contact the IT subcommittee.'], flash[:error]
+    assert_redirected_to admin_role_url(@role)
+  end
+
   test 'purge should remove all users but keep the role' do
     role = roles(:committee)
 

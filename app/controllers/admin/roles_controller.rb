@@ -13,6 +13,13 @@ class Admin::RolesController < AdminController
   end
 
   def add_user
+    unless current_user.has_role?('admin')
+      helpers.append_to_flash(:error, 'You cannot add users to roles. Only admins can do this. Please contact the IT subcommittee.')
+
+      redirect_to admin_role_url(@role)
+      return
+    end
+  
     user_id = params[:add_user_details][:user_id]
 
     user = User.find_by(id: user_id)
