@@ -132,8 +132,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_07_095731) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.boolean "late"
-    t.boolean "approved"
-    t.boolean "successful"
+    t.bigint "status", null: false
     t.index ["call_id"], name: "index_admin_proposals_proposals_on_call_id"
   end
 
