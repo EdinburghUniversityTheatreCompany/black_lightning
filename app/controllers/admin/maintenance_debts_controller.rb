@@ -56,7 +56,7 @@ class Admin::MaintenanceDebtsController < AdminController
   end
 
   def load_index_resources
-    @maintenance_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params, [:user, :show])
+    @maintenance_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params[:show_non_members], params, [:user, :show, :maintenance_attendance])
 
     params[:show_fulfilled] = show_fulfilled ? '1' : '0'
 
