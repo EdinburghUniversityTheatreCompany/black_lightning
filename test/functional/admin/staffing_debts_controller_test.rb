@@ -105,42 +105,31 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should "destroy" admin_staffing_debt' do
+  test 'should forgive admin_staffing_debt' do
     assert_difference('Admin::StaffingDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::StaffingDebt.count') do
-        delete :destroy, params: { id: @staffing_debt }
+        put :forgive, params: { id: @staffing_debt }
       end
     end
 
-    assert assigns(:staffing_debt).forgiven
+    assert_equal :forgiven, assigns(:staffing_debt).status
 
     assert_redirected_to admin_staffing_debts_path
   end
 
-  test 'should assign job to admin_staffing_debt' do
-    staffing_job = FactoryBot.create(:staffing_job, user: @staffing_debt.user)
+  test 'should convert to maintenance debt' do
+    assert_difference('Admin::StaffingDebt.unfulfilled.count', -1) do
+      assert_no_difference('Admin::StaffingDebt.count') do
+        assert_difference('Admin::MaintenanceDebt.count', +1) do
+          put :convert_to_maintenance_debt, params: { id: @staffing_debt }
+        end
+      end
+    end
 
-    staffing_job.update_attribute(:staffing_debt, nil)
-
-    other_staffing_debt = FactoryBot.create(:staffing_debt)
-
-    put :assign, params: { id: other_staffing_debt, job_id: staffing_job.id }
-
-    assert_nil flash[:error]
-    assert_equal staffing_job, other_staffing_debt.reload.admin_staffing_job
-    staffing_job.reload
-    assert_equal other_staffing_debt.id, staffing_job.staffing_debt.id
-  end
-
-  test 'should unassign job from admin_staffing_debt' do
-    staffing_job = FactoryBot.create(:staffing_job, user: @staffing_debt.user)
-    staffing_job.update_attribute(:staffing_debt, @staffing_debt)
-
-    assert_equal @staffing_debt.id, staffing_job.reload.staffing_debt&.id
-
-    put :unassign, params: { id: @staffing_debt }
-
-    assert_nil @staffing_debt.reload.admin_staffing_job
-    assert_nil staffing_job.reload.staffing_debt
+    new_maintenance_debt = Admin::MaintenanceDebt.where(user_id: @staffing_debt.user_id, show_id: @staffing_debt.show_id).first
+    assert_not_nil new_maintenance_debt, 'There should be a new maintenance debtwith the same details as the old staffing debt'
+    assert new_maintenance_debt.converted_from_staffing_debt, 'The new maintenance debt should be converted from a staffing debt'
+    
+    assert_redirected_to admin_staffing_debts_url
   end
 end

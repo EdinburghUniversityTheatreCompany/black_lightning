@@ -1,6 +1,7 @@
 module Admin::SharedDebtHelper
   include CookieHelper
-  
+  include LinkHelper
+
   def shared_debt_load(debts, show_non_members, params, includes)
     debt_class = debts.klass
     key = debt_class.table_name
@@ -99,4 +100,35 @@ module Admin::SharedDebtHelper
 
     return show_fulfilled, is_specific_user
   end
+
+  def formatted_status_for_debt(debt)
+    if debt.is_a?(Admin::StaffingDebt)
+      staffing = debt.admin_staffing_job&.staffable
+
+      job_description = if staffing.present? && staffing.is_a?(Admin::Staffing)
+          link_to "#{staffing.show_title} - #{debt.admin_staffing_job.name}", admin_staffing_url(staffing)
+      elsif debt.admin_staffing_job.present?
+          debt.admin_staffing_job.name
+      end
+
+      local_status = debt.status
+
+      case local_status
+      when :completed_staffing
+        return "Completed as #{job_description}"
+      when :awaiting_staffing
+        return "Awaiting Staffing as #{job_description}}"
+      else
+        return local_status.to_s.titleize
+      end
+    elsif debt.is_a?(Admin::MaintenanceDebt)
+      # Make the attendance into a link if the user has permission, and there is an attendance.
+      if debt.maintenance_attendance.present?
+        return get_link(debt.maintenance_attendance, :show, link_text: debt.formatted_status)
+      else 
+        return debt.formatted_status
+      end
+    end
+  end
 end
+

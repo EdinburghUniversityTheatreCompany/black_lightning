@@ -102,8 +102,8 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     debt_with_attendance.update(due_by: Date.current - 1)
 
     # Assert nothing changed.
-    assert_equal attendance, debt_with_attendance.reload.maintenance_attendance
     assert_nil debt_without_attendance.reload.maintenance_attendance
+    assert_equal attendance, debt_with_attendance.reload.maintenance_attendance
   end
 
   # In this test, the debt without attendance is moved and the 

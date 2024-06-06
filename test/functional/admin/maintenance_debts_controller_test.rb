@@ -121,10 +121,10 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should "destroy" admin_maintenance_debt' do
+  test 'should forgive admin_maintenance_debt' do
     assert_difference('Admin::MaintenanceDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::MaintenanceDebt.count') do
-        delete :destroy, params: { id: @maintenance_debt }
+        put :forgive, params: { id: @maintenance_debt }
       end
     end
 
@@ -141,6 +141,11 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
         end
       end
     end
-    assert(Admin::StaffingDebt.where(user_id: @maintenance_debt.user_id, show_id: @maintenance_debt.show_id).any?, 'There should be a staffing debt with the same details as the old maintenance debt' )
+
+    new_staffing_debt = Admin::StaffingDebt.where(user_id: @maintenance_debt.user_id, show_id: @maintenance_debt.show_id).first
+    assert_not_nil new_staffing_debt, 'There should be a staffing debt with the same details as the old maintenance debt'
+    assert new_staffing_debt.converted_from_maintenance_debt, 'The new staffing debt should be converted from a maintenance debt'
+    
+    assert_redirected_to admin_maintenance_debts_url
   end
 end

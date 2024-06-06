@@ -26,11 +26,12 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     assert_not staffing_debt.fulfilled
 
-    staffing_debt.forgiven = true
+    staffing_debt.state = :forgiven
 
     assert staffing_debt.fulfilled
 
-    staffing_debt.forgiven = false
+    # Unforgive the debt, and see if it takes a job.
+    staffing_debt.state = :normal
     staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, end_time: DateTime.now.advance(days: -1))
     staffing_job = FactoryBot.create(:staffing_job, user: staffing_debt.user, staffable: staffing)
 
@@ -46,7 +47,7 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     staffing.staffing_jobs.first.staffing_debt = fulfilled_debt
     fulfilled_debt.reload
 
-    forgiven_debt = FactoryBot.create(:staffing_debt, forgiven: true)
+    forgiven_debt = FactoryBot.create(:staffing_debt, state: :forgiven)
 
     unfulfilled_debt = FactoryBot.create(:staffing_debt)
 
@@ -58,53 +59,83 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
   end
 
   test 'forgive' do
-    staffing_debt = FactoryBot.create(:staffing_debt, forgiven: false)
+    staffing_debt = FactoryBot.create(:staffing_debt, state: :normal)
     staffing_job = FactoryBot.create(:staffing_job, staffing_debt: staffing_debt, user: staffing_debt.user)
 
     assert staffing_job.id, staffing_debt.reload.admin_staffing_job&.id
 
     staffing_debt.forgive
 
-    assert staffing_debt.forgiven
+    assert :forgiven, staffing_debt.status
+
     assert_nil staffing_debt.reload.admin_staffing_job
   end
 
-  test 'status and css class' do
-    staffing_debt = FactoryBot.create :staffing_debt
+  test 'status and css class for normal state with no job' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, due_by: Date.current.advance(days: 1)
 
-    # Not signed up before deadline
-    staffing_debt.due_by = Date.current.advance(days: 1)
     assert_equal :not_signed_up, staffing_debt.status
     assert_equal 'table-warning', staffing_debt.css_class
+  end
+
+  test 'status and css class for normal state causing debt' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, due_by: Date.current.advance(days: -1)
 
     # Not signed up after debt deadline -> causing debt
-    staffing_debt.due_by = Date.current.advance(days: -1)
     assert_equal :causing_debt, staffing_debt.status
     assert_equal 'table-danger', staffing_debt.css_class
+  end
 
-    # Forgiven
-    staffing_debt.forgive
+  test 'status and css class for normal state completed_staffing' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, with_staffing_job: true
+    staffing_debt.admin_staffing_job.staffable.end_time = Date.current.advance(days: -1)
+
+    assert_equal :completed_staffing, staffing_debt.status
+    assert_equal 'table-success', staffing_debt.css_class
+  end
+
+  test 'status and css class for normal state awaiting_staffing' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, with_staffing_job: true
+    staffing_debt.admin_staffing_job.staffable.end_time = Date.current.advance(days: 1)
+
+    assert_equal :awaiting_staffing, staffing_debt.status
+    assert_equal '', staffing_debt.css_class
+  end
+
+  test 'status and css class for forgiven state' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :forgiven
+
     assert_equal :forgiven, staffing_debt.status
     assert_equal 'table-success', staffing_debt.css_class
+  end
 
-    user = FactoryBot.create(:user)
-    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, end_time: DateTime.now.advance(days: 3))
-    staffed_job = FactoryBot.create(:unstaffed_staffing_job, user: user, staffable: staffing)
-    other_staffing_debt = FactoryBot.create(:staffing_debt, user: user, due_by: Date.current.advance(days: 1), admin_staffing_job: staffed_job)
+  test 'status and css class for expired state' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :expired
 
-    # Awaiting staffing before debt deadline
-    assert_equal :awaiting_staffing, other_staffing_debt.status
-    assert_equal '', other_staffing_debt.css_class
+    assert_equal :expired, staffing_debt.status
+    assert_equal 'table-success', staffing_debt.css_class
+  end
 
-    # Awaiting staffing after debt deadline
-    other_staffing_debt.update_attribute(:due_by, Date.current.advance(days: -1))
-    assert_equal :awaiting_staffing, other_staffing_debt.status
-    assert_equal '', other_staffing_debt.css_class
+  test 'status and css class for converted state' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :converted
 
-    # After staffing deadline -> completed staffing
-    staffing.update_attribute(:end_time, DateTime.now.advance(days: -1))
-    assert_equal :completed_staffing, other_staffing_debt.status
-    assert_equal 'table-success', other_staffing_debt.css_class
+    assert_equal :converted, staffing_debt.status
+    assert_equal 'table-success', staffing_debt.css_class
+  end
+
+  test 'convert staffing debt to maintenance debt' do
+    staffing_debt = FactoryBot.create(:staffing_debt)
+
+    assert_difference('Admin::StaffingDebt.unfulfilled.count', -1) do
+      assert_no_difference('Admin::StaffingDebt.count') do
+        assert_difference('Admin::MaintenanceDebt.count', +1) do
+          staffing_debt.convert_to_maintenance_debt
+        end
+      end
+    end
+
+    assert Admin::MaintenanceDebt.last.converted_from_staffing_debt, 'The converted_from_staffing_debt is not set on a maintenance debt converted from a staffing debt.'
+    assert staffing_debt.reload.converted?, 'The converted staffing debt was not marked as converted'
   end
 
   ##
@@ -147,13 +178,12 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
   end
 
   test 'does not associate with existing staffing_job that already has a staffing_debt associated' do
-    staffing_job = FactoryBot.create(:unstaffed_staffing_job, user: @user)
-    existing_staffing_debt = FactoryBot.create(:staffing_debt, admin_staffing_job: staffing_job, user: @user)
-    staffing_job.reload
+    existing_staffing_debt = FactoryBot.create(:staffing_debt, with_staffing_job: true)
+    staffing_job = existing_staffing_debt.admin_staffing_job
 
-    assert_equal existing_staffing_debt.admin_staffing_job.id, staffing_job.id, 'The existing_staffing_debt is not associated with the staffing_job'
+    assert_not_nil staffing_job, 'The existing_staffing_debt is not associated with the staffing_job. Issue with the factory?'
 
-    new_staffing_debt = FactoryBot.create(:staffing_debt, user: @user)
+    new_staffing_debt = FactoryBot.create(:staffing_debt, user: @user, due_by: existing_staffing_debt.due_by.advance(days: 1))
 
     assert_equal existing_staffing_debt.id, staffing_job.staffing_debt.id, 'The staffing_job is not associated with the existing_staffing_job anymore'
     assert_nil new_staffing_debt.admin_staffing_job, 'The new_staffing_debt is associated with a staffing_job'

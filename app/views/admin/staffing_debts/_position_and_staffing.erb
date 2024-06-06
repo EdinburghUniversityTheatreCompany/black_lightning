@@ -1,8 +1,0 @@
-<% staffing = staffing_job.staffable %>
-<% position = staffing_job.name %>
-
-<% if staffing.present? && staffing.is_a?(Admin::Staffing) %>
-  <%= link_to "#{staffing.show_title} - #{position}", admin_staffing_url(staffing) %>
-<% else %>
-  <%= position %>
-<% end %>

@@ -1,28 +1,15 @@
-<% headers = [:user_full_name, :show_name, :due_by, 'Converted', 'Staffing Job'] %>
-<% headers << '' #if can?(:unassign, Admin::StaffingDebt) %>
-<% headers << '' #if can?(:edit, Admin::StaffingDebt) %>
-<% headers << '' #if can?(:delete, Admin::StaffingDebt) %>
+<% headers = [:user_full_name, :show_name, :due_by, :status] %>
+<% headers << '' if can?(:edit, Admin::StaffingDebt) %>
+<% headers << '' if can?(:forgive, Admin::StaffingDebt) %>
 
-<% field_sets = [] %>
-<% @staffing_debts.each do |staffing_debt|
-    if staffing_debt.admin_staffing_job.present?
-      staffing_job_content = render('position_and_staffing', staffing_job: staffing_debt.admin_staffing_job)
-    elsif staffing_debt.status == :forgiven
-      staffing_job_content = 'Forgiven'
-    else
-      staffing_job_content = get_link(staffing_debt, :show, link_text: 'Assign Job', additional_condition: can?(:assign, staffing_debt), html_class: 'btn btn-secondary')
-    end
-
-  field_sets << { 
+<% field_sets = @staffing_debts.map do |staffing_debt| {
     fields: [
       staffing_debt,
       user_link(staffing_debt.user, false),
-      staffing_debt.show.name,
+      get_link(staffing_debt.show, :show),
       staffing_debt.due_by,
-      bool_icon(staffing_debt.converted),
-      staffing_job_content,
-      get_link(staffing_debt, :unassign, additional_condition: staffing_debt.admin_staffing_job_id.present?, http_method: :put),
-      get_link(staffing_debt, :edit, link_text: 'Change Deadline', additional_condition: staffing_debt.status != :forgiven),
+      formatted_status_for_debt(staffing_debt),
+      get_link(staffing_debt, :edit),
       render('forgive_button', staffing_debt: staffing_debt)
     ],
     class: staffing_debt.css_class
@@ -42,3 +29,5 @@ end %>
 
 <%= render 'shared/pages/index', resource_class: Admin::StaffingDebt, resources: @staffing_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
   include_edit_button: false, include_link_to_item: false %>
+
+<% # TODO: This is now identical to maintenance debts index.Genericise. %>

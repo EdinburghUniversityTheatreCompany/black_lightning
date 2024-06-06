@@ -18,7 +18,18 @@ FactoryBot.define do
   factory :staffing_debt, class: Admin::StaffingDebt do
     association :user, factory: :member
     association :show, factory: :show
+    state { :normal }
     due_by { Date.current + 1 }
+    converted_from_maintenance_debt { false}
+
+    transient do
+      with_staffing_job { false }
+    end
+
+    after(:create) do |staffing_debt, evaluator|
+      staffing_job = FactoryBot.create(:staffing_job, staffing_debt: staffing_debt, user: evaluator.user) if evaluator.with_staffing_job
+      staffing_debt.update(admin_staffing_job: staffing_job)
+    end
 
     factory :overdue_staffing_debt do
       due_by { Date.current - 1 }

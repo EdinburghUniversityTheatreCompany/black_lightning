@@ -231,10 +231,10 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_difference('Admin::Staffing.count', -1) do
       assert_difference('Admin::StaffingJob.count', -2) do
         delete :destroy, params: { id: @staffing }
+
+        assert_redirected_to admin_staffings_path
       end
     end
-
-    assert_redirected_to admin_staffings_path
   end
 
   test 'should get sign_up_confirm' do
@@ -284,10 +284,12 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   test 'sign_up should fail when job is already staffed by someone else' do
     job = FactoryBot.create(:staffed_staffing_job)
     job.staffable.start_time = Time.now.advance(days: -1)
+    assert_not_equal job.reload.user, @user, "The wrong user is signed up for the job"
 
     put :sign_up, params: { id: job }
 
     assert_equal ['Someone else has already signed up for this slot'], flash[:error]
+    assert_not_equal job.reload.user, @user, 'The user was signed up for the job anyway.'
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
@@ -328,10 +330,12 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   test 'sign_up should fail for job in the past' do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: Time.now.advance(days: -1))
     job = staffing.staffing_jobs.first
+    assert_nil job.reload.user, 'The unstaffed job has a user assigned'
 
     put :sign_up, params: { id: job }
 
     assert_equal ['You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.'], flash[:error]
+    assert_nil job.reload.user, 'The user was signed up for the job anyway.'
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end

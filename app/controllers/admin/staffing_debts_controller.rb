@@ -17,10 +17,16 @@ class Admin::StaffingDebtsController < AdminController
     super
   end
 
-  # New, Create, Edit, and Update are handled by the Generic Controller.
+  # New, Edit, and Update are handled by the Generic Controller.
+  def create
+    get_resource.state = :normal
+    get_resource.converted_from_maintenance_debt = :false
 
-  # DELETE /admin/staffing_debts/1
-  def destroy
+    super
+  end
+
+  # PUT /admin/staffing_debts/1
+  def forgive
     if @staffing_debt.forgive
       flash[:success] = 'The Staffing Debt has been successfully forgiven.'
     else
@@ -36,38 +42,13 @@ class Admin::StaffingDebtsController < AdminController
     end
   end
 
-  # Associates a debt with a staffing job.
   # PUT
-  def assign
-    if @staffing_debt.update(admin_staffing_job_id: params[:job_id])
-      flash[:success] = 'The Staffing Debt has been successfully assigned a job.'
-    else
-      # I hate using nocov but I cannot force this to fail and I can see that this code will work.
-      # :nocov:
-      flash[:error] = 'There was an error assigning the Staffing Debt.'
-      # :nocov:
-    end
+  def convert_to_maintenance_debt
+    @staffing_debt.convert_to_maintenance_debt
 
     respond_to do |format|
-      format.html { redirect_to admin_staffing_debts_url }
-      format.html { render :no_content }
-    end
-  end
-
-  # PUT
-  def unassign
-    if @staffing_debt.update(admin_staffing_job_id: nil)
-      flash[:success] = 'The Job is now removed from the Staffing Debt.'
-    else
-      # I hate using nocov but I cannot force this to fail and I can see that this code will work.
-      # :nocov:
-      flash[:error] = 'There was an error removing the Job from the the Staffing Debt.'
-      # :nocov:
-    end
-
-    respond_to do |format|
-      format.html { redirect_to admin_staffing_debts_url, notice: 'Job Removed' }
-      format.html { render :no_content }
+      format.html { redirect_to admin_staffing_debts_url, notice: 'Staffing Debt converted to Maintenance Debt' }
+      format.json { head :no_content }
     end
   end
 
@@ -78,7 +59,7 @@ class Admin::StaffingDebtsController < AdminController
   end
 
   def permitted_params
-    [:user_id, :show_id, :due_by, :admin_staffing_job_id]
+    [:user_id, :show_id, :due_by, :state, :admin_staffing_job_id]
   end
 
   def load_index_resources

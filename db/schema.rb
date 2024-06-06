@@ -91,6 +91,7 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_07_095731) do
     t.datetime "updated_at", precision: nil, null: false
     t.integer "state", default: 0
     t.bigint "maintenance_attendance_id"
+    t.boolean "converted_from_staffing_debt", default: false
     t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
   end
 
@@ -167,8 +168,8 @@ ActiveRecord::Schema[7.0].define(version: 2023_10_07_095731) do
     t.integer "admin_staffing_job_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.boolean "converted"
-    t.boolean "forgiven", default: false
+    t.boolean "converted_from_maintenance_debt", default: false
+    t.bigint "state", default: 0, null: false
   end
 
   create_table "admin_staffing_jobs", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|

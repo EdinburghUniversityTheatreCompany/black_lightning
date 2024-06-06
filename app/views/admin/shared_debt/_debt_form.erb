@@ -7,5 +7,10 @@
     <% end %>
 
     <%= f.input :due_by %>
+
+    <%= f.input :state, collection: f.object.class.states.keys, label_method: :humanize,
+                selected: f.object.class.states.keys[f.object[:state].to_i],
+                hint: "To convert the debt to another kind of debt, go to the 'view' page" %>
+
   <% end %>
 <% end %>

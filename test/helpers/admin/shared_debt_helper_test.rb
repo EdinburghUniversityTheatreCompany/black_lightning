@@ -84,4 +84,36 @@ class Admin::SharedDebtHelperTest < ActionView::TestCase
     
     assert_equal [false, false], shared_debt_is_specific_user(Admin::StaffingDebt, nil)
   end
+
+  test 'formatted status for maintenance debt' do
+    maintenance_debt = FactoryBot.create(:maintenance_debt)
+
+    assert_equal 'Unfulfilled', formatted_status_for_debt(maintenance_debt)
+  end
+
+  test 'formatted status for maintenance debt with attendance' do
+    @current_user = users(:admin)
+
+    maintenance_debt = FactoryBot.create(:maintenance_debt, with_attendance: true)
+
+    assert_match 'Completed', formatted_status_for_debt(maintenance_debt)
+    assert_match url_for([:admin, maintenance_debt.maintenance_attendance]), formatted_status_for_debt(maintenance_debt)
+  end
+
+  test 'formatted status for staffing debt' do 
+    staffing_debt = FactoryBot.create(:staffing_debt)
+
+    assert_equal 'Not Signed Up', formatted_status_for_debt(staffing_debt)
+
+    staffing_job = FactoryBot.create(:staffing_job, user: staffing_debt.user)
+    staffing_job.staffable.update(start_time: DateTime.current.advance(days: 2), end_time: DateTime.current.advance(days: 2, hours: 1))
+  
+    assert_equal staffing_job, staffing_debt.reload.admin_staffing_job, 'Staffing job did not match to the debt. Why?'
+
+    assert formatted_status_for_debt(staffing_debt.reload).starts_with?("Awaiting Staffing as")
+
+    staffing_job.staffable.update(start_time: DateTime.current.advance(days: -2), end_time: DateTime.current.advance(days: -1))
+
+    assert formatted_status_for_debt(staffing_debt.reload).starts_with?('Completed as')
+  end
 end

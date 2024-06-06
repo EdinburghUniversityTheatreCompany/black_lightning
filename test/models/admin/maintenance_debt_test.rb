@@ -30,7 +30,7 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
         end
       end
     end
-    assert Admin::StaffingDebt.last.converted?
+    assert Admin::StaffingDebt.last.converted_from_maintenance_debt, 'The converted_from_maintenance_debt is not set on a staffing debt converted from a maintenance debt.'
   end
 
   test 'get status and CSS class' do
@@ -42,6 +42,11 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     @maintenance_debt.state = :forgiven
     assert_equal :forgiven, @maintenance_debt.status
     assert_equal 'Forgiven', @maintenance_debt.formatted_status
+    assert_equal 'table-success', @maintenance_debt.css_class
+
+    @maintenance_debt.state = :expired
+    assert_equal :expired, @maintenance_debt.status
+    assert_equal 'Expired', @maintenance_debt.formatted_status
     assert_equal 'table-success', @maintenance_debt.css_class
 
     @maintenance_debt.state = :normal

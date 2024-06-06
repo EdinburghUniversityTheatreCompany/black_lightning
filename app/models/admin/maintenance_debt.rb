@@ -17,7 +17,8 @@ class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :show
   belongs_to :maintenance_attendance, optional: true
 
-  validates :due_by, :show_id, :user_id, presence: true
+  validates :due_by, :show_id, :user_id, :state, presence: true
+  validates :converted_from_staffing_debt, inclusion: [true, false]
 
   after_save :associate_with_attendance
   after_destroy { associate_with_attendance(true) }
@@ -27,7 +28,8 @@ class Admin::MaintenanceDebt < ApplicationRecord
   enum state: {
     normal: 0,
     converted: 1,
-    forgiven: 2
+    forgiven: 2,
+    expired: 3
   }
 
   def self.ransackable_attributes(auth_object = nil)
@@ -51,8 +53,8 @@ class Admin::MaintenanceDebt < ApplicationRecord
 
   def convert_to_staffing_debt
     ActiveRecord::Base.transaction do
-      Admin::StaffingDebt.create(due_by: due_by, show_id: show_id, user_id: user_id, converted: true)
-      update(state: :converted)
+      Admin::StaffingDebt.create(due_by: due_by, show_id: show_id, user_id: user_id, state: :normal, converted_from_maintenance_debt: true)
+      update(state: :converted, maintenance_attendance: nil)
     end
   end
 
@@ -64,6 +66,8 @@ class Admin::MaintenanceDebt < ApplicationRecord
     case state
     when 'forgiven'
       return :forgiven
+    when 'expired'
+      return :expired
     when 'converted'
       return :converted
     else
@@ -93,7 +97,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
     case status(on_date)
     when :unfulfilled
       'table-warning'
-    when :converted, :completed, :forgiven
+    when :converted, :completed, :forgiven, :expired
       'table-success'
     when :causing_debt
       'table-danger'
@@ -109,6 +113,8 @@ class Admin::MaintenanceDebt < ApplicationRecord
     # will keep the attendance attached.
     update(maintenance_attendance: nil) if relevant_keys.include?('state')
 
+    # Only reallocate if we are not checking for changes or the changes are not just the attendance.
+    # if we keep reallocating when the attendance changes, we will end up with a loop.
     user.reallocate_maintenance_debts if skip_check || relevant_keys != ['maintenance_attendance_id']
   end
 end

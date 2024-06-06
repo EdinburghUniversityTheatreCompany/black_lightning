@@ -57,8 +57,11 @@ class ShowTest < ActiveSupport::TestCase
     due_by = Date.current
     show = FactoryBot.create(:show, maintenance_debt_start: due_by)
 
+    assert_difference('Admin::MaintenanceDebt.count', show.users.count) do
     show.create_maintenance_debts
+    end
 
+    # Assert each user has a maintenance debt.
     show.users.each do |user|
       maintenance_debts = user.admin_maintenance_debts.where(show: show)
       assert_equal 1, maintenance_debts.count
@@ -71,9 +74,11 @@ class ShowTest < ActiveSupport::TestCase
     
     FactoryBot.create(:team_member, teamwork: show)
 
-    # Test that the new user also gets a maintenance debt.
+    # Test that the new user also gets a maintenance debt, but the other users do not get an extra one.
 
+    assert_difference('Admin::MaintenanceDebt.count', 1) do
     show.create_maintenance_debts
+    end
 
     show.users.each do |user|
       maintenance_debts = user.admin_maintenance_debts.where(show: show)
@@ -81,13 +86,30 @@ class ShowTest < ActiveSupport::TestCase
       assert_equal new_due_by, maintenance_debts.first.due_by
     end
 
-    # Extra validation on the generated maintenance debt
+    # Extra validation on the generated maintenance debt to make sure all details are correct.
     maintenance_debt = show.users.first.admin_maintenance_debts.first
 
     assert_equal new_due_by, maintenance_debt.due_by
     assert_equal show.users.first, maintenance_debt.user
     assert_equal 'normal', maintenance_debt.state
     assert_equal show, maintenance_debt.show
+  end
+
+  test 'create maintenance debts ignores a converted maintenance debt' do
+    due_by = Date.current
+    show = FactoryBot.create(:show, maintenance_debt_start: due_by)
+
+    user = show.users.first
+
+    # Give one user a maintenance debt already, but it is converted from a staffing debt, so it should not count.
+    maintenance_debt_converted_from = FactoryBot.create(:maintenance_debt, converted_from_staffing_debt: true, user: user)
+
+    # Assert each user gets a maintenance debt.
+    assert_difference('Admin::MaintenanceDebt.count', show.users.count) do
+      show.create_maintenance_debts
+    end
+
+    assert_equal 2, user.admin_maintenance_debts.count, "The first user does not have two maintenance debts"
   end
 
   test 'create staffing debts' do
@@ -103,7 +125,7 @@ class ShowTest < ActiveSupport::TestCase
     show.create_staffing_debts(1)
 
     show.users.each do |user|
-      assert_equal 1, user.admin_staffing_debts.where(show: show).count
+      assert_equal 1, user.admin_staffing_debts.where(show: show).count, 'The create_staffing_debts method on the show created a staffing debt when the user already had one.'
     end
 
     show.create_staffing_debts(2)
@@ -118,12 +140,12 @@ class ShowTest < ActiveSupport::TestCase
     assert_equal due_by, staffing_debt.due_by
     assert_equal user, staffing_debt.user
     assert_equal show, staffing_debt.show
-    assert_not staffing_debt.converted
-    assert_not staffing_debt.forgiven
+    assert_not staffing_debt.converted?
+    assert_not staffing_debt.forgiven?
 
     # Test that converted debts don't count when creating new staffing debts.
 
-    FactoryBot.create(:staffing_debt, user: user, show: show, converted: true)
+    FactoryBot.create(:staffing_debt, user: user, show: show, state: :normal, converted_from_maintenance_debt: true)
 
     show.create_staffing_debts(3)
 
