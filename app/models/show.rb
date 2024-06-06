@@ -57,33 +57,39 @@ class Show < Event
 
   def create_maintenance_debts
     users.select(:id, :position, :last_name).distinct.each do |user|
-      debts = user.admin_maintenance_debts.where(show_id: id)
+      debts = user.admin_maintenance_debts.where(show_id: id, converted_from_staffing_debt: false)
 
+      # If there is no maintenance debt for this show yet, create one.
       if debts.empty?
         Admin::MaintenanceDebt.create!(
           show: self,
           user: user,
           due_by: maintenance_debt_start,
-          state: :normal
+          state: :normal,
+          converted_from_staffing_debt: false
         )
+      # If there is, just update the due_by date.
       else
-        debts.each do |debt| 
-          debt.update!(due_by: maintenance_debt_start)
-        end
+        debts.update_all(due_by: maintenance_debt_start)
       end 
     end
   end
 
   def create_staffing_debts(total_amount)
     users.select(:id, :position, :last_name).distinct.each do |user|
-      amount = total_amount - user.admin_staffing_debts.where(show_id: id, converted: false).count
+      # Debts converted from a maintenance debt should not count towards the staffing debt total for a show.
+      # If someone should get two staffing debts, and they have had their maintenance debt converted, they should get
+      # a total of 3 debts. If you included the converted maintenance_debt here, adding the staffing debts would only add 
+      # one, for a total of 2.
+      amount = total_amount - user.admin_staffing_debts.where(show_id: id, converted_from_maintenance_debt: false).count
+      
       amount.times do
         Admin::StaffingDebt.create!(
           show: self,
           user: user,
           due_by: staffing_debt_start,
-          converted: false,
-          forgiven: false
+          state: :normal,
+          converted_from_maintenance_debt:false
         )
       end
     end
