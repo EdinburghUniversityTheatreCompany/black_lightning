@@ -88,25 +88,21 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     staffing_debt.forgive
     assert_equal :forgiven, staffing_debt.status
     assert_equal 'table-success', staffing_debt.css_class
+  end
 
-    user = FactoryBot.create(:user)
-    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, end_time: DateTime.now.advance(days: 3))
-    staffed_job = FactoryBot.create(:unstaffed_staffing_job, user: user, staffable: staffing)
-    other_staffing_debt = FactoryBot.create(:staffing_debt, user: user, due_by: Date.current.advance(days: 1), admin_staffing_job: staffed_job)
+  test 'convert staffing debt to maintenance debt' do
+    staffing_debt = FactoryBot.create(:staffing_debt)
 
-    # Awaiting staffing before debt deadline
-    assert_equal :awaiting_staffing, other_staffing_debt.status
-    assert_equal '', other_staffing_debt.css_class
+    assert_difference('Admin::StaffingDebt.unfulfilled.count', -1) do
+      assert_no_difference('Admin::StaffingDebt.count') do
+        assert_difference('Admin::MaintenanceDebt.count', +1) do
+          staffing_debt.convert_to_maintenance_debt
+        end
+      end
+    end
 
-    # Awaiting staffing after debt deadline
-    other_staffing_debt.update_attribute(:due_by, Date.current.advance(days: -1))
-    assert_equal :awaiting_staffing, other_staffing_debt.status
-    assert_equal '', other_staffing_debt.css_class
-
-    # After staffing deadline -> completed staffing
-    staffing.update_attribute(:end_time, DateTime.now.advance(days: -1))
-    assert_equal :completed_staffing, other_staffing_debt.status
-    assert_equal 'table-success', other_staffing_debt.css_class
+    assert Admin::MaintenanceDebt.last.converted_from_staffing_debt, 'The converted_from_staffing_debt is not set on a maintenance debt converted from a staffing debt.'
+    assert staffing_debt.reload.converted?, 'The converted staffing debt was not marked as converted'
   end
 
   ##
