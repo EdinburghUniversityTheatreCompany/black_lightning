@@ -1,7 +1,7 @@
 module Admin::SharedDebtHelper
   include CookieHelper
   
-  def shared_debt_load(debts, params, includes)
+  def shared_debt_load(debts, show_non_members, params, includes)
     debt_class = debts.klass
     key = debt_class.table_name
 
@@ -26,6 +26,7 @@ module Admin::SharedDebtHelper
     debts = q.result.includes(*includes)
 
     debts = debts.unfulfilled unless show_fulfilled
+    debts = debts.where(user: Role.find_by(name: :member).users.ids) unless show_non_members == '1'
     debts = debts.page(params[:page]).per(30)
 
     return debts, q, show_fulfilled, is_specific_user

@@ -8,13 +8,41 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
   end
 
   test 'should get index with multiple debts' do
-    FactoryBot.create_list(:maintenance_debt, 10)
+    debts = FactoryBot.create_list(:maintenance_debt, 4)
+
+    # Debts by default are assigned to members, so we set one to a non-member,
+    # and make sure that the index does not include it.
+    non_member_debt = debts.first
+    non_member_debt.user.remove_role(:member)
 
     get :index
     assert_response :success
 
     assert_not_nil assigns(:maintenance_debts)
     assert_not assigns(:is_specific_user)
+
+    # Ensure only non-members are included in the index.
+    assert assigns(:maintenance_debts).all { |debt| debt.user.has_role?(:member) }, 'The index includes a few non_members'
+    assert_not_includes assigns(:maintenance_debts), non_member_debt, 'The index includes a non_member'
+  end
+
+  test 'should get index with non-member debts' do
+    debts = FactoryBot.create_list(:maintenance_debt, 2)
+
+    # Debts by default are assigned to members, so we set one to a non-member,
+    # and make sure that the index does not include it.
+    non_member_debt = debts.first
+    non_member_debt.user.remove_role(:member)
+
+    get :index, params: { show_non_members: '1' }
+    assert_response :success
+
+    assert_not_nil assigns(:maintenance_debts)
+    assert_not assigns(:is_specific_user)
+
+    # Ensure all debts are included in the index. There is one created before each test, hence the +1.
+    assert_equal debts.count + 1, assigns(:maintenance_debts).count, 'The index does not include all debts'
+    assert_includes assigns(:maintenance_debts), non_member_debt, 'The index does not includes the non_member'
   end
 
   # Members can by default only see their own debts.
