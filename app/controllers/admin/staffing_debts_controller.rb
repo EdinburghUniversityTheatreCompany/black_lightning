@@ -25,8 +25,8 @@ class Admin::StaffingDebtsController < AdminController
     super
   end
 
-  # DELETE /admin/staffing_debts/1
-  def destroy
+  # PUT /admin/staffing_debts/1
+  def forgive
     if @staffing_debt.forgive
       flash[:success] = 'The Staffing Debt has been successfully forgiven.'
     else

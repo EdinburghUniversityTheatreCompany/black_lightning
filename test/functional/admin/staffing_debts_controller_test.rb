@@ -105,14 +105,14 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should "destroy" admin_staffing_debt' do
+  test 'should forgive admin_staffing_debt' do
     assert_difference('Admin::StaffingDebt.unfulfilled.count', -1) do
       assert_no_difference('Admin::StaffingDebt.count') do
-        delete :destroy, params: { id: @staffing_debt }
+        put :forgive, params: { id: @staffing_debt }
       end
     end
 
-    assert assigns(:staffing_debt).forgiven
+    assert_equal :forgiven, assigns(:staffing_debt).status
 
     assert_redirected_to admin_staffing_debts_path
   end
