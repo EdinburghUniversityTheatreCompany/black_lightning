@@ -1,8 +1,9 @@
 <% extra_fields = {} if extra_fields.nil? %>
 <% fields = { 
   user: user_link(debt.user, false),
-  due_by: debt.due_by,
   show: get_link(debt.show, :show),
+  due_by: debt.due_by,
+  status: formatted_status_for_debt(debt)
 } %>
 
 <% content_for :extra_show_actions do %>
