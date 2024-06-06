@@ -16,5 +16,12 @@ namespace :debt do
 
     p 'All debt and staffing records cleared.'
   end
+
+  desc 'expires all overdue debt'
+  task expire_overdue_debt: :environment do
+    Tasks::Logic::Debt.expire_overdue_debt
+
+    p 'Expired overdue debt.'
+  end
   # :nocov:
 end

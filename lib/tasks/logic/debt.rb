@@ -1,5 +1,12 @@
 # Please use deliver_now in rake tasks.
 class Tasks::Logic::Debt
+  # Removes all debts older than a year that have not already been completed some other way
+  # or are currently awaiting 
+  def self.expire_overdue_debt
+    Admin::StaffingDebt.unfulfilled.where(due_by: ..(Date.current - 365.days)).update_all(state: 'expired')
+    Admin::MaintenanceDebt.unfulfilled.where(due_by: ..(Date.current - 365.days)).update_all(state: 'expired')
+  end
+
   def self.notify_debtors
     debtors = User.in_debt
 

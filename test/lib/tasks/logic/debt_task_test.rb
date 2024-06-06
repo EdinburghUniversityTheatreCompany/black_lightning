@@ -61,4 +61,65 @@ class DebtTaskTest < ActiveSupport::TestCase
     assert Admin::Staffing.all.empty?
     assert Admin::StaffingJob.all.empty?
   end
+
+  test 'expire overdue debt should remove staffing debts older than a year but preserve younger debts' do
+    staffing_debt_older_than_a_year = FactoryBot.create(:staffing_debt, due_by: Date.current - 365.days)
+    staffing_debt_younger_than_a_year = FactoryBot.create(:staffing_debt, due_by: Date.current - 364.days)
+    
+    # Ensure the debt is in the future so awaiting staffing
+    staffing_debt_awaiting_staffing = FactoryBot.create(:staffing_debt, due_by: Date.current - 2.year, with_staffing_job: true)
+    staffing_debt_awaiting_staffing.admin_staffing_job.staffable.update(start_time: Date.current + 3.days, end_time: Date.current + 4.days)
+    assert_equal :awaiting_staffing, staffing_debt_awaiting_staffing.status
+
+    staffing_debt_already_staffed = FactoryBot.create(:staffing_debt, due_by: Date.current - 3.year, with_staffing_job: true)
+    staffing_debt_already_staffed.admin_staffing_job.staffable.update(start_time: Date.current - 4.days, end_time: Date.current - 3.days)
+    assert_equal :completed_staffing, staffing_debt_already_staffed.status
+
+    Tasks::Logic::Debt.expire_overdue_debt
+
+    assert_equal :expired, staffing_debt_older_than_a_year.reload.status
+    assert_equal :causing_debt, staffing_debt_younger_than_a_year.reload.status
+    assert_equal :awaiting_staffing, staffing_debt_awaiting_staffing.reload.status
+    assert_equal :completed_staffing, staffing_debt_already_staffed.reload.status
+  end
+
+  test 'preserve specific staffing debts when expiring' do
+    forgiven_staffing_debt = FactoryBot.create(:staffing_debt,  due_by: Date.current - 2.years, state: :forgiven)
+    converted_staffing_debt = FactoryBot.create(:staffing_debt, due_by: Date.current - 2.years, state: :converted)
+    expired_staffing_debt = FactoryBot.create(:staffing_debt,   due_by: Date.current - 2.years, state: :expired)
+    staffed_staffing_debt = FactoryBot.create(:staffing_debt,   due_by: Date.current - 2.years, state: :normal, with_staffing_job: true)
+  
+    Tasks::Logic::Debt.expire_overdue_debt
+
+    assert_equal 'forgiven', forgiven_staffing_debt.reload.state
+    assert_equal 'converted', converted_staffing_debt.reload.state
+    assert_equal 'expired', expired_staffing_debt.reload.state
+    assert_equal 'normal', staffed_staffing_debt.reload.state
+  end
+
+  test 'expire overdue debt should remove maintenance debts older than a year but preserve younger debts' do
+    maintenance_debt_older_than_a_year = FactoryBot.create(:maintenance_debt, due_by: Date.current - 365.days)
+    maintenance_debt_younger_than_a_year = FactoryBot.create(:maintenance_debt, due_by: Date.current - 364.days)
+    
+    # Attended is taken care of by the preserve test.
+    Tasks::Logic::Debt.expire_overdue_debt
+
+    assert_equal :expired, maintenance_debt_older_than_a_year.reload.status
+    assert_equal :causing_debt, maintenance_debt_younger_than_a_year.reload.status
+  end
+
+  test 'preserve specific maintenance debts when expiring' do
+    forgiven_maintenance_debt = FactoryBot.create(:maintenance_debt,  due_by: Date.current - 2.years, state: :forgiven)
+    converted_maintenance_debt = FactoryBot.create(:maintenance_debt, due_by: Date.current - 2.years, state: :converted)
+    expired_maintenance_debt = FactoryBot.create(:maintenance_debt,   due_by: Date.current - 2.years, state: :expired)
+    attended_maintenance_debt = FactoryBot.create(:maintenance_debt,  due_by: Date.current - 2.years, state: :normal, with_attendance: true)
+  
+    Tasks::Logic::Debt.expire_overdue_debt
+
+    assert_equal 'forgiven', forgiven_maintenance_debt.reload.state
+    assert_equal 'converted', converted_maintenance_debt.reload.state
+    assert_equal 'expired', expired_maintenance_debt.reload.state
+    assert_equal 'normal', attended_maintenance_debt.reload.state
+    assert_equal :completed, attended_maintenance_debt.reload.status
+  end
 end
