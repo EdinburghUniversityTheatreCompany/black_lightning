@@ -13,7 +13,7 @@
     <% if [:converted, :forgiven, :expired].include?(debt.status) %>
       <% fields[:convert_debt] = "This debt has been converted, forgiven, or expired already, so you cannot convert it." %>
     <% else %>
-      <% show_action_args[:convert_debt] = get_link(
+      <%= get_link(
         debt, :convert_to_staffing_debt,
         html_class: 'btn btn-secondary', http_method: :put, 
         confirm: "Converting the Maintenance Debt to Staffing Debt", 
