@@ -22,7 +22,9 @@ class Admin::StaffingDebt < ApplicationRecord
   belongs_to :show
   belongs_to :admin_staffing_job, class_name: 'Admin::StaffingJob', optional: true
 
-  before_create :associate_staffing_debt_with_existing_staffing_job
+  after_save :associate_with_staffing_job
+  after_destroy { associate_with_staffing_job(true) }
+
 
   def self.ransackable_attributes(auth_object = nil)
     %w[admin_staffing_job_id converted due_by forgiven show_id user_id]
@@ -55,11 +57,11 @@ class Admin::StaffingDebt < ApplicationRecord
     when 'converted'
       return :converted
     else
-    return :completed_staffing if admin_staffing_job.try(:completed?)
-    return :awaiting_staffing if admin_staffing_job.present?
-    return :causing_debt if due_by < on_date
+      return :completed_staffing if admin_staffing_job.try(:completed?)
+      return :awaiting_staffing if admin_staffing_job.present?
+      return :causing_debt if due_by < on_date
 
-    return :not_signed_up
+      return :not_signed_up
     end
   end
 
@@ -73,7 +75,7 @@ class Admin::StaffingDebt < ApplicationRecord
   # This is because a converted, successful or forgiven debt always counts as completed.
   def fulfilled
     return !(normal? && admin_staffing_job.blank?)
-    end
+  end
 
   # Returns if the staffing debt has been irreversibly completed.
   # This is the case UNLESS the status is normal and there is no associated COMPLETED staffing job.
@@ -112,12 +114,17 @@ class Admin::StaffingDebt < ApplicationRecord
     end
   end
 
-  private
+  # Associates itself with the soonest upcoming Staffing Job.
+  def associate_with_staffing_job(skip_check = false)
+    relevant_keys = previous_changes.keys.excluding('created_at', 'updated_at')
 
-  def associate_staffing_debt_with_existing_staffing_job
-    # Only associate when the record is new(that's why it's in the after_create) and the record does not already have a staffing job.
-    return if admin_staffing_job.present?
+    # Clear the staffing_job if the state or user has changed, just in case.
+    # Otherwise, setting a debt with an attached attendance to forgiven or converted
+    # will keep the attendance attached.
+    update(admin_staffing_job: nil) if relevant_keys.include?('state') || relevant_keys.include?('user_id')
 
-    self.admin_staffing_job = user.staffing_jobs.unassociated_staffing_jobs_that_count_towards_debt.first
+    # Only reallocate if we are not checking for changes or the changes are not just the staffing job.
+    # If we keep reallocating when the staffing job changes, we will end up with a loop.
+    user.reallocate_staffing_debts if relevant_keys != ['admin_staffing_job_id']
   end
 end

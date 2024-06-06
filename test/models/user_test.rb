@@ -119,19 +119,13 @@ class Admin::UserTest < ActiveSupport::TestCase
   test 'debt causing and upcoming staffing debts' do
     debt_causing_debt =      FactoryBot.create :staffing_debt,         user: @user, admin_staffing_job_id: nil
     future_debt =            FactoryBot.create :staffing_debt,         user: @user, due_by: debt_causing_debt.due_by.advance(days: 2)
-    _non_debt_causing_debt = FactoryBot.create :overdue_staffing_debt, user: @user, forgiven: true
-
-    staffing_job = FactoryBot.create :staffing_job, user: @user
-    staffed_debt = FactoryBot.create :staffing_debt, user: @user, admin_staffing_job_id: staffing_job.id
-
-    staffing_job.staffing_debt = staffed_debt
-    staffing_job.save!
+    _non_debt_causing_debt = FactoryBot.create :overdue_staffing_debt, user: @user, state: :forgiven
 
     from_date = debt_causing_debt.due_by.advance(days: 2)
 
-    assert_equal [debt_causing_debt], @user.debt_causing_staffing_debts(from_date).to_a
+    assert_equal [debt_causing_debt.id], @user.debt_causing_staffing_debts(from_date).ids
 
-    assert_equal [future_debt], @user.upcoming_staffing_debts(from_date).to_a
+    assert_equal [future_debt.id], @user.upcoming_staffing_debts(from_date).ids
   end
 
   test 'debt message suffix' do

@@ -22,8 +22,8 @@ class Admin::StaffingJob < ApplicationRecord
   belongs_to :user, optional: true
   has_one :staffing_debt, class_name: 'Admin::StaffingDebt', foreign_key: 'admin_staffing_job_id'
 
-  before_save :check_if_the_user_has_changed
-  after_save :associate_staffing_job_with_oldest_outstanding_debt
+  after_save :associate_with_debt
+  after_destroy :dissassociate_from_debt
 
   has_paper_trail limit: 6
 
@@ -52,40 +52,44 @@ class Admin::StaffingJob < ApplicationRecord
     return staffable.present? && staffable.counts_towards_debt? && name != 'Committee Rep'
   end
 
+  # Returns the staffing jobs that are not associated with any debt and count towards staffing.
   def self.unassociated_staffing_jobs_that_count_towards_debt
-    # Returns the staffing jobs that are not associated with any debt and count towards staffing.
-
     staffing_jobs = all.joins('LEFT OUTER JOIN admin_staffing_debts ON admin_staffing_debts.admin_staffing_job_id = admin_staffing_jobs.id').where('admin_staffing_debts.admin_staffing_job_id IS null')
     ids = staffing_jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
 
     return all.where(id: ids)
   end
 
-  private
+  # Associates itself with the soonest upcoming Maintenance Debt
+  def associate_with_debt(skip_check = false)
+    relevant_keys = previous_changes.keys.excluding('created_at', 'updated_at')
 
-  def check_if_the_user_has_changed
-    @user_changed = user_id_changed?
+    # If the only change is the ID of the staffing debt, skip reallocating the debts to prevent a loop.
+    # This means that if you update just the staffing debt, you can slightly mess up the debts,
+    # but I can't currently think of a better solution.
+    return if relevant_keys == ['admin_staffing_job_id']
+
+    # Necessary in some cases, such as when changing the user on the staffing_job and the debt is still nil in the local instance.
+    reload
+
+    # If the staffing job is associated with a template, the job does not count towards debt or has no user,
+    # do not associate with a debt. Just make sure the debt is nil.
+    if self.staffable.is_a?(Admin::StaffingTemplate) || !self.counts_towards_debt? || user.nil? 
+      staffing_debt.update(admin_staffing_job: nil) if staffing_debt.present? 
+    else
+      # &. makes sure that a staffing_debt is present, and only one of the keys in the array has to have changed for the staffing_debt to be disassociated.
+      staffing_debt&.update(admin_staffing_job: nil) if relevant_keys.any? { |key| %w[state user_id staffable_id name].include?(key) }
+
+      user.reallocate_staffing_debts
+    end
   end
 
-  def associate_staffing_job_with_oldest_outstanding_debt
-    # If the staffing job is associated with a template, do not try to associate the staffing_job with a debt.
-    # Check if the staffing job counts towards staffing and return if it does not.
-    return if (self.staffable.is_a?(Admin::StaffingTemplate) || !self.counts_towards_debt?)
+  def dissassociate_from_debt
+    # If the staffing_job is currently associated with a debt, break the association, and reallocate the staffing debts.
+    if staffing_debt.present?
+      staffing_debt.update(admin_staffing_job: nil)
 
-    # If the new user is nil, there can be no associated staffing_debt, so set it to nil.
-    # Setting the user to nil does not always set user_id_changed to true, so this check takes place here.
-    if !self.user.present?
-      self.staffing_debt = nil
-      return
-    # Only check for outstanding debt if the user has changed.
-    elsif @user_changed
-      debts = Admin::StaffingDebt.where(user_id: user_id, admin_staffing_job: nil).unfulfilled.reorder(:due_by)
-      if debts.empty?
-        # If the user changed and there are no debts found, it should not stay associated with the old debt.
-        self.staffing_debt = nil
-      else
-        self.staffing_debt = debts.first
-      end
+      user.reallocate_staffing_debts if user.present?
     end
   end
 end

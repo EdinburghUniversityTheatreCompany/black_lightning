@@ -264,6 +264,31 @@ class User < ApplicationRecord
     end
   end
 
+  # This method looks for all debts in the future and their staffing jobs, all unallocated staffing jobs, and all past debts without jobs.
+  # It then matches all the soonest debt with staffing jobs. 
+  def reallocate_staffing_debts
+    debts = admin_staffing_debts.reload.where('due_by >= ? ', Date.current).or(admin_staffing_debts.where(admin_staffing_job: nil)).where(state: :normal).order(due_by: :asc)
+
+    # Find all jobs for this user that are currently not associated or associated with a debt (belonging to this user) already.
+    jobs = staffing_jobs.reload.includes(:staffing_debt).where(admin_staffing_debts: { id: [nil] + debts.ids })
+    # And then filter out the jobs that do not count towards debt.
+    ids = jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
+    jobs = jobs.where(id: ids)
+
+    # The amount of pairs is how many combinations of debt and staffing job there are.
+    amount_of_pairs = [debts.size, jobs.size].min
+
+    # Link them as far as there are pairs.
+    for i in 0...amount_of_pairs do
+      debts[i].update(admin_staffing_job: jobs[i]) if debts[i].admin_staffing_job != jobs[i]
+    end
+
+    for i in amount_of_pairs...debts.size do
+      debts[i].update(admin_staffing_job: nil) if debts[i].admin_staffing_job.present?
+    end
+  end
+
+
   ## 
   # Roles
   # Overrides methods that only work on symbols to also work with the instance of the class.
