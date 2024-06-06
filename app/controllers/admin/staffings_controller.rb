@@ -238,7 +238,7 @@ class Admin::StaffingsController < AdminController
     end
 
     respond_to do |format|
-      if helpers.check_if_current_user_can_sign_up(current_user, @job.name) && @job.save && flash[:error].blank?
+      if helpers.check_if_current_user_can_sign_up(current_user, @job.name) && flash[:error].blank? && @job.save
         helpers.append_to_flash(:success, "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name} on #{(l @job.staffable.start_time, format: :short)}.")
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
@@ -257,14 +257,7 @@ class Admin::StaffingsController < AdminController
   #
   # DELETE /admin/staffings/1.json
   ##
-  def destroy
-    helpers.destroy_with_flash_message(@staffing)
-
-    respond_to do |format|
-      format.html { redirect_to admin_staffings_url }
-      format.json { head :no_content }
-    end
-  end
+  # Destroy is handled by the generic controller.
 
   private
 

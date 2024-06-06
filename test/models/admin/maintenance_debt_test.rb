@@ -44,6 +44,11 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     assert_equal 'Forgiven', @maintenance_debt.formatted_status
     assert_equal 'table-success', @maintenance_debt.css_class
 
+    @maintenance_debt.state = :expired
+    assert_equal :expired, @maintenance_debt.status
+    assert_equal 'Expired', @maintenance_debt.formatted_status
+    assert_equal 'table-success', @maintenance_debt.css_class
+
     @maintenance_debt.state = :normal
     assert_equal :unfulfilled, @maintenance_debt.status(@maintenance_debt.due_by.advance(days: -1))
     assert_equal 'Unfulfilled', @maintenance_debt.formatted_status(@maintenance_debt.due_by.advance(days: -1))

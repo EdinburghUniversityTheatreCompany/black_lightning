@@ -71,22 +71,55 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
     assert_nil staffing_debt.reload.admin_staffing_job
   end
 
-  test 'status and css class' do
-    staffing_debt = FactoryBot.create :staffing_debt
+  test 'status and css class for normal state with no job' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, due_by: Date.current.advance(days: 1)
 
-    # Not signed up before deadline
-    staffing_debt.due_by = Date.current.advance(days: 1)
     assert_equal :not_signed_up, staffing_debt.status
     assert_equal 'table-warning', staffing_debt.css_class
+  end
+
+  test 'status and css class for normal state causing debt' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, due_by: Date.current.advance(days: -1)
 
     # Not signed up after debt deadline -> causing debt
-    staffing_debt.due_by = Date.current.advance(days: -1)
     assert_equal :causing_debt, staffing_debt.status
     assert_equal 'table-danger', staffing_debt.css_class
+  end
 
-    # Forgiven
-    staffing_debt.forgive
+  test 'status and css class for normal state completed_staffing' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, with_staffing_job: true
+    staffing_debt.admin_staffing_job.staffable.end_time = Date.current.advance(days: -1)
+
+    assert_equal :completed_staffing, staffing_debt.status
+    assert_equal 'table-success', staffing_debt.css_class
+  end
+
+  test 'status and css class for normal state awaiting_staffing' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :normal, with_staffing_job: true
+    staffing_debt.admin_staffing_job.staffable.end_time = Date.current.advance(days: 1)
+
+    assert_equal :awaiting_staffing, staffing_debt.status
+    assert_equal '', staffing_debt.css_class
+  end
+
+  test 'status and css class for forgiven state' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :forgiven
+
     assert_equal :forgiven, staffing_debt.status
+    assert_equal 'table-success', staffing_debt.css_class
+  end
+
+  test 'status and css class for expired state' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :expired
+
+    assert_equal :expired, staffing_debt.status
+    assert_equal 'table-success', staffing_debt.css_class
+  end
+
+  test 'status and css class for converted state' do
+    staffing_debt = FactoryBot.create :staffing_debt, state: :converted
+
+    assert_equal :converted, staffing_debt.status
     assert_equal 'table-success', staffing_debt.css_class
   end
 
