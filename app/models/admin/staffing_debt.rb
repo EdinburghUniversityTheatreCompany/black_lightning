@@ -15,7 +15,8 @@
 # == Schema Information End
 #++
 class Admin::StaffingDebt < ApplicationRecord
-  validates :due_by, :show_id, :user_id, presence: true
+  validates :due_by, :show_id, :user_id, :state, presence: true
+  validates :converted_from_maintenance_debt, inclusion: [true, false]
 
   belongs_to :user
   belongs_to :show
@@ -31,38 +32,64 @@ class Admin::StaffingDebt < ApplicationRecord
     %w[admin_staffing_job show user]
   end
 
+  # the progress of staffing debt is tracked by its state enum
+  # with status being used to retrieve if the debt has become overdue and is causing debt, or has been staffed.
+  enum state: {
+    normal: 0,
+    converted: 1,
+    forgiven: 2,
+    expired: 3
+  }
+
   # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
   # If you change this, please also change the functions that return upcoming debts in the user model.
   # Yes, that's not very DRY but now the functions in user.rb can be a database query instead of something with select.
   def status(on_date = Date.current)
     # note that :awaiting_staffing indicates the staffing slot has not been completed yet AND the debt deadline hasn't passed
-    return :forgiven if forgiven
+
+    case state
+    when 'forgiven'
+      return :forgiven
+    when 'expired'
+      return :expired
+    when 'converted'
+      return :converted
+    else
     return :completed_staffing if admin_staffing_job.try(:completed?)
     return :awaiting_staffing if admin_staffing_job.present?
     return :causing_debt if due_by < on_date
 
     return :not_signed_up
+    end
   end
 
-  # returns if the staffing debt has been completed or not.
+  def formatted_status
+    local_status.to_s.titleize
+  end
+
+  # Returns if the staffing debt no longer counts for debt. 
+  # However, the job has not necessarily been completed, so it could revert to count again.
+  # This is the case UNLESS the status is normal and there is no associated staffing job.
+  # This is because a converted, successful or forgiven debt always counts as completed.
   def fulfilled
-    if admin_staffing_job.present?
-      admin_staffing_job.completed?
-    else
-      forgiven
+    return !(normal? && admin_staffing_job.blank?)
     end
+
+  # Returns if the staffing debt has been irreversibly completed.
+  # This is the case UNLESS the status is normal and there is no associated COMPLETED staffing job.
+  def completed
+    return !(normal? && admin_staffing_job.try(:completed?))
   end
 
   # returns unfulfilled staffing debts.
   def self.unfulfilled
-    fulfilled_ids = all.map { |debt| debt.fulfilled ? debt.id : nil }
-    return where.not(id: fulfilled_ids)
+    where(admin_staffing_job: nil, state: :normal)
   end
 
+
+  # Forgives this debt and frees up the associated staffing job.
   def forgive
-    self.forgiven = true
-    self.admin_staffing_job = nil
-    return save
+    return update(state: :forgiven, admin_staffing_job: nil)
   end
 
   def css_class
@@ -71,7 +98,7 @@ class Admin::StaffingDebt < ApplicationRecord
       'table-warning'
     when :awaiting_staffing
       ''
-    when :completed_staffing, :forgiven
+    when :completed_staffing, :forgiven, :expired, :converted
       'table-success'
     when :causing_debt
       'table-danger'

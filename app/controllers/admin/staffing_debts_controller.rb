@@ -17,7 +17,13 @@ class Admin::StaffingDebtsController < AdminController
     super
   end
 
-  # New, Create, Edit, and Update are handled by the Generic Controller.
+  # New, Edit, and Update are handled by the Generic Controller.
+  def create
+    get_resource.state = :normal
+    get_resource.converted_from_maintenance_debt = :false
+
+    super
+  end
 
   # DELETE /admin/staffing_debts/1
   def destroy
@@ -78,7 +84,7 @@ class Admin::StaffingDebtsController < AdminController
   end
 
   def permitted_params
-    [:user_id, :show_id, :due_by, :admin_staffing_job_id]
+    [:user_id, :show_id, :due_by, :state, :admin_staffing_job_id]
   end
 
   def load_index_resources
