@@ -86,6 +86,13 @@ class Admin::StaffingDebt < ApplicationRecord
     where(admin_staffing_job: nil, state: :normal)
   end
 
+  # Creates a new maintenance debt with the same attributes as this staffing debt.
+  def convert_to_maintenance_debt
+    ActiveRecord::Base.transaction do
+      Admin::MaintenanceDebt.create(due_by: due_by, show_id: show_id, user_id: user_id, state: :normal, converted_from_staffing_debt: true)
+      update(state: :converted, admin_staffing_job: nil)
+    end
+  end
 
   # Forgives this debt and frees up the associated staffing job.
   def forgive

@@ -15,8 +15,15 @@ class Admin::MaintenanceDebtsController < AdminController
     super
   end
 
+  def create
+    get_resource.state = :normal
+    get_resource.converted_from_staffing_debt = :false
+
+    super
+  end
+
   # DELETE /admin/maintenance_debts/1
-  def destroy
+  def forgive
     @maintenance_debt.forgive
 
     if @maintenance_debt.save
