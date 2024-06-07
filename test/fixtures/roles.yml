@@ -33,3 +33,9 @@ admin:
 welfare:
   id: 4
   name: "Welfare Contact"
+
+dm_trained:
+  name: "DM Trained"
+
+first_aid_trained:
+  name: "First Aid Trained"
