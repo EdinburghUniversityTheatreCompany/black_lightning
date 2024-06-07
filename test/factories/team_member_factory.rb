@@ -18,5 +18,6 @@ FactoryBot.define do
     position { ['Director', 'Producer', 'Technical Manager', 'Stage Manager', 'Assistant to Mr B. Hussey'].sample }
     # The tests for the call run on the assumption that every team_member of a proposal is a member.
     association :user, factory: :member
+    association :teamwork, factory: :show
   end
 end

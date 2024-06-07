@@ -112,7 +112,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   test 'should update show without new debtors' do
     @show = FactoryBot.create(:show)
 
-    users = FactoryBot.create_list(:user, 5) + @show.users
+    users = FactoryBot.create_list(:user, 3)
     attributes = FactoryBot.attributes_for(:show, team_members_attributes: team_members_attributes(users))
 
     # To check if an existing user who is in debt does not count.
@@ -122,6 +122,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
       put :update, params: { id: @show, show: attributes }
     end
 
+    assert_empty assigns(:show).errors.full_messages, 'There are errors on the show'
     assert_equal ["The Show \"#{attributes[:name]}\" was successfully updated."], flash[:success]
 
     assert_redirected_to admin_show_path(assigns(:show))

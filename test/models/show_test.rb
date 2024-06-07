@@ -58,7 +58,7 @@ class ShowTest < ActiveSupport::TestCase
     show = FactoryBot.create(:show, maintenance_debt_start: due_by)
 
     assert_difference('Admin::MaintenanceDebt.count', show.users.count) do
-    show.create_maintenance_debts
+      show.create_maintenance_debts
     end
 
     # Assert each user has a maintenance debt.
@@ -77,7 +77,7 @@ class ShowTest < ActiveSupport::TestCase
     # Test that the new user also gets a maintenance debt, but the other users do not get an extra one.
 
     assert_difference('Admin::MaintenanceDebt.count', 1) do
-    show.create_maintenance_debts
+      show.create_maintenance_debts
     end
 
     show.users.each do |user|
@@ -150,6 +150,17 @@ class ShowTest < ActiveSupport::TestCase
     show.create_staffing_debts(3)
 
     assert_equal 4, user.admin_staffing_debts.count
+  end
+
+  test 'cannot add user to the same show twice as team member' do
+    show = FactoryBot.create(:show, team_member_count: 1)
+    current_team_member = show.team_members.first
+
+    assert_no_difference('TeamMember.count') do
+      assert_raises ActiveRecord::RecordInvalid do
+        show.team_members.create!(user: current_team_member.user)
+      end
+    end
   end
 
   test 'as_json' do
