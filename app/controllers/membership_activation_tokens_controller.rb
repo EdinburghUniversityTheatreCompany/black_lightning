@@ -17,7 +17,7 @@ class MembershipActivationTokensController < ApplicationController
     @user = get_user
 
     @user.assign_attributes(user_params)
-
+  
     if params[:consent]
       unless @user.save
         respond_to do |format|
@@ -30,8 +30,6 @@ class MembershipActivationTokensController < ApplicationController
       @user.activate
       @user.touch(:consented)
 
-      sign_out
-
       @membership_activation_token.destroy
 
       helpers.append_to_flash(:success, 'You have successfully (re)-activated your account! Please log in to continue.')
@@ -39,6 +37,7 @@ class MembershipActivationTokensController < ApplicationController
       @user.send_welcome_email
 
       redirect_to admin_url
+    # If not consented.
     else
       helpers.append_to_flash(:error, 'You need to accept the Terms and Conditions before continuing.')
 
@@ -49,16 +48,29 @@ class MembershipActivationTokensController < ApplicationController
   private
 
   def get_user
-    return @membership_activation_token.user || User.new if current_user == @membership_activation_token.user
-
-    if @membership_activation_token.user.nil?
-      flash[:error] = 'This token belongs to a new user, but you are already logged in.'
-    elsif current_user.nil?
+    # The current_user is trying to reactivate themselves. That's allowed!
+    if current_user.present? && current_user == @membership_activation_token.user
+      return current_user
+    # The current_user is not signed in, and is trying to activate an account that has not consented.
+    # This means the account has either never been activated, or has not signed in for the consent period
+    # (currently a year). This means we just assume that it's fine since they have the token, and
+    # we let them reactivate.
+    elsif current_user.nil? && @membership_activation_token.user.present? && @membership_activation_token.user.consented.blank?
+      return @membership_activation_token.user
+    elsif current_user.present? && @membership_activation_token.user.nil?
+      flash[:error] = 'This token belongs to a new user, but you are already logged in. You are not allowed to activate this account.'
+    # The user is signed in but the token is not for them. Show an error.
+    elsif current_user.present? && @membership_activation_token.user.present? && current_user != @membership_activation_token.user
+      flash[:error] = 'This token belongs to a different user. You are not allowed to activate this account.'
+    # If the user is not signed in, but the token has a user, and that user has consented, they have signed in
+    # recently enough that they should know their password and be able to sign in, or at least request a reset.
+    elsif current_user.nil? && @membership_activation_token.user.present? && @membership_activation_token.user.consented
       flash[:error] = 'This token belongs to an existing user, but you are not logged in. Please log in and try again.'
     else
-      flash[:error] = 'This token belongs to a different user.'
+      flash[:error] = 'An unknown error occurred. You are not allowed to activate this account.'
     end
 
+    # If we have not returned yet, that means there was an error.
     raise(CanCan::AccessDenied, flash[:error])
   end
 
