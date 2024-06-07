@@ -9,7 +9,7 @@
     <% require "securerandom" %>
     <% id = SecureRandom.uuid %>
     <% show_hint = true if show_hint.nil? %>
-    <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe if show_hint %>
+    <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
     <% rows ||= '10' %>
 
     <div class="row">
