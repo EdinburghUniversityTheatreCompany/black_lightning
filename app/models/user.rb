@@ -288,7 +288,7 @@ class User < ApplicationRecord
     end
   end
 
-
+  
   ## 
   # Roles
   # Overrides methods that only work on symbols to also work with the instance of the class.
@@ -328,7 +328,6 @@ class User < ApplicationRecord
   end
 
   def send_welcome_email
-    # TEST: It is not tested if the membership_activation_tokens controller and users controller calls to this method actually work.
     UsersMailer.welcome_email(self).deliver_later unless email.ends_with?('@bedlamtheatre.co.uk')
   end
 end

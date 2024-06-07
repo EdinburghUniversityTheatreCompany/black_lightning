@@ -88,7 +88,12 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     user_attributes = FactoryBot.attributes_for(:user)
 
     assert_no_difference 'User.count' do
-      patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
+      # Test the welcome email is send. It also sends a 'password changed' email, which is why the count should be 2.
+      assert_difference 'ActionMailer::Base.deliveries.count', 2 do
+        perform_enqueued_jobs do
+          patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
+        end
+      end
 
       assert_nil flash[:error]
       assert_redirected_to admin_url
@@ -105,7 +110,13 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     user_attributes = FactoryBot.attributes_for(:user)
 
     assert_no_difference 'User.count' do
-      patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
+      # Test the welcome email is send again. It also sends a 'password changed' email, which is why the count should be 2.
+      assert_difference 'ActionMailer::Base.deliveries.count', 2 do
+        perform_enqueued_jobs do
+          patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
+          
+        end
+      end
 
       assert_nil flash[:error]
       assert_redirected_to admin_url
