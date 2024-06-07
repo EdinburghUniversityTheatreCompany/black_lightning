@@ -1,9 +1,5 @@
 <% @hide_alert = true %>
 
-<% content_for :head do %>
-  <%= stylesheet_link_tag "login", :media => "all" %>
-<% end %>
-
 <div class="container">
   <div id="login_form" class="row">
     <div class="span4 offset4">
@@ -26,8 +22,8 @@
     <%= f.input :password_confirmation, label: "Confirm your new password", required: true %>
   </div>
 
-  <div class="form-actions">
-    <%= f.button :submit, "Change my password" %>
+  <div class="form-actions mb-3">
+    <%= f.button :submit, "Change my password", class: 'btn btn-primary' %>
   </div>
 
       <% if params[:initial] then %>
