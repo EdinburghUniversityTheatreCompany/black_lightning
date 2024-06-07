@@ -43,6 +43,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
 
+  after_initialize :set_default_proposal_text
+
   # Reading is completely managed by ability.rb because it is so complicated and dependent on the call.
   DISABLED_PERMISSIONS = %w[read].freeze
 
@@ -188,4 +190,12 @@ class Admin::Proposals::Proposal < ApplicationRecord
     p "Slug: #{@show.slug}"
   end
   handle_asynchronously :convert_to_show
+
+  private
+
+  def set_default_proposal_text
+    return if !has_attribute?(:proposal_text) || proposal_text.present?
+
+    self.proposal_text = Admin::EditableBlock.find_by(name: 'Proposals - Proposal Text Default').try(:content) || ''
+  end
 end

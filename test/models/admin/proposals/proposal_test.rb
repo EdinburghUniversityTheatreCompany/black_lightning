@@ -24,6 +24,11 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal = FactoryBot.create(:proposal, call: @call)
   end
 
+  test 'set default proposal text' do
+    proposal = Admin::Proposals::Proposal.new
+    assert proposal.proposal_text.present?
+  end
+
   test 'instantiate_answers' do
     @proposal.questions.clear
 
