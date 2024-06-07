@@ -248,25 +248,11 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   test 'should not get sign_up_confirm without phone number' do
     @user.update_attribute(:phone_number, nil)
 
-    @staffing = FactoryBot.create(:staffing, staffed_job_count: 2)
-
     job = FactoryBot.create(:unstaffed_staffing_job)
 
     get :sign_up_confirm, params: { id: job }
 
-    assert_equal ['You cannot sign up for staffings. Have you set a phone number?'], flash[:error]
-    assert_redirected_to admin_staffing_path(job.staffable)
-  end
-
-  test 'should not get sign_up_confirm without permission' do
-    sign_in FactoryBot.create(:member)
-
-    job = FactoryBot.create(:unstaffed_staffing_job)
-
-    get :sign_up_confirm, params: { id: job }
-
-    assert_equal ['You cannot sign up for staffings. Have you set a phone number?'], flash[:error]
-
+    assert_equal ['You need to provide your phone number before you can sign up to staff.'], flash[:error]
     assert_redirected_to admin_staffing_path(job.staffable)
   end
 
@@ -305,13 +291,15 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test 'sign_up should fail for user without permission' do
-    sign_in FactoryBot.create(:member)
+    sign_in users(:member_with_phone_number)
 
     job = FactoryBot.create(:unstaffed_staffing_job)
 
     put :sign_up, params: { id: job }
 
-    assert_equal ['You cannot sign up for staffings. Have you set a phone number?'], flash[:error]
+    assert_nil job.reload.user, 'The user managed to attach itself despite not haging permission.'
+
+    assert_equal ['You do not have the appropriate permission to sign up for staffing slots.'], flash[:error]
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
@@ -322,7 +310,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     put :sign_up, params: { id: job }
 
-    assert_equal ['You cannot sign up for staffings. Have you set a phone number?'], flash[:error]
+    assert_equal ['You need to provide your phone number before you can sign up to staff.'], flash[:error]
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end

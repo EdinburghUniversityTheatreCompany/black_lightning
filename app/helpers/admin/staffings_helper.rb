@@ -3,6 +3,10 @@ module Admin::StaffingsHelper
   
   def check_if_current_user_can_sign_up(user, job = nil)
     can_sign_up = user.can?(:sign_up_for, Admin::StaffingJob)
+    
+    unless can_sign_up
+      append_to_flash(:error, 'You do not have the appropriate permission to sign up for staffing slots.')
+    end
 
     case job&.downcase
     when 'committee rep', 'committee', 'committee representative', 'cr'
@@ -18,7 +22,7 @@ module Admin::StaffingsHelper
     end
 
     unless user.phone_number.present?
-      append_to_flash(:error, 'You need to provide your phone number before you can sign up to staff. ')
+      append_to_flash(:error, 'You need to provide your phone number before you can sign up to staff.')
       can_sign_up = false
     end
 
