@@ -14,7 +14,7 @@
 require 'securerandom'
 
 class MembershipActivationToken < ApplicationRecord
-  belongs_to :user, optional: true
+  belongs_to :user
   before_validation :generate_token
 
   validates :token, uniqueness: { case_sensitive: false }, presence: true

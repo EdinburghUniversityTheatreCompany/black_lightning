@@ -26,6 +26,7 @@ class Admin::Staffing < ApplicationRecord
   validates :start_time, :end_time, presence: true, on: [:create, :update]
 
   after_save     :update_reminder
+  after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
   before_destroy :reminder_cleanup
 
   default_scope -> { order('start_time ASC') }
@@ -81,6 +82,17 @@ class Admin::Staffing < ApplicationRecord
         self.save!
       end
     end
+  end
+
+  # Reassociate staffing jobs if the count_towards_debt flag changes.
+  def update_staffing_jobs
+    staffing_jobs.each do |job|
+      job.staffing_debt.update(admin_staffing_job: nil) if job.staffing_debt.present?
+      job.associate_with_debt
+    end
+
+    # Unsure why this reload is needed, but otherwise some tests for staffing_jobs fail because they can't find the jobs associated with the staffing.
+    reload
   end
 
   ##

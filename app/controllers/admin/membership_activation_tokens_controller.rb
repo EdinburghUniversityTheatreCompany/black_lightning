@@ -10,12 +10,23 @@ class Admin::MembershipActivationTokensController < AdminController
 
   # TODO: This should be abstracted into a model so this can also be called from other logic things in case of a mass reactivation.
   def create_activation
+    # Has to be created early in case it is needed in render_on_fail
     @token = MembershipActivationToken.new
-
+    
     email = params[:user][:email]
+    first_name = params[:user][:first_name]
+    last_name = params[:user][:last_name]
 
+    unless email.present? && first_name.present? && last_name.present?
+      helpers.append_to_flash(:error, 'Please fill in all fields.')
+
+      return render_on_fail
+    end
+
+    # Try to find the user by their email.
     @user = User.find_by(email: email)
 
+    # If the user exists, check if they are already a member.
     if @user.present?
       base_message = "The email #{email} is already in use by #{@user.name(current_user)}"
 
@@ -25,18 +36,38 @@ class Admin::MembershipActivationTokensController < AdminController
         return render_on_fail
       end
 
-      helpers.append_to_flash(:success, "#{base_message}. They will be send a reactivation mail.")
+      base_message = "#{base_message}. They will be send a reactivation mail."
+    # If we cannot find a user by their email, try to find them by their name.
+    else
+      @user = User.find_by(first_name: first_name, last_name: last_name)
+    
+      # If a user with this name exists, do not proceed, but warn.
+      if @user.present?
+        helpers.append_to_flash(:error, "Found a user with the name '#{first_name} #{last_name}\' but with the email '#{@user.email}'. If this is the user you are trying to activate, please enter this email instead. If this is not the same user, please enter their name again and 'AGAIN' to the end of the last name.")
 
-      # TODO: Why is this add_user_to_token? I don't think this works because when I reactivated max hanover I think it send two emails?
-      return unless add_user_to_token
+        return render_on_fail
+      # If no user with this email or name exists, create a user with the basic information specified by the secretary so they can be tracked.
+      else
+        @user = User.new_user(email: email, first_name: first_name, last_name: last_name.delete_suffix('AGAIN'))
+        @user.save
+
+        base_message = "Activation Mail sent to #{email}"
+      end
     end
 
-    @token.save
-    MembershipActivationTokenMailer.send_activation(email, @token).deliver_later
+    @token.user = @user
 
-    helpers.append_to_flash(:success, "Activation Mail sent to #{email}")
+    # If this fails, we might have created a user above, but this user will be found if the
+    # form is resubmitted, so this is okay.
+    if @token.save
+      MembershipActivationTokenMailer.send_activation(email, @token).deliver_later
 
-    redirect_to new_admin_membership_activation_token_path
+      helpers.append_to_flash(:success, base_message)
+
+      redirect_to new_admin_membership_activation_token_path
+    else
+      render_on_fail
+    end
   end
 
   def create_reactivation
@@ -76,21 +107,6 @@ class Admin::MembershipActivationTokensController < AdminController
   end
 
   private
-
-  def add_user_to_token
-    unless @token.update_attribute(:user, @user)
-      # This will probably not happen, but here is a nice error just in case.
-      # :nocov:
-      helpers.append_to_flash(:error, 'There was an error assigning the user to the token')
-
-      render_on_fail
-
-      return false
-      # :nocov:
-    end
-
-    return true
-  end
 
   def render_on_fail
     @user = User.new if @user.nil?

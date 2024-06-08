@@ -3,8 +3,12 @@
         <%= simple_horizontal_form_for(@user, url: create_activation_admin_membership_activation_tokens_url, method: :post) do |f| %>
             <%= f.error_notification %>
 
-            <p>Enter the email of a new member here to send them an activation email.</p>
+            <p>Enter the details of a new member here to send them an activation email.</p>
+            
             <%= f.input :email %>
+            <%= f.input :first_name, required: true %>
+            <%= f.input :last_name, required: true %>
+
             <%= f.button :submit, "Send Activation", class: 'btn btn-primary' %>
         <% end %>
 

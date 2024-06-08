@@ -94,16 +94,17 @@ ChaosRails::Application.routes.draw do
 
     resources :debt_notifications, only: [:index]
 
-    resources :staffing_debts do
+    resources :staffing_debts, except: [:destroy] do
       member do
-        put 'assign'
-        put 'unassign'
+        put 'convert_to_maintenance_debt'
+        put 'forgive'
       end
     end
 
-    resources :maintenance_debts do
+    resources :maintenance_debts, except: [:destroy] do
       member do
         put 'convert_to_staffing_debt'
+        put 'forgive'
       end
     end
 

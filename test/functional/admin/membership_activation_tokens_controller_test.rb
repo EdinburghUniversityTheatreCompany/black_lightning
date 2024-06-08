@@ -27,17 +27,24 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
   test 'create activation token' do
     assert_difference 'MembershipActivationToken.count' do
       email = 'dennis@donkey.test'
+      first_name = 'dennis'
+      last_name = 'donkey'
 
       assert_difference 'ActionMailer::Base.deliveries.count' do
         perform_enqueued_jobs do
-          post :create_activation, params: { user: { email: email } }
+          post :create_activation, params: { user: { email: email, first_name: first_name, last_name: last_name } }
         end
       end
 
       assert_equal ["Activation Mail sent to #{email}"], flash[:success]
 
       assert assigns(:token).present?
-      assert_nil assigns(:token).user
+      assert assigns(:token).user.present?
+      assert assigns(:token).user.persisted?, "The user has not persisted despite being created. #{assigns(:token).user.errors.full_messages}"
+
+      assert assigns(:token).user.email = email
+      assert assigns(:token).user.first_name = first_name
+      assert assigns(:token).user.last_name = last_name
 
       assert_redirected_to new_admin_membership_activation_token_path
 
@@ -51,11 +58,11 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
 
       assert_difference 'ActionMailer::Base.deliveries.count' do
         perform_enqueued_jobs do
-          post :create_activation, params: { user: { email: user.email } }
+          post :create_activation, params: { user: { email: user.email, first_name: 'George', last_name: 'Tolloler' } }
         end
       end
 
-      expected_notice = ["The email #{user.email} is already in use by #{user.name(@admin)}. They will be send a reactivation mail.", "Activation Mail sent to #{user.email}"]
+      expected_notice = ["The email #{user.email} is already in use by #{user.name(@admin)}. They will be send a reactivation mail."]
 
       assert_equal expected_notice, flash[:success]
 
@@ -71,7 +78,7 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
     assert_no_difference 'MembershipActivationToken.count' do
       member = FactoryBot.create(:member)
 
-      post :create_activation, params: { user: { email: member.email } }
+      post :create_activation, params: { user: { email: member.email, first_name: 'Is not', last_name: 'a real name' } }
 
       expected_notice = ["The email #{member.email} is already in use by #{member.name(@admin)} and they already are a member. They will not be send an activation mail."]
       assert_equal expected_notice, flash[:error]
@@ -82,6 +89,69 @@ class Admin::MembershipActivationTokensControllerTest < ActionController::TestCa
       assert_enqueued_emails 0
     end
   end
+
+  test 'cannot create activation token without name' do
+    assert_no_difference 'MembershipActivationToken.count' do
+      post :create_activation, params: { user: { email: 'hoi@hoi.hoi' } }
+
+      assert_equal ['Please fill in all fields.'], flash[:error]
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test 'cannot create activation token for a user with the name of an existing user' do
+    assert_no_difference 'MembershipActivationToken.count' do
+      user = users(:user)
+
+      post :create_activation, params: { user: { email: 'something@unrelated.com', first_name: user.first_name, last_name: user.last_name } }
+    
+      assert_equal ["Found a user with the name '#{user.first_name} #{user.last_name}' but with the email '#{user.email}'. If this is the user you are trying to activate, please enter this email instead. If this is not the same user, please enter their name again and 'AGAIN' to the end of the last name."], flash[:error]
+
+      assert_response :unprocessable_entity
+    end
+  end
+
+  test 'can create activation token for user with the name of an existing user IF the last name ends in again' do
+    email = 'something@random.test'
+
+    user = users(:user)
+
+    assert_difference 'MembershipActivationToken.count', 1 do
+      assert_difference 'ActionMailer::Base.deliveries.count' do
+        perform_enqueued_jobs do
+          post :create_activation, params: { user: { email: email, first_name: user.first_name, last_name: user.last_name + 'AGAIN'} }
+        end
+      end
+      assert_nil flash[:error]
+      assert_redirected_to new_admin_membership_activation_token_path
+    end
+
+    # Assert a token has been created, and that the user is the user with the matching name but different email
+    assert assigns(:token).present?
+    assert assigns(:token).user.present?
+    assert assigns(:token).user.persisted?, "The user has not persisted despite being created. #{assigns(:token).user.errors.full_messages}"
+
+    assert_not_equal user, assigns(:token).user
+    assert_not_equal user.email, assigns(:token).user.email
+
+    assert_equal user.first_name, assigns(:token).user.first_name
+    assert_equal user.last_name, assigns(:token).user.last_name
+
+    # Check that the email was sent to the just-specified email.
+    assert_equal [email], ActionMailer::Base.deliveries.last.to
+  end
+
+  test 'can create activation token for a user with the name of an existing user with matching email' do
+    assert_difference 'MembershipActivationToken.count', 1 do
+      user = users(:user)
+
+      post :create_activation, params: { user: { email: user.email, first_name: user.first_name, last_name: user.last_name + 'AGAIN'} }
+
+      assert_nil flash[:error]
+      assert_redirected_to new_admin_membership_activation_token_path
+    end
+  end
+
 
   ##
   # Reactivation

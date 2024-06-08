@@ -32,8 +32,13 @@ class Admin::UsersControllerTest < ActionController::TestCase
   test 'should create user' do
     attributes = FactoryBot.attributes_for(:user)
 
-    assert_difference('User.count') do
-      post :create, params: { user: attributes }
+    # Test the welcome email is send.
+    assert_difference 'ActionMailer::Base.deliveries.count' do
+      perform_enqueued_jobs do
+        assert_difference('User.count') do
+          post :create, params: { user: attributes }
+        end
+      end
     end
 
     assert_redirected_to admin_user_path(assigns(:user))

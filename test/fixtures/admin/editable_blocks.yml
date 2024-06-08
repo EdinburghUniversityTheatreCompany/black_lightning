@@ -26,6 +26,10 @@ event_members_only_text_default:
   name: "Event Members-Only Text Default"
   content: "This is the default text for the members-only text field."
 
+proposals_proposal_text_default:
+  name: "Proposals - Proposal Text Default"
+  content: "This is the default text for the proposal text field."
+
 welcome email:
   name: "Email - Welcome Email"
   content: "This is the test welcome email content"
@@ -34,3 +38,8 @@ about:
   name: about
   url: about
   content: 'This is the about page'
+
+archive_help_page:
+  name: archive_help_page
+  url: archives/help
+  content: 'This is the archive help page'
