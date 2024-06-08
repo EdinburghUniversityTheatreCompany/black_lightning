@@ -2,7 +2,7 @@ source 'http://rubygems.org'
 
 ruby File.read(".ruby-version").strip
 
-gem 'rails', '~> 7.0'
+gem 'rails', '~> 7.1'
 
 gem 'mysql2'
 
