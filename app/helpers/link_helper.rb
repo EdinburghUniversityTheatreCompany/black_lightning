@@ -14,8 +14,8 @@ module LinkHelper
   end
 
   def link_to_add(form, attribute_name, object_name: nil, html_class: nil)
-    html_class ||= 'btn btn-secondary'
     object_name ||= format_class_name(attribute_name.to_s, true)
+    html_class ||= "btn btn-secondary #{object_name.parameterize.underscore}_add_button"
 
     # Important 'link_to_add_association"-fact: It goes up two divs, and then adds it to the end. This is why it is wrapped in a div here.
     # If you want to put it in a div yourself for whatever reason, you have to make that wrapping optional.

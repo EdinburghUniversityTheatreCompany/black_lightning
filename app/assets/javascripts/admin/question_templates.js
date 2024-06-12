@@ -3,8 +3,8 @@
 var template_item = null;
 // The type of the items. Either questions or jobs.
 var items_type = null;
-// Store all the items (questions or staffing_jobs) to add.
-var template_items = null;
+// Store all items.
+var global_data = null;
 
 (function () {
   "use strict";
@@ -20,12 +20,25 @@ var template_items = null;
   if(items_type == null || (items_type != 'questions' && items_type != 'jobs')) {alert("'items_type' is null or not 'questions' or 'jobs'. Is it set properly?")};
 
   $(document)
+    // This is the bit where the actual data is inserted.
     .on('cocoon:after-insert', function(e, insertedItem, originalEvent) {
       if (template_item === null) { return; }
 
-      if (items_type == 'questions') {
-        insertedItem.find('[name$="[question_text]"]').val(template_item.question_text);
-        insertedItem.find('[name$="[response_type]"]').val(template_item.response_type);
+      console.log(template_item);
+      console.log(insertedItem);
+
+      // If the type is questions, the added item can either be a question or a notify email.
+      if(items_type == 'questions')
+      {
+        if(insertedItem.hasClass('question'))
+        {
+          insertedItem.find('[name$="[question_text]"]').val(template_item.question_text);
+          insertedItem.find('[name$="[response_type]"]').val(template_item.response_type);
+        }
+        else if (insertedItem.hasClass('email'))
+        {
+          insertedItem.find('[name$="[email]"]').val(template_item.email)
+        }
       }
       else if(items_type == 'jobs')
       {
@@ -33,11 +46,25 @@ var template_items = null;
       }
     })
 
+  // Start inserting the fields
   function loadTemplate() {
+    if(items_type == 'questions')
+    {
+      loadTemplateHelper('question_add_button', global_data.questions);
+      loadTemplateHelper('notify_email_add_button', global_data.notify_emails);
+    }
+    else if(items_type == 'jobs')
+    {
+      loadTemplateHelper('admin_staffing_jobs_add_button', global_data.staffing_jobs);
+    }
+  }
+
+  function loadTemplateHelper(add_fields_button_class, template_items)
+  {
     //TODO: This feels dirty - there must be a better way:
     $.each(template_items, function (index, item) {
       template_item = item;
-      $('.add_fields').first().trigger('click');
+      $('.' + add_fields_button_class).first().trigger('click');
     });
 
     // After adding all the items, set the item back to null so adding a new field will add an empty field.
@@ -60,6 +87,12 @@ var template_items = null;
     $.getJSON(
       templates_base_url + '/' + template_id + '.json',
       function (data) {
+
+        console.log(data);
+        global_data = data;
+
+        var template_items = null;
+
         if (items_type == 'questions') {
           template_items = data.questions;
         }
@@ -72,9 +105,7 @@ var template_items = null;
 
         $('#template_summary').append('<h3>Items</h3>');
 
-        // It's called jobs_list to mirror the staffing jobs template. jobs should be read as questions.
         var items_list = $('<ul id="template_items_list"></ul>');
-
 
         $.each(template_items, function (index, item) {
           var item_value = 'No value assigned';
@@ -98,6 +129,7 @@ var template_items = null;
     );
   }
 
+  // After loading the document, load the template list.
   $(function () {
     $.getJSON(
       templates_base_url,
