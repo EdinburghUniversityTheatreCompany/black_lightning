@@ -21,6 +21,9 @@
 
     <%= f.input :name %>
 
+    <h3>Notify Emails</h3>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :notify_emails, partial_name: 'notify_email_fields') %>
+
     <div id="questions">
       <h3>Questions</h3>
       <%= render('shared/form/md_hints') %>

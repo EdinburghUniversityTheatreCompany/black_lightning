@@ -79,19 +79,23 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   test 'should create' do
     attributes = {
       event_id: @questionnaire.event_id,
-      name: 'Finbar the Viking'
+      name: 'Finbar the Viking',
+      notify_emails_attributes: { '0' => { email: 'alice@testest.test'}, '1' => { email: 'bob@test.test' } }
     }
 
     assert_difference('Admin::Questionnaires::Questionnaire.count') do
       post :create, params: { admin_questionnaires_questionnaire: attributes }
     end
 
-    assert Admin::Questionnaires::Questionnaire.where(name: attributes[:name], show_id: attributes[:show_id])
+    questionnaire = Admin::Questionnaires::Questionnaire.where(name: attributes[:name], event_id: attributes[:event_id]).first
+    assert questionnaire.present?, 'questionnaire was not found after creating.'
 
+    assert_redirected_to admin_questionnaires_questionnaire_path(assigns(:questionnaire))
+
+    assert_equal 2, questionnaire.notify_emails.count, 'Did not attach two notify emails'
     # Assert create cannot add any answers.
     assert(assigns(:questionnaire).answers.none? { |answer| answer.answer == 'Hexagon' })
 
-    assert_redirected_to admin_questionnaires_questionnaire_path(assigns(:questionnaire))
   end
 
   test 'should not create invalid questionnaire' do
@@ -162,6 +166,32 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
     assert_redirected_to admin_questionnaires_questionnaire_path(@questionnaire)
   end
 
+  test 'should submit answer does not send emails without notify specified' do
+    attributes = get_attributes
+
+    assert_no_difference 'ActionMailer::Base.deliveries.count' do
+      perform_enqueued_jobs do
+        put :set_answers, params: { id: @questionnaire, admin_questionnaires_questionnaire: attributes }
+      
+        assert_redirected_to admin_questionnaires_questionnaire_path(@questionnaire)
+      end
+    end
+  end
+
+  test 'should submit answer does send emails when notify is specified' do
+    assert @questionnaire.notify_emails.count > 0, 'The questionnaire has no notify emails. Specify some.'
+
+    attributes = get_attributes
+
+    assert_difference 'ActionMailer::Base.deliveries.count', 2 do
+      perform_enqueued_jobs do
+        put :set_answers, params: { id: @questionnaire, notify: '1', admin_questionnaires_questionnaire: attributes }
+      
+        assert_redirected_to admin_questionnaires_questionnaire_path(@questionnaire)
+      end
+    end
+  end
+
   test 'should not submit invalid answer' do
     attributes = {
       answers_attributes: { '0' => { question_id: nil, answer: 'Testing' } }
@@ -207,8 +237,8 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
       show_id: 0,
       name: 'Finbar the Viking',
       answers_attributes: { '0' => { answer: 'Hexagon', question_id: @questionnaire.questions.first.id } },
-      questions_attributes: {
-        '0' => { question_text: 'Testing', response_type: 'Testing' }
+      questions_attributes: { '0' => { question_text: 'Testing', response_type: 'Testing' },
+      notify_emails_attributes: { '0' => { email: 'alice@test.test' }, '1' => { email: 'bob@test.test' } }
       }
     }
   end

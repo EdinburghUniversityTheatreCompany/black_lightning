@@ -1,0 +1,7 @@
+<%= render '/shared/form/inline_fields_for_template',
+    f: f,
+    div_class_additions: 'email',
+    fields: [
+        { field: f.hidden_field(:id) + f.input(:email) },
+        { field: link_to_remove(f), col_modifier: 'auto' },
+] %>

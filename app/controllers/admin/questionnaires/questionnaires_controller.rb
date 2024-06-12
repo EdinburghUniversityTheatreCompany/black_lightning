@@ -75,7 +75,15 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def set_answers
     respond_to do |format|
       if @questionnaire.update(answer_params)
-        flash[:success] = 'The answers have been sucessfully submitted.'
+        helpers.append_to_flash(:success, 'The answers have been sucessfully submitted.')
+
+        # Send an email to the listed notify_emails that the questionnaire has been updated.
+        if params[:notify] == '1'
+          @questionnaire.notify_emails.each do |email|
+            QuestionnairesMailer.notify(@questionnaire, current_user, email).deliver_later
+          end
+        end
+
         format.html { redirect_to @questionnaire }
         format.json { head :no_content }
       else
@@ -118,7 +126,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   end
 
   def permitted_update_params
-    [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type]]
+    [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type], notify_emails_attributes: [:id, :_destroy, :email]]
   end
 
   def includes_args
