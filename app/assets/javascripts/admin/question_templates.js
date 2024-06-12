@@ -3,7 +3,7 @@
 var template_item = null;
 // The type of the items. Either questions or jobs.
 var items_type = null;
-// Store all items.
+// Store all data for the question_template or staffing_jobs template to be loaded.
 var global_data = null;
 
 (function () {
@@ -23,10 +23,7 @@ var global_data = null;
     // This is the bit where the actual data is inserted.
     .on('cocoon:after-insert', function(e, insertedItem, originalEvent) {
       if (template_item === null) { return; }
-
-      console.log(template_item);
-      console.log(insertedItem);
-
+  
       // If the type is questions, the added item can either be a question or a notify email.
       if(items_type == 'questions')
       {
@@ -61,13 +58,15 @@ var global_data = null;
 
   function loadTemplateHelper(add_fields_button_class, template_items)
   {
-    //TODO: This feels dirty - there must be a better way:
+    // TODO: This feels dirty - there must be a better way.
+    // This loops over every item in the template and clicks the corresponding 'add fields' button.
+    // This then triggers the cocoon:after-insert event (see above) which will insert the data into the fields.
     $.each(template_items, function (index, item) {
       template_item = item;
       $('.' + add_fields_button_class).first().trigger('click');
     });
 
-    // After adding all the items, set the item back to null so adding a new field will add an empty field.
+    // After adding all the items, set the item back to null so adding a new field will add an empty field rather than the data from the last item in the template.
     template_item = null;
   }
 
@@ -76,10 +75,10 @@ var global_data = null;
 
     $('#template_load').off('click', loadTemplate);
 
-    // If selecting blank, reset the current template_items.
+    // If selecting blank, reset the current data to null.
     if (template_id === "") {
       $('#template_summary').empty();
-      template_items = null;
+      global_data = null;
 
       $('#template_load').addClass('disabled');
       return;
@@ -87,42 +86,34 @@ var global_data = null;
     $.getJSON(
       templates_base_url + '/' + template_id + '.json',
       function (data) {
-
-        console.log(data);
         global_data = data;
 
+        // Load the items that will be previewed in the modal when selecting a template.
         var template_items = null;
 
-        if (items_type == 'questions') {
-          template_items = data.questions;
+        if (items_type == 'questions')
+        {
+          template_items = data.questions.map(question => question.question_text);
         }
         else if(items_type == 'jobs')
         {
-          template_items = data.staffing_jobs;
+          template_items = data.staffing_jobs.map(job => job.name);
         }
 
+        // Clear the old summary, readd the header, and add all the current preview items.
         $('#template_summary').empty();
 
         $('#template_summary').append('<h3>Items</h3>');
 
         var items_list = $('<ul id="template_items_list"></ul>');
 
-        $.each(template_items, function (index, item) {
-          var item_value = 'No value assigned';
-
-          if (items_type == 'questions') {
-            item_value = item.question_text;
-          }
-          else if(items_type == 'jobs')
-          {
-            item_value = item.name;
-          }
-
+        $.each(template_items, function (index, item_value) {
           $(items_list).append('<li>' + item_value + '</li>');
         });
 
         $('#template_summary').append(items_list);
 
+        // Enable the load button after the data has been loaded.
         $('#template_load').on('click', loadTemplate);
         $('#template_load').removeClass('disabled');
       }
