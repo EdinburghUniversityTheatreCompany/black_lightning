@@ -283,7 +283,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_10_101949) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["attached_object_type", "attached_object_id"], name: "index_emails_on_attached_object"
-    t.index ["email", "attached_object_id"], name: "index_emails_on_email_and_attached_object_id", unique: true
+    t.index ["email", "attached_object_id", "attached_object_type"], name: "index_emails_on_email_and_attached_object", unique: true
   end
 
   create_table "event_tags", charset: "utf8mb3", force: :cascade do |t|

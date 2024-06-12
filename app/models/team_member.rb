@@ -19,7 +19,7 @@
 #++
 class TeamMember < ActiveRecord::Base
   validates :position, :user, presence: true
-  validates_uniqueness_of :user_id, scope: :teamwork_id
+  validates_uniqueness_of :user_id, scope: [:teamwork_type, :teamwork_id]
   
   default_scope -> { order('position ASC') }
 
