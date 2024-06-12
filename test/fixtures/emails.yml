@@ -1,0 +1,14 @@
+notify_email_one:
+  attached_object_id: 1
+  attached_object_type: Admin::Questionnaires::QuestionnaireTemplate
+  email: alice@template.test
+
+notify_email_two:
+  attached_object_id: 1
+  attached_object_type: Admin::Questionnaires::QuestionnaireTemplate
+  email: bob@template.test
+
+notify_email_three:
+  attached_object_id: 1
+  attached_object_type: Admin::Questionnaires::QuestionnaireTemplate
+  email: charlie@template.test
