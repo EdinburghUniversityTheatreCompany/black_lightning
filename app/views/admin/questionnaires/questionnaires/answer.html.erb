@@ -7,5 +7,15 @@
 
       <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields', display_link_to_add: false) %>
     </div>
+
+    <% if @questionnaire.notify_emails.any? %>
+      <% content_for :extra_form_actions do %>
+        <%= f.button(:submit, 'Submit and Notify', params: { notify: 1 }, class: 'btn-success') if @questionnaire.notify_emails.any? %>
+      <% end %>
+
+      <p class="text-muted">Only use the 'Submit and Notify' button once you want the committee to chek your questionnaire, or you have made significant changes to your questionnaire. Pressing this button multiple times will not make committee check your questionnaire any quicker.</p>
+    <% else %>
+      <p class="text-muted">This questionnaire has no emails attached to notify when the questionnaire is completed. Please let the committee member responsible for checking the questionnaire know when it has been completed.</p>
+    <% end %>
   <% end %>
 <% end %>
