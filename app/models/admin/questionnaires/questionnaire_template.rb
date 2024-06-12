@@ -18,18 +18,21 @@ class Admin::Questionnaires::QuestionnaireTemplate < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
 
   has_many :questions, as: :questionable
+  has_many :notify_emails
+  has_many :notify_emails, class_name: 'Email', as: :attached_object, dependent: :destroy
 
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
+  accepts_nested_attributes_for :notify_emails, reject_if: :all_blank, allow_destroy: true
 
   def as_json(options = {})
-    defaults = { include: [:questions] }
+    defaults = { include: [:questions, :notify_emails] }
 
     options = merge_hash(defaults, options)
 
     super(options)
   end
 
-  def self.ransackable_attributes(auth_object = nil)
+def self.ransackable_attributes(auth_object = nil)
     %w[name]
   end
 

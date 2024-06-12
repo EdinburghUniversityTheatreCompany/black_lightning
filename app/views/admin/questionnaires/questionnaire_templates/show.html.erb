@@ -1,4 +1,6 @@
-<% fields = {} %>
+<% fields = {
+  emails: @questionnaire_template.notify_emails.pluck(:email).to_sentence || 'No emails set',
+} %>
 
 <% @questionnaire_template.questions.each do |question| %>
   <% fields[question.id] = { type: 'content', content: render('/shared/question_template_show', question: question) } %>

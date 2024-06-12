@@ -23,7 +23,7 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   end
 
   def permitted_params
-    [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type]]
+    [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type], notify_emails_attributes: [:id, :_destroy, :email]]
   end
 
   def edit_title
