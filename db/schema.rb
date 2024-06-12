@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.0].define(version: 2024_06_01_100725) do
+ActiveRecord::Schema[7.0].define(version: 2024_06_10_101949) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -91,7 +91,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_01_100725) do
     t.datetime "updated_at", precision: nil, null: false
     t.integer "state", default: 0
     t.bigint "maintenance_attendance_id"
-    t.boolean "converted_from_staffing_debt", default: false
+    t.boolean "converted_from_staffing_debt", default: false, null: false
     t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
   end
 
@@ -168,7 +168,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_01_100725) do
     t.integer "admin_staffing_job_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.boolean "converted_from_maintenance_debt", default: false
+    t.boolean "converted_from_maintenance_debt", default: false, null: false
     t.bigint "state", default: 0, null: false
   end
 
@@ -274,6 +274,16 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_01_100725) do
     t.datetime "updated_at", precision: nil, null: false
     t.string "description"
     t.index ["priority", "run_at"], name: "delayed_jobs_priority"
+  end
+
+  create_table "emails", charset: "utf8mb3", force: :cascade do |t|
+    t.string "email"
+    t.string "attached_object_type", null: false
+    t.bigint "attached_object_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["attached_object_type", "attached_object_id"], name: "index_emails_on_attached_object"
+    t.index ["email", "attached_object_id"], name: "index_emails_on_email_and_attached_object_id", unique: true
   end
 
   create_table "event_tags", charset: "utf8mb3", force: :cascade do |t|
