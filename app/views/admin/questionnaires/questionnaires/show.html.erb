@@ -1,6 +1,6 @@
 <% fields = {
   event: get_link(@questionnaire.event, :show),
-  emails: @questionnaire.notify_emails.pluck(:email).to_sentence || 'No emails set',
+  notify_emails: @questionnaire.notify_emails.pluck(:email).to_sentence.presence || 'No notify emails set',
   questions_and_answers: { type: 'content', header: 'Questions', content: render('/shared/questions_and_answers', answers: @questionnaire.answers) }
 } %>
 

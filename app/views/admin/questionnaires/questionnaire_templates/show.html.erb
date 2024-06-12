@@ -1,5 +1,5 @@
 <% fields = {
-  emails: @questionnaire_template.notify_emails.pluck(:email).to_sentence || 'No emails set',
+  notify_emails: @questionnaire_template.notify_emails.pluck(:email).to_sentence.presence || 'No notify emails set',
 } %>
 
 <% @questionnaire_template.questions.each do |question| %>
