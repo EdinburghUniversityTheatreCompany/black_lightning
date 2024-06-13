@@ -59,6 +59,24 @@ module ApplicationHelper
     flash[key] = flash[key].uniq
   end
 
+  # Turns all flash messages into arrays, merges 'alerts' into 'errors', and merges 'notices' in to 'successes'.
+  def format_flash
+    # Convert each flash type into an array if it is not already.
+    # The to_h is to make a local copy so we can assign to the real flash.
+    # If you do not do this, it would say you cannot assign during iteration
+    # and because flash is not a real hash, it does not have all methods and you
+    # cannot perform in-place operations.
+    flash.to_h.each{ |key, value| flash[key] = Array(value) }
+
+    # Alert is just an alias for error, so merge them here.
+    flash[:error] += flash[:alert] if flash[:alert].present?
+    flash.delete(:alert)
+
+    # Similarly for success
+    flash[:success] += flash[:notice] if flash[:notice].present?
+    flash.delete(:notice)
+  end
+
   def merge_hash(a, b)
     return a.merge(b) do |_key, oldval, newval|
       # http://stackoverflow.com/a/11171921
