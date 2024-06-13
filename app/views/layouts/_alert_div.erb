@@ -1,17 +1,60 @@
 <% hide_alert = @hide_alert if hide_alert.nil? %>
 
-<div class="container-fluid">
-  <% if hide_alert != true %>
-    <% flash.each do |key, message| %>
-      <% if message.is_a? Enumerable %>
-        <% message.each do |inner_message| %>
-          <%= render '/layouts/alert_message', key: key, message: inner_message %>
-        <% end %>
-      <% else %>
-        <%= render '/layouts/alert_message', key: key, message: message %>
+<% if hide_alert != true %>
+
+  <%- # Generic JavaScript code to help show toasts. This is called in alert_message. %>
+  <script type="text/javascript">
+    async function showToast(alert_type, message) {
+=      await Toast.fire({
+        icon: alert_type,
+        title: message
+      }) 
+    }
+
+    async function showPersistentToast (alert_type, message) {
+      await PersistentToast.fire({
+        icon: alert_type,
+        title: message,
+        position: 'top'
+      })
+    }
+
+    async function showError (message) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Oops...',
+        html: message,
+        allowOutsideClick: () => {
+          const popup = Swal.getPopup()
+          popup.classList.remove('swal2-show')
+          setTimeout(() => {
+            popup.classList.add('animate__animated', 'animation__shake')
+          })
+          setTimeout(() => {
+            popup.classList.remove('animate__animated', 'animation__shake')
+          }, 500)
+          return false
+        }
+      })
+    }
+  </script>
+
+  <% # Standardise flash before rendering, and perform any necessary merges. %>
+  <% format_flash %>
+
+  <% # Render each flash message by type. %>
+  <script type="text/javascript">
+    async function showAlerts() 
+    {
+      <% # Sort the flash to start with :error, then go on to the persisten notifications, and end with success and everything else (INFINITY rank). %>
+      <% flash.sort_by { |key, _| [:error, :info, :warning, :success].index(key.to_sym) || Float::INFINITY}.each do |key, messages| %>
+        <%= render '/layouts/alert_message', key: key, messages: messages %>
       <% end %>
-    <% end %>
-  <% end %>
-</div>
+    }
+
+    showAlerts();
+  </script>
+
+<% end %>
 
 <% flash.discard %>

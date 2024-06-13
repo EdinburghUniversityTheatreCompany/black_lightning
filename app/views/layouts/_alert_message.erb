@@ -1,42 +1,18 @@
 <% alert_type = swal_alert_info(key) %>
-<% if message == 'You need to log in or sign up before continuing.' then alert_type='info' end %>
-<% if message == 'Invalid email or password.' then alert_type='error' end %>
-<% if message == 'Logged in successfully.' || message == 'Logged out successfully.' then alert_type='success' end %>
-<% # Link in alert should have the 'alert-link' class on their <a>'s to automatically colour match them. %>
-<% # Same goes for alert-heading on a heading.%>
+
+<% if messages.count <= 1 
+    message = messages.first 
+  else
+    message = render_as_list(messages, 'ul')
+  end %>
+
+<% # Awaits make the code wait until the alert has disappeared before continuing. If you do not do this, only one alert will be visible. %>
+<% # The surrounding <script> tag and async function is in the alert_div partial. If you use this elsewhere, make sure to wrap calls to the partial in a script tag and async function. %>
 <% case alert_type %>
-<% when 'success','info' %>
-<script type="text/javascript">
-  Toast.fire({
-    icon: '<%= alert_type %>',
-    title: '<%= " #{message}" %>'
-  })
-</script>
-<% when 'warning' %>
-<script type="text/javascript">
-  PersistentToast.fire({
-    icon: '<%= alert_type %>',
-    title: '<%= " #{message}" %>',
-    position: 'top'
-  })
-</script>
-<% when 'error' %>
-<script type="text/javascript">
-  Swal.fire({
-    icon: 'error',
-    title: 'Oops...',
-    text: '<%= " #{message}" %>',
-    allowOutsideClick: () => {
-      const popup = Swal.getPopup()
-      popup.classList.remove('swal2-show')
-      setTimeout(() => {
-        popup.classList.add('animate__animated', 'animation__shake')
-      })
-      setTimeout(() => {
-        popup.classList.remove('animate__animated', 'animation__shake')
-      }, 500)
-      return false
-    }
-  })
-</script>
+  <% when 'success' %>
+      await showToast('<%= alert_type %>', '<%= " #{message}".html_safe %>');
+  <% when 'error' %>
+      await showError('<%= " <div class=\"text-justify\">#{message}</div>".html_safe %>');
+  <% else # Meant for info, but also used as a catch in case there is no flash category.%>
+      await showPersistentToast('<%= alert_type %>', '<%= " #{message}".html_safe %>');
 <% end %>
