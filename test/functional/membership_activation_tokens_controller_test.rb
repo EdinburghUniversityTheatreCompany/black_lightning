@@ -47,7 +47,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['This token belongs to a new user, but you are already logged in. You are not allowed to activate this account.'], flash[:error]
+    assert_match 'This token belongs to a new user, but you are already logged in. You are not allowed to activate this account.', response.body
   end
 
   test 'cannot get activate when logged in as the wrong user' do
@@ -58,7 +58,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['This token belongs to a different user. You are not allowed to activate this account.'], flash[:error]
+    assert_match 'This token belongs to a different user. You are not allowed to activate this account.', response.body
   end
 
   test 'cannot get activate when the user that the token belongs to is logged in as member' do
@@ -70,7 +70,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['You have already activated your account.'], flash[:error]
+    assert_match 'You have already activated your account.', response.body
   end
 
   test 'cannot submit when not logged in but the token belongs to an user' do
@@ -79,7 +79,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     get :activate, params: { id: @token }
 
     assert_response 403
-    assert_equal ['This token belongs to an existing user, but you are not logged in. Please log in and try again.'], flash[:error]
+    assert_match 'This token belongs to an existing user, but you are not logged in. Please log in and try again.', response.body
   end
 
   test 'submit for new member without being signed in' do

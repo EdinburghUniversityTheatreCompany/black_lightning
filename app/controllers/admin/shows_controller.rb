@@ -32,9 +32,9 @@ class Admin::ShowsController < Admin::GenericEventsController
 
     if @show.maintenance_debt_start.present?
       @show.create_maintenance_debts
-      flash[:notice] = 'Maintenance obligations created.'
+      helpers.append_to_flash(:success, 'Maintenance obligations created.')
     else
-      flash[:notice] = 'Could not create Maintenance obligations because the start date has not been set yet.'
+      helpers.append_to_flash(:error, 'Could not create Maintenance obligations because the start date has not been set yet.')
     end
 
     redirect_to admin_show_path(@show)
@@ -47,13 +47,13 @@ class Admin::ShowsController < Admin::GenericEventsController
     number_of_slots = params[:create_show_staffing_debts].try(:[], :number_of_slots)
   
     if number_of_slots.nil?
-      flash[:notice] = 'You have to specify the amount of Staffing slots you want to create.'
+      helpers.append_to_flash(:error, 'You have to specify the amount of Staffing slots you want to create.')
     elsif @show.staffing_debt_start.present?
       amount = number_of_slots.first.to_i
       @show.create_staffing_debts(amount)
-      flash[:notice] = "#{helpers.pluralize(amount, 'Staffing obligation slot')} created for every team member."
+      helpers.append_to_flash(:success, "#{helpers.pluralize(amount, 'Staffing obligation slot')} created for every team member.")
     else
-      flash[:notice] = 'Could not create Staffing obligations because the start date has not been set yet.'
+      helpers.append_to_flash(:error, 'Could not create Staffing obligations because the start date has not been set yet.')
     end
 
     redirect_to admin_show_path(@show)

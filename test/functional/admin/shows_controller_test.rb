@@ -139,7 +139,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     assert_enqueued_emails 1
 
-    assert_equal ["The show was successfully updated, but #{users.first.name} is in debt."], flash[:notice]
+    assert_equal "The show was successfully updated, but #{users.first.name} is in debt.", flash[:success].first
     assert_redirected_to admin_show_path(assigns(:show))
   end
 
@@ -181,7 +181,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to admin_show_path(@show)
-    assert_includes flash[:notice], 'Maintenance obligations created'
+    assert_equal ['Maintenance obligations created.'], flash[:success] 
   end
 
   # The authorize is not tested because that's a bit annoying, but make sure
@@ -192,7 +192,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     post :create_maintenance_debts, params: { id: @show.slug }
 
     assert_redirected_to admin_show_path(@show)
-    assert_includes flash[:notice], 'Could not create Maintenance obligations'
+    assert_equal ["Could not create Maintenance obligations because the start date has not been set yet."], flash[:error]
   end
 
   test 'should create staffing debts' do
@@ -203,23 +203,27 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to admin_show_path(@show)
-    assert_includes flash[:notice], '2 Staffing obligation slots created'
+    assert_equal ["2 Staffing obligation slots created for every team member."], flash[:success]
   end
 
   # The authorize is not tested because that's a bit annoying, but make sure
   # that you check that the user can actually create staffing debts!
-  test 'should not create staffing debts when the requirements are not met' do
-    @show = FactoryBot.create(:show, staffing_debt_start: nil)
+  test 'should not create staffing debts when the amount is not specified' do
+    @show = FactoryBot.create(:show)
 
     post :create_staffing_debts, params: { id: @show.slug }
 
     assert_redirected_to admin_show_path(@show)
-    assert_includes flash[:notice], 'specify the amount'
+    assert_equal ["You have to specify the amount of Staffing slots you want to create."], flash[:error]
+  end
+
+  test 'should not create staffing debts when the start date is not specified' do
+    @show = FactoryBot.create(:show, staffing_debt_start: nil)
 
     post :create_staffing_debts, params: { id: @show.slug, create_show_staffing_debts: { number_of_slots: 2 } }
 
     assert_redirected_to admin_show_path(@show)
-    assert_includes flash[:notice], 'Could not create Staffing obligations because the start date has not been set yet.'
+    assert_equal ['Could not create Staffing obligations because the start date has not been set yet.'], flash[:error]
   end
 
   test 'convert to season' do
