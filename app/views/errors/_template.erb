@@ -1,14 +1,17 @@
-<% @hide_alert = true %>
-
 <div style="text-align: center;">
-  <%= image_tag "HAL9000.png", style: "width: 250px;" %>
-  <p style="margin-top:20px;">
-    <b style="font-size: large; color: #dc143c;">
-      <%= error_header %>
-    </b>
-  </p>
+  <%= image_tag "HAL9000.png", style: "width: 250px;", class: 'mb-3' %>
 
-  <%= render '/layouts/alert_div', hide_alert: false %>
+  <h3 class="text-danger"><b><%= error_header %></b></h3>
 
   <%= yield %>
+
+  <div class="alert alert-danger text-justify">
+    <h4><b>Errors:</b></h4>
+    <%= @error_summary %>
+    
+    <% if @exception_backtrace.present? && current_user.has_role?(:admin) %>
+      <h4><b>Backtrace:</b></h4>
+      <%= render_as_list(@exception_backtrace, 'ol') %>
+    <% end %>
+  </div>
 </div>

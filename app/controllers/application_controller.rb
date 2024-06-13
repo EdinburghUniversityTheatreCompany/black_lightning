@@ -47,11 +47,13 @@ class ApplicationController < ActionController::Base
     Honeybadger.notify(exception, context: {
       user_email: current_user&.email,
       user_name: current_user&.name_or_email
-    })
+    }) if Rails.env.production?
 
     Rails.logger.warn 'Caught error and redirected to 500'
     Rails.logger.error exception
     Rails.logger.error exception.backtrace
+
+    @exception_backtrace = exception.backtrace
 
     render_error_page(exception, 'errors/500', 500)
   end
@@ -78,6 +80,7 @@ class ApplicationController < ActionController::Base
     messages = [exception.message.gsub(Rails.root.to_s, '')]
     messages += flash[:error] if flash[:error].present?
 
+    @error_summary = render_as_list(messages, 'ul')
     @error_type = exception.class
 
     # Errors and alerts are already rendered in the page body using the @error_summary, so we do not need to also render them as alerts.
@@ -86,7 +89,7 @@ class ApplicationController < ActionController::Base
 
     respond_to do |type|
       type.html { render template: template, status: status_code, layout: helpers.current_environment(request.fullpath) }
-      type.json { render json: { error: flash[:error] }, status: status_code }
+      type.json { render json: { error: messages }, status: status_code }
       type.all  { render body: nil, status: status_code }
     end
   end
