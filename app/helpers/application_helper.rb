@@ -11,29 +11,15 @@ module ApplicationHelper
     return word
   end
 
-  def html_alert_info(key)
-    case key.to_sym
-    when :alert, :error
-      return 'alert-danger', 'fas fa-exclamation-circle'
-    when :success
-      return 'alert-success', 'fas fa-check-circle'
-    when :notice
-      return 'alert-info', 'fas fa-info-circle'
-    else
-      return 'alert-info', 'fas fa-info-circle'
-    end
-  end
-
   def swal_alert_info(key)
     case key.to_sym
-    when :error
+    when :error, :alert
       return 'error'
-    when :alert
-      return 'warning'
-    when :success
+    # Notice is only really used by devise, and only for success messages.
+    when :success, :notice
       return 'success'
-    when :notice
-      return 'info'
+    when :warning
+      return 'warning'
     else
       return 'info'
     end

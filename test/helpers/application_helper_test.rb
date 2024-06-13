@@ -19,12 +19,14 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal 'Yes', bool_text([])
   end
 
-  test 'html_alert_info' do
-    assert_equal ['alert-danger', 'fas fa-exclamation-circle'], html_alert_info(:alert)
-    assert_equal ['alert-danger', 'fas fa-exclamation-circle'], html_alert_info(:error)
-    assert_equal ['alert-success', 'fas fa-check-circle'], html_alert_info(:success)
-    assert_equal ['alert-info', 'fas fa-info-circle'], html_alert_info(:notice)
-    assert_equal ['alert-info', 'fas fa-info-circle'], html_alert_info(:pineapple)
+  test 'swal_alert_info' do
+    assert_equal 'error', swal_alert_info(:alert)
+    assert_equal 'error', swal_alert_info(:error)
+    assert_equal 'success', swal_alert_info(:success)
+    assert_equal 'success', swal_alert_info(:notice)
+    assert_equal 'warning', swal_alert_info(:warning)
+    assert_equal 'info',  swal_alert_info(:info)
+    assert_equal 'info',  swal_alert_info(:pineapple), 'Info is not the default value for unspecified keys'
   end
 
   test 'current environment should return admin for admin pages' do
