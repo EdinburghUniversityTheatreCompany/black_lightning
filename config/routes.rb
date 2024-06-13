@@ -255,6 +255,14 @@ ChaosRails::Application.routes.draw do
       resources :questionnaire_templates
     end
 
+    get 'tests', to: 'tests#index'
+    namespace :tests do
+      get 'test_alerts/:type',action: 'test_alerts', as: 'test_alerts'
+      get 'test_404'
+      get 'test_500'
+      get 'test_access_denied'
+    end
+
     resources :complaints, except: [:new, :create] do
       get 'new', to: redirect('/complaints/new')
     end
@@ -327,10 +335,6 @@ ChaosRails::Application.routes.draw do
     !request.path.starts_with?('/rails/active_storage') && !request.path.starts_with?('/assets')
   }
 
-  # Test route
-  if Rails.env.test? || Rails.env.development?
-    get 'shows/test_report_500', to: 'shows#test_report_500'
-  end
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

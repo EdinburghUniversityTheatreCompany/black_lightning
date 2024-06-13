@@ -63,6 +63,10 @@ class Ability
       # They can give themselves a role with the permission enabled if they want it.
       cannot :add_non_members, Event
 
+      # Can view all the tests, except for the access_denied action, because that is the point.
+      can :manage, :tests
+      cannot :access_denied, :tests
+  
       # To override restrictions if the admin has the appropriate role.
       set_permissions_based_on_grid(user)
 
