@@ -264,7 +264,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
     assert Show.where(name: proposal.show_title).any?
     assert_redirected_to admin_proposals_proposal_path(proposal)
-    assert_includes flash[:notice].first, 'is queued to be converted'
+    assert_includes flash[:success].first, 'is queued to be converted'
   end
 
   test 'should not convert when the proposal has not been approved' do

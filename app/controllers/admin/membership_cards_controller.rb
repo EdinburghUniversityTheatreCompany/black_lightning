@@ -21,7 +21,7 @@ class Admin::MembershipCardsController < AdminController
   # POST /admin/membership_card
   ##
   def create
-    flash[:notice] = 'Membership Card successfully created.'
+    helpers.append_to_flash(:success, 'Membership Card successfully created.')
 
     redirect_to admin_membership_card_path(@card)
   end

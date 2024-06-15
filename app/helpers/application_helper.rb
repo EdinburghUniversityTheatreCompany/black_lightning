@@ -11,29 +11,15 @@ module ApplicationHelper
     return word
   end
 
-  def html_alert_info(key)
-    case key.to_sym
-    when :alert, :error
-      return 'alert-danger', 'fas fa-exclamation-circle'
-    when :success
-      return 'alert-success', 'fas fa-check-circle'
-    when :notice
-      return 'alert-info', 'fas fa-info-circle'
-    else
-      return 'alert-info', 'fas fa-info-circle'
-    end
-  end
-
   def swal_alert_info(key)
     case key.to_sym
-    when :error
+    when :error, :alert
       return 'error'
-    when :alert
-      return 'warning'
-    when :success
+    # Notice is only really used by devise, and only for success messages.
+    when :success, :notice
       return 'success'
-    when :notice
-      return 'info'
+    when :warning
+      return 'warning'
     else
       return 'info'
     end
@@ -57,6 +43,24 @@ module ApplicationHelper
     end
 
     flash[key] = flash[key].uniq
+  end
+
+  # Turns all flash messages into arrays, merges 'alerts' into 'errors', and merges 'notices' in to 'successes'.
+  def format_flash
+    # Convert each flash type into an array if it is not already.
+    # The to_h is to make a local copy so we can assign to the real flash.
+    # If you do not do this, it would say you cannot assign during iteration
+    # and because flash is not a real hash, it does not have all methods and you
+    # cannot perform in-place operations.
+    flash.to_h.each{ |key, value| flash[key] = Array(value) }
+
+    # Alert is just an alias for error, so merge them here.
+    flash[:error] += flash[:alert] if flash[:alert].present?
+    flash.delete(:alert)
+
+    # Similarly for success
+    flash[:success] += flash[:notice] if flash[:notice].present?
+    flash.delete(:notice)
   end
 
   def merge_hash(a, b)

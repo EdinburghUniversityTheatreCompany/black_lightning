@@ -1,0 +1,20 @@
+<h3>Tests</h3>
+
+<h4>Alert Tests</h4>
+<div class="btn-grid">
+    <%= link_to 'Test All Alerts', admin_tests_test_alerts_path(type: 'all'), class: 'btn btn-primary' %>
+    <%= link_to 'Test Error Alerts', admin_tests_test_alerts_path(type: 'error'), class: 'btn btn-danger' %>
+    <%= link_to 'Test Success Alerts', admin_tests_test_alerts_path(type: 'success'), class: 'btn btn-success' %>
+    <%= link_to 'Test Info Alerts', admin_tests_test_alerts_path(type: 'info'), class: 'btn btn-info' %>
+    <%= link_to 'Test Warning Alerts', admin_tests_test_alerts_path(type: 'warning'), class: 'btn btn-warning' %>
+</div>
+These buttons redirect back to this page, but with test Alerts.
+
+<h4>Error Page Tests</h4>
+<div class="btn-grid">
+    <%= link_to 'Test 404', admin_tests_test_404_path, class: 'btn btn-secondary' %>
+    <%= link_to 'Test 500', admin_tests_test_500_path, class: 'btn btn-secondary' %>
+    <%= link_to 'Test Access Denied', admin_tests_test_access_denied_path, class: 'btn btn-secondary' %>
+</div>
+
+<p>Do not forget you can access the mailer previews over at <a href="/rails/mailers">rails/mailers<a>.</p>

@@ -8,8 +8,7 @@ class MembershipActivationTokensController < ApplicationController
     @user = get_user
 
     if current_user&.has_role?('Member')
-      flash[:error] = 'You have already activated your account.'
-      raise(CanCan::AccessDenied, flash[:error])
+      raise(CanCan::AccessDenied, 'You have already activated your account.')
     end
   end
 
@@ -58,20 +57,20 @@ class MembershipActivationTokensController < ApplicationController
     elsif current_user.nil? && @membership_activation_token.user.present? && @membership_activation_token.user.consented.blank?
       return @membership_activation_token.user
     elsif current_user.present? && @membership_activation_token.user.nil?
-      flash[:error] = 'This token belongs to a new user, but you are already logged in. You are not allowed to activate this account.'
+      error_message =  'This token belongs to a new user, but you are already logged in. You are not allowed to activate this account.'
     # The user is signed in but the token is not for them. Show an error.
     elsif current_user.present? && @membership_activation_token.user.present? && current_user != @membership_activation_token.user
-      flash[:error] = 'This token belongs to a different user. You are not allowed to activate this account.'
+      error_message =  'This token belongs to a different user. You are not allowed to activate this account.'
     # If the user is not signed in, but the token has a user, and that user has consented, they have signed in
     # recently enough that they should know their password and be able to sign in, or at least request a reset.
     elsif current_user.nil? && @membership_activation_token.user.present? && @membership_activation_token.user.consented
-      flash[:error] = 'This token belongs to an existing user, but you are not logged in. Please log in and try again.'
+      error_message =  'This token belongs to an existing user, but you are not logged in. Please log in and try again.'
     else
-      flash[:error] = 'An unknown error occurred. You are not allowed to activate this account.'
+      error_message =  'An unknown error occurred. You are not allowed to activate this account.'
     end
 
     # If we have not returned yet, that means there was an error.
-    raise(CanCan::AccessDenied, flash[:error])
+    raise(CanCan::AccessDenied, error_message)
   end
 
   def user_params
