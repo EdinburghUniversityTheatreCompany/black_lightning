@@ -10,5 +10,4 @@ class ChaosRails::ScaffoldGenerator < Rails::Generators::ScaffoldGenerator
 
   remove_hook_for :resource_route
   remove_hook_for :scaffold_controller
-  remove_hook_for :assets
 end

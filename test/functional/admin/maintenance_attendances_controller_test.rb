@@ -67,15 +67,8 @@ class Admin::MaintenanceAttendancesControllerTest < ActionController::TestCase
   end
 
   test 'should destroy maintenance_attendance' do
-    p @maintenance_attendance
-    p @maintenance_attendance.user_id
-    p @maintenance_attendance.user
-
     assert_difference('MaintenanceAttendance.count', -1) do
       delete :destroy, params: { id: @maintenance_attendance }
-
-      #p flash
-      p response.body
     end
 
     assert_redirected_to admin_maintenance_attendances_url

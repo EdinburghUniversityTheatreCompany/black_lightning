@@ -72,7 +72,7 @@ class AttachmentsControllerTest < ActionController::TestCase
     
     question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: 'File')
     attachment = question.answers.first.attachments.first
-    attachment.save(access_level: 1)
+    attachment.update(access_level: 1)
 
     assert_not_nil attachment
 
@@ -89,9 +89,11 @@ class AttachmentsControllerTest < ActionController::TestCase
 
     question = FactoryBot.create(:question, questionable: proposal, answered: true, response_type: 'File')
     attachment = question.answers.first.attachments.first
-    attachment.save(access_level: 1)
+    attachment.update(access_level: 1)
 
     assert_not_nil attachment
+
+    assert_equal 1, attachment.access_level, 'The attachment does not have attachment level 1, so the user will not be able to see it.'
 
     get :file, params: { slug: attachment.name }
 
