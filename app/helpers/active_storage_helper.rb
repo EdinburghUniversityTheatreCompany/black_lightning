@@ -26,10 +26,21 @@ module ActiveStorageHelper
 
   def get_file_attached_hint(file)
     # nil because the message next to the button also displays 'No file chosen'
-    if file.attached?
+    if file.attached? 
       filename = file.filename.to_s
 
-      return "Current file: #{link_to filename, url_for(file)}".html_safe unless filename.starts_with?(PREFIX) 
+      # Don't return if the attached image is a default.
+      return if filename.starts_with?(PREFIX) 
+
+      begin
+        filename = link_to(filename, url_for(file))
+      rescue 
+        # This sometimes fails when the record is very new and has not finished processing
+        # with the error: ActionView::Template::Error: Cannot get a signed_id for a new record
+        # In this case, keep the filename as a name instead of a link.
+      end
+
+      return "Current file: #{filename}".html_safe 
     end
   end
 
