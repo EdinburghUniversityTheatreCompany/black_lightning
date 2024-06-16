@@ -64,6 +64,20 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal flash[:error], %w[Viking Donkey]
   end
 
+
+  test 'merge flash notice and alert when error and success do not exist' do
+    flash[:notice] = 'Pineapple'
+    flash[:alert] = 'Hexagon'
+
+    format_flash
+
+    assert_nil flash[:notice]
+    assert_nil flash[:alert]
+
+    assert_equal ['Pineapple'], flash[:success]
+    assert_equal ['Hexagon'], flash[:error]
+  end
+
   test 'merge hash' do
     a = {
       ingredients: [:pineapple],
