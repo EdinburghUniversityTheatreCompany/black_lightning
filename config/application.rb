@@ -62,9 +62,9 @@ module ChaosRails
 
     config.active_storage.variant_processor = :vips
 
-    if Rails.application.secrets.honeybadger
+    if Rails.application.credentials.try(:honeybadger).try(Rails.env.to_sym).present?
       Honeybadger.configure do |config|
-        config.api_key = Rails.application.secrets.honeybadger[:api_key]
+        config.api_key = Rails.application.credentials[:honeybadger][Rails.env.to_sym][:api_key]
       end
     end
 

@@ -82,8 +82,8 @@ Rails.application.configure do
     address: 'smtp.mailersend.net',
     port: 587,
     domain: 'notify.bedlamtheatre.co.uk',
-    user_name: Rails.application.secrets.mailsender[:user],
-    password: Rails.application.secrets.mailsender[:password],
+    user_name: Rails.application.credentials[:mailsender][Rails.env.to_sym][:user],
+    password: Rails.application.credentials[:mailsender][Rails.env.to_sym][:password],
     authentication: :login,
     enable_starttls_auto: true
   }
