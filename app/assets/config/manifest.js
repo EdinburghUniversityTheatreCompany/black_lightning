@@ -1,5 +1,6 @@
 // RAILS 6: JS is no longer handled by sprockets, according to https://github.com/rails/sprockets/blob/master/UPGRADING.md#manifestjs
 //= link application.js
+//= link admin.css
 
 //= link_tree ../images
 //= link_tree ../fonts
