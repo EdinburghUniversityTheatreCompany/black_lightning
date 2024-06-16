@@ -3,7 +3,7 @@ server 'bdlm-eusa-ed-ac-uk.han-boa.ts.net', roles: %w(web app db), user: fetch(:
 set :stage, :uoe
 set :deploy_to, '/srv/black_lightning'
 
-set :rvm_ruby_string, '2.3.3'
+set :rvm_ruby_string, '3.1.2@blacklightning'
 set :rvm_type, :system
 set :rvm_path, '/usr/local/rvm'
 
