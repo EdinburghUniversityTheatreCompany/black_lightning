@@ -18,6 +18,10 @@ ChaosRails::Application.routes.draw do
   #   post 'users/reactivate/stripe', to: 'registrations#reactivate_with_stripe', as: :reactivate_user_stripe
   # end
 
+  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
+  # Can be used by load balancers and uptime monitors to verify that the app is live.
+  get "up" => "rails/health#show", as: :rails_health_check
+
   resources :events,      only: [:index]
   resources :shows,       only: [:index, :show]
   resources :workshops,   only: [:index, :show]
