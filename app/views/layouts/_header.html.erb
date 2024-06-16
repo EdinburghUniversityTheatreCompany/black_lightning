@@ -37,7 +37,13 @@
 							<% else %>
 								<% # Render normal link %>
 								<li class="nav-item <%= "#{navbar_item[:item_class]}"%>">
-									<%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: "nav-link mx-1 ms-0-lg #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]} ") %>
+									<% navbar_item_class = "nav-link mx-1 ms-0-lg #{navbar_item[:link_class].presence || 'bedlam-nav-text'} #{' active' if @current_path == navbar_item[:path]}" %>
+									
+									<% if navbar_item[:method].blank? || navbar_item[:method] == :get %>
+										<%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: navbar_item_class) %>
+									<% else %>
+										<%= button_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: navbar_item_class) %>
+									<% end %>
 								</li>
 							<% end %>
 						</div>

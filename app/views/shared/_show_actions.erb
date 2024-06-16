@@ -1,7 +1,7 @@
 <% destroy_link_params = {} if destroy_link_params.nil? %>
 <% index_link_params = {} if index_link_params.nil? %>
 
-<div>
+<div class="btn-group">
   <%= get_link object, :edit, html_class: 'btn btn-primary' %>
 
   <%- # Allows passing a whole replacement button (or '') to destroy_link_params to replace the button. %>

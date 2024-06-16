@@ -2,5 +2,5 @@
 <% sign_up_text = '<i class="fas fa-edit" aria-hidden=”true”></i> Sign Up'.html_safe %>
 
 <% date = l job.staffable.start_time, format: :long %>
-<%= link_to sign_up_text, admin_staffing_sign_up_path(job), class: "btn btn-secondary staffing-sign-up", method: :put, 
+<%= button_to sign_up_text, admin_staffing_sign_up_path(job), class: "btn btn-secondary staffing-sign-up", method: :put, 
             data: { title: "Confirm Staffing", confirm: "Confirm staffing as #{job.name} for #{job.staffable.show_title} on #{date}", job_id: job.id } %>
