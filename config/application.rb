@@ -37,7 +37,7 @@ module ChaosRails
     # These settings can be overridden in specific environments using the files
     # in config/environments, which are processed later.
     #
-    config.time_zone = "London"
+    config.time_zone = "Edinburgh"
     config.eager_load_paths << "#{config.root}/lib"
     Rails.autoloaders.main.ignore(config.root.join('lib/generators'))
 
