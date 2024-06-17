@@ -4,12 +4,10 @@ class AddStateToStaffingDebts < ActiveRecord::Migration[7.0]
 
     Admin::StaffingDebt.all.each do |staffing_debt|
       if staffing_debt.forgiven
-        staffing_debt.state = :forgiven
+        staffing_debt.update_columns(state: :forgiven)
       else
-        staffing_debt.state = :normal
+        staffing_debt.update_columns(state: :normal)
       end
-
-      staffing_debt.save(validate: false)
     end
 
     rename_column :admin_staffing_debts, :converted, :converted_from_maintenance_debt
