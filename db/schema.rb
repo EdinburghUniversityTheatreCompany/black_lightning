@@ -168,7 +168,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_10_101949) do
     t.integer "admin_staffing_job_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.boolean "converted_from_maintenance_debt", default: false, null: false
+    t.boolean "converted_from_maintenance_debt", default: false
     t.bigint "state", default: 0, null: false
   end
 
@@ -564,7 +564,7 @@ ActiveRecord::Schema[7.0].define(version: 2024_06_10_101949) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.string "teamwork_type"
-    t.index ["teamwork_id", "user_id"], name: "index_team_members_on_teamwork_id_and_user_id", unique: true
+    t.index ["teamwork_id", "teamwork_type", "user_id"], name: "index_team_members_on_teamwork_and_user", unique: true
     t.index ["teamwork_id"], name: "index_team_members_on_teamwork_id"
     t.index ["teamwork_type"], name: "index_team_members_on_teamwork_type"
     t.index ["user_id"], name: "index_team_members_on_user_id"
