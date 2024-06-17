@@ -1,9 +1,9 @@
-<%= simple_horizontal_form_for :dropzone_pictures do |d| %>
+<%= simple_fields_for :dropzone_pictures do |d| %>
   <%= render 'shared/form/dropzone/dropzone', d: d %>
 
   <div class="mb-3"></div>
 
-  <%= d.input:access_level, collection: Picture::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false, selected: Picture.column_defaults['access_level'] %>
+  <%= d.input :access_level, collection: Picture::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false, selected: Picture.column_defaults['access_level'] %>
 
   <%= d.input(:picture_tag_ids, collection: PictureTag.accessible_by(current_ability), as: :check_boxes, label: 'Tags', label_method: ->(tag) { get_link(tag, :show, link_text: tag.name, target: :blank) }) %>
 <% end %>

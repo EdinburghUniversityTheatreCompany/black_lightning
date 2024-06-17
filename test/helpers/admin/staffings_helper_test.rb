@@ -6,17 +6,17 @@ class Admin::StaffingsHelperTest < ActionView::TestCase
     user = FactoryBot.create(:member, phone_number: '12345')
 
     assert_not check_if_current_user_can_sign_up(user), 'A normal user can sign up for staffing. Did you accidentally give them permission in the fixtures?'
-    
-    assert_nil flash[:error]
+
+    assert_equal ['You do not have the appropriate permission to sign up for staffing slots.'], flash[:error]
   end
 
   test 'member cannot sign up without phone number' do
     give_member_permission_to_sign_up_for_staffing
-    member = FactoryBot.create(:member, phone_number: nil)
+    member = users(:member)
 
     assert_not check_if_current_user_can_sign_up(member), 'A member can sign up, even though they don\'t have a phone number set'
-    
-    assert_nil flash[:error]
+
+    assert_equal ['You need to provide your phone number before you can sign up to staff.'], flash[:error]
   end
 
   test 'members can sign up' do
@@ -24,14 +24,14 @@ class Admin::StaffingsHelperTest < ActionView::TestCase
     member = FactoryBot.create(:member, phone_number: '12345')
 
     assert check_if_current_user_can_sign_up(member), 'The member cannot sign up for staffing. Did you give them the permission using the helper method'
-    
+  
     assert_nil flash[:error]
   end
 
   test 'members cannot sign up for committee rep and DM slots' do
     give_member_permission_to_sign_up_for_staffing
     
-    member = FactoryBot.create(:member, phone_number: '123')
+    member = users(:member_with_phone_number)
 
     assert_not check_if_current_user_can_sign_up(member, 'DungeoN MasteR')
     assert_equal ['You are not DM Trained. If you think this is a mistake, please contact the Theatre Manager.'], flash[:error]
@@ -53,7 +53,7 @@ class Admin::StaffingsHelperTest < ActionView::TestCase
   test 'DM Trained users can sign up for DM slots' do
     give_member_permission_to_sign_up_for_staffing
 
-    dm = FactoryBot.create(:member, phone_number: '1234')
+    dm = users(:member_with_phone_number)
     dm.add_role 'DM Trained'
 
     assert check_if_current_user_can_sign_up(dm, 'DuTy maNager')
@@ -64,7 +64,7 @@ class Admin::StaffingsHelperTest < ActionView::TestCase
   test 'DM Trained users cannot sign up for committee rep slots' do
     give_member_permission_to_sign_up_for_staffing
 
-    dm = FactoryBot.create(:member, phone_number: '1234')
+    dm = users(:member_with_phone_number)
     dm.add_role 'DM Trained'
 
     assert_not check_if_current_user_can_sign_up(dm, 'comMittee reP')

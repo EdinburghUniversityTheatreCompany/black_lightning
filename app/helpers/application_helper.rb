@@ -55,12 +55,21 @@ module ApplicationHelper
     flash.to_h.each{ |key, value| flash[key] = Array(value) }
 
     # Alert is just an alias for error, so merge them here.
-    flash[:error] += flash[:alert] if flash[:alert].present?
-    flash.delete(:alert)
+    if flash[:alert].present?
+      flash[:error] = [] unless flash[:error].present?
+
+      flash[:error] += flash[:alert] 
+
+      flash.delete(:alert)
+    end
 
     # Similarly for success
-    flash[:success] += flash[:notice] if flash[:notice].present?
-    flash.delete(:notice)
+    if flash[:notice].present?
+      flash[:success] = [] unless flash[:success].present?
+      
+      flash[:success] += flash[:notice]
+      flash.delete(:notice)
+    end
   end
 
   def merge_hash(a, b)

@@ -31,4 +31,48 @@ class StaffingMailerTest < ActionMailer::TestCase
       end
     end
   end
+
+  test 'should send staffing_reminder with a duty manager and committee rep' do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 3)
+    staffing.staffing_jobs[0].update(name: 'duty manager', user: FactoryBot.create(:user))
+    staffing.staffing_jobs[1].update(name: 'committee rep', user: FactoryBot.create(:user))
+
+    job = staffing.staffing_jobs[2]
+    email = StaffingMailer.staffing_reminder(job).deliver_now
+
+    assert_includes email.body.encoded, 'Duty Manager'
+    assert_includes email.body.encoded, 'Committee Rep'
+  end
+
+  test 'should send staffing_reminder with a duty manager' do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 3)
+    staffing.staffing_jobs[0].update(name: 'duty manager', user: FactoryBot.create(:user))
+
+    job = staffing.staffing_jobs[2]
+    email = StaffingMailer.staffing_reminder(job).deliver_now
+
+    assert_includes email.body.encoded, 'Duty Manager'
+    refute_includes email.body.encoded, 'Committee Rep'
+  end
+
+  test 'should send staffing_reminder with a committee rep' do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 3)
+    staffing.staffing_jobs[0].update(name: 'committee rep', user: FactoryBot.create(:user))
+
+    job = staffing.staffing_jobs[2]
+    email = StaffingMailer.staffing_reminder(job).deliver_now
+
+    refute_includes email.body.encoded, 'Duty Manager'
+    assert_includes email.body.encoded, 'Committee Rep'
+  end
+
+  test 'should send staffing_reminder without duty manager and committee rep' do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 3)
+
+    job = staffing.staffing_jobs[2]
+    email = StaffingMailer.staffing_reminder(job).deliver_now
+
+    refute_includes email.body.encoded, 'Duty Manager'
+    refute_includes email.body.encoded, 'Committee Rep'
+  end
 end

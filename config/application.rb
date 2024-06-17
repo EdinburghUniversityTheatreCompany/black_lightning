@@ -24,21 +24,22 @@ Bundler.require(*Rails.groups)
 
 module ChaosRails
   class Application < Rails::Application
-    # Settings in config/environments/* take precedence over those specified here.
-    # Application configuration should go into files in config/initializers
-    # -- all .rb files in that directory are automatically loaded after loading
-    # the framework and any gems in your application.
-
     # Initialize configuration defaults for originally generated Rails version.
-    config.load_defaults 7.0
+    config.load_defaults 7.1
 
-    # Custom directories with classes and modules you want to be autoloadable.
+    # Please, add to the `ignore` list any other `lib` subdirectories that do
+    # not contain `.rb` files, or that should not be reloaded or eager loaded.
+    # Common ones are `templates`, `generators`, or `middleware`, for example.
+    config.autoload_lib(ignore: %w(assets))
+
+    # Configuration for the application, engines, and railties goes here.
+    #
+    # These settings can be overridden in specific environments using the files
+    # in config/environments, which are processed later.
+    #
+    config.time_zone = "Edinburgh"
     config.eager_load_paths << "#{config.root}/lib"
     Rails.autoloaders.main.ignore(config.root.join('lib/generators'))
-
-    # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
-    # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
-    config.time_zone = 'London'
 
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
     # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
@@ -62,9 +63,9 @@ module ChaosRails
 
     config.active_storage.variant_processor = :vips
 
-    if Rails.application.secrets.honeybadger
+    if Rails.application.credentials.try(:honeybadger).try(Rails.env.to_sym).present?
       Honeybadger.configure do |config|
-        config.api_key = Rails.application.secrets.honeybadger[:api_key]
+        config.api_key = Rails.application.credentials[:honeybadger][Rails.env.to_sym][:api_key]
       end
     end
 
