@@ -2,9 +2,9 @@ source 'http://rubygems.org'
 
 ruby File.read(".ruby-version").strip
 
-gem 'rails', '~> 7.0'
+gem 'rails', '~> 7.1'
 
-gem 'mysql2', '=0.5.5'
+gem 'mysql2'
 
 gem 'sass-rails',   '> 5.0.0'
 gem 'webpacker', '~> 5.x'
