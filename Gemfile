@@ -4,7 +4,7 @@ ruby File.read(".ruby-version").strip
 
 gem 'rails', '~> 7.0'
 
-gem 'mysql2', '=0.5.5'
+gem 'mysql2', '0.5.6'
 
 gem 'sass-rails',   '> 5.0.0'
 gem 'webpacker', '~> 5.x'
