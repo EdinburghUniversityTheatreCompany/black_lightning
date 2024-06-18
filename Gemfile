@@ -55,6 +55,8 @@ gem 'stringex'
 
 gem 'honeybadger'
 
+gem 'csv'
+
 group :development, :test do
   # Use Puma as the app server
   gem 'puma'

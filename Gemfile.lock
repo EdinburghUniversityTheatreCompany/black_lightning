@@ -493,6 +493,7 @@ DEPENDENCIES
   cocoon
   coffee-rails
   coffee-script-source (= 1.12.2)
+  csv
   daemons
   delayed_job_active_record
   devise
