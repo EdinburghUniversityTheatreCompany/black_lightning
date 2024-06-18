@@ -13,3 +13,5 @@
 
 //= link jquery.fancybox.css
 //= link jquery.fancybox.js
+
+//= link select2.js
