@@ -1,3 +1,5 @@
+<%# locals: (items:) %>
+
 <% items.each do |item| %>
 <% is_active_category = item[:children].collect { |child| child[:path] } .include?(@current_path) %>
 

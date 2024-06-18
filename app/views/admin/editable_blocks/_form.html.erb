@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <%= simple_horizontal_form_for [@editable_block] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name, hint: 'You should not change the name, unless the block is a page for about, resources, or get involved. If you still change it, the site will not be able to find the Editable Block and cannot show it where necessary.' %>

@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <% upcoming_staffing = Admin::Staffing.accessible_by(current_ability).future.order('start_time ASC').first(5) %>
 
 <% upcoming_staffing.each do |staffing| %>

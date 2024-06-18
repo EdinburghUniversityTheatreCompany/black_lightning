@@ -1,4 +1,5 @@
-<% extra_fields = {} if extra_fields.nil? %>
+<%# locals: (debt:, extra_fields: {}) %>
+
 <% fields = { 
   user: user_link(debt.user, false),
   show: get_link(debt.show, :show),

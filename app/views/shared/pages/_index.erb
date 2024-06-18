@@ -1,11 +1,5 @@
-<% show_new_button = true if show_new_button.nil? %>
-<% search_fields = nil if search_fields.nil? %>
-<% include_edit_button = true if include_edit_button.nil? %>
-<% include_link_to_item = true if include_link_to_item.nil? %>
-<% quick_actions = [] if quick_actions.nil? %>
-<% content = nil if content.nil? %>
-<% include_pagination = true if include_pagination.nil? %>
-
+<%# locals: (resources:, resource_class:, field_sets: nil, headers: nil, show_new_button: true, search_fields: nil, include_edit_button: true, include_link_to_item: true, quick_actions: [], content: nil, include_pagination: true) %>
+<%# KEEP%>
 <% if show_new_button && can?(:new, resource_class) %>
   <% quick_actions << get_link(resource_class, :new) %>
 <% end %>

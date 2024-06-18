@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <%= simple_horizontal_form_for [:admin, @opportunity] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <% if @opportunity.approved %>

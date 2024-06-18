@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <% current_news = News.accessible_by(current_ability).order('publish_date DESC').current.first(4) %>
 
 <% current_news.each do |news| %>

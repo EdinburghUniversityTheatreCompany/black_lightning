@@ -56,7 +56,7 @@ module SearchFormHelper
     if params.key?(:type) && params[:type] != :text
         if params[:type] == :boolean
             # If it is a boolean, just render the boolean field and continue the loop.
-            return render('shared/boolean_search_form_field', f: f, name: key, label: label)
+            return render('shared/boolean_search_form_field', f: f, name: key, label: label, params: params)
         elsif params[:type] == :select
             # By default, you need to select an item, while usually, you want to have the filtering using a select be optional.
             params[:include_blank] = true if params[:include_blank].nil?

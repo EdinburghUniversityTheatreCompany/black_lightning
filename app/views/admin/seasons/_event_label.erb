@@ -1,5 +1,6 @@
+<%# locals: (event:, admin: true) %>
+
 <% event_label = "#{event.name} - #{event.date_range true}" %>
-<% admin = true if admin.nil? %>
 
 <%= get_link event, :show, link_text: event_label, target: :blank, admin: admin %>
 

@@ -1,3 +1,5 @@
+<%# locals: (paragraphs:) -%>
+
 <% paragraphs.each do |paragraph| %>
   <p class="card-text <%= paragraph[:class] %>">
     <%= '<small class="text-muted">'.html_safe if paragraph[:small] %>

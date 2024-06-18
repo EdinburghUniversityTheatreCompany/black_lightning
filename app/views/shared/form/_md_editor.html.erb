@@ -1,4 +1,5 @@
-<% input_field_args = {} if input_field_args.nil? %>
+<%# locals: (f:, field:, show_hint: true, rows: 10, input_field_args: {}) %>
+<%# KEEP%>
 
 <div class="row">
   <div class="col-sm-3">
@@ -8,9 +9,7 @@
   <div class="col-sm-9 tab-container md-editor">
     <% require "securerandom" %>
     <% id = SecureRandom.uuid %>
-    <% show_hint = true if show_hint.nil? %>
-    <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
-    <% rows ||= '10' %>
+    <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path(), target: '_blank') }".html_safe %>
 
     <div class="row">
       <div class="col-md">

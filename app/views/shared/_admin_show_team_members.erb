@@ -1,4 +1,6 @@
-<% deadline = nil if deadline.nil? %>
+<%# locals: (team_members:, deadline: nil) -%> 
+<%# KEEP%>
+
 <% team_members = team_members.includes(:user) %>
 <% current_user_is_part_of_teamwork = team_members.collect(&:user).include?(current_user) %>
 

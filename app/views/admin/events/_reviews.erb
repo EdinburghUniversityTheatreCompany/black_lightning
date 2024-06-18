@@ -1,3 +1,5 @@
+<%# locals: (reviews:) %>
+
 <% if reviews.any? %>
   <div class="row row-cols-auto g-3 row-cols-1 <%= 'row-cols-lg-2' if reviews.count > 1 %> ">
     <% reviews.each do |review| %>

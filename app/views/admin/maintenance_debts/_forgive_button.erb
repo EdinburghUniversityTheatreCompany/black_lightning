@@ -1,3 +1,5 @@
+<%# locals: (maintenance_debt:) %>
+
 <% if maintenance_debt.unfulfilled? %>
   <%= get_link maintenance_debt, :forgive, http_method: :put, link_text: 'Forgive',
                confirm: "Forgiving " + maintenance_debt.user.name(current_user)+ "'s debt",

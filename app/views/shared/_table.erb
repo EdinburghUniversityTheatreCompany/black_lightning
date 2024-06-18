@@ -1,5 +1,5 @@
-<% include_headers = true if include_headers.nil? %>
-<% new_headers = [] %>
+<%# locals: (field_sets:, headers:, table_class: 'table-hover', include_headers: true, new_headers: []) -%>
+<%# KEEP %>
 
 <% headers = headers.each do |header|
   if header.class == Symbol
@@ -13,8 +13,6 @@
     new_headers << header
   end
 end %>
-
-<% table_class = 'table-hover' if table_class.nil? %>
 
 <table class="table  <%= table_class %>">
   <% if include_headers %>

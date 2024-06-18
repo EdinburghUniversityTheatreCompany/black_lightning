@@ -1,8 +1,7 @@
 <% # UPDATE NOTICE: This is very ugly and hacky at the moment, mainly because we are on an old Bootstrap version. %>
 <% # Please fix this when you update bootstrap %>
 
-<% include_item_link = false unless include_item_link.present? %>
-<% include_header = true unless include_header.present? %>
+<%# locals: (attachments:, include_item_link: false, include_header: true) -%>
 
 <% if attachments.any? then %>
   <% content_for :head do %>

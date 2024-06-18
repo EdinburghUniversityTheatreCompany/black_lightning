@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <%= simple_horizontal_form_for [:admin, @workshop] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= render 'admin/events/basic_form', f: f %>
