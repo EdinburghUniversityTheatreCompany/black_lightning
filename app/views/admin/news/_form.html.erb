@@ -1,4 +1,4 @@
-<%= javascript_include_tag 'name_to_slug.js' %>
+<%= javascript_include_tag 'name_to_slug.js', defer: true %>
 <% # Requires the name to be called event_name and the slug to be called event_slug %>
 
 <%= simple_horizontal_form_for [:admin, @news] do |f| %>

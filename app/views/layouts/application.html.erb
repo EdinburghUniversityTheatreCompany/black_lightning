@@ -5,10 +5,9 @@
   <meta charset="UTF-8">
     
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre</title>
-  <%= stylesheet_link_tag    "application", media: "all" %>
+  <%= javascript_include_tag "application", "shared", defer: true, type: "module" %>
 
-  <%= javascript_pack_tag "application", "shared" %>
-  <%= javascript_include_tag "application" %>
+  <%= stylesheet_link_tag    "application", media: "all" %>
 
   <%= render('layouts/cdn_includes') %>
 

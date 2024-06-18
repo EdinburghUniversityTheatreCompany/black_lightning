@@ -1,5 +1,5 @@
 <% # Looks for an input tagged with event_name and an input tagged with event_slug %>
-<%= javascript_include_tag 'name_to_slug.js' %>
+<%= javascript_include_tag 'name_to_slug.js', defer: true %>
 
 <%= f.input :name, input_html: { id: 'event_name' } %>
 

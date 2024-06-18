@@ -1,4 +1,4 @@
-<%= javascript_include_tag "admin/staffings" %>
+<%= javascript_include_tag "admin/staffings", defer: true %>
 
 <% content_for :jobs_table do %>
   <% # Show the phone number column if the user has read permission on any of the users, apart from themselves. %>

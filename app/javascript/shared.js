@@ -1,14 +1,11 @@
-import "sweetalert"
-
-import 'core-js/stable'
-import 'regenerator-runtime/runtime'
+import "./sweetalert"
 
 import 'jquery-slimscroll'
 
-import '../src/alerts'
-import '../src/konami_code'
+import './src/alerts'
+import './src/konami_code'
 
-import "controllers"
+//import "./controllers"
 
 require("@rails/activestorage").start()
 

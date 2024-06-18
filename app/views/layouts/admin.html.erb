@@ -3,14 +3,13 @@
 
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
+  <%= javascript_include_tag "admin", "shared", defer: true %>
+
   <%= stylesheet_link_tag    "admin", media: "all" %>
 
-  <%= javascript_packs_with_chunks_tag "admin", "shared" %>
-
-  <%= javascript_include_tag "application" %>
-  <%= csrf_meta_tags %>
-
   <%= render('layouts/cdn_includes') %>
+
+  <%= csrf_meta_tags %>
 
   <%= yield :head %>
 

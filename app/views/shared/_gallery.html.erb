@@ -1,13 +1,8 @@
 <% if pictures.any? then %>
-  <% content_for :head do %>
-    <%= stylesheet_link_tag 'jquery.fancybox' %>
-    <%= javascript_include_tag 'jquery.fancybox' %>
-  <% end %>
-
   <script type="text/javascript">
-    $(document).ready(function() {
-      $(".fancybox").fancybox();
-    });
+    Fancybox.bind('[data-fancybox]', {
+      // Your custom options
+    });  
   </script>
 
 <div class="row">
@@ -24,7 +19,7 @@
             <% img = image_tag(picture.fetch_image.variant(medium_variant), { class: "card-img-top h-auto" }.merge(variant_width_and_height_html(medium_variant))) %>
             <% url = url_for(picture.fetch_image) %>
 
-            <%= link_to img, url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
+            <%= link_to img, url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" %>
             
             <div class="card-body">
               <p class="card-text">

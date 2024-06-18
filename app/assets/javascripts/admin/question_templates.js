@@ -45,6 +45,7 @@ var global_data = null;
 
   // Start inserting the fields
   function loadTemplate() {
+    console.log('loadTemplate')
     if(items_type == 'questions')
     {
       loadTemplateHelper('question_add_button', global_data.questions);
@@ -52,7 +53,7 @@ var global_data = null;
     }
     else if(items_type == 'jobs')
     {
-      loadTemplateHelper('admin_staffing_jobs_add_button', global_data.staffing_jobs);
+      loadTemplateHelper('staffing_job_add_button', global_data.staffing_jobs);
     }
   }
 
@@ -63,7 +64,10 @@ var global_data = null;
     // This then triggers the cocoon:after-insert event (see above) which will insert the data into the fields.
     $.each(template_items, function (index, item) {
       template_item = item;
+      console.log('triggering click on ' + add_fields_button_class);
+      console.log($('.' + add_fields_button_class).first());
       $('.' + add_fields_button_class).first().trigger('click');
+      console.log('after click')
     });
 
     // After adding all the items, set the item back to null so adding a new field will add an empty field rather than the data from the last item in the template.

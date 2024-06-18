@@ -8,7 +8,7 @@
 
   <%= javascript_packs_with_chunks_tag "admin", "shared" %>
 
-  <%= javascript_include_tag "application" %>
+  <%= javascript_include_tag "application", defer: true %>
   <%= csrf_meta_tags %>
 
   <%= yield :head %>
