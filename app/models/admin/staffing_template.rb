@@ -18,6 +18,8 @@ class Admin::StaffingTemplate < ApplicationRecord
 
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def as_json(options = {})
     defaults = { include: [staffing_jobs: {}] }
 

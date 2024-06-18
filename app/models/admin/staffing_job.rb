@@ -27,6 +27,8 @@ class Admin::StaffingJob < ApplicationRecord
 
   has_paper_trail limit: 6
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   # The functions that use staffable don't check if it's a staffing instead of a template.
   # They should just hard-fail when the staffable is a template. That situation should simply not occur.
 

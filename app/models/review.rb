@@ -25,6 +25,8 @@ class Review < ApplicationRecord
 
   belongs_to :event
 
+  normalizes :reviewer, :organisation, :title, with: -> (value) { value&.strip }
+  
   def reviewer_with_organisation
     return "#{reviewer}#{" for #{organisation}" if organisation.present?}"
   end

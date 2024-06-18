@@ -28,6 +28,8 @@ class Admin::Questionnaires::Questionnaire < ApplicationRecord
   accepts_nested_attributes_for :answers, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :notify_emails, reject_if: :all_blank, allow_destroy: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[name]
   end

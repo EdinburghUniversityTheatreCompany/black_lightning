@@ -15,12 +15,15 @@
 # == Schema Information End
 #++
 class CarouselItem < ApplicationRecord
+  CAROUSEL_NAMES = ['Home'].freeze
+
   validates :title, :tagline, :carousel_name, :ordering, presence: true
+  validates :carousel_name, inclusion: { in: CAROUSEL_NAMES }
   validates :image, attached: true
 
   has_one_attached :image
 
-  CAROUSEL_NAMES = ['Home'].freeze
+  normalizes :title, :tagline, with: -> (value) { value&.strip }
 
   def self.active_and_ordered
     return where(is_active: true).order('ordering')

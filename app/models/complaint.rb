@@ -18,6 +18,8 @@ class Complaint < ApplicationRecord
 
   before_destroy :stop_destroy
 
+  normalizes :subject, with: -> (subject) { subject&.strip }
+
   # Everyone can create and it should not be possible to delete complaints.
   DISABLED_PERMISSIONS = %w[create destroy].freeze
 

@@ -29,6 +29,8 @@ class Admin::Proposals::Call < ApplicationRecord
 
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   # TODO: Maybe revise what open means?
   scope :open, -> { where(submission_deadline: DateTime.now..DateTime::Infinity.new) }
 

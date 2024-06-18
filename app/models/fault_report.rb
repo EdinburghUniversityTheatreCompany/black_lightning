@@ -20,6 +20,8 @@ class FaultReport < ApplicationRecord
   belongs_to :reported_by,  class_name: 'User'
   belongs_to :fixed_by,     class_name: 'User', optional: true
 
+  normalizes :item, with: -> (item) { item&.strip }
+
   enum severity: {
     annoying: 0,
     probably_worth_fixing: 1,

@@ -4,4 +4,6 @@ class Email < ApplicationRecord
 
   # No duplicate emails on the same attached_object.
   validates_uniqueness_of :email, scope: [:attached_object_type, :attached_object_id]
+
+  normalizes :email, with: -> (email) { email&.downcase.strip }
 end

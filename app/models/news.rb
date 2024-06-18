@@ -45,6 +45,8 @@ class News < ApplicationRecord
 
   validates :image, content_type: %i[png jpg jpeg gif]
 
+  normalizes :title, :slug, with: -> (value) { value&.strip }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[body publish_date show_public slug title]
   end

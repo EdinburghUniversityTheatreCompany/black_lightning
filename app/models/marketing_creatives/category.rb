@@ -22,6 +22,8 @@ class MarketingCreatives::Category < ApplicationRecord
   has_one_attached :image
   validates :image, content_type: %i[png jpg jpeg gif]
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def to_param
     url
   end

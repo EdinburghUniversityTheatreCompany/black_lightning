@@ -20,6 +20,8 @@ class Admin::Proposals::CallQuestionTemplate < ApplicationRecord
   has_many :questions, as: :questionable
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def as_json(options = {})
     defaults = { include: [:questions] }
 

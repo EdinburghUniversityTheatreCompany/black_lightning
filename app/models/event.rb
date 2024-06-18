@@ -82,6 +82,9 @@ class Event < ApplicationRecord
 
   validates :image, content_type: %i[png jpg jpeg gif]
 
+  # Normalizatios
+  normalizes :name, :tagline, :slug, :author, :price, with: -> (value) { value&.strip }
+
   # Scopes #
 
   scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }

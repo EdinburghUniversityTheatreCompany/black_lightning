@@ -18,4 +18,6 @@
 #++
 class NewsletterSubscriber < ApplicationRecord
   validates :email, presence: true
+
+  normalizes :email, with: -> (email) {email&.downcase&.strip }
 end

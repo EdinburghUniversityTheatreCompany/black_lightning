@@ -21,14 +21,16 @@ class TeamMember < ActiveRecord::Base
   validates :position, :user, presence: true
   validates_uniqueness_of :user_id, scope: [:teamwork_type, :teamwork_id]
   
-  default_scope -> { order('position ASC') }
-
   # It should not be optional, but otherwise this fails on creation when immediately attaching team members.
   # A little bit annoying, definitely.
   belongs_to :teamwork, polymorphic: true, optional: true
   belongs_to :user
 
   delegate :name, to: :user, prefix: true
+
+  normalizes :position, with: -> (position) { position&.strip }
+
+  default_scope -> { order('position ASC') }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[position user_id teamwork_id teamwork_type]
