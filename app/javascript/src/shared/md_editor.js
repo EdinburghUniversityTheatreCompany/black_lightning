@@ -1,40 +1,33 @@
 // Converted from CoffeeSript using decaffeinate
 // Bootstrap 5: Remove the jQuery bits and keep just the Bootstrap 5.
-$(document).ready(function() {
-  // Bootstrap 4 jQuery method.
-  jQuery(() => addHandlers());
+window.addEventListener('load', function() {
+    addPreviewClickHandlersToButtonsIn(document);
+});
 
-  // Bootstrap 5 JS method.
-  // BOOTSTRAP 5: Does this find all preview toggles or the first?
-  const tabEl = document.querySelector('.preview-toggle');
+// Looks for all preview navigation buttons that are descendants of the passed element and adds a click handler to them to generate the preview when clicked.
+// It would be better to listen for the show.bs.tab event, but that event is not fired for some reason.
+function addPreviewClickHandlersToButtonsIn(element) {
+  const previewButtons = element.getElementsByClassName('preview-toggle');
 
-  // Stop if no preview toggle was found.
-  if(tabEl)
-  {
-    tabEl.addEventListener('shown.bs.tab', event => {
+  for (let button of previewButtons) {
+    button.addEventListener('click', event => {
       generatePreview(event);
     });
   }
-});
+}
 
+function generatePreview(event) {
+  // Find the ID to differentiate between this md_editor and other ones for the preview and input fields based on the one set on the clicked button.
+  const id = $(event.currentTarget).data("preview-id");
+  const input = $("#input-field-" + id + " textarea");
+  const preview = $("#preview-placeholder-" + id)
 
-// https://getbootstrap.com/docs/4.6/components/navs/#events see here for how tabs and javascrip work.
-// and for Bootstrap 5: https://getbootstrap.com/docs/5.2/components/navs-tabs/
-const addHandlers = () => $(document).find(".preview-toggle").on("show.bs.tab", function(e) {
- generatePreview(e);
-});
-
-function generatePreview(e)
-{
-  let id = undefined;
-  let input = undefined;
-  id = $(e.currentTarget).data("preview-id");
-  input = $("#" + id + "_input_field textarea");
-
-  $("#" + id + "_preview_placeholder").html('<b>Please Wait. Loading Preview...</b>');
+  // Set a loading text while we wait for the request to return.
+  preview.html('<b>Please Wait. Loading Preview...</b>');
 
   var token = $('meta[name="csrf-token"]').attr('content');
 
+  // Send a JSON request to the server to render the markdown. We need the CSRF token to be set in the headers.
   return $.ajax({
     type: 'POST',
     url: '/markdown/preview.json',
@@ -42,38 +35,40 @@ function generatePreview(e)
     beforeSend: function (xhr) {
       xhr.setRequestHeader('X-CSRF-Token', token)
     },
+    // If there's a success, render the markdown from the server.
     success(data) {
-      const preview = $("#" + id + "_preview_placeholder");
       preview.html(data.rendered_md);
     },
+    // If there's an error, render the error message in the preview pane.
     error(jqXHR, textStatus, errorThrown) {
       const error_data = JSON.parse(jqXHR.responseText);
       const error_html =  `\
 <b>There was an error rendering your kramdown.</b>
 <pre>${error_data.error}</pre>\
 `;
-      return $("#" + id + "_preview_placeholder").html(error_html);
+      return preview.html(error_html);
     },
     contentType: false,
     processData: false
   });
 }
 
+// After a new nested_fields item is inserted using cocoon, we need to add the preview click handlers to the new item.
 $(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
-  const new_id = new Date().getTime();
-  console.log('hello?')
-  /*
-    Slightly hacky way of making all the ids unique and updating the necessary anchors
-    TODO: This is not called right now and should be fixed! Fix it and check if md_editor still work properly on dynamic fields (creatives)
-  */
-  jQuery(insertedItem).find('[id$="_input_field"]').attr('id', new_id + '_input_field');
-  jQuery(insertedItem).find('[href$="_input_field"]').attr('href', '#' + new_id + '_input_field');
+  // If there is no markdown editor in the inserted item, we don't need to do anything.
+  if (insertedItem[0].getElementsByClassName('md-editor').length === 0) {
+    return;
+  }
 
-  jQuery(insertedItem).find('[id$="_preview"]').attr('id', new_id + '_preview');
-  jQuery(insertedItem).find('[href$="_preview"]').attr('href', '#' + new_id + '_preview').attr('data-preview-id', new_id);
+  // Get the ID of the markdown editor in the inserted item. This is the ID used in the above script, so we need to replace it, or the navigation and preview for separate editors will interfere with each other.
+  const idToReplace = insertedItem[0].getElementsByClassName('md-editor')[0].getAttribute('md-editor-id');
 
-  jQuery(insertedItem).find('[id$="_preview_placeholder"]').attr('id', new_id + '_preview_placeholder');
-  jQuery(insertedItem).find('[href$="_preview_placeholder"]').attr('href', '#' + new_id + '_preview_placeholder');
+  // Set the newId to the current time in milliseconds, so it is unique on the page.
+  const newId = new Date().getTime();
 
-  return addHandlers();
+  // Update all instances of the old id (which would otherwise be the same for all templates) with the new id.
+  // This ID is different from the actual ID used by cocoon/nested fields. This ID is just used because we need
+  // to anchor to specific elements for the tabbing and preview, and the nestd field ID only applies to inputs.
+  insertedItem[0].innerHTML = insertedItem[0].innerHTML.replace(new RegExp(idToReplace, 'g'), newId);
+  addPreviewClickHandlersToButtonsIn(insertedItem[0]);
 });
