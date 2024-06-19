@@ -10,4 +10,4 @@ import './src/admin/user_modal_script.js'
 
 import "./src/admin/techie_tree.js"
 
-require('moment')
+import 'moment'
