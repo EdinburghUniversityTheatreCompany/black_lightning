@@ -73,7 +73,7 @@ class ApplicationController < ActionController::Base
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     # Prepares the flash by turning all messages into arrays and merging the 'alerts' into the 'errors'.
-    format_flash 
+    standardise_flash 
 
     # Add the current error that caused the application to halt to the error flash. 
     # Compact removes any nil values.

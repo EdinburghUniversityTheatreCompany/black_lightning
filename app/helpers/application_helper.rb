@@ -1,75 +1,10 @@
 module ApplicationHelper
-  def bool_icon(bool)
-    return bool ? '&#10004;'.html_safe : '&#10008;'.html_safe
-  end
-
-  def bool_text(bool, capitalized = true)
-    word = bool ? 'yes' : 'no'
-
-    return word.upcase_first if capitalized
-
-    return word
-  end
-
-  def swal_alert_info(key)
-    case key.to_sym
-    when :error, :alert
-      return 'error'
-    # Notice is only really used by devise, and only for success messages.
-    when :success, :notice
-      return 'success'
-    when :warning
-      return 'warning'
-    else
-      return 'info'
-    end
-  end
-
   # It's a bit hacky, but it works.
   # Used by the error pages and subpage layout to decide which layout to use.
   def current_environment(path)
     return 'admin' if path[0..6].include?('admin') && current_ability.can?(:access, :backend)
 
     return 'application'
-  end
-
-  def append_to_flash(key, message)
-    if flash[key].blank?
-      flash[key] = [message]
-    elsif flash[key].is_a? Enumerable
-      flash[key] << message
-    else
-      flash[key] = [flash[key], message]
-    end
-
-    flash[key] = flash[key].uniq
-  end
-
-  # Turns all flash messages into arrays, merges 'alerts' into 'errors', and merges 'notices' in to 'successes'.
-  def format_flash
-    # Convert each flash type into an array if it is not already.
-    # The to_h is to make a local copy so we can assign to the real flash.
-    # If you do not do this, it would say you cannot assign during iteration
-    # and because flash is not a real hash, it does not have all methods and you
-    # cannot perform in-place operations.
-    flash.to_h.each{ |key, value| flash[key] = Array(value) }
-
-    # Alert is just an alias for error, so merge them here.
-    if flash[:alert].present?
-      flash[:error] = [] unless flash[:error].present?
-
-      flash[:error] += flash[:alert] 
-
-      flash.delete(:alert)
-    end
-
-    # Similarly for success
-    if flash[:notice].present?
-      flash[:success] = [] unless flash[:success].present?
-      
-      flash[:success] += flash[:notice]
-      flash.delete(:notice)
-    end
   end
 
   def merge_hash(a, b)
