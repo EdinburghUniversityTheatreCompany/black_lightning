@@ -12,4 +12,3 @@ global.$ = global.jQuery = jQuery;
 require("@popperjs/core")
 
 import "bootstrap"
-import './src/admin/md_editor'

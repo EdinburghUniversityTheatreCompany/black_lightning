@@ -2,8 +2,8 @@ import "./sweetalert"
 
 import 'jquery-slimscroll'
 
-import './src/alerts'
-import './src/konami_code'
+import './src/shared/konami_code'
+import './src/shared/md_editor'
 
 //import "./controllers"
 
