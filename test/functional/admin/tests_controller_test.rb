@@ -58,7 +58,7 @@ class Admin::TestControllerTest < ActionDispatch::IntegrationTest
     assert_response 500
     assert_match 'We have been informed.', response.body
     assert_nil flash[:error], 'The error flash was not cleared'
-    assert_equal "<ul><li>This is a test server error.</li><li>This is a bonus error.</li></ul>", assigns(:error_summary), 'The error page was not rendered using the template'
+    assert_match "<ul><li>This is a test server error.</li><li>This is a bonus error.</li></ul>", response.body, 'The error page was not rendered using the template'
     assert_match 'This is a bonus success.', response.body, 'The success was not rendered'
   end
 
@@ -67,7 +67,7 @@ class Admin::TestControllerTest < ActionDispatch::IntegrationTest
 
     assert_response 404
     assert_nil flash[:error]
-    assert_equal "<ul><li>This is a test not found error.</li></ul>", assigns(:error_summary)
+    assert_match "<ul><li>This is a test not found error.</li></ul>", response.body
   end
 
   test 'report access denied' do

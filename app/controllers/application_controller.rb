@@ -1,5 +1,5 @@
 class ApplicationController < ActionController::Base
-  include SubpageHelper, FormattingHelper, ApplicationHelper
+  include SubpageHelper, FormattingHelper, FlashHelper
 
   protect_from_forgery with: :exception
   before_action :set_paper_trail_whodunnit
@@ -73,7 +73,7 @@ class ApplicationController < ActionController::Base
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     # Prepares the flash by turning all messages into arrays and merging the 'alerts' into the 'errors'.
-    standardise_flash 
+    standardise_flash
 
     # Add the current error that caused the application to halt to the error flash. 
     # Compact removes any nil values.
