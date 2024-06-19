@@ -1,3 +1,5 @@
+// Script for the membership checker. This script is used to check if a user is a member of the site using the check_membership action in the membership conmembership
+
 document.addEventListener('DOMContentLoaded', function () {
     var form = document.querySelector('form');
 

@@ -1,4 +1,4 @@
-// Check if this works
+// A fun easter egg when you enter the keys below.
 
 var konami_keys = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 var konami_index = 0;

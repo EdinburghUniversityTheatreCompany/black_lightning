@@ -1,14 +1,15 @@
+// This script initialises the select2 fields on the website based on attributes defined in the HTML.
+
 // Add select2 fields to fields that exist on document load.
 document.addEventListener('DOMContentLoaded', function() {
   // Initialise all select2 fields that exist on document start.
   activateSelect2Fields(document);
-
-  // Initialise all select2 fields that are added dynamically using cocoon.
-  $(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
-    activateSelect2Fields(insertedItem[0]);
-  });
 });
 
+// Initialise all select2 fields that are added dynamically using cocoon.
+$(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
+  activateSelect2Fields(insertedItem[0]);
+});
 
 function activateSelect2Fields(parentElement) {
   // Find all select2 fields that are children of the parent.

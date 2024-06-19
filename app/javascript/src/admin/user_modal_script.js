@@ -1,4 +1,5 @@
 
+//Script to display a modal that asks the user if they want to view their profile or sign out when they click on their name or profile picture in the menu.
 function userModal(title, message, user_profile_url, sign_out_url) {
   // Treat confirmation as wanting to view the user profile
   // and denial as wanting to sign out.

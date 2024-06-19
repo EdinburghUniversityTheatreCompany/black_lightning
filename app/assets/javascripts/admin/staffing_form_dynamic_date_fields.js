@@ -1,3 +1,5 @@
+// Add dynamic date fields to the form to add new staffings.
+
 document.addEventListener('DOMContentLoaded', function() {
     var counter = 0;
     var addDateButton = document.getElementById('add_date');

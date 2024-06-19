@@ -1,3 +1,6 @@
+// Script for the techie tree bush version. This was meant to be an improved version,
+// but it was never finished. The current tree uses an old script, still defined inline, using dracula and raphael.
+
 // General resources:
 // How to use webpacker: https://stackoverflow.com/questions/54501241/rails-5-6-how-to-include-js-functions-with-webpacker/56549843
 
