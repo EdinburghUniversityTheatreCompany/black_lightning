@@ -11,6 +11,7 @@ import './src/admin/cookies.js'
 import './src/vendor/bootstrap.bundle.min.js'
 import './src/admin/md_editor.js'
 
-require("./src/admin/techie_tree.js")
+import './src/admin/user_modal_script.js'
+
 
 require('moment')
