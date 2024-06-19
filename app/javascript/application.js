@@ -5,10 +5,6 @@
 // that code so it'll be compiled.
 //
 
-import jQuery from 'jquery';
-
-global.$ = global.jQuery = jQuery;
-
 require("@popperjs/core")
 
 import "bootstrap"

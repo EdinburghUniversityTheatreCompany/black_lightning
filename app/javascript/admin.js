@@ -1,7 +1,3 @@
-import jQuery from 'jquery';
-
-global.$ = global.jQuery = jQuery;
-
 import 'popper.js'
 
 import './src/vendor/adminlte.customised.js'
