@@ -1,3 +1,7 @@
+<% content_for :head do %>
+  <%= javascript_include_tag "admin/membership_checker.js", defer: true %>
+<% end %>
+
 <%= display_block(@editable_block.name, false) %>
 
 <div class="row">
@@ -9,7 +13,7 @@
         <label for="membershipSearch">Membership Number or Member Name</label>
       </div>
 
-      <button type="submit" class="btn btn-secondary">Submit</button>
+      <button type="submit" class="btn btn-secondary mb-3">Submit</button>
     </form>
   </div>
 </div>
@@ -19,46 +23,3 @@
     <div class="results-box"></div>
   </div>
 </div>
-
-<script>
-  $form = $('form');
-  $form.submit(function (e) {
-    e.preventDefault();
-
-    $.getJSON("/admin/membership/check_membership", $form.serialize())
-      .done(function (data) {
-        showResult("success", data.response);
-        $('#search').val("").focus();
-
-        if (data.image) {
-          $('.results-box').append("<img src='" + data.image + "' class=\"img-thumbnail float-right\" style='width: 100px;' />");
-        }
-      })
-      .fail(function (xhr) {
-        showResult("alert", xhr.responseJSON.response);
-        $('#search').val("").focus();
-      });
-
-    return false;
-  });
-
-  function showResult(type, message) {
-    switch(type) {
-      case "alert":
-        alertclass = "alert-danger";
-        icon       = "fa-exclamation";
-        break;
-      case "success":
-        alertclass = "alert-success";
-        icon       = "fa-check";
-        break;
-    }
-
-    $alert = $("<div id=\"" +  type  + "\" class=\"alert " + alertclass + "\">" +
-              "<i class=\"" + icon  + " fas fa-large\" aria-hidden=”true”></i> "
-              + message +
-              "</div>");
-
-    $('.results-box').empty().append($alert);
-  }
-</script>
