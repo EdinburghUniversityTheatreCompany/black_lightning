@@ -9,6 +9,15 @@ class NewsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:news)
   end
 
+  test 'should get index as rss' do
+    FactoryBot.create_list(:news, 5)
+
+    get :index, format: :rss
+
+    assert_response :success
+    assert_not_nil assigns(:news)
+  end
+
   test 'should show news' do
     @news = FactoryBot.create(:news, show_public: true)
 
