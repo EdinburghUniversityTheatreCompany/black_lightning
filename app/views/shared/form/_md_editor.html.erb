@@ -1,11 +1,9 @@
-<% input_field_args = {} if input_field_args.nil? %>
+<%# locals: (f:, field:, show_hint: true, rows: 10, input_field_args: {}) %>
 
 <% # Use a unique ID in all navigation tabs so that there is no interference in navigation when there are multiple md_editors on one page. %>
 <% id = DateTime.now.strftime('%Q') %>
 
-<% show_hint = true if show_hint.nil? %>
 <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
-<% rows ||= '10' %>
 
 <div class="row">
   <div class="col-sm-3">

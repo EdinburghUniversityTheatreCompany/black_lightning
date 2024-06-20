@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <%= simple_horizontal_form_for(@proposal) do |f| %>
   <% content_for :extra_form_actions do %>
     <%= get_link @proposal.call, :view_other_proposals, link_target: admin_proposals_call_proposals_path(@proposal.call) , http_method: 'get' %>

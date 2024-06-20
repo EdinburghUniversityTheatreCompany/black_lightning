@@ -115,7 +115,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with destroy' do
     news = FactoryBot.create(:news, id: 1, title: 'Vikings have taken over the Bedlam')
-    expected_link = '<form class="button_to" method="post" action="/admin/news/1-vikings-have-taken-over-the-bedlam"><input type="hidden" name="_method" value="delete" autocomplete="off" /><button class="btn btn-danger" data-title="Deleting the News &quot;Vikings have taken over the Bedlam&quot;" data-confirm="Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?" title="Destroy" type="submit"><span class="no-wrap"><i class="fas fa-trash" aria-hidden=”true”></i> Destroy</span></button></form>'
+    expected_link = "<a class=\"btn btn-danger\" data-title=\"Deleting the News &quot;Vikings have taken over the Bedlam&quot;\" data-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" title=\"Destroy\" rel=\"nofollow\" data-method=\"delete\" href=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><span class=\"no-wrap\"><i class=\"fas fa-trash\" aria-hidden=”true”></i> Destroy</span></a>"
 
     assert_equal expected_link, get_link(news, :destroy)
 
@@ -126,7 +126,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with approve' do
     news = FactoryBot.create(:opportunity, id: 1)
-    expected_link = '<form class="button_to" method="post" action="/admin/opportunities/1/approve"><input type="hidden" name="_method" value="put" autocomplete="off" /><button class="btn btn-success" title="Approve" type="submit">Approve</button></form>'
+    expected_link = "<a class=\"btn btn-success\" title=\"Approve\" rel=\"nofollow\" data-method=\"put\" href=\"/admin/opportunities/1/approve\">Approve</a>"
 
     assert_equal expected_link, get_link(news, :approve)
 
@@ -137,7 +137,7 @@ class LinkHelperTest < ActionView::TestCase
 
   test 'get_link with reject' do
     news = FactoryBot.create(:opportunity, id: 1)
-    expected_link = "<form class=\"button_to\" method=\"post\" action=\"/admin/opportunities/1/reject\"><input type=\"hidden\" name=\"_method\" value=\"put\" autocomplete=\"off\" /><button class=\"btn btn-danger\" title=\"Reject\" type=\"submit\">Reject</button></form>"
+    expected_link = '<a class="btn btn-danger" title="Reject" rel="nofollow" data-method="put" href="/admin/opportunities/1/reject">Reject</a>'
 
     assert_equal expected_link, get_link(news, :reject)
 
@@ -153,7 +153,7 @@ class LinkHelperTest < ActionView::TestCase
       get_link(maintenance_debt, :convert_to_staffing_debt)
     end
 
-    expected_link = "<form class=\"button_to\" method=\"post\" action=\"/admin/maintenance_debts/1/convert_to_staffing_debt\"><input type=\"hidden\" name=\"_method\" value=\"put\" autocomplete=\"off\" /><button class=\"btn btn-secondary\" title=\"Convert To Staffing Debt\" type=\"submit\">Convert To Staffing Debt</button></form>"
+    expected_link = "<a class=\"btn btn-secondary\" title=\"Convert To Staffing Debt\" rel=\"nofollow\" data-method=\"put\" href=\"/admin/maintenance_debts/1/convert_to_staffing_debt\">Convert To Staffing Debt</a>"
 
     assert_equal expected_link, get_link(maintenance_debt, :convert_to_staffing_debt, http_method: :put)
   end
@@ -200,7 +200,7 @@ class LinkHelperTest < ActionView::TestCase
 
     assert_not @current_user.can?(:destroy, news)
 
-    expected_link = "<form class=\"button_to\" method=\"post\" action=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><input type=\"hidden\" name=\"_method\" value=\"delete\" autocomplete=\"off\" /><button class=\"btn btn-danger\" data-title=\"Deleting the News &quot;Vikings have taken over the Bedlam&quot;\" data-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" title=\"Destroy\" type=\"submit\"><span class=\"no-wrap\"><i class=\"fas fa-trash\" aria-hidden=”true”></i> Destroy</span></button></form>"
+    expected_link = "<a class=\"btn btn-danger\" data-title=\"Deleting the News &quot;Vikings have taken over the Bedlam&quot;\" data-confirm=\"Are you sure you want to delete the News &quot;Vikings have taken over the Bedlam&quot;?\" title=\"Destroy\" rel=\"nofollow\" data-method=\"delete\" href=\"/admin/news/1-vikings-have-taken-over-the-bedlam\"><span class=\"no-wrap\"><i class=\"fas fa-trash\" aria-hidden=”true”></i> Destroy</span></a>"
 
     assert_equal expected_link, get_link(news, :destroy, condition: true)
   end

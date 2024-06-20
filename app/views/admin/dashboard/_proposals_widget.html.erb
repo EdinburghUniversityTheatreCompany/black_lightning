@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <% open_calls = Admin::Proposals::Call.open %>
 <% open_calls.each do |call| %>
   <p><%= link_to call.name, admin_proposals_call_proposals_path(call) %></p>

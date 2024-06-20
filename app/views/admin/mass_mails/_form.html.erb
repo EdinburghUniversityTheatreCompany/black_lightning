@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <%= simple_horizontal_form_for [:admin, @mass_mail] do |f| %>
   <% content_for :extra_form_actions do %>
     <% if @mass_mail.persisted? %>

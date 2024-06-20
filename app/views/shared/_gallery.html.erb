@@ -1,3 +1,7 @@
+<%# locals: (pictures:, header_size: 3) -%>
+<%# KEEP%>
+
+
 <% if pictures.any? then %>
   <script type="text/javascript">
     Fancybox.bind('[data-fancybox]', {
@@ -7,7 +11,6 @@
 
 <div class="row">
   <div class="col">
-    <% header_size = 3 if header_size.nil? %>
     <% header_tag = "h#{header_size}"%>
     <<%= header_tag %>>Gallery</<%= header_tag %>>
     <i>Click on a thumbnail to see the image in full-size</i>

@@ -1,7 +1,7 @@
-<% div_class_additions = '' if div_class_additions.nil? %>
-
+<%# locals_check: (f:, attributes:, div_class_additions: '') %>
+<% # TODO: Check this%>
 <% has_error = f.object.errors.any? %>
-
+<% div_class_additions = '' if div_class_additions.nil? %>
 <div class="<%= div_class_additions %> nested-fields mb-3<%= ' error' if has_error %>">
     <%= yield %>
 </div>

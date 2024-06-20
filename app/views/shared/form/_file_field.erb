@@ -1,11 +1,10 @@
 <% # Bit hacky, but by default the field always says it does not have an image attached %>
+<%# locals: (f:, field_name:, hint: nil) %>
+<%# KEEP%>
 
 <% file = f.object.send(field_name) %>
 
 <% has_file_attached_hint = get_file_attached_hint(file) # ActiveStorageHelper %>
-
-
-<% hint = nil if hint.nil? %>
 
 <% if hint.nil? %>
   <% hint = has_file_attached_hint %>

@@ -1,5 +1,6 @@
-<% hide_alert = @hide_alert if hide_alert.nil? %>
+<%# locals: (hide_alert: @hide_alert) %>
 
+<% hide_alert = false %>
 <% if hide_alert != true %>
   <% # Standardise flash before rendering, and perform any necessary merges. %>
   <% standardise_flash %>

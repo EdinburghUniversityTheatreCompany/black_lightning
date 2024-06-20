@@ -1,4 +1,5 @@
-<% display_link_to_add = true if display_link_to_add.nil? %>
+<%# locals: (f:, partial_name:, association_name:, display_link_to_add: true) %>
+<%# KEEP%>
 
 <% if f.object.errors[association_name].present? then %>
   <p id="<%= association_name %>_errors" class="alert alert-danger">

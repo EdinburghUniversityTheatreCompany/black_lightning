@@ -11,7 +11,7 @@ xml.rss :version => "2.0" do
       xml.item do
         xml.title news.title
         xml.description render_markdown(news.body)
-        xml.pubDate news.created_at.to_s(:rfc822)
+        xml.pubDate news.created_at.to_s
         xml.link news_url(news)
         xml.guid news_url(news)
       end

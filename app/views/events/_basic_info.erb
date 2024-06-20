@@ -1,3 +1,5 @@
+<%# locals: (event:, event_type:) %>
+
 <%= render '/events/happened_message', event: event, event_type: event_type %>
 
 <% details = [ {  key: "Date#{'s' if event.start_date != event.end_date}", value: event.date_range(true) }] %>

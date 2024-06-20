@@ -1,3 +1,5 @@
+<%# locals: (page:, remote:, url:, current_page:, per_page:, total_pages:) %>
+
 <% if page.current? %>
   <li class="page-item active">
     <%= content_tag :a, page, data: { remote: remote }, rel: page.rel, class: 'page-link' %>

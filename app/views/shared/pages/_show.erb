@@ -1,4 +1,5 @@
-<% show_actions_args = {} if show_actions_args.nil? %>
+<% # locals: (fields:, object:, show_actions_args: {}) %>
+<%# KEEP%>
 
 <%= render('shared/quick_actions_card') do %>
   <% if content_for?(:custom_show_actions) %>
