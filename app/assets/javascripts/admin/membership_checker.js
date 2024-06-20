@@ -14,26 +14,14 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(data => {
         // If the user is not found, show an error alert.
         if (data.response === "Member not found")  {
-          showResult("alert", data.response);
-          return;
+          showResult("error", data.response);
         }
     
         // If we have found the user, show a success alert.
-        showResult("success", data.response);
-
-        // If the response has an image (user avatar), add it to the alert.
-        if (data.image) {
-          var img = document.createElement('img');
-
-          img.src = data.image;
-          img.classList.add('img-thumbnail', 'float-right');
-          img.style.width = '100px';
-      
-          document.querySelector('.results-box').appendChild(img);
-        }
+        showResult("success", data.response, data.image);
       })
       .catch(error => {
-        showResult("alert", error.responseJSON.response);
+        showResult("error", error.responseJSON.response);
       });
 
       document.getElementById('membershipSearch').value = "";
@@ -43,27 +31,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   
     // Create an alert below the form that displays the result of the search.
-    function showResult(type, message) {
-      var alertclass, icon;
-
-      switch(type) {
-        case "alert":
-          alertclass = "alert-danger";
-          icon = "fa-exclamation";
-          break;
-        case "success":
-          alertclass = "alert-success";
-          icon = "fa-check";
-          break;
+    function showResult(type, message, imageUrl = null) {
+      if(imageUrl) {
+        Swal.fire({
+          icon: type,
+          title: message,
+          imageUrl: imageUrl,
+          imageWidth: 150,
+          imageHeight: 150,
+          imageAlt: "User Avatar"
+        })
+      } else {
+        Swal.fire({
+          icon: type,
+          title: message
+        })
       }
-
-      var alert = document.createElement("div");
-      
-      alert.id = type;
-      alert.classList.add("alert", alertclass);
-      alert.innerHTML = "<i class='" + icon + " fas fa-large' aria-hidden='true'></i> " + message;
-
-      document.querySelector('.results-box').innerHTML = "";
-      document.querySelector('.results-box').appendChild(alert);
     }
 });

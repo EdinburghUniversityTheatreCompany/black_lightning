@@ -36,7 +36,7 @@ class Admin::MembershipController < AdminController
       end
 
       image_url = if user.avatar.attached?
-        url_for(user.avatar)
+        Rails.application.routes.url_helpers.rails_representation_url(user.avatar.variant(ApplicationController.helpers.square_thumb_variant).processed, only_path: true)
       else
         ''
       end
