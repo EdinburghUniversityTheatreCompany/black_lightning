@@ -149,11 +149,13 @@ class Admin::UsersControllerTest < ActionController::TestCase
 
     users = FactoryBot.create_list :user, 2
 
-    get :autocomplete_list, params: { all_users: 'true' }
+    get :autocomplete_list, params: { show_non_members: '1' }
 
     members.each { |member| assert_includes_user(member) }
 
     users.each { |user| assert_includes_user(user) }
+
+    assert_not response.body['pagination']['more']
   end
 
   private

@@ -43,7 +43,8 @@ class Admin::UsersController < AdminController
   end
 
   def autocomplete_list
-    page = params[:page].to_i || 1
+    page = [params[:page].to_i, 1].max # First page is always 1.
+
     per_page = 30 # Adjust the number of items per page as needed
 
     # Ransack query should take care of the filtering.
