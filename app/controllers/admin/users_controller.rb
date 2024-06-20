@@ -43,42 +43,23 @@ class Admin::UsersController < AdminController
   end
 
   def autocomplete_list
-    response.headers.delete('Content-Length')
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['Content-Type'] = 'application/json'
+    page = params[:page].to_i || 1
+    per_page = 30 # Adjust the number of items per page as needed
 
-    # Use the base_index_ransack_query to easily support ransacking the users.
+    # Ransack query should take care of the filtering.
     @users = base_index_ransack_query
 
-    @users = @users.with_role(:member) if params[:all_users].nil?
+    @users = @users.with_role(:member) if params[:show_non_members] != '1'
 
-    @users = @users.select(['id', :first_name, :last_name]).reorder(:first_name, :last_name)
-    
-    self.response_body = @users.map { |user| { id: user.id, text: user.name_or_default }}.to_json
+    @users = @users.reorder(:first_name, :last_name).page(page).per(per_page)
 
-    # Stop here. The old method is below.
-    return
-
-    # This... erm... thing... builds the response up one
-    # user at a time, which saves loading the whole lot into
-    # memory in one go. Unfortunately, it does mean doing some
-    # of the JSON myself. Sorry.
-    self.response_body = Enumerator.new do |output|
-      output << '['
-
-      first = true
-      @users.find_each do |u|
-        if first
-          first = false
-        else
-          output << ','
-        end
-
-        output << "{\"id\":\"#{u.id}\",\"text\":\"#{u.name_or_default}\"}"
-      end
-
-      output << ']'
+    items = @users.select(['id', :first_name, :last_name]).map do |user|
+      { id: user.id, text: user.name_or_default }
     end
+
+    total_count = @users.total_count
+
+    render json: { results: items, pagination: { total_count: total_count, more: total_count > per_page * page } }
   end
 
   private
@@ -87,12 +68,12 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
-    perm_parms = [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
+    perm_params = [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
             :phone_number, :card_number, :public_profile, :bio, :avatar, :username]
 
-    perm_params = perm_parms.push(role_ids: []) if current_user.has_role?(:admin)
-      
-    return perm_parms
+    perm_params.push(role_ids: []) if current_user.has_role?(:admin)
+
+    return perm_params
   end
 
   # TEST
