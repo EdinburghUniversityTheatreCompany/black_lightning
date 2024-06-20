@@ -1,5 +1,5 @@
 import swal from 'sweetalert2/dist/sweetalert2.js'
-import Rails from "@rails/ujs";
+import Rails from '@rails/ujs';
 import './alerts'
 
 window.Swal = swal;
@@ -29,7 +29,6 @@ const PersistentToast = Swal.mixin({
 window.Toast = Toast;
 window.PersistentToast = PersistentToast;
 
-// TODO: Doubt this works this way anymore? Check.
 Rails.confirm = function (message, element) {
   const swalWithBootstrap = swal.mixin({
     buttonsStyling: true,
@@ -51,4 +50,4 @@ Rails.confirm = function (message, element) {
         element.click();
       }
     });
-}
+};

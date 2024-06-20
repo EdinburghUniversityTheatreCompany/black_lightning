@@ -13,6 +13,9 @@ import './src/shared/input_validator'
 // Load all the stimulus controllers
 import "./controllers"
 
+import Rails from '@rails/ujs';
+Rails.start();
+
 require("@rails/activestorage").start()
 
 // Requires jQuery. There are vanilla js packages, but not as frequently maintained or downloaded.
