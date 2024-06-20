@@ -5,7 +5,7 @@ FactoryBot.define do
 
     draft { true }
 
-    send_date { DateTime.now.advance(days: 1) }
+    send_date { DateTime.current.advance(days: 1) }
 
     factory :sent_mass_mail do
       draft { false }

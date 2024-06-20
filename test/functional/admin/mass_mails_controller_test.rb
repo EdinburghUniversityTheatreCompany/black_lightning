@@ -150,7 +150,7 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
 
   test 'Should not send mail that has a send date in the past' do
     mass_mail = mass_mails(:draft_mass_mail)
-    mass_mail.update_attribute :send_date, DateTime.now.advance(days: -1)
+    mass_mail.update_attribute :send_date, DateTime.current.advance(days: -1)
 
     helper_test_send_mail_with_errors(mass_mail)
   end

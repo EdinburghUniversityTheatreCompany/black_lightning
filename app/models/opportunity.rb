@@ -25,7 +25,7 @@ class Opportunity < ApplicationRecord
 
   # If you update this, you must also update the active? method and the permission somewhere at the top of ability.rb.
   # You might also have to update the opportunities helper.
-  scope :active, -> { where('approved = true AND expiry_date > ?', Time.now).order('expiry_date ASC') }
+  scope :active, -> { where('approved = true AND expiry_date > ?', Time.current).order('expiry_date ASC') }
 
   def self.ransackable_attributes(auth_object = nil)
     ["approved", "description", "expiry_date", "show_email", "title"]
@@ -36,11 +36,11 @@ class Opportunity < ApplicationRecord
   end
 
   def active?
-    return approved && expiry_date > Time.now
+    return approved && expiry_date > Time.current
   end
 
   def css_class
-    return '' unless expiry_date > Time.now
+    return '' unless expiry_date > Time.current
 
     if active?
       return 'table-success'.html_safe

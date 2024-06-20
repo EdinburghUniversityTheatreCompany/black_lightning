@@ -20,7 +20,7 @@ require 'test_helper'
 
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   setup do
-    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: 5), question_count: 3)
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 5), question_count: 3)
     @proposal = FactoryBot.create(:proposal, call: @call)
   end
 

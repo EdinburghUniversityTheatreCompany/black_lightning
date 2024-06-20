@@ -233,7 +233,7 @@ class Admin::StaffingsController < AdminController
       helpers.append_to_flash(:error, 'Someone else has already signed up for this slot')
     end
 
-    if @job.staffable.start_time < Time.now
+    if @job.staffable.start_time < Time.current
       helpers.append_to_flash(:error, 'You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.')
     end
 
@@ -264,7 +264,7 @@ class Admin::StaffingsController < AdminController
   def set_new_params
     @shows = Show.future.pluck(:name)
 
-    now = Time.now
+    now = Time.current
     @default_start_time = Time.new(now.year, now.month, now.day, 18, 30, 0)
     @default_end_time = Time.new(now.year, now.month, now.day, 22, 00, 0)
   end

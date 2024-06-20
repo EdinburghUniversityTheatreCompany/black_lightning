@@ -32,7 +32,7 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
 
     # Unforgive the debt, and see if it takes a job.
     staffing_debt.state = :normal
-    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, end_time: DateTime.now.advance(days: -1))
+    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, end_time: DateTime.current.advance(days: -1))
     staffing_job = FactoryBot.create(:staffing_job, user: staffing_debt.user, staffable: staffing)
 
     staffing_debt.admin_staffing_job = staffing_job
@@ -41,7 +41,7 @@ class Admin::StaffingDebtTest < ActiveSupport::TestCase
   end
 
   test 'unfulfilled on self' do
-    staffing = FactoryBot.create(:staffing, end_time: DateTime.now.advance(days: -1), unstaffed_job_count: 1)
+    staffing = FactoryBot.create(:staffing, end_time: DateTime.current.advance(days: -1), unstaffed_job_count: 1)
     fulfilled_debt = FactoryBot.create(:staffing_debt)
 
     staffing.staffing_jobs.first.staffing_debt = fulfilled_debt

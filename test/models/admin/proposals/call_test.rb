@@ -17,8 +17,8 @@ require 'test_helper'
 
 class Admin::Proposals::CallTest < ActiveSupport::TestCase
   test 'open' do
-    old_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -1), editing_deadline: DateTime.now.advance(days: 1))
-    new_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: 1))
+    old_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -1), editing_deadline: DateTime.current.advance(days: 1))
+    new_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 1))
 
     assert new_call.open?
     assert_not old_call.open?
@@ -28,7 +28,7 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
   end
 
   test 'archive' do
-    call = FactoryBot.create(:proposal_call, archived: false, editing_deadline: DateTime.now.advance(days: -1))
+    call = FactoryBot.create(:proposal_call, archived: false, editing_deadline: DateTime.current.advance(days: -1))
 
     assert call.archive
 
@@ -45,7 +45,7 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
   end
 
   test 'cannot archive before the submission deadline has been reached' do
-    call = FactoryBot.create(:proposal_call, archived: false, editing_deadline: DateTime.now.advance(days: 1))
+    call = FactoryBot.create(:proposal_call, archived: false, editing_deadline: DateTime.current.advance(days: 1))
 
     assert_not call.archive
 

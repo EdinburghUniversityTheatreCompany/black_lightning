@@ -32,7 +32,7 @@ class Admin::Proposals::Call < ApplicationRecord
   normalizes :name, with: -> (name) { name&.strip }
 
   # TODO: Maybe revise what open means?
-  scope :open, -> { where(submission_deadline: DateTime.now..DateTime::Infinity.new) }
+  scope :open, -> { where(submission_deadline: DateTime.current..DateTime::Infinity.new) }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[archived editing_deadline name submission_deadline]
@@ -43,14 +43,14 @@ class Admin::Proposals::Call < ApplicationRecord
   end
 
   def open?
-    return submission_deadline > DateTime.now
+    return submission_deadline > DateTime.current
   end
 
   ##
   # Archives a call, if the editing deadline has been reached.
   ##
   def archive
-    return false if DateTime.now < editing_deadline
+    return false if DateTime.current < editing_deadline
 
     self.archived = true
     return save

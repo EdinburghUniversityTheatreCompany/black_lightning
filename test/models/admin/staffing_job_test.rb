@@ -26,10 +26,10 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
   end
 
   test 'completed' do
-    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, staffed_job_count: 1, start_time: DateTime.now.advance(days: -1))
+    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, staffed_job_count: 1, start_time: DateTime.current.advance(days: -1))
 
     assert staffing.staffing_jobs.first.completed?
-    staffing.update_attribute(:end_time, DateTime.now.advance(days: 1))
+    staffing.update_attribute(:end_time, DateTime.current.advance(days: 1))
     assert_not staffing.staffing_jobs.first.completed?
   end
 
