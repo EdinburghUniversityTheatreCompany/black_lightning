@@ -113,7 +113,7 @@ class Admin::MembershipActivationTokensController < AdminController
 
     respond_to do |format|
       format.html { render 'new', status: :unprocessable_entity }
-      format.json { render json: flash[:error], status: :unprocessable_entity }
+      # format.json { render json: flash[:error], status: :unprocessable_entity }
     end
   end
 end

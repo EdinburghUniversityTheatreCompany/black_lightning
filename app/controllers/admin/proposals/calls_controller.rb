@@ -31,7 +31,7 @@ class Admin::Proposals::CallsController < AdminController
 
     respond_to do |format|
       format.html { redirect_to admin_proposals_calls_path }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 

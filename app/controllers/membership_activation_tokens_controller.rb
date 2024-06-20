@@ -21,7 +21,7 @@ class MembershipActivationTokensController < ApplicationController
       unless @user.save
         respond_to do |format|
           format.html { render 'activate', status: :unprocessable_entity }
-          format.json { render json: user.errors, status: :unprocessable_entity }
+          # format.json { render json: user.errors, status: :unprocessable_entity }
         end
         return
       end

@@ -62,7 +62,7 @@ class Admin::OpportunitiesController < AdminController
 
     respond_to do |format|
       format.html { redirect_to admin_opportunity_url(@opportunity) }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
@@ -86,7 +86,7 @@ class Admin::OpportunitiesController < AdminController
 
     respond_to do |format|
       format.html { redirect_to admin_opportunity_url(@opportunity) }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 

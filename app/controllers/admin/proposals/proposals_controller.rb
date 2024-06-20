@@ -105,9 +105,8 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-
       format.html { redirect_to admin_proposals_proposal_path(@proposal) }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
@@ -125,9 +124,8 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-
       format.html { redirect_to admin_proposals_proposal_path(@proposal) }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
@@ -148,7 +146,7 @@ class Admin::Proposals::ProposalsController < AdminController
     ensure
       respond_to do |format|
         format.html { redirect_to admin_proposals_proposal_path(@proposal) }
-        format.json { head :no_content }
+        # format.json { head :no_content }
       end
     end
   end

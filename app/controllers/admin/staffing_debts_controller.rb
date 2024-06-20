@@ -38,7 +38,7 @@ class Admin::StaffingDebtsController < AdminController
 
     respond_to do |format|
       format.html { redirect_to admin_staffing_debts_path }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
@@ -48,7 +48,7 @@ class Admin::StaffingDebtsController < AdminController
 
     respond_to do |format|
       format.html { redirect_to admin_staffing_debts_url, notice: 'Staffing Debt converted to Maintenance Debt' }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
