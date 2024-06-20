@@ -22,6 +22,8 @@ class MassMail < ApplicationRecord
 
   before_destroy :check_if_mail_has_been_sent
 
+  normalizes :subject, with: -> (subject) { subject&.strip }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[body draft send_date sender_id subject]
   end

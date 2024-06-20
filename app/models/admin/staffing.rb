@@ -29,11 +29,6 @@ class Admin::Staffing < ApplicationRecord
   after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
   before_destroy :reminder_cleanup
 
-  default_scope -> { order('start_time ASC') }
-
-  scope :future, -> { where(['end_time >= ?', DateTime.now]) }
-  scope :past, -> { where(['end_time < ?', DateTime.now]) }
-
   has_many :staffing_jobs, as: :staffable, class_name: 'Admin::StaffingJob', dependent: :destroy
   has_many :users, through: :staffing_jobs
 
@@ -43,6 +38,13 @@ class Admin::Staffing < ApplicationRecord
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
   acts_as_url :show_title, url_attribute: :slug, sync_url: true, allow_duplicates: true
+
+  normalizes :show_title, with: -> (value) { value&.strip }
+
+  default_scope -> { order('start_time ASC') }
+
+  scope :future, -> { where(['end_time >= ?', DateTime.now]) }
+  scope :past, -> { where(['end_time < ?', DateTime.now]) }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[start_time show_title reminder_job_id end_time counts_towards_debt slug]

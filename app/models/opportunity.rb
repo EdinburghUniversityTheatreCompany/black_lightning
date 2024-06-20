@@ -21,6 +21,8 @@ class Opportunity < ApplicationRecord
 
   validates :title, :expiry_date, :description, :creator_id, presence: true
 
+  normalizes :title, with: -> (title) { title&.strip }
+
   # If you update this, you must also update the active? method and the permission somewhere at the top of ability.rb.
   # You might also have to update the opportunities helper.
   scope :active, -> { where('approved = true AND expiry_date > ?', Time.now).order('expiry_date ASC') }

@@ -35,6 +35,8 @@ class Attachment < ApplicationRecord
 
   has_one_attached :file
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   default_scope -> { order('name ASC') }
 
   ACCESS_LEVELS = [

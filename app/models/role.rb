@@ -31,6 +31,8 @@ class Role < ApplicationRecord
 
   scopify
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[name]
   end

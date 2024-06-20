@@ -37,6 +37,9 @@ class Venue < ApplicationRecord
 
   validates :image, content_type: %i[png jpg jpeg gif]
 
+  normalizes :email, with: -> (email) { email&.downcase&.strip }
+  normalizes :name, :tagline, with: -> (value) { value&.strip }
+
   default_scope -> { order('name ASC') }
 
   def self.ransackable_attributes(auth_object = nil)

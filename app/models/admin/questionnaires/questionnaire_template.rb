@@ -24,6 +24,8 @@ class Admin::Questionnaires::QuestionnaireTemplate < ApplicationRecord
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
   accepts_nested_attributes_for :notify_emails, reject_if: :all_blank, allow_destroy: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def as_json(options = {})
     defaults = { include: [:questions, :notify_emails] }
 

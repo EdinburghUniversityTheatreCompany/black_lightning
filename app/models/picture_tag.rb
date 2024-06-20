@@ -16,6 +16,8 @@ class PictureTag < ApplicationRecord
 
   has_and_belongs_to_many :pictures, optional: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[description name id ordering]
   end

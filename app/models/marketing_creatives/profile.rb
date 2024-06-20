@@ -25,6 +25,8 @@ class MarketingCreatives::Profile < ApplicationRecord
 
   belongs_to :user, optional: true
 
+  normalizes :name, :url, with: -> (value) { value&.strip }
+
   def to_param
     url
   end

@@ -45,6 +45,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   after_initialize :set_default_proposal_text
 
+  normalizes :show_title, with: -> (show_title) { show_title&.strip }
+
   # Reading is completely managed by ability.rb because it is so complicated and dependent on the call.
   DISABLED_PERMISSIONS = %w[read].freeze
 

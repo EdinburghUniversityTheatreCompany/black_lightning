@@ -20,6 +20,8 @@ class VideoLink < ApplicationRecord
   validate :link_is_valid
   validates :name, :link, :access_level, presence: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   default_scope -> { order(order: :asc) }
 
   # They're the same, so why not?

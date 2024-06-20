@@ -18,6 +18,8 @@ class EventTag < ApplicationRecord
 
   default_scope { order(:ordering) }
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[description id name ordering]
   end

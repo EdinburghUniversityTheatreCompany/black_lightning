@@ -23,6 +23,8 @@ class Techie < ApplicationRecord
 
   accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
+  normalizes :name, with: -> (name) { name&.strip }
+
   default_scope -> { order('name ASC') }
 
   def self.ransackable_attributes(auth_object = nil)
