@@ -25,20 +25,20 @@
     <div class="row">
       <div class="col-md">
         <%= render 'card_widget', card_title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), 
-          card_partial: "debt_widget", card_class: current_user.in_debt ? 'card-danger' :  'card-success' 
-        %>
-        <%= render 'card_widget', card_title: link_to('Opportunities', admin_opportunities_path), card_partial: "opportunities_widget", card_class: "" %>
-        <%= render 'card_widget', card_title: 'Resources', card_partial: "resources_widget", card_class: "" %>
+          card_partial: "debt_widget", card_status: current_user.in_debt ? 'danger' : 'green' %>
+
+        <%= render 'card_widget', card_title: link_to('Opportunities', admin_opportunities_path), card_partial: "opportunities_widget" %>
+        <%= render 'card_widget', card_title: 'Resources', card_partial: "resources_widget" %>
       </div>
       <div class="col-md-6">
-        <%= render 'card_widget', card_title: link_to('News', admin_news_index_path), card_partial: "news_widget", card_class: "" %>
-        <%= render 'card_widget', card_title: link_to('Upcoming Shows', admin_shows_path), card_partial: "shows_widget", card_class: "" %>
-        <%= render 'card_widget', card_title: link_to('Open Proposals', admin_proposals_calls_path), card_partial: "proposals_widget", card_class: "" %>
+        <%= render 'card_widget', card_title: link_to('News', admin_news_index_path), card_partial: "news_widget" %>
+        <%= render 'card_widget', card_title: link_to('Upcoming Shows', admin_shows_path), card_partial: "shows_widget" %>
+        <%= render 'card_widget', card_title: link_to('Open Proposals', admin_proposals_calls_path), card_partial: "proposals_widget" %>
       </div>
       <div class="col-xl">
-        <%= render 'card_widget', card_title: link_to('Staffing', admin_staffings_path), card_partial: "staffings_widget", card_class: "" %>
+        <%= render 'card_widget', card_title: link_to('Staffing', admin_staffings_path), card_partial: "staffings_widget" %>
         <% if current_user.has_role?('Committee') || can?(:manage, Admin::Staffing) %>
-          <%= render 'card_widget', card_title: "Committee Staffing", card_partial: "committee_staffing_widget", card_class: "" %>
+          <%= render 'card_widget', card_title: "Committee Staffing", card_partial: "committee_staffing_widget" %>
         <% end %>
       </div>
     </div><!-- /.container-fluid -->

@@ -1,6 +1,10 @@
-<%# locals: (card_class:, card_title:, card_partial:) %>
+<%# locals: (card_title:, card_partial:, card_status: nil) %>
 
-<div class="card <%= card_class %>">
+<div class="card">
+  <% if card_status.present? %>
+    <div class="card-status-start bg-<%= card_status %>"></div>
+  <% end %>
+
   <div class="card-header">
     <span class="card-title"><%= card_title %></span>
     <div class="card-tools">
