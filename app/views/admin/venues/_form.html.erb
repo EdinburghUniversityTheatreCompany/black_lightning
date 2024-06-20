@@ -9,7 +9,7 @@
 
     <%= f.input :location, label: "Location - #{link_to('About Setting Locations', admin_help_venue_location_path, target: '_blank')}".html_safe %>
     
-    <%= render "/shared/form/md_editor", f: f, field: :address, rows: 4, show_hint: false %>
+    <%= render "/shared/form/md_editor", f: f, field: :address, rows: 4, show_side_help: false %>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image%>
 

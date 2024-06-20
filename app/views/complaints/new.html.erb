@@ -10,7 +10,7 @@
   <div class="form-inputs">
     <%= f.input :subject %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :description, show_hint: true %>
+    <%= render "/shared/form/md_editor", f: f, field: :description %>
   </div>
 
   <%= recaptcha_v3(action: 'submit_complaint') %>

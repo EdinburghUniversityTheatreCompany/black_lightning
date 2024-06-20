@@ -1,6 +1,6 @@
-<%# locals: (f:, field:, show_hint: true, rows: 10, input_field_args: {}) %>
+<%# locals: (f:, field:, show_side_help: true, rows: 10, input_field_args: {}) %>
 
-<% # Use a unique ID in all navigation tabs so that there is no interference in navigation when there are multiple md_editors on one page. %>
+<%# Use a unique ID in all navigation tabs so that there is no interference in navigation when there are multiple md_editors on one page. %>
 <% id = DateTime.now.strftime('%Q') %>
 
 <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
@@ -10,8 +10,8 @@
     <%= f.label field, **input_field_args %>
   </div>
 
-  <% # Store the ID so we can easily find it and replace it everywhere it appears when we insert copies for nested fields. %>
-  <div class="col-sm-9 tab-container md-editor" md-editor-id="<%=id %>">
+  <%# Store the ID so we can easily find it and replace it everywhere it appears when we insert copies for nested fields. %>
+  <div class="col-sm-9 tab-container md-editor" md-editor-id="<%= id %>">
     <div class="row">
       <div class="col-md">
         <div class="tab-content">
@@ -48,7 +48,7 @@
   
           <div class="card-body p-1">
             <div class="yield">
-              <% if show_hint %>
+              <% if show_side_help %>
                 <%= render "shared/form/md_hints" %>
               <% end %>
 
