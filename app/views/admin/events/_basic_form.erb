@@ -31,11 +31,11 @@
 
 <%= f.input :is_public, hint: 'Display this event on the publicly visible part of the website?' %>
 
+<%= render 'admin/events/event_tags_form_section', f: f %>
+
 <%= render "/shared/form/md_editor", f: f, field: :publicity_text, show_hint: true %>
 
 <%= render "/shared/form/md_editor", f: f, field: :members_only_text, show_hint: true %>
-
-<%= render 'admin/events/event_tags_form_section', f: f %>
 
 <%= render '/shared/form/sections/gallery', f: f %>
 
