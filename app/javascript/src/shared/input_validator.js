@@ -13,22 +13,27 @@ $(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
 // Add event listeners to all inputs in the passed element.
 function addEventListenersToInputs(element) {
     $(element).find('input').each(function() {
+        // Do not add validators if the input is marked as not needing validation.
+        if ($(this).attr('nojsvalidation')) {
+            return;
+        };
+
         // Do not add validators if the input is in a search form.
         if ($(this).closest('form').hasClass('search-form')) {
             return;
         }
 
         this.addEventListener('input', function() {
-            validate(this);
+            validateInput(this);
         });
 
         // Validate them immediately to show users which fields they need to fill out or change.
-        validate(this);
+        validateInput(this);
     });
 };
 
 // Validates the input, adding the is-valid class if it's valid and is-invalid if it's invalid.
-function validate(input) {
+export function validateInput(input) {
     if (input.checkValidity()) {
         input.classList.remove('is-invalid');
         input.classList.add('is-valid');
