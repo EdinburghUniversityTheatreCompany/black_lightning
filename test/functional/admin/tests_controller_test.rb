@@ -75,6 +75,6 @@ class Admin::TestControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :forbidden
     assert_nil flash[:error]
-    assert_equal '<ul><li>You are not authorized to access this page.</li></ul>', assigns(:error_summary)
+    assert_match '<ul><li>You are not authorized to access this page.</li></ul>', response.body
   end
 end
