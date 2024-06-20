@@ -48,8 +48,8 @@ class Admin::JobControlControllerTest < ActionController::TestCase
   test 'should reset job' do
     job = Delayed::Job.new
     job.attempts = 3
-    job.run_at = Time.now
-    job.failed_at = Time.now
+    job.run_at = Time.current
+    job.failed_at = Time.current
     job.save!
 
     request.env['HTTP_REFERER'] = admin_jobs_overview_path

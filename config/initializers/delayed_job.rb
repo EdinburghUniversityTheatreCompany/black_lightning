@@ -8,7 +8,7 @@ class Delayed::Job
   ##
   def retry_job
     self.attempts = 0
-    self.run_at = Time.now
+    self.run_at = Time.current
     self.failed_at = nil
     self.save!
   end

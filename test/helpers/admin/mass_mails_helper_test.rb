@@ -6,7 +6,7 @@ class Admin::MassMailsHelperTest < ActionView::TestCase
   end
 
   test 'should return send date' do
-    @mass_mail.send_date = DateTime.now.advance(days: 1)
+    @mass_mail.send_date = DateTime.current.advance(days: 1)
     @mass_mail.save
 
     assert_not_equal 'No Send Date', get_send_date(@mass_mail)
