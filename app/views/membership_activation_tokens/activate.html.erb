@@ -25,7 +25,7 @@
     <% end %>
 
      <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
-        <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12, show_hint: true %>
+        <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12 %>
         <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
         <%= f.input :public_profile, label: 'Enable Public Profile', hint: 'Display your profile on the public website as well as the members-only part?' %>
   </div>

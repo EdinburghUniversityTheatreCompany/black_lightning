@@ -10,7 +10,7 @@
 
     <%= f.input :ordering, hint: 'The ordering in the subpage layer. Unused in other situations. From low to high.'%>
 
-    <%= render "/shared/form/md_editor", f: f, field: :content, rows: 12, show_hint: true %>
+    <%= render "/shared/form/md_editor", f: f, field: :content, rows: 12 %>
 
     <div class="well form-inline">
       <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
