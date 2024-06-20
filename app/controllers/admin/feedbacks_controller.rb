@@ -52,10 +52,10 @@ class Admin::FeedbacksController < AdminController
             redirect_to admin_show_path(@show)
           end
         end
-        format.json { render json: @feedback, status: :created, location: @feedback }
+        # format.json { render json: @feedback, status: :created, location: @feedback }
       else
         format.html { render 'new', status: :unprocessable_entity }
-        format.json { render json: @feedback.errors, status: :unprocessable_entity }
+        # format.json { render json: @feedback.errors, status: :unprocessable_entity }
       end
     end
   end

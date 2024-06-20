@@ -20,7 +20,7 @@ module GenericController
 
     respond_to do |format|
       format.html { render index_filename }
-      format.json { render json: resources }
+      # format.json { render json: resources }
     end
   end
 
@@ -29,7 +29,7 @@ module GenericController
 
     respond_to do |format|
       format.html # show.html.erb
-      format.json { render json: get_resource }
+      # format.json { render json: get_resource }
     end
   end
 
@@ -38,7 +38,7 @@ module GenericController
 
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json: get_resource }
+      # format.json { render json: get_resource }
     end
   end
 
@@ -52,10 +52,10 @@ module GenericController
         on_create_success
 
         format.html { redirect_to(create_redirect_url) }
-        format.json { render json: get_resource, status: :created }
+        # format.json { render json: get_resource, status: :created }
       else
         format.html { render 'new', status: :unprocessable_entity }
-        format.json { render json: get_resource.errors, status: :unprocessable_entity }
+        # format.json { render json: get_resource.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -65,7 +65,7 @@ module GenericController
 
     respond_to do |format|
       format.html # new.html.erb
-      format.json { render json: get_resource }
+      # format.json { render json: get_resource }
     end
   end
 
@@ -77,12 +77,12 @@ module GenericController
         on_update_success
 
         format.html { redirect_to(update_redirect_url) }
-        format.json { render json: [:admin, get_resource], status: :updated }
+        # format.json { render json: [:admin, get_resource], status: :updated }
       else
         @title = edit_title
 
         format.html { render 'edit', status: :unprocessable_entity }
-        format.json { render json: get_resource.errors, status: :unprocessable_entity }
+        # format.json { render json: get_resource.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -96,7 +96,7 @@ module GenericController
 
     respond_to do |format|
       format.html { redirect_to(url) }
-      format.json { format.json { render json: flash[:error] } }
+      # format.json { format.json { render json: flash[:error] } }
     end
   end
 

@@ -18,7 +18,7 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
 
     respond_to do |format|
       format.html # sign_up.html.erb
-      format.json { render json: @profile }
+      # format.json { render json: @profile }
     end
   end
 

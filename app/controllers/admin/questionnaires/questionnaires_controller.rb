@@ -33,7 +33,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
 
       respond_to do |format|
         format.html { redirect_to Admin::Questionnaires::Questionnaire }
-        format.json { render json: flash[:error] }
+        # format.json { render json: flash[:error] }
       end
     else
       super
@@ -63,7 +63,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
 
     respond_to do |format|
       format.html # answer.html.erb
-      format.json { render json: @questionnaire }
+      # format.json { render json: @questionnaire }
     end
   end
 
@@ -85,10 +85,10 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
         end
 
         format.html { redirect_to @questionnaire }
-        format.json { head :no_content }
+        # format.json { head :no_content }
       else
         format.html { render 'answer', status: :unprocessable_entity }
-        format.json { render json: @questionnaire.errors, status: :unprocessable_entity }
+        # format.json { render json: @questionnaire.errors, status: :unprocessable_entity }
       end
     end
   end
