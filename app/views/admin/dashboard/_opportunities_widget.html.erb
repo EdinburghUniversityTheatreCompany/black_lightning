@@ -1,5 +1,4 @@
-<% displayed_opportunities_count = 5 %>
-<% opportunities = Opportunity.active %>
+<%# locals: (opportunities: Opportunity.active, displayed_opportunities_count: 5) %>
 
 <% if opportunities.empty? then %>
   <div>

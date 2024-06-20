@@ -1,3 +1,5 @@
+<%# locals: () %>
+
 <div class="container-fluid bg-primary <%= 'mt-3' if !@admin_site %>">
   <footer class="px-2">
     <% # Exists only so the next row has something to margin against.%>
@@ -30,7 +32,7 @@
           </p>
 
           <p>
-            <%= link_to 'Project BlackLightning', static_path('black_lightning'), class: 'text-reset' %> Version: <%= version %>
+            <%= link_to 'Project BlackLightning', static_path('black_lightning'), class: 'text-reset' %> Version: <%= version() %>
             -
             <%= link_to 'Report Issue', 'https://github.com/EdinburghUniversityTheatreCompany/black_lightning/issues', class: 'text-reset' %>
             | <%= link_to 'Contact Us', static_path('contact'), class: 'text-reset' %>

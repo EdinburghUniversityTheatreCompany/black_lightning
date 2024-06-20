@@ -1,3 +1,5 @@
+<%# locals: (staffings_hash:, archived: nil) %>
+
 <% content_for :head do %>
   <style>
     td a { 
@@ -5,8 +7,6 @@
     }
   </style>
 <% end %>
-
-<% archived ||= nil %>  
   
   <table class="table table-hover">
     <thead>

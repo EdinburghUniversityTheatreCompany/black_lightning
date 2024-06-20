@@ -1,7 +1,5 @@
-<% all_users = can?(:add_non_members, Event) if all_users.nil? %>
-<% field = :user if field.nil? %>
-<% label = nil if label.nil? %>
-<% wrapper = nil if wrapper.nil? %>
+<%# locals: (f:, field: :user, all_users: can?(:add_non_members, Event), label: nil, wrapper: nil)%>
+<%# KEEP %>
 
 <%- # Enables ajax calls on the select2 to get the user names. %>
 <%- # Tries to get the current value of the field and make it the only item in the collection so the default is shown. %>

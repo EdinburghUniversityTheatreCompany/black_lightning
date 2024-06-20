@@ -1,3 +1,5 @@
+<%# locals: (paginator:, current_page: nil, per_page: nil, remote: nil, total_pages: nil, window: nil, left: nil, right: nil) %>
+
 <%= paginator.render do %>
   <nav aria-label="Page Navigation" class="mb-3">
     <ul class="pagination pagination-sm m-0 <%= 'float-right' if @admin_site %>">

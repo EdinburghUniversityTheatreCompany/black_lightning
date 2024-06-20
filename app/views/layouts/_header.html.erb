@@ -1,5 +1,7 @@
+<%# locals: () %>
+
 <div class="container">
-	<%= link_to image_tag('Header.png', class: "img-fluid", width: 1873, height: 300), root_url %>
+	<%= link_to image_tag('Header.png', class: "img-fluid", width: 1873, height: 300), root_url() %>
 </div>
 <% # NICETOHAVE: The hamburger should be on the right of the header when it appears.. %>
 
@@ -13,7 +15,7 @@
 				<ul class="navbar-nav mb-2 mb-lg-0 w-100">
 					<div class="row w-100 g-0">
 
-					<% public_navbar_items.each_with_index do |navbar_item, index| %>
+					<% public_navbar_items().each_with_index do |navbar_item, index| %>
 						<% # Add in columns to pad the auto to make sure the full width of the row is taken up, which a row of only col-auto's won't do%>
 						<% if index > 0 %>
 							<div class="col"></div>

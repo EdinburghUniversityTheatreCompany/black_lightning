@@ -1,3 +1,5 @@
+<%# locals: (users:, url:) -%>
+
 <% search_fields = { full_name_cont:   { slug: 'defaults.name' } } %>
 <%= render('shared/search_form', input_fields: search_fields, url: url, columns: 1) %>
 

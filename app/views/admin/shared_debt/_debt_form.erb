@@ -1,3 +1,5 @@
+<%# locals: (debt:) %>
+
 <%= simple_horizontal_form_for debt do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <% unless debt.persisted? %>

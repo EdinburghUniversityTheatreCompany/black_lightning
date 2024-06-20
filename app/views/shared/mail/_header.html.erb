@@ -1,10 +1,11 @@
-<!-- This is a partial to make bootstrapping mailers MUCH easier, here we automatically pass the subject into the header view, but the rest of the code is in the view itself
+<%# locals: () %>
+<%# This is a partial to make bootstrapping mailers MUCH easier, here we automatically pass the subject into the header view, but the rest of the code is in the view itself
 
 We also store the CSS here, because it cannot be passed as a separate stylesheet for mail clients.
 
 It MUST be passed @subject as a global variable, defined in the mailers.
 
-Note that there is an equivalent text header, but this is just empty, as this is not required.-->
+Note that there is an equivalent text header, but this is just empty, as this is not required. %>
 
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional //EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">

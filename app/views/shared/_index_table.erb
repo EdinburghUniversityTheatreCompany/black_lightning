@@ -1,5 +1,4 @@
-<% include_edit_button = true if include_edit_button.nil? %>
-<% include_link_to_item = true if include_link_to_item.nil? %>
+<%# locals: (headers:, field_sets:, resource_class:, include_edit_button: true, include_link_to_item: true) -%>
 
 <% headers << '' if can?(:edit, resource_class) && include_edit_button %>
 

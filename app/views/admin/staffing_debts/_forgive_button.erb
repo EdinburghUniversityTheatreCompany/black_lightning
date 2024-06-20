@@ -1,3 +1,5 @@
+<%# locals: (staffing_debt:) %>
+
 <% if staffing_debt.status != :forgiven %>
   <%= get_link staffing_debt, :forgive, http_method: :put, link_text: 'Forgive', 
                confirm: "Forgiving #{staffing_debt.user.name(current_user)}'s Debt",
