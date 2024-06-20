@@ -1,7 +1,7 @@
 <% content_for :head do %>
   <meta name="templates-base-url" content="/admin/staffing_templates" />
   <meta name="templates-items-type" content="jobs" />
-  <%= javascript_include_tag "admin/question_templates.js" %>
+  <%= javascript_include_tag "admin/question_templates.js", "admin/staffing_form_dynamic_date_fields.js", defer: true %>
 <% end %>
 
 <%= simple_horizontal_form_for @staffing do |f| %>
@@ -14,32 +14,6 @@
 		
     <div id="dates_container">	
       <h3>Dates</h3>	
-      <script type="text/javascript">	
-        $(function () {
-          var counter = 0;
-          $('#add_date').click(function () {
-            // Clone the blueprint, show it, and remove the blueprint id.
-            var item = $('#date_blueprint').clone();
-            $(item).show();
-            $(item).removeAttr('id');
-              
-            // Rename the newly-added item so the params are formatted correctly.
-            item.find('#start_datetime').attr('name', 'start_times[' + counter + ']');
-            item.find('#end_time').attr('name', 'end_times[' + counter + ']');
-
-            // Remove the current row if clicked.
-            item.find('a').click(function () {	
-              $(item).remove();	
-            });	
-
-            // Add one to the counter for the ids
-            counter++;	
-  
-            // Add the newly-generated item right before the add_date button.
-            $('#add_date').before(item);	
-          });	
-        });	
-      </script>	
       <a id="add_date" class="btn btn-secondary"><i class="fas fa-calendar-plus" aria-hidden=”true”></i> Add Date</a>
     </div>
   </div>

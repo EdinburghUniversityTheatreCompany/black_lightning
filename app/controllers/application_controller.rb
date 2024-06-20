@@ -1,5 +1,5 @@
 class ApplicationController < ActionController::Base
-  include SubpageHelper, FormattingHelper, ApplicationHelper
+  include SubpageHelper, FormattingHelper, FlashHelper
 
   protect_from_forgery with: :exception
   before_action :set_paper_trail_whodunnit
@@ -73,14 +73,13 @@ class ApplicationController < ActionController::Base
     @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
 
     # Prepares the flash by turning all messages into arrays and merging the 'alerts' into the 'errors'.
-    format_flash 
+    standardise_flash
 
     # Add the current error that caused the application to halt to the error flash. 
     # Compact removes any nil values.
-    messages = [exception.message.gsub(Rails.root.to_s, '')]
-    messages += flash[:error] if flash[:error].present?
+    @error_messages = [exception.message.gsub(Rails.root.to_s, '')]
+    @error_messages += flash[:error] if flash[:error].present?
 
-    @error_summary = render_as_list(messages, 'ul')
     @error_type = exception.class
 
     # Errors and alerts are already rendered in the page body using the @error_summary, so we do not need to also render them as alerts.
@@ -89,7 +88,7 @@ class ApplicationController < ActionController::Base
 
     respond_to do |type|
       type.html { render template: template, status: status_code, layout: helpers.current_environment(request.fullpath) }
-      type.json { render json: { error: messages }, status: status_code }
+      type.json { render json: { error: @error_messages }, status: status_code }
       type.all  { render body: nil, status: status_code }
     end
   end

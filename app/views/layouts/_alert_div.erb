@@ -1,60 +1,16 @@
 <% hide_alert = @hide_alert if hide_alert.nil? %>
 
 <% if hide_alert != true %>
-
-  <%- # Generic JavaScript code to help show toasts. This is called in alert_message. %>
-  <script type="text/javascript">
-    async function showToast(alert_type, message) {
-      await Toast.fire({
-        icon: alert_type,
-        title: message
-      }) 
-    }
-
-    async function showPersistentToast (alert_type, message) {
-      await PersistentToast.fire({
-        icon: alert_type,
-        title: message,
-        position: 'top'
-      })
-    }
-
-    async function showError (message) {
-      await Swal.fire({
-        icon: 'error',
-        title: 'Oops...',
-        html: message,
-        allowOutsideClick: () => {
-          const popup = Swal.getPopup()
-          popup.classList.remove('swal2-show')
-          setTimeout(() => {
-            popup.classList.add('animate__animated', 'animation__shake')
-          })
-          setTimeout(() => {
-            popup.classList.remove('animate__animated', 'animation__shake')
-          }, 500)
-          return false
-        }
-      })
-    }
-  </script>
-
   <% # Standardise flash before rendering, and perform any necessary merges. %>
-  <% format_flash %>
+  <% standardise_flash %>
 
-  <% # Render each flash message by type. %>
+  <% # Get the flash as json, then pass it on to a JavaScript function that renders the flashes. %>
   <script type="text/javascript">
-    async function showAlerts() 
-    {
-      <% # Sort the flash to start with :error, then go on to the persisten notifications, and end with success and everything else (INFINITY rank). %>
-      <% flash.sort_by { |key, _| [:error, :info, :warning, :success].index(key.to_sym) || Float::INFINITY}.each do |key, messages| %>
-        <%= render '/layouts/alert_message', key: key, messages: messages %>
-      <% end %>
-    }
-
-    showAlerts();
+    document.addEventListener('DOMContentLoaded', function () {
+      flashJson = <%= flash_as_alert_hash.to_h.to_json.html_safe %>;
+      showFlashAlerts(flashJson);
+    });
   </script>
 
+  <% flash.discard %>
 <% end %>
-
-<% flash.discard %>

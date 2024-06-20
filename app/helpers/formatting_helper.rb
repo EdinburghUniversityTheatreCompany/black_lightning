@@ -4,7 +4,23 @@ module FormattingHelper
   end
 
   def render_as_list(list, wrap_tag)
+    # Sanitize each item in the list to prevent XSS attacks.
     list.map! { |item| ActionController::Base.helpers.sanitize(item) }
-    "<#{wrap_tag}><li>#{list.join('</li><li>')}</li></#{wrap_tag}>".html_safe
+
+    return content_tag(wrap_tag) do
+      list.map { |item| content_tag(:li, item) }.join.html_safe
+    end
+  end
+
+  def bool_icon(bool)
+    return bool ? '&#10004;'.html_safe : '&#10008;'.html_safe
+  end
+
+  def bool_text(bool, capitalized = true)
+    word = bool ? 'yes' : 'no'
+
+    return word.upcase_first if capitalized
+
+    return word
   end
 end

@@ -96,11 +96,7 @@ module LinkHelper
     # Removes prepending pencil tags and such.
     title ||= strip_tags(link_text).strip
 
-    if http_method == :get
-      link = link_to(link_text, link_target, class: html_class, method: http_method, data: confirm_data, title: title, target: target)
-    else
-      link = button_to(link_text, link_target, class: html_class, method: http_method, data: confirm_data, title: title, target: target)
-    end
+    link = link_to(link_text, link_target, class: html_class, 'data-method' => http_method, data: confirm_data, title: title, target: target)
 
     link = wrap_in_tags(link, wrap_tag) if wrap_tag
 

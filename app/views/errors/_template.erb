@@ -7,7 +7,7 @@
 
   <div class="alert alert-danger text-justify">
     <h4><b>Errors:</b></h4>
-    <%= @error_summary %>
+    <%= render_as_list(@error_messages, 'ul') %>
     
     <% if @exception_backtrace.present? && current_user.has_role?(:admin) %>
       <h4><b>Backtrace:</b></h4>

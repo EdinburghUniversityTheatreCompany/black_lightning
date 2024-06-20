@@ -160,10 +160,10 @@ SimpleForm.setup do |config|
   config.wrappers :horizontal_boolean, tag: 'div', class: 'form-group row', error_class: 'form-group-invalid', valid_class: 'form-group-valid' do |b|
     b.use :html5
     b.optional :readonly
-    b.wrapper tag: 'label', class: 'col-sm-3' do |ba|
+    b.wrapper tag: 'label', class: 'col-sm-auto' do |ba|
       ba.use :label_text
     end
-    b.wrapper :grid_wrapper, tag: 'div', class: 'col-sm-9' do |wr|
+    b.wrapper :grid_wrapper, tag: 'div', class: 'col-sm' do |wr|
       wr.wrapper :form_check_wrapper, tag: 'div', class: 'form-check' do |bb|
         bb.use :input, class: 'form-check-input', error_class: 'is-invalid', valid_class: 'is-valid'
         bb.use :full_error, wrap_with: { tag: 'div', class: 'invalid-feedback d-block' }

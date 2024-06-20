@@ -2,7 +2,7 @@
 <% content_for :head do %>
   <meta name="templates-base-url" content="/admin/proposals/call_question_templates" />
   <meta name="templates-items-type" content="questions" />
-  <%= javascript_include_tag "admin/question_templates.js" %>
+  <%= javascript_include_tag "admin/question_templates.js", defer: true %>
 <% end %>
 
 <%= simple_horizontal_form_for(@call) do |f| %>

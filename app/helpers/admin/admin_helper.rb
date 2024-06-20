@@ -1,5 +1,5 @@
 module Admin::AdminHelper
-  include NameHelper
+  include NameHelper, FlashHelper
 
   # Destroys the passed object and adds a success or error message to the flash.
   # Checks if the ability can destroy the object. Also tests with an and for the additional condition.

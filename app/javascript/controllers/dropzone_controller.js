@@ -7,7 +7,7 @@ import {
   findElement,
   removeElement,
   insertAfter
-} from "helpers";
+} from "../helpers";
 
 // https://web-crunch.com/posts/rails-drag-drop-active-storage-stimulus-dropzone
 
