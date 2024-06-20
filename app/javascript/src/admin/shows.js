@@ -16,7 +16,7 @@ const importFromXTS = function(data, index) {
   // $('#show_end_date_3i').val(end_date.getDate())
 
   const message = "XTS details loaded.";
-  return showAlert("success", message);
+  return showToast("success", message);
 };
 
 const addXTSLookup = function() {
@@ -31,7 +31,7 @@ const addXTSLookup = function() {
         let message;
         if (data.length === 0) {
           message = "XTS details not found.";
-          showAlert("alert", message);
+          showToast("alert", message);
           return;
         }
 
@@ -65,7 +65,7 @@ const addXTSLookup = function() {
           importFromXTS(data, index);
         });
 
-        var alert = showAlert("notice", $message);
+        var alert = showToast("notice", $message);
 
       }
     });

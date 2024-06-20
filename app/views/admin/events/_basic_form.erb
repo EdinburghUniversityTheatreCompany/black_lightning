@@ -1,5 +1,5 @@
 <% # Looks for an input tagged with event_name and an input tagged with event_slug %>
-<%= javascript_include_tag 'name_to_slug.js' %>
+<%= javascript_include_tag 'name_to_slug.js', defer: true %>
 
 <%= f.input :name, input_html: { id: 'event_name' } %>
 
@@ -31,11 +31,11 @@
 
 <%= f.input :is_public, hint: 'Display this event on the publicly visible part of the website?' %>
 
+<%= render 'admin/events/event_tags_form_section', f: f %>
+
 <%= render "/shared/form/md_editor", f: f, field: :publicity_text, show_hint: true %>
 
 <%= render "/shared/form/md_editor", f: f, field: :members_only_text, show_hint: true %>
-
-<%= render 'admin/events/event_tags_form_section', f: f %>
 
 <%= render '/shared/form/sections/gallery', f: f %>
 

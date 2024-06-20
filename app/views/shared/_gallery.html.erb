@@ -1,13 +1,8 @@
 <% if pictures.any? then %>
-  <% content_for :head do %>
-    <%= stylesheet_link_tag 'jquery.fancybox' %>
-    <%= javascript_include_tag 'jquery.fancybox' %>
-  <% end %>
-
   <script type="text/javascript">
-    $(document).ready(function() {
-      $(".fancybox").fancybox();
-    });
+    Fancybox.bind('[data-fancybox]', {
+      // Your custom options
+    });  
   </script>
 
 <div class="row">
@@ -20,14 +15,13 @@
     <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
       <% pictures.includes(image_attachment: :blob).each do |picture| %>
         <div class="col">
-          <div class="card h-100">
+          <div class="card h-100 mb-0">
             <% img = image_tag(picture.fetch_image.variant(medium_variant), { class: "card-img-top h-auto" }.merge(variant_width_and_height_html(medium_variant))) %>
             <% url = url_for(picture.fetch_image) %>
 
-            <%= link_to img, url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description %>
+            <%= link_to img, url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" %>
             
-            <div class="card-body">
-              <p class="card-text">
+            <div class="card-text m-2">
                 <% gallery_name = picture.gallery_name %>
                 <% begin %>
                   <%= link_to(gallery_name, picture.gallery) %>
@@ -35,7 +29,11 @@
                   <%= gallery_name %>
                 <% end %>
                 - <%= picture.filename %>
-              <p>
+
+                <% if @admin_site && picture.picture_tags.present? %>
+                  <hr class="m-1">
+                  <%= picture.picture_tags.map {|tag| link_to(tag.name, admin_picture_tag_path(tag)) }.to_sentence.html_safe %>
+                <% end %>
             </div>
           </div>
         </div>

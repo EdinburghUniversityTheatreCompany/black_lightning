@@ -5,10 +5,11 @@
 <% include_header = true unless include_header.present? %>
 
 <% if attachments.any? then %>
-  <% content_for :head do %>
-    <%= stylesheet_link_tag 'jquery.fancybox' %>
-    <%= javascript_include_tag 'jquery.fancybox' %>
-  <% end %>
+  <script type="text/javascript">
+    Fancybox.bind('[data-fancybox]', {
+      // Your custom options
+    });  
+  </script>
 
   <% if include_header%>
     <h3>Attachments</h3>

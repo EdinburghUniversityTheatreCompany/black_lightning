@@ -1,3 +1,9 @@
+<% content_for :head do %>
+    <%= javascript_include_tag 'raphael-min.js', defer: true %>
+    <%= javascript_include_tag 'dracula_graffle.js', defer: true %>
+    <%= javascript_include_tag 'dracula_graph.js', defer: true %>
+<% end %>
+
 <%= render('shared/quick_actions_card') do %>
   <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
   <%= get_link Techie, :new, html_class: 'btn btn-secondary' %>
@@ -15,7 +21,9 @@
 </div>
 
 <div id="canvas" style="width: 940px; height: 1500px;"></div>
-<script>
+<script defer>
+    document.addEventListener('DOMContentLoaded', function () {
+
 var g = new Graph();
 
 var render = function(renderer, node) {
@@ -53,4 +61,6 @@ layouter.layout();
 /* draw the graph using the RaphaelJS draw implementation */
 var renderer = new Graph.Renderer.Raphael('canvas', g, 940, 1500);
 renderer.draw();
+
+});
 </script>

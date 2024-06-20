@@ -1,5 +1,7 @@
 import swal from 'sweetalert2/dist/sweetalert2.js'
-import Rails from "@rails/ujs";
+import Rails from '@rails/ujs';
+import './alerts'
+
 window.Swal = swal;
 
 const Toast = Swal.mixin({
@@ -23,6 +25,7 @@ const PersistentToast = Swal.mixin({
   timerProgressBar: false
 })
 
+// Make these methods available to the window object, so that they can be used in inline scripts.
 window.Toast = Toast;
 window.PersistentToast = PersistentToast;
 
@@ -47,5 +50,4 @@ Rails.confirm = function (message, element) {
         element.click();
       }
     });
-}
-
+};

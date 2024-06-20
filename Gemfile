@@ -6,13 +6,12 @@ gem 'rails', '~> 7.1'
 
 gem 'mysql2'
 
-gem 'sass-rails',   '> 5.0.0'
-gem 'webpacker', '~> 5.x'
-gem "sprockets-rails"
+gem 'propshaft'
+gem 'jsbundling-rails'
+gem 'cssbundling-rails'
+
 gem "terser"
 
-gem 'coffee-rails'
-gem 'fancybox3'
 gem 'breadcrumbs_on_rails'
 gem 'simple_form'
 gem 'devise'
@@ -26,7 +25,6 @@ gem 'kaminari'
 gem 'kramdown'
 gem 'cocoon'
 gem 'json'
-gem 'rails_autolink'
 
 gem 'delayed_job_active_record'
 gem 'daemons'

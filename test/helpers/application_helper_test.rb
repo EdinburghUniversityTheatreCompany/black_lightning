@@ -5,30 +5,6 @@ class ApplicationHelperTest < ActionView::TestCase
     return @current_user.ability
   end
 
-  test 'bool_icon' do
-    assert_equal '&#10004;', bool_icon(true)
-    assert_equal '&#10008;', bool_icon(false)
-  end
-
-  test 'bool_text' do
-    assert_equal 'Yes', bool_text(true)
-    assert_equal 'yes', bool_text('Pineapple', false)
-    assert_equal 'no', bool_text(false, false)
-    assert_equal 'No', bool_text(nil, true)
-    assert_equal 'Yes', bool_text('')
-    assert_equal 'Yes', bool_text([])
-  end
-
-  test 'swal_alert_info' do
-    assert_equal 'error', swal_alert_info(:alert)
-    assert_equal 'error', swal_alert_info(:error)
-    assert_equal 'success', swal_alert_info(:success)
-    assert_equal 'success', swal_alert_info(:notice)
-    assert_equal 'warning', swal_alert_info(:warning)
-    assert_equal 'info',  swal_alert_info(:info)
-    assert_equal 'info',  swal_alert_info(:pineapple), 'Info is not the default value for unspecified keys'
-  end
-
   test 'current environment should return admin for admin pages' do
     @current_user = users(:admin)
 
@@ -47,37 +23,6 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal 'application', current_environment('/admin/shows/the-wondrous-adventures')
     assert_equal 'application', current_environment('pineapple')
   end
-
-  test 'append to flash' do
-    assert_nil flash[:error]
-
-    append_to_flash(:error, 'Pineapple')
-    assert_equal flash[:error], ['Pineapple']
-
-    append_to_flash(:error, 'Hexagon')
-    assert_equal flash[:error], %w[Pineapple Hexagon]
-
-    flash[:error] = 'Viking'
-    assert_equal flash[:error], 'Viking'
-
-    append_to_flash(:error, 'Donkey')
-    assert_equal flash[:error], %w[Viking Donkey]
-  end
-
-
-  test 'merge flash notice and alert when error and success do not exist' do
-    flash[:notice] = 'Pineapple'
-    flash[:alert] = 'Hexagon'
-
-    format_flash
-
-    assert_nil flash[:notice]
-    assert_nil flash[:alert]
-
-    assert_equal ['Pineapple'], flash[:success]
-    assert_equal ['Hexagon'], flash[:error]
-  end
-
   test 'merge hash' do
     a = {
       ingredients: [:pineapple],

@@ -1,21 +1,8 @@
-<div class="form-horizontal">
-  <h3>Tags</h3>
 
-  <% no_event_tags = f.object.event_tags.empty? %>
+<% if f.object.event_tags.empty? %>
+  <div id="no_event_tags_warning" class="alert alert-danger">
+  You have not set any tags for this Event.
+  </div>
+<% end %>
 
-  <% if no_event_tags %>
-    <div id="no_event_tags_warning" class="alert alert-danger">
-    You have not set any tags for this Event.
-    </div>
-  <% end %>
-
-  <%= render layout: '/shared/collapsible_section', locals: { title: 'Tags', start_open: no_event_tags } do %>
-    <% if f.object.errors[:event_tags].present? then %>
-      <p id="event_tags_errors" class="alert alert-danger">
-        <%= f.error :event_tags %>
-      </p>
-    <% end %>
-
-    <%= f.input(:event_tag_ids, collection: EventTag.accessible_by(current_ability), as: :check_boxes, label: false, label_method: ->(event_tag) { get_link event_tag, :show, link_text: event_tag.name, target: :blank }) %>
-  <% end %>
-</div>
+<%= f.association(:event_tags, collection: EventTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>

@@ -32,7 +32,8 @@ jQuery(function() {
 
         // This message is separate from the message set in the controller.
         var message = "<p>Thank you for choosing to staff " + data.staffable.show_title + " as " + data.name + " on " + start_str + ".</p><p><a href=\"" + google_calendar_addr + "\" target=\"_blank\">Add to Google Calendar</a>";
-        showAlert("success", message);
+        
+        showToast("success", message);
 
         // Find the original button (rather than the clone in the modal)
         button = $("a[data-job-id=" + job_id + "]").not(".btn-danger");

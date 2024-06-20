@@ -1,5 +1,5 @@
 module Admin::StaffingsHelper
-  include ApplicationHelper
+  include FlashHelper
   
   def check_if_current_user_can_sign_up(user, job = nil)
     can_sign_up = user.can?(:sign_up_for, Admin::StaffingJob)

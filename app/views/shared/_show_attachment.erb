@@ -3,7 +3,7 @@
 
 <% url = attachment_path(attachment.slug) %>
 
-<div class="card h-100">
+<div class="card h-100 mb-0">
   <% begin %>
     <% if attachment.file.previewable? %>
       <% img = image_tag attachment.file.preview(thumb_variant) %>
@@ -18,21 +18,19 @@
     <% # It is impossible to create a thumbnail, so do nothing. %>
   <% end %>
 
-  <div class="card-body">
-    <p class="card-text">
-      <%= link_to attachment.name, url, rel: 'group', title: attachment.name %>
-      <% if include_item_link && attachment.item.present? %>
-        <hr class="m-0">
-        <% item_url = get_url_for_attachment_item(attachment) %>
+  <div class="card-text m-2">
+    <%= link_to attachment.name, url, rel: 'group', title: attachment.name %>
+    <% if include_item_link && attachment.item.present? %>
+      <hr class="m-1">
+      <% item_url = get_url_for_attachment_item(attachment) %>
 
-        <%= link_to attachment.item_name, item_url %>
-      <% end %>
+      <%= link_to attachment.item_name, item_url %>
+    <% end %>
 
-      <% if attachment.attachment_tags.present? %>
-        <hr class="m-0">
-        <%= attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }.to_sentence.html_safe %>
-      <% end %>
-    <p>
+    <% if attachment.attachment_tags.present? %>
+      <hr class="m-1">
+      <%= attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }.to_sentence.html_safe %>
+    <% end %>
   </div>
 </div>
 

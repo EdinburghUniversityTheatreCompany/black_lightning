@@ -3,14 +3,13 @@
 
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
+  <%= javascript_include_tag "admin", "shared", defer: true %>
+
   <%= stylesheet_link_tag    "admin", media: "all" %>
 
-  <%= javascript_packs_with_chunks_tag "admin", "shared" %>
-
-  <%= javascript_include_tag "application" %>
-  <%= csrf_meta_tags %>
-
   <%= render('layouts/cdn_includes') %>
+
+  <%= csrf_meta_tags %>
 
   <%= yield :head %>
 
@@ -138,61 +137,6 @@
   </div>
   <!-- ./wrapper -->
 
-  <script>
-    userModal = function (title, message, userLink, destroyLink) {
-      Swal.fire({
-        icon: 'question',
-        title: title,
-        text: message,
-        showConfirmButton: true,
-        confirmButtonText: 'View User Profile',
-        showCloseButton: true,
-        showCancelButton: true,
-        cancelButtonText: "Close",
-        showDenyButton: true,
-        denyButtonText: 'Log Out'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          location.assign(userLink)
-        } else if (result.isDenied) {
-          $.ajax({
-            url: '/users/sign_out',
-            type: "DELETE",
-            headers: {
-              'X-CSRF-Token': $('meta[name=csrf-token]').attr('content')
-            }
-          }).done(function () {
-            Swal.fire({
-              icon: 'success',
-              title: 'Logged out',
-              text: 'You were successfully logged out. See you soon!'
-            }).then(() => {
-              location.assign('/')
-            })
-          });
-
-        }
-      })
-    }
-
-    var triggerUserModalEl = document.getElementsByClassName('triggerUserModal');
-    var firstTriggerUserModalEl = triggerUserModalEl[0];
-    var secondTriggerUserModalEl = triggerUserModalEl[1];
-    var currentUserPath = firstTriggerUserModalEl.dataset.currentUserPath;
-    var nameAttr = firstTriggerUserModalEl.dataset.nameAttr;
-    var destroyUserPath = firstTriggerUserModalEl.dataset.destroyUserPath;
-
-    firstTriggerUserModalEl.onclick = function () {
-      userModal(nameAttr,
-        "You're currently logged in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
-        currentUserPath, destroyUserPath)
-    };
-    secondTriggerUserModalEl.onclick = function () {
-      userModal(nameAttr,
-        "You're currently logged in. Click view user profile to change your name, password, see shows that you're involved in, and more.",
-        currentUserPath, destroyUserPath)
-    };
-  </script>
 </body>
 
 </html>
