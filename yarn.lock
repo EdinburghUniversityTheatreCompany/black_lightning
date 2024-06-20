@@ -127,6 +127,7 @@
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 "@lgaitan/pace-progress@^1.0.7":
   version "1.0.7"
@@ -134,6 +135,8 @@
   integrity sha512-GMoTcF6WBpno7a7Iyx7M79os26d5bCDbh7YTZmXZM8YuLR3DDtwo0/CBYddStGD6QIBTieFDz4IAQiO0dAdRGw==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 "@nathanvda/cocoon@^1.2.14":
   version "1.2.14"
   resolved "https://registry.yarnpkg.com/@nathanvda/cocoon/-/cocoon-1.2.14.tgz#aaea910e4b9c0d28d5bdcb7f3743617db46b09af"
@@ -707,6 +710,7 @@ binary-extensions@^2.0.0:
   integrity sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 bootstrap-colorpicker@^3.4.0:
   version "3.4.0"
@@ -718,6 +722,8 @@ bootstrap-colorpicker@^3.4.0:
     popper.js ">=1.10"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 bootstrap-icons@^1.11.3:
   version "1.13.1"
   resolved "https://registry.yarnpkg.com/bootstrap-icons/-/bootstrap-icons-1.13.1.tgz#0aad3f5b55b67402990e729ce3883416f9cef6c5"
@@ -754,11 +760,6 @@ bootstrap@>=4.0, bootstrap@^5.3.3:
   version "5.3.8"
   resolved "https://registry.yarnpkg.com/bootstrap/-/bootstrap-5.3.8.tgz#6401a10057a22752d21f4e19055508980656aeed"
   integrity sha512-HP1SZDqaLDPwsNiqRqi5NcP0SSXciX2s9E+RyqJIIqGo+vJeN5AJVM98CXmW/Wux0nQ5L7jeWUdplCEf0Ee+tg==
-
-bootstrap@^4.6.1:
-  version "4.6.2"
-  resolved "https://registry.yarnpkg.com/bootstrap/-/bootstrap-4.6.2.tgz#8e0cd61611728a5bf65a3a2b8d6ff6c77d5d7479"
-  integrity sha512-51Bbp/Uxr9aTuy6ca/8FbFloBUJZLHwnhTcnjIeRn2suQWsWzcuJhGjKDB5eppVte/8oCdOL3VuwxvZDUggwGQ==
 
 brace-expansion@^1.1.7:
   version "1.1.12"
@@ -1086,6 +1087,7 @@ color-convert@^2.0.1:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 color-name@~1.1.4:
 =======
 color-name@^1.0.0, color-name@~1.1.4:
@@ -1104,6 +1106,9 @@ color-name@1.1.3:
   integrity sha512-72fSenhMw2HZMTVHeCA9KCmpEIbzWiQsjN+BHcBbS9vr1mtt+vJjPdksIBNUmKAW8TFUDPJK5SUU3QhE9NEXDw==
 
 color-name@^1.0.0, color-name@~1.1.4:
+=======
+color-name@~1.1.4:
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
   version "1.1.4"
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -1144,6 +1149,7 @@ concat-map@0.0.1:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 convert-source-map@^2.0.0:
   version "2.0.0"
@@ -1160,6 +1166,8 @@ core-util-is@~1.0.0:
   integrity sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 cross-spawn@^7.0.3:
   version "7.0.6"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-7.0.6.tgz#8a58fe78f00dcd70c370451759dfbfaf03e8ee9f"
@@ -1170,6 +1178,7 @@ cross-spawn@^7.0.3:
     which "^2.0.1"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 crypto-js@^4.2.0:
   version "4.2.0"
@@ -1177,6 +1186,8 @@ crypto-js@^4.2.0:
   integrity sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 data-confirm-modal@^1.6.2:
   version "1.6.2"
   resolved "https://registry.yarnpkg.com/data-confirm-modal/-/data-confirm-modal-1.6.2.tgz#81fc8ea298cfd9311d066915d1710b3cfa57d96b"
@@ -1594,6 +1605,7 @@ detect-libc@^2.0.3:
   integrity sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==
 >>>>>>> f6fc0e0c (deps: Update yarn packages)
 
+<<<<<<< HEAD
 dfa@^1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/dfa/-/dfa-1.2.0.tgz#96ac3204e2d29c49ea5b57af8d92c2ae12790657"
@@ -1601,6 +1613,9 @@ dfa@^1.2.0:
 
 dropzone@^5.9.2, dropzone@^5.9.3:
 >>>>>>> 97c581f4 (Update gems and packages, including papertrail)
+=======
+dropzone@^5.9.2:
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
   version "5.9.3"
   resolved "https://registry.yarnpkg.com/dropzone/-/dropzone-5.9.3.tgz#b3070ae090fa48cbc04c17535635537ca72d70d6"
   integrity sha512-Azk8kD/2/nJIuVPK+zQ9sjKMRIpRvNyqn9XwbBHNq+iNuSccbJS6hwm1Woy0pMST0erSo0u4j+KJaodndDk4vA==
@@ -1776,6 +1791,7 @@ estraverse@^5.2.0:
   integrity sha512-MMdARuVEQziNTeJD8DgMqmhwR11BRQ/cBP+pLtYdSTnf3MIO8fFeiINEbX36ZdNlfU/7A9f3gUw49B3oQsvwBA==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 ev-emitter@^1.0.0:
   version "1.1.1"
@@ -1788,6 +1804,8 @@ eve-raphael@0.5.0:
   integrity sha512-jrxnPsCGqng1UZuEp9DecX/AuSyAszATSjf4oEcRxvfxa1Oux4KkIPKBAAWWnpdwfARtr+Q0o9aPYWjsROD7ug==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 events@^3.2.0:
   version "3.3.0"
   resolved "https://registry.yarnpkg.com/events/-/events-3.3.0.tgz#31a95ad0a924e2d2c419a813aeb2c4e878ea7400"
@@ -1839,6 +1857,7 @@ fill-range@^7.1.1:
     to-regex-range "^5.0.1"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 filterizr@^2.2.4:
   version "2.2.4"
@@ -1849,6 +1868,8 @@ filterizr@^2.2.4:
     imagesloaded "^4.1.4"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 find-cache-dir@^3.3.1:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/find-cache-dir/-/find-cache-dir-3.3.2.tgz#b30c5b6eff0730731aea9bbd9dbecbd80256d64b"
@@ -1867,6 +1888,7 @@ find-up@^4.0.0:
     path-exists "^4.0.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 flag-icon-css@^4.1.7:
   version "4.1.7"
@@ -1874,6 +1896,8 @@ flag-icon-css@^4.1.7:
   integrity sha512-AFjSU+fv98XbU0vnTQ32vcLj89UEr1MhwDFcooQv14qWJCjg9fGZzfh9BVyDhAhIOZW/pGmJmq38RqpgPaeybQ==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 flat@^5.0.2:
   version "5.0.2"
   resolved "https://registry.yarnpkg.com/flat/-/flat-5.0.2.tgz#8ca6fe332069ffa9d324c327198c598259ceb241"
@@ -1900,6 +1924,7 @@ fraction.js@^5.3.4:
 >>>>>>> f6fc0e0c (deps: Update yarn packages)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 fs-extra@^10.0.0:
   version "10.1.0"
@@ -1911,6 +1936,8 @@ fs-extra@^10.0.0:
     universalify "^2.0.0"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 fs-extra@^11.0.0:
   version "11.3.3"
   resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-11.3.3.tgz#a27da23b72524e81ac6c3815cc0179b8c74c59ee"
@@ -1926,6 +1953,7 @@ fsevents@~2.3.2:
   integrity sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 fullcalendar@^5.10.1:
   version "5.11.5"
@@ -1933,11 +1961,14 @@ fullcalendar@^5.10.1:
   integrity sha512-eaVD6zOvuFXVpoMKlg2FQAj8e+PcpitBMwlzwRJJr1zOi/dXMYAksx2hLzwtsr93FVUNSSo16xwMTTZz6+prKQ==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 function-bind@^1.1.2:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/function-bind/-/function-bind-1.1.2.tgz#2c02d864d97f3ea6c8830c464cbd11ab6eab7a1c"
   integrity sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 functions-have-names@^1.2.3:
@@ -1957,6 +1988,8 @@ gensync@^1.0.0-beta.2:
 >>>>>>> db720c94 (feat: Migrate to Jobs Mission Control and ActiveJob)
 =======
 >>>>>>> 8a8eb953 (deps: Upgrade yarn packages instead of npm)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 get-caller-file@^2.0.5:
   version "2.0.5"
   resolved "https://registry.yarnpkg.com/get-caller-file/-/get-caller-file-2.0.5.tgz#4f94412a82db32f36e3b0b9741f8a97feb031f7e"
@@ -2339,6 +2372,7 @@ jquery-slimscroll@^1.3.8:
     jquery ">= 1.7"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 jquery-ui-dist@^1.13.0:
   version "1.13.3"
@@ -2348,6 +2382,8 @@ jquery-ui-dist@^1.13.0:
     jquery ">=1.8.0 <4.0.0"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 jquery-ujs@^1.2.2:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/jquery-ujs/-/jquery-ujs-1.2.3.tgz#dcac6026ab7268e5ee41faf9d31c997cd4ddd603"
@@ -2392,6 +2428,7 @@ jquery-validation@^1.19.3:
   integrity sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 jqvmap-novulnerability@^1.5.1:
   version "1.5.1"
@@ -2406,6 +2443,8 @@ jsgrid@^1.5.3:
   integrity sha512-/BJgQp7gZe8o/VgNelwXc21jHc9HN+l7WPOkBhC9b9jPXFtOrU9ftNLPVBmKYCNlIulAbGTW8SDJI0mpw7uWxQ==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 json-parse-even-better-errors@^2.3.1:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/json-parse-even-better-errors/-/json-parse-even-better-errors-2.3.1.tgz#7c47805a94319928e05777405dc12e1f7a4ee02d"
@@ -2438,6 +2477,7 @@ jsonfile@^6.0.1:
     graceful-fs "^4.1.6"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 jszip@^3.7.1:
   version "3.10.1"
@@ -2450,11 +2490,14 @@ jszip@^3.7.1:
     setimmediate "^1.0.5"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 kind-of@^6.0.2:
   version "6.0.3"
   resolved "https://registry.yarnpkg.com/kind-of/-/kind-of-6.0.3.tgz#07c05034a6c349fa06e24fa35aa76db4580ce4dd"
   integrity sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
 lie@~3.3.0:
@@ -2465,6 +2508,8 @@ lie@~3.3.0:
     immediate "~3.0.5"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 lilconfig@^3.1.1:
   version "3.1.3"
   resolved "https://registry.yarnpkg.com/lilconfig/-/lilconfig-3.1.3.tgz#a1bcfd6257f9585bf5ae14ceeebb7b559025e4c4"
@@ -2737,6 +2782,7 @@ p-try@^2.0.0:
   integrity sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 pako@^0.2.5:
   version "0.2.9"
@@ -2749,6 +2795,8 @@ pako@~1.0.2:
   integrity sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 path-exists@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/path-exists/-/path-exists-4.0.0.tgz#513bdbe2d3b95d7762e8c1137efa195c6c61b5b3"
@@ -2832,6 +2880,7 @@ pkg-dir@^4.1.0, pkg-dir@^4.2.0:
     find-up "^4.0.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 png-js@^1.0.0:
   version "1.0.0"
@@ -2844,6 +2893,8 @@ popper.js@>=1.10, popper.js@^1.16.1:
   integrity sha512-Wb4p1J4zyFTbM+u6WuO4XstYx4Ky9Cewe4DWrel7B0w6VVICvPwdOpotjzcf6eD8TsckVnIMNONQyPIUFOUbCQ==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 postcss-cli@^11.0.0:
   version "11.0.1"
   resolved "https://registry.yarnpkg.com/postcss-cli/-/postcss-cli-11.0.1.tgz#341188ff7b26b19b206ca923ae2bd979751e7da7"
@@ -2897,6 +2948,7 @@ pretty-hrtime@^1.0.3:
   integrity sha512-66hKPCr+72mlfiSjlEB1+45IjXSqvVAIy6mocupoww4tBFE9R9IhwwUGoI4G++Tc9Aq+2rxOt0RFU6gPcrte0A==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 process-nextick-args@~2.0.0:
   version "2.0.1"
@@ -2904,6 +2956,8 @@ process-nextick-args@~2.0.0:
   integrity sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 pstree.remy@^1.1.8:
   version "1.1.8"
   resolved "https://registry.yarnpkg.com/pstree.remy/-/pstree.remy-1.1.8.tgz#c242224f4a67c21f686839bbdb4ac282b8373d3a"
@@ -2922,6 +2976,7 @@ randombytes@^2.1.0:
     safe-buffer "^5.1.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 "raphael@^2.2.0 || ^2.1.1", raphael@^2.3.0:
   version "2.3.0"
@@ -2931,6 +2986,8 @@ randombytes@^2.1.0:
     eve-raphael "0.5.0"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 read-cache@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/read-cache/-/read-cache-1.0.0.tgz#e664ef31161166c9751cdbe8dbcf86b5fb58f774"
@@ -3044,6 +3101,7 @@ safe-buffer@^5.1.0:
 safe-buffer@^5.1.0, safe-buffer@~5.1.0, safe-buffer@~5.1.1:
 =======
 
+<<<<<<< HEAD
 safe-buffer@~5.1.0, safe-buffer@~5.1.1:
 >>>>>>> 8a8eb953 (deps: Upgrade yarn packages instead of npm)
   version "5.1.2"
@@ -3056,6 +3114,8 @@ safe-buffer@~5.1.0, safe-buffer@~5.1.1:
   integrity sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==
 >>>>>>> 82423eb9 (fix: Update browserlist)
 
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 sass@^1.77.6:
   version "1.97.3"
   resolved "https://registry.yarnpkg.com/sass/-/sass-1.97.3.tgz#9cb59339514fa7e2aec592b9700953ac6e331ab2"
@@ -3276,6 +3336,7 @@ spark-md5@^3.0.1:
   integrity sha512-wcFzz9cDfbuqe0FZzfi2or1sgyIrsDwmPwfZC4hiNidPdPINjeUwNfv5kldczoEAcjl9Y1L3SM7Uz2PUEQzxQw==
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 sparklines@^1.3.0:
   version "1.3.0"
@@ -3283,6 +3344,8 @@ sparklines@^1.3.0:
   integrity sha512-CkFtpDE3hmOeu1IJyIQIOH0AQtHnPj1c61ALxJZQ9cPEFKDgWC1fcNAHuwPi1i1klTDYvlKKseoYHSwe7JmdLA==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 stimulus@^3.0.0:
   version "3.2.2"
   resolved "https://registry.yarnpkg.com/stimulus/-/stimulus-3.2.2.tgz#a2e955f43e12e2e5784b175d4df5517ef678aa68"
@@ -3300,6 +3363,7 @@ string-width@^4.1.0, string-width@^4.2.0, string-width@^4.2.3:
     is-fullwidth-code-point "^3.0.0"
     strip-ansi "^6.0.1"
 
+<<<<<<< HEAD
 string_decoder@~1.1.1:
   version "1.1.1"
 <<<<<<< HEAD
@@ -3315,6 +3379,8 @@ string_decoder@~1.1.1:
   dependencies:
     safe-buffer "~5.1.0"
 
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 strip-ansi@^6.0.0, strip-ansi@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-6.0.1.tgz#9e26c63d30f53443e9489495b2105d37b67a85d9"
@@ -3503,6 +3569,7 @@ to-regex-range@^5.0.1:
     is-number "^7.0.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 toastr@^2.1.4:
   version "2.1.4"
@@ -3512,6 +3579,8 @@ toastr@^2.1.4:
     jquery ">=1.12.0"
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 touch@^3.1.0:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/touch/-/touch-3.1.1.tgz#097a23d7b161476435e5c1344a95c0f75b4a5694"
@@ -3579,6 +3648,7 @@ uri-js@^4.2.2:
     punycode "^2.1.0"
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 util-deprecate@~1.0.1:
   version "1.0.2"
@@ -3586,6 +3656,8 @@ util-deprecate@~1.0.1:
   integrity sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==
 
 >>>>>>> 82423eb9 (fix: Update browserlist)
+=======
+>>>>>>> 1a53dff1 (Replace admin-lte packages with tabler)
 vivagraphjs@^0.12.0:
   version "0.12.0"
   resolved "https://registry.yarnpkg.com/vivagraphjs/-/vivagraphjs-0.12.0.tgz#6fd06ef6136aaeca5cffea86d6d6f8bfaff7f52b"

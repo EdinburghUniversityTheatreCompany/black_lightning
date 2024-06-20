@@ -6,5 +6,4 @@ import "./src/admin/techie_tree.js"
 
 import 'moment'
 
-// Loads all Bootstrap javascripts automatically.
-import 'autosize'
+import "@tabler/core"
