@@ -33,8 +33,6 @@ function activateSelect2Fields(parentElement) {
 
     // If there is a remote-source specified, set up this select2 element for ajax.
     if ($(el).data('remote-source')) {
-      console.log('select2-ajax: ' + $(el).data('remote-source'))
-
       const ajax_attributes = {
         url: $(el).data('remote-source'),
         dataType: 'json',
