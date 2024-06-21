@@ -173,11 +173,11 @@ SimpleForm.setup do |config|
   end
 
   # horizontal input for boolean in space-constrained search field
-  config.wrappers :horizontal_boolean_search, tag: "div", class: "form-group row mb-3", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
+  config.wrappers :horizontal_boolean_search, tag: 'div', class: 'form-group row mb-3', error_class: 'form-group-invalid', valid_class: 'form-group-valid' do |b|
     b.use :html5
     b.optional :readonly
     # Autosize the column, but at least col-3 (= 25% of the width)
-    b.wrapper tag: "label", class: "col-sm-auto col-min-width-3" do |ba|
+    b.wrapper tag: 'label', class: 'col-sm-auto col-min-width-3' do |ba|
       ba.use :label_text
     end
     b.wrapper :grid_wrapper, tag: "div", class: "col-sm" do |wr|
