@@ -8,7 +8,7 @@
       <% if block_exists?(@editable_block_name) %>
         <div class="col-md-7">
           <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
-          <div class="card">
+      <div class="card mb-3">
             <div class="card-header">
               <span class="card-title">Information</span>
             </div>
@@ -29,7 +29,7 @@
         <% end %>
 
         <% unless quick_actions.blank? %>
-          <div class="card">
+      <div class="card mb-3">
             <div class="card-header">
               <span class="card-title">Quick actions</span>
             </div>
@@ -45,11 +45,14 @@
     <div class="row">
       <div class="col">
         <div class="card">
-          <div class="card-header">
-            <span class="card-title"><%= @title%></span>
+      <div class="card-header d-flex flex-wrap align-items-end justify-content-between">
+        <div><span class="card-title"><%= @title %></span></div>
 
             <% if include_pagination %>
-              <div class="card-tools"> <%= paginate resources %></div>
+          <% # Note: The localisation string has been modified in en.yml so that the name of the resources is not shown, as it would be by default. %>
+          <div><span class="card-title"><%= page_entries_info(resources) %></span></div>
+            
+          <div><%= paginate resources %></div>
             <% end %>
           </div>
 
@@ -61,7 +64,8 @@
             <% end %>
           </div>
 
-          <% if include_pagination %>
+      <% # Hide the bottom footer if there is no pagination. %>
+      <% if include_pagination && resources&.total_pages.present? && resources.total_pages > 1 %>
             <div class="card-footer clearfix">
               <%= paginate(resources) %>
             </div>
