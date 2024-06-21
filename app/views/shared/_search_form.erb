@@ -2,7 +2,7 @@
 <%# KEEP%>
 
 
-<div class="card">
+<div class="card mb-3">
   <div class="card-header">
     <span class="card-title">Search</span>
   </div>
@@ -12,7 +12,7 @@
   <% # If there are less fields than columns, set the amount of columns to the amount of fields to optimise screen space. %>
   <% columns = input_fields_outside_collapse.count if input_fields_in_collapse.empty? && input_fields_outside_collapse.count < columns %>
 
-  <%= search_form_for(@q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "search-form" }, **horizontal_form_options) do |f| %>
+  <%= search_form_for(@q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "search-form" }, **search_form_options) do |f| %>
     <div class="card-body">
       <%= render_search_form_fields(f, input_fields_outside_collapse, columns) %>
 

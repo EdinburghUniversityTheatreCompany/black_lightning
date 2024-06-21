@@ -15,6 +15,13 @@ module FormHelper
     }
   end
 
+  # Search forms are horizontal, but have a special boolean search field that takes up less space.
+  def search_form_options
+    options = horizontal_form_options
+    options[:wrapper_mappings][:boolean] = :horizontal_boolean_search
+    return options
+  end
+  
   def simple_horizontal_form_for(object, *args, &block)
     options = args.extract_options!
     new_options = horizontal_form_options
