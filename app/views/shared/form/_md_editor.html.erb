@@ -5,7 +5,7 @@
 
 <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
 
-<div class="row">
+<div class="form-group row mb-3">
   <div class="col-sm-3">
     <%= f.label field, **input_field_args %>
   </div>
@@ -44,15 +44,15 @@
               <button class="nav-link preview-toggle" data-bs-toggle="tab" data-bs-target="#preview-<%= id %>"     type="button" role="tab" data-preview-id="<%= id %>">Preview</button>
               <button class="nav-link active"         data-bs-toggle="tab" data-bs-target="#input-field-<%= id %>" type="button" role="tab">Input</button>
             </div>
-        </div>
-
+          </div>
+  
           <div class="card-body p-1">
-        <div class="yield">
-          <% if show_hint %>
-            <%= render "shared/form/md_hints" %>
-          <% end %>
+            <div class="yield">
+              <% if show_hint %>
+                <%= render "shared/form/md_hints" %>
+              <% end %>
 
-          <%= yield %>
+              <%= yield %>
             </div>
           </div>
         </div>
