@@ -1,10 +1,6 @@
 import jQuery from 'jquery';
 global.$ = global.jQuery = jQuery;
 
-require("@popperjs/core")
-
-import "bootstrap"
-
 import "./sweetalert"
 
 import 'jquery-slimscroll'
