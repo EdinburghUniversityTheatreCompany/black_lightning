@@ -38,18 +38,23 @@
       </div>
 
       <div class="col-md-auto">
-        <div class="nav nav-tabs">
-          <%- # BOOTSTRAP 5: Remove the data-toggle things, and generally adjust to bootstrap 5 (check bootstrap 5 docs). %>
-          <button class="nav-link preview-toggle" data-toggle="tab" data-target="#preview-<%= id %>"     data-bs-toggle="tab" data-bs-target="#preview-<%= id %>"      type="button" role="tab" data-preview-id="<%= id %>">Preview</button>
-          <button class="nav-link active"         data-toggle="tab" data-target="#input-field-<%= id %>" data-bs-toggle="tab" data-bs-target="#input-field-<%= id %>"  type="button" role="tab">Input</button>
+        <div class="card card-sm">
+          <div class="card-header">
+            <div class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs">
+              <button class="nav-link preview-toggle" data-bs-toggle="tab" data-bs-target="#preview-<%= id %>"     type="button" role="tab" data-preview-id="<%= id %>">Preview</button>
+              <button class="nav-link active"         data-bs-toggle="tab" data-bs-target="#input-field-<%= id %>" type="button" role="tab">Input</button>
+            </div>
         </div>
 
+          <div class="card-body p-1">
         <div class="yield">
           <% if show_hint %>
             <%= render "shared/form/md_hints" %>
           <% end %>
 
           <%= yield %>
+            </div>
+          </div>
         </div>
       </div>
     </div>
