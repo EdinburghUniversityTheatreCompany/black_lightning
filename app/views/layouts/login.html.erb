@@ -13,6 +13,8 @@
   <%= yield :head %>
 
   <meta name="viewport" content="initial-scale = 1.0" />
+
+  <%= render 'layouts/alerts_script' %>
 </head>
 
 <body class="hold-transition login-page">
@@ -32,8 +34,6 @@
         <!-- /.card -->
     </div>
     <!-- /.login-box -->
-
-    <%= render '/layouts/alert_div' %>
 </body>
 
 </html>
