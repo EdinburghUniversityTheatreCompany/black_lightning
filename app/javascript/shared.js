@@ -1,10 +1,6 @@
 // Import jQuery setup first - this exposes jQuery globally before other plugins load
 import './src/jquery-global'
 
-require("@popperjs/core")
-
-import "bootstrap"
-
 import "./sweetalert"
 
 // Use imports-loader to explicitly inject jQuery into slimscroll
