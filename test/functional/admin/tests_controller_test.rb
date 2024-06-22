@@ -52,7 +52,7 @@ class Admin::TestControllerTest < ActionDispatch::IntegrationTest
     assert_includes flash[:success], 'This is a notice message that should be added to the success messages.'
   end
 
-  test 'report 500' do
+  test 'report 500 as admin' do
     get admin_tests_test_500_path
 
     assert_response 500
@@ -60,6 +60,7 @@ class Admin::TestControllerTest < ActionDispatch::IntegrationTest
     assert_nil flash[:error], 'The error flash was not cleared'
     assert_match "<ul><li>This is a test server error.</li><li>This is a bonus error.</li></ul>", response.body, 'The error page was not rendered using the template'
     assert_match 'This is a bonus success.', response.body, 'The success was not rendered'
+    assert_match 'Backtrace:', response.body, 'The backtrace was not rendered for the admin'
   end
 
   test 'report 404' do
