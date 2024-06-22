@@ -45,7 +45,6 @@
 
 <%= render 'shared/form/sections/video_links', f: f %>
 
-<h3>Pretix Widget Configuration</h3>
 <%= render layout: '/shared/collapsible_section', locals: { title: 'Pretix Widget Configuration' } do %>
     <%= f.input :pretix_shown, hint: 'Display the Pretix widget for this event.' %>
     <%= f.input :pretix_slug_override, hint: ' Leave blank to use the slug for this event as the Pretix slug' %>
