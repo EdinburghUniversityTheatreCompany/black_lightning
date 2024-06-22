@@ -64,9 +64,11 @@ class Ability
       cannot :add_non_members, Event
 
       # Can view all the tests, except for the access_denied action, because that is the point.
-      can :manage, :tests
       cannot :access_denied, :tests
-  
+
+      # Can view the error details on the error page.
+      can :view_details, :errors
+
       # To override restrictions if the admin has the appropriate role.
       set_permissions_based_on_grid(user)
 
