@@ -40,7 +40,7 @@ export async function showFlashAlerts(flash) {
         await showToast(alertType, message);
         break;
       case 'error':
-        await showError(`<div class="text-justify">${message}</div>`);
+        await showError(`<div class="text-start">${message}</div>`);
         break;
       default:
         await showPersistentToast(alertType, message);
