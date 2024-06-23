@@ -1,8 +1,6 @@
 <%# locals: (f:) %>
 
 <div class="gallery-form">
-  <h3>Gallery</h3>
-
   <%= render layout: '/shared/collapsible_section', locals: { title: 'Gallery' } do %>
     <%= render('shared/form/sections/nested_fields', f: f, association_name: :pictures, partial_name: 'picture_fields') %>
 

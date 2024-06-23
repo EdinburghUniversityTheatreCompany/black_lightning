@@ -8,10 +8,10 @@
 
     <%= render '/admin/events/reviews_form_partial', f: f %>
 
-    <h3>Events</h3>
     <% if @season.new_record? %>
+      <h3>Events</h3>
       You can add events after creating the season.
-    <% else%>
+    <% else %>
       <%= render layout: '/shared/collapsible_section', locals: { title: 'Events' } do %>
         <% if f.object.errors[:events].present? then %>
           <p id="events_errors" class="alert alert-danger">

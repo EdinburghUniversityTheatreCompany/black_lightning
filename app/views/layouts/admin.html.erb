@@ -14,6 +14,8 @@
   <%= yield :head %>
 
   <meta name="viewport" content="initial-scale = 1.0" />
+
+  <%= render 'layouts/alerts_script' %>
 </head>
 
 <body class="hold-transition sidebar-mini layout-fixed">
@@ -119,8 +121,6 @@
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
       <%= content_for?(:content_header) ? yield(:content_header) : render('shared/admin_page_header', title: @title) %>
-
-      <%= render '/layouts/alert_div' %>
       
       <div class="content">
         <div class="container-fluid">

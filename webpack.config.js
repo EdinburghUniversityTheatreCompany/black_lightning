@@ -26,10 +26,7 @@ module.exports = {
     new webpack.ProvidePlugin({
       $: 'jquery',
       jQuery: 'jquery',
-      Popper: ['popper.js', 'default']  
-      // Not a typo, we're still using popper.js here because that is what adminlte requires.
-      // BOOTSTRAP 5: Replace with the below once upgrading adminlte
-      // Popper: ['@popperjs/core', 'default']
+      Popper: ['@popperjs/core', 'default']
     })
   ]
 }

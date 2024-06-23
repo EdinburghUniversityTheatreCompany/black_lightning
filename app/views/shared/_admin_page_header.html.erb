@@ -2,15 +2,14 @@
 
 <div class="content-header">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col">
-                <h1 class="m-0"><%= title %></h1>
-            </div><!-- /.col -->
-            <div class="col-auto">
-                <ol class="breadcrumb float-sm-right">
-                    <li class="breadcrumb-item active"><%= render_breadcrumbs :separator => " / " %></li>
-                </ol>
-            </div><!-- /.col -->
-        </div><!-- /.row -->
+        <%# To explain the flex: We have two items, the title and breadcrumbs. By default, show them in a row.
+            Allow them to wrap when they don't fit in the same row anymore. Justify them so they are as spread out as possible. 
+            align-items-end does not align the items to the end of the row, but to the bottom of the column. 
+            Confusing, I know. It would be flipped if the flexbox was laid out as a col instead. %>
+        <div class="d-flex flex-wrap align-items-end justify-content-between mb-2">
+            <div class="pe-2"><h1 class="m-0"><%= title %></h1></div>
+
+            <div><%= render_breadcrumbs builder: Builders::TablerBreadcrumbsBuilder, separator: '' %></div>
+        </div>
     </div>
 </div>

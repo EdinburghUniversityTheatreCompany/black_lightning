@@ -1,6 +1,7 @@
 // NOTE THAT THINGS PLACED HERE DO NOT WORK FOR THE BACKEND
 // This file has to be at the top because it also loads Bootstrap 5.
 @import '../bootstrap5_customisations';
+@import "bootstrap/scss/bootstrap";
 
 @import '../form_additions';
 @import '../shared_additions';

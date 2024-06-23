@@ -16,6 +16,8 @@
   <%= yield :head %>
 
   <%= meta_tags(@meta).html_safe %>
+
+  <%= render 'layouts/alerts_script' %>
 </head>
 
 <body>
@@ -23,8 +25,6 @@
 
   <div class="container">
     <%= render "layouts/ie_notice" %>
-
-    <%= render 'layouts/alert_div' %>
 
     <%= content_for?(:content) ? yield(:content) : yield %>
   </div>

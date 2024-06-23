@@ -4,7 +4,7 @@ module MdHelper
   def render_markdown(md)
     return '' if md.nil?
 
-    return Kramdown::Document.new(md, input: 'BKramdown').to_html.html_safe
+    return Kramdown::Document.new(md, input: 'BKramdown').to_html.gsub(/(^[ ]*<p>[ ]*)|([ ]*<\/p>[ ]*$)/, '').html_safe
   end
 
   def render_plain(md)

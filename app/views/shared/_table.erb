@@ -5,7 +5,7 @@
   if header.class == Symbol
     text = t('simple_form.labels.defaults.' + header.to_s)
     if @q.present?
-      new_headers << sort_link(@q, header, text)
+      new_headers << sort_link(@q, header, text, class: 'table-sort', hide_indicator: true)
     else
       new_headers << text
     end
@@ -14,23 +14,25 @@
   end
 end %>
 
-<table class="table  <%= table_class %>">
-  <% if include_headers %>
-    <thead>
-      <tr>
-        <% new_headers.each do |header| %>
-          <th scope="col"><%= header %></th>
-        <% end %>
-      </tr>
-    </thead>
-  <% end %>
-  <tbody>
-    <% field_sets.each do |field_set| %>
-      <tr class="<%= field_set[:class]%>">
-        <% field_set[:fields].each do |field| %>
-        <td> <%= field %> </td>
-        <% end %>
-      </tr>
+<div id="table-default" class="table-responsive">
+  <table class="table  <%= table_class %>">
+    <% if include_headers %>
+      <thead>
+        <tr>
+          <% new_headers.each do |header| %>
+            <th scope="col"><%= header %></th>
+          <% end %>
+        </tr>
+      </thead>
     <% end %>
-  </tbody>
-</table>
+    <tbody>
+      <% field_sets.each do |field_set| %>
+        <tr class="<%= field_set[:class]%>">
+          <% field_set[:fields].each do |field| %>
+          <td> <%= field %> </td>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
