@@ -18,7 +18,7 @@
     <%= f.input :draft, as: :hidden %>
     <%= f.input :subject %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12, show_hint: true %>
+    <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12 %>
 
     <%= f.input :send_date %>
   <% end %>

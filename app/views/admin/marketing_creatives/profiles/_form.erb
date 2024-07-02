@@ -6,9 +6,9 @@
 
     <%= render('shared/form/user_field', f: f) if can?(:manage, MarketingCreatives::Profile) %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :about, rows: 12, show_hint: true %>
+    <%= render "/shared/form/md_editor", f: f, field: :about, rows: 12 %>
     
-    <%= render "/shared/form/md_editor", f: f, field: :contact, rows: 12, show_hint: true %>
+    <%= render "/shared/form/md_editor", f: f, field: :contact, rows: 12 %>
 
     <div class="categories">
       <h3>Categories</h3>
