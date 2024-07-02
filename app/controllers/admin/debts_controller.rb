@@ -15,7 +15,7 @@ class Admin::DebtsController < AdminController
     respond_to do |format|
       format.html
       # TODO: This should include the debt stats and not actually the user info. Do something with a local class.
-      format.json { render json: @users }
+      # format.json { render json: @users }
     end
   end
 
@@ -35,7 +35,7 @@ class Admin::DebtsController < AdminController
     respond_to do |format|
       format.html
       # TODO: Same as above
-      format.json { render json: @users }
+      # format.json { render json: @users }
     end
   end
 end
