@@ -102,7 +102,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users have the correct proposal permissions before the submission deadline' do
-    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: 4))
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 4))
     helper_set_up_proposal
 
     situation = 'before the submission deadline'
@@ -120,7 +120,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users have the correct proposal permissions after the submission deadline / before the editing deadline' do
-    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -1), editing_deadline: DateTime.now.advance(days: 1))
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -1), editing_deadline: DateTime.current.advance(days: 1))
     helper_set_up_proposal
     situation = 'after the submission deadline / before the editing deadline'
 
@@ -138,7 +138,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users have the correct proposal permissions after the editing deadline for proposals awaiting approval' do
-    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -2), editing_deadline: DateTime.current.advance(days: -1))
     helper_set_up_proposal
     @proposal.status = :awaiting_approval
 
@@ -152,7 +152,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users have the correct proposal permissions after the editing deadline for proposals that have been approved ' do
-    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
+    @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -2), editing_deadline: DateTime.current.advance(days: -1))
     helper_set_up_proposal
 
     situation = "after the editing deadline, but that is approved"
@@ -188,7 +188,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test 'users have the correct proposal permissions for archived proposals' do
-    @call = FactoryBot.create(:proposal_call, archived: true, submission_deadline: DateTime.now.advance(days: -2), editing_deadline: DateTime.now.advance(days: -1))
+    @call = FactoryBot.create(:proposal_call, archived: true, submission_deadline: DateTime.current.advance(days: -2), editing_deadline: DateTime.current.advance(days: -1))
     helper_set_up_proposal
 
     @proposal.status = :approved

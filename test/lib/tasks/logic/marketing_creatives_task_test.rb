@@ -4,7 +4,7 @@ require 'test_helper'
 class MarketingCreativesTaskTest < ActiveSupport::TestCase
   test 'Should notify new sign ups' do
     profile = FactoryBot.create(:marketing_creatives_profile, approved: false)
-    older_profile = FactoryBot.create(:marketing_creatives_profile, approved: nil, created_at: DateTime.now.advance(hours: -25, minutes: 1))
+    older_profile = FactoryBot.create(:marketing_creatives_profile, approved: nil, created_at: DateTime.current.advance(hours: -25, minutes: 1))
 
     assert_difference 'ActionMailer::Base.deliveries.count' do
       Tasks::Logic::MarketingCreatives.notify_of_new_sign_ups
@@ -19,7 +19,7 @@ class MarketingCreativesTaskTest < ActiveSupport::TestCase
   end
 
   test 'should not notify sign-ups older than 25 hours' do
-    profile = FactoryBot.create(:marketing_creatives_profile, created_at: DateTime.now.advance(hours: -25, minutes: -1))
+    profile = FactoryBot.create(:marketing_creatives_profile, created_at: DateTime.current.advance(hours: -25, minutes: -1))
 
     assert_no_difference 'ActionMailer::Base.deliveries.count' do
       Tasks::Logic::MarketingCreatives.notify_of_new_sign_ups

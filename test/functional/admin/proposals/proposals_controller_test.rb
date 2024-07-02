@@ -4,7 +4,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   include NameHelper
 
   setup do
-    @call = FactoryBot.create(:proposal_call, question_count: 5, submission_deadline: DateTime.now.advance(days: 5))
+    @call = FactoryBot.create(:proposal_call, question_count: 5, submission_deadline: DateTime.current.advance(days: 5))
 
     @admin = users(:admin)
     sign_in @admin
@@ -64,7 +64,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should not get new after the submission deadline' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(hours: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(hours: -1))
     get :new, params: { call_id: @call.id }
 
     assert_includes flash[:error].first, "The submission deadline for #{@call.name} has been passed"
@@ -105,7 +105,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should not create after the submission deadline' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(hours: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(hours: -1))
     attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
 
     assert_no_difference('Admin::Proposals::Proposal.count') do
@@ -117,7 +117,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should get edit' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call)
 
     get :edit, params: { id: proposal }
@@ -126,7 +126,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'md_editor should render the question as the label' do
     question_text = 'This is definitely not a duplicate question'
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     @call.questions.first.update(response_type: 'Long Text', question_text: question_text)
 
     proposal = FactoryBot.create(:proposal, call: @call)
@@ -140,7 +140,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'should update proposal' do
     sign_out @admin
-    @call.update_attribute(:editing_deadline, DateTime.now.advance(days: 1))
+    @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
 
     proposal = FactoryBot.create(:proposal, call: @call)
 
@@ -162,8 +162,8 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should not email after updating when the editing deadline is passed' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -2))
-    @call.update_attribute(:editing_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -2))
+    @call.update_attribute(:editing_deadline, DateTime.current.advance(days: -1))
 
     proposal = FactoryBot.create(:proposal, call: @call)
 
@@ -196,7 +196,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should destroy admin_proposals_proposal' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, team_member_count: 0)
 
     assert_difference('Admin::Proposals::Proposal.count', -1) do
@@ -207,7 +207,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'approve' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
     put :approve, params: { id: proposal.id }
@@ -218,7 +218,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'reject' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
     put :reject, params: { id: proposal.id }
@@ -230,7 +230,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'approve already approved proposal' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
 
     proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
 
@@ -242,7 +242,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'reject already successful proposal' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
 
     proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
 
@@ -255,7 +255,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'convert' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
 
     assert_difference 'Show.count' do
@@ -268,7 +268,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   end
 
   test 'should not convert when the proposal has not been approved' do
-    @call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: [:awaiting_approval, :rejected].sample)
 
     assert_no_difference 'Show.count' do

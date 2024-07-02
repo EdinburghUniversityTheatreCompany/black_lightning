@@ -140,7 +140,7 @@ class Admin::AdminHelperTest < ActionView::TestCase
 
   def helper_create_proposal
     proposal = FactoryBot.create(:proposal)
-    proposal.call.update_attribute(:submission_deadline, DateTime.now.advance(days: -1))
+    proposal.call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
 
     return proposal
   end

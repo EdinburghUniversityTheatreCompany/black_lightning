@@ -10,7 +10,7 @@
 
 <% content_for :extra_show_actions do %>
   <%= get_link @call, :view_proposals, link_target: admin_proposals_call_proposals_path(@call) , http_method: 'get' %>
-  <%= get_link @call, :archive, wrap_tag: 'td', http_method: 'put', additional_condition: DateTime.now > @call.editing_deadline,
+  <%= get_link @call, :archive, wrap_tag: 'td', http_method: 'put', additional_condition: DateTime.current > @call.editing_deadline,
                 confirm: "Archiving #{@call.name}", detail: 'Please confirm that you want to archive this proposal call.' 
   %>
   <%- # Render a button to create a new proposal.%>

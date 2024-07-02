@@ -41,7 +41,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   test 'reminder_cleanup' do
     skip 'This test fails. It seems the reminder job does not actually get removed. It is not that big of a deal, because in the very rare case a staffing is removed, it will just fail and do nothing'
 
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 25, start_time: DateTime.now.advance(days: 1))
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 25, start_time: DateTime.current.advance(days: 1))
 
     assert_not_nil staffing.reminder_job
     assert_includes staffing.reminder_job.description, "Reminder for Staffing #{staffing.id}"
@@ -65,7 +65,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
   test 'update_reminder runs on creation' do
     # Very far in the future, because it has to be bigger than the current time
-    start_time = DateTime.now.advance(days: 10)
+    start_time = DateTime.current.advance(days: 10)
     start_time = start_time.change(hour: 18, min: 0)
 
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: start_time)
@@ -77,7 +77,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   end
 
   test 'update_reminder without reminder job present' do
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.now.advance(days: 1))
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: 1))
 
     assert_not_nil staffing.reload.reminder_job
 
@@ -92,7 +92,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   end
 
   test 'update_reminder without reminder job present and after the staffing passed' do
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.now.advance(days: -1))
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: -1))
 
     assert_nil staffing.reminder_job
 
@@ -102,7 +102,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   end
 
   test 'send_reminder' do
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5, start_time: DateTime.now.advance(days: 1))
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5, start_time: DateTime.current.advance(days: 1))
 
     assert_not_nil staffing.reload.reminder_job, 'The staffing does not automatically have a reminder job after creation'
     user = FactoryBot.create(:user)

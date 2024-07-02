@@ -93,7 +93,7 @@ class Admin::ShowsController < Admin::GenericEventsController
     username = Rails.application.config.xts[:username]
     password = Rails.application.config.xts[:password]
 
-    uniq = Time.now.to_i
+    uniq = Time.current.to_i
 
     # ?uniq=1355693791607&includedatetimes=true&agents=boxoffice:9n2nf92kt04&agents=boxoffice:9n2nf92kt04|craig:insecure
 
