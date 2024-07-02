@@ -78,7 +78,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   end
 
   test 'should archive call' do
-    @call.update_attribute(:editing_deadline, DateTime.now.advance(days: -1))
+    @call.update_attribute(:editing_deadline, DateTime.current.advance(days: -1))
     @call.update_attribute(:archived, false)
 
     assert_no_difference('Admin::Proposals::Call.count') do
@@ -91,7 +91,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   end
 
   test 'should not archive call with an editing deadline in the future.' do
-    @call.update_attribute(:editing_deadline, DateTime.now.advance(days: 1))
+    @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
     @call.update_attribute(:archived, false)
 
     assert_no_difference('Admin::Proposals::Call.count') do

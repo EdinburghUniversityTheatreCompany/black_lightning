@@ -1,4 +1,4 @@
-<% error_header = "Sorry #{current_user.present? ? " #{current_user.first_name}, " : " ," } there was a problem fetching this page: #{@error_type}" %>
+<% error_header = "Sorry#{" #{current_user.first_name}" if current_user&.first_name.present?}, there was a problem fetching this page: #{@error_type}" %>
 
 <%= render '/errors/template', error_header: error_header do %>
   <p>

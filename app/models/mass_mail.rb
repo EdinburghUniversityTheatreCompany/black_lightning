@@ -48,7 +48,7 @@ class MassMail < ApplicationRecord
   private
 
   def send_date_is_in_the_past?
-    return !send_date.present? || (send_date.present? && send_date < DateTime.now)
+    return !send_date.present? || (send_date.present? && send_date < DateTime.current)
   end
 
   def check_if_mail_has_been_sent

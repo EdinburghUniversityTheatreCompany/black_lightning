@@ -64,6 +64,11 @@ ChaosRails::Application.routes.draw do
 
   get 'attachments/:slug(/:style)', to: 'attachments#file', as: 'attachment'
 
+  # Test route
+  if Rails.env.test? || Rails.env.development?
+    get 'tests/test_500', to: 'tests#test_500'
+  end
+
   namespace :admin do
     get '', to: 'dashboard#index'
 

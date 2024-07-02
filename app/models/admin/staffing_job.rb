@@ -47,7 +47,7 @@ class Admin::StaffingJob < ApplicationRecord
   end
 
   def completed?
-    return staffable.end_time < DateTime.now
+    return staffable.end_time < DateTime.current
   end
 
   def counts_towards_debt?

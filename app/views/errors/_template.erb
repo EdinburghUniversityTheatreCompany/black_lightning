@@ -11,7 +11,7 @@
     <h4><b>Errors:</b></h4>
     <%= render_as_list(@error_messages, 'ul') %>
     
-    <% if @exception_backtrace.present? && current_user.has_role?(:admin) %>
+    <% if @exception_backtrace.present? && current_ability.can?(:view_details, :errors) %>
       <h4><b>Backtrace:</b></h4>
       <%= render_as_list(@exception_backtrace, 'ol') %>
     <% end %>

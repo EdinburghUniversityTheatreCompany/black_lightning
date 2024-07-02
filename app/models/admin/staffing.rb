@@ -43,8 +43,8 @@ class Admin::Staffing < ApplicationRecord
 
   default_scope -> { order('start_time ASC') }
 
-  scope :future, -> { where(['end_time >= ?', DateTime.now]) }
-  scope :past, -> { where(['end_time < ?', DateTime.now]) }
+  scope :future, -> { where(['end_time >= ?', DateTime.current]) }
+  scope :past, -> { where(['end_time < ?', DateTime.current]) }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[start_time show_title reminder_job_id end_time counts_towards_debt slug]

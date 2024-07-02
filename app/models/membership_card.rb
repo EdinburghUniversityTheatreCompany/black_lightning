@@ -28,7 +28,7 @@ class MembershipCard < ApplicationRecord
     number = rand(9999).to_s.center(4, rand(9).to_s)
 
     # Get unix timestamp
-    date_i = Time.now.to_i.to_s
+    date_i = Time.current.to_i.to_s
 
     self.card_number = date_i + number
   end

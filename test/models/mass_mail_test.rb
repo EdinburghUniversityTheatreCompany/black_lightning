@@ -61,7 +61,7 @@ class MassMailTest < ActiveSupport::TestCase
     recipients = FactoryBot.create_list(:member, 10)
 
     mass_mail = FactoryBot.create(:draft_mass_mail, recipients: recipients, sender: FactoryBot.create(:member))
-    mass_mail.update_attribute :send_date, DateTime.now.advance(seconds: -1)
+    mass_mail.update_attribute :send_date, DateTime.current.advance(seconds: -1)
 
     assert_raise ActiveRecord::RecordInvalid do
       mass_mail.prepare_send!
@@ -69,7 +69,7 @@ class MassMailTest < ActiveSupport::TestCase
 
     # Test if the error would be thrown on creation as well.
     assert_raise ActiveRecord::RecordInvalid do
-      FactoryBot.create(:draft_mass_mail, send_date: DateTime.now.advance(seconds: -1))
+      FactoryBot.create(:draft_mass_mail, send_date: DateTime.current.advance(seconds: -1))
     end
   end
 

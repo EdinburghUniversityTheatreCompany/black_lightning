@@ -29,7 +29,7 @@ class Admin::MassMailsController < AdminController
 
       respond_to do |format|
         format.html { redirect_to admin_mass_mails_url }
-        format.json { head :no_content }
+        # format.json { head :no_content }
       end
     end
   end
@@ -75,7 +75,7 @@ class Admin::MassMailsController < AdminController
 
       respond_to do |format|
         format.html { redirect_back fallback_location: admin_mass_mails_url }
-        format.json { render json: { error: flash[:error] } }
+        # format.json { render json: { error: flash[:error] } }
       end
     end
   end

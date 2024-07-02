@@ -1,7 +1,7 @@
-<%# locals: (f:, field:, show_hint: true, rows: 10, input_field_args: {}) %>
+<%# locals: (f:, field:, show_side_help: true, rows: 10, input_field_args: {}) %>
 
 <% # Use a unique ID in all navigation tabs so that there is no interference in navigation when there are multiple md_editors on one page. %>
-<% id = DateTime.now.strftime('%Q') %>
+<% id = DateTime.current.strftime('%Q') %>
 
 <% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
 
@@ -45,7 +45,7 @@
         </div>
 
         <div class="yield">
-          <% if show_hint %>
+          <% if show_side_help %>
             <%= render "shared/form/md_hints" %>
           <% end %>
 

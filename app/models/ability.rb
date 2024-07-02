@@ -51,10 +51,10 @@ class Ability
       can :manage, :all
 
       # Even admins should not be able to read proposals before the submission deadline has been passed.
-      cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+      cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
       can [:update, :read, :delete], Admin::Proposals::Proposal, users: { id: user.id }
-      can [:index, :create], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+      can [:index, :create], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
       cannot :manage, Complaint
       can :create, Complaint
@@ -64,9 +64,11 @@ class Ability
       cannot :add_non_members, Event
 
       # Can view all the tests, except for the access_denied action, because that is the point.
-      can :manage, :tests
       cannot :access_denied, :tests
-  
+
+      # Can view the error details on the error page.
+      can :view_details, :errors
+
       # To override restrictions if the admin has the appropriate role.
       set_permissions_based_on_grid(user)
 
@@ -83,7 +85,7 @@ class Ability
     alias_action :destroy, to: :delete
 
     # You must also update opportunity.rb when editing this.
-    can :read, Opportunity, approved: true, expiry_date: Time.now..DateTime::Infinity.new
+    can :read, Opportunity, approved: true, expiry_date: Time.current..DateTime::Infinity.new
 
     # Guests can see all venues.
     can [:read, :map], Venue
@@ -138,15 +140,15 @@ class Ability
 
     if user.has_role?('Proposal Checker') || user.has_role?('Committee')
       # If the user is a proposal checker, they should be able to read any proposal after the submission deadline, no matter if they are approved, rejected, or awaiting, after the submission deadline.
-      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now.advance(years: -100)..DateTime.now }
+      can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
 
       # They should also be able to index every proposal.
       can :index, Admin::Proposals::Proposal
     end
 
-    can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.now..DateTime::Infinity.new }
+    can :create, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
-    can :update, Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.now..DateTime::Infinity.new }
+    can :update, Admin::Proposals::Proposal, users: { id: user.id }, call: { editing_deadline: DateTime.current..DateTime::Infinity.new }
 
     # Everyone can read the about page.
     can :about, Admin::Proposals::Proposal

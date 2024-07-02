@@ -105,9 +105,8 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-
       format.html { redirect_to admin_proposals_proposal_path(@proposal) }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
@@ -125,9 +124,8 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-
       format.html { redirect_to admin_proposals_proposal_path(@proposal) }
-      format.json { head :no_content }
+      # format.json { head :no_content }
     end
   end
 
@@ -148,7 +146,7 @@ class Admin::Proposals::ProposalsController < AdminController
     ensure
       respond_to do |format|
         format.html { redirect_to admin_proposals_proposal_path(@proposal) }
-        format.json { head :no_content }
+        # format.json { head :no_content }
       end
     end
   end
@@ -203,7 +201,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   def on_update_success
     # Only email people if the proposal is edited before the editing deadline to prevent spamming people when tidying the archives.
-    mail_team_members(@proposal.team_members, @previous_team_member_ids, false) if @proposal.call.editing_deadline > DateTime.now
+    mail_team_members(@proposal.team_members, @previous_team_member_ids, false) if @proposal.call.editing_deadline > DateTime.current
 
     super
   end

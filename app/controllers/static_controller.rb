@@ -48,7 +48,7 @@ class StaticController < ApplicationController
 
     respond_to do |format|
       format.html { redirect_to(static_url('contact')) }
-      format.json { render json: success_message }
+      # format.json { render json: success_message }
     end
   end
 end

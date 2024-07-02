@@ -31,7 +31,7 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @staffings }
+      # format.json { render json: @staffings }
     end
   end
 
@@ -69,7 +69,7 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.json { render json: @staffings_hash }
+      # format.json { render json: @staffings_hash }
     end
   end
 
@@ -163,11 +163,11 @@ class Admin::StaffingsController < AdminController
       if failure
         set_new_params
         format.html { render 'new', status: :unprocessable_entity }
-        format.json { render json: @staffing.errors, status: :unprocessable_entity }
+        # format.json { render json: @staffing.errors, status: :unprocessable_entity }
       else
         flash[:success] = 'Staffing was successfully created.'
         format.html { redirect_to grid_admin_staffings_path(slug) }
-        format.json { render status: :created }
+        # format.json { render status: :created }
       end
     end
   end
@@ -186,10 +186,10 @@ class Admin::StaffingsController < AdminController
       if @staffing.save
         flash[:success] = 'Staffing was successfully updated.'
         format.html { redirect_to admin_staffing_path(@staffing) }
-        format.json { head :no_content }
+        # format.json { head :no_content }
       else
         format.html { render 'edit', status: :unprocessable_entity }
-        format.json { render json: @staffing.errors, status: :unprocessable_entity }
+        # format.json { render json: @staffing.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -214,7 +214,7 @@ class Admin::StaffingsController < AdminController
         helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].blank?
         
         format.html { redirect_to admin_staffing_path(@job.staffable) }
-        format.json { render json: @job.errors, status: :unprocessable_entity }
+        # format.json { render json: @job.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -233,7 +233,7 @@ class Admin::StaffingsController < AdminController
       helpers.append_to_flash(:error, 'Someone else has already signed up for this slot')
     end
 
-    if @job.staffable.start_time < Time.now
+    if @job.staffable.start_time < Time.current
       helpers.append_to_flash(:error, 'You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.')
     end
 
@@ -242,12 +242,12 @@ class Admin::StaffingsController < AdminController
         helpers.append_to_flash(:success, "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name} on #{(l @job.staffable.start_time, format: :short)}.")
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
-        format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
+        # format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
       else
         helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].blank?
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
-        format.json { render json: @job.errors, status: :unprocessable_entity }
+        # format.json { render json: @job.errors, status: :unprocessable_entity }
       end
     end
   end
@@ -264,7 +264,7 @@ class Admin::StaffingsController < AdminController
   def set_new_params
     @shows = Show.future.pluck(:name)
 
-    now = Time.now
+    now = Time.current
     @default_start_time = Time.new(now.year, now.month, now.day, 18, 30, 0)
     @default_end_time = Time.new(now.year, now.month, now.day, 22, 00, 0)
   end
