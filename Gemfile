@@ -46,7 +46,7 @@ gem 'ransack'
 gem 'nokogiri'
 
 gem 'rack-cors'
-gem 'rack', '~> 2.0'
+gem 'rack', '~> 3.1'
 gem 'paper_trail'
 
 gem 'stringex'
