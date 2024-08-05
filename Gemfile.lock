@@ -198,7 +198,7 @@ GEM
     ffi (1.17.0-x86_64-linux-gnu)
     globalid (1.2.1)
       activesupport (>= 6.1)
-    honeybadger (5.13.1)
+    honeybadger (5.15.4)
     html_acceptance (0.1.19)
     htmlentities (4.3.4)
     i18n (1.14.5)
