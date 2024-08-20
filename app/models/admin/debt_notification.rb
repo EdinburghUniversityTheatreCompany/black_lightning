@@ -12,10 +12,9 @@
 # == Schema Information End
 #++
 class Admin::DebtNotification < ApplicationRecord
-  enum notification_type: {
+  enum :notification_type,
     initial_notification: 0,
     reminder: 1
-  }
 
   belongs_to :user
 

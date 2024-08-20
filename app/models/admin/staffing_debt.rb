@@ -36,12 +36,11 @@ class Admin::StaffingDebt < ApplicationRecord
 
   # the progress of staffing debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt, or has been staffed.
-  enum state: {
+  enum :state,
     normal: 0,
     converted: 1,
     forgiven: 2,
     expired: 3
-  }
 
   # the status of a staffing debt is determined by whether or not it has a staffing job and if that job is in the past
   # If you change this, please also change the functions that return upcoming debts in the user model.
