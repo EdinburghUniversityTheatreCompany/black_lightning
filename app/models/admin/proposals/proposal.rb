@@ -24,13 +24,12 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
 
-  enum status: {
+  enum :status,
     awaiting_approval: 0,
     approved: 1,
     rejected: 2,
     successful: 3,
-    unsuccessful: 4,
-  }
+    unsuccessful: 4
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
   
