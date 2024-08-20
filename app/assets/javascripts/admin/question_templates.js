@@ -133,10 +133,19 @@ class TemplateLoader {
 
   // Load the list of available templates into the dropdown
   loadTemplateList() {
-    $.getJSON(this.templatesBaseUrl, data => {
+    $.getJSON(this.templatesBaseUrl)
+      .done(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          this.allTemplates = data; // Store all templates
       data.forEach(template => {
         $('#template_list').append(`<option value="${template.id}">${template.name}</option>`);
       });
+        } else {
+          console.log('Data is empty or not an array');
+        }
+      })
+      .fail((jqXHR, textStatus, errorThrown) => {
+        console.error('AJAX request failed:', textStatus, errorThrown);
     });
   }
 }
