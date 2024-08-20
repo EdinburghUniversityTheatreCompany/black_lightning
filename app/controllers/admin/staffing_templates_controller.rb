@@ -15,4 +15,8 @@ class Admin::StaffingTemplatesController < AdminController
   def permitted_params
     [:name, staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id]]
   end
+
+  def json_enabled_for_index?
+    true
+  end
 end

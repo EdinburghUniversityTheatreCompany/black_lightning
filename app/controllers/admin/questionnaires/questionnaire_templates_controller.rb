@@ -29,4 +29,8 @@ class Admin::Questionnaires::QuestionnaireTemplatesController < AdminController
   def edit_title
     "Edit #{@questionnaire_template.name}"
   end
+
+  def json_enabled_for_index?
+    true
+  end
 end
