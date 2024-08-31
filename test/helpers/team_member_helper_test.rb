@@ -13,6 +13,14 @@ class TeamMemberHelperTest < ActionView::TestCase
     assert_includes team_member_labels_for(@team_member, Date.current).join(';'), 'DM Trained'
   end
 
+  test 'Bar trained user should have the Bar trained label' do
+    assert_not @team_member.user.has_role?("Bar Trained")
+    assert_not_includes team_member_labels_for(@team_member, Date.current).join(';'), 'Bar Trained'
+
+    @team_member.user.add_role("Bar Trained")
+    assert_includes team_member_labels_for(@team_member, Date.current).join(';'), 'Bar Trained'
+  end
+
   test 'First Aid Trained user should have the First Aid Trained label' do
     assert_not @team_member.user.has_role?("First Aid Trained")
     assert_not_includes team_member_labels_for(@team_member, Date.current).join(';'), 'First Aid Trained'
