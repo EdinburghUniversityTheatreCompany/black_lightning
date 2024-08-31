@@ -38,7 +38,7 @@ class TeamMemberHelperTest < ActionView::TestCase
   end
   
   test 'shows in previous academic years should not warn for non-members' do
-    @team_member.teamwork.update(start_date: 1.year.ago , end_date: 1.year.ago + 1.days)
+    @team_member.teamwork.update(start_date: 1.year.ago - 5.days, end_date: 1.year.ago - 4.days)
 
     @team_member.user.remove_role("Member")
     labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
