@@ -19,6 +19,11 @@ module Admin::StaffingsHelper
         append_to_flash(:error, 'You are not DM Trained. If you think this is a mistake, please contact the Theatre Manager.')
         can_sign_up = false
       end
+    when 'bar', 'bar staff', 'barstaff'
+      unless user.has_role?('Bar Trained')
+        append_to_flash(:error, 'You are not Bar Trained. If you think this is a mistake, please contact the Front of House Manager.')
+        can_sign_up = false
+      end
     end
 
     unless user.phone_number.present?
