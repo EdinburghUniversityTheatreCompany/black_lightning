@@ -81,6 +81,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     proposal = FactoryBot.build(:proposal)
 
     attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
+    attributes[:status] = nil # The status needs to be assigned in the create. If this is not done, the proposal will not be saved, and the test will fail.
 
     team_members_count = 4
     attributes[:team_members_attributes] = generate_team_member_attributes(team_members_count)
@@ -127,7 +128,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test 'md_editor should render the question as the label' do
     question_text = 'This is definitely not a duplicate question'
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    @call.questions.first.update(response_type: 'Long Text', question_text: question_text)
+    @call.questions.first.update(response_type: 'Long Text', question_text:)
 
     proposal = FactoryBot.create(:proposal, call: @call)
 
@@ -251,7 +252,6 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert assigns(:proposal).successful?
     assert_redirected_to admin_proposals_proposal_path(proposal)
     assert_equal ["The #{get_object_name(proposal, include_class_name: true)} is not currently awaiting approval."], flash[:error]
-
   end
 
   test 'convert' do
@@ -269,7 +269,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test 'should not convert when the proposal has not been approved' do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    proposal = FactoryBot.create(:proposal, call: @call, status: [:awaiting_approval, :rejected].sample)
+    proposal = FactoryBot.create(:proposal, call: @call, status: %i[awaiting_approval rejected].sample)
 
     assert_no_difference 'Show.count' do
       put :convert, params: { id: proposal.id }
@@ -289,7 +289,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   def generate_team_member_attributes(count)
     team_members_attributes = {}
-    team_members = FactoryBot.build_list(:team_member,count)
+    team_members = FactoryBot.build_list(:team_member, count)
 
     team_members.each_with_index do |team_member, index|
       team_member_attributes = team_member.attributes.except('id', 'teamwork_id', 'teamwork_type', 'created_at', 'updated_at')
