@@ -79,7 +79,10 @@ class TemplateLoader {
     if (this.itemsType === ITEMS_TYPE.QUESTIONS) {
       // For questions, load both questions and notify emails
       this.loadTemplateHelper('question_add_button', this.globalData.questions);
-      this.loadTemplateHelper('notify_email_add_button', this.globalData.notify_emails);
+
+      if(this.globalData.notify_emails) { 
+        this.loadTemplateHelper('notify_email_add_button', this.globalData.notify_emails);
+      }
     } else if (this.itemsType === ITEMS_TYPE.JOBS) {
       // For jobs, load staffing jobs
       this.loadTemplateHelper('staffing_job_add_button', this.globalData.staffing_jobs);
