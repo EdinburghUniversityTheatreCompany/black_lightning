@@ -79,8 +79,8 @@ class User < ApplicationRecord
 
   has_one_attached :avatar
 
-  normalizes :email, with: -> (email) { email&.downcase.strip }
-  normalizes :first_name, :last_name, :username, with: -> (name) { name&.strip }
+  normalizes :email, with: ->(email) { email&.downcase&.strip&.gsub('@sms.ed.ac.uk', '@ed.ac.uk') }
+  normalizes :first_name, :last_name, :username, with: ->(name) { name&.strip }
 
   default_scope -> { order('last_name ASC') }
 
