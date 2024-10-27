@@ -7,16 +7,16 @@ class MembershipActivationTokensController < ApplicationController
     @title = 'Activate Membership'
     @user = get_user
 
-    if current_user&.has_role?('Member')
-      raise(CanCan::AccessDenied, 'You have already activated your account.')
-    end
+    return unless current_user&.has_role?('Member')
+
+    raise(CanCan::AccessDenied, 'You have already activated your account.')
   end
 
   def submit
     @user = get_user
 
     @user.assign_attributes(user_params)
-  
+
     if params[:consent]
       unless @user.save
         respond_to do |format|
@@ -35,7 +35,7 @@ class MembershipActivationTokensController < ApplicationController
 
       @user.send_welcome_email
 
-      redirect_to admin_url
+      redirect_to home_url
     # If not consented.
     else
       helpers.append_to_flash(:error, 'You need to accept the Terms and Conditions before continuing.')
