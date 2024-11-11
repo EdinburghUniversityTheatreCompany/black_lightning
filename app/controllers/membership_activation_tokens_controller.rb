@@ -35,7 +35,7 @@ class MembershipActivationTokensController < ApplicationController
 
       @user.send_welcome_email
 
-      redirect_to home_url
+      redirect_to root_url
     # If not consented.
     else
       helpers.append_to_flash(:error, 'You need to accept the Terms and Conditions before continuing.')
