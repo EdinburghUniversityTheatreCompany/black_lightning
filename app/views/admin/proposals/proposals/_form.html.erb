@@ -13,8 +13,7 @@
     <%= display_block("Proposals - Help on Form", true) %>
 
     <% if can?(:approve, @proposal) && DateTime.current > @proposal.call.editing_deadline %>
-      <%= f.input :status, collection: Admin::Proposals::Proposal.statuses.keys, label_method: :humanize,
-              selected: Admin::Proposals::Proposal.statuses.keys[@proposal[:status].to_i] %>
+      <%= f.input :status, collection: Admin::Proposals::Proposal.statuses.keys, label_method: :humanize, selected: @proposal.status %>
     <% end %>
 
     <%= f.input :show_title %>
