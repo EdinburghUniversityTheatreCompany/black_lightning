@@ -66,7 +66,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     get :edit, params: { id: @user }
     assert_response :success
 
-    assert_no_match "name=\"user[role_ids][]\"", response.body
+    assert_no_match 'name="user[role_ids][]"', response.body
   end
 
   test 'role checkboxes should be visible for admin users' do
@@ -76,7 +76,7 @@ class Admin::UsersControllerTest < ActionController::TestCase
     get :edit, params: { id: @user }
     assert_response :success
 
-    assert_match "name=\"user[role_ids][]\"", response.body
+    assert_match 'name="user[role_ids][]"', response.body
   end
 
   test 'should update user' do
@@ -129,6 +129,14 @@ class Admin::UsersControllerTest < ActionController::TestCase
     post :reset_password, params: { id: @user }
 
     assert_redirected_to admin_user_url(@user)
+  end
+
+  test 'get autocomplete list does not work when not signed in' do
+    sign_out users(:admin)
+
+    get :autocomplete_list
+
+    assert_redirected_to new_user_session_path
   end
 
   test 'get autocomplete list' do
