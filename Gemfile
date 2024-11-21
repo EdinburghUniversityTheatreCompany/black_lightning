@@ -1,53 +1,53 @@
 source 'http://rubygems.org'
 
-ruby File.read(".ruby-version").strip
+ruby File.read('.ruby-version').strip
 
-gem 'rails', '~> 7.1'
+gem 'rails', '~> 8.0'
 
 gem 'mysql2', github: 'mickzijdel/mysql2', branch: 'master'
 
-gem 'propshaft'
-gem 'jsbundling-rails'
 gem 'cssbundling-rails'
+gem 'jsbundling-rails'
+gem 'propshaft'
 
-gem "terser"
+gem 'terser'
 
 gem 'breadcrumbs_on_rails'
-gem 'simple_form'
+gem 'cancancan'
 gem 'devise'
 gem 'doorkeeper'
 gem 'doorkeeper-openid_connect'
-gem 'cancancan'
-gem 'rolify'
 gem 'recaptcha'
+gem 'rolify'
+gem 'simple_form'
 
-gem 'kaminari'
-gem 'kramdown'
 gem 'cocoon'
 gem 'json'
+gem 'kaminari'
+gem 'kramdown'
 
-gem 'delayed_job_active_record'
 gem 'daemons'
+gem 'delayed_job_active_record'
 
 gem 'caxlsx'
-gem 'rqrcode'
 gem 'leaflet-rails'
+gem 'rqrcode'
 
 gem 'silencer'
 
-gem 'image_processing'
-gem 'mini_magick'
 gem 'active_storage_validations'
 gem 'aws-sdk-s3', require: false
+gem 'image_processing'
+gem 'mini_magick'
 
 gem 'chronic'
 gem 'ransack'
 
 gem 'nokogiri'
 
-gem 'rack-cors'
-gem 'rack', '~> 2.0'
 gem 'paper_trail'
+gem 'rack', '~> 2.0'
+gem 'rack-cors'
 
 gem 'stringex'
 
@@ -65,10 +65,10 @@ group :development, :test do
   gem 'better_errors'
   gem 'binding_of_caller'
 
+  gem 'rails-controller-testing'
   gem 'rdoc'
   gem 'rubocop'
   gem 'rubocop-faker'
-  gem 'rails-controller-testing'
 
   # Adds support for Capybara system testing and selenium driver
   gem 'capybara', '>= 2.15'
@@ -78,8 +78,8 @@ group :development, :test do
 
   gem 'factory_bot_rails'
 
-  gem 'tzinfo-data'
   gem 'coffee-script-source', '1.12.2'
+  gem 'tzinfo-data'
 
   gem 'annotate'
 
@@ -98,9 +98,9 @@ group :test do
 end
 
 # Deploy with Capistrano
+gem 'capistrano3-delayed-job'
 gem 'capistrano-rails'
 gem 'capistrano-rvm'
-gem 'capistrano3-delayed-job'
 
-gem 'ed25519'
 gem 'bcrypt_pbkdf'
+gem 'ed25519'
