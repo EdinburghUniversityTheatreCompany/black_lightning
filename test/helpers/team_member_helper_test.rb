@@ -13,6 +13,14 @@ class TeamMemberHelperTest < ActionView::TestCase
     assert_includes team_member_labels_for(@team_member, Date.current).join(';'), 'DM Trained'
   end
 
+  test 'Bar trained user should have the Bar trained label' do
+    assert_not @team_member.user.has_role?("Bar Trained")
+    assert_not_includes team_member_labels_for(@team_member, Date.current).join(';'), 'Bar Trained'
+
+    @team_member.user.add_role("Bar Trained")
+    assert_includes team_member_labels_for(@team_member, Date.current).join(';'), 'Bar Trained'
+  end
+
   test 'First Aid Trained user should have the First Aid Trained label' do
     assert_not @team_member.user.has_role?("First Aid Trained")
     assert_not_includes team_member_labels_for(@team_member, Date.current).join(';'), 'First Aid Trained'
@@ -30,7 +38,7 @@ class TeamMemberHelperTest < ActionView::TestCase
   end
   
   test 'shows in previous academic years should not warn for non-members' do
-    @team_member.teamwork.update(start_date: 1.year.ago , end_date: 1.year.ago + 1.days)
+    @team_member.teamwork.update(start_date: 1.year.ago - 5.days, end_date: 1.year.ago - 4.days)
 
     @team_member.user.remove_role("Member")
     labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }

@@ -163,13 +163,13 @@ class Admin::UserTest < ActiveSupport::TestCase
     user_one = FactoryBot.create(:user)
     # One notification that is from before the date.
     user_two = FactoryBot.create(:user)
-    FactoryBot.create(:initial_debt_notification, sent_on: date.advance(days:-1), user: user_two)
+    FactoryBot.create(:initial_debt_notification, sent_on: date.advance(days: -1), user: user_two)
     # One notification that is on the date.
     user_three = FactoryBot.create(:user)
     FactoryBot.create(:initial_debt_notification, sent_on: date, user: user_three)
     # One notification that is after the date.
     user_four = FactoryBot.create(:user)
-    FactoryBot.create(:initial_debt_notification, sent_on: date.advance(days:1), user: user_four)
+    FactoryBot.create(:initial_debt_notification, sent_on: date.advance(days: 1), user: user_four)
 
     notified_users = User.notified_since(date).to_a
 
@@ -235,5 +235,20 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user.remove_role(role)
     assert_not @user.has_role?(role.name), 'The remove_role override for the Role class does not work.'
   end
-end
 
+  test 'email normalization' do
+    # Input -> Expected Output
+    pairs = [
+      ['j.appleseed@sms.ed.ac.uk', 'j.appleseed@sms.ed.ac.uk'],
+      ['s123456@sms.ed.ac.uk', 's123456@sms.ed.ac.uk'],
+      ['STAFF.MEMBER@SMS.ED.AC.UK', 'staff.member@sms.ed.ac.uk'],
+      ['s1912811@sms.ed.ac.uk', 's1912811@ed.ac.uk']
+    ]
+
+    pairs.each do |pair|
+      @user.email = pair[0]
+      @user.save
+      assert_equal pair[1], @user.email
+    end
+  end
+end

@@ -32,7 +32,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
     unsuccessful: 4
 
   belongs_to :call, class_name: 'Admin::Proposals::Call'
-  
+
   has_one :event, class_name: 'Event'
 
   has_many :answers, as: :answerable
@@ -44,7 +44,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   after_initialize :set_default_proposal_text
 
-  normalizes :show_title, with: -> (show_title) { show_title&.strip }
+  normalizes :show_title, with: ->(show_title) { show_title&.strip }
 
   # Reading is completely managed by ability.rb because it is so complicated and dependent on the call.
   DISABLED_PERMISSIONS = %w[read].freeze
@@ -69,12 +69,12 @@ class Admin::Proposals::Proposal < ApplicationRecord
     end
   end
 
-  #   
+  #
   def formatted_status
     return status.to_s.titleize
   end
 
-  # 
+  #
   def label_css_class
     case status
     when 'awaiting_approval'
@@ -99,9 +99,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
     labels_html = labels.join("\n").html_safe
 
     # Wrap the whole list of labels in a float right so that the margins stay preserved.
-    if pull_right
-      return "<div class=\"float-right\">#{labels_html}</div>".html_safe
-    end
+    return "<div class=\"float-right\">#{labels_html}</div>".html_safe if pull_right
 
     return labels_html
   end
@@ -150,7 +148,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
       end
     end
 
-
     @show.author = 'TBC'
     @show.price = 'TBC'
 
@@ -184,7 +181,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
       p message
       raise ActiveRecord::RecordNotSaved, message
     end
-  # :nocov:
+    # :nocov:
 
     p 'Created Show:'
     p "Name: #{@show.name}"

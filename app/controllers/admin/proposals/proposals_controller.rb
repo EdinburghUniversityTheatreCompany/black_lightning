@@ -68,6 +68,9 @@ class Admin::Proposals::ProposalsController < AdminController
     # Has to happen here because the call_closed_message has to be shown before checking permission.
     authorize! :create, @proposal
 
+    # Set the default status.
+    @proposal.status = 'awaiting_approval'
+
     super
   end
 
@@ -173,11 +176,11 @@ class Admin::Proposals::ProposalsController < AdminController
   def permitted_params
     [
       :proposal_text, :publicity_text, :show_title, :late, :status, :call, :call_id,
-      answers_attributes: [
-        :id, :_destroy, :answer, :question_id, 
-        attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
-      ],
-      team_members_attributes: %I[id _destroy position user user_id proposal proposal_id]
+      { answers_attributes: [
+          :id, :_destroy, :answer, :question_id,
+          { attachments_attributes: [:id, :_destroy, :name, :file, :access_level, { attachment_tag_ids: [] }] }
+        ],
+        team_members_attributes: %I[id _destroy position user user_id proposal proposal_id] }
     ]
   end
 

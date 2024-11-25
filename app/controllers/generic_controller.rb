@@ -20,7 +20,7 @@ module GenericController
 
     respond_to do |format|
       format.html { render index_filename }
-      # format.json { render json: resources }
+      format.json { render json: resources } if json_enabled_for_index?
     end
   end
 
@@ -245,6 +245,10 @@ module GenericController
 
   def items_per_page
     30
+  end
+
+  def json_enabled_for_index?
+    false
   end
 
   ##
