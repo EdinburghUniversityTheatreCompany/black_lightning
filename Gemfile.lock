@@ -1,3 +1,10 @@
+GIT
+  remote: https://github.com/mickzijdel/mysql2.git
+  revision: 081e71f66641c5e0cb1ab1c02cf80c4cf3617c09
+  branch: master
+  specs:
+    mysql2 (0.5.6)
+
 GEM
   remote: http://rubygems.org/
   specs:
@@ -469,7 +476,7 @@ DEPENDENCIES
   kramdown
   leaflet-rails
   mini_magick
-  mysql2
+  mysql2!
   nokogiri
   paper_trail
   propshaft
