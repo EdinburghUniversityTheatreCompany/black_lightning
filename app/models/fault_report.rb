@@ -22,22 +22,20 @@ class FaultReport < ApplicationRecord
 
   normalizes :item, with: -> (item) { item&.strip }
 
-  enum severity: {
+  enum :severity, 
     annoying: 0,
     probably_worth_fixing: 1,
     show_impeding: 2,
     dangerous: 3,
     no_fault: 4
-  }
 
-  enum status: {
+  enum :status, 
     reported: 0,
     in_progress: 1,
     cant_fix: 2,
     wont_fix: 3,
     on_hold: 4,
     completed: 5
-  }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[description fixed_by_id item reported_by_id severity status created_at updated_at]
