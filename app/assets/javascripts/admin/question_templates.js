@@ -20,6 +20,7 @@ class TemplateLoader {
     this.itemsType = $('meta[name="templates-items-type"]').attr("content");
     this.templateItem = null; // Holds the current item being added from the template
     this.globalData = null;  // Stores all data for the selected template
+    this.allTemplates = []; // New property to store all templates
 
     this.validateSetup();
     this.initEventListeners();
@@ -30,6 +31,12 @@ class TemplateLoader {
     if (!this.templatesBaseUrl) {
       alert("'templates_base_url' is null. Is it set properly?");
     }
+
+    // if the templatesBaseUrl does not end in '.json', add '.json' to the end.
+    if (!this.templatesBaseUrl.endsWith('.json')) {
+      this.templatesBaseUrl += '.json';
+    }
+
     if (!this.itemsType || ![ITEMS_TYPE.QUESTIONS, ITEMS_TYPE.JOBS].includes(this.itemsType)) {
       alert("'items_type' is null or not 'questions' or 'jobs'. Is it set properly?");
     }
@@ -58,21 +65,24 @@ class TemplateLoader {
         insertedItem.find('[name$="[question_text]"]').val(this.templateItem.question_text);
         insertedItem.find('[name$="[response_type]"]').val(this.templateItem.response_type);
       } else if (insertedItem.hasClass('email')) {
-      // Populate email for notify emails
+        // Populate email for notify emails
         insertedItem.find('[name$="[email]"]').val(this.templateItem.email);
       }
     } else if (this.itemsType === ITEMS_TYPE.JOBS) {
       // Populate job name for staffing jobs
       insertedItem.find('[name$="[name]"]').val(this.templateItem.name);
     }
-    }
+  }
 
   // Trigger the loading of template items when the "Load" button is clicked
   loadTemplate() {
     if (this.itemsType === ITEMS_TYPE.QUESTIONS) {
-        // For questions, load both questions and notify emails
+      // For questions, load both questions and notify emails
       this.loadTemplateHelper('question_add_button', this.globalData.questions);
-      this.loadTemplateHelper('notify_email_add_button', this.globalData.notify_emails);
+
+      if(this.globalData.notify_emails) { 
+        this.loadTemplateHelper('notify_email_add_button', this.globalData.notify_emails);
+      }
     } else if (this.itemsType === ITEMS_TYPE.JOBS) {
       // For jobs, load staffing jobs
       this.loadTemplateHelper('staffing_job_add_button', this.globalData.staffing_jobs);
@@ -83,7 +93,7 @@ class TemplateLoader {
   loadTemplateHelper(addFieldsButtonClass, templateItems) {
     templateItems.forEach(item => {
       this.templateItem = item;
-  // This loops over every item in the template and clicks the corresponding 'add fields' button.
+      // This loops over every item in the template and clicks the corresponding 'add fields' button.
       // This then triggers the cocoon:after-insert event (see above) which will insert the data into the fields.
       $('.' + addFieldsButtonClass).first().trigger('click');
     });
@@ -105,14 +115,20 @@ class TemplateLoader {
       return;
     }
 
-    // Fetch the template data from the server
-    $.getJSON(`${this.templatesBaseUrl}/${templateId}.json`, data => {
-      this.globalData = data;
+    // Find the selected template from the allTemplates array
+    const selectedTemplate = this.allTemplates.find(template => template.id == templateId);
+
+    if (selectedTemplate) {
+      this.globalData = selectedTemplate;
       this.updateTemplateSummary();
       // Enable the load button and bind the loadTemplate method
       $('#template_load').on('click', this.loadTemplate.bind(this));
       $('#template_load').removeClass('disabled');
-    });
+    } else {
+      console.error('Selected template not found in the loaded templates: ' + templateId);
+      $('#template_summary').empty().append('<p>Error: Template not found</p>');
+      $('#template_load').addClass('disabled');
+    }
   }
 
   // Update the template summary list in the modal
@@ -133,10 +149,19 @@ class TemplateLoader {
 
   // Load the list of available templates into the dropdown
   loadTemplateList() {
-    $.getJSON(this.templatesBaseUrl, data => {
-      data.forEach(template => {
-        $('#template_list').append(`<option value="${template.id}">${template.name}</option>`);
+    $.getJSON(this.templatesBaseUrl)
+      .done(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          this.allTemplates = data; // Store all templates
+          data.forEach(template => {
+            $('#template_list').append(`<option value="${template.id}">${template.name}</option>`);
+          });
+        } else {
+          console.log('Data is empty or not an array');
+        }
+      })
+      .fail((jqXHR, textStatus, errorThrown) => {
+        console.error('AJAX request failed:', textStatus, errorThrown);
       });
-    });
   }
 }

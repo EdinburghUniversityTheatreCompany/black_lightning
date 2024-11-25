@@ -19,7 +19,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_response :success
 
     # I was not quite sure how to best test that the user form is present, so I'm just testing if the hint is present.
-    assert_match 'If you already have an account, please log in instead of completing this form twice.', response.body
+    assert_match 'If you already have an account, please log in with that account instead of registering again.', response.body
     assert_not assigns(:user).saved_changes?
   end
 
@@ -35,7 +35,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_response :success
 
     # I was not quite sure how to best test that the user form is present, so I'm just testing if the hint is absent.
-    assert_no_match 'If you already have an account, please sign in instead of completing this form twice.', response.body
+    assert_no_match 'If you already have an account, please log in with that account instead of registering again.', response.body
     assert assigns(:user).persisted?
   end
 
@@ -96,7 +96,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
       end
 
       assert_nil flash[:error]
-      assert_redirected_to admin_url
+      assert_redirected_to root_url
 
       assert_not_nil assigns(:user)
       assert assigns(:user).has_role?('Member')
@@ -114,12 +114,11 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
       assert_difference 'ActionMailer::Base.deliveries.count', 2 do
         perform_enqueued_jobs do
           patch :submit, params: { id: @token, user: user_attributes, consent: 'true' }
-          
         end
       end
 
       assert_nil flash[:error]
-      assert_redirected_to admin_url
+      assert_redirected_to root_url
 
       assert_not_nil assigns(:user)
       assert assigns(:user).has_role?('Member')
@@ -139,7 +138,7 @@ class MembershipActivationTokensControllerTest < ActionController::TestCase
     assert_not assigns(:user).saved_changes?
 
     # The user form has to be present, even though a user is passed, but this user has not persisted yet.
-    assert_match 'If you already have an account, please log in instead of completing this form twice.', response.body
+    assert_match 'If you already have an account, please log in with that account instead of registering again.', response.body
   end
 
   test 'cannot submit with invalid user attributes' do

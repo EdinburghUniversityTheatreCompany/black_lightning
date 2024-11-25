@@ -43,6 +43,8 @@ class Admin::UsersController < AdminController
   end
 
   def autocomplete_list
+    authorize! :read, User
+
     page = [params[:page].to_i, 1].max # First page is always 1.
 
     per_page = 30 # Adjust the number of items per page as needed
@@ -69,8 +71,8 @@ class Admin::UsersController < AdminController
     params[:user].delete(:password) if params[:user][:password].blank?
     params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
 
-    perm_params = [:email, :password, :password_confirmation, :remember_me, :first_name, :last_name, 
-            :phone_number, :card_number, :public_profile, :bio, :avatar, :username]
+    perm_params = %i[email password password_confirmation remember_me first_name last_name
+                     phone_number card_number public_profile bio avatar username]
 
     perm_params.push(role_ids: []) if current_user.has_role?(:admin)
 

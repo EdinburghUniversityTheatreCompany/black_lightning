@@ -6,6 +6,8 @@ module TeamMemberHelper
 
         output_labels << { label_class: :info, text: 'DM Trained' } if team_member.user.has_role?('DM Trained') 
 
+        output_labels << { label_class: :info, text: 'Bar Trained' } if team_member.user.has_role?('Bar Trained')
+
         output_labels << { label_class: :success, text: 'First Aid Trained' } if team_member.user.has_role?('First Aid Trained')
 
         # Display the 'Not a Member' label if the show is this academic year, or it has a deadline in the future (and is likely a proposal)

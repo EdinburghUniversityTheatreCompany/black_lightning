@@ -41,6 +41,15 @@ class Admin::StaffingsHelperTest < ActionView::TestCase
     assert_equal ['You are not on committee. If you think this is a mistake, please contact the Secretary.'], flash[:error]
   end
 
+  test 'members cannot sign up for bar slots' do
+    give_member_permission_to_sign_up_for_staffing
+
+    member = users(:member_with_phone_number)
+
+    assert_not check_if_current_user_can_sign_up(member, 'bar')
+    assert_equal ['You are not Bar Trained. If you think this is a mistake, please contact the Front of House Manager.'], flash[:error]
+  end
+
   test 'committee members can sign up for committee rep and DM slots' do
     committee = FactoryBot.create(:committee, phone_number: '123')
 
