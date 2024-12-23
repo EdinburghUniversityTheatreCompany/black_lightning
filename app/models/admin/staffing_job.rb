@@ -51,7 +51,7 @@ class Admin::StaffingJob < ApplicationRecord
   end
 
   def counts_towards_debt?
-    return staffable.present? && staffable.counts_towards_debt? && name != 'Committee Rep'
+    return staffable.present? && staffable.counts_towards_debt? && name.downcase != 'committee rep'
   end
 
   # Returns the staffing jobs that are not associated with any debt and count towards staffing.
