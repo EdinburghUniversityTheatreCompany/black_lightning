@@ -7,7 +7,7 @@ class ComplaintsController < ApplicationController
   def create
     # I do not know how to deliberately fail the captcha, as the entire check is disabled in testing.
     # :nocov:
-    unless verify_recaptcha(action: 'submit_complaint', score: 0.85)
+    unless verify_recaptcha(action: 'submit_complaint', score: 1)
       render 'new'
 
       return
