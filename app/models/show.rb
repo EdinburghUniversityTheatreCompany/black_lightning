@@ -83,6 +83,14 @@ class Show < Event
       # one, for a total of 2.
       amount = total_amount - user.admin_staffing_debts.where(show_id: id, converted_from_maintenance_debt: false).count
       
+      # TODO: Add tests for the below.
+
+      # Limit the amount of debts assigned to assistants to 1.
+      amount = [amount, 1].min if user.position.downcase.include?("assistant")
+
+      # Welfare contacts get no debt.
+      amount = 0 if user.position.downcase.include?("welfare")
+
       amount.times do
         Admin::StaffingDebt.create!(
           show: self,
