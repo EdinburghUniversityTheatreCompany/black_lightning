@@ -8,7 +8,7 @@
       user_link(staffing_debt.user, false),
       get_link(staffing_debt.show, :show),
       staffing_debt.due_by,
-      formatted_status_for_debt(staffing_debt),
+      formatted_status_for_debt(staffing_debt).html_safe,
       get_link(staffing_debt, :edit),
       render('forgive_button', staffing_debt: staffing_debt)
     ],
