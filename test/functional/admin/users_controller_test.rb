@@ -139,7 +139,10 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_redirected_to new_user_session_path
   end
 
-  test 'get autocomplete list' do
+  test 'get autocomplete list as member' do
+    sign_out users(:admin)
+    sign_in users(:member)
+    
     members = FactoryBot.create_list :member, 5
     user = FactoryBot.create :user
 

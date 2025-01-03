@@ -124,6 +124,8 @@ class Ability
     # All users can edit and see themselves.
     # All users can consent for themselves.
     can %I[show debt_status update edit consent], User, id: user.id
+    # All users can autocomplete all users
+    can :autocomplete, User
 
     # People can see debt status for users on proposals they are on.
     # It is disabled because it is currently more efficient to just do this on the proposal show thing.
