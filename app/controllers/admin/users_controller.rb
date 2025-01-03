@@ -43,7 +43,7 @@ class Admin::UsersController < AdminController
   end
 
   def autocomplete_list
-    authorize! :read, User
+    authorize! :autocomplete, User
 
     page = [params[:page].to_i, 1].max # First page is always 1.
 
