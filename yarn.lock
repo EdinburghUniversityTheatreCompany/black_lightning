@@ -31,10 +31,10 @@
     base64-js "1.3.1"
     unicode-trie "^2.0.0"
 
-"@foliojs-fork/pdfkit@^0.15.2":
-  version "0.15.2"
-  resolved "https://registry.yarnpkg.com/@foliojs-fork/pdfkit/-/pdfkit-0.15.2.tgz#6dbe57ed45f1dc022d0219f3810071b9007e347e"
-  integrity sha512-Wpj6BH4DGn+zAWmCk9agdbAw3Zxt+MpemjssLfYdnretWpZ014uR6Zo51E4ftVP75UA8a7mtt4TiCu09lIKsBw==
+"@foliojs-fork/pdfkit@^0.15.3":
+  version "0.15.3"
+  resolved "https://registry.yarnpkg.com/@foliojs-fork/pdfkit/-/pdfkit-0.15.3.tgz#590b31e770a98e2af62ce44f268a0d06b41ff32f"
+  integrity sha512-Obc0Wmy3bm7BINFVvPhcl2rnSSK61DQrlHU8aXnAqDk9LCjWdUOPwhgD8Ywz5VtuFjRxmVOM/kQ/XLIBjDvltw==
   dependencies:
     "@foliojs-fork/fontkit" "^1.9.2"
     "@foliojs-fork/linebreak" "^1.1.1"
@@ -260,6 +260,7 @@
 "@sweetalert2/theme-bootstrap-4@^5.0.8":
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   version "5.0.17"
   resolved "https://registry.yarnpkg.com/@sweetalert2/theme-bootstrap-4/-/theme-bootstrap-4-5.0.17.tgz#742550c45d407c472f3c545a485f2a1d4774697e"
   integrity sha512-wepgHnJE8CEWEnAn0VvrsqnGDKBVCqm5JkDLwCWKJ5y+UX8GUatFVr/fxsykta2UGgFKsZaZyxVvvI90g1BK4Q==
@@ -274,6 +275,11 @@
   resolved "https://registry.yarnpkg.com/@sweetalert2/theme-bootstrap-4/-/theme-bootstrap-4-5.0.20.tgz#513a26aff1dfb8d2feb0a5134d076ec2dea6fc9c"
   integrity sha512-H2ytgJu+8ZRmrcLUqeY1a0PlK5EX8CwxY90Rza5+Omis7hSOPXOrVl8rZgtkaOv/4qALFa4qclQAYzlotnEKwA==
 >>>>>>> 2d74b78a (Update packages)
+=======
+  version "5.0.26"
+  resolved "https://registry.yarnpkg.com/@sweetalert2/theme-bootstrap-4/-/theme-bootstrap-4-5.0.26.tgz#68377e49f41a9438f5906a038cd68c495dbe221a"
+  integrity sha512-NXR+yosnpPP0hoHepihYWoDw1DxzOLmbiOZSi70aSF1pLNaU8jhw7d0WANFIqE/RC/7f90WLF21KlI8YpfZjTQ==
+>>>>>>> 917496ed (Update packages)
 
 "@tabler/icons@^2.32.0":
   version "2.47.0"
@@ -307,9 +313,9 @@
   integrity sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==
 
 "@types/node@*":
-  version "22.10.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.10.2.tgz#a485426e6d1fdafc7b0d4c7b24e2c78182ddabb9"
-  integrity sha512-Xxr6BBRCAOQixvonOye19wnzyDiUtTeqldOOmj3CkeblonbccA12PFwlufvRdrpjXxqnmUaeiU5EOA+7s5diUQ==
+  version "22.10.5"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-22.10.5.tgz#95af89a3fb74a2bb41ef9927f206e6472026e48b"
+  integrity sha512-F8Q+SeGimwOo86fiovQh8qiXfFEh2/ocYv7tU5pJ3EXMSSxk1Joj5wefpFK2fHTf/N6HKGSxIDBT9f3gCxXPkQ==
   dependencies:
     undici-types "~6.20.0"
 
@@ -741,6 +747,7 @@ call-bind-apply-helpers@^1.0.0, call-bind-apply-helpers@^1.0.1:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 caniuse-lite@^1.0.30001599, caniuse-lite@^1.0.30001629:
 <<<<<<< HEAD
   version "1.0.30001637"
@@ -772,6 +779,9 @@ caniuse-lite@^1.0.30001646, caniuse-lite@^1.0.30001669:
 >>>>>>> 97c581f4 (Update gems and packages, including papertrail)
 =======
 call-bind@^1.0.7:
+=======
+call-bind@^1.0.7, call-bind@^1.0.8:
+>>>>>>> 917496ed (Update packages)
   version "1.0.8"
   resolved "https://registry.yarnpkg.com/call-bind/-/call-bind-1.0.8.tgz#0736a9660f537e3388826f440d5ec45f744eaa4c"
   integrity sha512-oKlSFMcMwpUg2ednkhQ454wfWiU/ul3CkJe/PEHcTKuiX6RpbehUiFMXu13HalGZxfUwCQzZG747YXBn1im9ww==
@@ -1238,6 +1248,7 @@ dropzone@^5.9.2, dropzone@^5.9.3:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 electron-to-chromium@^1.4.796:
   version "1.4.816"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.816.tgz#3624649d1e7fde5cdbadf59d31a524245d8ee85f"
@@ -1245,6 +1256,9 @@ electron-to-chromium@^1.4.796:
 =======
 =======
 dunder-proto@^1.0.0:
+=======
+dunder-proto@^1.0.1:
+>>>>>>> 917496ed (Update packages)
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/dunder-proto/-/dunder-proto-1.0.1.tgz#d7ae667e1dc83482f8b70fd0f6eefc50da30f58a"
   integrity sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==
@@ -1281,10 +1295,16 @@ electron-to-chromium@^1.5.41:
 >>>>>>> 97c581f4 (Update gems and packages, including papertrail)
 =======
 electron-to-chromium@^1.5.73:
+<<<<<<< HEAD
   version "1.5.75"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.75.tgz#bba96eabf0e8ca36324679caa38b982800acc87d"
   integrity sha512-Lf3++DumRE/QmweGjU+ZcKqQ+3bKkU/qjaKYhIJKEOhgIO9Xs6IiAQFkfFoj+RhgDk4LUeNsLo6plExHqSyu6Q==
 >>>>>>> 2d74b78a (Update packages)
+=======
+  version "1.5.76"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.76.tgz#db20295c5061b68f07c8ea4dfcbd701485d94a3d"
+  integrity sha512-CjVQyG7n7Sr+eBXE86HIulnL5N8xZY1sgmOPGuq/F0Rr0FJq63lg0kEtOIDfZBk44FnDLf6FUJ+dsJcuiUDdDQ==
+>>>>>>> 917496ed (Update packages)
 
 emoji-regex@^8.0.0:
   version "8.0.0"
@@ -1323,9 +1343,9 @@ es-errors@^1.3.0:
 
 >>>>>>> 2d74b78a (Update packages)
 es-module-lexer@^1.2.1:
-  version "1.5.4"
-  resolved "https://registry.yarnpkg.com/es-module-lexer/-/es-module-lexer-1.5.4.tgz#a8efec3a3da991e60efa6b633a7cad6ab8d26b78"
-  integrity sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/es-module-lexer/-/es-module-lexer-1.6.0.tgz#da49f587fd9e68ee2404fe4e256c0c7d3a81be21"
+  integrity sha512-qqnD1yMU6tk/jnaMosogGySTZP8YtUgAffA9nMN+E/rjxcfRQ6IEk7IiozUjgxKoFHBGjTLnrHB/YC45r/59EQ==
 
 es-object-atoms@^1.0.0:
   version "1.0.0"
@@ -1481,20 +1501,28 @@ get-caller-file@^2.0.5:
 <<<<<<< HEAD
 =======
 get-intrinsic@^1.2.4, get-intrinsic@^1.2.6:
-  version "1.2.6"
-  resolved "https://registry.yarnpkg.com/get-intrinsic/-/get-intrinsic-1.2.6.tgz#43dd3dd0e7b49b82b2dfcad10dc824bf7fc265d5"
-  integrity sha512-qxsEs+9A+u85HhllWJJFicJfPDhRmjzoYdl64aMWW9yRIJmSyxdn8IEkuIM530/7T+lv0TIHd8L6Q/ra0tEoeA==
+  version "1.2.7"
+  resolved "https://registry.yarnpkg.com/get-intrinsic/-/get-intrinsic-1.2.7.tgz#dcfcb33d3272e15f445d15124bc0a216189b9044"
+  integrity sha512-VW6Pxhsrk0KAOqs3WEd0klDiF/+V7gQOpAvY1jVU/LHmaD/kQO4523aiJuikX/QAKYiW6x8Jh+RJej1almdtCA==
   dependencies:
     call-bind-apply-helpers "^1.0.1"
-    dunder-proto "^1.0.0"
     es-define-property "^1.0.1"
     es-errors "^1.3.0"
     es-object-atoms "^1.0.0"
     function-bind "^1.1.2"
+    get-proto "^1.0.0"
     gopd "^1.2.0"
     has-symbols "^1.1.0"
     hasown "^2.0.2"
-    math-intrinsics "^1.0.0"
+    math-intrinsics "^1.1.0"
+
+get-proto@^1.0.0, get-proto@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/get-proto/-/get-proto-1.0.1.tgz#150b3f2743869ef3e851ec0c49d15b1d14d00ee1"
+  integrity sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==
+  dependencies:
+    dunder-proto "^1.0.1"
+    es-object-atoms "^1.0.0"
 
 >>>>>>> 2d74b78a (Update packages)
 get-stdin@^9.0.0:
@@ -1865,7 +1893,7 @@ make-dir@^3.0.2, make-dir@^3.1.0:
   dependencies:
     semver "^6.0.0"
 
-math-intrinsics@^1.0.0:
+math-intrinsics@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/math-intrinsics/-/math-intrinsics-1.1.0.tgz#a0dd74be81e2aa5c2f27e65ce283605ee4e2b7f9"
   integrity sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==
@@ -2115,12 +2143,12 @@ path-type@^5.0.0:
 <<<<<<< HEAD
 =======
 pdfmake@^0.2.4:
-  version "0.2.17"
-  resolved "https://registry.yarnpkg.com/pdfmake/-/pdfmake-0.2.17.tgz#64beeb0b09c7e0ade39b6d4b379371818cea3da5"
-  integrity sha512-ODOp1T232yr/HGjdYCq888paBE7RDCflCOSRDUtR9CyfXneOmnMPZJl8dxP9zEXbKiv9vfk9Z/3eK2V2B/Wx/Q==
+  version "0.2.18"
+  resolved "https://registry.yarnpkg.com/pdfmake/-/pdfmake-0.2.18.tgz#0be32a9274466494a69285193b64f61f3198ea4e"
+  integrity sha512-Fe+GnMS8EVZu5rci/CDaQ+xmUoHvx8P+rvIlrwSYM6A5c7Aik8G6lpJbddhjBE2jXGjv6WcUCFCB06uZbjxkMw==
   dependencies:
     "@foliojs-fork/linebreak" "^1.1.2"
-    "@foliojs-fork/pdfkit" "^0.15.2"
+    "@foliojs-fork/pdfkit" "^0.15.3"
     iconv-lite "^0.6.3"
     xmldoc "^1.3.0"
 
@@ -2274,13 +2302,15 @@ rechoir@^0.8.0:
 <<<<<<< HEAD
 =======
 regexp.prototype.flags@^1.5.1:
-  version "1.5.3"
-  resolved "https://registry.yarnpkg.com/regexp.prototype.flags/-/regexp.prototype.flags-1.5.3.tgz#b3ae40b1d2499b8350ab2c3fe6ef3845d3a96f42"
-  integrity sha512-vqlC04+RQoFalODCbCumG2xIOvapzVMHwsyIGM/SIE8fRhFFsXeH8/QQ+s0T0kDAhKc4k30s73/0ydkHQz6HlQ==
+  version "1.5.4"
+  resolved "https://registry.yarnpkg.com/regexp.prototype.flags/-/regexp.prototype.flags-1.5.4.tgz#1ad6c62d44a259007e55b3970e00f746efbcaa19"
+  integrity sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA==
   dependencies:
-    call-bind "^1.0.7"
+    call-bind "^1.0.8"
     define-properties "^1.2.1"
     es-errors "^1.3.0"
+    get-proto "^1.0.1"
+    gopd "^1.2.0"
     set-function-name "^2.0.2"
 
 >>>>>>> 97c581f4 (Update gems and packages, including papertrail)
@@ -2546,6 +2576,7 @@ sweetalert2@^11.11.1, sweetalert2@^11.4.0:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   version "11.12.0"
   resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.12.0.tgz#a3039c537b2193161e8effcd09fdc83cd6a6d817"
   integrity sha512-Fe6sitTNReNdPF1q1w4uz1GAVv9acZff9Q7YILH5n6O/ti3MzwgfEA0aQ6tLjpy+O1NLXnZjUE//xrbluGXzJw==
@@ -2575,6 +2606,11 @@ sweetalert2@^11.11.1, sweetalert2@^11.4.0:
   resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.15.3.tgz#6322a7c5fa2e835d5a3570c83e55071e357cd4a7"
   integrity sha512-+0imNg+XYL8tKgx8hM0xoiXX3KfgxHDmiDc8nTJFO89fQEEhJlkecSdyYOZ3IhVMcUmoNte4fTIwWiugwkPU6w==
 >>>>>>> 2d74b78a (Update packages)
+=======
+  version "11.15.9"
+  resolved "https://registry.yarnpkg.com/sweetalert2/-/sweetalert2-11.15.9.tgz#127879d433c135cfc2dddba8480e2dfb27ebdf13"
+  integrity sha512-WjL1aLNtmbtPTeQRBCzIMMQ4hv2ePs705gwqkkMqwMso42bLv6mVTwNNCCzRy39OEOfbT/8N1KqEdaAxwmpGYg==
+>>>>>>> 917496ed (Update packages)
 
 tapable@^2.1.1, tapable@^2.2.0:
   version "2.2.1"
@@ -2786,9 +2822,9 @@ y18n@^5.0.5:
   integrity sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==
 
 yaml@^2.4.2:
-  version "2.6.1"
-  resolved "https://registry.yarnpkg.com/yaml/-/yaml-2.6.1.tgz#42f2b1ba89203f374609572d5349fb8686500773"
-  integrity sha512-7r0XPzioN/Q9kXBro/XPnA6kznR73DHq+GXh5ON7ZozRO6aMjbmiBuKste2wslTFkC5d1dw0GooOCepZXJ2SAg==
+  version "2.7.0"
+  resolved "https://registry.yarnpkg.com/yaml/-/yaml-2.7.0.tgz#aef9bb617a64c937a9a748803786ad8d3ffe1e98"
+  integrity sha512-+hSoy/QHluxmC9kCIJyL/uyFmLmc+e5CFR5Wa+bpIhIj85LVb9ZH2nVnqrHoSvKogwODv0ClqZkmiSSaIH5LTA==
 
 yargs-parser@^21.1.1:
   version "21.1.1"
