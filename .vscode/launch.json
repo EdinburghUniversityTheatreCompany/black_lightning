@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "rdbg",
+      "name": "Run dev server with rdbg",
+      "request": "launch",
+      "command": "bundle",
+      "script": "exec",
+      "args": [
+        "bin/rails",
+        "server"
+      ],
+      "useBundler": true,
+      "env": {
+        "RUBY_DEBUG_OPEN": "true",
+        "RUBY_DEBUG_NONSTOP": "true",
+        "PORT": "3000"
+      },
+      "useTerminal": true,
+      // Bit hacky, but ensures that we actually attach to the server.
+      // You might need to increase this time if the server takes longer to start.
+      "waitLaunchTime": 5000
+    },
+    {
+      "type": "rdbg",
+      "name": "Debug current file with rdbg",
+      "request": "launch",
+      "script": "${file}",
+      "args": [],
+      "askParameters": true
+    },
+    {
+      "type": "rdbg",
+      "name": "Attach with rdbg",
+      "request": "attach"
+    },
+    {
+      "type": "rdbg",
+      "name": "Test current line with rdbg",
+      "request": "launch",
+      "useBundler": true,
+      "script": "./bin/rails",
+      "args": [
+        "test ${file}:${lineNumber}"
+      ],
+    }
+  ]
+}

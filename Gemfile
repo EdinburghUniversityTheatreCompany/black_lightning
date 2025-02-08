@@ -88,6 +88,11 @@ group :development, :test do
   gem 'faker'
 
   gem 'test-prof'
+
+  gem "rdbg"
+  gem "ruby-lsp-rails"
+  gem "solargraph", require: false
+  gem "foreman"
 end
 
 group :test do
