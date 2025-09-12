@@ -5,6 +5,4 @@ inherit_gem:
 # Project-specific exclusions
 AllCops:
   Exclude:
-    - bin/*
-    - db/schema.rb
-    - db/migrate/*
+    - lib/generators/**/templates/**/*
