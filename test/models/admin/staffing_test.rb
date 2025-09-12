@@ -19,15 +19,6 @@ require "test_helper"
 class Admin::StaffingTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
-  setup do
-    # Turn on delayed jobs for legacy tests - the staffing mailer refers to the job.
-    Delayed::Worker.delay_jobs = true
-  end
-
-  teardown do
-    # Turn off delayed jobs back off
-    Delayed::Worker.delay_jobs = false
-  end
 
   test "filled_jobs" do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5)

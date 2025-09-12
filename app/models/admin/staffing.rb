@@ -34,9 +34,8 @@ class Admin::Staffing < ApplicationRecord
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
 
-  # Having this as a belongs_to feels wrong, but since the id of the job needs to be stored in the staffing it is necessary.
-  # Note: We keep this for backward compatibility during migration
-  belongs_to :reminder_job, class_name: "::Delayed::Job", optional: true
+  # Legacy: reminder_job_id field still exists in database but no longer used
+  # TODO: Remove reminder_job_id column in future migration
 
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
@@ -50,7 +49,7 @@ class Admin::Staffing < ApplicationRecord
   scope :past, -> { where([ "end_time < ?", DateTime.current ]) }
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[start_time show_title reminder_job_id end_time counts_towards_debt slug reminder_job_executed scheduled_job_id]
+    %w[start_time show_title end_time counts_towards_debt slug reminder_job_executed scheduled_job_id]
   end
 
   ##
@@ -75,11 +74,6 @@ class Admin::Staffing < ApplicationRecord
       rescue => e
         Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
       end
-    end
-
-    # Legacy: Remove delayed_job if exists
-    if self.reminder_job
-      self.reminder_job.delete
     end
   end
 

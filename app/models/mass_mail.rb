@@ -62,6 +62,4 @@ class MassMail < ApplicationRecord
     # Schedule the mass mail job for the specified send_date
     MassMailJob.set(wait_until: send_date).perform_later(id)
   end
-
-  # Removed delayed_job handle_asynchronously - now using MassMailJob with ActiveJob
 end
