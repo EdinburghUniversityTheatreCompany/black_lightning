@@ -32,7 +32,8 @@
 /uploads/
 
 # Ignore storage for ActiveStorage
-/storage/
+!/storage/.keep
+/storage
 
 #Ignore precompiled assets
 /public/assets
