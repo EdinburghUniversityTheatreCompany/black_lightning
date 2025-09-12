@@ -21,12 +21,12 @@ class AttachmentsController < ApplicationController
 
     authorize!(:show, attachment_item)
 
-    return 'There is no file attached' unless @attachment.file.attached?
+    return "There is no file attached" unless @attachment.file.attached?
 
-    response.headers['Content-Type'] = @attachment.file.content_type
-    response.headers['Content-Disposition'] = "inline; #{@attachment.file.filename}"
+    response.headers["Content-Type"] = @attachment.file.content_type
+    response.headers["Content-Disposition"] = "inline; #{@attachment.file.filename}"
 
-    if params[:style]&.to_s&.downcase == 'thumb' && @attachment.file.image?
+    if params[:style]&.to_s&.downcase == "thumb" && @attachment.file.image?
       variant = @attachment.file.blob.variant(helpers.thumb_variant).processed
 
       @attachment.file.blob.service.download(variant.key) do |chunk|

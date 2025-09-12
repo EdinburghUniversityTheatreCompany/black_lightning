@@ -19,9 +19,9 @@ FactoryBot.define do
   factory :attachment do
     name { generate(:random_string) }
 
-    access_level { [0, 1, 2].sample }
+    access_level { [ 0, 1, 2 ].sample }
 
-    file { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.pdf'), 'application/pdf') }
+    file { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.pdf"), "application/pdf") }
 
     transient do
       tag_count { 1 }

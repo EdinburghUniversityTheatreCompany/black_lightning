@@ -1,25 +1,10 @@
+# Omakase Ruby styling for Rails
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml
+
+# Project-specific exclusions
 AllCops:
   Exclude:
     - bin/*
     - db/schema.rb
     - db/migrate/*
-
-# Controllers don't necessarily need documentation for the class...
-Documentation:
-  Exclude:
-    - app/controllers/**/*
-    - app/mailers/*
-    - config/**/*
-    - previews/*
-
-LineLength:
-  Enabled: false
-
-RedundantReturn:
-  Enabled: false
-
-SingleLineBlockParams:
-  Enabled: false
-
-SpaceBeforeFirstArg:
-  Enabled: false

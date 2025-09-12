@@ -1,7 +1,7 @@
-require 'test_helper'
+require "test_helper"
 
 class UsersControllerTest < ActionController::TestCase
-  test 'should get show for public profile' do
+  test "should get show for public profile" do
     user = FactoryBot.create(:user, public_profile: true)
 
     get :show, params: { id: user }
@@ -10,7 +10,7 @@ class UsersControllerTest < ActionController::TestCase
     assert_equal user.team_memberships(true), assigns(:team_memberships)
   end
 
-  test 'should get access_denied for private profile' do
+  test "should get access_denied for private profile" do
     user = users(:admin)
 
     get :show, params: { id: user }
@@ -18,7 +18,7 @@ class UsersControllerTest < ActionController::TestCase
     assert_response 403
   end
 
-  test 'consent for self' do
+  test "consent for self" do
     user = users(:user)
 
     sign_in user

@@ -3,7 +3,7 @@ class ContactFormMailer < ApplicationMailer
     @message = message
     @name = name
     @recipient_email = recipient_email
-  
-    mail(to: [sender_email, recipient_email], subject: subject, reply_to: sender_email)
+
+    mail(to: [ sender_email, recipient_email ], subject: subject, reply_to: sender_email)
   end
 end

@@ -67,7 +67,7 @@ group :development, :test do
 
   gem 'rails-controller-testing'
   gem 'rdoc'
-  gem 'rubocop'
+  gem 'rubocop-rails-omakase'
   gem 'rubocop-faker'
 
   # Adds support for Capybara system testing and selenium driver

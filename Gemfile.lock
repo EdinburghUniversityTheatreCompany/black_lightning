@@ -410,6 +410,20 @@ GEM
       faker (>= 2.12.0)
       lint_roller (~> 1.1)
       rubocop (>= 1.72.1)
+    rubocop-performance (1.25.0)
+      lint_roller (~> 1.1)
+      rubocop (>= 1.75.0, < 2.0)
+      rubocop-ast (>= 1.38.0, < 2.0)
+    rubocop-rails (2.32.0)
+      activesupport (>= 4.2.0)
+      lint_roller (~> 1.1)
+      rack (>= 1.1)
+      rubocop (>= 1.75.0, < 2.0)
+      rubocop-ast (>= 1.44.0, < 2.0)
+    rubocop-rails-omakase (1.1.0)
+      rubocop (>= 1.72)
+      rubocop-performance (>= 1.24)
+      rubocop-rails (>= 2.30)
     ruby-lsp (0.26.1)
       language_server-protocol (~> 3.17.0)
       prism (>= 1.2, < 2.0)
@@ -561,8 +575,8 @@ DEPENDENCIES
   recaptcha
   rolify
   rqrcode
-  rubocop
   rubocop-faker
+  rubocop-rails-omakase
   ruby-lsp-rails
   selenium-webdriver
   silencer

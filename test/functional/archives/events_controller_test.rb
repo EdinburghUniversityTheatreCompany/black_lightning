@@ -1,7 +1,7 @@
-require 'test_helper'
+require "test_helper"
 
 class Archives::EventsControllerTest < ActionController::TestCase
-  test 'should get index' do
+  test "should get index" do
     # Need at least one public event
     FactoryBot.create(:show, is_public: true)
 
@@ -11,7 +11,7 @@ class Archives::EventsControllerTest < ActionController::TestCase
     assert assigns(:events).length > 0, "Make sure there is at least one event. Otherwise, you might need to create some."
   end
 
-  test 'should ransack on event tags' do
+  test "should ransack on event tags" do
     event = FactoryBot.create(:show, is_public: true)
     event_tag = event.event_tags.first
 

@@ -19,7 +19,7 @@ FactoryBot.define do
     association :staffable, factory: :staffing_that_does_count_towards_debt
 
     transient do
-      staffed { [true, false].sample }
+      staffed { [ true, false ].sample }
     end
 
     after(:create) do |job, evaluator|

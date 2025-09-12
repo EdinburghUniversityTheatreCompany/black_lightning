@@ -24,8 +24,8 @@ FactoryBot.define do
     association :gallery, factory: :show
     description { generate(:random_text) }
 
-    access_level { [0, 1, 2].sample }
+    access_level { [ 0, 1, 2 ].sample }
 
-    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') }
+    image { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png") }
   end
 end

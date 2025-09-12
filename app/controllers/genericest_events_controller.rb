@@ -12,12 +12,12 @@ module GenericestEventsController
   private
 
   def base_index_database_query
-    return super.on_date(Date.current) if params[:commit]&.upcase == 'ON THIS DAY'
+    return super.on_date(Date.current) if params[:commit]&.upcase == "ON THIS DAY"
 
-    return super
+    super
   end
 
   def order_args
-   ['end_date DESC']
+   [ "end_date DESC" ]
   end
 end

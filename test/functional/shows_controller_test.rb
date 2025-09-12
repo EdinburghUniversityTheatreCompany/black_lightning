@@ -1,7 +1,7 @@
-require 'test_helper'
+require "test_helper"
 
 class ShowsControllerTest < ActionController::TestCase
-  test 'should get index' do
+  test "should get index" do
     FactoryBot.create_list(:show, 10, is_public: true)
 
     get :index
@@ -9,7 +9,7 @@ class ShowsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:shows)
   end
 
-  test 'should get show' do
+  test "should get show" do
     @show = FactoryBot.create(:show, is_public: true)
 
     get :show, params: { id: @show }

@@ -11,7 +11,7 @@ class Admin::ShowsController < Admin::GenericEventsController
       amount_of_debts = existing_staffing_debts.where(user: existing_staffing_debts.first.user).count
 
       @staffing_confirm_data = {
-        title: 'Creating Staffing Obligation',
+        title: "Creating Staffing Obligation",
         confirm: "This show already has #{helpers.pluralize(amount_of_debts, 'Staffing obligation')} set for #{l existing_staffing_debts.first.due_by, format: :longy}. Are you sure you want to add more?"
       }
     else
@@ -32,9 +32,9 @@ class Admin::ShowsController < Admin::GenericEventsController
 
     if @show.maintenance_debt_start.present?
       @show.create_maintenance_debts
-      helpers.append_to_flash(:success, 'Maintenance obligations created.')
+      helpers.append_to_flash(:success, "Maintenance obligations created.")
     else
-      helpers.append_to_flash(:error, 'Could not create Maintenance obligations because the start date has not been set yet.')
+      helpers.append_to_flash(:error, "Could not create Maintenance obligations because the start date has not been set yet.")
     end
 
     redirect_to admin_show_path(@show)
@@ -45,15 +45,15 @@ class Admin::ShowsController < Admin::GenericEventsController
     authorize! :create, Admin::StaffingDebt
 
     number_of_slots = params[:create_show_staffing_debts].try(:[], :number_of_slots)
-  
+
     if number_of_slots.nil?
-      helpers.append_to_flash(:error, 'You have to specify the amount of Staffing slots you want to create.')
+      helpers.append_to_flash(:error, "You have to specify the amount of Staffing slots you want to create.")
     elsif @show.staffing_debt_start.present?
       amount = number_of_slots.first.to_i
       @show.create_staffing_debts(amount)
       helpers.append_to_flash(:success, "#{helpers.pluralize(amount, 'Staffing obligation slot')} created for every team member.")
     else
-      helpers.append_to_flash(:error, 'Could not create Staffing obligations because the start date has not been set yet.')
+      helpers.append_to_flash(:error, "Could not create Staffing obligations because the start date has not been set yet.")
     end
 
     redirect_to admin_show_path(@show)
@@ -114,7 +114,7 @@ class Admin::ShowsController < Admin::GenericEventsController
     # Convert the xml into an array of hashes.
     shows = []
 
-    doc.xpath('shows/showsummary').each do |element|
+    doc.xpath("shows/showsummary").each do |element|
       show = {}
       element.children.each do |child|
         show[child.name] = child.text
@@ -122,7 +122,7 @@ class Admin::ShowsController < Admin::GenericEventsController
       shows << show
     end
 
-    shows = shows.select { |show| show['name'] == params[:name] } if params[:name]
+    shows = shows.select { |show| show["name"] == params[:name] } if params[:name]
 
     render json: shows.to_json
   end
@@ -139,9 +139,9 @@ class Admin::ShowsController < Admin::GenericEventsController
     request = Net::HTTP::Get.new(uri.request_uri)
     response = http.request(request)
     data = response.body
-    send_data(data, filename: "#{show.name} - Sales Report.pdf", type: 'application/pdf')
+    send_data(data, filename: "#{show.name} - Sales Report.pdf", type: "application/pdf")
   end
-  #:nocov:
+  # :nocov:
 
   private
 
@@ -153,7 +153,7 @@ class Admin::ShowsController < Admin::GenericEventsController
     # Preventing data duplication. Shows will not be destroyed if these are present, but the converted event will be created before that is checked.
     # To prevent that, we do this check.
     unless @show.can_convert?
-      helpers.append_to_flash(:error, 'There are still attached feedbacks left. You cannot convert a show with one of these attached to prevent data loss.')
+      helpers.append_to_flash(:error, "There are still attached feedbacks left. You cannot convert a show with one of these attached to prevent data loss.")
       return false
     end
 
@@ -162,17 +162,17 @@ class Admin::ShowsController < Admin::GenericEventsController
     if event.save
       helpers.append_to_flash(:success, "Converted the Show \"#{@show.name}\" into the #{helpers.get_object_name(event, include_class_name: true)}.")
 
-      return event
+      event
     else
       additional_message = "There already exists a #{target_klass.name.humanize} with the slug \"#{@show.slug}\"" if target_klass.find_by(slug: @show.slug)
       helpers.append_to_flash(:error, "Could not create #{helpers.get_object_name(event, include_class_name: true)} from the Show \"#{@show.name}\". #{additional_message}")
 
-      return false
+      false
     end
   end
 
   def permitted_params
-    return super + [
+    super + [
       :maintenance_debt_start, :staffing_debt_start
     ]
   end

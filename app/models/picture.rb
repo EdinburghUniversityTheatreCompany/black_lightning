@@ -33,7 +33,7 @@ class Picture < ApplicationRecord
   ACCESS_LEVELS = Attachment::ACCESS_LEVELS
 
   def self.include_images
-    return self.includes({ image_attachment: :blob} )
+    self.includes({ image_attachment: :blob })
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -45,32 +45,32 @@ class Picture < ApplicationRecord
   end
 
   def fetch_image
-    image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached?
+    image.attach(ApplicationController.helpers.default_image_blob("missing.png")) unless image.attached?
 
-    return image
+    image
   end
 
   def gallery_name
     return get_object_name(gallery) if gallery.present?
 
-    return 'No Gallery'
+    "No Gallery"
   end
 
   def filename
-    return fetch_image.blob.filename
+    fetch_image.blob.filename
   end
 
   ##
   # Returns the url of the slideshow image
   ##
   def thumb_url
-    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.thumb_variant).processed, only_path: true)
+    Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.thumb_variant).processed, only_path: true)
   end
 
   ##
   # Returns the url of the full-size image
   ##
   def display_url
-    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.square_display_variant).processed, only_path: true)
+    Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.square_display_variant).processed, only_path: true)
   end
 end

@@ -11,7 +11,7 @@ class Admin::ReportsController < AdminController
   # GET /admin/reports
   ##
   def index
-    @title = 'Reports'
+    @title = "Reports"
   end
 
   ##
@@ -24,7 +24,7 @@ class Admin::ReportsController < AdminController
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_reports_path, notice: 'The roles report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: "The roles report will be emailed to you when it is ready."
   end
 
   ##
@@ -35,7 +35,7 @@ class Admin::ReportsController < AdminController
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_reports_path, notice: 'The members report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: "The members report will be emailed to you when it is ready."
   end
 
   ##
@@ -46,7 +46,7 @@ class Admin::ReportsController < AdminController
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_reports_path, notice: 'The subscribers report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: "The subscribers report will be emailed to you when it is ready."
   end
 
   ##
@@ -67,12 +67,12 @@ class Admin::ReportsController < AdminController
 
     ReportsMailer.delay.send_report(current_user, report)
 
-    redirect_to admin_reports_path, notice: 'The staffing report will be emailed to you when it is ready.'
+    redirect_to admin_reports_path, notice: "The staffing report will be emailed to you when it is ready."
   end
 
   private
 
   def authorization
-    authorize! :read, 'reports'
+    authorize! :read, "reports"
   end
 end

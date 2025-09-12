@@ -29,26 +29,26 @@ class Reports::Staffing
 
       sheet_name = "#{current_date.month}-#{current_date.year} - #{next_date.month}-#{next_date.year}"
       wb.add_worksheet(name: sheet_name) do |sheet|
-        sheet.add_row(['Firstname', 'Surname', 'Email', 'Staffing', 'Past Shows', 'Upcoming Shows'])
+        sheet.add_row([ "Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows" ])
 
         User.with_role(:member).each do |user|
-          past_show_count = user.shows.where(['end_date < ? AND end_date >= ? AND end_date < ?', Date.current, current_date, next_date]).count
-          upcoming_show_count = user.shows.where(['end_date >= ? AND end_date >= ? AND end_date < ?', Date.current, current_date, next_date]).count
+          past_show_count = user.shows.where([ "end_date < ? AND end_date >= ? AND end_date < ?", Date.current, current_date, next_date ]).count
+          upcoming_show_count = user.shows.where([ "end_date >= ? AND end_date >= ? AND end_date < ?", Date.current, current_date, next_date ]).count
 
-          staffing_count = user.staffings.joins(:staffing_jobs).where(['start_time >= ? AND start_time < ?', current_date, next_date]).distinct.count
+          staffing_count = user.staffings.joins(:staffing_jobs).where([ "start_time >= ? AND start_time < ?", current_date, next_date ]).distinct.count
 
-          sheet.add_row([user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count])
+          sheet.add_row([ user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count ])
         end
 
-        owes_staffing = wb.styles.add_style(fg_color: 'FF0000', b: true, type: :dxf)
-        will_owe_staffing = wb.styles.add_style(fg_color: 'FF9900', b: true, type: :dxf)
-        sheet.add_conditional_formatting('D:D', type: :cellIs, operator: :lessThan, formula: 'INDIRECT("RC[1]",0)', dxfId: owes_staffing, priority: 1)
-        sheet.add_conditional_formatting('D:D', type: :cellIs, operator: :lessThan, formula: 'INDIRECT("RC[1]",0) + INDIRECT("RC[2]",0)', dxfId: will_owe_staffing, priority: 2)
+        owes_staffing = wb.styles.add_style(fg_color: "FF0000", b: true, type: :dxf)
+        will_owe_staffing = wb.styles.add_style(fg_color: "FF9900", b: true, type: :dxf)
+        sheet.add_conditional_formatting("D:D", type: :cellIs, operator: :lessThan, formula: 'INDIRECT("RC[1]",0)', dxfId: owes_staffing, priority: 1)
+        sheet.add_conditional_formatting("D:D", type: :cellIs, operator: :lessThan, formula: 'INDIRECT("RC[1]",0) + INDIRECT("RC[2]",0)', dxfId: will_owe_staffing, priority: 2)
       end
 
       current_date = next_date
     end
 
-    return package
+    package
   end
 end

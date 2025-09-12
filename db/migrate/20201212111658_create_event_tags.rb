@@ -3,7 +3,7 @@ class CreateEventTags < ActiveRecord::Migration[6.0]
     create_table :event_tags do |t|
       t.string :name
       t.text :description
-      
+
       t.timestamps
     end
 

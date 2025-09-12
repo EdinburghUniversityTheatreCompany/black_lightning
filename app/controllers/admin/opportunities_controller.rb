@@ -94,14 +94,14 @@ class Admin::OpportunitiesController < AdminController
 
   def permitted_params
     # Do not include information about the approver and creator. That should only be settable by the controller.
-    [:description, :show_email, :title, :expiry_date]
+    [ :description, :show_email, :title, :expiry_date ]
   end
 
   def includes_args
-    [:creator]
+    [ :creator ]
   end
 
   def order_args
-    ['expiry_date DESC']
+    [ "expiry_date DESC" ]
   end
 end

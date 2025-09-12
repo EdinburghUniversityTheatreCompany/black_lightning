@@ -16,7 +16,7 @@
 # == Schema Information End
 #++
 
-require 'test_helper'
+require "test_helper"
 
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   setup do
@@ -24,12 +24,12 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     @proposal = FactoryBot.create(:proposal, call: @call)
   end
 
-  test 'set default proposal text' do
+  test "set default proposal text" do
     proposal = Admin::Proposals::Proposal.new
     assert proposal.proposal_text.present?
   end
 
-  test 'instantiate_answers' do
+  test "instantiate_answers" do
     @proposal.questions.clear
 
     remaining_question = @call.questions.first
@@ -37,15 +37,15 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
 
     new_question_count = remaining_question.answers.where(answerable: @proposal).any? ? 2 : 3
 
-    assert_difference '@proposal.answers.count', new_question_count do
+    assert_difference "@proposal.answers.count", new_question_count do
       # 2 = 3 answers on the call - 1 already added
-      assert_difference '@proposal.questions.count', 2 do
+      assert_difference "@proposal.questions.count", 2 do
         @proposal.instantiate_answers!
       end
     end
   end
 
-  test 'has_debtors' do
+  test "has_debtors" do
     assert_not_equal @proposal.users.first, @proposal.users.last
     # Add a debt a few days before the deadline editing. This user should be in debt.
     _not_counting_debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @proposal.call.editing_deadline.to_date.advance(days: 1))
@@ -56,17 +56,17 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert @proposal.has_debtors
   end
 
-  test 'convert unsuccessful proposal to show' do
+  test "convert unsuccessful proposal to show" do
     @proposal.update_attribute(:status, :unsuccessful)
 
     exception = assert_raise(ArgumentError) do
       @proposal.convert_to_show
     end
 
-    assert_equal('This proposal was not successful', exception.message)
+    assert_equal("This proposal was not successful", exception.message)
   end
 
-  test 'convert invalid proposal to show' do
+  test "convert invalid proposal to show" do
     @proposal.update_attribute(:status, :successful)
     @proposal.update_attribute(:show_title, nil)
 
@@ -75,7 +75,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     end
   end
 
-  test 'convert successful proposal to show' do
+  test "convert successful proposal to show" do
     @proposal.update(status: :successful)
 
     @proposal.convert_to_show
@@ -90,8 +90,8 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_not_nil show.slug
     assert show.slug.end_with?("-#{Date.current.year}")
 
-    assert_equal 'TBC', show.author
-    assert_equal 'TBC', show.price
+    assert_equal "TBC", show.author
+    assert_equal "TBC", show.price
 
     assert_equal Date.current, show.start_date
     assert_equal Date.current, show.end_date
@@ -105,7 +105,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert @proposal.reload.successful?
   end
 
-  test 'convert proposal to show with duplicate slug' do
+  test "convert proposal to show with duplicate slug" do
     preexisting_show = FactoryBot.create(:show)
     preexisting_show.update(slug: "#{preexisting_show.slug}-#{Date.current.year}")
 
@@ -120,7 +120,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert show.present?
   end
 
-  test 'convert proposal to show with loads of duplicate slugs' do
+  test "convert proposal to show with loads of duplicate slugs" do
     # Get a proposal
     @proposal.update(status: :successful)
 
@@ -134,7 +134,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_includes exception.message, "The number appended at the end of the slug has hit"
   end
 
-  test 'labels for successful proposal with debtors' do
+  test "labels for successful proposal with debtors" do
     @proposal.status = :successful
     _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
     expected_labels = "<span class=\"badge bg-success\">Successful</span>\n<span class=\"badge bg-danger\">Has Debtors</span>"
@@ -142,7 +142,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal expected_labels, @proposal.labels(false)
   end
 
-  test 'labels for rejected proposal that was late with pull right' do
+  test "labels for rejected proposal that was late with pull right" do
     @proposal.late = true
     @proposal.status = :rejected
 
@@ -151,7 +151,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal expected_labels, @proposal.labels(true)
   end
 
-  test 'labels for proposal awaiting approval with debtors that was late' do
+  test "labels for proposal awaiting approval with debtors that was late" do
     @proposal.status = :awaiting_approval
     @proposal.late = true
     _debt = FactoryBot.create(:staffing_debt, user: @proposal.users.first, due_by: @call.editing_deadline.advance(days: -1))
@@ -161,7 +161,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal expected_labels, @proposal.labels(false)
   end
 
-  test 'labels for approved proposal' do
+  test "labels for approved proposal" do
     @proposal.status = :approved
 
     expected_labels = '<span class="badge bg-info text-dark">Approved</span>'
@@ -169,7 +169,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal expected_labels, @proposal.labels(false)
 end
 
-  test 'labels for unsuccessful proposal with pull right' do
+  test "labels for unsuccessful proposal with pull right" do
     @proposal.status = :unsuccessful
 
     expected_labels = "<div class=\"float-right\"><span class=\"badge bg-danger\">Unsuccessful</span></div>"

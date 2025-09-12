@@ -4,10 +4,10 @@ class MembershipMailer < ApplicationMailer
   def new_member(user)
     @user = user
     @card = user.membership_card
-    @subject = 'Welcome to Bedlam'
+    @subject = "Welcome to Bedlam"
 
     qr = RQRCode::QRCode.new(@card.card_number, size: 2, level: :h)
-    attachments.inline['qr.png'] = RQRCode::Renderers::PNG.render(qr)
+    attachments.inline["qr.png"] = RQRCode::Renderers::PNG.render(qr)
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end
@@ -15,10 +15,10 @@ class MembershipMailer < ApplicationMailer
   def renew_membership(user)
     @user = user
     @card = user.membership_card
-    @subject = 'Bedlam Membership'
+    @subject = "Bedlam Membership"
 
     qr = RQRCode::QRCode.new(@card.card_number, size: 2, level: :h)
-    attachments.inline['qr.png'] = RQRCode::Renderers::PNG.render(qr)
+    attachments.inline["qr.png"] = RQRCode::Renderers::PNG.render(qr)
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end

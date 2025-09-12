@@ -1,5 +1,5 @@
 class ReportsMailer < ApplicationMailer
-  default reply_to: 'IT <it@bedlamtheatre.co.uk>'
+  default reply_to: "IT <it@bedlamtheatre.co.uk>"
 
   def send_report(user, report)
     @user = user
@@ -8,9 +8,9 @@ class ReportsMailer < ApplicationMailer
 
     @errors = report.validate
 
-    attachments['report.xlsx'] = report.to_stream.read
+    attachments["report.xlsx"] = report.to_stream.read
 
-    @subject = 'Bedlam Theatre Report'
+    @subject = "Bedlam Theatre Report"
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end

@@ -5,20 +5,20 @@ class Admin::MembershipActivationTokensController < AdminController
   def new
     @user = User.new
     @token = MembershipActivationToken.new
-    @title = 'Membership Activation'
+    @title = "Membership Activation"
   end
 
   # TODO: This should be abstracted into a model so this can also be called from other logic things in case of a mass reactivation.
   def create_activation
     # Has to be created early in case it is needed in render_on_fail
     @token = MembershipActivationToken.new
-    
+
     email = params[:user][:email]
     first_name = params[:user][:first_name]
     last_name = params[:user][:last_name]
 
     unless email.present? && first_name.present? && last_name.present?
-      helpers.append_to_flash(:error, 'Please fill in all fields.')
+      helpers.append_to_flash(:error, "Please fill in all fields.")
 
       return render_on_fail
     end
@@ -30,7 +30,7 @@ class Admin::MembershipActivationTokensController < AdminController
     if @user.present?
       base_message = "The email #{email} is already in use by #{@user.name(current_user)}"
 
-      if @user.has_role?('Member')
+      if @user.has_role?("Member")
         helpers.append_to_flash(:error, "#{base_message} and they already are a member. They will not be send an activation mail.")
 
         return render_on_fail
@@ -40,7 +40,7 @@ class Admin::MembershipActivationTokensController < AdminController
     # If we cannot find a user by their email, try to find them by their name.
     else
       @user = User.find_by(first_name: first_name, last_name: last_name)
-    
+
       # If a user with this name exists, do not proceed, but warn.
       if @user.present?
         helpers.append_to_flash(:error, "Found a user with the name '#{first_name} #{last_name}\' but with the email '#{@user.email}'. If this is the user you are trying to activate, please enter this email instead. If this is not the same user, please enter their name again and 'AGAIN' to the end of the last name.")
@@ -48,7 +48,7 @@ class Admin::MembershipActivationTokensController < AdminController
         return render_on_fail
       # If no user with this email or name exists, create a user with the basic information specified by the secretary so they can be tracked.
       else
-        @user = User.new_user(email: email, first_name: first_name, last_name: last_name.delete_suffix('AGAIN'))
+        @user = User.new_user(email: email, first_name: first_name, last_name: last_name.delete_suffix("AGAIN"))
         @user.save
 
         base_message = "Activation Mail sent to #{email}"
@@ -83,7 +83,7 @@ class Admin::MembershipActivationTokensController < AdminController
       return render_on_fail
     end
 
-    if @user.has_role?('Member')
+    if @user.has_role?("Member")
       helpers.append_to_flash(:error, "#{@user.name(current_user)} already is a member and will not be send a reactivation mail.")
 
       return render_on_fail
@@ -91,8 +91,8 @@ class Admin::MembershipActivationTokensController < AdminController
 
     email = @user.email
 
-    if email.downcase.include?('bedlamtheatre.co.uk') && email.downcase.include?('unknown')
-      helpers.append_to_flash(:error, 'This user had their email removed or was exported from the old website. Please ask them for their email, update their user record with the email they give you, and try again. Do not create a new account for them, but reactivate their old one instead.')
+    if email.downcase.include?("bedlamtheatre.co.uk") && email.downcase.include?("unknown")
+      helpers.append_to_flash(:error, "This user had their email removed or was exported from the old website. Please ask them for their email, update their user record with the email they give you, and try again. Do not create a new account for them, but reactivate their old one instead.")
 
       return render_on_fail
     end
@@ -112,7 +112,7 @@ class Admin::MembershipActivationTokensController < AdminController
     @user = User.new if @user.nil?
 
     respond_to do |format|
-      format.html { render 'new', status: :unprocessable_entity }
+      format.html { render "new", status: :unprocessable_entity }
       # format.json { render json: flash[:error], status: :unprocessable_entity }
     end
   end

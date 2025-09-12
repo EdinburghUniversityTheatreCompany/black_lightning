@@ -10,7 +10,7 @@ class Admin::HelpController < AdminController
   # GET /admin/help/markdown
   ##
   def kramdown
-    @title = 'kramdown Help'
+    @title = "kramdown Help"
 
     respond_to do |format|
       format.html # index.html.erb
@@ -24,6 +24,6 @@ class Admin::HelpController < AdminController
   # GET /admin/help/venue_location
   ##
   def venue_location
-    @title = 'Venue Location Help'
+    @title = "Venue Location Help"
   end
 end

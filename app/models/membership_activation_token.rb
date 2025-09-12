@@ -11,7 +11,7 @@
 #--
 # == Schema Information End
 #++
-require 'securerandom'
+require "securerandom"
 
 class MembershipActivationToken < ApplicationRecord
   belongs_to :user
@@ -23,7 +23,7 @@ class MembershipActivationToken < ApplicationRecord
   DISABLED_PERMISSIONS = %w[create read update].freeze
 
   def to_param
-    return token
+    token
   end
 
   private

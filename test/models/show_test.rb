@@ -30,22 +30,22 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class ShowTest < ActiveSupport::TestCase
-  test 'can convert show' do
+  test "can convert show" do
     show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
 
     assert show.can_convert?
   end
 
-  test 'convert show with reviews and no feedbacks' do
+  test "convert show with reviews and no feedbacks" do
     show = FactoryBot.create(:show, review_count: 1, feedback_count: 0)
 
     assert show.can_convert?
   end
 
-  test 'cannot convert show with feedbacks' do
+  test "cannot convert show with feedbacks" do
     feedback = FactoryBot.create(:feedback)
     show = feedback.show
     show.reviews.clear
@@ -53,11 +53,11 @@ class ShowTest < ActiveSupport::TestCase
     assert_not show.can_convert?
   end
 
-  test 'create maintenance debts' do
+  test "create maintenance debts" do
     due_by = Date.current
     show = FactoryBot.create(:show, maintenance_debt_start: due_by)
 
-    assert_difference('Admin::MaintenanceDebt.count', show.users.count) do
+    assert_difference("Admin::MaintenanceDebt.count", show.users.count) do
       show.create_maintenance_debts
     end
 
@@ -68,15 +68,15 @@ class ShowTest < ActiveSupport::TestCase
       assert_equal due_by, maintenance_debts.first.due_by
     end
 
-    # Test that the date changes, but the amount stays 1. 
+    # Test that the date changes, but the amount stays 1.
     new_due_by = Date.current.advance(days: 5)
     show.update_attribute(:maintenance_debt_start, new_due_by)
-    
+
     FactoryBot.create(:team_member, teamwork: show)
 
     # Test that the new user also gets a maintenance debt, but the other users do not get an extra one.
 
-    assert_difference('Admin::MaintenanceDebt.count', 1) do
+    assert_difference("Admin::MaintenanceDebt.count", 1) do
       show.create_maintenance_debts
     end
 
@@ -91,11 +91,11 @@ class ShowTest < ActiveSupport::TestCase
 
     assert_equal new_due_by, maintenance_debt.due_by
     assert_equal show.users.first, maintenance_debt.user
-    assert_equal 'normal', maintenance_debt.state
+    assert_equal "normal", maintenance_debt.state
     assert_equal show, maintenance_debt.show
   end
 
-  test 'create maintenance debts ignores a converted maintenance debt' do
+  test "create maintenance debts ignores a converted maintenance debt" do
     due_by = Date.current
     show = FactoryBot.create(:show, maintenance_debt_start: due_by)
 
@@ -105,14 +105,14 @@ class ShowTest < ActiveSupport::TestCase
     maintenance_debt_converted_from = FactoryBot.create(:maintenance_debt, converted_from_staffing_debt: true, user: user)
 
     # Assert each user gets a maintenance debt.
-    assert_difference('Admin::MaintenanceDebt.count', show.users.count) do
+    assert_difference("Admin::MaintenanceDebt.count", show.users.count) do
       show.create_maintenance_debts
     end
 
     assert_equal 2, user.admin_maintenance_debts.count, "The first user does not have two maintenance debts"
   end
 
-  test 'create staffing debts' do
+  test "create staffing debts" do
     due_by = Date.current
     show = FactoryBot.create(:show, staffing_debt_start: due_by)
 
@@ -125,7 +125,7 @@ class ShowTest < ActiveSupport::TestCase
     show.create_staffing_debts(1)
 
     show.users.each do |user|
-      assert_equal 1, user.admin_staffing_debts.where(show: show).count, 'The create_staffing_debts method on the show created a staffing debt when the user already had one.'
+      assert_equal 1, user.admin_staffing_debts.where(show: show).count, "The create_staffing_debts method on the show created a staffing debt when the user already had one."
     end
 
     show.create_staffing_debts(2)
@@ -152,25 +152,25 @@ class ShowTest < ActiveSupport::TestCase
     assert_equal 4, user.admin_staffing_debts.count
   end
 
-  test 'cannot add user to the same show twice as team member' do
+  test "cannot add user to the same show twice as team member" do
     show = FactoryBot.create(:show, team_member_count: 1)
     current_team_member = show.team_members.first
 
-    assert_no_difference('TeamMember.count') do
+    assert_no_difference("TeamMember.count") do
       assert_raises ActiveRecord::RecordInvalid do
         show.team_members.create!(user: current_team_member.user)
       end
     end
   end
 
-  test 'as_json' do
+  test "as_json" do
     show = FactoryBot.create(:show, venue: venues(:one), season: FactoryBot.create(:season))
 
-    json = show.as_json(include: [:season])
+    json = show.as_json(include: [ :season ])
 
     assert json.is_a? Hash
-    assert json.key? 'venue'
-    assert json.key? 'season'
-    assert json.key? 'reviews'
+    assert json.key? "venue"
+    assert json.key? "season"
+    assert json.key? "reviews"
   end
 end

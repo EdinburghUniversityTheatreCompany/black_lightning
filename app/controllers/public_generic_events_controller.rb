@@ -8,6 +8,6 @@ class PublicGenericEventsController < GenericEventsController
   end
 
   def base_index_database_query
-    return super.current.reorder('start_date asc')
+    super.current.reorder("start_date asc")
   end
 end

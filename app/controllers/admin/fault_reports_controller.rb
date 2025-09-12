@@ -33,15 +33,15 @@ class Admin::FaultReportsController < AdminController
   private
 
   def includes_args
-    [:reported_by]
+    [ :reported_by ]
   end
 
   def order_args
-    ['updated_at DESC']
+    [ "updated_at DESC" ]
   end
 
   def permitted_params
-    [:item, :description, :severity, :status, :reported_by_id, :fixed_by_id]
+    [ :item, :description, :severity, :status, :reported_by_id, :fixed_by_id ]
   end
 
   def edit_title

@@ -20,10 +20,10 @@ FactoryBot.define do
     about { generate(:random_text) }
     contact { generate(:random_text) }
 
-    approved { [true, false].sample }
+    approved { [ true, false ].sample }
 
     transient do
-      attach_user { [true, false].sample }
+      attach_user { [ true, false ].sample }
       amount_of_category_infos { 1 }
     end
 

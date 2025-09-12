@@ -14,12 +14,12 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
   end
 
   def includes_args
-    [:questions]
+    [ :questions ]
   end
 
   # :admin_proposals_call_question_template
   def permitted_params
-    [:name, { questions_attributes: %I[question_text response_type _destroy id] }]
+    [ :name, { questions_attributes: %I[question_text response_type _destroy id] } ]
   end
 
   def edit_title
@@ -27,7 +27,7 @@ class Admin::Proposals::CallQuestionTemplatesController < AdminController
   end
 
   def new_title
-    'New Proposal Call Question Template'
+    "New Proposal Call Question Template"
   end
 
   def json_enabled_for_index?

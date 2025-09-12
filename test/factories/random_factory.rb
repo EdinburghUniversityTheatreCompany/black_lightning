@@ -4,7 +4,7 @@ FactoryBot.define do
   end
 
   sequence(:random_text)   { |_n|  Faker::Lorem.paragraphs(number: 3).join('\n\n') }
-  sequence(:random_string) { |_n|  Faker::Lorem.words(number: 5).join(' ') }
+  sequence(:random_string) { |_n|  Faker::Lorem.words(number: 5).join(" ") }
 
   sequence(:random_date) do |_n|
     # See http://stackoverflow.com/a/4899857

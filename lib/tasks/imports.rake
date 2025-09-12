@@ -5,8 +5,8 @@ namespace :import do
     Rails.logger = Logger.new("#{Rails.root}/log/import.log")
     Rails.logger.level = Logger::DEBUG
 
-    shows_uri = 'http://old.bedlamtheatre.co.uk/shows.xml'
-    show_uri = 'http://old.bedlamtheatre.co.uk/shows/p'
+    shows_uri = "http://old.bedlamtheatre.co.uk/shows.xml"
+    show_uri = "http://old.bedlamtheatre.co.uk/shows/p"
 
     uri = URI.parse(shows_uri)
 
@@ -17,19 +17,19 @@ namespace :import do
 
     doc = Nokogiri::XML(xml_data)
 
-    Rails.logger.info 'Collecting show ids'
+    Rails.logger.info "Collecting show ids"
 
     shows = {}
-    doc.xpath('/search/results/Production/id').each do |element|
+    doc.xpath("/search/results/Production/id").each do |element|
       show_id = element.text
       shows[show_id] = {}
     end
 
     shows.each do |id, details|
-      Rails.logger.info '------'
+      Rails.logger.info "------"
       Rails.logger.info "Collecting data for show #{id}"
 
-      uri = URI.parse(show_uri + id + '.xml')
+      uri = URI.parse(show_uri + id + ".xml")
 
       xml_data = nil
       counter = 0
@@ -50,33 +50,33 @@ namespace :import do
       doc = Nokogiri::XML(xml_data)
 
       # Find the "Production" element, and read data.
-      doc.xpath('/Production').each do |element|
+      doc.xpath("/Production").each do |element|
         begin
-          title = element.children.search('title').first.text
+          title = element.children.search("title").first.text
 
           begin
-            blurb = element.children.search('blurb').first.text
+            blurb = element.children.search("blurb").first.text
           rescue
-            blurb = ''
+            blurb = ""
           end
 
           description = "<i class=\"icon-info-sign icon-large\" aria-hidden=”true”></i> This show was imported from the old website. If you are able to provide any more information, please contact the [Archivist](mailto:archive@bedlamtheatre.co.uk).\n{:.alert .alert-info}"
 
           begin
             description += "\n\n"
-            description += element.children.search('description').first.text
+            description += element.children.search("description").first.text
           rescue
           end
 
-          start_date  = Time.at(element.children.search('start').first.text.to_i).to_date
-          finish_date = Time.at(element.children.search('finish').first.text.to_i).to_date
+          start_date  = Time.at(element.children.search("start").first.text.to_i).to_date
+          finish_date = Time.at(element.children.search("finish").first.text.to_i).to_date
 
           Rails.logger.info "Start Date: #{start_date}"
           if start_date.year == 1970
-            Rails.logger.info '  Using season date instead'
+            Rails.logger.info "  Using season date instead"
 
-            start_date = Date.parse(element.children.search('Season/start').first.text)
-            finish_date = Date.parse(element.children.search('Season/finish').first.text)
+            start_date = Date.parse(element.children.search("Season/start").first.text)
+            finish_date = Date.parse(element.children.search("Season/finish").first.text)
             Rails.logger.info "  Start Date: #{start_date}"
           end
 
@@ -90,24 +90,24 @@ namespace :import do
           }
 
           # Add team member details:
-          element.children.search('role').each do |role_element|
-            user_full_name = role_element.children.search('Agent/name').text
-            position = role_element.children.search('position/displayname').text
+          element.children.search("role").each do |role_element|
+            user_full_name = role_element.children.search("Agent/name").text
+            position = role_element.children.search("position/displayname").text
 
             user = find_or_create_user_by_full_name(user_full_name)
             details[:team_members] << TeamMember.new(user_id: user.id, position: position)
           end
 
-          element.children.search('Portrayal').each do |role_element|
-            user_full_name = role_element.children.search('Agent/name').first.text
-            position = role_element.children.search('Agent/name').last.text
+          element.children.search("Portrayal").each do |role_element|
+            user_full_name = role_element.children.search("Agent/name").first.text
+            position = role_element.children.search("Agent/name").last.text
 
             user = find_or_create_user_by_full_name(user_full_name)
             details[:team_members] << TeamMember.new(user_id: user.id, position: position)
           end
 
           show = Show.new(details)
-          show.slug = show.name.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') + "-#{show.start_date.year}"
+          show.slug = show.name.gsub(/\s+/, "-").gsub(/[^a-zA-Z0-9\-]/, "").downcase.gsub(/\-{2,}/, "-") + "-#{show.start_date.year}"
           show.is_public = true
 
           show.save!
@@ -119,19 +119,19 @@ namespace :import do
         end
       end
 
-      Rails.logger.info 'Sleeping for 2 seconds.'
+      Rails.logger.info "Sleeping for 2 seconds."
 
       sleep(2)
     end
 
-    Rails.logger.info '--------------------------'
-    Rails.logger.info 'Finished Importing Data.'
+    Rails.logger.info "--------------------------"
+    Rails.logger.info "Finished Importing Data."
   end
 
   def find_or_create_user_by_full_name(name)
     Rails.logger.info "Finding user #{name}"
 
-    user_broken = name.split(' ')
+    user_broken = name.split(" ")
 
     if user_broken.count == 2
       user_first_name = user_broken[0]
@@ -145,7 +145,7 @@ namespace :import do
       Rails.logger.warn "  WARNING: User's name may have been incorrectly parsed"
 
       user_first_name = user_broken[0]
-      user_last_name = user_broken[1] + ' ' + user_broken[2]
+      user_last_name = user_broken[1] + " " + user_broken[2]
 
       user = User.where(first_name: user_first_name, last_name: user_last_name).first
     end
@@ -157,7 +157,7 @@ namespace :import do
       user.save!
     end
 
-    return user
+    user
   end
-    # :nocov:
+  # :nocov:
 end

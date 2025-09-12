@@ -18,7 +18,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :maintenance_attendance, optional: true
 
   validates :due_by, :show_id, :user_id, :state, presence: true
-  validates :converted_from_staffing_debt, inclusion: [true, false]
+  validates :converted_from_staffing_debt, inclusion: [ true, false ]
 
   after_save :associate_with_attendance
   after_destroy { associate_with_attendance(true) }
@@ -47,7 +47,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
 
   # See above for an explanation.
   def unfulfilled?
-    state == 'normal' && maintenance_attendance.nil?
+    state == "normal" && maintenance_attendance.nil?
   end
 
   def convert_to_staffing_debt
@@ -58,26 +58,26 @@ class Admin::MaintenanceDebt < ApplicationRecord
   end
 
   def forgive
-    return update(state: :forgiven)
+    update(state: :forgiven)
   end
 
   def status(on_date = Date.current)
     case state
-    when 'forgiven'
-      return :forgiven
-    when 'expired'
-      return :expired
-    when 'converted'
-      return :converted
+    when "forgiven"
+      :forgiven
+    when "expired"
+      :expired
+    when "converted"
+      :converted
     else
       if maintenance_attendance.present?
         return :completed
       end
 
       if due_by < on_date
-        return :causing_debt
+        :causing_debt
       else
-        return :unfulfilled
+        :unfulfilled
       end
     end
   end
@@ -86,34 +86,34 @@ class Admin::MaintenanceDebt < ApplicationRecord
     local_status = status(on_date)
 
     if local_status == :completed && maintenance_attendance.present?
-      return "Completed on #{maintenance_attendance.date}"
+      "Completed on #{maintenance_attendance.date}"
     else
-      return local_status.to_s.titleize
+      local_status.to_s.titleize
     end
   end
 
   def css_class(on_date = Date.current)
     case status(on_date)
     when :unfulfilled
-      'table-warning'
+      "table-warning"
     when :converted, :completed, :forgiven, :expired
-      'table-success'
+      "table-success"
     when :causing_debt
-      'table-danger'
+      "table-danger"
     end
   end
 
   # Associates itself with the soonest upcoming Maintenance Attendance
   def associate_with_attendance(skip_check = false)
-    relevant_keys = previous_changes.keys.excluding('created_at', 'updated_at')
+    relevant_keys = previous_changes.keys.excluding("created_at", "updated_at")
 
     # Clear the attendance if the state has changed, just in case.
     # Otherwise, setting a debt with an attached attendance to forgiven or converted
     # will keep the attendance attached.
-    update(maintenance_attendance: nil) if relevant_keys.include?('state')
+    update(maintenance_attendance: nil) if relevant_keys.include?("state")
 
     # Only reallocate if we are not checking for changes or the changes are not just the attendance.
     # if we keep reallocating when the attendance changes, we will end up with a loop.
-    user.reallocate_maintenance_debts if skip_check || relevant_keys != ['maintenance_attendance_id']
+    user.reallocate_maintenance_debts if skip_check || relevant_keys != [ "maintenance_attendance_id" ]
   end
 end

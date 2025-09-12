@@ -14,7 +14,7 @@ class Admin::Proposals::CallsController < AdminController
   # GET /admin/proposals/calls.json
   ##
   def index
-    @title = 'Proposals to the EUTC'
+    @title = "Proposals to the EUTC"
 
     super
   end
@@ -24,9 +24,9 @@ class Admin::Proposals::CallsController < AdminController
   ##
   def archive
     if @call.archive
-      flash[:success] = 'The Proposal Call has been successfully archived.'
+      flash[:success] = "The Proposal Call has been successfully archived."
     else
-      flash[:error] = 'Error archiving the Proposal Call. Has the editing deadline been reached?'
+      flash[:error] = "Error archiving the Proposal Call. Has the editing deadline been reached?"
     end
 
     respond_to do |format|
@@ -36,7 +36,7 @@ class Admin::Proposals::CallsController < AdminController
   end
 
   private
-  
+
   def resource_class
     Admin::Proposals::Call
   end
@@ -44,15 +44,15 @@ class Admin::Proposals::CallsController < AdminController
   def permitted_params
     [
       :submission_deadline, :editing_deadline, :name, :archived,
-      questions_attributes: [:id, :_destroy, :question_text, :response_type]
+      questions_attributes: [ :id, :_destroy, :question_text, :response_type ]
     ]
   end
 
   def index_query_params
-    { archived: [nil, false] }
+    { archived: [ nil, false ] }
   end
 
   def new_title
-    'New Proposal Call'
+    "New Proposal Call"
   end
 end

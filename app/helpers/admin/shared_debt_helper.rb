@@ -12,7 +12,7 @@ module Admin::SharedDebtHelper
       # In this case, the debts should not be searched. Clear the cookies to prevent a query from being loaded the next time the index is opened.
       shared_debt_clear_params(key)
 
-      debts = debts.where(user_id:params[:user_id]) if params[:user_id].present?
+      debts = debts.where(user_id: params[:user_id]) if params[:user_id].present?
 
       q_param = {}
       # Show fulfilled is already set.
@@ -27,7 +27,7 @@ module Admin::SharedDebtHelper
     debts = q.result.includes(*includes)
 
     debts = debts.unfulfilled unless show_fulfilled
-    debts = debts.where(user: Role.find_by(name: :member).users.ids) unless show_non_members == '1'
+    debts = debts.where(user: Role.find_by(name: :member).users.ids) unless show_non_members == "1"
     debts = debts.page(params[:page]).per(30)
 
     return debts, q, show_fulfilled, is_specific_user
@@ -39,7 +39,7 @@ module Admin::SharedDebtHelper
     # Load the cookie param if there is no query set.
     begin
       cookie_value = cookies["#{key}_query"]
-      q_param ||= JSON.parse(cookie_value.gsub('=>', ':')) if cookie_value.present?
+      q_param ||= JSON.parse(cookie_value.gsub("=>", ":")) if cookie_value.present?
     # :nocov:
     rescue JSON::ParserError => e
       # It's not the worst thing in the world if an error happens, but logging will be useful.
@@ -47,14 +47,14 @@ module Admin::SharedDebtHelper
       # and the errors become a nuisance, we can disable it.
 
       Honeybadger.notify(e)
-    # :nocov:
+      # :nocov:
     end
 
     q_param ||= {}
 
     set_cookie("#{key}_query", q_param)
 
-    return q_param
+    q_param
   end
 
   def shared_debt_show_fulfilled_param(params, key)
@@ -62,14 +62,14 @@ module Admin::SharedDebtHelper
     show_fulfilled_param = params.fetch(:show_fulfilled, nil)
 
     show_fulfilled = if show_fulfilled_param.present?
-      show_fulfilled_param == '1'
-    else 
-      cookies["#{key}_show_fulfilled"] == 'true'
+      show_fulfilled_param == "1"
+    else
+      cookies["#{key}_show_fulfilled"] == "true"
     end
 
     set_cookie("#{key}_show_fulfilled", show_fulfilled.to_s)
 
-    return show_fulfilled
+    show_fulfilled
   end
 
   def shared_debt_clear_params(key)
@@ -80,9 +80,9 @@ module Admin::SharedDebtHelper
   def shared_debt_ransack(debts, q_param)
     q = debts.ransack(q_param, auth_object: current_ability)
 
-    q.sorts = ['due_by asc', 'show_name asc', 'user_full_name asc'] if q.sorts.empty?
+    q.sorts = [ "due_by asc", "show_name asc", "user_full_name asc" ] if q.sorts.empty?
 
-    return q
+    q
   end
 
   def shared_debt_is_specific_user(debt_class, user_id)
@@ -115,20 +115,19 @@ module Admin::SharedDebtHelper
 
       case local_status
       when :completed_staffing
-        return "Completed as #{job_description}"
+        "Completed as #{job_description}"
       when :awaiting_staffing
-        return "Awaiting Staffing as #{job_description}}"
+        "Awaiting Staffing as #{job_description}}"
       else
-        return local_status.to_s.titleize
+        local_status.to_s.titleize
       end
     elsif debt.is_a?(Admin::MaintenanceDebt)
       # Make the attendance into a link if the user has permission, and there is an attendance.
       if debt.maintenance_attendance.present?
-        return get_link(debt.maintenance_attendance, :show, link_text: debt.formatted_status)
-      else 
-        return debt.formatted_status
+        get_link(debt.maintenance_attendance, :show, link_text: debt.formatted_status)
+      else
+        debt.formatted_status
       end
     end
   end
 end
-

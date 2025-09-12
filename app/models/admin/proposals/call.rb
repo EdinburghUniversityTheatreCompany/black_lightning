@@ -25,11 +25,11 @@ class Admin::Proposals::Call < ApplicationRecord
   after_save :instantiate_answers_on_proposals
 
   has_many :questions, as: :questionable, dependent: :destroy
-  has_many :proposals, class_name: 'Admin::Proposals::Proposal'
+  has_many :proposals, class_name: "Admin::Proposals::Proposal"
 
   accepts_nested_attributes_for :questions, reject_if: :all_blank, allow_destroy: true
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   # TODO: Maybe revise what open means?
   scope :open, -> { where(submission_deadline: DateTime.current..DateTime::Infinity.new) }
@@ -43,7 +43,7 @@ class Admin::Proposals::Call < ApplicationRecord
   end
 
   def open?
-    return submission_deadline > DateTime.current
+    submission_deadline > DateTime.current
   end
 
   ##
@@ -53,7 +53,7 @@ class Admin::Proposals::Call < ApplicationRecord
     return false if DateTime.current < editing_deadline
 
     self.archived = true
-    return save
+    save
   end
 
   private

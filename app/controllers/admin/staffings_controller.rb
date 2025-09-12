@@ -16,7 +16,7 @@ class Admin::StaffingsController < AdminController
   # GET /admin/staffings.json
   ##
   def index
-    @title = 'Staffing'
+    @title = "Staffing"
 
     # The sorting for the archived staffings looks a bit weird to ensure it is properly sorted in a descending by start_date manner
     # It first sorts the staffings in descending order, but this also groups them in the wrong order (as 7 March, 6 March, 5 March).
@@ -27,7 +27,7 @@ class Admin::StaffingsController < AdminController
       @archived_staffings[slug] = staffings.reverse
     end
 
-    @upcoming_staffings = @staffings.order('start_time ASC').future.group_by(&:slug)
+    @upcoming_staffings = @staffings.order("start_time ASC").future.group_by(&:slug)
 
     respond_to do |format|
       format.html # index.html.erb
@@ -46,16 +46,16 @@ class Admin::StaffingsController < AdminController
     @title = "Staffing for #{@staffings.empty? ? 'Nothing' : @staffings.first.show_title}"
 
     # Fall-back to past when future is empty, and to future when past is empty.
-    if (params[:archived] == 'true' && @staffings.past.any?) || @staffings.future.empty?
+    if (params[:archived] == "true" && @staffings.past.any?) || @staffings.future.empty?
       @staffings = @staffings.past
     else
       @staffings = @staffings.future
     end
 
-    @job_titles = @staffings.joins(:staffing_jobs).pluck('admin_staffing_jobs.name').uniq.sort
+    @job_titles = @staffings.joins(:staffing_jobs).pluck("admin_staffing_jobs.name").uniq.sort
 
     @staffings_hash = @staffings.collect do |staffing|
-      jobs = staffing.staffing_jobs.map { |job| [job.name, job] }.to_h
+      jobs = staffing.staffing_jobs.map { |job| [ job.name, job ] }.to_h
 
       staffing_hash = {
         staffing: staffing,
@@ -110,15 +110,15 @@ class Admin::StaffingsController < AdminController
     start_times = params[:start_times]
     end_times = params[:end_times]
 
-    slug = ''
+    slug = ""
 
     if start_times.nil? || end_times.nil?
-      helpers.append_to_flash(:error, 'You have not specified any start and end times.')
+      helpers.append_to_flash(:error, "You have not specified any start and end times.")
       failure = true
     end
 
     if @staffing.staffing_jobs.empty?
-      helpers.append_to_flash(:error, 'You have not added any jobs.')
+      helpers.append_to_flash(:error, "You have not added any jobs.")
       failure = true
     end
 
@@ -132,7 +132,7 @@ class Admin::StaffingsController < AdminController
       start_times.values.zip(end_times.values).each do |start_time, end_time|
         staffing = @staffing.dup
 
-        # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day. 
+        # Assumes that a staffing is shorter than 24 hours. This means that if end_time > start_time, it assumes it ends on the same day.
         # If end_time < start_time, it ends the next day.
 
         staffing.start_time = start_time
@@ -141,7 +141,7 @@ class Admin::StaffingsController < AdminController
         unless staffing.save
           failure = true
 
-          message = first_pass ? 'There is an issue with the form.' : 'There was an issue saving one of the staffings, and not all staffings have been saved.'
+          message = first_pass ? "There is an issue with the form." : "There was an issue saving one of the staffings, and not all staffings have been saved."
 
           helpers.append_to_flash(:error, message)
 
@@ -162,10 +162,10 @@ class Admin::StaffingsController < AdminController
     respond_to do |format|
       if failure
         set_new_params
-        format.html { render 'new', status: :unprocessable_entity }
+        format.html { render "new", status: :unprocessable_entity }
         # format.json { render json: @staffing.errors, status: :unprocessable_entity }
       else
-        flash[:success] = 'Staffing was successfully created.'
+        flash[:success] = "Staffing was successfully created."
         format.html { redirect_to grid_admin_staffings_path(slug) }
         # format.json { render status: :created }
       end
@@ -184,11 +184,11 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       if @staffing.save
-        flash[:success] = 'Staffing was successfully updated.'
+        flash[:success] = "Staffing was successfully updated."
         format.html { redirect_to admin_staffing_path(@staffing) }
         # format.json { head :no_content }
       else
-        format.html { render 'edit', status: :unprocessable_entity }
+        format.html { render "edit", status: :unprocessable_entity }
         # format.json { render json: @staffing.errors, status: :unprocessable_entity }
       end
     end
@@ -211,8 +211,8 @@ class Admin::StaffingsController < AdminController
       if helpers.check_if_current_user_can_sign_up(current_user, @job.name)
         format.html # render sign_up_confirm.html.erb
       else
-        helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].blank?
-        
+        helpers.append_to_flash(:erorr, "There was an error signing up. Please contact the Front of House Manager") if flash[:error].blank?
+
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         # format.json { render json: @job.errors, status: :unprocessable_entity }
       end
@@ -230,11 +230,11 @@ class Admin::StaffingsController < AdminController
     if @job.user.nil? || @job.user == current_user
       @job.user = current_user
     else
-      helpers.append_to_flash(:error, 'Someone else has already signed up for this slot')
+      helpers.append_to_flash(:error, "Someone else has already signed up for this slot")
     end
 
     if @job.staffable.start_time < Time.current
-      helpers.append_to_flash(:error, 'You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.')
+      helpers.append_to_flash(:error, "You cannot sign up for staffings in the past. Please contact the Front of House-manager if you have staffed this shift.")
     end
 
     respond_to do |format|
@@ -244,7 +244,7 @@ class Admin::StaffingsController < AdminController
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         # format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
       else
-        helpers.append_to_flash(:erorr, 'There was an error signing up. Please contact the Front of House Manager') if flash[:error].blank?
+        helpers.append_to_flash(:erorr, "There was an error signing up. Please contact the Front of House Manager") if flash[:error].blank?
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         # format.json { render json: @job.errors, status: :unprocessable_entity }
@@ -271,12 +271,12 @@ class Admin::StaffingsController < AdminController
 
   def creation_params
     params.require(:admin_staffing).permit(:show_title, :counts_towards_debt,
-                                           staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
+                                           staffing_jobs_attributes: [ :id, :_destroy, :name, :user, :user_id ])
   end
 
   def update_params
     params.require(:admin_staffing).permit(:show_title, :start_time, :end_time, :counts_towards_debt,
-                                            staffing_jobs_attributes: [:id, :_destroy, :name, :user, :user_id])
+                                            staffing_jobs_attributes: [ :id, :_destroy, :name, :user, :user_id ])
   end
 
   def edit_title

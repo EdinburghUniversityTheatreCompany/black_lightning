@@ -7,7 +7,7 @@ class GenericEventsController < ApplicationController
 
   def show
     @meta[:description] = helpers.render_plain(get_resource.publicity_text)
-    @meta['og:image'] = [@base_url + get_resource.slideshow_image_url] + get_resource.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
+    @meta["og:image"] = [ @base_url + get_resource.slideshow_image_url ] + get_resource.pictures.collect { |p| @base_url + url_for(p.fetch_image) }
 
     super
   end
@@ -15,11 +15,11 @@ class GenericEventsController < ApplicationController
   private
 
   def index_filename
-    '/events/index'
+    "/events/index"
   end
 
   def includes_args
-    [image_attachment: :blob]
+    [ image_attachment: :blob ]
   end
 
   def items_per_page

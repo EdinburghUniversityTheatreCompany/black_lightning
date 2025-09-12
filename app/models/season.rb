@@ -43,6 +43,6 @@ class Season < Event
   end
 
   def simultaneous_events
-    return (Event.where('end_date >= ? and start_date <= ?', start_date, end_date).or(Event.where(season: self)).reorder('start_date ASC') - [self]).uniq
+    (Event.where("end_date >= ? and start_date <= ?", start_date, end_date).or(Event.where(season: self)).reorder("start_date ASC") - [ self ]).uniq
   end
 end

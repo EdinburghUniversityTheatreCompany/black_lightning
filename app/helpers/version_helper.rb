@@ -1,9 +1,9 @@
 module VersionHelper
   def version
     begin
-      return File.read('version')
+      File.read("version")
     rescue
-      return 'Not found'
+      "Not found"
     end
   end
 end

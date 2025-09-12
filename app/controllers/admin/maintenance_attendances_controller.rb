@@ -1,6 +1,6 @@
 class Admin::MaintenanceAttendancesController < AdminController
   include GenericController
-  load_and_authorize_resource 
+  load_and_authorize_resource
 
   # INDEX:  /maintenance_attendances
   # SHOW:   /maintenance_attendances/1
@@ -14,14 +14,14 @@ class Admin::MaintenanceAttendancesController < AdminController
   def permitted_params
     # Make sure that references have _id appended to the end of them.
     # Check existing controllers for inspiration.
-    [:maintenance_session_id, :user_id]
+    [ :maintenance_session_id, :user_id ]
   end
 
   def order_args
-    ['date']
+    [ "date" ]
   end
 
   def includes_args
-    [:user, :maintenance_session, :maintenance_debt]
+    [ :user, :maintenance_session, :maintenance_debt ]
   end
 end

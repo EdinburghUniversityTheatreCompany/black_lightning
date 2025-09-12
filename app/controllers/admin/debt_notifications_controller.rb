@@ -10,6 +10,6 @@ class Admin::DebtNotificationsController < AdminController
   end
 
   def order_args
-    ['sent_on desc']
+    [ "sent_on desc" ]
   end
 end

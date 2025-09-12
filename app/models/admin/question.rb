@@ -19,10 +19,10 @@
 #++
 class Admin::Question < ApplicationRecord
   validates :question_text, :response_type, presence: true
-  
+
   belongs_to :questionable, polymorphic: true
 
-  has_many :answers, class_name: 'Admin::Answer', dependent: :destroy
+  has_many :answers, class_name: "Admin::Answer", dependent: :destroy
 
   ##
   # Defines the possible response types.
@@ -32,7 +32,7 @@ class Admin::Question < ApplicationRecord
   # You may also need to change the questionnaire show page.
   ##
   def self.response_types
-    ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File']
+    [ "Short Text", "Long Text", "Number", "Yes/No", "File" ]
   end
 
   def self.ransackable_attributes(auth_object = nil)

@@ -15,7 +15,7 @@ class AddAttachmentToAnswer < ActiveRecord::Migration[6.0]
         if answer.answerable_type == 'Admin::Questionnaires::Questionnaire'
           event = answer.answerable.event
 
-          date = event.start_date 
+          date = event.start_date
           answerable_title = event.name
         end
 
@@ -25,7 +25,7 @@ class AddAttachmentToAnswer < ActiveRecord::Migration[6.0]
         end
 
         item_name = "? - #{answer.id}"
-        
+
         question_text = answer.question.question_text.downcase
         if question_text.include?('rig plan')
           item_name = 'Rig Plan'
@@ -39,7 +39,7 @@ class AddAttachmentToAnswer < ActiveRecord::Migration[6.0]
           item_name = 'Banner'
         end
 
-        name = "#{date.to_s} #{answerable_title} #{item_name}"
+        name = "#{date} #{answerable_title} #{item_name}"
 
 
         name = "#{name} #{answer.id}" if Attachment.find_by(name: name).present?

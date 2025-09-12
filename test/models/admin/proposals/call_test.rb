@@ -13,10 +13,10 @@
 # == Schema Information End
 #++
 
-require 'test_helper'
+require "test_helper"
 
 class Admin::Proposals::CallTest < ActiveSupport::TestCase
-  test 'open' do
+  test "open" do
     old_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -1), editing_deadline: DateTime.current.advance(days: 1))
     new_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 1))
 
@@ -27,7 +27,7 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
     assert_not_includes Admin::Proposals::Call.open, old_call
   end
 
-  test 'archive' do
+  test "archive" do
     call = FactoryBot.create(:proposal_call, archived: false, editing_deadline: DateTime.current.advance(days: -1))
 
     assert call.archive
@@ -35,7 +35,7 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
     assert call.archived
   end
 
-  test 'instantiates answers on proposals after save' do
+  test "instantiates answers on proposals after save" do
     call = FactoryBot.create(:proposal_call)
 
     call.proposals.each do |proposal|
@@ -44,7 +44,7 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
     end
   end
 
-  test 'cannot archive before the submission deadline has been reached' do
+  test "cannot archive before the submission deadline has been reached" do
     call = FactoryBot.create(:proposal_call, archived: false, editing_deadline: DateTime.current.advance(days: 1))
 
     assert_not call.archive
@@ -52,18 +52,18 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
     assert_not call.archived
   end
 
-  test 'cannot destroy call with proposals attached' do
+  test "cannot destroy call with proposals attached" do
     call = FactoryBot.create(:proposal_call, proposal_count: 1)
 
-    assert_no_difference('Admin::Proposals::Call.count') do
+    assert_no_difference("Admin::Proposals::Call.count") do
       assert_not call.destroy
     end
 
-    assert_match 'You cannot destroy the call because there are proposals attached to it.', call.errors.full_messages.join('')
+    assert_match "You cannot destroy the call because there are proposals attached to it.", call.errors.full_messages.join("")
 
     call.proposals.clear
 
-    assert_difference 'Admin::Proposals::Call.count', -1 do
+    assert_difference "Admin::Proposals::Call.count", -1 do
       assert call.destroy
     end
   end
