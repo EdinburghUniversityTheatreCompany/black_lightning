@@ -157,4 +157,57 @@ class EventTest < ActionView::TestCase
 
     assert_equal(['Author 1', 'Author 3'], Event.author_name_list)
   end
+
+  test 'automatically generates slug from name if blank' do
+    event = FactoryBot.build(:event, name: 'Test Event Name', slug: '')
+    assert event.valid?
+    assert_equal 'test-event-name', event.slug
+  end
+
+  test 'updates slug when name changes and slug was auto-generated' do
+    event = FactoryBot.create(:event, name: 'Original Name')
+    original_slug = event.slug
+
+    event.name = 'New Event Name'
+    event.valid?
+    assert_not_equal original_slug, event.slug
+    assert_equal 'new-event-name', event.slug
+  end
+
+  test 'does not update slug when name changes if slug was manually set' do
+    event = FactoryBot.create(:event, name: 'Original Name', slug: 'custom-slug')
+    
+    event.name = 'New Event Name'
+    event.valid?
+    assert_equal 'custom-slug', event.slug
+  end
+
+  test 'generates unique slugs when duplicates would occur' do
+    event1 = FactoryBot.create(:event, name: 'Test Event')
+    event2 = FactoryBot.build(:event, name: 'Test Event', slug: '')
+    
+    assert event2.valid?
+    assert_equal 'test-event', event1.slug
+    assert_equal 'test-event-1', event2.slug
+  end
+
+  test 'handles special characters in slug generation' do
+    event = FactoryBot.build(:event, name: 'Event with "Quotes" & Symbols!', slug: '')
+    assert event.valid?
+    assert_equal 'event-with-quotes-and-symbols', event.slug
+  end
+
+  test 'handles accented characters in slug generation' do
+    event = FactoryBot.build(:event, name: 'Événement spéciàl', slug: '')
+    assert event.valid?
+    assert_equal 'evenement-special', event.slug
+  end
+
+  test 'slug uniqueness validation works case-insensitively' do
+    FactoryBot.create(:event, slug: 'test-slug')
+    duplicate_event = FactoryBot.build(:event, slug: 'TEST-SLUG')
+    
+    assert_not duplicate_event.valid?
+    assert duplicate_event.errors[:slug].any? { |error| error.include?('already taken') }
+  end
 end
