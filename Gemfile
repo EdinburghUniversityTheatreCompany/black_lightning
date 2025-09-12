@@ -55,10 +55,10 @@ gem "honeybadger"
 
 gem "csv"
 
-group :development, :test do
-  # Use Puma as the app server
-  gem "puma"
+# Use Puma as the app server
+gem "puma"
 
+group :development, :test do
   gem "byebug"
   gem "spring"
 
@@ -102,10 +102,9 @@ group :test do
   gem "html_acceptance"
 end
 
-# Deploy with Capistrano
-gem "capistrano3-delayed-job"
-gem "capistrano-rails"
-gem "capistrano-rvm"
+# Deploy with Kamal
+gem "kamal", "~> 2.0"
+gem "thruster"
 
 gem "bcrypt_pbkdf"
 gem "ed25519"
