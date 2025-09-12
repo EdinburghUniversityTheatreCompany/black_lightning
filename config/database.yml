@@ -29,5 +29,5 @@ production:
   database: bedlam_blacklightning_production
   pool: 5
   username: <%= ENV["DATABASE_USERNAME"] %>
-  password: <%= ENV["DATABASE_PASSWORD"] %>
+  password: <%= ENV["MYSQL_ROOT_PASSWORD"] %>
   host: <%= ENV["DATABASE_HOST"] %>
