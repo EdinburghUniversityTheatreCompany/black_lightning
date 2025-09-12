@@ -11,6 +11,10 @@ set :bundle_flags, "--quiet"
 set :bundle_path, -> { shared_path.join("bundle") }
 set :bundle_flags, "--deployment --quiet"
 set :bundle_without, %w[development test].join(" ")
+set :bundle_env_variables, {
+  "BUNDLE_FORCE_RUBY_PLATFORM" => "1",
+  "NOKOGIRI_USE_SYSTEM_LIBRARIES" => "1"
+}
 
 namespace :deploy do
   desc "chmod delayed_job script"

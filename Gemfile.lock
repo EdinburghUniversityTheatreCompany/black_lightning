@@ -310,12 +310,8 @@ GEM
       net-protocol
     net-ssh (7.3.0)
     nio4r (2.7.4)
-    nokogiri (1.18.9)
+    nokogiri (1.15.7)
       mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
-    nokogiri (1.18.9-x64-mingw-ucrt)
-      racc (~> 1.4)
-    nokogiri (1.18.9-x86_64-linux-gnu)
       racc (~> 1.4)
     observer (0.1.2)
     orm_adapter (0.5.0)
@@ -600,7 +596,7 @@ DEPENDENCIES
   mini_magick
   mission_control-jobs
   mysql2!
-  nokogiri
+  nokogiri (~> 1.15.6)
   paper_trail
   propshaft
   puma

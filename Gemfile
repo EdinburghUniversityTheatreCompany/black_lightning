@@ -46,7 +46,7 @@ gem "mini_magick"
 gem "chronic"
 gem "ransack"
 
-gem "nokogiri"
+gem "nokogiri", "~> 1.15.6"  # Last version that worked with GLIBC 2.28 TODO upgrade when doing kamal6
 
 gem "paper_trail"
 gem "rack", "~> 2.0"
