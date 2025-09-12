@@ -83,7 +83,6 @@ accessories:
   mysql:
     image: mysql:8.0
     host: bdlm-eusa-ed-ac-uk
-    port: 3306
     env:
       clear:
         MYSQL_ROOT_HOST: "%"
