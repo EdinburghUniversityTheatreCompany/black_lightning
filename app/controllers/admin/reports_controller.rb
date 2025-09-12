@@ -22,7 +22,7 @@ class Admin::ReportsController < AdminController
   def roles
     report = Reports::Roles.new
 
-    ReportsMailer.delay.send_report(current_user, report)
+    ReportsMailer.send_report(current_user, report).deliver_later
 
     redirect_to admin_reports_path, notice: "The roles report will be emailed to you when it is ready."
   end
@@ -33,7 +33,7 @@ class Admin::ReportsController < AdminController
   def members
     report = Reports::Membership.new
 
-    ReportsMailer.delay.send_report(current_user, report)
+    ReportsMailer.send_report(current_user, report).deliver_later
 
     redirect_to admin_reports_path, notice: "The members report will be emailed to you when it is ready."
   end
@@ -44,7 +44,7 @@ class Admin::ReportsController < AdminController
   def newsletter_subscribers
     report = Reports::NewsletterSubscribers.new
 
-    ReportsMailer.delay.send_report(current_user, report)
+    ReportsMailer.send_report(current_user, report).deliver_later
 
     redirect_to admin_reports_path, notice: "The subscribers report will be emailed to you when it is ready."
   end
@@ -65,7 +65,7 @@ class Admin::ReportsController < AdminController
 
     report = Reports::Staffing.new(start_year, end_year)
 
-    ReportsMailer.delay.send_report(current_user, report)
+    ReportsMailer.send_report(current_user, report).deliver_later
 
     redirect_to admin_reports_path, notice: "The staffing report will be emailed to you when it is ready."
   end
