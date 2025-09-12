@@ -36,11 +36,11 @@ FactoryBot.define do
     first_name            { Faker::Name.first_name }
     last_name             { Faker::Name.last_name  }
     email                 { Faker::Internet.email  }
-    phone_number          { '12345' }
+    phone_number          { "12345" }
     password              { :random_password }
     password_confirmation { password }
     consented             { 5.day.ago.to_fs(:db) }
-  
+
     factory :member do
       after(:create) do |user, _evaluator|
         user.add_role :member
@@ -54,7 +54,7 @@ FactoryBot.define do
     factory :committee do
       after(:create) do |user, _evaluator|
         user.add_role :member
-        user.add_role 'Committee'
+        user.add_role "Committee"
       end
     end
 

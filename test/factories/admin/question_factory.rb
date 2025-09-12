@@ -18,10 +18,10 @@ FactoryBot.define do
     association :questionable, factory: :questionnaire
 
     question_text { generate(:random_text) }
-    response_type { ['Short Text', 'Long Text', 'Number', 'Yes/No', 'File'].sample }
+    response_type { [ "Short Text", "Long Text", "Number", "Yes/No", "File" ].sample }
 
     transient do
-      answered { [true, false].sample }
+      answered { [ true, false ].sample }
     end
 
     after(:create) do |question, evaluator|

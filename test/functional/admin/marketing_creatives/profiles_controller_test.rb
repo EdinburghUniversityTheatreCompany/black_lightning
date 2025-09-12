@@ -1,4 +1,4 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::TestCase
   setup do
@@ -8,14 +8,14 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     @profile = FactoryBot.create(:marketing_creatives_profile)
   end
 
-  test 'should get index' do
+  test "should get index" do
     get :index
 
     assert_response :success
     assert_not_nil assigns(:profiles)
   end
 
-  test 'should get show' do
+  test "should get show" do
     # To check there are no render syntax errors.
     FactoryBot.create(:marketing_creatives_category_info, profile: @profile)
 
@@ -23,36 +23,36 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_response :success
   end
 
-  test 'random people can see approved status only when not approved' do
+  test "random people can see approved status only when not approved" do
     committee = sign_in_as_committee
 
     @profile.update_attribute(:approved, false)
 
     get :show, params: { id: @profile }
 
-    assert_includes response.body, '<b>Approved:</b>'
+    assert_includes response.body, "<b>Approved:</b>"
   end
 
-  test 'random people cannot see the approved status when approved' do
+  test "random people cannot see the approved status when approved" do
     sign_in_as_committee
 
     @profile.update_attribute(:approved, true)
 
     get :show, params: { id: @profile }
 
-    assert_not_includes response.body, '<b>Approved:</b>'
+    assert_not_includes response.body, "<b>Approved:</b>"
   end
 
-  test 'people who can reject can always see the approved state' do
+  test "people who can reject can always see the approved state" do
     @profile.update_attribute(:approved, true)
 
     get :show, params: { id: @profile }
     assert_response :success
 
-    assert_includes response.body, '<b>Approved:</b>'
+    assert_includes response.body, "<b>Approved:</b>"
   end
 
-  test 'people without manage permission cannot see ID and user' do
+  test "people without manage permission cannot see ID and user" do
     sign_in_as_committee
 
     @profile.update_attribute(:user, users(:user))
@@ -60,32 +60,32 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     get :show, params: { id: @profile }
     assert_response :success
 
-    assert_not_includes response.body, '<b>ID:</b>'
-    assert_not_includes response.body, '<b>User:</b>'
+    assert_not_includes response.body, "<b>ID:</b>"
+    assert_not_includes response.body, "<b>User:</b>"
   end
 
-  test 'people with manage permission can see ID and user' do
+  test "people with manage permission can see ID and user" do
     @profile.update_attribute(:user, users(:user))
 
     get :show, params: { id: @profile }
 
-    assert_includes response.body, '<b>ID:</b>'
-    assert_includes response.body, '<b>User:</b>'
+    assert_includes response.body, "<b>ID:</b>"
+    assert_includes response.body, "<b>User:</b>"
   end
 
-  test 'should get new' do
+  test "should get new" do
     get :new
     assert_response :success
   end
 
-  test 'should get sign_up' do
+  test "should get sign_up" do
     get :sign_up
     assert_response :success
 
     assert_not assigns(:profile).persisted?
   end
 
-  test 'should not get sign up if the user already has a profile' do
+  test "should not get sign up if the user already has a profile" do
     @profile.update_attribute(:user, @admin)
 
     get :sign_up
@@ -95,14 +95,14 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_not_nil flash[:error]
   end
 
-  test 'should create profile without manage' do
+  test "should create profile without manage" do
     committee = sign_in_as_committee
 
     # Check that the approved setting is set to false.
     attributes = FactoryBot.attributes_for(:marketing_creatives_profile)
     attributes[:approved] = true
 
-    assert_difference('MarketingCreatives::Profile.count') do
+    assert_difference("MarketingCreatives::Profile.count") do
       post :create, params: { marketing_creatives_profile: attributes }
     end
 
@@ -112,14 +112,14 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_redirected_to admin_marketing_creatives_profile_path(assigns(:profile))
   end
 
-  test 'should not create if the user already has a profile' do
+  test "should not create if the user already has a profile" do
     committee = sign_in_as_committee
-  
+
     @profile.update_attribute(:user, committee)
 
     attributes = FactoryBot.attributes_for(:marketing_creatives_profile)
 
-    assert_no_difference('MarketingCreatives::Profile.count') do
+    assert_no_difference("MarketingCreatives::Profile.count") do
       post :create, params: { marketing_creatives_profile: attributes }
     end
 
@@ -128,12 +128,12 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_not_nil flash[:error]
   end
 
-  test 'should create if the user has a profile but can manage' do
+  test "should create if the user has a profile but can manage" do
     @profile.update_attribute(:user, @admin)
 
     attributes = FactoryBot.attributes_for(:marketing_creatives_profile)
 
-    assert_difference('MarketingCreatives::Profile.count') do
+    assert_difference("MarketingCreatives::Profile.count") do
       post :create, params: { marketing_creatives_profile: attributes }
     end
 
@@ -142,23 +142,23 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_nil flash[:error]
   end
 
-  test 'should not create invalid profile' do
+  test "should not create invalid profile" do
     attributes = FactoryBot.attributes_for(:marketing_creatives_profile)
-    attributes[:name] = nil 
+    attributes[:name] = nil
 
-    assert_no_difference('MarketingCreatives::Profile.count') do
+    assert_no_difference("MarketingCreatives::Profile.count") do
       post :create, params: { marketing_creatives_profile: attributes }
     end
 
     assert_response :unprocessable_entity
   end
 
-  test 'should get edit' do
+  test "should get edit" do
     get :edit, params: { id: @profile }
     assert_response :success
   end
 
-  test 'should not show user field if the user cannot manage' do
+  test "should not show user field if the user cannot manage" do
     committee = sign_in_as_committee
 
     # This way we don't have to give committee permission to edit in the fixtures.
@@ -170,13 +170,13 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_not_includes response.body, 'id="marketing_creatives_profile_user_id"'
   end
 
-  test 'should show user field if the user can manage' do
+  test "should show user field if the user can manage" do
     get :edit, params: { id: @profile }
 
     assert_includes response.body, 'id="marketing_creatives_profile_user_id"'
   end
 
-  test 'should update profile' do
+  test "should update profile" do
     attributes = FactoryBot.attributes_for(:marketing_creatives_profile)
 
     put :update, params: { id: @profile, marketing_creatives_profile: attributes }
@@ -184,37 +184,37 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert attributes[:name], assigns(:profile).name
     assert_redirected_to admin_marketing_creatives_profile_path(@profile)
   end
-  
-  test 'should not update invalid profile' do
+
+  test "should not update invalid profile" do
     attributes = FactoryBot.attributes_for(:marketing_creatives_profile)
-    attributes[:about] = nil 
+    attributes[:about] = nil
 
     put :update, params: { id: @profile, marketing_creatives_profile: attributes }
 
     assert_response :unprocessable_entity
   end
 
-  test 'should destroy profile' do
+  test "should destroy profile" do
     @profile.category_infos.clear
 
-    assert_difference('MarketingCreatives::Profile.count', -1) do
+    assert_difference("MarketingCreatives::Profile.count", -1) do
       delete :destroy, params: { id: @profile }
     end
 
     assert_redirected_to admin_marketing_creatives_profiles_path
   end
 
-  test 'should not destroy profile with attached infos' do
+  test "should not destroy profile with attached infos" do
     category_info = FactoryBot.create(:marketing_creatives_category_info, profile: @profile)
 
-    assert_no_difference('MarketingCreatives::Profile.count') do
+    assert_no_difference("MarketingCreatives::Profile.count") do
       delete :destroy, params: { id: @profile }
     end
 
     assert_redirected_to admin_marketing_creatives_profile_path(@profile)
   end
 
-  test 'should approve' do
+  test "should approve" do
     @profile.update_attribute(:approved, false)
 
     put :approve, params: { id: @profile }
@@ -224,7 +224,7 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_redirected_to admin_marketing_creatives_profile_path(@profile)
   end
 
-  test 'should reject' do
+  test "should reject" do
     @profile.update_attribute(:approved, true)
 
     put :reject, params: { id: @profile }
@@ -234,13 +234,13 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     assert_redirected_to admin_marketing_creatives_profile_path(@profile)
   end
 
-  private 
+  private
 
   def sign_in_as_committee
     sign_out @admin
     committee = users(:committee)
     sign_in committee
 
-    return committee
+    committee
   end
 end

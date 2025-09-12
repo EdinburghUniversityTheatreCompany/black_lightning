@@ -69,7 +69,7 @@ class Admin::Proposals::ProposalsController < AdminController
     authorize! :create, @proposal
 
     # Set the default status.
-    @proposal.status = 'awaiting_approval'
+    @proposal.status = "awaiting_approval"
 
     super
   end
@@ -101,7 +101,7 @@ class Admin::Proposals::ProposalsController < AdminController
   ##
   def approve
     if @proposal.awaiting_approval?
-      @proposal.update!(status: 'approved')
+      @proposal.update!(status: "approved")
       helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as approved.")
     else
       helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently awaiting approval.")
@@ -120,7 +120,7 @@ class Admin::Proposals::ProposalsController < AdminController
   ##
   def reject
     if @proposal.awaiting_approval?
-      @proposal.update!(status: 'rejected')
+      @proposal.update!(status: "rejected")
       helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as rejected.")
     else
       helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently awaiting approval.")
@@ -163,7 +163,7 @@ class Admin::Proposals::ProposalsController < AdminController
   def call_closed_message(call)
     helpers.append_to_flash(:error, "Sorry. The submission deadline for #{call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call.")
     redirect_to admin_proposals_call_proposals_path(call)
-    return
+    nil
   end
 
   def mail_team_members(current_team_members, previous_team_member_ids, new)
@@ -178,7 +178,7 @@ class Admin::Proposals::ProposalsController < AdminController
       :proposal_text, :publicity_text, :show_title, :late, :status, :call, :call_id,
       { answers_attributes: [
           :id, :_destroy, :answer, :question_id,
-          { attachments_attributes: [:id, :_destroy, :name, :file, :access_level, { attachment_tag_ids: [] }] }
+          { attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, { attachment_tag_ids: [] } ] }
         ],
         team_members_attributes: %I[id _destroy position user user_id proposal proposal_id] }
     ]
@@ -197,7 +197,7 @@ class Admin::Proposals::ProposalsController < AdminController
     mail_team_members(@proposal.team_members, [], true)
 
     # If the current user is not on the proposal (silly, they forgot to add themselves), add them with the position of proposer.
-    TeamMember.create(position: 'Proposer', user: current_user, teamwork: @proposal) unless @proposal.users.include?(current_user)
+    TeamMember.create(position: "Proposer", user: current_user, teamwork: @proposal) unless @proposal.users.include?(current_user)
 
     super
   end
@@ -219,6 +219,6 @@ class Admin::Proposals::ProposalsController < AdminController
 
   # Only exists in admin form, and is in the admin namespace so does not need :admin prepended.
   def instance_url_hash(instance)
-    return instance
+    instance
   end
 end

@@ -27,15 +27,15 @@ FactoryBot.define do
 
     answer do
       case response_type
-        when 'Short Text'
+      when "Short Text"
           generate(:random_string)
-        when 'Long Text'
+      when "Long Text"
           generate(:random_text)
-        when 'Number'
+      when "Number"
           Random.new.rand(500)
-        when 'Yes/No'
-          %w(Yes No).sample
-        when 'File'
+      when "Yes/No"
+          %w[Yes No].sample
+      when "File"
       end
     end
 

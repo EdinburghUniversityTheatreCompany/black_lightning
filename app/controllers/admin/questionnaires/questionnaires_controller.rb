@@ -29,7 +29,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     set_create_form_parameters
 
     if @events_collection.empty?
-      flash[:error] = 'There are no future events, so it is not possible to add a questionnaire at the moment.'
+      flash[:error] = "There are no future events, so it is not possible to add a questionnaire at the moment."
 
       respond_to do |format|
         format.html { redirect_to Admin::Questionnaires::Questionnaire }
@@ -71,14 +71,14 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   # PUT/PATCH /admin/questionnaires/questionnaire/1/answer
   #
   # PUT/PATCH /admin/questionnaires/questionnaire/1/answer.json
-  ## 
+  ##
   def set_answers
     respond_to do |format|
       if @questionnaire.update(answer_params)
-        helpers.append_to_flash(:success, 'The answers have been sucessfully submitted.')
+        helpers.append_to_flash(:success, "The answers have been sucessfully submitted.")
 
         # Send an email to the listed notify_emails that the questionnaire has been updated.
-        if params[:notify] == '1'
+        if params[:notify] == "1"
           @questionnaire.notify_emails.each do |email|
             QuestionnairesMailer.notify(@questionnaire, current_user, email).deliver_later
           end
@@ -87,7 +87,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
         format.html { redirect_to @questionnaire }
         # format.json { head :no_content }
       else
-        format.html { render 'answer', status: :unprocessable_entity }
+        format.html { render "answer", status: :unprocessable_entity }
         # format.json { render json: @questionnaire.errors, status: :unprocessable_entity }
       end
     end
@@ -101,7 +101,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     resource_params.permit(
       answers_attributes: [
         :id, :_destroy, :answer, :question_id,
-        attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []]
+        attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, attachment_tag_ids: [] ]
       ]
     )
   end
@@ -109,8 +109,8 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   def set_create_form_parameters
     @event = Event.where(id: params[:event_id]).first
     events = Event.future.to_a
-    events += [@event] unless @event.nil?
-    @events_collection = events.collect { |event| [event.name, event.id] }
+    events += [ @event ] unless @event.nil?
+    @events_collection = events.collect { |event| [ event.name, event.id ] }
   end
 
   ##
@@ -122,19 +122,19 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   end
 
   def permitted_create_params
-    [:event_id] + permitted_update_params
+    [ :event_id ] + permitted_update_params
   end
 
   def permitted_update_params
-    [:name, questions_attributes: [:id, :_destroy, :question_text, :response_type], notify_emails_attributes: [:id, :_destroy, :email]]
+    [ :name, questions_attributes: [ :id, :_destroy, :question_text, :response_type ], notify_emails_attributes: [ :id, :_destroy, :email ] ]
   end
 
   def includes_args
-    [:event]
+    [ :event ]
   end
 
   def order_args
-    ['event.end_date DESC']
+    [ "event.end_date DESC" ]
   end
 
   def load_index_resources
@@ -148,7 +148,7 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
     q.event_end_date_gteq = helpers.start_of_term if @show_current_term_only
     q.event_start_date_lteq = helpers.end_of_term if @show_current_term_only
 
-    return q
+    q
   end
 
   def should_paginate
@@ -160,6 +160,6 @@ class Admin::Questionnaires::QuestionnairesController < AdminController
   end
 
   def edit_title
-    "Edit Questionnaire for #{@questionnaire.event.name}" 
+    "Edit Questionnaire for #{@questionnaire.event.name}"
   end
 end

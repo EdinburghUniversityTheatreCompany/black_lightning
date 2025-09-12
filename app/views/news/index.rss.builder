@@ -1,7 +1,7 @@
-#with thanks to http://techoctave.com/c7/posts/32-create-an-rss-feed-in-rails
+# with thanks to http://techoctave.com/c7/posts/32-create-an-rss-feed-in-rails
 
-xml.instruct! :xml, :version => "1.0"
-xml.rss :version => "2.0" do
+xml.instruct! :xml, version: "1.0"
+xml.rss version: "2.0" do
   xml.channel do
     xml.title "Bedlam Theatre"
     xml.description "Public news RSS feed."

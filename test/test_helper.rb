@@ -1,29 +1,29 @@
-require 'simplecov'
-require 'simplecov-rcov'
+require "simplecov"
+require "simplecov-rcov"
 
 SimpleCov.formatter = SimpleCov::Formatter::RcovFormatter
-SimpleCov.command_name 'MiniTest'
+SimpleCov.command_name "MiniTest"
 
 SimpleCov.start do
-  'rails'
-  add_filter '/test/'
-  add_filter '/config/'
+  "rails"
+  add_filter "/test/"
+  add_filter "/config/"
   enable_coverage :branch
 end
 
-require 'html_acceptance'
+require "html_acceptance"
 
-ENV['RAILS_ENV'] = 'test'
+ENV["RAILS_ENV"] = "test"
 
-require File.expand_path('../../config/environment', __FILE__)
-require 'rails/test_help'
+require File.expand_path("../../config/environment", __FILE__)
+require "rails/test_help"
 
 # Turn off delayed jobs to test mailer
 Delayed::Worker.delay_jobs = false
 
 class ActiveSupport::TestCase
   include ActionMailer::TestHelper
-  
+
   # Setup all fixtures in test/fixtures/*.(yml|csv) for all tests in alphabetical order.
   #
   # Note: You'll currently still have to declare fixtures explicitly in integration tests
@@ -31,8 +31,8 @@ class ActiveSupport::TestCase
   fixtures :all
 
   teardown do
-    FileUtils.rm_rf(Rails.root.join('tmp', 'storage'))
-    if ENV['VALIDATE']
+    FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
+    if ENV["VALIDATE"]
       validate_html
     end
   end
@@ -42,10 +42,10 @@ class ActiveSupport::TestCase
   # https://github.com/w3c/tidy-html5
   def validate_html
     return unless defined? response
-    return unless response.content_type == 'text/html'
+    return unless response.content_type == "text/html"
     return if response.status == 302
 
-    validation_dir = Rails.root.join 'tmp/validation'
+    validation_dir = Rails.root.join "tmp/validation"
     Dir.mkdir(validation_dir) unless File.exist?(validation_dir)
     acceptance = HTMLAcceptance.new(validation_dir, ignore_proprietary: true)
 
@@ -59,6 +59,6 @@ class ActionController::TestCase
   include ActionMailer::TestHelper
 
   teardown do
-    FileUtils.rm_rf(Rails.root.join('tmp', 'storage'))
+    FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
   end
 end

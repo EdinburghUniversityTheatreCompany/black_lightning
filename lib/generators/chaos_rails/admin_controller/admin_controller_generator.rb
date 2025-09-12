@@ -1,23 +1,23 @@
-require 'generators/chaos_rails/resource_helpers'
+require "generators/chaos_rails/resource_helpers"
 
 class ChaosRails::AdminControllerGenerator < Rails::Generators::NamedBase
   include Rails::Generators::ResourceHelpers
   include ChaosRails::ResourceHelpers
 
-  source_root File.expand_path('../templates', __FILE__)
+  source_root File.expand_path("../templates", __FILE__)
 
-  argument :attributes, type: :array, default: [], banner: 'field:type field:type'
+  argument :attributes, type: :array, default: [], banner: "field:type field:type"
 
   def create_controller_files
-    template_file = 'admin_controller.rb'
-    template template_file, File.join('app/controllers/admin', controller_class_path, "#{controller_file_name}_controller.rb")
+    template_file = "admin_controller.rb"
+    template template_file, File.join("app/controllers/admin", controller_class_path, "#{controller_file_name}_controller.rb")
   end
 
   def add_resource_route
     namespace = regular_class_path
 
-    unless namespace.first == 'admin'
-      namespace.insert(0, 'admin')
+    unless namespace.first == "admin"
+      namespace.insert(0, "admin")
     end
 
     route "resources :#{file_name.pluralize}", namespace: namespace
@@ -35,7 +35,7 @@ class ChaosRails::AdminControllerGenerator < Rails::Generators::NamedBase
     attachments, others = attributes_names.partition { |name| attachments?(name) }
     params = others.map { |name| ":#{name}" }
     params += attachments.map { |name| "#{name}: []" }
-    params.join(', ')
+    params.join(", ")
   end
 
   def attachments?(name)

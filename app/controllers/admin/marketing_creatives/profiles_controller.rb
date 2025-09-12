@@ -11,8 +11,8 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
   def sign_up
     return if check_if_the_current_user_has_a_profile
 
-    @title = 'Sign-Up As Marketing Creative'
-  
+    @title = "Sign-Up As Marketing Creative"
+
     # If you don't specify this, it will try to load a profile with ID nothing.
     @profile = MarketingCreatives::Profile.new
 
@@ -46,7 +46,7 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
     @profile.update_attribute(:approved, false)
 
     helpers.append_to_flash(:success, "#{helpers.get_object_name(@profile, include_class_name: true, include_the: true)} has been rejected and is now no longer visible.")
-    
+
     redirect_to admin_marketing_creatives_profile_path(@profile)
   end
 
@@ -54,13 +54,13 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
 
   def check_if_the_current_user_has_a_profile
     if current_user.marketing_creatives_profile.present?
-      helpers.append_to_flash(:error, 'You have already signed up for a Marketing Creative profile, so you cannot sign up for another one.')
+      helpers.append_to_flash(:error, "You have already signed up for a Marketing Creative profile, so you cannot sign up for another one.")
       redirect_to admin_marketing_creatives_profile_path(current_user.marketing_creatives_profile)
 
       return true
     end
 
-    return false
+    false
   end
 
   # Generic Controller Overrides
@@ -73,20 +73,20 @@ class Admin::MarketingCreatives::ProfilesController < AdminController
     params = [ :name, :about, :contact,
       category_infos_attributes: [
         :id, :_destroy, :category_id, :image, :description,
-        pictures_attributes: [:id, :_destroy, :description, :image]
+        pictures_attributes: [ :id, :_destroy, :description, :image ]
       ]
     ]
 
-    params += [:user_id] if can?(:manage, MarketingCreatives::Profile)
+    params += [ :user_id ] if can?(:manage, MarketingCreatives::Profile)
 
-    return params
+    params
   end
 
   def includes_args
-    [:user, :categories, :category_infos]
+    [ :user, :categories, :category_infos ]
   end
 
   def order_args
-    ['name']
+    [ "name" ]
   end
 end

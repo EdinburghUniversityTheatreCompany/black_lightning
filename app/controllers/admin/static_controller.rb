@@ -3,9 +3,9 @@
 ##
 class Admin::StaticController < AdminController
   def committee
-    unless current_user.present? && current_user.has_role?('Committee')
-      raise(CanCan::AccessDenied, 'You are not on committee')
-      return
+    unless current_user.present? && current_user.has_role?("Committee")
+      raise(CanCan::AccessDenied, "You are not on committee")
+      nil
     end
   end
 
@@ -16,6 +16,6 @@ class Admin::StaticController < AdminController
   def error
     Rails.logger.error "ADMIN: Could not find the page at #{request.fullpath}"
 
-    raise(ActionController::RoutingError.new('This page could not be found.'))
+    raise(ActionController::RoutingError.new("This page could not be found."))
   end
 end

@@ -8,13 +8,13 @@ class Tasks::Logic::Migrations
       counter += 1
     end
 
-    return counter
+    counter
   end
 
   # :nocov:
   def self.venue_image
     model = Venue
-    attachments = ['image']
+    attachments = [ "image" ]
 
     migrate_from_paperclip_to_active_storage(model, attachments)
   end
@@ -44,10 +44,10 @@ class Tasks::Logic::Migrations
           self.copy_file_from_paperclip_to_storage(attachment, blob, instance)
 
           ActiveStorage::Attachment.create(
-            name: attachment, 
-            record_type: model.name, 
-            record_id: instance.id, 
-            blob_id: blob.id, 
+            name: attachment,
+            record_type: model.name,
+            record_id: instance.id,
+            blob_id: blob.id,
             created_at: instance.updated_at.iso8601
           )
         end
@@ -59,7 +59,7 @@ class Tasks::Logic::Migrations
   end
 
   private
-  
+
   def self.key(instance, attachment)
     SecureRandom.uuid
   end
@@ -81,7 +81,7 @@ class Tasks::Logic::Migrations
     )
 
     destination = File.join(destination_directory, blob.key)
-  
+
     FileUtils.mkdir_p(destination_directory)
     puts "Copying #{source} to #{destination}"
     FileUtils.cp(source, destination)

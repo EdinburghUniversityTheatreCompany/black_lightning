@@ -9,10 +9,10 @@ class Admin::PictureTagsController < AdminController
   private
 
   def permitted_params
-    [:name, :description]
+    [ :name, :description ]
   end
 
   def order_args
-    ['name']
+    [ "name" ]
   end
 end

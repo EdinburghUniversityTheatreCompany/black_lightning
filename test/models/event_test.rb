@@ -30,7 +30,7 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class EventTest < ActionView::TestCase
   include TimeHelper
@@ -39,18 +39,18 @@ class EventTest < ActionView::TestCase
     @event = FactoryBot.create(:event)
   end
 
-  test 'last_event' do
+  test "last_event" do
     old_season = FactoryBot.create(:show, start_date: @event.start_date.advance(years: -3))
     last_workshop = FactoryBot.create(:workshop, start_date: Date.current.advance(weeks: -3), is_public: true)
     assert_equal last_workshop, Event.last_event
     assert_equal last_workshop, Workshop.last_event
   end
 
-  test 'selection_collection' do
-    assert_equal [[@event.name, @event.id]], Event.selection_collection
+  test "selection_collection" do
+    assert_equal [ [ @event.name, @event.id ] ], Event.selection_collection
   end
 
-  test 'this_academic_year' do
+  test "this_academic_year" do
     this_year_show = FactoryBot.create(:show, start_date: Date.current)
     old_show = FactoryBot.create(:show, start_date: @event.start_date.advance(years: -3))
     future_workshop = FactoryBot.create(:workshop, start_date: Date.current.advance(years: 1))
@@ -65,28 +65,28 @@ class EventTest < ActionView::TestCase
     assert_not future_workshop.this_academic_year?
   end
 
-  test 'thumb_image_url' do
+  test "thumb_image_url" do
     event = FactoryBot.create(:event, attach_image: false)
-    assert_includes event.thumb_image_url, 'active_storage_default-events-'
+    assert_includes event.thumb_image_url, "active_storage_default-events-"
   end
 
-  test 'slideshow_image_url' do
+  test "slideshow_image_url" do
     event = FactoryBot.create(:event, attach_image: false)
-    assert_includes event.slideshow_image_url, 'active_storage_default-events-'
+    assert_includes event.slideshow_image_url, "active_storage_default-events-"
   end
 
-  test 'date_range' do
+  test "date_range" do
     assert_equal time_range_string(@event.start_date, @event.end_date, true), @event.date_range(true)
   end
 
-  test 'simultaneous seasons' do
+  test "simultaneous seasons" do
     season = FactoryBot.create(:season)
     assert_includes season.simultaneous_seasons, season
     show = FactoryBot.create(:show, start_date: season.end_date.advance(days: -1))
     assert_includes show.simultaneous_seasons, season
   end
 
-  test 'possible proposals for new event and existing event' do
+  test "possible proposals for new event and existing event" do
     show = FactoryBot.build(:workshop, attach_proposal: false)
 
     long_ago_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(years: -5), status: :successful)
@@ -110,7 +110,7 @@ class EventTest < ActionView::TestCase
     assert_not_includes show.possible_proposals, unsuccessful_proposal
   end
 
-  test 'possible proposals for existing event with proposal attached' do
+  test "possible proposals for existing event with proposal attached" do
     show = FactoryBot.create(:show, attach_proposal: false)
 
     current_proposal = FactoryBot.create(:proposal, submission_deadline: show.start_date.advance(days: -5), status: :successful)
@@ -122,137 +122,137 @@ class EventTest < ActionView::TestCase
     assert_includes show.possible_proposals, far_future_proposal
   end
 
-  test 'as_json' do
+  test "as_json" do
     @event.update!(venue: venues(:one), season: FactoryBot.create(:season))
 
-    json = @event.as_json(include: [:season])
+    json = @event.as_json(include: [ :season ])
 
     assert json.is_a? Hash
-    assert json.key? 'venue'
-    assert json.key? 'season'
+    assert json.key? "venue"
+    assert json.key? "season"
   end
 
-  test 'sets default members-only text field' do
+  test "sets default members-only text field" do
     event = Event.new
 
-    assert_equal 'This is the default text for the members-only text field.', event.members_only_text
+    assert_equal "This is the default text for the members-only text field.", event.members_only_text
   end
 
-  test 'pretix slug override works' do
-    @event.slug = 'foo'
-    assert_equal 'foo', @event.pretix_slug
+  test "pretix slug override works" do
+    @event.slug = "foo"
+    assert_equal "foo", @event.pretix_slug
 
-    @event.pretix_slug_override = 'bar'
-    assert_equal 'bar', @event.pretix_slug
+    @event.pretix_slug_override = "bar"
+    assert_equal "bar", @event.pretix_slug
   end
 
-  test 'get author name list' do
-    show_1 = FactoryBot.create(:show, author: 'Author 2')
-    show_2 = FactoryBot.create(:show, author: 'Author 1')
+  test "get author name list" do
+    show_1 = FactoryBot.create(:show, author: "Author 2")
+    show_2 = FactoryBot.create(:show, author: "Author 1")
 
-    assert_equal(['Author 1', 'Author 2'], Event.author_name_list)
+    assert_equal([ "Author 1", "Author 2" ], Event.author_name_list)
 
     # Updating an author should clear the cache and return the new list.
-    show_1.update!(author: 'Author 3')
+    show_1.update!(author: "Author 3")
 
-    assert_equal(['Author 1', 'Author 3'], Event.author_name_list)
+    assert_equal([ "Author 1", "Author 3" ], Event.author_name_list)
   end
 
-  test 'automatically generates slug from name if blank' do
-    event = FactoryBot.build(:event, name: 'Test Event Name', slug: '')
+  test "automatically generates slug from name if blank" do
+    event = FactoryBot.build(:event, name: "Test Event Name", slug: "")
     assert event.valid?
-    assert_equal 'test-event-name', event.slug
+    assert_equal "test-event-name", event.slug
   end
 
-  test 'updates slug when name changes and slug was auto-generated' do
-    event = FactoryBot.create(:event, name: 'Original Name')
+  test "updates slug when name changes and slug was auto-generated" do
+    event = FactoryBot.create(:event, name: "Original Name")
     original_slug = event.slug
 
-    event.name = 'New Event Name'
+    event.name = "New Event Name"
     event.valid?
     assert_not_equal original_slug, event.slug
-    assert_equal 'new-event-name', event.slug
+    assert_equal "new-event-name", event.slug
   end
 
-  test 'does not update slug when name changes if slug was manually set' do
-    event = FactoryBot.create(:event, name: 'Original Name', slug: 'custom-slug')
-    
-    event.name = 'New Event Name'
+  test "does not update slug when name changes if slug was manually set" do
+    event = FactoryBot.create(:event, name: "Original Name", slug: "custom-slug")
+
+    event.name = "New Event Name"
     event.valid?
-    assert_equal 'custom-slug', event.slug
+    assert_equal "custom-slug", event.slug
   end
 
-  test 'generates unique slugs when duplicates would occur' do
-    event1 = FactoryBot.create(:event, name: 'Test Event')
-    event2 = FactoryBot.build(:event, name: 'Test Event', slug: '')
-    
+  test "generates unique slugs when duplicates would occur" do
+    event1 = FactoryBot.create(:event, name: "Test Event")
+    event2 = FactoryBot.build(:event, name: "Test Event", slug: "")
+
     assert event2.valid?
-    assert_equal 'test-event', event1.slug
-    assert_equal 'test-event-1', event2.slug
+    assert_equal "test-event", event1.slug
+    assert_equal "test-event-1", event2.slug
   end
 
-  test 'handles special characters in slug generation' do
-    event = FactoryBot.build(:event, name: 'Event with "Quotes" & Symbols!', slug: '')
+  test "handles special characters in slug generation" do
+    event = FactoryBot.build(:event, name: 'Event with "Quotes" & Symbols!', slug: "")
     assert event.valid?
-    assert_equal 'event-with-quotes-and-symbols', event.slug
+    assert_equal "event-with-quotes-and-symbols", event.slug
   end
 
-  test 'handles accented characters in slug generation' do
-    event = FactoryBot.build(:event, name: 'Événement spéciàl', slug: '')
+  test "handles accented characters in slug generation" do
+    event = FactoryBot.build(:event, name: "Événement spéciàl", slug: "")
     assert event.valid?
-    assert_equal 'evenement-special', event.slug
+    assert_equal "evenement-special", event.slug
   end
 
-  test 'slug uniqueness validation works case-insensitively' do
-    FactoryBot.create(:event, slug: 'test-slug')
-    duplicate_event = FactoryBot.build(:event, slug: 'TEST-SLUG')
-    
+  test "slug uniqueness validation works case-insensitively" do
+    FactoryBot.create(:event, slug: "test-slug")
+    duplicate_event = FactoryBot.build(:event, slug: "TEST-SLUG")
+
     assert_not duplicate_event.valid?
-    assert duplicate_event.errors[:slug].any? { |error| error.include?('already taken') }
+    assert duplicate_event.errors[:slug].any? { |error| error.include?("already taken") }
   end
 
-  test 'validates end_date is after or equal to start_date' do
+  test "validates end_date is after or equal to start_date" do
     event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current + 1.day)
     assert event.valid?
   end
 
-  test 'validates end_date can equal start_date' do
+  test "validates end_date can equal start_date" do
     event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current)
     assert event.valid?
   end
 
-  test 'invalidates when end_date is before start_date' do
+  test "invalidates when end_date is before start_date" do
     event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current - 1.day)
     assert_not event.valid?
-    assert_includes event.errors[:end_date], 'must be after or equal to start date'
+    assert_includes event.errors[:end_date], "must be after or equal to start date"
   end
 
-  test 'date range validation works with nil dates' do
+  test "date range validation works with nil dates" do
     event = FactoryBot.build(:event, start_date: nil, end_date: Date.current)
     assert_not event.valid?
     assert_includes event.errors[:start_date], "must not be blank."
-    assert_not_includes event.errors[:end_date], 'must be after or equal to start date'
+    assert_not_includes event.errors[:end_date], "must be after or equal to start date"
 
     event = FactoryBot.build(:event, start_date: Date.current, end_date: nil)
     assert_not event.valid?
     assert_includes event.errors[:end_date], "must not be blank."
   end
 
-  test 'date range validation works for Show subclass' do
+  test "date range validation works for Show subclass" do
     show = FactoryBot.build(:show, start_date: Date.current, end_date: Date.current - 1.day)
     assert_not show.valid?
-    assert_includes show.errors[:end_date], 'must be after or equal to start date'
+    assert_includes show.errors[:end_date], "must be after or equal to start date"
   end
 
-  test 'date range validation works for Workshop subclass' do
+  test "date range validation works for Workshop subclass" do
     workshop = FactoryBot.build(:workshop, start_date: Date.current, end_date: Date.current - 1.day)
     assert_not workshop.valid?
-    assert_includes workshop.errors[:end_date], 'must be after or equal to start date'
+    assert_includes workshop.errors[:end_date], "must be after or equal to start date"
   end
 
-  test 'date range validation works for Season subclass' do
+  test "date range validation works for Season subclass" do
     season = FactoryBot.build(:season, start_date: Date.current, end_date: Date.current - 1.day)
     assert_not season.valid?
-    assert_includes season.errors[:end_date], 'must be after or equal to start date'
+    assert_includes season.errors[:end_date], "must be after or equal to start date"
   end
 end

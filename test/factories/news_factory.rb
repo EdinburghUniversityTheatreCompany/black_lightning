@@ -24,12 +24,12 @@
 FactoryBot.define do
   factory :news do
     title { generate(:random_string) }
-    slug  { title.gsub(/\s+/, '-').gsub(/[^a-zA-Z0-9\-]/, '').downcase.gsub(/\-{2,}/, '-') }
+    slug  { title.gsub(/\s+/, "-").gsub(/[^a-zA-Z0-9\-]/, "").downcase.gsub(/\-{2,}/, "-") }
 
     body  { generate(:random_text) }
 
     publish_date { generate(:random_date) }
-    show_public  { [true, false].sample }
+    show_public  { [ true, false ].sample }
 
     association :author, factory: :user
   end

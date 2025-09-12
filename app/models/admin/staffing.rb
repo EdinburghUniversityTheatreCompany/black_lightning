@@ -23,28 +23,28 @@
 #++
 class Admin::Staffing < ApplicationRecord
   validates :show_title, presence: true
-  validates :start_time, :end_time, presence: true, on: [:create, :update]
+  validates :start_time, :end_time, presence: true, on: [ :create, :update ]
 
   after_save     :update_reminder
   after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
   before_destroy :reminder_cleanup
 
-  has_many :staffing_jobs, as: :staffable, class_name: 'Admin::StaffingJob', dependent: :destroy
+  has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
 
   # Having this as a belongs_to feels wrong, but since the id of the job needs to be stored in the staffing it is necessary.
-  belongs_to :reminder_job, class_name: '::Delayed::Job', optional: true
+  belongs_to :reminder_job, class_name: "::Delayed::Job", optional: true
 
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
   acts_as_url :show_title, url_attribute: :slug, sync_url: true, allow_duplicates: true
 
-  normalizes :show_title, with: -> (value) { value&.strip }
+  normalizes :show_title, with: ->(value) { value&.strip }
 
-  default_scope -> { order('start_time ASC') }
+  default_scope -> { order("start_time ASC") }
 
-  scope :future, -> { where(['end_time >= ?', DateTime.current]) }
-  scope :past, -> { where(['end_time < ?', DateTime.current]) }
+  scope :future, -> { where([ "end_time >= ?", DateTime.current ]) }
+  scope :past, -> { where([ "end_time < ?", DateTime.current ]) }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[start_time show_title reminder_job_id end_time counts_towards_debt slug]
@@ -108,7 +108,7 @@ class Admin::Staffing < ApplicationRecord
     if reminder_job.attempts > 0
       # Prevent the job from running more than once to prevent us spewing emails if there is an error.
       if reminder_job.last_error.nil?
-        raise ArgumentError, 'This reminder job has already been executed.'
+        raise ArgumentError, "This reminder job has already been executed."
       else
         # :nocov:
         raise reminder_job.last_error

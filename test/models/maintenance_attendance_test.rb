@@ -20,9 +20,9 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     @user = users(:member)
   end
 
-  test 'rematch debt if attendance is removed and there is a debt that is due later with linked attendance' do
+  test "rematch debt if attendance is removed and there is a debt that is due later with linked attendance" do
     # Set up a soon debt and far future debt with attendances.
-    # Once the attendance on the soonest debt is removed, the attendance from the future debt should swap over. 
+    # Once the attendance on the soonest debt is removed, the attendance from the future debt should swap over.
     # Middle should remain untouched.
     soonest_debt = FactoryBot.create(:maintenance_debt, user: @user, due_by: Date.current - 1, with_attendance: true)
     middle_debt = FactoryBot.create(:maintenance_debt, user: @user, due_by: Date.current, with_attendance: false)
@@ -39,7 +39,7 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_nil middle_debt.reload.maintenance_attendance
   end
 
-  test 'Match with unmatched attendance when debt is added' do
+  test "Match with unmatched attendance when debt is added" do
     # Create an attendance, then create a debt, and ensure they are matched.
     attendance = FactoryBot.create(:maintenance_attendance, user: @user)
     debt = FactoryBot.create(:maintenance_debt, with_attendance: false, user: @user)
@@ -47,7 +47,7 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_equal attendance, debt.reload.maintenance_attendance
   end
 
-  test 'Match with attendance from future debt when sooner debt is added' do 
+  test "Match with attendance from future debt when sooner debt is added" do
     # Create a future debt with an attendance
     future_debt = FactoryBot.create(:maintenance_debt, with_attendance: true, user: @user, due_by: Date.current + 2)
     to_be_transferred_attendance = future_debt.maintenance_attendance
@@ -60,11 +60,11 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_nil future_debt.reload.maintenance_attendance
   end
 
-  test 'match attendance from destroyed debt with soonest debt' do
+  test "match attendance from destroyed debt with soonest debt" do
     later_debt = FactoryBot.create(:maintenance_debt, with_attendance: false, user: @user, due_by: Date.current + 1)
     soonest_debt = FactoryBot.create(:maintenance_debt, with_attendance: false, user: @user, due_by: Date.current)
     debt_with_attendance = FactoryBot.create(:maintenance_debt, with_attendance: true, user: @user, due_by: Date.current - 1)
-    
+
     # Make sure the attendance has not cheekily aligned itself with a different debt.
     assert_not_nil debt_with_attendance.maintenance_attendance
 
@@ -78,7 +78,7 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
   end
 
   # In this test the debt_with_attendance is moved and the attendance should move away from it.
-  test 'Transfer attendance to sooner debt if due_by moves into the future' do
+  test "Transfer attendance to sooner debt if due_by moves into the future" do
     debt_with_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: true, due_by: Date.current)
     attendance = debt_with_attendance.maintenance_attendance
 
@@ -92,7 +92,7 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_equal attendance, debt_without_attendance.reload.maintenance_attendance
   end
 
-  test 'Do not transfer attendance if due date of a debt with attendance moves forward.' do
+  test "Do not transfer attendance if due date of a debt with attendance moves forward." do
     debt_with_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: true, due_by: Date.current)
     attendance = debt_with_attendance.maintenance_attendance
 
@@ -106,8 +106,8 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_equal attendance, debt_with_attendance.reload.maintenance_attendance
   end
 
-  # In this test, the debt without attendance is moved and the 
-  test 'Transfer attendance from later debt if due_by moves closer' do
+  # In this test, the debt without attendance is moved and the
+  test "Transfer attendance from later debt if due_by moves closer" do
     debt_with_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: true, due_by: Date.current)
     debt_without_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: false, due_by: Date.current + 2)
     attendance = debt_with_attendance.maintenance_attendance
@@ -121,8 +121,8 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_equal attendance, debt_without_attendance.reload.maintenance_attendance
     assert_nil debt_with_attendance.reload.maintenance_attendance
   end
-    
-  test 'Do not transfer if debt without attendance moves further into the future' do
+
+  test "Do not transfer if debt without attendance moves further into the future" do
     debt_with_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: true, due_by: Date.current)
     debt_without_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: false, due_by: Date.current + 2)
     attendance = debt_with_attendance.maintenance_attendance
@@ -135,7 +135,7 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_nil debt_without_attendance.reload.maintenance_attendance
   end
 
-  test 'find soonest debt when attendance is added' do
+  test "find soonest debt when attendance is added" do
     # Create two debts with different due dates.
     sooner_debt = FactoryBot.create(:maintenance_debt, user: @user, due_by: Date.current + 1)
     later_debt = FactoryBot.create(:maintenance_debt, user: @user, due_by: Date.current + 2)
@@ -145,21 +145,21 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     # Assert the maintenance matched to the sooner debt and not the later.
     assert_equal attendance.reload.maintenance_debt, sooner_debt
     assert_nil later_debt.reload.maintenance_attendance
-  end 
+  end
 
   ##
   # Failsafe tests
   ##
-  
+
   # Just test that this case works, and that it does not associate with an attendance from somewhere else.
   # If it does associate with a debt from somewhere else, that could break the other tests.
-  test 'Do not match with attendance when there are none available' do
+  test "Do not match with attendance when there are none available" do
     debt = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: false)
     assert_nil debt.maintenance_attendance
   end
-  
+
   # If this test fails, there might be some rogue maintenance debts.
-  test 'Free up attendance when maintenance debt is destroyed and there are no unmatched debts' do
+  test "Free up attendance when maintenance debt is destroyed and there are no unmatched debts" do
     debt_with_attendance = FactoryBot.create(:maintenance_debt, user: @user, with_attendance: true)
     attendance = debt_with_attendance.maintenance_attendance
 
@@ -170,14 +170,14 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_nil attendance.reload.maintenance_debt
   end
 
-  test 'only match with debt for the same user' do
+  test "only match with debt for the same user" do
     debt_for_user = FactoryBot.create(:maintenance_debt, user: @user, due_by: Date.current + 3, with_attendance: false)
-    
+
     # Earlier due so that it should want to match with this one if it does not take the user into account
     debt_for_other_user = FactoryBot.create(:maintenance_debt, due_by: Date.current + 1, with_attendance: false)
 
     attendance = FactoryBot.create(:maintenance_attendance, user: @user)
-    
+
     debt_for_user.reload
 
     assert_equal debt_for_user, attendance.reload.maintenance_debt
@@ -195,7 +195,7 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_nil debt_with_other_state.reload.maintenance_attendance
   end
 
-  test 'forgiving a debt should release the attendance' do
+  test "forgiving a debt should release the attendance" do
     debt = FactoryBot.create(:maintenance_debt, with_attendance: true)
     attendance = debt.maintenance_attendance
 
@@ -206,10 +206,10 @@ class MaintenanceAttendanceTest < ActiveSupport::TestCase
     assert_nil attendance.reload.maintenance_debt
   end
 
-  test 'converting a debt should release the attendance' do
+  test "converting a debt should release the attendance" do
     debt = FactoryBot.create(:maintenance_debt, with_attendance: true)
     attendance = debt.maintenance_attendance
-    
+
     assert_not_nil attendance
 
     debt.convert_to_staffing_debt

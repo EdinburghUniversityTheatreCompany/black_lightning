@@ -6,10 +6,10 @@ module Paperclip
   module Task
     def self.obtain_attachments(klass)
       klass = Paperclip.class_for(klass.to_s)
-      name = ENV['ATTACHMENT'] || ENV['attachment']
+      name = ENV["ATTACHMENT"] || ENV["attachment"]
       fail "Class #{klass.name} has no attachments specified" unless klass.respond_to?(:attachment_definitions)
       if !name.blank? && klass.attachment_definitions.keys.map(&:to_s).include?(name.to_s)
-        [name]
+        [ name ]
       else
         klass.attachment_definitions.keys
       end
@@ -20,7 +20,7 @@ end
 
 namespace :strays do
   # :nocov:
-  task :list, [:model] => :environment do |_t, args|
+  task :list, [ :model ] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
 
@@ -38,7 +38,7 @@ namespace :strays do
     end
   end
 
-  task :remove, [:model] => :environment do |_t, args|
+  task :remove, [ :model ] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
 
@@ -57,7 +57,7 @@ namespace :strays do
     end
   end
 
-  task :list_missing_files, [:model] => :environment do |_t, args|
+  task :list_missing_files, [ :model ] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
     attachments = Paperclip::Task.obtain_attachments(klass_name)
@@ -86,7 +86,7 @@ namespace :strays do
     end
   end
 
-  task :resolve_missing_files, [:model] => :environment do |_t, args|
+  task :resolve_missing_files, [ :model ] => :environment do |_t, args|
     klass_name = args[:model]
     klass = klass_name.constantize
     attachments = Paperclip::Task.obtain_attachments(klass_name)
@@ -120,4 +120,3 @@ namespace :strays do
   end
   # :nocov:
 end
-

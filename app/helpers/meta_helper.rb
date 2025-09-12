@@ -33,13 +33,13 @@ module MetaHelper
   ##
   def meta_tags(meta)
     meta = {} if meta.nil?
-    meta['og:description'] = meta[:description] if meta['og:description'].nil?
+    meta["og:description"] = meta[:description] if meta["og:description"].nil?
 
     @tags = []
 
     meta.each do |name, content|
-      type = 'name'
-      type = 'property' if name.to_s.starts_with?('og') || name.to_s.starts_with?('fb')
+      type = "name"
+      type = "property" if name.to_s.starts_with?("og") || name.to_s.starts_with?("fb")
 
       if content.is_a?(Array)
         content.each do |item|
@@ -50,6 +50,6 @@ module MetaHelper
       end
     end
 
-    return @tags.join "\n"
+    @tags.join "\n"
   end
 end

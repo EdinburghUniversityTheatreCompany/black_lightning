@@ -42,7 +42,7 @@ class Ability
     # :delete is not mapped to :destroy, that's done manually.
     # :manage -> every action
 
-    if user&.has_role?('Admin')
+    if user&.has_role?("Admin")
       ##############################################
       #              ADMIN PERMISSIONS             #
       ##############################################
@@ -53,8 +53,8 @@ class Ability
       # Even admins should not be able to read proposals before the submission deadline has been passed.
       cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
-      can [:update, :read, :delete], Admin::Proposals::Proposal, users: { id: user.id }
-      can [:index, :create], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
+      can [ :update, :read, :delete ], Admin::Proposals::Proposal, users: { id: user.id }
+      can [ :index, :create ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
       cannot :manage, Complaint
       can :create, Complaint
@@ -88,12 +88,12 @@ class Ability
     can :read, Opportunity, approved: true, expiry_date: Time.current..DateTime::Infinity.new
 
     # Guests can see all venues.
-    can [:read, :map], Venue
+    can [ :read, :map ], Venue
 
     # Guests can see public events, news, and user profiles.
     can :read, News, show_public: true
     can :read, Event, is_public: true
-   
+
     can :read, Review
 
     # Guests can see all Event Tags.
@@ -104,20 +104,20 @@ class Ability
 
     # Even though users should not be able to sign up when they have a profile, that authorisation is handled by the controller.
     # This way we can show a more appropriate error message.
-    can [:sign_up, :create], MarketingCreatives::Profile
+    can [ :sign_up, :create ], MarketingCreatives::Profile
     # Only people with explicit permission can do new. Create is an alias for new, so it has to be explicitly disallowed.
     cannot :new, MarketingCreatives::Profile
 
     # Everyone can create a complaint.
-    can [:create], Complaint
+    can [ :create ], Complaint
 
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
 
     can :show, Attachment, access_level: 2
     can :show, VideoLink, access_level: 2
-    can :show, Picture, access_level: 2 
-  
+    can :show, Picture, access_level: 2
+
     # Stop if the user is not logged in.
     return if user.nil?
 
@@ -138,9 +138,9 @@ class Ability
     # Show all proposals that an user is on, even if they are not approved / the submission deadline has not been reached.
     can :read, Admin::Proposals::Proposal, users: { id: user.id }
     # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
-    can :read, Admin::Proposals::Proposal, status: [:approved, :successful, :unsuccessful]
+    can :read, Admin::Proposals::Proposal, status: [ :approved, :successful, :unsuccessful ]
 
-    if user.has_role?('Proposal Checker') || user.has_role?('Committee')
+    if user.has_role?("Proposal Checker") || user.has_role?("Committee")
       # If the user is a proposal checker, they should be able to read any proposal after the submission deadline, no matter if they are approved, rejected, or awaiting, after the submission deadline.
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
 

@@ -16,7 +16,7 @@ class MaintenanceAttendance < ApplicationRecord
   belongs_to :user
   belongs_to :maintenance_session
 
-  has_one :maintenance_debt, class_name: 'Admin::MaintenanceDebt', dependent: :nullify
+  has_one :maintenance_debt, class_name: "Admin::MaintenanceDebt", dependent: :nullify
   delegate :date, to: :maintenance_session
 
   after_save :associate_with_debt
@@ -37,8 +37,8 @@ class MaintenanceAttendance < ApplicationRecord
 
   # Associates itself with the soonest upcoming Maintenance Debt
   def associate_with_debt(skip_check = false)
-    relevant_keys = previous_changes.keys.excluding('created_at', 'updated_at')
+    relevant_keys = previous_changes.keys.excluding("created_at", "updated_at")
 
-    user.reallocate_maintenance_debts if skip_check || relevant_keys != ['maintenance_debt_id']
+    user.reallocate_maintenance_debts if skip_check || relevant_keys != [ "maintenance_debt_id" ]
   end
 end

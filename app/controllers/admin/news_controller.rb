@@ -21,10 +21,10 @@ class Admin::NewsController < AdminController
   private
 
   def permitted_params
-    [:publish_date, :show_public, :slug, :title, :body, :image]
+    [ :publish_date, :show_public, :slug, :title, :body, :image ]
   end
 
   def order_args
-    ['publish_date DESC']
+    [ "publish_date DESC" ]
   end
 end

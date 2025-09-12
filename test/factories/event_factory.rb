@@ -39,9 +39,9 @@ FactoryBot.define do
     publicity_text { "And a publicity text for #{name}" }
     start_date   { generate(:random_date) }
     end_date     { start_date + 5.days }
-    is_public    { [true, false].sample }
-    pretix_shown { [true, false].sample }
-    pretix_view  { ['list', 'week','month'].sample}
+    is_public    { [ true, false ].sample }
+    pretix_shown { [ true, false ].sample }
+    pretix_view  { [ "list", "week", "month" ].sample }
 
     venue_id     { Venue.all.sample.id if venue.nil? }
 
@@ -50,12 +50,12 @@ FactoryBot.define do
       video_link_count { rand(3) }
       picture_count { rand(3) }
       attach_image { true }
-      attach_proposal { [true, false].sample }
+      attach_proposal { [ true, false ].sample }
       tag_count { 1 }
       review_count { 3 }
     end
 
-    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') if attach_image }
+    image { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png") if attach_image }
 
     after(:create) do |event, evaluator|
       create_list(:team_member, evaluator.team_member_count, teamwork: event)

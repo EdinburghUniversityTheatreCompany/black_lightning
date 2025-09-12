@@ -5,8 +5,8 @@ class UsersMailer < ApplicationMailer
   def welcome_email(user)
     @user = user
 
-    @subject = 'Welcome to Bedlam Theatre'
-    @editable_block = Admin::EditableBlock.find_by_name('Email - Welcome Email')
+    @subject = "Welcome to Bedlam Theatre"
+    @editable_block = Admin::EditableBlock.find_by_name("Email - Welcome Email")
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
   end

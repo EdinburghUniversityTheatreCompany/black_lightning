@@ -9,10 +9,10 @@ class GetInvolvedController < ApplicationController
   def opportunities
     @opportunities = Opportunity.active
 
-    @editable_block = Admin::EditableBlock.find_by(url: 'get_involved/opportunities')
+    @editable_block = Admin::EditableBlock.find_by(url: "get_involved/opportunities")
   end
 
   def page
-    @editable_block = Admin::EditableBlock.find_by!(url: @current_path.delete_prefix('/'))
+    @editable_block = Admin::EditableBlock.find_by!(url: @current_path.delete_prefix("/"))
   end
 end

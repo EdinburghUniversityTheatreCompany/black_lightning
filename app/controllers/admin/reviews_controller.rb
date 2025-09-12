@@ -9,10 +9,10 @@ class Admin::ReviewsController < AdminController
   private
 
   def permitted_params
-    [:title, :url, :body, :rating, :review_date, :organisation, :reviewer, :event_id]
+    [ :title, :url, :body, :rating, :review_date, :organisation, :reviewer, :event_id ]
   end
 
   def order_args
-    ['review_date DESC']
+    [ "review_date DESC" ]
   end
 end

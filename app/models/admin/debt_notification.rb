@@ -21,14 +21,14 @@ class Admin::DebtNotification < ApplicationRecord
   DISABLED_PERMISSIONS = %w[create update delete manage].freeze
 
   def self.default_scope
-    order('sent_on DESC')
+    order("sent_on DESC")
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    ["notification_type", "sent_on"]
+    [ "notification_type", "sent_on" ]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    ["user"]
+    [ "user" ]
   end
 end

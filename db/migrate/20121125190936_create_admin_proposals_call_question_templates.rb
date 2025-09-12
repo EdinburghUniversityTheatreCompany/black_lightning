@@ -5,7 +5,7 @@ class CreateAdminProposalsCallQuestionTemplates < ActiveRecord::Migration
       t.timestamps
     end
 
-    create_table :call_question_templates_questions, :id => false do |t|
+    create_table :call_question_templates_questions, id: false do |t|
       t.integer :call_question_template_id
       t.integer :question_id
     end

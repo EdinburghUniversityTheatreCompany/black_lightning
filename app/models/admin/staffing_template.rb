@@ -14,14 +14,14 @@ class Admin::StaffingTemplate < ApplicationRecord
   include ApplicationHelper
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
-  has_many :staffing_jobs, as: :staffable, class_name: 'Admin::StaffingJob', dependent: :destroy
+  has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
 
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   def as_json(options = {})
-    defaults = { include: [staffing_jobs: {}] }
+    defaults = { include: [ staffing_jobs: {} ] }
 
     options = merge_hash(defaults, options)
 

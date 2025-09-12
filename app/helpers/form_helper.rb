@@ -19,9 +19,9 @@ module FormHelper
   def search_form_options
     options = horizontal_form_options
     options[:wrapper_mappings][:boolean] = :horizontal_boolean_search
-    return options
+    options
   end
-  
+
   def simple_horizontal_form_for(object, *args, &block)
     options = args.extract_options!
     new_options = horizontal_form_options

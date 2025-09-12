@@ -19,19 +19,19 @@ class MarketingCreatives::Profile < ApplicationRecord
 
   acts_as_url :name
 
-  has_many :category_infos, class_name: 'MarketingCreatives::CategoryInfo', dependent: :restrict_with_error
+  has_many :category_infos, class_name: "MarketingCreatives::CategoryInfo", dependent: :restrict_with_error
   has_many :categories, through: :category_infos
   accepts_nested_attributes_for :category_infos, reject_if: :all_blank, allow_destroy: true
 
   belongs_to :user, optional: true
 
-  normalizes :name, :url, with: -> (value) { value&.strip }
+  normalizes :name, :url, with: ->(value) { value&.strip }
 
   def to_param
     url
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    ["about", "approved", "contact","name", "url", "user_id"]
+    [ "about", "approved", "contact", "name", "url", "user_id" ]
   end
 end

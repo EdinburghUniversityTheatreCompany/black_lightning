@@ -1,4 +1,4 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::VenuesControllerTest < ActionController::TestCase
   setup do
@@ -7,59 +7,59 @@ class Admin::VenuesControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  test 'should get index' do
+  test "should get index" do
     get :index
     assert_response :success
     assert_not_nil assigns(:venues)
   end
 
-  test 'should get map' do
+  test "should get map" do
     get :map
     assert_response :success
 
     # Assert venues with locations are included and venues without locations are not.
-    assert_match 'Bedlam Theatre', response.body
-    assert_match 'Pleasance Theatre', response.body
-    assert_no_match 'Roxy Central', response.body
+    assert_match "Bedlam Theatre", response.body
+    assert_match "Pleasance Theatre", response.body
+    assert_no_match "Roxy Central", response.body
   end
 
-  test 'should get new' do
+  test "should get new" do
     get :new
     assert_response :success
   end
 
-  test 'should create venue' do
-    assert_difference('Venue.count') do
+  test "should create venue" do
+    assert_difference("Venue.count") do
       post :create, params: { venue: { description: @venue.description, location: @venue.location, name: @venue.name } }
     end
 
     assert_redirected_to admin_venue_path(assigns(:venue))
   end
 
-  test 'should not create invalid venue' do
-    assert_no_difference('Venue.count') do
+  test "should not create invalid venue" do
+    assert_no_difference("Venue.count") do
       post :create, params: { venue: { description: @venue.description, location: @venue.location, name: nil } }
     end
 
     assert_response :unprocessable_entity
   end
 
-  test 'should show venue' do
-    get :show, params: { id: @venue}
+  test "should show venue" do
+    get :show, params: { id: @venue }
     assert_response :success
   end
 
-  test 'should show venue without location specified' do
-    get :show, params: { id: venues(:roxy)}
+  test "should show venue without location specified" do
+    get :show, params: { id: venues(:roxy) }
     assert_response :success
   end
 
-  test 'should get edit' do
-    get :edit, params: { id: @venue}
+  test "should get edit" do
+    get :edit, params: { id: @venue }
     assert_response :success
   end
 
-  test 'should update venue' do
+  test "should update venue" do
     new_name = FactoryBot.generate(:random_string)
 
     put :update, params: { id: @venue, venue: { name: new_name } }
@@ -69,13 +69,13 @@ class Admin::VenuesControllerTest < ActionController::TestCase
     assert_redirected_to admin_venue_path(assigns(:venue))
   end
 
-  test 'should not update invalid venue' do
+  test "should not update invalid venue" do
     put :update, params: { id: @venue, venue: { name: nil } }
     assert_response :unprocessable_entity
   end
 
-  test 'should destroy venue' do
-    assert_difference('Venue.count', -1) do
+  test "should destroy venue" do
+    assert_difference("Venue.count", -1) do
       delete :destroy, params: { id: @venue }
     end
 

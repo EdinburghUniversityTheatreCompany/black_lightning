@@ -26,18 +26,18 @@ module SearchFormHelper
   end
 
   def render_search_form_fields(f, input_fields, columns)
-    output = ''
+    output = ""
 
-    raise(ArgumentError, 'The amount of column should be a divisor of 12') unless [1, 2, 3, 4, 6, 12].include?(columns)
+    raise(ArgumentError, "The amount of column should be a divisor of 12") unless [ 1, 2, 3, 4, 6, 12 ].include?(columns)
 
     output += "<div class=\"row row-cols-#{columns}\">"
 
     input_fields.each_with_index do |(key, params), i|
       output += render_search_form_field(f, key, params)
     end
-    output += '</div>'
+    output += "</div>"
 
-    return output.html_safe
+    output.html_safe
   end
 
   def render_search_form_field(f, key, params)
@@ -56,25 +56,25 @@ module SearchFormHelper
     if params.key?(:type) && params[:type] != :text
         if params[:type] == :boolean
             # If it is a boolean, just render the boolean field and continue the loop.
-            return render('shared/boolean_search_form_field', f: f, name: key, label: label, params: params)
+            return render("shared/boolean_search_form_field", f: f, name: key, label: label, params: params)
         elsif params[:type] == :select
             # By default, you need to select an item, while usually, you want to have the filtering using a select be optional.
             params[:include_blank] = true if params[:include_blank].nil?
 
-            # No `next`. Just go on to render a normal select input, but with the above parameter set.
+        # No `next`. Just go on to render a normal select input, but with the above parameter set.
         elsif params[:type] == :date_range
             # Render a date range with options specified.
-            return render('shared/date_range_search_form_field', { f: f }.merge(params[:options]))
+            return render("shared/date_range_search_form_field", { f: f }.merge(params[:options]))
         elsif params[:type] == :submit_button
-          raise(ArgumentError, 'A submit button has not been filtered out in the search fields.')
+          raise(ArgumentError, "A submit button has not been filtered out in the search fields.")
         end
     end
 
     # If there is no type key, text is implied, and we just render an input.
 
     # Set email fields to render as text fields to prevent email and url validations, unless there is already an as in the params
-    if !params.key?(:as) && (key.to_s.include?('email') || key.to_s.include?('url'))
-        params[:as] = 'string'
+    if !params.key?(:as) && (key.to_s.include?("email") || key.to_s.include?("url"))
+        params[:as] = "string"
     end
 
     # By default, the fields are required, so override that and set them to not required unless explicitly stated.
@@ -82,10 +82,10 @@ module SearchFormHelper
     params[:required] = false if params[:required].nil?
 
     # Remove the type and slug from the parameters since they are not relevant for the input.
-    params = params.except!([:type, :slug])
+    params = params.except!([ :type, :slug ])
 
     # Render the input itself, unless it was caught by the switch earlier and is already rendered.
     # Wrap the input in a col so we cal columnise the form.
-    return "  <div class=\"col\">\n  #{f.input(key, params)}\n  </div>\n"
+    "  <div class=\"col\">\n  #{f.input(key, params)}\n  </div>\n"
   end
 end

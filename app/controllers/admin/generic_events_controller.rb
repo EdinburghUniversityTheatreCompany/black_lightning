@@ -15,22 +15,22 @@ class Admin::GenericEventsController < AdminController
   private
 
   def index_filename
-    'admin/events/index'
+    "admin/events/index"
   end
 
   def permitted_params
     # Returns a hash with base permitted params to prevent accidentally omitting one.
-    return [
-      :publicity_text, :members_only_text, :name, :slug, :tagline, 
+    [
+      :publicity_text, :members_only_text, :name, :slug, :tagline,
       :pretix_slug_override, :pretix_shown, :pretix_view,
       :author, :venue, :venue_id, :season, :season_id,
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],
-      pictures_attributes: [:id, :_destroy, :description, :image, :access_level, picture_tag_ids: []],
-      team_members_attributes: [:id, :_destroy, :position, :user, :user_id, :proposal],
-      attachments_attributes: [:id, :_destroy, :name, :file, :access_level, attachment_tag_ids: []],
-      video_links_attributes: [:id, :_destroy, :name, :link, :access_level, :order],
-      reviews_attributes: [:id, :_destroy, :title, :url, :body, :rating, :review_date, :organisation, :reviewer, :event_id],
+      pictures_attributes: [ :id, :_destroy, :description, :image, :access_level, picture_tag_ids: [] ],
+      team_members_attributes: [ :id, :_destroy, :position, :user, :user_id, :proposal ],
+      attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, attachment_tag_ids: [] ],
+      video_links_attributes: [ :id, :_destroy, :name, :link, :access_level, :order ],
+      reviews_attributes: [ :id, :_destroy, :title, :url, :body, :rating, :review_date, :organisation, :reviewer, :event_id ]
     ]
   end
 
@@ -58,6 +58,6 @@ class Admin::GenericEventsController < AdminController
   end
 
   def index_query_params
-    { is_public: false } if params[:show_private_only] == '1'
+    { is_public: false } if params[:show_private_only] == "1"
   end
 end

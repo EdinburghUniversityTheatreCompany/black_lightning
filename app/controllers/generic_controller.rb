@@ -14,7 +14,7 @@ module GenericController
 
     instance_variable_set("@#{resource_name.pluralize}", resources)
 
-    response.headers['X-Total-Count'] = resources.count.to_s
+    response.headers["X-Total-Count"] = resources.count.to_s
 
     @editable_block_name = index_editable_block_name
 
@@ -54,7 +54,7 @@ module GenericController
         format.html { redirect_to(create_redirect_url) }
         # format.json { render json: get_resource, status: :created }
       else
-        format.html { render 'new', status: :unprocessable_entity }
+        format.html { render "new", status: :unprocessable_entity }
         # format.json { render json: get_resource.errors, status: :unprocessable_entity }
       end
     end
@@ -81,7 +81,7 @@ module GenericController
       else
         @title = edit_title
 
-        format.html { render 'edit', status: :unprocessable_entity }
+        format.html { render "edit", status: :unprocessable_entity }
         # format.json { render json: get_resource.errors, status: :unprocessable_entity }
       end
     end
@@ -112,7 +112,7 @@ module GenericController
   ##
 
   def resource_params
-    @resource_params ||= params.require(resource_class.name.underscore.gsub('/', '_'))
+    @resource_params ||= params.require(resource_class.name.underscore.gsub("/", "_"))
   end
 
   # permitted_params should be explicitly defined in each controller that includes this Generic Controller!
@@ -154,11 +154,11 @@ module GenericController
   ##
 
   def new_title
-    return "New #{helpers.get_object_name(get_resource.class, include_class_name: true)}"
+    "New #{helpers.get_object_name(get_resource.class, include_class_name: true)}"
   end
 
   def edit_title
-    return "Edit #{helpers.get_object_name(get_resource, include_class_name: true)}"
+    "Edit #{helpers.get_object_name(get_resource, include_class_name: true)}"
   end
 
   ##
@@ -166,11 +166,11 @@ module GenericController
   ##
 
   def create_redirect_url
-    return url_for(controller: self.controller_path, action: :show, id: get_resource)
+    url_for(controller: self.controller_path, action: :show, id: get_resource)
   end
 
   def update_redirect_url
-    return url_for(controller: self.controller_path, action: :show, id: get_resource)
+    url_for(controller: self.controller_path, action: :show, id: get_resource)
   end
 
   def successful_destroy_redirect_url
@@ -204,7 +204,7 @@ module GenericController
 
     @q = process_q_before_getting_result(@q)
 
-    return @q.result(distinct: distinct_for_ransack)
+    @q.result(distinct: distinct_for_ransack)
   end
 
   # This is what is passed to random as well, so do any extra filtering here.
@@ -213,7 +213,7 @@ module GenericController
     # We want this because we expect the default ordering to be ignored when we specify something new.
     # Use where instead of rewhere because a where in the default scope is only used for things that should never be visible.
 
-    return base_index_ransack_query.includes(*includes_args)
+    base_index_ransack_query.includes(*includes_args)
                                    .where(index_query_params)
                                    .accessible_by(current_ability)
   end
@@ -224,11 +224,11 @@ module GenericController
 
     resources = resources.page(params[:page]).per(items_per_page) if should_paginate
 
-    return resources
+    resources
   end
 
   def includes_args
-    [nil]
+    [ nil ]
   end
 
   def index_query_params
@@ -236,7 +236,7 @@ module GenericController
   end
 
   def order_args
-    ['created_at']
+    [ "created_at" ]
   end
 
   def should_paginate
@@ -275,7 +275,7 @@ module GenericController
   end
 
   def index_filename
-    'index'
+    "index"
   end
 
   def index_editable_block_name
@@ -287,36 +287,36 @@ module GenericController
   ##
 
   def random_resources
-    base_index_database_query.reorder('')
+    base_index_database_query.reorder("")
   end
 
   def should_return_random
-    helpers.strip_tags(params[:commit].presence || '').strip.upcase == 'RANDOM'
+    helpers.strip_tags(params[:commit].presence || "").strip.upcase == "RANDOM"
   end
 
   def return_random
     return false unless should_return_random
 
     unless random_resources.present?
-      helpers.append_to_flash(:error, 'There are no results from the search, so I could not select a random instance. HAL is sorry.')
+      helpers.append_to_flash(:error, "There are no results from the search, so I could not select a random instance. HAL is sorry.")
       return false
     end
 
     instance = resource_class.find_by(id: random_resources.pluck(:id).sample)
- 
+
     # Primarily so the test works.
     instance_variable_set("@#{resource_name}", instance)
 
     redirect_to(url_for(instance_url_hash(instance)))
 
-    return true
+    true
   end
 
   # Hash with the instance and :admin if the url should go to the admin site.
   # Used by the return_random method above.
   def instance_url_hash(instance)
     instance_url_hash = if @admin_site
-      [:admin, instance]
+      [ :admin, instance ]
     else
       instance
     end
@@ -326,7 +326,7 @@ module GenericController
   # Dropzone
   ##
 
-  DROPZONE_IDENTIFIER = 'dropzone_'.freeze
+  DROPZONE_IDENTIFIER = "dropzone_".freeze
 
   # NOTE: This is not completely secure, as you could technically now attach files and pictures
   # to anything that has an attachment point even when you shouldn't be able to.
@@ -353,9 +353,9 @@ module GenericController
 
     files = upload_data[:files]
 
-    # Have to use this weird try 
-    files.select! {|file| file.present? }
-    if destination == 'pictures'
+    # Have to use this weird try
+    files.select! { |file| file.present? }
+    if destination == "pictures"
       # This check should happen after the destination check, otherwise
       # it won't throw an error if the files are nil.
       return if files.empty?
@@ -370,7 +370,7 @@ module GenericController
         Picture.create(attributes)
       end
     else
-      raise ArgumentError.new, 'The destination specified for the dropzone is not valid.'
+      raise ArgumentError.new, "The destination specified for the dropzone is not valid."
     end
   end
 end

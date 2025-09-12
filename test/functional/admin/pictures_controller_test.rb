@@ -1,7 +1,7 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::PicturesControllerTest < ActionController::TestCase
-  test 'should get index' do
+  test "should get index" do
     sign_in users(:admin)
 
     get :index
@@ -9,10 +9,10 @@ class Admin::PicturesControllerTest < ActionController::TestCase
     assert_response :success
   assert_not_nil assigns(:pictures)
 
-    assert_equal 'Pictures', assigns(:title)
+    assert_equal "Pictures", assigns(:title)
   end
 
-  test 'should ransack on picture tags' do
+  test "should ransack on picture tags" do
     sign_in users(:admin)
 
     picture_tag_id = PictureTag.all.first

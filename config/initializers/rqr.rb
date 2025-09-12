@@ -1,1 +1,1 @@
-require File.join(Rails.root, 'lib/RQRCode/renderers.rb')
+require File.join(Rails.root, "lib/RQRCode/renderers.rb")

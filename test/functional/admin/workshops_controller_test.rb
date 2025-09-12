@@ -1,11 +1,11 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::WorkshopsControllerTest < ActionController::TestCase
   setup do
     sign_in users(:admin)
   end
 
-  test 'should get index' do
+  test "should get index" do
     FactoryBot.create_list(:workshop, 10)
 
     get :index
@@ -13,46 +13,46 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:events)
   end
 
-  test 'should get show' do
+  test "should get show" do
     @workshop = FactoryBot.create(:workshop)
 
     get :show, params: { id: @workshop }
     assert_response :success
   end
 
-  test 'should get new' do
+  test "should get new" do
     get :new
     assert_response :success
   end
 
-  test 'should create workshop' do
+  test "should create workshop" do
     attributes = FactoryBot.attributes_for(:workshop)
 
-    assert_difference('Workshop.count') do
+    assert_difference("Workshop.count") do
       post :create, params: { workshop: attributes }
     end
 
     assert_redirected_to admin_workshop_path(assigns(:workshop))
   end
 
-  test 'should not create invalid workshop' do
+  test "should not create invalid workshop" do
     attributes = FactoryBot.attributes_for(:workshop, publicity_text: nil)
 
-    assert_no_difference('Workshop.count') do
+    assert_no_difference("Workshop.count") do
       post :create, params: { workshop: attributes }
     end
 
     assert_response :unprocessable_entity
   end
 
-  test 'should get edit' do
+  test "should get edit" do
     @workshop = FactoryBot.create(:workshop)
 
     get :edit, params: { id: @workshop }
     assert_response :success
   end
 
-  test 'should update workshop' do
+  test "should update workshop" do
     @workshop = FactoryBot.create(:workshop)
     attributes = FactoryBot.attributes_for(:workshop)
 
@@ -63,7 +63,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
     assert_redirected_to admin_workshop_path(assigns(:workshop))
   end
 
-  test 'should not update invalid workshop' do
+  test "should not update invalid workshop" do
     @workshop = FactoryBot.create(:workshop)
     attributes = FactoryBot.attributes_for(:workshop, publicity_text: nil)
 
@@ -72,10 +72,10 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should destroy workshop' do
+  test "should destroy workshop" do
     @workshop = FactoryBot.create(:workshop, team_member_count: 0, picture_count: 0, review_count: 0)
 
-    assert_difference('Workshop.count', -1) do
+    assert_difference("Workshop.count", -1) do
       delete :destroy, params: { id: @workshop }
     end
 

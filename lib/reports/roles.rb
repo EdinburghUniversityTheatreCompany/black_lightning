@@ -8,32 +8,32 @@ class Reports::Roles
   def create
     package = Axlsx::Package.new
     wb = package.workbook
-    datetime = wb.styles.add_style format_code: 'dd/mm/yyyy hh:mm'
+    datetime = wb.styles.add_style format_code: "dd/mm/yyyy hh:mm"
 
     # Add a worksheet with all users:
-    wb.add_worksheet(name: 'All Users') do |sheet|
-      sheet.add_row(['Firstname', 'Surname', 'Email', 'Last Login'])
+    wb.add_worksheet(name: "All Users") do |sheet|
+      sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
       User.all.each do |user|
-        sheet.add_row([user.first_name, user.last_name, user.email, user.last_sign_in_at], style: [nil, nil, nil, datetime])
+        sheet.add_row([ user.first_name, user.last_name, user.email, user.last_sign_in_at ], style: [ nil, nil, nil, datetime ])
       end
     end
 
     # Add a worksheet for each role.
     Role.all.each do |role|
-      wb.add_worksheet(name: role.name.gsub(/\//, ' - ')) do |sheet|
-        sheet.add_row(['Firstname', 'Surname', 'Email', 'Last Login'])
+      wb.add_worksheet(name: role.name.gsub(/\//, " - ")) do |sheet|
+        sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
         role.users.each do |user|
-          sheet.add_row([user.first_name, user.last_name, user.email, user.last_sign_in_at])
+          sheet.add_row([ user.first_name, user.last_name, user.email, user.last_sign_in_at ])
         end
 
         sheet.sheet_view.pane do |pane|
-          pane.top_left_cell = 'B2'
+          pane.top_left_cell = "B2"
           pane.state = :frozen_split
           pane.y_split = 1
         end
       end
     end
 
-    return package
+    package
   end
 end
