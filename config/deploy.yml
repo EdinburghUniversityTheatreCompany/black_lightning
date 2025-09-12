@@ -88,9 +88,6 @@ accessories:
         DATABASE_HOST: black_lightning-mysql
       secret:
         - MYSQL_ROOT_PASSWORD
-    files:
-      - config/mysql/production.cnf:/etc/mysql/my.cnf
-      - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
     directories:
       - data:/var/lib/mysql
 #   redis:
