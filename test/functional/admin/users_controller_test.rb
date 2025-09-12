@@ -131,6 +131,92 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_redirected_to admin_user_url(@user)
   end
 
+  test 'should not update password when same as current password' do
+    current_password = 'password123'
+    @user.update!(password: current_password, password_confirmation: current_password)
+    @user.reload
+    original_encrypted_password = @user.encrypted_password
+
+    # Submit the same password that's currently set
+    put :update, params: { 
+      id: @user, 
+      user: { 
+        password: current_password,
+        password_confirmation: current_password,
+        first_name: 'Updated Name'
+      } 
+    }
+
+    assert_redirected_to admin_user_path(@user)
+    @user.reload
+    
+    # Password should not have changed
+    assert_equal original_encrypted_password, @user.encrypted_password, 'Password should not have been updated when same as current'
+    
+    # But other fields should have been updated
+    assert_equal 'Updated Name', @user.first_name, 'Other fields should still be updated'
+  end
+
+  test 'should update password when different from current password' do
+    current_password = 'password123'
+    new_password = 'newpassword456'
+    @user.update!(password: current_password, password_confirmation: current_password)
+    @user.reload
+    original_encrypted_password = @user.encrypted_password
+
+    # Submit a different password
+    put :update, params: { 
+      id: @user, 
+      user: { 
+        password: new_password,
+        password_confirmation: new_password,
+        first_name: 'Updated Name'
+      } 
+    }
+
+    assert_redirected_to admin_user_path(@user)
+    @user.reload
+    
+    # Password should have changed
+    assert_not_equal original_encrypted_password, @user.encrypted_password, 'Password should have been updated when different from current'
+    
+    # Verify user can log in with new password
+    assert @user.valid_password?(new_password), 'User should be able to authenticate with new password'
+    assert_not @user.valid_password?(current_password), 'User should not be able to authenticate with old password'
+    
+    # Other fields should have been updated too
+    assert_equal 'Updated Name', @user.first_name, 'Other fields should still be updated'
+  end
+
+  test 'should not update password when blank password submitted' do
+    current_password = 'password123'
+    @user.update!(password: current_password, password_confirmation: current_password)
+    @user.reload
+    original_encrypted_password = @user.encrypted_password
+
+    # Submit blank password
+    put :update, params: { 
+      id: @user, 
+      user: { 
+        password: '',
+        password_confirmation: '',
+        first_name: 'Updated Name'
+      } 
+    }
+
+    assert_redirected_to admin_user_path(@user)
+    @user.reload
+    
+    # Password should not have changed
+    assert_equal original_encrypted_password, @user.encrypted_password, 'Password should not have been updated when blank'
+    
+    # User should still be able to log in with current password
+    assert @user.valid_password?(current_password), 'User should still be able to authenticate with current password'
+    
+    # Other fields should have been updated
+    assert_equal 'Updated Name', @user.first_name, 'Other fields should still be updated'
+  end
+
   test 'get autocomplete list does not work when not signed in' do
     sign_out users(:admin)
 

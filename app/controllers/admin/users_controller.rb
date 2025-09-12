@@ -68,8 +68,19 @@ class Admin::UsersController < AdminController
   private
 
   def permitted_params
-    params[:user].delete(:password) if params[:user][:password].blank?
-    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
+    if params[:user][:password].blank?
+      params[:user].delete(:password)
+    elsif @user&.persisted? && @user.valid_password?(params[:user][:password])
+      # If password is the same as current, treat as if blank (only for existing users)
+      params[:user].delete(:password)
+    end
+
+    if params[:user][:password_confirmation].blank?
+      params[:user].delete(:password_confirmation)
+    elsif params[:user][:password].blank? && params[:user][:password_confirmation].present?
+      # If password was removed but confirmation wasn't, remove confirmation too
+      params[:user].delete(:password_confirmation)
+    end
 
     perm_params = %i[email password password_confirmation remember_me first_name last_name
                      phone_number card_number public_profile bio avatar username]
