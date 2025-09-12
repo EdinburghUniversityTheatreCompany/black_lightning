@@ -58,6 +58,7 @@ class Event < ApplicationRecord
   # Validations #
   validates :name, :slug, :publicity_text, :members_only_text, :start_date, :end_date, presence: true
   validates :slug, uniqueness: { case_sensitive: false }
+  validate :end_date_after_start_date
 
   # Relationships #
 
@@ -276,6 +277,14 @@ class Event < ApplicationRecord
     if saved_change_to_author?
       # Clear the cache for the author_name_list so it regenerates.
       Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
+    end
+  end
+
+  def end_date_after_start_date
+    return unless start_date.present? && end_date.present?
+    
+    if end_date < start_date
+      errors.add(:end_date, 'must be after or equal to start date')
     end
   end
 end

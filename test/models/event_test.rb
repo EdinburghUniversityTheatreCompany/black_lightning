@@ -210,4 +210,49 @@ class EventTest < ActionView::TestCase
     assert_not duplicate_event.valid?
     assert duplicate_event.errors[:slug].any? { |error| error.include?('already taken') }
   end
+
+  test 'validates end_date is after or equal to start_date' do
+    event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current + 1.day)
+    assert event.valid?
+  end
+
+  test 'validates end_date can equal start_date' do
+    event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current)
+    assert event.valid?
+  end
+
+  test 'invalidates when end_date is before start_date' do
+    event = FactoryBot.build(:event, start_date: Date.current, end_date: Date.current - 1.day)
+    assert_not event.valid?
+    assert_includes event.errors[:end_date], 'must be after or equal to start date'
+  end
+
+  test 'date range validation works with nil dates' do
+    event = FactoryBot.build(:event, start_date: nil, end_date: Date.current)
+    assert_not event.valid?
+    assert_includes event.errors[:start_date], "must not be blank."
+    assert_not_includes event.errors[:end_date], 'must be after or equal to start date'
+
+    event = FactoryBot.build(:event, start_date: Date.current, end_date: nil)
+    assert_not event.valid?
+    assert_includes event.errors[:end_date], "must not be blank."
+  end
+
+  test 'date range validation works for Show subclass' do
+    show = FactoryBot.build(:show, start_date: Date.current, end_date: Date.current - 1.day)
+    assert_not show.valid?
+    assert_includes show.errors[:end_date], 'must be after or equal to start date'
+  end
+
+  test 'date range validation works for Workshop subclass' do
+    workshop = FactoryBot.build(:workshop, start_date: Date.current, end_date: Date.current - 1.day)
+    assert_not workshop.valid?
+    assert_includes workshop.errors[:end_date], 'must be after or equal to start date'
+  end
+
+  test 'date range validation works for Season subclass' do
+    season = FactoryBot.build(:season, start_date: Date.current, end_date: Date.current - 1.day)
+    assert_not season.valid?
+    assert_includes season.errors[:end_date], 'must be after or equal to start date'
+  end
 end
