@@ -13,9 +13,11 @@
 /db/*.sqlite3
 
 # Ignore private config files
-/config/database.yml
 /config/secrets.yml
-/config/openid_signing_key
+/config/credentials/*
+!/config/credentials/*.dist
+# Ignore master key for decrypting credentials and more.
+/config/master.key
 
 # Ignore all logfiles and tempfiles.
 /log/*
@@ -30,7 +32,8 @@
 /uploads/
 
 # Ignore storage for ActiveStorage
-/storage/
+!/storage/.keep
+/storage
 
 #Ignore precompiled assets
 /public/assets
@@ -51,9 +54,6 @@ version
 #Don't ignore .htaccess files
 !/public/assets/.htaccess
 !/public/system/.htaccess
-
-# Ignore master key for decrypting credentials and more.
-/config/master.key
 
 /public/packs
 /public/packs-test

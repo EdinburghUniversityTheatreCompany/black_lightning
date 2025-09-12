@@ -1,0 +1,130 @@
+# See https://docs.docker.com/engine/reference/builder/#dockerignore-file for more about ignoring files.
+
+# Version Control
+/.git/
+/.gitignore
+/.gitkeep
+
+# Bundler and Dependencies
+/.bundle
+/vendor/bundle
+/node_modules/
+
+# Environment and Configuration
+/.env*
+/config/master.key
+/config/credentials/*.key
+
+# Logs and Temporary Files
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Process ID Files
+/tmp/pids/*
+!/tmp/pids/.keep
+
+# Storage and Uploads
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/.keep
+
+# Assets and Builds
+/app/assets/builds/*
+!/app/assets/builds/.keep
+/public/assets
+/public/packs*
+/public/uploads
+
+# Test Files and Coverage
+/test/
+/spec/
+/coverage/
+/tmp/coverage/
+
+# Development and CI Files
+/.github
+/.devcontainer
+/.vscode/
+/.idea/
+/.kamal
+
+# Rails Specific
+/config/deploy*.yml
+/db/*.sqlite3*
+/db/test.sqlite3*
+
+# Documentation
+/docs/
+/README.md
+/CHANGELOG.md
+/LICENSE*
+
+# Docker Files
+/.dockerignore
+/Dockerfile*
+/docker-compose*.yml
+
+# Editor and OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+.*.swp
+.*.swo
+*.tmp
+*.bak
+
+# Ruby and Rails Cache
+/.sass-cache/
+/tmp/cache/
+
+# Yarn and NPM
+yarn-error.log
+npm-debug.log*
+.yarn-integrity
+
+# Other Common Files
+*.pid
+*.seed
+*.gz
+*.tar
+*.zip
+
+# Backup files
+*.orig
+*.rej
+
+# System files
+.fseventsd/
+.TemporaryItems/
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Tailwind/CSS build artifacts
+app/assets/stylesheets/*.css.map
+
+# Rubocop cache
+.rubocop-*
+
+# YARD documentation
+.yardoc/
+doc/
+
+# Rails credentials backups
+config/credentials/*.yml.enc.backup
+
+# Byebug history
+.byebug_history
+
+# Spring application pid
+spring/
+
+# Capybara screenshots
+tmp/capybara/
