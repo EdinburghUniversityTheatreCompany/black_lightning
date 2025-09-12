@@ -5,7 +5,7 @@ raise Exception.new, "The configuration for openid_connect is not included in th
 Doorkeeper::OpenidConnect.configure do
   issuer Rails.application.credentials[:openid_connect][Rails.env.to_sym][:issuer]
 
-  signing_key File.read("#{Rails.root}/config/openid_signing_key")
+  signing_key File.read("#{Rails.root}/config/credentials/openid_signing_key")
 
   subject_types_supported [ :public ]
 
