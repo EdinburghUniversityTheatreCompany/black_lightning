@@ -2,7 +2,7 @@
 service: blacklightning
 
 # Name of the container image.
-image: eusatheatre/blacklightning
+image: bedlamtheatre/blacklightning
 
 # Deploy to these servers.
 servers:
@@ -43,9 +43,9 @@ builder:
 env:
   clear:
     RAILS_ENV: production
-    DATABASE_URL: mysql2://black_lightning:Hoihoihoi3@127.0.0.1:3306/bedlam_blacklightning_production
   secret:
     - RAILS_MASTER_KEY
+    - DATABASE_URL
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal app logs -r job" will tail logs from the first server in the job section.
@@ -76,21 +76,23 @@ asset_path: /rails/public/assets
 
 # Use accessory services (secrets come from .kamal/secrets).
 #
-# accessories:
-#   db:
-#     image: mysql:8.0
-#     host: 192.168.0.2
-#     port: 3306
-#     env:
-#       clear:
-#         MYSQL_ROOT_HOST: '%'
-#       secret:
-#         - MYSQL_ROOT_PASSWORD
-#     files:
-#       - config/mysql/production.cnf:/etc/mysql/my.cnf
-#       - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
-#     directories:
-#       - data:/var/lib/mysql
+accessories:
+  db:
+    image: mysql:8.0
+    host: bdlm-eusa-ed-ac-uk
+    port: 3306
+    env:
+      clear:
+        MYSQL_ROOT_HOST: "%"
+        DATABASE_USERNAME: root
+        DATABASE_HOST: black_lightning-mysql
+      secret:
+        - MYSQL_ROOT_PASSWORD
+    files:
+      - config/mysql/production.cnf:/etc/mysql/my.cnf
+      - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
+    directories:
+      - data:/var/lib/mysql
 #   redis:
 #     image: valkey/valkey:8
 #     host: 192.168.0.2

@@ -15,7 +15,8 @@
 # Ignore private config files
 /config/database.yml
 /config/secrets.yml
-/config/openid_signing_key
+/config/credentials/*
+!/config/credentials/*.dist
 
 # Ignore all logfiles and tempfiles.
 /log/*
