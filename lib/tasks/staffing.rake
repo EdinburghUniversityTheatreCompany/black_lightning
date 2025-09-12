@@ -2,7 +2,7 @@ namespace :staffing do
   # Might come in handy one day, but I am not testing it
   # :nocov:
   task fix_bedfest: :environment do
-    Admin::Staffing.where(show_title: 'Bedlam Festival 2013').each do |s|
+    Admin::Staffing.where(show_title: "Bedlam Festival 2013").each do |s|
       s.end_time = case
       when s.start_time.hour == 10
         DateTime.civil(s.start_time.year, s.start_time.month, s.start_time.day, 14, 15)

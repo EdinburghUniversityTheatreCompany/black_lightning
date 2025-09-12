@@ -17,19 +17,19 @@
 class FaultReport < ApplicationRecord
   validates :item, :description, presence: true
 
-  belongs_to :reported_by,  class_name: 'User'
-  belongs_to :fixed_by,     class_name: 'User', optional: true
+  belongs_to :reported_by,  class_name: "User"
+  belongs_to :fixed_by,     class_name: "User", optional: true
 
-  normalizes :item, with: -> (item) { item&.strip }
+  normalizes :item, with: ->(item) { item&.strip }
 
-  enum :severity, 
+  enum :severity,
     annoying: 0,
     probably_worth_fixing: 1,
     show_impeding: 2,
     dangerous: 3,
     no_fault: 4
 
-  enum :status, 
+  enum :status,
     reported: 0,
     in_progress: 1,
     cant_fix: 2,
@@ -42,23 +42,23 @@ class FaultReport < ApplicationRecord
   end
 
   def reported_by_name
-    return reported_by.try(:name) || 'Unknown'
+    reported_by.try(:name) || "Unknown"
   end
 
   def fixed_by_name
-    return fixed_by.try(:name) || 'Unknown'
+    fixed_by.try(:name) || "Unknown"
   end
 
   def css_class
     case status.to_sym
     when :in_progress, :on_hold
-      return 'table-warning'
+      "table-warning"
     when :cant_fix, :wont_fix
-      return 'table-danger'
+      "table-danger"
     when :completed
-      return 'table-success'
+      "table-success"
     else
-      return ''
+      ""
     end
   end
 end

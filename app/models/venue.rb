@@ -37,38 +37,38 @@ class Venue < ApplicationRecord
 
   validates :image, content_type: %i[png jpg jpeg gif]
 
-  normalizes :email, with: -> (email) { email&.downcase&.strip }
-  normalizes :name, :tagline, with: -> (value) { value&.strip }
+  normalizes :email, with: ->(email) { email&.downcase&.strip }
+  normalizes :name, :tagline, with: ->(value) { value&.strip }
 
-  default_scope -> { order('name ASC') }
+  default_scope -> { order("name ASC") }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[address description location name tagline]
   end
-  
-  def fetch_image
-    image.attach(ApplicationController.helpers.default_image_blob('bedlam.png')) unless image.attached? 
 
-    return image
+  def fetch_image
+    image.attach(ApplicationController.helpers.default_image_blob("bedlam.png")) unless image.attached?
+
+    image
   end
 
   def to_param
-    return "#{id}-#{name.to_url}"
+    "#{id}-#{name.to_url}"
   end
 
   # Returns the marker info for use on maps. This includes hte latitude
   # If there is no location data,
-  def marker_info(open_popup=false)
+  def marker_info(open_popup = false)
     latlng_array = latlng
-  
+
     if latlng_array.present?
-      return {
+      {
         latlng: latlng_array,
         popup: popup_description,
         open_popup: open_popup
       }
     else
-      return nil
+      nil
     end
   end
 
@@ -76,20 +76,20 @@ class Venue < ApplicationRecord
   # Returns nil if the location data is not valid.
   def latlng
     if location.present?
-      latlng_array = location.split(',')
+      latlng_array = location.split(",")
 
       # If the location does not contain any arrays, or more than 2, just return nil as it is invalid.
       # Does not check if the resulting values are numeric. This can be done, but the map rendering will fail in the JavaScript
       # and not in Rails, which is less critical and will not produce a Rails error blocking the web page.
       return nil unless latlng_array.length == 2
 
-      return location.split(',')
+      location.split(",")
     else
-      return nil
+      nil
     end
   end
 
   def popup_description
-    return "<b>#{name}</b><br><br>#{escape_line_breaks(address)}".html_safe
+    "<b>#{name}</b><br><br>#{escape_line_breaks(address)}".html_safe
   end
 end

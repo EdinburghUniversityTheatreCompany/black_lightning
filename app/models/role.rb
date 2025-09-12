@@ -18,20 +18,20 @@
 class Role < ApplicationRecord
   # The roles that are referenced directly in the code.
   # Changing the name would break the website, so this list is used to prevent name changes for these roles.
-  HARDCODED_NAMES = ['Admin', 'Committee', 'DM Trained', 'Business Manager', 'First Aid Trained', 'Bar Trained'].freeze
-  NON_PURGEABLE_ROLES = ['member']
+  HARDCODED_NAMES = [ "Admin", "Committee", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained" ].freeze
+  NON_PURGEABLE_ROLES = [ "member" ]
 
   validates :name, presence: true
   validate :name_not_hardcoded
 
   has_and_belongs_to_many :users, join_table: :users_roles
-  has_and_belongs_to_many :permissions, class_name: 'Admin::Permission'
+  has_and_belongs_to_many :permissions, class_name: "Admin::Permission"
 
   belongs_to :resource, polymorphic: true, optional: true
 
   scopify
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[name]
@@ -42,7 +42,7 @@ class Role < ApplicationRecord
     # You cannot purge certain roles.
     return false if NON_PURGEABLE_ROLES.include?(name.downcase.strip)
 
-    return ActiveRecord::Base.transaction do
+    ActiveRecord::Base.transaction do
       self.users.clear
     end
   end
@@ -51,11 +51,11 @@ class Role < ApplicationRecord
     # This new role has no permissions, and the existing role keeps all permissions.
     def archive(suffix)
       if suffix.blank?
-        errors.add(:base, 'Suffix cannot be blank when archiving a role')
+        errors.add(:base, "Suffix cannot be blank when archiving a role")
         return false
       end
 
-      return ActiveRecord::Base.transaction do
+      ActiveRecord::Base.transaction do
         # Create or find the archival role and move all users over.
         new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
         new_role.users << self.users
@@ -66,6 +66,6 @@ class Role < ApplicationRecord
     end
 
   def name_not_hardcoded
-    errors.add(:name, 'is hardcoded and cannot be altered') if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
+    errors.add(:name, "is hardcoded and cannot be altered") if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
   end
 end

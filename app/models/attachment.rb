@@ -35,18 +35,18 @@ class Attachment < ApplicationRecord
 
   has_one_attached :file
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
-  default_scope -> { order('name ASC') }
+  default_scope -> { order("name ASC") }
 
   ACCESS_LEVELS = [
-    ['Grid-Based', 0],
-    ['Member', 1],
-    ['Everyone', 2]
+    [ "Grid-Based", 0 ],
+    [ "Member", 1 ],
+    [ "Everyone", 2 ]
   ].freeze
 
   def slug
-    return name
+    name
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -58,20 +58,20 @@ class Attachment < ApplicationRecord
   end
 
   def item_name
-    return 'No Item' if item.nil?
+    return "No Item" if item.nil?
 
-    if item_type == 'Admin::Answer'
-      return 'No Answerable for Item' if item.answerable.nil?
+    if item_type == "Admin::Answer"
+      return "No Answerable for Item" if item.answerable.nil?
 
       extra = if item.answerable.event.present?
                 " for #{get_object_name(item.answerable.event)}"
-              else
-                ''
-              end
+      else
+                ""
+      end
 
-      return "#{get_object_name(item.answerable)}#{extra}"
+      "#{get_object_name(item.answerable)}#{extra}"
     else
-      return get_object_name(item)
+      get_object_name(item)
     end
   end
 end

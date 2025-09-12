@@ -16,13 +16,13 @@ class MarketingCreatives::Category < ApplicationRecord
 
   acts_as_url :name
 
-  has_many :category_infos, class_name: 'MarketingCreatives::CategoryInfo', dependent: :restrict_with_error
+  has_many :category_infos, class_name: "MarketingCreatives::CategoryInfo", dependent: :restrict_with_error
   has_many :profiles, through: :category_infos
-  
+
   has_one_attached :image
   validates :image, content_type: %i[png jpg jpeg gif]
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   def to_param
     url
@@ -36,8 +36,8 @@ class MarketingCreatives::Category < ApplicationRecord
   # Display kittens if the image for whatever reason does not exist.
   ##
   def fetch_image
-    image.attach(ApplicationController.helpers.default_image_blob('missing.png')) unless image.attached? 
+    image.attach(ApplicationController.helpers.default_image_blob("missing.png")) unless image.attached?
 
-    return image
+    image
   end
 end

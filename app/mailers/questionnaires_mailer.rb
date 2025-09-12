@@ -1,7 +1,7 @@
 class QuestionnairesMailer < ApplicationMailer
   include NameHelper
 
-  default reply_to: 'IT <it@bedlamtheatre.co.uk>'
+  default reply_to: "IT <it@bedlamtheatre.co.uk>"
 
   # Notifies all notify_emails on the questionnaire that there was an update.
   def notify(questionnaire, submitter, recipient_notify_email)

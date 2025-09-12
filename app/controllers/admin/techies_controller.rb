@@ -5,12 +5,12 @@
 class Admin::TechiesController < AdminController
   include GenericController
 
-  load_and_authorize_resource except: [ :tree, :bush, :mass_new, :mass_create]
+  load_and_authorize_resource except: [ :tree, :bush, :mass_new, :mass_create ]
 
   def show
     super
 
-    @coparents = @techie.children.flat_map(&:parents).uniq - [@techie]
+    @coparents = @techie.children.flat_map(&:parents).uniq - [ @techie ]
   end
 
   def bush
@@ -18,12 +18,12 @@ class Admin::TechiesController < AdminController
 
     @q = Techie.ransack(params[:q], auth_object: current_ability)
 
-    @title = 'Techie Family Tree - New but sucks'
+    @title = "Techie Family Tree - New but sucks"
   end
 
   def tree_data
     nodes = @techies.select(:id, :name)
-    edges = @techies.includes(:children).map { |techie| techie.children.ids.uniq.map { |child_id| [techie.id, child_id] } }.flatten(1)
+    edges = @techies.includes(:children).flat_map { |techie| techie.children.ids.uniq.map { |child_id| [ techie.id, child_id ] } }
 
     json = { edges: edges, nodes: nodes }.to_json
 
@@ -34,7 +34,7 @@ class Admin::TechiesController < AdminController
   def tree
     authorize! :index, Techie
 
-    @title = 'Techie Family Tree'
+    @title = "Techie Family Tree"
 
     @q = Techie.ransack(params[:q], auth_object: current_ability)
 
@@ -64,17 +64,17 @@ class Admin::TechiesController < AdminController
 
       redirect_to(admin_techies_url)
     else
-      render 'mass_new', status: :unprocessable_entity
+      render "mass_new", status: :unprocessable_entity
     end
   end
 
   private
 
   def permitted_params
-    [:name, children_attributes: [:id, :_destroy, :name], parents_attributes: [:id, :_destroy, :name]]
+    [ :name, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]
   end
 
   def order_args
-    ['name asc']
+    [ "name asc" ]
   end
 end

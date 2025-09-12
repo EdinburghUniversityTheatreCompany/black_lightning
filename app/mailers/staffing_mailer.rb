@@ -8,9 +8,9 @@ class StaffingMailer < ApplicationMailer
     @start_time = l @staffing.start_time, format: :long
     @subject = "Bedlam Theatre Staffing at #{@start_time}"
 
-    duty_manager = @staffing.staffing_jobs.where(name: 'duty manager').or(@staffing.staffing_jobs.where(name: 'dm')).first&.user&.full_name
-    committee_rep = @staffing.staffing_jobs.where(name: 'committee rep').first&.user&.full_name
-    
+    duty_manager = @staffing.staffing_jobs.where(name: "duty manager").or(@staffing.staffing_jobs.where(name: "dm")).first&.user&.full_name
+    committee_rep = @staffing.staffing_jobs.where(name: "committee rep").first&.user&.full_name
+
     if duty_manager.present? && committee_rep.present?
       @late_running_sentence = ", or let the Duty Manager (#{duty_manager}) or Committee Rep (#{committee_rep}) know if you run late"
     elsif duty_manager.present?

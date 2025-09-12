@@ -1,6 +1,6 @@
 namespace :mail do
   # Sends a test email to the specified address
-  task :test, [:email_address] => :environment do |_t, args|
+  task :test, [ :email_address ] => :environment do |_t, args|
     if args[:email_address].nil?
       raise ArgumentError.new("No test email_address specified. Aborting")
     end

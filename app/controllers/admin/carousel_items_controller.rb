@@ -16,14 +16,14 @@ class Admin::CarouselItemsController < AdminController
   def permitted_params
     # Make sure that references have _id appended to the end of them.
     # Check existing controllers for inspiration.
-    [:title, :tagline, :carousel_name, :ordering, :is_active, :image, :url]
+    [ :title, :tagline, :carousel_name, :ordering, :is_active, :image, :url ]
   end
 
   def order_args
-    ['carousel_name', 'ordering']
+    [ "carousel_name", "ordering" ]
   end
 
   def index_query_params
-    { is_active: true } if params[:show_active_only] == '1'
+    { is_active: true } if params[:show_active_only] == "1"
   end
 end

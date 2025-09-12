@@ -1,5 +1,5 @@
-require 'csv'
-require 'json'
+require "csv"
+require "json"
 namespace :users do
   # desc 'Updates user attributes to match LDAP roles'
   # # N.B this also happens on sign in, but scheduling this as a cron job ensures
@@ -34,7 +34,7 @@ namespace :users do
   task interaction: :environment do
     all = User.all.count
     p "We have #{User.all.count} users, of which #{User.with_role(:member).count} are members"
-    percentage = 1 - (User.where(['sign_in_count = ?', 0]).count.to_f / all)
+    percentage = 1 - (User.where([ "sign_in_count = ?", 0 ]).count.to_f / all)
     p "#{percentage} of users have set a password and logged in at least once."
     phones = 1 - ((all - User.where(phone_number: nil).count.to_f) / all)
     p "#{phones} of users have given us their phone number."
@@ -42,20 +42,20 @@ namespace :users do
   # :nocov:
 
   task clean_up_personal_info: :environment do
-    p 'Cleaning up personal info..'
-    count = Tasks::Logic::Users::clean_up_personal_info
+    p "Cleaning up personal info.."
+    count = Tasks::Logic::Users.clean_up_personal_info
     p "Cleaned up #{count} members"
   end
 
-  desc 'Lists the amount of users who were involved in an event or listed on a proposal during each academic year.'
+  desc "Lists the amount of users who were involved in an event or listed on a proposal during each academic year."
   task determine_active_users_by_involvement: :environment do
-    p 'Academic Year, Total Members, Fresher\'s Play Only, Proposal Only'
+    p "Academic Year, Total Members, Fresher's Play Only, Proposal Only"
     (Rails.configuration.start_year..Date.current.year).each do |start_year|
       start_date = Date.new(start_year, 9, 1)
       end_date = Date.new(start_year + 1, 8, 31)
 
       # Determine who was involved in an event
-      events = Event.where('start_date <= ? and end_date >= ?', end_date, start_date)
+      events = Event.where("start_date <= ? and end_date >= ?", end_date, start_date)
       events_user_ids = events.flat_map { |event| event.users.ids }.uniq
 
       # Determine who was involved in an event that is not freshers play.

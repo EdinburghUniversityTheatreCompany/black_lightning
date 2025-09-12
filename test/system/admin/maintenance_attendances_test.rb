@@ -1,4 +1,4 @@
-require 'application_system_test_case'
+require "application_system_test_case"
 
 
 class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
@@ -22,7 +22,7 @@ class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
     fill_in "User", with: @admin_maintenance_attendance.user_id
     click_on "Create Maintenance attendance"
 
-    assert_text 'The Maintenance attendance was successfully created'
+    assert_text "The Maintenance attendance was successfully created"
   end
 
   test "should update Maintenance attendance" do
@@ -40,7 +40,7 @@ class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
     visit admin_maintenance_attendance_url(@admin_maintenance_attendance)
 
     page.accept_confirm do
-      click_on 'Destroy', match: :first
+      click_on "Destroy", match: :first
     end
     assert_text "The Maintenance attendance has been successfully destroyed."
   end

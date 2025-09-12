@@ -15,33 +15,33 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class PictureTest < ActionView::TestCase
-  test 'missing image' do
+  test "missing image" do
     picture = FactoryBot.create(:picture)
     picture.image.purge
     picture.save(validate: false)
 
-    assert_equal 'active_storage_default-missing.png', picture.fetch_image.filename.to_s
-    assert_equal 'active_storage_default-missing.png', picture.filename.to_s
+    assert_equal "active_storage_default-missing.png", picture.fetch_image.filename.to_s
+    assert_equal "active_storage_default-missing.png", picture.filename.to_s
   end
 
-  test 'thumb url' do
+  test "thumb url" do
     picture = FactoryBot.create(:picture)
-    assert_includes picture.thumb_url, 'test.png'
+    assert_includes picture.thumb_url, "test.png"
   end
 
-  test 'display url' do
+  test "display url" do
     picture = FactoryBot.create(:picture)
-    assert_includes picture.display_url, 'test.png'
+    assert_includes picture.display_url, "test.png"
   end
 
-  test 'get gallery name for no gallery' do
+  test "get gallery name for no gallery" do
     picture = FactoryBot.create(:picture)
     picture.gallery = nil
     picture.save(validate: false)
 
-    assert_equal 'No Gallery', picture.gallery_name
+    assert_equal "No Gallery", picture.gallery_name
   end
 end

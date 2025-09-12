@@ -3,12 +3,11 @@
 raise Exception.new, "The configuration for openid_connect is not included in the credentials.yml.enc file for the '#{Rails.env.to_sym}' environment" unless Rails.application.credentials[:openid_connect].try(Rails.env.to_sym).try(:issuer).present?
 
 Doorkeeper::OpenidConnect.configure do
-  
   issuer Rails.application.credentials[:openid_connect][Rails.env.to_sym][:issuer]
 
   signing_key File.read("#{Rails.root}/config/openid_signing_key")
 
-  subject_types_supported [:public]
+  subject_types_supported [ :public ]
 
   resource_owner_from_access_token do |access_token|
     # Example implementation:
@@ -62,27 +61,27 @@ Doorkeeper::OpenidConnect.configure do
   # Example claims:
   claims do
     claim :email do |resource_owner, scopes|
-      scopes.exists?(:email) ? resource_owner.email : ''
+      scopes.exists?(:email) ? resource_owner.email : ""
     end
-    
+
     claim :email_verified do |resource_owner, scopes|
-      scopes.exists?(:email) ? true : ''
+      scopes.exists?(:email) ? true : ""
     end
 
     claim :full_name do |resource_owner, scopes|
-      scopes.exists?(:profile) ? resource_owner.name_or_default : ''
+      scopes.exists?(:profile) ? resource_owner.name_or_default : ""
     end
-    
+
     claim :name do |resource_owner, scopes|
-      scopes.exists?(:profile) ? resource_owner.name_or_default : ''
+      scopes.exists?(:profile) ? resource_owner.name_or_default : ""
     end
-    
+
     claim :family_name do |resource_owner, scopes|
-      scopes.exists?(:profile) ? resource_owner.last_name : ''
+      scopes.exists?(:profile) ? resource_owner.last_name : ""
     end
-    
+
     claim :given_name do |resource_owner, scopes|
-      scopes.exists?(:profile) ? resource_owner.first_name : ''
+      scopes.exists?(:profile) ? resource_owner.first_name : ""
     end
   end
 end

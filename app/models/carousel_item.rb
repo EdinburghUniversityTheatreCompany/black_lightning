@@ -15,7 +15,7 @@
 # == Schema Information End
 #++
 class CarouselItem < ApplicationRecord
-  CAROUSEL_NAMES = ['Home'].freeze
+  CAROUSEL_NAMES = [ "Home" ].freeze
 
   validates :title, :tagline, :carousel_name, :ordering, presence: true
   validates :carousel_name, inclusion: { in: CAROUSEL_NAMES }
@@ -23,10 +23,10 @@ class CarouselItem < ApplicationRecord
 
   has_one_attached :image
 
-  normalizes :title, :tagline, with: -> (value) { value&.strip }
+  normalizes :title, :tagline, with: ->(value) { value&.strip }
 
   def self.active_and_ordered
-    return where(is_active: true).order('ordering')
+    where(is_active: true).order("ordering")
   end
 
   def self.ransackable_attributes(auth_object = nil)

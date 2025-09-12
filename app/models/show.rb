@@ -34,14 +34,14 @@
 
 class Show < Event
   include ApplicationHelper
-  
+
   validates :author, :price, presence: true
 
   # Validate uniqueness on Event Subtype basis instead of on the event.
   # Otherwise, you cannot have two different types with the same slug.
   validates :slug, uniqueness: { case_sensitive: false }
 
-  has_many :feedbacks, class_name: 'Admin::Feedback', dependent: :restrict_with_error
+  has_many :feedbacks, class_name: "Admin::Feedback", dependent: :restrict_with_error
 
   def self.ransackable_associations(auth_object = nil)
     super
@@ -52,7 +52,7 @@ class Show < Event
   # Please also modify the error messagse in admin Show controller that is displayed when this returns false
   # and the confirm message on the admin Shows show page for converting.
   def can_convert?
-    return feedbacks.empty?
+    feedbacks.empty?
   end
 
   def create_maintenance_debts
@@ -71,7 +71,7 @@ class Show < Event
       # If there is, just update the due_by date.
       else
         debts.update_all(due_by: maintenance_debt_start)
-      end 
+      end
     end
   end
 
@@ -79,14 +79,14 @@ class Show < Event
     users.select(:id, :position, :last_name).distinct.each do |user|
       # Debts converted from a maintenance debt should not count towards the staffing debt total for a show.
       # If someone should get two staffing debts, and they have had their maintenance debt converted, they should get
-      # a total of 3 debts. If you included the converted maintenance_debt here, adding the staffing debts would only add 
+      # a total of 3 debts. If you included the converted maintenance_debt here, adding the staffing debts would only add
       # one, for a total of 2.
       amount = total_amount - user.admin_staffing_debts.where(show_id: id, converted_from_maintenance_debt: false).count
-      
+
       # TODO: Add tests for the below.
 
       # Limit the amount of debts assigned to assistants to 1.
-      amount = [amount, 1].min if user.position.downcase.include?("assistant")
+      amount = [ amount, 1 ].min if user.position.downcase.include?("assistant")
 
       # Welfare contacts get no debt.
       amount = 0 if user.position.downcase.include?("welfare")
@@ -97,7 +97,7 @@ class Show < Event
           user: user,
           due_by: staffing_debt_start,
           state: :normal,
-          converted_from_maintenance_debt:false
+          converted_from_maintenance_debt: false
         )
       end
     end

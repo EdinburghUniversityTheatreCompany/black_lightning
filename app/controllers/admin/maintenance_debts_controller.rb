@@ -27,11 +27,11 @@ class Admin::MaintenanceDebtsController < AdminController
     @maintenance_debt.forgive
 
     if @maintenance_debt.save
-      flash[:success] = 'The Maintenance Debt has been successfully marked as completed.'
+      flash[:success] = "The Maintenance Debt has been successfully marked as completed."
     else
       # I hate using nocov but I cannot force this to fail and I can see that this code will work.
       # :nocov:
-      flash[:error] = 'Error marking Maintenance Debt completed. The Theatre Manager Fairy could not be saved :('
+      flash[:error] = "Error marking Maintenance Debt completed. The Theatre Manager Fairy could not be saved :("
       # :nocov:
     end
 
@@ -46,7 +46,7 @@ class Admin::MaintenanceDebtsController < AdminController
     @maintenance_debt.convert_to_staffing_debt
 
     respond_to do |format|
-      format.html { redirect_to admin_maintenance_debts_url, notice: 'Maintenance Debt converted to Staffing Debt' }
+      format.html { redirect_to admin_maintenance_debts_url, notice: "Maintenance Debt converted to Staffing Debt" }
       # format.json { head :no_content }
     end
   end
@@ -59,14 +59,14 @@ class Admin::MaintenanceDebtsController < AdminController
 
   # Only allow a trusted parameter "white list" through.
   def permitted_params
-    [:user_id, :due_by, :show_id, :state]
+    [ :user_id, :due_by, :show_id, :state ]
   end
 
   def load_index_resources
-    @maintenance_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params[:show_non_members], params, [:user, :show, :maintenance_attendance])
+    @maintenance_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@maintenance_debts, params[:show_non_members], params, [ :user, :show, :maintenance_attendance ])
 
-    params[:show_fulfilled] = show_fulfilled ? '1' : '0'
+    params[:show_fulfilled] = show_fulfilled ? "1" : "0"
 
-    return @maintenance_debts
+    @maintenance_debts
   end
 end

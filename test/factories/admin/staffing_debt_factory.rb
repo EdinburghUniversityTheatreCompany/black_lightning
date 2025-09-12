@@ -20,7 +20,7 @@ FactoryBot.define do
     association :show, factory: :show
     state { :normal }
     due_by { Date.current + 1 }
-    converted_from_maintenance_debt { false}
+    converted_from_maintenance_debt { false }
 
     transient do
       with_staffing_job { false }

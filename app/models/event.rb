@@ -57,15 +57,17 @@ class Event < ApplicationRecord
 
   # Validations #
   validates :name, :slug, :publicity_text, :members_only_text, :start_date, :end_date, presence: true
+  validates :slug, uniqueness: { case_sensitive: false }
+  validate :end_date_after_start_date
 
   # Relationships #
 
-  belongs_to :proposal, class_name: 'Admin::Proposals::Proposal', optional: true
+  belongs_to :proposal, class_name: "Admin::Proposals::Proposal", optional: true
 
-  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :destroy
+  has_many :team_members, class_name: "::TeamMember", as: :teamwork, dependent: :destroy
   has_many :users, through: :team_members
   has_many :pictures, as: :gallery, dependent: :restrict_with_error
-  has_many :questionnaires, class_name: 'Admin::Questionnaires::Questionnaire', dependent: :restrict_with_error
+  has_many :questionnaires, class_name: "Admin::Questionnaires::Questionnaire", dependent: :restrict_with_error
   has_many :reviews, dependent: :restrict_with_error
 
   belongs_to :venue
@@ -83,37 +85,38 @@ class Event < ApplicationRecord
   validates :image, content_type: %i[png jpg jpeg gif]
 
   # Normalizatios
-  normalizes :name, :tagline, :slug, :author, :price, with: -> (value) { value&.strip }
+  normalizes :name, :tagline, :slug, :author, :price, with: ->(value) { value&.strip }
 
   # Scopes #
 
-  scope :current, -> { where(['end_date >= ? AND is_public = ?', Date.current, true]) }
-  scope :future, -> { where(['end_date >= ?', Date.current]) }
-  scope :this_academic_year, -> { where('end_date >= ?', ApplicationController.helpers.start_of_year).where('start_date < ?', ApplicationController.helpers.next_year_start) }
+  scope :current, -> { where([ "end_date >= ? AND is_public = ?", Date.current, true ]) }
+  scope :future, -> { where([ "end_date >= ?", Date.current ]) }
+  scope :this_academic_year, -> { where("end_date >= ?", ApplicationController.helpers.start_of_year).where("start_date < ?", ApplicationController.helpers.next_year_start) }
 
   def this_academic_year?
-    return end_date >= ApplicationController.helpers.start_of_year && start_date < ApplicationController.helpers.next_year_start
+    end_date >= ApplicationController.helpers.start_of_year && start_date < ApplicationController.helpers.next_year_start
   end
 
   # ONLY LOOKS AT DAY AND MONTH! NOT AT YEAR.
   # Excludes shows that go into a new year (imps, candlewasters, the old ones we only know the year off, etc) because complicated logic and it wasn't very relevant.
-  scope :on_date, ->(date) { where('(MONTH(start_date) < :month OR (MONTH(start_date) = :month AND DAY(start_date) <= :day)) AND (MONTH(end_date) > :month OR (MONTH(end_date) = :month AND DAY(END_DATE) >= :day))', { day: date.day, month: date.month}) }
+  scope :on_date, ->(date) { where("(MONTH(start_date) < :month OR (MONTH(start_date) = :month AND DAY(start_date) <= :day)) AND (MONTH(end_date) > :month OR (MONTH(end_date) = :month AND DAY(END_DATE) >= :day))", { day: date.day, month: date.month }) }
 
   # Events are generally ordered with the most recent/upcoming ones first.
-  default_scope -> { order('end_date DESC') }
+  default_scope -> { order("end_date DESC") }
 
   # Callbacks
+  before_validation :generate_slug_from_name
   after_initialize :set_default_members_only_text
   after_update :recache_author_list_if_changed
 
   # Returns the last event to have finished.
   def self.last_event
-    return reorder('end_date DESC').where(['end_date < ? AND is_public = ?', Date.current, true]).first
+    reorder("end_date DESC").where([ "end_date < ? AND is_public = ?", Date.current, true ]).first
   end
 
   # Formats the shows so they can be used in a selection field
   def self.selection_collection
-    return pluck(:name, :id)
+    pluck(:name, :id)
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -121,7 +124,7 @@ class Event < ApplicationRecord
   end
 
   def self.ransackable_associations(auth_object = nil)
-    ["attachments", "event_tags", "pictures", "proposal", "questionnaires", "reviews", "roles", "season", "team_members", "users", "venue", "versions", "video_links"]
+    [ "attachments", "event_tags", "pictures", "proposal", "questionnaires", "reviews", "roles", "season", "team_members", "users", "venue", "versions", "video_links" ]
   end
 
   ##
@@ -131,23 +134,23 @@ class Event < ApplicationRecord
   ##
   def fetch_image
     number = id.modulo(4)
-    image.attach(ApplicationController.helpers.default_image_blob("events/#{number}.png")) unless image.attached? 
+    image.attach(ApplicationController.helpers.default_image_blob("events/#{number}.png")) unless image.attached?
 
-    return image
+    image
   end
 
   ##
   # Returns the url of the slideshow image
   ##
   def thumb_image_url
-    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.slideshow_variant).processed, only_path: true)
+    Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.slideshow_variant).processed, only_path: true)
   end
 
   ##
   # Returns the url of the slideshow image
   ##
   def slideshow_image_url
-    return Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.slideshow_variant).processed, only_path: true)
+    Rails.application.routes.url_helpers.rails_representation_url(fetch_image.variant(ApplicationController.helpers.slideshow_variant).processed, only_path: true)
   end
 
   ##
@@ -156,7 +159,7 @@ class Event < ApplicationRecord
   # The date format used is the :long format, defined in /config/locales/en.yml
   ##
   def date_range(include_year, format = :long)
-    return time_range_string(start_date, end_date, include_year, format)
+    time_range_string(start_date, end_date, include_year, format)
   end
 
   def short_blurb
@@ -182,7 +185,7 @@ class Event < ApplicationRecord
   end
 
   def simultaneous_seasons
-    return Season.where('start_date <= ? and end_date >= ?', end_date, start_date)
+    Season.where("start_date <= ? and end_date >= ?", end_date, start_date)
   end
 
   def possible_proposals
@@ -199,25 +202,25 @@ class Event < ApplicationRecord
       proposals = proposals.or(Admin::Proposals::Proposal.where(id: proposal.id)) if proposal.present?
     end
 
-    return proposals
+    proposals
   end
 
   def all_attachments
     answers = Admin::Answer.where(answerable: questionnaires).or(Admin::Answer.where(answerable: proposal))
 
-    return attachments.or(Attachment.where(item: answers))
+    attachments.or(Attachment.where(item: answers))
   end
 
   def set_default_members_only_text
     return if !has_attribute?(:members_only_text) || members_only_text.present?
 
-    editable_block = Admin::EditableBlock.find_by(name: 'Event Members-Only Text Default')
+    editable_block = Admin::EditableBlock.find_by(name: "Event Members-Only Text Default")
 
-    self.members_only_text = editable_block.present? ? editable_block.content : ''
+    self.members_only_text = editable_block.present? ? editable_block.content : ""
   end
 
   def as_json(options = {})
-    defaults = { methods: [:thumb_image_url, :slideshow_image_url], include: [:venue, { pictures: { methods: [:thumb_url, :display_url] } }, team_members: { methods: [:user_name] }] }
+    defaults = { methods: [ :thumb_image_url, :slideshow_image_url ], include: [ :venue, { pictures: { methods: [ :thumb_url, :display_url ] } }, team_members: { methods: [ :user_name ] } ] }
 
     options = merge_hash(defaults, options)
 
@@ -230,17 +233,58 @@ class Event < ApplicationRecord
 
   # Returns a list of the all authors for every event.
   def self.author_name_list
-    return Rails.cache.fetch(AUTHOR_NAME_LIST_CACHE_KEY, expires_in: 12.hours) do
+    Rails.cache.fetch(AUTHOR_NAME_LIST_CACHE_KEY, expires_in: 12.hours) do
       Event.where.not(author: nil).pluck(:author).uniq.sort
-    end 
+    end
   end
 
   private
+
+  def generate_slug_from_name
+    return unless name.present?
+
+    # Only generate slug if it's blank or if the name changed
+    should_generate = slug.blank? || name_changed?
+
+    # If we have an existing slug and the name didn't change, don't modify
+    return if slug.present? && !name_changed?
+
+    base_slug = name.to_url
+
+    # If name changed, only update if current slug looks auto-generated from old name
+    if name_changed? && slug.present?
+      old_name = name_was&.to_url
+      # Only update if the current slug matches what would have been auto-generated from the old name
+      # This indicates it was auto-generated, not manually set
+      unless slug == old_name || slug.start_with?("#{old_name}-")
+        return # Slug was manually set, don't change it
+      end
+    end
+
+    # Find a unique slug by appending numbers if needed
+    candidate_slug = base_slug
+    counter = 1
+
+    while Event.where.not(id: id).where("LOWER(slug) = ?", candidate_slug.downcase).exists?
+      candidate_slug = "#{base_slug}-#{counter}"
+      counter += 1
+    end
+
+    self.slug = candidate_slug
+  end
 
   def recache_author_list_if_changed
     if saved_change_to_author?
       # Clear the cache for the author_name_list so it regenerates.
       Rails.cache.delete(AUTHOR_NAME_LIST_CACHE_KEY)
+    end
+  end
+
+  def end_date_after_start_date
+    return unless start_date.present? && end_date.present?
+
+    if end_date < start_date
+      errors.add(:end_date, "must be after or equal to start date")
     end
   end
 end

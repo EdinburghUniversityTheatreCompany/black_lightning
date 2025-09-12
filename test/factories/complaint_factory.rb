@@ -17,6 +17,6 @@ FactoryBot.define do
     subject { generate(:random_string) }
     description { generate(:random_text) }
     comments { generate(:random_text) }
-    resolved { [true, false].sample }
+    resolved { [ true, false ].sample }
   end
 end

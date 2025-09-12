@@ -7,11 +7,11 @@ class Admin::ComplaintsController < AdminController
   private
 
   def permitted_params
-    [:comments, :resolved]
+    [ :comments, :resolved ]
   end
 
   def order_args
-    ['resolved ASC', 'created_at DESC']
+    [ "resolved ASC", "created_at DESC" ]
   end
 
   def edit_title

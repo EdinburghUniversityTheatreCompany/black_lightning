@@ -30,10 +30,10 @@ class Admin::EditableBlock < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :url, uniqueness: { case_sensitive: false }, if: :url?
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   def self.groups
-    select('`group`').distinct.map(&:group).reject(&:blank?)
+    select("`group`").distinct.map(&:group).reject(&:blank?)
   end
 
   def self.ransackable_attributes(auth_object = nil)

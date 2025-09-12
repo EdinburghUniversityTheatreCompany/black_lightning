@@ -1,4 +1,4 @@
-require 'application_system_test_case'
+require "application_system_test_case"
 
 
 class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
@@ -21,7 +21,7 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
     fill_in "Date", with: @admin_maintenance_session.date
     click_on "Create Maintenance session"
 
-    assert_text 'The Maintenance session was successfully created'
+    assert_text "The Maintenance session was successfully created"
   end
 
   test "should update Maintenance session" do
@@ -38,7 +38,7 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
     visit admin_maintenance_session_url(@admin_maintenance_session)
 
     page.accept_confirm do
-      click_on 'Destroy', match: :first
+      click_on "Destroy", match: :first
     end
     assert_text "The Maintenance session has been successfully destroyed."
   end

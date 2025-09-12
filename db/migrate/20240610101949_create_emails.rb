@@ -6,7 +6,7 @@ class CreateEmails < ActiveRecord::Migration[7.0]
 
       t.timestamps
 
-      t.index [:email, :attached_object_id, :attached_object_type], unique: true, name: 'index_emails_on_email_and_attached_object'
+      t.index [ :email, :attached_object_id, :attached_object_type ], unique: true, name: 'index_emails_on_email_and_attached_object'
     end
   end
 end

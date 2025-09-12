@@ -7,7 +7,7 @@ class ComplaintsController < ApplicationController
   private
 
   def create_redirect_url
-    return '/'
+    "/"
   end
 
   def permitted_params
@@ -15,10 +15,10 @@ class ComplaintsController < ApplicationController
   end
 
   def on_create_success
-    helpers.append_to_flash(:success, 'Your Complaint or Suggestion has been successfully submitted. Thank you.')
+    helpers.append_to_flash(:success, "Your Complaint or Suggestion has been successfully submitted. Thank you.")
   end
 
   def new_title
-    'Submit Complaint or Suggestion'
+    "Submit Complaint or Suggestion"
   end
 end

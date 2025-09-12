@@ -12,7 +12,7 @@
 class MaintenanceSession < ApplicationRecord
     validates :date, presence: true
 
-    has_many :maintenance_attendances
+    has_many :maintenance_attendances, dependent: :restrict_with_error
     has_many :users, through: :maintenance_attendances
 
     accepts_nested_attributes_for :maintenance_attendances, reject_if: :all_blank, allow_destroy: true

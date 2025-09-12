@@ -25,14 +25,14 @@ def random_youtube_link
     "www.youtube.com/watch?v=#{id}"
   ]
 
-  return templates.sample
+  templates.sample
 end
 
 FactoryBot.define do
   factory :video_link do
     name { generate(:random_string) }
     link { random_youtube_link }
-    access_level { [0, 1, 2].sample }
+    access_level { [ 0, 1, 2 ].sample }
     order { rand(10) }
 
     association :item, factory: :show

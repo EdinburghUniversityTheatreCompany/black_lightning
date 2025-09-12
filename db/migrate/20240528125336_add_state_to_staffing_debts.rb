@@ -26,7 +26,7 @@ class AddStateToStaffingDebts < ActiveRecord::Migration[7.0]
       when 0 # Normal, so not forgiven.
         staffing_debt.update(forgiven: false)
       when 1 # Converted to a maintenance debt. This was not tracked before, but forgiven is the closest alternative.
-        staffing_debt.update(forgiven:true)
+        staffing_debt.update(forgiven: true)
       when 2 # Forgiven, simply matched.
         staffing_debt.update(forgiven: true)
       when 3 # Expired because it got out of date, closest alternative is forgiven.

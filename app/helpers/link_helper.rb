@@ -1,15 +1,15 @@
 module LinkHelper
   def user_link(user, use_public_link_as_fallback)
-    return 'User Not Found' if user.nil?
+    return "User Not Found" if user.nil?
 
     name = user.name(current_ability)
 
     if current_ability.can?(:read, user)
-      return link_to name, admin_user_path(user)
+      link_to name, admin_user_path(user)
     elsif use_public_link_as_fallback && current_ability.can?(:view_shows_and_bio, user)
-      return link_to name, user_path(user)
+      link_to name, user_path(user)
     else
-      return name
+      name
     end
   end
 
@@ -22,31 +22,31 @@ module LinkHelper
     # There are some further specifics you should definitely check out here:
     # https://github.com/nathanvda/cocoon#link_to_add_association
     button = link_to_add_association add_button_text(object_name), form, attribute_name, class: html_class
-  
-    return "<div>#{button}</div>".html_safe
+
+    "<div>#{button}</div>".html_safe
   end
 
   def add_button_text(object_name)
-    return generate_icon_prefix('plus', "Add #{object_name}")
+    generate_icon_prefix("plus", "Add #{object_name}")
   end
 
   def link_to_remove(form, link_text: nil, html_class: nil)
-    html_class ||= 'btn btn-danger '
+    html_class ||= "btn btn-danger "
 
-    return link_to_remove_association remove_button_text(link_text), form, class: html_class
+    link_to_remove_association remove_button_text(link_text), form, class: html_class
   end
 
   def remove_button_text(text = nil)
-    text ||= 'Remove'
+    text ||= "Remove"
 
-    return generate_icon_prefix('trash', text)
+    generate_icon_prefix("trash", text)
   end
 
   def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
-    raise(ArgumentError, 'The object is nil') if object.nil?
+    raise(ArgumentError, "The object is nil") if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
-    action = action.to_s.parameterize(separator: '_').to_sym
+    action = action.to_s.parameterize(separator: "_").to_sym
 
     additional_message = 'Did you mean "new"? ' if action == :create
     additional_message = 'Did you mean "edit"? ' if action == :update
@@ -63,7 +63,7 @@ module LinkHelper
 
       raise(TypeError, "#{object} is an instance and not a class so it cannot be #{action}'ed. The allowed actions that are executable on classes are hard-coded, and you can modify them in the link-helper.")
     elsif %i[edit show destroy reject approve answer create update delete].include?(action) && object.is_a?(Class)
-      raise(TypeError, "#{object} is a class and not an instance so it cannot be #{action}'ed.") 
+      raise(TypeError, "#{object} is a class and not an instance so it cannot be #{action}'ed.")
     end
 
     condition = current_ability.can?(action, object) && additional_condition if condition.nil?
@@ -92,7 +92,7 @@ module LinkHelper
     html_class = get_default_html_class(action) if html_class.nil?
 
     html_class = "#{html_class} no-wrap" if no_wrap
-  
+
     # Removes prepending pencil tags and such.
     title ||= strip_tags(link_text).strip
 
@@ -100,28 +100,28 @@ module LinkHelper
 
     link = wrap_in_tags(link, wrap_tag) if wrap_tag
 
-    return link
+    link
   end
 
   def wrap_in_tags(content, wrap_tag)
-    return "<#{wrap_tag}>#{content}</#{wrap_tag}>".html_safe
+    "<#{wrap_tag}>#{content}</#{wrap_tag}>".html_safe
   end
 
   def get_namespace_for_link(object, is_admin)
-    model_namespace = (object.is_a?(Class) ? object : object.class).name.split('::').first
+    model_namespace = (object.is_a?(Class) ? object : object.class).name.split("::").first
 
-    namespace = is_admin && model_namespace != 'Admin' ? :admin : nil
+    namespace = is_admin && model_namespace != "Admin" ? :admin : nil
 
-    return namespace
+    namespace
   end
 
   def generate_icon_prefix(icon_name, prefix)
-    return "<span class=\"no-wrap\"><i class=\"fas fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
+    "<span class=\"no-wrap\"><i class=\"fas fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
   end
 
   def view_page_on_main_site_button
-    new_url = request.original_fullpath.delete_prefix('/admin')
-    link_to("View on Main Site", new_url, class: 'btn btn-secondary') if new_url != request.original_fullpath
+    new_url = request.original_fullpath.delete_prefix("/admin")
+    link_to("View on Main Site", new_url, class: "btn btn-secondary") if new_url != request.original_fullpath
   end
 
   private
@@ -134,16 +134,16 @@ module LinkHelper
       when :show
         link_text = get_object_name(object, "Show #{get_formatted_class_name(object)}")
       when :index
-        prefix = generate_icon_prefix('th-list', 'Show All')
+        prefix = generate_icon_prefix("th-list", "Show All")
         append_name = true if append_name.nil?
       when :new
-        prefix = generate_icon_prefix('plus', 'New')
+        prefix = generate_icon_prefix("plus", "New")
         append_name = true if append_name.nil?
       when :edit
-        prefix = generate_icon_prefix('pencil-alt', 'Edit')
+        prefix = generate_icon_prefix("pencil-alt", "Edit")
       when :destroy
-        prefix = generate_icon_prefix('trash', 'Destroy')
-      else #when :reject, :approve
+        prefix = generate_icon_prefix("trash", "Destroy")
+      else # when :reject, :approve
         prefix = action.to_s.humanize.titleize
       end
     end
@@ -153,21 +153,21 @@ module LinkHelper
 
     link_text ||= "#{prefix}#{" #{name}" if append_name}".html_safe
 
-    return link_text.to_s
+    link_text.to_s
   end
 
   def get_default_html_class(action)
     case action
     when :show
-      ''
+      ""
     when :new
-      'btn btn-primary'
+      "btn btn-primary"
     when :destroy, :reject
-      'btn btn-danger'
+      "btn btn-danger"
     when :approve
-      'btn btn-success'
+      "btn btn-success"
     else
-      'btn btn-secondary'
+      "btn btn-secondary"
     end
   end
 
@@ -187,13 +187,13 @@ module LinkHelper
   def get_default_link_target(object, action, namespace, anchor, query_params)
     query_params.merge(anchor: anchor) if anchor.present?
 
-    params = [namespace, object]
+    params = [ namespace, object ]
 
     # For index, object is a class, so it returns the index. For show, it returns the show page.
     if %i[show index destroy].include?(action)
-      return polymorphic_path(params, query_params)
+      polymorphic_path(params, query_params)
     else
-      return polymorphic_path_for_action(action, params, query_params)
+      polymorphic_path_for_action(action, params, query_params)
     end
   end
 
@@ -213,6 +213,6 @@ module LinkHelper
       confirm_data[:confirm] ||= "Are you sure you want to delete #{name}?"
     end
 
-    return confirm_data
+    confirm_data
   end
 end

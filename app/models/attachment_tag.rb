@@ -16,7 +16,7 @@ class AttachmentTag < ApplicationRecord
 
   has_and_belongs_to_many :attachments, optional: true
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   default_scope { order(:ordering) }
 

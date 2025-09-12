@@ -1,9 +1,9 @@
 ChaosRails::Application.config.middleware.insert_before 0, Rack::Cors do
   allow do
-    origins  'localhost:3000', '127.0.0.1:3000', '/(.+?)\.bedlamtheatre\.co\.uk', 'bedlamtheatre.co.uk', 'api.twitter.com', 'www.google-analytics.com', 'ssl.google-analytics.com'
-    resource '*',
+    origins  "localhost:3000", "127.0.0.1:3000", '/(.+?)\.bedlamtheatre\.co\.uk', "bedlamtheatre.co.uk", "api.twitter.com", "www.google-analytics.com", "ssl.google-analytics.com"
+    resource "*",
              headers: :any,
-             methods: [:get, :post, :put, :patch, :delete, :options, :head]
+             methods: [ :get, :post, :put, :patch, :delete, :options, :head ]
   end
 end
 # Be sure to restart your server when you modify this file.
@@ -12,4 +12,3 @@ end
 # Handle Cross-Origin Resource Sharing (CORS) in order to accept cross-origin Ajax requests.
 
 # Read more: https://github.com/cyu/rack-cors
-

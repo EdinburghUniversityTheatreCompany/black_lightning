@@ -19,13 +19,13 @@ class NewsController < ApplicationController
       respond_to do |format|
         format.rss { render layout: false }
       end
-      
+
       return
     end
 
     super
 
-    @title = 'Bedlam News'
+    @title = "Bedlam News"
   end
 
     ##
@@ -35,11 +35,11 @@ class NewsController < ApplicationController
     private
 
     def includes_args
-      [image_attachment: :blob]
+      [ image_attachment: :blob ]
     end
 
     def order_args
-      ['publish_date DESC']
+      [ "publish_date DESC" ]
     end
 
     def items_per_page

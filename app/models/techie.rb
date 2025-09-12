@@ -17,15 +17,15 @@
 class Techie < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
 
-  has_and_belongs_to_many :parents, class_name: 'Techie', foreign_key: 'child_id', association_foreign_key: 'techie_id', join_table: 'children_techies'
+  has_and_belongs_to_many :parents, class_name: "Techie", foreign_key: "child_id", association_foreign_key: "techie_id", join_table: "children_techies"
 
-  has_and_belongs_to_many :children, class_name: 'Techie', foreign_key: 'techie_id', association_foreign_key: 'child_id', join_table: 'children_techies'
+  has_and_belongs_to_many :children, class_name: "Techie", foreign_key: "techie_id", association_foreign_key: "child_id", join_table: "children_techies"
 
   accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
-  default_scope -> { order('name ASC') }
+  default_scope -> { order("name ASC") }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[id name]
@@ -55,10 +55,10 @@ class Techie < ApplicationRecord
     # Load all techies to cache them.
     Techie.all.includes(:children, :parents).load
 
-    techies = [self]
+    techies = [ self ]
 
-    techie_parents = [self]
-    techie_children = [self]
+    techie_parents = [ self ]
+    techie_children = [ self ]
 
     (0..amount_of_generations).each do
       techie_parents = techie_parents.to_a.flat_map(&:parents).uniq
@@ -68,7 +68,7 @@ class Techie < ApplicationRecord
       techies += techie_parents.to_a + techie_children.to_a
     end
 
-    return techies.uniq
+    techies.uniq
   end
 
   private
@@ -76,13 +76,13 @@ class Techie < ApplicationRecord
   def cycle_through_attributes(attributes, collection)
     attributes.each do |attribute|
       id = attribute[1][:id]
-      next if id == ''
+      next if id == ""
 
       techie = Techie.find(id)
 
       collection << techie unless collection.all.include?(techie)
 
-      collection.delete(techie) if attribute[1][:_destroy] == '1'
+      collection.delete(techie) if attribute[1][:_destroy] == "1"
     end
   end
 end

@@ -5,7 +5,7 @@ class Admin::SeasonsController < Admin::GenericEventsController
   private
 
   def permitted_params
-    return super + [
+    super + [
       event_ids: []
     ]
   end

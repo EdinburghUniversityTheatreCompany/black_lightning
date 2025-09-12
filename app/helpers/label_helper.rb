@@ -12,6 +12,6 @@ module LabelHelper
 
     message = ActionController::Base.helpers.sanitize message
 
-    return "<span class=\"badge bg-#{label_class}#{' float-right' if pull_right}\">#{message}</span>".html_safe
+    "<span class=\"badge bg-#{label_class}#{' float-right' if pull_right}\">#{message}</span>".html_safe
   end
 end

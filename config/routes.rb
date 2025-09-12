@@ -1,4 +1,4 @@
-require 'silencer'
+require "silencer"
 
 ChaosRails::Application.routes.draw do
   devise_for :users
@@ -6,9 +6,9 @@ ChaosRails::Application.routes.draw do
   use_doorkeeper
   use_doorkeeper_openid_connect
 
-  root to: 'static#home'
+  root to: "static#home"
 
-  match '*path', to: 'application#options', via: :options
+  match "*path", to: "application#options", via: :options
 
   # devise_for :users, controllers: { registrations: 'registrations' } do
   #   post 'users/stripe'      , to: 'registrations#create_with_stripe', as: :user_stripe_registration
@@ -22,98 +22,98 @@ ChaosRails::Application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
-  resources :events,      only: [:index]
-  resources :shows,       only: [:index, :show]
-  resources :workshops,   only: [:index, :show]
-  resources :seasons,     only: [:index, :show]
-  resources :news,        only: [:index, :show]
-  resources :venues,      only: [:index, :show] do
-    collection do 
-      get 'map'
+  resources :events,      only: [ :index ]
+  resources :shows,       only: [ :index, :show ]
+  resources :workshops,   only: [ :index, :show ]
+  resources :seasons,     only: [ :index, :show ]
+  resources :news,        only: [ :index, :show ]
+  resources :venues,      only: [ :index, :show ] do
+    collection do
+      get "map"
     end
   end
 
 
   resources :membership_activation_tokens, only: [] do
     member do
-      get 'activate', to: 'membership_activation_tokens#activate'
-      put 'submit', to: 'membership_activation_tokens#submit'
-      patch 'submit', to: 'membership_activation_tokens#submit'
+      get "activate", to: "membership_activation_tokens#activate"
+      put "submit", to: "membership_activation_tokens#submit"
+      patch "submit", to: "membership_activation_tokens#submit"
     end
   end
 
-  resources :users, only: [:show] do
+  resources :users, only: [ :show ] do
     member do
-      put 'consent'
+      put "consent"
     end
-  
+
     collection do
-      get 'current', to: 'users#current'
+      get "current", to: "users#current"
     end
   end
 
-  get 'marketing_creatives/sign_up', to: 'admin/marketing_creatives/profiles#sign_up'
+  get "marketing_creatives/sign_up", to: "admin/marketing_creatives/profiles#sign_up"
   # TODO: Corresponding create, maybe?
 
   # Defined in the silencer initializer.
   COMPLAINTS_ALIASES.each do |path|
-    get path, to: redirect('complaints/new')
+    get path, to: redirect("complaints/new")
   end
 
-  resources :complaints, only: [:new, :create]
+  resources :complaints, only: [ :new, :create ]
 
-  get 'attachments/:slug(/:style)', to: 'attachments#file', as: 'attachment'
+  get "attachments/:slug(/:style)", to: "attachments#file", as: "attachment"
 
   # Test route
   if Rails.env.test? || Rails.env.development?
-    get 'tests/test_500', to: 'tests#test_500'
+    get "tests/test_500", to: "tests#test_500"
   end
 
   namespace :admin do
-    get '', to: 'dashboard#index'
+    get "", to: "dashboard#index"
 
     # The resources pages:_inde
-    get 'resources', to: 'resources#page', as: :resources_index
-    get 'resources/membership_checker', to: 'resources#membership_checker', as: :resources_membership_checker
-    get 'resources/(*page)', to: 'resources#page', as: :resources
+    get "resources", to: "resources#page", as: :resources_index
+    get "resources/membership_checker", to: "resources#membership_checker", as: :resources_membership_checker
+    get "resources/(*page)", to: "resources#page", as: :resources
 
-    resources :events, only: [:index, :show] do
+    resources :events, only: [ :index, :show ] do
       member do
-        get 'xts', to: 'events#find_by_xts_id'
+        get "xts", to: "events#find_by_xts_id"
       end
     end
 
     resources :shows do
-      resources :feedbacks, except: [:show]
+      resources :feedbacks, except: [ :show ]
 
       collection do
-        get 'query_xts'
+        get "query_xts"
       end
 
       member do
-        post 'create_staffing_debts', to: 'shows#create_staffing_debts'
-        post 'create_maintenance_debts', to: 'shows#create_maintenance_debts'
-        get 'xts_report'
-        post 'convert_to_season', to: 'shows#convert_to_season'
-        post 'convert_to_workshop', to: 'shows#convert_to_workshop'
+        post "create_staffing_debts", to: "shows#create_staffing_debts"
+        post "create_maintenance_debts", to: "shows#create_maintenance_debts"
+        get "xts_report"
+        post "convert_to_season", to: "shows#convert_to_season"
+        post "convert_to_workshop", to: "shows#convert_to_workshop"
       end
     end
 
     resources :workshops
 
-    resources :debt_notifications, only: [:index]
+    resources :debt_notifications, only: [ :index ]
 
-    resources :staffing_debts, except: [:destroy] do
+    resources :staffing_debts, except: [ :destroy ] do
       member do
-        put 'convert_to_maintenance_debt'
-        put 'forgive'
+        put "convert_to_maintenance_debt"
+        put "forgive"
       end
     end
 
-    resources :maintenance_debts, except: [:destroy] do
+    resources :maintenance_debts, except: [ :destroy ] do
       member do
-        put 'convert_to_staffing_debt'
-        put 'forgive'
+        put "convert_to_staffing_debt"
+        put "forgive"
       end
     end
 
@@ -121,13 +121,13 @@ ChaosRails::Application.routes.draw do
 
     resources :maintenance_sessions
     resources :maintenance_attendances
-  
+
     resources :venues do
-      collection do 
-        get 'map'
+      collection do
+        get "map"
       end
     end
-  
+
     resources :seasons
     resources :news
     resources :fault_reports
@@ -136,19 +136,19 @@ ChaosRails::Application.routes.draw do
     resources :attachment_tags
     resources :picture_tags
 
-    resources :attachments, only: [:index]
-    resources :pictures, only: [:index]
+    resources :attachments, only: [ :index ]
+    resources :pictures, only: [ :index ]
 
     resources :opportunities do
       member do
-        put 'approve'
-        put 'reject'
+        put "approve"
+        put "reject"
       end
     end
 
     resources :membership, only: [] do
       collection do
-        get 'check_membership', to: 'membership#check_membership'
+        get "check_membership", to: "membership#check_membership"
       end
     end
 
@@ -158,11 +158,11 @@ ChaosRails::Application.routes.draw do
 
     resources :users do
       member do
-        post 'reset_password'
+        post "reset_password"
       end
 
       collection do
-        get  'autocomplete_list', constraints: { format: :json }
+        get  "autocomplete_list", constraints: { format: :json }
       end
     end
 
@@ -170,71 +170,71 @@ ChaosRails::Application.routes.draw do
     #   get 'generate_card'
     # end
 
-    resources :membership_activation_tokens, only: [:new] do
+    resources :membership_activation_tokens, only: [ :new ] do
       collection do
-        post 'create_activation', to: 'membership_activation_tokens#create_activation'
-        post 'create_reactivation', to: 'membership_activation_tokens#create_reactivation'
+        post "create_activation", to: "membership_activation_tokens#create_activation"
+        post "create_reactivation", to: "membership_activation_tokens#create_reactivation"
       end
     end
 
     resources :reviews
-  
+
     resources :roles do
       member do
-        post 'add_user', to: 'roles#add_user'
-        delete 'purge', to: 'roles#purge'
-        put 'archive', to: 'roles#archive'
+        post "add_user", to: "roles#add_user"
+        delete "purge", to: "roles#purge"
+        put "archive", to: "roles#archive"
       end
     end
 
-    get  '/permissions/grid', to: 'permissions#grid', as: :permissions
-    post '/permissions/grid', to: 'permissions#update_grid', as: :update_permissions
+    get  "/permissions/grid", to: "permissions#grid", as: :permissions
+    post "/permissions/grid", to: "permissions#update_grid", as: :update_permissions
 
     resources :techies do
       collection do
-        get 'tree'
-        get 'bush'
-        get 'tree_data'
-        get 'mass_new'
-        post 'mass_create'
+        get "tree"
+        get "bush"
+        get "tree_data"
+        get "mass_new"
+        post "mass_create"
       end
     end
 
-    get 'techie_families', to: 'techies#index'
+    get "techie_families", to: "techies#index"
 
     namespace :marketing_creatives do
       resources :profiles do
         collection do
-          get 'sign_up', to: 'profiles#sign_up'
+          get "sign_up", to: "profiles#sign_up"
         end
 
         member do
-          put 'approve'
-          put 'reject'
+          put "approve"
+          put "reject"
         end
       end
 
       # Looks a bit weird but necessary to get the url to be admin/marketing_creatives.
       # Needs to be after the other resources or it will try to look for a category with url "profile" for example.
-      resources '', controller: 'categories', as: 'categories'
+      resources "", controller: "categories", as: "categories"
     end
 
     resources :staffing_templates
 
     resources :staffings do
       collection do
-        get ':slug/grid', to: 'staffings#grid', format: :html, as: :grid
+        get ":slug/grid", to: "staffings#grid", format: :html, as: :grid
       end
     end
 
-    get '/staffings/job/:id/sign_up_confirm', to: 'staffings#sign_up_confirm', as: :sign_up_confirm
-    put '/staffings/job/:id/sign_up', to: 'staffings#sign_up', as: :staffing_sign_up
+    get "/staffings/job/:id/sign_up_confirm", to: "staffings#sign_up_confirm", as: :sign_up_confirm
+    put "/staffings/job/:id/sign_up", to: "staffings#sign_up", as: :staffing_sign_up
 
-    get '/proposals', to: redirect('/admin/proposals/calls')
+    get "/proposals", to: redirect("/admin/proposals/calls")
     namespace :proposals do
       resources :calls do
         member do
-          put 'archive'
+          put "archive"
         end
 
         resources :proposals, only: :index
@@ -242,104 +242,104 @@ ChaosRails::Application.routes.draw do
 
       resources :proposals, except: :index do
         member do
-          put 'approve'
-          put 'reject'
-          put 'convert'
+          put "approve"
+          put "reject"
+          put "convert"
         end
       end
 
-      get '/about', to: 'proposals#about'
+      get "/about", to: "proposals#about"
       resources :call_question_templates
     end
 
     namespace :questionnaires do
       resources :questionnaires do
         member do
-          get  'answer', to: 'questionnaires#answer'
-          put 'answer', to: 'questionnaires#set_answers'
-          patch 'answer', to: 'questionnaires#set_answers'
+          get  "answer", to: "questionnaires#answer"
+          put "answer", to: "questionnaires#set_answers"
+          patch "answer", to: "questionnaires#set_answers"
         end
       end
 
       resources :questionnaire_templates
     end
 
-    get 'tests', to: 'tests#index'
+    get "tests", to: "tests#index"
     namespace :tests do
-      get 'test_alerts/:type',action: 'test_alerts', as: 'test_alerts'
-      get 'test_404'
-      get 'test_500'
-      get 'test_access_denied'
+      get "test_alerts/:type", action: "test_alerts", as: "test_alerts"
+      get "test_404"
+      get "test_500"
+      get "test_access_denied"
     end
 
-    resources :complaints, except: [:new, :create] do
-      get 'new', to: redirect('/complaints/new')
+    resources :complaints, except: [ :new, :create ] do
+      get "new", to: redirect("/complaints/new")
     end
 
-    get '/reports/', to: 'reports#index', as: 'reports'
-    namespace 'reports' do
-      %w(roles members newsletter_subscribers staffing).each do |action|
+    get "/reports/", to: "reports#index", as: "reports"
+    namespace "reports" do
+      %w[roles members newsletter_subscribers staffing].each do |action|
         put action, action: action, as: action
       end
     end
 
-    namespace 'jobs' do
-      %w(overview working pending failed remove retry).each do |action|
-        get action, action: action, as:  action, controller: '/admin/job_control'
+    namespace "jobs" do
+      %w[overview working pending failed remove retry].each do |action|
+        get action, action: action, as:  action, controller: "/admin/job_control"
       end
     end
 
-    namespace 'help' do
-      %w(kramdown venue_location).each do |action|
-        get action, action: action, as:  action, controller: '/admin/help'
+    namespace "help" do
+      %w[kramdown venue_location].each do |action|
+        get action, action: action, as:  action, controller: "/admin/help"
       end
     end
 
-    get 'committee', to: 'static#committee', as: :committee
-    get 'bootstrap_test', to: 'static#bootstrap_test', as: :bootstrap_test
+    get "committee", to: "static#committee", as: :committee
+    get "bootstrap_test", to: "static#bootstrap_test", as: :bootstrap_test
     # Catch all 404's on the admin site.
-    get '*page', to: 'static#error', as: :static
-    
+    get "*page", to: "static#error", as: :static
+
     # Test route
     if Rails.env.test? || Rails.env.development?
-      get 'dashboard/widget/:widget_name', to: 'dashboard#widget'
+      get "dashboard/widget/:widget_name", to: "dashboard#widget"
     end
   end
 
-  get 'archives', to: 'archives#index', as: :archives_index
+  get "archives", to: "archives#index", as: :archives_index
   namespace :archives do
-    get 'events', to: 'events#index', as: :events
-    get 'shows', to: 'shows#index', as: :shows
-    get 'workshops', to: 'workshops#index', as: :workshops
-    get 'proposals', to: 'proposals#index', as: :proposals
-    get 'seasons',    to: 'seasons#index',    as: :seasons
+    get "events", to: "events#index", as: :events
+    get "shows", to: "shows#index", as: :shows
+    get "workshops", to: "workshops#index", as: :workshops
+    get "proposals", to: "proposals#index", as: :proposals
+    get "seasons",    to: "seasons#index",    as: :seasons
   end
-  get 'archives/(*page)', to: 'archives#page', as: :archives
+  get "archives/(*page)", to: "archives#page", as: :archives
 
-  post 'markdown/preview', to: 'markdown#preview'
+  post "markdown/preview", to: "markdown#preview"
 
-  get 'about', to: 'about#page', as: :about_index
-  get 'about/(*page)', to: 'about#page', as: :about
+  get "about", to: "about#page", as: :about_index
+  get "about/(*page)", to: "about#page", as: :about
 
-  get 'get_involved', to: 'get_involved#page', as: :get_involved_index
-  get 'get_involved/opportunities', to: 'get_involved#opportunities', as: :get_involved_opportunities
-  get 'get_involved/(*page)', to: 'get_involved#page', as: :get_involved
+  get "get_involved", to: "get_involved#page", as: :get_involved_index
+  get "get_involved/opportunities", to: "get_involved#opportunities", as: :get_involved_opportunities
+  get "get_involved/(*page)", to: "get_involved#page", as: :get_involved
 
-  get 'youth', to: redirect('/getinvolved/youth_project')
+  get "youth", to: redirect("/getinvolved/youth_project")
 
-  get 'welcomeweek', to: redirect('/welcome_week')
-  get 'welcome_week/parapicnic_in_the_park', to: redirect('https://theatreparadok.co.uk/events/2021_09_parapicnic/')
-  get 'welcome_week/catching_up', to: redirect('https://theatreparadok.co.uk/events/catching-up-fringe-show-performance-screening-for-welcome-week/')
+  get "welcomeweek", to: redirect("/welcome_week")
+  get "welcome_week/parapicnic_in_the_park", to: redirect("https://theatreparadok.co.uk/events/2021_09_parapicnic/")
+  get "welcome_week/catching_up", to: redirect("https://theatreparadok.co.uk/events/catching-up-fringe-show-performance-screening-for-welcome-week/")
 
-  get 'welcome_week', to: redirect('get_involved/welcome_week')
+  get "welcome_week", to: redirect("get_involved/welcome_week")
 
   # Use bedlamtheatre.co.uk/:slug to find a season
-  get '/:id', to: 'seasons#show', constraints: Constraints::ExistingSeason.new
+  get "/:id", to: "seasons#show", constraints: Constraints::ExistingSeason.new
 
   # Other static pages. The approach using %w(...) does not work without updating all references to static_path.
-  get '/*page', to: 'static#show', as: :static, constraints: lambda { |request|
+  get "/*page", to: "static#show", as: :static, constraints: lambda { |request|
     # Exclude active_storage paths from being redirected to the 404 page.
-    !request.path.starts_with?('/rails/active_storage') && !request.path.starts_with?('/assets')
+    !request.path.starts_with?("/rails/active_storage") && !request.path.starts_with?("/assets")
   }
 
 

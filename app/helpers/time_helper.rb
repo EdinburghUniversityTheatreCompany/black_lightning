@@ -1,7 +1,7 @@
 module TimeHelper
   # Time as in datetime
   def time_range_string(start_time, end_time, include_year, format = :long)
-    return '' if start_time.nil? && end_time.nil?
+    return "" if start_time.nil? && end_time.nil?
 
     # Check if there is just one datetime provided or if the datetimes are the same
     if start_time.nil? || end_time.nil? || start_time == end_time
@@ -23,10 +23,10 @@ module TimeHelper
     result << " - #{I18n.l(end_time, format: format)}"
     result << " #{end_time.year}" if include_year
 
-    return result
+    result
   end
 
   def max_end_year
-    return Date.current.year + 5
+    Date.current.year + 5
   end
 end
