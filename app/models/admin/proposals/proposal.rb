@@ -187,7 +187,10 @@ class Admin::Proposals::Proposal < ApplicationRecord
     p "Name: #{@show.name}"
     p "Slug: #{@show.slug}"
   end
-  handle_asynchronously :convert_to_show
+  # Convert to show asynchronously using ActiveJob
+  def convert_to_show_async
+    ProposalConversionJob.perform_later(id)
+  end
 
   private
 
