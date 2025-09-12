@@ -81,7 +81,8 @@ RUN chmod +x bin/* && \
     sed -i 's/ruby\.exe$/ruby/' bin/*
 
 # Precompile assets for production without requiring the real master key
-RUN DATABASE_URL="mysql2://user:pass@127.0.0.1:3306/dummy" ACTIVE_STORAGE_SERVICE=local SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
+ # DATABASE_URL="mysql2://user:pass@127.0.0.1:3306/dummy" 
+RUN ACTIVE_STORAGE_SERVICE=local SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 
 # Clean up build artifacts
 RUN rm -rf \
