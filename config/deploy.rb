@@ -11,6 +11,9 @@ set :keep_releases, 4
 set :linked_files, %w[config/database.yml config/master.key config/openid_signing_key]
 set :linked_dirs, %w[log bundle tmp/pids tmp/cache tmp/sockets public/system public/assets public/packs node_modules uploads storage .duplicacy]
 
+# Ensure native gems like nokogiri build against system libraries on the server
+set :default_env, { "BUNDLE_FORCE_RUBY_PLATFORM" => "true" }
+
 # TODO: Run zeitwerk:check
 # TODO: Run tests
 # TODO: Fix the issue with delayed_job not restarting properly
