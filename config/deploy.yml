@@ -2,7 +2,7 @@
 service: blacklightning
 
 # Name of the container image.
-image: eusatheatre/blacklightning
+image: bedlamtheatre/blacklightning
 
 # Deploy to these servers.
 servers:
@@ -25,7 +25,7 @@ proxy:
 registry:
   # Specify the registry server, if you're not using Docker Hub
   # server: registry.digitalocean.com / ghcr.io / ...
-  username: eusatheatre
+  username: bedlamtheatre
 
   # Always use an access token rather than real password (pulled from .kamal/secrets).
   password:
@@ -34,18 +34,21 @@ registry:
 # Configure the image builder.
 builder:
   arch: amd64
-  cache:
-    type: registry
-    image: mickzijdel/reciprocity-build-cache
-    options: mode=max
+  # cache:
+  #   type: registry
+  #   image: bedlamtheatre/blacklightning-build-cache
+  #   options: mode=max
+  # WARNING: IF YOU ENABLE THIS, IT WILL NOT BE PRIVATE AND THAT IS PROBABLY BAD FOR CREDENTIALS SECURITY REASONS
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
   clear:
     RAILS_ENV: production
-    DATABASE_URL: mysql2://black_lightning:Hoihoihoi3@127.0.0.1:3306/bedlam_blacklightning_production
+    DATABASE_USERNAME: root
+    DATABASE_HOST: blacklightning-mysql
   secret:
     - RAILS_MASTER_KEY
+    - MYSQL_ROOT_PASSWORD
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal app logs -r job" will tail logs from the first server in the job section.
@@ -55,8 +58,8 @@ env:
 
 # Use a different ssh user than root
 #
-# ssh:
-#   user: app
+ssh:
+  user: deploy
 
 # Use a persistent storage volume.
 volumes:
@@ -76,21 +79,17 @@ asset_path: /rails/public/assets
 
 # Use accessory services (secrets come from .kamal/secrets).
 #
-# accessories:
-#   db:
-#     image: mysql:8.0
-#     host: 192.168.0.2
-#     port: 3306
-#     env:
-#       clear:
-#         MYSQL_ROOT_HOST: '%'
-#       secret:
-#         - MYSQL_ROOT_PASSWORD
-#     files:
-#       - config/mysql/production.cnf:/etc/mysql/my.cnf
-#       - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
-#     directories:
-#       - data:/var/lib/mysql
+accessories:
+  mysql:
+    image: mysql:8.0
+    host: bdlm-eusa-ed-ac-uk
+    env:
+      clear:
+        MYSQL_ROOT_HOST: "%"
+      secret:
+        - MYSQL_ROOT_PASSWORD
+    directories:
+      - data:/var/lib/mysql
 #   redis:
 #     image: valkey/valkey:8
 #     host: 192.168.0.2

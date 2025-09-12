@@ -11,8 +11,8 @@ wasabi:
   bucket: bedlam-theatre-website
   endpoint: https://s3.eu-central-1.wasabisys.com
   region: eu-central-1
-  access_key_id: <%= Rails.application.credentials[:wasabi][Rails.env.to_sym][:access_key_id] %>
-  secret_access_key: <%= Rails.application.credentials[:wasabi][Rails.env.to_sym][:secret_access_key] %>
+  access_key_id: <%= Rails.application.credentials.dig(:wasabi, Rails.env.to_sym, :access_key_id) %>
+  secret_access_key: <%= Rails.application.credentials.dig(:wasabi, Rails.env.to_sym, :secret_access_key) %>
 
 wasabi_mirrored:
   service: Mirror
