@@ -1,93 +1,97 @@
-source 'http://rubygems.org'
+source "http://rubygems.org"
 
-ruby File.read('.ruby-version').strip
+ruby File.read(".ruby-version").strip
 
-gem 'rails', '~> 8.0'
+gem "rails", "~> 8.0"
 
-gem 'mysql2', github: 'mickzijdel/mysql2', branch: 'master'
+gem "mysql2", github: "mickzijdel/mysql2", branch: "master"
 
-gem 'cssbundling-rails'
-gem 'jsbundling-rails'
-gem 'propshaft'
+gem "cssbundling-rails"
+gem "jsbundling-rails"
+gem "propshaft"
 
-gem 'terser'
+gem "terser"
 
-gem 'breadcrumbs_on_rails'
-gem 'cancancan'
-gem 'devise'
-gem 'doorkeeper'
-gem 'doorkeeper-openid_connect'
-gem 'recaptcha'
-gem 'rolify'
-gem 'simple_form'
+gem "breadcrumbs_on_rails"
+gem "cancancan"
+gem "devise"
+gem "doorkeeper"
+gem "doorkeeper-openid_connect"
+gem "recaptcha"
+gem "rolify"
+gem "simple_form"
 
-gem 'cocoon'
-gem 'json'
-gem 'kaminari'
-gem 'kramdown'
+gem "cocoon"
+gem "json"
+gem "kaminari"
+gem "kramdown"
 
-gem 'daemons'
-gem 'delayed_job_active_record'
+gem "daemons"
+gem "delayed_job_active_record"
 
-gem 'caxlsx'
-gem 'leaflet-rails'
-gem 'rqrcode'
+# New job system
+gem "solid_queue"
+gem "mission_control-jobs"
 
-gem 'silencer'
+gem "caxlsx"
+gem "leaflet-rails"
+gem "rqrcode"
 
-gem 'active_storage_validations'
-gem 'aws-sdk-s3', require: false
-gem 'image_processing'
-gem 'mini_magick'
+gem "silencer"
 
-gem 'chronic'
-gem 'ransack'
+gem "active_storage_validations"
+gem "aws-sdk-s3", require: false
+gem "image_processing"
+gem "mini_magick"
 
-gem 'nokogiri'
+gem "chronic"
+gem "ransack"
 
-gem 'paper_trail'
-gem 'rack', '~> 2.0'
-gem 'rack-cors'
+gem "nokogiri"
 
-gem 'stringex'
+gem "paper_trail"
+gem "rack", "~> 2.0"
+gem "rack-cors"
 
-gem 'honeybadger'
+gem "stringex"
 
-gem 'csv'
+gem "honeybadger"
+
+gem "csv"
 
 group :development, :test do
   # Use Puma as the app server
-  gem 'puma'
+  gem "puma"
 
-  gem 'byebug'
-  gem 'spring'
+  gem "byebug"
+  gem "spring"
 
-  gem 'better_errors'
-  gem 'binding_of_caller'
+  gem "better_errors"
+  gem "binding_of_caller"
 
-  gem 'rails-controller-testing'
-  gem 'rdoc'
-  gem 'rubocop-rails-omakase'
-  gem 'rubocop-faker'
+  gem "rails-controller-testing"
+  gem "rdoc"
+  gem "rubocop-rails-omakase"
+  gem "rubocop-faker"
 
   # Adds support for Capybara system testing and selenium driver
-  gem 'capybara', '>= 2.15'
-  gem 'selenium-webdriver'
+  gem "capybara", ">= 2.15"
+  gem "selenium-webdriver"
   # Easy installation and use of web drivers to run system tests with browsers
-  gem 'webdrivers'
+  gem "webdrivers"
 
-  gem 'factory_bot_rails'
+  gem "factory_bot_rails"
 
-  gem 'coffee-script-source', '1.12.2'
-  gem 'tzinfo-data'
+  gem "coffee-script-source", "1.12.2"
+  gem "tzinfo-data"
 
-  gem 'annotate'
+  gem "annotate"
 
-  gem 'bullet'
+  gem "bullet"
 
-  gem 'faker'
+  gem "faker"
 
-  gem 'test-prof'
+  gem "test-prof"
 
   gem "rdbg"
   gem "ruby-lsp-rails"
@@ -96,16 +100,16 @@ group :development, :test do
 end
 
 group :test do
-  gem 'simplecov'
-  gem 'simplecov-rcov'
+  gem "simplecov"
+  gem "simplecov-rcov"
 
-  gem 'html_acceptance'
+  gem "html_acceptance"
 end
 
 # Deploy with Capistrano
-gem 'capistrano3-delayed-job'
-gem 'capistrano-rails'
-gem 'capistrano-rvm'
+gem "capistrano3-delayed-job"
+gem "capistrano-rails"
+gem "capistrano-rvm"
 
-gem 'bcrypt_pbkdf'
-gem 'ed25519'
+gem "bcrypt_pbkdf"
+gem "ed25519"

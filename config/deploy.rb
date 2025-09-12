@@ -2,7 +2,7 @@ set :application, "BlackLightning"
 set :repo_url,    "git@github.com:EdinburghUniversityTheatreCompany/black_lightning.git"
 set :branch,      "main"
 
-set :rails_env, "production" # added for delayed job
+set :rails_env, "production"
 
 set :user, "deploy"
 
@@ -13,7 +13,6 @@ set :linked_dirs, %w[log bundle tmp/pids tmp/cache tmp/sockets public/system pub
 
 # TODO: Run zeitwerk:check
 # TODO: Run tests
-# TODO: Fix the issue with delayed_job not restarting properly
 # TODO: Do a mysql dump
 
 before "deploy:assets:precompile", "deploy:yarn_install"
@@ -23,6 +22,20 @@ namespace :deploy do
     on roles(:app), in: :sequence, wait: 5 do
       within release_path do
         execute :touch, "tmp/restart.txt"
+      end
+    end
+  end
+
+  desc "Start solid_queue processes"
+  after :migrate_jobs, :start_solid_queue do
+    on roles(:app) do
+      within release_path do
+        with rails_env: fetch(:rails_env) do
+          # Stop any existing solid_queue processes
+          execute :bundle, :exec, :rails, "solid_queue:stop", raise_on_non_zero_exit: false
+          # Start solid_queue
+          execute :bundle, :exec, :rails, "solid_queue:start"
+        end
       end
     end
   end

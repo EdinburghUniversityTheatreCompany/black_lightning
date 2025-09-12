@@ -1,0 +1,34 @@
+class StaffingReminderJob < ApplicationJob
+  queue_as :default
+
+  def perform(staffing_id)
+    staffing = Admin::Staffing.find(staffing_id)
+
+    # Prevent the job from running more than once to prevent us spewing emails if there is an error.
+    if staffing.reminder_job_executed?
+      raise ArgumentError, "This reminder job has already been executed."
+    end
+
+    errors = []
+
+    staffing.staffing_jobs.each do |job|
+      # Keep going to other users if sending to one fails for some reason.
+      next if job.user.nil?
+
+      begin
+        StaffingMailer.staffing_reminder(job).deliver_now
+      rescue => e
+        exception = e.exception "Error sending reminder to #{job.user.name}: " + e.message
+        errors << exception
+      end
+    end
+
+    # Mark as executed
+    staffing.update!(reminder_job_executed: true)
+
+    # Raise the errors now for the logs.
+    errors&.each do |e|
+      raise e
+    end
+  end
+end

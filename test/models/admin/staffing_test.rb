@@ -17,8 +17,10 @@
 require "test_helper"
 
 class Admin::StaffingTest < ActiveSupport::TestCase
+  include ActiveJob::TestHelper
+
   setup do
-    # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
+    # Turn on delayed jobs for legacy tests - the staffing mailer refers to the job.
     Delayed::Worker.delay_jobs = true
   end
 
@@ -101,20 +103,25 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     assert_nil staffing.reminder_job
   end
 
-  test "send_reminder" do
-    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5, start_time: DateTime.current.advance(days: 1))
+  test "send_reminder with ActiveJob" do
+    perform_enqueued_jobs do
+      staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5, start_time: DateTime.current.advance(days: 1))
 
-    assert_not_nil staffing.reload.reminder_job, "The staffing does not automatically have a reminder job after creation"
-    user = FactoryBot.create(:user)
+      assert_not_nil staffing.reload.scheduled_job_id, "The staffing does not automatically have a scheduled job after creation"
+      user = FactoryBot.create(:user)
 
-    staffing.staffing_jobs.first.update_attribute(:user, user)
+      staffing.staffing_jobs.first.update_attribute(:user, user)
 
-    staffing.send(:send_reminder)
-    assert_enqueued_emails 1
+      # Manually execute the job
+      StaffingReminderJob.new.perform(staffing.id)
 
-    # Should raise an error the second time, because it has already send mails.
-    assert_raises ArgumentError do
-      staffing.send(:send_reminder)
+      assert_performed_jobs 1
+      assert staffing.reload.reminder_job_executed?, "The reminder job should be marked as executed"
+
+      # Should raise an error the second time, because it has already been executed.
+      assert_raises ArgumentError do
+        StaffingReminderJob.new.perform(staffing.id)
+      end
     end
   end
 end
