@@ -43,9 +43,11 @@ builder:
 env:
   clear:
     RAILS_ENV: production
+    DATABASE_USERNAME: root
+    DATABASE_HOST: blacklightning-mysql
   secret:
     - RAILS_MASTER_KEY
-    - DATABASE_URL
+    - MYSQL_ROOT_PASSWORD
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal app logs -r job" will tail logs from the first server in the job section.
@@ -77,15 +79,13 @@ asset_path: /rails/public/assets
 # Use accessory services (secrets come from .kamal/secrets).
 #
 accessories:
-  db:
+  mysql:
     image: mysql:8.0
     host: bdlm-eusa-ed-ac-uk
     port: 3306
     env:
       clear:
         MYSQL_ROOT_HOST: "%"
-        DATABASE_USERNAME: root
-        DATABASE_HOST: black_lightning-mysql
       secret:
         - MYSQL_ROOT_PASSWORD
     directories:
