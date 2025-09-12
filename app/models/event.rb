@@ -57,6 +57,7 @@ class Event < ApplicationRecord
 
   # Validations #
   validates :name, :slug, :publicity_text, :members_only_text, :start_date, :end_date, presence: true
+  validates :slug, uniqueness: { case_sensitive: false }
 
   # Relationships #
 
@@ -103,6 +104,7 @@ class Event < ApplicationRecord
   default_scope -> { order('end_date DESC') }
 
   # Callbacks
+  before_validation :generate_slug_from_name
   after_initialize :set_default_members_only_text
   after_update :recache_author_list_if_changed
 
@@ -236,6 +238,39 @@ class Event < ApplicationRecord
   end
 
   private
+
+  def generate_slug_from_name
+    return unless name.present?
+    
+    # Only generate slug if it's blank or if the name changed
+    should_generate = slug.blank? || name_changed?
+    
+    # If we have an existing slug and the name didn't change, don't modify
+    return if slug.present? && !name_changed?
+    
+    base_slug = name.to_url
+    
+    # If name changed, only update if current slug looks auto-generated from old name
+    if name_changed? && slug.present?
+      old_name = name_was&.to_url
+      # Only update if the current slug matches what would have been auto-generated from the old name
+      # This indicates it was auto-generated, not manually set
+      unless slug == old_name || slug.start_with?("#{old_name}-")
+        return # Slug was manually set, don't change it
+      end
+    end
+    
+    # Find a unique slug by appending numbers if needed
+    candidate_slug = base_slug
+    counter = 1
+    
+    while Event.where.not(id: id).where('LOWER(slug) = ?', candidate_slug.downcase).exists?
+      candidate_slug = "#{base_slug}-#{counter}"
+      counter += 1
+    end
+    
+    self.slug = candidate_slug
+  end
 
   def recache_author_list_if_changed
     if saved_change_to_author?

@@ -40,4 +40,57 @@ class NewsTest < ActionView::TestCase
     news.body = nil
     assert_equal '', news.preview
   end
+
+  test 'automatically generates slug from title if blank' do
+    news = FactoryBot.build(:news, title: 'Test News Title', slug: '')
+    assert news.valid?
+    assert_equal 'test-news-title', news.slug
+  end
+
+  test 'updates slug when title changes and slug was auto-generated' do
+    news = FactoryBot.create(:news, title: 'Original Title')
+    original_slug = news.slug
+
+    news.title = 'New News Title'
+    news.valid?
+    assert_not_equal original_slug, news.slug
+    assert_equal 'new-news-title', news.slug
+  end
+
+  test 'does not update slug when title changes if slug was manually set' do
+    news = FactoryBot.create(:news, title: 'Original Title', slug: 'custom-slug')
+    
+    news.title = 'New News Title'
+    news.valid?
+    assert_equal 'custom-slug', news.slug
+  end
+
+  test 'generates unique slugs when duplicates would occur' do
+    news1 = FactoryBot.create(:news, title: 'Test News')
+    news2 = FactoryBot.build(:news, title: 'Test News', slug: '')
+    
+    assert news2.valid?
+    assert_equal 'test-news', news1.slug
+    assert_equal 'test-news-1', news2.slug
+  end
+
+  test 'handles special characters in slug generation' do
+    news = FactoryBot.build(:news, title: 'News with "Quotes" & Symbols!', slug: '')
+    assert news.valid?
+    assert_equal 'news-with-quotes-and-symbols', news.slug
+  end
+
+  test 'handles accented characters in slug generation' do
+    news = FactoryBot.build(:news, title: 'Nouvelles spéciàles', slug: '')
+    assert news.valid?
+    assert_equal 'nouvelles-speciales', news.slug
+  end
+
+  test 'slug uniqueness validation works case-insensitively' do
+    FactoryBot.create(:news, slug: 'test-slug')
+    duplicate_news = FactoryBot.build(:news, slug: 'TEST-SLUG')
+    
+    assert_not duplicate_news.valid?
+    assert duplicate_news.errors[:slug].any? { |error| error.include?('already taken') }
+  end
 end
