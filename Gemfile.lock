@@ -213,6 +213,7 @@ GEM
       railties (>= 6.1.0)
     faker (3.5.2)
       i18n (>= 1.8.11, < 2)
+    ffi (1.17.2)
     ffi (1.17.2-x64-mingw-ucrt)
     ffi (1.17.2-x86_64-linux-gnu)
     foreman (0.90.0)
@@ -283,6 +284,7 @@ GEM
     mini_magick (5.3.1)
       logger
     mini_mime (1.1.5)
+    mini_portile2 (2.8.9)
     minitest (5.25.5)
     mission_control-jobs (1.1.0)
       actioncable (>= 7.1)
@@ -308,6 +310,9 @@ GEM
       net-protocol
     net-ssh (7.3.0)
     nio4r (2.7.4)
+    nokogiri (1.18.9)
+      mini_portile2 (~> 2.8.2)
+      racc (~> 1.4)
     nokogiri (1.18.9-x64-mingw-ucrt)
       racc (~> 1.4)
     nokogiri (1.18.9-x86_64-linux-gnu)
@@ -550,6 +555,7 @@ GEM
     zeitwerk (2.7.3)
 
 PLATFORMS
+  ruby
   x64-mingw-ucrt
   x86_64-linux
 

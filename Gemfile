@@ -29,7 +29,6 @@ gem "kramdown"
 gem "daemons"
 gem "delayed_job_active_record"
 
-
 gem "solid_queue"
 gem "mission_control-jobs"
 
