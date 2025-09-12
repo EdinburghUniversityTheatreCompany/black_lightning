@@ -34,10 +34,11 @@ registry:
 # Configure the image builder.
 builder:
   arch: amd64
-  cache:
-    type: registry
-    image: mickzijdel/reciprocity-build-cache
-    options: mode=max
+  # cache:
+  #   type: registry
+  #   image: bedlamtheatre/blacklightning-build-cache
+  #   options: mode=max
+  # WARNING: IF YOU ENABLE THIS, IT WILL NOT BE PRIVATE AND THAT IS PROBABLY BAD FOR CREDENTIALS SECURITY REASONS
 
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
 env:
