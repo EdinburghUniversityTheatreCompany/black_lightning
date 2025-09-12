@@ -1,9 +1,9 @@
-require 'test_helper'
-require 'rake'
+require "test_helper"
+require "rake"
 
 # Tests the debt rake tasks.
 class MigrationsTaskTest < ActiveSupport::TestCase
-  test 'should fix calls where editing deadline is nil' do
+  test "should fix calls where editing deadline is nil" do
     correct_call = FactoryBot.create(:proposal_call)
     editing_deadline = correct_call.editing_deadline
 

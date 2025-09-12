@@ -7,7 +7,7 @@ class Admin::VenuesController < AdminController
   load_and_authorize_resource
 
   def map
-    @title = 'Venues Map'
+    @title = "Venues Map"
 
     @venues_marker_info = Venue.accessible_by(current_ability).map(&:marker_info).compact
 
@@ -19,10 +19,10 @@ class Admin::VenuesController < AdminController
   private
 
   def permitted_params
-    [:description, :image, :location, :address, :name, :tagline, pictures_attributes: %I[id _destroy description image]]
+    [ :description, :image, :location, :address, :name, :tagline, pictures_attributes: %I[id _destroy description image] ]
   end
 
   def order_args
-    ['name']
+    [ "name" ]
   end
 end

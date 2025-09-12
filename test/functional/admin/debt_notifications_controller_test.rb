@@ -1,4 +1,4 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::DebtNotificationsControllerTest < ActionController::TestCase
   setup do
@@ -6,14 +6,14 @@ class Admin::DebtNotificationsControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  test 'should get index' do
+  test "should get index" do
     get :index
     assert_response :success
-    assert_not_nil assigns(:debt_notifications), 'The debt notifications were not set by the index method'
+    assert_not_nil assigns(:debt_notifications), "The debt notifications were not set by the index method"
   end
 
-  test 'should get index with search' do
-    name = 'veryspecificquerythatwillnotbearandomname'
+  test "should get index with search" do
+    name = "veryspecificquerythatwillnotbearandomname"
 
     user = FactoryBot.create(:member)
     debt_notification = FactoryBot.create(:initial_debt_notification, user: user)
@@ -25,7 +25,7 @@ class Admin::DebtNotificationsControllerTest < ActionController::TestCase
 
     assert_response :success
 
-    assert_includes assigns(:debt_notifications).to_a, other_debt_notification, 'The debt notifications do not include the expected debt notification'
-    assert_includes assigns(:debt_notifications).to_a, debt_notification, 'The debt notifications include an unexpected debt notification'
+    assert_includes assigns(:debt_notifications).to_a, other_debt_notification, "The debt notifications do not include the expected debt notification"
+    assert_includes assigns(:debt_notifications).to_a, debt_notification, "The debt notifications include an unexpected debt notification"
   end
 end

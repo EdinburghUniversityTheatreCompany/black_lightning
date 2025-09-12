@@ -8,12 +8,12 @@ class Reports::NewsletterSubscribers
   def create
     package = Axlsx::Package.new
 
-    package.workbook.add_worksheet(name: 'Subscribers') do |sheet|
+    package.workbook.add_worksheet(name: "Subscribers") do |sheet|
       NewsletterSubscriber.all.each do |subscriber|
-        sheet.add_row([subscriber.email])
+        sheet.add_row([ subscriber.email ])
       end
     end
 
-    return package
+    package
   end
 end

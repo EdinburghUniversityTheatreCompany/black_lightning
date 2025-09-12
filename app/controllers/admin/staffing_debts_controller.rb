@@ -28,11 +28,11 @@ class Admin::StaffingDebtsController < AdminController
   # PUT /admin/staffing_debts/1
   def forgive
     if @staffing_debt.forgive
-      flash[:success] = 'The Staffing Debt has been successfully forgiven.'
+      flash[:success] = "The Staffing Debt has been successfully forgiven."
     else
       # I hate using nocov but I cannot force this to fail and I can see that this code will work.
       # :nocov:
-      flash[:error] = 'Error forgiving the Staffing Debt. The Front of House fairy has been resurrected :)'
+      flash[:error] = "Error forgiving the Staffing Debt. The Front of House fairy has been resurrected :)"
       # :nocov:
     end
 
@@ -47,7 +47,7 @@ class Admin::StaffingDebtsController < AdminController
     @staffing_debt.convert_to_maintenance_debt
 
     respond_to do |format|
-      format.html { redirect_to admin_staffing_debts_url, notice: 'Staffing Debt converted to Maintenance Debt' }
+      format.html { redirect_to admin_staffing_debts_url, notice: "Staffing Debt converted to Maintenance Debt" }
       # format.json { head :no_content }
     end
   end
@@ -59,15 +59,15 @@ class Admin::StaffingDebtsController < AdminController
   end
 
   def permitted_params
-    [:user_id, :show_id, :due_by, :state, :admin_staffing_job_id]
+    [ :user_id, :show_id, :due_by, :state, :admin_staffing_job_id ]
   end
 
   def load_index_resources
-    @staffing_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@staffing_debts, params[:show_non_members], params, [:user, :admin_staffing_job])
+    @staffing_debts, @q, show_fulfilled, @is_specific_user = helpers.shared_debt_load(@staffing_debts, params[:show_non_members], params, [ :user, :admin_staffing_job ])
 
-    params[:show_fulfilled] = show_fulfilled ? '1' : '0'
+    params[:show_fulfilled] = show_fulfilled ? "1" : "0"
 
-    return @staffing_debts
+    @staffing_debts
   end
 
   def edit_title

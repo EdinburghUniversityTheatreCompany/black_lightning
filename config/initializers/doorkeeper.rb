@@ -19,7 +19,7 @@ Doorkeeper.configure do
 
   resource_owner_authenticator do
     current_user || begin
-      session['user_return_to'] = request.url
+      session["user_return_to"] = request.url
       redirect_to(new_user_session_url)
       nil
     end

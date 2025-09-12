@@ -18,6 +18,6 @@ FactoryBot.define do
 
     name_on_profile { generate(:random_string) }
 
-    image { Rack::Test::UploadedFile.new(Rails.root.join('test', 'test.png'), 'image/png') }
+    image { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png") }
   end
 end

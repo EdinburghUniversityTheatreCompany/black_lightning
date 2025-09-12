@@ -7,15 +7,15 @@ module Admin::ReportsHelper
   ##
   def list_reports
     # action: name
-    return {
-      roles: 'Roles',
-      members: 'Members',
-      newsletter_subscribers: 'Newsletter Subscribers',
-      staffing: 'Staffing'
+    {
+      roles: "Roles",
+      members: "Members",
+      newsletter_subscribers: "Newsletter Subscribers",
+      staffing: "Staffing"
     }
   end
 
   def get_report_link(report, report_name)
-    return link_to report_name, url_for([:admin_reports, report]), method: :put
+    link_to report_name, url_for([ :admin_reports, report ]), method: :put
   end
 end

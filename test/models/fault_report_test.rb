@@ -14,21 +14,21 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class Admin::FaultReportTest < ActionView::TestCase
-  test 'should return the correct css class' do
+  test "should return the correct css class" do
     @fault_report = FactoryBot.create(:fault_report)
 
-    helper_compare_css_class 'table-warning', 'in_progress'
-    helper_compare_css_class 'table-warning', :on_hold
+    helper_compare_css_class "table-warning", "in_progress"
+    helper_compare_css_class "table-warning", :on_hold
 
-    helper_compare_css_class 'table-danger', 'cant_fix'
-    helper_compare_css_class 'table-danger', :wont_fix
+    helper_compare_css_class "table-danger", "cant_fix"
+    helper_compare_css_class "table-danger", :wont_fix
 
-    helper_compare_css_class 'table-success', 'completed'
+    helper_compare_css_class "table-success", "completed"
 
-    helper_compare_css_class '', :reported
+    helper_compare_css_class "", :reported
   end
 
   def helper_compare_css_class(expected_class, state)

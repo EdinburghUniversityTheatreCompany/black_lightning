@@ -25,17 +25,17 @@ class ApplicationController < ActionController::Base
 
     # Create the @meta hash
     @meta = {
-      description: 'The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.',
+      description: "The Bedlam Theatre is a unique, entirely student run theatre in the heart of Edinburgh.",
 
       # facebook opengraph data:
-      'og:url' => @base_url + request.fullpath,
-      'og:image' => @base_url + helpers.image_path('BedlamLogoBW.png'),
-      'og:title' => @title ? "#{@title} - Bedlam Theatre" : 'Bedlam Theatre',
+      "og:url" => @base_url + request.fullpath,
+      "og:image" => @base_url + helpers.image_path("BedlamLogoBW.png"),
+      "og:title" => @title ? "#{@title} - Bedlam Theatre" : "Bedlam Theatre",
 
-      'viewport' => 'width=device-width, initial-scale=1'
+      "viewport" => "width=device-width, initial-scale=1"
     }
 
-    @support_email = 'it@bedlamtheatre.co.uk'
+    @support_email = "it@bedlamtheatre.co.uk"
 
     @admin_site = false
   end
@@ -49,35 +49,35 @@ class ApplicationController < ActionController::Base
       user_name: current_user&.name_or_email
     }) if Rails.env.production?
 
-    Rails.logger.warn 'Caught error and redirected to 500'
+    Rails.logger.warn "Caught error and redirected to 500"
     Rails.logger.error exception
     Rails.logger.error exception.backtrace
 
     @exception_backtrace = exception.backtrace
 
-    render_error_page(exception, 'errors/500', 500)
+    render_error_page(exception, "errors/500", 500)
   end
 
   def report_access_denied(exception)
-    render_error_page(exception, 'errors/access_denied', 403)
+    render_error_page(exception, "errors/access_denied", 403)
   end
 
   def report_404(exception)
-    render_error_page(exception, 'errors/404', 404)
+    render_error_page(exception, "errors/404", 404)
   end
 
   private
 
   def render_error_page(exception, template, status_code)
     @meta = {} if @meta.nil?
-    @meta['ROBOTS'] = 'NOINDEX, NOFOLLOW'
+    @meta["ROBOTS"] = "NOINDEX, NOFOLLOW"
 
     # Prepares the flash by turning all messages into arrays and merging the 'alerts' into the 'errors'.
     standardise_flash
 
-    # Add the current error that caused the application to halt to the error flash. 
+    # Add the current error that caused the application to halt to the error flash.
     # Compact removes any nil values.
-    @error_messages = [exception.message.gsub(Rails.root.to_s, '')]
+    @error_messages = [ exception.message.gsub(Rails.root.to_s, "") ]
     @error_messages += flash[:error] if flash[:error].present?
 
     @error_type = exception.class

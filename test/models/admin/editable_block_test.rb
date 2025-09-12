@@ -12,10 +12,10 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class Admin::EditableBlockTest < ActiveSupport::TestCase
-  test 'get list of groups' do
+  test "get list of groups" do
     groups = %w[smurf pineapple hexagon Hubschrauber]
 
     groups.each do |group|

@@ -1,16 +1,16 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::PermissionsControllerTest < ActionController::TestCase
   setup do
     sign_in users(:admin)
   end
 
-  test 'should get grid' do
+  test "should get grid" do
     get :grid
     assert_response :success
   end
 
-  test 'should update permissions' do
+  test "should update permissions" do
     post :update_grid
     assert_redirected_to admin_permissions_path
   end

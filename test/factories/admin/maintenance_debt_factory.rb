@@ -17,7 +17,7 @@ FactoryBot.define do
     association :user, factory: :member
     association :show, factory: :show
     due_by { Date.current + 1 }
-    converted_from_staffing_debt { false}
+    converted_from_staffing_debt { false }
 
     transient do
       with_attendance { false }

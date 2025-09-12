@@ -4,13 +4,13 @@ require "#{Rails.root}/lib/constraints"
 class Constraints::ExistingSeason
   def get_season_slugs
     if Season.table_exists?
-      return Season.select(:slug).collect(&:slug)
+      Season.select(:slug).collect(&:slug)
     else
       # This is here because of issue #123
       # :nocov:
-      p 'The table seasons does not exist'
-      return nil
-      #: nocov:
+      p "The table seasons does not exist"
+      nil
+      # : nocov:
     end
   end
 
@@ -18,6 +18,6 @@ class Constraints::ExistingSeason
     season_slugs = get_season_slugs
     return false if season_slugs.nil?
 
-    return season_slugs.include?(request.url.split('/').last)
+    season_slugs.include?(request.url.split("/").last)
   end
 end

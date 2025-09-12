@@ -31,13 +31,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
     successful: 3,
     unsuccessful: 4
 
-  belongs_to :call, class_name: 'Admin::Proposals::Call'
+  belongs_to :call, class_name: "Admin::Proposals::Call"
 
-  has_one :event, class_name: 'Event'
+  has_one :event, class_name: "Event"
 
   has_many :answers, as: :answerable
   has_many :questions, through: :answers
-  has_many :team_members, class_name: '::TeamMember', as: :teamwork, dependent: :restrict_with_error
+  has_many :team_members, class_name: "::TeamMember", as: :teamwork, dependent: :restrict_with_error
   has_many :users, through: :team_members
 
   accepts_nested_attributes_for :answers, :team_members, reject_if: :all_blank, allow_destroy: true
@@ -71,19 +71,19 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   #
   def formatted_status
-    return status.to_s.titleize
+    status.to_s.titleize
   end
 
   #
   def label_css_class
     case status
-    when 'awaiting_approval'
+    when "awaiting_approval"
       :warning
-    when 'approved'
+    when "approved"
       :info
-    when 'successful'
+    when "successful"
       :success
-    when 'rejected', 'unsuccessful'
+    when "rejected", "unsuccessful"
       :danger
     end
   end
@@ -93,22 +93,22 @@ class Admin::Proposals::Proposal < ApplicationRecord
     labels = []
 
     labels << generate_label(label_css_class, formatted_status)
-    labels << generate_label(:danger, 'Late') if late
-    labels << generate_label(:danger, 'Has Debtors') if has_debtors
+    labels << generate_label(:danger, "Late") if late
+    labels << generate_label(:danger, "Has Debtors") if has_debtors
 
     labels_html = labels.join("\n").html_safe
 
     # Wrap the whole list of labels in a float right so that the margins stay preserved.
     return "<div class=\"float-right\">#{labels_html}</div>".html_safe if pull_right
 
-    return labels_html
+    labels_html
   end
 
   ##
   # returns true if any users associated with the proposal are in debt with debts starting before the creation of this proposal
   ##
   def has_debtors
-    return users.in_debt(call.editing_deadline.to_date).any?
+    users.in_debt(call.editing_deadline.to_date).any?
   end
 
   ##
@@ -119,7 +119,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
   def convert_to_show
     unless successful?
       p "The proposal #{show_title} was not successful and cannot be converted to a show"
-      raise ArgumentError, 'This proposal was not successful'
+      raise ArgumentError, "This proposal was not successful"
     end
 
     p "Converting #{show_title} from proposal to show"
@@ -148,14 +148,14 @@ class Admin::Proposals::Proposal < ApplicationRecord
       end
     end
 
-    @show.author = 'TBC'
-    @show.price = 'TBC'
+    @show.author = "TBC"
+    @show.price = "TBC"
 
     @show.start_date = Date.current
     @show.end_date = Date.current
     @show.is_public = false
 
-    venue = Venue.find_by(name: 'Unknown').presence || Venue.where('name like ?', '%unknown').first.presence || Venue.find_by(name: 'Bedlam Theatre').presence || Venue.where('name like ?', '%Bedlam%').first.presence
+    venue = Venue.find_by(name: "Unknown").presence || Venue.where("name like ?", "%unknown").first.presence || Venue.find_by(name: "Bedlam Theatre").presence || Venue.where("name like ?", "%Bedlam%").first.presence
 
     raise(ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. Could not find a Venue with a name resembling 'Unknown', resembling 'Bedlam Theatre' or with a name that contains 'Bedlam'.") if venue.nil?
 
@@ -165,11 +165,11 @@ class Admin::Proposals::Proposal < ApplicationRecord
       @show.errors.full_messages.each do |error|
         p error
       end
-      p 'Converting the proposal to a show failed for the above reasons.'
+      p "Converting the proposal to a show failed for the above reasons."
       raise ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. #{@show.errors.full_messages.join(' ,')}"
     end
 
-    p 'Adding Team Members'
+    p "Adding Team Members"
     @show.team_members << team_members.collect(&:dup)
 
     @show.proposal = self
@@ -183,7 +183,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
     end
     # :nocov:
 
-    p 'Created Show:'
+    p "Created Show:"
     p "Name: #{@show.name}"
     p "Slug: #{@show.slug}"
   end
@@ -194,6 +194,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
   def set_default_proposal_text
     return if !has_attribute?(:proposal_text) || proposal_text.present?
 
-    self.proposal_text = Admin::EditableBlock.find_by(name: 'Proposals - Proposal Text Default').try(:content) || ''
+    self.proposal_text = Admin::EditableBlock.find_by(name: "Proposals - Proposal Text Default").try(:content) || ""
   end
 end

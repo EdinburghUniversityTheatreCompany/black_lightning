@@ -30,115 +30,115 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class Admin::UserTest < ActiveSupport::TestCase
   setup do
     @user = users(:user)
   end
 
-  test 'sort by first name' do
+  test "sort by first name" do
     FactoryBot.create :user
 
-    assert_equal User.reorder('first_name ASC'), User.by_first_name
+    assert_equal User.reorder("first_name ASC"), User.by_first_name
   end
 
-  test 'get ability' do
+  test "get ability" do
     assert @user.ability.is_a? Ability
   end
 
-  test 'has name' do
+  test "has name" do
     assert @user.name?
-    @user.update_attribute(:first_name, '')
+    @user.update_attribute(:first_name, "")
     assert_not @user.name?
-    @user.update!(first_name: 'Finbar', last_name: nil)
+    @user.update!(first_name: "Finbar", last_name: nil)
     assert_not @user.name?
   end
 
-  test 'name or default' do
+  test "name or default" do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name_or_default
-    @user.update(first_name: '', last_name: '')
-    assert_equal 'No Name Set', @user.name_or_default
+    @user.update(first_name: "", last_name: "")
+    assert_equal "No Name Set", @user.name_or_default
   end
 
-  test 'name or email' do
+  test "name or email" do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name_or_email
-    @user.update(first_name: '', last_name: '')
+    @user.update(first_name: "", last_name: "")
     assert_equal @user.email, @user.name_or_email
   end
 
-  test 'name' do
+  test "name" do
     assert_equal "#{@user.first_name} #{@user.last_name}", @user.name
-    @user.update(first_name: '', last_name: '')
-    assert_equal 'No Name Set', @user.name
+    @user.update(first_name: "", last_name: "")
+    assert_equal "No Name Set", @user.name
 
     admin = FactoryBot.create(:admin)
 
     assert_equal @user.email, @user.name(admin)
   end
 
-  test 'unify numbers' do
-    @user.update_attribute(:phone_number, '07777')
+  test "unify numbers" do
+    @user.update_attribute(:phone_number, "07777")
     @user.unify_numbers
-    assert_equal '+447777', @user.phone_number
+    assert_equal "+447777", @user.phone_number
 
-    @user.update_attribute(:phone_number, '+317777')
+    @user.update_attribute(:phone_number, "+317777")
 
     @user.unify_numbers
-    assert_equal '+317777', @user.phone_number
+    assert_equal "+317777", @user.phone_number
 
-    @user.update_attribute(:phone_number, '327777')
+    @user.update_attribute(:phone_number, "327777")
     @user.unify_numbers
-    assert_equal '327777', @user.phone_number
+    assert_equal "327777", @user.phone_number
   end
 
-  test 'create user' do
-    attributes = { first_name: 'Finbar', last_name: 'the Viking', email: 'finbar@viking.arrr' }
+  test "create user" do
+    attributes = { first_name: "Finbar", last_name: "the Viking", email: "finbar@viking.arrr" }
     user = User.new_user(attributes)
     assert_not user.password.blank?
     assert user.valid?
 
-    attributes[:password] = 'Hexagon'
+    attributes[:password] = "Hexagon"
     user = User.new_user(attributes)
-    assert_equal 'Hexagon', user.password
+    assert_equal "Hexagon", user.password
     assert user.valid?
   end
 
   # Debt
-  test 'debt causing and upcoming maintenance debts' do
+  test "debt causing and upcoming maintenance debts" do
     debt_causing_debt =      FactoryBot.create(:maintenance_debt,         user: @user)
     future_debt =            FactoryBot.create(:maintenance_debt,         user: @user, due_by: debt_causing_debt.due_by.advance(days: 2))
     _non_debt_causing_debt = FactoryBot.create(:overdue_maintenance_debt, user: @user, with_attendance: true)
 
     from_date = debt_causing_debt.due_by.advance(days: 2)
-    assert_equal [debt_causing_debt], @user.debt_causing_maintenance_debts(from_date).to_a
+    assert_equal [ debt_causing_debt ], @user.debt_causing_maintenance_debts(from_date).to_a
 
-    assert_equal [future_debt], @user.upcoming_maintenance_debts(from_date).to_a
+    assert_equal [ future_debt ], @user.upcoming_maintenance_debts(from_date).to_a
   end
 
-  test 'debt causing and upcoming staffing debts' do
+  test "debt causing and upcoming staffing debts" do
     debt_causing_debt =      FactoryBot.create :staffing_debt,         user: @user, admin_staffing_job_id: nil
     future_debt =            FactoryBot.create :staffing_debt,         user: @user, due_by: debt_causing_debt.due_by.advance(days: 2)
     _non_debt_causing_debt = FactoryBot.create :overdue_staffing_debt, user: @user, state: :forgiven
 
     from_date = debt_causing_debt.due_by.advance(days: 2)
 
-    assert_equal [debt_causing_debt.id], @user.debt_causing_staffing_debts(from_date).ids
+    assert_equal [ debt_causing_debt.id ], @user.debt_causing_staffing_debts(from_date).ids
 
-    assert_equal [future_debt.id], @user.upcoming_staffing_debts(from_date).ids
+    assert_equal [ future_debt.id ], @user.upcoming_staffing_debts(from_date).ids
   end
 
-  test 'debt message suffix' do
-    assert_equal 'not in Debt', @user.debt_message_suffix
+  test "debt message suffix" do
+    assert_equal "not in Debt", @user.debt_message_suffix
     staffing_debt = FactoryBot.create :overdue_staffing_debt, user: @user
-    assert_equal 'in staffing Debt', @user.debt_message_suffix
+    assert_equal "in staffing Debt", @user.debt_message_suffix
     FactoryBot.create :overdue_maintenance_debt, user: @user
-    assert_equal 'in staffing and maintenance Debt', @user.debt_message_suffix
+    assert_equal "in staffing and maintenance Debt", @user.debt_message_suffix
     staffing_debt.delete
-    assert_equal 'in maintenance Debt', @user.debt_message_suffix
+    assert_equal "in maintenance Debt", @user.debt_message_suffix
   end
 
-  test 'in debt' do
+  test "in debt" do
     assert_not @user.in_debt
     staffing_debt = FactoryBot.create :overdue_staffing_debt, user: @user
     assert @user.in_debt
@@ -148,15 +148,15 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert @user.in_debt
   end
 
-  test 'users in debt' do
+  test "users in debt" do
     FactoryBot.create :overdue_staffing_debt, user: @user
     FactoryBot.create :staffing_debt
     FactoryBot.create :maintenance_debt
 
-    assert_equal [@user], User.in_debt.to_a
+    assert_equal [ @user ], User.in_debt.to_a
   end
 
-  test 'test notified since returns only users who are in debt and have not received a notification' do
+  test "test notified since returns only users who are in debt and have not received a notification" do
     date = Date.current.advance(days: -7)
 
     # No notification.
@@ -173,13 +173,13 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     notified_users = User.notified_since(date).to_a
 
-    assert_not_includes notified_users, user_one, 'The list of notified users includes the user without any notifications'
-    assert_not_includes notified_users, user_two, 'The list of notified users includes the user with a notification from before date'
-    assert_not_includes notified_users, user_three, 'The list of notified users includes the user with a notification on the date'
-    assert_includes notified_users, user_four, 'The list of notified users does not include the user that should be notified'
+    assert_not_includes notified_users, user_one, "The list of notified users includes the user without any notifications"
+    assert_not_includes notified_users, user_two, "The list of notified users includes the user with a notification from before date"
+    assert_not_includes notified_users, user_three, "The list of notified users includes the user with a notification on the date"
+    assert_includes notified_users, user_four, "The list of notified users does not include the user that should be notified"
   end
 
-  test 'team memberships' do
+  test "team memberships" do
     events = FactoryBot.create_list :show, 3, is_public: true
     user = events.first.users.first
 
@@ -187,7 +187,7 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     assert_not_equal user, team_membership_without_teamwork.user
 
-    team_membership_without_teamwork.update_attribute :teamwork_type, 'Event'
+    team_membership_without_teamwork.update_attribute :teamwork_type, "Event"
     team_membership_without_teamwork.update_attribute :teamwork, nil
 
     team_memberships = user.team_memberships(true)
@@ -199,7 +199,7 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_includes teamworks, events.first
   end
 
-  test 'consented' do
+  test "consented" do
     @user.consented = Date.current
     assert @user.consented?
 
@@ -208,41 +208,41 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_not @user.consented?
   end
 
-  test 'add_role override' do
+  test "add_role override" do
     role = Role.find_by(name: :member)
 
-    assert_not @user.has_role?(role.name), 'The user already has the role at the start, so the tests cannot be completed properly.'
+    assert_not @user.has_role?(role.name), "The user already has the role at the start, so the tests cannot be completed properly."
 
     @user.add_role(role)
-    assert @user.has_role?(:member), 'User does not have the role that was added as class instance'
+    assert @user.has_role?(:member), "User does not have the role that was added as class instance"
   end
 
-  test 'has_role override' do
+  test "has_role override" do
     role = Role.find_by(name: :member)
     @user.add_role(role.name)
 
-    assert @user.has_role?(role.name), 'Basemark check if the user has the member role failed'
+    assert @user.has_role?(role.name), "Basemark check if the user has the member role failed"
 
-    assert @user.has_role?(role), 'The has_role? method override for the Role class does not work'
+    assert @user.has_role?(role), "The has_role? method override for the Role class does not work"
   end
 
-  test 'remove_role override' do
+  test "remove_role override" do
     role = Role.find_by(name: :member)
     @user.add_role(role.name)
 
-    assert @user.has_role?(role.name), 'Basemark check if the user has the member role failed'
+    assert @user.has_role?(role.name), "Basemark check if the user has the member role failed"
 
     @user.remove_role(role)
-    assert_not @user.has_role?(role.name), 'The remove_role override for the Role class does not work.'
+    assert_not @user.has_role?(role.name), "The remove_role override for the Role class does not work."
   end
 
-  test 'email normalization' do
+  test "email normalization" do
     # Input -> Expected Output
     pairs = [
-      ['j.appleseed@sms.ed.ac.uk', 'j.appleseed@sms.ed.ac.uk'],
-      ['s123456@sms.ed.ac.uk', 's123456@sms.ed.ac.uk'],
-      ['STAFF.MEMBER@SMS.ED.AC.UK', 'staff.member@sms.ed.ac.uk'],
-      ['s1912811@sms.ed.ac.uk', 's1912811@ed.ac.uk']
+      [ "j.appleseed@sms.ed.ac.uk", "j.appleseed@sms.ed.ac.uk" ],
+      [ "s123456@sms.ed.ac.uk", "s123456@sms.ed.ac.uk" ],
+      [ "STAFF.MEMBER@SMS.ED.AC.UK", "staff.member@sms.ed.ac.uk" ],
+      [ "s1912811@sms.ed.ac.uk", "s1912811@ed.ac.uk" ]
     ]
 
     pairs.each do |pair|

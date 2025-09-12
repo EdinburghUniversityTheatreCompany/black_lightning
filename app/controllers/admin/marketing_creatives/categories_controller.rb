@@ -3,7 +3,7 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   load_and_authorize_resource class: MarketingCreatives::Category, find_by: :url
 
   def index
-    @title = 'Marketing Creative Categories'
+    @title = "Marketing Creative Categories"
 
     super
   end
@@ -23,20 +23,20 @@ class Admin::MarketingCreatives::CategoriesController < AdminController
   end
 
   private
-  
+
   def resource_class
     MarketingCreatives::Category
   end
 
   def permitted_params
-    [:name, :name_on_profile, :image]
+    [ :name, :name_on_profile, :image ]
   end
 
   def order_args
-    ['name']
+    [ "name" ]
   end
 
   def includes_args
-    [image_attachment: :blob]
+    [ image_attachment: :blob ]
   end
 end

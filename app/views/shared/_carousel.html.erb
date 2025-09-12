@@ -9,7 +9,7 @@
 
   <div class="carousel-inner">
     <% carousel_items.each_with_index do |item, index| %>
-      <div class="carousel-item <%= 'active' if index == 0 %>" data-bs-interval="3500">
+      <div class="carousel-item <%= 'active' if index == 0 %>" data-bs-interval="6000">
         <% img = render('shared/image', image: item[:image].presence || item.image) %>
 
         <% if item[:url].present? %>

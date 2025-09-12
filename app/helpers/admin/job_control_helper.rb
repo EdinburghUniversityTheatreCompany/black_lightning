@@ -10,11 +10,11 @@ module Admin::JobControlHelper
   ##
   def delayed_job
     begin
-      return Delayed::Job
+      Delayed::Job
     rescue
       # Can't really test that.
       # :nocov:
-      return false
+      false
       # :nocov:
     end
   end
@@ -29,7 +29,7 @@ module Admin::JobControlHelper
   # * Pending
   ##
   def delayed_jobs(type)
-    return delayed_job.where(delayed_job_sql(type))
+    delayed_job.where(delayed_job_sql(type))
   end
 
   ##
@@ -38,13 +38,13 @@ module Admin::JobControlHelper
   def delayed_job_sql(type)
     case type
     when :enqueued
-      return ''
+      ""
     when :working
-      return 'locked_at is not null'
+      "locked_at is not null"
     when :failed
-      return 'last_error is not null'
+      "last_error is not null"
     when :pending
-      return 'attempts = 0'
+      "attempts = 0"
     end
   end
 
@@ -55,10 +55,10 @@ module Admin::JobControlHelper
     pid = File.read("#{Rails.root}/tmp/pids/delayed_job.pid").strip
     # :nocov:
     Process.kill(0, pid.to_i)
-    return true
-    # :nocov:
+    true
+  # :nocov:
   # file or process not found.
   rescue Errno::ENOENT, Errno::ESRCH
-    return false
+    false
   end
 end

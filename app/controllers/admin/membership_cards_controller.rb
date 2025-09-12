@@ -6,7 +6,7 @@ class Admin::MembershipCardsController < AdminController
   # GET /admin/membership_cards
   ##
   def index
-    @title = 'Membership Cards'
+    @title = "Membership Cards"
     @cards = @membership_cards.page(params[:page]).per(15)
   end
 
@@ -21,7 +21,7 @@ class Admin::MembershipCardsController < AdminController
   # POST /admin/membership_card
   ##
   def create
-    helpers.append_to_flash(:success, 'Membership Card successfully created.')
+    helpers.append_to_flash(:success, "Membership Card successfully created.")
 
     redirect_to admin_membership_card_path(@card)
   end
@@ -37,13 +37,13 @@ class Admin::MembershipCardsController < AdminController
 
   def generate_card
     if @card.user.nil?
-      flash[:error] = 'Card Not Activated'
+      flash[:error] = "Card Not Activated"
       redirect_to admin_membership_card_path(@card)
       return
     end
 
     MembershipCardPdf.create(@card) do |pdf|
-      send_data pdf.render, filename: "card_#{@card.card_number}.pdf", type: 'application/pdf', disposition: 'inline'
+      send_data pdf.render, filename: "card_#{@card.card_number}.pdf", type: "application/pdf", disposition: "inline"
     end
   end
 end

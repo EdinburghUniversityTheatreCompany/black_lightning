@@ -1,6 +1,6 @@
 module ActiveStorageHelper
   # Please change the note in the assets/images/defaults folder if you change this or the key_filename.
-  PREFIX = 'active_storage_default'.freeze
+  PREFIX = "active_storage_default".freeze
 
   def default_image_blob(default_image_filename)
     # Use a slash so user uploaded files are very unlikely to match.
@@ -12,67 +12,67 @@ module ActiveStorageHelper
     if blob.nil?
       begin
         blob = ActiveStorage::Blob.create_and_upload!(
-          io: File.open(Rails.root.join('app', 'assets', 'images', 'defaults', default_image_filename)),
+          io: File.open(Rails.root.join("app", "assets", "images", "defaults", default_image_filename)),
           filename: key_filename,
-          content_type: 'image/png'
+          content_type: "image/png"
         )
       rescue Errno::ENOENT => e
         raise ArgumentError, "There is no default file named #{default_image_filename} in the assets/images/defaults folder"
       end
     end
 
-    return blob
+    blob
   end
 
   def get_file_attached_hint(file)
     # nil because the message next to the button also displays 'No file chosen'
-    if file.attached? 
+    if file.attached?
       filename = file.filename.to_s
 
       # Don't return if the attached image is a default.
-      return if filename.starts_with?(PREFIX) 
+      return if filename.starts_with?(PREFIX)
 
       begin
         filename = link_to(filename, url_for(file))
-      rescue 
+      rescue
         # This sometimes fails when the record is very new and has not finished processing
         # with the error: ActionView::Template::Error: Cannot get a signed_id for a new record
         # In this case, keep the filename as a name instead of a link.
       end
 
-      return "Current file: #{filename}".html_safe 
+      "Current file: #{filename}".html_safe
     end
   end
 
   def thumb_variant(scale_factor = 1)
-    return { resize_to_fill: [192 * scale_factor, 100 * scale_factor] }
+    { resize_to_fill: [ 192 * scale_factor, 100 * scale_factor ] }
   end
 
   def thumb_variant_public(scale_factor = 1)
-    return thumb_variant(1.5 * scale_factor)
+    thumb_variant(1.5 * scale_factor)
   end
 
   def medium_variant
-    return { resize_to_fill: [576, 300] }
+    { resize_to_fill: [ 576, 300 ] }
   end
 
   def slideshow_variant
-    return { resize_to_fill: [960, 500] }
+    { resize_to_fill: [ 960, 500 ] }
   end
 
   def square_thumb_variant(dimensions = 150)
-    return { resize_to_fill: [dimensions, dimensions] }
+    { resize_to_fill: [ dimensions, dimensions ] }
   end
 
   def square_display_variant
-    return { resize_to_fill: [700, 700] }
+    { resize_to_fill: [ 700, 700 ] }
   end
 
   def variant_width_and_height_html(variant)
-    return { width: variant[:resize_to_fill][0], height: variant[:resize_to_fill][1] }
+    { width: variant[:resize_to_fill][0], height: variant[:resize_to_fill][1] }
   end
 
   def base_width_and_height_html(image)
-    return { width: image.metadata['width'], height: image.metadata['height'] }
+    { width: image.metadata["width"], height: image.metadata["height"] }
   end
 end

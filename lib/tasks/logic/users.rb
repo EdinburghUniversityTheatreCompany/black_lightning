@@ -13,6 +13,6 @@ class Tasks::Logic::Users
       end
     end
 
-    return users.size
+    users.size
   end
 end

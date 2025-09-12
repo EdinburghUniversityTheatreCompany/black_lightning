@@ -17,25 +17,25 @@ class MassMail < ApplicationRecord
   validate :send_date_is_not_in_the_past
   validates :subject, :body, presence: true
 
-  belongs_to :sender, class_name: 'User', optional: true
-  has_and_belongs_to_many :recipients, class_name: 'User', optional: true
+  belongs_to :sender, class_name: "User", optional: true
+  has_and_belongs_to_many :recipients, class_name: "User", optional: true
 
   before_destroy :check_if_mail_has_been_sent
 
-  normalizes :subject, with: -> (subject) { subject&.strip }
+  normalizes :subject, with: ->(subject) { subject&.strip }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[body draft send_date sender_id subject]
   end
 
   def send_date_is_not_in_the_past
-    errors.add(:send_date, 'cannot be in the past') if send_date_is_in_the_past?
+    errors.add(:send_date, "cannot be in the past") if send_date_is_in_the_past?
   end
 
   def prepare_send!
-    raise(Exceptions::MassMail::NoRecipients, 'There are no recipients') if recipients.nil? || recipients.empty?
-    raise(Exceptions::MassMail::NoSender, 'There is no sender') if sender.nil?
-    raise(Exceptions::MassMail::AlreadySent, 'The mass mail has already been send') unless draft
+    raise(Exceptions::MassMail::NoRecipients, "There are no recipients") if recipients.nil? || recipients.empty?
+    raise(Exceptions::MassMail::NoSender, "There is no sender") if sender.nil?
+    raise(Exceptions::MassMail::AlreadySent, "The mass mail has already been send") unless draft
 
     raise ActiveRecord::RecordInvalid.new(self) if invalid?
 
@@ -48,7 +48,7 @@ class MassMail < ApplicationRecord
   private
 
   def send_date_is_in_the_past?
-    return !send_date.present? || (send_date.present? && send_date < DateTime.current)
+    !send_date.present? || (send_date.present? && send_date < DateTime.current)
   end
 
   def check_if_mail_has_been_sent

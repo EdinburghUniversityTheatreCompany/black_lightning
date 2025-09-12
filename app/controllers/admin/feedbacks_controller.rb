@@ -44,7 +44,7 @@ class Admin::FeedbacksController < AdminController
     respond_to do |format|
       if @feedback.save
         format.html do
-          flash[:success] = 'Feedback was successfully submitted.'
+          flash[:success] = "Feedback was successfully submitted."
 
           if can? :show, @feedback
             redirect_to admin_show_feedbacks_path(@show)
@@ -54,7 +54,7 @@ class Admin::FeedbacksController < AdminController
         end
         # format.json { render json: @feedback, status: :created, location: @feedback }
       else
-        format.html { render 'new', status: :unprocessable_entity }
+        format.html { render "new", status: :unprocessable_entity }
         # format.json { render json: @feedback.errors, status: :unprocessable_entity }
       end
     end
@@ -83,7 +83,7 @@ class Admin::FeedbacksController < AdminController
   end
 
   def permitted_params
-    [:body, :show, :show_id]
+    [ :body, :show, :show_id ]
   end
 
   def index_query_params

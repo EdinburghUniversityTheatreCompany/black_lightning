@@ -1,5 +1,5 @@
 module Exceptions
-  module MassMail 
+  module MassMail
     class MassMailError < StandardError; end
     class AlreadySent < MassMailError; end
     class NoRecipients < MassMailError; end

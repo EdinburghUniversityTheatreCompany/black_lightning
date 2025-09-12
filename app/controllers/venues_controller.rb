@@ -22,7 +22,7 @@ class VenuesController < ApplicationController
   end
 
   def map
-    @title = 'Venues Map'
+    @title = "Venues Map"
 
     @venues_marker_info = Venue.accessible_by(current_ability).map(&:marker_info).compact
 
@@ -31,13 +31,13 @@ class VenuesController < ApplicationController
     end
   end
 
-  private 
-  
+  private
+
   def includes_args
-    [image_attachment: :blob]
+    [ image_attachment: :blob ]
   end
 
   def order_args
-    ['name']
+    [ "name" ]
   end
 end

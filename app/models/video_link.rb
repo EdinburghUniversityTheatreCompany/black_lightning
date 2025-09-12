@@ -20,7 +20,7 @@ class VideoLink < ApplicationRecord
   validate :link_is_valid
   validates :name, :link, :access_level, presence: true
 
-  normalizes :name, with: -> (name) { name&.strip }
+  normalizes :name, with: ->(name) { name&.strip }
 
   default_scope -> { order(order: :asc) }
 
@@ -32,10 +32,10 @@ class VideoLink < ApplicationRecord
 
   SHARED_ATTRIBUTES = "width=\"#{VIDEO_EMBED_WIDTH}\" height=\"#{VIDEO_EMBED_HEIGHT}\" frameborder=\"0\" allowfullscreen=\"true\" allow=\"autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share\" class=\"w-100\""
 
-  YOUTUBE_ID_REGEX = %r/^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/
+  YOUTUBE_ID_REGEX = %r{^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*}
 
   def self.ransackable_attributes(auth_object = nil)
-    ["name", "link", "access_level", "order", "item_type", "item_id"]
+    [ "name", "link", "access_level", "order", "item_type", "item_id" ]
   end
 
   def video_id
@@ -43,31 +43,31 @@ class VideoLink < ApplicationRecord
 
     return :youtube, id[1] if id.present?
 
-    return :facebook, CGI.escape(link) if link.include?('fb.watch') || link.include?('facebook.')
+    return :facebook, CGI.escape(link) if link.include?("fb.watch") || link.include?("facebook.")
 
-    return nil
+    nil
   end
 
   def generate_specific_embed
     service, id = video_id
 
-    return case service
-           when :youtube
+    case service
+    when :youtube
              "src=\"https://www.youtube-nocookie.com/embed/#{id}\""
-           when :facebook
+    when :facebook
              "src=\"https://www.facebook.com/plugins/post.php?href=#{id}&width=#{VIDEO_EMBED_WIDTH}&show_text=true&height=#{VIDEO_EMBED_HEIGHT}&appId\" style=\"border:none;overflow:hidden\" scrolling=\"no\""
-           end
+    end
   end
 
   def embed_code
     specific_part = generate_specific_embed
 
-    return 'The video link is not valid.' if specific_part.nil?
+    return "The video link is not valid." if specific_part.nil?
 
-    return "<iframe #{specific_part} #{SHARED_ATTRIBUTES}></iframe>".html_safe
+    "<iframe #{specific_part} #{SHARED_ATTRIBUTES}></iframe>".html_safe
   end
 
   def link_is_valid
-    errors.add(:link, 'is not a valid YouTube or Facebook video link') if video_id.nil?
+    errors.add(:link, "is not a valid YouTube or Facebook video link") if video_id.nil?
   end
 end

@@ -31,21 +31,24 @@ class News < ApplicationRecord
     "#{id}-#{slug}"
   end
 
-  belongs_to :author, class_name: 'User'
+  belongs_to :author, class_name: "User"
 
   validates :title, :body, :publish_date, presence: true
   validates :slug, presence: true, uniqueness: { case_sensitive: false }
 
   # News should always be ordered by publish_date DESC
-  default_scope -> { order('publish_date DESC') }
+  default_scope -> { order("publish_date DESC") }
 
-  scope :current, -> { where(['publish_date <= ?', Time.current]) }
+  # Callbacks
+  before_validation :generate_slug_from_title
+
+  scope :current, -> { where([ "publish_date <= ?", Time.current ]) }
 
   has_one_attached :image
 
   validates :image, content_type: %i[png jpg jpeg gif]
 
-  normalizes :title, :slug, with: -> (value) { value&.strip }
+  normalizes :title, :slug, with: ->(value) { value&.strip }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[body publish_date show_public slug title]
@@ -62,17 +65,51 @@ class News < ApplicationRecord
   ##
   def fetch_image
     number = id.modulo(2)
-    image.attach(ApplicationController.helpers.default_image_blob("news/#{number}.png")) unless image.attached? 
+    image.attach(ApplicationController.helpers.default_image_blob("news/#{number}.png")) unless image.attached?
 
-    return image
+    image
   end
+
+  private
+
+  def generate_slug_from_title
+    return unless title.present?
+
+    # If we have an existing slug and the title didn't change, don't modify
+    return if slug.present? && !title_changed?
+
+    base_slug = title.to_url
+
+    # If title changed, only update if current slug looks auto-generated from old title
+    if title_changed? && slug.present?
+      old_title = title_was&.to_url
+      # Only update if the current slug matches what would have been auto-generated from the old title
+      # This indicates it was auto-generated, not manually set
+      unless slug == old_title || slug.start_with?("#{old_title}-")
+        return # Slug was manually set, don't change it
+      end
+    end
+
+    # Find a unique slug by appending numbers if needed
+    candidate_slug = base_slug
+    counter = 1
+
+    while News.where.not(id: id).where("LOWER(slug) = ?", candidate_slug.downcase).exists?
+      candidate_slug = "#{base_slug}-#{counter}"
+      counter += 1
+    end
+
+    self.slug = candidate_slug
+  end
+
+  public
 
   # Display the body up to the first line break after 140 characters.
   def preview
     content = body
 
     begin
-      preview = ''
+      preview = ""
 
       while content.present?
         partition = content.partition(/(\n)|(<\/p>)/)
@@ -87,10 +124,10 @@ class News < ApplicationRecord
         end
       end
 
-      return preview
+      preview
     rescue
       # :nocov:
-      return 'There was an error rendering a preview for this news item.'
+      "There was an error rendering a preview for this news item."
       # :nocov:
     end
   end

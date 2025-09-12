@@ -12,23 +12,23 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class ComplaintTest < ActiveSupport::TestCase
-  test 'html class' do
+  test "html class" do
     complaint = FactoryBot.build(:complaint, resolved: true)
 
     assert_nil complaint.html_class
 
     complaint.resolved = false
 
-    assert_equal 'error', complaint.html_class
+    assert_equal "error", complaint.html_class
  end
 
-  test 'cannot destroy complaint' do
+  test "cannot destroy complaint" do
     complaint = FactoryBot.build(:complaint)
 
-    assert_no_difference 'Complaint.count' do
+    assert_no_difference "Complaint.count" do
       assert_not complaint.destroy
     end
   end

@@ -38,7 +38,7 @@ class User < ApplicationRecord
 
   rolify
   has_paper_trail limit: 6
-  
+
   ###############
   # Permissions
   ###############
@@ -56,26 +56,26 @@ class User < ApplicationRecord
   devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
 
   # set our own validations
-  validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: 'Please enter a valid mobile number' }
+  validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: "Please enter a valid mobile number" }
   validates :email, presence: true
 
   validates :avatar, content_type: %i[png jpg jpeg gif]
 
-  has_one :marketing_creatives_profile, class_name: 'MarketingCreatives::Profile', dependent: :restrict_with_error
+  has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
   has_one  :membership_card, dependent: :destroy
   delegate :card_number, to: :membership_card, allow_nil: true
   accepts_nested_attributes_for :membership_card, reject_if: :all_blank, allow_destroy: true
 
-  has_many :team_membership, class_name: 'TeamMember', dependent: :restrict_with_error
-  has_many :shows, through: :team_membership, source: :teamwork, source_type: 'Show'
-  has_many :staffing_jobs, class_name: 'Admin::StaffingJob', dependent: :restrict_with_error 
-  has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: 'Admin::Staffing'
-  has_many :admin_maintenance_debts, class_name: 'Admin::MaintenanceDebt', dependent: :restrict_with_error 
-  has_many :admin_staffing_debts, class_name: 'Admin::StaffingDebt', dependent: :restrict_with_error 
-  has_many :admin_debt_notifications, class_name: 'Admin::DebtNotification', dependent: :destroy
-  has_many :membership_activation_tokens, class_name: 'MembershipActivationToken', dependent: :destroy
-  has_many :maintenance_attendances, class_name: 'MaintenanceAttendance', dependent: :restrict_with_error
+  has_many :team_membership, class_name: "TeamMember", dependent: :restrict_with_error
+  has_many :shows, through: :team_membership, source: :teamwork, source_type: "Show"
+  has_many :staffing_jobs, class_name: "Admin::StaffingJob", dependent: :restrict_with_error
+  has_many :staffings, through: :staffing_jobs, source: :staffable, source_type: "Admin::Staffing"
+  has_many :admin_maintenance_debts, class_name: "Admin::MaintenanceDebt", dependent: :restrict_with_error
+  has_many :admin_staffing_debts, class_name: "Admin::StaffingDebt", dependent: :restrict_with_error
+  has_many :admin_debt_notifications, class_name: "Admin::DebtNotification", dependent: :destroy
+  has_many :membership_activation_tokens, class_name: "MembershipActivationToken", dependent: :destroy
+  has_many :maintenance_attendances, class_name: "MaintenanceAttendance", dependent: :restrict_with_error
 
   has_one_attached :avatar
 
@@ -84,22 +84,22 @@ class User < ApplicationRecord
 
     normalized = email.strip.downcase
     if normalized.match?(/^s\d{7}@sms\.ed\.ac\.uk$/)
-      normalized.sub('@sms.ed.ac.uk', '@ed.ac.uk')
+      normalized.sub("@sms.ed.ac.uk", "@ed.ac.uk")
     else
       normalized
     end
   }
   normalizes :first_name, :last_name, :username, with: ->(name) { name&.strip }
 
-  default_scope -> { order('last_name ASC') }
+  default_scope -> { order("last_name ASC") }
 
   # Also change the method 'consented'
   def self.not_consented
     where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
   end
-  
+
   def self.by_first_name
-    reorder('first_name ASC')
+    reorder("first_name ASC")
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -107,11 +107,11 @@ class User < ApplicationRecord
     attributes += %w[bio email public_profile] if auth_object.can?(:read, User)
     attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count] if auth_object.can?(:manage, User)
 
-    return attributes
+    attributes
   end
 
   def self.ransackable_associations(auth_object = nil)
-    ["admin_debt_notifications", "admin_maintenance_debts", "admin_staffing_debts", "marketing_creatives_profile", "roles", "shows", "staffing_jobs", "staffings", "versions"]
+    [ "admin_debt_notifications", "admin_maintenance_debts", "admin_staffing_debts", "marketing_creatives_profile", "roles", "shows", "staffing_jobs", "staffings", "versions" ]
   end
 
   def ability
@@ -125,26 +125,26 @@ class User < ApplicationRecord
   # Should be your primary option of displaying a name
   def name(current_user = nil)
     if current_user.present? && current_user.can?(:show, self)
-      return name_or_email
+      name_or_email
     else
-      return name_or_default
+      name_or_default
     end
   end
 
   # Returns true if the users first_name and last_name are set.
   def name?
-    return first_name.present? && last_name.present?
+    first_name.present? && last_name.present?
   end
 
   # A quick way of getting the user's full name.
   def name_or_default
     return full_name unless full_name.blank?
 
-    return 'No Name Set'
+    "No Name Set"
   end
 
   def full_name
-    return "#{first_name} #{last_name}".strip
+    "#{first_name} #{last_name}".strip
   end
 
   # A quick way to get the user's full name, if they have a name, or their email.
@@ -152,26 +152,26 @@ class User < ApplicationRecord
   def name_or_email
     return name_or_default if name?
 
-    return email
+    email
   end
 
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.
   def unify_numbers
     return unless phone_number
 
-    self.phone_number = phone_number.gsub(/\s/, '')
+    self.phone_number = phone_number.gsub(/\s/, "")
 
-    if phone_number[0] == '0'
-      phone_number[0] = '+44'
+    if phone_number[0] == "0"
+      phone_number[0] = "+44"
     end
   end
 
   ransacker :full_name, formatter: proc { |v| v.mb_chars.downcase.to_s } do |parent|
     # Alternative
-    #Arel.sql("CONCAT_WS(' ', users.first_name, users.last_name)")
-    Arel::Nodes::NamedFunction.new('LOWER',
-      [Arel::Nodes::NamedFunction.new('concat_ws',
-        [Arel::Nodes::SqlLiteral.new("' '"), parent.table[:first_name], parent.table[:last_name]])])
+    # Arel.sql("CONCAT_WS(' ', users.first_name, users.last_name)")
+    Arel::Nodes::NamedFunction.new("LOWER",
+      [ Arel::Nodes::NamedFunction.new("concat_ws",
+        [ Arel::Nodes::SqlLiteral.new("' '"), parent.table[:first_name], parent.table[:last_name] ]) ])
   end
 
   ##
@@ -192,28 +192,28 @@ class User < ApplicationRecord
       user.password = password
     end
 
-    return user
+    user
   end
 
   ##
   # Debt
-  ## 
+  ##
 
   # The current and upcoming function share code, so please check them both if you change things.
   def debt_causing_maintenance_debts(on_date = Date.current)
-    return admin_maintenance_debts.where('due_by < ?', on_date).unfulfilled
+    admin_maintenance_debts.where("due_by < ?", on_date).unfulfilled
   end
 
   def upcoming_maintenance_debts(from_date = Date.current)
-    return admin_maintenance_debts.where('due_by >= ?', from_date).unfulfilled
+    admin_maintenance_debts.where("due_by >= ?", from_date).unfulfilled
   end
-  
+
   def debt_causing_staffing_debts(on_date = Date.current)
-    return admin_staffing_debts.where('due_by < ?', on_date).unfulfilled
+    admin_staffing_debts.where("due_by < ?", on_date).unfulfilled
   end
 
   def upcoming_staffing_debts(from_date = Date.current)
-    return admin_staffing_debts.where('due_by >= ?', from_date).unfulfilled
+    admin_staffing_debts.where("due_by >= ?", from_date).unfulfilled
   end
 
   def debt_message_suffix(on_date = Date.current)
@@ -221,50 +221,50 @@ class User < ApplicationRecord
     in_staffing_debt = debt_causing_staffing_debts(on_date).any?
 
     if in_maintenance_debt && in_staffing_debt
-      return 'in staffing and maintenance Debt'
+      "in staffing and maintenance Debt"
     elsif in_maintenance_debt
-      return 'in maintenance Debt'
+      "in maintenance Debt"
     elsif in_staffing_debt
-      return 'in staffing Debt'
+      "in staffing Debt"
     else
-      return 'not in Debt'
+      "not in Debt"
     end
   end
 
   # Returns true if the user is in debt
   # Rename to in debt?
   def in_debt(on_date = Date.current)
-    return debt_causing_maintenance_debts(on_date).any? || debt_causing_staffing_debts(on_date).any?
+    debt_causing_maintenance_debts(on_date).any? || debt_causing_staffing_debts(on_date).any?
   end
 
   def self.in_debt(on_date = Date.current)
     in_debt_ids = includes(:admin_maintenance_debts, :admin_staffing_debts).find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
-    
-    return where(id: in_debt_ids)
+
+    where(id: in_debt_ids)
   end
 
   # returns users who have been sent a notification since the given date
   def self.notified_since(date)
-    return includes(:admin_debt_notifications).where('admin_debt_notifications.sent_on > ?', date).references(:admin_debt_notifications).distinct
+    includes(:admin_debt_notifications).where("admin_debt_notifications.sent_on > ?", date).references(:admin_debt_notifications).distinct
   end
 
   # Note: This function does not have any regard for permissions.
   def team_memberships(public_only)
-    team_memberships = team_membership.where(teamwork_type: 'Event')
+    team_memberships = team_membership.where(teamwork_type: "Event")
 
     team_memberships = team_memberships.select { |team_membership| team_membership.teamwork.present? }
     team_memberships = team_memberships.select { |team_membership| team_membership.teamwork&.is_public } if public_only
 
-    return team_memberships.sort { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
+    team_memberships.sort { |a, b| a.teamwork.start_date <=> b.teamwork.start_date }
   end
 
   # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
-  # It then matches all the soonest debt with attendances. 
+  # It then matches all the soonest debt with attendances.
   def reallocate_maintenance_debts
-    debts = admin_maintenance_debts.reload.where('due_by >= ? ', Date.current).or(admin_maintenance_debts.where(maintenance_attendance: nil)).where(state: :normal).order(due_by: :asc)
-    attendances = maintenance_attendances.reload.includes(:maintenance_debt).where(admin_maintenance_debts: { id: [nil] + debts.ids })
+    debts = admin_maintenance_debts.reload.where("due_by >= ? ", Date.current).or(admin_maintenance_debts.where(maintenance_attendance: nil)).where(state: :normal).order(due_by: :asc)
+    attendances = maintenance_attendances.reload.includes(:maintenance_debt).where(admin_maintenance_debts: { id: [ nil ] + debts.ids })
 
-    amount_of_pairs = [debts.size, attendances.size].min
+    amount_of_pairs = [ debts.size, attendances.size ].min
 
     # Link them as far as there are pairs.
     for i in 0...amount_of_pairs do
@@ -277,18 +277,18 @@ class User < ApplicationRecord
   end
 
   # This method looks for all debts in the future and their staffing jobs, all unallocated staffing jobs, and all past debts without jobs.
-  # It then matches all the soonest debt with staffing jobs. 
+  # It then matches all the soonest debt with staffing jobs.
   def reallocate_staffing_debts
-    debts = admin_staffing_debts.reload.where('due_by >= ? ', Date.current).or(admin_staffing_debts.where(admin_staffing_job: nil)).where(state: :normal).order(due_by: :asc)
+    debts = admin_staffing_debts.reload.where("due_by >= ? ", Date.current).or(admin_staffing_debts.where(admin_staffing_job: nil)).where(state: :normal).order(due_by: :asc)
 
     # Find all jobs for this user that are currently not associated or associated with a debt (belonging to this user) already.
-    jobs = staffing_jobs.reload.includes(:staffing_debt).where(admin_staffing_debts: { id: [nil] + debts.ids })
+    jobs = staffing_jobs.reload.includes(:staffing_debt).where(admin_staffing_debts: { id: [ nil ] + debts.ids })
     # And then filter out the jobs that do not count towards debt.
     ids = jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
     jobs = jobs.where(id: ids)
 
     # The amount of pairs is how many combinations of debt and staffing job there are.
-    amount_of_pairs = [debts.size, jobs.size].min
+    amount_of_pairs = [ debts.size, jobs.size ].min
 
     # Link them as far as there are pairs.
     for i in 0...amount_of_pairs do
@@ -300,11 +300,11 @@ class User < ApplicationRecord
     end
   end
 
-  
-  ## 
+
+  ##
   # Roles
   # Overrides methods that only work on symbols to also work with the instance of the class.
-  ## 
+  ##
   def add_role(role)
     if role.instance_of?(Symbol) || role.instance_of?(String)
       super(role)
@@ -340,6 +340,6 @@ class User < ApplicationRecord
   end
 
   def send_welcome_email
-    UsersMailer.welcome_email(self).deliver_later unless email.ends_with?('@bedlamtheatre.co.uk')
+    UsersMailer.welcome_email(self).deliver_later unless email.ends_with?("@bedlamtheatre.co.uk")
   end
 end

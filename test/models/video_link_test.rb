@@ -14,33 +14,33 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class VideoLinkTest < ActionView::TestCase
-  test 'submitting invalid link' do
+  test "submitting invalid link" do
     assert_raises ActiveRecord::RecordInvalid do
-      FactoryBot.create(:video_link, link: 'WAH')
+      FactoryBot.create(:video_link, link: "WAH")
     end
   end
 
-  test 'embedding for invalid link' do
+  test "embedding for invalid link" do
     video_link = FactoryBot.create(:video_link)
-    video_link.update_attribute(:link, 'WAH')
+    video_link.update_attribute(:link, "WAH")
 
-    assert_equal 'The video link is not valid.', video_link.embed_code
+    assert_equal "The video link is not valid.", video_link.embed_code
   end
 
-  test 'embedding for valid link' do
+  test "embedding for valid link" do
     video_link = FactoryBot.create(:video_link)
 
-    assert_not_equal 'The video link is not valid.', video_link.embed_code
-    assert_includes video_link.embed_code, 'youtube-nocookie.com'
+    assert_not_equal "The video link is not valid.", video_link.embed_code
+    assert_includes video_link.embed_code, "youtube-nocookie.com"
   end
 
-  test 'embedding Facebook link' do
-    video_link = FactoryBot.create(:video_link, link: 'https://fb.watch/4Eo-S1p6H9/')
+  test "embedding Facebook link" do
+    video_link = FactoryBot.create(:video_link, link: "https://fb.watch/4Eo-S1p6H9/")
 
-    assert_not_equal 'The video link is not valid.', video_link.embed_code
-    assert_includes video_link.embed_code, 'facebook.com'
+    assert_not_equal "The video link is not valid.", video_link.embed_code
+    assert_includes video_link.embed_code, "facebook.com"
   end
 end

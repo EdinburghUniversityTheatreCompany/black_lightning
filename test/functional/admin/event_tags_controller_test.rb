@@ -1,4 +1,4 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::EventTagsControllerTest < ActionController::TestCase
   setup do
@@ -7,7 +7,7 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  test 'pagination should render for a lot of items' do
+  test "pagination should render for a lot of items" do
     # Create a lot of event tags.
     FactoryBot.create_list(:event_tag, 50)
 
@@ -15,19 +15,19 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test 'should get index' do
+  test "should get index" do
     get :index
     assert_response :success
     assert_not_nil assigns(:event_tags)
   end
 
-  test 'should get new' do
+  test "should get new" do
     get :new
     assert_response :success
   end
 
-  test 'should create event_tag' do
-    assert_difference('EventTag.count') do
+  test "should create event_tag" do
+    assert_difference("EventTag.count") do
       params = FactoryBot.attributes_for(:event_tag)
       post :create, params: { event_tag: params }
     end
@@ -35,8 +35,8 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
     assert_redirected_to admin_event_tag_path(assigns(:event_tag))
   end
 
-  test 'should not create invalid event tag' do
-    assert_no_difference('EventTag.count') do
+  test "should not create invalid event tag" do
+    assert_no_difference("EventTag.count") do
       # Duplicate name.
       params = FactoryBot.attributes_for(:event_tag, name: @event_tag.name)
       post :create, params: { event_tag: params }
@@ -45,17 +45,17 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
-  test 'should show event tag' do
+  test "should show event tag" do
     get :show, params: { id: @event_tag }
     assert_response :success
   end
 
-  test 'should get edit' do
+  test "should get edit" do
     get :edit, params: { id: @event_tag }
     assert_response :success
   end
 
-  test 'should update event_tag' do
+  test "should update event_tag" do
     new_name = FactoryBot.generate(:random_string)
 
     put :update, params: { id: @event_tag, event_tag: { name: new_name } }
@@ -65,13 +65,13 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
     assert_redirected_to admin_event_tag_path(assigns(:event_tag))
   end
 
-  test 'should not update invalid event_tag' do
+  test "should not update invalid event_tag" do
     put :update, params: { id: @event_tag, event_tag: { name: nil } }
     assert_response :unprocessable_entity
   end
 
-  test 'should destroy event_tag' do
-    assert_difference('EventTag.count', -1) do
+  test "should destroy event_tag" do
+    assert_difference("EventTag.count", -1) do
       delete :destroy, params: { id: @event_tag }
     end
 

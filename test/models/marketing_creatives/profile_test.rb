@@ -13,10 +13,10 @@
 #--
 # == Schema Information End
 #++
-require 'test_helper'
+require "test_helper"
 
 class MarketingCreatives::ProfileTest < ActionView::TestCase
-  test 'to_param is url' do
+  test "to_param is url" do
     @profile = FactoryBot.create(:marketing_creatives_profile)
     assert_equal @profile.url, @profile.to_param
   end

@@ -1,4 +1,4 @@
-require 'csv'
+require "csv"
 
 class Tasks::Logic::Techie
   def self.import(file)
@@ -6,7 +6,7 @@ class Tasks::Logic::Techie
       parent = Techie.find_or_create_by(name: row[0])
 
       child = row[1]
-      Raise(ArgumentError, "Use a comma (,) as the separator, not a semicolon {;), on row #{row}") if child.nil? && row.includes(';')
+      Raise(ArgumentError, "Use a comma (,) as the separator, not a semicolon {;), on row #{row}") if child.nil? && row.includes(";")
 
       child = Techie.find_or_create_by(name: child)
 

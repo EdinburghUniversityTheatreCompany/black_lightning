@@ -1,7 +1,7 @@
-require 'test_helper'
+require "test_helper"
 
 class Admin::AttachmentsControllerTest < ActionController::TestCase
-  test 'should get index' do
+  test "should get index" do
     sign_in users(:admin)
 
     get :index
@@ -9,10 +9,10 @@ class Admin::AttachmentsControllerTest < ActionController::TestCase
     assert_response :success
     assert_not_nil assigns(:attachments)
 
-    assert_equal 'Attachments', assigns(:title)
+    assert_equal "Attachments", assigns(:title)
   end
 
-  test 'should ransack on attachment tags' do
+  test "should ransack on attachment tags" do
     sign_in users(:admin)
 
     attachment_tag_id = AttachmentTag.all.first

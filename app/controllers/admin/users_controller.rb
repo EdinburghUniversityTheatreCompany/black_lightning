@@ -4,8 +4,8 @@
 class Admin::UsersController < AdminController
   include GenericController
 
-  load_and_authorize_resource except: [:autocomplete_list]
-  skip_load_resource only: [:create]
+  load_and_authorize_resource except: [ :autocomplete_list ]
+  skip_load_resource only: [ :create ]
 
   ##
   # Overrides load_index_resources
@@ -37,7 +37,7 @@ class Admin::UsersController < AdminController
     @user.send_reset_password_instructions
 
     respond_to do |format|
-      flash[:succes] = 'Password reset instructions sent.'
+      flash[:succes] = "Password reset instructions sent."
       format.html { redirect_back fallback_location: admin_user_url(@user) }
     end
   end
@@ -45,18 +45,18 @@ class Admin::UsersController < AdminController
   def autocomplete_list
     authorize! :autocomplete, User
 
-    page = [params[:page].to_i, 1].max # First page is always 1.
+    page = [ params[:page].to_i, 1 ].max # First page is always 1.
 
     per_page = 30 # Adjust the number of items per page as needed
 
     # Ransack query should take care of the filtering.
     @users = base_index_ransack_query
 
-    @users = @users.with_role(:member) if params[:show_non_members] != '1'
+    @users = @users.with_role(:member) if params[:show_non_members] != "1"
 
     @users = @users.reorder(:first_name, :last_name).page(page).per(per_page)
 
-    items = @users.select(['id', :first_name, :last_name]).map do |user|
+    items = @users.select([ "id", :first_name, :last_name ]).map do |user|
       { id: user.id, text: user.name_or_default }
     end
 
@@ -68,22 +68,33 @@ class Admin::UsersController < AdminController
   private
 
   def permitted_params
-    params[:user].delete(:password) if params[:user][:password].blank?
-    params[:user].delete(:password_confirmation) if params[:user][:password_confirmation].blank?
+    if params[:user][:password].blank?
+      params[:user].delete(:password)
+    elsif @user&.persisted? && @user.valid_password?(params[:user][:password])
+      # If password is the same as current, treat as if blank (only for existing users)
+      params[:user].delete(:password)
+    end
+
+    if params[:user][:password_confirmation].blank?
+      params[:user].delete(:password_confirmation)
+    elsif params[:user][:password].blank? && params[:user][:password_confirmation].present?
+      # If password was removed but confirmation wasn't, remove confirmation too
+      params[:user].delete(:password_confirmation)
+    end
 
     perm_params = %i[email password password_confirmation remember_me first_name last_name
                      phone_number card_number public_profile bio avatar username]
 
     perm_params.push(role_ids: []) if current_user.has_role?(:admin)
 
-    return perm_params
+    perm_params
   end
 
   # TEST
   def base_index_database_query
-    return super.with_role(:member) if params[:show_non_members] != '1'
+    return super.with_role(:member) if params[:show_non_members] != "1"
 
-    return super
+    super
   end
 
   def on_create_success
