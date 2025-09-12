@@ -5,7 +5,7 @@ if creds.present? && creds[:issuer].present?
   Doorkeeper::OpenidConnect.configure do
     issuer creds[:issuer]
 
-    signing_key File.read("#{Rails.root}/config/credentials/openid_signing_key")
+    signing_key Rails.application.credentials.dig(:openid_connect, Rails.env.to_sym, :private_key)
 
     subject_types_supported [ :public ]
 
