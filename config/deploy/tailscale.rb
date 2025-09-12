@@ -8,7 +8,9 @@ set :rvm_type, :system
 set :rvm_path, "/usr/local/rvm"
 
 set :bundle_flags, "--quiet"
-set :bundle_dir, ""
+set :bundle_path, -> { shared_path.join("bundle") }
+set :bundle_flags, "--deployment --quiet"
+set :bundle_without, %w[development test].join(" ")
 
 namespace :deploy do
   desc "chmod delayed_job script"
