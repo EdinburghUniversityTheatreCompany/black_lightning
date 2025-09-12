@@ -72,6 +72,9 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     get "", to: "dashboard#index"
 
+    # Mount MissionControl Jobs
+    mount MissionControl::Jobs::Engine, at: "/jobs"
+
     # The resources pages:_inde
     get "resources", to: "resources#page", as: :resources_index
     get "resources/membership_checker", to: "resources#membership_checker", as: :resources_membership_checker
@@ -280,12 +283,6 @@ ChaosRails::Application.routes.draw do
     namespace "reports" do
       %w[roles members newsletter_subscribers staffing].each do |action|
         put action, action: action, as: action
-      end
-    end
-
-    namespace "jobs" do
-      %w[overview working pending failed remove retry].each do |action|
-        get action, action: action, as:  action, controller: "/admin/job_control"
       end
     end
 

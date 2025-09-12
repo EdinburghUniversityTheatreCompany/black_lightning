@@ -9,6 +9,5 @@ install_plugin Capistrano::SCM::Git
 
 require 'capistrano/rvm'
 require 'capistrano/rails'
-require 'capistrano/delayed_job'
 
 require 'capistrano/honeybadger'
