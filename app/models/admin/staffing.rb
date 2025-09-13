@@ -1,9 +1,9 @@
 ##
 # Represents staffing that has many jobs. Users sign up for the Staffing_Job, not the Staffing.
 #
-# A Delayed::Job will be created to send out reminders, and updated whever the staffing is saved.
+# A StaffingReminderJob will be scheduled to send out reminders, and updated whenever the staffing is saved.
 #
-# If the Staffing is deleted, reminder_cleanup removes the Delayed::Job
+# If the Staffing is deleted, reminder_cleanup removes the scheduled job
 #
 # == Schema Information
 #
@@ -15,6 +15,8 @@
 # *created_at*::          <tt>datetime, not null</tt>
 # *updated_at*::          <tt>datetime, not null</tt>
 # *reminder_job_id*::     <tt>integer</tt>
+# *reminder_job_executed*:: <tt>boolean, default: false</tt>
+# *scheduled_job_id*::    <tt>string</tt>
 # *end_time*::            <tt>datetime</tt>
 # *counts_towards_debt*:: <tt>boolean</tt>
 # *slug*::                <tt>string(255)</tt>
@@ -32,8 +34,8 @@ class Admin::Staffing < ApplicationRecord
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
 
-  # Having this as a belongs_to feels wrong, but since the id of the job needs to be stored in the staffing it is necessary.
-  belongs_to :reminder_job, class_name: "::Delayed::Job", optional: true
+  # Legacy: reminder_job_id field still exists in database but no longer used
+  # TODO: Remove reminder_job_id column in future migration
 
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 
@@ -47,7 +49,7 @@ class Admin::Staffing < ApplicationRecord
   scope :past, -> { where([ "end_time < ?", DateTime.current ]) }
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[start_time show_title reminder_job_id end_time counts_towards_debt slug]
+    %w[start_time show_title end_time counts_towards_debt slug reminder_job_executed scheduled_job_id]
   end
 
   ##
@@ -60,30 +62,43 @@ class Admin::Staffing < ApplicationRecord
   private
 
   ##
-  # Remove the reminder_job when the Staffing is deleted to prevent the job from failing.
+  # Remove scheduled jobs when the Staffing is deleted to prevent jobs from failing.
   ##
   def reminder_cleanup
-    if self.reminder_job
-      self.reminder_job.delete
+    # Cancel ActiveJob if exists
+    if scheduled_job_id.present?
+      begin
+        # Try to cancel the job in Solid Queue
+        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
+        job&.destroy
+      rescue => e
+        Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
+      end
     end
   end
 
   ##
-  # Upstart_time the reminder job for the staffing
+  # Update/schedule the reminder job for the staffing
   ##
   def update_reminder
-    if reminder_job.present?
-      reminder_job.run_at = start_time.advance(hours: -2)
-      reminder_job.save!
-    else
-      if self.start_time > DateTime.current
-        self.reminder_job = delay(run_at: start_time.advance(hours: -2)).send_reminder
-        reminder_job.description = "Reminder for Staffing #{id} - #{show_title} - #{I18n.l start_time, format: :short}"
-        reminder_job.save!
+    return unless self.start_time > DateTime.current
 
-        self.save!
+    # Cancel existing job if present
+    if scheduled_job_id.present?
+      begin
+        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
+        job&.destroy
+      rescue => e
+        Rails.logger.warn "Could not cancel existing job #{scheduled_job_id}: #{e.message}"
       end
     end
+
+    # Schedule new reminder job
+    job = StaffingReminderJob.set(wait_until: start_time.advance(hours: -2)).perform_later(id)
+
+    # Set attributes - they'll be saved when the current save completes
+    self.scheduled_job_id = job.job_id
+    self.reminder_job_executed = false
   end
 
   # Reassociate staffing jobs if the count_towards_debt flag changes.
@@ -98,46 +113,9 @@ class Admin::Staffing < ApplicationRecord
   end
 
   ##
-  # Sends a reminder for staffing.
-  #
-  # Should only be called as a delayed job.
+  # Check if the reminder job has been executed
   ##
-  def send_reminder
-    return if reminder_job.nil?
-
-    if reminder_job.attempts > 0
-      # Prevent the job from running more than once to prevent us spewing emails if there is an error.
-      if reminder_job.last_error.nil?
-        raise ArgumentError, "This reminder job has already been executed."
-      else
-        # :nocov:
-        raise reminder_job.last_error
-        # :nocov:
-      end
-    end
-
-    errors = []
-
-    staffing_jobs.each do |job|
-      # Keep going to other users if sending to one fails for some reason.
-      next if job.user.nil?
-
-      begin
-        StaffingMailer.staffing_reminder(job).deliver_later
-      rescue => e
-        # :nocov:
-        exception = e.exception "Error sending reminder to #{job.user.name(current_user)}: " + e.message
-        errors << exception
-        # :nocov:
-      end
-    end
-
-    reminder_job.increment!(:attempts)
-    # Raise the errors now for the logs.
-    errors&.each do |e|
-      # :nocov:
-      raise e
-      # :nocov:
-    end
+  def reminder_job_executed?
+    reminder_job_executed
   end
 end

@@ -1,16 +1,6 @@
 require "test_helper"
 
 class StaffingMailerTest < ActionMailer::TestCase
-  setup do
-    # Turn on delayed jobs for staffings - the staffing mailer refers to the job.
-    Delayed::Worker.delay_jobs = true
-  end
-
-  teardown do
-    # Turn off delayed jobs back off
-    Delayed::Worker.delay_jobs = false
-  end
-
   test "should send staffing_reminder" do
     staffing = FactoryBot.create(:staffing, staffed_job_count: 3)
 

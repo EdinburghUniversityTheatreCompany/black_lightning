@@ -56,8 +56,6 @@ module ChaosRails
     # Protect against csrf attacks by checking origin matches sites address
     config.action_controller.forgery_protection_origin_check = true
 
-    config.active_job.queue_adapter = :delayed_job
-
     config.action_mailer.default_url_options = { host: "www.bedlamtheatre.co.uk" }
 
     config.active_storage.variant_processor = :vips
@@ -72,5 +70,11 @@ module ChaosRails
 
     # Set image loading to lazy.
     config.action_view.image_loading = "lazy"
+
+  # Use AdminController as base controller
+  config.mission_control.jobs.base_controller_class = "Admin::JobsController"
+
+  # Disable HTTP Basic Auth for MissionControl
+  config.mission_control.jobs.http_basic_auth_enabled = false
   end
 end

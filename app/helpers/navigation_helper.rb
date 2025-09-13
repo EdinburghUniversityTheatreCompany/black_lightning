@@ -74,7 +74,7 @@ module NavigationHelper
     children << { title: "Carousel Items", path: admin_carousel_items_path, fa_icon: "fa-camera-rotate" }   if can? :index, CarouselItem
     children << { title: "Roles", path: admin_roles_path, fa_icon: "fa-id-card" }                      if can? :index, Role
     children << { title: "Permissions", path: admin_permissions_path, fa_icon: "fa-unlock" }          if can? :index, Admin::Permission
-    children << { title: "Jobs", path: admin_jobs_overview_path, fa_icon: "fa-user-tie" }               if can? :manage, :jobs
+    children << { title: "Jobs", path: admin_mission_control_jobs_path, fa_icon: "fa-user-tie" }               if can? :manage, :jobs
     children << { title: "Test", path: admin_tests_path, fa_icon: "fa-vial" }                             if can? :manage, :tests
     navbar_categories << { title: "Website Admin", children: children, fa_icon: "fa-laptop-code" }
 

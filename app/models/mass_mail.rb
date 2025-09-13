@@ -59,16 +59,7 @@ class MassMail < ApplicationRecord
   end
 
   def send!
-    recipients.each do |recipient|
-      begin
-        MassMailer.send_mail(self, recipient).deliver_later
-      rescue => e
-        # :nocov:
-        Rails.logger.fatal e.message
-        # :nocov:
-      end
-    end
+    # Schedule the mass mail job for the specified send_date
+    MassMailJob.set(wait_until: send_date).perform_later(id)
   end
-
-  handle_asynchronously :send!, run_at: proc { |m| m.send_date }
 end
