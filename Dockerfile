@@ -30,7 +30,8 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       libjemalloc2 \
       libvips \
       default-mysql-client \
-      tzdata && \
+      tzdata \
+      cron && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
 # Throw-away build stage to reduce size of final image
