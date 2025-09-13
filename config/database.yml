@@ -3,13 +3,14 @@
 
 default: &default
   adapter: mysql2
-  encoding: unicode
+  encoding: utf8
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
   username: <%= Rails.application.credentials.dig(:database, :username) %>
   password: <%= Rails.application.credentials.dig(:database, :password) %>
-  host: localhost
+  host: 127.0.0.1
+  port: 3306
 
 development:
   <<: *default
