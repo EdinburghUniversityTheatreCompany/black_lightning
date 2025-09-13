@@ -18,7 +18,7 @@ class StaffingReminderJob < ApplicationJob
       begin
         StaffingMailer.staffing_reminder(job).deliver_now
       rescue => e
-        exception = e.exception "Error sending reminder to #{job.user.name}: " + e.message
+        exception = e.exception "Error sending reminder to #{job.user.full_name} (ID: #{job.user.id}): " + e.message
         errors << exception
       end
     end
