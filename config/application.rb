@@ -56,8 +56,6 @@ module ChaosRails
     # Protect against csrf attacks by checking origin matches sites address
     config.action_controller.forgery_protection_origin_check = true
 
-    config.active_job.queue_adapter = :solid_queue
-
     config.action_mailer.default_url_options = { host: "www.bedlamtheatre.co.uk" }
 
     config.active_storage.variant_processor = :vips
