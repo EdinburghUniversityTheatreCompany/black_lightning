@@ -28,8 +28,8 @@
         <span class="card-title"><%= @title %></span>
       </div>
       <div class="card-body">
-        <% if @grouped_data.empty? %>
-          <p class="text-muted">No techies with entry years found.</p>
+        <% if @grouped_data.empty? && @grouped_no_year.empty? %>
+          <p class="text-muted">No techies found.</p>
         <% else %>
           <% @grouped_data.each do |year, parent_groups| %>
             <div class="mb-4">
@@ -48,6 +48,23 @@
                     </div>
                   </div>
                 <% end %>
+              <% end %>
+            </div>
+          <% end %>
+
+          <% unless @grouped_no_year.empty? %>
+            <div class="mb-4">
+              <h3 class="text-secondary">No Entry Year</h3>
+
+              <% @grouped_no_year.each do |parent_group, techies| %>
+                <div class="ms-3 mb-3">
+                  <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
+                  <div class="ms-3">
+                    <% techies.each_with_index do |techie, index| %>
+                      <%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %><%= index < techies.length - 1 ? ', ' : '' %>
+                    <% end %>
+                  </div>
+                </div>
               <% end %>
             </div>
           <% end %>

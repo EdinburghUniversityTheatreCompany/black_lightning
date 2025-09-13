@@ -79,11 +79,18 @@ class Admin::TechiesController < AdminController
                             .group_by(&:entry_year)
                             .sort.reverse.to_h
 
+    # Get techies without entry year
+    @techies_without_year = Techie.includes(:parents, :children)
+                                 .where(entry_year: nil)
+
     # Process each year to group techies by parent combinations
     @grouped_data = {}
     @techies_by_year.each do |year, techies|
       @grouped_data[year] = group_techies_by_parents(techies)
     end
+
+    # Process techies without entry year
+    @grouped_no_year = group_techies_by_parents(@techies_without_year)
   end
 
   private
