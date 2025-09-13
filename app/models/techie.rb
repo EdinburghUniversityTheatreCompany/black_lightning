@@ -49,6 +49,14 @@ class Techie < ApplicationRecord
     cycle_through_attributes(attributes, parents)
   end
 
+  def name_with_entry_year
+    if entry_year.present?
+      "#{name} (#{entry_year})"
+    else
+      name
+    end
+  end
+
   def get_relatives(amount_of_generations, get_siblings_of_related)
     # Make sure the amount of generations to get is at least one.
     amount_of_generations = 1 if amount_of_generations < 1

@@ -96,4 +96,12 @@ class TechieTest < ActionView::TestCase
     techie.entry_year = nil
     assert techie.valid?
   end
+
+  test "name_with_entry_year includes entry year when present" do
+    techie = Techie.new(name: "John Doe", entry_year: 2020)
+    assert_equal "John Doe (2020)", techie.name_with_entry_year
+
+    techie_without_year = Techie.new(name: "Jane Doe", entry_year: nil)
+    assert_equal "Jane Doe", techie_without_year.name_with_entry_year
+  end
 end
