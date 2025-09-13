@@ -17,53 +17,47 @@ namespace :jobs do
         # Parse the delayed job handler to extract the staffing ID
         handler_yaml = YAML.load(delayed_job.handler)
 
-        # The handler should be a Delayed::PerformableMethod
-        if handler_yaml.is_a?(Delayed::PerformableMethod)
-          object = handler_yaml.object
-          method_name = handler_yaml.method_name
+        object = handler_yaml.object
+        method_name = handler_yaml.method_name
 
-          if object.is_a?(Admin::Staffing) && method_name.to_s == "send_reminder"
-            staffing = object
+        if object.is_a?(Admin::Staffing) && method_name.to_s == "send_reminder"
+          staffing = object
 
-            # Check if this staffing still exists and hasn't been executed
-            if staffing.persisted? && !staffing.reminder_job_executed?
+          # Check if this staffing still exists and hasn't been executed
+          if staffing.persisted? && !staffing.reminder_job_executed?
 
-              # Schedule the new ActiveJob with the same timing
-              scheduled_time = delayed_job.run_at
+            # Schedule the new ActiveJob with the same timing
+            scheduled_time = delayed_job.run_at
 
-              if scheduled_time > Time.current
-                puts "Migrating job for Staffing #{staffing.id} (#{staffing.show_title}) scheduled for #{scheduled_time}"
+            if scheduled_time > Time.current
+              puts "Migrating job for Staffing #{staffing.id} (#{staffing.show_title}) scheduled for #{scheduled_time}"
 
-                # Create the new ActiveJob
-                job = StaffingReminderJob.set(wait_until: scheduled_time).perform_later(staffing.id)
+              # Create the new ActiveJob
+              job = StaffingReminderJob.set(wait_until: scheduled_time).perform_later(staffing.id)
 
-                # Update the staffing record with the new job ID
-                staffing.update_columns(
-                  scheduled_job_id: job.job_id,
-                  reminder_job_executed: false,
-                  reminder_job_id: nil  # Clear the old delayed job reference
-                )
+              # Update the staffing record with the new job ID
+              staffing.update_columns(
+                scheduled_job_id: job.job_id,
+                reminder_job_executed: false,
+                reminder_job_id: nil  # Clear the old delayed job reference
+              )
 
-                # Remove the old delayed job
-                delayed_job.destroy
+              # Remove the old delayed job
+              delayed_job.destroy
 
-                migrated_count += 1
-              else
-                puts "Skipping expired job for Staffing #{staffing.id} - was scheduled for #{scheduled_time}"
-                delayed_job.destroy
-                skipped_count += 1
-              end
+              migrated_count += 1
             else
-              puts "Skipping job for Staffing #{staffing.id} - staffing not found or already executed"
+              puts "Skipping expired job for Staffing #{staffing.id} - was scheduled for #{scheduled_time}"
               delayed_job.destroy
               skipped_count += 1
             end
           else
-            puts "Skipping non-staffing reminder job: #{delayed_job.id}"
+            puts "Skipping job for Staffing #{staffing.id} - staffing not found or already executed"
+            delayed_job.destroy
             skipped_count += 1
           end
         else
-          puts "Skipping job with unrecognized handler format: #{delayed_job.id}"
+          puts "Skipping non-staffing reminder job: #{delayed_job.id}"
           skipped_count += 1
         end
 
