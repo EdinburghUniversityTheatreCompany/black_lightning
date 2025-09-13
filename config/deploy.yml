@@ -42,6 +42,7 @@ env:
     RAILS_ENV: production
     DATABASE_USERNAME: root
     DATABASE_HOST: blacklightning-mysql
+    SOLID_QUEUE_IN_PUMA: true
   secret:
     - RAILS_MASTER_KEY
     - MYSQL_ROOT_PASSWORD
