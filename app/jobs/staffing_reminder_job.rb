@@ -1,5 +1,5 @@
 class StaffingReminderJob < ApplicationJob
-  queue_as :default
+  queue_as :reminders
 
   def perform(staffing_id)
     staffing = Admin::Staffing.find(staffing_id)
