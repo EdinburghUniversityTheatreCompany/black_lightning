@@ -1,5 +1,5 @@
 class ProposalConversionJob < ApplicationJob
-  queue_as :default
+  queue_as :proposals
 
   def perform(proposal_id)
     proposal = Admin::Proposals::Proposal.find(proposal_id)
