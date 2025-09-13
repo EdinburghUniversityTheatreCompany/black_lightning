@@ -190,15 +190,15 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     year_2021_data = grouped_data[2021]
     assert_not_nil year_2021_data
 
-    # Should have three parent groups: "Alice", "Alice & Bob", "Bob"
+    # Should have three parent groups with entry years: "Alice (2020)", "Alice (2020) & Bob (2019)", "Bob (2019)"
     parent_groups = year_2021_data.keys.sort
-    assert_includes parent_groups, "Alice"
-    assert_includes parent_groups, "Alice & Bob"
-    assert_includes parent_groups, "Bob"
+    assert_includes parent_groups, "Alice (2020)"
+    assert_includes parent_groups, "Alice (2020) & Bob (2019)"
+    assert_includes parent_groups, "Bob (2019)"
 
     # Check correct techies are in each group
-    assert_includes year_2021_data["Alice"].map(&:name), "Charlie"
-    assert_includes year_2021_data["Alice & Bob"].map(&:name), "Diana"
-    assert_includes year_2021_data["Bob"].map(&:name), "Eve"
+    assert_includes year_2021_data["Alice (2020)"].map(&:name), "Charlie"
+    assert_includes year_2021_data["Alice (2020) & Bob (2019)"].map(&:name), "Diana"
+    assert_includes year_2021_data["Bob (2019)"].map(&:name), "Eve"
   end
 end

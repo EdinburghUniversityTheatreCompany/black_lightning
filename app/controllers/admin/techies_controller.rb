@@ -101,8 +101,8 @@ class Admin::TechiesController < AdminController
     grouped = {}
 
     techies.each do |techie|
-      parent_names = techie.parents.pluck(:name).sort
-      parent_key = parent_names.empty? ? "No Parents" : parent_names.join(" & ")
+      parent_names_with_years = techie.parents.map(&:name_with_entry_year).sort
+      parent_key = parent_names_with_years.empty? ? "No Parents" : parent_names_with_years.join(" & ")
 
       grouped[parent_key] ||= []
       grouped[parent_key] << techie
