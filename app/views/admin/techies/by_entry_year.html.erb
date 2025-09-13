@@ -1,0 +1,58 @@
+<% quick_actions = [
+  link_to(generate_icon_prefix('list', 'All Techies'), admin_techies_url, class: 'btn btn-secondary'),
+  link_to(generate_icon_prefix('tree', 'Tree'), tree_admin_techies_url, class: 'btn btn-secondary'),
+  link_to(generate_icon_prefix('user-group', 'Mass Add Techies'), mass_new_admin_techies_url, class: 'btn btn-secondary'),
+] %>
+
+<div class="row">
+  <div class="col">
+    <% unless quick_actions.blank? %>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Quick actions</span>
+        </div>
+        <div class="card-body">
+          <% quick_actions.each do |quick_action| %>
+            <%= quick_action %>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><%= @title %></span>
+      </div>
+      <div class="card-body">
+        <% if @grouped_data.empty? %>
+          <p class="text-muted">No techies with entry years found.</p>
+        <% else %>
+          <% @grouped_data.each do |year, parent_groups| %>
+            <div class="mb-4">
+              <h3 class="text-primary"><%= year %></h3>
+
+              <% if parent_groups.empty? %>
+                <p class="text-muted ms-3">No techies found for this year.</p>
+              <% else %>
+                <% parent_groups.each do |parent_group, techies| %>
+                  <div class="ms-3 mb-3">
+                    <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
+                    <div class="ms-3">
+                      <% techies.each_with_index do |techie, index| %>
+                        <%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %><%= index < techies.length - 1 ? ', ' : '' %>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
