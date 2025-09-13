@@ -3,6 +3,7 @@
 <%= simple_horizontal_form_for [:admin, @techie] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
+    <%= f.input :entry_year %>
     
     <%- # parent_fields and child_fields are a wrapper around relations_field that needs to exist so link_to_add works properly. %>
 

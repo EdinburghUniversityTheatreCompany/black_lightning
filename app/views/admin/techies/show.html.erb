@@ -22,8 +22,7 @@
   </ul>
 <% end %>
 
-<% fields = { } %>
+<% fields = { entry_year: @techie.entry_year } %>
 <% [:parents, :children, :co_parents].each { |relation| fields[relation] = { type: 'content', header: relation.to_s.dasherize.titleize, content: yield(relation) } } %>
 
-<% #type: 'content', header: titleize(relation), content: yield(relation) %>
 <%= render('shared/pages/show', object: @techie, fields: fields) %>

@@ -3,11 +3,11 @@
   link_to(generate_icon_prefix('user-group', 'Mass Add Techies'), mass_new_admin_techies_url, class: 'btn btn-secondary'),
 ] %>
 
-<% headers = [:name] %>
+<% headers = [:name, :entry_year] %>
 
-<% field_sets = @techies.map { |techie| {fields: [techie] } } %>
+<% field_sets = @techies.map { |techie| {fields: [techie, techie.entry_year] } } %>
 
-<% search_fields = { name_cont: { slug: 'defaults.name' } } %>
+<% search_fields = { name_cont: { slug: 'defaults.name' }, entry_year_eq: { slug: 'defaults.entry_year' } } %>
 
 <%= render 'shared/pages/index', resource_class: Techie, resources: @techies, headers: headers, field_sets: field_sets, search_fields: search_fields,
   quick_actions: quick_actions %>

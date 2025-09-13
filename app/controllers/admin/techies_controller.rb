@@ -71,10 +71,10 @@ class Admin::TechiesController < AdminController
   private
 
   def permitted_params
-    [ :name, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]
+    [ :name, :entry_year, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]
   end
 
   def order_args
-    [ "name asc" ]
+    [ "name asc", "entry_year asc" ]
   end
 end

@@ -78,4 +78,22 @@ class TechieTest < ActionView::TestCase
       end
     end
   end
+
+  test "validates entry_year is a reasonable year" do
+    techie = Techie.new(name: "Test Techie")
+
+    techie.entry_year = 1949
+    assert_not techie.valid?
+    assert_includes techie.errors[:entry_year], "must be greater than 1950"
+
+    techie.entry_year = Time.current.year + 2
+    assert_not techie.valid?
+    assert_includes techie.errors[:entry_year], "must be less than or equal to #{Time.current.year + 1}"
+
+    techie.entry_year = 2020
+    assert techie.valid?
+
+    techie.entry_year = nil
+    assert techie.valid?
+  end
 end

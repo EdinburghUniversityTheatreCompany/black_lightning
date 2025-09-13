@@ -16,6 +16,7 @@
 #++
 class Techie < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
+  validates :entry_year, numericality: { greater_than: 1950, less_than_or_equal_to: ->(_) { Time.current.year + 1 } }, allow_nil: true
 
   has_and_belongs_to_many :parents, class_name: "Techie", foreign_key: "child_id", association_foreign_key: "techie_id", join_table: "children_techies"
 
@@ -28,7 +29,7 @@ class Techie < ApplicationRecord
   default_scope -> { order("name ASC") }
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[id name]
+    %w[id name entry_year]
   end
 
   def self.ransackable_associations(auth_object = nil)
