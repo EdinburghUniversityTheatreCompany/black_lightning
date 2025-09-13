@@ -13,8 +13,14 @@ default: &default
   port: 3306
 
 development:
-  <<: *default
-  database: bedlam_blacklightning_development
+  primary:
+    <<: *default
+    database: bedlam_blacklightning_development
+
+  queue:
+    <<: *default
+    database: bedlam_blacklightning_development_queue
+    migrations_paths: db/queue_migrate
 
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
@@ -24,11 +30,16 @@ test:
   database: bedlam_blacklightning_test
 
 production:
-  adapter: mysql2
-  encoding: utf8
-  reconnect: false
-  database: bedlam_blacklightning_production
-  pool: 5
-  username: <%= ENV["DATABASE_USERNAME"] %>
-  password: <%= ENV["MYSQL_ROOT_PASSWORD"] %>
-  host: <%= ENV["DATABASE_HOST"] %>
+  primary: &primary_production
+    adapter: mysql2
+    encoding: utf8
+    reconnect: false
+    database: bedlam_blacklightning_production
+    pool: 5
+    username: <%= ENV["DATABASE_USERNAME"] %>
+    password: <%= ENV["MYSQL_ROOT_PASSWORD"] %>
+    host: <%= ENV["DATABASE_HOST"] %>
+  queue:
+    <<: *primary_production
+    database: bedlam_blacklightning_production_queue
+    migrations_paths: db/queue_migrate
