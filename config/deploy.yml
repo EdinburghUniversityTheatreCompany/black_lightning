@@ -8,6 +8,13 @@ image: bedlamtheatre/blacklightning
 servers:
   web:
     - bdlm-eusa-ed-ac-uk
+  cron:
+    hosts:
+      - bdlm-eusa-ed-ac-uk
+    cmd: bash -c "cat config/crontab | crontab - && cron -f"
+    options:
+      no-healthcheck: true
+      user: root
 
 # Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
 # Remove this section when using multiple web servers and ensure you terminate SSL at your load balancer.
@@ -76,6 +83,10 @@ asset_path: /rails/public/assets
 # boot:
 #   limit: 10 # Can also specify as a percentage of total hosts, such as "25%"
 #   wait: 2
+
+logging:
+  options:
+    max-size: 200M
 
 # Use accessory services (secrets come from .kamal/secrets).
 #

@@ -1,0 +1,2 @@
+# Make sure that the website can still send emails by checking in with Honeybadger
+00 05 * * * bash bash_scripts/daily_job.sh
