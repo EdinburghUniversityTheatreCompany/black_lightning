@@ -1,29 +1,34 @@
 <% content_for :parents do %>
   <ul>
     <% @techie.parents.each do |parent| %>
-      <li><%= get_link parent, :show %></li>
+      <li><%= link_to parent.name_with_entry_year, admin_techie_path(parent) %></li>
     <% end %>
   </ul>
 <% end %>
 
 <% content_for :children do %>
-  <ul>
-    <% @techie.children.each do |child| %>
-      <li><%= get_link child, :show %></li>
-    <% end %>
-  </ul>
+  <% children_by_year = @techie.children.group_by(&:entry_year).sort_by { |year, children| year || Float::INFINITY }.reverse %>
+  <% children_by_year.each do |year, children| %>
+    <div class="mb-3">
+      <h6 class="text-secondary"><%= year ? year : "No Entry Year" %></h6>
+      <ul>
+        <% children.sort_by(&:name).each do |child| %>
+          <li><%= get_link child, :show %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
 <% end %>
 
 <% content_for :co_parents do %>
   <ul>
     <% @coparents.each do |coparent| %>
-      <li><%= get_link coparent, :show %></li>
+      <li><%= link_to coparent.name_with_entry_year, admin_techie_path(coparent) %></li>
     <% end %>
   </ul>
 <% end %>
 
-<% fields = { } %>
+<% fields = { entry_year: @techie.entry_year } %>
 <% [:parents, :children, :co_parents].each { |relation| fields[relation] = { type: 'content', header: relation.to_s.dasherize.titleize, content: yield(relation) } } %>
 
-<% #type: 'content', header: titleize(relation), content: yield(relation) %>
 <%= render('shared/pages/show', object: @techie, fields: fields) %>

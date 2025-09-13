@@ -160,4 +160,74 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     get :tree
     assert_response :success
   end
+
+  test "should get by_entry_year" do
+    get :by_entry_year
+    assert_response :success
+    assert_not_nil assigns(:title)
+    assert_not_nil assigns(:grouped_data)
+    assert_not_nil assigns(:grouped_no_year)
+  end
+
+  test "by_entry_year groups techies correctly by parents" do
+    # Create test data with specific entry years and parent relationships
+    parent1 = Techie.create!(name: "Alice", entry_year: 2020)
+    parent2 = Techie.create!(name: "Bob", entry_year: 2019)
+    child1 = Techie.create!(name: "Charlie", entry_year: 2021)
+    child2 = Techie.create!(name: "Diana", entry_year: 2021)
+    child3 = Techie.create!(name: "Eve", entry_year: 2021)
+
+    # Set up parent relationships
+    child1.parents = [parent1]
+    child2.parents = [parent1, parent2]
+    child3.parents = [parent2]
+
+    get :by_entry_year
+
+    assert_response :success
+    grouped_data = assigns(:grouped_data)
+
+    # Check that 2021 year data contains proper parent groupings
+    year_2021_data = grouped_data[2021]
+    assert_not_nil year_2021_data
+
+    # Should have three parent groups with entry years: "Alice (2020)", "Alice (2020) & Bob (2019)", "Bob (2019)"
+    parent_groups = year_2021_data.keys.sort
+    assert_includes parent_groups, "Alice (2020)"
+    assert_includes parent_groups, "Alice (2020) & Bob (2019)"
+    assert_includes parent_groups, "Bob (2019)"
+
+    # Check correct techies are in each group
+    assert_includes year_2021_data["Alice (2020)"].map(&:name), "Charlie"
+    assert_includes year_2021_data["Alice (2020) & Bob (2019)"].map(&:name), "Diana"
+    assert_includes year_2021_data["Bob (2019)"].map(&:name), "Eve"
+  end
+
+  test "by_entry_year handles techies without entry year" do
+    # Create techies with and without entry years
+    parent_with_year = Techie.create!(name: "Parent With Year", entry_year: 2020)
+    parent_no_year = Techie.create!(name: "Parent No Year", entry_year: nil)
+    child_with_year = Techie.create!(name: "Child With Year", entry_year: 2021)
+    child_no_year = Techie.create!(name: "Child No Year", entry_year: nil)
+
+    # Set up relationships
+    child_with_year.parents = [parent_with_year]
+    child_no_year.parents = [parent_no_year]
+
+    get :by_entry_year
+
+    assert_response :success
+    grouped_data = assigns(:grouped_data)
+    grouped_no_year = assigns(:grouped_no_year)
+
+    # Check that child with year is in the year data
+    year_2021_data = grouped_data[2021]
+    assert_not_nil year_2021_data
+    assert_includes year_2021_data["Parent With Year (2020)"].map(&:name), "Child With Year"
+
+    # Check that child without year is in the no-year data
+    assert_not_nil grouped_no_year
+    assert_includes grouped_no_year.keys, "Parent No Year"
+    assert_includes grouped_no_year["Parent No Year"].map(&:name), "Child No Year"
+  end
 end
