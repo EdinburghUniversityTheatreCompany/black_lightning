@@ -22,7 +22,7 @@ class Admin::GenericEventsController < AdminController
     # Returns a hash with base permitted params to prevent accidentally omitting one.
     [
       :publicity_text, :members_only_text, :name, :slug, :tagline,
-      :pretix_slug_override, :pretix_shown, :pretix_view,
+      :pretix_slug_override, :pretix_shown, :pretix_view, :content_warnings,
       :author, :venue, :venue_id, :season, :season_id,
       :xts_id, :is_public, :image, :proposal, :proposal_id,
       :start_date, :end_date, :price, :spark_seat_slug, event_tag_ids: [],

@@ -35,6 +35,7 @@
   event_tags:     event.event_tags.accessible_by(current_ability).collect{ |event_tag| link_to(event_tag.name, admin_events_url('q[event_tags_id_eq]' => event_tag.id))}.join('; ').presence&.html_safe() || 'There are no tags set for this event.',
   image:          { type: 'image', image: event.image, variant: slideshow_variant },
   publicity_and_members: { type: 'content', content: yield(:publicity_and_members) },
+  content_warnings: { type: 'content', markdown: event.content_warnings },
   members_only_text: { type: 'markdown', markdown: event.members_only_text },
   gallery:        { type: 'content', content: render('/shared/gallery', pictures: event.pictures.accessible_by(current_ability, :show)) },
   attachments:    { type: 'content', content: render('shared/attachments_gallery', attachments: event.all_attachments.accessible_by(current_ability, :show)) },
