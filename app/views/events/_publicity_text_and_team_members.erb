@@ -13,6 +13,14 @@
         <% if event.pretix_shown %>
           <%= render 'shared/pretix_widget', event: event %>
         <% end %>
+
+        <% if event.content_warnings.present? %>
+          <div class="mt-4">
+            <%= render layout: '/shared/collapsible_section', locals: { title: 'Content Warnings' } do %>
+              <%= render_markdown event.content_warnings %>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </div>
   </div>
