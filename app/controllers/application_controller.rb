@@ -9,6 +9,10 @@ class ApplicationController < ActionController::Base
   check_authorization unless: :devise_controller?
 
   rescue_from Exception, StandardError do |exception|
+    if self.class.name.starts_with?("Doorkeeper::")
+      raise exception
+    end
+
     if Rails.env.production? || self.is_a?(Admin::TestsController) || self.is_a?(TestsController)
       report_500(exception)
     else
