@@ -5,7 +5,7 @@
 class Admin::TechiesController < AdminController
   include GenericController
 
-  load_and_authorize_resource except: [ :tree, :bush, :mass_new, :mass_create ]
+  load_and_authorize_resource except: [ :tree, :bush, :mass_new, :mass_create, :by_entry_year ]
 
   def show
     super
@@ -68,6 +68,24 @@ class Admin::TechiesController < AdminController
     end
   end
 
+  def by_entry_year
+    authorize! :index, Techie
+
+    @title = "Techies by Entry Year and Parents"
+
+    # Get all techies with their parents and children, grouped by entry year
+    @techies_by_year = Techie.includes(:parents, :children)
+                            .where.not(entry_year: nil)
+                            .group_by(&:entry_year)
+                            .sort.reverse.to_h
+
+    # Process each year to group techies by parent combinations
+    @grouped_data = {}
+    @techies_by_year.each do |year, techies|
+      @grouped_data[year] = group_techies_by_parents(techies)
+    end
+  end
+
   private
 
   def permitted_params
@@ -76,5 +94,23 @@ class Admin::TechiesController < AdminController
 
   def order_args
     [ "name asc", "entry_year asc" ]
+  end
+
+  def group_techies_by_parents(techies)
+    # Group techies by their parent combinations
+    grouped = {}
+
+    techies.each do |techie|
+      parent_names = techie.parents.pluck(:name).sort
+      parent_key = parent_names.empty? ? "No Parents" : parent_names.join(" & ")
+
+      grouped[parent_key] ||= []
+      grouped[parent_key] << techie
+    end
+
+    # Sort by parent group names alphabetically and sort techies within each group
+    grouped.sort.map do |parent_key, group_techies|
+      [parent_key, group_techies.sort_by(&:name)]
+    end.to_h
   end
 end

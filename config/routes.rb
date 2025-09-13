@@ -200,6 +200,7 @@ ChaosRails::Application.routes.draw do
         get "tree_data"
         get "mass_new"
         post "mass_create"
+        get "by_entry_year"
       end
     end
 

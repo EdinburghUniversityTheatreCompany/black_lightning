@@ -160,4 +160,45 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     get :tree
     assert_response :success
   end
+
+  test "should get by_entry_year" do
+    get :by_entry_year
+    assert_response :success
+    assert_not_nil assigns(:title)
+    assert_not_nil assigns(:grouped_data)
+  end
+
+  test "by_entry_year groups techies correctly by parents" do
+    # Create test data with specific entry years and parent relationships
+    parent1 = Techie.create!(name: "Alice", entry_year: 2020)
+    parent2 = Techie.create!(name: "Bob", entry_year: 2019)
+    child1 = Techie.create!(name: "Charlie", entry_year: 2021)
+    child2 = Techie.create!(name: "Diana", entry_year: 2021)
+    child3 = Techie.create!(name: "Eve", entry_year: 2021)
+
+    # Set up parent relationships
+    child1.parents = [parent1]
+    child2.parents = [parent1, parent2]
+    child3.parents = [parent2]
+
+    get :by_entry_year
+
+    assert_response :success
+    grouped_data = assigns(:grouped_data)
+
+    # Check that 2021 year data contains proper parent groupings
+    year_2021_data = grouped_data[2021]
+    assert_not_nil year_2021_data
+
+    # Should have three parent groups: "Alice", "Alice & Bob", "Bob"
+    parent_groups = year_2021_data.keys.sort
+    assert_includes parent_groups, "Alice"
+    assert_includes parent_groups, "Alice & Bob"
+    assert_includes parent_groups, "Bob"
+
+    # Check correct techies are in each group
+    assert_includes year_2021_data["Alice"].map(&:name), "Charlie"
+    assert_includes year_2021_data["Alice & Bob"].map(&:name), "Diana"
+    assert_includes year_2021_data["Bob"].map(&:name), "Eve"
+  end
 end
