@@ -35,6 +35,7 @@ en:
         editing_deadline: 'Editing Deadline'
         end_date: 'End Date'
         email: 'Email'
+        entry_year: 'Entry Year'
         event: 'Event'
         event_name: 'Event Name'
         event_tags: 'Event Tags'
