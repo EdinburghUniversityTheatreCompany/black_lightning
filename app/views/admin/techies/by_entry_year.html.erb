@@ -41,11 +41,11 @@
                 <% parent_groups.each do |parent_group, techies| %>
                   <div class="ms-3 mb-3">
                     <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
-                    <div class="ms-3">
-                      <% techies.each_with_index do |techie, index| %>
-                        <%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %><%= index < techies.length - 1 ? ', ' : '' %>
+                    <ul class="ms-3">
+                      <% techies.each do |techie| %>
+                        <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
                       <% end %>
-                    </div>
+                    </ul>
                   </div>
                 <% end %>
               <% end %>
@@ -59,11 +59,11 @@
               <% @grouped_no_year.each do |parent_group, techies| %>
                 <div class="ms-3 mb-3">
                   <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
-                  <div class="ms-3">
-                    <% techies.each_with_index do |techie, index| %>
-                      <%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %><%= index < techies.length - 1 ? ', ' : '' %>
+                  <ul class="ms-3">
+                    <% techies.each do |techie| %>
+                      <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
                     <% end %>
-                  </div>
+                  </ul>
                 </div>
               <% end %>
             </div>
