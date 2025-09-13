@@ -1,3 +1,5 @@
+# This script is run daily by the crontab in the cron container as defined by config/deploy.yml
+
 # Notify the marketing manager if there are any marketing creatives sign ups
 bundle exec rails marketing_creatives:notify_of_new_sign_ups
 
