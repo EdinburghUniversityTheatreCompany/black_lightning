@@ -200,20 +200,21 @@ class User < ApplicationRecord
   ##
 
   # The current and upcoming function share code, so please check them both if you change things.
+  # Optimized to use single database queries instead of chaining where().unfulfilled
   def debt_causing_maintenance_debts(on_date = Date.current)
-    admin_maintenance_debts.where("due_by < ?", on_date).unfulfilled
+    admin_maintenance_debts.unfulfilled_before_date(on_date)
   end
 
   def upcoming_maintenance_debts(from_date = Date.current)
-    admin_maintenance_debts.where("due_by >= ?", from_date).unfulfilled
+    admin_maintenance_debts.unfulfilled_after_date(from_date)
   end
 
   def debt_causing_staffing_debts(on_date = Date.current)
-    admin_staffing_debts.where("due_by < ?", on_date).unfulfilled
+    admin_staffing_debts.unfulfilled_before_date(on_date)
   end
 
   def upcoming_staffing_debts(from_date = Date.current)
-    admin_staffing_debts.where("due_by >= ?", from_date).unfulfilled
+    admin_staffing_debts.unfulfilled_after_date(from_date)
   end
 
   def debt_message_suffix(on_date = Date.current)
@@ -238,9 +239,27 @@ class User < ApplicationRecord
   end
 
   def self.in_debt(on_date = Date.current)
-    in_debt_ids = includes(:admin_maintenance_debts, :admin_staffing_debts).find_each.map { |user| user.in_debt(on_date) ? user.id : nil }
+    # Use database-level query instead of loading all users into memory
+    # A user is in debt if they have either:
+    # 1. Maintenance debts that are unfulfilled and past due, OR
+    # 2. Staffing debts that are unfulfilled and past due
 
-    where(id: in_debt_ids)
+    maintenance_debt_subquery = Admin::MaintenanceDebt
+      .where(state: :normal)
+      .where.missing(:maintenance_attendance)
+      .where("due_by < ?", on_date)
+      .select(:user_id)
+
+    staffing_debt_subquery = Admin::StaffingDebt
+      .where(admin_staffing_job: nil, state: :normal)
+      .where("due_by < ?", on_date)
+      .select(:user_id)
+
+    where(
+      id: maintenance_debt_subquery
+    ).or(
+      where(id: staffing_debt_subquery)
+    ).distinct
   end
 
   # returns users who have been sent a notification since the given date
@@ -262,42 +281,93 @@ class User < ApplicationRecord
   # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
   # It then matches all the soonest debt with attendances.
   def reallocate_maintenance_debts
-    debts = admin_maintenance_debts.reload.where("due_by >= ? ", Date.current).or(admin_maintenance_debts.where(maintenance_attendance: nil)).where(state: :normal).order(due_by: :asc)
-    attendances = maintenance_attendances.reload.includes(:maintenance_debt).where(admin_maintenance_debts: { id: [ nil ] + debts.ids })
+    # Remove unnecessary reload calls and optimize query
+    debts = admin_maintenance_debts
+      .where("due_by >= ? ", Date.current)
+      .or(admin_maintenance_debts.where(maintenance_attendance: nil))
+      .where(state: :normal)
+      .order(due_by: :asc)
+      .to_a
+
+    attendances = maintenance_attendances
+      .includes(:maintenance_debt)
+      .where(admin_maintenance_debts: { id: [ nil ] + debts.map(&:id) })
+      .to_a
 
     amount_of_pairs = [ debts.size, attendances.size ].min
 
-    # Link them as far as there are pairs.
-    for i in 0...amount_of_pairs do
-      debts[i].update(maintenance_attendance: attendances[i]) if debts[i].maintenance_attendance != attendances[i]
-    end
+    # Use transaction for bulk operations
+    ActiveRecord::Base.transaction do
+      # Prepare bulk updates
+      updates_to_link = []
+      updates_to_unlink = []
 
-    for i in amount_of_pairs...debts.size do
-      debts[i].update(maintenance_attendance: nil) if debts[i].maintenance_attendance.present?
+      # Link them as far as there are pairs
+      (0...amount_of_pairs).each do |i|
+        if debts[i].maintenance_attendance != attendances[i]
+          updates_to_link << { id: debts[i].id, maintenance_attendance_id: attendances[i].id }
+        end
+      end
+
+      # Unlink the rest
+      (amount_of_pairs...debts.size).each do |i|
+        if debts[i].maintenance_attendance.present?
+          updates_to_unlink << { id: debts[i].id, maintenance_attendance_id: nil }
+        end
+      end
+
+      # Perform bulk updates
+      Admin::MaintenanceDebt.upsert_all(updates_to_link, unique_by: :id) if updates_to_link.any?
+      Admin::MaintenanceDebt.upsert_all(updates_to_unlink, unique_by: :id) if updates_to_unlink.any?
     end
   end
 
   # This method looks for all debts in the future and their staffing jobs, all unallocated staffing jobs, and all past debts without jobs.
   # It then matches all the soonest debt with staffing jobs.
   def reallocate_staffing_debts
-    debts = admin_staffing_debts.reload.where("due_by >= ? ", Date.current).or(admin_staffing_debts.where(admin_staffing_job: nil)).where(state: :normal).order(due_by: :asc)
+    # Remove unnecessary reload calls and optimize query
+    debts = admin_staffing_debts
+      .where("due_by >= ? ", Date.current)
+      .or(admin_staffing_debts.where(admin_staffing_job: nil))
+      .where(state: :normal)
+      .order(due_by: :asc)
+      .to_a
 
     # Find all jobs for this user that are currently not associated or associated with a debt (belonging to this user) already.
-    jobs = staffing_jobs.reload.includes(:staffing_debt).where(admin_staffing_debts: { id: [ nil ] + debts.ids })
-    # And then filter out the jobs that do not count towards debt.
-    ids = jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
-    jobs = jobs.where(id: ids)
+    jobs = staffing_jobs
+      .includes(:staffing_debt)
+      .where(admin_staffing_debts: { id: [ nil ] + debts.map(&:id) })
+      .to_a
+
+    # Filter out jobs that do not count towards debt
+    valid_jobs = jobs.select(&:counts_towards_debt?)
 
     # The amount of pairs is how many combinations of debt and staffing job there are.
-    amount_of_pairs = [ debts.size, jobs.size ].min
+    amount_of_pairs = [ debts.size, valid_jobs.size ].min
 
-    # Link them as far as there are pairs.
-    for i in 0...amount_of_pairs do
-      debts[i].update(admin_staffing_job: jobs[i]) if debts[i].admin_staffing_job != jobs[i]
-    end
+    # Use transaction for bulk operations
+    ActiveRecord::Base.transaction do
+      # Prepare bulk updates
+      updates_to_link = []
+      updates_to_unlink = []
 
-    for i in amount_of_pairs...debts.size do
-      debts[i].update(admin_staffing_job: nil) if debts[i].admin_staffing_job.present?
+      # Link them as far as there are pairs
+      (0...amount_of_pairs).each do |i|
+        if debts[i].admin_staffing_job != valid_jobs[i]
+          updates_to_link << { id: debts[i].id, admin_staffing_job_id: valid_jobs[i].id }
+        end
+      end
+
+      # Unlink the rest
+      (amount_of_pairs...debts.size).each do |i|
+        if debts[i].admin_staffing_job.present?
+          updates_to_unlink << { id: debts[i].id, admin_staffing_job_id: nil }
+        end
+      end
+
+      # Perform bulk updates
+      Admin::StaffingDebt.upsert_all(updates_to_link, unique_by: :id) if updates_to_link.any?
+      Admin::StaffingDebt.upsert_all(updates_to_unlink, unique_by: :id) if updates_to_unlink.any?
     end
   end
 

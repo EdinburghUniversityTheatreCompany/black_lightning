@@ -45,6 +45,19 @@ class Admin::MaintenanceDebt < ApplicationRecord
     where(state: 0).where.missing(:maintenance_attendance)
   end
 
+  # Optimized scope for debt calculations - combines unfulfilled check with date filter
+  def self.unfulfilled_before_date(on_date)
+    where(state: :normal)
+      .where.missing(:maintenance_attendance)
+      .where("due_by < ?", on_date)
+  end
+
+  def self.unfulfilled_after_date(from_date)
+    where(state: :normal)
+      .where.missing(:maintenance_attendance)
+      .where("due_by >= ?", from_date)
+  end
+
   # See above for an explanation.
   def unfulfilled?
     state == "normal" && maintenance_attendance.nil?
