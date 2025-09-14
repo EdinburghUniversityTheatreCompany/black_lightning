@@ -9,6 +9,7 @@ class DailyMaintenanceJob < ApplicationJob
     purge_unattached_storage
     expire_outdated_debt
     notify_debtors
+    send_test_email
     honeybadger_checkin
 
     Rails.logger.info "Daily maintenance job completed successfully"
@@ -45,6 +46,11 @@ class DailyMaintenanceJob < ApplicationJob
   def notify_debtors
     Rails.logger.info "Notifying debtors"
     Tasks::Logic::Debt.notify_debtors
+  end
+
+  def send_test_email
+    Rails.logger.info "Sending test email for Honeybadger check-in"
+    TestMailer.test_email("m7IG49@report.hbchk.in").deliver_now
   end
 
   def honeybadger_checkin
