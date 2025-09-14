@@ -111,11 +111,4 @@ class Admin::Staffing < ApplicationRecord
     # Unsure why this reload is needed, but otherwise some tests for staffing_jobs fail because they can't find the jobs associated with the staffing.
     reload
   end
-
-  ##
-  # Check if the reminder job has been executed
-  ##
-  def reminder_job_executed?
-    reminder_job_executed
-  end
 end
