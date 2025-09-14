@@ -117,7 +117,7 @@ class Admin::TechiesController < AdminController
 
     # Sort by parent group names alphabetically and sort techies within each group
     grouped.sort.map do |parent_key, group_techies|
-      [parent_key, group_techies.sort_by(&:name)]
+      [ parent_key, group_techies.sort_by(&:name) ]
     end.to_h
   end
 end

@@ -178,9 +178,9 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     child3 = Techie.create!(name: "Eve", entry_year: 2021)
 
     # Set up parent relationships
-    child1.parents = [parent1]
-    child2.parents = [parent1, parent2]
-    child3.parents = [parent2]
+    child1.parents = [ parent1 ]
+    child2.parents = [ parent1, parent2 ]
+    child3.parents = [ parent2 ]
 
     get :by_entry_year
 
@@ -211,8 +211,8 @@ class Admin::TechiesControllerTest < ActionController::TestCase
     child_no_year = Techie.create!(name: "Child No Year", entry_year: nil)
 
     # Set up relationships
-    child_with_year.parents = [parent_with_year]
-    child_no_year.parents = [parent_no_year]
+    child_with_year.parents = [ parent_with_year ]
+    child_no_year.parents = [ parent_no_year ]
 
     get :by_entry_year
 
