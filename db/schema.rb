@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_14_091126) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_14_102617) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -209,7 +209,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_14_091126) do
     t.boolean "counts_towards_debt"
     t.string "slug"
     t.boolean "reminder_job_executed", default: false
-    t.string "scheduled_job_id"
     t.index ["reminder_job_id"], name: "index_admin_staffings_on_reminder_job_id"
     t.index ["slug"], name: "index_admin_staffings_on_slug"
   end
