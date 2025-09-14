@@ -316,9 +316,17 @@ class User < ApplicationRecord
         end
       end
 
-      # Perform bulk updates
-      Admin::MaintenanceDebt.upsert_all(updates_to_link, unique_by: :id) if updates_to_link.any?
-      Admin::MaintenanceDebt.upsert_all(updates_to_unlink, unique_by: :id) if updates_to_unlink.any?
+      # Perform bulk updates using update_all (more appropriate since we're only updating existing records)
+      if updates_to_link.any?
+        updates_to_link.each do |update|
+          Admin::MaintenanceDebt.where(id: update[:id]).update_all(maintenance_attendance_id: update[:maintenance_attendance_id])
+        end
+      end
+
+      if updates_to_unlink.any?
+        debt_ids = updates_to_unlink.map { |u| u[:id] }
+        Admin::MaintenanceDebt.where(id: debt_ids).update_all(maintenance_attendance_id: nil)
+      end
     end
   end
 
@@ -365,9 +373,17 @@ class User < ApplicationRecord
         end
       end
 
-      # Perform bulk updates
-      Admin::StaffingDebt.upsert_all(updates_to_link, unique_by: :id) if updates_to_link.any?
-      Admin::StaffingDebt.upsert_all(updates_to_unlink, unique_by: :id) if updates_to_unlink.any?
+      # Perform bulk updates using update_all (more appropriate since we're only updating existing records)
+      if updates_to_link.any?
+        updates_to_link.each do |update|
+          Admin::StaffingDebt.where(id: update[:id]).update_all(admin_staffing_job_id: update[:admin_staffing_job_id])
+        end
+      end
+
+      if updates_to_unlink.any?
+        debt_ids = updates_to_unlink.map { |u| u[:id] }
+        Admin::StaffingDebt.where(id: debt_ids).update_all(admin_staffing_job_id: nil)
+      end
     end
   end
 
