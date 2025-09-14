@@ -15,7 +15,7 @@
 
 <%= f.input :end_date, start_year: Rails.configuration.start_year, end_year: max_end_year %>
 
-<%= f.association :venue, collection: Venue.all, label_method: :name %>
+<%= f.association :venue, collection: Venue.all, label_method: :name, required: true %>
 
 <%= f.input :author, collection: Event.author_name_list, allow_custom_input: true %>
 
