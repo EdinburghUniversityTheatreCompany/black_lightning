@@ -8,7 +8,7 @@ class Tasks::Logic::Debt
   end
 
   def self.notify_debtors
-    debtors = User.in_debt
+    debtors = User.in_debt.includes(:admin_maintenance_debts, :admin_staffing_debts)
 
     # Reallocate the debts for each debtors in case they do have enough
     # staffing jobs/attendances to cover their debt, but something went wrong allocating previously.
@@ -18,7 +18,7 @@ class Tasks::Logic::Debt
     end
 
     # Reload debtors.
-    debtors = User.in_debt
+    debtors = User.in_debt.includes(:admin_maintenance_debts, :admin_staffing_debts)
 
     # Debtors who weren't in debt yesterday.
     new_debtors = debtors - User.in_debt(Date.current.advance(days: -1))
