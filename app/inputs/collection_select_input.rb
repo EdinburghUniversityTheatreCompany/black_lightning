@@ -20,8 +20,12 @@ class CollectionSelectInput < SimpleForm::Inputs::CollectionSelectInput
     # If the field is a custom input, try to get the current value (for example, for positions),
     # and add it to the collection if it is not in there already. Only for string selects.
     if input_options[:allow_custom_input] && collection.first.present? && collection.first.is_a?(String)
-      current_value = @builder.object.try(attribute_name.to_sym).presence || ""
-      collection2 = [ current_value ] + collection2 unless collection.include?(current_value)
+      current_value = @builder.object.try(attribute_name.to_sym).presence
+
+      # Only add the current value to the collection if it's present and not already in the collection
+      if current_value.present? && !collection.include?(current_value)
+        collection2 = [ current_value ] + collection2
+      end
     end
 
     @builder.collection_select(
