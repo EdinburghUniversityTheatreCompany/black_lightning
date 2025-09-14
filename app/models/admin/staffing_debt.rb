@@ -87,6 +87,17 @@ class Admin::StaffingDebt < ApplicationRecord
     where(admin_staffing_job: nil, state: :normal)
   end
 
+  # Optimized scope for debt calculations - combines unfulfilled check with date filter
+  def self.unfulfilled_before_date(on_date)
+    where(admin_staffing_job: nil, state: :normal)
+      .where("due_by < ?", on_date)
+  end
+
+  def self.unfulfilled_after_date(from_date)
+    where(admin_staffing_job: nil, state: :normal)
+      .where("due_by >= ?", from_date)
+  end
+
   # Creates a new maintenance debt with the same attributes as this staffing debt.
   def convert_to_maintenance_debt
     ActiveRecord::Base.transaction do
