@@ -3,8 +3,6 @@
 #
 # A StaffingReminderJob will be scheduled to send out reminders, and updated whenever the staffing is saved.
 #
-# If the Staffing is deleted, reminder_cleanup removes the scheduled job
-#
 # == Schema Information
 #
 # Table name: admin_staffings
@@ -16,7 +14,6 @@
 # *updated_at*::          <tt>datetime, not null</tt>
 # *reminder_job_id*::     <tt>integer</tt>
 # *reminder_job_executed*:: <tt>boolean, default: false</tt>
-# *scheduled_job_id*::    <tt>string</tt>
 # *end_time*::            <tt>datetime</tt>
 # *counts_towards_debt*:: <tt>boolean</tt>
 # *slug*::                <tt>string(255)</tt>
@@ -29,7 +26,6 @@ class Admin::Staffing < ApplicationRecord
 
   after_save     :update_reminder
   after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
-  before_destroy :reminder_cleanup
 
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
@@ -49,7 +45,7 @@ class Admin::Staffing < ApplicationRecord
   scope :past, -> { where([ "end_time < ?", DateTime.current ]) }
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[start_time show_title end_time counts_towards_debt slug reminder_job_executed scheduled_job_id]
+    %w[start_time show_title end_time counts_towards_debt slug reminder_job_executed]
   end
 
   ##
@@ -62,42 +58,15 @@ class Admin::Staffing < ApplicationRecord
   private
 
   ##
-  # Remove scheduled jobs when the Staffing is deleted to prevent jobs from failing.
-  ##
-  def reminder_cleanup
-    # Cancel ActiveJob if exists
-    if scheduled_job_id.present?
-      begin
-        # Try to cancel the job in Solid Queue
-        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
-        job&.destroy
-      rescue => e
-        Rails.logger.warn "Could not cancel job #{scheduled_job_id}: #{e.message}"
-      end
-    end
-  end
-
-  ##
   # Update/schedule the reminder job for the staffing
   ##
   def update_reminder
     return unless self.start_time > DateTime.current
 
-    # Cancel existing job if present
-    if scheduled_job_id.present?
-      begin
-        job = SolidQueue::Job.find_by(active_job_id: scheduled_job_id)
-        job&.destroy
-      rescue => e
-        Rails.logger.warn "Could not cancel existing job #{scheduled_job_id}: #{e.message}"
-      end
-    end
+    # Schedule new reminder job - duplicate prevention handled by reminder_job_executed flag
+    StaffingReminderJob.set(wait_until: start_time.advance(hours: -2)).perform_later(id)
 
-    # Schedule new reminder job
-    job = StaffingReminderJob.set(wait_until: start_time.advance(hours: -2)).perform_later(id)
-
-    # Set attributes - they'll be saved when the current save completes
-    self.scheduled_job_id = job.job_id
+    # Reset execution flag for new job
     self.reminder_job_executed = false
   end
 
