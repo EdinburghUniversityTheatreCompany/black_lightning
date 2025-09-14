@@ -152,6 +152,64 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "should preserve author field when update fails" do
+    @show = FactoryBot.create(:show, author: "Original Author")
+    new_author = "Brand New Custom Author"
+
+    # Create attributes that will fail validation (missing venue which is required)
+    attributes = FactoryBot.attributes_for(:show, author: new_author)
+    attributes[:venue_id] = nil  # This will cause validation to fail
+
+    put :update, params: { id: @show, show: attributes }
+
+    assert_response :unprocessable_entity
+
+    # The author field should be preserved in the form when re-rendered
+    # Check that the assigned show object has the new author value
+    assert_equal new_author, assigns(:show).author, "Author field should preserve the submitted value when validation fails"
+
+    # Also check that the author appears in the rendered form
+    assert_includes response.body, new_author, "Author field should appear in the re-rendered form"
+  end
+
+  test "should preserve author field with whitespace when update fails" do
+    @show = FactoryBot.create(:show, author: "Original Author")
+    new_author_with_whitespace = "  Custom Author With Spaces  "
+
+    # Create attributes that will fail validation (missing venue which is required)
+    attributes = FactoryBot.attributes_for(:show, author: new_author_with_whitespace)
+    attributes[:venue_id] = nil  # This will cause validation to fail
+
+    put :update, params: { id: @show, show: attributes }
+
+    assert_response :unprocessable_entity
+
+    # The author field should be normalized (trimmed) but preserved
+    expected_author = "Custom Author With Spaces"  # Normalized version
+    assert_equal expected_author, assigns(:show).author, "Author field should preserve the normalized value when validation fails"
+
+    # Also check that the author appears in the rendered form
+    assert_includes response.body, expected_author, "Author field should appear in the re-rendered form"
+  end
+
+  test "should preserve empty author field when update fails" do
+    @show = FactoryBot.create(:show, author: "Original Author")
+
+    # Try to set author to empty string and cause validation failure
+    attributes = FactoryBot.attributes_for(:show, author: "")
+    attributes[:venue_id] = nil  # This will cause validation to fail
+
+    put :update, params: { id: @show, show: attributes }
+
+    assert_response :unprocessable_entity
+
+    # The author field should be empty (normalized from empty string)
+    assert_equal "", assigns(:show).author, "Author field should be empty when set to empty string"
+
+    # The form should not crash and should render properly with empty author
+    assert_response :unprocessable_entity
+  end
+
 
   test "should destroy show" do
     @show = FactoryBot.create(:show, team_member_count: 0, picture_count: 0, review_count: 0, feedback_count: 0)
