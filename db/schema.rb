@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
+ActiveRecord::Schema[8.0].define(version: 2025_09_14_091126) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.string "name", null: false
     t.string "record_type", null: false
@@ -62,6 +62,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.integer "notification_type"
+    t.index ["sent_on"], name: "index_admin_debt_notifications_on_sent_on"
     t.index ["user_id"], name: "index_admin_debt_notifications_on_user_id"
   end
 
@@ -92,7 +93,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.integer "state", default: 0
     t.bigint "maintenance_attendance_id"
     t.boolean "converted_from_staffing_debt", default: false, null: false
+    t.index ["due_by", "state"], name: "index_admin_maintenance_debts_on_due_by_and_state"
     t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
+    t.index ["show_id", "converted_from_staffing_debt"], name: "index_admin_maintenance_debts_on_show_and_converted"
+    t.index ["user_id"], name: "index_admin_maintenance_debts_on_user_id"
   end
 
   create_table "admin_permissions", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
@@ -170,6 +174,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.datetime "updated_at", precision: nil, null: false
     t.boolean "converted_from_maintenance_debt", default: false
     t.bigint "state", default: 0, null: false
+    t.index ["due_by", "state"], name: "index_admin_staffing_debts_on_due_by_and_state"
+    t.index ["show_id"], name: "index_admin_staffing_debts_on_show_id"
+    t.index ["user_id"], name: "index_admin_staffing_debts_on_user_id"
   end
 
   create_table "admin_staffing_jobs", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
@@ -181,6 +188,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.string "staffable_type"
     t.index ["staffable_id"], name: "index_admin_staffing_jobs_on_staffable_id"
     t.index ["staffable_id"], name: "index_admin_staffing_jobs_on_staffing_id"
+    t.index ["staffable_type", "staffable_id"], name: "index_admin_staffing_jobs_on_staffable"
     t.index ["staffable_type"], name: "index_admin_staffing_jobs_on_staffable_type"
     t.index ["user_id"], name: "index_admin_staffing_jobs_on_user_id"
   end
@@ -330,8 +338,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.string "pretix_slug_override"
     t.string "pretix_view"
     t.text "content_warnings"
+    t.index ["end_date", "is_public"], name: "index_events_on_end_date_and_is_public"
     t.index ["proposal_id"], name: "index_events_on_proposal_id"
     t.index ["season_id"], name: "index_events_on_season_id"
+    t.index ["start_date", "end_date"], name: "index_events_on_date_range"
     t.index ["venue_id"], name: "index_events_on_venue_id"
   end
 
@@ -355,6 +365,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.integer "user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["maintenance_session_id"], name: "index_maintenance_attendances_on_maintenance_session_id"
     t.index ["user_id"], name: "index_maintenance_attendances_on_user_id"
   end
 
@@ -425,6 +436,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.integer "user_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["user_id"], name: "index_membership_cards_on_user_id"
   end
 
   create_table "news", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
@@ -441,6 +453,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.datetime "image_updated_at", precision: nil
     t.integer "author_id"
     t.index ["author_id"], name: "index_news_on_author_id"
+    t.index ["slug"], name: "index_news_on_slug"
   end
 
   create_table "newsletter_subscribers", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
@@ -507,6 +520,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.date "expiry_date"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["approved", "expiry_date"], name: "index_opportunities_on_approved_and_expiry"
   end
 
   create_table "picture_tags", charset: "utf8mb3", force: :cascade do |t|
@@ -690,6 +704,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.string "teamwork_type"
     t.index ["teamwork_id", "teamwork_type", "user_id"], name: "index_team_members_on_teamwork_and_user", unique: true
     t.index ["teamwork_id"], name: "index_team_members_on_teamwork_id"
+    t.index ["teamwork_type", "teamwork_id"], name: "index_team_members_on_teamwork_type_and_id"
     t.index ["teamwork_type"], name: "index_team_members_on_teamwork_type"
     t.index ["user_id"], name: "index_team_members_on_user_id"
   end
@@ -772,7 +787,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_13_160322) do
     t.index ["item_type", "item_id"], name: "index_video_links_on_item_type_and_item_id"
   end
 
-  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
   add_foreign_key "admin_maintenance_debts", "maintenance_attendances"
