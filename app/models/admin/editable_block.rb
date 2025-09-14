@@ -39,4 +39,10 @@ class Admin::EditableBlock < ApplicationRecord
   def self.ransackable_attributes(auth_object = nil)
     %w[admin_page content group name ordering url]
   end
+
+  def cached_rendered_content
+    Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}", expires_in: 7.days) do
+      Kramdown::Document.new(content || "", input: "BKramdown").to_html
+    end
+  end
 end
