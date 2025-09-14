@@ -5,7 +5,7 @@ class StaffingReminderJob < ApplicationJob
     staffing = Admin::Staffing.find(staffing_id)
 
     # Prevent the job from running more than once to prevent us spewing emails if there is an error.
-    if staffing.reminder_job_executed?
+    if staffing.reminder_job_executed
       raise ArgumentError, "This reminder job has already been executed."
     end
 

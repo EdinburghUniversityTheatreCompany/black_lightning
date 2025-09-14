@@ -107,7 +107,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
       StaffingReminderJob.new.perform(staffing.id)
 
       assert_performed_jobs 1
-      assert staffing.reload.reminder_job_executed?, "The reminder job should be marked as executed"
+      assert staffing.reload.reminder_job_executed, "The reminder job should be marked as executed"
 
       # Should raise an error the second time, because it has already been executed.
       assert_raises ArgumentError do
