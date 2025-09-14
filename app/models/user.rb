@@ -269,13 +269,16 @@ class User < ApplicationRecord
 
   # Note: This function does not have any regard for permissions.
   def team_memberships(public_only)
-    query = team_membership.joins(:teamwork)
-                          .where(teamwork_type: "Event")
-                          .includes(teamwork: [ :venue, :season, { image_attachment: :blob } ])
+    query = team_membership.where(teamwork_type: "Event")
+                          .preload(teamwork: [ :venue, :season, { image_attachment: :blob } ])
 
-    query = query.where("events.is_public = ?", true) if public_only
+    results = query.to_a
 
-    query.order("events.start_date ASC")
+    if public_only
+      results = results.select { |tm| tm.teamwork&.is_public }
+    end
+
+    results.sort_by { |tm| tm.teamwork&.start_date || Date.current }
   end
 
   # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
