@@ -122,4 +122,87 @@ class DebtTaskTest < ActiveSupport::TestCase
     assert_equal "normal", attended_maintenance_debt.reload.state
     assert_equal :completed, attended_maintenance_debt.reload.status
   end
+
+  test "Should handle SMTP errors gracefully when notifying debtors" do
+    # Create debtors that will trigger notifications
+    successful_debt = FactoryBot.create(:overdue_maintenance_debt, due_by: Date.current.advance(days: -1))
+    failing_debt = FactoryBot.create(:overdue_staffing_debt, due_by: Date.current.advance(days: -1))
+
+    # Mock the mailer to raise an error for the failing user
+    original_method = DebtMailer.method(:mail_debtor)
+    DebtMailer.define_singleton_method(:mail_debtor) do |user, new_debtor|
+      if user.id == failing_debt.user.id
+        # Create a message delivery that will raise SMTP error
+        message = original_method.call(user, new_debtor)
+        message.define_singleton_method(:deliver_now) do
+          raise Net::SMTPServerBusy.new("450 Message not queued: recipient is suppressed")
+        end
+        message
+      else
+        original_method.call(user, new_debtor)
+      end
+    end
+
+    begin
+      # Capture log output to verify error logging
+      original_logger = Rails.logger
+      log_output = StringIO.new
+      Rails.logger = Logger.new(log_output)
+
+      # Should not fail entirely even though one email fails
+      assert_nothing_raised do
+        Tasks::Logic::Debt.notify_debtors
+      end
+
+      # Verify error was logged
+      log_content = log_output.string
+      assert_includes log_content, "Failed to send debt notification"
+      assert_includes log_content, "450 Message not queued: recipient is suppressed"
+
+      Rails.logger = original_logger
+    ensure
+      # Restore original method
+      DebtMailer.define_singleton_method(:mail_debtor, original_method)
+    end
+  end
+
+  test "Should handle SMTP errors for reminder emails" do
+    # Create long-time debtor that will trigger reminder
+    old_debt = FactoryBot.create(:overdue_maintenance_debt, due_by: Date.current.advance(days: -20))
+    FactoryBot.create(:initial_debt_notification, user: old_debt.user, sent_on: Date.current.advance(days: -20))
+
+    # Mock the mailer to raise an error for reminder emails
+    original_method = DebtMailer.method(:mail_debtor)
+    DebtMailer.define_singleton_method(:mail_debtor) do |user, new_debtor|
+      message = original_method.call(user, new_debtor)
+      if !new_debtor # This is a reminder
+        message.define_singleton_method(:deliver_now) do
+          raise Net::SMTPFatalError.new("550 Invalid recipient")
+        end
+      end
+      message
+    end
+
+    begin
+      # Capture log output
+      original_logger = Rails.logger
+      log_output = StringIO.new
+      Rails.logger = Logger.new(log_output)
+
+      # Should not fail entirely even though reminder email fails
+      assert_nothing_raised do
+        Tasks::Logic::Debt.notify_debtors
+      end
+
+      # Verify error was logged for reminder
+      log_content = log_output.string
+      assert_includes log_content, "Failed to send debt reminder"
+      assert_includes log_content, "550 Invalid recipient"
+
+      Rails.logger = original_logger
+    ensure
+      # Restore original method
+      DebtMailer.define_singleton_method(:mail_debtor, original_method)
+    end
+  end
 end
