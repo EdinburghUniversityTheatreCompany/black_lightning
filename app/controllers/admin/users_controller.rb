@@ -42,6 +42,33 @@ class Admin::UsersController < AdminController
     end
   end
 
+  def merge
+    target_user_id = params[:target_user_id]
+    
+    if target_user_id.blank?
+      flash[:error] = "Please select a target user to merge into."
+      redirect_back fallback_location: admin_user_url(@user)
+      return
+    end
+    
+    target_user = User.find(target_user_id)
+    
+    begin
+      User.merge_user_into(@user, target_user)
+      flash[:success] = "Successfully merged #{@user.name_or_email} into #{target_user.name_or_email}. The original user has been deleted."
+      redirect_to admin_user_url(target_user)
+    rescue ActiveRecord::RecordInvalid => e
+      flash[:error] = "Failed to merge users: #{e.message}"
+      redirect_back fallback_location: admin_user_url(@user)
+    rescue ActiveRecord::RecordNotDestroyed => e
+      flash[:error] = "Failed to delete source user after merge: #{e.message}"
+      redirect_back fallback_location: admin_user_url(@user)
+    rescue ArgumentError => e
+      flash[:error] = e.message
+      redirect_back fallback_location: admin_user_url(@user)
+    end
+  end
+
   def autocomplete_list
     authorize! :autocomplete, User
 
@@ -53,6 +80,9 @@ class Admin::UsersController < AdminController
     @users = base_index_ransack_query
 
     @users = @users.with_role(:member) if params[:show_non_members] != "1"
+
+    # Exclude specific user if exclude_user_id parameter is provided
+    @users = @users.where.not(id: params[:exclude_user_id]) if params[:exclude_user_id].present?
 
     @users = @users.reorder(:first_name, :last_name).page(page).per(per_page)
 

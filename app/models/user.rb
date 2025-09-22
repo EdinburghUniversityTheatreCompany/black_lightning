@@ -438,6 +438,8 @@ class User < ApplicationRecord
   # Fails if there is something unmergeable.
   ##
   def self.merge_user_into(source_user, target_user)
+    raise ArgumentError, "Source and target users cannot be the same" if source_user.id == target_user.id
+
     ActiveRecord::Base.transaction do
       # Has Many relationships
       has_manies = [:team_membership, :staffing_jobs, :admin_staffing_debts, :admin_maintenance_debts, :admin_debt_notifications, :membership_activation_tokens, :maintenance_attendances]
@@ -455,12 +457,16 @@ class User < ApplicationRecord
 
       # Has One relationships
       if source_user.membership_card.present?
-        raise(ActiveRecord::RecordInvalid, "The source and target user both have a Membership Card attached. Please delete one and try merging again.") if target_user.membership_card.present?
+        if target_user.membership_card.present?
+          raise ActiveRecord::RecordInvalid.new(source_user), "The source and target user both have a Membership Card attached. Please delete one and try merging again."
+        end
         source_user.membership_card.update!(user: target_user)
       end
 
       if source_user.marketing_creatives_profile.present?
-        raise(ActiveRecord::RecordInvalid, "The source and target user both have a Marketing Creatives Profile attached. Please delete one and try merging again.") if target_user.marketing_creatives_profile.present?
+        if target_user.marketing_creatives_profile.present?
+          raise ActiveRecord::RecordInvalid.new(source_user), "The source and target user both have a Marketing Creatives Profile attached. Please delete one and try merging again."
+        end
         source_user.marketing_creatives_profile.update!(user: target_user)
       end
 
@@ -478,11 +484,11 @@ class User < ApplicationRecord
       # Single field merging - only update if target field is blank
       single_fields = [:phone_number, :first_name, :last_name, :bio]
       single_fields.each do |single_field|
-        target_user[single_field] ||= source_user[single_field]
+        target_user[single_field] = source_user[single_field] if target_user[single_field].blank? && source_user[single_field].present?
       end
 
-      # Special handling for public_profile - only set to false if source is false
-      target_user.public_profile = false unless source_user.public_profile
+      # Special handling for public_profile - set to false if either user has it as false
+      target_user.public_profile = false if !source_user.public_profile
       
       # Accumulate sign in counts
       target_user.sign_in_count += source_user.sign_in_count
@@ -495,7 +501,7 @@ class User < ApplicationRecord
       begin
         source_user.destroy!
       rescue ActiveRecord::RecordNotDestroyed => e
-        raise(ActiveRecord::RecordNotDestroyed, "#{e.message}; Messages: #{source_user.errors.full_messages.join(', ')}")
+        raise ActiveRecord::RecordNotDestroyed.new("Failed to delete source user: #{e.message}; Errors: #{source_user.errors.full_messages.join(', ')}")
       end
     end
   end

@@ -255,6 +255,64 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_not response.body["pagination"]["more"]
   end
 
+  test "get autocomplete list excludes specified user" do
+    excluded_user = FactoryBot.create(:member)
+    included_user = FactoryBot.create(:member)
+
+    get :autocomplete_list, params: { exclude_user_id: excluded_user.id }
+
+    assert_includes_user(included_user)
+    assert_not_includes response.body, excluded_user.id.to_s
+  end
+
+  test "should merge user successfully" do
+    target_user = FactoryBot.create(:user)
+    
+    # Create some test data for source user
+    staffing_job = FactoryBot.create(:staffing_job, user: @user)
+    
+    assert_difference("User.count", -1) do
+      post :merge, params: { id: @user, target_user_id: target_user.id }
+    end
+    
+    assert_redirected_to admin_user_path(target_user)
+    assert_match /Successfully merged/, flash[:success]
+    
+    # Check that the staffing job was transferred
+    staffing_job.reload
+    assert_equal target_user, staffing_job.user
+  end
+
+  test "should not merge user into self" do
+    assert_no_difference("User.count") do
+      post :merge, params: { id: @user, target_user_id: @user.id }
+    end
+    
+    assert_match /Source and target users cannot be the same/, flash[:error]
+  end
+
+  test "should handle merge failure" do
+    target_user = FactoryBot.create(:user)
+    
+    # Create conflicting membership cards
+    MembershipCard.create!(user: @user)
+    MembershipCard.create!(user: target_user)
+    
+    assert_no_difference("User.count") do
+      post :merge, params: { id: @user, target_user_id: target_user.id }
+    end
+    
+    assert_match /Failed to merge users/, flash[:error]
+  end
+
+  test "should require target_user_id for merge" do
+    assert_no_difference("User.count") do
+      post :merge, params: { id: @user }
+    end
+    
+    assert_match /Please select a target user/, flash[:error]
+  end
+
   private
 
   def assert_includes_user(user)

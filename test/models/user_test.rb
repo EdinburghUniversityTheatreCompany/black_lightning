@@ -253,6 +253,13 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   # User merge tests
+  test "merge_user_into validates different users" do
+    user = FactoryBot.create(:user)
+    
+    assert_raises(ArgumentError, /Source and target users cannot be the same/) do
+      User.merge_user_into(user, user)
+    end
+  end
   test "merge_user_into transfers has_many relationships" do
     source_user = FactoryBot.create(:user)
     target_user = FactoryBot.create(:user)
@@ -323,6 +330,26 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal "User", target_user.last_name
     assert_equal "123456789", target_user.phone_number
     assert_equal "Source bio", target_user.bio
+  end
+
+  test "merge_user_into handles public_profile correctly" do
+    # Test 1: source has public_profile false, target true -> result should be false
+    source_user = FactoryBot.create(:user, public_profile: false)
+    target_user = FactoryBot.create(:user, public_profile: true)
+    
+    User.merge_user_into(source_user, target_user)
+    
+    target_user.reload
+    assert_equal false, target_user.public_profile
+    
+    # Test 2: source has public_profile true, target false -> result should stay false
+    source_user2 = FactoryBot.create(:user, public_profile: true)
+    target_user2 = FactoryBot.create(:user, public_profile: false)
+    
+    User.merge_user_into(source_user2, target_user2)
+    
+    target_user2.reload
+    assert_equal false, target_user2.public_profile
   end
 
   test "merge_user_into accumulates sign_in_count" do
