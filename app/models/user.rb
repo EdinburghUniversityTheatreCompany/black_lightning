@@ -432,4 +432,71 @@ class User < ApplicationRecord
   def send_welcome_email
     UsersMailer.welcome_email(self).deliver_later unless email.ends_with?("@bedlamtheatre.co.uk")
   end
+
+  ##
+  # Merges the source user into the target user by changing all references to the source to the target, and then deletes the source.
+  # Fails if there is something unmergeable.
+  ##
+  def self.merge_user_into(source_user, target_user)
+    ActiveRecord::Base.transaction do
+      # Has Many relationships
+      has_manies = [:team_membership, :staffing_jobs, :admin_staffing_debts, :admin_maintenance_debts, :admin_debt_notifications, :membership_activation_tokens, :maintenance_attendances]
+      has_manies.each do |has_many_relation|
+        source_user.send(has_many_relation).each do |relation|
+          relation.update!(user: target_user)
+        end
+      end
+
+      # Many-to-many relationship for roles (rolify)
+      source_user.roles.each do |role|
+        target_user.add_role(role.name) unless target_user.has_role?(role.name)
+      end
+      source_user.roles.clear
+
+      # Has One relationships
+      if source_user.membership_card.present?
+        raise(ActiveRecord::RecordInvalid, "The source and target user both have a Membership Card attached. Please delete one and try merging again.") if target_user.membership_card.present?
+        source_user.membership_card.update!(user: target_user)
+      end
+
+      if source_user.marketing_creatives_profile.present?
+        raise(ActiveRecord::RecordInvalid, "The source and target user both have a Marketing Creatives Profile attached. Please delete one and try merging again.") if target_user.marketing_creatives_profile.present?
+        source_user.marketing_creatives_profile.update!(user: target_user)
+      end
+
+      # Handle avatar attachment
+      if source_user.avatar.attached? && !target_user.avatar.attached?
+        source_user.avatar.blob.open do |tempfile|
+          target_user.avatar.attach(
+            io: tempfile,
+            filename: source_user.avatar.filename,
+            content_type: source_user.avatar.content_type
+          )
+        end
+      end
+
+      # Single field merging - only update if target field is blank
+      single_fields = [:phone_number, :first_name, :last_name, :bio]
+      single_fields.each do |single_field|
+        target_user[single_field] ||= source_user[single_field]
+      end
+
+      # Special handling for public_profile - only set to false if source is false
+      target_user.public_profile = false unless source_user.public_profile
+      
+      # Accumulate sign in counts
+      target_user.sign_in_count += source_user.sign_in_count
+
+      target_user.save!
+
+      # Reload changes to the has_many relations and such
+      source_user.reload
+      # and try to destroy the old user
+      begin
+        source_user.destroy!
+      rescue ActiveRecord::RecordNotDestroyed => e
+        raise(ActiveRecord::RecordNotDestroyed, "#{e.message}; Messages: #{source_user.errors.full_messages.join(', ')}")
+      end
+    end
+  end
 end

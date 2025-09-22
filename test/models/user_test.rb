@@ -251,4 +251,143 @@ class Admin::UserTest < ActiveSupport::TestCase
       assert_equal pair[1], @user.email
     end
   end
+
+  # User merge tests
+  test "merge_user_into transfers has_many relationships" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    # Create some test data for source user
+    staffing_job = FactoryBot.create(:staffing_job, user: source_user)
+    maintenance_debt = FactoryBot.create(:maintenance_debt, user: source_user)
+    staffing_debt = FactoryBot.create(:staffing_debt, user: source_user)
+    
+    original_target_relationships_count = target_user.staffing_jobs.count + target_user.admin_maintenance_debts.count + target_user.admin_staffing_debts.count
+    
+    User.merge_user_into(source_user, target_user)
+    
+    # Check relationships were transferred
+    assert_includes target_user.staffing_jobs.reload, staffing_job
+    assert_includes target_user.admin_maintenance_debts.reload, maintenance_debt  
+    assert_includes target_user.admin_staffing_debts.reload, staffing_debt
+    
+    # Check source user was deleted
+    assert_raises(ActiveRecord::RecordNotFound) { source_user.reload }
+  end
+
+  test "merge_user_into transfers roles" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    # Add role to source user
+    source_user.add_role(:member)
+    
+    assert source_user.has_role?(:member)
+    assert_not target_user.has_role?(:member)
+    
+    User.merge_user_into(source_user, target_user)
+    
+    # Check role was transferred
+    assert target_user.has_role?(:member)
+    
+    # Check source user was deleted
+    assert_raises(ActiveRecord::RecordNotFound) { source_user.reload }
+  end
+
+  test "merge_user_into does not duplicate roles" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    # Both users have the same role
+    source_user.add_role(:member)
+    target_user.add_role(:member)
+    
+    initial_member_role_count = Role.find_by(name: "member").users.count
+    
+    User.merge_user_into(source_user, target_user)
+    
+    # Check role count didn't increase
+    assert_equal initial_member_role_count - 1, Role.find_by(name: "member").users.count
+    assert target_user.has_role?(:member)
+  end
+
+  test "merge_user_into transfers single fields only when target is blank" do
+    source_user = FactoryBot.create(:user, first_name: "Source", last_name: "User", phone_number: "123456789", bio: "Source bio")
+    target_user = FactoryBot.create(:user, first_name: "Target", last_name: "", phone_number: "", bio: "")
+    
+    User.merge_user_into(source_user, target_user)
+    
+    target_user.reload
+    # Should keep existing first_name, but take missing fields from source
+    assert_equal "Target", target_user.first_name
+    assert_equal "User", target_user.last_name
+    assert_equal "123456789", target_user.phone_number
+    assert_equal "Source bio", target_user.bio
+  end
+
+  test "merge_user_into accumulates sign_in_count" do
+    source_user = FactoryBot.create(:user, sign_in_count: 5)
+    target_user = FactoryBot.create(:user, sign_in_count: 3)
+    
+    User.merge_user_into(source_user, target_user)
+    
+    target_user.reload
+    assert_equal 8, target_user.sign_in_count
+  end
+
+  test "merge_user_into fails when both users have membership_card" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    MembershipCard.create!(user: source_user)
+    MembershipCard.create!(user: target_user)
+    
+    assert_raises(ActiveRecord::RecordInvalid, /both have a Membership Card/) do
+      User.merge_user_into(source_user, target_user)
+    end
+  end
+
+  test "merge_user_into transfers membership_card when target doesn't have one" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    membership_card = MembershipCard.create!(user: source_user)
+    
+    User.merge_user_into(source_user, target_user)
+    
+    membership_card.reload
+    assert_equal target_user, membership_card.user
+  end
+
+  test "merge_user_into fails when both users have marketing_creatives_profile" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    FactoryBot.create(:marketing_creatives_profile, user: source_user)
+    FactoryBot.create(:marketing_creatives_profile, user: target_user)
+    
+    assert_raises(ActiveRecord::RecordInvalid, /both have a Marketing Creatives Profile/) do
+      User.merge_user_into(source_user, target_user)
+    end
+  end
+
+  test "merge_user_into rolls back on failure" do
+    source_user = FactoryBot.create(:user)
+    target_user = FactoryBot.create(:user)
+    
+    # Create conflicting membership cards to trigger rollback
+    MembershipCard.create!(user: source_user)
+    MembershipCard.create!(user: target_user)
+    
+    staffing_job = FactoryBot.create(:staffing_job, user: source_user)
+    
+    assert_raises(ActiveRecord::RecordInvalid) do
+      User.merge_user_into(source_user, target_user)
+    end
+    
+    # Check that the transaction rolled back
+    staffing_job.reload
+    assert_equal source_user, staffing_job.user, "Staffing job should still belong to source user after rollback"
+    assert_not_nil User.find(source_user.id), "Source user should still exist after rollback"
+  end
 end
