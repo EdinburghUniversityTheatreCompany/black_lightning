@@ -10,6 +10,33 @@
 
 <%= content_for :extra_show_actions do %>
     <%= get_link @user, :reset_password, http_method: :post %>
+    <hr class="mt-3 mb-3">
+    <div class="merge-user-form">
+        <h5>Merge User</h5>
+        <p class="text-muted">
+            Merge this user into another user. All data (roles, debts, attendances, etc.) will be transferred to the target user, and this user will be deleted.
+        </p>
+        <%= form_with url: merge_admin_user_path(@user), method: :post, local: true do |form| %>
+            <div class="form-group mb-3">
+                <%= form.label :target_user_id, "Target User:" %>
+                <%= form.select :target_user_id, 
+                    [], 
+                    { prompt: "Select target user..." }, 
+                    { 
+                        class: "form-control", 
+                        required: true,
+                        'data-remote-source' => "#{admin_users_autocomplete_list_path}?exclude_user_id=#{@user.id}",
+                        'data-query-field' => 'q[full_name_cont]',
+                        'data-placeholder' => 'Select a user to merge into',
+                        'data-minimum-input-length' => 2,
+                    } %>
+            </div>
+            <%= form.submit "Merge User", 
+                class: "btn btn-warning", data: { 
+                    confirm: "Are you sure you want to merge #{@user.name_or_email} into the selected user? This action cannot be undone and will delete the current user." 
+                } %>
+        <% end %>
+    </div>
 <% end %>
 
 <%= render('shared/pages/show', object: @user, fields: fields, show_actions_args: { destroy_link_params: { 
