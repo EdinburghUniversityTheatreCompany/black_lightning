@@ -6,6 +6,7 @@ class StaffingReminderJob < ApplicationJob
 
     # Prevent the job from running more than once to prevent us spewing emails if there is an error.
     if staffing.reminder_job_executed
+      Rails.logger.warn "StaffingReminderJob: Attempt to execute already completed reminder for staffing #{staffing_id} (#{staffing.show_title})"
       raise ArgumentError, "This reminder job has already been executed."
     end
 
