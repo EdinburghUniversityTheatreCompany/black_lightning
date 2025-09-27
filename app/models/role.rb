@@ -24,6 +24,8 @@ class Role < ApplicationRecord
   validates :name, presence: true
   validate :name_not_hardcoded
 
+  before_destroy :prevent_hardcoded_or_non_purgeable_destruction
+
   has_and_belongs_to_many :users, join_table: :users_roles
   has_and_belongs_to_many :permissions, class_name: "Admin::Permission"
 
@@ -76,6 +78,18 @@ class Role < ApplicationRecord
   def remove_user(user)
     ActiveRecord::Base.transaction do
       self.users.delete(user)
+    end
+  end
+
+  private
+
+  def prevent_hardcoded_or_non_purgeable_destruction
+    if HARDCODED_NAMES.include?(name)
+      errors.add(:base, "Cannot delete hardcoded role '#{name}' as it is referenced in code")
+      throw(:abort)
+    elsif NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
+      errors.add(:base, "Cannot delete role '#{name}' as it is protected from deletion")
+      throw(:abort)
     end
   end
 end

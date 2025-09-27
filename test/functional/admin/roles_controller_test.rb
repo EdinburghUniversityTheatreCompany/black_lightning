@@ -113,8 +113,11 @@ class Admin::RolesControllerTest < ActionController::TestCase
   end
 
   test "should destroy role" do
+    # Create a test role that can be destroyed (not hardcoded or non-purgeable)
+    test_role = FactoryBot.create(:role, name: "Test Destroyable Role")
+
     assert_difference("Role.count", -1) do
-      delete :destroy, params: { id: @role }
+      delete :destroy, params: { id: test_role }
     end
 
     assert_redirected_to admin_roles_path
@@ -325,5 +328,53 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
 
     assert_match "Archived all users with the Role", flash[:success].first
+  end
+
+  test "should not destroy hardcoded role" do
+    hardcoded_role = roles(:admin)
+
+    assert_no_difference("Role.count") do
+      delete :destroy, params: { id: hardcoded_role }
+    end
+
+    assert_includes flash[:error], "Cannot delete hardcoded role 'Admin' as it is referenced in code"
+    assert_redirected_to admin_role_path(hardcoded_role)
+    assert Role.exists?(hardcoded_role.id), "Hardcoded role should still exist"
+  end
+
+  test "should not destroy non-purgeable role" do
+    member_role = roles(:member)
+
+    assert_no_difference("Role.count") do
+      delete :destroy, params: { id: member_role }
+    end
+
+    assert_includes flash[:error], "Cannot delete role 'Member' as it is protected from deletion"
+    assert_redirected_to admin_role_path(member_role)
+    assert Role.exists?(member_role.id), "Non-purgeable role should still exist"
+  end
+
+  test "should destroy regular role" do
+    regular_role = FactoryBot.create(:role, name: "Test Role")
+
+    assert_difference("Role.count", -1) do
+      delete :destroy, params: { id: regular_role }
+    end
+
+    assert_includes flash[:success], "The role 'Test Role' was successfully deleted."
+    assert_redirected_to admin_roles_path
+    assert_not Role.exists?(regular_role.id), "Regular role should be removed"
+  end
+
+  test "should not destroy committee role" do
+    committee_role = roles(:committee)
+
+    assert_no_difference("Role.count") do
+      delete :destroy, params: { id: committee_role }
+    end
+
+    assert_includes flash[:error], "Cannot delete hardcoded role 'Committee' as it is referenced in code"
+    assert_redirected_to admin_role_path(committee_role)
+    assert Role.exists?(committee_role.id), "Committee role should still exist"
   end
 end
