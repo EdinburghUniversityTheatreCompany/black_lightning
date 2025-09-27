@@ -72,6 +72,16 @@ class Admin::RolesController < AdminController
     redirect_to admin_role_url(@role)
   end
 
+  def destroy
+    if @role.destroy
+      helpers.append_to_flash(:success, "The role '#{@role.name}' was successfully deleted.")
+      redirect_to admin_roles_path
+    else
+      helpers.append_to_flash(:error, @role.errors.full_messages.join(", "))
+      redirect_to admin_role_path(@role)
+    end
+  end
+
   private
 
   def permitted_params

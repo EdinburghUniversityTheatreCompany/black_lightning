@@ -166,4 +166,35 @@ class RoleTest < ActionView::TestCase
 
     assert_equal initial_user_count, role.reload.users.count, "User count should not change when removing user not in role"
   end
+
+  test "cannot destroy hardcoded role" do
+    role = roles(:admin)  # Admin is in HARDCODED_NAMES
+
+    assert_not role.destroy, "Hardcoded role should not be destroyable"
+    assert_includes role.errors.full_messages, "Cannot delete hardcoded role 'Admin' as it is referenced in code"
+    assert role.persisted?, "Hardcoded role should still exist in database"
+  end
+
+  test "cannot destroy non-purgeable role" do
+    role = roles(:member)  # member is in NON_PURGEABLE_ROLES
+
+    assert_not role.destroy, "Non-purgeable role should not be destroyable"
+    assert_includes role.errors.full_messages, "Cannot delete role 'Member' as it is protected from deletion"
+    assert role.persisted?, "Non-purgeable role should still exist in database"
+  end
+
+  test "can destroy regular role" do
+    role = FactoryBot.create(:role, name: "Test Role")
+
+    assert role.destroy, "Regular role should be destroyable"
+    assert_not Role.exists?(role.id), "Regular role should be removed from database"
+  end
+
+  test "cannot destroy committee role" do
+    role = roles(:committee)  # Committee is in HARDCODED_NAMES
+
+    assert_not role.destroy, "Committee role should not be destroyable"
+    assert_includes role.errors.full_messages, "Cannot delete hardcoded role 'Committee' as it is referenced in code"
+    assert role.persisted?, "Committee role should still exist in database"
+  end
 end
