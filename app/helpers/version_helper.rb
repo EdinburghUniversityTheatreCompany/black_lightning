@@ -1,9 +1,11 @@
 module VersionHelper
   def version
-    begin
-      File.read("version")
-    rescue
-      "Not found"
+    # Try Kamal environment variable first (git SHA from deployment)
+    if ENV['KAMAL_VERSION'].present?
+      return ENV['KAMAL_VERSION'][0,8]
     end
+
+    # Final fallback
+    "Unknown"
   end
 end
