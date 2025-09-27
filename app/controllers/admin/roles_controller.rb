@@ -7,13 +7,12 @@ class Admin::RolesController < AdminController
     @q = @role.users.ransack(params[:q], auth_object: current_ability)
 
     @users = @q.result
-               .accessible_by(current_ability)
 
     super
   end
 
   def add_user
-    unless current_user.has_role?("admin")
+    unless current_user.has_role?("admin") || (@role.trained_role? && current_user.can?(:add_user, @role))
       helpers.append_to_flash(:error, "You cannot add users to roles. Only admins can do this. Please contact the IT subcommittee.")
 
       redirect_to admin_role_url(@role)
