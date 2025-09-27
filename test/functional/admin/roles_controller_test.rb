@@ -192,6 +192,29 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
     assert_match "Something went wrong removing all users from", flash[:error].first
   end
+  test "should add user to trained role with manage_trained_roles permission" do
+    sign_out @admin
+
+    # Create a user with manage_trained_roles permission
+    user_with_permission = FactoryBot.create(:user)
+    permission = Admin::Permission.find_or_create_by(action: "manage_trained_roles", subject_class: "Role")
+    role = FactoryBot.create(:role, name: "Test Manager")
+    role.permissions << permission
+    user_with_permission.add_role(role.name)
+    sign_in user_with_permission
+
+    # Create a trained role and try to add a user to it
+    trained_role = FactoryBot.create(:role, name: "Test Trained")
+    user_to_add = FactoryBot.create(:user, first_name: "Test", last_name: "User")
+
+    assert_not user_to_add.has_role?(trained_role.name)
+
+    post :add_user, params: { id: trained_role, add_user_details: { user_id: user_to_add.id } }
+
+    assert user_to_add.reload.has_role?(trained_role.name)
+    assert_equal [ "Test User has been added to the role of Test Trained" ], flash[:success]
+    assert_redirected_to admin_role_url(trained_role)
+  end
 
   test "archive" do
     user = FactoryBot.create(:user)

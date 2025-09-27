@@ -68,4 +68,8 @@ class Role < ApplicationRecord
   def name_not_hardcoded
     errors.add(:name, "is hardcoded and cannot be altered") if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
   end
+
+  def trained_role?
+    name&.include?("Trained")
+  end
 end

@@ -83,6 +83,8 @@ class Ability
     # Alias :delete to :destroy because they're easy to mix up and
     # because the current permission actions use :delete and the controller actions use :destroy
     alias_action :destroy, to: :delete
+    # Alias remove_user and add_user to manage_trained_roles for roles
+    alias_action :remove_user, :add_user, to: :manage_trained_roles
 
     # You must also update opportunity.rb when editing this.
     can :read, Opportunity, approved: true, expiry_date: Time.current..DateTime::Infinity.new
@@ -186,6 +188,13 @@ class Ability
     end
 
     set_permissions_based_on_grid(user)
+
+    # Allow users with manage_trained_roles permission to add/remove users from trained roles
+    if can? :manage_trained_roles, Role
+      can [ :add_user, :remove_user ], Role do |role|
+        role&.trained_role?
+      end
+    end
 
     can :show, Admin::EditableBlock if can? :access, :backend
 

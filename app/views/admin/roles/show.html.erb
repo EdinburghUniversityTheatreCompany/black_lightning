@@ -1,6 +1,6 @@
 <% fields = { } %>
 
-<% if current_user.has_role?('Admin') %>
+<% if current_user.can?(:add_user, @role) %>
   <% content_for :add_user do %>
     <% if @role.name.downcase == 'member' %>
       <% if can? :new, MembershipActivationToken %>
