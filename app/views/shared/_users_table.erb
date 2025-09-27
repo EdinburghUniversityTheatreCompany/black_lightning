@@ -1,8 +1,16 @@
-<%# locals: (users:, url:) -%>
+<%# locals: (users:, url:, show_remove_buttons: false, remove_url_helper: nil) -%>
 
 <% search_fields = { full_name_cont:   { slug: 'defaults.name' } } %>
 <%= render('shared/search_form', input_fields: search_fields, url: url, columns: 1) %>
 
-<% headers = [:name] %>
-<% field_sets = users.map { |user| { fields: [user] } } %>
+<% if show_remove_buttons %>
+  <% headers = [:name, 'Actions'] %>
+  <% field_sets = users.map { |user| { fields: [
+    user,
+    link_to('Remove', remove_url_helper.call(user.id), method: :delete, class: 'btn btn-sm btn-danger', confirm: "Remove #{user.name} from this role?")
+  ] } } %>
+<% else %>
+  <% headers = [:name] %>
+  <% field_sets = users.map { |user| { fields: [user] } } %>
+<% end %>
 <%= render('shared/index_table', headers: headers, field_sets: field_sets, resource_class: User) %>

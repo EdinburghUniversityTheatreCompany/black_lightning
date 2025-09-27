@@ -185,6 +185,7 @@ ChaosRails::Application.routes.draw do
     resources :roles do
       member do
         post "add_user", to: "roles#add_user"
+        delete "remove_user/:user_id", to: "roles#remove_user", as: "remove_user"
         delete "purge", to: "roles#purge"
         put "archive", to: "roles#archive"
       end

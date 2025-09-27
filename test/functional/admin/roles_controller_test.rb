@@ -192,6 +192,96 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
     assert_match "Something went wrong removing all users from", flash[:error].first
   end
+
+  test "should remove user from role as admin" do
+    user = FactoryBot.create(:user, first_name: "Finbar", last_name: "the Viking")
+    user.add_role(@role.name)
+
+    assert user.has_role?(@role.name)
+
+    delete :remove_user, params: { id: @role, user_id: user.id }
+
+    assert_not user.reload.has_role?(@role.name)
+    assert_equal [ "Finbar the Viking has been removed from the role of Member" ], flash[:success]
+    assert_redirected_to admin_role_url(@role)
+  end
+
+  test "should remove user from trained role with manage_trained_roles permission" do
+    sign_out @admin
+
+    # Create a user with manage_trained_roles permission
+    user_with_permission = FactoryBot.create(:user)
+    permission = Admin::Permission.find_or_create_by(action: "manage_trained_roles", subject_class: "Role")
+    role = FactoryBot.create(:role, name: "Test Manager")
+    role.permissions << permission
+    user_with_permission.add_role(role.name)
+    sign_in user_with_permission
+
+    # Create a trained role and add a user to it
+    trained_role = FactoryBot.create(:role, name: "Test Trained")
+    user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
+    user_to_remove.add_role(trained_role.name)
+
+    assert user_to_remove.has_role?(trained_role.name)
+
+    # Verify the permission check works
+    assert user_with_permission.can?(:remove_user, trained_role), "User should be able to remove users from trained role"
+
+    puts "Calling delete with URL: #{remove_user_admin_role_path(trained_role, user_to_remove.id)}"
+    delete :remove_user, params: { id: trained_role.id, user_id: user_to_remove.id }
+
+    # Debug: check what happened
+    puts "Flash success: #{flash[:success]}"
+    puts "Flash error: #{flash[:error]}"
+    puts "User still has role: #{user_to_remove.reload.has_role?(trained_role.name)}"
+
+    assert_not user_to_remove.reload.has_role?(trained_role.name)
+    assert_equal [ "Test User has been removed from the role of Test Trained" ], flash[:success]
+    assert_redirected_to admin_role_url(trained_role)
+  end
+
+  test "should not remove user from non-trained role without admin permission" do
+    sign_out @admin
+
+    # Create a user with manage_trained_roles permission
+    user_with_permission = FactoryBot.create(:user)
+    permission = Admin::Permission.find_or_create_by(action: "manage_trained_roles", subject_class: "Role")
+    role = FactoryBot.create(:role, name: "Test Manager")
+    role.permissions << permission
+    user_with_permission.add_role(role.name)
+    sign_in user_with_permission
+
+    # Try to remove from a non-trained role
+    user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
+    user_to_remove.add_role(@role.name)
+
+    assert user_to_remove.has_role?(@role.name)
+
+    delete :remove_user, params: { id: @role, user_id: user_to_remove.id }
+
+    assert user_to_remove.reload.has_role?(@role.name)
+    assert_equal [ "You cannot remove users from roles. Only admins can do this. Please contact the IT subcommittee." ], flash[:error]
+    assert_redirected_to admin_role_url(@role)
+  end
+
+  test "should not remove user who does not exist" do
+    delete :remove_user, params: { id: @role, user_id: -1 }
+
+    assert_equal [ "This user does not exist." ], flash[:error]
+    assert_redirected_to admin_role_url(@role)
+  end
+
+  test "should not remove user who is not in the role" do
+    user = FactoryBot.create(:user, first_name: "Finbar", last_name: "the Viking")
+
+    assert_not user.has_role?(@role.name)
+
+    delete :remove_user, params: { id: @role, user_id: user.id }
+
+    assert_equal [ "Finbar the Viking was not in the role of Member" ], flash[:warning]
+    assert_redirected_to admin_role_url(@role)
+  end
+
   test "should add user to trained role with manage_trained_roles permission" do
     sign_out @admin
 

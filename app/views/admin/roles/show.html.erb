@@ -24,7 +24,9 @@
   <% fields[:add_user] = { type: 'content', header: 'Add User', content: yield(:add_user) } %>
 <% end %>
 
-<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: render('shared/users_table', users: @users, url: admin_role_url(@role)) } %>
+<% show_remove = current_user.has_role?("admin") || (@role.trained_role? && current_user.can?(:remove_user, @role)) %>
+<% remove_url_lambda = lambda { |user_id| remove_user_admin_role_path(@role, user_id) } %>
+<% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: render('shared/users_table', users: @users, url: admin_role_url(@role), show_remove_buttons: show_remove, remove_url_helper: remove_url_lambda) } %>
 
 <% content_for :extra_show_actions do %>
   <%= get_link @role, :archive, link_text: 'Archive Role', http_method: :put, html_class: 'btn btn-secondary',
