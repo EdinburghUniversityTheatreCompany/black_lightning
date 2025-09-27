@@ -1,28 +1,38 @@
 <%# locals: (items:) %>
 
 <% items.each do |item| %>
-<% is_active_category = item[:children].collect { |child| child[:path] } .include?(@current_path) %>
+  <% if item[:is_logout] %>
+    <!-- Standalone logout item -->
+    <li class="nav-item">
+      <%= link_to item[:path], method: item[:method], class: "nav-link", data: { confirm: "Are you sure you want to log out?" } do %>
+        <i class="nav-icon fas <%= item[:fa_icon] %>"></i>
+        <p><%= item[:title] %></p>
+      <% end %>
+    </li>
+  <% else %>
+    <!-- Regular category with children -->
+    <% is_active_category = item[:children].collect { |child| child[:path] } .include?(@current_path) %>
 
-<li class="nav-item <%= 'menu-open' if is_active_category %>">
-    <a href="#" class="nav-link <%= 'active' if is_active_category %>">
-        <i class="nav-icon fas fa-solid <%= item[:fa_icon] %>"></i>
-        <p>
-            <%= item[:title] %>
-            <i class="right fas fa-angle-left"></i>
-        </p>
-    </a>
-    <ul class="nav nav-treeview">
-        <% item[:children].each do |subitem|%>
-        <% is_active = @current_path == subitem[:path] %>
-        <li class="nav-item">
-            <a href="<%=subitem[:path]%>" class="nav-link <%='active' if is_active %>">
-                <i class="fas <%= subitem[:fa_icon] %> nav-icon"></i>
-                <p><%= subitem[:title] %></p>
-            </a>
-        </li>
+    <li class="nav-item <%= 'menu-open' if is_active_category %>">
+        <a href="#" class="nav-link <%= 'active' if is_active_category %>">
+            <i class="nav-icon fas fa-solid <%= item[:fa_icon] %>"></i>
+            <p>
+                <%= item[:title] %>
+                <i class="right fas fa-angle-left"></i>
+            </p>
+        </a>
+        <ul class="nav nav-treeview">
+            <% item[:children].each do |subitem|%>
+            <% is_active = @current_path == subitem[:path] %>
+            <li class="nav-item">
+                <a href="<%=subitem[:path]%>" class="nav-link <%='active' if is_active %>">
+                    <i class="fas <%= subitem[:fa_icon] %> nav-icon"></i>
+                    <p><%= subitem[:title] %></p>
+                </a>
+            </li>
 
-    <%end%>
-    </ul>
-</li>
-
+        <%end%>
+        </ul>
+    </li>
+  <% end %>
 <% end %>
