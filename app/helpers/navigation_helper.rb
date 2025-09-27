@@ -98,6 +98,9 @@ module NavigationHelper
     # Remove categories that do not have any children.
     navbar_categories.reject! { |category| category[:children].empty? }
 
+    # Add logout as a standalone item
+    navbar_categories << { title: "Log Out", path: destroy_user_session_path, method: :delete, fa_icon: "fa-sign-out-alt", is_logout: true }
+
     navbar_categories
   end
 end

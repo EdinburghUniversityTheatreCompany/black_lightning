@@ -82,8 +82,7 @@
         <div class="user-panel mt-3 pb-3 mb-3 d-flex">
           <div class="image">
             <a href="#" class="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
-              data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
-              data-destroy-path='/users/sign_out'>
+              data-name-attr=<%=  current_user.first_name.presence || current_user.email %>>
               <% if @header_user.avatar.present? %>
               <%= image_tag @header_user.avatar.variant(square_thumb_variant), class: "img-circle elevation-2" %>
               <% else %>
@@ -94,8 +93,7 @@
           <div class="info text-white">
             <span>Welcome,
               <a href="#" class="triggerUserModal" data-current-user-path=<%= admin_user_path(current_user) %>
-                data-name-attr=<%=  current_user.first_name.presence || current_user.email %>
-                data-destroy-path='/users/sign_out'><%=  current_user.first_name.presence || current_user.email %></a></span>
+                data-name-attr=<%=  current_user.first_name.presence || current_user.email %>><%=  current_user.first_name.presence || current_user.email %></a></span>
           </div>
         </div>
 
