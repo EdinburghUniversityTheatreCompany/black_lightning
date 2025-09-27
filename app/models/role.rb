@@ -72,4 +72,10 @@ class Role < ApplicationRecord
   def trained_role?
     name&.include?("Trained")
   end
+
+  def remove_user(user)
+    ActiveRecord::Base.transaction do
+      self.users.delete(user)
+    end
+  end
 end

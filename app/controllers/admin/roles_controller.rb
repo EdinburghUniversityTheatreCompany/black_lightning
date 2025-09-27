@@ -12,13 +12,6 @@ class Admin::RolesController < AdminController
   end
 
   def add_user
-    unless current_user.has_role?("admin") || (@role.trained_role? && current_user.can?(:add_user, @role))
-      helpers.append_to_flash(:error, "You cannot add users to roles. Only admins can do this. Please contact the IT subcommittee.")
-
-      redirect_to admin_role_url(@role)
-      return
-    end
-
     user_id = params[:add_user_details][:user_id]
 
     user = User.find_by(id: user_id)
@@ -30,6 +23,24 @@ class Admin::RolesController < AdminController
         user.add_role @role.name
 
         helpers.append_to_flash(:success, "#{user.name(current_user)} has been added to the role of #{@role.name}")
+      end
+    else
+      helpers.append_to_flash(:error, "This user does not exist.")
+    end
+
+    redirect_to admin_role_url(@role)
+  end
+
+  def remove_user
+    user_id = params[:user_id]
+    user = User.find_by(id: user_id)
+
+    if user.present?
+      if user.has_role? @role.name
+        @role.remove_user(user)
+        helpers.append_to_flash(:success, "#{user.name(current_user)} has been removed from the role of #{@role.name}")
+      else
+        helpers.append_to_flash(:warning, "#{user.name(current_user)} was not in the role of #{@role.name}")
       end
     else
       helpers.append_to_flash(:error, "This user does not exist.")
