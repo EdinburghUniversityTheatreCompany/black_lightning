@@ -4,6 +4,7 @@
   <%= render('shared/pages/form', f: f) do %>
       <% name_disabled = Role::HARDCODED_NAMES.include?(@role.name)%>
 
-      <%= f.input :name, disabled: name_disabled, hint: name_disabled ? 'You cannot change the name of this role.' : '' %>
+      <%= f.input :name, readonly: name_disabled, hint: name_disabled ? 'You cannot change the name of this role.' : '' %>
+      <%= f.hidden_field :name if name_disabled %>
   <% end %>
 <% end %>
