@@ -104,4 +104,8 @@ class Admin::OpportunitiesController < AdminController
   def order_args
     [ "expiry_date DESC" ]
   end
+
+  def distinct_for_ransack
+    false
+  end
 end
