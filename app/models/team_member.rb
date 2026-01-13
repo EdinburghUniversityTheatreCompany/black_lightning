@@ -20,6 +20,7 @@
 class TeamMember < ActiveRecord::Base
   validates :position, :user, presence: true
   validates_uniqueness_of :user_id, scope: [ :teamwork_type, :teamwork_id ]
+  validate :uniqueness_in_parent_collection
 
   # It should not be optional, but otherwise this fails on creation when immediately attaching team members.
   # A little bit annoying, definitely.
@@ -34,5 +35,29 @@ class TeamMember < ActiveRecord::Base
 
   def self.ransackable_attributes(auth_object = nil)
     %w[position user_id teamwork_id teamwork_type]
+  end
+
+  private
+
+  def uniqueness_in_parent_collection
+    return unless teamwork && user_id
+    return if teamwork.new_record?
+    return if teamwork.type_changed?
+
+    # Access the association's internal target without loading from database
+    # This should avoid corrupting the association cache
+    collection = teamwork.association(:team_members).target
+    my_index = collection.index(self)
+
+    duplicates = collection.each_with_index.select do |tm, idx|
+      tm != self && # Not the same object
+      tm.user_id == user_id && # Same user
+      !tm.marked_for_destruction? && # Not being deleted
+      (tm.persisted? || idx < my_index) # Either saved OR appears earlier in collection
+    end
+
+    if duplicates.any?
+      errors.add(:user_id, "is already a team member on this #{teamwork_type.underscore.humanize.downcase}")
+    end
   end
 end
