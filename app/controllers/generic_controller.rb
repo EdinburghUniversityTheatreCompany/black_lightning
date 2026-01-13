@@ -73,16 +73,28 @@ module GenericController
     check_for_dropzone
 
     respond_to do |format|
-      if get_resource.update(update_params)
-        on_update_success
+      begin
+        if get_resource.update(update_params)
+          on_update_success
 
-        format.html { redirect_to(update_redirect_url) }
-        # format.json { render json: [:admin, get_resource], status: :updated }
-      else
-        @title = edit_title
+          format.html { redirect_to(update_redirect_url) }
+          # format.json { render json: [:admin, get_resource], status: :updated }
+        else
+          @title = edit_title
 
-        format.html { render "edit", status: :unprocessable_entity }
-        # format.json { render json: get_resource.errors, status: :unprocessable_entity }
+          format.html { render "edit", status: :unprocessable_entity }
+          # format.json { render json: get_resource.errors, status: :unprocessable_entity }
+        end
+      rescue ActiveRecord::RecordNotUnique => e
+        # Safety net: catch database constraint violations
+        # The model validation should prevent this, but this handles race conditions
+        if e.message.include?("team_members") && e.message.include?("teamwork_and_user")
+          get_resource.errors.add(:base, "Cannot add the same person as a team member more than once.")
+          @title = edit_title
+          format.html { render "edit", status: :unprocessable_entity }
+        else
+          raise # Re-raise other constraint violations
+        end
       end
     end
   end
