@@ -42,7 +42,7 @@ class TeamMember < ActiveRecord::Base
   def uniqueness_in_parent_collection
     return unless teamwork && user_id
     return if teamwork.new_record?
-    return if teamwork.type_changed?
+    return if teamwork.respond_to?(:type_changed?) && teamwork.type_changed?
 
     # Access the association's internal target without loading from database
     # This should avoid corrupting the association cache

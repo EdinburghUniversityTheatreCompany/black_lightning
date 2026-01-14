@@ -45,4 +45,16 @@ class TeamMemberTest < ActiveSupport::TestCase
 
     assert team_member2.valid?, "Should be valid when different user"
   end
+
+  test "should work with Proposal which does not have STI type column" do
+    proposal = FactoryBot.create(:proposal)
+    user = FactoryBot.create(:user)
+
+    # Build a team member on a Proposal (non-STI model)
+    # This should not raise NoMethodError for type_changed?
+    team_member = proposal.team_members.build(user_id: user.id, position: "Director")
+
+    # Should be able to validate without error
+    assert_nothing_raised { team_member.valid? }
+  end
 end
