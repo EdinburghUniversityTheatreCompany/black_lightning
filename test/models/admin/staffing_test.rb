@@ -65,10 +65,47 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
     assert staffing.reload.reminder_job_executed, "The reminder job should be marked as executed"
 
-    # Should raise an error the second time, because it has already been executed.
-    assert_raises ArgumentError do
+    # Second execution should return silently (no error)
+    assert_nothing_raised do
       StaffingReminderJob.new.perform(staffing.id)
     end
+  end
+
+  test "reminder job tracks individual recipients with reminder_sent_at" do
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 2, start_time: DateTime.current.advance(days: 1))
+    user1 = FactoryBot.create(:user)
+    user2 = FactoryBot.create(:user)
+
+    staffing.staffing_jobs.first.update!(user: user1)
+    staffing.staffing_jobs.second.update!(user: user2)
+
+    # All start with nil reminder_sent_at
+    assert_nil staffing.staffing_jobs.first.reminder_sent_at
+    assert_nil staffing.staffing_jobs.second.reminder_sent_at
+
+    StaffingReminderJob.new.perform(staffing.id)
+
+    # Both should now have reminder_sent_at set
+    assert_not_nil staffing.staffing_jobs.first.reload.reminder_sent_at
+    assert_not_nil staffing.staffing_jobs.second.reload.reminder_sent_at
+    assert staffing.reload.reminder_job_executed
+  end
+
+  test "reminder_sent_at is reset when staffing is rescheduled" do
+    staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: 1))
+    user = FactoryBot.create(:user)
+    staffing.staffing_jobs.first.update!(user: user)
+
+    # Execute the job
+    StaffingReminderJob.new.perform(staffing.id)
+    assert_not_nil staffing.staffing_jobs.first.reload.reminder_sent_at
+
+    # Update the staffing (triggers reschedule)
+    staffing.update!(show_title: "Rescheduled Show")
+
+    # reminder_sent_at should be reset
+    assert_nil staffing.staffing_jobs.first.reload.reminder_sent_at
+    assert_not staffing.reload.reminder_job_executed
   end
 
   test "scheduled job is properly managed when staffing is updated" do

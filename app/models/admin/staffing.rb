@@ -103,6 +103,9 @@ class Admin::Staffing < ApplicationRecord
       scheduled_job_id: job.job_id,
       reminder_job_executed: false
     )
+
+    # Reset individual reminder flags so they get re-sent
+    staffing_jobs.update_all(reminder_sent_at: nil)
   end
 
   # Reassociate staffing jobs if the count_towards_debt flag changes.
