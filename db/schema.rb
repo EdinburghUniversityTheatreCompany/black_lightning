@@ -182,6 +182,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_17_092735) do
   create_table "admin_staffing_jobs", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", precision: nil, null: false
     t.string "name"
+    t.datetime "reminder_sent_at"
     t.integer "staffable_id"
     t.string "staffable_type"
     t.datetime "updated_at", precision: nil, null: false
