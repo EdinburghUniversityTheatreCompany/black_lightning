@@ -57,7 +57,7 @@ function activateSelect2Fields(parentElement) {
 
       attributes['ajax'] = ajax_attributes;
     }
-  
+
     // Finally, instantiate the select2 field with the attributes determined above.
     // This needs to be jQuery as select2 is a jQuery plugin.
     $(el).select2(attributes);

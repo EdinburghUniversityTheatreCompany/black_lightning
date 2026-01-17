@@ -162,6 +162,8 @@ ChaosRails::Application.routes.draw do
     resources :users do
       member do
         post "reset_password"
+        get "merge"
+        post "absorb"
       end
 
       collection do
