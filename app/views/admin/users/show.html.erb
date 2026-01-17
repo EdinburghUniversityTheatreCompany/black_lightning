@@ -10,6 +10,9 @@
 
 <%= content_for :extra_show_actions do %>
     <%= get_link @user, :reset_password, http_method: :post %>
+    <% if can? :absorb, @user %>
+        <%= link_to "Merge Another User Into This One", merge_admin_user_path(@user), class: "btn btn-warning" %>
+    <% end %>
 <% end %>
 
 <%= render('shared/pages/show', object: @user, fields: fields, show_actions_args: { destroy_link_params: { 

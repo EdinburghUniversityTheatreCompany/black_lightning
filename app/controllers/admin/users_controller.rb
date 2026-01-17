@@ -42,6 +42,25 @@ class Admin::UsersController < AdminController
     end
   end
 
+  def merge
+    @title = "Merge User Into #{@user.name_or_email}"
+  end
+
+  def absorb
+    source_user = User.find(params[:source_user_id])
+    result = @user.absorb(source_user)
+
+    respond_to do |format|
+      if result[:success]
+        flash[:success] = "Successfully merged #{source_user.name_or_email} into #{@user.name_or_email}"
+        format.html { redirect_to admin_user_url(@user) }
+      else
+        flash[:error] = result[:errors].join(", ")
+        format.html { redirect_back fallback_location: admin_user_url(@user) }
+      end
+    end
+  end
+
   def autocomplete_list
     authorize! :autocomplete, User
 

@@ -1,0 +1,30 @@
+<div class="card">
+  <div class="card-body">
+    <%= form_with url: absorb_admin_user_path(@user), method: :post, local: true do %>
+      <p>Select the user to merge <strong>from</strong>. All their associations (team memberships, staffing jobs, debts, etc.) will be transferred to <%= @user.name_or_email %>, and the selected user will be deleted.</p>
+
+      <div class="form-group">
+        <label for="source_user_id">User to merge from (will be deleted)</label>
+        <select name="source_user_id" id="source_user_id" class="simple-select2"
+                data-remote-source="/admin/users/autocomplete_list"
+                data-show-non-members="1"
+                data-query-field="q[full_name_cont]"
+                data-placeholder="Select a user to merge"
+                data-minimum-input-length="2"
+                data-allow-clear="true"
+                required>
+          <option></option>
+        </select>
+      </div>
+
+      <div class="alert alert-danger mt-3">
+        <strong>Warning:</strong> This action cannot be easily undone. The selected user will be permanently deleted after their data is transferred.
+      </div>
+
+      <div class="card-footer">
+        <%= link_to "Cancel", admin_user_path(@user), class: "btn btn-secondary" %>
+        <button type="submit" class="btn btn-danger">Merge Users</button>
+      </div>
+    <% end %>
+  </div>
+</div>

@@ -390,6 +390,95 @@ class User < ApplicationRecord
     end
   end
 
+  ##
+  # Merging Users
+  ##
+
+  # Merges another user into this user, transferring all their associations.
+  # The source_user will be destroyed after a successful merge.
+  # Returns a hash with { success: boolean, errors: [], transferred: {} }
+  def absorb(source_user)
+    return { success: false, errors: [ "Cannot merge user into itself" ] } if source_user&.id == id
+    return { success: false, errors: [ "Source user not found" ] } if source_user.nil?
+
+    transferred = {
+      team_members: 0,
+      staffing_jobs: 0,
+      maintenance_debts: 0,
+      staffing_debts: 0,
+      debt_notifications: 0,
+      maintenance_attendances: 0,
+      roles: []
+    }
+
+    ActiveRecord::Base.transaction do
+      # 1. Transfer TeamMembers (with duplicate handling)
+      source_user.team_membership.each do |tm|
+        existing = team_membership.find_by(teamwork_type: tm.teamwork_type, teamwork_id: tm.teamwork_id)
+        if existing
+          # Concatenate positions with '/' if they have different roles
+          unless existing.position.include?(tm.position)
+            existing.update!(position: "#{existing.position} / #{tm.position}")
+          end
+          tm.destroy!
+        else
+          tm.update!(user_id: id)
+          transferred[:team_members] += 1
+        end
+      end
+
+      # 2. Transfer Staffing Jobs
+      transferred[:staffing_jobs] = source_user.staffing_jobs.update_all(user_id: id)
+
+      # 3. Transfer Debts
+      transferred[:maintenance_debts] = source_user.admin_maintenance_debts.update_all(user_id: id)
+      transferred[:staffing_debts] = source_user.admin_staffing_debts.update_all(user_id: id)
+
+      # 4. Transfer Debt Notifications
+      transferred[:debt_notifications] = source_user.admin_debt_notifications.update_all(user_id: id)
+
+      # 5. Transfer Maintenance Attendances
+      transferred[:maintenance_attendances] = source_user.maintenance_attendances.update_all(user_id: id)
+
+      # 6. Merge Roles (union)
+      source_user.roles.each do |role|
+        unless has_role?(role.name)
+          add_role(role.name)
+          transferred[:roles] << role.name
+        end
+      end
+
+      # 7. Handle MembershipCard - keep target's, destroy source's
+      source_user.membership_card&.destroy
+
+      # 8. Handle MarketingCreatives::Profile - keep target's if exists, otherwise transfer
+      if marketing_creatives_profile.nil? && source_user.marketing_creatives_profile.present?
+        source_user.marketing_creatives_profile.update!(user_id: id)
+      else
+        source_user.marketing_creatives_profile&.destroy
+      end
+
+      # 9. Handle Avatar - keep target's if attached, otherwise transfer
+      if !avatar.attached? && source_user.avatar.attached?
+        avatar.attach(source_user.avatar.blob)
+      end
+
+      # 10. Handle MembershipActivationTokens - just destroy source's
+      source_user.membership_activation_tokens.destroy_all
+
+      # 11. Reallocate debts after transfer to properly link jobs/attendances
+      reallocate_maintenance_debts
+      reallocate_staffing_debts
+
+      # 12. Destroy source user - reload first to clear cached associations
+      source_user.reload.destroy!
+    end
+
+    { success: true, transferred: transferred }
+  rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotDestroyed => e
+    { success: false, errors: [ e.message ] }
+  end
+
 
   ##
   # Roles
