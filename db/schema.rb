@@ -10,25 +10,25 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_17_092735) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name", null: false
-    t.string "record_type", null: false
-    t.bigint "record_id", null: false
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
     t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
     t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
   end
 
   create_table "active_storage_blobs", charset: "utf8mb3", force: :cascade do |t|
-    t.string "key", null: false
-    t.string "filename", null: false
-    t.string "content_type"
-    t.text "metadata"
     t.bigint "byte_size", null: false
     t.string "checksum"
+    t.string "content_type"
     t.datetime "created_at", precision: nil, null: false
+    t.string "filename", null: false
+    t.string "key", null: false
+    t.text "metadata"
     t.string "service_name", null: false
     t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
   end
@@ -40,16 +40,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "admin_answers", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "question_id"
-    t.integer "answerable_id"
     t.text "answer"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.integer "answerable_id"
     t.string "answerable_type"
-    t.string "file_file_name"
+    t.datetime "created_at", precision: nil, null: false
     t.string "file_content_type"
+    t.string "file_file_name"
     t.integer "file_file_size"
     t.datetime "file_updated_at", precision: nil
+    t.integer "question_id"
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["answerable_id"], name: "index_admin_answers_on_answerable_id"
     t.index ["answerable_id"], name: "index_admin_proposals_answers_on_proposal_id"
     t.index ["answerable_type"], name: "index_admin_answers_on_answerable_type"
@@ -57,42 +57,42 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "admin_debt_notifications", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "user_id"
-    t.date "sent_on"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
     t.integer "notification_type"
+    t.date "sent_on"
+    t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["sent_on"], name: "index_admin_debt_notifications_on_sent_on"
     t.index ["user_id"], name: "index_admin_debt_notifications_on_user_id"
   end
 
   create_table "admin_editable_blocks", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
+    t.boolean "admin_page"
     t.text "content"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.boolean "admin_page"
     t.string "group"
-    t.string "url"
+    t.string "name"
     t.bigint "ordering"
+    t.datetime "updated_at", precision: nil, null: false
+    t.string "url"
   end
 
   create_table "admin_feedbacks", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "show_id"
     t.text "body"
     t.datetime "created_at", precision: nil, null: false
+    t.integer "show_id"
     t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_maintenance_debts", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "user_id"
-    t.date "due_by"
-    t.integer "show_id"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.integer "state", default: 0
-    t.bigint "maintenance_attendance_id"
     t.boolean "converted_from_staffing_debt", default: false, null: false
+    t.datetime "created_at", precision: nil, null: false
+    t.date "due_by"
+    t.bigint "maintenance_attendance_id"
+    t.integer "show_id"
+    t.integer "state", default: 0
+    t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["due_by", "state"], name: "index_admin_maintenance_debts_on_due_by_and_state"
     t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
     t.index ["show_id", "converted_from_staffing_debt"], name: "index_admin_maintenance_debts_on_show_and_converted"
@@ -100,92 +100,92 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "admin_permissions", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
-    t.string "description"
     t.string "action"
-    t.string "subject_class"
     t.datetime "created_at", precision: nil, null: false
+    t.string "description"
+    t.string "name"
+    t.string "subject_class"
     t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_permissions_roles", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "role_id"
     t.integer "permission_id"
+    t.integer "role_id"
     t.index ["role_id"], name: "index_admin_permissions_roles_on_role_id"
   end
 
   create_table "admin_proposals_call_question_templates", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
     t.datetime "created_at", precision: nil, null: false
+    t.string "name"
     t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_proposals_calls", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.datetime "submission_deadline", precision: nil
-    t.string "name"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
     t.boolean "archived"
+    t.datetime "created_at", precision: nil, null: false
     t.datetime "editing_deadline", precision: nil
+    t.string "name"
+    t.datetime "submission_deadline", precision: nil
+    t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_proposals_proposals", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
     t.integer "call_id"
-    t.string "show_title"
-    t.text "publicity_text"
-    t.text "proposal_text"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
     t.boolean "late"
+    t.text "proposal_text"
+    t.text "publicity_text"
+    t.string "show_title"
     t.bigint "status", null: false
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["call_id"], name: "index_admin_proposals_proposals_on_call_id"
   end
 
   create_table "admin_questionnaires_questionnaire_templates", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
     t.datetime "created_at", precision: nil, null: false
+    t.string "name"
     t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_questionnaires_questionnaires", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "event_id"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.integer "event_id"
     t.string "name"
+    t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_questions", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.text "question_text"
-    t.string "response_type"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.text "question_text"
     t.integer "questionable_id"
     t.string "questionable_type"
+    t.string "response_type"
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["questionable_id"], name: "index_admin_questions_on_questionable_id"
     t.index ["questionable_type"], name: "index_admin_questions_on_questionable_type"
   end
 
   create_table "admin_staffing_debts", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "user_id"
-    t.integer "show_id"
-    t.date "due_by"
     t.integer "admin_staffing_job_id"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
     t.boolean "converted_from_maintenance_debt", default: false
+    t.datetime "created_at", precision: nil, null: false
+    t.date "due_by"
+    t.integer "show_id"
     t.bigint "state", default: 0, null: false
+    t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["due_by", "state"], name: "index_admin_staffing_debts_on_due_by_and_state"
     t.index ["show_id"], name: "index_admin_staffing_debts_on_show_id"
     t.index ["user_id"], name: "index_admin_staffing_debts_on_user_id"
   end
 
   create_table "admin_staffing_jobs", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
+    t.datetime "created_at", precision: nil, null: false
     t.string "name"
     t.integer "staffable_id"
-    t.integer "user_id"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
     t.string "staffable_type"
+    t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["staffable_id"], name: "index_admin_staffing_jobs_on_staffable_id"
     t.index ["staffable_id"], name: "index_admin_staffing_jobs_on_staffing_id"
     t.index ["staffable_type", "staffable_id"], name: "index_admin_staffing_jobs_on_staffable"
@@ -194,32 +194,32 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "admin_staffing_templates", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
     t.datetime "created_at", precision: nil, null: false
+    t.string "name"
     t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "admin_staffings", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.datetime "start_time", precision: nil
-    t.string "show_title"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.integer "reminder_job_id"
-    t.datetime "end_time", precision: nil
     t.boolean "counts_towards_debt"
-    t.string "slug"
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "end_time", precision: nil
     t.boolean "reminder_job_executed", default: false
+    t.integer "reminder_job_id"
     t.string "scheduled_job_id"
+    t.string "show_title"
+    t.string "slug"
+    t.datetime "start_time", precision: nil
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["reminder_job_id"], name: "index_admin_staffings_on_reminder_job_id"
     t.index ["slug"], name: "index_admin_staffings_on_slug"
   end
 
   create_table "attachment_tags", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name"
-    t.text "description"
     t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.text "description"
+    t.string "name"
     t.bigint "ordering"
+    t.datetime "updated_at", null: false
   end
 
   create_table "attachment_tags_attachments", id: false, charset: "utf8mb3", force: :cascade do |t|
@@ -228,80 +228,80 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "attachments", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
-    t.string "file_file_name"
+    t.integer "access_level", default: 1, null: false
+    t.datetime "created_at", precision: nil, null: false
+    t.integer "editable_block_id"
     t.string "file_content_type"
+    t.string "file_file_name"
     t.integer "file_file_size"
     t.datetime "file_updated_at", precision: nil
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.integer "editable_block_id"
-    t.string "item_type"
     t.bigint "item_id"
-    t.integer "access_level", default: 1, null: false
+    t.string "item_type"
+    t.string "name"
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["item_type", "item_id"], name: "index_attachments_on_item_type_and_item_id"
   end
 
   create_table "carousel_items", charset: "utf8mb3", force: :cascade do |t|
-    t.string "title"
-    t.text "tagline"
-    t.boolean "is_active"
     t.string "carousel_name"
-    t.integer "ordering"
     t.datetime "created_at", null: false
+    t.boolean "is_active"
+    t.integer "ordering"
+    t.text "tagline"
+    t.string "title"
     t.datetime "updated_at", null: false
     t.string "url"
   end
 
   create_table "children_techies", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "techie_id"
     t.integer "child_id"
     t.datetime "created_at", precision: nil, null: false
+    t.integer "techie_id"
     t.datetime "updated_at", precision: nil, null: false
     t.index ["techie_id"], name: "index_children_techies_on_techie_id"
   end
 
   create_table "complaints", charset: "utf8mb3", force: :cascade do |t|
-    t.string "subject"
-    t.text "description"
-    t.boolean "resolved"
     t.text "comments"
     t.datetime "created_at", null: false
+    t.text "description"
+    t.boolean "resolved"
+    t.string "subject"
     t.datetime "updated_at", null: false
   end
 
   create_table "delayed_jobs", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "priority", default: 0
     t.integer "attempts", default: 0
+    t.datetime "created_at", precision: nil, null: false
+    t.string "description"
+    t.datetime "failed_at", precision: nil
     t.text "handler"
     t.text "last_error"
-    t.datetime "run_at", precision: nil
     t.datetime "locked_at", precision: nil
-    t.datetime "failed_at", precision: nil
     t.string "locked_by"
+    t.integer "priority", default: 0
     t.string "queue"
-    t.datetime "created_at", precision: nil, null: false
+    t.datetime "run_at", precision: nil
     t.datetime "updated_at", precision: nil, null: false
-    t.string "description"
     t.index ["priority", "run_at"], name: "delayed_jobs_priority"
   end
 
   create_table "emails", charset: "utf8mb3", force: :cascade do |t|
-    t.string "email"
-    t.string "attached_object_type", null: false
     t.bigint "attached_object_id", null: false
+    t.string "attached_object_type", null: false
     t.datetime "created_at", null: false
+    t.string "email"
     t.datetime "updated_at", null: false
     t.index ["attached_object_type", "attached_object_id"], name: "index_emails_on_attached_object"
     t.index ["email", "attached_object_id", "attached_object_type"], name: "index_emails_on_email_and_attached_object", unique: true
   end
 
   create_table "event_tags", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name"
-    t.text "description"
     t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.text "description"
+    t.string "name"
     t.bigint "ordering"
+    t.datetime "updated_at", null: false
   end
 
   create_table "event_tags_events", id: false, charset: "utf8mb3", force: :cascade do |t|
@@ -310,34 +310,34 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "events", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
-    t.string "tagline"
-    t.string "slug"
-    t.text "publicity_text"
-    t.integer "xts_id"
+    t.string "author"
+    t.text "content_warnings"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.boolean "is_public"
-    t.string "image_file_name"
+    t.date "end_date"
     t.string "image_content_type"
+    t.string "image_file_name"
     t.integer "image_file_size"
     t.datetime "image_updated_at", precision: nil
-    t.date "start_date"
-    t.date "end_date"
-    t.integer "venue_id"
-    t.integer "season_id"
-    t.string "author"
-    t.string "type"
-    t.string "price"
-    t.string "spark_seat_slug"
+    t.boolean "is_public"
     t.date "maintenance_debt_start"
-    t.date "staffing_debt_start"
-    t.integer "proposal_id"
     t.text "members_only_text"
+    t.string "name"
     t.boolean "pretix_shown"
     t.string "pretix_slug_override"
     t.string "pretix_view"
-    t.text "content_warnings"
+    t.string "price"
+    t.integer "proposal_id"
+    t.text "publicity_text"
+    t.integer "season_id"
+    t.string "slug"
+    t.string "spark_seat_slug"
+    t.date "staffing_debt_start"
+    t.date "start_date"
+    t.string "tagline"
+    t.string "type"
+    t.datetime "updated_at", precision: nil, null: false
+    t.integer "venue_id"
+    t.integer "xts_id"
     t.index ["end_date", "is_public"], name: "index_events_on_end_date_and_is_public"
     t.index ["proposal_id"], name: "index_events_on_proposal_id"
     t.index ["season_id"], name: "index_events_on_season_id"
@@ -346,13 +346,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "fault_reports", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "item"
+    t.datetime "created_at", precision: nil, null: false
     t.text "description"
+    t.integer "fixed_by_id"
+    t.string "item"
+    t.integer "reported_by_id"
     t.integer "severity", default: 0
     t.integer "status", default: 0
-    t.integer "reported_by_id"
-    t.integer "fixed_by_id"
-    t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["fixed_by_id"], name: "index_fault_reports_on_fixed_by_id"
     t.index ["reported_by_id"], name: "index_fault_reports_on_reported_by_id"
@@ -361,59 +361,59 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "maintenance_attendances", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "maintenance_session_id", null: false
-    t.integer "user_id", null: false
     t.datetime "created_at", null: false
+    t.bigint "maintenance_session_id", null: false
     t.datetime "updated_at", null: false
+    t.integer "user_id", null: false
     t.index ["maintenance_session_id"], name: "index_maintenance_attendances_on_maintenance_session_id"
     t.index ["user_id"], name: "index_maintenance_attendances_on_user_id"
   end
 
   create_table "maintenance_sessions", charset: "utf8mb3", force: :cascade do |t|
-    t.date "date"
     t.datetime "created_at", null: false
+    t.date "date"
     t.datetime "updated_at", null: false
   end
 
   create_table "marketing_creatives_categories", charset: "utf8mb3", force: :cascade do |t|
+    t.datetime "created_at", null: false
     t.string "name"
     t.string "name_on_profile"
-    t.string "url"
-    t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "url"
     t.index ["url"], name: "index_marketing_creatives_categories_on_url"
   end
 
   create_table "marketing_creatives_category_infos", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "profile_id"
     t.bigint "category_id"
-    t.text "description"
     t.datetime "created_at", null: false
+    t.text "description"
+    t.bigint "profile_id"
     t.datetime "updated_at", null: false
     t.index ["category_id"], name: "index_marketing_creatives_category_infos_on_category_id"
     t.index ["profile_id"], name: "index_marketing_creatives_category_infos_on_profile_id"
   end
 
   create_table "marketing_creatives_profiles", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name"
-    t.string "url"
     t.text "about"
     t.boolean "approved"
-    t.integer "user_id"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
     t.text "contact"
+    t.datetime "created_at", null: false
+    t.string "name"
+    t.datetime "updated_at", null: false
+    t.string "url"
+    t.integer "user_id"
     t.index ["url"], name: "index_marketing_creatives_profiles_on_url"
     t.index ["user_id"], name: "index_marketing_creatives_profiles_on_user_id"
   end
 
   create_table "mass_mails", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
+    t.text "body"
+    t.datetime "created_at", precision: nil, null: false
+    t.boolean "draft"
+    t.datetime "send_date", precision: nil
     t.integer "sender_id"
     t.string "subject"
-    t.text "body"
-    t.datetime "send_date", precision: nil
-    t.boolean "draft"
-    t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
   end
 
@@ -423,69 +423,69 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "membership_activation_tokens", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "uid"
-    t.string "token"
-    t.integer "user_id"
     t.datetime "created_at", precision: nil, null: false
+    t.string "token"
+    t.string "uid"
     t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["user_id"], name: "index_membership_activation_tokens_on_user_id"
   end
 
   create_table "membership_cards", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
     t.string "card_number"
-    t.integer "user_id"
     t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["user_id"], name: "index_membership_cards_on_user_id"
   end
 
   create_table "news", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "title"
+    t.integer "author_id"
     t.text "body"
-    t.string "slug"
-    t.datetime "publish_date", precision: nil
-    t.boolean "show_public"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.string "image_file_name"
     t.string "image_content_type"
+    t.string "image_file_name"
     t.integer "image_file_size"
     t.datetime "image_updated_at", precision: nil
-    t.integer "author_id"
+    t.datetime "publish_date", precision: nil
+    t.boolean "show_public"
+    t.string "slug"
+    t.string "title"
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["author_id"], name: "index_news_on_author_id"
     t.index ["slug"], name: "index_news_on_slug"
   end
 
   create_table "newsletter_subscribers", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "email"
     t.datetime "created_at", precision: nil, null: false
+    t.string "email"
     t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "oauth_access_grants", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "resource_owner_id", null: false
     t.bigint "application_id", null: false
-    t.string "token", null: false
+    t.datetime "created_at", precision: nil, null: false
     t.integer "expires_in", null: false
     t.text "redirect_uri", null: false
-    t.datetime "created_at", precision: nil, null: false
+    t.bigint "resource_owner_id", null: false
     t.datetime "revoked_at", precision: nil
     t.string "scopes", default: "", null: false
+    t.string "token", null: false
     t.index ["application_id"], name: "index_oauth_access_grants_on_application_id"
     t.index ["resource_owner_id"], name: "index_oauth_access_grants_on_resource_owner_id"
     t.index ["token"], name: "index_oauth_access_grants_on_token", unique: true
   end
 
   create_table "oauth_access_tokens", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "resource_owner_id"
     t.bigint "application_id", null: false
-    t.string "token", null: false
-    t.string "refresh_token"
-    t.integer "expires_in"
-    t.datetime "revoked_at", precision: nil
     t.datetime "created_at", precision: nil, null: false
-    t.string "scopes"
+    t.integer "expires_in"
     t.string "previous_refresh_token", default: "", null: false
+    t.string "refresh_token"
+    t.bigint "resource_owner_id"
+    t.datetime "revoked_at", precision: nil
+    t.string "scopes"
+    t.string "token", null: false
     t.index ["application_id"], name: "index_oauth_access_tokens_on_application_id"
     t.index ["refresh_token"], name: "index_oauth_access_tokens_on_refresh_token", unique: true
     t.index ["resource_owner_id"], name: "index_oauth_access_tokens_on_resource_owner_id"
@@ -493,13 +493,13 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "oauth_applications", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name", null: false
-    t.string "uid", null: false
-    t.string "secret", null: false
-    t.text "redirect_uri", null: false
-    t.string "scopes", default: "", null: false
     t.boolean "confidential", default: true, null: false
     t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.text "redirect_uri", null: false
+    t.string "scopes", default: "", null: false
+    t.string "secret", null: false
+    t.string "uid", null: false
     t.datetime "updated_at", null: false
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
@@ -511,22 +511,22 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "opportunities", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "title"
-    t.text "description"
-    t.boolean "show_email"
     t.boolean "approved"
-    t.integer "creator_id"
     t.integer "approver_id"
-    t.date "expiry_date"
     t.datetime "created_at", precision: nil, null: false
+    t.integer "creator_id"
+    t.text "description"
+    t.date "expiry_date"
+    t.boolean "show_email"
+    t.string "title"
     t.datetime "updated_at", precision: nil, null: false
     t.index ["approved", "expiry_date"], name: "index_opportunities_on_approved_and_expiry"
   end
 
   create_table "picture_tags", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name"
-    t.text "description"
     t.datetime "created_at", null: false
+    t.text "description"
+    t.string "name"
     t.datetime "updated_at", null: false
   end
 
@@ -536,81 +536,81 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "pictures", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
+    t.integer "access_level", default: 2, null: false
+    t.datetime "created_at", precision: nil, null: false
     t.text "description"
     t.integer "gallery_id"
     t.string "gallery_type"
-    t.string "image_file_name"
     t.string "image_content_type"
+    t.string "image_file_name"
     t.integer "image_file_size"
     t.datetime "image_updated_at", precision: nil
-    t.datetime "created_at", precision: nil, null: false
     t.datetime "updated_at", precision: nil, null: false
-    t.integer "access_level", default: 2, null: false
     t.index ["gallery_id"], name: "index_pictures_on_gallery_id"
     t.index ["gallery_type"], name: "index_pictures_on_gallery_type"
   end
 
   create_table "reviews", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "event_id"
-    t.string "reviewer"
     t.text "body"
+    t.datetime "created_at", precision: nil, null: false
+    t.integer "event_id"
+    t.string "organisation"
     t.decimal "rating", precision: 2, scale: 1
     t.date "review_date"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.string "organisation"
+    t.string "reviewer"
     t.string "title"
+    t.datetime "updated_at", precision: nil, null: false
     t.string "url"
   end
 
   create_table "roles", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.string "resource_type"
+    t.string "name"
     t.bigint "resource_id"
+    t.string "resource_type"
+    t.datetime "updated_at", precision: nil, null: false
     t.index ["name", "resource_type", "resource_id"], name: "index_roles_on_name_and_resource_type_and_resource_id"
     t.index ["name"], name: "index_roles_on_name"
     t.index ["resource_type", "resource_id"], name: "index_roles_on_resource_type_and_resource_id"
   end
 
   create_table "solid_queue_blocked_executions", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "job_id", null: false
-    t.string "queue_name", null: false
-    t.integer "priority", default: 0, null: false
     t.string "concurrency_key", null: false
-    t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.bigint "job_id", null: false
+    t.integer "priority", default: 0, null: false
+    t.string "queue_name", null: false
     t.index ["concurrency_key", "priority", "job_id"], name: "index_solid_queue_blocked_executions_for_release"
     t.index ["expires_at", "concurrency_key"], name: "index_solid_queue_blocked_executions_for_maintenance"
     t.index ["job_id"], name: "index_solid_queue_blocked_executions_on_job_id", unique: true
   end
 
   create_table "solid_queue_claimed_executions", charset: "utf8mb3", force: :cascade do |t|
+    t.datetime "created_at", null: false
     t.bigint "job_id", null: false
     t.bigint "process_id"
-    t.datetime "created_at", null: false
     t.index ["job_id"], name: "index_solid_queue_claimed_executions_on_job_id", unique: true
     t.index ["process_id", "job_id"], name: "index_solid_queue_claimed_executions_on_process_id_and_job_id"
   end
 
   create_table "solid_queue_failed_executions", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "job_id", null: false
-    t.text "error"
     t.datetime "created_at", null: false
+    t.text "error"
+    t.bigint "job_id", null: false
     t.index ["job_id"], name: "index_solid_queue_failed_executions_on_job_id", unique: true
   end
 
   create_table "solid_queue_jobs", charset: "utf8mb3", force: :cascade do |t|
-    t.string "queue_name", null: false
-    t.string "class_name", null: false
-    t.text "arguments"
-    t.integer "priority", default: 0, null: false
     t.string "active_job_id"
-    t.datetime "scheduled_at"
-    t.datetime "finished_at"
+    t.text "arguments"
+    t.string "class_name", null: false
     t.string "concurrency_key"
     t.datetime "created_at", null: false
+    t.datetime "finished_at"
+    t.integer "priority", default: 0, null: false
+    t.string "queue_name", null: false
+    t.datetime "scheduled_at"
     t.datetime "updated_at", null: false
     t.index ["active_job_id"], name: "index_solid_queue_jobs_on_active_job_id"
     t.index ["class_name"], name: "index_solid_queue_jobs_on_class_name"
@@ -620,88 +620,88 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "solid_queue_pauses", charset: "utf8mb3", force: :cascade do |t|
-    t.string "queue_name", null: false
     t.datetime "created_at", null: false
+    t.string "queue_name", null: false
     t.index ["queue_name"], name: "index_solid_queue_pauses_on_queue_name", unique: true
   end
 
   create_table "solid_queue_processes", charset: "utf8mb3", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "hostname"
     t.string "kind", null: false
     t.datetime "last_heartbeat_at", null: false
-    t.bigint "supervisor_id"
-    t.integer "pid", null: false
-    t.string "hostname"
     t.text "metadata"
-    t.datetime "created_at", null: false
     t.string "name", null: false
+    t.integer "pid", null: false
+    t.bigint "supervisor_id"
     t.index ["last_heartbeat_at"], name: "index_solid_queue_processes_on_last_heartbeat_at"
     t.index ["name", "supervisor_id"], name: "index_solid_queue_processes_on_name_and_supervisor_id", unique: true
     t.index ["supervisor_id"], name: "index_solid_queue_processes_on_supervisor_id"
   end
 
   create_table "solid_queue_ready_executions", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "job_id", null: false
-    t.string "queue_name", null: false
-    t.integer "priority", default: 0, null: false
     t.datetime "created_at", null: false
+    t.bigint "job_id", null: false
+    t.integer "priority", default: 0, null: false
+    t.string "queue_name", null: false
     t.index ["job_id"], name: "index_solid_queue_ready_executions_on_job_id", unique: true
     t.index ["priority", "job_id"], name: "index_solid_queue_poll_all"
     t.index ["queue_name", "priority", "job_id"], name: "index_solid_queue_poll_by_queue"
   end
 
   create_table "solid_queue_recurring_executions", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "job_id", null: false
-    t.string "task_key", null: false
-    t.datetime "run_at", null: false
     t.datetime "created_at", null: false
+    t.bigint "job_id", null: false
+    t.datetime "run_at", null: false
+    t.string "task_key", null: false
     t.index ["job_id"], name: "index_solid_queue_recurring_executions_on_job_id", unique: true
     t.index ["task_key", "run_at"], name: "index_solid_queue_recurring_executions_on_task_key_and_run_at", unique: true
   end
 
   create_table "solid_queue_recurring_tasks", charset: "utf8mb3", force: :cascade do |t|
-    t.string "key", null: false
-    t.string "schedule", null: false
-    t.string "command", limit: 2048
-    t.string "class_name"
     t.text "arguments"
-    t.string "queue_name"
-    t.integer "priority", default: 0
-    t.boolean "static", default: true, null: false
-    t.text "description"
+    t.string "class_name"
+    t.string "command", limit: 2048
     t.datetime "created_at", null: false
+    t.text "description"
+    t.string "key", null: false
+    t.integer "priority", default: 0
+    t.string "queue_name"
+    t.string "schedule", null: false
+    t.boolean "static", default: true, null: false
     t.datetime "updated_at", null: false
     t.index ["key"], name: "index_solid_queue_recurring_tasks_on_key", unique: true
     t.index ["static"], name: "index_solid_queue_recurring_tasks_on_static"
   end
 
   create_table "solid_queue_scheduled_executions", charset: "utf8mb3", force: :cascade do |t|
-    t.bigint "job_id", null: false
-    t.string "queue_name", null: false
-    t.integer "priority", default: 0, null: false
-    t.datetime "scheduled_at", null: false
     t.datetime "created_at", null: false
+    t.bigint "job_id", null: false
+    t.integer "priority", default: 0, null: false
+    t.string "queue_name", null: false
+    t.datetime "scheduled_at", null: false
     t.index ["job_id"], name: "index_solid_queue_scheduled_executions_on_job_id", unique: true
     t.index ["scheduled_at", "priority", "job_id"], name: "index_solid_queue_dispatch_all"
   end
 
   create_table "solid_queue_semaphores", charset: "utf8mb3", force: :cascade do |t|
-    t.string "key", null: false
-    t.integer "value", default: 1, null: false
-    t.datetime "expires_at", null: false
     t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
+    t.string "key", null: false
     t.datetime "updated_at", null: false
+    t.integer "value", default: 1, null: false
     t.index ["expires_at"], name: "index_solid_queue_semaphores_on_expires_at"
     t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
   create_table "team_members", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "position"
-    t.integer "user_id"
-    t.integer "teamwork_id"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
+    t.string "position"
+    t.integer "teamwork_id"
     t.string "teamwork_type"
+    t.datetime "updated_at", precision: nil, null: false
+    t.integer "user_id"
     t.index ["teamwork_id", "teamwork_type", "user_id"], name: "index_team_members_on_teamwork_and_user", unique: true
     t.index ["teamwork_id"], name: "index_team_members_on_teamwork_id"
     t.index ["teamwork_type", "teamwork_id"], name: "index_team_members_on_teamwork_type_and_id"
@@ -710,79 +710,79 @@ ActiveRecord::Schema[8.0].define(version: 2025_09_23_143634) do
   end
 
   create_table "techies", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
     t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
     t.integer "entry_year"
+    t.string "name"
+    t.datetime "updated_at", precision: nil, null: false
   end
 
   create_table "users", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "email", default: "", null: false
-    t.string "encrypted_password", default: "", null: false
-    t.string "reset_password_token"
-    t.datetime "reset_password_sent_at", precision: nil
-    t.datetime "remember_created_at", precision: nil
-    t.integer "sign_in_count", default: 0
-    t.datetime "current_sign_in_at", precision: nil
-    t.datetime "last_sign_in_at", precision: nil
-    t.string "current_sign_in_ip"
-    t.string "last_sign_in_ip"
-    t.string "first_name"
-    t.string "last_name"
-    t.datetime "created_at", precision: nil, null: false
-    t.datetime "updated_at", precision: nil, null: false
-    t.string "phone_number"
-    t.boolean "public_profile", default: true
-    t.text "bio"
-    t.string "avatar_file_name"
     t.string "avatar_content_type"
+    t.string "avatar_file_name"
     t.integer "avatar_file_size"
     t.datetime "avatar_updated_at", precision: nil
-    t.string "username"
-    t.string "remember_token"
+    t.text "bio"
     t.date "consented"
+    t.datetime "created_at", precision: nil, null: false
+    t.datetime "current_sign_in_at", precision: nil
+    t.string "current_sign_in_ip"
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "first_name"
+    t.string "last_name"
+    t.datetime "last_sign_in_at", precision: nil
+    t.string "last_sign_in_ip"
+    t.string "phone_number"
+    t.boolean "public_profile", default: true
+    t.datetime "remember_created_at", precision: nil
+    t.string "remember_token"
+    t.datetime "reset_password_sent_at", precision: nil
+    t.string "reset_password_token"
+    t.integer "sign_in_count", default: 0
+    t.datetime "updated_at", precision: nil, null: false
+    t.string "username"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
   end
 
   create_table "users_roles", id: false, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.integer "user_id"
     t.integer "role_id"
+    t.integer "user_id"
     t.index ["user_id", "role_id"], name: "index_users_roles_on_user_id_and_role_id"
   end
 
   create_table "venues", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "name"
-    t.string "tagline"
+    t.text "address"
+    t.datetime "created_at", precision: nil, null: false
     t.text "description"
-    t.string "location"
-    t.string "image_file_name"
     t.string "image_content_type"
+    t.string "image_file_name"
     t.integer "image_file_size"
     t.datetime "image_updated_at", precision: nil
-    t.datetime "created_at", precision: nil, null: false
+    t.string "location"
+    t.string "name"
+    t.string "tagline"
     t.datetime "updated_at", precision: nil, null: false
-    t.text "address"
   end
 
   create_table "versions", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.string "item_type", limit: 191, null: false
-    t.integer "item_id", null: false
-    t.string "event", null: false
-    t.string "whodunnit"
-    t.text "object", size: :long
     t.datetime "created_at", precision: nil
+    t.string "event", null: false
+    t.integer "item_id", null: false
+    t.string "item_type", limit: 191, null: false
+    t.text "object", size: :long
+    t.string "whodunnit"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end
 
   create_table "video_links", charset: "utf8mb3", force: :cascade do |t|
-    t.string "name", null: false
-    t.string "link", null: false
     t.integer "access_level", default: 1, null: false
-    t.integer "order"
-    t.string "item_type"
-    t.bigint "item_id"
     t.datetime "created_at", null: false
+    t.bigint "item_id"
+    t.string "item_type"
+    t.string "link", null: false
+    t.string "name", null: false
+    t.integer "order"
     t.datetime "updated_at", null: false
     t.index ["item_type", "item_id"], name: "index_video_links_on_item_type_and_item_id"
   end
