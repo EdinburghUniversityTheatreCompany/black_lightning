@@ -4,13 +4,10 @@ class MassMailJob < ApplicationJob
   def perform(mass_mail_id)
     mass_mail = MassMail.find(mass_mail_id)
 
+    # Each email is enqueued as a separate job so it can be retried independently
+    # if rate limited. ApplicationJob handles retry with exponential backoff.
     mass_mail.recipients.each do |recipient|
-      begin
-        MassMailer.send_mail(mass_mail, recipient).deliver_now
-      rescue => e
-        Rails.logger.fatal e.message
-        # Continue sending to other recipients even if one fails
-      end
+      MassMailer.send_mail(mass_mail, recipient).deliver_later
     end
   end
 end
