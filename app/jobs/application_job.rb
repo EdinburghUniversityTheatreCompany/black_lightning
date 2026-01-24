@@ -10,10 +10,12 @@ class ApplicationJob < ActiveJob::Base
   # Default queue is 'default'
   queue_as :default
 
-  # SMTP rate limiting errors need longer backoff than standard errors
+  # SMTP errors - retry with polynomial backoff
+  # Net::SMTPFatalError: 5xx permanent errors (some are transient)
+  # Net::SMTPServerBusy: 4xx temporary errors including Mailersend 450 rate limits
   # :polynomially_longer uses (executions ** 4) + jitter
-  # Waits roughly: 1s, 16s, 81s, 256s, 625s across 5 attempts
-  retry_on Net::SMTPFatalError, wait: :polynomially_longer, attempts: 5
+  # 10 attempts spans ~30 minutes, giving rate limit windows time to reset
+  retry_on Net::SMTPFatalError, Net::SMTPServerBusy, wait: :polynomially_longer, attempts: 10
 
   # Configure max attempts similar to delayed_job with exponential backoff
   retry_on StandardError, wait: ->(executions) { executions * 2 }, attempts: 5
