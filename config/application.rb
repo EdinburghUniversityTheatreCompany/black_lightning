@@ -58,6 +58,10 @@ module ChaosRails
 
     config.action_mailer.default_url_options = { host: "www.bedlamtheatre.co.uk" }
 
+    # Use custom delivery job that inherits from ApplicationJob
+    # This gives all emails (including Devise) SMTP retry logic with exponential backoff
+    config.action_mailer.delivery_job = "MailDeliveryJob"
+
     config.active_storage.variant_processor = :vips
 
     if Rails.application.credentials.try(:honeybadger).try(Rails.env.to_sym).present?
