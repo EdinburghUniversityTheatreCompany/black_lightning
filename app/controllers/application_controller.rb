@@ -49,8 +49,12 @@ class ApplicationController < ActionController::Base
   ##
   def report_500(exception)
     Honeybadger.notify(exception, context: {
+      user_id: current_user&.id,
       user_email: current_user&.email,
-      user_name: current_user&.name_or_email
+      user_name: current_user&.name_or_email,
+      path: request.fullpath,
+      http_method: request.method,
+      request_id: request.request_id
     }) if Rails.env.production?
 
     Rails.logger.warn "Caught error and redirected to 500"
