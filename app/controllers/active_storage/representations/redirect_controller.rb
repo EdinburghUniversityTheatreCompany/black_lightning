@@ -17,6 +17,9 @@ class ActiveStorage::Representations::RedirectController < ActiveStorage::BaseCo
     )
 
     expires_in ActiveStorage.service_urls_expire_in
-    redirect_to @blob.representation(params[:variation_key]).processed.url(disposition: params[:disposition])
+    redirect_to @blob.representation(params[:variation_key]).processed.url(disposition: params[:disposition]), allow_other_host: true
+  rescue Vips::Error, MiniMagick::Error => e
+    Honeybadger.notify(e)
+    head :not_found
   end
 end
