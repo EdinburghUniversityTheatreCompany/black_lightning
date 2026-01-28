@@ -920,6 +920,7 @@ call-bound@^1.0.2:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 caniuse-lite@^1.0.30001646, caniuse-lite@^1.0.30001688:
   version "1.0.30001690"
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001690.tgz#f2d15e3aaf8e18f76b2b8c1481abde063b8104c8"
@@ -930,10 +931,18 @@ caniuse-lite@^1.0.30001702, caniuse-lite@^1.0.30001726:
 =======
 caniuse-lite@^1.0.30001702, caniuse-lite@^1.0.30001737:
 >>>>>>> 8a8eb953 (deps: Upgrade yarn packages instead of npm)
+=======
+caniuse-lite@^1.0.30001702:
+>>>>>>> 742f6043 (feat: Set up cloudflare IP checking things to prevent ip spoof errors)
   version "1.0.30001741"
   resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001741.tgz#67fb92953edc536442f3c9da74320774aa523143"
   integrity sha512-QGUGitqsc8ARjLdgAfxETDhRbJ0REsP6O3I96TAth/mVjh2cYzN2u+3AzPP3aVSm2FehEItaJw1xd+IGBXWeSw==
 >>>>>>> 82423eb9 (fix: Update browserlist)
+
+caniuse-lite@^1.0.30001726:
+  version "1.0.30001766"
+  resolved "https://registry.yarnpkg.com/caniuse-lite/-/caniuse-lite-1.0.30001766.tgz#b6f6b55cb25a2d888d9393104d14751c6a7d6f7a"
+  integrity sha512-4C0lfJ0/YPjJQHagaE9x2Elb69CIqEPZeG0anQt9SIvIoOH4a4uaRl73IavyO+0qZh6MDLH//DrXThEYKHkmYA==
 
 channels@^0.0.4:
   version "0.0.4"
@@ -1559,6 +1568,7 @@ ekko-lightbox@^5.3.0:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 electron-to-chromium@^1.4.820:
   version "1.4.823"
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.823.tgz#38587f7aa55bed14930f04091dfc65c39a3d8bd7"
@@ -1600,6 +1610,12 @@ electron-to-chromium@^1.5.211:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.218.tgz#921042a011a98a4620853c9d391ab62bcc124400"
   integrity sha512-uwwdN0TUHs8u6iRgN8vKeWZMRll4gBkz+QMqdS7DDe49uiK68/UX92lFb61oiFPrpYZNeZIqa4bA7O6Aiasnzg==
 >>>>>>> 8a8eb953 (deps: Upgrade yarn packages instead of npm)
+=======
+electron-to-chromium@^1.5.173:
+  version "1.5.279"
+  resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.5.279.tgz#67dfdeb22fd81412d0d18d1d9b2c749e9b8945cb"
+  integrity sha512-0bblUU5UNdOt5G7XqGiJtpZMONma6WAfq9vsFmtn9x1+joAObr6x1chfqyxFSDCAFwFhCQDrqeAr6MYdpwJ9Hg==
+>>>>>>> 742f6043 (feat: Set up cloudflare IP checking things to prevent ip spoof errors)
 
 emoji-regex@^8.0.0:
   version "8.0.0"
@@ -1611,10 +1627,10 @@ emojis-list@^3.0.0:
   resolved "https://registry.yarnpkg.com/emojis-list/-/emojis-list-3.0.0.tgz#5570662046ad29e2e916e71aae260abdff4f6a78"
   integrity sha512-/kyM18EfinwXZbno9FyUGeFh87KC8HRQBQGildHZbEuRyWFOmv1U10o9BBp8XVZDVNNuQKyIGIu5ZYAAXJ0V2Q==
 
-enhanced-resolve@^5.17.3:
-  version "5.18.3"
-  resolved "https://registry.yarnpkg.com/enhanced-resolve/-/enhanced-resolve-5.18.3.tgz#9b5f4c5c076b8787c78fe540392ce76a88855b44"
-  integrity sha512-d4lC8xfavMeBjzGr2vECC3fsGXziXZQyJxD868h2M/mBI3PwAuODxAkLkq5HYuvrPYcUtiLzsTo8U3PgX3Ocww==
+enhanced-resolve@^5.17.2:
+  version "5.18.4"
+  resolved "https://registry.yarnpkg.com/enhanced-resolve/-/enhanced-resolve-5.18.4.tgz#c22d33055f3952035ce6a144ce092447c525f828"
+  integrity sha512-LgQMM4WXU3QI+SYgEc2liRgznaD5ojbmY3sb8LxyguVkIg5FxdpTkvk72te2R38/TGKxH634oLxXRGY6d7AP+Q==
   dependencies:
     graceful-fs "^4.2.4"
     tapable "^2.2.0"
