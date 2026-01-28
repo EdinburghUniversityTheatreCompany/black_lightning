@@ -16,6 +16,8 @@ require "action_cable/engine"
 require "rails/test_unit/railtie"
 
 require "image_processing/mini_magick"
+require_relative "../lib/cloudflare_ips"
+require_relative "../app/middleware/cloudflare_ip_sanitizer"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -39,6 +41,9 @@ module ChaosRails
     config.time_zone = "Edinburgh"
     config.eager_load_paths << "#{config.root}/lib"
     Rails.autoloaders.main.ignore(config.root.join("lib/generators"))
+
+    # Strip spoofed HTTP_CLIENT_IP headers from Cloudflare requests
+    config.middleware.insert_before ActionDispatch::RemoteIp, CloudflareIpSanitizer
 
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
     # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]

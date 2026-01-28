@@ -2,3 +2,8 @@ daily_maintenance:
   class: DailyMaintenanceJob
   queue: default
   schedule: at 2am every day
+
+refresh_cloudflare_ips:
+  class: RefreshCloudflareIpsJob
+  queue: default
+  schedule: every 12 hours
