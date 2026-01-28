@@ -1,3 +1,9 @@
+// FontAwesome - self-hosted
+$fa-font-path: "/webfonts";
+@import "@fortawesome/fontawesome-free/scss/fontawesome";
+@import "@fortawesome/fontawesome-free/scss/solid";
+@import "@fortawesome/fontawesome-free/scss/brands";
+
 // NOTE THAT THINGS PLACED HERE DO NOT WORK FOR THE BACKEND
 // This file has to be at the top because it also loads Bootstrap 5.
 @import '../bootstrap5_customisations';
