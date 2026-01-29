@@ -1,5 +1,36 @@
 // This script initialises the select2 fields on the website based on attributes defined in the HTML.
 
+// Shared cache for all Select2 AJAX requests on this page.
+// Cache is automatically cleared on page navigation (appropriate for user data).
+const select2Cache = {
+  data: {},
+  timestamps: {},
+  maxAge: 60000, // Cache entries expire after 60 seconds
+
+  generateKey(url, params) {
+    const sortedParams = Object.keys(params)
+      .sort()
+      .map(k => `${k}=${params[k]}`)
+      .join('&');
+    return `${url}?${sortedParams}`;
+  },
+
+  get(key) {
+    const timestamp = this.timestamps[key];
+    if (timestamp && (Date.now() - timestamp) < this.maxAge) {
+      return this.data[key];
+    }
+    delete this.data[key];
+    delete this.timestamps[key];
+    return null;
+  },
+
+  set(key, value) {
+    this.data[key] = value;
+    this.timestamps[key] = Date.now();
+  }
+};
+
 // Add select2 fields to fields that exist on document load.
 document.addEventListener('DOMContentLoaded', function() {
   // Initialise all select2 fields that exist on document start.
@@ -33,8 +64,12 @@ function activateSelect2Fields(parentElement) {
 
     // If there is a remote-source specified, set up this select2 element for ajax.
     if ($(el).data('remote-source')) {
+      const remoteUrl = $(el).data('remote-source');
+      const queryField = $(el).data('query-field');
+      const showNonMembers = $(el).data('show-non-members');
+
       const ajax_attributes = {
-        url: $(el).data('remote-source'),
+        url: remoteUrl,
         dataType: 'json',
         delay: 250,
         data: function(params) {
@@ -43,15 +78,33 @@ function activateSelect2Fields(parentElement) {
             _type: params._type || 'query'
           };
 
-          query[$(el).data('query-field')] = params.term;
+          query[queryField] = params.term;
 
           // For user search fields.
           // Query parameters will be ?q[full_name_cont]=[term]&all_users=
-          if ($(el).data('show-non-members')) {
-            query['show_non_members'] = $(el).data('show-non-members');
+          if (showNonMembers) {
+            query['show_non_members'] = showNonMembers;
           }
-  
+
           return query;
+        },
+        transport: function(params, success, failure) {
+          const cacheKey = select2Cache.generateKey(params.url, params.data);
+          const cachedData = select2Cache.get(cacheKey);
+
+          if (cachedData) {
+            // Return cached data asynchronously to match AJAX behavior
+            setTimeout(function() { success(cachedData); }, 0);
+            return { abort: function() {} };
+          }
+
+          // Not in cache, make the actual AJAX request
+          return $.ajax(params)
+            .done(function(data) {
+              select2Cache.set(cacheKey, data);
+              success(data);
+            })
+            .fail(failure);
         }
       };
 
