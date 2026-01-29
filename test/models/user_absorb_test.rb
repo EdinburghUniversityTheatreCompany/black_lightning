@@ -175,4 +175,50 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal 1, result[:transferred][:staffing_debts]
     assert_includes result[:transferred][:roles], "Committee"
   end
+
+  # Email handling tests
+
+  test "absorb replaces target's unknown_ email with source's real email" do
+    @target_user.update!(email: "unknown_12345678@bedlamtheatre.co.uk")
+    real_email = "john.doe@example.com"
+    @source_user.update!(email: real_email)
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal real_email, @target_user.reload.email, "Target should have source's real email"
+  end
+
+  test "absorb keeps target's real email when source has unknown_ email" do
+    real_email = "jane.doe@example.com"
+    @target_user.update!(email: real_email)
+    @source_user.update!(email: "unknown_87654321@bedlamtheatre.co.uk")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal real_email, @target_user.reload.email, "Target should keep real email"
+  end
+
+  test "absorb keeps target's email when both have unknown_ emails" do
+    target_unknown = "unknown_11111111@bedlamtheatre.co.uk"
+    @target_user.update!(email: target_unknown)
+    @source_user.update!(email: "unknown_22222222@bedlamtheatre.co.uk")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal target_unknown, @target_user.reload.email, "Target should keep its unknown email"
+  end
+
+  test "absorb keeps target's email when both have real emails" do
+    target_email = "target@example.com"
+    @target_user.update!(email: target_email)
+    @source_user.update!(email: "source@example.com")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal target_email, @target_user.reload.email, "Target should keep its real email"
+  end
 end

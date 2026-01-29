@@ -412,6 +412,21 @@ class User < ApplicationRecord
     }
 
     ActiveRecord::Base.transaction do
+      # Handle unknown_ email replacement
+      # If either user has an unknown_ email, replace it with the real email
+      target_has_unknown = email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
+      source_has_unknown = source_user.email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
+
+      if target_has_unknown && !source_has_unknown
+        # Target has unknown email, source has real email - use source's email
+        # First, change source's email temporarily to avoid uniqueness constraint
+        source_email = source_user.email
+        source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+        update!(email: source_email)
+      elsif !target_has_unknown && source_has_unknown
+        # Source has unknown email, target has real email - keep target's (no action needed)
+      end
+      # If both have unknown or both have real emails, keep target's email
       # 1. Transfer TeamMembers (with duplicate handling)
       source_user.team_membership.each do |tm|
         existing = team_membership.find_by(teamwork_type: tm.teamwork_type, teamwork_id: tm.teamwork_id)
