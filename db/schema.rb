@@ -320,6 +320,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_30_213159) do
     t.integer "image_file_size"
     t.datetime "image_updated_at", precision: nil
     t.boolean "is_public"
+    t.integer "maintenance_debt_amount"
     t.date "maintenance_debt_start"
     t.text "members_only_text"
     t.string "name"
@@ -332,6 +333,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_30_213159) do
     t.integer "season_id"
     t.string "slug"
     t.string "spark_seat_slug"
+    t.integer "staffing_debt_amount"
     t.date "staffing_debt_start"
     t.date "start_date"
     t.string "tagline"
