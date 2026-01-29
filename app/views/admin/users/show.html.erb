@@ -1,5 +1,6 @@
 <% fields = {
     email: @user.email,
+    student_id: @user.student_id.present? ? @user.student_id : 'Not set',
     phone_number: @user.phone_number.present? ? link_to(@user.phone_number, "tel: #{@user.phone_number}") : 'Not set',
     roles: @user.roles.collect {|role| role.name.capitalize }.to_sentence,
     marketing_creative_profile: @user.marketing_creatives_profile.present? ? get_link(@user.marketing_creatives_profile, :show) : 'This user has no Marketing Creative Profile.',
