@@ -35,6 +35,7 @@
 #++
 class User < ApplicationRecord
   before_save :unify_numbers
+  before_validation :extract_student_id_from_email, if: :email_changed?
 
   rolify
   has_paper_trail limit: 6
@@ -60,6 +61,12 @@ class User < ApplicationRecord
   validates :email, presence: true
 
   validates :avatar, content_type: %i[png jpg jpeg gif]
+  validates :student_id,
+    format: {
+      with: /\As\d{7}\z/,
+      message: "must be in format s1234567 (s followed by 7 digits)",
+      allow_blank: true
+    }
 
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
@@ -105,7 +112,7 @@ class User < ApplicationRecord
   def self.ransackable_attributes(auth_object = nil)
     attributes = %w[first_name last_name full_name]
     attributes += %w[bio email public_profile] if auth_object.can?(:read, User)
-    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count] if auth_object.can?(:manage, User)
+    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count student_id] if auth_object.can?(:manage, User)
 
     attributes
   end
@@ -535,5 +542,14 @@ class User < ApplicationRecord
 
   def send_welcome_email
     UsersMailer.welcome_email(self).deliver_later unless email.ends_with?("@bedlamtheatre.co.uk")
+  end
+
+  private
+
+  def extract_student_id_from_email
+    return unless email.present?
+    if email.match?(/\A(s\d{7})@ed\.ac\.uk\z/i)
+      self.student_id = email.match(/\A(s\d{7})@ed\.ac\.uk\z/i)[1].downcase
+    end
   end
 end

@@ -1,17 +1,19 @@
-<% headers = [:name, :email] %>
+<% headers = [:name, :email, :student_id] %>
 
-<% field_sets = @users.map { |user| { 
+<% field_sets = @users.map { |user| {
   fields: [
-    user,  
-    user.email
+    user,
+    user.email,
+    user.student_id
   ] } } %>
 
 <% search_fields = {
     full_name_cont:   { slug: 'defaults.name' },
     email_cont:       { slug: 'defaults.email' },
+    student_id_cont:  { slug: 'defaults.student_id', label: 'Student ID' },
     bio_cont:         { slug: 'defaults.bio' },
     show_non_members: { slug: 'defaults.show_non_members', type: :boolean },
-    
+
     random_button:    { slug: 'defaults.random_button', type: :submit_button, action: :Random }
 } %>
 

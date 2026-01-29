@@ -102,7 +102,7 @@ class Admin::UsersController < AdminController
     end
 
     perm_params = %i[email password password_confirmation remember_me first_name last_name
-                     phone_number card_number public_profile bio avatar username]
+                     phone_number card_number public_profile bio avatar username student_id]
 
     perm_params.push(role_ids: []) if current_user.has_role?(:admin)
 

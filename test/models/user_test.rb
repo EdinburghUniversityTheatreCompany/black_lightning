@@ -251,4 +251,82 @@ class Admin::UserTest < ActiveSupport::TestCase
       assert_equal pair[1], @user.email
     end
   end
+
+  test "student_id validation - valid formats" do
+    valid_student_ids = [ "s1234567", "s9999999", nil, "" ]
+
+    valid_student_ids.each do |student_id|
+      @user.student_id = student_id
+      assert @user.valid?, "#{student_id.inspect} should be valid but got errors: #{@user.errors.full_messages}"
+    end
+  end
+
+  test "student_id validation - invalid formats" do
+    invalid_student_ids = [ "1234567", "S1234567", "s123456", "s12345678", "student123", "s123456a" ]
+
+    invalid_student_ids.each do |student_id|
+      @user.student_id = student_id
+      assert_not @user.valid?, "#{student_id.inspect} should be invalid"
+      assert @user.errors[:student_id].any?, "Expected validation error on student_id for #{student_id.inspect}"
+    end
+  end
+
+  test "student_id automatic extraction from email on create" do
+    user = User.new(
+      email: "s1234567@ed.ac.uk",
+      password: "password123",
+      first_name: "Test",
+      last_name: "User"
+    )
+    user.save!
+
+    assert_equal "s1234567", user.student_id
+  end
+
+  test "student_id automatic extraction from email on update" do
+    @user.update!(email: "s9876543@ed.ac.uk")
+    assert_equal "s9876543", @user.student_id
+  end
+
+  test "student_id extraction handles mixed case email" do
+    @user.update!(email: "S7654321@ED.AC.UK")
+    assert_equal "s7654321", @user.student_id
+  end
+
+  test "student_id not extracted from non-matching emails" do
+    # Start with no student_id
+    @user.update!(student_id: nil)
+
+    non_matching_emails = [
+      "staff@ed.ac.uk",
+      "john@gmail.com",
+      "j.appleseed@ed.ac.uk"
+    ]
+
+    non_matching_emails.each do |email|
+      @user.update!(email: email)
+      assert_nil @user.student_id, "student_id should remain nil for #{email}"
+    end
+  end
+
+  test "manually set student_id is preserved" do
+    @user.student_id = "s1111111"
+    @user.email = "john@gmail.com"
+    @user.save!
+
+    assert_equal "s1111111", @user.student_id
+  end
+
+  test "duplicate student_ids are allowed" do
+    @user.update!(email: "s1234567@ed.ac.uk")
+    assert_equal "s1234567", @user.student_id
+
+    # Create another user with a different email but manually set the same student_id
+    user2 = FactoryBot.create(:user, email: "s9999999@ed.ac.uk")
+    user2.update!(student_id: "s1234567")
+    assert_equal "s1234567", user2.student_id
+
+    # Both users should exist with the same student_id
+    assert_equal 2, User.where(student_id: "s1234567").count
+  end
 end
