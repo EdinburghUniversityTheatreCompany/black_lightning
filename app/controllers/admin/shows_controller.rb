@@ -1,59 +1,33 @@
 class Admin::ShowsController < Admin::GenericEventsController
-  # Those are checked for permission to create debts instead.
-  skip_authorize_resource only: %i[create_maintenance_debts create_staffing_debts convert_to_season convert_to_workshop]
-
-  # GET /admin/shows
-  # GET /admin/shows.json
-
-  def show
-    existing_staffing_debts = Admin::StaffingDebt.where(show: @show)
-    if existing_staffing_debts.any?
-      amount_of_debts = existing_staffing_debts.where(user: existing_staffing_debts.first.user).count
-
-      @staffing_confirm_data = {
-        title: "Creating Staffing Obligation",
-        confirm: "This show already has #{helpers.pluralize(amount_of_debts, 'Staffing obligation')} set for #{l existing_staffing_debts.first.due_by, format: :longy}. Are you sure you want to add more?"
-      }
-    else
-      @staffing_confirm_data = {}
-    end
-
-    super
-  end
+  skip_authorize_resource only: %i[update_debt_settings convert_to_season convert_to_workshop]
 
   # New is handled by the Generic Controller.
   # Create is handled by the Generic Controller.
   # Edit is handled by the Generic Controller.
   # Destroy is handled by Generic Controller.
 
-  # POST admin/shows/1/create_maintenance_debts
-  def create_maintenance_debts
+  # PATCH admin/shows/1/update_debt_settings
+  def update_debt_settings
     authorize! :create, Admin::MaintenanceDebt
-
-    if @show.maintenance_debt_start.present?
-      @show.create_maintenance_debts
-      helpers.append_to_flash(:success, "Maintenance obligations created.")
-    else
-      helpers.append_to_flash(:error, "Could not create Maintenance obligations because the start date has not been set yet.")
-    end
-
-    redirect_to admin_show_path(@show)
-  end
-
-  # POST admin/shows/1/create_staffing_debts
-  def create_staffing_debts
     authorize! :create, Admin::StaffingDebt
 
-    number_of_slots = params[:create_show_staffing_debts].try(:[], :number_of_slots)
+    unless @show.end_date > helpers.start_of_year
+      helpers.append_to_flash(:error, "Debt settings can only be configured for shows in the current academic year or later.")
+      redirect_to admin_show_path(@show)
+      return
+    end
 
-    if number_of_slots.nil?
-      helpers.append_to_flash(:error, "You have to specify the amount of Staffing slots you want to create.")
-    elsif @show.staffing_debt_start.present?
-      amount = number_of_slots.first.to_i
-      @show.create_staffing_debts(amount)
-      helpers.append_to_flash(:success, "#{helpers.pluralize(amount, 'Staffing obligation slot')} created for every team member.")
+    if @show.update(debt_settings_params)
+      result = @show.sync_debts_for_all_users
+      total_created = result[:maintenance] + result[:staffing]
+
+      if total_created > 0
+        helpers.append_to_flash(:success, "Debt settings saved. Created #{helpers.pluralize(result[:maintenance], 'maintenance debt')} and #{helpers.pluralize(result[:staffing], 'staffing debt')}.")
+      else
+        helpers.append_to_flash(:success, "Debt settings saved.")
+      end
     else
-      helpers.append_to_flash(:error, "Could not create Staffing obligations because the start date has not been set yet.")
+      helpers.append_to_flash(:error, "Could not save debt settings: #{@show.errors.full_messages.to_sentence}")
     end
 
     redirect_to admin_show_path(@show)
@@ -173,7 +147,15 @@ class Admin::ShowsController < Admin::GenericEventsController
 
   def permitted_params
     super + [
-      :maintenance_debt_start, :staffing_debt_start
+      :maintenance_debt_start, :staffing_debt_start,
+      :maintenance_debt_amount, :staffing_debt_amount
     ]
+  end
+
+  def debt_settings_params
+    params.require(:show).permit(
+      :maintenance_debt_amount, :maintenance_debt_start,
+      :staffing_debt_amount, :staffing_debt_start
+    )
   end
 end

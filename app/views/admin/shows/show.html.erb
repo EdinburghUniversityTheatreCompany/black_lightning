@@ -24,56 +24,54 @@
   reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @show.reviews) }
 } %>
 
-<% # Only show the Debt stuff if the show happens this year or later. %>
-<% if @show.end_date >= start_of_year %>
-    <% if can? :create, Admin::MaintenanceDebt %>
-        <% content_for :maintenance_debt do %>
-            <%= simple_horizontal_form_for [:admin, @show] do |f| %>
-                <%= f.input :maintenance_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
-                <%= f.button :submit, value: 'Set Maintenance Due Date', class: 'btn btn-secondary' %>
-            <% end %>
+<% # Only show the Debt stuff if the show is in the current academic year. %>
+<% if @show.end_date > start_of_year && (can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)) %>
+    <% content_for :debt_settings do %>
+        <p>
+            Configure the number of debts to assign to team members. Once configured, debts will be
+            automatically created when team members are added to the show. Saving these settings will
+            also sync debts for all existing team members.
+        </p>
+        <p>
+            <strong>Position rules:</strong> Assistants (all roles must be assistant) get max 1 staffing debt.
+            Welfare contacts (if their only role) get 0 staffing debts.
+        </p>
 
-            <% if @show.maintenance_debt_start.present? %>
-                <% existing_maintenance_debt = Admin::MaintenanceDebt.where(show: @show).first %>
-                <% has_maintenance_debt = existing_maintenance_debt.present? %>
+        <%= simple_horizontal_form_for @show, url: update_debt_settings_admin_show_path(@show), method: :patch do |f| %>
+            <%= f.error_notification %>
 
-                <%= get_link @show, :create_maintenance_debts, link_text: 'Create Maintenance Obligations', http_method: :post, html_class: "btn btn-primary",
-                            confirm: ('Creating Maintenance Obligations' if has_maintenance_debt),
-                            detail: ("This show already had its Maintenance obligations set for #{l existing_maintenance_debt.due_by, format: :longy}. Adding Maintenance Debts again will result in users on the show without Maintenance Debt getting a Maintenance Debt. Users that already have a Maintenance Debt will have the due_by date updated to #{l @show.maintenance_debt_start, format: :longy}." if has_maintenance_debt) 
-                %>
-            <% end %>
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Maintenance Debts</h5>
+                    <%= f.input :maintenance_debt_amount, label: 'Amount per person', as: :integer, min: 0, max: 5,
+                                hint: 'Leave blank or set to 0 to disable auto-creation' %>
+                    <%= f.input :maintenance_debt_start, as: :date, label: 'Due date',
+                                default: ((@show.end_date || Date.current) + 14) %>
+                </div>
+                <div class="col-md-6">
+                    <h5>Staffing Debts</h5>
+                    <%= f.input :staffing_debt_amount, label: 'Amount per person', as: :integer, min: 0, max: 5,
+                                hint: 'Leave blank or set to 0 to disable auto-creation' %>
+                    <%= f.input :staffing_debt_start, as: :date, label: 'Due date',
+                                default: ((@show.end_date || Date.current) + 14) %>
+                </div>
+            </div>
+
+            <%= f.button :submit, value: 'Save Debt Settings', class: 'btn btn-primary' %>
         <% end %>
 
-        <% extra_fields[:maintenance_debt] = { type: 'content', header: 'Maintenance Debt', content: yield(:maintenance_debt)  } %>
-    <% end %>
-
-    <% if can? :create, Admin::StaffingDebt %>
-        <% content_for :staffing_debt do %>
-            <p>
-                When you add staffing debts, it will top up every team member's staffing debt up to the amount specified.
-                If someone already has one staffing debt and someone else has none and you select 1, now both will have 1 staffing debt.
-                This makes it easy to set staffing debt for the part of the team early on, 
-                and you can easily set it again later on when the rest of the team is added.
+        <% if @show.debt_configuration_active? %>
+            <hr>
+            <p class="text-muted">
+                <strong>Current configuration:</strong>
+                <%= @show.maintenance_debt_amount.present? ? "#{@show.maintenance_debt_amount} maintenance debt(s)" : "No maintenance debts" %>
+                &bull;
+                <%= @show.staffing_debt_amount.present? ? "#{@show.staffing_debt_amount} staffing debt(s)" : "No staffing debts" %>
             </p>
-
-            <%= simple_horizontal_form_for [:admin, @show] do |f| %>
-                <%= f.input :staffing_debt_start, as: :date, default: ((@show.end_date || Date.current()) + 14) %>
-                <%= f.button :submit, value: 'Set Staffing Due Date', class: 'btn btn-secondary' %>
-            <% end %>
-
-            <% if @show.staffing_debt_start.present? %>
-                <%= simple_horizontal_form_for(:create_show_staffing_debts, url: create_staffing_debts_admin_show_path(@show)) do |f| %>
-                    <%= f.error_notification %>
-
-                    <%= f.input :number_of_slots, label: 'Total Amount of Staffing Debts', as: :integer, min: 1, max: 3 %>
-
-                    <%= submit_tag 'Create Staffing Obligations', class: 'btn btn-primary', data: @staffing_confirm_data %>
-                <% end %>
-            <% end %>
         <% end %>
-
-        <% extra_fields[:staffing_debt] = { type: 'content', header: 'Staffing Debt', content: yield(:staffing_debt) }%>
     <% end %>
+
+    <% extra_fields[:debt_settings] = { type: 'content', header: 'Debt Settings', content: yield(:debt_settings) } %>
 <% end %>
 
 <%= render('admin/events/basic_show', event: @show, extra_fields: extra_fields) %>

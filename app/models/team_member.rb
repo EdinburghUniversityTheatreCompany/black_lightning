@@ -33,11 +33,19 @@ class TeamMember < ActiveRecord::Base
 
   default_scope -> { order("position ASC") }
 
+  after_create :sync_debts_if_show
+
   def self.ransackable_attributes(auth_object = nil)
     %w[position user_id teamwork_id teamwork_type]
   end
 
   private
+
+  def sync_debts_if_show
+    return unless teamwork.is_a?(Show)
+
+    teamwork.sync_debts_for_user(user)
+  end
 
   def uniqueness_in_parent_collection
     return unless teamwork && user_id

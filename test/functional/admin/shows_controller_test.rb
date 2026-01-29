@@ -58,12 +58,20 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "should get show with debt dates set" do
-    @show = FactoryBot.create(:show, is_public: true, end_date: start_of_year, staffing_debt_start: Date.current, maintenance_debt_start: Date.current)
+  test "should get show with debt settings section for current academic year show" do
+    @show = FactoryBot.create(:show, is_public: true, end_date: start_of_year.advance(days: 1), start_date: start_of_year)
 
     get :show, params: { id: @show }
     assert_response :success
-    assert_match "Total Amount of Staffing Debts", response.body
+    assert_match "Debt Settings", response.body
+  end
+
+  test "should not show debt settings for old show" do
+    @show = FactoryBot.create(:show, is_public: true, end_date: start_of_year.advance(years: -2), start_date: start_of_year.advance(years: -2))
+
+    get :show, params: { id: @show }
+    assert_response :success
+    assert_no_match "Debt Settings", response.body
   end
 
   test "should get new" do
@@ -231,57 +239,74 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
   end
 
-  test "should create maintenance debts" do
-    @show = FactoryBot.create(:show, maintenance_debt_start: Date.current)
+  test "should update debt settings and create debts" do
+    # Create show with known team members (all Directors, not capped)
+    @show = FactoryBot.create(:show, start_date: start_of_year, end_date: start_of_year.advance(days: 7), team_member_count: 0)
+    3.times do
+      user = FactoryBot.create(:user)
+      FactoryBot.create(:team_member, teamwork: @show, user: user, position: "Director")
+    end
+
+    debt_params = {
+      maintenance_debt_amount: 1,
+      maintenance_debt_start: Date.current.advance(days: 14),
+      staffing_debt_amount: 2,
+      staffing_debt_start: Date.current.advance(days: 14)
+    }
 
     assert_difference "Admin::MaintenanceDebt.count", @show.team_members.count do
-      post :create_maintenance_debts, params: { id: @show.slug }
+      assert_difference "Admin::StaffingDebt.count", @show.team_members.count * 2 do
+        patch :update_debt_settings, params: { id: @show.slug, show: debt_params }
+      end
     end
 
     assert_redirected_to admin_show_path(@show)
-    assert_equal [ "Maintenance obligations created." ], flash[:success]
+    assert flash[:success].first.include?("Debt settings saved")
   end
 
-  # The authorize is not tested because that's a bit annoying, but make sure
-  # that you check that the user can actually create maintenance debts!
-  test "should not create maintenance debts when the maintenance debt start is not set" do
-    @show = FactoryBot.create(:show, maintenance_debt_start: nil)
+  test "should update debt settings without creating duplicate debts" do
+    @show = FactoryBot.create(:show, start_date: start_of_year, end_date: start_of_year.advance(days: 7))
 
-    post :create_maintenance_debts, params: { id: @show.slug }
+    debt_params = {
+      maintenance_debt_amount: 1,
+      maintenance_debt_start: Date.current.advance(days: 14),
+      staffing_debt_amount: 1,
+      staffing_debt_start: Date.current.advance(days: 14)
+    }
 
+    # First save creates debts
+    patch :update_debt_settings, params: { id: @show.slug, show: debt_params }
     assert_redirected_to admin_show_path(@show)
-    assert_equal [ "Could not create Maintenance obligations because the start date has not been set yet." ], flash[:error]
-  end
 
-  test "should create staffing debts" do
-    @show = FactoryBot.create(:show, staffing_debt_start: Date.current)
-
-    assert_difference "Admin::StaffingDebt.count", @show.team_members.count * 2 do
-      post :create_staffing_debts, params: { id: @show.slug, create_show_staffing_debts: { number_of_slots: 2 } }
+    # Second save should not create more debts
+    assert_no_difference "Admin::MaintenanceDebt.count" do
+      assert_no_difference "Admin::StaffingDebt.count" do
+        patch :update_debt_settings, params: { id: @show.slug, show: debt_params }
+      end
     end
 
     assert_redirected_to admin_show_path(@show)
-    assert_equal [ "2 Staffing obligation slots created for every team member." ], flash[:success]
+    # The last flash message should indicate no new debts were created
+    assert_equal "Debt settings saved.", flash[:success].last
   end
 
-  # The authorize is not tested because that's a bit annoying, but make sure
-  # that you check that the user can actually create staffing debts!
-  test "should not create staffing debts when the amount is not specified" do
-    @show = FactoryBot.create(:show)
+  test "should not update debt settings for show outside academic year" do
+    @show = FactoryBot.create(:show,
+      start_date: start_of_year.advance(years: -2),
+      end_date: start_of_year.advance(years: -2)
+    )
 
-    post :create_staffing_debts, params: { id: @show.slug }
+    debt_params = {
+      maintenance_debt_amount: 1,
+      maintenance_debt_start: Date.current.advance(days: 14)
+    }
+
+    assert_no_difference "Admin::MaintenanceDebt.count" do
+      patch :update_debt_settings, params: { id: @show.slug, show: debt_params }
+    end
 
     assert_redirected_to admin_show_path(@show)
-    assert_equal [ "You have to specify the amount of Staffing slots you want to create." ], flash[:error]
-  end
-
-  test "should not create staffing debts when the start date is not specified" do
-    @show = FactoryBot.create(:show, staffing_debt_start: nil)
-
-    post :create_staffing_debts, params: { id: @show.slug, create_show_staffing_debts: { number_of_slots: 2 } }
-
-    assert_redirected_to admin_show_path(@show)
-    assert_equal [ "Could not create Staffing obligations because the start date has not been set yet." ], flash[:error]
+    assert_equal [ "Debt settings can only be configured for shows in the current academic year or later." ], flash[:error]
   end
 
   test "convert to season" do

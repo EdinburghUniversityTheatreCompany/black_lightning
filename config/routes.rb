@@ -101,8 +101,7 @@ ChaosRails::Application.routes.draw do
       end
 
       member do
-        post "create_staffing_debts", to: "shows#create_staffing_debts"
-        post "create_maintenance_debts", to: "shows#create_maintenance_debts"
+        patch "update_debt_settings", to: "shows#update_debt_settings"
         get "xts_report"
         post "convert_to_season", to: "shows#convert_to_season"
         post "convert_to_workshop", to: "shows#convert_to_workshop"
