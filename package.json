@@ -36,5 +36,8 @@
   },
   "browserslist": [
     "defaults"
-  ]
+  ],
+  "devDependencies": {
+    "imports-loader": "^5.0.0"
+  }
 }

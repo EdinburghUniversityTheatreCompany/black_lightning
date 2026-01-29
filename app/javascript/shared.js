@@ -1,9 +1,10 @@
-import jQuery from 'jquery';
-global.$ = global.jQuery = jQuery;
+// Import jQuery setup first - this exposes jQuery globally before other plugins load
+import './src/jquery-global'
 
 import "./sweetalert"
 
-import 'jquery-slimscroll'
+// Use imports-loader to explicitly inject jQuery into slimscroll
+require('imports-loader?imports=default|jquery|jQuery!jquery-slimscroll')
 
 import './src/shared/konami_code'
 import './src/shared/md_editor'
