@@ -7,6 +7,7 @@
     <% email_hint = 'Creating an user will send them a welcome email, unless the email ends in @bedlamtheatre.co.uk' if @user.new_record? %>
     <%= f.input :email, hint: email_hint %>
     <%= f.input :student_id, hint: 'Format: s1234567 (auto-extracted from @ed.ac.uk emails, or enter manually)' %>
+    <%= f.input :associate_id, hint: 'Format: ASSOC123456 (for non-student members)' %>
     <%= f.input :first_name %>
     <%= f.input :last_name %>
     <%= f.input :phone_number %>

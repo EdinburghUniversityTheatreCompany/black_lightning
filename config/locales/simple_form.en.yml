@@ -1,10 +1,10 @@
 en:
   simple_form:
-    "yes": 'Yes'
-    "no": 'No'
+    "yes": "Yes"
+    "no": "No"
     required:
-      text: 'required'
-      mark: '*'
+      text: "required"
+      mark: "*"
       # You can uncomment the line below if you need to overwrite the whole required html.
       # When using html, text and mark won't be used.
       # html: '<abbr title="required">*</abbr>'
@@ -13,84 +13,87 @@ en:
 
     labels:
       defaults:
-        about: 'About'
-        address: 'Address'
-        approved: 'Approved'
-        attachment_tags: 'Attachment Tags'
-        author: 'Author'
-        bio: 'Bio'
-        body: 'Body'
-        active: 'Is Active'
-        code: 'Code'
-        comments: 'Comments'
-        content: 'Content'
-        created_at: 'Created At'
-        creator: 'Creator'
-        creator_full_name: 'Creator Full Name'
-        date: 'Date'
-        description: 'Description'
-        draft: 'Draft'
-        debt: 'Debt'
-        due_by: 'Due By'
-        editing_deadline: 'Editing Deadline'
-        end_date: 'End Date'
-        email: 'Email'
-        entry_year: 'Entry Year'
-        event: 'Event'
-        event_name: 'Event Name'
-        event_tags: 'Event Tags'
-        expiry_date: 'Expiry Date'
-        filename: 'File Name'
-        file_name: 'File Name'
-        gallery: 'Gallery'
-        group: 'Group'
-        hint: 'Hint'
-        item: 'Item'
-        job: 'Job'
-        maintenance_debts: 'Maintenance Debts'
-        members_only_text: 'Members-Only Text'
-        name: 'Name'
-        notes: 'Notes'
-        notification_type: 'Notification Type'
-        ordering: 'Ordering'
-        organisation: 'Organisation'
-        picture_tags: 'Picture Tags'
-        proposal_text: 'Proposal Text'
-        proposal_title: 'Proposal Title'
-        publicity_text: 'Publicity Text'
-        publish_date: 'Publish Date'
-        publish_date_gteq: 'Published After'
-        publish_date_lteq: 'Published Before'
-        random_button: 'Random'
-        rating: 'Rating'
-        reported_by: 'Reported By'
-        reviewer: 'Reviewer'
-        send_date: 'Send Date'
-        sent_on: 'Sent On'
-        severity: 'Severity'
-        show: 'Show'
-        show_fulfilled: 'Show Fulfilled'
-        show_in_debt_only: 'Show In Debt Only'
-        show_name: 'Show Name'
-        show_non_members: 'Show Non Members'
-        show_private_only: 'Show Private Only'
-        show_public: 'Show Public'
-        show_title: 'Show Title'
-        staffing_debts: 'Staffing Debts'
-        start_date: 'Start Date'
-        status: 'Status'
-        subject: 'Subject'
-        submission_deadline: 'Submission Deadline'
-        tagline: 'Tagline'
-        title: 'Title'
-        unassociated_staffing_slots: 'Unassociated Staffing Slots'
-        unassociated_maintenance_attendances: 'Unassociated Maintenance Attendances'
-        updated_at: 'Updated At'
-        url: 'URL'
-        user: 'User'
-        user_full_name: 'User Name'
-        venue: 'Venue'
-     
+        about: "About"
+        address: "Address"
+        approved: "Approved"
+        attachment_tags: "Attachment Tags"
+        author: "Author"
+        bio: "Bio"
+        body: "Body"
+        active: "Is Active"
+        code: "Code"
+        comments: "Comments"
+        content: "Content"
+        created_at: "Created At"
+        creator: "Creator"
+        creator_full_name: "Creator Full Name"
+        date: "Date"
+        description: "Description"
+        draft: "Draft"
+        debt: "Debt"
+        due_by: "Due By"
+        editing_deadline: "Editing Deadline"
+        end_date: "End Date"
+        email: "Email"
+        entry_year: "Entry Year"
+        event: "Event"
+        event_name: "Event Name"
+        event_tags: "Event Tags"
+        expiry_date: "Expiry Date"
+        filename: "File Name"
+        file_name: "File Name"
+        gallery: "Gallery"
+        group: "Group"
+        hint: "Hint"
+        item: "Item"
+        job: "Job"
+        maintenance_debts: "Maintenance Debts"
+        members_only_text: "Members-Only Text"
+        name: "Name"
+        notes: "Notes"
+        notification_type: "Notification Type"
+        ordering: "Ordering"
+        organisation: "Organisation"
+        picture_tags: "Picture Tags"
+        proposal_text: "Proposal Text"
+        proposal_title: "Proposal Title"
+        publicity_text: "Publicity Text"
+        publish_date: "Publish Date"
+        publish_date_gteq: "Published After"
+        publish_date_lteq: "Published Before"
+        random_button: "Random"
+        rating: "Rating"
+        reported_by: "Reported By"
+        reviewer: "Reviewer"
+        send_date: "Send Date"
+        sent_on: "Sent On"
+        severity: "Severity"
+        show: "Show"
+        show_fulfilled: "Show Fulfilled"
+        show_in_debt_only: "Show In Debt Only"
+        show_name: "Show Name"
+        show_non_members: "Show Non Members"
+        show_private_only: "Show Private Only"
+        show_public: "Show Public"
+        show_title: "Show Title"
+        staffing_debts: "Staffing Debts"
+        start_date: "Start Date"
+        status: "Status"
+        student_id: "Student ID"
+        associate_id: "Associate Member ID"
+        member_id: "Student/Associate Member ID"
+        subject: "Subject"
+        submission_deadline: "Submission Deadline"
+        tagline: "Tagline"
+        title: "Title"
+        unassociated_staffing_slots: "Unassociated Staffing Slots"
+        unassociated_maintenance_attendances: "Unassociated Maintenance Attendances"
+        updated_at: "Updated At"
+        url: "URL"
+        user: "User"
+        user_full_name: "User Name"
+        venue: "Venue"
+
     # Examples
     # labels:
     #   defaults:
