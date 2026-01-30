@@ -1,0 +1,66 @@
+<%= render('shared/quick_actions_card') do %>
+  <%= get_link(User, :index, link_text: "Back to Users") %>
+<% end %>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Option 1: Paste Data</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: preview_admin_membership_imports_path, method: :post, local: true do |f| %>
+          <p class="text-muted">Paste tab-separated data from Excel/spreadsheet. Expected columns:</p>
+          <span class="font-monospace d-block mb-3">Student ID | Name | Date Purchased | Member Type | Purchaser Email</span>
+
+          <%= f.text_area :paste_data, rows: 15, class: "form-control font-monospace",
+              placeholder: "Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email\ns9988776\tFinbar the Viking\t14/01/1980 14:25\tStudent\tfinbar@viking.se" %>
+
+          <div class="mt-3">
+            <%= f.submit "Preview Import", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Option 2: Upload XLSX</h5>
+      </div>
+      <div class="card-body">
+        <%= form_with url: preview_admin_membership_imports_path, method: :post, local: true, multipart: true do |f| %>
+          <p class="text-muted">Upload an Excel file (.xlsx) with the same column structure.</p>
+
+          <div class="mb-3">
+            <%= f.file_field :xlsx_file, accept: ".xlsx", class: "form-control" %>
+          </div>
+
+          <div class="mt-3">
+            <%= f.submit "Preview Import", class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-4">
+  <div class="card-header">
+    <h5 class="mb-0">How It Works</h5>
+  </div>
+  <div class="card-body">
+    <p>The import process matches each row against existing users in the following order:</p>
+    <ol>
+      <li><strong>Student/Associate ID match:</strong> If a user with the same ID exists, they will be activated</li>
+      <li><strong>Email match:</strong> If a user with the same email exists, they will be activated</li>
+      <li><strong>Name match:</strong> If a user with the same last name and similar first name exists, you'll be asked to confirm</li>
+      <li><strong>No match:</strong> A new user account will be created</li>
+    </ol>
+    <p class="mb-0 text-muted">
+      <strong>Note:</strong> Users with placeholder emails (unknown_*@bedlamtheatre.co.uk) will have their email updated if the import provides one.
+      Missing student/associate IDs will also be filled in automatically.
+    </p>
+  </div>
+</div>
