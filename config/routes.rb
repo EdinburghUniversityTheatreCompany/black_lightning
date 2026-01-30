@@ -178,6 +178,13 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    resources :membership_imports, only: [ :new ] do
+      collection do
+        post :preview
+        post :confirm
+      end
+    end
+
     # resources :membership_cards, only: [:index, :show, :create, :destroy] do
     #   get 'generate_card'
     # end

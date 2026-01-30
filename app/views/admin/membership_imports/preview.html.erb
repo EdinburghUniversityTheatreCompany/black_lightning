@@ -1,0 +1,235 @@
+<%= render('shared/quick_actions_card') do %>
+  <%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
+<% end %>
+
+<% total = @import.rows.size %>
+<div class="alert alert-info">
+  <strong>Found <%= total %> row(s) to process.</strong>
+  Review the categorization below and adjust decisions as needed.
+</div>
+
+<%= form_with url: confirm_admin_membership_imports_path, method: :post, local: true do |f| %>
+  <%# Bucket 3: Activate by Email %>
+  <% if @import.categorized[:activate_by_email].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white">
+        <strong>Activate by Email Match</strong>
+        <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:activate_by_email].size %></span>
+        <small class="float-end">Will be activated automatically</small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Import Name</th>
+              <th>Existing User</th>
+              <th>Email Match</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @import.categorized[:activate_by_email].each do |item| %>
+              <tr>
+                <td>
+                  <%= item[:row][:original_name] %>
+                  <% if item[:row][:student_id] || item[:row][:associate_id] %>
+                    <br><small class="text-muted">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %> (will be added)</small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
+                  <% if item[:existing_user].student_id.blank? && item[:row][:student_id].present? %>
+                    <br><small class="text-success">+ will add student ID</small>
+                  <% end %>
+                </td>
+                <td><span class="font-monospace"><%= item[:row][:email] %></span></td>
+                <td>
+                  <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
+                  <span class="badge bg-info">Will Activate</span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Bucket 4: Propose Merge - secretary decides %>
+  <% if @import.categorized[:propose_merge].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-warning">
+        <strong>Possible Matches (Review Required)</strong>
+        <span class="badge bg-dark ms-2"><%= @import.categorized[:propose_merge].size %></span>
+        <small class="float-end">Please decide for each row</small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Import Data</th>
+              <th>Possible Match</th>
+              <th style="width: 200px;">Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @import.categorized[:propose_merge].each do |item| %>
+              <tr>
+                <td>
+                  <strong><%= item[:row][:original_name] %></strong><br>
+                  <small class="text-muted"><%= item[:row][:email] %></small>
+                  <% if item[:row][:student_id] || item[:row][:associate_id] %>
+                    <br><small class="text-muted">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %></small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
+                  <small class="text-muted"><%= item[:existing_user].email %></small>
+                  <% if item[:existing_user].student_id.present? %>
+                    <br><small class="text-muted">ID: <%= item[:existing_user].student_id %></small>
+                  <% end %>
+                </td>
+                <td>
+                  <select name="actions[<%= item[:index] %>]" class="form-select form-select-sm">
+                    <option value="merge">Merge & Activate (same person)</option>
+                    <option value="create">Create New (different person)</option>
+                    <option value="skip">Skip</option>
+                  </select>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Bucket 5: Create New %>
+  <% if @import.categorized[:create_new].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-primary text-white">
+        <strong>New Users to Create</strong>
+        <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:create_new].size %></span>
+        <small class="float-end">Will create and activate</small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>ID</th>
+              <th style="width: 150px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @import.categorized[:create_new].each do |item| %>
+              <tr>
+                <td><%= item[:row][:original_name] %></td>
+                <td>
+                  <% if item[:row][:email].present? %>
+                    <span class="font-monospace"><%= item[:row][:email] %></span>
+                  <% else %>
+                    <em class="text-muted">(will generate placeholder)</em>
+                  <% end %>
+                </td>
+                <td>
+                  <% if item[:row][:student_id] || item[:row][:associate_id] %>
+                    <span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span>
+                  <% else %>
+                    <em class="text-muted">-</em>
+                  <% end %>
+                </td>
+                <td>
+                  <select name="actions[<%= item[:index] %>]" class="form-select form-select-sm">
+                    <option value="create">Create & Activate</option>
+                    <option value="skip">Skip</option>
+                  </select>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+    <%# Bucket 1: Already Active - just show, no action needed %>
+  <% if @import.categorized[:already_active].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-secondary text-white">
+        <strong>Already Active Members</strong>
+        <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:already_active].size %></span>
+        <small class="float-end">No action needed</small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Import Name</th>
+              <th>Existing User</th>
+              <th>ID</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @import.categorized[:already_active].each do |item| %>
+              <tr class="table-secondary">
+                <td><%= item[:row][:original_name] %></td>
+                <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
+                <td><span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] || item[:row][:email] %></span></td>
+                <td><span class="badge bg-success">Already Member</span></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Bucket 2: Activate by ID - auto-activate %>
+  <% if @import.categorized[:activate_by_id].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white">
+        <strong>Activate by Student/Associate ID</strong>
+        <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:activate_by_id].size %></span>
+        <small class="float-end">Will be activated automatically</small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Import Name</th>
+              <th>Existing User</th>
+              <th>ID Match</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @import.categorized[:activate_by_id].each do |item| %>
+              <tr>
+                <td><%= item[:row][:original_name] %></td>
+                <td>
+                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
+                  <br><small class="text-muted"><%= item[:existing_user].email %></small>
+                </td>
+                <td><span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span></td>
+                <td>
+                  <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
+                  <span class="badge bg-info">Will Activate</span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="card">
+    <div class="card-footer d-flex justify-content-between">
+      <%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
+      <%= f.submit "Confirm Import", class: "btn btn-success" %>
+    </div>
+  </div>
+<% end %>

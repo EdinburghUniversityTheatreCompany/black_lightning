@@ -4,7 +4,7 @@
             <%= f.error_notification %>
 
             <p>Enter the details of a new member here to send them an activation email.</p>
-            
+
             <%= f.input :email %>
             <%= f.input :first_name, required: true %>
             <%= f.input :last_name, required: true %>
@@ -22,4 +22,12 @@
             <%= f.button :submit, "Send Re-activation", class: 'btn btn-primary' %>
         <% end %>
     </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-body">
+    <h5>Bulk Import</h5>
+    <p>Need to activate many members at once? Import from a spreadsheet or paste data directly.</p>
+    <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: "btn btn-primary" %>
+  </div>
 </div>
