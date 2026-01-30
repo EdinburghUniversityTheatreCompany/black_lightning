@@ -1,5 +1,5 @@
 <%= render('shared/quick_actions_card') do %>
-  <%= link_to "Back to Users", admin_users_path, class: "btn btn-secondary" %>
+  <%= get_link(User, :index, link_text: "Back to Users") %>
 <% end %>
 
 <%
