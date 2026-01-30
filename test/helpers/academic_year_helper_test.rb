@@ -54,4 +54,23 @@ class AcademicYearHelperTest < ActionView::TestCase
 
     assert_equal "23/24", academic_year_shorthand
   end
+
+  # date_to_academic_year tests
+  test "date_to_academic_year returns correct year for September onwards" do
+    assert_equal 2023, date_to_academic_year(Date.new(2023, 9, 1))
+    assert_equal 2023, date_to_academic_year(Date.new(2023, 10, 15))
+    assert_equal 2023, date_to_academic_year(Date.new(2023, 12, 25))
+  end
+
+  test "date_to_academic_year returns previous year for before September" do
+    assert_equal 2022, date_to_academic_year(Date.new(2023, 1, 1))
+    assert_equal 2022, date_to_academic_year(Date.new(2023, 8, 31))
+  end
+
+  # format_academic_year tests
+  test "format_academic_year formats year correctly" do
+    assert_equal "23/24", format_academic_year(2023)
+    assert_equal "99/00", format_academic_year(1999)
+    assert_equal "09/10", format_academic_year(2009)
+  end
 end

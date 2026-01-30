@@ -37,8 +37,21 @@ module AcademicYearHelper
     next_year_start
   end
 
-  # Returns the 2x/2y short0hand for the current year.
+  # Returns the 2x/2y shorthand for the current year.
   def academic_year_shorthand
     "#{start_of_year.strftime("%y")}/#{next_year_start.strftime("%y")}"
+  end
+
+  # Converts a date to its academic year start year.
+  # E.g., October 2023 -> 2023 (part of 2023/24 academic year)
+  #       August 2023 -> 2022 (part of 2022/23 academic year)
+  def date_to_academic_year(date)
+    date.month >= 9 ? date.year : date.year - 1
+  end
+
+  # Formats an academic year start year as a shorthand string.
+  # E.g., 2023 -> "23/24"
+  def format_academic_year(start_year)
+    "#{start_year.to_s[-2..]}/#{(start_year + 1).to_s[-2..]}"
   end
 end
