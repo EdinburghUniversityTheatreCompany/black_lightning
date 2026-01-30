@@ -168,7 +168,7 @@ class Event < ApplicationRecord
 
   # Returns the name and author in one string, or just the name if no author is specified.
   def name_and_author
-    if author.present?
+    if author.present? && author.upcase.strip != "NEVER SET"
       "\"#{name}\"#{" by #{author}"}"
     else
       name
