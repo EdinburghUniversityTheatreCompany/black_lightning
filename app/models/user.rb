@@ -517,6 +517,97 @@ class User < ApplicationRecord
     { success: false, errors: [ e.message ] }
   end
 
+  ##
+  # Duplicate Detection
+  ##
+
+  # Returns the academic years the user was active based on their event participation.
+  # Academic years run from September to August, so 2024-09-01 to 2025-08-31 is "2024/25".
+  # Returns an array of starting years, e.g. [2022, 2023, 2024] for someone active in 22/23, 23/24, 24/25.
+  def years_active
+    event_dates = team_membership.where(teamwork_type: "Event")
+                                 .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
+                                 .pluck("events.start_date", "events.end_date")
+    return [] if event_dates.empty?
+
+    academic_years = Set.new
+    event_dates.each do |start_date, end_date|
+      next unless start_date && end_date
+      # Convert dates to academic years (Sept-Aug) using the helper
+      academic_years << ApplicationController.helpers.date_to_academic_year(start_date)
+      academic_years << ApplicationController.helpers.date_to_academic_year(end_date)
+    end
+    academic_years.to_a.sort
+  end
+
+  # Check if this user's years of activity overlap with another user's
+  # within the given threshold (default 4 years gap allowed).
+  # Returns true if they overlap or if either has no activity data.
+  def years_overlap?(other_user, threshold: 4)
+    my_years = years_active
+    their_years = other_user.years_active
+    return true if my_years.empty? || their_years.empty? # No data = assume possible match
+
+    # Check if any year is within threshold of each other
+    my_years.any? { |y| their_years.any? { |ty| (y - ty).abs <= threshold } }
+  end
+
+  # Mark another user as not a duplicate of this user
+  def mark_not_duplicate(other_user)
+    ids = not_duplicate_user_ids || []
+    ids << other_user.id unless ids.include?(other_user.id)
+    update!(not_duplicate_user_ids: ids)
+  end
+
+  # Check if this user has been marked as not a duplicate of another user (in either direction)
+  def marked_not_duplicate?(other_user)
+    (not_duplicate_user_ids || []).include?(other_user.id) ||
+      (other_user.not_duplicate_user_ids || []).include?(id)
+  end
+
+  # Fuzzy first name matching using StringSimilarity module
+  def self.fuzzy_first_name_match?(name1, name2, threshold: 0.6)
+    StringSimilarity.fuzzy_name_match?(name1, name2, threshold: threshold)
+  end
+
+  # Find all potential duplicate user pairs
+  # Returns a hash with three buckets:
+  #   - same_id: Users with same student_id or associate_id (definite duplicates)
+  #   - fuzzy_name_overlapping: Last name exact + first name fuzzy + years overlap
+  #   - fuzzy_name_non_overlapping: Last name exact + first name fuzzy + years don't overlap
+  def self.find_potential_duplicates
+    duplicates = { same_id: [], fuzzy_name_overlapping: [], fuzzy_name_non_overlapping: [] }
+
+    # Use unscoped to avoid default ORDER BY conflicting with GROUP BY in MySQL
+    # Bucket 1: Same student_id (definite duplicates regardless of years)
+    unscoped.where.not(student_id: [ nil, "" ]).group(:student_id).having("COUNT(*) > 1").pluck(:student_id).each do |sid|
+      users = where(student_id: sid).to_a
+      duplicates[:same_id] << { users: users, match_type: :student_id, id_value: sid }
+    end
+
+    # Bucket 1b: Same associate_id (definite duplicates regardless of years)
+    unscoped.where.not(associate_id: [ nil, "" ]).group(:associate_id).having("COUNT(*) > 1").pluck(:associate_id).each do |aid|
+      users = where(associate_id: aid).to_a
+      duplicates[:same_id] << { users: users, match_type: :associate_id, id_value: aid }
+    end
+
+    # Bucket 2 & 3: Same last name with fuzzy first name match
+    unscoped.where.not(last_name: [ nil, "" ]).group(:last_name).having("COUNT(*) > 1").pluck(:last_name).each do |ln|
+      users = where(last_name: ln).to_a
+      users.combination(2).each do |u1, u2|
+        next if u1.marked_not_duplicate?(u2)
+        next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)
+
+        if u1.years_overlap?(u2)
+          duplicates[:fuzzy_name_overlapping] << { users: [ u1, u2 ], years_overlap: true }
+        else
+          duplicates[:fuzzy_name_non_overlapping] << { users: [ u1, u2 ], years_overlap: false }
+        end
+      end
+    end
+
+    duplicates
+  end
 
   ##
   # Roles
