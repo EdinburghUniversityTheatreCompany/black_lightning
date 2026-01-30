@@ -1,0 +1,157 @@
+<%= render('shared/quick_actions_card') do %>
+  <%= link_to "Back to Users", admin_users_path, class: "btn btn-secondary" %>
+<% end %>
+
+<% total_count = @duplicates[:same_id].size + @duplicates[:fuzzy_name_overlapping].size + @duplicates[:fuzzy_name_non_overlapping].size %>
+
+<% if total_count == 0 %>
+  <div class="alert alert-success">
+    <strong>No potential duplicates found!</strong> All users appear to be unique.
+  </div>
+<% else %>
+
+  <%# Bucket 1: Same ID (Definite Duplicates) %>
+  <% if @duplicates[:same_id].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-danger text-white">
+        <strong>Definite Duplicates (Same Student/Associate ID)</strong> - <%= @duplicates[:same_id].size %> group(s)
+      </div>
+      <div class="card-body">
+        <p class="text-muted">These users share the same student or associate ID. They are almost certainly duplicates and should be merged.</p>
+        <table class="table table-sm table-hover">
+          <thead>
+            <tr>
+              <th>Match Type</th>
+              <th>ID Value</th>
+              <th>Users</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @duplicates[:same_id].each do |dup| %>
+              <tr>
+                <td><span class="badge bg-danger"><%= dup[:match_type].to_s.titleize %></span></td>
+                <td><code><%= dup[:id_value] %></code></td>
+                <td>
+                  <% dup[:users].each do |user| %>
+                    <%= link_to user.name_or_email, admin_user_path(user) %>
+                    <small class="text-muted">(<%= user.email %>)</small>
+                    <% if user.years_active.any? %>
+                      <small class="text-muted">- Active: <%= user.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <% end %>
+                    <br>
+                  <% end %>
+                </td>
+                <td>
+                  <% target = dup[:users].first %>
+                  <%= link_to "Merge", merge_admin_user_path(target), class: "btn btn-sm btn-warning" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Bucket 2: Fuzzy Name Match with Overlapping Years %>
+  <% if @duplicates[:fuzzy_name_overlapping].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-warning">
+        <strong>Likely Duplicates (Name Match + Overlapping Activity)</strong> - <%= @duplicates[:fuzzy_name_overlapping].size %> pair(s)
+      </div>
+      <div class="card-body">
+        <p class="text-muted">These users have matching last names, similar first names, and were active during overlapping time periods. They are likely the same person.</p>
+        <table class="table table-sm table-hover">
+          <thead>
+            <tr>
+              <th>User 1</th>
+              <th>User 2</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @duplicates[:fuzzy_name_overlapping].each do |dup| %>
+              <% u1, u2 = dup[:users] %>
+              <tr>
+                <td>
+                  <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
+                  <small class="text-muted"><%= u1.email %></small><br>
+                  <% if u1.years_active.any? %>
+                    <small class="text-muted">Active: <%= u1.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% else %>
+                    <small class="text-muted">No activity recorded</small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
+                  <small class="text-muted"><%= u2.email %></small><br>
+                  <% if u2.years_active.any? %>
+                    <small class="text-muted">Active: <%= u2.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% else %>
+                    <small class="text-muted">No activity recorded</small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to "Merge", merge_admin_user_path(u1), class: "btn btn-sm btn-warning" %>
+                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Bucket 3: Fuzzy Name Match without Overlapping Years %>
+  <% if @duplicates[:fuzzy_name_non_overlapping].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-info text-white">
+        <strong>Possible Duplicates (Name Match, Different Time Periods)</strong> - <%= @duplicates[:fuzzy_name_non_overlapping].size %> pair(s)
+      </div>
+      <div class="card-body">
+        <p class="text-muted">These users have matching names but were active in different time periods (more than 4 years apart). They are less likely to be the same person, but you may want to review them.</p>
+        <table class="table table-sm table-hover">
+          <thead>
+            <tr>
+              <th>User 1</th>
+              <th>User 2</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @duplicates[:fuzzy_name_non_overlapping].each do |dup| %>
+              <% u1, u2 = dup[:users] %>
+              <tr>
+                <td>
+                  <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
+                  <small class="text-muted"><%= u1.email %></small><br>
+                  <% if u1.years_active.any? %>
+                    <small class="text-muted">Active: <%= u1.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% else %>
+                    <small class="text-muted">No activity recorded</small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
+                  <small class="text-muted"><%= u2.email %></small><br>
+                  <% if u2.years_active.any? %>
+                    <small class="text-muted">Active: <%= u2.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% else %>
+                    <small class="text-muted">No activity recorded</small>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to "Merge", merge_admin_user_path(u1), class: "btn btn-sm btn-warning" %>
+                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+<% end %>
