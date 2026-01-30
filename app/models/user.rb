@@ -628,13 +628,38 @@ class User < ApplicationRecord
   # Check if this user's years of activity overlap with another user's
   # within the given threshold (default 4 years gap allowed).
   # Returns true if they overlap or if either has no activity data.
-  def years_overlap?(other_user, threshold: 4)
-    my_years = years_active
-    their_years = other_user.years_active
+  # Optionally accepts a years_active_cache hash to avoid repeated DB queries.
+  def years_overlap?(other_user, threshold: 4, years_active_cache: nil)
+    my_years = years_active_cache ? years_active_cache[id] : years_active
+    their_years = years_active_cache ? years_active_cache[other_user.id] : other_user.years_active
+    my_years ||= []
+    their_years ||= []
     return true if my_years.empty? || their_years.empty? # No data = assume possible match
 
     # Check if any year is within threshold of each other
     my_years.any? { |y| their_years.any? { |ty| (y - ty).abs <= threshold } }
+  end
+
+  # Bulk load years_active for multiple users in ONE query.
+  # Returns a hash: { user_id => [year1, year2, ...], ... }
+  def self.bulk_years_active_for(user_ids)
+    return {} if user_ids.empty?
+
+    # Single query to get all event dates for all users
+    event_data = TeamMember.where(user_id: user_ids, teamwork_type: "Event")
+                           .joins("INNER JOIN events ON events.id = team_members.teamwork_id")
+                           .pluck(:user_id, "events.start_date", "events.end_date")
+
+    # Group by user_id and compute academic years
+    result = Hash.new { |h, k| h[k] = Set.new }
+    event_data.each do |user_id, start_date, end_date|
+      next unless start_date && end_date
+      result[user_id] << ApplicationController.helpers.date_to_academic_year(start_date)
+      result[user_id] << ApplicationController.helpers.date_to_academic_year(end_date)
+    end
+
+    # Convert Sets to sorted Arrays
+    result.transform_values { |years| years.to_a.sort }
   end
 
   # Mark another user as not a duplicate of this user
@@ -660,33 +685,65 @@ class User < ApplicationRecord
   #   - same_id: Users with same student_id or associate_id (definite duplicates)
   #   - fuzzy_name_overlapping: Last name exact + first name fuzzy + years overlap
   #   - fuzzy_name_non_overlapping: Last name exact + first name fuzzy + years don't overlap
+  #
+  # Performance optimized: Uses batch loading to minimize database queries.
+  # Also returns years_active_cache for use in views to avoid re-querying.
   def self.find_potential_duplicates
     duplicates = { same_id: [], fuzzy_name_overlapping: [], fuzzy_name_non_overlapping: [] }
 
     # Use unscoped to avoid default ORDER BY conflicting with GROUP BY in MySQL
     # Bucket 1: Same student_id (definite duplicates regardless of years)
-    unscoped.where.not(student_id: [ nil, "" ]).group(:student_id).having("COUNT(*) > 1").pluck(:student_id).each do |sid|
-      users = where(student_id: sid).to_a
-      duplicates[:same_id] << { users: users, match_type: :student_id, id_value: sid }
+    duplicate_student_ids = unscoped.where.not(student_id: [ nil, "" ])
+                                    .group(:student_id)
+                                    .having("COUNT(*) > 1")
+                                    .pluck(:student_id)
+    if duplicate_student_ids.any?
+      users_by_student_id = where(student_id: duplicate_student_ids).group_by(&:student_id)
+      duplicate_student_ids.each do |sid|
+        duplicates[:same_id] << { users: users_by_student_id[sid], match_type: :student_id, id_value: sid }
+      end
     end
 
     # Bucket 1b: Same associate_id (definite duplicates regardless of years)
-    unscoped.where.not(associate_id: [ nil, "" ]).group(:associate_id).having("COUNT(*) > 1").pluck(:associate_id).each do |aid|
-      users = where(associate_id: aid).to_a
-      duplicates[:same_id] << { users: users, match_type: :associate_id, id_value: aid }
+    duplicate_associate_ids = unscoped.where.not(associate_id: [ nil, "" ])
+                                      .group(:associate_id)
+                                      .having("COUNT(*) > 1")
+                                      .pluck(:associate_id)
+    if duplicate_associate_ids.any?
+      users_by_associate_id = where(associate_id: duplicate_associate_ids).group_by(&:associate_id)
+      duplicate_associate_ids.each do |aid|
+        duplicates[:same_id] << { users: users_by_associate_id[aid], match_type: :associate_id, id_value: aid }
+      end
     end
 
     # Bucket 2 & 3: Same last name with fuzzy first name match
-    unscoped.where.not(last_name: [ nil, "" ]).group(:last_name).having("COUNT(*) > 1").pluck(:last_name).each do |ln|
-      users = where(last_name: ln).to_a
-      users.combination(2).each do |u1, u2|
-        next if u1.marked_not_duplicate?(u2)
-        next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)
+    # Step 1: Get all last names that appear more than once
+    duplicate_last_names = unscoped.where.not(last_name: [ nil, "" ])
+                                   .group(:last_name)
+                                   .having("COUNT(*) > 1")
+                                   .pluck(:last_name)
 
-        if u1.years_overlap?(u2)
-          duplicates[:fuzzy_name_overlapping] << { users: [ u1, u2 ], years_overlap: true }
-        else
-          duplicates[:fuzzy_name_non_overlapping] << { users: [ u1, u2 ], years_overlap: false }
+    if duplicate_last_names.any?
+      # Step 2: Batch-load ALL users with duplicate last names in ONE query
+      all_users = where(last_name: duplicate_last_names).to_a
+      users_by_last_name = all_users.group_by(&:last_name)
+
+      # Step 3: Bulk-load years_active for all these users in ONE query
+      all_user_ids = all_users.map(&:id)
+      years_active_cache = bulk_years_active_for(all_user_ids)
+
+      # Step 4: Process combinations using the cached data
+      duplicate_last_names.each do |ln|
+        users = users_by_last_name[ln]
+        users.combination(2).each do |u1, u2|
+          next if u1.marked_not_duplicate?(u2)
+          next unless fuzzy_first_name_match?(u1.first_name, u2.first_name)
+
+          if u1.years_overlap?(u2, years_active_cache: years_active_cache)
+            duplicates[:fuzzy_name_overlapping] << { users: [ u1, u2 ], years_overlap: true, years_active_cache: years_active_cache }
+          else
+            duplicates[:fuzzy_name_non_overlapping] << { users: [ u1, u2 ], years_overlap: false, years_active_cache: years_active_cache }
+          end
         end
       end
     end
