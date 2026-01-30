@@ -1,12 +1,12 @@
-<div class="card">
+<div class="card mb-3">
   <div class="card-body">
-    <%= form_with url: absorb_admin_user_path(@user), method: :post, local: true do %>
+    <%= form_with url: merge_preview_admin_user_path(@user), method: :post do %>
       <p>Select the user to merge <strong>from</strong>. All their associations (team memberships, staffing jobs, debts, etc.) will be transferred to <%= @user.name_or_email %>, and the selected user will be deleted.</p>
 
       <div class="form-group">
         <label for="source_user_id">User to merge from (will be deleted)</label>
         <select name="source_user_id" id="source_user_id" class="simple-select2"
-                data-remote-source="/admin/users/autocomplete_list"
+                data-remote-source="/admin/users/autocomplete_list?exclude_id=<%= @user.id %>"
                 data-show-non-members="1"
                 data-query-field="q[full_name_cont]"
                 data-placeholder="Select a user to merge"
@@ -14,17 +14,22 @@
                 data-allow-clear="true"
                 required>
           <option></option>
+          <% if @source_user %>
+            <option value="<%= @source_user.id %>" selected><%= @source_user.name_or_email %></option>
+          <% end %>
         </select>
       </div>
 
-      <div class="alert alert-danger mt-3">
-        <strong>Warning:</strong> This action cannot be easily undone. The selected user will be permanently deleted after their data is transferred.
-      </div>
-
-      <div class="card-footer">
+      <div class="card-footer mt-3">
         <%= link_to "Cancel", admin_user_path(@user), class: "btn btn-secondary" %>
-        <button type="submit" class="btn btn-danger">Merge Users</button>
+        <button type="submit" class="btn btn-primary">Preview Merge</button>
       </div>
     <% end %>
   </div>
+</div>
+
+<div id="merge_preview_container">
+  <% if @source_user %>
+    <%= render partial: "merge_modal", locals: { target: @user, source: @source_user } %>
+  <% end %>
 </div>

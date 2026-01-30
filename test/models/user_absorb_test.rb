@@ -221,4 +221,94 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
     assert_equal target_email, @target_user.reload.email, "Target should keep its real email"
   end
+
+  # Field preference tests (keep_from_source parameter)
+
+  test "absorb with keep_from_source name copies name from source" do
+    @target_user.update!(first_name: "John", last_name: "Target")
+    @source_user.update!(first_name: "Jane", last_name: "Source")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "name" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    @target_user.reload
+    assert_equal "Jane", @target_user.first_name
+    assert_equal "Source", @target_user.last_name
+  end
+
+  test "absorb with keep_from_source email copies email from source" do
+    @target_user.update!(email: "target@example.com")
+    @source_user.update!(email: "source@example.com")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "email" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal "source@example.com", @target_user.reload.email
+  end
+
+  test "absorb with keep_from_source phone_number copies phone from source" do
+    @target_user.update!(phone_number: "111-111-1111")
+    @source_user.update!(phone_number: "222-222-2222")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "phone_number" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal "222-222-2222", @target_user.reload.phone_number
+  end
+
+  test "absorb with keep_from_source student_id copies student_id from source" do
+    @target_user.update!(student_id: "s1111111")
+    @source_user.update!(student_id: "s2222222")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "student_id" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal "s2222222", @target_user.reload.student_id
+  end
+
+  test "absorb with keep_from_source associate_id copies associate_id from source" do
+    @target_user.update!(associate_id: "ASSOC111")
+    @source_user.update!(associate_id: "ASSOC222")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "associate_id" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal "ASSOC222", @target_user.reload.associate_id
+  end
+
+  test "absorb with multiple keep_from_source fields copies all specified fields" do
+    @target_user.update!(first_name: "John", last_name: "Target", student_id: "s1111111")
+    @source_user.update!(first_name: "Jane", last_name: "Source", student_id: "s2222222")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "name", "student_id" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    @target_user.reload
+    assert_equal "Jane", @target_user.first_name
+    assert_equal "Source", @target_user.last_name
+    assert_equal "s2222222", @target_user.student_id
+  end
+
+  test "absorb without keep_from_source keeps target fields by default" do
+    @target_user.update!(first_name: "John", last_name: "Target")
+    @source_user.update!(first_name: "Jane", last_name: "Source")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    @target_user.reload
+    assert_equal "John", @target_user.first_name
+    assert_equal "Target", @target_user.last_name
+  end
+
+  test "absorb with keep_from_source email overrides unknown_ email logic" do
+    # Even though target has unknown_ email, explicitly choosing email should work
+    @target_user.update!(email: "unknown_12345678@bedlamtheatre.co.uk")
+    @source_user.update!(email: "source@example.com")
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "email" ])
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_equal "source@example.com", @target_user.reload.email
+  end
 end

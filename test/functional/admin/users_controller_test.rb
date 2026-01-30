@@ -255,6 +255,79 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_not response.body["pagination"]["more"]
   end
 
+  test "get autocomplete list excludes user when exclude_id provided" do
+    member1 = FactoryBot.create(:member)
+    member2 = FactoryBot.create(:member)
+
+    get :autocomplete_list, params: { exclude_id: member1.id }
+
+    assert_includes response.body, member2.first_name
+    assert_not_includes response.body, member1.id.to_s
+  end
+
+  # Merge flow tests
+
+  test "should get merge page" do
+    get :merge, params: { id: @user }
+    assert_response :success
+  end
+
+  test "should get merge page with pre-selected source user" do
+    source_user = FactoryBot.create(:member)
+
+    get :merge, params: { id: @user, source_user_id: source_user.id }
+
+    assert_response :success
+    assert_equal source_user, assigns(:source_user)
+  end
+
+  test "should post merge_preview redirects to merge with source_user_id" do
+    sign_in users(:admin)
+    target_user = FactoryBot.create(:member)
+    source_user = FactoryBot.create(:member)
+
+    post :merge_preview, params: { id: target_user.id, source_user_id: source_user.id }
+
+    assert_redirected_to merge_admin_user_path(target_user, source_user_id: source_user.id)
+  end
+
+  test "should absorb user with field preferences" do
+    sign_in users(:admin)
+    target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
+    source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
+    source_id = source_user.id
+
+    post :absorb, params: {
+      id: target_user.id,
+      source_user_id: source_user.id,
+      keep_from_source: [ "name" ]
+    }
+
+    assert_redirected_to admin_user_path(target_user)
+    target_user.reload
+    assert_equal "Jane", target_user.first_name
+    assert_equal "Source", target_user.last_name
+    assert_not User.exists?(source_id), "Source user should be deleted"
+  end
+
+  test "should absorb user without field preferences uses defaults" do
+    sign_in users(:admin)
+    target_user = FactoryBot.create(:member, first_name: "John", last_name: "Target")
+    source_user = FactoryBot.create(:member, first_name: "Jane", last_name: "Source")
+    source_id = source_user.id
+
+    post :absorb, params: {
+      id: target_user.id,
+      source_user_id: source_user.id
+    }
+
+    assert_redirected_to admin_user_path(target_user)
+    target_user.reload
+    assert_equal "John", target_user.first_name  # Kept target values
+    assert_equal "Target", target_user.last_name
+    assert_not User.exists?(source_id), "Source user should be deleted"
+  end
+
   private
 
   def assert_includes_user(user)

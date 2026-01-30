@@ -44,11 +44,22 @@ class Admin::UsersController < AdminController
 
   def merge
     @title = "Merge User Into #{@user.name_or_email}"
+
+    # If source_user_id is provided (e.g., from duplicates view), pre-load for preview
+    if params[:source_user_id].present?
+      @source_user = User.find_by(id: params[:source_user_id])
+    end
+  end
+
+  def merge_preview
+    # Redirect to merge with source_user_id in URL so URL reflects state
+    redirect_to merge_admin_user_path(@user, source_user_id: params[:source_user_id])
   end
 
   def absorb
     source_user = User.find(params[:source_user_id])
-    result = @user.absorb(source_user)
+    keep_from_source = params[:keep_from_source] || []
+    result = @user.absorb(source_user, keep_from_source: keep_from_source)
 
     respond_to do |format|
       if result[:success]
@@ -72,6 +83,9 @@ class Admin::UsersController < AdminController
     @users = base_index_ransack_query
 
     @users = @users.with_role(:member) if params[:show_non_members] != "1"
+
+    # Exclude specific user (e.g., when selecting merge source, exclude target)
+    @users = @users.where.not(id: params[:exclude_id]) if params[:exclude_id].present?
 
     @users = @users.reorder(:first_name, :last_name).page(page).per(per_page)
 

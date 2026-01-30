@@ -163,6 +163,7 @@ ChaosRails::Application.routes.draw do
       member do
         post "reset_password"
         get "merge"
+        post "merge_preview"
         post "absorb"
       end
 
