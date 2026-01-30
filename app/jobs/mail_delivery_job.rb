@@ -10,9 +10,9 @@ class MailDeliveryJob < ApplicationJob
     mailer_class = mailer_class.with(params) if params
     message = if kwargs
                 mailer_class.public_send(mail_method, *args, **kwargs)
-              else
+    else
                 mailer_class.public_send(mail_method, *args)
-              end
+    end
     message.send(delivery_method)
   end
 end
