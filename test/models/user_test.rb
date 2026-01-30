@@ -329,4 +329,48 @@ class Admin::UserTest < ActiveSupport::TestCase
     # Both users should exist with the same student_id
     assert_equal 2, User.where(student_id: "s1234567").count
   end
+
+  # Associate ID tests
+  test "associate_id validation - valid formats" do
+    valid_associate_ids = [ "ASSOC123456", "ASSOC1", "ASSOC999999999", nil, "" ]
+
+    valid_associate_ids.each do |associate_id|
+      @user.associate_id = associate_id
+      assert @user.valid?, "#{associate_id.inspect} should be valid but got errors: #{@user.errors.full_messages}"
+    end
+  end
+
+  test "associate_id validation - invalid formats" do
+    # Note: "assoc123456" is valid because the normalizer converts it to uppercase before validation
+    invalid_associate_ids = [ "123456", "ASSOC", "ASSOCIATE123", "A123456" ]
+
+    invalid_associate_ids.each do |associate_id|
+      @user.associate_id = associate_id
+      assert_not @user.valid?, "#{associate_id.inspect} should be invalid"
+      assert @user.errors[:associate_id].any?, "Expected validation error on associate_id for #{associate_id.inspect}"
+    end
+  end
+
+  test "associate_id is normalized to uppercase" do
+    @user.associate_id = "assoc213752"
+    @user.save!
+
+    assert_equal "ASSOC213752", @user.associate_id
+  end
+
+  test "associate_id is stripped of whitespace" do
+    @user.associate_id = "  ASSOC123456  "
+    @user.save!
+
+    assert_equal "ASSOC123456", @user.associate_id
+  end
+
+  test "user can have both student_id and associate_id" do
+    @user.student_id = "s1234567"
+    @user.associate_id = "ASSOC123456"
+    @user.save!
+
+    assert_equal "s1234567", @user.student_id
+    assert_equal "ASSOC123456", @user.associate_id
+  end
 end

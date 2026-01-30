@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_29_105145) do
+ActiveRecord::Schema[8.1].define(version: 2026_01_30_122114) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -718,6 +718,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_29_105145) do
   end
 
   create_table "users", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
+    t.string "associate_id"
     t.string "avatar_content_type"
     t.string "avatar_file_name"
     t.integer "avatar_file_size"
@@ -743,6 +744,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_29_105145) do
     t.string "student_id"
     t.datetime "updated_at", precision: nil, null: false
     t.string "username"
+    t.index ["associate_id"], name: "index_users_on_associate_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["student_id"], name: "index_users_on_student_id"

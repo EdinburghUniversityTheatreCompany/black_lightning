@@ -67,6 +67,12 @@ class User < ApplicationRecord
       message: "must be in format s1234567 (s followed by 7 digits)",
       allow_blank: true
     }
+  validates :associate_id,
+    format: {
+      with: /\AASSOC\d+\z/i,
+      message: "must be in format ASSOC123456 (ASSOC followed by digits)",
+      allow_blank: true
+    }
 
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
@@ -97,6 +103,7 @@ class User < ApplicationRecord
     end
   }
   normalizes :first_name, :last_name, :username, with: ->(name) { name&.strip }
+  normalizes :associate_id, with: ->(id) { id&.strip&.upcase }
 
   default_scope -> { order("last_name ASC") }
 
@@ -112,7 +119,7 @@ class User < ApplicationRecord
   def self.ransackable_attributes(auth_object = nil)
     attributes = %w[first_name last_name full_name]
     attributes += %w[bio email public_profile] if auth_object.can?(:read, User)
-    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count student_id] if auth_object.can?(:manage, User)
+    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count student_id associate_id member_id] if auth_object.can?(:manage, User)
 
     attributes
   end
@@ -179,6 +186,15 @@ class User < ApplicationRecord
     Arel::Nodes::NamedFunction.new("LOWER",
       [ Arel::Nodes::NamedFunction.new("concat_ws",
         [ Arel::Nodes::SqlLiteral.new("' '"), parent.table[:first_name], parent.table[:last_name] ]) ])
+  end
+
+  # Combined ransacker for searching both student_id and associate_id
+  ransacker :member_id, formatter: proc { |v| v.to_s.upcase } do |parent|
+    Arel::Nodes::NamedFunction.new("UPPER",
+      [ Arel::Nodes::NamedFunction.new("COALESCE",
+        [ Arel::Nodes::NamedFunction.new("concat_ws",
+          [ Arel::Nodes::SqlLiteral.new("' '"), parent.table[:student_id], parent.table[:associate_id] ]),
+          Arel::Nodes::SqlLiteral.new("''") ]) ])
   end
 
   ##
