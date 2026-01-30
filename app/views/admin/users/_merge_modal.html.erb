@@ -1,0 +1,237 @@
+<%# Merge preview modal showing field comparison and association stats %>
+<%
+  # Helper to determine default selection for a field
+  # Returns :source if source should be selected by default
+  def default_selection(target_value, source_value)
+    if target_value.blank? && source_value.present?
+      :source  # Target empty, source has value
+    elsif target_value.present? && target_value == source_value
+      :source  # Both equal, prefer source (arbitrary but consistent)
+    else
+      :target  # Target has value (different or source empty)
+    end
+  end
+
+  # Field definitions: [field_key, label, target_value, source_value]
+  fields = [
+    ["name", "Name", "#{target.first_name} #{target.last_name}".strip, "#{source.first_name} #{source.last_name}".strip],
+    ["email", "Email", target.email, source.email],
+    ["phone_number", "Phone", target.phone_number, source.phone_number],
+    ["student_id", "Student ID", target.student_id, source.student_id],
+    ["associate_id", "Associate ID", target.associate_id, source.associate_id],
+  ]
+
+  stats = source.merge_stats_as_source(target)
+%>
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Merge Preview</h5>
+  </div>
+
+  <%= form_with url: absorb_admin_user_path(target), method: :post, local: true do |f| %>
+    <%= hidden_field_tag :source_user_id, source.id %>
+
+    <div class="card-body">
+      <p class="text-muted mb-3">
+        Select which values to keep for each field. All associations will be transferred from
+        <strong><%= source.name_or_email %></strong> to <strong><%= target.name_or_email %></strong>.
+      </p>
+
+      <table class="table table-bordered">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 20%">Field</th>
+            <th style="width: 40%">
+              <span class="badge bg-primary">TARGET</span>
+              <%= target.name_or_email %>
+            </th>
+            <th style="width: 40%">
+              <span class="badge bg-secondary">SOURCE</span>
+              <%= source.name_or_email %>
+              <small class="text-muted">(will be deleted)</small>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <% fields.each do |field_key, label, target_val, source_val| %>
+            <% select_source = default_selection(target_val, source_val) == :source %>
+            <tr>
+              <td><strong><%= label %></strong></td>
+              <td>
+                <div class="form-check">
+                  <input type="radio"
+                         class="form-check-input"
+                         name="field_choice[<%= field_key %>]"
+                         id="keep_target_<%= field_key %>"
+                         value="target"
+                         <%= "checked" unless select_source %>>
+                  <label class="form-check-label" for="keep_target_<%= field_key %>">
+                    <%= target_val.presence || tag.em("(empty)", class: "text-muted") %>
+                  </label>
+                </div>
+              </td>
+              <td>
+                <div class="form-check">
+                  <input type="radio"
+                         class="form-check-input"
+                         name="field_choice[<%= field_key %>]"
+                         id="keep_source_<%= field_key %>"
+                         value="source"
+                         <%= "checked" if select_source %>>
+                  <label class="form-check-label" for="keep_source_<%= field_key %>">
+                    <%= source_val.presence || tag.em("(empty)", class: "text-muted") %>
+                  </label>
+                  <% if select_source %>
+                    <input type="hidden" name="keep_from_source[]" value="<%= field_key %>" id="hidden_<%= field_key %>">
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+
+          <%# Avatar row %>
+          <% avatar_select_source = default_selection(target.avatar.attached?, source.avatar.attached?) == :source %>
+          <tr>
+            <td><strong>Avatar</strong></td>
+            <td>
+              <div class="form-check">
+                <input type="radio"
+                       class="form-check-input"
+                       name="field_choice[avatar]"
+                       id="keep_target_avatar"
+                       value="target"
+                       <%= "checked" unless avatar_select_source %>>
+                <label class="form-check-label" for="keep_target_avatar">
+                  <% if target.avatar.attached? %>
+                    <%= image_tag target.avatar.variant(resize_to_limit: [50, 50]), class: "rounded" %>
+                  <% else %>
+                    <em class="text-muted">(no avatar)</em>
+                  <% end %>
+                </label>
+              </div>
+            </td>
+            <td>
+              <div class="form-check">
+                <input type="radio"
+                       class="form-check-input"
+                       name="field_choice[avatar]"
+                       id="keep_source_avatar"
+                       value="source"
+                       <%= "checked" if avatar_select_source %>>
+                <label class="form-check-label" for="keep_source_avatar">
+                  <% if source.avatar.attached? %>
+                    <%= image_tag source.avatar.variant(resize_to_limit: [50, 50]), class: "rounded" %>
+                  <% else %>
+                    <em class="text-muted">(no avatar)</em>
+                  <% end %>
+                </label>
+                <% if avatar_select_source %>
+                  <input type="hidden" name="keep_from_source[]" value="avatar" id="hidden_avatar">
+                <% end %>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h6 class="mt-4">Associations to transfer from SOURCE (<%= source.name_or_email %>):</h6>
+      <ul class="list-group list-group-flush mb-3">
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Team memberships
+          <span>
+            <span class="badge bg-primary rounded-pill"><%= stats[:team_memberships][:total] %></span>
+            <% if stats[:team_memberships][:overlapping] > 0 %>
+              <small class="text-muted">(<%= stats[:team_memberships][:overlapping] %> overlap - roles will be merged with "/")</small>
+            <% end %>
+          </span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Staffing jobs
+          <span>
+            <span class="badge bg-primary rounded-pill"><%= stats[:staffing_jobs][:total] %></span>
+            <% if stats[:staffing_jobs][:unlinked] > 0 %>
+              <small class="text-warning">(<%= stats[:staffing_jobs][:unlinked] %> unlinked)</small>
+            <% end %>
+          </span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Staffing debts
+          <span>
+            <span class="badge bg-primary rounded-pill"><%= stats[:staffing_debts][:total] %></span>
+            <% if stats[:staffing_debts][:unlinked] > 0 %>
+              <small class="text-warning">(<%= stats[:staffing_debts][:unlinked] %> unlinked)</small>
+            <% end %>
+          </span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Maintenance debts
+          <span>
+            <span class="badge bg-primary rounded-pill"><%= stats[:maintenance_debts][:total] %></span>
+            <% if stats[:maintenance_debts][:unlinked] > 0 %>
+              <small class="text-warning">(<%= stats[:maintenance_debts][:unlinked] %> unlinked)</small>
+            <% end %>
+          </span>
+        </li>
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          Maintenance attendances
+          <span>
+            <span class="badge bg-primary rounded-pill"><%= stats[:maintenance_attendances][:total] %></span>
+            <% if stats[:maintenance_attendances][:unlinked] > 0 %>
+              <small class="text-warning">(<%= stats[:maintenance_attendances][:unlinked] %> unlinked)</small>
+            <% end %>
+          </span>
+        </li>
+        <% if stats[:roles].any? %>
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            Roles
+            <span>
+              <% stats[:roles].each do |role| %>
+                <span class="badge bg-info"><%= role %></span>
+              <% end %>
+            </span>
+          </li>
+        <% end %>
+      </ul>
+
+      <div class="alert alert-warning">
+        <strong>Warning:</strong> <strong><%= source.name_or_email %></strong> will be permanently deleted after merge.
+        <% if stats[:team_memberships][:overlapping] > 0 %>
+          <br><small>Team members on the same shows will have their roles concatenated with "/".</small>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="card-footer d-flex justify-content-between">
+      <%= link_to "Cancel", admin_user_path(target), class: "btn btn-secondary" %>
+      <button type="submit" class="btn btn-danger">Confirm Merge</button>
+    </div>
+  <% end %>
+</div>
+
+<script>
+  // Update hidden fields when radio buttons change
+  document.querySelectorAll('input[type="radio"][name^="field_choice"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const fieldKey = this.name.match(/\[(.+)\]/)[1];
+      const hiddenField = document.getElementById('hidden_' + fieldKey);
+
+      if (this.value === 'source') {
+        // Add hidden field if selecting source and it doesn't exist
+        if (!hiddenField) {
+          const hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'keep_from_source[]';
+          hidden.value = fieldKey;
+          hidden.id = 'hidden_' + fieldKey;
+          this.parentNode.appendChild(hidden);
+        }
+      } else {
+        // Remove hidden field if selecting target
+        if (hiddenField) {
+          hiddenField.remove();
+        }
+      }
+    });
+  });
+</script>

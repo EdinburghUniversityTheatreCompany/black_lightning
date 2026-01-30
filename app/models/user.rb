@@ -417,10 +417,68 @@ class User < ApplicationRecord
   # Merging Users
   ##
 
+  # Returns count of staffing jobs not linked to any debt
+  def staffing_jobs_unlinked_count
+    staffing_jobs.left_joins(:staffing_debt).where(admin_staffing_debts: { id: nil }).count
+  end
+
+  # Returns count of staffing debts not linked to any job
+  def staffing_debts_unlinked_count
+    admin_staffing_debts.where(admin_staffing_job_id: nil, state: :normal).count
+  end
+
+  # Returns count of maintenance debts not linked to any attendance
+  def maintenance_debts_unlinked_count
+    admin_maintenance_debts.where(maintenance_attendance_id: nil, state: :normal).count
+  end
+
+  # Returns count of maintenance attendances not linked to any debt
+  def maintenance_attendances_unlinked_count
+    maintenance_attendances.left_joins(:maintenance_debt).where(admin_maintenance_debts: { id: nil }).count
+  end
+
+  # Returns count of team memberships that overlap with another user (same show/event)
+  def overlapping_team_memberships_with(other_user)
+    team_membership.where(
+      teamwork_type: other_user.team_membership.select(:teamwork_type),
+      teamwork_id: other_user.team_membership.select(:teamwork_id)
+    ).count
+  end
+
+  # Returns merge statistics for preview modal
+  def merge_stats_as_source(target_user)
+    overlaps = target_user.overlapping_team_memberships_with(self)
+
+    {
+      team_memberships: {
+        total: team_membership.count,
+        overlapping: overlaps
+      },
+      staffing_jobs: {
+        total: staffing_jobs.count,
+        unlinked: staffing_jobs_unlinked_count
+      },
+      staffing_debts: {
+        total: admin_staffing_debts.count,
+        unlinked: staffing_debts_unlinked_count
+      },
+      maintenance_debts: {
+        total: admin_maintenance_debts.count,
+        unlinked: maintenance_debts_unlinked_count
+      },
+      maintenance_attendances: {
+        total: maintenance_attendances.count,
+        unlinked: maintenance_attendances_unlinked_count
+      },
+      roles: roles.pluck(:name)
+    }
+  end
+
   # Merges another user into this user, transferring all their associations.
   # The source_user will be destroyed after a successful merge.
+  # keep_from_source: array of field names to copy from source user (e.g., ['name', 'email', 'student_id'])
   # Returns a hash with { success: boolean, errors: [], transferred: {} }
-  def absorb(source_user)
+  def absorb(source_user, keep_from_source: [])
     return { success: false, errors: [ "Cannot merge user into itself" ] } if source_user&.id == id
     return { success: false, errors: [ "Source user not found" ] } if source_user.nil?
 
@@ -435,21 +493,46 @@ class User < ApplicationRecord
     }
 
     ActiveRecord::Base.transaction do
-      # Handle unknown_ email replacement
-      # If either user has an unknown_ email, replace it with the real email
-      target_has_unknown = email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
-      source_has_unknown = source_user.email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
-
-      if target_has_unknown && !source_has_unknown
-        # Target has unknown email, source has real email - use source's email
-        # First, change source's email temporarily to avoid uniqueness constraint
-        source_email = source_user.email
-        source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
-        update!(email: source_email)
-      elsif !target_has_unknown && source_has_unknown
-        # Source has unknown email, target has real email - keep target's (no action needed)
+      # Apply field preferences from source user
+      keep_from_source.each do |field|
+        case field.to_s
+        when "name"
+          self.first_name = source_user.first_name
+          self.last_name = source_user.last_name
+        when "email"
+          # Handle email swap to avoid uniqueness constraint
+          if source_user.email != email
+            source_email = source_user.email
+            source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+            self.email = source_email
+          end
+        when "phone_number"
+          self.phone_number = source_user.phone_number
+        when "student_id"
+          self.student_id = source_user.student_id
+        when "associate_id"
+          self.associate_id = source_user.associate_id
+        when "avatar"
+          if source_user.avatar.attached?
+            avatar.purge if avatar.attached?
+            avatar.attach(source_user.avatar.blob)
+          end
+        end
       end
-      # If both have unknown or both have real emails, keep target's email
+      save! if changed?
+
+      # Handle email for legacy behavior (unknown_ email replacement) when not explicitly chosen
+      unless keep_from_source.include?("email")
+        target_has_unknown = email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
+        source_has_unknown = source_user.email.match?(/^unknown_.*@bedlamtheatre\.co\.uk$/)
+
+        if target_has_unknown && !source_has_unknown
+          source_email = source_user.email
+          source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+          update!(email: source_email)
+        end
+      end
+
       # 1. Transfer TeamMembers (with duplicate handling)
       source_user.team_membership.each do |tm|
         existing = team_membership.find_by(teamwork_type: tm.teamwork_type, teamwork_id: tm.teamwork_id)
@@ -496,9 +579,11 @@ class User < ApplicationRecord
         source_user.marketing_creatives_profile&.destroy
       end
 
-      # 9. Handle Avatar - keep target's if attached, otherwise transfer
-      if !avatar.attached? && source_user.avatar.attached?
-        avatar.attach(source_user.avatar.blob)
+      # 9. Handle Avatar - keep target's if attached, otherwise transfer (unless explicitly chosen)
+      unless keep_from_source.include?("avatar")
+        if !avatar.attached? && source_user.avatar.attached?
+          avatar.attach(source_user.avatar.blob)
+        end
       end
 
       # 10. Handle MembershipActivationTokens - just destroy source's

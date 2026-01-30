@@ -192,4 +192,69 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     end
     assert_empty matches, "Marked not-duplicates should not appear in results"
   end
+
+  # Merge helper methods tests
+
+  test "overlapping_team_memberships_with returns count of shared shows" do
+    user1 = FactoryBot.create(:user)
+    user2 = FactoryBot.create(:user)
+
+    show1 = FactoryBot.create(:show)
+    show2 = FactoryBot.create(:show)
+    show3 = FactoryBot.create(:show)
+
+    # Both users on show1 and show2
+    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
+    TeamMember.create!(user: user2, teamwork: show1, position: "Director")
+    TeamMember.create!(user: user1, teamwork: show2, position: "Stage Manager")
+    TeamMember.create!(user: user2, teamwork: show2, position: "Producer")
+
+    # Only user1 on show3
+    TeamMember.create!(user: user1, teamwork: show3, position: "Actor")
+
+    assert_equal 2, user1.overlapping_team_memberships_with(user2)
+    assert_equal 2, user2.overlapping_team_memberships_with(user1)
+  end
+
+  test "overlapping_team_memberships_with returns 0 when no shared shows" do
+    user1 = FactoryBot.create(:user)
+    user2 = FactoryBot.create(:user)
+
+    show1 = FactoryBot.create(:show)
+    show2 = FactoryBot.create(:show)
+
+    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
+    TeamMember.create!(user: user2, teamwork: show2, position: "Actor")
+
+    assert_equal 0, user1.overlapping_team_memberships_with(user2)
+  end
+
+  test "merge_stats_as_source returns correct statistics" do
+    target = FactoryBot.create(:user)
+    source = FactoryBot.create(:user)
+    source.add_role(:member)
+
+    show = FactoryBot.create(:show)
+    TeamMember.create!(user: source, teamwork: show, position: "Actor")
+
+    stats = source.merge_stats_as_source(target)
+
+    assert_equal 1, stats[:team_memberships][:total]
+    assert_equal 0, stats[:team_memberships][:overlapping]
+    assert_includes stats[:roles].map(&:downcase), "member"
+  end
+
+  test "merge_stats_as_source shows overlapping team memberships" do
+    target = FactoryBot.create(:user)
+    source = FactoryBot.create(:user)
+
+    show = FactoryBot.create(:show)
+    TeamMember.create!(user: target, teamwork: show, position: "Director")
+    TeamMember.create!(user: source, teamwork: show, position: "Actor")
+
+    stats = source.merge_stats_as_source(target)
+
+    assert_equal 1, stats[:team_memberships][:total]
+    assert_equal 1, stats[:team_memberships][:overlapping]
+  end
 end

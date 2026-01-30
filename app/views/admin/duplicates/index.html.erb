@@ -44,7 +44,8 @@
                 </td>
                 <td>
                   <% target = dup[:users].first %>
-                  <%= link_to "Merge", merge_admin_user_path(target), class: "btn btn-sm btn-warning" %>
+                  <% source = dup[:users].second %>
+                  <%= link_to "Merge", merge_admin_user_path(target, source_user_id: source.id), class: "btn btn-sm btn-warning" %>
                 </td>
               </tr>
             <% end %>
@@ -93,7 +94,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning" %>
                   <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
                 </td>
               </tr>
@@ -143,7 +144,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning" %>
                   <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
                 </td>
               </tr>
