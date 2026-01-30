@@ -2,6 +2,13 @@
   <%= link_to "Back to Users", admin_users_path, class: "btn btn-secondary" %>
 <% end %>
 
+<%
+  # Helper to get years_active from cache if available, otherwise fall back to method call
+  def cached_years_active(user, cache = nil)
+    cache ? (cache[user.id] || []) : user.years_active
+  end
+%>
+
 <% total_count = @duplicates[:same_id].size + @duplicates[:fuzzy_name_overlapping].size + @duplicates[:fuzzy_name_non_overlapping].size %>
 
 <% if total_count == 0 %>
@@ -34,10 +41,11 @@
                 <td><code><%= dup[:id_value] %></code></td>
                 <td>
                   <% dup[:users].each do |user| %>
+                    <% years = cached_years_active(user, dup[:years_active_cache]) %>
                     <%= link_to user.name_or_email, admin_user_path(user) %>
                     <small class="text-muted">(<%= user.email %>)</small>
-                    <% if user.years_active.any? %>
-                      <small class="text-muted">- Active: <%= user.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <% if years.any? %>
+                      <small class="text-muted">- Active: <%= years.map { |y| format_academic_year(y) }.join(", ") %></small>
                     <% end %>
                     <br>
                   <% end %>
@@ -74,12 +82,15 @@
           <tbody>
             <% @duplicates[:fuzzy_name_overlapping].each do |dup| %>
               <% u1, u2 = dup[:users] %>
+              <% cache = dup[:years_active_cache] %>
+              <% u1_years = cached_years_active(u1, cache) %>
+              <% u2_years = cached_years_active(u2, cache) %>
               <tr>
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                   <small class="text-muted"><%= u1.email %></small><br>
-                  <% if u1.years_active.any? %>
-                    <small class="text-muted">Active: <%= u1.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% if u1_years.any? %>
+                    <small class="text-muted">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
                     <small class="text-muted">No activity recorded</small>
                   <% end %>
@@ -87,8 +98,8 @@
                 <td>
                   <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
                   <small class="text-muted"><%= u2.email %></small><br>
-                  <% if u2.years_active.any? %>
-                    <small class="text-muted">Active: <%= u2.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% if u2_years.any? %>
+                    <small class="text-muted">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
                     <small class="text-muted">No activity recorded</small>
                   <% end %>
@@ -124,12 +135,15 @@
           <tbody>
             <% @duplicates[:fuzzy_name_non_overlapping].each do |dup| %>
               <% u1, u2 = dup[:users] %>
+              <% cache = dup[:years_active_cache] %>
+              <% u1_years = cached_years_active(u1, cache) %>
+              <% u2_years = cached_years_active(u2, cache) %>
               <tr>
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                   <small class="text-muted"><%= u1.email %></small><br>
-                  <% if u1.years_active.any? %>
-                    <small class="text-muted">Active: <%= u1.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% if u1_years.any? %>
+                    <small class="text-muted">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
                     <small class="text-muted">No activity recorded</small>
                   <% end %>
@@ -137,8 +151,8 @@
                 <td>
                   <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
                   <small class="text-muted"><%= u2.email %></small><br>
-                  <% if u2.years_active.any? %>
-                    <small class="text-muted">Active: <%= u2.years_active.map { |y| format_academic_year(y) }.join(", ") %></small>
+                  <% if u2_years.any? %>
+                    <small class="text-muted">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
                     <small class="text-muted">No activity recorded</small>
                   <% end %>
