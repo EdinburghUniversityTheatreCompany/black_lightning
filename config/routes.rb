@@ -171,6 +171,12 @@ ChaosRails::Application.routes.draw do
       end
     end
 
+    resources :duplicates, only: [ :index ] do
+      collection do
+        post :mark_not_duplicate
+      end
+    end
+
     # resources :membership_cards, only: [:index, :show, :create, :destroy] do
     #   get 'generate_card'
     # end
