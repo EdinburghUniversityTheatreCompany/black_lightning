@@ -2,6 +2,9 @@
 
 If you learn something about the project that would be useful context for other agents looking at the codebase, add it to this file at the end of your to do list.
 
+## URL as state
+Always maintain the URL as state with readable parameters where possible for GET actions.
+
 ## Turbo
 This project does not use turbo. Please do not use turbostreams or similar.
 
