@@ -325,6 +325,83 @@ class ShowTest < ActiveSupport::TestCase
     end
   end
 
+  test "tag_debt_recommendations returns recommendations from tags" do
+    show = FactoryBot.create(:show, tag_count: 0)
+    mainterm_tag = event_tags(:mainterm)
+    show.event_tags << mainterm_tag
+
+    recommendations = show.tag_debt_recommendations
+
+    assert_equal 1, recommendations.length
+    assert_equal "Mainterm.", recommendations.first[:tag_name]
+    assert_equal 1, recommendations.first[:maintenance]
+    assert_equal 2, recommendations.first[:staffing]
+  end
+
+  test "tag_debt_recommendations returns empty array when no tags" do
+    show = FactoryBot.create(:show, tag_count: 0)
+
+    recommendations = show.tag_debt_recommendations
+
+    assert_empty recommendations
+  end
+
+  test "tag_debt_recommendations returns empty array when tags have no recommendations" do
+    show = FactoryBot.create(:show, tag_count: 0)
+    new_writing_tag = event_tags(:new_writing)
+    show.event_tags << new_writing_tag
+
+    recommendations = show.tag_debt_recommendations
+
+    assert_empty recommendations
+  end
+
+  test "matches_tag_debt_recommendations? returns true when debts match" do
+    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 1, staffing_debt_amount: 2)
+    mainterm_tag = event_tags(:mainterm)
+    show.event_tags << mainterm_tag
+
+    assert show.matches_tag_debt_recommendations?
+  end
+
+  test "matches_tag_debt_recommendations? returns false when debts don't match" do
+    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 2, staffing_debt_amount: 3)
+    mainterm_tag = event_tags(:mainterm)
+    show.event_tags << mainterm_tag
+
+    assert_not show.matches_tag_debt_recommendations?
+  end
+
+  test "debt_recommendation_status returns :no_recommendation when no tags" do
+    show = FactoryBot.create(:show, tag_count: 0)
+
+    assert_equal :no_recommendation, show.debt_recommendation_status
+  end
+
+  test "debt_recommendation_status returns :needs_config when tags but no debts" do
+    show = FactoryBot.create(:show, tag_count: 0)
+    mainterm_tag = event_tags(:mainterm)
+    show.event_tags << mainterm_tag
+
+    assert_equal :needs_config, show.debt_recommendation_status
+  end
+
+  test "debt_recommendation_status returns :matches when debts match tag recommendations" do
+    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 1, staffing_debt_amount: 2)
+    mainterm_tag = event_tags(:mainterm)
+    show.event_tags << mainterm_tag
+
+    assert_equal :matches, show.debt_recommendation_status
+  end
+
+  test "debt_recommendation_status returns :mismatch when debts don't match tag recommendations" do
+    show = FactoryBot.create(:show, tag_count: 0, maintenance_debt_amount: 2, staffing_debt_amount: 3)
+    mainterm_tag = event_tags(:mainterm)
+    show.event_tags << mainterm_tag
+
+    assert_equal :mismatch, show.debt_recommendation_status
+  end
+
   test "as_json" do
     show = FactoryBot.create(:show, venue: venues(:one), season: FactoryBot.create(:season))
 

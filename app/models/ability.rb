@@ -194,6 +194,9 @@ class Ability
     can :manage, :membership_import if can? :absorb, User
     can :manage, :user_import if can? :absorb, User
 
+    # Grant debt_overview access if user can create either type of debt
+    can :debt_overview, Show if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
+
     # Allow users with manage_trained_roles permission to add/remove users from trained roles
     if can? :manage_trained_roles, Role
       can [ :add_user, :remove_user ], Role do |role|

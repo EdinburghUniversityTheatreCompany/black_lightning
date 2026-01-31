@@ -98,6 +98,7 @@ ChaosRails::Application.routes.draw do
 
       collection do
         get "query_xts"
+        get "debt_overview"
       end
 
       member do

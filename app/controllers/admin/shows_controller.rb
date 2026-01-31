@@ -1,10 +1,22 @@
 class Admin::ShowsController < Admin::GenericEventsController
-  skip_authorize_resource only: %i[update_debt_settings convert_to_season convert_to_workshop]
+  include AcademicYearHelper
+
+  skip_authorize_resource only: %i[update_debt_settings convert_to_season convert_to_workshop debt_overview]
 
   # New is handled by the Generic Controller.
   # Create is handled by the Generic Controller.
   # Edit is handled by the Generic Controller.
   # Destroy is handled by Generic Controller.
+
+  # GET admin/shows/debt_overview
+  def debt_overview
+    authorize! :debt_overview, Show
+
+    academic_year_start = start_of_year
+    @shows = Show.where("end_date >= ?", academic_year_start)
+                 .includes(:event_tags, :venue)
+                 .order(start_date: :asc)
+  end
 
   # PATCH admin/shows/1/update_debt_settings
   def update_debt_settings

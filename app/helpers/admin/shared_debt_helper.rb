@@ -130,4 +130,18 @@ module Admin::SharedDebtHelper
       end
     end
   end
+
+  def debt_status_row_class(show)
+    case show.debt_recommendation_status
+    when :needs_config then "table-warning"
+    when :mismatch then "table-danger"
+    when :matches then "table-success"
+    else ""
+    end
+  end
+
+  def show_debt_recommendation_details?(show)
+    show.tag_debt_recommendations.any? &&
+      [ :needs_config, :mismatch ].include?(show.debt_recommendation_status)
+  end
 end

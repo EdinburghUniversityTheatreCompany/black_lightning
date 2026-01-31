@@ -13,6 +13,8 @@
 class EventTag < ApplicationRecord
   validates :name, :description, presence: true
   validates :name, uniqueness: { case_sensitive: false }
+  validates :recommended_maintenance_debts, numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :recommended_staffing_debts, numericality: { greater_than_or_equal_to: 0, allow_nil: true }
 
   has_and_belongs_to_many :events, optional: true
 

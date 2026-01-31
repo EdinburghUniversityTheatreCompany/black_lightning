@@ -9,7 +9,7 @@ class Admin::EventTagsController < AdminController
   private
 
   def permitted_params
-    [ :name, :ordering, :description ]
+    [ :name, :ordering, :description, :recommended_maintenance_debts, :recommended_staffing_debts ]
   end
 
   def order_args

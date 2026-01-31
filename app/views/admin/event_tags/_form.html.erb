@@ -6,5 +6,19 @@
     <%= f.input :ordering, hint: 'Lowest will appear at the top.' %>
 
     <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12 %>
+
+    <hr>
+    <h5>Debt Recommendations (Optional)</h5>
+    <p class="text-muted small">
+      Set recommended debt amounts for shows with this tag. This helps debt managers remember
+      standard amounts but doesn't enforce them. Leave blank if this tag has no debt recommendations.
+    </p>
+
+    <%= f.input :recommended_maintenance_debts, label: 'Recommended maintenance debts',
+                as: :integer, min: 0, max: 5,
+                hint: 'Number of maintenance debts typically assigned to shows with this tag' %>
+    <%= f.input :recommended_staffing_debts, label: 'Recommended staffing debts',
+                as: :integer, min: 0, max: 5,
+                hint: 'Number of staffing debts typically assigned to shows with this tag' %>
   <% end %>
 <% end %>
