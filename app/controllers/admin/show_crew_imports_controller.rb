@@ -5,6 +5,8 @@
 # Creates user accounts and adds them to an event's team.
 ##
 class Admin::ShowCrewImportsController < AdminController
+  include Importable
+
   before_action :load_event
 
   def new
@@ -15,8 +17,7 @@ class Admin::ShowCrewImportsController < AdminController
   def preview
     authorize! :update, @event
 
-    data = params[:paste_data].presence || params[:xlsx_file]
-    input_type = params[:paste_data].present? ? :paste : :xlsx
+    data, input_type = parse_import_params
 
     if data.blank?
       helpers.append_to_flash(:error, "Please paste data or upload a file")
@@ -36,22 +37,19 @@ class Admin::ShowCrewImportsController < AdminController
     @existing_team_members = categorize_existing_team_members(@import)
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    # Use with_indifferent_access so keys work as both symbols and strings
-    @cache_key = "crew_import_#{SecureRandom.uuid}"
-    Rails.cache.write(@cache_key, {
+    @cache_key = generate_import_cache_key("crew_import")
+    write_import_cache(@cache_key, {
       event_id: @event.id,
       categorized: serialize_import(@import.categorized),
       existing_team_members: @existing_team_members
-    }.with_indifferent_access, expires_in: 1.hour)
+    })
     @title = "Review Crew Import for #{@event.name}"
   end
 
   def confirm
     authorize! :update, @event
 
-    cache_key = params[:cache_key]
-    import_data = cache_key.present? ? Rails.cache.read(cache_key) : nil
-    Rails.cache.delete(cache_key) if import_data.present?
+    import_data = read_and_clear_cache(params[:cache_key])
 
     if import_data.blank? || import_data["event_id"].to_i != @event.id
       helpers.append_to_flash(:error, "No pending import found. Please start over.")
@@ -76,7 +74,7 @@ class Admin::ShowCrewImportsController < AdminController
       user = case action
       when "create"
         results[:created] += 1
-        create_user(row)
+        create_user_from_row(row)
       when "link"
         # Use existing user
         User.find_by(id: item["existing_user_id"])
@@ -131,18 +129,6 @@ class Admin::ShowCrewImportsController < AdminController
     @event = Show.find_by_slug(params[:show_id])
   end
 
-  def serialize_import(categorized)
-    categorized.transform_values do |items|
-      items.map do |item|
-        {
-          "row" => item[:row],
-          "existing_user_id" => item[:existing_user]&.id,
-          "index" => item[:index]
-        }
-      end
-    end
-  end
-
   def categorize_existing_team_members(import)
     existing = {}
 
@@ -166,26 +152,6 @@ class Admin::ShowCrewImportsController < AdminController
     end
 
     existing
-  end
-
-  def create_user(row)
-    email = row[:email].presence || generate_placeholder_email
-
-    user = User.new(
-      email: email,
-      first_name: row[:first_name],
-      last_name: row[:last_name],
-      student_id: row[:student_id],
-      associate_id: row[:associate_id],
-      password: Devise.friendly_token[0, 20]
-    )
-
-    user.save!
-    user
-  end
-
-  def generate_placeholder_email
-    "unknown_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk"
   end
 
   def add_or_update_team_member(user, position)
