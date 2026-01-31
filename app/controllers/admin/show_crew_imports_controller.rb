@@ -36,12 +36,13 @@ class Admin::ShowCrewImportsController < AdminController
     @existing_team_members = categorize_existing_team_members(@import)
 
     # Store in cache to avoid session cookie overflow (4KB limit)
+    # Use with_indifferent_access so keys work as both symbols and strings
     @cache_key = "crew_import_#{SecureRandom.uuid}"
     Rails.cache.write(@cache_key, {
       event_id: @event.id,
       categorized: serialize_import(@import.categorized),
       existing_team_members: @existing_team_members
-    }, expires_in: 1.hour)
+    }.with_indifferent_access, expires_in: 1.hour)
     @title = "Review Crew Import for #{@event.name}"
   end
 
