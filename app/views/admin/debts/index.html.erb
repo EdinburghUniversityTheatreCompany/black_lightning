@@ -18,5 +18,10 @@
   class: user.in_debt ? 'table-danger' : ''
 } } %>
 
+<% quick_actions = [] %>
+<% if can?(:debt_overview, Show) %>
+  <% quick_actions << link_to('Show Debt Overview', debt_overview_admin_shows_path, class: 'btn btn-primary') %>
+<% end %>
+
 <%= render 'shared/pages/index', resource_class: Admin::Debt, resources: @users, headers: headers, field_sets: field_sets, search_fields: search_fields, 
-  show_new_button: false, include_edit_button: false, include_link_to_item: false %>
+  show_new_button: false, include_edit_button: false, include_link_to_item: false, quick_actions: quick_action %>
