@@ -189,9 +189,10 @@ class Ability
 
     set_permissions_based_on_grid(user)
 
-    # Users who can absorb users can also view and manage duplicates and membership imports
+    # Users who can absorb users can also view and manage duplicates and imports
     can :manage, :duplicate if can? :absorb, User
     can :manage, :membership_import if can? :absorb, User
+    can :manage, :user_import if can? :absorb, User
 
     # Allow users with manage_trained_roles permission to add/remove users from trained roles
     if can? :manage_trained_roles, Role

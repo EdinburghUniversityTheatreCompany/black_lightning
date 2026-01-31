@@ -1,0 +1,290 @@
+require "test_helper"
+
+class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
+  setup do
+    sign_in users(:admin)
+    @show = FactoryBot.create(:show)
+  end
+
+  # Authorization tests
+
+  test "should get new" do
+    get :new, params: { show_id: @show.slug }
+    assert_response :success
+  end
+
+  test "non-admin without update permission cannot access" do
+    sign_out users(:admin)
+    sign_in users(:member)
+
+    get :new, params: { show_id: @show.slug }
+    assert_response :forbidden
+  end
+
+  # Preview tests
+
+  test "preview with valid paste data shows categorized results" do
+    user = FactoryBot.create(:user, student_id: "s1234567")
+
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail\tPosition
+      Test User\ts1234567\ttest@example.com\tDirector
+      New User\ts9999999\tnew@example.com\tProducer
+    TSV
+
+    post :preview, params: { show_id: @show.slug, paste_data: tsv }
+
+    assert_response :success
+    assert assigns(:import)
+    assert_equal 2, assigns(:import).rows.size
+  end
+
+  test "preview with empty data redirects back with error" do
+    post :preview, params: { show_id: @show.slug, paste_data: "" }
+
+    assert_redirected_to new_admin_show_show_crew_import_path(@show)
+    assert flash[:error].present?
+  end
+
+  test "preview stores import data in session" do
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail\tPosition
+      New User\ts9999999\tnew@example.com\tDirector
+    TSV
+
+    post :preview, params: { show_id: @show.slug, paste_data: tsv }
+
+    assert session[:pending_crew_import].present?
+    # Session keys may be symbols or strings depending on serializer
+    event_id = session[:pending_crew_import][:event_id] || session[:pending_crew_import]["event_id"]
+    assert_equal @show.id, event_id
+  end
+
+  test "preview identifies existing team members" do
+    user = FactoryBot.create(:user, student_id: "s1234567")
+    @show.team_members.create!(user: user, position: "Producer")
+
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail\tPosition
+      Test User\ts1234567\ttest@example.com\tDirector
+    TSV
+
+    post :preview, params: { show_id: @show.slug, paste_data: tsv }
+
+    assert_response :success
+    assert assigns(:existing_team_members).present?
+    assert assigns(:existing_team_members).key?(user.id)
+    assert_equal "Producer", assigns(:existing_team_members)[user.id]["current_position"]
+    assert_equal "Director", assigns(:existing_team_members)[user.id]["new_position"]
+  end
+
+  # Confirm tests
+
+  test "confirm without session data redirects with error" do
+    post :confirm, params: { show_id: @show.slug }
+
+    assert_redirected_to new_admin_show_show_crew_import_path(@show)
+    assert flash[:error].present?
+  end
+
+  test "confirm creates new user and adds to crew" do
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => [
+          { "row" => { "original_name" => "New Director", "first_name" => "New", "last_name" => "Director", "student_id" => "s9999999", "email" => "new@example.com", "position" => "Director" }, "existing_user_id" => nil, "index" => 0 }
+        ]
+      },
+      "existing_team_members" => {}
+    }
+
+    assert_difference [ "User.count", "@show.team_members.count" ], 1 do
+      post :confirm, params: { show_id: @show.slug, actions: { "0" => "create" } }
+    end
+
+    assert_redirected_to admin_show_path(@show)
+    new_user = User.find_by(email: "new@example.com")
+    assert new_user.present?
+    assert @show.team_members.exists?(user: new_user, position: "Director")
+    assert flash[:success].any? { |msg| msg.include?("created") }
+  end
+
+  test "confirm adds existing user to crew" do
+    user = FactoryBot.create(:user, student_id: "s1234567")
+
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [
+          { "row" => { "original_name" => "Test User", "first_name" => "Test", "last_name" => "User", "student_id" => "s1234567", "email" => "test@example.com", "position" => "Producer" }, "existing_user_id" => user.id, "index" => 0 }
+        ],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {}
+    }
+
+    assert_no_difference "User.count" do
+      assert_difference "@show.team_members.count", 1 do
+        post :confirm, params: { show_id: @show.slug, actions: { "0" => "link" } }
+      end
+    end
+
+    assert_redirected_to admin_show_path(@show)
+    assert @show.team_members.exists?(user: user, position: "Producer")
+  end
+
+  test "confirm skips when action is skip" do
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => [
+          { "row" => { "original_name" => "Skip User", "first_name" => "Skip", "last_name" => "User", "student_id" => "s8888888", "email" => "skip@example.com", "position" => "Director" }, "existing_user_id" => nil, "index" => 0 }
+        ]
+      },
+      "existing_team_members" => {}
+    }
+
+    assert_no_difference [ "User.count", "@show.team_members.count" ] do
+      post :confirm, params: { show_id: @show.slug, actions: { "0" => "skip" } }
+    end
+
+    assert_redirected_to admin_show_path(@show)
+    assert flash[:success].any? { |msg| msg.include?("skipped") }
+  end
+
+  test "confirm merges positions for existing team member" do
+    user = FactoryBot.create(:user, student_id: "s1234567")
+    team_member = @show.team_members.create!(user: user, position: "Producer")
+
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {
+        user.id.to_s => {
+          "user_id" => user.id,
+          "user_name" => user.name_or_email,
+          "current_position" => "Producer",
+          "new_position" => "Director",
+          "index" => 0
+        }
+      }
+    }
+
+    post :confirm, params: { show_id: @show.slug, existing_actions: { user.id.to_s => "merge" } }
+
+    assert_redirected_to admin_show_path(@show)
+    team_member.reload
+    assert_equal "Producer, Director", team_member.position
+    assert flash[:success].any? { |msg| msg.include?("updated") }
+  end
+
+  test "confirm replaces position for existing team member" do
+    user = FactoryBot.create(:user, student_id: "s1234567")
+    team_member = @show.team_members.create!(user: user, position: "Producer")
+
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {
+        user.id.to_s => {
+          "user_id" => user.id,
+          "user_name" => user.name_or_email,
+          "current_position" => "Producer",
+          "new_position" => "Director",
+          "index" => 0
+        }
+      }
+    }
+
+    post :confirm, params: { show_id: @show.slug, existing_actions: { user.id.to_s => "replace" } }
+
+    assert_redirected_to admin_show_path(@show)
+    team_member.reload
+    assert_equal "Director", team_member.position
+  end
+
+  test "confirm skips existing team member when action is skip" do
+    user = FactoryBot.create(:user, student_id: "s1234567")
+    team_member = @show.team_members.create!(user: user, position: "Producer")
+
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {
+        user.id.to_s => {
+          "user_id" => user.id,
+          "user_name" => user.name_or_email,
+          "current_position" => "Producer",
+          "new_position" => "Director",
+          "index" => 0
+        }
+      }
+    }
+
+    post :confirm, params: { show_id: @show.slug, existing_actions: { user.id.to_s => "skip" } }
+
+    assert_redirected_to admin_show_path(@show)
+    team_member.reload
+    assert_equal "Producer", team_member.position # Unchanged
+  end
+
+  test "confirm clears session after processing" do
+    session[:pending_crew_import] = {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {}
+    }
+
+    post :confirm, params: { show_id: @show.slug }
+
+    assert_nil session[:pending_crew_import]
+  end
+
+  test "confirm rejects mismatched event_id" do
+    other_show = FactoryBot.create(:show)
+
+    session[:pending_crew_import] = {
+      "event_id" => other_show.id, # Different show
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {}
+    }
+
+    post :confirm, params: { show_id: @show.slug }
+
+    assert_redirected_to new_admin_show_show_crew_import_path(@show)
+    assert flash[:error].present?
+  end
+end

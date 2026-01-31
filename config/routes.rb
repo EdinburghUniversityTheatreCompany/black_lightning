@@ -89,6 +89,13 @@ ChaosRails::Application.routes.draw do
     resources :shows do
       resources :feedbacks, except: [ :show ]
 
+      resources :show_crew_imports, only: [ :new ] do
+        collection do
+          post :preview
+          post :confirm
+        end
+      end
+
       collection do
         get "query_xts"
       end
@@ -179,6 +186,13 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :membership_imports, only: [ :new ] do
+      collection do
+        post :preview
+        post :confirm
+      end
+    end
+
+    resources :user_imports, only: [ :new ] do
       collection do
         post :preview
         post :confirm

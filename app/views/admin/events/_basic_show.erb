@@ -52,6 +52,8 @@
 
 <% content_for :extra_show_actions do %>
   <%= view_page_on_main_site_button if event.is_public %>
+  <% # TODO: Convert to get_link %>
+  <%= link_to "Bulk Import Crew", new_admin_show_show_crew_import_path(event), class: "btn btn-secondary" %>
 <% end %>
 
 <%= render('shared/pages/show', object: event, fields: fields) %>

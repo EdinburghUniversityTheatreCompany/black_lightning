@@ -18,4 +18,9 @@
     random_button:      { slug: 'defaults.random_button', type: :submit_button, action: :Random }
 } %>
 
-<%= render 'shared/pages/index', resource_class: User, resources: @users, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<% quick_actions = [] %>
+<% if can? :manage, :user_import %>
+  <% quick_actions << link_to("Bulk User Import", new_admin_user_import_path, class: "btn btn-secondary") %>
+<% end %>
+
+<%= render 'shared/pages/index', resource_class: User, resources: @users, headers: headers, field_sets: field_sets, search_fields: search_fields, quick_actions: quick_actions %>
