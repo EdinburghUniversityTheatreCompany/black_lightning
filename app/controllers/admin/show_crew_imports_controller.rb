@@ -74,7 +74,9 @@ class Admin::ShowCrewImportsController < AdminController
       user = case action
       when "create"
         results[:created] += 1
-        create_user_from_row(row)
+        new_user = create_user_from_row(row)
+        new_user.send_welcome_email
+        new_user
       when "link"
         # Use existing user
         User.find_by(id: item["existing_user_id"])

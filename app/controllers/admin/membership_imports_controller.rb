@@ -122,6 +122,7 @@ class Admin::MembershipImportsController < AdminController
     update_email_if_unknown(user, row[:email])
     update_ids_if_missing(user, row)
     user.add_role(:member)
+    user.send_welcome_email
     results[:activated] += 1
   end
 
@@ -138,6 +139,7 @@ class Admin::MembershipImportsController < AdminController
 
     if user.save
       user.add_role(:member)
+      user.send_welcome_email
       results[:created] += 1
     else
       results[:errors] << "Failed to create #{row[:original_name]}: #{user.errors.full_messages.join(', ')}"
@@ -160,6 +162,7 @@ class Admin::MembershipImportsController < AdminController
     end
 
     existing_user.add_role(:member)
+    existing_user.send_welcome_email
     results[:merged] += 1
   end
 
