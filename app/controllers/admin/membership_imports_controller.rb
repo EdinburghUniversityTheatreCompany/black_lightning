@@ -5,6 +5,8 @@
 # Allows secretary to import membership purchases and activate users in bulk.
 ##
 class Admin::MembershipImportsController < AdminController
+  include Importable
+
   authorize_resource class: false
 
   def new
@@ -12,11 +14,10 @@ class Admin::MembershipImportsController < AdminController
   end
 
   def preview
-    data = params[:paste_data].presence || params[:xlsx_file]
-    input_type = params[:paste_data].present? ? :paste : :xlsx
+    data, input_type = parse_import_params
 
     if data.blank?
-      flash[:error] = "Please provide data to import (paste or upload)"
+      helpers.append_to_flash(:error, "Please provide data to import (paste or upload)")
       redirect_to new_admin_membership_import_path
       return
     end
@@ -25,23 +26,21 @@ class Admin::MembershipImportsController < AdminController
     @title = "Review Import"
 
     unless @import.valid?
-      flash[:error] = @import.errors.join(", ")
+      helpers.append_to_flash(:error, @import.errors.join(", "))
       redirect_to new_admin_membership_import_path
       return
     end
 
     # Store in cache to avoid session cookie overflow (4KB limit)
-    @cache_key = "membership_import_#{SecureRandom.uuid}"
-    Rails.cache.write(@cache_key, serialize_import(@import.categorized), expires_in: 1.hour)
+    @cache_key = generate_import_cache_key("membership_import")
+    write_import_cache(@cache_key, serialize_import(@import.categorized))
   end
 
   def confirm
-    cache_key = params[:cache_key]
-    categorized = cache_key.present? ? Rails.cache.read(cache_key) : nil
-    Rails.cache.delete(cache_key) if categorized.present?
+    categorized = read_and_clear_cache(params[:cache_key])
 
     if categorized.blank?
-      flash[:error] = "No pending import found. Please start over."
+      helpers.append_to_flash(:error, "No pending import found. Please start over.")
       redirect_to new_admin_membership_import_path
       return
     end
@@ -49,24 +48,11 @@ class Admin::MembershipImportsController < AdminController
     actions = params[:actions] || {}
     results = process_import(deserialize_import(categorized), actions)
 
-    flash[:success] = format_results(results)
+    helpers.append_to_flash(:success, format_results(results))
     redirect_to new_admin_membership_import_path
   end
 
   private
-
-  def serialize_import(categorized)
-    # Convert to a format that can be stored in session (no ActiveRecord objects)
-    categorized.transform_values do |items|
-      items.map do |item|
-        {
-          row: item[:row],
-          existing_user_id: item[:existing_user]&.id,
-          index: item[:index]
-        }
-      end
-    end
-  end
 
   def deserialize_import(serialized)
     # Convert back from session format

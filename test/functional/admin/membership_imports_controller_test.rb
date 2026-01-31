@@ -85,7 +85,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
     assert_redirected_to new_admin_membership_import_path
     assert user.reload.has_role?(:member)
-    assert flash[:success].include?("activated")
+    assert flash[:success].any? { |msg| msg.include?("activated") }
   end
 
   test "confirm creates new user" do
@@ -109,7 +109,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert new_user.present?
     assert new_user.has_role?(:member)
     assert_equal "s9999999", new_user.student_id
-    assert flash[:success].include?("created")
+    assert flash[:success].any? { |msg| msg.include?("created") }
   end
 
   test "confirm skips when action is skip" do
@@ -130,7 +130,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
     assert_redirected_to new_admin_membership_import_path
     assert_not user.reload.has_role?(:member)
-    assert flash[:success].include?("skipped")
+    assert flash[:success].any? { |msg| msg.include?("skipped") }
   end
 
   test "confirm merges when action is merge" do
@@ -156,7 +156,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert user.has_role?(:member)
     assert_equal "s1234567", user.student_id
     assert_equal "johnny@example.com", user.email # Unknown email should be replaced
-    assert flash[:success].include?("merged")
+    assert flash[:success].any? { |msg| msg.include?("merged") }
   end
 
   test "confirm updates unknown email during activation" do
