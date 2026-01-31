@@ -16,15 +16,9 @@
 # - Bulk Show Crew Import (creates users + adds team membership)
 ##
 class UserImport
+  include ImportParsing
+
   BUCKETS = %i[exact_match_id exact_match_email fuzzy_match create_new].freeze
-
-  # Columns for user import: Name, Student/Associate ID (optional), Email (optional)
-  USER_IMPORT_COLUMNS = [ "Name", "Student ID", "Email" ].freeze
-
-  # Columns for show crew import: Name, Student/Associate ID (optional), Email (optional), Position
-  CREW_IMPORT_COLUMNS = [ "Name", "Student ID", "Email", "Position" ].freeze
-
-  attr_reader :rows, :categorized, :errors
 
   def initialize(data, input_type:, import_mode: :user)
     @errors = []
@@ -54,81 +48,18 @@ class UserImport
     end
   end
 
-  def parse_data(data, input_type)
-    case input_type
-    when :paste
-      parse_tsv(data)
-    when :xlsx
-      parse_xlsx(data)
-    else
-      @errors << "Unknown input type: #{input_type}"
-      []
-    end
-  rescue StandardError => e
-    @errors << "Failed to parse data: #{e.message}"
-    []
-  end
-
-  def parse_tsv(data)
-    return [] if data.blank?
-
-    lines = data.strip.split("\n")
-    return [] if lines.size < 2 # Need at least header + 1 row
-
-    headers = lines.first.split("\t").map(&:strip)
-
-    lines[1..].filter_map do |line|
-      next if line.blank?
-
-      values = line.split("\t").map(&:strip)
-      row = headers.zip(values).to_h
-      normalize_row(row)
-    end
-  end
-
-  def parse_xlsx(file)
-    return [] if file.blank?
-
-    xlsx = Roo::Spreadsheet.open(file.path)
-    sheet = xlsx.sheet(0)
-    return [] if sheet.last_row.nil? || sheet.last_row < 2
-
-    headers = sheet.row(1).map { |h| h.to_s.strip }
-
-    (2..sheet.last_row).filter_map do |i|
-      row_values = sheet.row(i)
-      next if row_values.all?(&:blank?)
-
-      row = headers.zip(row_values.map { |v| v.to_s.strip }).to_h
-      normalize_row(row)
-    end
-  end
-
   def normalize_row(row)
-    # Parse "Name" into first_name and last_name
-    name = find_column(row, "name").to_s.strip
-    name_parts = name.split(/\s+/, 2)
-
-    # Extract student_id or associate_id from "Student ID" column
-    raw_id = find_column(row, "student", "id").to_s.strip
-    student_id = raw_id.match?(/\As\d{7}\z/i) ? raw_id.downcase : nil
-    associate_id = raw_id.match?(/\AASSOC\d+\z/i) ? raw_id.upcase : nil
+    name_data = parse_name(find_column(row, "name"))
+    id_data = parse_id(find_column(row, "student", "id"))
 
     # Email handling: accept multiple column names for flexibility
     raw_email = find_column(row, "email")
     email = raw_email.to_s.strip.downcase.presence
-    if email.blank? && student_id.present?
-      email = "#{student_id}@ed.ac.uk"
+    if email.blank? && id_data[:student_id].present?
+      email = "#{id_data[:student_id]}@ed.ac.uk"
     end
 
-    result = {
-      original_name: name,
-      first_name: name_parts[0].to_s,
-      last_name: name_parts[1].to_s,
-      email: email,
-      student_id: student_id,
-      associate_id: associate_id
-    }
+    result = name_data.merge(id_data).merge(email: email)
 
     # Add position for crew imports
     if @import_mode == :crew
@@ -136,23 +67,6 @@ class UserImport
     end
 
     result
-  end
-
-  # Find column value by looking for headers containing any of the keywords (case-insensitive)
-  def find_column(row, *keywords)
-    # First try exact matches for common variations
-    keywords.each do |keyword|
-      return row[keyword] if row[keyword].present?
-      return row[keyword.capitalize] if row[keyword.capitalize].present?
-      return row[keyword.upcase] if row[keyword.upcase].present?
-    end
-
-    # Fallback: find first column whose header contains ALL keywords
-    matching_key = row.keys.find do |k|
-      header = k.to_s.downcase
-      keywords.all? { |kw| header.include?(kw.downcase) }
-    end
-    row[matching_key] if matching_key
   end
 
   def categorize_rows

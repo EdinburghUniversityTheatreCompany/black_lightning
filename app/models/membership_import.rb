@@ -8,9 +8,9 @@
 # Categorizes each row into one of five buckets based on matching rules.
 ##
 class MembershipImport
-  BUCKETS = %i[already_active activate_by_id activate_by_email propose_merge create_new].freeze
+  include ImportParsing
 
-  attr_reader :rows, :categorized, :errors
+  BUCKETS = %i[already_active activate_by_id activate_by_email propose_merge create_new].freeze
 
   def initialize(data, input_type:)
     @errors = []
@@ -24,76 +24,15 @@ class MembershipImport
 
   private
 
-  def parse_data(data, input_type)
-    case input_type
-    when :paste
-      parse_tsv(data)
-    when :xlsx
-      parse_xlsx(data)
-    else
-      @errors << "Unknown input type: #{input_type}"
-      []
-    end
-  rescue StandardError => e
-    @errors << "Failed to parse data: #{e.message}"
-    []
-  end
-
-  def parse_tsv(data)
-    return [] if data.blank?
-
-    lines = data.strip.split("\n")
-    return [] if lines.size < 2 # Need at least header + 1 row
-
-    headers = lines.first.split("\t").map(&:strip)
-
-    lines[1..].filter_map do |line|
-      next if line.blank?
-
-      values = line.split("\t").map(&:strip)
-      row = headers.zip(values).to_h
-      normalize_row(row)
-    end
-  end
-
-  def parse_xlsx(file)
-    return [] if file.blank?
-
-    xlsx = Roo::Spreadsheet.open(file.path)
-    sheet = xlsx.sheet(0)
-    return [] if sheet.last_row.nil? || sheet.last_row < 2
-
-    headers = sheet.row(1).map { |h| h.to_s.strip }
-
-    (2..sheet.last_row).filter_map do |i|
-      row_values = sheet.row(i)
-      next if row_values.all?(&:blank?)
-
-      row = headers.zip(row_values.map { |v| v.to_s.strip }).to_h
-      normalize_row(row)
-    end
-  end
-
   def normalize_row(row)
-    # Parse "Name" into first_name and last_name
-    name = row["Name"].to_s.strip
-    name_parts = name.split(/\s+/, 2)
+    name_data = parse_name(row["Name"])
+    id_data = parse_id(row["Student ID"])
 
-    # Extract student_id or associate_id from "Student ID" column
-    raw_id = row["Student ID"].to_s.strip
-    student_id = raw_id.match?(/\As\d{7}\z/i) ? raw_id.downcase : nil
-    associate_id = raw_id.match?(/\AASSOC\d+\z/i) ? raw_id.upcase : nil
-
-    {
-      original_name: name,
-      first_name: name_parts[0].to_s,
-      last_name: name_parts[1].to_s,
+    name_data.merge(id_data).merge(
       email: row["Purchaser Email"].to_s.strip.downcase.presence,
-      student_id: student_id,
-      associate_id: associate_id,
       member_type: row["Member Type"].to_s.strip.presence,
       date_purchased: parse_date(row["Date Purchased"])
-    }
+    )
   end
 
   def parse_date(date_str)
