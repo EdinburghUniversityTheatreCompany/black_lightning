@@ -9,6 +9,7 @@
 </div>
 
 <%= form_with url: confirm_admin_show_show_crew_imports_path(@event), method: :post, local: true do |f| %>
+  <%= hidden_field_tag :cache_key, @cache_key %>
   <%# Existing team members that appear in import %>
   <% if @existing_team_members.any? %>
     <div class="card mb-3">

@@ -30,12 +30,15 @@ class Admin::MembershipImportsController < AdminController
       return
     end
 
-    # Store categorized data in session for confirm action
-    session[:pending_import] = serialize_import(@import.categorized)
+    # Store in cache to avoid session cookie overflow (4KB limit)
+    @cache_key = "membership_import_#{SecureRandom.uuid}"
+    Rails.cache.write(@cache_key, serialize_import(@import.categorized), expires_in: 1.hour)
   end
 
   def confirm
-    categorized = session.delete(:pending_import)
+    cache_key = params[:cache_key]
+    categorized = cache_key.present? ? Rails.cache.read(cache_key) : nil
+    Rails.cache.delete(cache_key) if categorized.present?
 
     if categorized.blank?
       flash[:error] = "No pending import found. Please start over."
