@@ -35,19 +35,22 @@ class Admin::ShowCrewImportsController < AdminController
     # Check for existing team members and categorize them
     @existing_team_members = categorize_existing_team_members(@import)
 
-    # Store in session for confirm action
-    session[:pending_crew_import] = {
+    # Store in cache to avoid session cookie overflow (4KB limit)
+    @cache_key = "crew_import_#{SecureRandom.uuid}"
+    Rails.cache.write(@cache_key, {
       event_id: @event.id,
       categorized: serialize_import(@import.categorized),
       existing_team_members: @existing_team_members
-    }
+    }, expires_in: 1.hour)
     @title = "Review Crew Import for #{@event.name}"
   end
 
   def confirm
     authorize! :update, @event
 
-    import_data = session.delete(:pending_crew_import)
+    cache_key = params[:cache_key]
+    import_data = cache_key.present? ? Rails.cache.read(cache_key) : nil
+    Rails.cache.delete(cache_key) if import_data.present?
 
     if import_data.blank? || import_data["event_id"].to_i != @event.id
       helpers.append_to_flash(:error, "No pending import found. Please start over.")

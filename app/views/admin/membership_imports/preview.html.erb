@@ -9,6 +9,7 @@
 </div>
 
 <%= form_with url: confirm_admin_membership_imports_path, method: :post, local: true do |f| %>
+  <%= hidden_field_tag :cache_key, @cache_key %>
   <%# Bucket 3: Activate by Email %>
   <% if @import.categorized[:activate_by_email].any? %>
     <div class="card mb-3">

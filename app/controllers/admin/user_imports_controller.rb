@@ -29,13 +29,16 @@ class Admin::UserImportsController < AdminController
       return
     end
 
-    # Store in session for confirm action
-    session[:pending_user_import] = serialize_import(@import.categorized)
+    # Store in cache to avoid session cookie overflow (4KB limit)
+    @cache_key = "user_import_#{SecureRandom.uuid}"
+    Rails.cache.write(@cache_key, serialize_import(@import.categorized), expires_in: 1.hour)
     @title = "Review User Import"
   end
 
   def confirm
-    categorized = session.delete(:pending_user_import)
+    cache_key = params[:cache_key]
+    categorized = cache_key.present? ? Rails.cache.read(cache_key) : nil
+    Rails.cache.delete(cache_key) if categorized.present?
 
     if categorized.blank?
       helpers.append_to_flash(:error, "No pending import found. Please start over.")
