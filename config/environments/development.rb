@@ -37,7 +37,9 @@ Rails.application.configure do
   else
     config.action_controller.perform_caching = false
 
-    config.cache_store = :null_store
+    # Use memory_store even without caching enabled - needed for import features
+    # that store temporary data in the cache to avoid session cookie overflow
+    config.cache_store = :memory_store
   end
 
   # Store uploaded files on the local file system (see config/storage.yml for options).
