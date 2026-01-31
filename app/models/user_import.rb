@@ -91,16 +91,17 @@ class UserImport
 
   def normalize_row(row)
     # Parse "Name" into first_name and last_name
-    name = row["Name"].to_s.strip
+    name = find_column(row, "name").to_s.strip
     name_parts = name.split(/\s+/, 2)
 
     # Extract student_id or associate_id from "Student ID" column
-    raw_id = row["Student ID"].to_s.strip
+    raw_id = find_column(row, "student", "id").to_s.strip
     student_id = raw_id.match?(/\As\d{7}\z/i) ? raw_id.downcase : nil
     associate_id = raw_id.match?(/\AASSOC\d+\z/i) ? raw_id.upcase : nil
 
-    # Email handling: use provided email, or auto-generate from student_id
-    email = row["Email"].to_s.strip.downcase.presence
+    # Email handling: accept multiple column names for flexibility
+    raw_email = find_column(row, "email")
+    email = raw_email.to_s.strip.downcase.presence
     if email.blank? && student_id.present?
       email = "#{student_id}@ed.ac.uk"
     end
@@ -116,10 +117,27 @@ class UserImport
 
     # Add position for crew imports
     if @import_mode == :crew
-      result[:position] = row["Position"].to_s.strip.presence
+      result[:position] = find_column(row, "position").to_s.strip.presence
     end
 
     result
+  end
+
+  # Find column value by looking for headers containing any of the keywords (case-insensitive)
+  def find_column(row, *keywords)
+    # First try exact matches for common variations
+    keywords.each do |keyword|
+      return row[keyword] if row[keyword].present?
+      return row[keyword.capitalize] if row[keyword.capitalize].present?
+      return row[keyword.upcase] if row[keyword.upcase].present?
+    end
+
+    # Fallback: find first column whose header contains ALL keywords
+    matching_key = row.keys.find do |k|
+      header = k.to_s.downcase
+      keywords.all? { |kw| header.include?(kw.downcase) }
+    end
+    row[matching_key] if matching_key
   end
 
   def categorize_rows
