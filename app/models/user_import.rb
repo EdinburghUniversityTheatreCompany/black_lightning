@@ -30,6 +30,7 @@ class UserImport
     @errors = []
     @import_mode = import_mode
     @rows = parse_data(data, input_type)
+    validate_rows
     @categorized = categorize_rows
   end
 
@@ -38,6 +39,20 @@ class UserImport
   end
 
   private
+
+  def validate_rows
+    return if @rows.empty?
+
+    # For crew imports, validate that position column exists and has data
+    if @import_mode == :crew
+      rows_without_position = @rows.select { |row| row[:position].blank? }
+      if rows_without_position.size == @rows.size
+        @errors << "Position column is required for crew imports. Please include a 'Position' column and make sure every row has a value in this column."
+      elsif rows_without_position.any?
+        @errors << "#{rows_without_position.size} row(s) are missing a position"
+      end
+    end
+  end
 
   def parse_data(data, input_type)
     case input_type
