@@ -1,0 +1,232 @@
+<%= render('shared/quick_actions_card') do %>
+  <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: "btn btn-secondary" %>
+<% end %>
+
+<% total = @import.rows.size %>
+<div class="alert alert-info">
+  <strong>Found <%= total %> row(s) to process for <%= @event.name %>.</strong>
+  Review the categorization below and adjust decisions as needed.
+</div>
+
+<%= form_with url: confirm_admin_show_show_crew_imports_path(@event), method: :post, local: true do |f| %>
+  <%# Existing team members that appear in import %>
+  <% if @existing_team_members.any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-warning">
+        <strong>Already on Team (Review Required)</strong>
+        <span class="badge bg-dark ms-2"><%= @existing_team_members.size %></span>
+        <small class="float-end">These people are already on <%= @event.name %></small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Team Member</th>
+              <th>Current Position</th>
+              <th>Import Position</th>
+              <th style="width: 200px;">Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @existing_team_members.each do |user_id, data| %>
+              <tr>
+                <td><%= data["user_name"] %></td>
+                <td><span class="font-monospace"><%= data["current_position"] %></span></td>
+                <td><span class="font-monospace"><%= data["new_position"] %></span></td>
+                <td>
+                  <select name="existing_actions[<%= user_id %>]" class="form-select form-select-sm">
+                    <option value="skip">Skip (keep current)</option>
+                    <option value="merge">Merge positions</option>
+                    <option value="replace">Replace with new</option>
+                  </select>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <%# Bucket 1: Exact match by ID %>
+  <% if @import.categorized[:exact_match_id].any? %>
+    <% items_not_on_team = @import.categorized[:exact_match_id].reject { |item| @existing_team_members.key?(item[:existing_user]&.id) } %>
+    <% if items_not_on_team.any? %>
+      <div class="card mb-3">
+        <div class="card-header bg-success text-white">
+          <strong>Matched by Student/Associate ID</strong>
+          <span class="badge bg-light text-dark ms-2"><%= items_not_on_team.size %></span>
+          <small class="float-end">Will add to crew</small>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Import Name</th>
+                <th>Existing User</th>
+                <th>Position</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% items_not_on_team.each do |item| %>
+                <tr class="table-success">
+                  <td><%= item[:row][:original_name] %></td>
+                  <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
+                  <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                  <td>
+                    <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
+                    <span class="badge bg-success">Will Add</span>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Bucket 2: Exact match by email %>
+  <% if @import.categorized[:exact_match_email].any? %>
+    <% items_not_on_team = @import.categorized[:exact_match_email].reject { |item| @existing_team_members.key?(item[:existing_user]&.id) } %>
+    <% if items_not_on_team.any? %>
+      <div class="card mb-3">
+        <div class="card-header bg-success text-white">
+          <strong>Matched by Email</strong>
+          <span class="badge bg-light text-dark ms-2"><%= items_not_on_team.size %></span>
+          <small class="float-end">Will add to crew</small>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Import Name</th>
+                <th>Existing User</th>
+                <th>Position</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% items_not_on_team.each do |item| %>
+                <tr class="table-success">
+                  <td><%= item[:row][:original_name] %></td>
+                  <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
+                  <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                  <td>
+                    <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
+                    <span class="badge bg-success">Will Add</span>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Bucket 3: Fuzzy name match - needs review %>
+  <% if @import.categorized[:fuzzy_match].any? %>
+    <% items_not_on_team = @import.categorized[:fuzzy_match].reject { |item| @existing_team_members.key?(item[:existing_user]&.id) } %>
+    <% if items_not_on_team.any? %>
+      <div class="card mb-3">
+        <div class="card-header bg-warning">
+          <strong>Possible Matches (Review Required)</strong>
+          <span class="badge bg-dark ms-2"><%= items_not_on_team.size %></span>
+          <small class="float-end">Please decide for each row</small>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Import Data</th>
+                <th>Possible Match</th>
+                <th>Position</th>
+                <th style="width: 200px;">Decision</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% items_not_on_team.each do |item| %>
+                <tr>
+                  <td>
+                    <strong><%= item[:row][:original_name] %></strong><br>
+                    <% if item[:row][:email].present? %>
+                      <small class="text-muted"><%= item[:row][:email] %></small>
+                    <% end %>
+                  </td>
+                  <td>
+                    <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
+                    <small class="text-muted"><%= item[:existing_user].email %></small>
+                  </td>
+                  <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                  <td>
+                    <select name="actions[<%= item[:index] %>]" class="form-select form-select-sm">
+                      <option value="link">Same person (add to crew)</option>
+                      <option value="create">Different person (create new)</option>
+                      <option value="skip">Skip</option>
+                    </select>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%# Bucket 4: Create new %>
+  <% if @import.categorized[:create_new].any? %>
+    <div class="card mb-3">
+      <div class="card-header bg-primary text-white">
+        <strong>New Users to Create</strong>
+        <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:create_new].size %></span>
+        <small class="float-end">Will create and add to crew</small>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Position</th>
+              <th style="width: 150px;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @import.categorized[:create_new].each do |item| %>
+              <tr>
+                <td><%= item[:row][:original_name] %></td>
+                <td>
+                  <% if item[:row][:email].present? %>
+                    <span class="font-monospace"><%= item[:row][:email] %></span>
+                    <% if item[:row][:student_id].present? && item[:row][:email] == "#{item[:row][:student_id]}@ed.ac.uk" %>
+                      <br><small class="text-muted">(auto-generated)</small>
+                    <% end %>
+                  <% else %>
+                    <em class="text-muted">(will generate placeholder)</em>
+                  <% end %>
+                </td>
+                <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                <td>
+                  <select name="actions[<%= item[:index] %>]" class="form-select form-select-sm">
+                    <option value="create">Create & Add</option>
+                    <option value="skip">Skip</option>
+                  </select>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="card">
+    <div class="card-footer d-flex justify-content-between">
+      <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: "btn btn-secondary" %>
+      <%= f.submit "Confirm Import", class: "btn btn-success" %>
+    </div>
+  </div>
+<% end %>
