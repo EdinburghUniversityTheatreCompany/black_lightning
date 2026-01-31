@@ -1,0 +1,87 @@
+<h1>Debt Overview</h1>
+
+<p class="text-muted">
+  Shows in the current academic year and future. Color-coded to help identify which shows need debt configuration.
+</p>
+
+<div class="mb-3">
+  <span class="badge bg-warning text-dark">Yellow</span> = Has tags with debt recommendations but no debts configured<br>
+  <span class="badge bg-danger">Red</span> = Has debts configured that don't match tag recommendations<br>
+  <span class="badge bg-success">Green</span> = Debts match tag recommendations
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Show</th>
+        <th>Dates</th>
+        <th>Tags</th>
+        <th>Maintenance Debts</th>
+        <th>Staffing Debts</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @shows.each do |show| %>
+        <tr class="<%= debt_status_row_class(show) %>">
+          <td>
+            <%= link_to show.name, admin_show_path(show) %>
+          </td>
+          <td>
+            <%= show.date_range(true, :short) %>
+          </td>
+          <td>
+            <% if show.event_tags.any? %>
+              <% show.event_tags.each do |tag| %>
+                <span class="badge bg-secondary"><%= tag.name %></span>
+              <% end %>
+            <% else %>
+              <span class="text-muted">No tags</span>
+            <% end %>
+          </td>
+          <td>
+            <% if show.maintenance_debt_amount.present? %>
+              <strong><%= show.maintenance_debt_amount %></strong>
+              <% if show.maintenance_debt_start.present? %>
+                (due <%= show.maintenance_debt_start.strftime("%d %b %y") %>)
+              <% end %>
+            <% else %>
+              <span class="text-muted">Not configured</span>
+            <% end %>
+          </td>
+          <td>
+            <% if show.staffing_debt_amount.present? %>
+              <strong><%= show.staffing_debt_amount %></strong>
+              <% if show.staffing_debt_start.present? %>
+                (due <%= show.staffing_debt_start.strftime("%d %b %y") %>)
+              <% end %>
+            <% else %>
+              <span class="text-muted">Not configured</span>
+            <% end %>
+          </td>
+          <td>
+            <%= link_to 'Configure', admin_show_path(show, anchor: 'debt_settings'), class: 'btn btn-sm btn-primary' %>
+          </td>
+        </tr>
+        <% if show_debt_recommendation_details?(show) %>
+          <tr class="<%= debt_status_row_class(show) %>">
+            <td colspan="6" class="small">
+              <em>Tag recommendations:
+                <% show.tag_debt_recommendations.each do |rec| %>
+                  <%= rec[:tag_name] %>: <%= rec[:maintenance] || 0 %> maintenance, <%= rec[:staffing] || 0 %> staffing &nbsp;
+                <% end %>
+              </em>
+            </td>
+          </tr>
+        <% end %>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% if @shows.empty? %>
+  <div class="alert alert-info">
+    No shows found in the current academic year or future.
+  </div>
+<% end %>

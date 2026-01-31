@@ -37,6 +37,19 @@
             Welfare contacts (if their only role) get 0 staffing debts.
         </p>
 
+        <% if @show.tag_debt_recommendations.any? %>
+            <div class="alert alert-info">
+                <strong>Tag recommendations:</strong>
+                <% @show.tag_debt_recommendations.each do |rec| %>
+                    <div>
+                        Tag "<%= rec[:tag_name] %>":
+                        <%= rec[:maintenance] || 0 %> maintenance,
+                        <%= rec[:staffing] || 0 %> staffing
+                    </div>
+                <% end %>
+            </div>
+        <% end %>
+
         <%= simple_horizontal_form_for @show, url: update_debt_settings_admin_show_path(@show), method: :patch do |f| %>
             <%= f.error_notification %>
 
