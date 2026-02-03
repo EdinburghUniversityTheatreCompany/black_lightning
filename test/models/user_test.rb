@@ -373,4 +373,21 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal "s1234567", @user.student_id
     assert_equal "ASSOC123456", @user.associate_id
   end
+
+  # Profile completion tests
+  test "profile_completed_at can be set and read" do
+    assert @user.respond_to?(:profile_completed_at), "User should have profile_completed_at attribute"
+
+    timestamp = Time.current
+    @user.update!(profile_completed_at: timestamp)
+
+    assert_in_delta timestamp, @user.profile_completed_at, 1.second
+  end
+
+  test "profile_completed_at can be nil" do
+    user = FactoryBot.create(:user)
+    user.update_column(:profile_completed_at, nil)
+
+    assert_nil user.profile_completed_at
+  end
 end

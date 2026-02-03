@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_01_31_112330) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_03_141201) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -740,6 +740,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_01_31_112330) do
     t.string "last_sign_in_ip"
     t.json "not_duplicate_user_ids"
     t.string "phone_number"
+    t.datetime "profile_completed_at"
     t.boolean "public_profile", default: true
     t.datetime "remember_created_at", precision: nil
     t.string "remember_token"
