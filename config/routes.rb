@@ -34,13 +34,7 @@ ChaosRails::Application.routes.draw do
   end
 
 
-  resources :membership_activation_tokens, only: [] do
-    member do
-      get "activate", to: "membership_activation_tokens#activate"
-      put "submit", to: "membership_activation_tokens#submit"
-      patch "submit", to: "membership_activation_tokens#submit"
-    end
-  end
+  resource :profile_completion, only: [ :show, :update ]
 
   resources :users, only: [ :show ] do
     member do
@@ -202,13 +196,6 @@ ChaosRails::Application.routes.draw do
     # resources :membership_cards, only: [:index, :show, :create, :destroy] do
     #   get 'generate_card'
     # end
-
-    resources :membership_activation_tokens, only: [ :new ] do
-      collection do
-        post "create_activation", to: "membership_activation_tokens#create_activation"
-        post "create_reactivation", to: "membership_activation_tokens#create_reactivation"
-      end
-    end
 
     resources :reviews
 
