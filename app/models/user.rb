@@ -107,6 +107,9 @@ class User < ApplicationRecord
 
   default_scope -> { order("last_name ASC") }
 
+  scope :profile_incomplete, -> { where(profile_completed_at: nil) }
+  scope :profile_complete, -> { where.not(profile_completed_at: nil) }
+
   # Also change the method 'consented'
   def self.not_consented
     where(consented: Date.current.advance(years: -100)..Date.current.advance(years: -1))
@@ -114,6 +117,10 @@ class User < ApplicationRecord
 
   def self.by_first_name
     reorder("first_name ASC")
+  end
+
+  def self.find_by_profile_completion_token(token)
+    find_signed(token, purpose: :profile_completion)
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -787,6 +794,22 @@ class User < ApplicationRecord
   def consented?
     # Check if the user has consented less than a year ago.
     consented&.after?(Date.current.advance(years: -1))
+  end
+
+  def profile_complete?
+    profile_completed_at.present?
+  end
+
+  def profile_incomplete?
+    !profile_complete?
+  end
+
+  def complete_profile!
+    update!(profile_completed_at: Time.current, consented: Date.current)
+  end
+
+  def profile_completion_token
+    signed_id(purpose: :profile_completion, expires_in: 7.days)
   end
 
   def send_welcome_email

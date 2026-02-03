@@ -390,4 +390,120 @@ class Admin::UserTest < ActiveSupport::TestCase
 
     assert_nil user.profile_completed_at
   end
+
+  test "profile_complete? returns true when profile_completed_at is present" do
+    @user.update!(profile_completed_at: Time.current)
+
+    assert @user.profile_complete?
+  end
+
+  test "profile_complete? returns false when profile_completed_at is nil" do
+    @user.update_column(:profile_completed_at, nil)
+
+    assert_not @user.profile_complete?
+  end
+
+  test "profile_incomplete? returns true when profile_completed_at is nil" do
+    @user.update_column(:profile_completed_at, nil)
+
+    assert @user.profile_incomplete?
+  end
+
+  test "profile_incomplete? returns false when profile_completed_at is present" do
+    @user.update!(profile_completed_at: Time.current)
+
+    assert_not @user.profile_incomplete?
+  end
+
+  test "complete_profile! sets profile_completed_at and consented" do
+    @user.update_column(:profile_completed_at, nil)
+    @user.update_column(:consented, nil)
+
+    freeze_time do
+      @user.complete_profile!
+
+      assert_in_delta Time.current, @user.profile_completed_at, 1.second
+      assert_equal Date.current, @user.consented
+    end
+  end
+
+  test "complete_profile! updates consented even if already set" do
+    old_consent_date = Date.current.advance(months: -6)
+    @user.update_column(:consented, old_consent_date)
+    @user.update_column(:profile_completed_at, nil)
+
+    freeze_time do
+      @user.complete_profile!
+
+      assert_equal Date.current, @user.consented
+      assert_not_equal old_consent_date, @user.consented
+    end
+  end
+
+  test "profile_completion_token generates a valid signed token" do
+    token = @user.profile_completion_token
+
+    assert_not_nil token
+    assert_kind_of String, token
+    assert token.length > 20, "Token should be a substantial signed ID"
+  end
+
+  test "find_by_profile_completion_token finds user with valid token" do
+    token = @user.profile_completion_token
+
+    found_user = User.find_by_profile_completion_token(token)
+
+    assert_equal @user, found_user
+  end
+
+  test "find_by_profile_completion_token returns nil for invalid token" do
+    found_user = User.find_by_profile_completion_token("invalid_token")
+
+    assert_nil found_user
+  end
+
+  test "find_by_profile_completion_token returns nil for expired token" do
+    token = @user.profile_completion_token
+
+    travel 8.days do
+      found_user = User.find_by_profile_completion_token(token)
+
+      assert_nil found_user
+    end
+  end
+
+  test "find_by_profile_completion_token returns nil for token with wrong purpose" do
+    # Generate a token with a different purpose
+    wrong_purpose_token = @user.signed_id(purpose: :password_reset, expires_in: 7.days)
+
+    found_user = User.find_by_profile_completion_token(wrong_purpose_token)
+
+    assert_nil found_user
+  end
+
+  test "profile_incomplete scope returns users without profile_completed_at" do
+    incomplete_user = FactoryBot.create(:user)
+    incomplete_user.update_column(:profile_completed_at, nil)
+
+    complete_user = FactoryBot.create(:user)
+    complete_user.update!(profile_completed_at: Time.current)
+
+    incomplete_users = User.profile_incomplete
+
+    assert_includes incomplete_users, incomplete_user
+    assert_not_includes incomplete_users, complete_user
+  end
+
+  test "profile_complete scope returns users with profile_completed_at" do
+    incomplete_user = FactoryBot.create(:user)
+    incomplete_user.update_column(:profile_completed_at, nil)
+
+    complete_user = FactoryBot.create(:user)
+    complete_user.update!(profile_completed_at: Time.current)
+
+    complete_users = User.profile_complete
+
+    assert_includes complete_users, complete_user
+    assert_not_includes complete_users, incomplete_user
+  end
 end
