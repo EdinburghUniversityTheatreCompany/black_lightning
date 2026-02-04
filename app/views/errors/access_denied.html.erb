@@ -10,11 +10,8 @@
     <% else %>
       <p>
         You are not a member at the moment, which might cause this error. 
-        <% if current_user.membership_activation_tokens.empty? %>
-          <b>Please buy membership on the EUSA website</b> and email the secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a> afterwards to ask if they can (re)activate your membership.
-        <% else %>
-          <b>You can activate your membership by clicking <%= link_to('here', activate_membership_activation_token_url(current_user.membership_activation_tokens.last)) %>.</b> Please email the secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a> if you have any trouble.
-        <% end %>
+
+        <b>Please buy membership on the EUSA website</b> and email the secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a> afterwards to ask if they can (re)activate your membership.
       </p>
     <% end %>
   <% end %>

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_03_141201) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_04_091122) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -427,15 +427,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_03_141201) do
     t.integer "user_id"
   end
 
-  create_table "membership_activation_tokens", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
-    t.datetime "created_at", precision: nil, null: false
-    t.string "token"
-    t.string "uid"
-    t.datetime "updated_at", precision: nil, null: false
-    t.integer "user_id"
-    t.index ["user_id"], name: "index_membership_activation_tokens_on_user_id"
-  end
-
   create_table "membership_cards", id: :integer, charset: "utf8mb3", collation: "utf8mb3_unicode_ci", force: :cascade do |t|
     t.string "card_number"
     t.datetime "created_at", precision: nil, null: false
@@ -807,7 +798,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_03_141201) do
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_profiles", column: "profile_id"
   add_foreign_key "marketing_creatives_profiles", "users"
-  add_foreign_key "membership_activation_tokens", "users"
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade

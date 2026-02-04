@@ -87,7 +87,6 @@ class User < ApplicationRecord
   has_many :admin_maintenance_debts, class_name: "Admin::MaintenanceDebt", dependent: :restrict_with_error
   has_many :admin_staffing_debts, class_name: "Admin::StaffingDebt", dependent: :restrict_with_error
   has_many :admin_debt_notifications, class_name: "Admin::DebtNotification", dependent: :destroy
-  has_many :membership_activation_tokens, class_name: "MembershipActivationToken", dependent: :destroy
   has_many :maintenance_attendances, class_name: "MaintenanceAttendance", dependent: :restrict_with_error
 
   has_one_attached :avatar
@@ -593,14 +592,11 @@ class User < ApplicationRecord
         end
       end
 
-      # 10. Handle MembershipActivationTokens - just destroy source's
-      source_user.membership_activation_tokens.destroy_all
-
-      # 11. Reallocate debts after transfer to properly link jobs/attendances
+      # 10. Reallocate debts after transfer to properly link jobs/attendances
       reallocate_maintenance_debts
       reallocate_staffing_debts
 
-      # 12. Destroy source user - reload first to clear cached associations
+      # 11. Destroy source user - reload first to clear cached associations
       source_user.reload.destroy!
     end
 
