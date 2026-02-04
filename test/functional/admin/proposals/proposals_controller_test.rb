@@ -20,7 +20,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
 
   test "should show proposal" do
     sign_out @admin
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, :with_team_members, call: @call)
     proposal.users.first.add_role :admin
     sign_in proposal.users.first
 
@@ -31,7 +31,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test "someone on the proposal can see debt status" do
     sign_out @admin
 
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, :with_team_members, call: @call)
     user = proposal.users.first
     user.add_role(:member)
     debtor = proposal.users.last
@@ -143,7 +143,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     sign_out @admin
     @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
 
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, :with_team_members, call: @call)
 
     proposal.users.first.add_role :admin
     sign_in proposal.users.first
@@ -183,7 +183,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
   test "should not update invalid proposal" do
     sign_out @admin
 
-    proposal = FactoryBot.create(:proposal, call: @call)
+    proposal = FactoryBot.create(:proposal, :with_team_members, call: @call)
     proposal.users.first.add_role :admin
     sign_in proposal.users.first
 

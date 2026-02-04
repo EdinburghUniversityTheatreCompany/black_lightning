@@ -24,14 +24,18 @@ FactoryBot.define do
     status         { Admin::Proposals::Proposal.statuses.keys.sample }
 
     transient do
-      team_member_count { 5 }
+      team_member_count { 0 }
       submission_deadline { 5.days.from_now }
     end
 
     call { FactoryBot.create(:proposal_call, submission_deadline: submission_deadline) }
 
     after(:build) do |proposal, evaluator|
-      proposal.team_members << FactoryBot.build_list(:team_member, evaluator.team_member_count, teamwork: proposal)
+      proposal.team_members << FactoryBot.build_list(:team_member, evaluator.team_member_count, teamwork: proposal) if evaluator.team_member_count > 0
+    end
+
+    trait :with_team_members do
+      team_member_count { 5 }
     end
   end
 end

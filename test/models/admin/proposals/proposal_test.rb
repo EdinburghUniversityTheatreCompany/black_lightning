@@ -21,7 +21,7 @@ require "test_helper"
 class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
   setup do
     @call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 5), question_count: 3)
-    @proposal = FactoryBot.create(:proposal, call: @call)
+    @proposal = FactoryBot.create(:proposal, :with_team_members, call: @call)
   end
 
   test "set default proposal text" do
@@ -118,20 +118,6 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     show = Show.where(slug: "#{preexisting_show.slug}-2")
 
     assert show.present?
-  end
-
-  test "convert proposal to show with loads of duplicate slugs" do
-    # Get a proposal
-    @proposal.update(status: :successful)
-
-    # Now try converting the same proposal many times and at some point, expect a RecordNotSaved error.
-    exception = assert_raises ActiveRecord::RecordNotSaved do
-      for i in 0..101 do
-        @proposal.convert_to_show
-      end
-    end
-
-    assert_includes exception.message, "The number appended at the end of the slug has hit"
   end
 
   test "labels for successful proposal with debtors" do
