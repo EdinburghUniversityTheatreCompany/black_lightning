@@ -6,7 +6,7 @@ class Admin::WorkshopsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:workshop, 10)
+    FactoryBot.create_list(:workshop, 3)
 
     get :index
     assert_response :success

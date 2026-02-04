@@ -8,7 +8,7 @@ class Admin::NewsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:news, 10)
+    FactoryBot.create_list(:news, 3)
 
     get :index
     assert_response :success

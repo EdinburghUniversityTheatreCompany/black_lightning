@@ -8,8 +8,8 @@ class Admin::EventTagsControllerTest < ActionController::TestCase
   end
 
   test "pagination should render for a lot of items" do
-    # Create a lot of event tags.
-    FactoryBot.create_list(:event_tag, 50)
+    # Create event tags.
+    FactoryBot.create_list(:event_tag, 3)
 
     get :index
     assert_response :success

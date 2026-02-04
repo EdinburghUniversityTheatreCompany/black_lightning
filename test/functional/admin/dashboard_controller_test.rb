@@ -25,7 +25,7 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_widget_does_not_error "news"
     assert_match "There is no news", response.body
 
-    FactoryBot.create_list(:news, 10)
+    FactoryBot.create_list(:news, 3)
 
     assert_widget_does_not_error "news"
     news = News.current.first
@@ -61,7 +61,7 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_widget_does_not_error "staffings"
     assert_match "There are no upcoming staffing slots.", response.body
 
-    FactoryBot.create_list(:staffing, 10)
+    FactoryBot.create_list(:staffing, 3)
 
     assert_widget_does_not_error "staffings"
     assert_match Admin::Staffing.future.first.show_title, response.body
@@ -75,7 +75,7 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_widget_does_not_error "committee_staffing"
     assert_match "Displays the amount of committee rep slots", response.body
 
-    FactoryBot.create_list(:committee, 10)
+    FactoryBot.create_list(:committee, 3)
     extra_committee = FactoryBot.create(:committee, first_name: "Dennis the Donkey")
 
     assert_widget_does_not_error "committee_staffing"

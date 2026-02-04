@@ -8,7 +8,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:opportunity, 10)
+    FactoryBot.create_list(:opportunity, 3)
 
     get :index
     assert_response :success

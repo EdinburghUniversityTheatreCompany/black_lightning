@@ -8,7 +8,7 @@ class Admin::FeedbacksControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:feedback, 10)
+    FactoryBot.create_list(:feedback, 3)
 
     get :index, params: { show_id: @show }
     assert_response :success

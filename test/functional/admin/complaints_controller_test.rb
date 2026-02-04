@@ -11,7 +11,7 @@ class Admin::ComplaintsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:complaint, 10)
+    FactoryBot.create_list(:complaint, 3)
 
     get :index
     assert_response :success

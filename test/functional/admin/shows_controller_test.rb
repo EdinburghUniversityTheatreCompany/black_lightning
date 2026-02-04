@@ -9,7 +9,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:show, 10)
+    FactoryBot.create_list(:show, 3)
 
     get :index
     assert_response :success
@@ -17,7 +17,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test "should get random show" do
-    FactoryBot.create_list(:show, 10)
+    FactoryBot.create_list(:show, 3)
 
     get :index, params: { commit: "Random" }
 

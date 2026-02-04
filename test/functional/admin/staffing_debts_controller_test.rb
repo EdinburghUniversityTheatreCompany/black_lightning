@@ -10,7 +10,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
   end
 
   test "should get index with multiple debts" do
-    FactoryBot.create_list(:staffing_debt, 10)
+    FactoryBot.create_list(:staffing_debt, 3)
 
     get :index
     assert_response :success

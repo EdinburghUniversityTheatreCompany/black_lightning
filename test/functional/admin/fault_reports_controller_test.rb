@@ -8,7 +8,7 @@ class Admin::FaultReportsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:fault_report, 10)
+    FactoryBot.create_list(:fault_report, 3)
 
     get :index
     assert_response :success

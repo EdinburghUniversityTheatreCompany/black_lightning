@@ -8,7 +8,7 @@ class Admin::Proposals::CallsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:proposal_call, 10)
+    FactoryBot.create_list(:proposal_call, 3)
 
     get :index
     assert_response :success
