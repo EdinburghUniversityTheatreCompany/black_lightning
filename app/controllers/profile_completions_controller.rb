@@ -64,6 +64,6 @@ class ProfileCompletionsController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:password, :first_name, :last_name, :phone_number, :bio, :avatar, :public_profile)
+    params.require(:user).permit(:email, :password, :password_confirmation, :first_name, :last_name, :phone_number, :bio, :avatar, :public_profile)
   end
 end

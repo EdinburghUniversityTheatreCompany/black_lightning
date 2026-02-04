@@ -1,3 +1,38 @@
-<%# This is a stub view. Will be properly implemented in Task 4. %>
-<h1>Complete Your Profile</h1>
-<p>This view will be implemented properly later.</p>
+<h1><%= @title %></h1>
+
+<p>
+  <%= display_block("Registration Help", false) %>
+</p>
+
+<%= simple_horizontal_form_for(@user, method: :patch, url: profile_completion_path(token: params[:token])) do |f| %>
+  <%= f.error_notification %>
+
+  <% unless current_user %>
+    <p><b>Already have an account?</b> <%= link_to "Log in here", new_user_session_path %> instead of creating a new one.</p>
+  <% end %>
+
+  <div class="form-inputs">
+    <%= f.input :email, required: true, autofocus: true %>
+
+    <%= f.input :first_name, required: true %>
+    <%= f.input :last_name, required: true %>
+
+    <%= f.input :phone_number, hint: 'It is not mandatory to enter your phone number. A phone number is only required once you want to sign up for staffing slots.' %>
+
+    <% if @user.encrypted_password.blank? || params[:token].present? %>
+      <%= f.input :password, required: true, hint: 'Minimum 6 characters' %>
+      <%= f.input :password_confirmation, required: true %>
+    <% end %>
+
+    <p>A bio and avatar are not mandatory, but these will be shown on your profile if you enter them.</p>
+    <%= render "/shared/form/md_editor", f: f, field: :bio, rows: 12 %>
+    <%= render 'shared/form/file_field', f: f, field_name: :avatar, hint: 'Try to keep the image as square as possible.' %>
+    <%= f.input :public_profile, label: 'Enable Public Profile', hint: 'Display your profile on the public website as well as the members-only part?' %>
+  </div>
+
+  <%= render 'shared/consent' %>
+
+  <div class="form-actions mb-3">
+    <%= f.button :submit, 'Complete Profile', class: 'btn btn-primary' %>
+  </div>
+<% end %>
