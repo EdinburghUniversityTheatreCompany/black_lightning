@@ -23,7 +23,7 @@ class ProposalsMailerTest < ActionMailer::TestCase
   test "should send added_to_proposal for update" do
     # Mainly test if the line changes properly.
 
-    proposal = FactoryBot.create(:proposal)
+    proposal = FactoryBot.create(:proposal, :with_team_members)
     updater = proposal.users.first
 
     team_member = proposal.team_members.first

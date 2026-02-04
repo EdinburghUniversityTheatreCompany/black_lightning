@@ -587,6 +587,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     @random_ability = Ability.new(FactoryBot.create(:user))
 
+    # Create proposals if the call doesn't have any
+    FactoryBot.create_list(:proposal, 2, :with_team_members, call: @call) if @call.proposals.empty?
     @proposal = @call.proposals.sample
     @proposal.status = :rejected
 

@@ -26,7 +26,9 @@ FactoryBot.define do
 
     after(:create) do |question, evaluator|
       if evaluator.answered && question.answers.empty?
-        FactoryBot.create(:answer, question_id: question.id, response_type: question.response_type, answerable: question.questionable)
+        # File responses need attachments
+        with_attachment = (question.response_type == "File")
+        FactoryBot.create(:answer, question_id: question.id, response_type: question.response_type, answerable: question.questionable, with_attachment: with_attachment)
       end
     end
 
