@@ -31,11 +31,11 @@ proposals_proposal_text_default:
   content: "This is the default text for the proposal text field."
 
 welcome email_members:
-  name: "Email - Welcome Email (Members)"
+  name: "Email - Welcome Email (Member)"
   content: "This is the test welcome email content for members"
 
 welcome email_non_members:
-  name: "Email - Welcome Email (Non-Members)"
+  name: "Email - Welcome Email (Non-Member)"
   content: "This is the test welcome email content for non-members"
 
 about:
