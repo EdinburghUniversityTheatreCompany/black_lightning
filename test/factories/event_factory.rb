@@ -44,7 +44,7 @@ FactoryBot.define do
     pretix_shown { [ true, false ].sample }
     pretix_view  { [ "list", "week", "month" ].sample }
 
-    venue_id     { Venue.all.sample.id if venue.nil? }
+    venue        { Venue.first }
 
     transient do
       team_member_count { 0 }
@@ -87,11 +87,15 @@ FactoryBot.define do
     price { generate(:random_name) }
 
     transient do
-      feedback_count { 1 }
+      feedback_count { 0 }
     end
 
     after(:create) do |show, evaluator|
-      create_list(:feedback, evaluator.feedback_count, show: show)
+      create_list(:feedback, evaluator.feedback_count, show: show) if evaluator.feedback_count > 0
+    end
+
+    trait :with_feedback do
+      feedback_count { 1 }
     end
   end
 

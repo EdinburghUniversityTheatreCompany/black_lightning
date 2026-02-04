@@ -17,7 +17,7 @@
 FactoryBot.define do
   factory :staffing_debt, class: Admin::StaffingDebt do
     association :user, factory: :member
-    association :show, factory: :show
+    show { Show.first || FactoryBot.create(:show) }
     state { :normal }
     due_by { Date.current + 1 }
     converted_from_maintenance_debt { false }
