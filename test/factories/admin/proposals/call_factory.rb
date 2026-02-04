@@ -21,14 +21,22 @@ FactoryBot.define do
     editing_deadline { submission_deadline.advance(days: 5) }
 
     transient do
-      question_count { 5 }
-      proposal_count { 2 }
+      question_count { 0 }
+      proposal_count { 0 }
     end
 
     after(:create) do |call, evaluator|
-      call.questions = FactoryBot.create_list(:question, evaluator.question_count, questionable: call)
-      call.proposals = FactoryBot.create_list(:proposal, evaluator.proposal_count, call: call)
+      call.questions = FactoryBot.create_list(:question, evaluator.question_count, questionable: call) if evaluator.question_count > 0
+      call.proposals = FactoryBot.create_list(:proposal, evaluator.proposal_count, call: call) if evaluator.proposal_count > 0
       call.save
+    end
+
+    trait :with_questions do
+      question_count { 5 }
+    end
+
+    trait :with_proposals do
+      proposal_count { 2 }
     end
   end
 end

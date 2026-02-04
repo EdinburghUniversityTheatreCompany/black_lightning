@@ -21,13 +21,17 @@ FactoryBot.define do
     response_type { [ "Short Text", "Long Text", "Number", "Yes/No", "File" ].sample }
 
     transient do
-      answered { [ true, false ].sample }
+      answered { false }
     end
 
     after(:create) do |question, evaluator|
       if evaluator.answered && question.answers.empty?
         FactoryBot.create(:answer, question_id: question.id, response_type: question.response_type, answerable: question.questionable)
       end
+    end
+
+    trait :with_answer do
+      answered { true }
     end
   end
 end

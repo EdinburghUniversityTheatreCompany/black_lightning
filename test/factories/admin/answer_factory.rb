@@ -23,6 +23,7 @@ FactoryBot.define do
 
     transient do
       response_type { question.response_type }
+      with_attachment { false }
     end
 
     answer do
@@ -45,8 +46,12 @@ FactoryBot.define do
       if evaluator.response_type.present?
         answer.question.update(response_type: evaluator.response_type)
 
-        FactoryBot.create(:attachment, item: answer) if answer.attachments.empty?
+        FactoryBot.create(:attachment, item: answer) if evaluator.with_attachment && answer.attachments.empty?
       end
+    end
+
+    trait :with_attachment do
+      with_attachment { true }
     end
   end
 end
