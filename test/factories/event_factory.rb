@@ -47,6 +47,16 @@ FactoryBot.define do
     venue_id     { Venue.all.sample.id if venue.nil? }
 
     transient do
+      team_member_count { 0 }
+      video_link_count { 0 }
+      picture_count { 0 }
+      attach_image { false }
+      attach_proposal { false }
+      tag_count { 0 }
+      review_count { 0 }
+    end
+
+    trait :with_associations do
       team_member_count { 5 }
       video_link_count { rand(3) }
       picture_count { rand(3) }
