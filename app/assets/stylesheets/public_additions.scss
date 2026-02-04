@@ -1,5 +1,5 @@
 // Required to override mb-2 and others.
-@import 'bootstrap5_customisations.scss';
+@use 'bootstrap5_customisations.scss' as *;
 
 // START HEADER
 .bedlam-nav-text {

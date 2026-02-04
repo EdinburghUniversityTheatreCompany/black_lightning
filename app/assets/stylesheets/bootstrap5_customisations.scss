@@ -10,4 +10,10 @@ $danger: #212529;
 $link-color: $red;
 $headings-color: $red;
 
-@import "bootstrap/scss/bootstrap";
+@use "bootstrap/scss/bootstrap" with (
+  $primary: $red,
+  $secondary: #fdc5b6,
+  $danger: #212529,
+  $link-color: $red,
+  $headings-color: $red
+);

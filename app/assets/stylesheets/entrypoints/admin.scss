@@ -1,14 +1,19 @@
 // FontAwesome - self-hosted
-$fa-font-path: "/webfonts";
-@import "@fortawesome/fontawesome-free/scss/fontawesome";
-@import "@fortawesome/fontawesome-free/scss/solid";
-@import "@fortawesome/fontawesome-free/scss/brands";
+@use "@fortawesome/fontawesome-free/scss/fontawesome" with (
+  $fa-font-path: "/webfonts"
+);
+@use "@fortawesome/fontawesome-free/scss/solid" with (
+  $fa-font-path: "/webfonts"
+);
+@use "@fortawesome/fontawesome-free/scss/brands" with (
+  $fa-font-path: "/webfonts"
+);
 
-@import '../swalCustomTheme';
+@use '../swalCustomTheme';
 
-@import '../form_additions';
-@import '../shared_additions';
+@use '../form_additions';
+@use '../shared_additions';
 
-@import '../admin/customisations';
+@use '../admin/customisations';
 
-@import '../admin/adminlte';
+@use '../admin/adminlte';
