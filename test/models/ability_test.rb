@@ -223,7 +223,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     allowed_actions = %I[show answer read index]
     forbidden_actions = %I[new create update delete]
 
-    questionnaire = FactoryBot.create :questionnaire
+    questionnaire = FactoryBot.create :questionnaire, :with_team_members
     ability = Ability.new(questionnaire.event.team_members.first.user)
 
     helper_test_actions(questionnaire, "a questionnaire of a show they are on", ability, allowed_actions, forbidden_actions)
@@ -238,7 +238,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     forbidden_actions = %I[update edit delete destroy create new]
 
     # Users can see feedbacks of shows they were involved in.
-    feedback = FactoryBot.create :feedback
+    feedback = FactoryBot.create :feedback, :with_team_members
 
     user = feedback.show.users.sample
     # If you do not do this, the user might accidentally get permissions from fixtures.
@@ -265,7 +265,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(other_show, "other show", @ability, [], allowed_actions + forbidden_actions)
 
     # 2: Test shows the user is a director or producer on.
-    show = FactoryBot.create :show, is_public: false
+    show = FactoryBot.create :show, is_public: false, team_member_count: 1
 
     team_member = show.team_members.sample
     positions_that_can_update_shows.each do |position|
@@ -277,7 +277,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     end
 
     # 3: Test shows the user is a hexagon on.
-    hexagon_show = FactoryBot.create :show, is_public: false
+    hexagon_show = FactoryBot.create :show, is_public: false, team_member_count: 1
 
     hexagon_team_member = hexagon_show.team_members.sample
     hexagon_team_member.position = "Hexagon"

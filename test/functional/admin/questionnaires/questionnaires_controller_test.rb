@@ -26,7 +26,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   end
 
   test "should get index as normal user" do
-    show = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current)
+    show = FactoryBot.create(:show, start_date: Date.current, end_date: Date.current, team_member_count: 1)
     user = show.users.first
 
     assert_not_nil user

@@ -38,7 +38,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
   # This mainly tests the show team members partial.
   test "should get show with a team member that is DM trained" do
-    @show = FactoryBot.create(:show)
+    @show = FactoryBot.create(:show, team_member_count: 1)
 
     @show.users.first.add_role "DM Trained"
 
@@ -118,7 +118,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
   end
 
   test "should update show without new debtors" do
-    @show = FactoryBot.create(:show)
+    @show = FactoryBot.create(:show, team_member_count: 1)
 
     users = FactoryBot.create_list(:user, 3)
     attributes = FactoryBot.attributes_for(:show, team_members_attributes: team_members_attributes(users))

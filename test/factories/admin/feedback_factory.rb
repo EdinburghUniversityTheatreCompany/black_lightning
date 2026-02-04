@@ -15,5 +15,9 @@ FactoryBot.define do
   factory :feedback, class: Admin::Feedback do
     body  { generate :random_string }
     show
+
+    trait :with_team_members do
+      show { association :show, team_member_count: 1 }
+    end
   end
 end

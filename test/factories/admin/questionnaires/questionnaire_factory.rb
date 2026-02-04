@@ -15,13 +15,21 @@ FactoryBot.define do
   factory :questionnaire, class: Admin::Questionnaires::Questionnaire do
     name  { generate(:random_name) }
 
-    before(:create) do |questionnaire, _evaluator|
-      questionnaire.event = FactoryBot.create(%i[show workshop season].sample) unless questionnaire.event.present?
+    transient do
+      event_team_member_count { 0 }
+    end
+
+    before(:create) do |questionnaire, evaluator|
+      questionnaire.event = FactoryBot.create(%i[show workshop season].sample, team_member_count: evaluator.event_team_member_count) unless questionnaire.event.present?
     end
 
     after(:create) do |questionnaire, _evaluator|
       questions = FactoryBot.create_list(:question, 5, questionable: questionnaire)
       emails = FactoryBot.create_list(:email, 2, attached_object: questionnaire)
+    end
+
+    trait :with_team_members do
+      event_team_member_count { 1 }
     end
   end
 end

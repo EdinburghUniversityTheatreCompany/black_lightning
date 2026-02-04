@@ -180,7 +180,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "team memberships" do
-    events = FactoryBot.create_list :show, 3, is_public: true
+    events = FactoryBot.create_list :show, 3, is_public: true, team_member_count: 2
     user = events.first.users.first
 
     team_membership_without_teamwork = events.last.team_members.last
