@@ -1,3 +1,3 @@
 Hi <%= @user.first_name.presence || @user.email  %>!
 
-<%= render_plain(@editable_block.content) %>
+<%= render_plain(@editable_block.content).gsub('{{PROFILE_COMPLETION_LINK}}', @profile_completion_url) %>
