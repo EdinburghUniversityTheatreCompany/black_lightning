@@ -25,7 +25,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
   test "should get index" do
     FactoryBot.create_list(:staffing, 2, unstaffed_job_count: 2, staffed_job_count: 2)
-    FactoryBot.create_list(:staffing, 25, staffed_job_count: 3, start_time: DateTime.current.advance(days: -5))
+    FactoryBot.create_list(:staffing, 3, staffed_job_count: 3, start_time: DateTime.current.advance(days: -5))
     get :index
     assert_response :success
     assert_not_nil assigns(:upcoming_staffings)

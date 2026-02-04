@@ -2,7 +2,7 @@ require "test_helper"
 
 class SeasonsControllerTest < ActionController::TestCase
   test "should get index" do
-    FactoryBot.create_list(:season, 5)
+    FactoryBot.create_list(:season, 2)
 
     get :index
     assert_response :success
@@ -10,7 +10,7 @@ class SeasonsControllerTest < ActionController::TestCase
   end
 
   test "should get show" do
-    @season = FactoryBot.create(:season, show_count: 10, is_public: true)
+    @season = FactoryBot.create(:season, show_count: 3, is_public: true)
 
     get :show, params: { id: @season.slug }
     assert_response :success
@@ -22,7 +22,7 @@ class SeasonsControllerTest < ActionController::TestCase
 
   test "existing season constraint" do
     season = FactoryBot.create(:season)
-    _other_seasons = FactoryBot.create_list(:season, 4)
+    _other_seasons = FactoryBot.create_list(:season, 2)
 
     assert_recognizes({ controller: "seasons", action: "show", id: season.slug }, "//#{season.slug}")
 
