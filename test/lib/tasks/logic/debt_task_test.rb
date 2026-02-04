@@ -48,10 +48,10 @@ class DebtTaskTest < ActiveSupport::TestCase
   end
 
   test "Should clear all maintenance debts, staffing debts and debt notifications" do
-    FactoryBot.create_list(:maintenance_debt, 5)
-    FactoryBot.create_list(:staffing_debt, 5)
-    FactoryBot.create_list(:initial_debt_notification, 5)
-    FactoryBot.create_list(:staffing, 5, staffed_job_count: 2)
+    FactoryBot.create_list(:maintenance_debt, 2)
+    FactoryBot.create_list(:staffing_debt, 2)
+    FactoryBot.create_list(:initial_debt_notification, 2)
+    FactoryBot.create_list(:staffing, 2, staffed_job_count: 2)
 
     Tasks::Logic::Debt.clear_all_debts
 

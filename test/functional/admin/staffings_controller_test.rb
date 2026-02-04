@@ -24,8 +24,8 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
   end
 
   test "should get index" do
-    FactoryBot.create_list(:staffing, 5, unstaffed_job_count: 2, staffed_job_count: 2)
-    FactoryBot.create_list(:staffing, 5, staffed_job_count: 3, start_time: DateTime.current.advance(days: -5))
+    FactoryBot.create_list(:staffing, 2, unstaffed_job_count: 2, staffed_job_count: 2)
+    FactoryBot.create_list(:staffing, 25, staffed_job_count: 3, start_time: DateTime.current.advance(days: -5))
     get :index
     assert_response :success
     assert_not_nil assigns(:upcoming_staffings)
@@ -34,7 +34,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
   test "should get grid" do
     show_title = "Test #&@!$@&@!(@(D???//"
-    FactoryBot.create_list(:staffing, 10, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title)
+    FactoryBot.create_list(:staffing, 2, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title)
 
     get :grid, params: { slug: show_title.to_url }
 
@@ -46,7 +46,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
   test "should get archived grid" do
     show_title = "Electric Bugaloo"
-    FactoryBot.create_list(:staffing, 4, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title, end_time: DateTime.current.advance(days: -1))
+    FactoryBot.create_list(:staffing, 2, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title, end_time: DateTime.current.advance(days: -1))
 
     get :grid, params: { slug: show_title.to_url, archived: "true" }
 
@@ -59,7 +59,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
   test "should get archived grid when future staffings do not exist for this show" do
     show_title = "Frost/Nixon"
-    FactoryBot.create_list(:staffing, 4, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title, end_time: DateTime.current.advance(days: -1))
+    FactoryBot.create_list(:staffing, 2, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title, end_time: DateTime.current.advance(days: -1))
 
     get :grid, params: { slug: show_title.to_url }
 
