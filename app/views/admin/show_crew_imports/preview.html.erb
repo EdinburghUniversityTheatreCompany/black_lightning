@@ -35,11 +35,18 @@
                 <td><span class="font-monospace"><%= data["current_position"] %></span></td>
                 <td><span class="font-monospace"><%= data["new_position"] %></span></td>
                 <td>
-                  <select name="existing_actions[<%= user_id %>]" class="form-select form-select-sm">
-                    <option value="skip">Skip (keep current)</option>
-                    <option value="merge">Merge positions</option>
-                    <option value="replace">Replace with new</option>
-                  </select>
+                  <div class="form-check">
+                    <%= radio_button_tag "existing_actions[#{user_id}]", "skip", true, class: "form-check-input", id: "existing_action_#{user_id}_skip" %>
+                    <%= label_tag "existing_action_#{user_id}_skip", "Skip (keep current)", class: "form-check-label" %>
+                  </div>
+                  <div class="form-check">
+                    <%= radio_button_tag "existing_actions[#{user_id}]", "merge", false, class: "form-check-input", id: "existing_action_#{user_id}_merge" %>
+                    <%= label_tag "existing_action_#{user_id}_merge", "Merge positions", class: "form-check-label" %>
+                  </div>
+                  <div class="form-check">
+                    <%= radio_button_tag "existing_actions[#{user_id}]", "replace", false, class: "form-check-input", id: "existing_action_#{user_id}_replace" %>
+                    <%= label_tag "existing_action_#{user_id}_replace", "Replace with new", class: "form-check-label" %>
+                  </div>
                 </td>
               </tr>
             <% end %>
@@ -162,11 +169,18 @@
                   </td>
                   <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                   <td>
-                    <select name="actions[<%= item[:index] %>]" class="form-select form-select-sm">
-                      <option value="link">Same person (add to crew)</option>
-                      <option value="create">Different person (create new)</option>
-                      <option value="skip">Skip</option>
-                    </select>
+                    <div class="form-check">
+                      <%= radio_button_tag "actions[#{item[:index]}]", "link", true, class: "form-check-input", id: "action_#{item[:index]}_link" %>
+                      <%= label_tag "action_#{item[:index]}_link", "Same person (add to crew)", class: "form-check-label" %>
+                    </div>
+                    <div class="form-check">
+                      <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
+                      <%= label_tag "action_#{item[:index]}_create", "Different person (create new)", class: "form-check-label" %>
+                    </div>
+                    <div class="form-check">
+                      <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
+                      <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
+                    </div>
                   </td>
                 </tr>
               <% end %>
@@ -211,10 +225,14 @@
                 </td>
                 <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                 <td>
-                  <select name="actions[<%= item[:index] %>]" class="form-select form-select-sm">
-                    <option value="create">Create & Add</option>
-                    <option value="skip">Skip</option>
-                  </select>
+                  <div class="form-check">
+                    <%= radio_button_tag "actions[#{item[:index]}]", "create", true, class: "form-check-input", id: "action_#{item[:index]}_create" %>
+                    <%= label_tag "action_#{item[:index]}_create", "Create & Add", class: "form-check-label" %>
+                  </div>
+                  <div class="form-check">
+                    <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
+                    <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
+                  </div>
                 </td>
               </tr>
             <% end %>
