@@ -5,6 +5,7 @@ class ApplicationController < ActionController::Base
   before_action :set_paper_trail_whodunnit
 
   before_action :set_globals
+  before_action :require_profile_completion!
 
   check_authorization unless: :devise_controller?
 
@@ -99,5 +100,20 @@ class ApplicationController < ActionController::Base
       type.json { render json: { error: @error_messages }, status: status_code }
       type.all  { render body: nil, status: status_code }
     end
+  end
+
+  def require_profile_completion!
+    return unless user_signed_in?
+    return if current_user.profile_complete?
+    return if profile_completion_exempt_controller?
+
+    helpers.append_to_flash(:notice, "Please complete your profile to continue.")
+    redirect_to profile_completion_path
+  end
+
+  def profile_completion_exempt_controller?
+    is_a?(ProfileCompletionsController) ||
+      devise_controller? ||
+      is_a?(Doorkeeper::ApplicationController)
   end
 end

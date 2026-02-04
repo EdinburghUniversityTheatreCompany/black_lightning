@@ -40,6 +40,7 @@ FactoryBot.define do
     password              { :random_password }
     password_confirmation { password }
     consented             { 5.day.ago.to_fs(:db) }
+    profile_completed_at  { Time.current }
 
     factory :member do
       after(:create) do |user, _evaluator|

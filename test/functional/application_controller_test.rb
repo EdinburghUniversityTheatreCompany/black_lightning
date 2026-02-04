@@ -18,4 +18,33 @@ class ApplicationControllerTest < ActionController::TestCase
     assert_equal "http://test.host/shows", assigns(:meta)["og:url"]
     assert_equal [ :description, "og:url", "og:image", "og:title", "viewport", "og:description" ], assigns(:meta).keys
   end
+
+  # ==================
+  # Profile completion blocking tests
+  # ==================
+
+  test "unauthenticated users are not blocked by profile completion" do
+    get :index
+
+    assert_response :success
+  end
+
+  test "authenticated users with complete profiles are not blocked" do
+    complete_user = FactoryBot.create(:user, profile_completed_at: Time.current)
+    sign_in complete_user
+
+    get :index
+
+    assert_response :success
+  end
+
+  test "authenticated users with incomplete profiles are redirected to profile completion" do
+    incomplete_user = FactoryBot.create(:user, profile_completed_at: nil)
+    sign_in incomplete_user
+
+    get :index
+
+    assert_redirected_to profile_completion_path
+    assert_includes flash[:notice], "Please complete your profile to continue."
+  end
 end

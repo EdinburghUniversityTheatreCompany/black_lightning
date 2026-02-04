@@ -37,6 +37,7 @@ admin:
   email: 'Peter@peanut.yum'
   public_profile: false
   consented: <%= 5.day.ago.to_fs(:db) %>
+  profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
 
 user:
   id: 2
@@ -44,6 +45,7 @@ user:
   last_name: 'Cat'
   email: 'cyclops@cat.eye'
   consented: <%= 5.day.ago.to_fs(:db) %>
+  profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
 
 committee:
   id: 3
@@ -51,6 +53,7 @@ committee:
   last_name: 'Sombrero'
   email: 'yee@haw.howdy'
   consented: <%= 5.day.ago.to_fs(:db) %>
+  profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
 
 member:
   id: 4
@@ -58,6 +61,7 @@ member:
   last_name: 'Dinosaur'
   email: 'impact@yucatan.gulf'
   consented: <%= 5.day.ago.to_fs(:db) %>
+  profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
 
 member_with_phone_number:
   id: 5
@@ -66,9 +70,11 @@ member_with_phone_number:
   email: 'sicily@island.sea'
   phone_number: '123456789'
   consented: <%= 5.day.ago.to_fs(:db) %>
+  profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
 
 iolanthe_faerie:
   first_name: 'Iolianthe'
   last_name: 'Faerie'
   email: 'iolanthe@faerie.peer'
   consented: <%= 5.day.ago.to_fs(:db) %>
+  profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
