@@ -98,6 +98,59 @@ class Admin::UsersController < AdminController
     render json: { results: items, pagination: { total_count: total_count, more: total_count > per_page * page } }
   end
 
+  ##
+  # GET /admin/users/activate
+  ##
+  def activate
+    authorize! :create, User
+
+    @user = User.new
+    @title = "Activate Members"
+  end
+
+  ##
+  # POST /admin/users/activate
+  ##
+  def create_activation
+    authorize! :create, User
+
+    # Handle both new user creation and resend
+    if params[:user_id].present?
+      # Resend to existing user
+      user = User.find(params[:user_id])
+      user.send_welcome_email
+
+      helpers.append_to_flash(:success, "Profile completion email resent to #{user.email}")
+      redirect_to activate_admin_users_path
+    else
+      # Create new user
+      @user = User.new_user(activation_user_params)
+      @user.add_role(:member) if params[:user][:is_member] == "1"
+
+      if @user.save
+        @user.send_welcome_email
+        helpers.append_to_flash(:success, "User created and profile completion email sent to #{@user.email}")
+        redirect_to activate_admin_users_path
+      else
+        @title = "Activate Members"
+        render :activate, status: :unprocessable_entity
+      end
+    end
+  end
+
+  ##
+  # POST /admin/users/resend_activation
+  ##
+  def resend_activation
+    authorize! :create, User
+
+    user = User.find(params[:user_id])
+    user.send_welcome_email
+
+    helpers.append_to_flash(:success, "Profile completion email resent to #{user.email}")
+    redirect_to activate_admin_users_path
+  end
+
   private
 
   def permitted_params
@@ -134,5 +187,9 @@ class Admin::UsersController < AdminController
     super
 
     @user.send_welcome_email
+  end
+
+  def activation_user_params
+    params.require(:user).permit(:email, :first_name, :last_name, :student_id, :associate_id)
   end
 end
