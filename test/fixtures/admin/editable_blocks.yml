@@ -30,16 +30,20 @@ proposals_proposal_text_default:
   name: "Proposals - Proposal Text Default"
   content: "This is the default text for the proposal text field."
 
-welcome email:
-  name: "Email - Welcome Email"
-  content: "This is the test welcome email content"
+welcome email_members:
+  name: "Email - Welcome Email (Members)"
+  content: "This is the test welcome email content for members"
+
+welcome email_non_members:
+  name: "Email - Welcome Email (Non-Members)"
+  content: "This is the test welcome email content for non-members"
 
 about:
   name: about
   url: about
-  content: 'This is the about page'
+  content: "This is the about page"
 
 archive_help_page:
   name: archive_help_page
   url: archives/help
-  content: 'This is the archive help page'
+  content: "This is the archive help page"
