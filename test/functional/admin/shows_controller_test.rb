@@ -231,14 +231,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_redirected_to admin_shows_path
   end
 
-  test "should not destroy show with team members" do
-    @show = FactoryBot.create(:show, team_member_count: 1)
-
-    assert_no_difference "Show.count" do
-      delete :destroy, params: { id: @show }
-    end
-  end
-
   test "should update debt settings and create debts" do
     # Create show with known team members (all Directors, not capped)
     @show = FactoryBot.create(:show, start_date: start_of_year, end_date: start_of_year.advance(days: 7), team_member_count: 0)

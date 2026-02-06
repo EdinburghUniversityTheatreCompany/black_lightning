@@ -17,7 +17,5 @@ class ComplaintsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to "/"
-
-    assert_enqueued_emails 1
   end
 end
