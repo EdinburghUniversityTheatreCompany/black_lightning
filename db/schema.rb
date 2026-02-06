@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_04_091122) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_06_145531) do
   create_table "active_storage_attachments", charset: "utf8mb3", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -96,6 +96,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_04_091122) do
     t.index ["due_by", "state"], name: "index_admin_maintenance_debts_on_due_by_and_state"
     t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
     t.index ["show_id", "converted_from_staffing_debt"], name: "index_admin_maintenance_debts_on_show_and_converted"
+    t.index ["user_id", "due_by", "state"], name: "index_maintenance_debts_on_user_date_state"
+    t.index ["user_id", "state", "maintenance_attendance_id"], name: "index_maintenance_debts_reallocation"
     t.index ["user_id"], name: "index_admin_maintenance_debts_on_user_id"
   end
 
@@ -176,6 +178,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_04_091122) do
     t.integer "user_id"
     t.index ["due_by", "state"], name: "index_admin_staffing_debts_on_due_by_and_state"
     t.index ["show_id"], name: "index_admin_staffing_debts_on_show_id"
+    t.index ["user_id", "due_by", "state"], name: "index_staffing_debts_on_user_date_state"
+    t.index ["user_id", "state", "admin_staffing_job_id"], name: "index_staffing_debts_reallocation"
     t.index ["user_id"], name: "index_admin_staffing_debts_on_user_id"
   end
 
