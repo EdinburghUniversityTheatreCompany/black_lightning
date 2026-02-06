@@ -106,6 +106,7 @@ class Show < Event
 
   def sync_debts_for_user(user)
     return { maintenance: 0, staffing: 0 } unless debt_configuration_active?
+    return { maintenance: 0, staffing: 0 } unless maintenance_debt_start.present? || staffing_debt_start.present?
     return { maintenance: 0, staffing: 0 } unless end_date && end_date > start_of_year
 
     team_member = team_members.find_by(user: user)
