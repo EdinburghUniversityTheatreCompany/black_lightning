@@ -24,6 +24,10 @@ class Reports::Staffing
 
     current_date = Date.new(@start_year, 1, 1)
 
+    # Preload all members once
+    members = User.with_role(:member).order(:last_name, :first_name).to_a
+    member_ids = members.map(&:id)
+
     while current_date.year <= @end_year
       next_date = current_date.months_since(6)
 
@@ -31,13 +35,45 @@ class Reports::Staffing
       wb.add_worksheet(name: sheet_name) do |sheet|
         sheet.add_row([ "Firstname", "Surname", "Email", "Staffing", "Past Shows", "Upcoming Shows" ])
 
-        User.with_role(:member).each do |user|
-          past_show_count = user.shows.where([ "end_date < ? AND end_date >= ? AND end_date < ?", Date.current, current_date, next_date ]).count
-          upcoming_show_count = user.shows.where([ "end_date >= ? AND end_date >= ? AND end_date < ?", Date.current, current_date, next_date ]).count
+        # BATCH: Query all show counts for all members in this period
+        # Manual join needed for polymorphic association
+        past_shows = TeamMember
+          .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
+          .where(user_id: member_ids)
+          .where('events.end_date < ? AND events.end_date >= ? AND events.end_date < ?',
+                 Date.current, current_date, next_date)
+          .reorder(nil)
+          .group(:user_id)
+          .count
 
-          staffing_count = user.staffings.joins(:staffing_jobs).where([ "start_time >= ? AND start_time < ?", current_date, next_date ]).distinct.count
+        upcoming_shows = TeamMember
+          .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
+          .where(user_id: member_ids)
+          .where('events.end_date >= ? AND events.end_date >= ? AND events.end_date < ?',
+                 Date.current, current_date, next_date)
+          .reorder(nil)
+          .group(:user_id)
+          .count
 
-          sheet.add_row([ user.first_name, user.last_name, user.email, staffing_count, past_show_count, upcoming_show_count ])
+        # BATCH: Query all staffing counts for all members in this period
+        # Manual join needed for polymorphic staffable association
+        staffing_counts = Admin::StaffingJob
+          .joins("INNER JOIN admin_staffings ON admin_staffings.id = admin_staffing_jobs.staffable_id AND admin_staffing_jobs.staffable_type = 'Admin::Staffing'")
+          .where(user_id: member_ids)
+          .where('admin_staffings.start_time >= ? AND admin_staffings.start_time < ?', current_date, next_date)
+          .group(:user_id)
+          .select('user_id, COUNT(DISTINCT admin_staffings.id) as count')
+          .each_with_object({}) { |result, hash| hash[result.user_id] = result.count }
+
+        members.each do |user|
+          sheet.add_row([
+            user.first_name,
+            user.last_name,
+            user.email,
+            staffing_counts[user.id] || 0,
+            past_shows[user.id] || 0,
+            upcoming_shows[user.id] || 0
+          ])
         end
 
         owes_staffing = wb.styles.add_style(fg_color: "FF0000", b: true, type: :dxf)
