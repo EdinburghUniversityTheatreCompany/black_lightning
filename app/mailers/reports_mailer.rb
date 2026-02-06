@@ -1,10 +1,14 @@
 class ReportsMailer < ApplicationMailer
   default reply_to: "IT <it@bedlamtheatre.co.uk>"
 
-  def send_report(user, report)
+  def send_report(user, report_class_name, *report_args)
     @user = user
 
-    report = report.create
+    # Instantiate the report class with any arguments
+    report_class = report_class_name.constantize
+    report_instance = report_args.any? ? report_class.new(*report_args) : report_class.new
+
+    report = report_instance.create
 
     @errors = report.validate
 

@@ -20,9 +20,7 @@ class Admin::ReportsController < AdminController
   # PUT /admin/reports/roles
   ##
   def roles
-    report = Reports::Roles.new
-
-    ReportsMailer.send_report(current_user, report).deliver_later
+    ReportsMailer.send_report(current_user, "Reports::Roles").deliver_later
 
     redirect_to admin_reports_path, notice: "The roles report will be emailed to you when it is ready."
   end
@@ -31,9 +29,7 @@ class Admin::ReportsController < AdminController
   # A report containing a list of all members.
   ##
   def members
-    report = Reports::Membership.new
-
-    ReportsMailer.send_report(current_user, report).deliver_later
+    ReportsMailer.send_report(current_user, "Reports::Membership").deliver_later
 
     redirect_to admin_reports_path, notice: "The members report will be emailed to you when it is ready."
   end
@@ -42,9 +38,7 @@ class Admin::ReportsController < AdminController
   # A report containing all the entries in the NewsletterSubscriber model.
   ##
   def newsletter_subscribers
-    report = Reports::NewsletterSubscribers.new
-
-    ReportsMailer.send_report(current_user, report).deliver_later
+    ReportsMailer.send_report(current_user, "Reports::NewsletterSubscribers").deliver_later
 
     redirect_to admin_reports_path, notice: "The subscribers report will be emailed to you when it is ready."
   end
@@ -63,9 +57,7 @@ class Admin::ReportsController < AdminController
     start_year = params[:first_year] || 1.years.ago.year
     end_year   = params[:end_year]   || 1.years.since.year
 
-    report = Reports::Staffing.new(start_year, end_year)
-
-    ReportsMailer.send_report(current_user, report).deliver_later
+    ReportsMailer.send_report(current_user, "Reports::Staffing", start_year, end_year).deliver_later
 
     redirect_to admin_reports_path, notice: "The staffing report will be emailed to you when it is ready."
   end
