@@ -20,9 +20,11 @@ class MassMailTest < ActiveSupport::TestCase
     recipients = FactoryBot.create_list(:member, 5)
     mass_mail = FactoryBot.create(:draft_mass_mail, recipients: recipients, sender: FactoryBot.create(:member))
 
-    mass_mail.prepare_send!
-
-    assert_enqueued_emails 5
+    assert_difference "ActionMailer::Base.deliveries.count", 5 do
+      perform_enqueued_jobs do
+        mass_mail.prepare_send!
+      end
+    end
   end
 
   test "cannot send mass mail without recipients" do

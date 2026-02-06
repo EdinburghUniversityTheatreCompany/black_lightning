@@ -105,10 +105,13 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
   test "should update mass mail with sending" do
     mass_mail = mass_mails(:draft_mass_mail)
     attributes = FactoryBot.attributes_for(:draft_mass_mail)
+    expected_recipient_count = User.with_role(:member).count
 
-    put :update, params: { id: mass_mail, mass_mail: attributes, send: true }
-
-    assert_enqueued_emails User.with_role(:member).count
+    assert_difference "ActionMailer::Base.deliveries.count", expected_recipient_count do
+      perform_enqueued_jobs do
+        put :update, params: { id: mass_mail, mass_mail: attributes, send: true }
+      end
+    end
 
     assert_nil assigns(:error_message), "An error was caught when catching the mail: #{assigns(:error_message)}"
     assert_not assigns(:mass_mail).draft, "The mass mail should be send, but it is still a draft"
