@@ -197,7 +197,16 @@ class Ability
     # Grant debt_overview access if user can create either type of debt
     can :debt_overview, Show if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
 
-    # Allow users with manage_trained_roles permission to add/remove users from trained roles
+    # Explicitly exclude add_user and remove_user from :manage on Role
+    # This prevents users with "can :manage, Role" from automatically being able to add/remove users
+    cannot [ :add_user, :remove_user ], Role
+
+    # Re-allow for admins (they should be able to add/remove users from any role)
+    if user&.has_role?("Admin")
+      can [ :add_user, :remove_user ], Role
+    end
+
+    # Allow users with manage_trained_roles permission to add/remove users from trained roles only
     if can? :manage_trained_roles, Role
       can [ :add_user, :remove_user ], Role do |role|
         role&.trained_role?

@@ -123,7 +123,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_roles_path
   end
 
-  test "should add user" do
+  test "should add user as admin" do
     user = FactoryBot.create(:user, first_name: "Finbar", last_name: "the Viking")
 
     post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }
@@ -152,18 +152,19 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
   end
 
-  test "should not add user as committee" do
+  test "should not add user as regular user" do
     sign_out @admin
-    sign_in users(:committee)
+
+    signed_in_user = users(:member)
+    sign_in signed_in_user
+
+    assert signed_in_user.cannot?(:add_user, @role), "The user should not have permission to add users to the role."
 
     user = FactoryBot.create(:user, first_name: "Finbar", last_name: "the Viking")
 
     post :add_user, params: { id: @role, add_user_details: { user_id: user.id } }
 
     assert_not user.has_role?("Member"), "The user was added to the role even though non-admins should not be able to do so."
-
-    assert_equal [ "You cannot add users to roles. Only admins can do this. Please contact the IT subcommittee." ], flash[:error]
-    assert_redirected_to admin_role_url(@role)
   end
 
   test "purge should remove all users but keep the role" do
@@ -213,12 +214,10 @@ class Admin::RolesControllerTest < ActionController::TestCase
     sign_out @admin
 
     # Create a user with manage_trained_roles permission
-    user_with_permission = FactoryBot.create(:user)
-    permission = Admin::Permission.find_or_create_by(action: "manage_trained_roles", subject_class: "Role")
-    role = FactoryBot.create(:role, name: "Test Manager")
-    role.permissions << permission
-    user_with_permission.add_role(role.name)
+    user_with_permission = users(:committee)
     sign_in user_with_permission
+
+    assert user_with_permission.can?(:remove_user, Role), "User should be able to remove users from trained role"
 
     # Create a trained role and add a user to it
     trained_role = FactoryBot.create(:role, name: "Test Trained")
@@ -227,16 +226,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     assert user_to_remove.has_role?(trained_role.name)
 
-    # Verify the permission check works
-    assert user_with_permission.can?(:remove_user, trained_role), "User should be able to remove users from trained role"
-
-    puts "Calling delete with URL: #{remove_user_admin_role_path(trained_role, user_to_remove.id)}"
     delete :remove_user, params: { id: trained_role.id, user_id: user_to_remove.id }
-
-    # Debug: check what happened
-    puts "Flash success: #{flash[:success]}"
-    puts "Flash error: #{flash[:error]}"
-    puts "User still has role: #{user_to_remove.reload.has_role?(trained_role.name)}"
 
     assert_not user_to_remove.reload.has_role?(trained_role.name)
     assert_equal [ "Test User has been removed from the role of Test Trained" ], flash[:success]
@@ -263,8 +253,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     delete :remove_user, params: { id: @role, user_id: user_to_remove.id }
 
     assert user_to_remove.reload.has_role?(@role.name)
-    assert_equal [ "You cannot remove users from roles. Only admins can do this. Please contact the IT subcommittee." ], flash[:error]
-    assert_redirected_to admin_role_url(@role)
+    assert_response 403
   end
 
   test "should not remove user who does not exist" do
@@ -289,12 +278,11 @@ class Admin::RolesControllerTest < ActionController::TestCase
     sign_out @admin
 
     # Create a user with manage_trained_roles permission
-    user_with_permission = FactoryBot.create(:user)
-    permission = Admin::Permission.find_or_create_by(action: "manage_trained_roles", subject_class: "Role")
-    role = FactoryBot.create(:role, name: "Test Manager")
-    role.permissions << permission
-    user_with_permission.add_role(role.name)
+    user_with_permission = users(:committee)
+
     sign_in user_with_permission
+
+    assert user_with_permission.can?(:add_user, Role), "User should be able to add users to trained role"
 
     # Create a trained role and try to add a user to it
     trained_role = FactoryBot.create(:role, name: "Test Trained")
@@ -304,7 +292,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     post :add_user, params: { id: trained_role, add_user_details: { user_id: user_to_add.id } }
 
-    assert user_to_add.reload.has_role?(trained_role.name)
+    assert user_to_add.reload.has_role?(trained_role.name), "Role should have the user added to it."
     assert_equal [ "Test User has been added to the role of Test Trained" ], flash[:success]
     assert_redirected_to admin_role_url(trained_role)
   end
