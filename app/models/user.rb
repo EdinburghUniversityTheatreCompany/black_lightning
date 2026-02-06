@@ -186,7 +186,7 @@ class User < ApplicationRecord
     end
   end
 
-  ransacker :full_name, formatter: proc { |v| v.mb_chars.downcase.to_s } do |parent|
+  ransacker :full_name, formatter: proc { |v| v.downcase } do |parent|
     # Alternative
     # Arel.sql("CONCAT_WS(' ', users.first_name, users.last_name)")
     Arel::Nodes::NamedFunction.new("LOWER",
