@@ -87,8 +87,21 @@ FactoryBot.define do
     author { generate(:random_name) }
     price { generate(:random_name) }
 
+    # Don't set debt dates by default - prevents expensive sync_debts callbacks
+    maintenance_debt_start { nil }
+    staffing_debt_start { nil }
+    maintenance_debt_amount { nil }
+    staffing_debt_amount { nil }
+
     transient do
       feedback_count { 0 }
+    end
+
+    trait :with_debts do
+      maintenance_debt_start { 1.month.from_now }
+      staffing_debt_start { 1.month.from_now }
+      maintenance_debt_amount { 2 }
+      staffing_debt_amount { 2 }
     end
 
     after(:create) do |show, evaluator|
