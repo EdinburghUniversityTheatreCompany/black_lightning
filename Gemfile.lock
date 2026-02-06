@@ -524,6 +524,7 @@ GEM
       net-sftp (>= 2.1.2)
       net-ssh (>= 2.8.0)
       ostruct
+    stackprof (0.2.27)
     stimulus-rails (1.3.4)
       railties (>= 6.0.0)
     stringex (2.8.6)
@@ -639,6 +640,7 @@ DEPENDENCIES
   solargraph
   solid_queue
   spring
+  stackprof (>= 0.2.9)
   stringex
   terser
   test-prof

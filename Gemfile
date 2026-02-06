@@ -92,6 +92,7 @@ group :development, :test do
   gem "faker"
 
   gem "test-prof"
+  gem "stackprof", ">= 0.2.9", require: false
 
   gem "rdbg"
   gem "ruby-lsp-rails"
