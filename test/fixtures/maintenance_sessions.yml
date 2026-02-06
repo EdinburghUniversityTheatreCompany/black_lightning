@@ -11,3 +11,7 @@
 #++
 one:
   date: '2023-10-09'
+
+# For testing that deletion is allowed when there are no attendances
+no_attendances:
+  date: '2023-10-10'

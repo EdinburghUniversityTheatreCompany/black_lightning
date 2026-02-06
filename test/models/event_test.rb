@@ -147,6 +147,9 @@ class EventTest < ActionView::TestCase
   end
 
   test "get author name list" do
+    # Clear the cache to ensure test isolation
+    Rails.cache.delete(Event::AUTHOR_NAME_LIST_CACHE_KEY)
+
     show_1 = FactoryBot.create(:show, author: "Author 2")
     show_2 = FactoryBot.create(:show, author: "Author 1")
 

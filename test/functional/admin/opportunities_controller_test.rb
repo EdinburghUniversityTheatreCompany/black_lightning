@@ -96,11 +96,13 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   end
 
   test "should not update invalid opportunity" do
+    original_description = @opportunity.description
     attributes = FactoryBot.attributes_for(:opportunity, description: nil)
 
     put :update, params: { id: @opportunity, opportunity: attributes }
 
-    assert_not_equal attributes[:description], assigns(:opportunity).description
+    @opportunity.reload
+    assert_equal original_description, @opportunity.description
 
     assert_response :unprocessable_entity
   end

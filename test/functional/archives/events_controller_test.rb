@@ -12,7 +12,7 @@ class Archives::EventsControllerTest < ActionController::TestCase
   end
 
   test "should ransack on event tags" do
-    event = FactoryBot.create(:show, is_public: true)
+    event = FactoryBot.create(:show, is_public: true, tag_count: 1)
     event_tag = event.event_tags.first
 
     assert event_tag.present?

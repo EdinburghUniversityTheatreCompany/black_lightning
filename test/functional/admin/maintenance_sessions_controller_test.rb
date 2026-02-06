@@ -67,8 +67,10 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
   end
 
   test "should destroy maintenance_session" do
+    maintenance_session_without_attendances = maintenance_sessions(:no_attendances)
+
     assert_difference("MaintenanceSession.count", -1) do
-      delete :destroy, params: { id: @admin_maintenance_session }
+      delete :destroy, params: { id: maintenance_session_without_attendances }
     end
 
     assert_redirected_to admin_maintenance_sessions_url
