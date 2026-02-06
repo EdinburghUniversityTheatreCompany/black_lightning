@@ -47,5 +47,3 @@ The `get_link` helper provides:
 <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: "btn btn-primary" %>
 <%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
 ```
-# Testing
-The full test suite is very slow to run. Only run it at the end of completing a plan and ask the user for permission first.
