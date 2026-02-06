@@ -44,8 +44,8 @@ FactoryBot.define do
     pretix_shown { [ true, false ].sample }
     pretix_view  { [ "list", "week", "month" ].sample }
 
-    # Use first venue from DB, create one if none exist
-    venue { Venue.first || FactoryBot.create(:venue) }
+    # Use fixture venue - fixtures are loaded in tests
+    venue_id { Venue.first&.id }
 
     transient do
       team_member_count { 0 }
