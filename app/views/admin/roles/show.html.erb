@@ -3,10 +3,10 @@
 <% if current_user.can?(:add_user, @role) %>
   <% content_for :add_user do %>
     <% if @role.name.downcase == 'member' %>
-      <% if can? :new, MembershipActivationToken %>
+      <% if can? :create, User %>
         Please add members from the membership activation page.
         <br>
-        <%= get_link MembershipActivationToken, :new, link_text: '(Re)-activate Membership' %>
+        <%= link_to 'Activate Membership', activate_admin_users_path, class: 'btn btn-primary' %>
       <% else %>
         You are not allowed to add members. Please ask the secretary to add new members.
       <% end %>
