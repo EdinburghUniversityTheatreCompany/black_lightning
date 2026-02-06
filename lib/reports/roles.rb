@@ -13,16 +13,17 @@ class Reports::Roles
     # Add a worksheet with all users:
     wb.add_worksheet(name: "All Users") do |sheet|
       sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
-      User.all.each do |user|
+      User.order(:last_name, :first_name).each do |user|
         sheet.add_row([ user.first_name, user.last_name, user.email, user.last_sign_in_at ], style: [ nil, nil, nil, datetime ])
       end
     end
 
-    # Add a worksheet for each role.
-    Role.all.each do |role|
+    # Add a worksheet for each role - preload users to prevent N+1 queries
+    Role.includes(:users).order(:name).each do |role|
       wb.add_worksheet(name: role.name.gsub(/\//, " - ")) do |sheet|
         sheet.add_row([ "Firstname", "Surname", "Email", "Last Login" ])
-        role.users.each do |user|
+        # Use preloaded users (no additional queries)
+        role.users.sort_by { |u| [ u.last_name, u.first_name ] }.each do |user|
           sheet.add_row([ user.first_name, user.last_name, user.email, user.last_sign_in_at ])
         end
 
