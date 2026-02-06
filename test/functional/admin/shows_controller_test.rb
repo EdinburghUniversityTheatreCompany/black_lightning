@@ -355,7 +355,9 @@ class Admin::ShowsControllerTest < ActionController::TestCase
 
     assert_no_difference("Show.count") do
       assert_no_difference("Workshop.count") do
-        post :convert_to_workshop, params: { id: show }
+        assert_raises RuntimeError do
+          post :convert_to_workshop, params: { id: show }
+        end
       end
     end
 
