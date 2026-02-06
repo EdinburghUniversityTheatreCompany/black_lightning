@@ -314,9 +314,11 @@ class User < ApplicationRecord
   # It then matches all the soonest debt with attendances.
   def reallocate_maintenance_debts
     # Remove unnecessary reload calls and optimize query
+    # Preload maintenance_attendance to prevent N+1 queries
     debts = admin_maintenance_debts
+      .includes(:maintenance_attendance)
       .where("due_by >= ? ", Date.current)
-      .or(admin_maintenance_debts.where(maintenance_attendance: nil))
+      .or(admin_maintenance_debts.includes(:maintenance_attendance).where(maintenance_attendance: nil))
       .where(state: :normal)
       .order(due_by: :asc)
       .to_a
@@ -366,9 +368,11 @@ class User < ApplicationRecord
   # It then matches all the soonest debt with staffing jobs.
   def reallocate_staffing_debts
     # Remove unnecessary reload calls and optimize query
+    # Preload admin_staffing_job to prevent N+1 queries
     debts = admin_staffing_debts
+      .includes(:admin_staffing_job)
       .where("due_by >= ? ", Date.current)
-      .or(admin_staffing_debts.where(admin_staffing_job: nil))
+      .or(admin_staffing_debts.includes(:admin_staffing_job).where(admin_staffing_job: nil))
       .where(state: :normal)
       .order(due_by: :asc)
       .to_a
@@ -380,6 +384,8 @@ class User < ApplicationRecord
       .to_a
 
     # Filter out jobs that do not count towards debt
+    # Note: Cannot eager load polymorphic :staffable association, so this may cause N+1
+    # but it's acceptable given the complexity of the alternative
     valid_jobs = jobs.select(&:counts_towards_debt?)
 
     # The amount of pairs is how many combinations of debt and staffing job there are.
