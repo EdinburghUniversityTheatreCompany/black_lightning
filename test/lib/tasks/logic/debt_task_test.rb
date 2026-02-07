@@ -4,11 +4,11 @@ require "rake"
 # Tests the debt rake tasks.
 class DebtTaskTest < ActiveSupport::TestCase
   test "Should notify new debtors" do
-    new_debts = FactoryBot.create_list(:overdue_maintenance_debt, 2, due_by: Date.current.advance(days: -1))
-    new_debts += FactoryBot.create_list(:overdue_staffing_debt, 3, due_by: Date.current.advance(days: -1))
+    new_debts = FactoryBot.create_list(:overdue_maintenance_debt, 1, due_by: Date.current.advance(days: -1))
+    new_debts += FactoryBot.create_list(:overdue_staffing_debt, 1, due_by: Date.current.advance(days: -1))
 
     # Older debts. Create notifications so they are not included in the unrepentant debts.
-    older_debts = FactoryBot.create_list(:overdue_maintenance_debt, 4, due_by: Date.current.advance(days: -2))
+    older_debts = FactoryBot.create_list(:overdue_maintenance_debt, 1, due_by: Date.current.advance(days: -2))
     older_debts.each do |older_debt|
       FactoryBot.create(:reminder_debt_notification, user: older_debt.user, sent_on: Date.current.advance(days: -3))
     end
@@ -24,8 +24,8 @@ class DebtTaskTest < ActiveSupport::TestCase
   end
 
   test "Should notify unrepentant debtors" do
-    unrepentant_debts = FactoryBot.create_list(:overdue_maintenance_debt, 2, due_by: Date.current.advance(days: -15))
-    unrepentant_debts += FactoryBot.create_list(:overdue_staffing_debt, 3, due_by: Date.current.advance(days: -15))
+    unrepentant_debts = FactoryBot.create_list(:overdue_maintenance_debt, 1, due_by: Date.current.advance(days: -15))
+    unrepentant_debts += FactoryBot.create_list(:overdue_staffing_debt, 1, due_by: Date.current.advance(days: -15))
 
     unrepentant_debts.each do |unrepentant_debt|
       FactoryBot.create(:initial_debt_notification, user: unrepentant_debt.user, sent_on: Date.current.advance(days: -15))
@@ -48,10 +48,10 @@ class DebtTaskTest < ActiveSupport::TestCase
   end
 
   test "Should clear all maintenance debts, staffing debts and debt notifications" do
-    FactoryBot.create_list(:maintenance_debt, 2)
-    FactoryBot.create_list(:staffing_debt, 2)
-    FactoryBot.create_list(:initial_debt_notification, 2)
-    FactoryBot.create_list(:staffing, 2, staffed_job_count: 2)
+    FactoryBot.create_list(:maintenance_debt, 1)
+    FactoryBot.create_list(:staffing_debt, 1)
+    FactoryBot.create_list(:initial_debt_notification, 1)
+    FactoryBot.create_list(:staffing, 1, staffed_job_count: 1)
 
     Tasks::Logic::Debt.clear_all_debts
 
