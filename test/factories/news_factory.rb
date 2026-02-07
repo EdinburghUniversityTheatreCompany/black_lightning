@@ -31,6 +31,6 @@ FactoryBot.define do
     publish_date { generate(:random_date) }
     show_public  { [ true, false ].sample }
 
-    association :author, factory: :user
+    author { User.first || FactoryBot.create(:user) }
   end
 end
