@@ -70,16 +70,20 @@ FactoryBot.define do
     image { Rack::Test::UploadedFile.new(Rails.root.join("test", "test.png"), "image/png") if attach_image }
 
     after(:create) do |event, evaluator|
-      create_list(:team_member, evaluator.team_member_count, teamwork: event)
-      create_list(:video_link, evaluator.video_link_count, item: event)
-      create_list(:picture, evaluator.picture_count, gallery: event)
+      create_list(:team_member, evaluator.team_member_count, teamwork: event) if evaluator.team_member_count > 0
+      create_list(:video_link, evaluator.video_link_count, item: event) if evaluator.video_link_count > 0
+      create_list(:picture, evaluator.picture_count, gallery: event) if evaluator.picture_count > 0
+      create_list(:review, evaluator.review_count, event: event) if evaluator.review_count > 0
 
-      create_list(:review, evaluator.review_count, event: event)
+      if evaluator.tag_count > 0
+        event.event_tags << EventTag.all.sample(evaluator.tag_count)
+      end
 
-      event.event_tags << EventTag.all.sample(evaluator.tag_count)
+      if evaluator.attach_proposal && event.proposal.nil?
+        event.proposal = FactoryBot.create(:proposal)
+      end
 
-      event.proposal = FactoryBot.create(:proposal) if evaluator.attach_proposal && event.proposal.nil?
-      event.save
+      event.save if event.changed?
     end
   end
 
