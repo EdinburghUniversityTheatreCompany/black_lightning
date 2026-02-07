@@ -3,7 +3,7 @@
 
 default: &default
   adapter: mysql2
-  encoding: utf8
+  encoding: utf8mb4
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
@@ -32,7 +32,7 @@ test:
 production:
   primary: &primary_production
     adapter: mysql2
-    encoding: utf8
+    encoding: utf8mb4
     reconnect: false
     database: bedlam_blacklightning_production
     pool: 5
