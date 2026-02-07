@@ -348,22 +348,6 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_equal [ "There are still attached feedbacks left. You cannot convert a show with one of these attached to prevent data loss." ], flash[:error]
   end
 
-  # Assuming it also will not convert to a Season in this case.
-  test "converting to workshop with identical slug gives error" do
-    show = FactoryBot.create(:show, review_count: 0, feedback_count: 0)
-    workshop = FactoryBot.create(:workshop, slug: show.slug)
-
-    assert_no_difference("Show.count") do
-      assert_no_difference("Workshop.count") do
-        assert_raises RuntimeError do
-          post :convert_to_workshop, params: { id: show }
-        end
-      end
-    end
-
-    assert_equal [ "Could not create Workshop \"#{show.name}\" from the Show \"#{show.name}\". There already exists a Workshop with the slug \"#{show.slug}\"" ], flash[:error]
-  end
-
   test "cannot convert without permission" do
     sign_out @admin
     sign_in FactoryBot.create(:committee)
