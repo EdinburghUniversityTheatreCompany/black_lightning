@@ -40,7 +40,7 @@ class Reports::Staffing
         past_shows = TeamMember
           .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
           .where(user_id: member_ids)
-          .where('events.end_date < ? AND events.end_date >= ? AND events.end_date < ?',
+          .where("events.end_date < ? AND events.end_date >= ? AND events.end_date < ?",
                  Date.current, current_date, next_date)
           .reorder(nil)
           .group(:user_id)
@@ -49,7 +49,7 @@ class Reports::Staffing
         upcoming_shows = TeamMember
           .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Show'")
           .where(user_id: member_ids)
-          .where('events.end_date >= ? AND events.end_date >= ? AND events.end_date < ?',
+          .where("events.end_date >= ? AND events.end_date >= ? AND events.end_date < ?",
                  Date.current, current_date, next_date)
           .reorder(nil)
           .group(:user_id)
@@ -60,9 +60,9 @@ class Reports::Staffing
         staffing_counts = Admin::StaffingJob
           .joins("INNER JOIN admin_staffings ON admin_staffings.id = admin_staffing_jobs.staffable_id AND admin_staffing_jobs.staffable_type = 'Admin::Staffing'")
           .where(user_id: member_ids)
-          .where('admin_staffings.start_time >= ? AND admin_staffings.start_time < ?', current_date, next_date)
+          .where("admin_staffings.start_time >= ? AND admin_staffings.start_time < ?", current_date, next_date)
           .group(:user_id)
-          .select('user_id, COUNT(DISTINCT admin_staffings.id) as count')
+          .select("user_id, COUNT(DISTINCT admin_staffings.id) as count")
           .each_with_object({}) { |result, hash| hash[result.user_id] = result.count }
 
         members.each do |user|
