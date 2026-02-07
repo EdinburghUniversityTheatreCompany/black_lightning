@@ -2,7 +2,7 @@ require "test_helper"
 
 class NewsControllerTest < ActionController::TestCase
   test "should get index" do
-    FactoryBot.create_list(:news, 20)
+    FactoryBot.create_list(:news, 3)
 
     get :index
     assert_response :success
@@ -10,7 +10,7 @@ class NewsControllerTest < ActionController::TestCase
   end
 
   test "should get index as rss" do
-    FactoryBot.create_list(:news, 5)
+    FactoryBot.create_list(:news, 2)
 
     get :index, format: :rss
 

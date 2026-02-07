@@ -2,7 +2,7 @@ require "test_helper"
 
 class WorkshopsControllerTest < ActionController::TestCase
   test "should get index" do
-    FactoryBot.create_list(:workshop, 10)
+    FactoryBot.create_list(:workshop, 3)
 
     get :index
     assert_response :success

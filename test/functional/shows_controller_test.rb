@@ -2,7 +2,7 @@ require "test_helper"
 
 class ShowsControllerTest < ActionController::TestCase
   test "should get index" do
-    FactoryBot.create_list(:show, 10, is_public: true)
+    FactoryBot.create_list(:show, 3, is_public: true)
 
     get :index
     assert_response :success

@@ -10,7 +10,7 @@ class SeasonsControllerTest < ActionController::TestCase
   end
 
   test "should get show" do
-    @season = FactoryBot.create(:season, show_count: 3, is_public: true)
+    @season = FactoryBot.create(:season, show_count: 1, is_public: true)
 
     get :show, params: { id: @season.slug }
     assert_response :success
