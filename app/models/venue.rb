@@ -53,6 +53,7 @@ class Venue < ApplicationRecord
   end
 
   def to_param
+    return id.to_s if name.nil?
     "#{id}-#{name.to_url}"
   end
 
