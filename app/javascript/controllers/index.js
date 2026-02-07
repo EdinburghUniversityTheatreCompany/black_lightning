@@ -4,5 +4,5 @@
 
 import { application } from "./application"
 
-import DirectUploadController from "./dropzone_controller"
-application.register("dropzone", DirectUploadController)
+import DropzoneController from "./dropzone_controller"
+application.register("dropzone", DropzoneController)
