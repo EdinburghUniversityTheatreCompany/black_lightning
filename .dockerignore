@@ -44,6 +44,8 @@
 /coverage/
 /tmp/coverage/
 
+.playwright-cli
+
 # Development and CI Files
 /.github
 /.devcontainer
