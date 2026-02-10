@@ -15,9 +15,7 @@
 
     <% if f.object.is_a?(Event) && f.object.persisted? && can?(:update, f.object) %>
       <div class="mb-3">
-        <%= link_to new_admin_show_show_crew_import_path(f.object), class: "btn btn-secondary" do %>
-          <i class="fas fa-users" aria-hidden="true"></i> Bulk Import Crew
-        <% end %>
+        <%= get_link f.object, :edit, link_text: "Bulk Import Team", link_target: new_admin_show_show_crew_import_path(f.object) %>
       </div>
     <% end %>
 
