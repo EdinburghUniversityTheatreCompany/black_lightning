@@ -7,7 +7,7 @@ class ApplicationController < ActionController::Base
   before_action :set_globals
   before_action :require_profile_completion!
 
-  check_authorization unless: :devise_controller?
+  check_authorization unless: :auth_controller?
 
   rescue_from Exception, StandardError do |exception|
     if self.class.name.starts_with?("Doorkeeper::")
@@ -112,8 +112,12 @@ class ApplicationController < ActionController::Base
   end
 
   def profile_completion_exempt_controller?
-    is_a?(ProfileCompletionsController) ||
-      devise_controller? ||
-      is_a?(Doorkeeper::ApplicationController)
+    is_a?(ProfileCompletionsController) || auth_controller?
+  end
+
+  def auth_controller?
+    devise_controller? ||
+    is_a?(DevAuthController) ||
+    is_a?(Doorkeeper::ApplicationController)
   end
 end

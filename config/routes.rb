@@ -352,6 +352,10 @@ ChaosRails::Application.routes.draw do
 
   get "welcome_week", to: redirect("get_involved/welcome_week")
 
+  # Dev auth bypass for Claude Code screenshot/browser testing
+  get "dev_auth/login", to: "dev_auth#login" if Rails.env.local?
+
+
   # Use bedlamtheatre.co.uk/:slug to find a season
   get "/:id", to: "seasons#show", constraints: Constraints::ExistingSeason.new
 

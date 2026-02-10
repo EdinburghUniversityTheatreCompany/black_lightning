@@ -15,6 +15,26 @@ admin_user.add_role :admin
 test_user = User.create! email: 'test@bedlamtheatre.co.uk', password: 'Passw0rd', password_confirmation: 'Passw0rd'
 test_user.add_role :member
 
+# Claude Code screenshot/testing user
+puts "Seeding Claude dev user..."
+claude_user = User.find_or_initialize_by(email: "unknown_claude@bedlamtheatre.co.uk")
+
+if claude_user.new_record?
+  claude_user.assign_attributes(
+    password: SecureRandom.hex(20),
+    first_name: "Claude",
+    last_name: "Dev",
+    consented: Time.current,
+    profile_completed_at: Time.current
+  )
+  claude_user.save!
+
+  claude_user.add_role(:admin)
+  puts "  Created claude-dev@localhost"
+else
+  puts "  claude-dev@localhost already exists"
+end
+
 # Necessary Editable Blocks
 
 about = Admin::EditableBlock.create!              url: 'about', name: 'About', group: 'About'
