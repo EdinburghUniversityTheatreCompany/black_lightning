@@ -195,7 +195,7 @@ class Ability
     can :manage, :user_import if can? :absorb, User
 
     # Grant debt_overview access if user can create either type of debt
-    can :debt_overview, Show if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
+    can :debt_overview, Event if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
 
     # Explicitly exclude add_user and remove_user from :manage on Role
     # This prevents users with "can :manage, Role" from automatically being able to add/remove users

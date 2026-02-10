@@ -32,8 +32,8 @@ search_fields = {
 }
 
 quick_actions = []
-if @events.klass == Show && can?(:debt_overview, Show)
-  quick_actions << link_to('Show Debt Overview', debt_overview_admin_shows_path, class: 'btn btn-primary')
+if @events.klass == Show && can?(:debt_overview, Event)
+  quick_actions << link_to('Show Debt Overview', debt_overview_admin_events_path, class: 'btn btn-primary')
 end
 %>
 

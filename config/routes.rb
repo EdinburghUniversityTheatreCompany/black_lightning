@@ -78,6 +78,10 @@ ChaosRails::Application.routes.draw do
       member do
         get "xts", to: "events#find_by_xts_id"
       end
+
+      collection do
+        get "debt_overview"
+      end
     end
 
     resources :shows do
@@ -92,7 +96,6 @@ ChaosRails::Application.routes.draw do
 
       collection do
         get "query_xts"
-        get "debt_overview"
       end
 
       member do

@@ -11,8 +11,8 @@
   ] } } %>
 
 <% quick_actions = [] %>
-<% if can?(:debt_overview, Show) %>
-  <% quick_actions << link_to('Show Debt Overview', debt_overview_admin_shows_path, class: 'btn btn-primary') %>
+<% if can?(:debt_overview, Event) %>
+  <% quick_actions << link_to('Show Debt Overview', debt_overview_admin_events_path, class: 'btn btn-primary') %>
 <% end %>
 
 <%= render 'shared/pages/index', resource_class: Admin::DebtNotification, resources: @debt_notifications, headers: headers, field_sets: field_sets, search_fields: search_fields,

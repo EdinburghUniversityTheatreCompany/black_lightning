@@ -292,7 +292,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to admin_show_path(@show)
-    assert_equal [ "Debt settings can only be configured for shows in the current academic year or later." ], flash[:error]
+    assert_equal [ "Debt settings can only be configured for events in the current academic year or later." ], flash[:error]
   end
 
   test "convert to season" do
