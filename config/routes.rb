@@ -103,7 +103,27 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :workshops
+    resources :workshops do
+      resources :feedbacks, except: [ :show ]
+
+      resources :show_crew_imports, only: [ :new ] do
+        collection do
+          post :preview
+          post :confirm
+        end
+      end
+    end
+
+    resources :seasons do
+      resources :feedbacks, except: [ :show ]
+
+      resources :show_crew_imports, only: [ :new ] do
+        collection do
+          post :preview
+          post :confirm
+        end
+      end
+    end
 
     resources :debt_notifications, only: [ :index ]
 
@@ -132,7 +152,6 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :seasons
     resources :news
     resources :fault_reports
 

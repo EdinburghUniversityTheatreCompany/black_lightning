@@ -128,7 +128,8 @@ class Admin::ShowCrewImportsController < AdminController
   private
 
   def load_event
-    @event = Show.find_by_slug(params[:show_id])
+    event_id = params[:show_id] || params[:season_id] || params[:workshop_id] || params[:event_id] || params[:id]
+    @event = Event.find_by!(slug: event_id)
   end
 
   def categorize_existing_team_members(import)

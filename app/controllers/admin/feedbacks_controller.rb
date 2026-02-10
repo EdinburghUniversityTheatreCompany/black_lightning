@@ -9,7 +9,7 @@ class Admin::FeedbacksController < AdminController
   # GET /admin/feedbacks
   # GET /admin/feedbacks.json
   def index
-    @show = Show.find_by_slug(params[:show_id])
+    @show = Event.find_by!(slug: params[:show_id] || params[:season_id] || params[:workshop_id])
 
     @title = "Feedback for #{@show.name}"
 
@@ -20,7 +20,7 @@ class Admin::FeedbacksController < AdminController
   # GET /admin/feedbacks/new
   # GET /admin/feedbacks/new.json
   def new
-    @show = Show.find_by_slug(params[:show_id])
+    @show = Event.find_by!(slug: params[:show_id] || params[:season_id] || params[:workshop_id])
     @title = "New Feedback for #{@show.name}"
 
     super
@@ -37,7 +37,7 @@ class Admin::FeedbacksController < AdminController
   # POST /admin/feedbacks
   # POST /admin/feedbacks.json
   def create
-    @show = Show.find_by_slug(params[:show_id])
+    @show = Event.find_by!(slug: params[:show_id] || params[:season_id] || params[:workshop_id])
 
     @feedback.show = @show
 

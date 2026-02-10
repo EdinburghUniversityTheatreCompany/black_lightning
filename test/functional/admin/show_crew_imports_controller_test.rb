@@ -13,6 +13,27 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "should work with Season event type" do
+    season = FactoryBot.create(:season, slug: "bedfest-2026", name: "Bedfest 2026")
+
+    get :new, params: { season_id: season.slug }
+    assert_response :success
+    assert_includes assigns(:title), "Bedfest 2026"
+  end
+
+  test "should work with Workshop event type" do
+    workshop = FactoryBot.create(:workshop, slug: "lighting-workshop", name: "Lighting Workshop")
+
+    get :new, params: { workshop_id: workshop.slug }
+    assert_response :success
+    assert_includes assigns(:title), "Lighting Workshop"
+  end
+
+  test "should return 404 for non-existent event" do
+    get :new, params: { show_id: "non-existent-slug" }
+    assert_response :not_found
+  end
+
   test "non-admin without update permission cannot access" do
     sign_out users(:admin)
     sign_in users(:member)
