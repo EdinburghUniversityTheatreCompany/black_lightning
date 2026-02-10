@@ -10,10 +10,10 @@ class Admin::ShowsController < Admin::GenericEventsController
 
   # GET admin/shows/debt_overview
   def debt_overview
-    authorize! :debt_overview, Show
+    authorize! :debt_overview, Event
 
     academic_year_start = start_of_year
-    @shows = Show.where("end_date >= ?", academic_year_start)
+    @shows = Event.where("end_date >= ?", academic_year_start)
                  .includes(:event_tags, :venue)
                  .order(start_date: :asc)
   end

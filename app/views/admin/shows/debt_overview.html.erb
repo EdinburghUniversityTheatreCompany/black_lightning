@@ -26,7 +26,7 @@
       <% @shows.each do |show| %>
         <tr class="<%= debt_status_row_class(show) %>">
           <td>
-            <%= link_to show.name, admin_show_path(show) %>
+            <%= get_link show, :show %>
           </td>
           <td>
             <%= show.date_range(true, :short) %>
