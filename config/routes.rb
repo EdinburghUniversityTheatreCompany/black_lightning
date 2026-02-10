@@ -112,6 +112,10 @@ ChaosRails::Application.routes.draw do
           post :confirm
         end
       end
+
+      member do
+        patch "update_debt_settings", to: "workshops#update_debt_settings"
+      end
     end
 
     resources :seasons do
@@ -122,6 +126,10 @@ ChaosRails::Application.routes.draw do
           post :preview
           post :confirm
         end
+      end
+
+      member do
+        patch "update_debt_settings", to: "seasons#update_debt_settings"
       end
     end
 

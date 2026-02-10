@@ -1,4 +1,4 @@
-<% content_for :event_labels do %>  
+<% content_for :event_labels do %>
   <ul class="list-group list-group-flush">
     <% @season.events.reorder(:start_date).each do |event| %>
       <li class="list-group-item py-1">
@@ -14,5 +14,14 @@
   event_labels:   { type: 'content', header: 'Events', content: yield(:event_labels) },
   reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @season.reviews) }
 } %>
+
+<%# Only show the Debt stuff if the season is in the current academic year. %>
+<% if @season.end_date > start_of_year && (can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)) %>
+    <% content_for :debt_settings do %>
+        <%= render 'admin/events/debt_settings_form', event: @season %>
+    <% end %>
+
+    <% extra_fields[:debt_settings] = { type: 'content', header: 'Debt Settings', content: yield(:debt_settings) } %>
+<% end %>
 
 <%= render('admin/events/basic_show', event: @season, extra_fields: extra_fields) %>

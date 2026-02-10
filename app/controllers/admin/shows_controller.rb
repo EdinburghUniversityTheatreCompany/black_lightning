@@ -1,7 +1,7 @@
 class Admin::ShowsController < Admin::GenericEventsController
   include AcademicYearHelper
 
-  skip_authorize_resource only: %i[update_debt_settings convert_to_season convert_to_workshop debt_overview]
+  skip_authorize_resource only: %i[convert_to_season convert_to_workshop debt_overview]
 
   # New is handled by the Generic Controller.
   # Create is handled by the Generic Controller.
@@ -16,33 +16,6 @@ class Admin::ShowsController < Admin::GenericEventsController
     @shows = Show.where("end_date >= ?", academic_year_start)
                  .includes(:event_tags, :venue)
                  .order(start_date: :asc)
-  end
-
-  # PATCH admin/shows/1/update_debt_settings
-  def update_debt_settings
-    authorize! :create, Admin::MaintenanceDebt
-    authorize! :create, Admin::StaffingDebt
-
-    unless @show.end_date > helpers.start_of_year
-      helpers.append_to_flash(:error, "Debt settings can only be configured for shows in the current academic year or later.")
-      redirect_to admin_show_path(@show)
-      return
-    end
-
-    if @show.update(debt_settings_params)
-      result = @show.sync_debts_for_all_users
-      total_created = result[:maintenance] + result[:staffing]
-
-      if total_created > 0
-        helpers.append_to_flash(:success, "Debt settings saved. Created #{helpers.pluralize(result[:maintenance], 'maintenance debt')} and #{helpers.pluralize(result[:staffing], 'staffing debt')}.")
-      else
-        helpers.append_to_flash(:success, "Debt settings saved.")
-      end
-    else
-      helpers.append_to_flash(:error, "Could not save debt settings: #{@show.errors.full_messages.to_sentence}")
-    end
-
-    redirect_to admin_show_path(@show)
   end
 
   # POST admin/shows/1/convert_to_season
@@ -155,19 +128,5 @@ class Admin::ShowsController < Admin::GenericEventsController
 
       false
     end
-  end
-
-  def permitted_params
-    super + [
-      :maintenance_debt_start, :staffing_debt_start,
-      :maintenance_debt_amount, :staffing_debt_amount
-    ]
-  end
-
-  def debt_settings_params
-    params.require(:show).permit(
-      :maintenance_debt_amount, :maintenance_debt_start,
-      :staffing_debt_amount, :staffing_debt_start
-    )
   end
 end

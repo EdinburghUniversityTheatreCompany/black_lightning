@@ -1,0 +1,55 @@
+<p>
+    Configure the number of debts to assign to team members. Once configured, debts will be
+    automatically created when team members are added to the <%= event.class.name.downcase %>. Saving these settings will
+    also sync debts for all existing team members.
+</p>
+<p>
+    <strong>Position rules:</strong> Assistants (all roles must be assistant) get max 1 staffing debt.
+    Welfare contacts (if their only role) get 0 staffing debts.
+</p>
+
+<% if event.tag_debt_recommendations.any? %>
+    <div class="alert alert-info">
+        <strong>Tag recommendations:</strong>
+        <% event.tag_debt_recommendations.each do |rec| %>
+            <div>
+                Tag "<%= rec[:tag_name] %>":
+                <%= rec[:maintenance] || 0 %> maintenance,
+                <%= rec[:staffing] || 0 %> staffing
+            </div>
+        <% end %>
+    </div>
+<% end %>
+
+<%= simple_horizontal_form_for event, url: polymorphic_path([:update_debt_settings, :admin, event]), method: :patch do |f| %>
+    <%= f.error_notification %>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h5>Maintenance Debts</h5>
+            <%= f.input :maintenance_debt_amount, label: 'Amount per person', as: :integer, min: 0, max: 5,
+                        hint: 'Leave blank or set to 0 to disable auto-creation' %>
+            <%= f.input :maintenance_debt_start, as: :date, label: 'Due date',
+                        default: ((event.end_date || Date.current) + 14) %>
+        </div>
+        <div class="col-md-6">
+            <h5>Staffing Debts</h5>
+            <%= f.input :staffing_debt_amount, label: 'Amount per person', as: :integer, min: 0, max: 5,
+                        hint: 'Leave blank or set to 0 to disable auto-creation' %>
+            <%= f.input :staffing_debt_start, as: :date, label: 'Due date',
+                        default: ((event.end_date || Date.current) + 14) %>
+        </div>
+    </div>
+
+    <%= f.button :submit, value: 'Save Debt Settings', class: 'btn btn-primary' %>
+<% end %>
+
+<% if event.debt_configuration_active? %>
+    <hr>
+    <p class="text-muted">
+        <strong>Current configuration:</strong>
+        <%= event.maintenance_debt_amount.present? ? "#{event.maintenance_debt_amount} maintenance debt(s)" : "No maintenance debts" %>
+        &bull;
+        <%= event.staffing_debt_amount.present? ? "#{event.staffing_debt_amount} staffing debt(s)" : "No staffing debts" %>
+    </p>
+<% end %>

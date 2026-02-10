@@ -44,6 +44,7 @@ class Event < ApplicationRecord
   include AttachmentItem
   include VideoLinkItem
   include MdHelper
+  include DebtManagement
 
   has_paper_trail limit: 6
   resourcify

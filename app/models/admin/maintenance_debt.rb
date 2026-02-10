@@ -14,7 +14,7 @@
 #++
 class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
-  belongs_to :show
+  belongs_to :show, class_name: "Event", foreign_key: :show_id
   belongs_to :maintenance_attendance, optional: true
 
   validates :due_by, :show_id, :user_id, :state, presence: true

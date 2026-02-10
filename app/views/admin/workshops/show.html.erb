@@ -2,4 +2,13 @@
   reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @workshop.reviews) }
 } %>
 
+<%# Only show the Debt stuff if the workshop is in the current academic year. %>
+<% if @workshop.end_date > start_of_year && (can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)) %>
+    <% content_for :debt_settings do %>
+        <%= render 'admin/events/debt_settings_form', event: @workshop %>
+    <% end %>
+
+    <% extra_fields[:debt_settings] = { type: 'content', header: 'Debt Settings', content: yield(:debt_settings) } %>
+<% end %>
+
 <%= render('admin/events/basic_show', event: @workshop, extra_fields: extra_fields) %>

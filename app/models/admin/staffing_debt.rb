@@ -19,7 +19,7 @@ class Admin::StaffingDebt < ApplicationRecord
   validates :converted_from_maintenance_debt, inclusion: [ true, false ]
 
   belongs_to :user
-  belongs_to :show
+  belongs_to :show, class_name: "Event", foreign_key: :show_id
   belongs_to :admin_staffing_job, class_name: "Admin::StaffingJob", optional: true
 
   after_save :associate_with_staffing_job
