@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_07_133000) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_12_131145) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -245,6 +245,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_07_133000) do
     t.string "name"
     t.datetime "updated_at", precision: nil, null: false
     t.index ["item_type", "item_id"], name: "index_attachments_on_item_type_and_item_id"
+  end
+
+  create_table "cached_duplicates", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "bucket_type", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "user1_id", null: false
+    t.integer "user2_id", null: false
+    t.index ["bucket_type"], name: "index_cached_duplicates_on_bucket_type"
+    t.index ["user1_id", "user2_id"], name: "index_cached_duplicates_on_user1_id_and_user2_id", unique: true
+    t.index ["user2_id"], name: "fk_rails_eb3a6cb896"
   end
 
   create_table "carousel_items", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -797,6 +808,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_07_133000) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
   add_foreign_key "admin_maintenance_debts", "maintenance_attendances"
+  add_foreign_key "cached_duplicates", "users", column: "user1_id"
+  add_foreign_key "cached_duplicates", "users", column: "user2_id"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "maintenance_attendances", "users"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"

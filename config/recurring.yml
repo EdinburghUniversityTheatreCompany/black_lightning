@@ -7,3 +7,8 @@ refresh_cloudflare_ips:
   class: RefreshCloudflareIpsJob
   queue: default
   schedule: every 12 hours
+
+refresh_fuzzy_duplicates:
+  class: RefreshFuzzyBothDuplicatesJob
+  queue: default
+  schedule: at 4am every day

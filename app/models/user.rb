@@ -770,46 +770,8 @@ class User < ApplicationRecord
       end
     end
 
-    # Bucket 4 & 5: Fuzzy match on BOTH first and last names (excluding exact last name matches)
-    # Track pairs already processed in buckets 2/3 to avoid duplicates
-    processed_pairs = Set.new
-    duplicates[:fuzzy_name_overlapping].each do |dup|
-      u1, u2 = dup[:users]
-      processed_pairs << [ u1.id, u2.id ].sort
-    end
-    duplicates[:fuzzy_name_non_overlapping].each do |dup|
-      u1, u2 = dup[:users]
-      processed_pairs << [ u1.id, u2.id ].sort
-    end
-
-    # Load all users for fuzzy-both checking
-    all_users = User.all.to_a
-
-    # Extend or create years_active_cache for all users
-    all_user_ids = all_users.map(&:id)
-    years_active_cache_all = bulk_years_active_for(all_user_ids)
-
-    # Check all user pairs for fuzzy both names
-    all_users.combination(2).each do |user1, user2|
-      pair_id = [ user1.id, user2.id ].sort
-
-      # Skip if already processed in buckets 2/3 (exact last name match)
-      next if processed_pairs.include?(pair_id)
-
-      # Skip if marked as not duplicates
-      next if user1.marked_not_duplicate?(user2)
-
-      # Check fuzzy matching on both names
-      next unless fuzzy_last_name_match?(user1.last_name, user2.last_name)
-      next unless fuzzy_first_name_match?(user1.first_name, user2.first_name)
-
-      # Sort into buckets based on year overlap
-      if user1.years_overlap?(user2, years_active_cache: years_active_cache_all)
-        duplicates[:fuzzy_both_overlapping] << { users: [ user1, user2 ], years_overlap: true, years_active_cache: years_active_cache_all }
-      else
-        duplicates[:fuzzy_both_no_overlap] << { users: [ user1, user2 ], years_overlap: false, years_active_cache: years_active_cache_all }
-      end
-    end
+    # Bucket 4 & 5: Loaded from cached_duplicates table by controller
+    # (Background job computes these to avoid O(n²) performance issues)
 
     duplicates
   end
