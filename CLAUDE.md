@@ -47,3 +47,6 @@ The `get_link` helper provides:
 <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: "btn btn-primary" %>
 <%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
 ```
+
+# Testing
+Start the test database using `docker start /mysql8` before running any tests.
