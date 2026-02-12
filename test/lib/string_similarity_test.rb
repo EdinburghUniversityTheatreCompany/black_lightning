@@ -89,4 +89,21 @@ class StringSimilarityTest < ActiveSupport::TestCase
     # With low threshold, different names might match
     assert StringSimilarity.fuzzy_name_match?("John", "Jon", threshold: 0.5)
   end
+
+  # Edge cases for last names
+  test "fuzzy_name_match handles hyphenated last names" do
+    assert StringSimilarity.fuzzy_name_match?("Smith-Jones", "SmithJones")
+    assert StringSimilarity.fuzzy_name_match?("O'Connor-Smith", "OConnorSmith")
+  end
+
+  test "fuzzy_name_match handles common last name typos" do
+    assert StringSimilarity.fuzzy_name_match?("Turnbull", "Trunbull")
+    assert StringSimilarity.fuzzy_name_match?("Johnson", "Jonson")
+    assert StringSimilarity.fuzzy_name_match?("Anderson", "Andersen")
+  end
+
+  test "fuzzy_name_match handles apostrophes in last names" do
+    assert StringSimilarity.fuzzy_name_match?("O'Brien", "OBrien")
+    assert StringSimilarity.fuzzy_name_match?("D'Angelo", "DAngelo")
+  end
 end

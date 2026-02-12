@@ -140,6 +140,32 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert User.fuzzy_first_name_match?("Jean-Pierre", "JeanPierre")
   end
 
+  # fuzzy_last_name_match? tests
+  test "fuzzy_last_name_match returns true for exact match" do
+    assert User.fuzzy_last_name_match?("Smith", "Smith")
+  end
+
+  test "fuzzy_last_name_match returns true for similar last names" do
+    assert User.fuzzy_last_name_match?("Turnbull", "Trunbull")
+    assert User.fuzzy_last_name_match?("Johnson", "Jonson")
+  end
+
+  test "fuzzy_last_name_match returns false for very different last names" do
+    assert_not User.fuzzy_last_name_match?("Smith", "Jones")
+    assert_not User.fuzzy_last_name_match?("Turnbull", "Anderson")
+  end
+
+  test "fuzzy_last_name_match handles special characters" do
+    assert User.fuzzy_last_name_match?("O'Brien", "OBrien")
+    assert User.fuzzy_last_name_match?("Smith-Jones", "SmithJones")
+  end
+
+  test "fuzzy_last_name_match returns false for blank names" do
+    assert_not User.fuzzy_last_name_match?("", "Smith")
+    assert_not User.fuzzy_last_name_match?("Smith", "")
+    assert_not User.fuzzy_last_name_match?(nil, "Smith")
+  end
+
   # find_potential_duplicates tests
   test "find_potential_duplicates finds users with same student_id" do
     user1 = FactoryBot.create(:user, student_id: "s1234567", last_name: "Smith", first_name: "John")
@@ -191,6 +217,93 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
       d[:users].include?(user1) && d[:users].include?(user2)
     end
     assert_empty matches, "Marked not-duplicates should not appear in results"
+  end
+
+  # Bucket 4: Fuzzy both names + overlapping years tests
+  test "find_potential_duplicates finds fuzzy both names with overlapping years" do
+    user1 = FactoryBot.create(:user, first_name: "Kate", last_name: "Turnbull")
+    user2 = FactoryBot.create(:user, first_name: "Katie", last_name: "Trunbull")
+
+    # Both users have no events, so years_overlap? returns true (no data = assume possible match)
+    duplicates = User.find_potential_duplicates
+
+    fuzzy_both_matches = duplicates[:fuzzy_both_overlapping].select do |d|
+      d[:users].include?(user1) && d[:users].include?(user2)
+    end
+    assert_equal 1, fuzzy_both_matches.size
+  end
+
+  test "find_potential_duplicates fuzzy both names with actual overlapping events" do
+    user1 = FactoryBot.create(:user, first_name: "Leo", last_name: "Johnson")
+    user2 = FactoryBot.create(:user, first_name: "Leon", last_name: "Jonson")
+
+    show1 = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
+    show2 = FactoryBot.create(:show, start_date: Date.new(2023, 11, 1), end_date: Date.new(2023, 11, 5))
+
+    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
+    TeamMember.create!(user: user2, teamwork: show2, position: "Actor")
+
+    duplicates = User.find_potential_duplicates
+
+    fuzzy_both_matches = duplicates[:fuzzy_both_overlapping].select do |d|
+      d[:users].include?(user1) && d[:users].include?(user2)
+    end
+    assert_equal 1, fuzzy_both_matches.size
+  end
+
+  # Bucket 5: Fuzzy both names + no overlapping years tests
+  test "find_potential_duplicates finds fuzzy both names without overlapping years" do
+    user1 = FactoryBot.create(:user, first_name: "Kate", last_name: "Turnbull")
+    user2 = FactoryBot.create(:user, first_name: "Katie", last_name: "Trunbull")
+
+    show1 = FactoryBot.create(:show, start_date: Date.new(2015, 10, 1), end_date: Date.new(2015, 10, 5))
+    show2 = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
+
+    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
+    TeamMember.create!(user: user2, teamwork: show2, position: "Actor")
+
+    duplicates = User.find_potential_duplicates
+
+    fuzzy_both_matches = duplicates[:fuzzy_both_no_overlap].select do |d|
+      d[:users].include?(user1) && d[:users].include?(user2)
+    end
+    assert_equal 1, fuzzy_both_matches.size
+  end
+
+  # Mutual exclusivity tests
+  test "find_potential_duplicates does not put exact last name matches in fuzzy_both buckets" do
+    user1 = FactoryBot.create(:user, first_name: "John", last_name: "TestMutex")
+    user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "TestMutex")
+
+    duplicates = User.find_potential_duplicates
+
+    # Should be in fuzzy_name_overlapping (bucket 2), not fuzzy_both
+    fuzzy_exact_last = duplicates[:fuzzy_name_overlapping].select do |d|
+      d[:users].include?(user1) && d[:users].include?(user2)
+    end
+    assert_equal 1, fuzzy_exact_last.size, "Exact last name match should be in bucket 2"
+
+    # Should NOT be in fuzzy_both buckets
+    all_fuzzy_both = duplicates[:fuzzy_both_overlapping] + duplicates[:fuzzy_both_no_overlap]
+    fuzzy_both_matches = all_fuzzy_both.select do |d|
+      d[:users].include?(user1) && d[:users].include?(user2)
+    end
+    assert_empty fuzzy_both_matches, "Exact last name matches should not appear in fuzzy_both buckets"
+  end
+
+  test "find_potential_duplicates excludes marked not-duplicates from fuzzy_both buckets" do
+    user1 = FactoryBot.create(:user, first_name: "Kate", last_name: "Turnbull")
+    user2 = FactoryBot.create(:user, first_name: "Katie", last_name: "Trunbull")
+
+    user1.mark_not_duplicate(user2)
+
+    duplicates = User.find_potential_duplicates
+
+    all_fuzzy_both = duplicates[:fuzzy_both_overlapping] + duplicates[:fuzzy_both_no_overlap]
+    matches = all_fuzzy_both.select do |d|
+      d[:users].include?(user1) && d[:users].include?(user2)
+    end
+    assert_empty matches, "Marked not-duplicates should not appear in fuzzy_both buckets"
   end
 
   # Merge helper methods tests
