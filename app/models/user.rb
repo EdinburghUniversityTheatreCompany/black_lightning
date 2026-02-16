@@ -124,8 +124,8 @@ class User < ApplicationRecord
 
   def self.ransackable_attributes(auth_object = nil)
     attributes = %w[first_name last_name full_name]
-    attributes += %w[bio email public_profile] if auth_object.can?(:read, User)
-    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count student_id associate_id member_id] if auth_object.can?(:manage, User)
+    attributes += %w[bio email public_profile student_id associate_id member_id] if auth_object.can?(:read, User)
+    attributes += %w[activation_state consented email ever_activated phone_number username sign_in_count] if auth_object.can?(:manage, User)
 
     attributes
   end

@@ -506,4 +506,51 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_includes complete_users, complete_user
     assert_not_includes complete_users, incomplete_user
   end
+
+  # Ransack tests
+  test "ransackable_attributes includes member_id for users with :read permission" do
+    # Create a user with a role that has :read permission for User
+    user_with_read = FactoryBot.create(:user)
+    role = Role.create!(name: "User Viewer")
+    user_with_read.add_role(role)
+
+    # Grant the role :read permission for User using existing fixture
+    permission = admin_permissions(:can_read_users)
+    role.permissions << permission
+
+    ability = Ability.new(user_with_read)
+
+    assert ability.can?(:read, User), "User should have :read permission for User"
+
+    ransackable_attrs = User.ransackable_attributes(ability)
+
+    assert_includes ransackable_attrs, "member_id", "member_id should be ransackable for users with :read permission"
+    assert_includes ransackable_attrs, "student_id", "student_id should be ransackable for users with :read permission"
+    assert_includes ransackable_attrs, "associate_id", "associate_id should be ransackable for users with :read permission"
+  end
+
+  test "ransack search with member_id_cont works for users with :read permission" do
+    # Create test users with IDs
+    user1 = FactoryBot.create(:user, student_id: "s1234567")
+    user2 = FactoryBot.create(:user, associate_id: "ASSOC123")
+    user3 = FactoryBot.create(:user, student_id: "s9999999")
+
+    # Create a user with :read permission
+    searcher = FactoryBot.create(:user)
+    role = Role.create!(name: "User Viewer")
+    searcher.add_role(role)
+    permission = admin_permissions(:can_read_users)
+    role.permissions << permission
+
+    ability = Ability.new(searcher)
+
+    # This should not raise an error
+    q = User.ransack({ member_id_cont: "123" }, auth_object: ability)
+    results = q.result
+
+    # Should find both user1 (s1234567 contains 123) and user2 (ASSOC123 contains 123)
+    assert_includes results, user1, "Should find user with student_id containing '123'"
+    assert_includes results, user2, "Should find user with associate_id containing '123'"
+    assert_not_includes results, user3, "Should not find user without '123' in member_id"
+  end
 end
