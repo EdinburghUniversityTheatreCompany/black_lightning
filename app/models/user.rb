@@ -602,7 +602,10 @@ class User < ApplicationRecord
       reallocate_maintenance_debts
       reallocate_staffing_debts
 
-      # 11. Destroy source user - reload first to clear cached associations
+      # 11. Remove cached duplicate records involving source user
+      CachedDuplicate.where(user1_id: source_user.id).or(CachedDuplicate.where(user2_id: source_user.id)).destroy_all
+
+      # 12. Destroy source user - reload first to clear cached associations
       source_user.reload.destroy!
     end
 

@@ -311,4 +311,50 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
     assert_equal "source@example.com", @target_user.reload.email
   end
+
+  # Cached duplicate tests
+
+  test "absorb removes cached duplicates where source is user1" do
+    other_user = FactoryBot.create(:member)
+    duplicate = CachedDuplicate.create!(user1: @source_user, user2: other_user, bucket_type: "overlapping")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_not CachedDuplicate.exists?(duplicate.id), "Cached duplicate should be deleted"
+    assert_not User.exists?(@source_user.id), "Source user should be deleted"
+  end
+
+  test "absorb removes cached duplicates where source is user2" do
+    other_user = FactoryBot.create(:member)
+    duplicate = CachedDuplicate.create!(user1: other_user, user2: @source_user, bucket_type: "no_overlap")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_not CachedDuplicate.exists?(duplicate.id), "Cached duplicate should be deleted"
+    assert_not User.exists?(@source_user.id), "Source user should be deleted"
+  end
+
+  test "absorb removes all cached duplicates involving source user" do
+    user1 = FactoryBot.create(:member)
+    user2 = FactoryBot.create(:member)
+    user3 = FactoryBot.create(:member)
+
+    # Create multiple cached duplicates involving source user
+    dup1 = CachedDuplicate.create!(user1: @source_user, user2: user1, bucket_type: "overlapping")
+    dup2 = CachedDuplicate.create!(user1: user2, user2: @source_user, bucket_type: "no_overlap")
+    dup3 = CachedDuplicate.create!(user1: @source_user, user2: user3, bucket_type: "overlapping")
+    # Create one that should remain (doesn't involve source user)
+    dup_keep = CachedDuplicate.create!(user1: user1, user2: user2, bucket_type: "overlapping")
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+    assert_not CachedDuplicate.exists?(dup1.id), "Cached duplicate 1 should be deleted"
+    assert_not CachedDuplicate.exists?(dup2.id), "Cached duplicate 2 should be deleted"
+    assert_not CachedDuplicate.exists?(dup3.id), "Cached duplicate 3 should be deleted"
+    assert CachedDuplicate.exists?(dup_keep.id), "Unrelated cached duplicate should remain"
+    assert_not User.exists?(@source_user.id), "Source user should be deleted"
+  end
 end
