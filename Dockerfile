@@ -44,6 +44,7 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       build-essential \
       git \
       libmariadb-dev-compat \
+      libyaml-dev \
       pkg-config \
       curl && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
