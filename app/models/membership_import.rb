@@ -27,8 +27,12 @@ class MembershipImport
   def normalize_row(row)
     name_data = parse_name(row["Name"])
     id_data = parse_id(row["Student ID"])
+    user_id_raw = find_column(row, "user_id") ||
+                  find_column(row, "user id") ||
+                  find_column(row, "userid")
 
     name_data.merge(id_data).merge(
+      user_id: parse_user_id(user_id_raw),
       email: row["Purchaser Email"].to_s.strip.downcase.presence,
       member_type: row["Member Type"].to_s.strip.presence,
       date_purchased: parse_date(row["Date Purchased"])
@@ -40,6 +44,13 @@ class MembershipImport
 
     Chronic.parse(date_str.to_s)&.to_date
   rescue StandardError
+    nil
+  end
+
+  def parse_user_id(raw)
+    id = Integer(raw.to_s.strip, 10)
+    id.positive? ? id : nil
+  rescue ArgumentError, TypeError
     nil
   end
 
@@ -55,6 +66,14 @@ class MembershipImport
   end
 
   def determine_bucket(row)
+    # 0. Match by database primary key (highest priority)
+    if row[:user_id].present?
+      user = User.find_by(id: row[:user_id])
+      if user
+        return user.has_role?(:member) ? [ :already_active, user ] : [ :activate_by_id, user ]
+      end
+    end
+
     # 1. Match by student_id
     if row[:student_id].present?
       user = User.find_by(student_id: row[:student_id])

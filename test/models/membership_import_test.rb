@@ -256,4 +256,145 @@ class MembershipImportTest < ActiveSupport::TestCase
 
     assert_equal "ASSOC123", import.rows.first[:associate_id]
   end
+
+  # User ID Column Tests
+
+  test "parses user_id column formatted as 'User ID'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "parses user_id column formatted as 'user_id'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      user_id\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "parses user_id column formatted as 'userid'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      userid\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "parses user_id column formatted as 'UserID'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      UserID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "user_id is nil when column is absent" do
+    tsv = <<~TSV
+      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      s9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_nil import.rows.first[:user_id]
+  end
+
+  test "user_id is nil when value is blank" do
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      \ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_nil import.rows.first[:user_id]
+  end
+
+  test "user_id match categorizes already-active member as already_active" do
+    member = FactoryBot.create(:member)
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{member.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal 1, import.categorized[:already_active].size
+    assert_equal member, import.categorized[:already_active].first[:existing_user]
+  end
+
+  test "user_id match categorizes non-member as activate_by_id" do
+    non_member = FactoryBot.create(:user)
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{non_member.id}\ts9999999\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal 1, import.categorized[:activate_by_id].size
+    assert_equal non_member, import.categorized[:activate_by_id].first[:existing_user]
+  end
+
+  test "user_id match takes priority over student_id match" do
+    user_by_id  = FactoryBot.create(:user)
+    user_by_sid = FactoryBot.create(:user, student_id: "s8880001")
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user_by_id.id}\ts8880001\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal 1, import.categorized[:activate_by_id].size
+    assert_equal user_by_id, import.categorized[:activate_by_id].first[:existing_user]
+  end
+
+  test "user_id match takes priority over email match" do
+    user_by_id    = FactoryBot.create(:user)
+    user_by_email = FactoryBot.create(:user, email: "target@example.com")
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user_by_id.id}\ts9999999\tSome Name\t07/09/2025\tStudent\ttarget@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal 1, import.categorized[:activate_by_id].size
+    assert_equal user_by_id, import.categorized[:activate_by_id].first[:existing_user]
+  end
+
+  test "user_id match takes priority over associate_id match" do
+    user_by_id       = FactoryBot.create(:user)
+    user_by_assoc_id = FactoryBot.create(:user, associate_id: "ASSOC8880001")
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{user_by_id.id}\tASSOC8880001\tSome Name\t07/09/2025\tAssociate\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    assert_equal 1, import.categorized[:activate_by_id].size
+    assert_equal user_by_id, import.categorized[:activate_by_id].first[:existing_user]
+  end
+
+  test "unknown user_id falls through to next matching strategy" do
+    tsv = <<~TSV
+      User ID\tStudent ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      999999999\t#{@non_member_with_student_id.student_id}\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+    # user_id 999999999 does not exist; falls through to student_id match
+    assert_equal 1, import.categorized[:activate_by_id].size
+    assert_equal @non_member_with_student_id, import.categorized[:activate_by_id].first[:existing_user]
+  end
 end
