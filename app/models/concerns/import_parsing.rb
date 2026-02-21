@@ -95,6 +95,15 @@ module ImportParsing
     }
   end
 
+  # Parse database primary key from raw string. Returns a positive integer or nil.
+  # Uses Integer() rather than to_i so blank strings raise rather than returning 0.
+  def parse_user_id(raw)
+    id = Integer(raw.to_s.strip, 10)
+    id.positive? ? id : nil
+  rescue ArgumentError, TypeError
+    nil
+  end
+
   # Parse student_id or associate_id from raw ID string
   def parse_id(raw_id)
     id = raw_id.to_s.strip

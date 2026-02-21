@@ -47,13 +47,6 @@ class MembershipImport
     nil
   end
 
-  def parse_user_id(raw)
-    id = Integer(raw.to_s.strip, 10)
-    id.positive? ? id : nil
-  rescue ArgumentError, TypeError
-    nil
-  end
-
   def categorize_rows
     result = BUCKETS.index_with { |_| [] }
 
