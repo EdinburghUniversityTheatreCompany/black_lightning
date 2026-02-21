@@ -51,6 +51,9 @@ class UserImport
   def normalize_row(row)
     name_data = parse_name(find_column(row, "name"))
     id_data = parse_id(find_column(row, "student", "id"))
+    user_id_raw = find_column(row, "user_id") ||
+                  find_column(row, "user id") ||
+                  find_column(row, "userid")
 
     # Email handling: accept multiple column names for flexibility
     raw_email = find_column(row, "email")
@@ -59,7 +62,10 @@ class UserImport
       email = "#{id_data[:student_id]}@ed.ac.uk"
     end
 
-    result = name_data.merge(id_data).merge(email: email)
+    result = name_data.merge(id_data).merge(
+      user_id: parse_user_id(user_id_raw),
+      email: email
+    )
 
     # Add position for crew imports
     if @import_mode == :crew
@@ -85,6 +91,12 @@ class UserImport
   end
 
   def determine_bucket(row)
+    # 0. Match by database primary key (highest priority)
+    if row[:user_id].present?
+      user = User.find_by(id: row[:user_id])
+      return [ :exact_match_id, user ] if user
+    end
+
     # 1. Match by student_id
     if row[:student_id].present?
       user = User.find_by(student_id: row[:student_id])

@@ -219,4 +219,121 @@ class UserImportTest < ActiveSupport::TestCase
     assert_equal 1, import.categorized[:exact_match_email].size
     assert_equal 1, import.categorized[:create_new].size
   end
+
+  # User ID Column Tests
+
+  test "parses user_id column formatted as 'User ID'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      User ID\tName\tStudent ID\tEmail
+      #{user.id}\tSome Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "parses user_id column formatted as 'user_id'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      user_id\tName\tStudent ID\tEmail
+      #{user.id}\tSome Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "parses user_id column formatted as 'userid'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      userid\tName\tStudent ID\tEmail
+      #{user.id}\tSome Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "parses user_id column formatted as 'UserID'" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      UserID\tName\tStudent ID\tEmail
+      #{user.id}\tSome Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal user.id, import.rows.first[:user_id]
+  end
+
+  test "user_id is nil when column is absent" do
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail
+      Some Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_nil import.rows.first[:user_id]
+  end
+
+  test "user_id is nil when value is blank" do
+    tsv = <<~TSV
+      User ID\tName\tStudent ID\tEmail
+      \tSome Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_nil import.rows.first[:user_id]
+  end
+
+  test "user_id match categorizes as exact_match_id" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      User ID\tName\tStudent ID\tEmail
+      #{user.id}\tSome Name\ts9999999\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal 1, import.categorized[:exact_match_id].size
+    assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
+  end
+
+  test "user_id match takes priority over student_id match" do
+    user_by_id  = FactoryBot.create(:user)
+    user_by_sid = FactoryBot.create(:user, student_id: "s8880001")
+    tsv = <<~TSV
+      User ID\tName\tStudent ID\tEmail
+      #{user_by_id.id}\tSome Name\ts8880001\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal 1, import.categorized[:exact_match_id].size
+    assert_equal user_by_id, import.categorized[:exact_match_id].first[:existing_user]
+  end
+
+  test "user_id match takes priority over email match" do
+    user_by_id    = FactoryBot.create(:user)
+    user_by_email = FactoryBot.create(:user, email: "target@example.com")
+    tsv = <<~TSV
+      User ID\tName\tStudent ID\tEmail
+      #{user_by_id.id}\tSome Name\ts9999999\ttarget@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    assert_equal 1, import.categorized[:exact_match_id].size
+    assert_equal user_by_id, import.categorized[:exact_match_id].first[:existing_user]
+  end
+
+  test "unknown user_id falls through to next matching strategy" do
+    user = FactoryBot.create(:user, student_id: "s7654321")
+    tsv = <<~TSV
+      User ID\tName\tStudent ID\tEmail
+      999999999\tSome Name\ts7654321\tsome@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+    # user_id 999999999 does not exist; falls through to student_id match
+    assert_equal 1, import.categorized[:exact_match_id].size
+    assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
+  end
 end
