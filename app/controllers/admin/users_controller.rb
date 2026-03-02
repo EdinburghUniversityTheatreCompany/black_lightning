@@ -176,6 +176,10 @@ class Admin::UsersController < AdminController
     perm_params
   end
 
+  def order_args
+    [ "last_name asc", "first_name asc" ]
+  end
+
   # TEST
   def base_index_database_query
     return super.with_role(:member) if params[:show_non_members] != "1"

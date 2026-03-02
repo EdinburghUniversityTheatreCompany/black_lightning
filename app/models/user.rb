@@ -104,8 +104,6 @@ class User < ApplicationRecord
   normalizes :first_name, :last_name, :username, with: ->(name) { name&.strip }
   normalizes :associate_id, with: ->(id) { id&.strip&.upcase }
 
-  default_scope -> { order("last_name ASC") }
-
   scope :profile_incomplete, -> { where(profile_completed_at: nil) }
   scope :profile_complete, -> { where.not(profile_completed_at: nil) }
 

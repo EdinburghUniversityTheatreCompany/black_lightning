@@ -14,7 +14,7 @@
       <%= simple_horizontal_form_for(:add_user_details, url: add_user_admin_role_url(@role)) do |f| %>
         <%= f.error_notification %>
 
-        <%= f.input :user_id, collection: User.all %>
+        <%= f.input :user_id, collection: User.order(:last_name, :first_name) %>
 
         <%= submit_tag "Add User to Role", class: 'btn btn-secondary' %>
       <% end %>
