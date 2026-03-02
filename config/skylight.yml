@@ -1,0 +1,7 @@
+---
+# The authentication token for the application.
+authentication:
+
+ignored_endpoints:
+  - HeartbeatController#status
+  - StatusWorker

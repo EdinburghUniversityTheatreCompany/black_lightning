@@ -484,6 +484,8 @@ GEM
     simplecov-rcov (0.3.7)
       simplecov (>= 0.4.1)
     simplecov_json_formatter (0.1.4)
+    skylight (7.0.0)
+      activesupport (>= 7.1.0)
     solargraph (0.58.2)
       ast (~> 2.4.3)
       backport (~> 1.2)
@@ -636,6 +638,7 @@ DEPENDENCIES
   simple_form
   simplecov
   simplecov-rcov
+  skylight
   solargraph
   solid_queue
   spring
