@@ -6,6 +6,7 @@ class ApplicationController < ActionController::Base
 
   before_action :set_globals
   before_action :require_profile_completion!
+  around_action :set_statement_timeout
 
   check_authorization unless: :auth_controller?
 
@@ -100,6 +101,19 @@ class ApplicationController < ActionController::Base
       type.json { render json: { error: @error_messages }, status: status_code }
       type.all  { render body: nil, status: status_code }
     end
+  end
+
+  def set_statement_timeout
+    ActiveRecord::Base.connection.execute("SET SESSION max_execution_time = 25000")
+    yield
+  rescue ActiveRecord::StatementTimeout => e
+    Honeybadger.notify(e, context: {
+      path: request.path,
+      method: request.method,
+      query_string: request.query_string,
+      user_id: current_user&.id
+    })
+    render_error_page(e, "errors/500", 500)
   end
 
   def require_profile_completion!

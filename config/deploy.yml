@@ -44,6 +44,7 @@ env:
     DATABASE_HOST: blacklightning-mysql
     SOLID_QUEUE_IN_PUMA: true
     RACK_TIMEOUT_SERVICE_TIMEOUT: 30
+    RACK_TIMEOUT_SERVICE_PAST_WAIT: true
   secret:
     - RAILS_MASTER_KEY
     - MYSQL_ROOT_PASSWORD
