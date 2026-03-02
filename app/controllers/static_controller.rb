@@ -14,7 +14,7 @@ class StaticController < ApplicationController
 
   def home
     @events = Event.includes(image_attachment: :blob).current.reorder("start_date ASC")
-    @news = News.accessible_by(current_ability).includes(:author).order("publish_date DESC").current.first(4)
+    @news = News.where(show_public: true).includes(:author).order("publish_date DESC").current.first(4)
 
     @carousel_events = @events
     # If there are too many carousel events, filter out workshops, and limit to 3.
