@@ -4,10 +4,10 @@
 # This helps debug issues with image processing by including blob details in error reports.
 ActiveSupport::Notifications.subscribe(/active_storage/) do |name, start, finish, id, payload|
   if payload[:exception]
-    blob = payload[:blob] || payload[:key]
+    blob = payload[:blob]
     Honeybadger.context(
       active_storage_blob_id: blob&.id,
-      active_storage_blob_key: blob&.key,
+      active_storage_blob_key: blob&.key || payload[:key],
       active_storage_blob_filename: blob&.filename&.to_s,
       active_storage_event: name
     )
