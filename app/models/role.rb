@@ -31,6 +31,8 @@ class Role < ApplicationRecord
 
   belongs_to :resource, polymorphic: true, optional: true
 
+  scope :trained, -> { where("name LIKE ?", "%Trained%") }
+
   scopify
 
   normalizes :name, with: ->(name) { name&.strip }

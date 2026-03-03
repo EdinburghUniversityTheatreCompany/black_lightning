@@ -123,6 +123,9 @@ class Ability
     # Stop if the user is not logged in.
     return if user.nil?
 
+    # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
+    can :read, Role, id: Role.trained.pluck(:id)
+
     # All users can edit and see themselves.
     # All users can consent for themselves.
     can %I[show debt_status update edit consent], User, id: user.id

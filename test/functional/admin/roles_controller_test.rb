@@ -58,6 +58,35 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_match "Add User to Role", response.body
   end
 
+  test "member can view trained role show page" do
+    sign_out @admin
+    sign_in users(:member)
+
+    trained_role = roles(:dm_trained)
+    get :show, params: { id: trained_role }
+    assert_response :success
+  end
+
+  test "member cannot view non-trained role show page" do
+    sign_out @admin
+    sign_in users(:member)
+
+    get :show, params: { id: roles(:committee) }
+    assert_response :forbidden
+  end
+
+  test "member can view index and only sees trained roles" do
+    sign_out @admin
+    sign_in users(:member)
+
+    get :index
+    assert_response :success
+
+    assigns(:roles).each do |role|
+      assert role.trained_role?, "Non-trained role '#{role.name}' should not be visible to members on the index"
+    end
+  end
+
   test "should get new" do
     get :new
     assert_response :success

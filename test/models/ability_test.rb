@@ -14,7 +14,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     exclusions = [ Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt,
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo,
-                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture, MaintenanceAttendance ]
+                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture, MaintenanceAttendance,
+                  Role ]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -506,9 +507,21 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(Complaint, "the complaint class as an admin", ability, allowed_actions + semi_forbidden_actions, forbidden_actions)
   end
 
+  test "logged in users can read trained roles but not non-trained roles" do
+    trained_role = roles(:dm_trained)
+    non_trained_role = roles(:committee)
+
+    allowed_actions = %I[show read index]
+    forbidden_actions = %I[new create update edit delete destroy]
+
+    helper_test_actions(trained_role, "a trained role", @ability, allowed_actions, forbidden_actions)
+    helper_test_actions(non_trained_role, "a non-trained role", @ability, [], allowed_actions + forbidden_actions)
+  end
+
   test "permission grid permissions work" do
     # Pick classses for this that does not have any special permissions.
     # Please make sure the format of the Admin::Permission here is the same as the grid would use.
+    # Note: Role has a base :read permission for trained roles, so use instance-level checks for Role :read.
 
     role = Role.where(name: "member")
     other_role = [ Role.create(name: "pineapple") ]
@@ -534,8 +547,13 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     other_ability = Ability.new other_user
 
     granted_permissions.each do |permission|
-      assert @ability.can?(permission.action.to_sym, permission.subject_class.constantize), "The user cannot perform the action :#{permission.action} on #{permission.subject_class} even though it should be able to"
-      assert other_ability.cannot?(permission.action.to_sym, permission.subject_class.constantize), "The other user can perform the action :#{permission.action} on #{permission.subject_class} but it should not be able to"
+      subject = permission.subject_class.constantize
+
+      assert @ability.can?(permission.action.to_sym, subject), "The user cannot perform the action :#{permission.action} on #{permission.subject_class} even though it should be able to"
+
+      # For Role :read, check a non-trained role instance since all logged-in users can read trained roles at the class level.
+      check_subject = (permission.action.to_sym == :read && subject == Role) ? other_role.first : subject
+      assert other_ability.cannot?(permission.action.to_sym, check_subject), "The other user can perform the action :#{permission.action} on #{permission.subject_class} but it should not be able to"
     end
   end
 
