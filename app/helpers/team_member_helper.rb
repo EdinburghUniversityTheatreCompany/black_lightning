@@ -4,13 +4,10 @@ module TeamMemberHelper
     def team_member_labels_for(team_member, deadline)
         output_labels = []
 
-        output_labels << { label_class: :info, text: "DM Trained" } if team_member.user.has_role?("DM Trained")
-
-        output_labels << { label_class: :info, text: "Bar Trained" } if team_member.user.has_role?("Bar Trained")
-
-        output_labels << { label_class: :warning, text: "Tool Trained" } if team_member.user.has_role?("Tool Trained")
-
-        output_labels << { label_class: :success, text: "First Aid Trained" } if team_member.user.has_role?("First Aid Trained")
+        team_member.user.roles.trained.each do |role|
+            label_class = role.name == "First Aid Trained" ? :success : :info
+            output_labels << { label_class: label_class, text: role.name }
+        end
 
         # Display the 'Not a Member' label if the show is this academic year, or it has a deadline in the future (and is likely a proposal)
         show_member_status =  (team_member.teamwork_type == "Event" && team_member.teamwork.this_academic_year?) || (deadline.present? && deadline.future?)
