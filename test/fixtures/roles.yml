@@ -42,3 +42,6 @@ dm_trained:
 
 first_aid_trained:
   name: "First Aid Trained"
+
+tool_trained:
+  name: "Tool Trained"
