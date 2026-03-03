@@ -19,7 +19,7 @@ class Admin::PermissionsController < AdminController
   ##
   def update_grid
     @roles.includes(:permissions).each do |role|
-      models = params[role.name]
+      models = params["[#{role.name}]"]
 
       # Skip roles that have no data in the submission. This prevents wiping
       # all permissions when the form is submitted before fully loading, or

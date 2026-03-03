@@ -29,4 +29,27 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
 
     assert_equal permissions_before, permissions_after, "Permissions should not be wiped when no data is submitted for a role"
   end
+
+  test "submitting permissions for a role should save them" do
+    role = roles(:welfare)
+
+    # Welfare starts with read+update on Complaint (from fixtures)
+    assert role.permissions.where(subject_class: "Complaint").exists?
+
+    # Submit with Complaint manage permission added
+    post :update_grid, params: {
+      "[#{role.name}]" => {
+        "Complaint" => { "read" => "read", "update" => "update", "manage" => "manage" }
+      }
+    }
+
+    assert_redirected_to admin_permissions_path
+
+    role.reload
+    complaint_permissions = role.permissions.where(subject_class: "Complaint").pluck(:action).sort
+
+    assert_includes complaint_permissions, "manage"
+    assert_includes complaint_permissions, "read"
+    assert_includes complaint_permissions, "update"
+  end
 end
