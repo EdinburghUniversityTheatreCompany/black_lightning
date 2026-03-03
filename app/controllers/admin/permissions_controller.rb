@@ -21,9 +21,14 @@ class Admin::PermissionsController < AdminController
     @roles.includes(:permissions).each do |role|
       models = params[role.name]
 
+      # Skip roles that have no data in the submission. This prevents wiping
+      # all permissions when the form is submitted before fully loading, or
+      # when a role's checkboxes are all unchecked (HTML checkboxes only
+      # submit values when checked).
+      next unless models
+
       (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
-        actions = models[model_name]&.keys if models
-        actions ||= []
+        actions = models[model_name]&.keys || []
 
         Admin::Permission.update_permission(role, model_name, actions)
       end

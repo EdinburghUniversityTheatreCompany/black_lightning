@@ -14,4 +14,19 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
     post :update_grid
     assert_redirected_to admin_permissions_path
   end
+
+  test "submitting empty params should not wipe existing permissions" do
+    role = roles(:committee)
+    permissions_before = role.permissions.count
+
+    assert permissions_before > 0, "Committee should have permissions to start with"
+
+    # Simulate submitting the form with no checkbox data (e.g. page not fully loaded)
+    post :update_grid
+
+    role.reload
+    permissions_after = role.permissions.count
+
+    assert_equal permissions_before, permissions_after, "Permissions should not be wiped when no data is submitted for a role"
+  end
 end
