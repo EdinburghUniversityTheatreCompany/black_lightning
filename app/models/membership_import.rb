@@ -51,8 +51,8 @@ class MembershipImport
     result = BUCKETS.index_with { |_| [] }
 
     @rows.each_with_index do |row, index|
-      bucket, match = determine_bucket(row)
-      result[bucket] << { row: row, existing_user: match, index: index }
+      bucket, match, match_type = determine_bucket(row)
+      result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
     end
 
     result
@@ -63,7 +63,8 @@ class MembershipImport
     if row[:user_id].present?
       user = User.find_by(id: row[:user_id])
       if user
-        return user.has_role?(:member) ? [ :already_active, user ] : [ :activate_by_id, user ]
+        bucket = user.has_role?(:member) ? :already_active : :activate_by_id
+        return [ bucket, user, :user_id ]
       end
     end
 
@@ -71,7 +72,8 @@ class MembershipImport
     if row[:student_id].present?
       user = User.find_by(student_id: row[:student_id])
       if user
-        return user.has_role?(:member) ? [ :already_active, user ] : [ :activate_by_id, user ]
+        bucket = user.has_role?(:member) ? :already_active : :activate_by_id
+        return [ bucket, user, :student_id ]
       end
     end
 
@@ -79,7 +81,8 @@ class MembershipImport
     if row[:associate_id].present?
       user = User.find_by(associate_id: row[:associate_id])
       if user
-        return user.has_role?(:member) ? [ :already_active, user ] : [ :activate_by_id, user ]
+        bucket = user.has_role?(:member) ? :already_active : :activate_by_id
+        return [ bucket, user, :associate_id ]
       end
     end
 
@@ -87,7 +90,8 @@ class MembershipImport
     if row[:email].present?
       user = User.find_by(email: row[:email])
       if user
-        return user.has_role?(:member) ? [ :already_active, user ] : [ :activate_by_email, user ]
+        bucket = user.has_role?(:member) ? :already_active : :activate_by_email
+        return [ bucket, user, nil ]
       end
     end
 
@@ -98,11 +102,11 @@ class MembershipImport
         next unless User.fuzzy_first_name_match?(row[:first_name], user.first_name)
 
         # Found a fuzzy match - propose merge
-        return [ :propose_merge, user ]
+        return [ :propose_merge, user, nil ]
       end
     end
 
     # 5. No match found - create new
-    [ :create_new, nil ]
+    [ :create_new, nil, nil ]
   end
 end

@@ -6,7 +6,7 @@
 #
 # Accepts either pasted TSV data or an uploaded xlsx file.
 # Categorizes each row into buckets based on matching rules:
-# - exact_match_id: User with matching student_id or associate_id
+# - exact_match_id: User with matching user_id, student_id, or associate_id
 # - exact_match_email: User with matching email
 # - fuzzy_match: Possible match by name (active users only)
 # - create_new: No match found
@@ -83,8 +83,8 @@ class UserImport
     @active_user_ids = active_user_ids_for_matching
 
     @rows.each_with_index do |row, index|
-      bucket, match = determine_bucket(row)
-      result[bucket] << { row: row, existing_user: match, index: index }
+      bucket, match, match_type = determine_bucket(row)
+      result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
     end
 
     result
@@ -94,25 +94,25 @@ class UserImport
     # 0. Match by database primary key (highest priority)
     if row[:user_id].present?
       user = User.find_by(id: row[:user_id])
-      return [ :exact_match_id, user ] if user
+      return [ :exact_match_id, user, :user_id ] if user
     end
 
     # 1. Match by student_id
     if row[:student_id].present?
       user = User.find_by(student_id: row[:student_id])
-      return [ :exact_match_id, user ] if user
+      return [ :exact_match_id, user, :student_id ] if user
     end
 
     # 2. Match by associate_id
     if row[:associate_id].present?
       user = User.find_by(associate_id: row[:associate_id])
-      return [ :exact_match_id, user ] if user
+      return [ :exact_match_id, user, :associate_id ] if user
     end
 
     # 3. Match by email
     if row[:email].present?
       user = User.find_by(email: row[:email])
-      return [ :exact_match_email, user ] if user
+      return [ :exact_match_email, user, nil ] if user
     end
 
     # 4. Fuzzy name match (last name exact, first name fuzzy) - only for active users
@@ -122,12 +122,12 @@ class UserImport
         next unless User.fuzzy_first_name_match?(row[:first_name], user.first_name)
 
         # Found a fuzzy match - propose for review
-        return [ :fuzzy_match, user ]
+        return [ :fuzzy_match, user, nil ]
       end
     end
 
     # 5. No match found - create new
-    [ :create_new, nil ]
+    [ :create_new, nil, nil ]
   end
 
   # Get IDs of users who have been active in recent events (team memberships).

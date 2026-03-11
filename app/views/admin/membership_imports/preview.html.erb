@@ -189,7 +189,18 @@
               <tr class="table-secondary">
                 <td><%= item[:row][:original_name] %></td>
                 <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
-                <td><span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] || item[:row][:email] %></span></td>
+                <td>
+                  <% case item[:match_type] %>
+                  <% when :user_id %>
+                    <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
+                  <% when :student_id %>
+                    <span class="font-monospace"><%= item[:row][:student_id] %></span>
+                  <% when :associate_id %>
+                    <span class="font-monospace"><%= item[:row][:associate_id] %></span>
+                  <% else %>
+                    <span class="font-monospace"><%= item[:row][:email] %></span>
+                  <% end %>
+                </td>
                 <td><span class="badge bg-success">Already Member</span></td>
               </tr>
             <% end %>
@@ -203,7 +214,7 @@
   <% if @import.categorized[:activate_by_id].any? %>
     <div class="card mb-3">
       <div class="card-header bg-info text-white">
-        <strong>Activate by Student/Associate ID</strong>
+        <strong>Activate by ID</strong>
         <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:activate_by_id].size %></span>
         <small class="float-end">Will be activated automatically</small>
       </div>
@@ -225,7 +236,16 @@
                   <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
                   <br><small class="text-muted"><%= item[:existing_user].email %></small>
                 </td>
-                <td><span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span></td>
+                <td>
+                  <% case item[:match_type] %>
+                  <% when :user_id %>
+                    <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
+                  <% when :student_id %>
+                    <span class="font-monospace"><%= item[:row][:student_id] %></span>
+                  <% when :associate_id %>
+                    <span class="font-monospace"><%= item[:row][:associate_id] %></span>
+                  <% end %>
+                </td>
                 <td>
                   <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
                   <span class="badge bg-info">Will Activate</span>

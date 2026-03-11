@@ -62,7 +62,7 @@
     <% if items_not_on_team.any? %>
       <div class="card mb-3">
         <div class="card-header bg-success text-white">
-          <strong>Matched by Student/Associate ID</strong>
+          <strong>Matched by ID</strong>
           <span class="badge bg-light text-dark ms-2"><%= items_not_on_team.size %></span>
           <small class="float-end">Will add to crew</small>
         </div>
@@ -80,7 +80,19 @@
               <% items_not_on_team.each do |item| %>
                 <tr class="table-success">
                   <td><%= item[:row][:original_name] %></td>
-                  <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
+                  <td>
+                    <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
+                    <small class="text-muted">
+                      <% case item[:match_type] %>
+                      <% when :user_id %>
+                        Matched by User ID
+                      <% when :student_id %>
+                        Matched by Student ID
+                      <% when :associate_id %>
+                        Matched by Associate ID
+                      <% end %>
+                    </small>
+                  </td>
                   <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                   <td>
                     <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
