@@ -212,7 +212,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_show_path(@show)
     team_member.reload
-    assert_equal "Producer, Director", team_member.position
+    assert_equal "Producer / Director", team_member.position
     assert flash[:success].any? { |msg| msg.include?("updated") }
   end
 

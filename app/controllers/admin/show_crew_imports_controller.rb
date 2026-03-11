@@ -108,7 +108,7 @@ class Admin::ShowCrewImportsController < AdminController
       when "merge"
         team_member = @event.team_members.find_by(user_id: user_id)
         if team_member && new_position.present?
-          merged_position = [ team_member.position, new_position ].reject(&:blank?).uniq.join(", ")
+          merged_position = [ team_member.position, new_position ].join("/").split("/").map(&:strip).reject(&:blank?).uniq.join(" / ")
           team_member.update!(position: merged_position)
           results[:updated] += 1
         end
