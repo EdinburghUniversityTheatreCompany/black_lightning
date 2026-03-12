@@ -6,7 +6,7 @@
            placeholder_text: "Name\tStudent ID\tEmail\nFinbar the Viking\ts1234567\tfinbar@viking.se\nErik Bloodaxe\t\terik@norse.no" do %>
   <p>The import process matches each row against existing users in the following order:</p>
   <ol>
-    <li><strong>Student/Associate ID match:</strong> If a user with the same ID exists, they will be linked</li>
+    <li><strong>ID match:</strong> If a user with the same User ID, Student ID, or Associate ID exists, they will be linked</li>
     <li><strong>Email match:</strong> If a user with the same email exists, they will be linked</li>
     <li><strong>Name match:</strong> If an <em>active</em> user with the same last name and similar first name exists, you'll be asked to confirm</li>
     <li><strong>No match:</strong> A new user account will be created</li>
