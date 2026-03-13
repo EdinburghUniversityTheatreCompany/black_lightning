@@ -21,16 +21,19 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_match "not associated with any Debt", response.body
   end
 
-  test "news widget" do
+  test "news widget with no news" do
+    News.delete_all
+
     assert_widget_does_not_error "news"
     assert_match "There is no news", response.body
+  end
 
-    FactoryBot.create_list(:news, 3)
+  test "news widget with news" do
+    current_news = news(:current_news)
 
     assert_widget_does_not_error "news"
-    news = News.current.first
-    assert_match news.title, response.body
-    assert_match news.body[0..70], response.body
+    assert_match current_news.title, response.body
+    assert_match current_news.body[0..70], response.body
   end
 
   test "shows widget" do
