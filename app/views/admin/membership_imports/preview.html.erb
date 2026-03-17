@@ -69,8 +69,8 @@
           <thead class="table-light">
             <tr>
               <th>Import Data</th>
-              <th>Possible Match</th>
-              <th style="width: 200px;">Decision</th>
+              <th>Possible Match(es)</th>
+              <th style="width: 280px;">Decision</th>
             </tr>
           </thead>
           <tbody>
@@ -84,17 +84,27 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
-                  <small class="text-muted"><%= item[:existing_user].email %></small>
-                  <% if item[:existing_user].student_id.present? %>
-                    <br><small class="text-muted">ID: <%= item[:existing_user].student_id %></small>
+                  <% item[:existing_users].each_with_index do |user, i| %>
+                    <% years = @import.years_active_cache[user.id] %>
+                    <%= link_to user.name_or_email, admin_user_path(user) %>
+                    <small class="text-muted">(<%= format_years_active_label(years) %>)</small><br>
+                    <small class="text-muted"><%= user.email %></small>
+                    <% if user.student_id.present? %>
+                      <br><small class="text-muted">ID: <%= user.student_id %></small>
+                    <% end %>
+                    <% if i < item[:existing_users].size - 1 %>
+                      <hr class="my-1">
+                    <% end %>
                   <% end %>
                 </td>
                 <td>
-                  <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "merge", true, class: "form-check-input", id: "action_#{item[:index]}_merge" %>
-                    <%= label_tag "action_#{item[:index]}_merge", "Merge & Activate", class: "form-check-label" %>
-                  </div>
+                  <% item[:existing_users].each_with_index do |user, i| %>
+                    <% years = @import.years_active_cache[user.id] %>
+                    <div class="form-check">
+                      <%= radio_button_tag "actions[#{item[:index]}]", "merge_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_merge_#{user.id}" %>
+                      <%= label_tag "action_#{item[:index]}_merge_#{user.id}", "Merge with #{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
+                    </div>
+                  <% end %>
                   <div class="form-check">
                     <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
                     <%= label_tag "action_#{item[:index]}_create", "Create New", class: "form-check-label" %>

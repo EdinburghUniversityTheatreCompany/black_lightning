@@ -119,7 +119,7 @@ class MembershipImportTest < ActiveSupport::TestCase
     import = MembershipImport.new(tsv, input_type: :paste)
 
     assert_equal 1, import.categorized[:propose_merge].size
-    assert_equal @user_with_similar_name, import.categorized[:propose_merge].first[:existing_user]
+    assert_includes import.categorized[:propose_merge].first[:existing_users], @user_with_similar_name
   end
 
   test "categorizes completely new user as create_new" do
@@ -396,5 +396,75 @@ class MembershipImportTest < ActiveSupport::TestCase
     # user_id 999999999 does not exist; falls through to student_id match
     assert_equal 1, import.categorized[:activate_by_id].size
     assert_equal @non_member_with_student_id, import.categorized[:activate_by_id].first[:existing_user]
+  end
+
+  test "returns multiple fuzzy match candidates sorted by confidence" do
+    # User with exact name match (no activity = eligible)
+    alex_exact = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr")
+    # User with abbreviation match (no activity = eligible)
+    alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr")
+
+    tsv = <<~TSV
+      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      s9999999\tAlex Kerr\t07/09/2025\tStudent\tnew@email.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+
+    assert_equal 1, import.categorized[:propose_merge].size
+    candidates = import.categorized[:propose_merge].first[:existing_users]
+    assert_equal 2, candidates.size
+    # Exact match should come first
+    assert_equal alex_exact, candidates.first
+    assert_equal alexander, candidates.second
+  end
+
+  test "excludes users inactive for more than 5 years from fuzzy matching" do
+    # User with old activity only
+    old_user = FactoryBot.create(:user, first_name: "John", last_name: "Ancient")
+    old_show = FactoryBot.create(:show, start_date: Date.new(2015, 10, 1), end_date: Date.new(2015, 10, 5))
+    old_show.team_members.create!(user: old_user, position: "Actor")
+
+    tsv = <<~TSV
+      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      s9999999\tJohn Ancient\t07/09/2025\tStudent\tnew@email.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+
+    # Should not fuzzy match old inactive user
+    assert_equal 0, import.categorized[:propose_merge].size
+    assert_equal 1, import.categorized[:create_new].size
+  end
+
+  test "includes users with no activity in fuzzy matching" do
+    # User with no team memberships at all (brand new account)
+    new_user = FactoryBot.create(:user, first_name: "John", last_name: "Newaccount")
+
+    tsv = <<~TSV
+      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      s9999999\tJohn Newaccount\t07/09/2025\tStudent\tnew@email.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+
+    assert_equal 1, import.categorized[:propose_merge].size
+    assert_includes import.categorized[:propose_merge].first[:existing_users], new_user
+  end
+
+  test "populates years_active_cache for fuzzy match candidates" do
+    user = FactoryBot.create(:user, first_name: "Alex", last_name: "Cached")
+    show = FactoryBot.create(:show, start_date: Date.new(2024, 10, 1), end_date: Date.new(2024, 10, 5))
+    show.team_members.create!(user: user, position: "Actor")
+
+    tsv = <<~TSV
+      Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      s9999999\tAlex Cached\t07/09/2025\tStudent\tnew@email.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+
+    assert import.years_active_cache.key?(user.id)
+    assert_includes import.years_active_cache[user.id], 2024
   end
 end

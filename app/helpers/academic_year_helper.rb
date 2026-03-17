@@ -54,4 +54,19 @@ module AcademicYearHelper
   def format_academic_year(start_year)
     "#{start_year.to_s[-2..]}/#{(start_year + 1).to_s[-2..]}"
   end
+
+  # Formats a user's years_active array into a human-readable label.
+  # E.g., [2019, 2020, 2021] -> "active 19/20–21/22"
+  def format_years_active_label(years)
+    return "no activity on record" if years.blank?
+
+    first = format_academic_year(years.min)
+    last = format_academic_year(years.max)
+
+    if first == last
+      "active #{first}"
+    else
+      "active #{first}–#{last}"
+    end
+  end
 end

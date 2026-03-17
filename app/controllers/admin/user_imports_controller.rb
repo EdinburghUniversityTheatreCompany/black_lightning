@@ -60,7 +60,7 @@ class Admin::UserImportsController < AdminController
         user = create_user_from_row(row)
         user.send_welcome_email
         results[:created] += 1
-      when "link"
+      when "link", /\Alink_\d+\z/
         # User already exists, no action needed (just acknowledging the link)
         results[:linked] += 1
       when "skip", nil

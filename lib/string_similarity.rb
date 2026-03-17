@@ -47,6 +47,18 @@ module StringSimilarity
     long.start_with?(short)
   end
 
+  # Returns a confidence score (0.0–1.0) for how well two names match.
+  # Exact normalized match → 1.0, abbreviation → 0.9, otherwise Levenshtein similarity.
+  def match_confidence(name1, name2)
+    n1 = normalize_name(name1)
+    n2 = normalize_name(name2)
+
+    return 1.0 if n1 == n2
+    return 0.9 if abbreviation?(n1, n2) || abbreviation?(n2, n1)
+
+    levenshtein_similarity(n1, n2)
+  end
+
   # Fuzzy matches two names using normalization, abbreviation check, and Levenshtein similarity.
   # Returns true if the names are considered a match.
   def fuzzy_name_match?(name1, name2, threshold: 0.6)

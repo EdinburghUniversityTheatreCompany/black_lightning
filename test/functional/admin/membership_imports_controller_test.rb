@@ -265,4 +265,31 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
     assert_nil Rails.cache.read(cache_key)
   end
+
+  test "confirm merges with selected user when action is merge_<id>" do
+    user1 = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr", email: "unknown_aaa@bedlamtheatre.co.uk")
+    user2 = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr", email: "unknown_bbb@bedlamtheatre.co.uk")
+
+    cache_key = "membership_import_test_#{SecureRandom.uuid}"
+    Rails.cache.write(cache_key, {
+      "already_active" => [],
+      "activate_by_id" => [],
+      "activate_by_email" => [],
+      "propose_merge" => [
+        { "row" => { "original_name" => "Alex Kerr", "first_name" => "Alex", "last_name" => "Kerr", "student_id" => nil, "email" => "alex@example.com" }, "existing_user_ids" => [ user1.id, user2.id ], "index" => 0 }
+      ],
+      "create_new" => []
+    }, expires_in: 1.hour)
+
+    # Select user2 specifically
+    post :confirm, params: { cache_key: cache_key, actions: { "0" => "merge_#{user2.id}" } }
+
+    assert_redirected_to new_admin_membership_import_path
+    user2.reload
+    assert user2.has_role?(:member)
+    assert_equal "alex@example.com", user2.email
+    # user1 should NOT have been merged
+    user1.reload
+    assert_not user1.has_role?(:member)
+  end
 end

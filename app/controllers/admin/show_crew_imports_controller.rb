@@ -78,8 +78,11 @@ class Admin::ShowCrewImportsController < AdminController
         new_user.send_welcome_email
         new_user
       when "link"
-        # Use existing user
+        # Use existing user (single-match bucket)
         User.find_by(id: item["existing_user_id"])
+      when /\Alink_(\d+)\z/
+        # Use selected user from multi-candidate fuzzy match
+        User.find_by(id: $1.to_i)
       when "skip", nil
         results[:skipped] += 1
         next
@@ -138,19 +141,20 @@ class Admin::ShowCrewImportsController < AdminController
     # Check each imported row to see if the user is already on the team
     import.categorized.each do |bucket, items|
       items.each do |item|
-        user = item[:existing_user]
-        next unless user
+        # Collect users from both single-match and multi-match buckets
+        users = item[:existing_users] || [ item[:existing_user] ].compact
+        users.each do |user|
+          team_member = @event.team_members.find_by(user_id: user.id)
+          next unless team_member
 
-        team_member = @event.team_members.find_by(user_id: user.id)
-        next unless team_member
-
-        existing[user.id] = {
-          "user_id" => user.id,
-          "user_name" => user.name_or_email,
-          "current_position" => team_member.position,
-          "new_position" => item[:row][:position],
-          "index" => item[:index]
-        }
+          existing[user.id] = {
+            "user_id" => user.id,
+            "user_name" => user.name_or_email,
+            "current_position" => team_member.position,
+            "new_position" => item[:row][:position],
+            "index" => item[:index]
+          }
+        end
       end
     end
 

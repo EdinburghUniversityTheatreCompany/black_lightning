@@ -106,4 +106,30 @@ class StringSimilarityTest < ActiveSupport::TestCase
     assert StringSimilarity.fuzzy_name_match?("O'Brien", "OBrien")
     assert StringSimilarity.fuzzy_name_match?("D'Angelo", "DAngelo")
   end
+
+  test "match_confidence returns 1.0 for exact normalized match" do
+    assert_equal 1.0, StringSimilarity.match_confidence("Alex", "Alex")
+    assert_equal 1.0, StringSimilarity.match_confidence("Alex", "alex")
+    assert_equal 1.0, StringSimilarity.match_confidence("O'Brien", "OBrien")
+  end
+
+  test "match_confidence returns 0.9 for abbreviation match" do
+    assert_equal 0.9, StringSimilarity.match_confidence("Leo", "Leonardo")
+    assert_equal 0.9, StringSimilarity.match_confidence("Alex", "Alexander")
+  end
+
+  test "match_confidence returns levenshtein similarity for other matches" do
+    confidence = StringSimilarity.match_confidence("John", "Jon")
+    assert confidence > 0.6
+    assert confidence < 0.9
+  end
+
+  test "match_confidence orders exact > abbreviation > levenshtein" do
+    exact = StringSimilarity.match_confidence("Alex", "Alex")
+    abbreviation = StringSimilarity.match_confidence("Alex", "Alexander")
+    levenshtein = StringSimilarity.match_confidence("Alex", "Alec")
+
+    assert exact > abbreviation
+    assert abbreviation > levenshtein
+  end
 end

@@ -73,4 +73,17 @@ class AcademicYearHelperTest < ActionView::TestCase
     assert_equal "99/00", format_academic_year(1999)
     assert_equal "09/10", format_academic_year(2009)
   end
+
+  test "format_years_active_label with no years" do
+    assert_equal "no activity on record", format_years_active_label([])
+    assert_equal "no activity on record", format_years_active_label(nil)
+  end
+
+  test "format_years_active_label with single year" do
+    assert_equal "active 23/24", format_years_active_label([ 2023 ])
+  end
+
+  test "format_years_active_label with multiple years" do
+    assert_equal "active 19/20–23/24", format_years_active_label([ 2019, 2020, 2021, 2023 ])
+  end
 end

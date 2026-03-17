@@ -58,11 +58,18 @@ class Admin::MembershipImportsController < AdminController
     # Convert back from session format
     serialized.transform_values do |items|
       items.map do |item|
-        {
+        deserialized = {
           row: item["row"].symbolize_keys,
-          existing_user: item["existing_user_id"] ? User.find_by(id: item["existing_user_id"]) : nil,
           index: item["index"]
         }
+
+        if item["existing_user_ids"]
+          deserialized[:existing_users] = User.where(id: item["existing_user_ids"]).to_a
+        else
+          deserialized[:existing_user] = item["existing_user_id"] ? User.find_by(id: item["existing_user_id"]) : nil
+        end
+
+        deserialized
       end
     end
   end
@@ -109,6 +116,10 @@ class Admin::MembershipImportsController < AdminController
       create_and_activate_user(item[:row], results)
     when "merge"
       merge_and_activate(item[:existing_user], item[:row], results)
+    when /\Amerge_(\d+)\z/
+      # Selected user from multi-candidate fuzzy match
+      selected_user = User.find_by(id: $1.to_i)
+      merge_and_activate(selected_user, item[:row], results)
     when "skip"
       results[:skipped] += 1
     end

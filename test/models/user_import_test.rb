@@ -170,7 +170,8 @@ class UserImportTest < ActiveSupport::TestCase
 
     # Should fuzzy match the active user, not the inactive one
     assert_equal 1, import.categorized[:fuzzy_match].size
-    assert_equal active_user, import.categorized[:fuzzy_match].first[:existing_user]
+    assert_includes import.categorized[:fuzzy_match].first[:existing_users], active_user
+    assert_not_includes import.categorized[:fuzzy_match].first[:existing_users], inactive_user
   end
 
   test "categorizes as create_new when no match found" do
@@ -335,5 +336,45 @@ class UserImportTest < ActiveSupport::TestCase
     # user_id 999999999 does not exist; falls through to student_id match
     assert_equal 1, import.categorized[:exact_match_id].size
     assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
+  end
+
+  test "returns multiple fuzzy match candidates sorted by confidence" do
+    # Create two active users with same last name and similar first names
+    alex_exact = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr")
+    alexander = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr")
+
+    recent_show = FactoryBot.create(:show, start_date: Date.current - 1.month, end_date: Date.current - 1.month + 3.days)
+    recent_show.team_members.create!(user: alex_exact, position: "Director")
+    recent_show.team_members.create!(user: alexander, position: "Producer")
+
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail
+      Alex Kerr\t\t
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_equal 1, import.categorized[:fuzzy_match].size
+    candidates = import.categorized[:fuzzy_match].first[:existing_users]
+    assert_equal 2, candidates.size
+    # Exact match should come first (higher confidence)
+    assert_equal alex_exact, candidates.first
+    assert_equal alexander, candidates.second
+  end
+
+  test "populates years_active_cache for fuzzy match candidates" do
+    user = FactoryBot.create(:user, first_name: "John", last_name: "Smith")
+    show = FactoryBot.create(:show, start_date: Date.new(2024, 10, 1), end_date: Date.new(2024, 10, 5))
+    show.team_members.create!(user: user, position: "Actor")
+
+    tsv = <<~TSV
+      Name\tStudent ID\tEmail
+      Jon Smith\t\t
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert import.years_active_cache.key?(user.id)
+    assert_includes import.years_active_cache[user.id], 2024
   end
 end

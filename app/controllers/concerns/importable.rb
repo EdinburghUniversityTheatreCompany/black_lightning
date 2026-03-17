@@ -22,11 +22,19 @@ module Importable
   def serialize_import(categorized)
     categorized.transform_values do |items|
       items.map do |item|
-        {
+        serialized = {
           "row" => item[:row],
-          "existing_user_id" => item[:existing_user]&.id,
           "index" => item[:index]
         }
+
+        # Fuzzy match buckets store multiple candidates
+        if item[:existing_users]
+          serialized["existing_user_ids"] = item[:existing_users].map(&:id)
+        else
+          serialized["existing_user_id"] = item[:existing_user]&.id
+        end
+
+        serialized
       end
     end
   end

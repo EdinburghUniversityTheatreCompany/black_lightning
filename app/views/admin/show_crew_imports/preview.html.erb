@@ -148,7 +148,7 @@
 
   <%# Bucket 3: Fuzzy name match - needs review %>
   <% if @import.categorized[:fuzzy_match].any? %>
-    <% items_not_on_team = @import.categorized[:fuzzy_match].reject { |item| @existing_team_members.key?(item[:existing_user]&.id) } %>
+    <% items_not_on_team = @import.categorized[:fuzzy_match].reject { |item| item[:existing_users].all? { |u| @existing_team_members.key?(u.id) } } %>
     <% if items_not_on_team.any? %>
       <div class="card mb-3">
         <div class="card-header bg-warning">
@@ -161,9 +161,9 @@
             <thead class="table-light">
               <tr>
                 <th>Import Data</th>
-                <th>Possible Match</th>
+                <th>Possible Match(es)</th>
                 <th>Position</th>
-                <th style="width: 200px;">Decision</th>
+                <th style="width: 280px;">Decision</th>
               </tr>
             </thead>
             <tbody>
@@ -176,15 +176,25 @@
                     <% end %>
                   </td>
                   <td>
-                    <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
-                    <small class="text-muted"><%= item[:existing_user].email %></small>
+                    <% item[:existing_users].each_with_index do |user, i| %>
+                      <% years = @import.years_active_cache[user.id] %>
+                      <%= link_to user.name_or_email, admin_user_path(user) %>
+                      <small class="text-muted">(<%= format_years_active_label(years) %>)</small><br>
+                      <small class="text-muted"><%= user.email %></small>
+                      <% if i < item[:existing_users].size - 1 %>
+                        <hr class="my-1">
+                      <% end %>
+                    <% end %>
                   </td>
                   <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                   <td>
-                    <div class="form-check">
-                      <%= radio_button_tag "actions[#{item[:index]}]", "link", true, class: "form-check-input", id: "action_#{item[:index]}_link" %>
-                      <%= label_tag "action_#{item[:index]}_link", "Same person (add to crew)", class: "form-check-label" %>
-                    </div>
+                    <% item[:existing_users].each_with_index do |user, i| %>
+                      <% years = @import.years_active_cache[user.id] %>
+                      <div class="form-check">
+                        <%= radio_button_tag "actions[#{item[:index]}]", "link_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_link_#{user.id}" %>
+                        <%= label_tag "action_#{item[:index]}_link_#{user.id}", "#{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
+                      </div>
+                    <% end %>
                     <div class="form-check">
                       <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
                       <%= label_tag "action_#{item[:index]}_create", "Different person (create new)", class: "form-check-label" %>

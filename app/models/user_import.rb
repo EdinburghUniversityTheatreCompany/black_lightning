@@ -20,12 +20,15 @@ class UserImport
 
   BUCKETS = %i[exact_match_id exact_match_email fuzzy_match create_new].freeze
 
+  attr_reader :years_active_cache
+
   def initialize(data, input_type:, import_mode: :user)
     @errors = []
     @import_mode = import_mode
     @rows = parse_data(data, input_type)
     validate_rows
     @categorized = categorize_rows
+    @years_active_cache = load_years_active_cache
   end
 
   def valid?
@@ -84,7 +87,11 @@ class UserImport
 
     @rows.each_with_index do |row, index|
       bucket, match, match_type = determine_bucket(row)
-      result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
+      if bucket == :fuzzy_match
+        result[bucket] << { row: row, existing_users: match, index: index, match_type: match_type }
+      else
+        result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
+      end
     end
 
     result
@@ -118,16 +125,22 @@ class UserImport
     # 4. Fuzzy name match (last name exact, first name fuzzy) - only for active users
     if row[:last_name].present?
       candidates = User.where(last_name: row[:last_name]).where(id: @active_user_ids)
-      candidates.each do |user|
-        next unless User.fuzzy_first_name_match?(row[:first_name], user.first_name)
-
-        # Found a fuzzy match - propose for review
-        return [ :fuzzy_match, user, nil ]
-      end
+      matches = candidates
+        .select { |user| User.fuzzy_first_name_match?(row[:first_name], user.first_name) }
+        .sort_by { |user| -StringSimilarity.match_confidence(row[:first_name], user.first_name) }
+      return [ :fuzzy_match, matches, nil ] if matches.any?
     end
 
     # 5. No match found - create new
     [ :create_new, nil, nil ]
+  end
+
+  # Bulk-load years_active for all users in the fuzzy_match bucket to avoid N+1 queries.
+  def load_years_active_cache
+    fuzzy_user_ids = @categorized[:fuzzy_match].flat_map { |item| item[:existing_users].map(&:id) }
+    return {} if fuzzy_user_ids.empty?
+
+    User.bulk_years_active_for(fuzzy_user_ids)
   end
 
   # Get IDs of users who have been active in recent events (team memberships).

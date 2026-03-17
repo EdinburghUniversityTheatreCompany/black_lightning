@@ -316,4 +316,34 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_redirected_to new_admin_show_show_crew_import_path(@show)
     assert flash[:error].present?
   end
+
+  test "confirm adds selected user to crew when action is link_<id>" do
+    user1 = FactoryBot.create(:user, first_name: "Alex", last_name: "Kerr")
+    user2 = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr")
+
+    cache_key = "crew_import_test_#{SecureRandom.uuid}"
+    Rails.cache.write(cache_key, {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [
+          { "row" => { "original_name" => "Alex Kerr", "first_name" => "Alex", "last_name" => "Kerr", "student_id" => nil, "email" => nil, "position" => "Director" }, "existing_user_ids" => [ user1.id, user2.id ], "index" => 0 }
+        ],
+        "create_new" => []
+      },
+      "existing_team_members" => {}
+    }, expires_in: 1.hour)
+
+    # Select user2 specifically
+    assert_difference("TeamMember.count", 1) do
+      post :confirm, params: { show_id: @show.slug, cache_key: cache_key, actions: { "0" => "link_#{user2.id}" } }
+    end
+
+    assert_redirected_to admin_show_path(@show)
+    assert @show.team_members.find_by(user_id: user2.id).present?
+    assert_equal "Director", @show.team_members.find_by(user_id: user2.id).position
+    # user1 should NOT have been added
+    assert_nil @show.team_members.find_by(user_id: user1.id)
+  end
 end
