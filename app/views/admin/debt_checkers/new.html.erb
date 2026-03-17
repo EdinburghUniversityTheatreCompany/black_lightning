@@ -1,0 +1,17 @@
+<%= render 'admin/shared/import_form',
+           preview_path: preview_admin_debt_checkers_path,
+           cancel_path: admin_debts_path,
+           cancel_text: "Back to Debts",
+           columns_description: "Name | Student/User ID (optional) | Email (optional)",
+           placeholder_text: "Name\tStudent ID\tEmail\nFinbar the Viking\ts1234567\tfinbar@viking.se\nErik Bloodaxe\t42\t" do %>
+  <p>Paste or upload a list of people to check their <strong>debt</strong> and <strong>membership</strong> status.</p>
+  <ol>
+    <li><strong>ID match:</strong> If a user with the same User ID, Student ID, or Associate ID exists, their debt status will be shown</li>
+    <li><strong>Email match:</strong> If a user with the same email exists, their debt status will be shown</li>
+    <li><strong>Name match:</strong> If an <em>active</em> user with the same last name and similar first name exists, possible matches will be shown with their debt status</li>
+    <li><strong>No match:</strong> The person will appear in the "Not Found" section</li>
+  </ol>
+  <p class="mb-0 text-muted">
+    This is a read-only tool. No users will be created or modified.
+  </p>
+<% end %>

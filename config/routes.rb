@@ -154,6 +154,12 @@ ChaosRails::Application.routes.draw do
 
     resources :debts
 
+    resources :debt_checkers, only: [ :new ] do
+      collection do
+        post :preview
+      end
+    end
+
     resources :maintenance_sessions
     resources :maintenance_attendances
 
