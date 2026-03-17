@@ -83,7 +83,15 @@ class AcademicYearHelperTest < ActionView::TestCase
     assert_equal "active 23/24", format_years_active_label([ 2023 ])
   end
 
-  test "format_years_active_label with multiple years" do
-    assert_equal "active 19/20–23/24", format_years_active_label([ 2019, 2020, 2021, 2023 ])
+  test "format_years_active_label with consecutive years" do
+    assert_equal "active 19/20-21/22", format_years_active_label([ 2019, 2020, 2021 ])
+  end
+
+  test "format_years_active_label with gap in years" do
+    assert_equal "active 17/18-19/20, 22/23-23/24", format_years_active_label([ 2017, 2018, 2019, 2022, 2023 ])
+  end
+
+  test "format_years_active_label with multiple gaps" do
+    assert_equal "active 15/16, 18/19-19/20, 23/24", format_years_active_label([ 2015, 2018, 2019, 2023 ])
   end
 end

@@ -55,18 +55,20 @@ module AcademicYearHelper
     "#{start_year.to_s[-2..]}/#{(start_year + 1).to_s[-2..]}"
   end
 
-  # Formats a user's years_active array into a human-readable label.
-  # E.g., [2019, 2020, 2021] -> "active 19/20–21/22"
+  # Formats a user's years_active array into a human-readable label with consecutive ranges.
+  # E.g., [2017, 2018, 2019, 2022, 2023] -> "active 17/18–19/20, 22/23–23/24"
   def format_years_active_label(years)
     return "no activity on record" if years.blank?
 
-    first = format_academic_year(years.min)
-    last = format_academic_year(years.max)
-
-    if first == last
-      "active #{first}"
-    else
-      "active #{first}–#{last}"
+    sorted = years.sort
+    ranges = sorted.slice_when { |a, b| b - a > 1 }.map do |group|
+      if group.size == 1
+        format_academic_year(group.first)
+      else
+        "#{format_academic_year(group.first)}–#{format_academic_year(group.last)}"
+      end
     end
+
+    "active #{ranges.join(', ')}"
   end
 end
