@@ -26,4 +26,10 @@ class Admin::EditableBlockTest < ActiveSupport::TestCase
     # aka, the result has to contain all groups.
     assert groups & Admin::EditableBlock.groups == groups
   end
+
+  test "url is downcased after saving" do
+    block = FactoryBot.create(:editable_block, url: "About/Team")
+
+    assert_equal "about/team", block.url
+  end
 end

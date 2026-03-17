@@ -31,6 +31,7 @@ class Admin::EditableBlock < ApplicationRecord
   validates :url, uniqueness: { case_sensitive: false }, if: :url?
 
   normalizes :name, with: ->(name) { name&.strip }
+  normalizes :url, with: ->(url) { url&.downcase }
 
   after_commit :clear_navbar_cache
 
