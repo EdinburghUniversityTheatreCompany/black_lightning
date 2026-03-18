@@ -87,4 +87,18 @@ if creds.present? && creds[:issuer].present?
   end
 else
   Rails.logger.warn("Skipping Doorkeeper OpenID Connect configuration: missing credentials for #{Rails.env}") if defined?(Rails)
+
+  # Provide a minimal dummy configuration to prevent MissingConfiguration error
+  # during app initialization (e.g. asset precompilation in Docker).
+  # doorkeeper-openid_connect 1.9.0+ raises if configure is never called.
+  Doorkeeper::OpenidConnect.configure do
+    issuer "not-configured"
+    signing_key "not-configured"
+    subject_types_supported [ :public ]
+    resource_owner_from_access_token { |_access_token| nil }
+    auth_time_from_resource_owner { |_resource_owner| nil }
+    reauthenticate_resource_owner { |_resource_owner, _return_to| nil }
+    select_account_for_resource_owner { |_resource_owner, _return_to| nil }
+    subject { |_resource_owner, _application| nil }
+  end
 end
