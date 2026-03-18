@@ -38,7 +38,7 @@ class User < ApplicationRecord
   before_validation :extract_student_id_from_email, if: :email_changed?
 
   rolify
-  has_paper_trail limit: 6
+  has_paper_trail
 
   ###############
   # Permissions

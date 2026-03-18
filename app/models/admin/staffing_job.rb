@@ -25,7 +25,7 @@ class Admin::StaffingJob < ApplicationRecord
   after_save :associate_with_debt
   after_destroy :dissassociate_from_debt
 
-  has_paper_trail limit: 6
+  has_paper_trail
 
   normalizes :name, with: ->(name) { name&.strip }
 

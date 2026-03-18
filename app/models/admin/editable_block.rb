@@ -23,7 +23,7 @@
 
 class Admin::EditableBlock < ApplicationRecord
   resourcify
-  has_paper_trail limit: 10, meta: { version_note: :version_note }
+  has_paper_trail meta: { version_note: :version_note }
 
   include AttachmentItem
   include Versionable

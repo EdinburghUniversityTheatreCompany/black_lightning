@@ -46,7 +46,7 @@ class Event < ApplicationRecord
   include MdHelper
   include DebtManagement
 
-  has_paper_trail limit: 6
+  has_paper_trail
   resourcify
 
   AUTHOR_NAME_LIST_CACHE_KEY = "Event/author_name_list".freeze
