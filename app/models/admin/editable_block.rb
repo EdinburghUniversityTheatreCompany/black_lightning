@@ -23,9 +23,10 @@
 
 class Admin::EditableBlock < ApplicationRecord
   resourcify
-  has_paper_trail limit: 10
+  has_paper_trail limit: 10, meta: { version_note: :version_note }
 
   include AttachmentItem
+  include Versionable
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :url, uniqueness: { case_sensitive: false }, if: :url?

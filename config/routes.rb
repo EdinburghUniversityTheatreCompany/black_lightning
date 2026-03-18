@@ -192,7 +192,9 @@ ChaosRails::Application.routes.draw do
       end
     end
 
-    resources :editable_blocks
+    resources :editable_blocks do
+      resources :version_histories, only: [ :index, :show ]
+    end
     resources :carousel_items
     resources :mass_mails
 

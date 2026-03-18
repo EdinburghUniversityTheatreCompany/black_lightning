@@ -50,6 +50,7 @@ gem "ransack"
 gem "nokogiri"
 
 gem "paper_trail"
+gem "diffy"
 gem "rack", "~> 2.0"
 gem "rack-cors"
 

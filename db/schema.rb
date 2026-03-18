@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_02_141000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_18_133240) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -791,6 +791,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_02_141000) do
     t.integer "item_id", null: false
     t.string "item_type", limit: 191, null: false
     t.text "object", size: :long
+    t.string "version_note"
     t.string "whodunnit"
     t.index ["item_type", "item_id"], name: "index_versions_on_item_type_and_item_id"
   end

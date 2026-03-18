@@ -1,0 +1,42 @@
+<%= render('shared/quick_actions_card') do %>
+  <div class="btn-group">
+    <%= get_link @parent_record, :show, link_text: "Back to #{get_object_name(@parent_record)}" %>
+  </div>
+<% end %>
+
+<div class="card">
+  <div class="card-body">
+    <% if @versions.any? %>
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Author</th>
+            <th>Action</th>
+            <th>Edit Summary</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @versions.each do |version| %>
+            <tr>
+              <td><%= version.created_at.strftime("%d %B %Y, %H:%M") %></td>
+              <td><%= version_author_name(version) %></td>
+              <td><%= version.event.titleize %></td>
+              <td><%= version.version_note %></td>
+              <td>
+                <% if version.event != "create" %>
+                  <%= link_to "View changes",
+                      admin_editable_block_version_history_path(@parent_record, version),
+                      class: "btn btn-sm btn-secondary" %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% else %>
+      <p class="text-muted">No version history available.</p>
+    <% end %>
+  </div>
+</div>

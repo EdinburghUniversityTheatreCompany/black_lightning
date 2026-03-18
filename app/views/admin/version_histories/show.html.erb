@@ -1,0 +1,43 @@
+<%= render('shared/quick_actions_card') do %>
+  <div class="btn-group">
+    <%= link_to "Back to History",
+        admin_editable_block_version_histories_path(@parent_record),
+        class: "btn btn-secondary" %>
+    <%= get_link @parent_record, :show %>
+  </div>
+<% end %>
+
+<div class="card">
+  <div class="card-body">
+    <h5>
+      Version by <%= version_author_name(@version) %>
+      on <%= @version.created_at.strftime("%d %B %Y, %H:%M") %>
+    </h5>
+
+    <% if @version.version_note.present? %>
+      <p class="text-muted"><em><%= @version.version_note %></em></p>
+    <% end %>
+
+    <hr>
+
+    <% if @diff.any? %>
+      <% @diff.each do |attribute, (old_val, new_val)| %>
+        <h6><%= attribute.titleize %></h6>
+
+        <% if old_val.length > 80 || new_val.length > 80 %>
+          <div class="diff-container">
+            <%= Diffy::Diff.new(old_val + "\n", new_val + "\n", include_plus_and_minus_in_html: true, include_diff_info: false).to_s(:html).html_safe %>
+          </div>
+        <% else %>
+          <p>
+            <del class="text-danger"><%= old_val.presence || "(empty)" %></del>
+            &rarr;
+            <ins class="text-success"><%= new_val.presence || "(empty)" %></ins>
+          </p>
+        <% end %>
+      <% end %>
+    <% else %>
+      <p class="text-muted">No attribute changes detected for this version.</p>
+    <% end %>
+  </div>
+</div>

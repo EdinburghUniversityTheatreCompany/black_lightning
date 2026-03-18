@@ -27,7 +27,7 @@ class Admin::EditableBlocksController < AdminController
 
   def permitted_params
     [
-      :content, :name, :url, :ordering, :admin_page, :group,
+      :content, :name, :url, :ordering, :admin_page, :group, :version_note,
       attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, attachment_tag_ids: [] ]
     ]
   end

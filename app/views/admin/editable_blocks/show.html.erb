@@ -6,6 +6,9 @@
   content: { type: 'markdown', markdown: @editable_block.content }
 } %>
 
-<% content_for(:extra_show_actions, link_to("View Block on Website", "#{'/' unless @editable_block.url[0] == '/'}#{@editable_block.url}", class: 'btn btn-secondary'))  if @editable_block.url.present? %>
+<% content_for(:extra_show_actions) do %>
+  <%= link_to("View Block on Website", "#{'/' unless @editable_block.url[0] == '/'}#{@editable_block.url}", class: 'btn btn-secondary') if @editable_block.url.present? %>
+  <%= link_to("History", admin_editable_block_version_histories_path(@editable_block), class: 'btn btn-secondary') %>
+<% end %>
 
 <%= render('shared/pages/show', object: @editable_block, fields: fields) %>

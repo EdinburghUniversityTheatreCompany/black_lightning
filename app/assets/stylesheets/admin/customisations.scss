@@ -24,4 +24,41 @@
     position: block;
  } */
 
+// Version diff styling (diffy output)
+.diff-container {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+
+  .diff {
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    li {
+      padding: 2px 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+
+      &.del {
+        background-color: #fdd;
+        color: #900;
+      }
+
+      &.ins {
+        background-color: #dfd;
+        color: #060;
+      }
+
+      .symbol {
+        display: inline-block;
+        width: 1.2em;
+      }
+    }
+  }
+}
+
 //This fixes content hiding behind the fixed navbar

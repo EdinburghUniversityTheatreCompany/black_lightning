@@ -172,6 +172,7 @@ GEM
       responders
       warden (~> 1.2.3)
     diff-lcs (1.6.2)
+    diffy (3.4.4)
     docile (1.4.1)
     doorkeeper (5.9.0)
       railties (>= 5)
@@ -282,7 +283,6 @@ GEM
     mini_magick (5.3.1)
       logger
     mini_mime (1.1.5)
-    mini_portile2 (2.8.9)
     minitest (6.0.2)
       drb (~> 2.0)
       prism (~> 1.5)
@@ -313,9 +313,6 @@ GEM
       net-protocol
     net-ssh (7.3.1)
     nio4r (2.7.5)
-    nokogiri (1.19.1)
-      mini_portile2 (~> 2.8.2)
-      racc (~> 1.4)
     nokogiri (1.19.1-x86_64-linux-gnu)
       racc (~> 1.4)
     observer (0.1.2)
@@ -578,7 +575,6 @@ GEM
     zeitwerk (2.7.5)
 
 PLATFORMS
-  ruby
   x86_64-linux
 
 DEPENDENCIES
@@ -602,6 +598,7 @@ DEPENDENCIES
   daemons
   delayed_job_active_record
   devise
+  diffy
   doorkeeper
   doorkeeper-openid_connect
   ed25519
