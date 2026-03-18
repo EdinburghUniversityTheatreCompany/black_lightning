@@ -29,13 +29,9 @@ class MembershipImport
 
   def normalize_row(row)
     name_data = parse_name(row["Name"])
-    id_data = parse_id(row["Student ID"])
-    user_id_raw = find_column(row, "user_id") ||
-                  find_column(row, "user id") ||
-                  find_column(row, "userid")
+    id_data = collect_ids_from_row(row)
 
     name_data.merge(id_data).merge(
-      user_id: parse_user_id(user_id_raw),
       email: row["Purchaser Email"].to_s.strip.downcase.presence,
       member_type: row["Member Type"].to_s.strip.presence,
       date_purchased: parse_date(row["Date Purchased"])

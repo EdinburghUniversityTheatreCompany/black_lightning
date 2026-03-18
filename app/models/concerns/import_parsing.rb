@@ -95,6 +95,45 @@ module ImportParsing
     }
   end
 
+  # Matches column headers that represent an ID field:
+  # "ID", "Student ID", "Associate ID", "User ID", "student_id", "userid", etc.
+  ID_COLUMN_PATTERN = /\A(student|associate|user)?[\s_]*id\z/i
+
+  # Auto-detect ID type from value format.
+  # Returns {user_id:, student_id:, associate_id:} with at most one populated.
+  def parse_any_id(raw)
+    value = raw.to_s.strip
+    result = { user_id: nil, student_id: nil, associate_id: nil }
+    return result if value.blank?
+
+    if value.match?(/\As\d{7}\z/i)
+      result[:student_id] = value.downcase
+    elsif value.match?(/\AASSOC\d+\z/i)
+      result[:associate_id] = value.upcase
+    else
+      result[:user_id] = parse_user_id(value)
+    end
+
+    result
+  end
+
+  # Scan all ID-like columns in the row and auto-detect each value's type.
+  # Merges results with first-non-nil-wins per ID type.
+  def collect_ids_from_row(row)
+    merged = { user_id: nil, student_id: nil, associate_id: nil }
+
+    row.each do |header, value|
+      next unless header.to_s.strip.match?(ID_COLUMN_PATTERN)
+      next if value.blank?
+
+      parse_any_id(value).each do |key, val|
+        merged[key] ||= val
+      end
+    end
+
+    merged
+  end
+
   # Parse database primary key from raw string. Returns a positive integer or nil.
   # Uses Integer() rather than to_i so blank strings raise rather than returning 0.
   def parse_user_id(raw)
@@ -102,13 +141,5 @@ module ImportParsing
     id.positive? ? id : nil
   rescue ArgumentError, TypeError
     nil
-  end
-
-  # Parse student_id or associate_id from raw ID string
-  def parse_id(raw_id)
-    id = raw_id.to_s.strip
-    student_id = id.match?(/\As\d{7}\z/i) ? id.downcase : nil
-    associate_id = id.match?(/\AASSOC\d+\z/i) ? id.upcase : nil
-    { student_id: student_id, associate_id: associate_id }
   end
 end

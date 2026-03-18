@@ -2,8 +2,8 @@
            preview_path: preview_admin_user_imports_path,
            cancel_path: admin_users_path,
            cancel_text: "Back to Users",
-           columns_description: "Name | Student ID (optional) | Email (optional)",
-           placeholder_text: "Name\tStudent ID\tEmail\nFinbar the Viking\ts1234567\tfinbar@viking.se\nErik Bloodaxe\t\terik@norse.no" do %>
+           columns_description: "Name | ID (optional, you can have multiple ID columns for different types: Student ID, Associate ID, User ID) | Email (optional)",
+           placeholder_text: "Name\tID\tEmail\nFinbar the Viking\ts1234567\tfinbar@viking.se\nErik Bloodaxe\tASSOC42\terik@norse.no" do %>
   <p>The import process matches each row against existing users in the following order:</p>
   <ol>
     <li><strong>ID match:</strong> If a user with the same User ID, Student ID, or Associate ID exists, they will be linked</li>

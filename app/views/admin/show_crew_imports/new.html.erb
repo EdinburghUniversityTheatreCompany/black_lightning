@@ -2,8 +2,8 @@
            preview_path: preview_admin_show_show_crew_imports_path(@event),
            cancel_path: admin_show_path(@event),
            cancel_text: "Back to #{@event.name}",
-           columns_description: "Name | Student/User ID (optional) | Email (optional) | Position",
-           placeholder_text: "Name\tStudent ID\tEmail\tPosition\nFinbar the Viking\ts1234567\tfinbar@viking.se\tDirector\nErik Bloodaxe\t42\t\tProducer" do %>
+           columns_description: "Name | ID (optional, you can have multiple ID columns for different types: Student ID, Associate ID, User ID) | Email (optional) | Position",
+           placeholder_text: "Name\tID\tEmail\tPosition\nFinbar the Viking\ts1234567\tfinbar@viking.se\tDirector\nErik Bloodaxe\t42\t\tProducer" do %>
   <p>The import process matches each row against existing users and adds them to <strong><%= @event.name %></strong>:</p>
   <ol>
     <li><strong>ID match:</strong> If a user with the same User ID, Student ID, or Associate ID exists, they will be added to the crew</li>

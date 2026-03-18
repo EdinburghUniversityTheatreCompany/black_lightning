@@ -452,6 +452,36 @@ class MembershipImportTest < ActiveSupport::TestCase
     assert_includes import.categorized[:propose_merge].first[:existing_users], new_user
   end
 
+  # Generic ID Column Tests
+
+  test "generic ID column works instead of Student ID header" do
+    tsv = <<~TSV
+      ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{@non_member_with_student_id.student_id}\tSome Name\t07/09/2025\tStudent\tsome@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+
+    assert_equal 1, import.categorized[:activate_by_id].size
+    assert_equal @non_member_with_student_id, import.categorized[:activate_by_id].first[:existing_user]
+  end
+
+  test "generic ID column with mixed ID types across rows" do
+    associate_user = FactoryBot.create(:user, associate_id: "ASSOC999")
+    numeric_user = FactoryBot.create(:user)
+
+    tsv = <<~TSV
+      ID\tName\tDate Purchased\tMember Type\tPurchaser Email
+      #{@non_member_with_student_id.student_id}\tStudent Person\t07/09/2025\tStudent\tstudent@example.com
+      ASSOC999\tAssociate Person\t07/09/2025\tAssociate\tassoc@example.com
+      #{numeric_user.id}\tDatabase Person\t07/09/2025\tStudent\tdb@example.com
+    TSV
+
+    import = MembershipImport.new(tsv, input_type: :paste)
+
+    assert_equal 3, import.categorized[:activate_by_id].size
+  end
+
   test "populates years_active_cache for fuzzy match candidates" do
     user = FactoryBot.create(:user, first_name: "Alex", last_name: "Cached")
     show = FactoryBot.create(:show, start_date: Date.new(2024, 10, 1), end_date: Date.new(2024, 10, 5))

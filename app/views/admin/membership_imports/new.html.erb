@@ -2,8 +2,8 @@
            preview_path: preview_admin_membership_imports_path,
            cancel_path: admin_users_path,
            cancel_text: "Back to Users",
-           columns_description: "Student ID | Name | Date Purchased | Member Type | Purchaser Email",
-           placeholder_text: "Student ID\tName\tDate Purchased\tMember Type\tPurchaser Email\ns9988776\tFinbar the Viking\t14/01/1980 14:25\tStudent\tfinbar@viking.se" do %>
+           columns_description: "ID | Name | Date Purchased | Member Type | Purchaser Email",
+           placeholder_text: "ID (you can have multiple ID columns for different types: Student ID, Associate ID, User ID) | Name | Date Purchased | Member Type | Purchaser Email\ns9988776\tFinbar the Viking\t14/01/1980 14:25\tStudent\tfinbar@viking.se" do %>
   <p>The import process matches each row against existing users in the following order:</p>
   <ol>
     <li><strong>ID match:</strong> If a user with the same User ID, Student ID, or Associate ID exists, they will be activated</li>

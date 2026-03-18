@@ -362,6 +362,96 @@ class UserImportTest < ActiveSupport::TestCase
     assert_equal alexander, candidates.second
   end
 
+  # Generic ID Column Tests
+
+  test "generic ID column with student ID value populates student_id" do
+    tsv = <<~TSV
+      Name\tID\tEmail
+      Test User\ts1234567\ttest@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_equal "s1234567", import.rows.first[:student_id]
+    assert_nil import.rows.first[:associate_id]
+    assert_nil import.rows.first[:user_id]
+  end
+
+  test "generic ID column with associate ID value populates associate_id" do
+    tsv = <<~TSV
+      Name\tID\tEmail
+      Test User\tASSOC42\ttest@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_equal "ASSOC42", import.rows.first[:associate_id]
+    assert_nil import.rows.first[:student_id]
+    assert_nil import.rows.first[:user_id]
+  end
+
+  test "generic ID column with numeric value populates user_id" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      Name\tID\tEmail
+      Test User\t#{user.id}\ttest@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_equal user.id, import.rows.first[:user_id]
+    assert_nil import.rows.first[:student_id]
+    assert_nil import.rows.first[:associate_id]
+  end
+
+  test "mixed ID types across rows in same generic ID column" do
+    user = FactoryBot.create(:user)
+    tsv = <<~TSV
+      Name\tID\tEmail
+      Student Person\ts1234567\tstudent@example.com
+      Associate Person\tASSOC42\tassoc@example.com
+      Database Person\t#{user.id}\tdb@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_equal 3, import.rows.size
+
+    assert_equal "s1234567", import.rows[0][:student_id]
+    assert_nil import.rows[0][:user_id]
+
+    assert_equal "ASSOC42", import.rows[1][:associate_id]
+    assert_nil import.rows[1][:user_id]
+
+    assert_equal user.id, import.rows[2][:user_id]
+    assert_nil import.rows[2][:student_id]
+  end
+
+  test "non-matching ID column headers like Transaction ID are ignored" do
+    tsv = <<~TSV
+      Name\tTransaction ID\tEmail
+      Test User\t99999\ttest@example.com
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_nil import.rows.first[:user_id]
+    assert_nil import.rows.first[:student_id]
+    assert_nil import.rows.first[:associate_id]
+  end
+
+  test "generic ID column auto-generates email from detected student_id" do
+    tsv = <<~TSV
+      Name\tID\tEmail
+      Test User\ts1234567\t
+    TSV
+
+    import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
+
+    assert_equal "s1234567", import.rows.first[:student_id]
+    assert_equal "s1234567@ed.ac.uk", import.rows.first[:email]
+  end
+
   test "populates years_active_cache for fuzzy match candidates" do
     user = FactoryBot.create(:user, first_name: "John", last_name: "Smith")
     show = FactoryBot.create(:show, start_date: Date.new(2024, 10, 1), end_date: Date.new(2024, 10, 5))

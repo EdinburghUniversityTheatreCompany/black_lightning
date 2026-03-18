@@ -53,10 +53,7 @@ class UserImport
 
   def normalize_row(row)
     name_data = parse_name(find_column(row, "name"))
-    id_data = parse_id(find_column(row, "student", "id"))
-    user_id_raw = find_column(row, "user_id") ||
-                  find_column(row, "user id") ||
-                  find_column(row, "userid")
+    id_data = collect_ids_from_row(row)
 
     # Email handling: accept multiple column names for flexibility
     raw_email = find_column(row, "email")
@@ -66,7 +63,6 @@ class UserImport
     end
 
     result = name_data.merge(id_data).merge(
-      user_id: parse_user_id(user_id_raw),
       email: email
     )
 
