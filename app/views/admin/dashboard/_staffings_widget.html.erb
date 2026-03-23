@@ -8,7 +8,7 @@
 
     <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
     <% if remaining_positions > 0 %>
-      <%= generate_label('danger', remaining_positions.to_s, rounded=true) %>
+      <%= generate_label('bg-danger', remaining_positions.to_s, rounded=true) %>
     <% end %>
   </p>
 <% end %>

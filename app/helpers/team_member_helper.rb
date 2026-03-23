@@ -5,18 +5,23 @@ module TeamMemberHelper
         output_labels = []
 
         team_member.user.roles.trained.each do |role|
-            label_class = role.name == "First Aid Trained" ? :success : :info
+            label_class = role.name == "First Aid Trained" ? "bg-success" : "bg-info"
             output_labels << { label_class: label_class, text: role.name }
         end
 
+        if team_member.user.has_role?("life member")
+            output_labels << { label_class: "bg-rainbow-rotate", text: "Life Member" }
+        end
+
+
         # Display the 'Not a Member' label if the show is this academic year, or it has a deadline in the future (and is likely a proposal)
         show_member_status =  (team_member.teamwork_type == "Event" && team_member.teamwork.this_academic_year?) || (deadline.present? && deadline.future?)
-        output_labels << { label_class: :secondary, text: "Not A Member" } if !team_member.user.has_role?("Member") && show_member_status
+        output_labels << { label_class: "bg-secondary", text: "Not A Member" } if !team_member.user.has_role?("Member") && show_member_status
 
         if team_member.user.in_debt
             debt_message = team_member.user.debt_message_suffix.upcase_first
 
-            output_labels << { label_class: :danger, text: link_to(debt_message, admin_debt_path(team_member.user)) }
+            output_labels << { label_class: "bg-danger", text: link_to(debt_message, admin_debt_path(team_member.user)) }
         end
 
         if deadline.present? && team_member.user.in_debt(deadline)
@@ -25,7 +30,7 @@ module TeamMemberHelper
             # Only show the deadline message if the debt on the deadline is different.
             if on_deadline_debt_message != debt_message
                 on_deadline_debt_message = "#{on_deadline_debt_message} on the editing deadline"
-                output_labels << { label_class: :danger, text: link_to(on_deadline_debt_message, admin_debt_path(team_member.user)) }
+                output_labels << { label_class: "bg-danger", text: link_to(on_deadline_debt_message, admin_debt_path(team_member.user)) }
             end
         end
 

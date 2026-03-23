@@ -2,10 +2,11 @@
     padding: 1rem .5rem !important;
 }
 
-.preloader{
+.preloader {
     opacity: 1;
     transition: opacity 200ms linear;
 }
+
 // IF THE FOOTER POSITIONING BREAKS, uncomment this block, it will work
 // First port of call, check that <!doctype html> is present. Don't know why that fixes it but it does!
 
@@ -26,39 +27,61 @@
 
 // Version diff styling (diffy output)
 .diff-container {
-  overflow-x: auto;
-  margin-bottom: 1rem;
+    overflow-x: auto;
+    margin-bottom: 1rem;
 
-  .diff {
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      font-family: monospace;
-      font-size: 0.9em;
+    .diff {
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        li {
+            padding: 2px 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+
+            &.del {
+                background-color: #fdd;
+                color: #900;
+            }
+
+            &.ins {
+                background-color: #dfd;
+                color: #060;
+            }
+
+            .symbol {
+                display: inline-block;
+                width: 1.2em;
+            }
+        }
+    }
+}
+
+.bg-rainbow-rotate {
+    // almost certainly could be cleaner :shrug:
+    background: linear-gradient(in oklch 90deg, #ff0094 0.0%, #00c800 37.5%, #00b5ff 62.5%, #ff0094 100%) repeat-x;
+    animation: rainbow-rotate 32s linear infinite;
+    background-size: 800% 100%;
+}
+
+.bg-rainbow-rotate,
+.bg-rainbow-rotate>a {
+    color: #fff !important;
+}
+
+@keyframes rainbow-rotate {
+    0% {
+        background-position: 0 0;
     }
 
-    li {
-      padding: 2px 8px;
-      white-space: pre-wrap;
-      word-break: break-word;
-
-      &.del {
-        background-color: #fdd;
-        color: #900;
-      }
-
-      &.ins {
-        background-color: #dfd;
-        color: #060;
-      }
-
-      .symbol {
-        display: inline-block;
-        width: 1.2em;
-      }
+    100% {
+        background-position: 800% 0;
     }
-  }
 }
 
 //This fixes content hiding behind the fixed navbar
