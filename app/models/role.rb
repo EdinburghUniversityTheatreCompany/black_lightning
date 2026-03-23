@@ -51,23 +51,23 @@ class Role < ApplicationRecord
     end
   end
 
-    # Moves all users on this role to a new role with the academic year shorthand as a suffix.
-    # This new role has no permissions, and the existing role keeps all permissions.
-    def archive(suffix)
-      if suffix.blank?
-        errors.add(:base, "Suffix cannot be blank when archiving a role")
-        return false
-      end
-
-      ActiveRecord::Base.transaction do
-        # Create or find the archival role and move all users over.
-        new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
-        new_role.users << self.users
-
-        # Then clear them from this role.
-        self.users.clear
-      end
+  # Moves all users on this role to a new role with the academic year shorthand as a suffix.
+  # This new role has no permissions, and the existing role keeps all permissions.
+  def archive(suffix)
+    if suffix.blank?
+      errors.add(:base, "Suffix cannot be blank when archiving a role")
+      return false
     end
+
+    ActiveRecord::Base.transaction do
+      # Create or find the archival role and move all users over.
+      new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
+      new_role.users << self.users
+
+      # Then clear them from this role.
+      self.users.clear
+    end
+  end
 
   def name_not_hardcoded
     errors.add(:name, "is hardcoded and cannot be altered") if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
