@@ -10,12 +10,12 @@ class Admin::DebtCheckersController < AdminController
   include Importable
 
   def new
-    authorize! :index, Admin::Debt
+    authorize! :check_debt, Admin::Debt
     @title = "Bulk Debt Checker"
   end
 
   def preview
-    authorize! :index, Admin::Debt
+    authorize! :check_debt, Admin::Debt
 
     data, input_type = parse_import_params
 

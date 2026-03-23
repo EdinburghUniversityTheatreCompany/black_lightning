@@ -20,6 +20,42 @@ class Admin::DebtCheckersControllerTest < ActionController::TestCase
     assert_response :forbidden
   end
 
+  test "producer on a future show can access debt checker" do
+    sign_out users(:admin)
+
+    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
+    user = FactoryBot.create(:member)
+    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
+
+    sign_in user
+    get :new
+    assert_response :success
+  end
+
+  test "producer on a past show cannot access debt checker" do
+    sign_out users(:admin)
+
+    show = FactoryBot.create(:show, start_date: 2.months.ago, end_date: 1.month.ago)
+    user = FactoryBot.create(:member)
+    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Producer")
+
+    sign_in user
+    get :new
+    assert_response :forbidden
+  end
+
+  test "non-producer on a future show cannot access debt checker" do
+    sign_out users(:admin)
+
+    show = FactoryBot.create(:show, start_date: 1.week.from_now, end_date: 2.weeks.from_now)
+    user = FactoryBot.create(:member)
+    FactoryBot.create(:team_member, user: user, teamwork: show, position: "Director")
+
+    sign_in user
+    get :new
+    assert_response :forbidden
+  end
+
   # Preview tests
 
   test "preview with valid paste data shows results" do

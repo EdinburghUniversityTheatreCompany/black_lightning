@@ -192,10 +192,24 @@ class Ability
 
     set_permissions_based_on_grid(user)
 
+    # Producers on future shows can use the bulk debt checker
+    if TeamMember
+         .joins("INNER JOIN events ON events.id = team_members.teamwork_id AND team_members.teamwork_type = 'Event'")
+         .where(user_id: user.id)
+         .where("events.type = 'Show'")
+         .where("events.end_date >= ?", Date.current)
+         .where("LOWER(team_members.position) LIKE ?", "%producer%")
+         .exists?
+      can :check_debt, Admin::Debt
+    end
+
     # Users who can absorb users can also view and manage duplicates and imports
     can :manage, :duplicate if can? :absorb, User
     can :manage, :membership_import if can? :absorb, User
     can :manage, :user_import if can? :absorb, User
+
+    # Anyone who can index debts via the grid can also use the debt checker
+    can :check_debt, Admin::Debt if can?(:index, Admin::Debt)
 
     # Grant debt_overview access if user can create either type of debt
     can :debt_overview, Event if can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)

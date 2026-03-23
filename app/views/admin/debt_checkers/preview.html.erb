@@ -1,6 +1,8 @@
 <%= render('shared/quick_actions_card') do %>
   <%= link_to "New Check", new_admin_debt_checker_path, class: "btn btn-primary" %>
-  <%= link_to "Back to Debts", admin_debts_path, class: "btn btn-secondary" %>
+  <% if can?(:index, Admin::Debt) %>
+    <%= link_to "Back to Debts", admin_debts_path, class: "btn btn-secondary" %>
+  <% end %>
 <% end %>
 
 <% matched_count = @exact_matches.size + @fuzzy_matches.size %>
