@@ -1,0 +1,33 @@
+<%# locals: (selected_user: nil) %>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="mb-0">Quick Lookup</h5>
+  </div>
+  <div class="card-body">
+    <p class="text-muted">Search for a specific user to check their debt status.</p>
+    <%= form_with url: lookup_admin_debt_checkers_path, method: :get, local: true do %>
+      <div class="row align-items-end">
+        <div class="col-md-6">
+          <label for="user_id" class="form-label">User</label>
+          <select name="user_id" id="user_id" class="simple-select2"
+                  data-remote-source="/admin/users/autocomplete_list"
+                  data-show-non-members="1"
+                  data-query-field="q[full_name_cont]"
+                  data-placeholder="Search by name..."
+                  data-minimum-input-length="2"
+                  data-allow-clear="true"
+                  required>
+            <option></option>
+            <% if selected_user %>
+              <option value="<%= selected_user.id %>" selected><%= selected_user.name_or_email %></option>
+            <% end %>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <button type="submit" class="btn btn-primary">Check Debt</button>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>

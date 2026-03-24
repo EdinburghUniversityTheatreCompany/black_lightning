@@ -1,3 +1,7 @@
+<%= render 'admin/debt_checkers/user_lookup' %>
+
+<h5 class="mb-3">Bulk Check</h5>
+
 <%= render 'admin/shared/import_form',
            preview_path: preview_admin_debt_checkers_path,
            cancel_path: can?(:index, Admin::Debt) ? admin_debts_path : root_path,

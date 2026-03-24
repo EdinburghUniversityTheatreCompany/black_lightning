@@ -11,7 +11,24 @@ class Admin::DebtCheckersController < AdminController
 
   def new
     authorize! :check_debt, Admin::Debt
-    @title = "Bulk Debt Checker"
+    @title = "Debt Checker"
+  end
+
+  def show
+    authorize! :check_debt, Admin::Debt
+
+    @user = User.find(params[:id])
+    @title = "Debt Check — #{@user.name_or_email}"
+  end
+
+  def lookup
+    authorize! :check_debt, Admin::Debt
+
+    if params[:user_id].present?
+      redirect_to admin_debt_checker_path(params[:user_id])
+    else
+      redirect_to new_admin_debt_checker_path, alert: "Please select a user"
+    end
   end
 
   def preview

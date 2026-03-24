@@ -154,9 +154,10 @@ ChaosRails::Application.routes.draw do
 
     resources :debts
 
-    resources :debt_checkers, only: [ :new ] do
+    resources :debt_checkers, only: [ :new, :show ] do
       collection do
         post :preview
+        get :lookup
       end
     end
 
