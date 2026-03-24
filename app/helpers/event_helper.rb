@@ -12,7 +12,7 @@ module EventHelper
     url = url_for(event)
     {
       title: event.name_and_author,
-      tagline: "<small>#{event.date_and_price}</small><br>#{event.short_blurb}".html_safe,
+      tagline: "<small>#{h(event.date_and_price)}</small><br>#{h(event.short_blurb)}".html_safe,
       image: event.fetch_image,
       url: url
     }
