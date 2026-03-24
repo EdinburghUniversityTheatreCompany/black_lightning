@@ -1,8 +1,21 @@
 <%# locals: (user:) %>
 
 <% if can?(:show, Admin::Debt) || can?(:read, Admin::StaffingDebt) || can?(:read, Admin::MaintenanceDebt) %>
+  <% past_staffing = user.debt_causing_staffing_debts %>
+  <% past_maintenance = user.debt_causing_maintenance_debts %>
+  <% upcoming_staffing = user.upcoming_staffing_debts %>
+  <% upcoming_maintenance = user.upcoming_maintenance_debts %>
+
+  <% if user.in_debt %>
+    <% header_class = "bg-danger text-white" %>
+  <% elsif upcoming_staffing.any? || upcoming_maintenance.any? %>
+    <% header_class = "bg-warning" %>
+  <% else %>
+    <% header_class = "bg-success text-white" %>
+  <% end %>
+
   <div class="card mt-3">
-    <div class="card-header">
+    <div class="card-header <%= header_class %>">
       <h5 class="mb-0">Debt Summary</h5>
     </div>
     <div class="card-body">
@@ -26,11 +39,6 @@
           <%= link_to 'View all', admin_maintenance_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
         </div>
       </div>
-
-      <% past_staffing = user.debt_causing_staffing_debts %>
-      <% past_maintenance = user.debt_causing_maintenance_debts %>
-      <% upcoming_staffing = user.upcoming_staffing_debts %>
-      <% upcoming_maintenance = user.upcoming_maintenance_debts %>
 
       <% if past_staffing.any? || past_maintenance.any? %>
         <h6 class="mt-3">Unfulfilled Past Debts</h6>
