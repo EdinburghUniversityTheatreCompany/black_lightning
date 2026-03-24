@@ -56,7 +56,7 @@ module AcademicYearHelper
   end
 
   # Formats a user's years_active array into a human-readable label with consecutive ranges.
-  # E.g., [2017, 2018, 2019, 2022, 2023] -> "active 17/18–19/20, 22/23–23/24"
+  # E.g., [2017, 2018, 2019, 2022, 2023] -> "active 17/18-19/20, 22/23-23/24"
   def format_years_active_label(years)
     return "no activity on record" if years.blank?
 
@@ -65,7 +65,7 @@ module AcademicYearHelper
       if group.size == 1
         format_academic_year(group.first)
       else
-        "#{format_academic_year(group.first)}–#{format_academic_year(group.last)}"
+        "#{format_academic_year(group.first)}-#{format_academic_year(group.last)}"
       end
     end
 

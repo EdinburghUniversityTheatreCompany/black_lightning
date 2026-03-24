@@ -47,7 +47,7 @@ module StringSimilarity
     long.start_with?(short)
   end
 
-  # Returns a confidence score (0.0–1.0) for how well two names match.
+  # Returns a confidence score (0.0-1.0) for how well two names match.
   # Exact normalized match → 1.0, abbreviation → 0.9, otherwise Levenshtein similarity.
   def match_confidence(name1, name2)
     n1 = normalize_name(name1)
