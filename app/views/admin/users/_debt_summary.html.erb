@@ -1,17 +1,25 @@
 <%# locals: (user:) %>
 
-<% if can?(:show, Admin::Debt) || can?(:read, Admin::StaffingDebt) || can?(:read, Admin::MaintenanceDebt) %>
-  <% past_staffing = user.debt_causing_staffing_debts %>
-  <% past_maintenance = user.debt_causing_maintenance_debts %>
+<% full_access = can?(:show, Admin::Debt.new(user.id)) || can?(:read, Admin::StaffingDebt.new(user_id: user.id)) || can?(:read, Admin::MaintenanceDebt.new(user_id: user.id)) %>
+<% check_only = !full_access && can?(:check_debt, Admin::Debt) %>
+
+<% if full_access || check_only %>
   <% upcoming_staffing = user.upcoming_staffing_debts %>
   <% upcoming_maintenance = user.upcoming_maintenance_debts %>
+  <% has_upcoming = upcoming_staffing.any? || upcoming_maintenance.any? %>
 
   <% if user.in_debt %>
     <% header_class = "bg-danger text-white" %>
-  <% elsif upcoming_staffing.any? || upcoming_maintenance.any? %>
+    <% badge_class = "bg-danger" %>
+    <% status_label = user.debt_message_suffix.capitalize %>
+  <% elsif has_upcoming %>
     <% header_class = "bg-warning" %>
+    <% badge_class = "bg-warning text-dark" %>
+    <% status_label = "not in debt, but has upcoming unfulfilled debts" %>
   <% else %>
     <% header_class = "bg-success text-white" %>
+    <% badge_class = "bg-success" %>
+    <% status_label = "not in debt" %>
   <% end %>
 
   <div class="card mt-3">
@@ -19,93 +27,105 @@
       <h5 class="mb-0">Debt Summary</h5>
     </div>
     <div class="card-body">
-      <p><strong><%= user.name(current_user) %></strong> is currently <strong><%= user.debt_message_suffix %></strong>.</p>
+      <p class="<%= 'mb-0' if check_only %>">
+        <strong><%= user.name(current_user) %></strong> is currently
+        <% if check_only %>
+          <span class="badge <%= badge_class %>"><%= status_label %></span>
+        <% else %>
+          <strong><%= user.debt_message_suffix %></strong>.
+        <% end %>
+      </p>
 
-      <div class="row mb-3">
-        <div class="col-md-6">
-          <h6>Staffing Debts</h6>
-          <ul class="list-unstyled mb-0">
-            <li>Total: <%= user.admin_staffing_debts.count %></li>
-            <li>Unlinked jobs: <%= user.staffing_debts_unlinked_count %></li>
-          </ul>
-          <%= link_to 'View all', admin_staffing_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
+      <% unless check_only %>
+        <% past_staffing = user.debt_causing_staffing_debts %>
+        <% past_maintenance = user.debt_causing_maintenance_debts %>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h6>Staffing Debts</h6>
+            <ul class="list-unstyled mb-0">
+              <li>Total: <%= user.admin_staffing_debts.count %></li>
+              <li>Unlinked jobs: <%= user.staffing_debts_unlinked_count %></li>
+            </ul>
+            <%= link_to 'View all', admin_staffing_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
+          </div>
+          <div class="col-md-6">
+            <h6>Maintenance Debts</h6>
+            <ul class="list-unstyled mb-0">
+              <li>Total: <%= user.admin_maintenance_debts.count %></li>
+              <li>Unlinked attendances: <%= user.maintenance_debts_unlinked_count %></li>
+            </ul>
+            <%= link_to 'View all', admin_maintenance_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
+          </div>
         </div>
-        <div class="col-md-6">
-          <h6>Maintenance Debts</h6>
-          <ul class="list-unstyled mb-0">
-            <li>Total: <%= user.admin_maintenance_debts.count %></li>
-            <li>Unlinked attendances: <%= user.maintenance_debts_unlinked_count %></li>
-          </ul>
-          <%= link_to 'View all', admin_maintenance_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
-        </div>
-      </div>
 
-      <% if past_staffing.any? || past_maintenance.any? %>
-        <h6 class="mt-3">Unfulfilled Past Debts</h6>
-        <table class="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Show</th>
-              <th>Due By</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% past_staffing.includes(:show).each do |debt| %>
-              <tr class="<%= debt.css_class %>">
-                <td>Staffing</td>
-                <td><%= get_link(debt.show, :show) %></td>
-                <td><%= debt.due_by %></td>
-                <td><%= formatted_status_for_debt(debt) %></td>
+        <% if past_staffing.any? || past_maintenance.any? %>
+          <h6 class="mt-3">Unfulfilled Past Debts</h6>
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Show</th>
+                <th>Due By</th>
+                <th>Status</th>
               </tr>
-            <% end %>
-            <% past_maintenance.includes(:show).each do |debt| %>
-              <tr class="<%= debt.css_class %>">
-                <td>Maintenance</td>
-                <td><%= get_link(debt.show, :show) %></td>
-                <td><%= debt.due_by %></td>
-                <td><%= formatted_status_for_debt(debt) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      <% end %>
+            </thead>
+            <tbody>
+              <% past_staffing.includes(:show).each do |debt| %>
+                <tr class="<%= debt.css_class %>">
+                  <td>Staffing</td>
+                  <td><%= get_link(debt.show, :show) %></td>
+                  <td><%= debt.due_by %></td>
+                  <td><%= formatted_status_for_debt(debt) %></td>
+                </tr>
+              <% end %>
+              <% past_maintenance.includes(:show).each do |debt| %>
+                <tr class="<%= debt.css_class %>">
+                  <td>Maintenance</td>
+                  <td><%= get_link(debt.show, :show) %></td>
+                  <td><%= debt.due_by %></td>
+                  <td><%= formatted_status_for_debt(debt) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
 
-      <% if upcoming_staffing.any? || upcoming_maintenance.any? %>
-        <h6 class="mt-3">Upcoming Debts</h6>
-        <table class="table table-sm table-striped">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Show</th>
-              <th>Due By</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% upcoming_staffing.includes(:show).each do |debt| %>
-              <tr class="<%= debt.css_class %>">
-                <td>Staffing</td>
-                <td><%= get_link(debt.show, :show) %></td>
-                <td><%= debt.due_by %></td>
-                <td><%= formatted_status_for_debt(debt) %></td>
+        <% if has_upcoming %>
+          <h6 class="mt-3">Upcoming Debts</h6>
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Show</th>
+                <th>Due By</th>
+                <th>Status</th>
               </tr>
-            <% end %>
-            <% upcoming_maintenance.includes(:show).each do |debt| %>
-              <tr class="<%= debt.css_class %>">
-                <td>Maintenance</td>
-                <td><%= get_link(debt.show, :show) %></td>
-                <td><%= debt.due_by %></td>
-                <td><%= formatted_status_for_debt(debt) %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      <% end %>
+            </thead>
+            <tbody>
+              <% upcoming_staffing.includes(:show).each do |debt| %>
+                <tr class="<%= debt.css_class %>">
+                  <td>Staffing</td>
+                  <td><%= get_link(debt.show, :show) %></td>
+                  <td><%= debt.due_by %></td>
+                  <td><%= formatted_status_for_debt(debt) %></td>
+                </tr>
+              <% end %>
+              <% upcoming_maintenance.includes(:show).each do |debt| %>
+                <tr class="<%= debt.css_class %>">
+                  <td>Maintenance</td>
+                  <td><%= get_link(debt.show, :show) %></td>
+                  <td><%= debt.due_by %></td>
+                  <td><%= formatted_status_for_debt(debt) %></td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        <% end %>
 
-      <% if past_staffing.empty? && past_maintenance.empty? && upcoming_staffing.empty? && upcoming_maintenance.empty? %>
-        <p class="text-muted mb-0">No unfulfilled or upcoming debts.</p>
+        <% if past_staffing.empty? && past_maintenance.empty? && !has_upcoming %>
+          <p class="text-muted mb-0">No unfulfilled or upcoming debts.</p>
+        <% end %>
       <% end %>
     </div>
   </div>
