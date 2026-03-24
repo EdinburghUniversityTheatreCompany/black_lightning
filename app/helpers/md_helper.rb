@@ -10,7 +10,7 @@ module MdHelper
   def render_plain(md)
     return "" if md.nil?
 
-    ActionController::Base.helpers.strip_tags(Kramdown::Document.new(md, input: "BKramdown").to_html)
+    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(Kramdown::Document.new(md, input: "BKramdown").to_html))
   end
 
   def truncate_markdown(content, length = 100)

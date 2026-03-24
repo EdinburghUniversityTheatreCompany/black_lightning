@@ -164,7 +164,7 @@ class Event < ApplicationRecord
   end
 
   def short_blurb
-    (tagline.presence || truncate_markdown(publicity_text, 120)).html_safe
+    tagline.presence || truncate_markdown(publicity_text, 120)
   end
 
   # Returns the name and author in one string, or just the name if no author is specified.

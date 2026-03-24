@@ -17,6 +17,18 @@ class MdHelperTest < ActionView::TestCase
     assert_equal plain, render_plain(@markdown)
   end
 
+  test "render_plain decodes HTML entities" do
+    assert_includes render_plain("John & Jeremy"), "John & Jeremy"
+    assert_includes render_plain("Tom & Jerry"), "Tom & Jerry"
+    assert_not_includes render_plain("Tom & Jerry"), "&amp;"
+  end
+
+  test "truncate_markdown does not double-encode HTML entities" do
+    text = "John & Jeremy's father (lovingly, Pops) owned a bar. Now, with him having 'kicked the keg' if you will, one of them has to run it."
+    result = truncate_markdown(text, 120)
+    assert_not_includes result, "&amp;amp;", "HTML entities should not be double-encoded"
+  end
+
   test "truncated markdown" do
     archive_warning = '<i class="icon-info-sign icon-large"></i> This show was imported from the old website. If you are able to provide any more information, please contact the [Archivist](mailto:archive@bedlamtheatre.co.uk).
     {:.alert .alert-info}'
