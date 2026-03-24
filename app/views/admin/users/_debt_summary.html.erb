@@ -1,7 +1,7 @@
-<%# locals: (user:) %>
+<%# locals: (user:, allow_compact: false) %>
 
 <% full_access = can?(:show, Admin::Debt.new(user.id)) || can?(:read, Admin::StaffingDebt.new(user_id: user.id)) || can?(:read, Admin::MaintenanceDebt.new(user_id: user.id)) %>
-<% check_only = !full_access && can?(:check_debt, Admin::Debt) %>
+<% check_only = allow_compact && !full_access && can?(:check_debt, Admin::Debt) %>
 
 <% if full_access || check_only %>
   <% upcoming_staffing = user.upcoming_staffing_debts %>
