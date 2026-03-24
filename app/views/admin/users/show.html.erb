@@ -18,9 +18,11 @@
     <% end %>
 <% end %>
 
-<%= render('shared/pages/show', object: @user, fields: fields, show_actions_args: { destroy_link_params: { 
+<%= render('shared/pages/show', object: @user, fields: fields, show_actions_args: { destroy_link_params: {
     type_confirm: @user.name,
-    detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:" 
+    detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:"
 } } ) %>
+
+<%= render 'admin/users/debt_summary', user: @user %>
 
 <%= render(template:'users/show', locals: { display_title: false }) %>
