@@ -49,6 +49,7 @@ env:
     - RAILS_MASTER_KEY
     - MYSQL_ROOT_PASSWORD
     - SKYLIGHT_AUTHENTICATION
+    - HONEYBADGER_API_KEY
 
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal app logs -r job" will tail logs from the first server in the job section.

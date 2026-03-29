@@ -7,8 +7,8 @@ default: &default
   # For details on connection pooling, see Rails configuration guide
   # https://guides.rubyonrails.org/configuring.html#database-pooling
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
-  username: <%= ENV.fetch("DB_USERNAME") { Rails.application.credentials.dig(:database, :development, :username) } %>
-  password: <%= ENV.fetch("DB_PASSWORD") { Rails.application.credentials.dig(:database, :development, :password) } %>
+  username: <%= ENV.fetch("DB_USERNAME") { Rails.application.credentials.dig(:database, :username) } %>
+  password: <%= ENV.fetch("DB_PASSWORD") { Rails.application.credentials.dig(:database, :password) } %>
   host: <%= ENV.fetch("DB_HOST") { "127.0.0.1" } %>
   port: 3306
 

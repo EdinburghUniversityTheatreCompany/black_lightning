@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-creds = Rails.application.credentials.dig(:openid_connect, Rails.env.to_sym)
+creds = Rails.application.credentials.dig(:openid_connect)
 if creds.present? && creds[:issuer].present?
   Doorkeeper::OpenidConnect.configure do
     issuer creds[:issuer]
 
-    signing_key Rails.application.credentials.dig(:openid_connect, Rails.env.to_sym, :private_key)
+    signing_key creds.private_key
 
     subject_types_supported [ :public ]
 
