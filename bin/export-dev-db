@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Exports the local development database for use in the devcontainer.
+#
+# Usage:
+#   bin/export-dev-db
+#
+# This creates .devcontainer/dump.sql.gz. The next time you rebuild or reopen
+# the devcontainer, setup.sh will auto-import it into the container's MySQL.
+#
+# The dump file is gitignored — it's for local use only.
+
+set -e
+
+DUMP_FILE=".devcontainer/dump.sql.gz"
+DB="bedlam_blacklightning_development"
+
+echo "Exporting '$DB' to $DUMP_FILE..."
+echo "(You will be prompted for your MySQL root password)"
+
+mysqldump -h 127.0.0.1 -u root -p \
+  --single-transaction \
+  --routines \
+  --triggers \
+  "$DB" | gzip > "$DUMP_FILE"
+
+echo ""
+echo "Done! $DUMP_FILE created."
+echo ""
+echo "Next steps:"
+echo "  1. Rebuild the devcontainer: Ctrl+Shift+P → 'Dev Containers: Rebuild Container'"
+echo "  2. setup.sh will auto-import the dump during postCreateCommand"

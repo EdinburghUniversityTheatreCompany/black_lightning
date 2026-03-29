@@ -1,0 +1,17 @@
+{
+  "name": "BlackLightning",
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/BlackLightning",
+  "remoteUser": "vscode",
+  "postCreateCommand": ".devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Shopify.ruby-lsp",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

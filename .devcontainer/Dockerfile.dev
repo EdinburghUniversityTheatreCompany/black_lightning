@@ -1,0 +1,35 @@
+FROM ruby:4.0.2
+
+# Install system dependencies
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential \
+      git \
+      curl \
+      sudo \
+      libmariadb-dev-compat \
+      libyaml-dev \
+      pkg-config \
+      default-mysql-client \
+      libvips \
+      libjemalloc2 \
+      tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 22
+ARG NODE_VERSION=22
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Yarn
+RUN npm install -g yarn
+
+# Create non-root user with passwordless sudo (standard devcontainer pattern)
+# Container runs as root so volume mounts are writable; remoteUser in
+# devcontainer.json switches the developer shell to vscode.
+RUN groupadd --gid 1000 vscode && \
+    useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode && \
+    echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode
+
+WORKDIR /workspaces/BlackLightning

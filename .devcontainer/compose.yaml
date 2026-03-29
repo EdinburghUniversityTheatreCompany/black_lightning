@@ -1,0 +1,31 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.dev
+    volumes:
+      - ..:/workspaces/BlackLightning:cached
+      - bundle-cache:/bundle
+    command: sleep infinity
+    environment:
+      BUNDLE_PATH: /bundle/vendor
+      DB_HOST: mysql
+      DB_USERNAME: root
+      DB_PASSWORD: password
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_HOST: "%"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3307:3306"  # non-standard port avoids clashing with any host MySQL
+
+volumes:
+  mysql-data:
+  bundle-cache:
