@@ -15,6 +15,7 @@
 # Ignore private config files
 /config/secrets.yml
 /config/credentials/*.key
+!/config/credentials/development.key
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
@@ -66,8 +67,3 @@ yarn-debug.log*
 !/app/assets/builds/.keep
 
 .playwright-cli
-
-
-# Ignore key files for decrypting credentials and more.
-/config/credentials/*.key
-
