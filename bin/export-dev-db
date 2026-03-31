@@ -9,10 +9,17 @@
 #
 # The dump file is gitignored — it's for local use only.
 
-set -e
+set -eo pipefail
 
 DUMP_FILE=".devcontainer/dump.sql.gz"
 DB="bedlam_blacklightning_development"
+
+if ! command -v mysqldump &>/dev/null; then
+  echo "Error: mysqldump not found. Install it with:"
+  echo "  sudo apt install mysql-client   # Debian/Ubuntu"
+  echo "  brew install mysql-client       # macOS"
+  exit 1
+fi
 
 echo "Exporting '$DB' to $DUMP_FILE..."
 echo "(You will be prompted for your MySQL root password)"
@@ -21,6 +28,7 @@ mysqldump -h 127.0.0.1 -u root -p \
   --single-transaction \
   --routines \
   --triggers \
+  --databases \
   "$DB" | gzip > "$DUMP_FILE"
 
 echo ""
