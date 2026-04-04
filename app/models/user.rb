@@ -55,6 +55,7 @@ class User < ApplicationRecord
   # devise :ldap_authenticatable, :recoverable, :rememberable, :trackable, :registerable
 
   devise :database_authenticatable, :registerable, :recoverable, :rememberable, :validatable
+  has_secure_token :calendar_token
 
   # set our own validations
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: "Please enter a valid mobile number" }
