@@ -45,6 +45,11 @@ class CalendarsControllerTest < ActionController::TestCase
     assert_not_includes response.body, "staffing-job-#{past_job.id}@bedlamtheatre.co.uk"
   end
 
+  test "regenerate_token requires authentication" do
+    post :regenerate_token
+    assert_redirected_to new_user_session_path
+  end
+
   test "regenerate_token changes token and redirects" do
     sign_in @user
     old_token = @user.calendar_token

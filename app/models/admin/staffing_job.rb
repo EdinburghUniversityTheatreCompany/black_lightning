@@ -79,6 +79,21 @@ class Admin::StaffingJob < ApplicationRecord
     cal
   end
 
+  def to_ical_event
+    require "icalendar"
+
+    event = Icalendar::Event.new
+    event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
+    event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
+    event.dtend         = Icalendar::Values::DateTime.new(staffable.end_time.utc, "tzid" => "UTC")
+    event.summary       = "#{staffable.show_title} — #{name}"
+    event.description   = "You are staffing #{staffable.show_title} as #{name}."
+    event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
+    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffable.updated_at ].max.utc, "tzid" => "UTC")
+    event.sequence      = calendar_sequence
+    event
+  end
+
   def counts_towards_debt?
     staffable.present? && staffable.counts_towards_debt? && name.downcase != "committee rep"
   end

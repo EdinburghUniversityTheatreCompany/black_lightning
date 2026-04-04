@@ -38,16 +38,7 @@ class CalendarsController < ApplicationController
     cal.append_custom_property("REFRESH-INTERVAL;VALUE=DURATION", "PT1H")
 
     jobs.each do |job|
-      event = Icalendar::Event.new
-      event.uid           = "staffing-job-#{job.id}@bedlamtheatre.co.uk"
-      event.dtstart       = Icalendar::Values::DateTime.new(job.staffable.start_time.utc, "tzid" => "UTC")
-      event.dtend         = Icalendar::Values::DateTime.new(job.staffable.end_time.utc, "tzid" => "UTC")
-      event.summary       = "#{job.staffable.show_title} — #{job.name}"
-      event.description   = "You are staffing #{job.staffable.show_title} as #{job.name}."
-      event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
-      event.last_modified = Icalendar::Values::DateTime.new([job.updated_at, job.staffable.updated_at].max.utc, "tzid" => "UTC")
-      event.sequence      = job.calendar_sequence
-      cal.add_event(event)
+      cal.add_event(job.to_ical_event)
     end
 
     cal
