@@ -27,6 +27,7 @@ class Admin::Staffing < ApplicationRecord
 
   after_save     :update_reminder
   after_save     :update_staffing_jobs, if: :saved_change_to_counts_towards_debt?
+  after_save     :send_calendar_update_emails, if: :staffing_details_changed?
   before_destroy :reminder_cleanup
 
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
@@ -106,6 +107,17 @@ class Admin::Staffing < ApplicationRecord
 
     # Reset individual reminder flags so they get re-sent
     staffing_jobs.update_all(reminder_sent_at: nil)
+  end
+
+  def staffing_details_changed?
+    saved_change_to_show_title? || saved_change_to_start_time? || saved_change_to_end_time?
+  end
+
+  def send_calendar_update_emails
+    staffing_jobs.where.not(user_id: nil).each do |job|
+      job.bump_calendar_sequence
+      StaffingMailer.calendar_invite(job, method: :request).deliver_later
+    end
   end
 
   # Reassociate staffing jobs if the count_towards_debt flag changes.

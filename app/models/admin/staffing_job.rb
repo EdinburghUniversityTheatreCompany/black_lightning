@@ -5,13 +5,14 @@
 #
 # Table name: admin_staffing_jobs
 #
-# *id*::             <tt>integer, not null, primary key</tt>
-# *name*::           <tt>string(255)</tt>
-# *staffable_id*::   <tt>integer</tt>
-# *user_id*::        <tt>integer</tt>
-# *created_at*::     <tt>datetime, not null</tt>
-# *updated_at*::     <tt>datetime, not null</tt>
-# *staffable_type*:: <tt>string(255)</tt>
+# *id*::                  <tt>integer, not null, primary key</tt>
+# *name*::                <tt>string(255)</tt>
+# *staffable_id*::        <tt>integer</tt>
+# *user_id*::             <tt>integer</tt>
+# *created_at*::          <tt>datetime, not null</tt>
+# *updated_at*::          <tt>datetime, not null</tt>
+# *staffable_type*::      <tt>string(255)</tt>
+# *calendar_sequence*::   <tt>integer, default: 0, not null</tt>
 #--
 # == Schema Information End
 #++
@@ -22,7 +23,9 @@ class Admin::StaffingJob < ApplicationRecord
   belongs_to :user, optional: true
   has_one :staffing_debt, class_name: "Admin::StaffingDebt", foreign_key: "admin_staffing_job_id"
 
+  after_save :send_calendar_invite_email  # must run before associate_with_debt (which calls reload, clearing saved_changes)
   after_save :associate_with_debt
+  after_destroy :send_calendar_cancellation_email
   after_destroy :dissassociate_from_debt
 
   has_paper_trail
@@ -50,6 +53,32 @@ class Admin::StaffingJob < ApplicationRecord
     staffable.end_time < DateTime.current
   end
 
+  ##
+  # Build an Icalendar::Calendar for this job.
+  # method: :request for new/updated invite, :cancel for cancellation.
+  ##
+  def ical_calendar(method:)
+    require "icalendar"
+    require "icalendar/tzinfo"
+
+    cal = Icalendar::Calendar.new
+    cal.prodid = "-//Bedlam Theatre//BlackLightning//EN"
+    cal.ip_method = method.to_s.upcase
+
+    event = Icalendar::Event.new
+    event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
+    event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
+    event.dtend         = Icalendar::Values::DateTime.new(staffable.end_time.utc, "tzid" => "UTC")
+    event.summary       = "#{staffable.show_title} — #{name}"
+    event.description   = "You are staffing #{staffable.show_title} as #{name}."
+    event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
+    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffable.updated_at ].max.utc, "tzid" => "UTC")
+    event.sequence      = calendar_sequence
+
+    cal.add_event(event)
+    cal
+  end
+
   def counts_towards_debt?
     staffable.present? && staffable.counts_towards_debt? && name.downcase != "committee rep"
   end
@@ -60,6 +89,51 @@ class Admin::StaffingJob < ApplicationRecord
     ids = staffing_jobs.map { |job| job.counts_towards_debt? ? job.id : nil }
 
     all.where(id: ids)
+  end
+
+  private
+
+  def send_calendar_invite_email
+    # Skip for template-based jobs — they have no real date/time
+    return if staffable.is_a?(Admin::StaffingTemplate)
+
+    if saved_change_to_user_id?
+      old_user_id, new_user_id = saved_change_to_user_id
+
+      # Send cancellation to the user who was removed
+      if old_user_id.present?
+        old_user = User.find(old_user_id)
+        bump_calendar_sequence
+        StaffingMailer.calendar_invite(self, method: :cancel, recipient: old_user).deliver_later
+      end
+
+      # Send invite to the newly assigned user
+      if new_user_id.present?
+        StaffingMailer.calendar_invite(self, method: :request).deliver_later
+      end
+    elsif saved_change_to_name? && user.present?
+      bump_calendar_sequence
+      StaffingMailer.calendar_invite(self, method: :request).deliver_later
+    end
+  end
+
+  def send_calendar_cancellation_email
+    return if staffable.is_a?(Admin::StaffingTemplate)
+    return unless user.present?
+
+    bump_calendar_sequence
+    StaffingMailer.calendar_invite(self, method: :cancel).deliver_later
+  end
+
+  public
+
+  def bump_calendar_sequence
+    new_seq = calendar_sequence + 1
+    unless destroyed?
+      update_column(:calendar_sequence, new_seq)  # bypasses callbacks
+      self.calendar_sequence = new_seq
+    end
+    new_seq
   end
 
   # Associates itself with the soonest upcoming Maintenance Debt

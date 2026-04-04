@@ -1,0 +1,13 @@
+Dear <%= @user.first_name %>,
+
+<% if @method == :cancel %>
+Your staffing slot for <%= @staffing.show_title %> on <%= l @staffing.start_time, format: :long %> (<%= @job.name %>) has been removed. A calendar cancellation is attached to this email.
+<% else %>
+You have been added to staffing for <%= @staffing.show_title %> on <%= l @staffing.start_time, format: :long %> as <%= @job.name %>. A calendar invite is attached: open it to add the event to your calendar.
+
+You can also subscribe to your personal staffing calendar to keep all your shifts automatically in sync. See your account page to find the subscription link.
+<% end %>
+
+Regards,
+
+The EUTC Committee

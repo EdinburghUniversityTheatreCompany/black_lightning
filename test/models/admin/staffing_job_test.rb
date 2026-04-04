@@ -213,6 +213,51 @@ class Admin::StaffingJobTest < ActiveSupport::TestCase
     helper_test_does_not_associate_even_though(staffing_debt, staffing_job, "the staffing_debt is forgiven")
   end
 
+  ##
+  # Calendar invite hooks
+  ##
+  test "sends a calendar REQUEST invite when a user is assigned to a job" do
+    job = FactoryBot.create(:unstaffed_staffing_job)
+    user = FactoryBot.create(:user)
+
+    assert_enqueued_emails(1) do
+      job.update!(user: user)
+    end
+  end
+
+  test "sends a calendar CANCEL invite when a user is removed from a job" do
+    job = FactoryBot.create(:staffed_staffing_job)
+
+    assert_enqueued_emails(1) do
+      job.update!(user: nil)
+    end
+  end
+
+  test "sends a calendar REQUEST update when the role name changes" do
+    job = FactoryBot.create(:staffed_staffing_job)
+
+    assert_enqueued_emails(1) do
+      job.update!(name: "New Role Name")
+    end
+  end
+
+  test "sends CANCEL to old user and REQUEST to new user when user is reassigned" do
+    job = FactoryBot.create(:staffed_staffing_job)
+    new_user = FactoryBot.create(:user)
+
+    assert_enqueued_emails(2) do
+      job.update!(user: new_user)
+    end
+  end
+
+  test "does not send calendar email when unrelated fields change" do
+    job = FactoryBot.create(:staffed_staffing_job)
+
+    assert_enqueued_emails(0) do
+      job.update_columns(updated_at: Time.current)
+    end
+  end
+
   private
 
   def helper_test_does_not_associate_even_though(staffing_debt, staffing_job, reason)

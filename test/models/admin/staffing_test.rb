@@ -108,6 +108,42 @@ class Admin::StaffingTest < ActiveSupport::TestCase
     assert_not staffing.reload.reminder_job_executed
   end
 
+  ##
+  # Calendar invite cascade
+  ##
+  test "sends calendar updates to all assigned users when show_title changes" do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 2, unstaffed_job_count: 1)
+
+    assert_enqueued_emails(2) do
+      staffing.update!(show_title: "New Show Title")
+    end
+  end
+
+  test "sends calendar updates to all assigned users when start_time changes" do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 2)
+
+    assert_enqueued_emails(2) do
+      staffing.update!(start_time: staffing.start_time.advance(hours: 1),
+                       end_time: staffing.end_time.advance(hours: 1))
+    end
+  end
+
+  test "sends calendar updates to all assigned users when end_time changes" do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 1)
+
+    assert_enqueued_emails(1) do
+      staffing.update!(end_time: staffing.end_time.advance(minutes: 30))
+    end
+  end
+
+  test "does not send calendar emails when only counts_towards_debt changes" do
+    staffing = FactoryBot.create(:staffing, staffed_job_count: 1, counts_towards_debt: false)
+
+    assert_enqueued_emails(0) do
+      staffing.update!(counts_towards_debt: true)
+    end
+  end
+
   test "scheduled job is properly managed when staffing is updated" do
     # Create a staffing with a future start time
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: DateTime.current.advance(days: 1))
