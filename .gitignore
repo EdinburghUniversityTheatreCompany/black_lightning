@@ -16,7 +16,7 @@
 /config/secrets.yml
 /config/credentials/*.key
 !/config/credentials/development.key
-
+!/config/credentials/test.key
 # Ignore master key for decrypting credentials and more.
 /config/master.key
 
