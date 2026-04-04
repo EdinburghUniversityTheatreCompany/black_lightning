@@ -63,6 +63,9 @@ ChaosRails::Application.routes.draw do
     get "tests/test_500", to: "tests#test_500"
   end
 
+  get  "calendar/:token/staffing.ics", to: "calendars#staffing",        as: :staffing_calendar,        format: false
+  post "calendar/regenerate_token",    to: "calendars#regenerate_token", as: :regenerate_calendar_token
+
   namespace :admin do
     get "", to: "dashboard#index"
 
