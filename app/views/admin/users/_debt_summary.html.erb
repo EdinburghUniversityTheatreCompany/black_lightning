@@ -44,7 +44,7 @@
           <div class="col-md-6">
             <h6>Staffing Debts</h6>
             <ul class="list-unstyled mb-0">
-              <li>Total: <%= user.admin_staffing_debts.count %></li>
+              <li>Unfulfilled: <%= user.admin_staffing_debts.unfulfilled.count %></li>
               <li>Unlinked jobs: <%= user.staffing_jobs_unlinked_count %></li>
             </ul>
             <%= link_to 'View all', admin_staffing_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
@@ -52,7 +52,7 @@
           <div class="col-md-6">
             <h6>Maintenance Debts</h6>
             <ul class="list-unstyled mb-0">
-              <li>Total: <%= user.admin_maintenance_debts.count %></li>
+              <li>Unfulfilled: <%= user.admin_maintenance_debts.unfulfilled.count %></li>
               <li>Unlinked attendances: <%= user.maintenance_attendances_unlinked_count %></li>
             </ul>
             <%= link_to 'View all', admin_maintenance_debts_path(user_id: user.id), class: 'btn btn-sm btn-secondary mt-2' %>
