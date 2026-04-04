@@ -40,7 +40,9 @@ class StaffingMailerTest < ActionMailer::TestCase
     job = FactoryBot.create(:staffed_staffing_job)
 
     email = StaffingMailer.calendar_invite(job, method: :request)
-    ics = email.attachments.find { |a| a.mime_type.start_with?("text/calendar") }.body.to_s
+    ics_raw = email.attachments.find { |a| a.mime_type.start_with?("text/calendar") }.body.to_s
+    # Unfold RFC 5545 line continuations (CRLF+space or LF+space) before asserting
+    ics = ics_raw.gsub(/\r?\n[ \t]/, "")
 
     assert_includes ics, job.staffable.show_title
     assert_includes ics, job.name
