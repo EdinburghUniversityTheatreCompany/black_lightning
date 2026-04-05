@@ -103,7 +103,7 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
 
   test "should get edit" do
     get :edit, params: { id: @maintenance_debt }
-    assert_response :success
+    assert_redirected_to admin_maintenance_debt_path(@maintenance_debt)
   end
 
   test "should update admin_maintenance_debt" do

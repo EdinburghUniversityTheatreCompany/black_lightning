@@ -15,6 +15,11 @@ class Admin::MaintenanceDebtsController < AdminController
     super
   end
 
+  # GET /admin/maintenance_debts/1/edit
+  def edit
+    redirect_to admin_maintenance_debt_path(@maintenance_debt)
+  end
+
   def create
     get_resource.state = :normal
     get_resource.converted_from_staffing_debt = :false
@@ -60,6 +65,10 @@ class Admin::MaintenanceDebtsController < AdminController
   # Only allow a trusted parameter "white list" through.
   def permitted_params
     [ :user_id, :due_by, :show_id, :state ]
+  end
+
+  def update_failure_template
+    "show"
   end
 
   def load_index_resources

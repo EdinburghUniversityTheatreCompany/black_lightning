@@ -82,7 +82,7 @@ module GenericController
         else
           @title = edit_title
 
-          format.html { render "edit", status: :unprocessable_entity }
+          format.html { render update_failure_template, status: :unprocessable_entity }
           # format.json { render json: get_resource.errors, status: :unprocessable_entity }
         end
       rescue ActiveRecord::RecordNotUnique => e
@@ -91,7 +91,7 @@ module GenericController
         if e.message.include?("team_members") && e.message.include?("teamwork_and_user")
           get_resource.errors.add(:base, "Cannot add the same person as a team member more than once.")
           @title = edit_title
-          format.html { render "edit", status: :unprocessable_entity }
+          format.html { render update_failure_template, status: :unprocessable_entity }
         else
           raise # Re-raise other constraint violations
         end
@@ -288,6 +288,10 @@ module GenericController
 
   def index_filename
     "index"
+  end
+
+  def update_failure_template
+    "edit"
   end
 
   def index_editable_block_name

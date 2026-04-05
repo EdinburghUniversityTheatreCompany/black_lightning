@@ -17,7 +17,12 @@ class Admin::StaffingDebtsController < AdminController
     super
   end
 
-  # New, Edit, and Update are handled by the Generic Controller.
+  # GET /admin/staffing_debts/1/edit
+  def edit
+    redirect_to admin_staffing_debt_path(@staffing_debt)
+  end
+
+  # New and Update are handled by the Generic Controller.
   def create
     get_resource.state = :normal
     get_resource.converted_from_maintenance_debt = :false
@@ -72,5 +77,9 @@ class Admin::StaffingDebtsController < AdminController
 
   def edit_title
     "Edit Staffing Debt for #{@staffing_debt.user.name(current_user)}"
+  end
+
+  def update_failure_template
+    "show"
   end
 end

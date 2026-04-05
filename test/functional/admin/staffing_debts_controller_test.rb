@@ -83,7 +83,7 @@ class Admin::StaffingDebtsControllerTest < ActionController::TestCase
 
   test "should get edit" do
     get :edit, params: { id: @staffing_debt }
-    assert_response :success
+    assert_redirected_to admin_staffing_debt_path(@staffing_debt)
   end
 
   test "should update admin_staffing_debt" do

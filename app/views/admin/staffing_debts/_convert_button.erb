@@ -1,0 +1,7 @@
+<%# locals: (staffing_debt:) %>
+<% unless [:converted, :forgiven, :expired].include?(staffing_debt.status) %>
+  <%= get_link staffing_debt, :convert_to_maintenance_debt,
+               http_method: :put, link_text: "Convert",
+               confirm: "Converting the Staffing Debt to Maintenance Debt",
+               detail: "Are you sure you want to convert #{staffing_debt.user.name(current_user)}'s Staffing Debt into a Maintenance Debt?" %>
+<% end %>

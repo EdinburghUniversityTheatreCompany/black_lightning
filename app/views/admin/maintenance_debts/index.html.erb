@@ -1,16 +1,18 @@
 <% headers = [:user_full_name, :show_name, :due_by, :status] %>
-<% headers << '' if can?(:edit, Admin::MaintenanceDebt) %>
+<% headers << '' if can?(:show, Admin::MaintenanceDebt) %>
 <% headers << '' if can?(:forgive, Admin::MaintenanceDebt) %>
+<% headers << '' if can?(:convert_to_staffing_debt, Admin::MaintenanceDebt) %>
 
-<% field_sets = @maintenance_debts.map do |maintenance_debt| { 
+<% field_sets = @maintenance_debts.map do |maintenance_debt| {
   fields: [
     maintenance_debt,
     user_link(maintenance_debt.user, false),
     get_link(maintenance_debt.show, :show),
     maintenance_debt.due_by,
     formatted_status_for_debt(maintenance_debt),
-    get_link(maintenance_debt, :edit),
-    render('forgive_button', maintenance_debt: maintenance_debt)
+    get_link(maintenance_debt, :show, link_text: "View / Edit"),
+    render('forgive_button', maintenance_debt: maintenance_debt),
+    render('convert_button', maintenance_debt: maintenance_debt)
   ],
   class: maintenance_debt.css_class
 }

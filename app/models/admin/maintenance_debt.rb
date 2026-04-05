@@ -87,7 +87,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
         return :completed
       end
 
-      if due_by < on_date
+      if due_by.present? && due_by < on_date
         :causing_debt
       else
         :unfulfilled

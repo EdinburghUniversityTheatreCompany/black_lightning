@@ -2,7 +2,7 @@
 
 <% fields = { 
   user: user_link(debt.user, false),
-  show: get_link(debt.show, :show),
+  show: debt.show.present? ? get_link(debt.show, :show) : "None",
   due_by: debt.due_by,
   status: formatted_status_for_debt(debt)
 } %>

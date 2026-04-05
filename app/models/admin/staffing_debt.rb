@@ -58,7 +58,7 @@ class Admin::StaffingDebt < ApplicationRecord
     else
       return :completed_staffing if admin_staffing_job.try(:completed?)
       return :awaiting_staffing if admin_staffing_job.present?
-      return :causing_debt if due_by < on_date
+      return :causing_debt if due_by.present? && due_by < on_date
 
       :not_signed_up
     end
