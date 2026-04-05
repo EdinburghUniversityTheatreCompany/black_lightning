@@ -61,6 +61,7 @@ class User < ApplicationRecord
   # set our own validations
   validates :phone_number, allow_blank: true, format: { with: /\A(\(?\+?[0-9]*\)?)?[0-9_\- \(\)]*\z/, message: "Please enter a valid mobile number" }
   validates :email, presence: true
+  validates :calendar_email, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP, message: "must be a valid email address" }
 
   validates :avatar, content_type: %i[png jpg jpeg gif]
   validates :student_id,
@@ -173,6 +174,12 @@ class User < ApplicationRecord
     return name_or_default if name?
 
     email
+  end
+
+  # Returns the email address to use for calendar invites.
+  # Uses calendar_email override if set, otherwise falls back to main email.
+  def calendar_email_for_invites
+    calendar_email.presence || email
   end
 
   # Ensures that all phone numbers begin with +44 and don't have any spaces in.

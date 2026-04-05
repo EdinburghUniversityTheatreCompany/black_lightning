@@ -11,6 +11,7 @@
     <%= f.input :first_name %>
     <%= f.input :last_name %>
     <%= f.input :phone_number %>
+    <%= f.input :calendar_email, hint: "If set, calendar invites (for staffing) will be sent here instead of their main email." %>
 
     <% password_hint = "Leave blank to generate random password" if @user.new_record? %>
 

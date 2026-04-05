@@ -5,6 +5,7 @@
 
   <div class="form-inputs">
     <%= f.input :email, required: true, autofocus: true %>
+    <%= f.input :calendar_email, required: false, hint: "Calendar invites (for staffing) will be sent here instead of your main email. Leave blank to use your main email." %>
 
     <% if devise_mapping.confirmable? && resource.pending_reconfirmation? %>
       <p>Currently waiting confirmation for: <%= resource.unconfirmed_email %></p>

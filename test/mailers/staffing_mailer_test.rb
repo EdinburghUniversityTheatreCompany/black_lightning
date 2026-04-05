@@ -69,6 +69,15 @@ class StaffingMailerTest < ActionMailer::TestCase
     assert_includes ics, "METHOD:CANCEL"
   end
 
+  test "calendar_invite sends to calendar_email override when set" do
+    job = FactoryBot.create(:staffed_staffing_job)
+    job.user.update!(calendar_email: "override@example.com")
+
+    email = StaffingMailer.calendar_invite(job, method: :request)
+
+    assert_equal [ "override@example.com" ], email.to
+  end
+
   test "calendar_invite CANCEL uses same UID as REQUEST for the same job" do
     job = FactoryBot.create(:staffed_staffing_job)
 

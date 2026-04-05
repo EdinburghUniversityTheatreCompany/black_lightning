@@ -3,6 +3,7 @@ class ApplicationController < ActionController::Base
 
   protect_from_forgery with: :exception
   before_action :set_paper_trail_whodunnit
+  before_action :configure_permitted_parameters, if: :devise_controller?
 
   before_action :set_globals
   before_action :require_profile_completion!
@@ -77,6 +78,10 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  def configure_permitted_parameters
+    devise_parameter_sanitizer.permit(:account_update, keys: [ :calendar_email ])
+  end
 
   def render_error_page(exception, template, status_code)
     @meta = {} if @meta.nil?

@@ -18,7 +18,7 @@ class StaffingMailer < ApplicationMailer
     }
 
     mail(
-      to:      email_address_with_name(@user.email, @user.full_name),
+      to:      email_address_with_name(@user.calendar_email_for_invites, @user.full_name),
       subject: calendar_invite_subject
     )
   end

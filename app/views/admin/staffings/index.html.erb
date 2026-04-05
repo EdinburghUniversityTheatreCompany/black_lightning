@@ -25,6 +25,7 @@
                   data: { confirm: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?" },
                   class: "btn btn-sm btn-outline-danger" %>
     </div>
+    <p class="text-muted small mb-0 mt-2">Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.</p>
   </div>
 </div>
 

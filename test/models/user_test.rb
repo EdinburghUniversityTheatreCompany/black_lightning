@@ -553,4 +553,23 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_includes results, user2, "Should find user with associate_id containing '123'"
     assert_not_includes results, user3, "Should not find user without '123' in member_id"
   end
+
+  test "calendar_email_for_invites returns main email when calendar_email is blank" do
+    @user.calendar_email = nil
+    assert_equal @user.email, @user.calendar_email_for_invites
+
+    @user.calendar_email = ""
+    assert_equal @user.email, @user.calendar_email_for_invites
+  end
+
+  test "calendar_email_for_invites returns calendar_email when set" do
+    @user.calendar_email = "other@example.com"
+    assert_equal "other@example.com", @user.calendar_email_for_invites
+  end
+
+  test "calendar_email validates format when present" do
+    @user.calendar_email = "not-an-email"
+    assert_not @user.valid?
+    assert @user.errors[:calendar_email].present?
+  end
 end
