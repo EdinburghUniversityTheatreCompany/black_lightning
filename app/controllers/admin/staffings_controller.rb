@@ -10,6 +10,8 @@ class Admin::StaffingsController < AdminController
 
   skip_load_resource only: %i[create]
 
+  before_action :provision_calendar_token, only: [ :index ]
+
   ##
   # GET /admin/staffings
   #
@@ -267,6 +269,10 @@ class Admin::StaffingsController < AdminController
     now = Time.current
     @default_start_time = Time.new(now.year, now.month, now.day, 18, 30, 0)
     @default_end_time = Time.new(now.year, now.month, now.day, 22, 00, 0)
+  end
+
+  def provision_calendar_token
+    current_user.ensure_calendar_token!
   end
 
   def creation_params

@@ -58,6 +58,6 @@ class CalendarsControllerTest < ActionController::TestCase
 
     @user.reload
     assert_not_equal old_token, @user.calendar_token
-    assert_redirected_to edit_user_registration_path
+    assert_redirected_to admin_staffings_path
   end
 end

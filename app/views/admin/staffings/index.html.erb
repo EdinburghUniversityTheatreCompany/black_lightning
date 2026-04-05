@@ -1,7 +1,32 @@
 <%= display_block("Staffing", true) %>
 
-<br />
-<br />
+<div class="card bg-light mb-3 mt-3">
+  <div class="card-body py-2">
+    <h6 class="card-title mb-1">Your Staffing Calendar</h6>
+    <% webcal_url = staffing_calendar_url(token: current_user.calendar_token).sub(/\Ahttps?:\/\//, "webcal://") %>
+    <% https_url  = staffing_calendar_url(token: current_user.calendar_token) %>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <%= link_to "Subscribe", webcal_url, class: "btn btn-sm btn-primary" %>
+      <div class="input-group input-group-sm" style="max-width: 460px;">
+        <input type="text" class="form-control"
+               value="<%= https_url %>"
+               id="staffings-calendar-url"
+               readonly autocomplete="off">
+        <button class="btn btn-outline-secondary" type="button"
+                onclick="navigator.clipboard.writeText('<%= j(https_url) %>');
+                         this.textContent='Copied!';
+                         setTimeout(() => this.textContent='Copy', 2000)">
+          Copy
+        </button>
+      </div>
+      <%= link_to "Regenerate",
+                  regenerate_calendar_token_path,
+                  method: :post,
+                  data: { confirm: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?" },
+                  class: "btn btn-sm btn-outline-danger" %>
+    </div>
+  </div>
+</div>
 
 <h3>Upcoming Positions</h3>
 <% if @upcoming_staffings.any? %>

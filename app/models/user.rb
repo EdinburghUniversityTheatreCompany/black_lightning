@@ -35,6 +35,7 @@
 #++
 class User < ApplicationRecord
   before_save :unify_numbers
+  before_save :ensure_calendar_token
   before_validation :extract_student_id_from_email, if: :email_changed?
 
   rolify
@@ -836,7 +837,16 @@ class User < ApplicationRecord
     UsersMailer.welcome_email(self).deliver_later unless email.ends_with?("@bedlamtheatre.co.uk")
   end
 
+  def ensure_calendar_token!
+    return if calendar_token.present?
+    update_column(:calendar_token, SecureRandom.base58(24))
+  end
+
   private
+
+  def ensure_calendar_token
+    self.calendar_token ||= SecureRandom.base58(24)
+  end
 
   def extract_student_id_from_email
     return unless email.present?

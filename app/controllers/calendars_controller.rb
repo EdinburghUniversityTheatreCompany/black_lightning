@@ -24,7 +24,7 @@ class CalendarsController < ApplicationController
 
   def regenerate_token
     current_user.regenerate_calendar_token
-    redirect_to edit_user_registration_path, notice: "Your calendar link has been regenerated."
+    redirect_to admin_staffings_path, notice: "Your calendar link has been regenerated."
   end
 
   private
