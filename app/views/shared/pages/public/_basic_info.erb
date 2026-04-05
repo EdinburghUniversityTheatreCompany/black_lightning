@@ -9,7 +9,7 @@
   <div class="col<%='-md-8' if details.any? %>">
     <% # This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
     <div class="card mb-3 mb-md-0">
-      <%= image_tag(image.variant(slideshow_variant()), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(slideshow_variant()))) %>
+      <%= image_tag(active_storage_proxy_url(image.variant(slideshow_variant())), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(slideshow_variant()))) %>
       
       <% if tagline.present? %>
         <div class="card-body">

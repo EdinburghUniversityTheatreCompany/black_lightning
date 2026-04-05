@@ -44,6 +44,10 @@ class Picture < ApplicationRecord
     %w[gallery image_attachment image_blob picture_tags]
   end
 
+  def public?
+    access_level == ACCESS_LEVELS.assoc("Everyone").last
+  end
+
   def fetch_image
     image.attach(ApplicationController.helpers.default_image_blob("missing.png")) unless image.attached?
 

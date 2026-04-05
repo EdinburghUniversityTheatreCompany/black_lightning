@@ -1,4 +1,4 @@
-<%# locals: (image:, variant: nil, eager_load: true, image_options: {}) -%>
+<%# locals: (image:, variant: nil, eager_load: true, image_options: {}, proxy: false) -%>
 <%# KEEP %>
 
 <% width_and_height = if variant.present? 
@@ -20,4 +20,8 @@ end
   <% image = image.variant(variant) %>
 <% end %>
 
-<%= image_tag(image, image_options) %>
+<% if proxy %>
+  <%= image_tag(active_storage_proxy_url(image), image_options) %>
+<% else %>
+  <%= image_tag(image, image_options) %>
+<% end %>

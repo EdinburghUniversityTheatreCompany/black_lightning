@@ -6,7 +6,8 @@
 <div class="card">
   <div class="card-body">
     <% if @user.avatar.present? %>
-      <%= image_tag @user.avatar.variant(square_thumb_variant), { class: "img-thumbnail zoomable float-end ms-3 mb-3" }.merge(variant_width_and_height_html(square_thumb_variant)) %>
+      <%# Proxy URL is safe here: UsersController#show authorizes :view_shows_and_bio, which is only granted for public_profile: true users %>
+      <%= image_tag active_storage_proxy_url(@user.avatar.variant(square_thumb_variant)), { class: "img-thumbnail zoomable float-end ms-3 mb-3" }.merge(variant_width_and_height_html(square_thumb_variant)) %>
     <% end %>
 
     <%= render_markdown @user.bio %>

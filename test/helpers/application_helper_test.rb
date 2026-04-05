@@ -54,6 +54,27 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_match slug, spark_seat_widget(slug)
   end
 
+  test "active_storage_proxy_url returns a blob proxy URL for an attachment" do
+    user = FactoryBot.create(:user)
+    user.avatar.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+
+    url = active_storage_proxy_url(user.avatar)
+
+    assert_match %r{/rails/active_storage/blobs/proxy/}, url
+    assert_no_match %r{X-Amz}, url
+  end
+
+  test "active_storage_proxy_url returns a representation proxy URL for a variant" do
+    user = FactoryBot.create(:user)
+    user.avatar.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+
+    variant = user.avatar.variant(resize_to_limit: [ 100, 100 ])
+    url = active_storage_proxy_url(variant)
+
+    assert_match %r{/rails/active_storage/representations/proxy/}, url
+    assert_no_match %r{X-Amz}, url
+  end
+
   # We now use the built-in function, but it is still good to test it
   test "Get strip_tags" do
     assert_equal "This is stripped", strip_tags("<!-- it happened 2 years before 1980, idk when exactly -->This is stripped")
