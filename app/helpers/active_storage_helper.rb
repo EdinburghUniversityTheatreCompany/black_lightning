@@ -68,6 +68,10 @@ module ActiveStorageHelper
     { loader: { n: -1 }, resize_to_fill: [ 700, 700 ], convert: "webp", saver: { Q: 80 } }
   end
 
+  def large_display_variant
+    { loader: { n: -1 }, resize_to_fill: [ 1920, 1200 ], convert: "webp", saver: { Q: 85 } }
+  end
+
   def variant_width_and_height_html(variant)
     { width: variant[:resize_to_fill][0], height: variant[:resize_to_fill][1] }
   end

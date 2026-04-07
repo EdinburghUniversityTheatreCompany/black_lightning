@@ -78,6 +78,15 @@ class ActiveStorageHelperTest < ActionView::TestCase
     assert square_display_variant[:resize_to_fill].is_a? Array
   end
 
+  test "large_display_variant" do
+    assert large_display_variant.is_a? Hash
+    assert large_display_variant[:resize_to_fill].is_a? Array
+    assert_equal 1920, large_display_variant[:resize_to_fill][0]
+    assert_equal 1200, large_display_variant[:resize_to_fill][1]
+    assert_equal "webp", large_display_variant[:convert]
+    assert_equal(-1, large_display_variant.dig(:loader, :n))
+  end
+
   test "square_thumb_variant" do
     assert square_thumb_variant.is_a? Hash
 
