@@ -1,7 +1,16 @@
 <%# locals: (image:, variant: nil, eager_load: true, image_options: {}, proxy: false) -%>
 <%# KEEP %>
 
-<% width_and_height = if variant.present? 
+<% if variant.nil?
+  if Rails.env.local?
+    raise ArgumentError, "_image partial called without a variant — this serves the full-size blob. Pass variant: or use image_tag directly if you intentionally want full size."
+  else
+    Rails.logger.warn("[_image.erb] called without variant for blob #{image.try(:blob)&.id} — serving full-size. Fix the caller.")
+  end
+end
+%>
+
+<% width_and_height = if variant.present?
   variant_width_and_height_html(variant)
 else
   base_width_and_height_html(image)
