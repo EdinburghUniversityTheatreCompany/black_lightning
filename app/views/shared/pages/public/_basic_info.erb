@@ -6,14 +6,19 @@
 </div>
 
 <div class="row">
-  <div class="col<%='-md-8' if details.any? %>">
-    <% # This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
+  <div class="col<%= '-md-8' if details.any? %>">
+    <%# This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
     <div class="card mb-3 mb-md-0">
       <%= image_tag(active_storage_proxy_url(image.variant(slideshow_variant())), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(slideshow_variant()))) %>
-      
-      <% if tagline.present? %>
+
+      <% if tagline.present? || @admin_site %>
         <div class="card-body">
-          <p class="card-text"><%= tagline %></p>
+          <% if tagline.present? %>
+            <p class="card-text"><%= tagline %></p>
+          <% end %>
+          <% if @admin_site %>
+            <%= link_to "Download original image", active_storage_proxy_url(image), class: "small text-muted" %>
+          <% end %>
         </div>
       <% end %>
     </div>
@@ -33,5 +38,5 @@
   <% end %>
 </div>
 
-<% # Margin here so it does not mess with the h-100 on the details card. %>
+<%# Margin here so it does not mess with the h-100 on the details card. %>
 <div class="mb-3"></div>
