@@ -32,7 +32,7 @@
                 <% rescue NoMethodError %>
                   <%= gallery_name %>
                 <% end %>
-                - <%= link_to picture.filename, download_url, title: "Download original" %>
+                - <%= link_to picture.filename, download_url, title: "Download original", target: "_blank" %>
 
                 <% if @admin_site && picture.picture_tags.present? %>
                   <hr class="m-1">

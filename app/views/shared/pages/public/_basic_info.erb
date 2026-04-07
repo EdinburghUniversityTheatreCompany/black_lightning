@@ -17,7 +17,7 @@
             <p class="card-text"><%= tagline %></p>
           <% end %>
           <% if @admin_site %>
-            <%= link_to "Download original image", active_storage_proxy_url(image), class: "small text-muted" %>
+            <%= link_to "Download original image", active_storage_proxy_url(image), class: "small text-muted", target: "_blank" %>
           <% end %>
         </div>
       <% end %>

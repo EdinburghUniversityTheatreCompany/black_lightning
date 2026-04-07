@@ -27,7 +27,7 @@
         <% if value[:image].attached? && !value[:image].filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
           <%= render('shared/image', image: value[:image], variant: value[:variant]) %>
           <% if @admin_site %>
-            <%= link_to "Download original image", url_for(value[:image]), class: "small text-muted" %>
+            <%= link_to "Download original image", url_for(value[:image]), class: "small text-muted", target: "_blank" %>
           <% end %>
         <% else %>
           No Image
