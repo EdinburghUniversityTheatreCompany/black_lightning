@@ -3,6 +3,7 @@
     <% @category_infos.each do |category_info| %>
       <div class="col">
         <div class="card h-100">
+          <%# 2× scale for retina screens — displayed at thumb size (192×100) but rendered at 384×200 %>
           <% img = image_tag category_info.fetch_image.variant(thumb_variant(2)), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(thumb_variant(2))) %>
           <%= get_link category_info.profile, :show, link_text: img %>
 
