@@ -5,7 +5,7 @@
   updated_at: l(@news.updated_at, format: :longy),
   author: link_to(@news.author.name(@current_user), admin_news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))),
   show_public: @news.show_public,
-  image: { type: 'image', image: @news.image },
+  image: { type: 'image', image: @news.image, variant: medium_variant },
   body: { type: 'markdown', markdown: @news.body }
 } %>
 
