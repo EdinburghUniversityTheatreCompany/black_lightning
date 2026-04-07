@@ -35,7 +35,7 @@ class Venue < ApplicationRecord
 
   has_one_attached :image
 
-  validates :image, content_type: %i[png jpg jpeg gif]
+  validates :image, content_type: %i[png jpg jpeg gif webp]
 
   normalizes :email, with: ->(email) { email&.downcase&.strip }
   normalizes :name, :tagline, with: ->(value) { value&.strip }

@@ -54,4 +54,14 @@ class VenueTest < ActiveSupport::TestCase
   test "get popup_description" do
     assert_not_nil venues(:one).popup_description
   end
+
+  test "accepts webp image uploads" do
+    venue = venues(:one)
+    venue.image.attach(
+      io: StringIO.new("fake webp content"),
+      filename: "test.webp",
+      content_type: "image/webp"
+    )
+    assert venue.valid?, "Venue should be valid with webp image: #{venue.errors.full_messages}"
+  end
 end

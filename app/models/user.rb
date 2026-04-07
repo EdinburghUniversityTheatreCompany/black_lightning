@@ -63,7 +63,7 @@ class User < ApplicationRecord
   validates :email, presence: true
   validates :calendar_email, allow_blank: true, format: { with: URI::MailTo::EMAIL_REGEXP, message: "must be a valid email address" }
 
-  validates :avatar, content_type: %i[png jpg jpeg gif]
+  validates :avatar, content_type: %i[png jpg jpeg gif webp]
   validates :student_id,
     format: {
       with: /\As\d{7}\z/,

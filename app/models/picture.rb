@@ -25,7 +25,7 @@ class Picture < ApplicationRecord
 
   has_one_attached :image
 
-  validates :image, content_type: %i[png jpg jpeg gif], attached: true
+  validates :image, content_type: %i[png jpg jpeg gif webp], attached: true
   validates :access_level, presence: true
 
   has_and_belongs_to_many :picture_tags, optional: true

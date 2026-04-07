@@ -83,7 +83,7 @@ class Event < ApplicationRecord
   # ActiveStorage #
   has_one_attached :image
 
-  validates :image, content_type: %i[png jpg jpeg gif]
+  validates :image, content_type: %i[png jpg jpeg gif webp]
 
   # Normalizatios
   normalizes :name, :tagline, :slug, :author, :price, with: ->(value) { value&.strip }

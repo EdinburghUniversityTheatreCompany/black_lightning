@@ -26,7 +26,7 @@ class MarketingCreatives::CategoryInfo < ApplicationRecord
   accepts_nested_attributes_for :pictures, allow_destroy: true
 
   has_one_attached :image
-  validates :image, content_type: %i[png jpg jpeg gif]
+  validates :image, content_type: %i[png jpg jpeg gif webp]
 
   def self.ransackable_attributes(auth_object = nil)
     %w[profile_id category_id description]

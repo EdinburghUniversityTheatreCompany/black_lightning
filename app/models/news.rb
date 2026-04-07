@@ -46,7 +46,7 @@ class News < ApplicationRecord
 
   has_one_attached :image
 
-  validates :image, content_type: %i[png jpg jpeg gif]
+  validates :image, content_type: %i[png jpg jpeg gif webp]
 
   normalizes :title, :slug, with: ->(value) { value&.strip }
 
