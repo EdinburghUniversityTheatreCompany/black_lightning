@@ -56,18 +56,18 @@ class ActiveStorageHelperTest < ActionView::TestCase
 
   test "slideshow_variant" do
     assert slideshow_variant.is_a? Hash
-    assert slideshow_variant.values.first.is_a? Array
+    assert slideshow_variant[:resize_to_fill].is_a? Array
   end
 
   test "thumb_variant" do
     assert thumb_variant.is_a? Hash
-    assert thumb_variant.values.first.is_a? Array
+    assert thumb_variant[:resize_to_fill].is_a? Array
 
-    dimensions_array = thumb_variant.values.first
+    dimensions_array = thumb_variant[:resize_to_fill]
 
     scaler = 2
 
-    scaled_dimensions_array = thumb_variant(scaler).values.first
+    scaled_dimensions_array = thumb_variant(scaler)[:resize_to_fill]
 
     assert_equal scaler * dimensions_array[0], scaled_dimensions_array[0]
     assert_equal scaler * dimensions_array[1], scaled_dimensions_array[1]
@@ -75,19 +75,36 @@ class ActiveStorageHelperTest < ActionView::TestCase
 
   test "square_display_variant" do
     assert square_display_variant.is_a? Hash
-    assert square_display_variant.values.first.is_a? Array
+    assert square_display_variant[:resize_to_fill].is_a? Array
   end
 
   test "square_thumb_variant" do
     assert square_thumb_variant.is_a? Hash
 
-    dimensions_array = square_thumb_variant.values.first
+    dimensions_array = square_thumb_variant[:resize_to_fill]
     assert dimensions_array.is_a? Array
 
     assert_equal dimensions_array[0], dimensions_array[1]
     assert_equal dimensions_array[0], 150
 
-    # Check if the dimensions are 200x200 now
-    assert_equal square_thumb_variant(200).values.first.first, 200
+    assert_equal square_thumb_variant(200)[:resize_to_fill].first, 200
+  end
+
+  test "all variants include webp conversion" do
+    variants = [
+      thumb_variant,
+      thumb_variant(2),
+      thumb_variant_public,
+      medium_variant,
+      slideshow_variant,
+      square_thumb_variant,
+      square_display_variant
+    ]
+
+    variants.each do |variant|
+      assert_equal "webp", variant[:convert], "#{variant.inspect} should convert to webp"
+      assert_equal 80, variant.dig(:saver, :Q), "#{variant.inspect} should have Q: 80 saver"
+      assert_equal(-1, variant.dig(:loader, :n), "#{variant.inspect} should have loader n: -1 for GIF support")
+    end
   end
 end

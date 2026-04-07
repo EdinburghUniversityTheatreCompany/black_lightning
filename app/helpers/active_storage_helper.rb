@@ -45,7 +45,7 @@ module ActiveStorageHelper
   end
 
   def thumb_variant(scale_factor = 1)
-    { resize_to_fill: [ 192 * scale_factor, 100 * scale_factor ] }
+    { loader: { n: -1 }, resize_to_fill: [ 192 * scale_factor, 100 * scale_factor ], convert: "webp", saver: { Q: 80 } }
   end
 
   def thumb_variant_public(scale_factor = 1)
@@ -53,19 +53,19 @@ module ActiveStorageHelper
   end
 
   def medium_variant
-    { resize_to_fill: [ 576, 300 ] }
+    { loader: { n: -1 }, resize_to_fill: [ 576, 300 ], convert: "webp", saver: { Q: 80 } }
   end
 
   def slideshow_variant
-    { resize_to_fill: [ 960, 500 ] }
+    { loader: { n: -1 }, resize_to_fill: [ 960, 500 ], convert: "webp", saver: { Q: 80 } }
   end
 
   def square_thumb_variant(dimensions = 150)
-    { resize_to_fill: [ dimensions, dimensions ] }
+    { loader: { n: -1 }, resize_to_fill: [ dimensions, dimensions ], convert: "webp", saver: { Q: 80 } }
   end
 
   def square_display_variant
-    { resize_to_fill: [ 700, 700 ] }
+    { loader: { n: -1 }, resize_to_fill: [ 700, 700 ], convert: "webp", saver: { Q: 80 } }
   end
 
   def variant_width_and_height_html(variant)
