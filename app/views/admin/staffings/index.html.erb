@@ -20,6 +20,12 @@
 </div>
 <p class="text-muted small mb-3">Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.</p>
 
+<% search_fields = {
+  show_title_cont: { slug: 'defaults.show_title' },
+  date_range: { type: :date_range, options: { start_date_attribute: 'start_time', end_date_attribute: 'start_time' } }
+} %>
+<%= render 'shared/search_form', input_fields: search_fields, columns: 2, url: admin_staffings_path %>
+
 <h3>Upcoming Positions</h3>
 <% if @upcoming_staffings.any? %>
   <%= render 'staffing_index_row', staffings_hash: @upcoming_staffings %>
