@@ -20,16 +20,26 @@ class Admin::StaffingsController < AdminController
   def index
     @title = "Staffing"
 
-    # The sorting for the archived staffings looks a bit weird to ensure it is properly sorted in a descending by start_date manner
-    # It first sorts the staffings in descending order, but this also groups them in the wrong order (as 7 March, 6 March, 5 March).
-    # To fix that weird order, it then reverses the array with staffings, so staffings.first is 5 March as you would expect.
-    @archived_staffings = @staffings.past.sort_by { |staffing| -staffing.end_time.to_i } .group_by(&:slug)
+    @upcoming_staffings = @staffings.includes(:staffing_jobs, staffing_jobs: :user)
+                                    .future.order(start_time: :asc).group_by(&:slug)
 
-    @archived_staffings.each do |slug, staffings|
-      @archived_staffings[slug] = staffings.reverse
-    end
+    # Paginate archived staffings by slug group (one row per show).
+    # First, get paginated slugs ordered by most recent end_time.
+    archived_slugs = Admin::Staffing.past
+                                    .select("slug, MAX(end_time) as max_end_time")
+                                    .group(:slug)
+                                    .reorder("max_end_time DESC")
+                                    .page(params[:page]).per(10)
 
-    @upcoming_staffings = @staffings.order("start_time ASC").future.group_by(&:slug)
+    # Then load the full staffing records for those slugs with eager loading.
+    @archived_staffings = Admin::Staffing.past
+                                         .includes(:staffing_jobs, staffing_jobs: :user)
+                                         .where(slug: archived_slugs.map(&:slug))
+                                         .order(start_time: :asc)
+                                         .group_by(&:slug)
+
+    # Keep the pagination object for the view.
+    @archived_staffings_pagination = archived_slugs
 
     respond_to do |format|
       format.html # index.html.erb

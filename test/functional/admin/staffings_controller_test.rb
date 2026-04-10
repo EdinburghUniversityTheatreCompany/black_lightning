@@ -32,6 +32,25 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
     assert_not_nil assigns(:archived_staffings)
   end
 
+  test "should paginate archived staffings by slug" do
+    # Create 12 past staffings with unique show titles (each gets a unique slug).
+    12.times do |i|
+      FactoryBot.create(:staffing, staffed_job_count: 1, show_title: "Archived Show #{i}", start_time: DateTime.current.advance(days: -(i + 1)))
+    end
+
+    get :index
+    assert_response :success
+
+    # With 10 per page, first page should have 10 slug groups.
+    assert_equal 10, assigns(:archived_staffings).size
+    assert_not_nil assigns(:archived_staffings_pagination)
+
+    # Second page should have the remaining 2.
+    get :index, params: { page: 2 }
+    assert_response :success
+    assert_equal 2, assigns(:archived_staffings).size
+  end
+
   test "should get grid" do
     show_title = "Test #&@!$@&@!(@(D???//"
     FactoryBot.create_list(:staffing, 2, staffed_job_count: 2, unstaffed_job_count: 3, show_title: show_title)
