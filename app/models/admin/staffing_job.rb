@@ -119,7 +119,14 @@ class Admin::StaffingJob < ApplicationRecord
       if old_user_id.present?
         old_user = User.find(old_user_id)
         bump_calendar_sequence
-        StaffingMailer.calendar_invite(self, method: :cancel, recipient: old_user).deliver_later
+        ics_data = ical_calendar(method: :cancel).to_ical
+
+        StaffingMailer.calendar_cancellation(
+          recipient: old_user,
+          staffing: staffable,
+          job_name: name,
+          ics_data: ics_data
+        ).deliver_later
       end
 
       # Send invite to the newly assigned user

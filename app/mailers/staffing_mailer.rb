@@ -1,16 +1,13 @@
 class StaffingMailer < ApplicationMailer
   ##
   # Sends a calendar invite (.ics attachment) for a staffing job.
-  # method: :request for new/updated invite, :cancel for cancellation.
-  # recipient: defaults to job.user; pass explicitly when removing a user.
   ##
   def calendar_invite(job, method:, recipient: nil)
     @job      = job
     @staffing = job.staffable
     @user     = recipient || job.user
-    return if @user.nil?
 
-    @method   = method
+    return if @user.nil?
 
     ics_data = job.ical_calendar(method: method).to_ical
 
@@ -21,7 +18,7 @@ class StaffingMailer < ApplicationMailer
 
     mail(
       to:      email_address_with_name(@user.calendar_email_for_invites, @user.full_name),
-      subject: calendar_invite_subject
+      subject: "Staffing confirmed: #{@staffing.show_title} on #{l @staffing.start_time, format: :long} (#{@job.name})"
     )
   end
 
@@ -70,18 +67,5 @@ class StaffingMailer < ApplicationMailer
     end
 
     mail(to: email_address_with_name(@user.email, @user.full_name), subject: @subject)
-  end
-
-  private
-
-  def calendar_invite_subject
-    show = @staffing.show_title
-    start_time = l @staffing.start_time, format: :long
-
-    if @method == :cancel
-      "Staffing removed: #{show} on #{start_time}"
-    else
-      "Staffing confirmed: #{show} on #{start_time} (#{@job.name})"
-    end
   end
 end
