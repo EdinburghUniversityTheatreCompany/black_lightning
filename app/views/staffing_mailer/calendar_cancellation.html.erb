@@ -1,0 +1,7 @@
+<p>Dear <%= @user.first_name %>,</p>
+
+<p>Your staffing slot for <strong><%= @staffing.show_title %></strong> on <%= l @staffing.start_time, format: :long %> (<em><%= @job_name %></em>) has been removed. A calendar cancellation is attached to this email.</p>
+
+<p>Regards,</p>
+
+<p>The EUTC Committee</p>

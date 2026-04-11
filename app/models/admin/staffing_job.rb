@@ -137,7 +137,14 @@ class Admin::StaffingJob < ApplicationRecord
     return unless user.present?
 
     bump_calendar_sequence
-    StaffingMailer.calendar_invite(self, method: :cancel).deliver_later
+    ics_data = ical_calendar(method: :cancel).to_ical
+
+    StaffingMailer.calendar_cancellation(
+      recipient: user,
+      staffing: staffable,
+      job_name: name,
+      ics_data: ics_data
+    ).deliver_later
   end
 
   public

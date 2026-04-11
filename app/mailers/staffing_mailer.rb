@@ -8,6 +8,8 @@ class StaffingMailer < ApplicationMailer
     @job      = job
     @staffing = job.staffable
     @user     = recipient || job.user
+    return if @user.nil?
+
     @method   = method
 
     ics_data = job.ical_calendar(method: method).to_ical
@@ -20,6 +22,28 @@ class StaffingMailer < ApplicationMailer
     mail(
       to:      email_address_with_name(@user.calendar_email_for_invites, @user.full_name),
       subject: calendar_invite_subject
+    )
+  end
+
+  ##
+  # Sends a calendar cancellation without needing the job record.
+  # Used by after_destroy callbacks where the record may be gone by the time the job runs.
+  ##
+  def calendar_cancellation(recipient:, staffing:, job_name:, ics_data:)
+    @user     = recipient
+    @staffing = staffing
+    @job_name = job_name
+
+    return if @user.nil?
+
+    attachments["staffing.ics"] = {
+      mime_type: "text/calendar; charset=utf-8; method=CANCEL",
+      content:   ics_data
+    }
+
+    mail(
+      to:      email_address_with_name(@user.calendar_email_for_invites, @user.full_name),
+      subject: "Staffing removed: #{@staffing.show_title} on #{l @staffing.start_time, format: :long}"
     )
   end
 
