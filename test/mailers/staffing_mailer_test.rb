@@ -60,10 +60,16 @@ class StaffingMailerTest < ActionMailer::TestCase
     assert_includes ics, expected_end
   end
 
-  test "calendar_invite CANCEL ics contains METHOD:CANCEL" do
+  test "calendar_cancellation ics contains METHOD:CANCEL" do
     job = FactoryBot.create(:staffed_staffing_job)
+    ics_data = job.ical_calendar(method: :cancel).to_ical
 
-    email = StaffingMailer.calendar_invite(job, method: :cancel)
+    email = StaffingMailer.calendar_cancellation(
+      recipient: job.user,
+      staffing: job.staffable,
+      job_name: job.name,
+      ics_data: ics_data
+    )
     ics = email.attachments.find { |a| a.mime_type.start_with?("text/calendar") }.body.to_s
 
     assert_includes ics, "METHOD:CANCEL"
@@ -141,14 +147,14 @@ class StaffingMailerTest < ActionMailer::TestCase
     end
   end
 
-  test "calendar_invite CANCEL uses same UID as REQUEST for the same job" do
+  test "calendar_cancellation uses same UID as calendar_invite REQUEST for the same job" do
     job = FactoryBot.create(:staffed_staffing_job)
 
     request_ics = StaffingMailer.calendar_invite(job, method: :request).attachments.find { |a| a.mime_type.start_with?("text/calendar") }.body.to_s
-    cancel_ics  = StaffingMailer.calendar_invite(job, method: :cancel).attachments.find { |a| a.mime_type.start_with?("text/calendar") }.body.to_s
+    cancel_ics_data = job.ical_calendar(method: :cancel).to_ical
 
     uid = "staffing-job-#{job.id}@bedlamtheatre.co.uk"
     assert_includes request_ics, uid
-    assert_includes cancel_ics, uid
+    assert_includes cancel_ics_data, uid
   end
 end
