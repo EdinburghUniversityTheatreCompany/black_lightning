@@ -12,7 +12,7 @@ class RefreshCloudflareIpsJob < ApplicationJob
     Rails.logger.info "Refreshed Cloudflare IPs: #{ips.size} ranges"
   rescue => e
     Rails.logger.error "Failed to refresh Cloudflare IPs: #{e.message}"
-    Honeybadger.notify(e)
+    Honeybadger.notify(e, context: { urls: URLS.values })
   end
 
   private

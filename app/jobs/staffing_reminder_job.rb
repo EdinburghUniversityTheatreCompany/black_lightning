@@ -9,6 +9,7 @@ class StaffingReminderJob < ApplicationJob
     end
 
     pending_jobs = staffing.staffing_jobs.where(reminder_sent_at: nil).where.not(user: nil)
+    Honeybadger.context(staffing_id: staffing.id, show_title: staffing.show_title, pending_jobs_count: pending_jobs.count)
 
     pending_jobs.each do |staffing_job|
       StaffingMailer.staffing_reminder(staffing_job).deliver_now

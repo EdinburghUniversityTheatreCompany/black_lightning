@@ -4,12 +4,25 @@ class DailyMaintenanceJob < ApplicationJob
   def perform
     Rails.logger.info "Starting daily maintenance job"
 
+    Honeybadger.context(current_step: "notify_marketing_creatives")
     notify_marketing_creatives
+
+    Honeybadger.context(current_step: "clean_up_personal_info")
     clean_up_personal_info
+
+    Honeybadger.context(current_step: "purge_unattached_storage")
     purge_unattached_storage
+
+    Honeybadger.context(current_step: "expire_outdated_debt")
     expire_outdated_debt
+
+    Honeybadger.context(current_step: "notify_debtors")
     notify_debtors
+
+    Honeybadger.context(current_step: "send_test_email")
     send_test_email
+
+    Honeybadger.context(current_step: "honeybadger_checkin")
     honeybadger_checkin
 
     Rails.logger.info "Daily maintenance job completed successfully"

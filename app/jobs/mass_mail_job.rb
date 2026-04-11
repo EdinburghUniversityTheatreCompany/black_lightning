@@ -3,6 +3,7 @@ class MassMailJob < ApplicationJob
 
   def perform(mass_mail_id)
     mass_mail = MassMail.find(mass_mail_id)
+    Honeybadger.context(mass_mail_id: mass_mail.id, subject: mass_mail.subject, recipient_count: mass_mail.recipients.count)
 
     # Each email is enqueued as a separate job so it can be retried independently
     # if rate limited. ApplicationJob handles retry with exponential backoff.

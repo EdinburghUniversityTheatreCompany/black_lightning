@@ -6,6 +6,8 @@ class MailDeliveryJob < ApplicationJob
   # - 10 attempts with polynomial backoff spanning ~30 minutes
 
   def perform(mailer, mail_method, delivery_method, args:, kwargs: nil, params: nil)
+    Honeybadger.context(mailer: mailer, mail_method: mail_method)
+
     mailer_class = mailer.constantize
     mailer_class = mailer_class.with(params) if params
     message = if kwargs
