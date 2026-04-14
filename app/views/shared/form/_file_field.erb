@@ -12,4 +12,4 @@
   <% hint = "#{hint}<br><br>#{has_file_attached_hint}".html_safe %>
 <% end %>
 
-<%= f.input field_name, hint: hint %>
+<%= f.input field_name, hint: hint, input_html: { direct_upload: true } %>

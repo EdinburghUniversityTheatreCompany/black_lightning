@@ -5,7 +5,12 @@
         div_class_additions: 'col-4',
         attributes: [:description, :image, :access_level, :picture_tags]
     } do %>
-    <%= image_tag f.object.fetch_image.variant(thumb_variant), class: "img-thumbnail" %>
+    <% if f.object.image.attached? && f.object.image.blob.persisted? %>
+      <%= image_tag f.object.image.variant(thumb_variant), class: "img-thumbnail" %>
+      <%= f.hidden_field :image, value: f.object.image.blob.signed_id %>
+    <% else %>
+      <%= image_tag "missing.png", class: "img-thumbnail" %>
+    <% end %>
     <br />
 
     <%= render 'shared/form/file_field', f: f, field_name: :image %>
