@@ -5,13 +5,13 @@
         div_class_additions: 'col-4',
         attributes: [:description, :image, :access_level, :picture_tags]
     } do %>
-    <% if f.object.image.attached? && f.object.image.blob.persisted? %>
+    <% if f.object.persisted? %>
+      <%= image_tag f.object.fetch_image.variant(thumb_variant), class: "img-thumbnail" %>
+    <% elsif f.object.image.attached? && f.object.image.blob.persisted? %>
       <%= image_tag f.object.image.variant(thumb_variant), class: "img-thumbnail" %>
       <%= f.hidden_field :image, value: f.object.image.blob.signed_id %>
-    <% else %>
-      <%= image_tag "missing.png", class: "img-thumbnail" %>
     <% end %>
-    <br />
+    <br>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image %>
 
@@ -22,5 +22,5 @@
     <%= f.association(:picture_tags, collection: PictureTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>
 
     <%= link_to_remove f %>
-    <hr />
+    <hr>
 <% end %>

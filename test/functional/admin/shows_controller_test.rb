@@ -106,6 +106,39 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "should get edit with existing pictures" do
+    @show = FactoryBot.create(:show, picture_count: 2)
+
+    get :edit, params: { id: @show }
+    assert_response :success
+  end
+
+  test "should get edit without missing.png in Cocoon template" do
+    @show = FactoryBot.create(:show)
+
+    get :edit, params: { id: @show }
+    assert_response :success
+    assert_no_match "missing.png", response.body
+  end
+
+  test "should re-render edit when update fails with new picture attributes" do
+    @show = FactoryBot.create(:show)
+
+    picture_image = fixture_file_upload(Rails.root.join("test", "test.png"), "image/png")
+    invalid_attributes = FactoryBot.attributes_for(:show, venue_id: nil)
+    invalid_attributes[:pictures_attributes] = {
+      "0" => {
+        description: "test picture",
+        image: picture_image,
+        access_level: 2,
+        _destroy: "false"
+      }
+    }
+
+    put :update, params: { id: @show, show: invalid_attributes }
+    assert_response :unprocessable_entity
+  end
+
   test "should update show" do
     @show = FactoryBot.create(:show)
     attributes = FactoryBot.attributes_for(:show)
