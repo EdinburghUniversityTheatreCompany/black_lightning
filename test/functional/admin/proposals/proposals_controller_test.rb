@@ -254,6 +254,68 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently awaiting approval." ], flash[:error]
   end
 
+  test "mark_successful" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    put :mark_successful, params: { id: proposal.id }
+
+    assert assigns(:proposal).successful?, "The proposal is not successful after requesting the mark_successful action."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as successful." ], flash[:success]
+  end
+
+  test "mark_unsuccessful" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    put :mark_unsuccessful, params: { id: proposal.id }
+
+    assert assigns(:proposal).unsuccessful?, "The proposal is not unsuccessful after requesting the mark_unsuccessful action."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} has been marked as unsuccessful." ], flash[:success]
+  end
+
+  test "mark_successful on a proposal that is not approved" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    put :mark_successful, params: { id: proposal.id }
+
+    assert assigns(:proposal).awaiting_approval?, "The proposal status should not have changed."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently approved." ], flash[:error]
+  end
+
+  test "mark_unsuccessful on a proposal that is not approved" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :successful)
+
+    put :mark_unsuccessful, params: { id: proposal.id }
+
+    assert assigns(:proposal).successful?, "The proposal status should not have changed."
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+    assert_equal [ "The #{get_object_name(proposal, include_class_name: true)} is not currently approved." ], flash[:error]
+  end
+
+  test "user without approve permission cannot change status via update" do
+    sign_out @admin
+    @call.update_attribute(:editing_deadline, DateTime.current.advance(days: 1))
+
+    proposal = FactoryBot.create(:proposal, :with_team_members, call: @call, status: :awaiting_approval)
+    # A team member on the proposal can update it, but should not have the :approve ability.
+    updater = proposal.users.first
+    sign_in updater
+
+    attributes = FactoryBot.attributes_for(:proposal, call_id: @call.id)
+    attributes[:status] = "approved"
+
+    put :update, params: { id: proposal.id, admin_proposals_proposal: attributes }
+
+    proposal.reload
+    assert proposal.awaiting_approval?, "A user without the approve ability was able to set the proposal status via the update action."
+  end
+
   test "convert" do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :successful)

@@ -162,9 +162,9 @@ module LinkHelper
       ""
     when :new
       "btn btn-primary"
-    when :destroy, :reject
+    when :destroy, :reject, :mark_unsuccessful
       "btn btn-danger"
-    when :approve
+    when :approve, :mark_successful
       "btn btn-success"
     else
       "btn btn-secondary"
@@ -177,7 +177,7 @@ module LinkHelper
       :get
     when :destroy
       :delete
-    when :approve, :reject
+    when :approve, :reject, :mark_successful, :mark_unsuccessful
       :put
     else
       raise(ArgumentError, "There is no default HTTP method for the specified action #{action}")

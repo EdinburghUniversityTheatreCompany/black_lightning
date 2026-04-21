@@ -75,8 +75,8 @@ class Ability
       return
     end
 
-    # If you can approve something, you can also reject it.
-    alias_action :reject, to: :approve
+    # If you can approve something, you can also reject it, and mark proposals successful/unsuccessful.
+    alias_action :reject, :mark_successful, :mark_unsuccessful, to: :approve
     # Alias grid to read
     alias_action :grid, to: :read
     alias_action :debt_status, to: :read

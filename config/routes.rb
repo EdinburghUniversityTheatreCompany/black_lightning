@@ -311,6 +311,8 @@ ChaosRails::Application.routes.draw do
         member do
           put "approve"
           put "reject"
+          put "mark_successful"
+          put "mark_unsuccessful"
           put "convert"
         end
       end

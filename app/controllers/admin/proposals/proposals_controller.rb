@@ -133,6 +133,42 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   ##
+  # PUT /admin/proposals/proposals/1/mark_successful
+  #
+  # PUT /admin/proposals/proposals/1/mark_successful.json
+  ##
+  def mark_successful
+    if @proposal.approved?
+      @proposal.update!(status: "successful")
+      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as successful.")
+    else
+      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently approved.")
+    end
+
+    respond_to do |format|
+      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
+    end
+  end
+
+  ##
+  # PUT /admin/proposals/proposals/1/mark_unsuccessful
+  #
+  # PUT /admin/proposals/proposals/1/mark_unsuccessful.json
+  ##
+  def mark_unsuccessful
+    if @proposal.approved?
+      @proposal.update!(status: "unsuccessful")
+      helpers.append_to_flash(:success, "The #{helpers.get_object_name(@proposal, include_class_name: true)} has been marked as unsuccessful.")
+    else
+      helpers.append_to_flash(:error, "The #{helpers.get_object_name(@proposal, include_class_name: true)} is not currently approved.")
+    end
+
+    respond_to do |format|
+      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
+    end
+  end
+
+  ##
   # PUT /admin/proposals/proposals/1/convert
   #
   # PUT /admin/proposals/proposals/1/convert.json
@@ -174,14 +210,17 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   def permitted_params
-    [
-      :proposal_text, :publicity_text, :show_title, :late, :status, :call, :call_id,
+    params = [
+      :proposal_text, :publicity_text, :show_title, :late, :call, :call_id,
       { answers_attributes: [
           :id, :_destroy, :answer, :question_id,
           { attachments_attributes: [ :id, :_destroy, :name, :file, :access_level, { attachment_tag_ids: [] } ] }
         ],
         team_members_attributes: %I[id _destroy position user user_id proposal proposal_id] }
     ]
+    # Only approvers may set status directly; otherwise it is controlled via the approve/reject/mark_* actions.
+    params.unshift(:status) if can?(:approve, @proposal)
+    params
   end
 
   def index_query_params

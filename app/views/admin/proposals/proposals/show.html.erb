@@ -15,14 +15,10 @@
   questions_and_answers: { type: 'content', header: 'Questions', content: render('/shared/questions_and_answers', answers: @proposal.answers) }
 } %>
 
-<% if can?(:approve, @proposal) && @proposal.approved? %>
-  <% fields[:approval_notice] = { type: 'content', content: "You have to start editing the proposal to set whether or not it was successful." } %>
-<% end %>
-
 <% content_for :extra_show_actions do %>
   <%= get_link @proposal, :convert, http_method: :put, additional_condition: @proposal.successful? %>
 
-  <% if can?(:approve, @proposal) && @proposal.status == 'awaiting_approval' %>
+  <% if can?(:approve, @proposal) && @proposal.awaiting_approval? %>
       <% if @proposal.has_debtors %>
         <% confirm = "Approving #{ @proposal.show_title}" %>
         <% detail = "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm" %>
@@ -31,6 +27,11 @@
 
       <%= get_link @proposal, :approve, confirm: confirm, detail: detail, type_confirm: type_confirm %>
       <%= get_link @proposal, :reject %>
+  <% end %>
+
+  <% if can?(:approve, @proposal) && @proposal.approved? %>
+      <%= get_link @proposal, :mark_successful %>
+      <%= get_link @proposal, :mark_unsuccessful %>
   <% end %>
 <% end %>
 
