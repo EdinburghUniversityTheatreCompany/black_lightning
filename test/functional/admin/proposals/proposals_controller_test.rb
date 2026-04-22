@@ -347,78 +347,13 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "pending shows awaiting_approval and approved proposals with actions for approver" do
-    # Admins lose :approve on a call whose submission deadline is in the future, so move it into the past.
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-
-    awaiting = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-    approved = FactoryBot.create(:proposal, call: @call, status: :approved)
-    FactoryBot.create(:proposal, call: @call, status: :rejected)
-    FactoryBot.create(:proposal, call: @call, status: :successful)
-
-    get :pending
-
-    assert_response :success
-    assert_includes assigns(:awaiting_approval), awaiting
-    assert_includes assigns(:approved), approved
-    assert_equal 1, assigns(:awaiting_approval).size
-    assert_equal 1, assigns(:approved).size
-
-    # Approver sees the action buttons.
-    assert_match approve_admin_proposals_proposal_path(awaiting), response.body
-    assert_match reject_admin_proposals_proposal_path(awaiting), response.body
-    assert_match mark_successful_admin_proposals_proposal_path(approved), response.body
-    assert_match mark_unsuccessful_admin_proposals_proposal_path(approved), response.body
-  end
-
-  test "pending is viewable without approve permission but hides action buttons" do
-    sign_out @admin
-    # Committee user has :index on proposals via ability.rb but no :approve in the fixtures.
-    sign_in users(:committee)
-
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-
-    awaiting = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-    approved = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    get :pending
-
-    assert_response :success
-    assert_includes assigns(:awaiting_approval), awaiting
-    assert_includes assigns(:approved), approved
-
-    assert_no_match(/#{Regexp.escape approve_admin_proposals_proposal_path(awaiting)}/, response.body)
-    assert_no_match(/#{Regexp.escape reject_admin_proposals_proposal_path(awaiting)}/, response.body)
-    assert_no_match(/#{Regexp.escape mark_successful_admin_proposals_proposal_path(approved)}/, response.body)
-    assert_no_match(/#{Regexp.escape mark_unsuccessful_admin_proposals_proposal_path(approved)}/, response.body)
-  end
-
-  test "pending hides proposals a member cannot read" do
-    sign_out @admin
-    sign_in users(:member)
-
-    # Call is open (submission_deadline in the future) and member is not on the proposal,
-    # so awaiting_approval proposals must NOT leak through.
-    hidden_awaiting = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-    # Approved proposals are readable by any logged-in user per ability.rb.
-    visible_approved = FactoryBot.create(:proposal, call: @call, status: :approved)
-
-    get :pending
-
-    assert_response :success
-    assert_not_includes assigns(:awaiting_approval), hidden_awaiting,
-      "A member not on the proposal should not see awaiting_approval proposals before the submission deadline."
-    assert_includes assigns(:approved), visible_approved,
-      "Approved proposals should be visible to any logged-in user."
-  end
-
-  test "approve from pending dashboard redirects back to pending" do
+  test "approve from calls index redirects back to calls index" do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
 
-    put :approve, params: { id: proposal.id, redirect_to: pending_admin_proposals_proposals_path }
+    put :approve, params: { id: proposal.id, redirect_to: admin_proposals_calls_path }
 
-    assert_redirected_to pending_admin_proposals_proposals_path
+    assert_redirected_to admin_proposals_calls_path
   end
 
   test "approve ignores unsafe redirect_to param" do
@@ -430,13 +365,13 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to admin_proposals_proposal_path(proposal)
   end
 
-  test "mark_successful from pending dashboard redirects back to pending" do
+  test "mark_successful from calls index redirects back to calls index" do
     @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
     proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
 
-    put :mark_successful, params: { id: proposal.id, redirect_to: pending_admin_proposals_proposals_path }
+    put :mark_successful, params: { id: proposal.id, redirect_to: admin_proposals_calls_path }
 
-    assert_redirected_to pending_admin_proposals_proposals_path
+    assert_redirected_to admin_proposals_calls_path
   end
 
   test "approve honours per-call index as a safe redirect target" do
@@ -446,34 +381,6 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     put :approve, params: { id: proposal.id, redirect_to: admin_proposals_call_proposals_path(@call) }
 
     assert_redirected_to admin_proposals_call_proposals_path(@call)
-  end
-
-  test "pending surfaces open calls with no proposals and renders new proposal button for creators" do
-    # @call is already open (setup sets submission_deadline 5 days in the future) and has no proposals.
-    sign_out @admin
-    sign_in users(:member)
-
-    get :pending
-
-    assert_response :success
-    assert_includes assigns(:open_calls), @call
-    assert_match @call.name, response.body
-    assert_match new_admin_proposals_proposal_path(call_id: @call.id), response.body
-  end
-
-  test "pending hides new proposal button from users who cannot create proposals" do
-    # A closed call still shows up if it has awaiting proposals, but cannot accept new ones.
-    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
-    FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
-
-    sign_out @admin
-    sign_in users(:member)
-
-    get :pending
-
-    assert_response :success
-    # The call heading is present but the new-proposal CTA for it is not (call is closed).
-    assert_no_match(/#{Regexp.escape new_admin_proposals_proposal_path(call_id: @call.id)}/, response.body)
   end
 
   private

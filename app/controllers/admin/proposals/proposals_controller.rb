@@ -200,7 +200,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # instead of always bouncing back to the proposal's show page. Only known-safe paths are accepted.
   def post_action_redirect_path
     allowed = [
-      _admin_proposals_calls_path,
+      admin_proposals_calls_path,
       admin_proposals_call_proposals_path(@proposal.call)
     ]
     return params[:redirect_to] if allowed.include?(params[:redirect_to])
