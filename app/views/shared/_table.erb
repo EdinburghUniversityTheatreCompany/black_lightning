@@ -1,4 +1,4 @@
-<%# locals: (field_sets:, headers:, table_class: 'table-hover', include_headers: true, new_headers: []) -%>
+<%# locals: (field_sets:, headers:, table_class: 'table-hover', include_headers: true, new_headers: [], col_widths: []) -%>
 <%# KEEP %>
 
 <% headers = headers.each do |header|
@@ -14,7 +14,14 @@
   end
 end %>
 
-<table class="table  <%= table_class %>">
+<table class="table <%= table_class %>" <% if col_widths.any? %>style="table-layout: fixed; width: 100%"<% end %>>
+  <% if col_widths.any? %>
+    <colgroup>
+      <% col_widths.each do |w| %>
+        <col style="width: <%= w %>">
+      <% end %>
+    </colgroup>
+  <% end %>
   <% if include_headers %>
     <thead>
       <tr>
