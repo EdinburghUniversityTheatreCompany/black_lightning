@@ -11,7 +11,7 @@ class Admin::Proposals::ProposalsController < AdminController
 
   before_action :set_paper_trail_whodunnit
   load_and_authorize_resource class: Admin::Proposals::Proposal
-  skip_authorize_resource only: %i[new create]
+  skip_authorize_resource only: %i[new create pending]
 
   ##
   # GET /admin/proposals/calls/1/proposals
@@ -23,6 +23,32 @@ class Admin::Proposals::ProposalsController < AdminController
     @title = "Proposals for #{@call.name}"
 
     super
+  end
+
+  ##
+  # GET /admin/proposals/proposals/pending
+  #
+  # Cross-call dashboard of proposals still needing a decision. Shows:
+  # - awaiting_approval proposals (with inline approve/reject for approvers)
+  # - approved proposals (with inline mark_successful/mark_unsuccessful for approvers)
+  #
+  # Any logged-in user may open the page; per-proposal visibility is enforced by the existing
+  # :read rules in ability.rb (team members see their own pre-deadline proposals; everyone sees
+  # approved/successful/unsuccessful ones; proposal checkers see everything post-submission deadline).
+  ##
+  def pending
+    authorize! :index, Admin::Proposals::Proposal
+
+    scoped = Admin::Proposals::Proposal
+      .accessible_by(current_ability, :read)
+      .includes(:call, team_members: :user)
+      .references(:call)
+      .order("admin_proposals_calls.editing_deadline ASC")
+
+    @awaiting_approval = scoped.where(status: :awaiting_approval)
+    @approved = scoped.where(status: :approved)
+
+    @title = "Active Proposals"
   end
 
   ##
@@ -108,7 +134,7 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
+      format.html { redirect_to post_action_redirect_path }
       # format.json { head :no_content }
     end
   end
@@ -127,7 +153,7 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
+      format.html { redirect_to post_action_redirect_path }
       # format.json { head :no_content }
     end
   end
@@ -146,7 +172,7 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
+      format.html { redirect_to post_action_redirect_path }
     end
   end
 
@@ -164,7 +190,7 @@ class Admin::Proposals::ProposalsController < AdminController
     end
 
     respond_to do |format|
-      format.html { redirect_to admin_proposals_proposal_path(@proposal) }
+      format.html { redirect_to post_action_redirect_path }
     end
   end
 
@@ -195,6 +221,15 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   private
+
+  # Allow approve/reject/mark_* actions triggered from the pending dashboard to return there
+  # instead of always bouncing back to the proposal's show page. Only known-safe paths are accepted.
+  def post_action_redirect_path
+    allowed = [ pending_admin_proposals_proposals_path ]
+    return params[:redirect_to] if allowed.include?(params[:redirect_to])
+
+    admin_proposals_proposal_path(@proposal)
+  end
 
   def call_closed_message(call)
     helpers.append_to_flash(:error, "Sorry. The submission deadline for #{call.name} has been passed and the call is no longer open. You can no longer submit a proposal for this call.")

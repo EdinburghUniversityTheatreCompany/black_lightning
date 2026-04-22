@@ -1,0 +1,74 @@
+<% can_act = can?(:approve, Admin::Proposals::Proposal) %>
+<% redirect_param = { redirect_to: pending_admin_proposals_proposals_path } %>
+
+<div class="callout callout-info">
+  <p>
+    Active proposals across every call. Awaiting Approval decisions happen before the General Meeting;
+    Approved proposals are set to successful or unsuccessful after the General Meeting.
+  </p>
+  <% unless can_act %>
+    <p class="mb-0"><em>You have view-only access. Contact an approver to make changes.</em></p>
+  <% end %>
+</div>
+
+<h2>Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h2>
+
+<% if @awaiting_approval.any? %>
+  <% @awaiting_approval.group_by(&:call).each do |call, proposals| %>
+    <h4 class="mt-3"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
+
+    <% headers = [ "Show Title", "Status" ] %>
+    <% headers << "Actions" if can_act %>
+
+    <% field_sets = proposals.map do |proposal|
+      fields = [
+        get_link(proposal, :show, link_text: proposal.show_title),
+        proposal.labels(false, show_debtors: false)
+      ]
+      if can_act
+        approve_link = proposal.has_debtors ?
+          get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
+          get_link(proposal, :approve, query_params: redirect_param)
+
+        fields << safe_join([
+          approve_link,
+          get_link(proposal, :reject, query_params: redirect_param)
+        ].compact, " ")
+      end
+      { fields: fields }
+    end %>
+
+    <%= render "shared/table", headers: headers, field_sets: field_sets %>
+  <% end %>
+<% else %>
+  <p><em>No proposals are awaiting approval.</em></p>
+<% end %>
+
+<h2 class="mt-4">Approved — Awaiting GM Outcome <span class="badge bg-secondary"><%= @approved.size %></span></h2>
+
+<% if @approved.any? %>
+  <% @approved.group_by(&:call).each do |call, proposals| %>
+    <h4 class="mt-3"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
+
+    <% headers = [ "Show Title", "Status" ] %>
+    <% headers << "Actions" if can_act %>
+
+    <% field_sets = proposals.map do |proposal|
+      fields = [
+        get_link(proposal, :show, link_text: proposal.show_title),
+        proposal.labels(false, show_debtors: false)
+      ]
+      if can_act
+        fields << safe_join([
+          get_link(proposal, :mark_successful, query_params: redirect_param),
+          get_link(proposal, :mark_unsuccessful, query_params: redirect_param)
+        ].compact, " ")
+      end
+      { fields: fields }
+    end %>
+
+    <%= render "shared/table", headers: headers, field_sets: field_sets %>
+  <% end %>
+<% else %>
+  <p><em>No approved proposals are awaiting a GM outcome.</em></p>
+<% end %>

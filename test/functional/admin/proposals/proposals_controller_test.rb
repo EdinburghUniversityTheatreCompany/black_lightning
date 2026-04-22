@@ -347,6 +347,98 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "pending shows awaiting_approval and approved proposals with actions for approver" do
+    # Admins lose :approve on a call whose submission deadline is in the future, so move it into the past.
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+
+    awaiting = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+    approved = FactoryBot.create(:proposal, call: @call, status: :approved)
+    FactoryBot.create(:proposal, call: @call, status: :rejected)
+    FactoryBot.create(:proposal, call: @call, status: :successful)
+
+    get :pending
+
+    assert_response :success
+    assert_includes assigns(:awaiting_approval), awaiting
+    assert_includes assigns(:approved), approved
+    assert_equal 1, assigns(:awaiting_approval).size
+    assert_equal 1, assigns(:approved).size
+
+    # Approver sees the action buttons.
+    assert_match approve_admin_proposals_proposal_path(awaiting), response.body
+    assert_match reject_admin_proposals_proposal_path(awaiting), response.body
+    assert_match mark_successful_admin_proposals_proposal_path(approved), response.body
+    assert_match mark_unsuccessful_admin_proposals_proposal_path(approved), response.body
+  end
+
+  test "pending is viewable without approve permission but hides action buttons" do
+    sign_out @admin
+    # Committee user has :index on proposals via ability.rb but no :approve in the fixtures.
+    sign_in users(:committee)
+
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+
+    awaiting = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+    approved = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    get :pending
+
+    assert_response :success
+    assert_includes assigns(:awaiting_approval), awaiting
+    assert_includes assigns(:approved), approved
+
+    assert_no_match(/#{Regexp.escape approve_admin_proposals_proposal_path(awaiting)}/, response.body)
+    assert_no_match(/#{Regexp.escape reject_admin_proposals_proposal_path(awaiting)}/, response.body)
+    assert_no_match(/#{Regexp.escape mark_successful_admin_proposals_proposal_path(approved)}/, response.body)
+    assert_no_match(/#{Regexp.escape mark_unsuccessful_admin_proposals_proposal_path(approved)}/, response.body)
+  end
+
+  test "pending hides proposals a member cannot read" do
+    sign_out @admin
+    sign_in users(:member)
+
+    # Call is open (submission_deadline in the future) and member is not on the proposal,
+    # so awaiting_approval proposals must NOT leak through.
+    hidden_awaiting = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+    # Approved proposals are readable by any logged-in user per ability.rb.
+    visible_approved = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    get :pending
+
+    assert_response :success
+    assert_not_includes assigns(:awaiting_approval), hidden_awaiting,
+      "A member not on the proposal should not see awaiting_approval proposals before the submission deadline."
+    assert_includes assigns(:approved), visible_approved,
+      "Approved proposals should be visible to any logged-in user."
+  end
+
+  test "approve from pending dashboard redirects back to pending" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    put :approve, params: { id: proposal.id, redirect_to: pending_admin_proposals_proposals_path }
+
+    assert_redirected_to pending_admin_proposals_proposals_path
+  end
+
+  test "approve ignores unsafe redirect_to param" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    put :approve, params: { id: proposal.id, redirect_to: "https://evil.example.com" }
+
+    assert_redirected_to admin_proposals_proposal_path(proposal)
+  end
+
+  test "mark_successful from pending dashboard redirects back to pending" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :approved)
+
+    put :mark_successful, params: { id: proposal.id, redirect_to: pending_admin_proposals_proposals_path }
+
+    assert_redirected_to pending_admin_proposals_proposals_path
+  end
+
   private
 
   def generate_team_member_attributes(count)

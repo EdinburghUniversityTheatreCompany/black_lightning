@@ -308,6 +308,9 @@ ChaosRails::Application.routes.draw do
       end
 
       resources :proposals, except: :index do
+        collection do
+          get "pending"
+        end
         member do
           put "approve"
           put "reject"
