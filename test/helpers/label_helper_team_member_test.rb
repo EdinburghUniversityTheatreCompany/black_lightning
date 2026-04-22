@@ -1,6 +1,6 @@
 require "test_helper"
 
-class TeamMemberHelperTest < ActionView::TestCase
+class LabelHelperTeamMemberTest < ActionView::TestCase
   setup do
     @team_member = FactoryBot.create(:team_member)
   end
@@ -37,6 +37,34 @@ class TeamMemberHelperTest < ActionView::TestCase
     assert_includes team_member_labels_for(@team_member, Date.current).join(";"), "First Aid Trained"
   end
 
+  test "Members should not show a membership label" do
+    @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
+
+    labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
+    assert_not_includes labels, "Life Member"
+    assert_not_includes labels, "Member"
+  end
+  
+  test "Life Members should not show a membership label" do
+    @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
+    
+    @team_member.user.remove_role("Member")
+    @team_member.user.add_role("Life Member")
+    labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
+    assert_not_includes labels, "Life Member"
+    assert_not_includes labels, "Member"
+  end
+
+  test "Life Members should not show a membership label" do
+    @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
+    
+    @team_member.user.remove_role("Member")
+    @team_member.user.add_role("Life Member")
+    labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
+    assert_not_includes labels, "Life Member"
+    assert_not_includes labels, "Member"
+  end
+
   test "Show in this academic year should warn for non-member" do
     @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
 
@@ -60,7 +88,7 @@ class TeamMemberHelperTest < ActionView::TestCase
 
     label = team_member_labels_for(@team_member, deadline).first
 
-    assert_includes label[:text], "In staffing Debt"
+    assert_includes label[:text], "In staffing debt now"
     assert_equal :danger, label[:label_class]
   end
 
@@ -71,7 +99,7 @@ class TeamMemberHelperTest < ActionView::TestCase
 
     label = team_member_labels_for(@team_member, deadline).first
 
-    assert_includes label[:text], "In maintenance Debt"
+    assert_includes label[:text], "In maintenance debt now"
     assert_equal :danger, label[:label_class]
   end
 
@@ -85,10 +113,46 @@ class TeamMemberHelperTest < ActionView::TestCase
 
     assert_equal 2, labels.count
 
-    assert_includes labels.first[:text], "In staffing Debt"
+    assert_includes labels.first[:text], "In staffing debt now"
     assert_equal :danger, labels.first[:label_class]
 
-    assert_includes labels.last[:text], "In staffing and maintenance Debt on the editing deadline"
+    assert_includes labels.last[:text], "In maintenance debt on the editing deadline"
     assert_equal :danger, labels.last[:label_class]
+  end
+
+  test "User profiles for members should show membership labels" do
+    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
+
+    assert_includes labels, "Member"
+  end
+
+  test "User profiles for life members should show membership labels" do
+    @team_member.user.remove_role("Member")
+    @team_member.user.add_role("Life Member")
+
+    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
+
+    assert_includes labels, "Life Member"
+  end
+
+  test "User profiles for members should show staffing debts" do
+    FactoryBot.create(:overdue_maintenance_debt, user: @team_member.user)
+    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
+
+    assert_includes labels, "In staffing debt"
+  end
+
+  test "User profiles for members should show maintenance debts" do
+    FactoryBot.create(:overdue_maintenance_debt, user: @team_member.user)
+    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
+
+    assert_includes labels, "In maintenance debt"
+  end
+
+  test "User profiles for members should show staffing & maintenance debts" do
+    FactoryBot.create(:overdue_maintenance_debt, user: @team_member.user)
+    labels = user_profile_labels_for(@team_member.user).map { |l| l[:text] }
+
+    assert_includes labels, "In staffing and maintenance debt"
   end
 end

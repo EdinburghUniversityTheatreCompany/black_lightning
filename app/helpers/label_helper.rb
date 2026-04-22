@@ -20,7 +20,7 @@ module LabelHelper
                 if is_life_member
                     output_labels << { label_class: "bg-rainbow-rotate", text: "Life Member" }
                 elsif is_member
-                    output_labels << { label_class: "bg-success", text: "Member" }
+                    output_labels << { label_class: "bg-secondary", text: "Member" }
                 else
                     output_labels << { label_class: "bg-secondary", text: "Not A Member" }
                 end
@@ -89,11 +89,16 @@ module LabelHelper
     # Generate the labels to be shown in the team member list.
     # `deadline` is the proposal deadline, if applicable.
     def team_member_labels_for(team_member, deadline)
-        # Display the 'Not a Member' label if the show is this academic year, or it has a deadline in the future (and is likely a proposal)
+        # Display the 'Not a Member' label if the show is this academic year,
+        # or it has a deadline in the future (and is likely a proposal)
         show_member_status = (team_member.teamwork_type == "Event" && team_member.teamwork.this_academic_year?) || (deadline.present? && deadline.future?)
 
-        show_member_status_when = show_member_status ? :positive : :never
+        show_member_status_when = show_member_status ? :negative : :never
         user_labels_for(team_member.user, deadline, show_member_status_when)
+    end
+
+    def user_profile_labels_for(user)
+        user_labels_for(user, nil, :always, true)
     end
 
     def generate_label(label_class, message, pull_right = false, rounded = false)
