@@ -26,6 +26,7 @@ class Admin::Proposals::CallsController < AdminController
       .accessible_by(current_ability, :read)
       .includes(:call, team_members: :user)
       .references(:call)
+      .where(admin_proposals_calls: { archived: [ false, nil ] })
       .order("admin_proposals_calls.editing_deadline ASC")
 
     @awaiting_approval = scoped.where(status: :awaiting_approval)
