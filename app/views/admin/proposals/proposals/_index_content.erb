@@ -1,12 +1,38 @@
 <%# locals: () %>
 
-<% headers = [:show_title] %>
+<% can_act = can?(:approve, Admin::Proposals::Proposal) %>
+<% redirect_param = { redirect_to: admin_proposals_call_proposals_path(@call) } %>
 
-<% field_sets = @proposals.map { |proposal| { 
-  fields: [
+<% headers = [:show_title, "Status"] %>
+<% headers << "Actions" if can_act %>
+
+<% field_sets = @proposals.map do |proposal|
+  fields = [
     proposal,
-    "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal.labels(true)}".html_safe 
-  ] } } %>
+    "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal.labels(true)}".html_safe
+  ]
+
+  if can_act
+    action_buttons =
+      case proposal.status.to_s
+      when "awaiting_approval"
+        approve_link = proposal.has_debtors ?
+          get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
+          get_link(proposal, :approve, query_params: redirect_param)
+
+        [ approve_link, get_link(proposal, :reject, query_params: redirect_param) ]
+      when "approved"
+        [ get_link(proposal, :mark_successful, query_params: redirect_param),
+          get_link(proposal, :mark_unsuccessful, query_params: redirect_param) ]
+      else
+        []
+      end
+
+    fields << safe_join(action_buttons.compact, " ")
+  end
+
+  { fields: fields }
+end %>
 
 <% call_info_fields = {
   submission_deadline: l(@call.submission_deadline, format: :longy),

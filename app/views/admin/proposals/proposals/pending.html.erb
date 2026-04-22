@@ -13,42 +13,70 @@
 
 <h2>Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h2>
 
-<% if @awaiting_approval.any? %>
-  <% @awaiting_approval.group_by(&:call).each do |call, proposals| %>
-    <h4 class="mt-3"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
+<% awaiting_by_call = @awaiting_approval.group_by(&:call) %>
+<% calls_to_show = (@open_calls + awaiting_by_call.keys).uniq.sort_by(&:editing_deadline) %>
 
-    <% headers = [ "Show Title", "Status" ] %>
-    <% headers << "Actions" if can_act %>
+<% if calls_to_show.any? %>
+  <% calls_to_show.each do |call| %>
+    <% proposals = awaiting_by_call[call] || [] %>
 
-    <% field_sets = proposals.map do |proposal|
-      fields = [
-        get_link(proposal, :show, link_text: proposal.show_title),
-        proposal.labels(false, show_debtors: false)
-      ]
-      if can_act
-        approve_link = proposal.has_debtors ?
-          get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
-          get_link(proposal, :approve, query_params: redirect_param)
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
+      <div>
+        <h4 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
+        <small class="text-muted">
+          Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+          &middot;
+          Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+        </small>
+      </div>
+      <% if call.open? %>
+        <%= get_link(Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_proposal_path(call_id: call.id), link_text: "New Proposal") %>
+      <% end %>
+    </div>
 
-        fields << safe_join([
-          approve_link,
-          get_link(proposal, :reject, query_params: redirect_param)
-        ].compact, " ")
-      end
-      { fields: fields }
-    end %>
+    <% if proposals.any? %>
+      <% headers = [ "Show Title", "Status" ] %>
+      <% headers << "Actions" if can_act %>
 
-    <%= render "shared/table", headers: headers, field_sets: field_sets %>
+      <% field_sets = proposals.map do |proposal|
+        fields = [
+          get_link(proposal, :show, link_text: proposal.show_title),
+          proposal.labels(false, show_debtors: false)
+        ]
+        if can_act
+          approve_link = proposal.has_debtors ?
+            get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
+            get_link(proposal, :approve, query_params: redirect_param)
+
+          fields << safe_join([
+            approve_link,
+            get_link(proposal, :reject, query_params: redirect_param)
+          ].compact, " ")
+        end
+        { fields: fields }
+      end %>
+
+      <%= render "shared/table", headers: headers, field_sets: field_sets %>
+    <% else %>
+      <p><em>No proposals yet for this call.</em></p>
+    <% end %>
   <% end %>
 <% else %>
-  <p><em>No proposals are awaiting approval.</em></p>
+  <p><em>No proposals are awaiting approval and there are no open calls.</em></p>
 <% end %>
 
-<h2 class="mt-4">Approved — Awaiting GM Outcome <span class="badge bg-secondary"><%= @approved.size %></span></h2>
+<h2 class="mt-4">Approved (Awaiting GM Outcome) <span class="badge bg-secondary"><%= @approved.size %></span></h2>
 
 <% if @approved.any? %>
   <% @approved.group_by(&:call).each do |call, proposals| %>
-    <h4 class="mt-3"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
+    <div class="mt-3">
+      <h4 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
+      <small class="text-muted">
+        Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+        &middot;
+        Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+      </small>
+    </div>
 
     <% headers = [ "Show Title", "Status" ] %>
     <% headers << "Actions" if can_act %>

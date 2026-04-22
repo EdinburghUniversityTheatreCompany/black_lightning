@@ -48,6 +48,9 @@ class Admin::Proposals::ProposalsController < AdminController
     @awaiting_approval = scoped.where(status: :awaiting_approval)
     @approved = scoped.where(status: :approved)
 
+    # Surface every open call so the view can show a "New Proposal" CTA even for calls with no proposals yet.
+    @open_calls = Admin::Proposals::Call.open.order(:editing_deadline)
+
     @title = "Active Proposals"
   end
 
@@ -225,7 +228,10 @@ class Admin::Proposals::ProposalsController < AdminController
   # Allow approve/reject/mark_* actions triggered from the pending dashboard to return there
   # instead of always bouncing back to the proposal's show page. Only known-safe paths are accepted.
   def post_action_redirect_path
-    allowed = [ pending_admin_proposals_proposals_path ]
+    allowed = [
+      pending_admin_proposals_proposals_path,
+      admin_proposals_call_proposals_path(@proposal.call)
+    ]
     return params[:redirect_to] if allowed.include?(params[:redirect_to])
 
     admin_proposals_proposal_path(@proposal)

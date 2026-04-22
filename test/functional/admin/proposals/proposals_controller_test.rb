@@ -439,6 +439,43 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_redirected_to pending_admin_proposals_proposals_path
   end
 
+  test "approve honours per-call index as a safe redirect target" do
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    proposal = FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    put :approve, params: { id: proposal.id, redirect_to: admin_proposals_call_proposals_path(@call) }
+
+    assert_redirected_to admin_proposals_call_proposals_path(@call)
+  end
+
+  test "pending surfaces open calls with no proposals and renders new proposal button for creators" do
+    # @call is already open (setup sets submission_deadline 5 days in the future) and has no proposals.
+    sign_out @admin
+    sign_in users(:member)
+
+    get :pending
+
+    assert_response :success
+    assert_includes assigns(:open_calls), @call
+    assert_match @call.name, response.body
+    assert_match new_admin_proposals_proposal_path(call_id: @call.id), response.body
+  end
+
+  test "pending hides new proposal button from users who cannot create proposals" do
+    # A closed call still shows up if it has awaiting proposals, but cannot accept new ones.
+    @call.update_attribute(:submission_deadline, DateTime.current.advance(days: -1))
+    FactoryBot.create(:proposal, call: @call, status: :awaiting_approval)
+
+    sign_out @admin
+    sign_in users(:member)
+
+    get :pending
+
+    assert_response :success
+    # The call heading is present but the new-proposal CTA for it is not (call is closed).
+    assert_no_match(/#{Regexp.escape new_admin_proposals_proposal_path(call_id: @call.id)}/, response.body)
+  end
+
   private
 
   def generate_team_member_attributes(count)

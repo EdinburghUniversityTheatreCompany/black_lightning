@@ -1,7 +1,7 @@
 <%# locals: () %>
 
 <% if can? :index, Admin::Proposals::Proposal %>
-  <p><%= link_to "Active Proposals dashboard", pending_admin_proposals_proposals_path %></p>
+  <p><%= link_to "Proposals", pending_admin_proposals_proposals_path %></p>
 <% end %>
 
 <% open_calls = Admin::Proposals::Call.open %>
