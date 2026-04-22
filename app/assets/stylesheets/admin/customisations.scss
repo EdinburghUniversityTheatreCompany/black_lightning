@@ -62,8 +62,11 @@
     }
 }
 
+.badge {
+    margin: -0.25em 0;
+}
+
 .bg-rainbow-rotate {
-    // almost certainly could be cleaner :shrug:
     background: linear-gradient(in oklch 90deg, #ff0094 0.0%, #00c800 37.5%, #00b5ff 62.5%, #ff0094 100%) repeat-x;
     animation: rainbow-rotate 32s linear infinite;
     background-size: 800% 100%;
@@ -84,4 +87,23 @@
     }
 }
 
-//This fixes content hiding behind the fixed navbar
+.bg-admin-rotate {
+    background: linear-gradient(in oklch 90deg, #f20938 0.0%, #ef3967 33.3%, #ef6739 66.7%, #f20938 100%) repeat-x;
+    animation: admin-rotate 32s linear infinite;
+    background-size: 800% 100%;
+}
+
+.bg-admin-rotate,
+.bg-admin-rotate>a {
+    color: #fff !important;
+}
+
+@keyframes admin-rotate {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 800% 0;
+    }
+}

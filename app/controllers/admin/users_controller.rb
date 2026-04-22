@@ -19,8 +19,8 @@ class Admin::UsersController < AdminController
 
     @team_memberships = @user.team_memberships(false)
     @link_to_admin_events = true
-    
-    @header_badges = helpers.user_labels_for(@user, nil)
+
+    @header_badges = helpers.user_labels_for(@user, nil, :always, true)
 
     super
   end
