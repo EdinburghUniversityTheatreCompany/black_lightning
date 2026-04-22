@@ -26,35 +26,6 @@ class Admin::Proposals::ProposalsController < AdminController
   end
 
   ##
-  # GET /admin/proposals/proposals/pending
-  #
-  # Cross-call dashboard of proposals still needing a decision. Shows:
-  # - awaiting_approval proposals (with inline approve/reject for approvers)
-  # - approved proposals (with inline mark_successful/mark_unsuccessful for approvers)
-  #
-  # Any logged-in user may open the page; per-proposal visibility is enforced by the existing
-  # :read rules in ability.rb (team members see their own pre-deadline proposals; everyone sees
-  # approved/successful/unsuccessful ones; proposal checkers see everything post-submission deadline).
-  ##
-  def pending
-    authorize! :index, Admin::Proposals::Proposal
-
-    scoped = Admin::Proposals::Proposal
-      .accessible_by(current_ability, :read)
-      .includes(:call, team_members: :user)
-      .references(:call)
-      .order("admin_proposals_calls.editing_deadline ASC")
-
-    @awaiting_approval = scoped.where(status: :awaiting_approval)
-    @approved = scoped.where(status: :approved)
-
-    # Surface every open call so the view can show a "New Proposal" CTA even for calls with no proposals yet.
-    @open_calls = Admin::Proposals::Call.open.order(:editing_deadline)
-
-    @title = "Active Proposals"
-  end
-
-  ##
   # GET /admin/proposals/proposals/1
   #
   # GET /admin/proposals/proposals/1.json
@@ -229,7 +200,7 @@ class Admin::Proposals::ProposalsController < AdminController
   # instead of always bouncing back to the proposal's show page. Only known-safe paths are accepted.
   def post_action_redirect_path
     allowed = [
-      pending_admin_proposals_proposals_path,
+      _admin_proposals_calls_path,
       admin_proposals_call_proposals_path(@proposal.call)
     ]
     return params[:redirect_to] if allowed.include?(params[:redirect_to])

@@ -1,6 +1,6 @@
 <%# locals: () %>
 
-<% can_act = can?(:approve, Admin::Proposals::Proposal) %>
+<% can_act = can?(:approve, Admin::Proposals::Proposal) && @proposals.any? { |p| p.approved? || p.awaiting_approval? } %>
 <% redirect_param = { redirect_to: admin_proposals_call_proposals_path(@call) } %>
 
 <% headers = [:show_title, "Status"] %>
@@ -11,6 +11,8 @@
     proposal,
     "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal.labels(true)}".html_safe
   ]
+
+  # TODO: These buttons are not rendering
 
   if can_act
     action_buttons =

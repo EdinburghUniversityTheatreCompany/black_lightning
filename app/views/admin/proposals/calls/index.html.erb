@@ -1,15 +1,3 @@
-<% headers = [:name, :submission_deadline, :editing_deadline, ''] %>
+<% content = render('admin/proposals/calls/index_content') %>
 
-<% field_sets = @calls.map { |call| { 
-  fields: [
-    call,
-    l(call.submission_deadline, format: :longy),
-    l(call.editing_deadline, format: :longy),
-    get_link(call, :show, link_target: admin_proposals_call_proposals_path(call), link_text: 'View Proposals', html_class: 'btn btn-secondary')
-  ] } } %>
-
-<% search_fields = {
-    name_cont: { slug: 'defaults.name' }
-} %>
-
-<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, content: content, include_pagination: false %>

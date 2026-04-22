@@ -25,9 +25,8 @@ module NavigationHelper
 
     # Propose
     children = []
-    children << { title: "Proposals", path: pending_admin_proposals_proposals_path, fa_icon: "fa-clipboard" } if can? :index, Admin::Proposals::Proposal
+    children << { title: "Proposals", path: admin_proposals_calls_path } if can? :index, Admin::Proposals::Call
     children << { title: "Proposal Archive", path: archives_proposals_path, fa_icon: "fa-box-archive" } if can? :index, Admin::Proposals::Call
-    children << { title: "Manage Calls", path: admin_proposals_calls_path, fa_icon: "fa-clipboard-list" } if can? :index, Admin::Proposals::Call
     navbar_categories << { title: "Propose", children: children, fa_icon: "fa-chalkboard" }
 
     # Productions
