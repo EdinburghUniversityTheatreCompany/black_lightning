@@ -8,21 +8,29 @@ module LabelHelper
 
         if show_member_status_when != :never
             is_life_member = user.has_role?("life member")
-            is_member = is_life_member || user.has_role?("member")
+            is_eutc_member = user.has_role?("member")
 
             show_member_status = case show_member_status_when
-            when :positive; is_member
-            when :negative; !is_member
+            when :positive; is_eutc_member
+            when :negative; !is_eutc_member
             when :always; true
             end
 
             if show_member_status
                 if is_life_member
-                    output_labels << { label_class: "bg-rainbow-rotate", text: "Life Member" }
-                elsif is_member
-                    output_labels << { label_class: "bg-secondary", text: "Member" }
+                    if show_member_status_when != :negative
+                        output_labels << { label_class: "bg-rainbow-rotate", text: "Life Member" }
+                    end
+
+                    if is_eutc_member
+                        output_labels << { label_class: "bg-info", text: "EUTC Member" }
+                    else
+                        output_labels << { label_class: "bg-secondary", text: "Non-EUTC Member" }
+                    end
+                elsif is_eutc_member
+                    output_labels << { label_class: "bg-info", text: "Member" }
                 else
-                    output_labels << { label_class: "bg-secondary", text: "Not A Member" }
+                    output_labels << { label_class: "bg-secondary", text: "Non-Member" }
                 end
             end
         end

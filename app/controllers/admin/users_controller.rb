@@ -20,7 +20,6 @@ class Admin::UsersController < AdminController
     @team_memberships = @user.team_memberships(false)
     @link_to_admin_events = true
 
-    # FIXME: this is a bit messy...
     @header_badges = helpers.user_profile_labels_for(@user)
 
     super
