@@ -27,7 +27,7 @@ module Admin::SharedDebtHelper
     debts = q.result.includes(*includes)
 
     debts = debts.unfulfilled unless show_fulfilled
-    debts = debts.where(user: Role.find_by(name: :member).users.ids) unless show_non_members == "1"
+    debts = debts.where(user: Role.find_by(name: :member).users.ids) unless show_non_members == "1" || is_specific_user
     debts = debts.page(params[:page]).per(30)
 
     return debts, q, show_fulfilled, is_specific_user

@@ -258,13 +258,13 @@ class User < ApplicationRecord
     in_staffing_debt = debt_causing_staffing_debts(on_date).any?
 
     if in_maintenance_debt && in_staffing_debt
-      "in staffing and maintenance Debt"
+      "in staffing and maintenance debt"
     elsif in_maintenance_debt
-      "in maintenance Debt"
+      "in maintenance debt"
     elsif in_staffing_debt
-      "in staffing Debt"
+      "in staffing debt"
     else
-      "not in Debt"
+      "not in debt"
     end
   end
 

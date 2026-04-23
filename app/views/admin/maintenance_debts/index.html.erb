@@ -26,7 +26,7 @@ else
     show_name_cont:       { slug: 'defaults.show_name' },
     show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean },
     show_non_members:     { slug: 'defaults.show_non_members', type: :boolean }
-} 
+  } 
 end %>
 
 <%= render 'shared/pages/index', resource_class: Admin::MaintenanceDebt, resources: @maintenance_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
