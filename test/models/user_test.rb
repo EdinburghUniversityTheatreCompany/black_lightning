@@ -129,13 +129,13 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "debt message suffix" do
-    assert_equal "not in Debt", @user.debt_message_suffix
+    assert_equal "not in debt", @user.debt_message_suffix
     staffing_debt = FactoryBot.create :overdue_staffing_debt, user: @user
-    assert_equal "in staffing Debt", @user.debt_message_suffix
+    assert_equal "in staffing debt", @user.debt_message_suffix
     FactoryBot.create :overdue_maintenance_debt, user: @user
-    assert_equal "in staffing and maintenance Debt", @user.debt_message_suffix
+    assert_equal "in staffing and maintenance debt", @user.debt_message_suffix
     staffing_debt.delete
-    assert_equal "in maintenance Debt", @user.debt_message_suffix
+    assert_equal "in maintenance debt", @user.debt_message_suffix
   end
 
   test "in debt" do

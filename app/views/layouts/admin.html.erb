@@ -116,7 +116,7 @@
 
     <!-- Content Wrapper. Contains page content -->
     <div class="content-wrapper">
-      <%= content_for?(:content_header) ? yield(:content_header) : render('shared/admin_page_header', title: @title) %>
+      <%= content_for?(:content_header) ? yield(:content_header) : render('shared/admin_page_header', title: @title, header_badges: @header_badges) %>
 
       <%= render '/layouts/alert_div' %>
       

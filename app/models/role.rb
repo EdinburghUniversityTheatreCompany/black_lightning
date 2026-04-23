@@ -19,7 +19,7 @@ class Role < ApplicationRecord
   # The roles that are referenced directly in the code.
   # Changing the name would break the website, so this list is used to prevent name changes for these roles.
   HARDCODED_NAMES = [ "Admin", "Committee", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained" ].freeze
-  NON_PURGEABLE_ROLES = [ "member" ]
+  NON_PURGEABLE_ROLES = [ "member", "life member" ]
 
   validates :name, presence: true
   validate :name_not_hardcoded
@@ -51,23 +51,23 @@ class Role < ApplicationRecord
     end
   end
 
-    # Moves all users on this role to a new role with the academic year shorthand as a suffix.
-    # This new role has no permissions, and the existing role keeps all permissions.
-    def archive(suffix)
-      if suffix.blank?
-        errors.add(:base, "Suffix cannot be blank when archiving a role")
-        return false
-      end
-
-      ActiveRecord::Base.transaction do
-        # Create or find the archival role and move all users over.
-        new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
-        new_role.users << self.users
-
-        # Then clear them from this role.
-        self.users.clear
-      end
+  # Moves all users on this role to a new role with the academic year shorthand as a suffix.
+  # This new role has no permissions, and the existing role keeps all permissions.
+  def archive(suffix)
+    if suffix.blank?
+      errors.add(:base, "Suffix cannot be blank when archiving a role")
+      return false
     end
+
+    ActiveRecord::Base.transaction do
+      # Create or find the archival role and move all users over.
+      new_role = Role.find_or_create_by(name: "#{name} #{suffix}")
+      new_role.users << self.users
+
+      # Then clear them from this role.
+      self.users.clear
+    end
+  end
 
   def name_not_hardcoded
     errors.add(:name, "is hardcoded and cannot be altered") if Role::HARDCODED_NAMES.include?(name_was) && name != name_was

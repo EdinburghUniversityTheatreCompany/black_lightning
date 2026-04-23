@@ -78,13 +78,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
   def label_css_class
     case status
     when "awaiting_approval"
-      :warning
+      "bg-warning"
     when "approved"
-      :info
+      "bg-info"
     when "successful"
-      :success
+      "bg-success"
     when "rejected", "unsuccessful"
-      :danger
+      "bg-danger"
     end
   end
 
@@ -93,8 +93,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
     labels = []
 
     labels << generate_label(label_css_class, formatted_status)
-    labels << generate_label(:danger, "Late") if late
-    labels << generate_label(:danger, "Has Debtors") if show_debtors && has_debtors
+    labels << generate_label("bg-danger", "Late") if late
+    labels << generate_label("bg-danger", "Has Debtors") if show_debtors && has_debtors
 
     labels_html = labels.join("\n").html_safe
 
