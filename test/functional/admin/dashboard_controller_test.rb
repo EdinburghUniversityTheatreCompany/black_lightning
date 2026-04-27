@@ -18,7 +18,7 @@ class Admin::DashboardControllerTest < ActionController::TestCase
     assert_match "You are #{@user.debt_message_suffix}", response.body
 
     # Check if it renders the debts@show page
-    assert_match "not associated with any Debt", response.body
+    assert_match "not associated with any debt", response.body
   end
 
   test "news widget with no news" do
