@@ -278,9 +278,7 @@ Doorkeeper.configure do
   # #call can be used in order to allow conditional checks (to allow non-SSL
   # redirects to localhost for example).
   #
-  # force_ssl_in_redirect_uri !Rails.env.development?
-  #
-  # force_ssl_in_redirect_uri { |uri| uri.host != 'localhost' }
+  force_ssl_in_redirect_uri !Rails.env.development?
 
   # Specify what redirect URI's you want to block during Application creation.
   # Any redirect URI is whitelisted by default.
@@ -288,7 +286,7 @@ Doorkeeper.configure do
   # You can use this option in order to forbid URI's with 'javascript' scheme
   # for example.
   #
-  # forbid_redirect_uri { |uri| uri.scheme.to_s.downcase == 'javascript' }
+  forbid_redirect_uri { |uri| %w[javascript data vbscript].include?(uri.scheme.to_s.downcase) }
 
   # Allows to set blank redirect URIs for Applications in case Doorkeeper configured
   # to use URI-less OAuth grant flows like Client Credentials or Resource Owner
@@ -434,11 +432,11 @@ Doorkeeper.configure do
   # so that the user skips the authorization step.
   # For example if dealing with a trusted application.
   #
-  skip_authorization do |resource_owner, client|
-    true # TODO: Should this always be skipped? Probably not.
-    # Example implementation:
-    # client.superapp? or resource_owner.admin?
-  end
+  # Removed blanket skip_authorization block (Vuln 3: OAuth consent screen).
+  # Users must now explicitly consent to OAuth application access.
+  # skip_authorization do |resource_owner, client|
+  #   client.superapp? or resource_owner.admin?
+  # end
 
   # Configure custom constraints for the Token Introspection request.
   # By default this configuration option allows to introspect a token by another

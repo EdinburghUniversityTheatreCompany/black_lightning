@@ -582,6 +582,12 @@ class User < ApplicationRecord
 
       # 6. Merge Roles (union)
       source_user.roles.each do |role|
+        # CRITICAL: admin role must never be absorbed.
+        # Non-admin users with :manage,User permission CAN absorb an admin and inherit their other roles.
+        # This is acceptable because absorb access is already gated by CanCanCan authorization,
+        # and we prevent the most critical escalation (admin status itself). If we need to prevent
+        # non-admins from absorbing admins entirely, that belongs in CanCanCan authorization, not here.
+        next if role.name == "Admin"
         unless has_role?(role.name)
           add_role(role.name)
           transferred[:roles] << role.name

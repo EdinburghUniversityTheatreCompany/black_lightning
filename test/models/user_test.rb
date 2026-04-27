@@ -572,4 +572,88 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_not @user.valid?
     assert @user.errors[:calendar_email].present?
   end
+
+  # Absorb tests — user merging
+  test "admin role is NOT transferred via absorb when source user holds :admin" do
+    target_user = FactoryBot.create(:user)
+    source_user = FactoryBot.create(:user)
+
+    # Grant admin to source user
+    source_user.add_role(:admin)
+    assert source_user.has_role?(:admin), "Setup: source user should have :admin"
+
+    # Perform absorb
+    result = target_user.absorb(source_user)
+
+    # Verify absorb was successful
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+
+    # Verify admin role was NOT transferred
+    assert_not target_user.has_role?(:admin), "Target user should NOT have :admin after absorbing admin"
+    assert_not_includes result[:transferred][:roles], "Admin", "Admin role should not be in transferred roles list"
+  end
+
+  test "admin absorbing another admin does NOT get duplicate :admin roles" do
+    admin_user = FactoryBot.create(:admin)
+    source_admin = FactoryBot.create(:admin)
+
+    # Perform absorb
+    result = admin_user.absorb(source_admin)
+
+    # Verify absorb was successful
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+
+    # Verify target admin still has only one :admin role (no duplicates)
+    admin_role_count = admin_user.roles.where(name: "Admin").count
+    assert_equal 1, admin_role_count, "Target admin should have exactly one :admin role, not duplicated"
+  end
+
+  test "all non-admin roles transfer normally via absorb" do
+    target_user = FactoryBot.create(:user)
+    source_user = FactoryBot.create(:user)
+
+    # Grant non-admin roles to source user
+    source_user.add_role(:member)
+    source_user.add_role(:committee)
+
+    # Perform absorb
+    result = target_user.absorb(source_user)
+
+    # Verify absorb was successful
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+
+    # Verify non-admin roles were transferred
+    assert target_user.has_role?(:member), "Target should have :member role"
+    assert target_user.has_role?(:committee), "Target should have :committee role"
+
+    # Verify returned transferred roles list contains the capitalized role names
+    assert_includes result[:transferred][:roles], "Member", "Member should be in transferred roles"
+    assert_includes result[:transferred][:roles], "Committee", "Committee should be in transferred roles"
+  end
+
+  test "absorb with mixed admin and non-admin roles transfers only non-admin" do
+    target_user = FactoryBot.create(:user)
+    source_user = FactoryBot.create(:user)
+
+    # Grant mixed roles to source user
+    source_user.add_role(:admin)
+    source_user.add_role(:member)
+    source_user.add_role(:committee)
+
+    # Perform absorb
+    result = target_user.absorb(source_user)
+
+    # Verify absorb was successful
+    assert result[:success], "Absorb should succeed: #{result[:errors]}"
+
+    # Verify only non-admin roles were transferred
+    assert target_user.has_role?(:member), "Target should have :member role"
+    assert target_user.has_role?(:committee), "Target should have :committee role"
+    assert_not target_user.has_role?(:admin), "Target should NOT have :admin role"
+
+    # Verify only non-admin roles are in transferred list
+    assert_includes result[:transferred][:roles], "Member"
+    assert_includes result[:transferred][:roles], "Committee"
+    assert_not_includes result[:transferred][:roles], "Admin"
+  end
 end

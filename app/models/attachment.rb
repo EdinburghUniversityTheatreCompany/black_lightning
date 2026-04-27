@@ -27,8 +27,17 @@ class Attachment < ApplicationRecord
 
   belongs_to :item, polymorphic: true
 
+  ALLOWED_CONTENT_TYPES = %w[
+    application/pdf
+    image/png image/jpeg image/gif image/webp
+    application/vnd.openxmlformats-officedocument.wordprocessingml.document
+    application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+    application/msword application/vnd.ms-excel
+    text/plain
+  ].freeze
+
   validates :name, presence: true, uniqueness: { case_sensitive: false }
-  validates :file, attached: true
+  validates :file, attached: true, content_type: ALLOWED_CONTENT_TYPES
   validates :access_level, presence: true
 
   has_and_belongs_to_many :attachment_tags, optional: true

@@ -24,7 +24,11 @@ class AttachmentsController < ApplicationController
     return "There is no file attached" unless @attachment.file.attached?
 
     response.headers["Content-Type"] = @attachment.file.content_type
-    response.headers["Content-Disposition"] = "inline; #{@attachment.file.filename}"
+    response.headers["Content-Security-Policy"] = "sandbox"
+
+    inline_ok = %w[application/pdf image/png image/jpeg image/gif image/webp].include?(@attachment.file.content_type)
+    disposition = inline_ok ? "inline" : "attachment"
+    response.headers["Content-Disposition"] = "#{disposition}; #{@attachment.file.filename}"
 
     if params[:style]&.to_s&.downcase == "thumb" && @attachment.file.image?
       variant = @attachment.file.blob.variant(helpers.thumb_variant).processed

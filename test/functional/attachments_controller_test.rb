@@ -99,4 +99,47 @@ class AttachmentsControllerTest < ActionController::TestCase
 
     assert_response :success
   end
+
+  test "pdf files serve with inline disposition" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :success
+    assert_equal "inline; test.pdf", response.headers["Content-Disposition"]
+    assert_equal "sandbox", response.headers["Content-Security-Policy"]
+  end
+
+  test "images serve with inline disposition" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+    attachment.file.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :success
+    assert_equal "inline; test.png", response.headers["Content-Disposition"]
+    assert_equal "sandbox", response.headers["Content-Security-Policy"]
+  end
+
+  test "office documents serve with attachment disposition" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+    attachment.file.attach(io: StringIO.new("fake docx"), filename: "document.docx", content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :success
+    assert_equal "attachment; document.docx", response.headers["Content-Disposition"]
+    assert_equal "sandbox", response.headers["Content-Security-Policy"]
+  end
+
+  test "text files serve with attachment disposition" do
+    attachment = FactoryBot.create(:attachment, item: @editable_block, access_level: 2)
+    attachment.file.attach(io: StringIO.new("hello world"), filename: "document.txt", content_type: "text/plain")
+
+    get :file, params: { slug: attachment.name }
+
+    assert_response :success
+    assert_equal "attachment; document.txt", response.headers["Content-Disposition"]
+    assert_equal "sandbox", response.headers["Content-Security-Policy"]
+  end
 end

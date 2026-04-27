@@ -44,20 +44,10 @@ class LabelHelperTeamMemberTest < ActionView::TestCase
     assert_not_includes labels, "Life Member"
     assert_not_includes labels, "Member"
   end
-  
-  test "Life Members should not show a membership label" do
-    @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
-    
-    @team_member.user.remove_role("Member")
-    @team_member.user.add_role("Life Member")
-    labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
-    assert_not_includes labels, "Life Member"
-    assert_not_includes labels, "Member"
-  end
 
   test "Life Members should not show a membership label" do
     @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
-    
+
     @team_member.user.remove_role("Member")
     @team_member.user.add_role("Life Member")
     labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
@@ -80,7 +70,7 @@ class LabelHelperTeamMemberTest < ActionView::TestCase
     labels = team_member_labels_for(@team_member, nil).map { |l| l[:text] }
     assert_not_includes labels, "Non-Member"
   end
-  
+
   test "Show in this academic year should warn for non-member life members" do
     @team_member.teamwork.update(start_date: Date.current, end_date: Date.current + 1.days)
 
