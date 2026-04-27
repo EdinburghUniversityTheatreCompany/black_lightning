@@ -81,9 +81,7 @@ group :development, :test do
 
   # Adds support for Capybara system testing and selenium driver
   gem "capybara", ">= 2.15"
-  gem "selenium-webdriver"
-  # Easy installation and use of web drivers to run system tests with browsers
-  gem "webdrivers"
+  gem "selenium-webdriver", ">= 4.8.2"
 
   gem "factory_bot_rails"
 
