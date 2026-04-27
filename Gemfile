@@ -2,7 +2,7 @@ source "http://rubygems.org"
 
 ruby File.read(".ruby-version").strip
 
-gem "rails", "~> 8.0"
+gem "rails", "~> 8.1"
 
 gem "mysql2" #, github: "mickzijdel/mysql2", branch: "master"
 

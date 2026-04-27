@@ -3,7 +3,7 @@
         "@fortawesome/fontawesome-free": "^6.1.1",
         "@nathanvda/cocoon": "^1.2.14",
         "@popperjs/core": "^2.11.8",
-        "@rails/activestorage": "^7.0.3-4",
+        "@rails/activestorage": "^8",
         "@rails/ujs": "^7.0.3-4",
         "admin-lte": "^3.2.0",
         "autoprefixer": "^10.4.19",

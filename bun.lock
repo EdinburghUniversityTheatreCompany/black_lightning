@@ -6,7 +6,7 @@
         "@fortawesome/fontawesome-free": "^6.1.1",
         "@nathanvda/cocoon": "^1.2.14",
         "@popperjs/core": "^2.11.8",
-        "@rails/activestorage": "^7.0.3-4",
+        "@rails/activestorage": "^8",
         "@rails/ujs": "^7.0.3-4",
         "admin-lte": "^3.2.0",
         "autoprefixer": "^10.4.19",
@@ -96,7 +96,7 @@
 
     "@popperjs/core": ["@popperjs/core@2.11.8", "", {}, "sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A=="],
 
-    "@rails/activestorage": ["@rails/activestorage@7.2.300", "", { "dependencies": { "spark-md5": "^3.0.1" } }, "sha512-UE3dtCTCBNTLUhuq8eZGKJkXE9NRAgOyzPZJyA7sGNivV/mDcN4949CfZG7CFx7R96IqmulvdfkwfrucPVynCg=="],
+    "@rails/activestorage": ["@rails/activestorage@8.1.300", "", { "dependencies": { "spark-md5": "^3.0.1" } }, "sha512-AOv3zZrTJjQlzm4L9uzOQtCz6zaM4IqUyux6yzSqmS+PZ8EzwD1F2JAc4LlJNJAv4MSyNYriG+CaCm1QbQTjsA=="],
 
     "@rails/ujs": ["@rails/ujs@7.1.600", "", {}, "sha512-ntMYJ8++n1zcIJ1g75or7Va9IU3ueCHgp9IJk7Ny7eFEbu0Kx40EHZ2FNhoxoUEjlF5NifCFCbvoK5rDK5HpIQ=="],
 
