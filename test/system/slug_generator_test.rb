@@ -6,7 +6,7 @@ class SlugGeneratorTest < ApplicationSystemTestCase
   end
 
   test "auto-generates slug from name field on input" do
-    visit new_admin_news_index_path
+    visit new_admin_news_path
 
     fill_in "event_name", with: "My Test Event"
 
@@ -14,7 +14,7 @@ class SlugGeneratorTest < ApplicationSystemTestCase
   end
 
   test "stops auto-generating slug once user manually edits it" do
-    visit new_admin_news_index_path
+    visit new_admin_news_path
 
     fill_in "event_name", with: "My Test Event"
     assert_equal "my-test-event", find_field("event_slug").value
@@ -26,7 +26,7 @@ class SlugGeneratorTest < ApplicationSystemTestCase
   end
 
   test "handles accented characters and special punctuation correctly" do
-    visit new_admin_news_index_path
+    visit new_admin_news_path
 
     fill_in "event_name", with: "Café & Restaurant"
 
@@ -34,7 +34,7 @@ class SlugGeneratorTest < ApplicationSystemTestCase
   end
 
   test "resumes auto-generating after slug is cleared" do
-    visit new_admin_news_index_path
+    visit new_admin_news_path
 
     fill_in "event_name", with: "First Title"
     fill_in "event_slug", with: "manual-override"
