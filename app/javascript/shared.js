@@ -8,7 +8,6 @@ require('imports-loader?imports=default|jquery|jQuery!jquery-slimscroll')
 
 import './src/shared/md_editor'
 import './src/shared/select2'
-import './src/shared/input_validator'
 
 // Load all the stimulus controllers
 import "./controllers"
