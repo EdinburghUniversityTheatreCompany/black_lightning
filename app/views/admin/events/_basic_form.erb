@@ -1,13 +1,18 @@
 <%# locals: (f:) %>
 
-<% # Looks for an input tagged with event_name and an input tagged with event_slug %>
-<%= javascript_include_tag 'name_to_slug.js', defer: true %>
+<div data-controller="slug-generator">
+  <%= f.input :name, input_html: {
+        id: 'event_name',
+        data: { 'slug-generator-target': 'name', action: 'input->slug-generator#nameChanged' }
+      } %>
 
-<%= f.input :name, input_html: { id: 'event_name' } %>
+  <%= f.input :tagline %>
 
-<%= f.input :tagline %>
-
-<%= f.input :slug, input_html: { id: 'event_slug' } %>
+  <%= f.input :slug, input_html: {
+        id: 'event_slug',
+        data: { 'slug-generator-target': 'slug', action: 'input->slug-generator#slugChanged' }
+      } %>
+</div>
 
 <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the image that appears in the slideshow on the frontpage, and as the header image on your event page. The apect ratio should be approximately 48/25.' %>
 
