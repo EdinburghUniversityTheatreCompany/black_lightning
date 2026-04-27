@@ -169,18 +169,63 @@ class ProfileCompletionsControllerTest < ActionController::TestCase
     assert_response 404
   end
 
-  test "update with token for user whose profile was already completed still works" do
-    # Even with a token, if profile is already complete, the token-based lookup works
-    # and the user can still update their profile (idempotent behavior)
-    @complete_user.update_columns(profile_completed_at: nil) # Make incomplete temporarily
-    token = @complete_user.profile_completion_token
-    @complete_user.update_columns(profile_completed_at: Time.current) # Make complete again
+  test "token is invalid after profile completion" do
+    # Generate a token while profile is incomplete
+    token = @incomplete_user.profile_completion_token
 
-    user_params = { first_name: "Updated" }
+    # Complete the profile (salt gets reset)
+    @incomplete_user.complete_profile!
 
+    # Try to use the same token to update profile - should fail
+    user_params = { first_name: "Hacker" }
     patch :update, params: { token: token, user: user_params, consent: "true" }
 
-    # Token user lookup works, so profile gets updated
+    # Token is now invalid because salt changed
+    assert_response 404
+    assert_match "Invalid or expired profile completion token", response.body
+
+    # Verify profile wasn't modified
+    @incomplete_user.reload
+    assert_not_equal "Hacker", @incomplete_user.first_name
+  end
+
+  test "same token cannot be replayed after profile completion" do
+    # Get a token and complete the profile
+    token = @incomplete_user.profile_completion_token
+    user_params = { first_name: "Valid", last_name: "User", password: "validpassword123" }
+
+    # Use the token once (valid)
+    assert_enqueued_emails 1 do
+      patch :update, params: { token: token, user: user_params, consent: "true" }
+    end
+
     assert_redirected_to admin_path
+    @incomplete_user.reload
+    assert_equal "Valid", @incomplete_user.first_name
+    assert @incomplete_user.profile_complete?
+
+    # Try to use the same token again - should fail
+    different_user = FactoryBot.create(:user, profile_completed_at: nil)
+    sign_out @incomplete_user
+    token_again = token
+
+    patch :update, params: { token: token_again, user: { first_name: "Hacker" }, consent: "true" }
+
+    # Token is invalid now
+    assert_response 404
+  end
+
+  test "token is invalidated by salt reset" do
+    # Verify token works before completion
+    token = @incomplete_user.profile_completion_token
+    get :show, params: { token: token }
+    assert_response :success
+
+    # Complete profile (this resets the salt)
+    @incomplete_user.complete_profile!
+
+    # Same token should now be invalid due to salt change
+    get :show, params: { token: token }
+    assert_response 404
   end
 end

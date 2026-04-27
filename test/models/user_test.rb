@@ -441,6 +441,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "profile_completion_token generates a valid signed token" do
+    @user.update_column(:profile_completed_at, nil)
     token = @user.profile_completion_token
 
     assert_not_nil token
@@ -449,6 +450,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "find_by_profile_completion_token finds user with valid token" do
+    @user.update_column(:profile_completed_at, nil)
     token = @user.profile_completion_token
 
     found_user = User.find_by_profile_completion_token(token)
@@ -463,6 +465,7 @@ class Admin::UserTest < ActiveSupport::TestCase
   end
 
   test "find_by_profile_completion_token returns nil for expired token" do
+    @user.update_column(:profile_completed_at, nil)
     token = @user.profile_completion_token
 
     travel 8.days do
@@ -479,6 +482,45 @@ class Admin::UserTest < ActiveSupport::TestCase
     found_user = User.find_by_profile_completion_token(wrong_purpose_token)
 
     assert_nil found_user
+  end
+
+  test "find_by_profile_completion_token returns nil after profile completion" do
+    # Make user incomplete
+    @user.update_column(:profile_completed_at, nil)
+    token = @user.profile_completion_token
+
+    # Verify token works before completion
+    assert_equal @user, User.find_by_profile_completion_token(token)
+
+    # Complete the profile (this resets the salt)
+    @user.complete_profile!
+
+    # Token should now be invalid due to salt reset
+    assert_nil User.find_by_profile_completion_token(token)
+  end
+
+  test "profile_completion_salt is included in token purpose" do
+    @user.update_column(:profile_completed_at, nil)
+    original_salt = @user.profile_completion_salt
+    token = @user.profile_completion_token
+
+    # Verify token works with original salt
+    found = User.find_by_profile_completion_token(token)
+    assert_equal @user, found
+
+    # Change the salt directly (simulate profile completion)
+    @user.update_column(:profile_completion_salt, SecureRandom.hex(8))
+
+    # Token should now be invalid
+    assert_nil User.find_by_profile_completion_token(token)
+  end
+
+  test "complete_profile! resets the salt" do
+    original_salt = @user.profile_completion_salt
+
+    @user.complete_profile!
+
+    assert_not_equal original_salt, @user.profile_completion_salt
   end
 
   test "profile_incomplete scope returns users without profile_completed_at" do

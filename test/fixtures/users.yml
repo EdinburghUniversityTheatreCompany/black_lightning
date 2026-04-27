@@ -38,6 +38,7 @@ admin:
   public_profile: false
   consented: <%= 5.day.ago.to_fs(:db) %>
   profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
+  profile_completion_salt: '<%= SecureRandom.hex(8) %>'
 
 user:
   id: 2
@@ -46,6 +47,7 @@ user:
   email: 'cyclops@cat.eye'
   consented: <%= 5.day.ago.to_fs(:db) %>
   profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
+  profile_completion_salt: '<%= SecureRandom.hex(8) %>'
 
 committee:
   id: 3
@@ -54,6 +56,7 @@ committee:
   email: 'yee@haw.howdy'
   consented: <%= 5.day.ago.to_fs(:db) %>
   profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
+  profile_completion_salt: '<%= SecureRandom.hex(8) %>'
 
 member:
   id: 4
@@ -62,6 +65,7 @@ member:
   email: 'impact@yucatan.gulf'
   consented: <%= 5.day.ago.to_fs(:db) %>
   profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
+  profile_completion_salt: '<%= SecureRandom.hex(8) %>'
 
 member_with_phone_number:
   id: 5
@@ -71,6 +75,7 @@ member_with_phone_number:
   phone_number: '123456789'
   consented: <%= 5.day.ago.to_fs(:db) %>
   profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
+  profile_completion_salt: '<%= SecureRandom.hex(8) %>'
 
 iolanthe_faerie:
   first_name: 'Iolianthe'
@@ -78,3 +83,4 @@ iolanthe_faerie:
   email: 'iolanthe@faerie.peer'
   consented: <%= 5.day.ago.to_fs(:db) %>
   profile_completed_at: <%= 5.day.ago.to_fs(:db) %>
+  profile_completion_salt: '<%= SecureRandom.hex(8) %>'

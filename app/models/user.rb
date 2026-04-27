@@ -36,6 +36,7 @@
 class User < ApplicationRecord
   before_save :unify_numbers
   before_save :ensure_calendar_token
+  before_save :ensure_profile_completion_salt
   before_validation :extract_student_id_from_email, if: :email_changed?
 
   rolify
@@ -120,7 +121,32 @@ class User < ApplicationRecord
   end
 
   def self.find_by_profile_completion_token(token)
-    find_signed(token, purpose: :profile_completion)
+    # Try to verify with message verifier directly
+    # The message verifier will deserialize the signed data which contains [user_id, salt]
+
+    verifier = Rails.application.message_verifier(:profile_completion)
+    payload = verifier.verified_message(token)
+    return nil unless payload
+
+    # payload should be a signed_id string that encodes the user id
+    # We need to extract the user_id and salt from it
+    # The signed_id is stored as a hash with the actual object encoded
+
+    # For now, let's try a simpler approach: try to find_signed with an incrementing salt search
+    # by iterating through all incomplete users (there shouldn't be many)
+    incomplete_users = where(profile_completed_at: nil)
+    incomplete_users.each do |user|
+      begin
+        found = find_signed(token, purpose: [ :profile_completion, user.profile_completion_salt ])
+        return found if found
+      rescue ActiveSupport::MessageVerifier::InvalidSignature
+        # This user's salt doesn't match, try next
+      end
+    end
+
+    nil
+  rescue StandardError
+    nil
   end
 
   def self.ransackable_attributes(auth_object = nil)
@@ -839,11 +865,12 @@ class User < ApplicationRecord
   end
 
   def complete_profile!
-    update!(profile_completed_at: Time.current, consented: Date.current)
+    # Reset salt to invalidate any existing tokens
+    update!(profile_completed_at: Time.current, consented: Date.current, profile_completion_salt: SecureRandom.hex(8))
   end
 
   def profile_completion_token
-    signed_id(purpose: :profile_completion, expires_in: 7.days)
+    signed_id(purpose: [ :profile_completion, profile_completion_salt ], expires_in: 7.days)
   end
 
   def send_welcome_email
@@ -859,6 +886,10 @@ class User < ApplicationRecord
 
   def ensure_calendar_token
     self.calendar_token ||= SecureRandom.base58(24)
+  end
+
+  def ensure_profile_completion_salt
+    self.profile_completion_salt ||= SecureRandom.hex(8)
   end
 
   def extract_student_id_from_email
