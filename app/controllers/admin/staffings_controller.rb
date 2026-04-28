@@ -257,12 +257,12 @@ class Admin::StaffingsController < AdminController
         helpers.append_to_flash(:success, "Thank you for choosing to staff #{@job.staffable.show_title} - #{@job.name} on #{(l @job.staffable.start_time, format: :short)}.")
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
-        # format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
+        format.json { render json: @job.to_json(include: { user: {}, staffable: {} }, methods: %I[js_start_time js_end_time]) }
       else
-        helpers.append_to_flash(:erorr, "There was an error signing up. Please contact the Front of House Manager") if flash[:error].blank?
+        helpers.append_to_flash(:error, "There was an error signing up. Please contact the Front of House Manager") if flash[:error].blank?
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
-        # format.json { render json: @job.errors, status: :unprocessable_entity }
+        format.json { render json: { error: flash[:error] }, status: :unprocessable_entity }
       end
     end
   end
