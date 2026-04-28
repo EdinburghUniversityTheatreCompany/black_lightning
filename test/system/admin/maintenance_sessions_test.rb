@@ -11,7 +11,7 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
     visit admin_maintenance_sessions_url
     assert_selector "h1", text: "Maintenance Sessions"
 
-    assert_text "REPLACE THIS WITH THE NAME OF A FIXTURE ITEM"
+    assert_text "2023-10-09"
   end
 
   test "should create Maintenance session" do
@@ -21,7 +21,7 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
     fill_in "Date", with: @admin_maintenance_session.date
     click_on "Create Maintenance session"
 
-    assert_text "The Maintenance session was successfully created"
+    assert_text "was successfully created."
   end
 
   test "should update Maintenance session" do
@@ -31,15 +31,15 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
     fill_in "Date", with: @admin_maintenance_session.date
     click_on "Update Maintenance session"
 
-    assert_text "The Maintenance session was successfully updated."
+    assert_text "was successfully updated."
   end
 
   test "should destroy Maintenance session" do
-    visit admin_maintenance_session_url(@admin_maintenance_session)
+    maintenance_session_to_destroy = maintenance_sessions(:no_attendances)
+    visit admin_maintenance_session_url(maintenance_session_to_destroy)
 
-    page.accept_confirm do
-      click_on "Destroy", match: :first
-    end
-    assert_text "The Maintenance session has been successfully destroyed."
+    click_on "Destroy", match: :first
+    find(".swal2-confirm").click
+    assert_text "has been successfully destroyed."
   end
 end
