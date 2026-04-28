@@ -39,7 +39,7 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
     visit admin_maintenance_session_url(maintenance_session_to_destroy)
 
     click_on "Destroy", match: :first
-    find(".swal2-confirm").click
+    click_button "Yes"
     assert_text "has been successfully destroyed."
   end
 end

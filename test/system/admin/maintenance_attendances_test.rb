@@ -40,7 +40,7 @@ class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
     visit admin_maintenance_attendance_url(@admin_maintenance_attendance)
 
     click_on "Destroy", match: :first
-    find(".swal2-confirm").click
+    click_button "Yes"
     assert_text "The Maintenance Attendance has been successfully destroyed."
   end
 end
