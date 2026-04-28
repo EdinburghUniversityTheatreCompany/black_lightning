@@ -78,10 +78,6 @@ ChaosRails::Application.routes.draw do
     get "resources/(*page)", to: "resources#page", as: :resources
 
     resources :events, only: [ :index, :show ] do
-      member do
-        get "xts", to: "events#find_by_xts_id"
-      end
-
       collection do
         get "debt_overview"
       end
@@ -97,13 +93,8 @@ ChaosRails::Application.routes.draw do
         end
       end
 
-      collection do
-        get "query_xts"
-      end
-
       member do
         patch "update_debt_settings", to: "shows#update_debt_settings"
-        get "xts_report"
         post "convert_to_season", to: "shows#convert_to_season"
         post "convert_to_workshop", to: "shows#convert_to_workshop"
       end

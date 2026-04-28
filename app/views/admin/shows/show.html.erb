@@ -1,10 +1,4 @@
 <% content_for :extra_show_actions do %>
-    <% if @show.xts_id && can?(:edit, @show) %>
-        <%= link_to xts_report_admin_show_path(@show), class: "btn btn-secondary" do %>
-            <i class='fas fa-shopping-basket' aria-hidden=”true”></i> XTS Report
-        <% end %>
-    <% end %>
-
     <%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn btn-secondary' %>
 
     <%= get_link Admin::Feedback, :index, link_text: 'Show Feedback', link_target: admin_show_feedbacks_path(@show), 

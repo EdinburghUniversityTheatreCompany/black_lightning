@@ -37,7 +37,7 @@ Details about reference links can be found on the [kramdown website](http://kram
 
 Inline links can be created as follows:
 
-    [This](http://xtspro.com/+/eutc/) is EUTC's XTSPro page.
+    [This](https://www.bedlamtheatre.co.uk) is Bedlam Theatre's website.
 
 If you're referring to a page that is on the Bedlam Website, you can use
 relative paths:
