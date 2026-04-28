@@ -7,8 +7,6 @@ import "./sweetalert"
 require('imports-loader?imports=default|jquery|jQuery!jquery-slimscroll')
 
 import './src/shared/md_editor'
-import './src/shared/select2'
-
 // Load all the stimulus controllers
 import "./controllers"
 
