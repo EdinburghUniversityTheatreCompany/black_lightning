@@ -226,7 +226,7 @@ class Admin::StaffingsController < AdminController
       if helpers.check_if_current_user_can_sign_up(current_user, @job.name)
         format.html # render sign_up_confirm.html.erb
       else
-        helpers.append_to_flash(:erorr, "There was an error signing up. Please contact the Front of House Manager") if flash[:error].blank?
+        helpers.append_to_flash(:error, "There was an error signing up. Please contact the Front of House Manager") if flash[:error].blank?
 
         format.html { redirect_to admin_staffing_path(@job.staffable) }
         # format.json { render json: @job.errors, status: :unprocessable_entity }
