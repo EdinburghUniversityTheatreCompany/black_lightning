@@ -16,7 +16,9 @@
   <meta name="viewport" content="initial-scale = 1.0" />
 </head>
 
-<body class="hold-transition sidebar-mini layout-fixed" data-controller="form-validator select">
+<body class="hold-transition sidebar-mini layout-fixed"
+      data-controller="konami-code form-validator select"
+      data-action="keydown@window->konami-code#keyDown">
   <div class="wrapper">
     <div class="preloader flex-column justify-content-center align-items-center">
       <img class="" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
