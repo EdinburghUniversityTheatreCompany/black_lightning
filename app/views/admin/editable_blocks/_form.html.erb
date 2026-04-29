@@ -16,17 +16,11 @@
       <%= f.input :version_note, label: "Edit summary", hint: "Briefly describe what you changed (optional)", input_html: { maxlength: 255 } %>
     <% end %>
 
-    <div class="well form-inline">
-      <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
+    <small class="d-block mb-2">
+      <strong>Images</strong> can be uploaded directly via the editor toolbar (image icon).<br>
+      <strong>Other files</strong> (PDFs, documents): upload via the Attachments section below, then link from the editor using <code>[link text](/attachments/attachmentname)</code>.
+    </small>
 
-      <br />
-
-      <small>
-        <strong>Images</strong> can be uploaded directly via the editor toolbar (image icon). <br />
-        <strong>Other files</strong> (PDFs, documents): upload via the Attachments section above, then link from the editor using <code>[link text](/attachments/attachmentname)</code>.
-      </small>
-    </div>
-  </div>
-
+    <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
   <% end %>
 <% end %>
