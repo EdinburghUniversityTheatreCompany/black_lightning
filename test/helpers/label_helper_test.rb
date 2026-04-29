@@ -3,7 +3,7 @@ require "test_helper"
 class LabelHelperTest < ActionView::TestCase
   test "sanitizes html" do
     message = "<faketag>Finbar<div> the <p></p>Viking"
-    label = generate_label("info", message)
+    label = generate_label("bg-info", message)
     assert_equal '<span class="badge bg-info text-dark">Finbar<div> the <p></p>Viking</div></span>', label
   end
 

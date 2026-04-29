@@ -17,11 +17,8 @@ module LinkHelper
     object_name ||= format_class_name(attribute_name.to_s, true)
     html_class ||= "btn btn-secondary #{object_name.parameterize.underscore}_add_button"
 
-    # Important 'link_to_add_association"-fact: It goes up two divs, and then adds it to the end. This is why it is wrapped in a div here.
-    # If you want to put it in a div yourself for whatever reason, you have to make that wrapping optional.
-    # There are some further specifics you should definitely check out here:
-    # https://github.com/nathanvda/cocoon#link_to_add_association
-    button = link_to_add_association add_button_text(object_name), form, attribute_name, class: html_class
+    button = button_tag(add_button_text(object_name), type: "button", class: html_class,
+                        data: { action: "nested-form#add" })
 
     "<div>#{button}</div>".html_safe
   end
@@ -31,9 +28,10 @@ module LinkHelper
   end
 
   def link_to_remove(form, link_text: nil, html_class: nil)
-    html_class ||= "btn btn-danger "
+    html_class ||= "btn btn-danger"
 
-    link_to_remove_association remove_button_text(link_text), form, class: html_class
+    button_tag(remove_button_text(link_text), type: "button", class: html_class,
+               data: { action: "nested-form#remove" })
   end
 
   def remove_button_text(text = nil)

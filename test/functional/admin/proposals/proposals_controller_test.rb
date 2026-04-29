@@ -48,7 +48,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
 
     assert_match 'class="badge bg-danger"', response.body
-    assert_match "In maintenance Debt", response.body
+    assert_match "In maintenance debt", response.body
 
     assert_match 'class="badge bg-danger">Has Debtors</span>', response.body, "The Has Debtors label is absent. Are you sure the label generation did not change? Are you sure one of the users is actually in debt (most likely because there is a maintenance debt label)?"
   end

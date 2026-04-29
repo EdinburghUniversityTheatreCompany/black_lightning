@@ -5,18 +5,8 @@ class Admin::HelpControllerTest < ActionController::TestCase
     sign_in users(:admin)
   end
 
-  test "should get kramdown" do
-    get :kramdown
-    assert_response :success
-  end
-
-  test "should get kramdown as text" do
-    get :kramdown, format: :text
-
-    assert_response :success
-  end
-
   test "should get venue location" do
     get :venue_location
+    assert_response :success
   end
 end

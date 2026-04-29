@@ -2,7 +2,7 @@ source "http://rubygems.org"
 
 ruby File.read(".ruby-version").strip
 
-gem "rails", "~> 8.0"
+gem "rails", "~> 8.1"
 
 gem "mysql2" #, github: "mickzijdel/mysql2", branch: "master"
 
@@ -21,10 +21,9 @@ gem "recaptcha"
 gem "rolify"
 gem "simple_form"
 
-gem "cocoon"
 gem "json"
 gem "kaminari"
-gem "kramdown"
+gem "commonmarker"
 
 gem "icalendar"
 
@@ -32,6 +31,7 @@ gem "daemons"
 gem "delayed_job_active_record"
 
 gem "solid_queue"
+gem "solid_cache"
 gem "mission_control-jobs"
 
 gem "caxlsx"
@@ -81,9 +81,7 @@ group :development, :test do
 
   # Adds support for Capybara system testing and selenium driver
   gem "capybara", ">= 2.15"
-  gem "selenium-webdriver"
-  # Easy installation and use of web drivers to run system tests with browsers
-  gem "webdrivers"
+  gem "selenium-webdriver", ">= 4.8.2"
 
   gem "factory_bot_rails"
 

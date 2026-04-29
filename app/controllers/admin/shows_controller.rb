@@ -35,62 +35,6 @@ class Admin::ShowsController < Admin::GenericEventsController
     end
   end
 
-  # It is only there for legacy purposes.
-  # :nocov:
-  def query_xts
-    username = Rails.application.config.xts[:username]
-    password = Rails.application.config.xts[:password]
-
-    uniq = Time.current.to_i
-
-    # ?uniq=1355693791607&includedatetimes=true&agents=boxoffice:9n2nf92kt04&agents=boxoffice:9n2nf92kt04|craig:insecure
-
-    xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/tickets/getshows?uniq=#{uniq}&includedatetimes=true&agents=#{username}:#{password}"
-
-    uri = URI.parse(xts_api_uri)
-
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-    request = Net::HTTP::Get.new(uri.request_uri)
-    response = http.request(request)
-    xml_data = response.body
-
-    doc = Nokogiri::XML(xml_data)
-
-    # Convert the xml into an array of hashes.
-    shows = []
-
-    doc.xpath("shows/showsummary").each do |element|
-      show = {}
-      element.children.each do |child|
-        show[child.name] = child.text
-      end
-      shows << show
-    end
-
-    shows = shows.select { |show| show["name"] == params[:name] } if params[:name]
-
-    render json: shows.to_json
-  end
-
-  def xts_report
-    xts_api_uri = "https://internal.bedlamtheatre.co.uk:8443/xts/v2/reports/show?showid=#{show.xts_id}"
-
-    uri = URI.parse(xts_api_uri)
-
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-
-    request = Net::HTTP::Get.new(uri.request_uri)
-    response = http.request(request)
-    data = response.body
-    send_data(data, filename: "#{show.name} - Sales Report.pdf", type: "application/pdf")
-  end
-  # :nocov:
-
   private
 
   # The show is never actually destroyed. The event just changes type.

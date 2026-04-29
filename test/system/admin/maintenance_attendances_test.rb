@@ -11,37 +11,36 @@ class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
     visit admin_maintenance_attendances_url
     assert_selector "h1", text: "Maintenance Attendances"
 
-    assert_text "REPLACE THIS WITH THE NAME OF A FIXTURE ITEM"
+    assert_text "Iolianthe Faerie"
   end
 
   test "should create Maintenance attendance" do
     visit admin_maintenance_attendances_url
     click_on "New Maintenance Attendance"
 
-    fill_in "Date", with: @admin_maintenance_attendance.date
-    fill_in "User", with: @admin_maintenance_attendance.user_id
+    select @admin_maintenance_attendance.maintenance_session.to_label.to_s, from: "Maintenance session"
+    select @admin_maintenance_attendance.user.name, from: "User"
     click_on "Create Maintenance attendance"
 
-    assert_text "The Maintenance attendance was successfully created"
+    assert_text "The Maintenance Attendance was successfully created."
   end
 
   test "should update Maintenance attendance" do
     visit admin_maintenance_attendance_url(@admin_maintenance_attendance)
     click_on "Edit", match: :prefer_exact
 
-    fill_in "Date", with: @admin_maintenance_attendance.date
-    fill_in "User", with: @admin_maintenance_attendance.user_id
+    select @admin_maintenance_attendance.maintenance_session.to_label.to_s, from: "Maintenance session"
+    select @admin_maintenance_attendance.user.name, from: "User"
     click_on "Update Maintenance attendance"
 
-    assert_text "The Maintenance attendance was successfully updated."
+    assert_text "The Maintenance Attendance was successfully updated."
   end
 
   test "should destroy Maintenance attendance" do
     visit admin_maintenance_attendance_url(@admin_maintenance_attendance)
 
-    page.accept_confirm do
-      click_on "Destroy", match: :first
-    end
-    assert_text "The Maintenance attendance has been successfully destroyed."
+    click_on "Destroy", match: :first
+    click_button "Yes"
+    assert_text "The Maintenance Attendance has been successfully destroyed."
   end
 end

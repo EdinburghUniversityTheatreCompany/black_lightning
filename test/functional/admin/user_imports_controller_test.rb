@@ -3,6 +3,13 @@ require "test_helper"
 class Admin::UserImportsControllerTest < ActionController::TestCase
   setup do
     sign_in users(:admin)
+    ActionController::Base.perform_caching = true
+    Rails.cache.clear
+  end
+
+  teardown do
+    ActionController::Base.perform_caching = false
+    Rails.cache.clear
   end
 
   # Authorization tests

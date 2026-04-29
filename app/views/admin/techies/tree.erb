@@ -1,7 +1,7 @@
 <% content_for :head do %>
-    <%= javascript_include_tag 'raphael-min.js', defer: true %>
-    <%= javascript_include_tag 'dracula_graffle.js', defer: true %>
-    <%= javascript_include_tag 'dracula_graph.js', defer: true %>
+    <%= javascript_include_tag 'raphael-min.js' %>
+    <%= javascript_include_tag 'dracula_graffle.js' %>
+    <%= javascript_include_tag 'dracula_graph.js' %>
 <% end %>
 
 <%= render('shared/quick_actions_card') do %>
@@ -20,47 +20,14 @@
     </div>
 </div>
 
-<div id="canvas" style="width: 940px; height: 1500px;"></div>
-<script defer>
-    document.addEventListener('DOMContentLoaded', function () {
-
-var g = new Graph();
-
-var render = function(renderer, node) {
-        /* the Raphael set is obligatory, containing all you want to display */
-        var text = renderer.text(node.point[0] + 10, node.point[1] + 10, node.label);
-        var dimensions = text.getBBox();
-
-        var set = renderer.set().push(
-            /* custom objects go here */
-            renderer.rect(node.point[0] - (dimensions.width)/2, node.point[1], dimensions.width + 20, dimensions.height + 10).attr({"fill": "#feb", r : "12px", "stroke-width" : node.distance == 0 ? "3px" : "1px" })).push(
-              text
-            );
-
-        text.toFront();
-        return set;
-    };
-
-/* add a simple node */
-<% @techies.each do |techie| %>
-g.addNode("<%= techie.id %>", { render:render, label: "<%= techie.name.html_safe %>" });
-<% end %>
-
-<% @techies.each do |techie| %>
-    <% techie.children.each do |child| %>
-        <% if @techies.include?(child) %>
-            g.addEdge("<%= techie.id %>", "<%= child.id %>", {directed: true});
-        <% end %>
-    <% end %>
-<% end %>
-
-/* layout the graph using the Spring layout implementation */
-var layouter = new Graph.Layout.Spring(g);
-layouter.layout();
-
-/* draw the graph using the RaphaelJS draw implementation */
-var renderer = new Graph.Renderer.Raphael('canvas', g, 940, 1500);
-renderer.draw();
-
-});
-</script>
+<%
+  graph_nodes = @techies.map { |t| { id: t.id.to_s, label: t.name } }
+  graph_edges = @techies.flat_map do |t|
+    t.children.select { |c| @techies.include?(c) }.map { |c| { from: t.id.to_s, to: c.id.to_s } }
+  end
+%>
+<div id="canvas"
+     style="width: 940px; height: 1500px;"
+     data-controller="techie-graph"
+     data-techie-graph-nodes-value="<%= graph_nodes.to_json %>"
+     data-techie-graph-edges-value="<%= graph_edges.to_json %>"></div>

@@ -1,4 +1,9 @@
 import { application } from "./application"
+import { definitionsFromContext } from "@hotwired/stimulus-webpack-helpers"
+
+// Auto-discover local controllers from the controllers folder
+const context = require.context(".", true, /_controller\.js$/)
+application.load(definitionsFromContext(context))
 
 // Auto-discover local controllers from the controllers folder
 const context = require.context(".", true, /.*_controller\.js$/)
