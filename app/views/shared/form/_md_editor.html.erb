@@ -4,15 +4,16 @@
     <%= f.label field, **input_field_args %>
   </div>
 
-  <div class="col-sm-9"
-       data-controller="markdown-editor"
-       data-markdown-editor-upload-url-value="<%= markdown_upload_path %>"
-       data-markdown-editor-item-type-value="<%= f.object.class.name %>"
-       data-markdown-editor-item-id-value="<%= f.object.id %>"
-       data-markdown-editor-height-value="<%= rows * 28 %>px">
-    <%= f.input_field field, class: "form-control", rows: rows, **input_field_args %>
-    <div class="invalid-feedback">
-      <%= f.full_error field %>
+  <div class="col-sm-9">
+    <div data-controller="markdown-editor"
+         data-markdown-editor-upload-url-value="<%= markdown_upload_path %>"
+         data-markdown-editor-item-type-value="<%= f.object.class.name %>"
+         data-markdown-editor-item-id-value="<%= f.object.id %>"
+         data-markdown-editor-height-value="<%= rows * 28 %>px">
+      <%= f.input_field field, class: "form-control", rows: rows, **input_field_args %>
+      <div class="invalid-feedback">
+        <%= f.full_error field %>
+      </div>
     </div>
     <%= yield if block_given? %>
   </div>
