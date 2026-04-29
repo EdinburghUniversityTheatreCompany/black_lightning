@@ -9,6 +9,11 @@ export default class extends Controller {
   connect() {
     // Graph, Graph.Layout.Spring, Graph.Renderer.Raphael are globals from Raphael/Dracula
     /* global Graph */
+    if (typeof Graph === "undefined") {
+      console.error("techie-graph: Raphael/Dracula libraries not loaded")
+      return
+    }
+
     const g = new Graph()
 
     const render = (renderer, node) => {
