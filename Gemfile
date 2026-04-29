@@ -23,7 +23,7 @@ gem "simple_form"
 
 gem "json"
 gem "kaminari"
-gem "kramdown"
+gem "commonmarker"
 
 gem "icalendar"
 

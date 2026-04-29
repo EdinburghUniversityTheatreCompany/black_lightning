@@ -7,20 +7,6 @@
 ##
 class Admin::HelpController < AdminController
   ##
-  # GET /admin/help/markdown
-  ##
-  def kramdown
-    @title = "kramdown Help"
-
-    respond_to do |format|
-      format.html # index.html.erb
-      format.text do
-        render inline: IO.read("#{Rails.root}/app/views/admin/help/kramdown.html.md")
-      end
-    end
-  end
-
-  ##
   # GET /admin/help/venue_location
   ##
   def venue_location

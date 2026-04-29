@@ -2,8 +2,8 @@ require "test_helper"
 
 class MarkdownControllerTest < ActionController::TestCase
   test "should generate preview" do
-    markdown = File.read(Rails.root.join("test/kramdown.md"))
-    html = File.read(Rails.root.join("test/kramdown.html"))
+    markdown = File.read(Rails.root.join("test/markdown.md"))
+    html = File.read(Rails.root.join("test/markdown.html"))
 
     assert_not_nil markdown
 

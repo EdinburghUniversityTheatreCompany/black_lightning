@@ -46,7 +46,7 @@ class Admin::EditableBlock < ApplicationRecord
 
   def cached_rendered_content
     Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}", expires_in: 7.days) do
-      Kramdown::Document.new(content || "", input: "BKramdown").to_html
+      ::Commonmarker.to_html(content || "", options: MdHelper::MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
     end
   end
 

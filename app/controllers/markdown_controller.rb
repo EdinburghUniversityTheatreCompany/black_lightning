@@ -32,8 +32,9 @@ class MarkdownController < ApplicationController
 
     item = resolve_item(params[:item_type], params[:item_id])
 
+    stem = File.basename(file.original_filename, ".*").parameterize.truncate(40, omission: "")
     attachment = Attachment.new(
-      name: "md-upload-#{SecureRandom.hex(16)}",
+      name: "md-upload-#{stem}-#{SecureRandom.hex(4)}",
       access_level: 2,
       item: item
     )

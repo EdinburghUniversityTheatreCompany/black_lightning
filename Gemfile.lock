@@ -144,6 +144,7 @@ GEM
     chronic (0.10.2)
     chunky_png (1.4.0)
     coffee-script-source (1.12.2)
+    commonmarker (2.8.1-x86_64-linux)
     concurrent-ruby (1.3.6)
     connection_pool (3.0.2)
     crass (1.0.6)
@@ -591,6 +592,7 @@ DEPENDENCIES
   caxlsx
   chronic
   coffee-script-source (= 1.12.2)
+  commonmarker
   cssbundling-rails
   csv
   daemons
@@ -611,7 +613,6 @@ DEPENDENCIES
   json
   kamal (~> 2.0)
   kaminari
-  kramdown
   leaflet-rails
   mini_magick
   mission_control-jobs

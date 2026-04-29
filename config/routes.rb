@@ -344,7 +344,7 @@ ChaosRails::Application.routes.draw do
     end
 
     namespace "help" do
-      %w[kramdown venue_location].each do |action|
+      %w[venue_location].each do |action|
         get action, action: action, as:  action, controller: "/admin/help"
       end
     end
