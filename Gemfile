@@ -36,7 +36,6 @@ gem "mission_control-jobs"
 
 gem "caxlsx"
 gem "roo"  # For reading xlsx files (membership imports)
-gem "leaflet-rails"
 gem "rqrcode"
 
 gem "silencer"

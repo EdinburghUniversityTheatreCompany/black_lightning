@@ -263,9 +263,6 @@ GEM
     kramdown-parser-gfm (1.1.0)
       kramdown (~> 2.0)
     language_server-protocol (3.17.0.5)
-    leaflet-rails (1.9.5)
-      actionpack (>= 4.2.0)
-      railties (>= 4.2.0)
     lint_roller (1.1.0)
     logger (1.7.0)
     loofah (2.25.1)
@@ -613,7 +610,6 @@ DEPENDENCIES
   json
   kamal (~> 2.0)
   kaminari
-  leaflet-rails
   mini_magick
   mission_control-jobs
   mysql2
