@@ -6,7 +6,6 @@ import "./sweetalert"
 // Use imports-loader to explicitly inject jQuery into slimscroll
 require('imports-loader?imports=default|jquery|jQuery!jquery-slimscroll')
 
-import './src/shared/md_editor'
 // Load all the stimulus controllers
 import "./controllers"
 

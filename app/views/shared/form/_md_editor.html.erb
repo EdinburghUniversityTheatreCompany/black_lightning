@@ -1,57 +1,19 @@
-<%# locals: (f:, field:, show_side_help: true, rows: 10, input_field_args: {}) %>
-
-<% # Use a unique ID in all navigation tabs so that there is no interference in navigation when there are multiple md_editors on one page. %>
-<% id = DateTime.current.strftime('%Q') %>
-
-<% hint = "Note: Text entered will be rendered using #{ link_to('kramdown', admin_help_kramdown_path, target: '_blank') }".html_safe %>
-
-<div class="row">
+<%# locals: (f:, field:, rows: 10, show_side_help: true, input_field_args: {}) %>
+<div class="form-group row">
   <div class="col-sm-3">
     <%= f.label field, **input_field_args %>
   </div>
 
-  <% # Store the ID so we can easily find it and replace it everywhere it appears when we insert copies for nested fields. %>
-  <div class="col-sm-9 tab-container md-editor" md-editor-id="<%=id %>">
-    <div class="row">
-      <div class="col-md">
-        <div class="tab-content">
-          <div id="input-field-<%= id %>" class="tab-pane active show" role="tabpanel">
-            <div class="form-group row">
-              <div class="col">
-                <%= f.input_field field, class: "form-control text md field", rows: rows,  **input_field_args %>
-                <%= f.hint field, hint: hint %>
-
-                <div class="invalid-feedback">
-                  <%= f.full_error field %>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div id="preview-<%= id %>" class="tab-pane md-editor-preview-tab-pane" role="tabpanel">
-            <div class="card">
-              <div class="card-body p-1 md-editor-preview-placeholder" id="preview-placeholder-<%= id %>">
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-auto">
-        <div class="nav nav-tabs">
-          <%- # BOOTSTRAP 5: Remove the data-toggle things, and generally adjust to bootstrap 5 (check bootstrap 5 docs). %>
-          <button class="nav-link preview-toggle" data-toggle="tab" data-target="#preview-<%= id %>"     data-bs-toggle="tab" data-bs-target="#preview-<%= id %>"      type="button" role="tab" data-preview-id="<%= id %>">Preview</button>
-          <button class="nav-link active"         data-toggle="tab" data-target="#input-field-<%= id %>" data-bs-toggle="tab" data-bs-target="#input-field-<%= id %>"  type="button" role="tab">Input</button>
-        </div>
-
-        <div class="yield">
-          <% if show_side_help %>
-            <%= render "shared/form/md_hints" %>
-          <% end %>
-
-          <%= yield %>
-        </div>
-      </div>
+  <div class="col-sm-9"
+       data-controller="markdown-editor"
+       data-markdown-editor-upload-url-value="<%= markdown_upload_path %>"
+       data-markdown-editor-item-type-value="<%= f.object.class.name %>"
+       data-markdown-editor-item-id-value="<%= f.object.id %>"
+       data-markdown-editor-height-value="<%= rows * 28 %>px">
+    <%= f.input_field field, class: "form-control", rows: rows, **input_field_args %>
+    <div class="invalid-feedback">
+      <%= f.full_error field %>
     </div>
+    <%= yield if block_given? %>
   </div>
 </div>
