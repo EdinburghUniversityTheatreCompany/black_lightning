@@ -338,6 +338,10 @@ export default class extends Controller {
           option.textContent = template.name
           list.appendChild(option)
         })
+
+        // TomSelect is initialized before this async fetch completes.
+        // Sync its internal option store from the now-populated <select>.
+        list.tomselect?.sync()
       })
       .catch((err) => {
         console.error("Failed to load template list:", err)
