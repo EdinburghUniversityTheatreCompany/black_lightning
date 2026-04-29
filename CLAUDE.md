@@ -1,4 +1,14 @@
+
 # Black Lightning - Claude Code Guidelines
+
+## Packages
+Use yarn for package management rather than npm or bun.
+
+The public facing website uses Bootstrap 5. The admin website currently uses Bootstrap 4.3 with AdminLTE but the plan is to migrate away.
+
+Use stimulus for all JavaScript sprinkles. We remain on jsbundling rather than importmaps
+
+## Maintain Documentation
 
 If you learn something about the project that would be useful context for other agents looking at the codebase, add it to this file at the end of your to do list.
 
