@@ -22,6 +22,11 @@ export default class extends Controller {
     this.cornified = false
   }
 
+  disconnect() {
+    this.indexValue = 0
+    this.cornified = false
+  }
+
   keyDown(event) {
     const key = event.key
 
