@@ -23,3 +23,9 @@
 @use '../admin/customisations';
 
 @use '../admin/adminlte';
+
+// Fancybox lightbox
+@use "@fancyapps/ui/dist/fancybox/fancybox";
+
+// Leaflet maps
+@use "leaflet/dist/leaflet";

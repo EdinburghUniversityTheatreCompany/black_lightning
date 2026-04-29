@@ -4,12 +4,7 @@
 <%# locals: (attachments:, include_item_link: false, include_header: true) -%>
 
 <% if attachments.any? then %>
-  <script type="text/javascript">
-    Fancybox.bind('[data-fancybox]', {
-      // Your custom options
-    });  
-  </script>
-
+<div data-controller="fancybox">
   <% if include_header%>
     <h3>Attachments</h3>
   <% end %>
@@ -21,6 +16,7 @@
       </div>
     <% end %>
   </div>
+</div>
 <% end %>
 
 <div class="mb-3"></div>

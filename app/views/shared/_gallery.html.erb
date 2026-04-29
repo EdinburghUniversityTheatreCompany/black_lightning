@@ -3,12 +3,7 @@
 
 
 <% if pictures.any? then %>
-  <script type="text/javascript">
-    Fancybox.bind('[data-fancybox]', {
-      // Your custom options
-    });  
-  </script>
-
+<div data-controller="fancybox">
 <div class="row">
   <div class="col">
     <% header_tag = "h#{header_size}"%>
@@ -44,6 +39,7 @@
       <% end %>
     </div>
   </div>
+</div>
 </div>
 <% end %>
 
