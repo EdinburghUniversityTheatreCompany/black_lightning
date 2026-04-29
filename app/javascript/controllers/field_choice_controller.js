@@ -3,7 +3,9 @@ import { Controller } from "@hotwired/stimulus"
 export default class extends Controller {
   toggle(event) {
     const radio = event.target
-    const fieldKey = radio.name.match(/\[(.+)\]/)[1]
+    const match = radio.name.match(/\[(.+)\]/)
+    if (!match) return
+    const fieldKey = match[1]
     const hiddenField = document.getElementById("hidden_" + fieldKey)
 
     if (radio.value === "source") {
