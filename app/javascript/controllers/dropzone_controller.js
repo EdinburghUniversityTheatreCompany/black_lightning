@@ -1,5 +1,5 @@
 import Dropzone from "dropzone";
-import { Controller } from "stimulus";
+import { Controller } from "@hotwired/stimulus";
 import { DirectUpload } from "@rails/activestorage";
 import {
   getMetaValue,
@@ -19,6 +19,11 @@ export default class extends Controller {
     this.hideFileInput();
     this.bindEvents();
     Dropzone.autoDiscover = false; // necessary quirk for Dropzone error in console
+  }
+
+  disconnect() {
+    this.dropZone?.destroy()
+    this.dropZone = null
   }
 
   // Private
