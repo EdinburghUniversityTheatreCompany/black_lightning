@@ -371,6 +371,7 @@ ChaosRails::Application.routes.draw do
   get "archives/(*page)", to: "archives#page", as: :archives
 
   post "markdown/preview", to: "markdown#preview"
+  post "markdown/upload", to: "markdown#upload", as: "markdown_upload"
 
   get "about", to: "about#page", as: :about_index
   get "about/(*page)", to: "about#page", as: :about

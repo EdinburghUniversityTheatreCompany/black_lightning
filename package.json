@@ -5,6 +5,7 @@
         "@rails/activestorage": "^8",
         "@rails/ujs": "^7.0.3-4",
         "@stimulus-components/rails-nested-form": "^5.0.0",
+        "@toast-ui/editor": "^3.2.2",
         "admin-lte": "^3.2.0",
         "autoprefixer": "^10.4.19",
         "babel-loader": "8.2.2",
