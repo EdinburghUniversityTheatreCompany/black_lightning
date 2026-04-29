@@ -1,7 +1,7 @@
 <%# locals: (f:, field: :user, all_users: can?(:add_non_members, Event), label: nil, wrapper: nil)%>
 <%# KEEP %>
 
-<%- # Enables ajax calls on the select2 to get the user names. %>
+<%# Enables AJAX autocomplete via the select Stimulus controller (Tom Select). %>
 <%- # Tries to get the current value of the field and make it the only item in the collection so the default is shown. %>
 <% coll = User.where(id: f.object.try(field).try(:id)) %>
 <%= f.association(field, collection: coll, label: label, wrapper: wrapper, input_html: { 

@@ -9,6 +9,12 @@
   $fa-font-path: "/webfonts"
 );
 
+// Tom Select (Bootstrap 5 theme) - replaces Select2
+@use "tom-select/dist/css/tom-select.bootstrap5";
+
+// Toast UI Editor
+@use "@toast-ui/editor/dist/toastui-editor";
+
 // NOTE THAT THINGS PLACED HERE DO NOT WORK FOR THE BACKEND
 // This file has to be at the top because it also loads Bootstrap 5.
 @use '../bootstrap5_customisations';

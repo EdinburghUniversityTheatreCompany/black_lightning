@@ -21,10 +21,9 @@ gem "recaptcha"
 gem "rolify"
 gem "simple_form"
 
-gem "cocoon"
 gem "json"
 gem "kaminari"
-gem "kramdown"
+gem "commonmarker"
 
 gem "icalendar"
 

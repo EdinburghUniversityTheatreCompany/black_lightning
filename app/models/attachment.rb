@@ -25,7 +25,7 @@
 class Attachment < ApplicationRecord
   include NameHelper
 
-  belongs_to :item, polymorphic: true
+  belongs_to :item, polymorphic: true, optional: true
 
   ALLOWED_CONTENT_TYPES = %w[
     application/pdf

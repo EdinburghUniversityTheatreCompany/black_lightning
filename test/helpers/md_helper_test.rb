@@ -47,7 +47,8 @@ class MdHelperTest < ActionView::TestCase
     expected_truncated_description = "This show was imported from the old website. If you are a..."
     assert_equal expected_truncated_description, truncate_markdown(archive_warning, 60)
 
-    description_with_comment = "<!-- it happened 2 years before 1980, idk when exactly -->Pineapple"
+    # CommonMark treats <!-- ... --> as an HTML block — the entire line is suppressed (unsafe: false)
+    description_with_comment = "<!-- it happened 2 years before 1980, idk when exactly -->\nPineapple"
     assert_equal "Pineapple", truncate_markdown(description_with_comment)
   end
 

@@ -44,11 +44,6 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal result, merge_hash(a, b)
   end
 
-  test "Get xts_widget" do
-    id = 2139
-    assert_match id.to_s, xts_widget(id)
-  end
-
   test "Get spark_seat_widget" do
     slug = "hexagon-finbar-pineapple-red"
     assert_match slug, spark_seat_widget(slug)

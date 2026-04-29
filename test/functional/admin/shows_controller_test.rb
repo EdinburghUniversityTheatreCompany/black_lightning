@@ -113,15 +113,15 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "should render add picture Cocoon template without image on edit" do
+  test "should render add picture nested-form template without image on edit" do
     @show = FactoryBot.create(:show)
 
     get :edit, params: { id: @show }
     assert_response :success
 
-    # Cocoon embeds a rendered template for new pictures in a data attribute.
+    # stimulus-rails-nested-form embeds the new-record template in a <template> tag.
     # A new empty picture has no image, so no image_tag should be rendered in it.
-    assert_match "data-association-insertion-template", response.body
+    assert_match "data-nested-form-target=\"template\"", response.body
     assert_no_match "missing.png", response.body
   end
 

@@ -1,13 +1,19 @@
 // FontAwesome - self-hosted
-@use "@fortawesome/fontawesome-free/scss/fontawesome" with (
-  $fa-font-path: "/webfonts"
+@use "@fortawesome/fontawesome-free/scss/fontawesome" with ($fa-font-path: "/webfonts"
 );
-@use "@fortawesome/fontawesome-free/scss/solid" with (
-  $fa-font-path: "/webfonts"
+@use "@fortawesome/fontawesome-free/scss/solid" with ($fa-font-path: "/webfonts"
 );
-@use "@fortawesome/fontawesome-free/scss/brands" with (
-  $fa-font-path: "/webfonts"
+@use "@fortawesome/fontawesome-free/scss/brands" with ($fa-font-path: "/webfonts"
 );
+
+// Tom Select (Bootstrap 4 theme) - replaces Select2.
+// Admin still uses Bootstrap 4.3 via AdminLTE; the BS5 theme breaks because it
+// references CSS variables (--bs-form-control-bg etc.) that BS4 doesn't expose.
+// Switch back to BS5 once AdminLTE is replaced in Phase 3.
+@use "tom-select/dist/css/tom-select.bootstrap4";
+
+// Toast UI Editor
+@use "@toast-ui/editor/dist/toastui-editor";
 
 @use '../swalCustomTheme';
 

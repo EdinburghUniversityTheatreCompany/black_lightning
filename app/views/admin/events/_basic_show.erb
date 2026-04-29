@@ -23,7 +23,6 @@
   slug:           event.slug,
   'ID' =>         (event.id if can?(:manage, event)),
   'SparkSeat Slug' => (event.spark_seat_slug if event.spark_seat_slug.present?),
-  'XTS ID' =>     (event.xts_id if event.xts_id.present?),
   is_public:      bool_text(event.is_public),
   proposal:       'No proposal linked',
   season:         event.season.present? ? get_link(event.season, :show) : 'Not part of a season',
