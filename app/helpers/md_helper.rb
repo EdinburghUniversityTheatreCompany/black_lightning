@@ -11,7 +11,7 @@ module MdHelper
     return "" if md.blank?
 
     html = ::Commonmarker.to_html(md, options: MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
-    Rails::Html::SafeListSanitizer.new.sanitize(html, tags: %w[
+    sanitized = Rails::Html::SafeListSanitizer.new.sanitize(html, tags: %w[
       p h1 h2 h3 h4 h5 h6 br hr
       em strong i b
       ul ol li
@@ -19,7 +19,8 @@ module MdHelper
       a img
       table thead tbody tfoot tr td th
       div span
-    ], attributes: %w[id class href src alt title width height style]).html_safe
+    ], attributes: %w[id class href src alt title width height style])
+    %(<div class="markdown-body">#{sanitized}</div>).html_safe
   end
 
   def render_plain(md)
