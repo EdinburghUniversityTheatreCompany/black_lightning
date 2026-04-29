@@ -7,10 +7,27 @@
   </p>
 <% end %>
 
-<%= f.simple_fields_for(association_name) do |nested_f| %>
-  <% render partial_name, f: nested_f %>
-<% end %>
+<div data-controller="nested-form">
+  <%= f.simple_fields_for(association_name) do |nested_f| %>
+    <div class="nested-form-wrapper" data-new-record="<%= nested_f.object.new_record? %>">
+      <%= render partial_name, f: nested_f %>
+      <%= nested_f.hidden_field :_destroy %>
+    </div>
+  <% end %>
 
-<% if display_link_to_add %>
-  <%= link_to_add f, association_name %>
-<% end %>
+  <div data-nested-form-target="target"></div>
+
+  <template data-nested-form-target="template">
+    <% association_class = f.object.class.reflect_on_association(association_name).klass %>
+    <%= f.simple_fields_for(association_name, association_class.new, child_index: "NEW_RECORD") do |nested_f| %>
+      <div class="nested-form-wrapper" data-new-record="true">
+        <%= render partial_name, f: nested_f %>
+        <%= nested_f.hidden_field :_destroy %>
+      </div>
+    <% end %>
+  </template>
+
+  <% if display_link_to_add %>
+    <%= link_to_add f, association_name %>
+  <% end %>
+</div>

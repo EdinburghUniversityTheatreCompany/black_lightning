@@ -53,22 +53,19 @@ function generatePreview(event) {
   });
 }
 
-// After a new nested_fields item is inserted using cocoon, we need to add the preview click handlers to the new item.
-$(document).on("cocoon:after-insert", function(e, insertedItem, originalEvent) {
-  // If there is no markdown editor in the inserted item, we don't need to do anything.
-  if (insertedItem[0].getElementsByClassName('md-editor').length === 0) {
-    return;
+// Watch for dynamically inserted nested form rows and reinitialise any markdown editors inside them.
+// Uses MutationObserver instead of the removed cocoon:after-insert jQuery event.
+new MutationObserver((mutations) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (node.nodeType !== Node.ELEMENT_NODE) continue
+      const editors = node.querySelectorAll?.(".md-editor")
+      if (!editors?.length) continue
+
+      const idToReplace = editors[0].getAttribute("md-editor-id")
+      const newId = new Date().getTime()
+      node.innerHTML = node.innerHTML.replace(new RegExp(idToReplace, "g"), newId)
+      addPreviewClickHandlersToButtonsIn(node)
+    }
   }
-
-  // Get the ID of the markdown editor in the inserted item. This is the ID used in the above script, so we need to replace it, or the navigation and preview for separate editors will interfere with each other.
-  const idToReplace = insertedItem[0].getElementsByClassName('md-editor')[0].getAttribute('md-editor-id');
-
-  // Set the newId to the current time in milliseconds, so it is unique on the page.
-  const newId = new Date().getTime();
-
-  // Update all instances of the old id (which would otherwise be the same for all templates) with the new id.
-  // This ID is different from the actual ID used by cocoon/nested fields. This ID is just used because we need
-  // to anchor to specific elements for the tabbing and preview, and the nestd field ID only applies to inputs.
-  insertedItem[0].innerHTML = insertedItem[0].innerHTML.replace(new RegExp(idToReplace, 'g'), newId);
-  addPreviewClickHandlersToButtonsIn(insertedItem[0]);
-});
+}).observe(document.body, { childList: true, subtree: true })

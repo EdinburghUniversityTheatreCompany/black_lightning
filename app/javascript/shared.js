@@ -15,5 +15,3 @@ Rails.start();
 
 require("@rails/activestorage").start()
 
-// Requires jQuery. There are vanilla js packages, but not as frequently maintained or downloaded.
-require("@nathanvda/cocoon")
