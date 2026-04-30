@@ -19,10 +19,23 @@ import { Controller } from "@hotwired/stimulus"
 //                                 action: "submit->staffing-signup#signUp",
 //                                 staffing_signup_job_id_value: job.id } } %>
 export default class extends Controller {
-  static values = { jobId: Number }
+  static values = { jobId: Number, confirmMessage: String }
 
-  signUp(event) {
+  async signUp(event) {
     event.preventDefault()
+
+    if (this.confirmMessageValue) {
+      const swalWithBootstrap = window.Swal.mixin({ buttonsStyling: true })
+      const result = await swalWithBootstrap.fire({
+        icon: "warning",
+        html: this.confirmMessageValue,
+        title: "Are you sure?",
+        showCancelButton: true,
+        confirmButtonText: "Yes",
+        cancelButtonText: "Cancel",
+      })
+      if (!result.value) return
+    }
 
     const form = this.element
     const button = form.querySelector("button, input[type=submit]")
