@@ -1,15 +1,11 @@
-<% content_for :head do %>
-  <%= javascript_include_tag "admin/membership_checker.js", defer: true %>
-<% end %>
-
 <%= display_block(@editable_block.name, false) %>
 
 <div class="row">
   <div class="col">
-    <form class="mt-3">
+    <form class="mt-3" data-controller="membership-checker" data-action="submit->membership-checker#submit">
       <% # BOOSTRAP NICETOHAVE: This form %>
       <div class="form-floating mb-3">
-        <input type="text" class="form-control" id="membershipSearch" name="search" placeholder="Finbar the Viking" autofocus="autofocus">
+        <input type="text" class="form-control" id="membershipSearch" name="search" placeholder="Finbar the Viking" autofocus="autofocus" data-membership-checker-target="input">
         <label for="membershipSearch">Membership Number or Member Name</label>
       </div>
 
