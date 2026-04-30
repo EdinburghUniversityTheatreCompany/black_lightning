@@ -647,6 +647,7 @@ DEPENDENCIES
   terser
   test-prof
   thruster
+  turbo-rails
   tzinfo-data
 
 RUBY VERSION

@@ -8,6 +8,7 @@ gem "mysql2" #, github: "mickzijdel/mysql2", branch: "master"
 
 gem "cssbundling-rails"
 gem "jsbundling-rails"
+gem "turbo-rails"
 gem "propshaft"
 
 gem "terser"
