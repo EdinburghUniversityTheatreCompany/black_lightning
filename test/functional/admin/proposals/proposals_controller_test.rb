@@ -136,7 +136,7 @@ class Admin::Proposals::ProposalsControllerTest < ActionController::TestCase
     assert_response :success
 
     # The label bit is necessary because otherwise it will find the attribute and always match, even when the label is not visibly rendered
-    assert_match "\"><p>#{question_text}</p></label>", response.body
+    assert_match %r{<p>#{question_text}</p>\n?</div></label>}, response.body
   end
 
   test "should update proposal" do
