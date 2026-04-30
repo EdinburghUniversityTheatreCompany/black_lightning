@@ -7,10 +7,11 @@
 Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src :self
-    policy.script_src :self
-    policy.style_src :self, :unsafe_inline
+    policy.script_src :self, "https://pretix.eu", :unsafe_inline, :unsafe_eval
+    policy.style_src :self, :unsafe_inline, "https://eutc.azureedge.net"
     policy.img_src :self, :data, :https
     policy.font_src :self
+    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk"
     # Specify URI for violation reports
     # policy.report_uri "/csp-violation-report-endpoint"
   end
