@@ -12,7 +12,7 @@ class KonamiCodeTest < ApplicationSystemTestCase
 
     find("body").send_keys(*KONAMI_SEQUENCE)
 
-    assert_selector ".__cornify_unicorn", wait: 3
+    assert_selector ".__itify_head", wait: 3
   end
 
   test "konami code shows unicorn on admin site" do
@@ -21,6 +21,6 @@ class KonamiCodeTest < ApplicationSystemTestCase
 
     find("body").send_keys(*KONAMI_SEQUENCE)
 
-    assert_selector ".__cornify_unicorn", wait: 3
+    assert_selector ".__itify_head", wait: 3
   end
 end

@@ -1,25 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
-import cornify_add from "../src/vendor/cornify"
+import itify_add, { itify_init } from "../src/vendor/itify"
 
 // Easter egg: listens for the Konami code sequence on window keydown events.
-// Once the full sequence is entered, calls into the locally-vendored cornify
-// library to add a unicorn/rainbow to the page. Subsequent keypresses add more
-// cornifications.
-//
-// Cornify is bundled locally (see app/javascript/src/vendor/cornify.js) rather
-// than loaded from cornify.com so the page can run under a strict CSP without
-// allowing remote script-src.
+// Image URLs are resolved server-side by ItifyHelper and passed in via
+// data-konami-code-heads-value / data-konami-code-pineapple-value so images
+// are handled by Sprockets (correct fingerprinting) and not fetched until
+// the easter egg is triggered.
 //
 // Usage:
 //   <body data-controller="konami-code"
-//         data-action="keydown@window->konami-code#keyDown">
+//         data-action="keydown@window->konami-code#keyDown"
+//         data-konami-code-heads-value="<%= itify_head_urls.to_json %>"
+//         data-konami-code-pineapple-value="<%= asset_path('easter_egg/pineapple.png') %>">
 export default class extends Controller {
-  static values = { index: Number }
+  static values = { index: Number, heads: Array, pineapple: String }
 
   connect() {
     this.indexValue = 0
     this.konamiKeys = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"]
     this.cornified = false
+    itify_init(this.headsValue, this.pineappleValue)
   }
 
   disconnect() {
@@ -30,16 +30,15 @@ export default class extends Controller {
   keyDown(event) {
     const key = event.key
 
-    // Once cornified, every subsequent keypress adds another unicorn/rainbow.
     if (this.cornified) {
-      cornify_add()
+      itify_add()
       return
     }
 
     if (key === this.konamiKeys[this.indexValue]) {
       this.indexValue++
       if (this.indexValue === this.konamiKeys.length) {
-        cornify_add()
+        itify_add()
         this.cornified = true
       }
     } else {

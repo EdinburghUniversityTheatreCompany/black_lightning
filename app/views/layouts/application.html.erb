@@ -16,7 +16,10 @@
   <%= meta_tags(@meta).html_safe %>
 </head>
 
-<body data-controller="konami-code form-validator select" data-action="keydown@window->konami-code#keyDown">
+<body data-controller="konami-code form-validator select"
+      data-action="keydown@window->konami-code#keyDown"
+      data-konami-code-heads-value="<%= itify_head_urls.to_json %>"
+      data-konami-code-pineapple-value="<%= asset_path('easter_egg/pineapple.png') %>">
   <%= render "layouts/header" %>
 
   <div class="container">
