@@ -1,0 +1,1 @@
+Please read `CLAUDE.md` in the repository root before doing anything else in the project

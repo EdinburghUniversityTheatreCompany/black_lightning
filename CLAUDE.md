@@ -1,7 +1,10 @@
 
 # Black Lightning - Claude Code Guidelines
 
+
 ## Packages
+Ruby on Rails 8.1 
+
 Use yarn for package management rather than npm or bun.
 
 The public facing website uses Bootstrap 5. The admin website currently uses Bootstrap 4.3 with AdminLTE but the plan is to migrate away.
@@ -15,12 +18,9 @@ If you learn something about the project that would be useful context for other 
 ## URL as state
 Always maintain the URL as state with readable parameters where possible for GET actions.
 
-## Turbo
-This project does not use turbo. Please do not use turbostreams or similar.
-
 ## Link Helper
 
-Always use this for links, including external and non-model links. this keeps styling consistent
+Always use the link helper for links, including external and non-model links. this keeps styling consistent
 
 **Use `get_link` from `LinkHelper` for button-style links to model resources.**
 
