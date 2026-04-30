@@ -115,7 +115,7 @@
                        <%= "checked" unless avatar_select_source %>>
                 <label class="form-check-label" for="keep_target_avatar">
                   <% if target.avatar.attached? %>
-                    <%= image_tag target.avatar.variant(square_thumb_variant(50)), class: "rounded" %>
+                    <%= render 'shared/image', image: target.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
                   <% else %>
                     <em class="text-muted">(no avatar)</em>
                   <% end %>
@@ -133,7 +133,7 @@
                        <%= "checked" if avatar_select_source %>>
                 <label class="form-check-label" for="keep_source_avatar">
                   <% if source.avatar.attached? %>
-                    <%= image_tag source.avatar.variant(square_thumb_variant(50)), class: "rounded" %>
+                    <%= render 'shared/image', image: source.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
                   <% else %>
                     <em class="text-muted">(no avatar)</em>
                   <% end %>

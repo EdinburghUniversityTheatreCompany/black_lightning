@@ -4,7 +4,7 @@
   <% categories.each do |category| %>
     <div class="col">
       <div class="card h-100">
-        <% img = image_tag category.fetch_image.variant(square_thumb_variant(300)), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(square_thumb_variant(300))) %>
+        <% img = capture do %><%= render 'shared/image', image: category.fetch_image, variant: square_thumb_variant(300), image_options: { class: 'card-img-top h-auto' } %><% end %>
         <%= get_link category, :show, link_text: img %>
 
         <div class="card-body">

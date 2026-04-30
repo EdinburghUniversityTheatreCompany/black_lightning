@@ -6,9 +6,9 @@
         attributes: [:description, :image, :access_level, :picture_tags]
     } do %>
     <% if f.object.persisted? %>
-      <%= image_tag f.object.fetch_image.variant(thumb_variant), class: "img-thumbnail" %>
+      <%= render 'shared/image', image: f.object.fetch_image, variant: thumb_variant, eager_load: false, image_options: { class: "img-thumbnail" } %>
     <% elsif f.object.image.attached? && f.object.image.blob.persisted? %>
-      <%= image_tag f.object.image.variant(thumb_variant), class: "img-thumbnail" %>
+      <%= render 'shared/image', image: f.object.image, variant: thumb_variant, eager_load: false, image_options: { class: "img-thumbnail" } %>
       <%= f.hidden_field :image, value: f.object.image.blob.signed_id %>
     <% end %>
     <br>

@@ -25,8 +25,9 @@
       <div class="col">
         <div class="card h-100">
           <% url = link_to_admin_events ? [:admin, item[:event]] : item[:event] %>
-          <% img = image_tag(active_storage_proxy_url(item[:event].fetch_image.variant(medium_variant)), { class: 'card-img-top h-auto' }.merge(variant_width_and_height_html(thumb_variant_public))) %>
-          <%= link_to(img, url) %>
+          <%= link_to url do %>
+            <%= render 'shared/image', image: item[:event].fetch_image, variant: medium_variant, proxy: true, image_options: { class: 'card-img-top h-auto' } %>
+          <% end %>
 
           <div class="card-body d-flex flex-column">
             <%= link_to(item[:event].name_and_author, url, class: 'card-title') %>

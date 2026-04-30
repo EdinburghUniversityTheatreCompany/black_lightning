@@ -14,11 +14,12 @@
       <% pictures.includes(image_attachment: :blob).each do |picture| %>
         <div class="col">
           <div class="card h-100 mb-0">
-            <% img = image_tag(active_storage_proxy_url(picture.fetch_image.variant(medium_variant)), { class: "card-img-top h-auto" }.merge(variant_width_and_height_html(medium_variant))) %>
             <% lightbox_url = active_storage_proxy_url(picture.fetch_image.variant(large_display_variant)) %>
             <% download_url = active_storage_proxy_url(picture.fetch_image) %>
 
-            <%= link_to img, lightbox_url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" %>
+            <%= link_to lightbox_url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" do %>
+              <%= render 'shared/image', image: picture.fetch_image, variant: medium_variant, proxy: true, image_options: { class: "card-img-top h-auto" } %>
+            <% end %>
 
             <div class="card-text m-2">
                 <% gallery_name = picture.gallery_name %>
