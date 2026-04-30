@@ -8,8 +8,8 @@
     <%= f.input :is_active %>
     <%= f.input :ordering, hint: 'The lower the number, the earlier it will appear.' %>
 
-    <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'The aspect ratio should be the same for all items in the same carousel.' %>
+    <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'The carousel enforces a fixed aspect ratio: images will be cropped or letterboxed. For best results, upload images close to the configured ratio.' %>
 
-    <%= f.input :url, hint: 'URL for the destination when clicking the carousel image.'%>
+    <%= f.input :url, hint: 'URL for the destination when clicking the carousel image.' %>
   <% end %>
 <% end %>

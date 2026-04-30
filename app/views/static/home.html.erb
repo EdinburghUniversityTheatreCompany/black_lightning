@@ -5,7 +5,12 @@
 
 <div class="row">
   <div class="col-md-8">
-    <%= render 'shared/carousel', id: 'homeCarousel', carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items) %>
+    <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
+    <%= render 'shared/carousel',
+          id: 'homeCarousel',
+          carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items),
+          aspect_ratio: carousel_config[:aspect_ratio]&.join("/"),
+          fit_mode: carousel_config.fetch(:fit_mode, "cover") %>
 
     <div class="card mt-3">
       <div class="card-header">

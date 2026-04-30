@@ -1,6 +1,6 @@
-<%# locals: (id:, carousel_items:) -%>
+<%# locals: (id:, carousel_items:, aspect_ratio: nil, fit_mode: "cover") -%>
 
-<div id="<%= id %>" class="carousel carousel-dark slide" data-bs-ride="carousel">
+<div id="<%= id %>" class="carousel carousel-dark slide" data-bs-ride="carousel" data-controller="carousel-equalizer">
   <div class="carousel-indicators">
     <% carousel_items.each_with_index do |item, index| %>
       <button type="button" data-bs-target="#<%= id %>" data-bs-slide-to="<%= index %>" aria-label="<%= item[:title] %>" <%= 'class="active" aria-current="true"'.html_safe if index == 0 %>></button>
@@ -10,15 +10,17 @@
   <div class="carousel-inner">
     <% carousel_items.each_with_index do |item, index| %>
       <div class="carousel-item <%= 'active' if index == 0 %>" data-bs-interval="6000">
-        <% img = render('shared/image', image: item[:image].presence || item.image, variant: slideshow_variant, proxy: true) %>
+        <div class="carousel-image-wrapper<%= " carousel-image-wrapper--#{fit_mode}" if aspect_ratio %>" style="<%= "aspect-ratio: #{aspect_ratio};" if aspect_ratio %>">
+          <% img = render('shared/image', image: item[:image].presence || item.image, variant: slideshow_variant, proxy: true) %>
 
-        <% if item[:url].present? %>
-          <%= link_to(img, item[:url]) %>
-        <% else %>
-          <%= img %>
-        <% end %>
+          <% if item[:url].present? %>
+            <%= link_to(img, item[:url]) %>
+          <% else %>
+            <%= img %>
+          <% end %>
+        </div>
 
-        <div class="carousel-caption-below d-block card w-100">
+        <div class="carousel-caption-below d-block card w-100" data-carousel-equalizer-target="caption">
           <div class="card-body">
             <h5><%= item[:url].present? ? link_to(item[:title], item[:url]) : item[:title] %></h5>
             <p><%= item[:tagline] %></p>
