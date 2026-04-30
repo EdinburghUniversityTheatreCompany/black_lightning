@@ -1,5 +1,4 @@
 import swal from 'sweetalert2/dist/sweetalert2.js'
-import Rails from '@rails/ujs';
 import './alerts'
 
 window.Swal = swal;
@@ -29,25 +28,3 @@ const PersistentToast = Swal.mixin({
 window.Toast = Toast;
 window.PersistentToast = PersistentToast;
 
-Rails.confirm = function (message, element) {
-  const swalWithBootstrap = swal.mixin({
-    buttonsStyling: true,
-  });
-
-  swalWithBootstrap
-    .fire({
-      icon: 'warning',
-      html: message,
-      title: "Are you sure?",
-      showCancelButton: true,
-      confirmButtonText: "Yes",
-      cancelButtonText: "Cancel",
-    })
-    .then((result) => {
-      if (result.value) {
-        console.log("sweetalert finished");
-        element.removeAttribute("data-confirm");
-        element.click();
-      }
-    });
-};

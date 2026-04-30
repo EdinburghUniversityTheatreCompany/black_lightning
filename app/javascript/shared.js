@@ -9,8 +9,8 @@ require('imports-loader?imports=default|jquery|jQuery!jquery-slimscroll')
 // Load all the stimulus controllers
 import "./controllers"
 
-import Rails from '@rails/ujs';
-Rails.start();
+import { Turbo } from "@hotwired/turbo-rails";
+Turbo.session.drive = false;
 
 require("@rails/activestorage").start()
 
