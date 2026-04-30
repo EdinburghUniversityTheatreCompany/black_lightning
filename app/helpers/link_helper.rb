@@ -94,7 +94,19 @@ module LinkHelper
     # Removes prepending pencil tags and such.
     title ||= strip_tags(link_text).strip
 
-    link = link_to(link_text, link_target, class: html_class, method: http_method, data: confirm_data, title: title, target: target)
+    if http_method.nil? || http_method == :get
+      link = link_to(link_text, link_target, class: html_class, data: (confirm_data || {}), title: title, target: target)
+    else
+      confirm_message = confirm_data&.dig(:turbo_confirm)
+      form_data = confirm_message.present? ? {
+        controller: "confirm",
+        action: "submit->confirm#confirm",
+        confirm_message_value: confirm_message
+      } : {}
+      link = button_to(link_text.html_safe, link_target, method: http_method,
+                       class: html_class, title: title,
+                       form: { style: "display:contents", data: form_data })
+    end
 
     link = wrap_in_tags(link, wrap_tag) if wrap_tag
 
@@ -183,7 +195,7 @@ module LinkHelper
   end
 
   def get_default_link_target(object, action, namespace, anchor, query_params)
-    query_params.merge(anchor: anchor) if anchor.present?
+    query_params = query_params.merge(anchor: anchor) if anchor.present?
 
     params = [ namespace, object ]
 
@@ -200,7 +212,7 @@ module LinkHelper
 
     confirm_data = {
       title: title,
-      confirm: confirm,
+      turbo_confirm: confirm,
       verify: verify
     }
 
@@ -208,7 +220,7 @@ module LinkHelper
     if action == :destroy
       name = get_object_name(object, include_class_name: true, include_the: true)
       confirm_data[:title] ||= "Deleting #{name}"
-      confirm_data[:confirm] ||= "Are you sure you want to delete #{name}?"
+      confirm_data[:turbo_confirm] ||= "Are you sure you want to delete #{name}?"
     end
 
     confirm_data
