@@ -55,7 +55,7 @@
 
             <p class="card-text"><small class="text-muted"><%= l(news_item.publish_date, format: :longy) %> by <%= news_item.author.name(@current_user) %></small></p>
 
-            <p class="card-text"><%= truncate_markdown(news_item.body, 140) %></p>
+            <p class="card-text"><%= render_plain(news_item.preview) %></p>
 
             <p class="card-text"><%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %></p>
           </li>

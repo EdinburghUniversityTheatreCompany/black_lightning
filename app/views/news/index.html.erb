@@ -14,7 +14,7 @@
   header: news.title,
   paragraphs: [
     { content: l(news.publish_date, format: :longy), small: true },
-    { content: news.preview }
+    { content: render_plain(news.preview) }
   ],
   button_text: 'Read Full Article'
   } }
