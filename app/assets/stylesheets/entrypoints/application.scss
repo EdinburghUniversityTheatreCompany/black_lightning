@@ -1,12 +1,12 @@
 // FontAwesome - self-hosted
 @use "@fortawesome/fontawesome-free/scss/fontawesome" with (
-  $fa-font-path: "/webfonts"
+  $fa-font-path: "webfonts"
 );
 @use "@fortawesome/fontawesome-free/scss/solid" with (
-  $fa-font-path: "/webfonts"
+  $fa-font-path: "webfonts"
 );
 @use "@fortawesome/fontawesome-free/scss/brands" with (
-  $fa-font-path: "/webfonts"
+  $fa-font-path: "webfonts"
 );
 
 // Tom Select (Bootstrap 5 theme) - replaces Select2
