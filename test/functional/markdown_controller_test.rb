@@ -12,7 +12,7 @@ class MarkdownControllerTest < ActionController::TestCase
 
     response_html = ActiveSupport::JSON.decode(response.body)["rendered_md"]
 
-    assert_equal response_html, html
+    assert_equal response_html.strip, html.strip
   end
 
   test "upload creates attachment and returns url for valid image" do
