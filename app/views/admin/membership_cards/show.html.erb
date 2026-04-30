@@ -9,8 +9,14 @@
 </p>
 
 <% if request.remote_ip == "79.77.20.249" %>
-  <%= link_to "Print Receipt", "http://192.168.1.254:8179/print/#{@card.card_number}", method: :post, class: "btn btn-primary", remote: true %>
+  <%= button_tag "Print Receipt",
+      type: "button",
+      class: "btn btn-primary",
+      data: { controller: "print", print_url_value: "http://192.168.1.254:8179/print/#{@card.card_number}", action: "click->print#send" } %>
 <% end %>
-<%= link_to "Print Stall Receipt", "http://localhost:5000/print/#{@card.card_number}", method: :post, class: "btn btn-primary", remote: true %>
+<%= button_tag "Print Stall Receipt",
+    type: "button",
+    class: "btn btn-primary",
+    data: { controller: "print", print_url_value: "http://localhost:5000/print/#{@card.card_number}", action: "click->print#send" } %>
 
 <%= link_to "Print Card", admin_membership_card_generate_card_path(@card), class: "btn btn-secondary" %>
