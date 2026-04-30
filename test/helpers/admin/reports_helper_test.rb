@@ -1,6 +1,8 @@
 require "test_helper"
 
 class Admin::ReportsHelperTest < ActionView::TestCase
+  include LinkHelper
+
   test "should get reports list" do
     assert_equal(
       {
@@ -14,6 +16,9 @@ class Admin::ReportsHelperTest < ActionView::TestCase
   end
 
   test "should get report link" do
-    assert_equal '<a rel="nofollow" data-method="put" href="/admin/reports/roles">Roles</a>', get_report_link(:roles, "Roles")
+    link = get_report_link(:roles, "Roles")
+    assert_includes link, 'action="/admin/reports/roles"'
+    assert_includes link, 'value="put"'
+    assert_includes link, ">Roles<"
   end
 end

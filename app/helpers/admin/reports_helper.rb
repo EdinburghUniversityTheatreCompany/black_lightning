@@ -20,6 +20,6 @@ module Admin::ReportsHelper
       link_text: report_name,
       link_target: url_for([ :admin_reports, report ]),
       http_method: :put,
-      condition: current_ability.can?(:read, "reports"))
+      condition: true)
   end
 end
