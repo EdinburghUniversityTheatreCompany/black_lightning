@@ -18,8 +18,8 @@ class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
     visit admin_maintenance_attendances_url
     click_on "New Maintenance Attendance"
 
-    select @admin_maintenance_attendance.maintenance_session.to_label.to_s, from: "Maintenance session"
-    select @admin_maintenance_attendance.user.name, from: "User"
+    tom_select @admin_maintenance_attendance.maintenance_session.to_label.to_s, from: "Maintenance session"
+    tom_select @admin_maintenance_attendance.user.name, from: "User"
     click_on "Create Maintenance attendance"
 
     assert_text "The Maintenance Attendance was successfully created."
@@ -29,8 +29,8 @@ class Admin::MaintenanceAttendancesTest < ApplicationSystemTestCase
     visit admin_maintenance_attendance_url(@admin_maintenance_attendance)
     click_on "Edit", match: :prefer_exact
 
-    select @admin_maintenance_attendance.maintenance_session.to_label.to_s, from: "Maintenance session"
-    select @admin_maintenance_attendance.user.name, from: "User"
+    tom_select @admin_maintenance_attendance.maintenance_session.to_label.to_s, from: "Maintenance session"
+    tom_select @admin_maintenance_attendance.user.name, from: "User"
     click_on "Update Maintenance attendance"
 
     assert_text "The Maintenance Attendance was successfully updated."

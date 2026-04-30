@@ -34,7 +34,7 @@ class FormValidatorTest < ApplicationSystemTestCase
     visit new_admin_news_path
 
     # Submit with an empty title to force a server-side error.
-    click_button "Save"
+    click_button "Create News"
 
     # The server re-renders the form with .is-invalid on the title input.
     assert_selector "input#event_name.is-invalid", wait: 5
