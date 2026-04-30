@@ -5,7 +5,7 @@
   <% if current_user.present? %>
     <% if current_user.has_role?('Member') %>
       <p>
-        If you've recently renewed your membership, you might need to <%= link_to "log out", destroy_user_session_path, method: :delete %> and log back in again to regain access to members only pages.
+        If you've recently renewed your membership, you might need to <%= button_to "log out", destroy_user_session_path, method: :delete, class: "btn btn-link p-0 align-baseline", form: { style: "display:contents" } %> and log back in again to regain access to members only pages.
       </p>
     <% else %>
       <p>

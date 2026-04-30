@@ -12,11 +12,17 @@
     Copy
   </button>
   <%= link_to "Subscribe", webcal_url, class: "btn btn-primary" %>
-  <%= link_to "Regenerate link",
-              regenerate_calendar_token_path,
+  <%= button_to "Regenerate link", regenerate_calendar_token_path,
               method: :post,
-              data: { confirm: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?" },
-              class: "btn btn-danger" %>
+              class: "btn btn-danger",
+              form: {
+                style: "display:contents",
+                data: {
+                  controller: "confirm",
+                  action: "submit->confirm#confirm",
+                  confirm_message_value: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?"
+                }
+              } %>
 </div>
 <p class="text-muted small mb-3">Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.</p>
 

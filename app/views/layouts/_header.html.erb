@@ -44,7 +44,7 @@
 									<% if navbar_item[:method].blank? || navbar_item[:method] == :get %>
 										<%= link_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: navbar_item_class) %>
 									<% else %>
-										<%= button_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: navbar_item_class) %>
+										<%= button_to(navbar_item[:title], navbar_item[:path], method: navbar_item[:method], class: navbar_item_class, form: { style: "display:contents" }) %>
 									<% end %>
 								</li>
 							<% end %>
