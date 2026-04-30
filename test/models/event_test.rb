@@ -258,4 +258,39 @@ class EventTest < ActionView::TestCase
     assert_not season.valid?
     assert_includes season.errors[:end_date], "must be after or equal to start date"
   end
+
+  test "rejects slug with spaces" do
+    event = FactoryBot.build(:event, slug: "my event slug")
+    assert_not event.valid?
+    assert event.errors[:slug].any?
+  end
+
+  test "rejects slug with uppercase letters" do
+    event = FactoryBot.build(:event, slug: "My-Event")
+    assert_not event.valid?
+    assert event.errors[:slug].any?
+  end
+
+  test "rejects slug with special characters" do
+    [ "slug<tag>", "slug&amp", "slug/path", "slug?query", "slug#hash" ].each do |bad_slug|
+      event = FactoryBot.build(:event, slug: bad_slug)
+      assert_not event.valid?, "Expected #{bad_slug.inspect} to be invalid"
+      assert event.errors[:slug].any?, "Expected slug errors for #{bad_slug.inspect}"
+    end
+  end
+
+  test "rejects slug with leading or trailing hyphen" do
+    event = FactoryBot.build(:event, slug: "-leading-hyphen")
+    assert_not event.valid?
+    assert event.errors[:slug].any?
+
+    event = FactoryBot.build(:event, slug: "trailing-hyphen-")
+    assert_not event.valid?
+    assert event.errors[:slug].any?
+  end
+
+  test "accepts valid slug with lowercase letters numbers and hyphens" do
+    event = FactoryBot.build(:event, slug: "my-event-2024")
+    assert event.valid?
+  end
 end

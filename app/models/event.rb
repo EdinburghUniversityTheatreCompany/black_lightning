@@ -45,6 +45,7 @@ class Event < ApplicationRecord
   include VideoLinkItem
   include MdHelper
   include DebtManagement
+  include Sluggable
 
   has_paper_trail
   resourcify
@@ -255,6 +256,8 @@ class Event < ApplicationRecord
     # If name changed, only update if current slug looks auto-generated from old name
     if name_changed? && slug.present?
       old_name = name_was&.to_url
+      # For new records name_was is nil, so treat any pre-set slug as manually set
+      return if old_name.nil?
       # Only update if the current slug matches what would have been auto-generated from the old name
       # This indicates it was auto-generated, not manually set
       unless slug == old_name || slug.start_with?("#{old_name}-")

@@ -22,6 +22,8 @@
 # == Schema Information End
 #++
 class News < ApplicationRecord
+  include Sluggable
+
   resourcify
 
   ##
@@ -83,6 +85,8 @@ class News < ApplicationRecord
     # If title changed, only update if current slug looks auto-generated from old title
     if title_changed? && slug.present?
       old_title = title_was&.to_url
+      # For new records title_was is nil, so treat any pre-set slug as manually set
+      return if old_title.nil?
       # Only update if the current slug matches what would have been auto-generated from the old title
       # This indicates it was auto-generated, not manually set
       unless slug == old_title || slug.start_with?("#{old_title}-")
