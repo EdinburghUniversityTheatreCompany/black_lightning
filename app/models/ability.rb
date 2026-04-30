@@ -96,8 +96,6 @@ class Ability
     can :read, News, show_public: true
     can :read, Event, is_public: true
 
-    can :read, Review
-
     # Guests can see all Event Tags.
     can :read, EventTag
 
@@ -119,6 +117,8 @@ class Ability
     can :show, Attachment, access_level: 2
     can :show, VideoLink, access_level: 2
     can :show, Picture, access_level: 2
+
+    can :read, Review, event: { is_public: true }
 
     # Stop if the user is not logged in.
     return if user.nil?
@@ -170,6 +170,7 @@ class Ability
     team_member_roles_that_can_update_shows = %w[Director Producer Co-Producer Assistant Producer]
     team_member_roles_that_can_update_shows.each do |role|
       can %I[read update], Show, team_members: { position: role, user_id: user.id }
+      can %I[read create update delete], Review, event: { team_members: { position: role, user_id: user.id } }
     end
 
     can :read, Admin::MaintenanceDebt, user_id: user.id

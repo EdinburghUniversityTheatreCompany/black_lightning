@@ -288,6 +288,35 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(other_show, "show where they are a hexagon", hexagon_ability, [], allowed_actions + forbidden_actions)
   end
 
+  test "guests can only read reviews for public shows" do
+    ability = Ability.new(nil)
+
+    public_review  = FactoryBot.create(:review, event: FactoryBot.create(:show, is_public: true))
+    private_review = FactoryBot.create(:review, event: FactoryBot.create(:show, is_public: false))
+
+    assert  ability.can?(:read, public_review),     "Guests cannot read reviews for public shows"
+    assert  ability.cannot?(:read, private_review),  "Guests can read reviews for private shows"
+  end
+
+  test "users have the correct review permissions" do
+    show   = FactoryBot.create(:show, is_public: false, team_member_count: 1)
+    review = FactoryBot.create(:review, event: show)
+
+    team_member = show.team_members.sample
+
+    %w[Director Producer].each do |position|
+      team_member.update!(position: position)
+      ability = Ability.new(team_member.user)
+      allowed = %I[show read update edit create delete destroy]
+      helper_test_actions(review, "review for show where they are #{position}", ability, allowed, [])
+    end
+
+    other_show   = FactoryBot.create(:show, is_public: false)
+    other_review = FactoryBot.create(:review, event: other_show)
+    ability = Ability.new(team_member.user)
+    helper_test_actions(other_review, "review for a show they are not on", ability, [], %I[show read update edit create delete destroy])
+  end
+
   test "users have the correct debt permissions" do
     allowed_actions = %I[show]
     forbidden_actions = %I[index read update edit delete destroy create new]
