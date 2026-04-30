@@ -222,6 +222,24 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal target_email, @target_user.reload.email, "Target should keep its real email"
   end
 
+  test "absorb with keep_from_source email succeeds" do
+    source_email_to_preserve = @source_user.email
+
+    result = @target_user.absorb(@source_user, keep_from_source: [ "email" ])
+
+    assert result[:success], "Absorb should succeed when preserving the source user's email: #{result[:errors]}"
+    assert_equal source_email_to_preserve, @target_user.reload.email
+  end
+
+  test "absorb with email from targetsucceeds" do
+    target_email_to_preserve = @target_user.email
+
+    result = @target_user.absorb(@source_user)
+
+    assert result[:success], "Absorb should succeed when preserving the target user's email: #{result[:errors]}"
+    assert_equal target_email_to_preserve, @target_user.reload.email
+  end
+
   # Field preference tests (keep_from_source parameter)
 
   test "absorb with keep_from_source name copies name from source" do
