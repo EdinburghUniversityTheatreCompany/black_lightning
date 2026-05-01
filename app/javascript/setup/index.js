@@ -1,8 +1,6 @@
 // Import jQuery setup first - this exposes jQuery globally before other plugins load
+// (needed by the old admin.js/login stack; can be removed once login is migrated)
 import './jquery-global'
-
-// Plugins that depend on global jQuery
-import "jquery-slimscroll"
 
 // Load all the stimulus controllers
 import "../controllers"
