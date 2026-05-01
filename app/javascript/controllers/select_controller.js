@@ -105,8 +105,10 @@ export default class extends Controller {
     const plugins = []
     if (allowClear) { plugins.push("clear_button") }
 
+    const theme = window.location.pathname.startsWith("/admin") ? "default" : "bootstrap5"
+
     const options = {
-      theme: "bootstrap5",
+      theme,
       allowEmptyOption: allowClear,
       placeholder,
       plugins,
