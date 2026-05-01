@@ -23,11 +23,15 @@ class Admin::VersionHistoriesController < AdminController
     @diff = @parent_record.diff_for_version(@version)
   end
 
+  ALLOWED_PARENT_MODELS = %w[EditableBlock].freeze
+
   private
 
   def load_parent_record
     parent_param = request.path_parameters.keys.find { |k| k.to_s.end_with?("_id") && k != :id }
     parent_class_name = parent_param.to_s.chomp("_id").classify
+
+    raise ActionController::RoutingError.new("Not found") unless ALLOWED_PARENT_MODELS.include?(parent_class_name)
 
     # Try Admin-namespaced model first (since this controller is in the admin namespace),
     # then fall back to non-namespaced model.
