@@ -1,4 +1,5 @@
 require "test_helper"
+require "cgi"
 
 class ProposalsMailerTest < ActionMailer::TestCase
   test "should send added_to_proposal for new" do
@@ -15,7 +16,7 @@ class ProposalsMailerTest < ActionMailer::TestCase
         assert_equal "Added to Bedlam Theatre Proposal - #{proposal.show_title}", email.subject
 
         assert_match "The proposal was submitted by #{updater.name}", email.text_part.to_s
-        assert_match "The proposal was submitted by #{updater.name}", email.html_part.to_s
+        assert_match "The proposal was submitted by #{CGI.escapeHTML(updater.name)}", email.html_part.to_s
       end
     end
   end
@@ -31,6 +32,6 @@ class ProposalsMailerTest < ActionMailer::TestCase
     email = ProposalsMailer.added_to_proposal(proposal, updater, team_member, false).deliver_now
 
     assert_match "You have been added by #{updater.name}", email.text_part.to_s
-    assert_match "You have been added by #{updater.name}", email.html_part.to_s
+    assert_match "You have been added by #{CGI.escapeHTML(updater.name)}", email.html_part.to_s
   end
 end
