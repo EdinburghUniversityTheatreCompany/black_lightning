@@ -14,7 +14,7 @@
               confirm_message_value: "Are you sure you want to log out?"
             }
           } do %>
-        <i class="nav-icon fas <%= item[:fa_icon] %>"></i>
+        <i class="nav-icon fa-solid <%= item[:fa_icon] %>"></i>
         <p><%= item[:title] %></p>
       <% end %>
     </li>
@@ -24,10 +24,10 @@
 
     <li class="nav-item <%= 'menu-open' if is_active_category %>">
         <a href="#" class="nav-link <%= 'active' if is_active_category %>">
-            <i class="nav-icon fas fa-solid <%= item[:fa_icon] %>"></i>
+            <i class="nav-icon fa-solid <%= item[:fa_icon] %>"></i>
             <p>
                 <%= item[:title] %>
-                <i class="right fas fa-angle-left"></i>
+                <i class="right fa-solid fa-angle-left"></i>
             </p>
         </a>
         <ul class="nav nav-treeview">
@@ -35,7 +35,7 @@
             <% is_active = @current_path == subitem[:path] %>
             <li class="nav-item">
                 <a href="<%=subitem[:path]%>" class="nav-link <%='active' if is_active %>">
-                    <i class="fas <%= subitem[:fa_icon] %> nav-icon"></i>
+                    <i class="fa-solid <%= subitem[:fa_icon] %> nav-icon"></i>
                     <p><%= subitem[:title] %></p>
                 </a>
             </li>

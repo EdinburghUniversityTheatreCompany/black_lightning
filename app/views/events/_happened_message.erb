@@ -2,7 +2,7 @@
 
 <% if event.end_date.present? && event.end_date < Date.current %>
   <p class="alert alert-info">
-    <i class="fas fa-info-circle fa-large" aria-hidden=”true”></i>
+    <i class=”fa-solid fa-info-circle fa-large” aria-hidden=”true”></i>
     This <%= event_type %> finished on <%= l event.end_date, format: :longy %>, and this page is being kept for archival purposes only.
   </p>
 <% end %>
