@@ -8,8 +8,6 @@
             data: { 'slug-generator-target': 'name', action: 'input->slug-generator#nameChanged' }
           } %>
 
-      <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12 %>
-
       <%= f.input :slug, input_html: {
             id: 'event_slug',
             data: { 'slug-generator-target': 'slug', action: 'input->slug-generator#slugChanged' }
@@ -21,5 +19,7 @@
     <%= f.input :show_public, hint: 'Display this news item on the publicly visible part of the website?' %>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image %>
+
+    <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12 %>
   <% end %>
 <% end %>

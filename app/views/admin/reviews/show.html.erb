@@ -1,9 +1,10 @@
 <% fields = {
-  reviewer: @review.reviewer_with_organisation,
+  reviewer: @review.reviewer,
+  organisation: @review.organisation,
   rating: star_rating(@review.rating),
   review_date: l(@review.review_date, format: :longy),
-  event: get_link(@review.event, :show),
   original_review: @review.url.present? ? link_to(@review.url, @review.url) : nil,
+  event: get_link(@review.event, :show),
   body: render_markdown(@review.body),
 } %>
 

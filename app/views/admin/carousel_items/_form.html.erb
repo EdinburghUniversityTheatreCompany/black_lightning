@@ -7,9 +7,8 @@
     <%= f.input :carousel_name, collection: CarouselItem::CAROUSEL_NAMES, include_blank: false %>
     <%= f.input :is_active %>
     <%= f.input :ordering, hint: 'The lower the number, the earlier it will appear.' %>
+    <%= f.input :url, hint: 'URL for the destination when clicking the carousel image.' %>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'The carousel enforces a fixed aspect ratio: images will be cropped or letterboxed. For best results, upload images close to the configured ratio.' %>
-
-    <%= f.input :url, hint: 'URL for the destination when clicking the carousel image.' %>
   <% end %>
 <% end %>

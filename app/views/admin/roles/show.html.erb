@@ -31,8 +31,8 @@
 <% content_for :extra_show_actions do %>
   <%= get_link @role, :archive, link_text: 'Archive Role', http_method: :put, html_class: 'btn btn-secondary',
       confirm: "Archiving #{@role.name}", detail: "This will create a new role labelled with the current academic year ('#{@role.name} #{academic_year_shorthand}') and will move all users to it, while leaving all permissions on this role." %>
-  
-  <% # Only show the purge button if this role can be purged. %>
+
+  <%# Only show the purge button if this role can be purged. %>
   <% if !Role::NON_PURGEABLE_ROLES.include?(@role.name.downcase.strip) %>
     <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
       confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>

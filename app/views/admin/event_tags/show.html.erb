@@ -1,7 +1,9 @@
-<% fields = { 
+<% fields = {
   name: @event_tag.name,
   ordering: @event_tag.ordering,
-  description: { type: 'markdown', markdown: @event_tag.description } 
+  description: { type: 'markdown', markdown: @event_tag.description },
+  recommended_maintenance_debts: @event_tag.recommended_maintenance_debts,
+  recommended_staffing_debts: @event_tag.recommended_staffing_debts
 } %>
 
 <% content_for :extra_show_actions do %>

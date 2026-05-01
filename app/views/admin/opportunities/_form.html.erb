@@ -15,9 +15,8 @@
     <%= f.input :title %>
 
     <%= f.input :expiry_date %>
+    <%= f.input :show_email, hint: "Turning this on will result in your email (#{current_user.email}) being publicly visible. If you do not want this, please include an alternative method to contact you in the description." %>
 
     <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12 %>
-
-    <%= f.input :show_email, hint: "Turning this on will result in your email (#{current_user.email}) being publicly visible. If you do not want this, please include an alternative method to contact you in the description." %>
   <% end %>
 <% end %>
