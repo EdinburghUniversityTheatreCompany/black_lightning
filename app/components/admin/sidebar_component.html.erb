@@ -1,0 +1,44 @@
+<aside class="sidebar w-64 bg-sidebar-bg text-sidebar-text flex flex-col h-full shrink-0"
+       data-admin--sidebar-target="sidebar">
+  <%# Brand %>
+  <div class="p-4 border-b border-white/10">
+    <a href="/admin/" class="block">
+      <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_single-line-white-for-red.png"
+           alt="Bedlam Theatre" class="h-8 w-auto">
+    </a>
+  </div>
+
+  <%# User panel %>
+  <div class="p-4 border-b border-white/10 flex items-center gap-3">
+    <img src="/images/userdef.png" class="w-8 h-8 rounded-full" alt="User avatar">
+    <span class="text-sm text-white/80"><%= user_display_name %></span>
+  </div>
+
+  <%# Navigation %>
+  <nav class="flex-1 overflow-y-auto py-2">
+    <a href="/admin/"
+       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/10 <%= 'bg-primary text-white' if @current_path == '/admin' || @current_path == '/admin/' %>">
+      <i class="fas fa-home w-4" aria-hidden="true"></i>
+      Home
+    </a>
+
+    <% @nav_items.each do |category| %>
+      <details class="group" <%= "open" if category_open?(category) %>>
+        <summary class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer hover:bg-white/10 list-none">
+          <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
+          <span class="flex-1"><%= category[:title] %></span>
+          <i class="fas fa-chevron-right text-xs transition-transform group-open:rotate-90" aria-hidden="true"></i>
+        </summary>
+        <div class="pl-4">
+          <% (category[:children] || []).each do |item| %>
+            <a href="<%= item[:path] %>"
+               class="flex items-center gap-2 px-4 py-1.5 text-sm hover:bg-white/10 <%= 'text-white font-medium active' if active_item?(item) %>">
+              <i class="fas <%= item[:fa_icon] %> w-4 text-xs" aria-hidden="true"></i>
+              <%= item[:title] %>
+            </a>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+  </nav>
+</aside>
