@@ -1,5 +1,6 @@
 <% content_for :head do %>
-<%= stylesheet_link_tag "admin", media: "all" %>
+<%= vite_client_tag %>
+  <%= vite_stylesheet_tag "admin.scss" %>
 <% end %>
 
 <div class="container">
@@ -18,19 +19,19 @@
         </div>
 
         <div class="form-actions mb-3">
-          <%= f.button :submit, "Log in", class: "btn btn-primary"%>
+          <%= f.button :submit, "Log in", class: "btn btn-primary" %>
         </div>
         <% end %>
 
-        <hr />
+        <hr>
 
         <%= render "devise/shared/links" %>
 
         <p style="font-size: x-small; line-height: normal;">
           By logging in, you agree that this website may store both a session cookie to allow you to log in, and any
           other cookies including tracking cookies.
-          <br />
-          For more information, please see the <%= link_to 'Privacy Policy', static_path('privacy_policy')%>.
+          <br>
+          For more information, please see the <%= link_to 'Privacy Policy', static_path('privacy_policy') %>.
         </p>
       </div>
 

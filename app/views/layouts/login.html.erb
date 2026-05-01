@@ -3,21 +3,23 @@
 
 <head>
   <title><%= "#{@title}" unless @title.nil? %></title>
-  <%= javascript_include_tag "application", "admin", "shared", defer: true %>
+  <%= vite_client_tag %>
+  <%= vite_javascript_tag "application", "admin" %>
 
-  <%= stylesheet_link_tag    "admin", media: "all" %>
+  <%= vite_stylesheet_tag "admin.scss" %>
+
   <script src="https://kit.fontawesome.com/4a12ad4883.js" crossorigin="anonymous"></script>
 
   <%= csrf_meta_tags %>
 
   <%= yield :head %>
 
-  <meta name="viewport" content="initial-scale = 1.0" />
+  <meta name="viewport" content="initial-scale = 1.0">
 </head>
 
 <body class="hold-transition login-page" data-controller="form-validator">
 
-      
+
     <div class="login-box">
         <!-- /.login-logo -->
         <div class="card card-outline card-danger">

@@ -1,7 +1,8 @@
 <% @hide_alert = true %>
 
 <% content_for :head do %>
-  <%= stylesheet_link_tag "admin", media: "all" %>
+  <%= vite_client_tag %>
+  <%= vite_stylesheet_tag "admin.scss" %>
 <% end %>
 
 <div class="container">
