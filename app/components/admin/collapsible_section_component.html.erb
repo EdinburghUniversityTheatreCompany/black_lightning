@@ -1,13 +1,13 @@
 <div class="card <%= @card_class %>"
      data-controller="collapsible"
      data-collapsible-open-value="<%= @start_open %>">
-  <div class="card-header <%= @header_class %>">
+  <div class="card-header <%= @header_class %>" data-action="click->collapsible#toggle" style="cursor: pointer;">
     <span class="card-title"><%= @title %></span>
     <% if @title_right %>
       <%= @title_right %>
     <% end %>
     <div class="card-tools">
-      <button type="button" class="btn btn-tool" data-action="collapsible#toggle">
+      <button type="button" class="btn btn-tool" tabindex="-1">
         <i class="fas fa-minus" aria-hidden="true"></i>
       </button>
     </div>
