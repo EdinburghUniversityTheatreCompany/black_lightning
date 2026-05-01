@@ -4,7 +4,7 @@ class AdminController < ApplicationController
   before_action :check_consented!, if: :user_signed_in?
   before_action :add_breadcrumbs
 
-  layout "admin"
+  layout "admin_new"
 
   private
 
