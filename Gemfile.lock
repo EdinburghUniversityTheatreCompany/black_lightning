@@ -1,5 +1,5 @@
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
     action_text-trix (2.1.18)
       railties
@@ -126,6 +126,9 @@ GEM
     bullet (8.1.1)
       activesupport (>= 3.0.0)
       uniform_notifier (~> 1.11)
+    bundler-audit (0.9.3)
+      bundler (>= 1.2.0)
+      thor (~> 1.0)
     byebug (13.0.0)
       reline (>= 0.6.0)
     cancancan (3.6.1)
@@ -602,6 +605,7 @@ DEPENDENCIES
   brakeman
   breadcrumbs_on_rails
   bullet
+  bundler-audit (~> 0.9.3)
   byebug
   cancancan
   capybara (>= 2.15)

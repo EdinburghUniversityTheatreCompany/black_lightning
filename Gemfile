@@ -1,4 +1,4 @@
-source "http://rubygems.org"
+source "https://rubygems.org"
 
 ruby File.read(".ruby-version").strip
 
@@ -122,3 +122,5 @@ gem "thruster"
 
 gem "bcrypt_pbkdf"
 gem "ed25519"
+
+gem "bundler-audit", "~> 0.9.3", group: :development
