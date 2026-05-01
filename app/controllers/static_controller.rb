@@ -1,15 +1,21 @@
 class StaticController < ApplicationController
   skip_authorization_check
 
+  ALLOWED_PAGES = %w[accessibility black_lightning contact on_fire press privacy_policy student_theatre welcome_week].freeze
+
   # This is a catch-all for the pages that do not have explicitly defined routes.
   def show
-    begin
-      render "static/#{params[:page]}"
-    rescue
-      Rails.logger.error "Could not find the page at #{request.fullpath}"
+    page = params[:page]
 
-      raise(ActionController::RoutingError.new("This page could not be found."))
+    unless ALLOWED_PAGES.include?(page)
+      Rails.logger.error "Could not find the page at #{request.fullpath}"
+      raise ActionController::RoutingError.new("This page could not be found.")
     end
+
+    render "static/#{page}"
+  rescue ActionView::MissingTemplate
+    Rails.logger.error "Could not find the page at #{request.fullpath}"
+    raise ActionController::RoutingError.new("This page could not be found.")
   end
 
   def home
