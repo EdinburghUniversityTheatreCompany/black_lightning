@@ -1,0 +1,3 @@
+<%= simple_form_for(record, url: "#") do |f| %>
+  <%= render Admin::MdEditorComponent.new(f: f, field: :bio, input_field_args: { label: "About You" }) %>
+<% end %>
