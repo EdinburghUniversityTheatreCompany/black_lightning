@@ -3,7 +3,6 @@ import { Controller } from "@hotwired/stimulus";
 import { DirectUpload } from "@rails/activestorage";
 import {
   getMetaValue,
-  toArray,
   findElement,
   removeElement,
   insertAfter
@@ -115,7 +114,6 @@ class DirectUploadController {
   }
 
   uploadRequestDidProgress(event) {
-    const element = this.source.element;
     const progress = (event.loaded / event.total) * 100;
     findElement(
       this.file.previewTemplate,

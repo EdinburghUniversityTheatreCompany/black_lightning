@@ -6,27 +6,27 @@
 // Call itify_init(headsArray, pineappleUrl) once on controller connect before
 // calling itify_add().
 
-var itify_count = 0
-var HEADS = []
-var PINEAPPLE_URL = null
+let itify_count = 0
+let HEADS = []
+let PINEAPPLE_URL = null
 
-var itify_init = function (heads, pineappleUrl) {
+const itify_init = function (heads, pineappleUrl) {
   HEADS = Array.isArray(heads) ? heads : []
   PINEAPPLE_URL = pineappleUrl || null
   itify_count = 0
 }
 
-var itify_add = function () {
+const itify_add = function () {
   if (HEADS.length === 0) {
-    console.warn('[itify] No head images available. Check ItifyHelper and data-konami-code-heads-value.')
+    console.warn('[itify] No head images available. Check ItifyHelper and data-konami-code-heads-value.') // eslint-disable-line no-console
     return
   }
 
   itify_count += 1
 
-  var showGrandHead = itify_count === 15
+  const showGrandHead = itify_count === 15
 
-  var div = document.createElement('div')
+  const div = document.createElement('div')
   div.style.position = 'fixed'
   div.className = '__itify_head'
   div.style.zIndex = showGrandHead ? '143143143' : '143143'
@@ -38,13 +38,13 @@ var itify_add = function () {
     div.style.top = '50%'
     div.style.left = '50%'
   } else {
-    var angle = Math.round(Math.random() * 10 - 5)
+    const angle = Math.round(Math.random() * 10 - 5)
     div.style.top = Math.round(Math.random() * 100) + '%'
     div.style.left = Math.round(Math.random() * 100) + '%'
     div.style.transform += ' rotate(' + angle + 'deg)'
   }
 
-  var img = document.createElement('img')
+  const img = document.createElement('img')
   img.style.opacity = '0'
   img.style.transition = 'all .1s linear'
   img.style.maxHeight = '200px'
@@ -53,13 +53,13 @@ var itify_add = function () {
   img.src = HEADS[Math.floor(Math.random() * HEADS.length)]
 
   div.onmouseover = function () {
-    var size = 1 + Math.round(Math.random() * 10) / 100
-    var a = Math.round(Math.random() * 20 - 10)
+    const size = 1 + Math.round(Math.random() * 10) / 100
+    const a = Math.round(Math.random() * 20 - 10)
     img.style.transform = 'rotate(' + a + 'deg) scale(' + size + ',' + size + ')'
   }
   div.onmouseout = function () {
-    var size = 0.9 + Math.round(Math.random() * 10) / 100
-    var a = Math.round(Math.random() * 6 - 3)
+    const size = 0.9 + Math.round(Math.random() * 10) / 100
+    const a = Math.round(Math.random() * 6 - 3)
     img.style.transform = 'rotate(' + a + 'deg) scale(' + size + ',' + size + ')'
   }
 
@@ -74,9 +74,9 @@ var itify_add = function () {
   itify_updatecount()
 }
 
-var itify_updatecount = function () {
-  var id = '__itify_count'
-  var p = document.getElementById(id)
+const itify_updatecount = function () {
+  const id = '__itify_count'
+  let p = document.getElementById(id)
 
   if (p == null) {
     p = document.createElement('p')
@@ -97,9 +97,9 @@ var itify_updatecount = function () {
   p.innerHTML = itify_count === 1 ? 'You ITified!' : 'You ITified ' + itify_count + ' times!'
 }
 
-var itify_activate_terminal = function () {
+const itify_activate_terminal = function () {
   if (!document.getElementById('__itify_css')) {
-    var style = document.createElement('style')
+    const style = document.createElement('style')
     style.id = '__itify_css'
     style.textContent = [
       'body.itified::before {',
@@ -127,21 +127,21 @@ var itify_activate_terminal = function () {
 
   document.getElementsByTagName('body')[0].classList.add('itified')
 
-  var words = ['Deployed', 'Optimised', 'Refactored', 'Compiled', 'Patched', 'Shipped', 'Debugged', 'Merged']
-  var level = 6
+  const words = ['Deployed', 'Optimised', 'Refactored', 'Compiled', 'Patched', 'Shipped', 'Debugged', 'Merged']
+  let level = 6
   while (level >= 1) {
-    var headers = document.getElementsByTagName('h' + level)
-    for (var i = 0; i < headers.length; i++) {
+    const headers = document.getElementsByTagName('h' + level)
+    for (let i = 0; i < headers.length; i++) {
       headers[i].innerHTML = words[Math.floor(Math.random() * words.length)] + ' ' + headers[i].innerHTML
     }
     level -= 1
   }
 }
 
-var itify_add_pineapple_button = function () {
+const itify_add_pineapple_button = function () {
   if (document.getElementById('__itify_pineapple_button')) return
 
-  var button = document.createElement('div')
+  const button = document.createElement('div')
   button.id = '__itify_pineapple_button'
   button.onclick = itify_click_pineapple_button
   button.style.position = 'fixed'
@@ -151,7 +151,7 @@ var itify_add_pineapple_button = function () {
   button.setAttribute('aria-label', 'Hide the IT committee')
 
   if (PINEAPPLE_URL) {
-    var img = document.createElement('img')
+    const img = document.createElement('img')
     img.src = PINEAPPLE_URL
     img.alt = 'Pineapple button'
     img.style.maxHeight = '150px'
@@ -168,21 +168,21 @@ var itify_add_pineapple_button = function () {
   document.getElementsByTagName('body')[0].appendChild(button)
 }
 
-var itify_click_pineapple_button = function () {
-  var body = document.getElementsByTagName('body')[0]
+const itify_click_pineapple_button = function () {
+  const body = document.getElementsByTagName('body')[0]
 
-  var heads = document.getElementsByClassName('__itify_head')
+  const heads = document.getElementsByClassName('__itify_head')
   while (heads.length > 0) {
     heads[0].parentNode.removeChild(heads[0])
   }
 
-  var count = document.getElementById('__itify_count')
+  const count = document.getElementById('__itify_count')
   if (count) count.parentNode.removeChild(count)
 
-  var button = document.getElementById('__itify_pineapple_button')
+  const button = document.getElementById('__itify_pineapple_button')
   if (button) button.parentNode.removeChild(button)
 
-  var css = document.getElementById('__itify_css')
+  const css = document.getElementById('__itify_css')
   if (css) css.parentNode.removeChild(css)
 
   body.classList.remove('itified')

@@ -47,9 +47,6 @@ export default class extends Controller {
   #insertQueue = []
   // The item currently waiting to be populated by the MutationObserver
   #pendingItem = null
-  // Class of the Cocoon "add" button for the current batch
-  #pendingButtonClass = null
-
   connect() {
     this.#baseUrl = document.querySelector('meta[name="templates-base-url"]')?.content
     this.#itemsType = document.querySelector('meta[name="templates-items-type"]')?.content
@@ -70,7 +67,6 @@ export default class extends Controller {
 
   #validateSetup() {
     if (!this.#baseUrl) {
-      // eslint-disable-next-line no-alert
       alert("'templates-base-url' meta tag is missing or empty.")
       return false
     }
@@ -80,7 +76,6 @@ export default class extends Controller {
     }
 
     if (!this.#itemsType || !["questions", "jobs"].includes(this.#itemsType)) {
-      // eslint-disable-next-line no-alert
       alert("'templates-items-type' meta tag must be 'questions' or 'jobs'.")
       return false
     }
@@ -236,7 +231,6 @@ export default class extends Controller {
   #advanceQueue() {
     if (this.#insertQueue.length === 0) {
       this.#pendingItem = null
-      this.#pendingButtonClass = null
       return
     }
 
@@ -246,12 +240,10 @@ export default class extends Controller {
   #processNextItem() {
     if (this.#insertQueue.length === 0) {
       this.#pendingItem = null
-      this.#pendingButtonClass = null
       return
     }
 
     const { addButtonClass, item } = this.#insertQueue.shift()
-    this.#pendingButtonClass = addButtonClass
 
     const button = document.querySelector(`.${addButtonClass}`)
     if (!button) {

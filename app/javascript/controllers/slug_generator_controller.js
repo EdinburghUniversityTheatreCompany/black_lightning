@@ -57,11 +57,11 @@ export default class extends Controller {
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
       // Replace spaces and common punctuation with hyphens
-      .replace(/[\s\._]+/g, "-")
+      .replace(/[\s._]+/g, "-")
       // Remove any character that isn't alphanumeric or hyphen
-      .replace(/[^a-z0-9\-]/g, "")
+      .replace(/[^a-z0-9-]/g, "")
       // Collapse consecutive hyphens
-      .replace(/\-{2,}/g, "-")
+      .replace(/-{2,}/g, "-")
       // Trim leading/trailing hyphens
       .replace(/^-+|-+$/g, "")
   }
