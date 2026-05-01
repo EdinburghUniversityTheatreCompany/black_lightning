@@ -10,5 +10,6 @@ export default class extends Controller {
 
   openValueChanged() {
     this.contentTarget.classList.toggle("hidden", !this.openValue)
+    this.element.classList.toggle("is-open", this.openValue)
   }
 }

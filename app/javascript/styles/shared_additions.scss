@@ -1,3 +1,7 @@
+[data-controller="collapsible"] .when-open { display: none; }
+[data-controller="collapsible"].is-open .when-closed { display: none; }
+[data-controller="collapsible"].is-open .when-open { display: inline; }
+
 .markdown-body > p:last-child {
   margin-bottom: 0;
 }

@@ -9,9 +9,17 @@
       <%= helpers.render_search_form_fields(f, fields_outside_collapse, effective_columns) %>
 
       <% if fields_in_collapse.any? %>
-        <%= render(Admin::CollapsibleSectionComponent.new(title: "More", card_class: "mb-0", start_open: false)) do %>
-          <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
-        <% end %>
+        <div data-controller="collapsible">
+          <div data-collapsible-target="content" class="hidden">
+            <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
+          </div>
+
+          <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                  data-action="collapsible#toggle">
+            <span class="when-closed">More <i class="fas fa-chevron-down"></i></span>
+            <span class="when-open">Less <i class="fas fa-chevron-up"></i></span>
+          </button>
+        </div>
       <% end %>
     </div>
 

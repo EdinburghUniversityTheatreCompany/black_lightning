@@ -678,3 +678,15 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
 .card-primary>.card-header a {
   color: white !important;
 }
+
+[data-controller="collapsible"] .when-open {
+  display: none;
+}
+
+[data-controller="collapsible"].is-open .when-closed {
+  display: none;
+}
+
+[data-controller="collapsible"].is-open .when-open {
+  display: inline;
+}
