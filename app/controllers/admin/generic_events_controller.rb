@@ -18,8 +18,7 @@ class Admin::GenericEventsController < AdminController
   # PATCH admin/seasons/1/update_debt_settings
   # PATCH admin/generic_events/1/update_debt_settings
   def update_debt_settings
-    authorize! :create, Admin::MaintenanceDebt
-    authorize! :create, Admin::StaffingDebt
+    raise CanCan::AccessDenied unless can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)
 
     unless get_resource.end_date > helpers.start_of_year
       helpers.append_to_flash(:error, "Debt settings can only be configured for events in the current academic year or later.")
@@ -96,9 +95,9 @@ class Admin::GenericEventsController < AdminController
   end
 
   def debt_settings_params
-    params.require(resource_name).permit(
-      :maintenance_debt_amount, :maintenance_debt_start,
-      :staffing_debt_amount, :staffing_debt_start
-    )
+    permitted = []
+    permitted += [ :maintenance_debt_amount, :maintenance_debt_start ] if can?(:create, Admin::MaintenanceDebt)
+    permitted += [ :staffing_debt_amount, :staffing_debt_start ] if can?(:create, Admin::StaffingDebt)
+    params.require(resource_name).permit(*permitted)
   end
 end
