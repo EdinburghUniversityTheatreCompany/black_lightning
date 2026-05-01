@@ -1,17 +1,23 @@
 <%# locals: () %>
 
-Displays the amount of committee rep slots staffed per semester for each committee member.
 <% committee = Role.where(name: "Committee").first.users %>
 
-
-<% committee.each do |person|%>
-  <div class="row">
-    <div class="col-auto"><b><%= person.name %></b></div>
-
-    <div class="col">
-    <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(start_of_year,christmas)}.count %>
-    /
-    <%= person.staffing_jobs.where(name:"Committee Rep").all.select{|j| j.staffable.start_time.between?(christmas,next_year_start)}.count %>
-    </div>
-  </div>
-<% end %>
+<ul class="list-group list-group-flush">
+  <% if committee.empty? %>
+    <li class="list-group-item text-muted">No committee members found.</li>
+  <% else %>
+    <% committee.each do |person| %>
+      <li class="list-group-item flex gap-4">
+        <span class="shrink-0"><%= person.name %></span>
+        <span class="text-muted ml-auto">
+          <%= person.staffing_jobs.where(name: "Committee Rep").select { |j| j.staffable.start_time.between?(start_of_year, christmas) }.count %>
+          /
+          <%= person.staffing_jobs.where(name: "Committee Rep").select { |j| j.staffable.start_time.between?(christmas, next_year_start) }.count %>
+        </span>
+      </li>
+    <% end %>
+    <li class="list-group-item text-sm text-muted">
+      Displays the amount of committee rep slots staffed per semester for each committee member
+    </li>
+  <% end %>
+</ul>

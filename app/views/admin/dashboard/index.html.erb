@@ -28,7 +28,7 @@
           <%= render "staffings_widget" %>
         <% end %>
         <% if current_user.has_role?("Committee") || can?(:manage, Admin::Staffing) %>
-          <%= render Admin::CardWidgetComponent.new(title: "Committee Staffing") do %>
+          <%= render Admin::CardWidgetComponent.new(title: "Committee Staffing", flush: true) do %>
             <%= render "committee_staffing_widget" %>
           <% end %>
         <% end %>
