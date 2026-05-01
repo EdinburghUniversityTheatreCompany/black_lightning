@@ -104,8 +104,6 @@ group :development, :test do
   gem "ruby-lsp-rails"
   gem "solargraph", require: false
   gem "foreman"
-
-  ge
 end
 
 group :test do
