@@ -102,6 +102,9 @@ importers:
       globals:
         specifier: ^17.5.0
         version: 17.6.0
+      stimulus-vite-helpers:
+        specifier: ^3.1.0
+        version: 3.1.0
 
 packages:
 
@@ -1548,6 +1551,9 @@ packages:
     resolution: {integrity: sha512-ORqcTsg3sa4PGFEyUkbvcPG56F4K2fx1qJCUQIgngO1GaW5taKcvDkT0HvdTqtQAFe/1lN4CpJAqoSCt+nYF/Q==}
     peerDependencies:
       '@hotwired/stimulus': ^3.2.1
+
+  stimulus-vite-helpers@3.1.0:
+    resolution: {integrity: sha512-qy9vnNnu6e/1PArEndp456BuSKLQkBgc+vX2pedOHT0N4GSLQY0l5fuQ4ft56xZ8xSWqrfuYSR+GXXIPtoESww==}
 
   string_decoder@1.1.1:
     resolution: {integrity: sha512-n/ShnvDi6FHbbVfviro+WojiFzv+s8MPMHBczVePfUpDJLwoLT0ht1l4YwBCbi8pJAveEEdnkHyPyTP/mzRfwg==}
@@ -3165,6 +3171,8 @@ snapshots:
   stimulus-rails-nested-form@4.1.0(@hotwired/stimulus@3.2.2):
     dependencies:
       '@hotwired/stimulus': 3.2.2
+
+  stimulus-vite-helpers@3.1.0: {}
 
   string_decoder@1.1.1:
     dependencies:
