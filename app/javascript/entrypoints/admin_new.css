@@ -19,6 +19,8 @@
   --color-primary: #ba0204;
   --color-primary-dark: #8a0103;
   --color-secondary: #fdc5b6;
+  --color-wine: #7f1d1d;
+  --color-wine-dark: #5c1313;
   --color-sidebar-bg: #343a40;
   --color-sidebar-text: #c2c7d0;
   --font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif;
@@ -28,35 +30,35 @@
 
   /* Bootstrap button compat */
   .btn {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium cursor-pointer border-0 no-underline transition-colors;
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium cursor-pointer no-underline transition-colors;
   }
 
   .btn-primary {
-    @apply bg-primary text-white hover:bg-primary-dark;
+    @apply bg-white border border-primary text-primary hover:bg-primary hover:text-white;
   }
 
   .btn-secondary {
-    @apply bg-gray-200 text-gray-800 hover:bg-gray-300;
+    @apply bg-white border border-slate-400 text-slate-600 hover:bg-slate-50;
   }
 
   .btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700;
+    @apply bg-wine border-0 text-white hover:bg-wine-dark;
   }
 
   .btn-success {
-    @apply bg-green-600 text-white hover:bg-green-700;
+    @apply bg-green-600 border-0 text-white hover:bg-green-700;
   }
 
   .btn-warning {
-    @apply bg-yellow-500 text-white hover:bg-yellow-600;
+    @apply bg-yellow-500 border-0 text-white hover:bg-yellow-600;
   }
 
   .btn-info {
-    @apply bg-blue-500 text-white hover:bg-blue-600;
+    @apply bg-blue-500 border-0 text-white hover:bg-blue-600;
   }
 
   .btn-link {
-    @apply bg-transparent text-primary underline hover:text-primary-dark px-0;
+    @apply bg-transparent border-0 text-primary underline hover:text-primary-dark px-0;
   }
 
   .btn-sm {
