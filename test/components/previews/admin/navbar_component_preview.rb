@@ -1,7 +1,5 @@
-class Admin::NavbarComponentPreview < ViewComponent::Preview
-  layout "admin_new"
-
+class Admin::NavbarComponentPreview < Admin::ApplicationComponentPreview
   def default
-    render Admin::NavbarComponent.new(current_user: User.first)
+    render Admin::NavbarComponent.new(current_user: sample_user)
   end
 end

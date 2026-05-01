@@ -1,6 +1,4 @@
-class Admin::PageHeaderComponentPreview < ViewComponent::Preview
-  layout "admin_new"
-
+class Admin::PageHeaderComponentPreview < Admin::ApplicationComponentPreview
   def default
     render Admin::PageHeaderComponent.new(title: "Example Page")
   end

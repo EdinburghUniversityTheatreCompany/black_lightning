@@ -1,6 +1,4 @@
-class Admin::SidebarComponentPreview < ViewComponent::Preview
-  layout "admin_new"
-
+class Admin::SidebarComponentPreview < Admin::ApplicationComponentPreview
   def default
     nav_items = [
       { title: "Productions", fa_icon: "fa-industry", children: [
@@ -13,7 +11,7 @@ class Admin::SidebarComponentPreview < ViewComponent::Preview
     ]
     render Admin::SidebarComponent.new(
       nav_items: nav_items,
-      current_user: User.first,
+      current_user: sample_user,
       current_path: "/admin/shows"
     )
   end
