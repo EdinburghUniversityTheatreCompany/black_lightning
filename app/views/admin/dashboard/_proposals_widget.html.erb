@@ -1,14 +1,13 @@
 <%# locals: () %>
 
-<% if can? :index, Admin::Proposals::Proposal %>
-  <p><%= link_to "Proposals", admin_proposals_calls_path %></p>
-<% end %>
-
 <% open_calls = Admin::Proposals::Call.open %>
-<% open_calls.each do |call| %>
-  <p><%= link_to call.name, admin_proposals_call_proposals_path(call) %></p>
-<% end %>
 
-<% if open_calls.empty? %>
-  <p>There are no open proposal calls.</p>
-<% end %>
+<ul class="list-group list-group-flush">
+  <% if open_calls.empty? %>
+    <li class="list-group-item text-muted">There are no open proposal calls.</li>
+  <% else %>
+    <% open_calls.each do |call| %>
+      <li class="list-group-item"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></li>
+    <% end %>
+  <% end %>
+</ul>

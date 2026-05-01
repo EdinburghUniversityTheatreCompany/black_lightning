@@ -13,18 +13,18 @@
         <% end %>
       </div>
       <div class="col-md-6">
-        <%= render Admin::CardWidgetComponent.new(title: link_to("News", admin_news_index_path)) do %>
+        <%= render Admin::CardWidgetComponent.new(title: link_to("News", admin_news_index_path), flush: true) do %>
           <%= render "news_widget" %>
         <% end %>
-        <%= render Admin::CardWidgetComponent.new(title: link_to("Upcoming Shows", admin_shows_path)) do %>
+        <%= render Admin::CardWidgetComponent.new(title: link_to("Upcoming Shows", admin_shows_path), flush: true) do %>
           <%= render "shows_widget" %>
         <% end %>
-        <%= render Admin::CardWidgetComponent.new(title: link_to("Open Proposal Calls", admin_proposals_calls_path)) do %>
+        <%= render Admin::CardWidgetComponent.new(title: link_to("Open Proposal Calls", admin_proposals_calls_path), flush: true) do %>
           <%= render "proposals_widget" %>
         <% end %>
       </div>
       <div class="col-xl">
-        <%= render Admin::CardWidgetComponent.new(title: link_to("Staffing", admin_staffings_path)) do %>
+        <%= render Admin::CardWidgetComponent.new(title: link_to("Staffing", admin_staffings_path), flush: true) do %>
           <%= render "staffings_widget" %>
         <% end %>
         <% if current_user.has_role?("Committee") || can?(:manage, Admin::Staffing) %>

@@ -1,10 +1,12 @@
 <%# locals: () %>
 
 <% future_shows = Show.future.reorder('start_date ASC').first(5) %>
-<% future_shows.each do |show| %>
-  <p><%= link_to show.name, admin_show_path(show) %></p>
-<% end %>
-
-<% if future_shows.empty? then %>
-  <p>There are no upcoming shows.</p>
-<% end %>
+<ul class="list-group list-group-flush">
+  <% if future_shows.empty? %>
+    <li class="list-group-item text-muted">There are no upcoming shows.</li>
+  <% else %>
+    <% future_shows.each do |show| %>
+      <li class="list-group-item"><%= link_to show.name, admin_show_path(show) %></li>
+    <% end %>
+  <% end %>
+</ul>
