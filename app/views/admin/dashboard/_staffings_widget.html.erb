@@ -7,12 +7,17 @@
     <li class="list-group-item text-muted">There are no upcoming staffing slots.</li>
   <% else %>
     <% upcoming_staffing.each do |staffing| %>
-      <li class="list-group-item flex items-center justify-between">
-        <%= link_to (l staffing.start_time, format: :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
+      <li class="list-group-item">
         <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
-        <% if remaining_positions > 0 %>
-          <%= generate_label('bg-danger', remaining_positions.to_s, rounded=true) %>
-        <% end %>
+        <div class="row align-items-center">
+          <div class="col-4 text-muted"><%= staffing.start_time.strftime("%-d %B %H:%M") %>-<%= staffing.end_time.strftime("%H:%M") %></div>
+          <div class="col-8 d-flex justify-content-between align-items-center truncate">
+            <%= link_to staffing.show_title, admin_staffing_path(staffing) %>
+            <% if remaining_positions > 0 %>
+              <%= generate_label('bg-danger', remaining_positions.to_s, rounded=true) %>
+            <% end %>
+          </div>
+        </div>
       </li>
     <% end %>
   <% end %>

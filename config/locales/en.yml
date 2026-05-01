@@ -40,6 +40,7 @@ en:
   date:
     formats:
       time_only:       ! ''
+      short:           ! '%-d %b'
       shorty:          ! '%d/%m/%y'
       long:            ! '%A %d %B'
       longy:           ! '%A %d %B %Y'
