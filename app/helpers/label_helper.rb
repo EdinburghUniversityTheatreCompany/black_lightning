@@ -113,7 +113,6 @@ module LabelHelper
         label_class = label_class&.to_s
 
         label_class = "#{label_class} text-dark" if %w[bg-warning bg-info bg-light].include?(label_class)
-        # TODO: Test the proper generated classes and stuff
 
         label_class = "#{label_class} rounded-pill" if rounded
 
