@@ -14,6 +14,7 @@
 @source "../../../app/views/**/*.erb";
 @source "../../../app/components/**/*.html.erb";
 @source "../controllers/**/*.js";
+@source "../../../config/initializers/**/*.rb";
 
 @theme {
   --color-primary: #ba0204;
