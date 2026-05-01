@@ -11,34 +11,56 @@
   <%# User panel %>
   <div class="p-4 border-b border-white/10 flex items-center gap-3">
     <img src="/images/userdef.png" class="w-8 h-8 rounded-full" alt="User avatar">
-    <span class="text-sm text-white/80"><%= user_display_name %></span>
+    <span class="text-white/80"><%= user_display_name %></span>
   </div>
 
   <%# Navigation %>
   <nav class="flex-1 overflow-y-auto py-2">
-    <a href="/admin/"
-       class="flex items-center gap-2 px-4 py-2 text-sm hover:bg-white/10 <%= 'bg-primary text-white' if @current_path == '/admin' || @current_path == '/admin/' %>">
+    <% home_class = "flex items-center gap-2 px-4 py-2 hover:bg-white/10" %>
+    <% home_class += " bg-primary text-white" if @current_path == "/admin" || @current_path == "/admin/" %>
+    <a href="/admin/" class="<%= home_class %>">
       <i class="fas fa-home w-4" aria-hidden="true"></i>
       Home
     </a>
 
     <% @nav_items.each do |category| %>
-      <details class="group" <%= "open" if category_open?(category) %>>
-        <summary class="flex items-center gap-2 px-4 py-2 text-sm cursor-pointer hover:bg-white/10 list-none">
+      <% if category[:is_logout] %>
+        <%= button_to category[:path], method: :delete,
+              class: "w-full flex items-center gap-2 px-4 py-2 hover:bg-white/10 text-left text-sidebar-text",
+              form: { data: { turbo_confirm: false } } do %>
           <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
-          <span class="flex-1"><%= category[:title] %></span>
-          <i class="fas fa-chevron-right text-xs transition-transform group-open:rotate-90" aria-hidden="true"></i>
-        </summary>
-        <div class="pl-4">
-          <% (category[:children] || []).each do |item| %>
-            <a href="<%= item[:path] %>"
-               class="flex items-center gap-2 px-4 py-1.5 text-sm hover:bg-white/10 <%= 'text-white font-medium active' if active_item?(item) %>">
-              <i class="fas <%= item[:fa_icon] %> w-4 text-xs" aria-hidden="true"></i>
-              <%= item[:title] %>
-            </a>
-          <% end %>
-        </div>
-      </details>
+          <span><%= category[:title] %></span>
+        <% end %>
+      <% elsif category[:children].blank? && category[:path].present? %>
+        <% cat_class = "flex items-center gap-2 px-4 py-2 hover:bg-white/10" %>
+        <% cat_class += " bg-primary text-white" if @current_path.start_with?(category[:path]) %>
+        <a href="<%= category[:path] %>" class="<%= cat_class %>">
+          <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
+          <span><%= category[:title] %></span>
+        </a>
+      <% else %>
+        <% if category_open?(category) %>
+          <details class="group" open>
+        <% else %>
+          <details class="group">
+        <% end %>
+          <summary class="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-white/10 list-none">
+            <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
+            <span class="flex-1"><%= category[:title] %></span>
+            <i class="fas fa-chevron-right text-xs transition-transform group-open:rotate-90" aria-hidden="true"></i>
+          </summary>
+          <div class="pl-4">
+            <% (category[:children] || []).each do |item| %>
+              <% item_class = "flex items-center gap-2 px-4 py-1.5 hover:bg-white/10" %>
+              <% item_class += " text-white font-medium active" if active_item?(item) %>
+              <a href="<%= item[:path] %>" class="<%= item_class %>">
+                <i class="fas <%= item[:fa_icon] %> w-4 text-xs" aria-hidden="true"></i>
+                <%= item[:title] %>
+              </a>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
     <% end %>
   </nav>
 </aside>
