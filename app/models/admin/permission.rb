@@ -3,17 +3,12 @@
 #
 # E.g. can :test, SomeModel
 # would be represented with action = "test" and subject_class = "SomeModel".
-#--
-# TODO: Tidy up this model. Name and Description are no longer required.
-#++
 #
 # == Schema Information
 #
 # Table name: admin_permissions
 #
 # *id*::            <tt>integer, not null, primary key</tt>
-# *name*::          <tt>string(255)</tt>
-# *description*::   <tt>string(255)</tt>
 # *action*::        <tt>string(255)</tt>
 # *subject_class*:: <tt>string(255)</tt>
 # *created_at*::    <tt>datetime, not null</tt>
