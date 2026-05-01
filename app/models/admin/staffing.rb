@@ -12,7 +12,6 @@
 # *show_title*::          <tt>string(255)</tt>
 # *created_at*::          <tt>datetime, not null</tt>
 # *updated_at*::          <tt>datetime, not null</tt>
-# *reminder_job_id*::     <tt>integer</tt>
 # *reminder_job_executed*:: <tt>boolean, default: false</tt>
 # *scheduled_job_id*::    <tt>string</tt>
 # *end_time*::            <tt>datetime</tt>
@@ -32,9 +31,6 @@ class Admin::Staffing < ApplicationRecord
 
   has_many :staffing_jobs, as: :staffable, class_name: "Admin::StaffingJob", dependent: :destroy
   has_many :users, through: :staffing_jobs
-
-  # Legacy: reminder_job_id field still exists in database but no longer used
-  # TODO: Remove reminder_job_id column in future migration
 
   accepts_nested_attributes_for :staffing_jobs, reject_if: :all_blank, allow_destroy: true
 

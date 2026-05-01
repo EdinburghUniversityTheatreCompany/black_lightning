@@ -7,7 +7,6 @@
 # *show_title*::          <tt>string(255)</tt>
 # *created_at*::          <tt>datetime, not null</tt>
 # *updated_at*::          <tt>datetime, not null</tt>
-# *reminder_job_id*::     <tt>integer</tt>
 # *end_time*::            <tt>datetime</tt>
 # *counts_towards_debt*:: <tt>boolean</tt>
 # *slug*::                <tt>string(255)</tt>

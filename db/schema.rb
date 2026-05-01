@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_27_202903) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_01_000000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -210,13 +210,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_27_202903) do
     t.datetime "created_at", precision: nil, null: false
     t.datetime "end_time", precision: nil
     t.boolean "reminder_job_executed", default: false
-    t.integer "reminder_job_id"
     t.string "scheduled_job_id"
     t.string "show_title"
     t.string "slug"
     t.datetime "start_time", precision: nil
     t.datetime "updated_at", precision: nil, null: false
-    t.index ["reminder_job_id"], name: "index_admin_staffings_on_reminder_job_id"
     t.index ["slug"], name: "index_admin_staffings_on_slug"
   end
 
@@ -746,13 +744,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_27_202903) do
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
     t.string "first_name"
+    t.text "google_access_token"
+    t.string "google_calendar_id"
+    t.text "google_refresh_token"
+    t.datetime "google_token_expires_at"
     t.string "last_name"
     t.datetime "last_sign_in_at", precision: nil
     t.string "last_sign_in_ip"
     t.json "not_duplicate_user_ids"
     t.string "phone_number"
     t.datetime "profile_completed_at"
-    t.string "profile_completion_salt"
+    t.string "profile_completion_salt", default: "d18bb80a91c253f6"
     t.boolean "public_profile", default: true
     t.datetime "remember_created_at", precision: nil
     t.string "remember_token"
