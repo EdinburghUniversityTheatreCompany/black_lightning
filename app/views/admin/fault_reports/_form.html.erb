@@ -17,6 +17,6 @@
       <%= f.association :fixed_by %>
     <% end %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :description, rows: 12 %>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :description, rows: 12 )%>
   <% end %>
 <% end %>
