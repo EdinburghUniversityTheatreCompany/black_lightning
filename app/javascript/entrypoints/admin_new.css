@@ -130,6 +130,7 @@ select.simple-select2 {
   /* Bootstrap badge compat */
   .badge {
     @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-medium;
+    margin: -0.25em 0;
   }
 
   .badge-primary {
@@ -694,4 +695,119 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
 
 [data-controller="collapsible"].is-open .when-open {
   display: inline;
+}
+
+/* Leaflet map container default dimensions */
+.leaflet-container {
+  height: 400px;
+  width: 100%;
+}
+
+/* Markdown-rendered content */
+.markdown-body > p:last-child {
+  margin-bottom: 0;
+}
+
+.captioned-image {
+  max-width: 192px;
+  font-size: smaller;
+}
+
+.captioned-image p:last-child {
+  margin: 0;
+}
+
+img.float-left,
+img.float-right {
+  max-width: 192px;
+  height: auto;
+}
+
+.carousel-image-wrapper {
+  overflow: hidden;
+  display: block;
+}
+
+.carousel-image-wrapper img,
+.carousel-image-wrapper a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-image-wrapper img {
+  object-fit: cover;
+}
+
+.carousel-image-wrapper.carousel-image-wrapper--contain img {
+  object-fit: contain;
+  background: transparent;
+}
+
+/* Version diff output (diffy gem) */
+.diff-container {
+  overflow-x: auto;
+  margin-bottom: 1rem;
+}
+
+.diff-container .diff ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.diff-container .diff li {
+  padding: 2px 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.diff-container .diff li.del {
+  background-color: #fdd;
+  color: #900;
+}
+
+.diff-container .diff li.ins {
+  background-color: #dfd;
+  color: #060;
+}
+
+.diff-container .diff li .symbol {
+  display: inline-block;
+  width: 1.2em;
+}
+
+/* Animated gradient backgrounds */
+.bg-rainbow-rotate {
+  background: linear-gradient(in oklch 90deg, #ff0094 0.0%, #00c800 37.5%, #00b5ff 62.5%, #ff0094 100%) repeat-x;
+  animation: rainbow-rotate 32s linear infinite;
+  background-size: 800% 100%;
+}
+
+.bg-rainbow-rotate,
+.bg-rainbow-rotate > a {
+  color: #fff !important;
+}
+
+@keyframes rainbow-rotate {
+  0%   { background-position: 0 0; }
+  100% { background-position: 800% 0; }
+}
+
+.bg-admin-rotate {
+  background: linear-gradient(in oklch 90deg, #f20938 0.0%, #ef3967 33.3%, #ef6739 66.7%, #f20938 100%) repeat-x;
+  animation: admin-rotate 32s linear infinite;
+  background-size: 800% 100%;
+}
+
+.bg-admin-rotate,
+.bg-admin-rotate > a {
+  color: #fff !important;
+}
+
+@keyframes admin-rotate {
+  0%   { background-position: 0 0; }
+  100% { background-position: 800% 0; }
 }
