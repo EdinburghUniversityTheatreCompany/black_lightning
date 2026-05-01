@@ -2,6 +2,9 @@
 inherit_gem:
   rubocop-rails-omakase: rubocop.yml
 
+require:
+  - rubocop-view_component
+
 # Project-specific exclusions
 AllCops:
   Exclude:
