@@ -1,0 +1,20 @@
+<div class="card <%= @card_class %>"
+     data-controller="collapsible"
+     data-collapsible-open-value="<%= @start_open %>">
+  <div class="card-header <%= @header_class %> flex items-center justify-between">
+    <button type="button"
+            class="btn btn-link flex-1 text-left"
+            data-action="collapsible#toggle">
+      <%= helpers.generate_icon_prefix('chevron-down', @title) %>
+    </button>
+    <% if @title_right %>
+      <%= @title_right %>
+    <% end %>
+  </div>
+
+  <div data-collapsible-target="content" class="<%= 'hidden' unless @start_open %>">
+    <div class="card-body <%= @body_class %>">
+      <%= content %>
+    </div>
+  </div>
+</div>
