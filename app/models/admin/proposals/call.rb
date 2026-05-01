@@ -31,7 +31,6 @@ class Admin::Proposals::Call < ApplicationRecord
 
   normalizes :name, with: ->(name) { name&.strip }
 
-  # TODO: Maybe revise what open means?
   scope :open, -> { where(submission_deadline: DateTime.current..DateTime::Infinity.new) }
 
   def self.ransackable_attributes(auth_object = nil)
