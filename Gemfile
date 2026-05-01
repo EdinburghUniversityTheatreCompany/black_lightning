@@ -79,6 +79,9 @@ group :development, :test do
   gem "rubocop-rails-omakase"
   gem "rubocop-faker"
 
+  # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
+  gem "brakeman", require: false
+
   # Adds support for Capybara system testing and selenium driver
   gem "capybara", ">= 2.15"
   gem "selenium-webdriver", ">= 4.8.2"
@@ -101,6 +104,8 @@ group :development, :test do
   gem "ruby-lsp-rails"
   gem "solargraph", require: false
   gem "foreman"
+
+  ge
 end
 
 group :test do
