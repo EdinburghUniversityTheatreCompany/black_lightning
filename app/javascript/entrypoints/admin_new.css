@@ -243,6 +243,39 @@
     @apply border-red-500;
   }
 
+  /* Bootstrap modal compat — hide by default, shown via JS */
+  .modal {
+    @apply hidden fixed inset-0 z-50 overflow-auto;
+  }
+
+  .modal.show {
+    @apply flex items-center justify-center;
+  }
+
+  .modal-dialog {
+    @apply bg-white rounded shadow-lg w-full max-w-lg mx-4;
+  }
+
+  .modal-header {
+    @apply flex items-center justify-between px-4 py-3 border-b border-gray-200;
+  }
+
+  .modal-title {
+    @apply text-base font-semibold text-gray-800;
+  }
+
+  .modal-body {
+    @apply p-4;
+  }
+
+  .modal-footer {
+    @apply flex items-center gap-2 justify-end px-4 py-3 border-t border-gray-200;
+  }
+
+  .close {
+    @apply text-gray-500 hover:text-gray-700 text-xl leading-none cursor-pointer bg-transparent border-0;
+  }
+
   /* Bootstrap grid compat */
   .row {
     @apply flex flex-wrap -mx-2;
