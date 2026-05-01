@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 
+/* Icon font — imported here (not via JS) to avoid FOUC on page load */
+@import "@fortawesome/fontawesome-free/css/fontawesome.css";
+@import "@fortawesome/fontawesome-free/css/solid.css";
+@import "@fortawesome/fontawesome-free/css/brands.css";
+
 /* Third-party component styles that carry over from the old admin */
 @import "@toast-ui/editor/dist/toastui-editor.css";
 @import "@fancyapps/ui/dist/fancybox/fancybox.css";
