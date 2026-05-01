@@ -3,10 +3,8 @@
 <ul class="list-group list-group-flush">
   <% fields.each do |label_value_pair| %>
     <% label, value = label_value_pair %>
-
-    <%# TODO: What about doing a 'Not Specified" if nil instead? %>
-    <%# value = 'Not Specified' unless value.present? %>
-
+    <%# Skip nil values, which hides them from the table. %>
+    <%# If you want to show an alt when left empty, you have to add a guard to where you specify the field. %>
     <% next if value.nil? %>
 
     <%# Check peersupport (ask Mick) for a way to incorporate localisation. %>
