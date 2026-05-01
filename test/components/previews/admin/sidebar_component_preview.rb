@@ -1,4 +1,6 @@
 class Admin::SidebarComponentPreview < ViewComponent::Preview
+  layout "admin_new"
+
   def default
     nav_items = [
       { title: "Productions", fa_icon: "fa-industry", children: [
