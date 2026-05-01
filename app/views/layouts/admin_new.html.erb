@@ -39,8 +39,8 @@
 
       <%= render "/layouts/alert_div" %>
 
-      <main class="flex-1 overflow-y-auto">
-        <div class="px-6 py-4">
+      <main class="flex-1 overflow-y-auto flex flex-col">
+        <div class="px-6 py-4 flex-1">
           <%= content_for?(:content) ? yield(:content) : yield %>
         </div>
 
