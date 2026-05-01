@@ -80,7 +80,8 @@ jobs:
             - name: Run tests
               env:
                   RAILS_ENV: test
-                  DATABASE_URL: mysql2://root@127.0.0.1:3306
+                  DB_USERNAME: root
+                  DB_PASSWORD: ""
                   # REDIS_URL: redis://localhost:6379/0
               run: bin/rails db:test:prepare test test:system
 
