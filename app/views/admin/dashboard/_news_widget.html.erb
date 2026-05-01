@@ -9,7 +9,7 @@
     <% current_news.each do |news| %>
       <li class="list-group-item">
         <p class="mb-1"><%= link_to news.title, admin_news_path(news) %> <%= content_tag(:span, "Members", class: "badge bg-important") unless news.show_public %></p>
-        <p class="text-muted text-sm mb-0"><%= truncate_markdown(news.body, 140) %></p>
+        <p class="text-muted text-sm mb-0 line-clamp-2"><%= truncate_markdown(news.body, 300) %></p>
       </li>
     <% end %>
   </ul>
