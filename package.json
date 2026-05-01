@@ -27,7 +27,7 @@
         "sweetalert2": "^11.11.1",
         "tom-select": "^2.6.0",
         "webpack": "^5.92.0",
-        "webpack-cli": "^5.1.4"
+        "webpack-cli": "^7.0.2"
     },
     "scripts": {
         "build": "yarn webpack --config webpack.config.js",
