@@ -104,6 +104,8 @@ group :development, :test do
   gem "ruby-lsp-rails"
   gem "solargraph", require: false
   gem "foreman"
+
+  gem "overcommit", require: false
 end
 
 group :test do

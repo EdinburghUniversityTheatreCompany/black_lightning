@@ -1,0 +1,28 @@
+# https://github.com/sds/overcommit#configuration
+# Full hook list: https://github.com/sds/overcommit/tree/master/lib/overcommit/hook
+
+gemfile: Gemfile
+
+PreCommit:
+  RuboCop:
+    enabled: true
+    on_warn: fail
+    command: ['bundle', 'exec', 'rubocop']
+    flags: ['--format', 'emacs']
+    exclude:
+      - 'db/schema.rb'
+      - 'db/queue_schema.rb'
+      - 'db/cache_schema.rb'
+
+  Brakeman:
+    enabled: true
+    flags: ['--no-pager']
+
+  EsLint:
+    enabled: true
+    required_executable: 'yarn'
+    command: ['yarn', 'eslint']
+    flags: ['--format', 'compact']
+    include:
+      - 'app/javascript/controllers/**/*.js'
+      - 'app/javascript/lib/**/*.js'

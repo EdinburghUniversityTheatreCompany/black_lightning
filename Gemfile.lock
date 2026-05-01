@@ -143,6 +143,8 @@ GEM
       marcel (~> 1.0)
       nokogiri (~> 1.10, >= 1.10.4)
       rubyzip (>= 2.4, < 4)
+    childprocess (5.1.0)
+      logger (~> 1.5)
     chronic (0.10.2)
     chunky_png (1.4.0)
     coffee-script-source (1.12.2)
@@ -223,6 +225,7 @@ GEM
       actionpack (>= 6.0.0)
       activesupport (>= 6.0.0)
       railties (>= 6.0.0)
+    iniparse (1.5.0)
     io-console (0.8.2)
     irb (1.18.0)
       pp (>= 0.6.0)
@@ -315,6 +318,10 @@ GEM
     open3 (0.2.1)
     orm_adapter (0.5.0)
     ostruct (0.6.3)
+    overcommit (0.69.0)
+      childprocess (>= 0.6.3, < 6)
+      iniparse (~> 1.4)
+      rexml (>= 3.3.9)
     paper_trail (17.0.0)
       activerecord (>= 7.1)
       request_store (~> 1.4)
@@ -624,6 +631,7 @@ DEPENDENCIES
   mission_control-jobs
   mysql2
   nokogiri
+  overcommit
   paper_trail
   propshaft
   puma
