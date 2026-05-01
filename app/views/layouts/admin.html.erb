@@ -12,6 +12,10 @@
 
   <%= yield :head %>
 
+  <% if Rails.env.test? %>
+    <style>*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }</style>
+  <% end %>
+
   <meta name="viewport" content="initial-scale = 1.0" />
 </head>
 
