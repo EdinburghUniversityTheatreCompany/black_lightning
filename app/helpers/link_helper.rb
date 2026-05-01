@@ -54,7 +54,11 @@ module LinkHelper
       raise(ArgumentError, "#{additional_message}. \"#{action}\" is not a valid GET action.")
     end
 
-    # TODO: Check if the action is a member and/or collection action instead of having a list like this.
+    # We keep a list of what kinds of actions are what.
+    # It is technically possible to infer this from the controller,
+    # but that requires mapping a class to the controller path which
+    # is fragile.
+    # If you want to be able to override, add an "is_member" param.
     if %I[index grid new].include?(action) && !object.is_a?(Class)
       # The object has to be a class because those actions are not related to instances.
       # Grid is used as a class thing once and as an instance(or rather, slug thing) the other time.
