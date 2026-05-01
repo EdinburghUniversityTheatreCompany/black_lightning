@@ -33,16 +33,3 @@ module.exports = {
     })
   ]
 }
-
-//TODO
-/*
-const { environment } = require('@rails/webpacker')
-
-environment.plugins.prepend(
-)
-
-environment.config.set('resolve.alias', {jquery: 'jquery/src/jquery'});
-
-module.exports = environment*/
-
-// TODO: Maybe need to setup babel?
