@@ -7,4 +7,7 @@ export default defineConfig({
     RubyPlugin(),
     tailwindcss(),
   ],
+  optimizeDeps: {
+    include: ['dropzone'],
+  },
 })
