@@ -9,10 +9,11 @@
   </div>
 
   <%# User panel %>
-  <div class="p-4 border-b border-white/10 flex items-center gap-3">
+  <a href="<%= helpers.admin_user_path(@current_user) %>"
+     class="p-4 border-b border-white/10 flex items-center gap-3 hover:bg-white/10">
     <img src="/images/userdef.png" class="w-8 h-8 rounded-full" alt="User avatar">
-    <span class="text-white/80"><%= user_display_name %></span>
-  </div>
+    <span class="text-white/80">Welcome, <%= user_display_name %></span>
+  </a>
 
   <%# Navigation %>
   <nav class="flex-1 overflow-y-auto py-2">
