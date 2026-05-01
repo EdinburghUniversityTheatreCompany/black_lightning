@@ -7,7 +7,7 @@
 
   <% # Get the flash as json, then pass it on to a JavaScript function that renders the flashes. %>
   <script type="text/javascript">
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('turbo:load', function () {
       flashJson = <%= flash_as_alert_hash.to_h.to_json.html_safe %>;
       showFlashAlerts(flashJson);
     });
