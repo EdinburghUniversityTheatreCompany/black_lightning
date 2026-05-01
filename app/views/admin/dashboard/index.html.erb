@@ -2,7 +2,7 @@
   <div class="container-fluid">
     <div class="row">
       <div class="col-md">
-        <%= render Admin::CardWidgetComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), card_class: current_user.in_debt ? "card-danger" : "card-success") do %>
+        <%= render Admin::CardWidgetComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), card_class: current_user.in_debt ? "card-danger" : "card-success", flush: true) do %>
           <%= render "debt_widget" %>
         <% end %>
         <%= render Admin::CardWidgetComponent.new(title: link_to("Opportunities", admin_opportunities_path)) do %>
