@@ -47,7 +47,6 @@ ChaosRails::Application.routes.draw do
   end
 
   get "marketing_creatives/sign_up", to: "admin/marketing_creatives/profiles#sign_up"
-  # TODO: Corresponding create, maybe?
 
   # Defined in the silencer initializer.
   COMPLAINTS_ALIASES.each do |path|
