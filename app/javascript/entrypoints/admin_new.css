@@ -36,10 +36,18 @@
 
   /* Bootstrap card compat */
   .card          { @apply bg-white rounded border border-gray-200 mb-4; }
-  .card-header   { @apply px-4 py-3 border-b border-gray-200 font-medium text-gray-700 bg-gray-50; }
+  .card-header   { @apply px-4 py-3 border-b border-gray-200 font-medium text-gray-700 bg-gray-50 flex items-center; }
   .card-body     { @apply p-4; }
   .card-footer   { @apply px-4 py-3 border-t border-gray-200 bg-gray-50; }
-  .card-title    { @apply text-lg font-semibold mb-2; }
+  .card-title    { @apply text-base font-semibold flex-1; }
+  .card-tools    { @apply flex items-center gap-1 ml-auto; }
+  .btn-tool      { @apply bg-transparent border-0 text-inherit opacity-70 hover:opacity-100 p-1 cursor-pointer rounded inline-flex items-center justify-center leading-none; }
+  /* AdminLTE card color variants */
+  .card-danger  > .card-header { @apply bg-red-600 text-white border-red-600; }
+  .card-success > .card-header { @apply bg-green-600 text-white border-green-600; }
+  .card-warning > .card-header { @apply bg-yellow-500 text-white border-yellow-500; }
+  .card-info    > .card-header { @apply bg-blue-500 text-white border-blue-500; }
+  .card-primary > .card-header { @apply bg-primary text-white border-primary; }
 
   /* Bootstrap badge compat */
   .badge           { @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-medium; }
@@ -79,8 +87,19 @@
 
   /* Bootstrap grid compat */
   .row      { @apply flex flex-wrap -mx-2; }
+  /* row-cols-N: each .col takes 1/N of the row width */
+  .row-cols-1 > .col  { @apply w-full flex-none; }
+  .row-cols-2 > .col  { @apply w-1/2 flex-none; }
+  .row-cols-3 > .col  { @apply w-1/3 flex-none; }
+  .row-cols-4 > .col  { @apply w-1/4 flex-none; }
+  .row-cols-6 > .col  { @apply w-1/6 flex-none; }
   .col      { @apply flex-1 px-2; }
   .col-auto { @apply w-auto px-2; }
+  /* Responsive auto cols (no number suffix) — admin is desktop-first so we always activate */
+  .col-sm   { @apply flex-1 px-2; }
+  .col-md   { @apply flex-1 px-2; }
+  .col-lg   { @apply flex-1 px-2; }
+  .col-xl   { @apply flex-1 px-2; }
   .col-12   { @apply w-full px-2; }
   .col-11   { @apply w-11/12 px-2; }
   .col-10   { @apply w-10/12 px-2; }

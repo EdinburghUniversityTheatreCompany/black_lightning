@@ -1,20 +1,16 @@
 <div class="card <%= @card_class %>"
      data-controller="collapsible"
      data-collapsible-open-value="<%= @start_open %>">
-  <div class="card-header <%= @header_class %>">
+  <div class="card-header">
     <span class="card-title"><%= @title %></span>
-    <% if @title_right %>
-      <%= @title_right %>
-    <% end %>
     <div class="card-tools">
       <button type="button" class="btn btn-tool" data-action="collapsible#toggle">
         <i class="fas fa-minus" aria-hidden="true"></i>
       </button>
     </div>
   </div>
-
-  <div data-collapsible-target="content" class="<%= 'hidden' unless @start_open %>">
-    <div class="card-body <%= @body_class %>">
+  <div data-collapsible-target="content">
+    <div class="card-body">
       <%= content %>
     </div>
   </div>
