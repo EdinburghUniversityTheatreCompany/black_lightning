@@ -11,6 +11,13 @@ The public facing website uses Bootstrap 5. The admin website currently uses Boo
 
 Use stimulus for all JavaScript sprinkles. We use Vite rather than jsbundling, cssbundling and importmaps. We use propshaft too to serve some images and JavaScript files that are only used on a few pages
 
+## JavaScript
+Prefer writing Stimulus controllers that go into the `app/javascript/controllers` folder. Custom modules go into the `app/javascript/lib folder`.
+
+JavaScript that is only used on specific pages should go into the `app/assets` folder so it can be loaded by Propshaft.
+
+Stylesheets also live in `app/javascript/styles` so they can be handled by Vite.
+
 ## Maintain Documentation
 
 If you learn something about the project that would be useful context for other agents looking at the codebase, add it to this file at the end of your to do list.
