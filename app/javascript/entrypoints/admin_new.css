@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 
+/* Third-party component styles that carry over from the old admin */
+@import "@toast-ui/editor/dist/toastui-editor.css";
+@import "@fancyapps/ui/dist/fancybox/fancybox.css";
+@import "leaflet/dist/leaflet.css";
+
 @source "../../../app/views/**/*.erb";
 @source "../../../app/components/**/*.html.erb";
 @source "../controllers/**/*.js";
