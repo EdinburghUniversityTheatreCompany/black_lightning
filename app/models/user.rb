@@ -123,7 +123,7 @@ class User < ApplicationRecord
   def self.find_by_profile_completion_token(token)
     where(profile_completed_at: nil).each do |user|
       found = find_signed(token, purpose: [ :profile_completion, user.profile_completion_salt ])
-      return found if found
+      return found if found && found == user
     end
 
     nil
