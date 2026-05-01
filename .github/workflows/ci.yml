@@ -63,7 +63,7 @@ jobs:
         steps:
             - name: Install packages
               run: sudo apt-get update && sudo apt-get install --no-install-recommends -y
-                  build-essential git libpq-dev pkg-config google-chrome-stable
+                  build-essential git libpq-dev pkg-config google-chrome-stable libvips-dev
 
             - name: Checkout code
               uses: actions/checkout@v6
