@@ -10,7 +10,7 @@
     user_link(debt.user, false),
     get_link(debt.show, :show),
     debt.due_by,
-    formatted_status_for_debt(debt).html_safe,
+    formatted_status_for_debt(debt),
     get_link(debt, :show, link_text: "View / Edit"),
     render(forgive_partial, debt: debt),
     render('admin/shared/debt_convert_button', debt: debt, convert_action: convert_permission,

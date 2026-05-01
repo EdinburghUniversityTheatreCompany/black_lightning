@@ -115,9 +115,9 @@ module Admin::SharedDebtHelper
 
       case local_status
       when :completed_staffing
-        "Completed as #{job_description}"
+        safe_join([ "Completed as ", job_description || "" ])
       when :awaiting_staffing
-        "Awaiting Staffing as #{job_description}}"
+        safe_join([ "Awaiting Staffing as ", job_description || "" ])
       else
         local_status.to_s.titleize
       end
