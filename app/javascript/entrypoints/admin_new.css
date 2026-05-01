@@ -1,7 +1,12 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/forms";
 
-/* Icon font — imported here (not via JS) to avoid FOUC on page load */
+/* Icon font and tom-select — imported here (not via JS) to avoid FOUC on page load */
+/* Hide native selects until TomSelect initialises them (it sets display:none on them anyway) */
+select.simple-select2 {
+  display: none;
+}
+
 @import "@fortawesome/fontawesome-free/css/fontawesome.css";
 @import "@fortawesome/fontawesome-free/css/solid.css";
 @import "@fortawesome/fontawesome-free/css/brands.css";
