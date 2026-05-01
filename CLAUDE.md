@@ -7,9 +7,9 @@ Ruby on Rails 8.1
 
 Use yarn for package management rather than npm or bun.
 
-The public facing website uses Bootstrap 5. The admin website currently uses Bootstrap 4.3 with AdminLTE but the plan is to migrate away.
+The public facing website uses Bootstrap 5. The admin website currently uses Bootstrap 4.3 with AdminLTE but the plan is to migrate away to ViewComponents with Tailwind
 
-Use stimulus for all JavaScript sprinkles. We remain on jsbundling rather than importmaps
+Use stimulus for all JavaScript sprinkles. We use Vite rather than jsbundling, cssbundling and importmaps
 
 ## Maintain Documentation
 

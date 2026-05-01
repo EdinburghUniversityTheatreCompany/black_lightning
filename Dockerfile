@@ -49,7 +49,7 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       curl && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
-# Install Node.js for jsbundling-rails
+# Install Node.js for Vite asset bundling
 ARG NODE_VERSION=22
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
     apt-get install -y nodejs
