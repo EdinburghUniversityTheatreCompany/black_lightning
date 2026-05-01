@@ -24,7 +24,7 @@
         "sass": "^1.77.6",
         "stimulus": "^3.0.0",
         "stimulus-rails-nested-form": "^4.1.0",
-        "sweetalert2": "^11.11.1",
+        "sweetalert2": "^11.26.24",
         "tom-select": "^2.6.0",
         "vivagraphjs": "^0.12.0",
         "webpack": "^5.92.0",
