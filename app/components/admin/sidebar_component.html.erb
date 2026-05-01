@@ -11,7 +11,15 @@
   <%# User panel %>
   <a href="<%= helpers.admin_user_path(@current_user) %>"
      class="p-4 border-b border-white/10 flex items-center gap-3 hover:bg-white/10">
-    <img src="/images/userdef.png" class="w-8 h-8 rounded-full" alt="User avatar">
+
+    <div class="w-8 h-8">
+      <% if @current_user.avatar.present? %>
+        <%= render 'shared/image', image: @current_user.avatar, variant: helpers.square_thumb_variant, eager_load: true, image_options: { class: "rounded-full" } %>
+      <% else %>
+        <img src="/images/userdef.png" class="rounded-full" alt="User avatar">
+      <% end %>
+    </div>
+
     <span class="text-white/80">Welcome, <%= user_display_name %></span>
   </a>
 
