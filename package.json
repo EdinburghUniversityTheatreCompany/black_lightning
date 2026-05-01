@@ -41,6 +41,8 @@
         "defaults"
     ],
     "devDependencies": {
-        "imports-loader": "^5.0.0"
+        "imports-loader": "^5.0.0",
+        "vite": "^8.0.10",
+        "vite-plugin-ruby": "^5.2.1"
     }
 }

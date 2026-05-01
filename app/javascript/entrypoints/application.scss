@@ -1,0 +1,23 @@
+// Tom Select (Bootstrap 5 theme) - replaces Select2
+@use "tom-select/dist/css/tom-select.bootstrap5";
+
+// Toast UI Editor
+@use "@toast-ui/editor/dist/toastui-editor.css";
+
+// NOTE THAT THINGS PLACED HERE DO NOT WORK FOR THE BACKEND
+// This file has to be at the top because it also loads Bootstrap 5.
+@use '../styles/bootstrap5_customisations';
+
+@use '../styles/form_additions';
+@use '../styles/shared_additions';
+
+@use '../styles/public_additions';
+
+@use '../styles/swalCustomTheme';
+
+// Fancybox lightbox
+@use "@fancyapps/ui/dist/fancybox/fancybox";
+
+// Leaflet maps
+@use "leaflet/dist/leaflet";
+

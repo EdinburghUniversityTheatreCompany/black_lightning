@@ -1,5 +1,6 @@
 /* eslint no-console:0 */
+import "../setup"
 
-require("@popperjs/core")
+import("@popperjs/core")
 
 import "bootstrap"

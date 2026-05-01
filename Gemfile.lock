@@ -183,6 +183,7 @@ GEM
       ostruct (>= 0.5)
     dotenv (3.2.0)
     drb (2.2.3)
+    dry-cli (1.4.1)
     ed25519 (1.4.0)
     erb (6.0.4)
     erubi (1.13.1)
@@ -294,6 +295,7 @@ GEM
       railties (>= 7.1)
       stimulus-rails
       turbo-rails
+    mutex_m (0.3.0)
     mysql2 (0.5.7)
       bigdecimal
     net-imap (0.6.4)
@@ -343,6 +345,8 @@ GEM
     rack (2.2.23)
     rack-cors (2.0.2)
       rack (>= 2.0.0)
+    rack-proxy (0.7.7)
+      rack
     rack-session (1.0.2)
       rack (< 3)
     rack-test (2.2.0)
@@ -556,6 +560,15 @@ GEM
     uniform_notifier (1.18.0)
     uri (1.1.1)
     useragent (0.16.11)
+    vite_rails (3.10.0)
+      railties (>= 5.1, < 9)
+      vite_ruby (~> 3.0, >= 3.2.2)
+    vite_ruby (3.10.2)
+      dry-cli (>= 0.7, < 2)
+      logger (~> 1.6)
+      mutex_m
+      rack-proxy (~> 0.6, >= 0.6.1)
+      zeitwerk (~> 2.2)
     warden (1.2.9)
       rack (>= 2.0.9)
     webrick (1.9.2)
@@ -652,6 +665,7 @@ DEPENDENCIES
   thruster
   turbo-rails
   tzinfo-data
+  vite_rails
 
 RUBY VERSION
   ruby 4.0.2

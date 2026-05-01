@@ -4,9 +4,9 @@
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
   
-  <%= javascript_include_tag "admin", "shared", defer: true %>
-
-  <%= stylesheet_link_tag    "admin", media: "all" %>
+  <%= vite_client_tag %>
+  <%= vite_javascript_tag "admin" %>
+  <%= vite_stylesheet_tag "admin.scss" %>
 
   <%= csrf_meta_tags %>
 
@@ -56,7 +56,7 @@
             <span class="dropdown-header">Notifications</span>
 
             <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
-              <% debt_icon = @header_user.in_debt ? 'fa-circle-exclamation' : 'fa-check' %>
+              <% debt_icon = @header_user.in_debt ? 'fa-exclamation-circle' : 'fa-check' %>
               <i class="fa-solid <%= debt_icon %> mr-2"></i>
               You are <%= @header_user.debt_message_suffix %>
             </a>

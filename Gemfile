@@ -67,6 +67,8 @@ gem "csv"
 # Use Puma as the app server
 gem "puma"
 
+gem "vite_rails"
+
 group :development, :test do
   gem "byebug"
   gem "spring"

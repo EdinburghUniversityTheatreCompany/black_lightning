@@ -8,10 +8,22 @@ Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src :self
     policy.script_src :self, "https://pretix.eu", :unsafe_inline, :unsafe_eval
+    # Allow @vite/client to hot reload javascript changes in development
+    policy.script_src *policy.script_src, :unsafe_eval, "http://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
+
+    # You may need to enable this in production as well depending on your setup.
+#    policy.script_src *policy.script_src, :blob if Rails.env.test?
+
     policy.style_src :self, :unsafe_inline, "https://eutc.azureedge.net"
+    # Allow @vite/client to hot reload style changes in development
+    policy.style_src *policy.style_src, :unsafe_inline if Rails.env.development?
+
     policy.img_src :self, :data, :https
     policy.font_src :self
     policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk"
+    # Allow @vite/client to hot reload changes in development
+    policy.connect_src *policy.connect_src, "ws://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
+
     # Specify URI for violation reports
     # policy.report_uri "/csp-violation-report-endpoint"
   end
