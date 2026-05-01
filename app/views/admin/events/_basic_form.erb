@@ -46,7 +46,7 @@
 
 <%= render Admin::MdEditorComponent.new(f: f, field: :members_only_text )%>
 
-<%= render '/shared/form/sections/gallery', f: f %>
+<%= render(Admin::Form::GalleryComponent.new(f: f)) %>
 
 <%= render 'shared/form/sections/attachments', f: f %>
 
