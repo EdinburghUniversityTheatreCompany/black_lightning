@@ -50,6 +50,10 @@ class Picture < ApplicationRecord
     image
   end
 
+  def authorizable_item
+    gallery
+  end
+
   def gallery_name
     return get_object_name(gallery) if gallery.present?
 

@@ -425,7 +425,8 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     allowed_actions = %I[show]
     forbidden_actions = %I[read index edit update new create delete destroy]
 
-    public_attachment = FactoryBot.create(:show_attachment, access_level: 2)
+    public_show = FactoryBot.create(:show, is_public: true)
+    public_attachment = FactoryBot.create(:attachment, item: public_show, access_level: 2)
 
     helper_test_actions(public_attachment, "a public attachment", @ability, allowed_actions, forbidden_actions)
     helper_test_actions(public_attachment, "a public attachment as member", Ability.new(users(:member)), allowed_actions, forbidden_actions)

@@ -5,8 +5,11 @@
 ###########
 # WARNING #
 ###########
-# Please do not define permissions using blocks. Use the hash notation.
-# Using blocks breaks load_and_authorize_resource unless you define the SQL query as well.
+# Prefer hash conditions over block. Hash conditions work with load_and_authorize_resource
+# and accessible_by (SQL generation) automatically. Blocks alone break SQL generation,
+# which means you need to pass a raw SQL string as the conditions argument instead of
+# a hash: can :action, Model, "sql_condition" do |record| ... end
+# Combining a hash with a block raises CanCan::BlockAndConditionsError.
 # See: https://github.com/CanCanCommunity/cancancan/wiki/Defining-Abilities and the separate pages for the different kinds of definitions.
 #
 # When you add a permission, please add a test for it, even if it is obvious what it does.
@@ -114,9 +117,18 @@ class Ability
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
 
-    can :show, Attachment, access_level: 2
-    can :show, VideoLink, access_level: 2
-    can :show, Picture, access_level: 2
+    can :show, Attachment, "access_level = 2" do |attachment|
+      attachment.access_level == 2 &&
+        ((item = attachment.authorizable_item).nil? || can?(:show, item))
+    end
+    can :show, VideoLink, "access_level = 2" do |video_link|
+      video_link.access_level == 2 &&
+        ((item = video_link.authorizable_item).nil? || can?(:show, item))
+    end
+    can :show, Picture, "access_level = 2" do |picture|
+      picture.access_level == 2 &&
+        ((item = picture.authorizable_item).nil? || can?(:show, item))
+    end
 
     can :read, Review, event: { is_public: true }
 
@@ -233,11 +245,22 @@ class Ability
 
     can :show, Admin::EditableBlock if can? :access, :backend
 
-    # Fix at the same time as has_role? :member
-    can :show, Attachment, access_level: 1 if can? :access, :backend
-    can :show, VideoLink, access_level: 1 if can? :access, :backend
-    can :show, Picture, access_level: 1 if can? :access, :backend
+    if can?(:access, :backend)
+      can :show, Attachment, "access_level = 1" do |attachment|
+        attachment.access_level == 1 &&
+          ((item = attachment.authorizable_item).nil? || can?(:show, item))
+      end
+    end
 
-    # TODO: Should only be allowed to see attachments if the user can also see the object they are related to. Remember that also goes for non-logged in users.
+    if can?(:access, :backend)
+      can :show, VideoLink, "access_level = 1" do |video_link|
+        video_link.access_level == 1 &&
+          ((item = video_link.authorizable_item).nil? || can?(:show, item))
+      end
+      can :show, Picture, "access_level = 1" do |picture|
+        picture.access_level == 1 &&
+          ((item = picture.authorizable_item).nil? || can?(:show, item))
+      end
+    end
   end
 end

@@ -58,6 +58,10 @@ class Attachment < ApplicationRecord
     name
   end
 
+  def authorizable_item
+    item.is_a?(Admin::Answer) ? item.answerable : item
+  end
+
   def self.ransackable_attributes(auth_object = nil)
     %w[editable_block_id name]
   end

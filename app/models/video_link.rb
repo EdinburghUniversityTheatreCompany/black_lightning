@@ -67,6 +67,10 @@ class VideoLink < ApplicationRecord
     "<iframe #{specific_part} #{SHARED_ATTRIBUTES}></iframe>".html_safe
   end
 
+  def authorizable_item
+    item
+  end
+
   def link_is_valid
     errors.add(:link, "is not a valid YouTube or Facebook video link") if video_id.nil?
   end
