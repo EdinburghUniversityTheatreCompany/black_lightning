@@ -56,7 +56,7 @@
             <span class="dropdown-header">Notifications</span>
 
             <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
-              <% debt_icon = @header_user.in_debt ? 'fa-exclamation-circle' : 'fa-check' %>
+              <% debt_icon = @header_user.in_debt ? 'fa-circle-exclamation' : 'fa-check' %>
               <i class="fa-solid <%= debt_icon %> mr-2"></i>
               You are <%= @header_user.debt_message_suffix %>
             </a>

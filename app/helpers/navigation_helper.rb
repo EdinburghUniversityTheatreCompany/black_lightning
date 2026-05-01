@@ -32,7 +32,7 @@ module NavigationHelper
     # Productions
     children = []
     children << { title: "Events", path: admin_events_path, fa_icon: "fa-calendar" }             if can? :index, Event
-    children << { title: "Shows", path: admin_shows_path, fa_icon: "fa-theater-masks" }          if can? :index, Show
+    children << { title: "Shows", path: admin_shows_path, fa_icon: "fa-masks-theater" }          if can? :index, Show
     children << { title: "Workshops", path: admin_workshops_path, fa_icon: "fa-hammer" }         if can? :index, Workshop
     children << { title: "Festivals & Seasons", path: admin_seasons_path, fa_icon: "fa-shop" }   if can? :index, Season
     children << { title: "Questionnaires", path: admin_questionnaires_questionnaires_path, fa_icon: "fa-clipboard-list" } if can? :index, Admin::Questionnaires::Questionnaire
@@ -101,7 +101,7 @@ module NavigationHelper
     navbar_categories.reject! { |category| category[:children].empty? }
 
     # Add logout as a standalone item
-    navbar_categories << { title: "Log Out", path: destroy_user_session_path, method: :delete, fa_icon: "fa-sign-out-alt", is_logout: true }
+    navbar_categories << { title: "Log Out", path: destroy_user_session_path, method: :delete, fa_icon: "fa-right-from-bracket", is_logout: true }
 
     navbar_categories
   end
