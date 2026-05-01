@@ -1,33 +1,8 @@
-<% headers = [:user_full_name, :show_name, :due_by, :status] %>
-<% headers << '' if can?(:show, Admin::MaintenanceDebt) %>
-<% headers << '' if can?(:forgive, Admin::MaintenanceDebt) %>
-<% headers << '' if can?(:convert_to_staffing_debt, Admin::MaintenanceDebt) %>
-
-<% field_sets = @maintenance_debts.map do |maintenance_debt| {
-  fields: [
-    maintenance_debt,
-    user_link(maintenance_debt.user, false),
-    get_link(maintenance_debt.show, :show),
-    maintenance_debt.due_by,
-    formatted_status_for_debt(maintenance_debt),
-    get_link(maintenance_debt, :show, link_text: "View / Edit"),
-    render('forgive_button', maintenance_debt: maintenance_debt),
-    render('convert_button', maintenance_debt: maintenance_debt)
-  ],
-  class: maintenance_debt.css_class
-}
-end %>
-
-<% if @is_specific_user
-  search_fields = nil
-else 
-  search_fields = {
-    user_full_name_cont:  { slug: 'defaults.user' },
-    show_name_cont:       { slug: 'defaults.show_name' },
-    show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean },
-    show_non_members:     { slug: 'defaults.show_non_members', type: :boolean }
-  } 
-end %>
-
-<%= render 'shared/pages/index', resource_class: Admin::MaintenanceDebt, resources: @maintenance_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
-  include_edit_button: false, include_link_to_item: false %>
+<%= render 'admin/shared/debts_index',
+  debts: @maintenance_debts,
+  debt_class: Admin::MaintenanceDebt,
+  convert_permission: :convert_to_staffing_debt,
+  is_specific_user: @is_specific_user,
+  forgive_partial: 'admin/maintenance_debts/forgive_button',
+  from_type: 'Maintenance',
+  to_type: 'Staffing' %>

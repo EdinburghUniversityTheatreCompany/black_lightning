@@ -1,34 +1,8 @@
-<% headers = [:user_full_name, :show_name, :due_by, :status] %>
-<% headers << '' if can?(:show, Admin::StaffingDebt) %>
-<% headers << '' if can?(:forgive, Admin::StaffingDebt) %>
-<% headers << '' if can?(:convert_to_maintenance_debt, Admin::StaffingDebt) %>
-
-<% field_sets = @staffing_debts.map do |staffing_debt| {
-    fields: [
-        staffing_debt,
-        user_link(staffing_debt.user, false),
-        get_link(staffing_debt.show, :show),
-        staffing_debt.due_by,
-        formatted_status_for_debt(staffing_debt).html_safe,
-        get_link(staffing_debt, :show, link_text: "View / Edit"),
-        render('forgive_button', staffing_debt: staffing_debt),
-        render('convert_button', staffing_debt: staffing_debt)
-    ],
-    class: staffing_debt.css_class
-} end %>
-
-<% if @is_specific_user
-    search_fields = nil
-else
-    search_fields = {
-        user_full_name_cont:  { slug: 'defaults.user' },
-        show_name_cont:       { slug: 'defaults.show_name' },
-        show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean },
-        show_non_members:     { slug: 'defaults.show_non_members', type: :boolean },
-    } 
-end %>
-
-<%= render 'shared/pages/index', resource_class: Admin::StaffingDebt, resources: @staffing_debts, headers: headers, field_sets: field_sets, search_fields: search_fields,
-  include_edit_button: false, include_link_to_item: false %>
-
-<%# TODO: This is now identical to maintenance debts index.Genericise. %>
+<%= render 'admin/shared/debts_index',
+  debts: @staffing_debts,
+  debt_class: Admin::StaffingDebt,
+  convert_permission: :convert_to_maintenance_debt,
+  is_specific_user: @is_specific_user,
+  forgive_partial: 'admin/staffing_debts/forgive_button',
+  from_type: 'Staffing',
+  to_type: 'Maintenance' %>

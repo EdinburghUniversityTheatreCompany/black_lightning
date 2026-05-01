@@ -1,0 +1,8 @@
+<%# locals: (debt:) %>
+
+<% if debt.status != :forgiven %>
+  <%= get_link debt, :forgive, http_method: :put, link_text: 'Forgive',
+               confirm: "Forgiving #{debt.user.name(current_user)}'s Debt",
+               detail: "If you forgive a Debt a FOH fairy dies#{ ' and the associated staffing job will be disassociated' if debt.admin_staffing_job.present? }."
+  %>
+<% end %>

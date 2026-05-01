@@ -21,7 +21,7 @@
         detail: "Are you sure you want to convert #{debt.user.name current_user}'s Maintenance Debt into a Staffing Debt?" 
       ) %>
 
-      <%= render('forgive_button', maintenance_debt: debt) %>
+      <%= render('forgive_button', debt: debt) %>
     <% end %>
   <% elsif debt.is_a?(Admin::StaffingDebt) %>
     <% fields[:converted_from_maintenance_debt] = bool_text(debt.converted_from_maintenance_debt) %>
@@ -36,7 +36,7 @@
         detail: "Are you sure you want to convert #{debt.user.name current_user}'s Staffing Debt into a Maintenance Debt?"
       ) %>
 
-      <%= render('forgive_button', staffing_debt: debt) %>
+      <%= render('forgive_button', debt: debt) %>
     <% end %>
   <% end %>
 <% end %>

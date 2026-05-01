@@ -1,0 +1,7 @@
+<%# locals: (debt:, convert_action:, from_type:, to_type:) %>
+<% unless [:converted, :forgiven, :expired].include?(debt.status) %>
+  <%= get_link debt, convert_action,
+               http_method: :put, link_text: "Convert",
+               confirm: "Converting the #{from_type} Debt to #{to_type} Debt",
+               detail: "Are you sure you want to convert #{debt.user.name(current_user)}'s #{from_type} Debt into a #{to_type} Debt?" %>
+<% end %>
