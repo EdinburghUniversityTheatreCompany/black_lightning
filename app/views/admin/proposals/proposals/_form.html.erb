@@ -27,7 +27,7 @@
       <%= render('shared/form/sections/nested_fields', f: f, association_name: :answers, partial_name: 'answer_fields', display_link_to_add: false) %>
     </div>
 
-    <%= render '/shared/form/sections/team_members', f: f %>
+    <%= render(Admin::Form::TeamMembersComponent.new(f: f)) %>
 
     <div>By submitting this form you agree that this proposal (including the names of the team members) may be shared with Friends of Bedlam</div>
   <% end %>
