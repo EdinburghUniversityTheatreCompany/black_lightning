@@ -10,6 +10,4 @@ import '../vendor/adminlte.customised.js'
 // This is a Bootstrap 4 install, which is still needed for adminlte. Once you upgrade to Bootstrap 5, remove it, and just load Bootstrap 5 in shared.
 import '../vendor/bootstrap.bundle.min.js'
 
-import '../vendor/admin/user_modal_script.js'
-
 import 'moment'
