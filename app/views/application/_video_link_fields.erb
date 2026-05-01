@@ -1,9 +1,8 @@
 <%# locals: (f:, dynamic: nil) %>
 
-<%= render layout: '/shared/form/fields_for_template', locals: { 
+<%= render layout: '/shared/form/fields_for_template', locals: {
         f: f,
-        div_class_additions: 'video_link',
-        attributes: [:name, :link, :order, :access_level]
+        div_class_additions: 'video_link'
     } do %>
     <%= f.input :name, placeholder: 'Video Link Title' %>
     

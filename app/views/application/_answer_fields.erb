@@ -1,10 +1,9 @@
 <%# locals: (f:, dynamic: nil) %>
 
 <% if f.object.question %>
-  <%= render layout: '/shared/form/fields_for_template', locals: { 
+  <%= render layout: '/shared/form/fields_for_template', locals: {
         f: f,
-        div_class_additions: 'question',
-        attributes: [:answer]
+        div_class_additions: 'question'
     } do %>
       <% question_text = render_markdown(f.object.question.question_text) %>
 

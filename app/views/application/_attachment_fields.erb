@@ -1,9 +1,8 @@
 <%# locals: (f:, dynamic: nil) %>
 
-<%= render layout: '/shared/form/fields_for_template', locals: { 
+<%= render layout: '/shared/form/fields_for_template', locals: {
         f: f,
-        div_class_additions: 'job',
-        attributes: [:name, :file, :access_level, :attachment_tags]
+        div_class_additions: 'job'
     } do %>
     <%= f.input :name, placeholder: "Attachment Name" %>
 
