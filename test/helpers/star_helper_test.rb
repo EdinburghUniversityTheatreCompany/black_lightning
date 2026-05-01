@@ -6,8 +6,8 @@ class StarHelperTest < ActionView::TestCase
     assert_equal "", star_rating(nil)
     assert_equal "", star_rating("Pineapple")
 
-    star = '<i class="fas fa-star" aria-hidden=”true”></i>'
-    half_star = '<i class="fas fa-star-half-alt" aria-hidden=”true”></i>'
+    star = '<i class="fa-solid fa-star" aria-hidden=”true”></i>'
+    half_star = '<i class="fa-solid fa-star-half-stroke" aria-hidden=”true”></i>'
 
     assert_equal half_star, star_rating(0.5)
 

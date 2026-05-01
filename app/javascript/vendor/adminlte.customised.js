@@ -5,11 +5,12 @@
  */
 (function (global, factory) {
   typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports, require('jquery')) :
-  typeof define === 'function' && define.amd ? define(['exports', 'jquery'], factory) :
-  (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.adminlte = {}, global.jQuery));
-})(this, (function (exports, $) { 'use strict';
+    typeof define === 'function' && define.amd ? define(['exports', 'jquery'], factory) :
+      (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.adminlte = {}, global.jQuery));
+})(this, (function (exports, $) {
+  'use strict';
 
-  function _interopDefaultLegacy (e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
+  function _interopDefaultLegacy(e) { return e && typeof e === 'object' && 'default' in e ? e : { 'default': e }; }
 
   var $__default = /*#__PURE__*/_interopDefaultLegacy($);
 
@@ -44,13 +45,13 @@
     loadOnInit: true,
     loadErrorTemplate: true,
     responseType: '',
-    overlayTemplate: '<div class="overlay"><i class="fas fa-2x fa-sync-alt fa-spin"></i></div>',
+    overlayTemplate: '<div class="overlay"><i class="fa-solid fa-2x fa-sync-alt fa-spin"></i></div>',
     errorTemplate: '<span class="text-danger"></span>',
-    onLoadStart: function onLoadStart() {},
+    onLoadStart: function onLoadStart() { },
     onLoadDone: function onLoadDone(response) {
       return response;
     },
-    onLoadFail: function onLoadFail(_jqXHR, _textStatus, _errorThrown) {}
+    onLoadFail: function onLoadFail(_jqXHR, _textStatus, _errorThrown) { }
   };
 
   var CardRefresh = /*#__PURE__*/function () {
@@ -115,7 +116,7 @@
 
       $__default["default"](this._element).trigger($__default["default"].Event(EVENT_OVERLAY_REMOVED));
     } // Private
-    ;
+      ;
 
     _proto._init = function _init() {
       var _this2 = this;
@@ -128,7 +129,7 @@
         this.load();
       }
     } // Static
-    ;
+      ;
 
     CardRefresh._jQueryInterface = function _jQueryInterface(config) {
       var data = $__default["default"](this).data(DATA_KEY$e);
@@ -329,7 +330,7 @@
 
       this.maximize();
     } // Private
-    ;
+      ;
 
     _proto._init = function _init(card) {
       var _this3 = this;
@@ -345,7 +346,7 @@
         _this3.remove();
       });
     } // Static
-    ;
+      ;
 
     CardWidget._jQueryInterface = function _jQueryInterface(config) {
       var data = $__default["default"](this).data(DATA_KEY$d);
@@ -535,7 +536,7 @@
         this.collapse();
       }
     } // Private
-    ;
+      ;
 
     _proto._init = function _init() {
       var _this2 = this;
@@ -671,7 +672,7 @@
         });
       }
     } // Static
-    ;
+      ;
 
     ControlSidebar._jQueryInterface = function _jQueryInterface(operation) {
       return this.each(function () {
@@ -757,7 +758,7 @@
       $__default["default"](this._element).parents(SELECTOR_DIRECT_CHAT).first().toggleClass(CLASS_NAME_DIRECT_CHAT_OPEN);
       $__default["default"](this._element).trigger($__default["default"].Event(EVENT_TOGGLED));
     } // Static
-    ;
+      ;
 
     DirectChat._jQueryInterface = function _jQueryInterface(config) {
       return this.each(function () {
@@ -884,7 +885,7 @@
         });
       }
     } // Static
-    ;
+      ;
 
     Dropdown._jQueryInterface = function _jQueryInterface(config) {
       return this.each(function () {
@@ -1019,7 +1020,7 @@
         $element.trigger($__default["default"].Event(EVENT_EXPANDED$1));
       }
     } // Static
-    ;
+      ;
 
     ExpandableTable._jQueryInterface = function _jQueryInterface(operation) {
       return this.each(function () {
@@ -1133,7 +1134,7 @@
         document.msExitFullscreen();
       }
     } // Static
-    ;
+      ;
 
     Fullscreen._jQueryInterface = function _jQueryInterface(config) {
       var data = $__default["default"](this).data(DATA_KEY$8);
@@ -1278,7 +1279,7 @@
         navId += "-" + Math.floor(Math.random() * 1000);
       }
 
-      var newNavItem = "<li class=\"nav-item\" role=\"presentation\"><a href=\"#\" class=\"btn-iframe-close\" data-widget=\"iframe-close\" data-type=\"only-this\"><i class=\"fas fa-times\"></i></a><a class=\"nav-link\" data-toggle=\"row\" id=\"" + navId + "\" href=\"#" + tabId + "\" role=\"tab\" aria-controls=\"" + tabId + "\" aria-selected=\"false\">" + title + "</a></li>";
+      var newNavItem = "<li class=\"nav-item\" role=\"presentation\"><a href=\"#\" class=\"btn-iframe-close\" data-widget=\"iframe-close\" data-type=\"only-this\"><i class=\"fa-solid fa-times\"></i></a><a class=\"nav-link\" data-toggle=\"row\" id=\"" + navId + "\" href=\"#" + tabId + "\" role=\"tab\" aria-controls=\"" + tabId + "\" aria-selected=\"false\">" + title + "</a></li>";
       $__default["default"](SELECTOR_TAB_NAVBAR_NAV).append(unescape(escape(newNavItem)));
       var newTabItem = "<div class=\"tab-pane fade\" id=\"" + tabId + "\" role=\"tabpanel\" aria-labelledby=\"" + navId + "\"><iframe src=\"" + link + "\"></iframe></div>";
       $__default["default"](SELECTOR_TAB_CONTENT).append(unescape(escape(newTabItem)));
@@ -1450,7 +1451,7 @@
 
       this._fixHeight(true);
     } // Private
-    ;
+      ;
 
     _proto._init = function _init() {
       var usingDefTab = $__default["default"](SELECTOR_TAB_CONTENT).children().length > 2;
@@ -1628,7 +1629,7 @@
         }
       }
     } // Static
-    ;
+      ;
 
     IFrame._jQueryInterface = function _jQueryInterface(config) {
       if ($__default["default"](SELECTOR_DATA_TOGGLE$1).length > 0) {
@@ -1810,7 +1811,7 @@
         }
       }
     } // Private
-    ;
+      ;
 
     _proto._init = function _init() {
       var _this = this;
@@ -1875,7 +1876,7 @@
     _proto._isFooterFixed = function _isFooterFixed() {
       return $__default["default"](SELECTOR_FOOTER).css('position') === 'fixed';
     } // Static
-    ;
+      ;
 
     Layout._jQueryInterface = function _jQueryInterface(config) {
       if (config === void 0) {
@@ -2079,7 +2080,7 @@
         $body.removeClass(CLASS_NAME_COLLAPSED);
       }
     } // Private
-    ;
+      ;
 
     _proto._init = function _init() {
       var _this2 = this;
@@ -2102,7 +2103,7 @@
       });
       $__default["default"](SELECTOR_WRAPPER).append(overlay);
     } // Static
-    ;
+      ;
 
     PushMenu._jQueryInterface = function _jQueryInterface(operation) {
       return this.each(function () {
@@ -2284,7 +2285,7 @@
         this.open();
       }
     } // Private
-    ;
+      ;
 
     _proto._parseItem = function _parseItem(item, path) {
       var _this3 = this;
@@ -2361,7 +2362,7 @@
     _proto._addNotFound = function _addNotFound() {
       $__default["default"](SELECTOR_SEARCH_RESULTS_GROUP).append(this._renderItem(this.options.notFoundText, '#', []));
     } // Static
-    ;
+      ;
 
     SidebarSearch._jQueryInterface = function _jQueryInterface(config) {
       var data = $__default["default"](this).data(DATA_KEY$4);
@@ -2507,7 +2508,7 @@
         this.open();
       }
     } // Static
-    ;
+      ;
 
     NavbarSearch._jQueryInterface = function _jQueryInterface(options) {
       return this.each(function () {
@@ -2688,7 +2689,7 @@
         });
       }
     } // Static
-    ;
+      ;
 
     _proto._getContainerId = function _getContainerId() {
       if (this._config.position == POSITION_TOP_RIGHT) {
@@ -2731,7 +2732,7 @@
         $__default["default"](this._getContainerId()).removeClass('fixed');
       }
     } // Static
-    ;
+      ;
 
     Toasts._jQueryInterface = function _jQueryInterface(option, config) {
       return this.each(function () {
@@ -2819,7 +2820,7 @@
     _proto.unCheck = function unCheck(item) {
       this._config.onUnCheck.call(item);
     } // Private
-    ;
+      ;
 
     _proto._init = function _init() {
       var _this = this;
@@ -2830,7 +2831,7 @@
         _this.toggle($__default["default"](event.target));
       });
     } // Static
-    ;
+      ;
 
     TodoList._jQueryInterface = function _jQueryInterface(config) {
       return this.each(function () {
@@ -2987,7 +2988,7 @@
         this.expand($__default["default"](treeviewMenu), parentLi);
       }
     } // Private
-    ;
+      ;
 
     _proto._setupListeners = function _setupListeners() {
       var _this3 = this;
@@ -3003,7 +3004,7 @@
         $__default["default"](this._config.sidebarButtonSelector).PushMenu('expand');
       }
     } // Static
-    ;
+      ;
 
     Treeview._jQueryInterface = function _jQueryInterface(config) {
       return this.each(function () {
