@@ -1,127 +1,128 @@
 name: CI
 
 on:
-    pull_request:
-    push:
-        branches: [ main ]
+  pull_request:
+  push:
+    branches: [ main ]
 
 jobs:
-    scan_ruby:
-        runs-on: ubuntu-latest
+  scan_ruby:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v6
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-            - name: Set up Ruby
-              uses: ruby/setup-ruby@v1
-              with:
-                  ruby-version: .ruby-version
-                  bundler-cache: true
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
 
-            - name: Make bin files executable
-              run: chmod +x bin/*
+      - name: Make bin files executable
+        run: chmod +x bin/*
 
-            - name: Scan for common Rails security vulnerabilities using static analysis
-              run: bin/brakeman --no-pager
+      - name: Scan for common Rails security vulnerabilities using static analysis
+        run: bin/brakeman --no-pager
 
-    lint_ruby:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v6
+  lint_ruby:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-            - name: Set up Ruby
-              uses: ruby/setup-ruby@v1
-              with:
-                  ruby-version: .ruby-version
-                  bundler-cache: true
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
 
-            - name: Make bin files executable
-              run: chmod +x bin/*
+      - name: Make bin files executable
+        run: chmod +x bin/*
 
-            - name: Lint Ruby code for consistent style
-              run: bin/rubocop -f github
+      - name: Lint Ruby code for consistent style
+        run: bin/rubocop -f github
 
-    lint_js:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v6
+  lint_js:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-            - name: Set up Node
-              uses: actions/setup-node@v6
-              with:
-                  node-version-file: .node-version
-                  cache: yarn
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: yarn
 
-            - name: Install JavaScript dependencies
-              run: yarn install --frozen-lockfile
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
 
-            - name: Lint JavaScript code for consistent style
-              run: yarn lint
+      - name: Lint JavaScript code for consistent style
+        run: yarn lint
 
+  test:
+    runs-on: ubuntu-latest
 
-    test:
-        runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: true
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s
+          --health-timeout=5s --health-retries=3
+      # redis:
+      #   image: redis
+      #   ports:
+      #     - 6379:6379
+      #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
 
-        services:
-            mysql:
-                image: mysql
-                env:
-                    MYSQL_ALLOW_EMPTY_PASSWORD: true
-                ports:
-                    - 3306:3306
-                options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-            # redis:
-            #   image: redis
-            #   ports:
-            #     - 6379:6379
-            #   options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Install packages
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y
+          build-essential git libpq-dev pkg-config google-chrome-stable
+          libvips-dev
 
-        steps:
-            - name: Install packages
-              run: sudo apt-get update && sudo apt-get install --no-install-recommends -y
-                  build-essential git libpq-dev pkg-config google-chrome-stable libvips-dev
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-            - name: Checkout code
-              uses: actions/checkout@v6
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
 
-            - name: Set up Ruby
-              uses: ruby/setup-ruby@v1
-              with:
-                  ruby-version: .ruby-version
-                  bundler-cache: true
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: yarn
 
-            - name: Set up Node
-              uses: actions/setup-node@v6
-              with:
-                  node-version-file: .node-version
-                  cache: yarn
+      - name: Install JavaScript dependencies
+        run: yarn install --frozen-lockfile
 
-            - name: Install JavaScript dependencies
-              run: yarn install --frozen-lockfile
+      - name: Make bin files executable
+        run: chmod +x bin/*
 
-            - name: Build JavaScript assets
-              run: bin/vite build --mode=test
-              env:
-                  RAILS_ENV: test
+      - name: Build JavaScript assets
+        run: bin/vite build --mode=test
+        env:
+          RAILS_ENV: test
 
-            - name: Make bin files executable
-              run: chmod +x bin/*
+      - name: Run tests
+        env:
+          RAILS_ENV: test
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+          # REDIS_URL: redis://localhost:6379/0
+        run: bin/rails db:test:prepare test test:system
 
-            - name: Run tests
-              env:
-                  RAILS_ENV: test
-                  DB_USERNAME: root
-                  DB_PASSWORD: ""
-                  # REDIS_URL: redis://localhost:6379/0
-              run: bin/rails db:test:prepare test test:system
-
-            - name: Keep screenshots from failed system tests
-              uses: actions/upload-artifact@v7
-              if: failure()
-              with:
-                  name: screenshots
-                  path: ${{ github.workspace }}/tmp/screenshots
-                  if-no-files-found: ignore
+      - name: Keep screenshots from failed system tests
+        uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: screenshots
+          path: ${{ github.workspace }}/tmp/screenshots
+          if-no-files-found: ignore
