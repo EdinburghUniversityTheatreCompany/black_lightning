@@ -12,3 +12,7 @@ AllCops:
     - db/schema.rb
     - db/queue_schema.rb
     - db/cache_schema.rb
+
+ViewComponent/MissingPreview:
+  Exclude:
+    - "**/application_component.rb"
