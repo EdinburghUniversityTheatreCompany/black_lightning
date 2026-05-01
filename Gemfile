@@ -4,7 +4,7 @@ ruby File.read(".ruby-version").strip
 
 gem "rails", "~> 8.1"
 
-gem "mysql2" #, github: "mickzijdel/mysql2", branch: "master"
+gem "mysql2" # , github: "mickzijdel/mysql2", branch: "master"
 
 gem "cssbundling-rails"
 gem "jsbundling-rails"

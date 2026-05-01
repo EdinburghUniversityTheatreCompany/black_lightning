@@ -1,9 +1,9 @@
 class CalendarsController < ApplicationController
   # Token-authenticated public endpoint — no Devise session required for feed
   skip_authorization_check
-  skip_before_action :require_profile_completion!, only: [:staffing]
+  skip_before_action :require_profile_completion!, only: [ :staffing ]
 
-  before_action :authenticate_user!, only: [:regenerate_token]
+  before_action :authenticate_user!, only: [ :regenerate_token ]
 
   def staffing
     user = User.find_by!(calendar_token: params[:token])
@@ -13,7 +13,7 @@ class CalendarsController < ApplicationController
                .where("admin_staffings.end_time >= ?", Time.current)
                .includes(:staffable)
 
-    last_modified = jobs.flat_map { |j| [j.updated_at, j.staffable.updated_at] }.max || Time.current
+    last_modified = jobs.flat_map { |j| [ j.updated_at, j.staffable.updated_at ] }.max || Time.current
 
     if stale?(etag: last_modified.to_i, last_modified: last_modified, public: false)
       cal = build_feed(jobs)
