@@ -7,12 +7,14 @@ class StaticController < ApplicationController
   def show
     page = params[:page]
 
-    unless ALLOWED_PAGES.include?(page)
+    safe_page = ALLOWED_PAGES.find { |p| p == page }
+
+    unless safe_page
       Rails.logger.error "Could not find the page at #{request.fullpath}"
       raise ActionController::RoutingError.new("This page could not be found.")
     end
 
-    render "static/#{page}"
+    render "static/#{safe_page}"
   rescue ActionView::MissingTemplate
     Rails.logger.error "Could not find the page at #{request.fullpath}"
     raise ActionController::RoutingError.new("This page could not be found.")
