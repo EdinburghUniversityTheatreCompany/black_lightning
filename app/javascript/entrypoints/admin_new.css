@@ -100,6 +100,15 @@
   .col-md   { @apply flex-1 px-2; }
   .col-lg   { @apply flex-1 px-2; }
   .col-xl   { @apply flex-1 px-2; }
+  .col-sm-1  { @apply w-1/12 px-2; }
+  .col-sm-2  { @apply w-2/12 px-2; }
+  .col-sm-3  { @apply w-3/12 px-2; }
+  .col-sm-4  { @apply w-4/12 px-2; }
+  .col-sm-6  { @apply w-6/12 px-2; }
+  .col-sm-8  { @apply w-8/12 px-2; }
+  .col-sm-9  { @apply w-9/12 px-2; }
+  .col-sm-10 { @apply w-10/12 px-2; }
+  .col-sm-12 { @apply w-full px-2; }
   .col-12   { @apply w-full px-2; }
   .col-11   { @apply w-11/12 px-2; }
   .col-10   { @apply w-10/12 px-2; }

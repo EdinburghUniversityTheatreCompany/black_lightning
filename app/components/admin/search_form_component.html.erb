@@ -1,0 +1,28 @@
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">Search</span>
+  </div>
+
+  <%= helpers.search_form_for(@q, builder: SimpleForm::FormBuilder, url: form_url,
+        html: { id: "search", class: "search-form" }, **helpers.horizontal_form_options) do |f| %>
+    <div class="card-body">
+      <%= helpers.render_search_form_fields(f, fields_outside_collapse, effective_columns) %>
+
+      <% if fields_in_collapse.any? %>
+        <%= render(Admin::CollapsibleSectionComponent.new(title: "More", card_class: "mb-0", start_open: false)) do %>
+          <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="card-footer">
+      <%= f.button :button, class: "btn btn-primary", name: "commit" do %>
+        <%= helpers.generate_icon_prefix("magnifying-glass", "Search") %>
+      <% end %>
+
+      <% button_params.each do |_key, params| %>
+        <%= f.submit(params[:action], class: "btn btn-secondary") %>
+      <% end %>
+    </div>
+  <% end %>
+</div>
