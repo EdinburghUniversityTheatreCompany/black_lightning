@@ -130,7 +130,7 @@ module LinkHelper
   end
 
   def generate_icon_prefix(icon_name, prefix)
-    "<span class=\”no-wrap\”><i class=\”fa-solid fa-#{icon_name}\” aria-hidden=”true”></i> #{prefix}</span>".html_safe
+    "<span class=\"no-wrap\"><i class=\"fa-solid fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
   end
 
   def view_page_on_main_site_button

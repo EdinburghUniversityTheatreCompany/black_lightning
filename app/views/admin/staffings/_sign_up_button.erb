@@ -1,6 +1,6 @@
 <%# locals: (job:) %>
 
-<% sign_up_text = '<i class=”fa-solid fa-pen-to-square” aria-hidden=”true”></i> Sign Up'.html_safe %>
+<% sign_up_text = '<i class="fa-solid fa-pen-to-square" aria-hidden=”true”></i> Sign Up'.html_safe %>
 
 <% date = l job.staffable.start_time, format: :long %>
 <%= button_to sign_up_text, admin_staffing_sign_up_path(job), method: :put,

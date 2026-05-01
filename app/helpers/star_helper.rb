@@ -14,12 +14,12 @@ module StarHelper
     # Appends a star equal to the whole number part of the rating.
     amount_of_stars = rating.floor
     (1..amount_of_stars).each do
-      stars << "<i class=”fa-solid fa-star” aria-hidden=”true”></i>"
+      stars << "<i class=\"fa-solid fa-star\" aria-hidden=”true”></i>"
     end
 
     # Appends a half star if the decimal part >= 0.5
     if half_star
-      stars << "<i class=”fa-solid fa-star-half-stroke” aria-hidden=”true”></i>"
+      stars << "<i class=\"fa-solid fa-star-half-stroke\" aria-hidden=”true”></i>"
     end
 
     # Only multiples of 0.5 can be shown in visual stars, so this appensd the numeric rating
