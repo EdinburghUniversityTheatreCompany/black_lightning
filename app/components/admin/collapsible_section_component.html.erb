@@ -15,8 +15,12 @@
   </div>
 
   <div data-collapsible-target="content" class="<%= 'hidden' unless @start_open %>">
-    <div class="card-body <%= @body_class %>">
+    <% if @flush %>
       <%= content %>
-    </div>
+    <% else %>
+      <div class="card-body">
+        <%= content %>
+      </div>
+    <% end %>
   </div>
 </div>
