@@ -1,13 +1,10 @@
-// FontAwesome - self-hosted
-@use "@fortawesome/fontawesome-free/scss/fontawesome" with (
-  $fa-font-path: "webfonts"
+// FontAwesome 7 - served from node_modules via Propshaft
+@use "@fortawesome/fontawesome-free/scss/variables" with (
+  $font-path: "webfonts"
 );
-@use "@fortawesome/fontawesome-free/scss/solid" with (
-  $fa-font-path: "webfonts"
-);
-@use "@fortawesome/fontawesome-free/scss/brands" with (
-  $fa-font-path: "webfonts"
-);
+@use "@fortawesome/fontawesome-free/scss/fontawesome";
+@use "@fortawesome/fontawesome-free/scss/solid";
+@use "@fortawesome/fontawesome-free/scss/brands";
 
 // Tom Select (Bootstrap 5 theme) - replaces Select2
 @use "tom-select/dist/css/tom-select.bootstrap5";
