@@ -93,6 +93,20 @@ jobs:
                   ruby-version: .ruby-version
                   bundler-cache: true
 
+            - name: Set up Node
+              uses: actions/setup-node@v6
+              with:
+                  node-version-file: .node-version
+                  cache: yarn
+
+            - name: Install JavaScript dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Build JavaScript assets
+              run: bin/vite build --mode=test
+              env:
+                  RAILS_ENV: test
+
             - name: Make bin files executable
               run: chmod +x bin/*
 
