@@ -8,7 +8,7 @@
         <%= render Admin::CardWidgetComponent.new(title: link_to("Opportunities", admin_opportunities_path)) do %>
           <%= render "opportunities_widget" %>
         <% end %>
-        <%= render Admin::CardWidgetComponent.new(title: "Resources") do %>
+        <%= render Admin::CardWidgetComponent.new(title: "Resources", flush: true) do %>
           <%= render "resources_widget" %>
         <% end %>
       </div>

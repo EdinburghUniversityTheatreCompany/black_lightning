@@ -10,8 +10,12 @@
     </div>
   </div>
   <div data-collapsible-target="content">
-    <div class="card-body">
+    <% if @flush %>
       <%= content %>
-    </div>
+    <% else %>
+      <div class="card-body">
+        <%= content %>
+      </div>
+    <% end %>
   </div>
 </div>
