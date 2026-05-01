@@ -1,5 +1,5 @@
 <%# locals: (resources:, resource_class:, field_sets: nil, headers: nil, show_new_button: true, search_fields: nil, include_edit_button: true, include_link_to_item: true, quick_actions: [], content: nil, include_pagination: true) %>
-<%# KEEP%>
+<%# KEEP %>
 <% if show_new_button && can?(:new, resource_class) %>
   <% quick_actions << get_link(resource_class, :new) %>
 <% end %>
@@ -7,7 +7,7 @@
     <div class="row">
       <% if block_exists?(@editable_block_name) %>
         <div class="col-md-7">
-          <% # If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
+          <%# If you want to use this for front-end as well, you need to recognise if something is admin or not. %>
           <div class="card">
             <div class="card-header">
               <span class="card-title">Information</span>
@@ -17,7 +17,7 @@
             </div>
           </div>
         </div>
-        <% # Slightly bad to put it here, but essentially, if not rendering the block, add an "Create Block" button to the quick actions.%>
+        <%# Slightly bad to put it here, but essentially, if not rendering the block, add an "Create Block" button to the quick actions. %>
       <% else %>
         <% quick_actions << link_to_create_block(@editable_block_name) %>
       <% end %>
@@ -50,22 +50,22 @@
       <div class="col">
         <div class="card">
           <div class="card-header">
-            <span class="card-title"><%= @title%></span>
+            <span class="card-title"><%= @title %></span>
 
             <% if include_pagination %>
               <div class="card-tools"> <%= paginate resources %></div>
             <% end %>
           </div>
 
-          <div class="card-body">
-            <% if content.present? %>
+          <% if content.present? %>
+            <div class="card-body">
               <%= content %>
-            <% else %>
-                <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, include_link_to_item: include_link_to_item, resource_class: resource_class) %>
-            <% end %>
-          </div>
+            </div>
+          <% else %>
+            <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, include_link_to_item: include_link_to_item, resource_class: resource_class) %>
+          <% end %>
 
-          <% if include_pagination %>
+          <% if include_pagination && resources.respond_to?(:total_pages) && resources.total_pages > 1 %>
             <div class="card-footer clearfix">
               <%= paginate(resources) %>
             </div>
