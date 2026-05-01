@@ -5,20 +5,12 @@
 class Admin::TechiesController < AdminController
   include GenericController
 
-  load_and_authorize_resource except: [ :tree, :bush, :mass_new, :mass_create, :by_entry_year ]
+  load_and_authorize_resource except: [ :tree, :mass_new, :mass_create, :by_entry_year ]
 
   def show
     super
 
     @coparents = @techie.children.flat_map(&:parents).uniq - [ @techie ]
-  end
-
-  def bush
-    authorize! :index, Techie
-
-    @q = Techie.ransack(params[:q], auth_object: current_ability)
-
-    @title = "Techie Family Tree - New but sucks"
   end
 
   def tree_data

@@ -12,6 +12,4 @@ import '../vendor/bootstrap.bundle.min.js'
 
 import '../vendor/admin/user_modal_script.js'
 
-import "../vendor/admin/techie_tree.js"
-
 import 'moment'
