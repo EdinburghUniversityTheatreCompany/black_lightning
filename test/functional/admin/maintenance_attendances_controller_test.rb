@@ -1,7 +1,6 @@
 require "test_helper"
 
 class Admin::MaintenanceAttendancesControllerTest < ActionController::TestCase
-  # TODO: all of this
   setup do
     @maintenance_attendance = maintenance_attendances(:one)
     @maintenance_session = maintenance_sessions(:one)
