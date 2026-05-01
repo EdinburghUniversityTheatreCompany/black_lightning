@@ -7,6 +7,8 @@
         "@popperjs/core": "^2.11.8",
         "@rails/activestorage": "^8",
         "@stimulus-components/rails-nested-form": "^5.0.0",
+        "@tailwindcss/forms": "^0.5.11",
+        "@tailwindcss/vite": "^4.2.4",
         "@toast-ui/editor": "^3.2.2",
         "admin-lte": "^3.2.0",
         "bootstrap": "^5.3.3",
@@ -21,6 +23,7 @@
         "sass-embedded": "^1.86.0",
         "stimulus-rails-nested-form": "^4.1.0",
         "sweetalert2": "^11.11.1",
+        "tailwindcss": "^4.2.4",
         "tom-select": "^2.6.0",
         "vite": "^8.0.10",
         "vite-plugin-ruby": "^5.2.1"

@@ -1,0 +1,15 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+
+@source "../../../app/views/**/*.erb";
+@source "../../../app/components/**/*.html.erb";
+@source "../controllers/**/*.js";
+
+@theme {
+  --color-primary: #ba0204;
+  --color-primary-dark: #8a0103;
+  --color-secondary: #fdc5b6;
+  --color-sidebar-bg: #343a40;
+  --color-sidebar-text: #c2c7d0;
+  --font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif;
+}
