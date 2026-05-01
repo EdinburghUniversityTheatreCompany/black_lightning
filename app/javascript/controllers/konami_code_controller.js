@@ -1,5 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
-import itify_add, { itify_init } from "../vendor/itify"
+import itify_add, { itify_init } from "../lib/itify"
 
 // Easter egg: listens for the Konami code sequence on window keydown events.
 // Image URLs are resolved server-side by ItifyHelper and passed in via
