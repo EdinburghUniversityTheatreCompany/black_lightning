@@ -165,6 +165,32 @@
   .page-item.active .page-link { @apply bg-primary text-white border-primary; }
   .img-circle             { @apply rounded-full; }
 
+  /* Breadcrumb links */
+  .breadcrumb-item a { @apply text-primary hover:text-primary-dark; }
+  .breadcrumb-item   { @apply text-gray-400; }
+
+  /* Bootstrap list-group compat */
+  .list-group      { @apply flex flex-col; }
+  .list-group-item { @apply px-5 py-3 border-b border-gray-200 last:border-b-0; }
+  .list-group-item.active { @apply bg-primary text-white border-primary; }
+
   /* Sidebar collapsed state */
   .sidebar-collapsed { @apply hidden; }
+
 }
+
+/* Admin breadcrumb link color (lives outside <main>) */
+.admin-breadcrumb a { @apply text-primary hover:text-primary-dark; }
+
+/* Admin content link styling — scoped to main so navbar/sidebar are unaffected */
+main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
+  @apply text-primary hover:text-primary-dark;
+}
+
+/* Links inside primary-colored backgrounds (footer, etc.) must stay white */
+.bg-primary a,
+.card-danger > .card-header a,
+.card-success > .card-header a,
+.card-warning > .card-header a,
+.card-info    > .card-header a,
+.card-primary > .card-header a { color: white !important; }
