@@ -440,6 +440,35 @@
     @apply lg:w-3/12 px-2;
   }
 
+  .col-xl-12 {
+    @apply xl:w-full px-2;
+  }
+
+  .col-xl-8 {
+    @apply xl:w-8/12 px-2;
+  }
+
+  .col-xl-6 {
+    @apply xl:w-6/12 px-2;
+  }
+
+  .col-xl-4 {
+    @apply xl:w-4/12 px-2;
+  }
+
+  .col-xl-3 {
+    @apply xl:w-3/12 px-2;
+  }
+
+  .col-xl-2 {
+    @apply xl:w-2/12 px-2;
+  }
+
+  /* Vertical divider between columns */
+  .vertical-rule>[class*="col-"]:not(:first-child) {
+    @apply border-l border-gray-200 pl-4;
+  }
+
   /* Bootstrap utility aliases */
   .container-fluid {
     @apply w-full px-4;
