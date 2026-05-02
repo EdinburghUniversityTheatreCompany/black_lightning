@@ -1,6 +1,6 @@
 module FormHelper
   def horizontal_form_options
-    if params[:controller].to_s.start_with?("admin/")
+    if @admin_site || params[:controller].to_s.start_with?("admin/")
       {
         wrapper: :tailwind_horizontal_form,
         wrapper_mappings: {
