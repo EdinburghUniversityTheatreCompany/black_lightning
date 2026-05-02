@@ -2,6 +2,7 @@
     "dependencies": {
         "@fancyapps/ui": "^6.1.14",
         "@fortawesome/fontawesome-free": "7.2.0",
+        "@hotwired/stimulus": "^3.0.0",
         "@hotwired/turbo-rails": "^8.0.0",
         "@popperjs/core": "^2.11.8",
         "@rails/activestorage": "^8",
@@ -18,7 +19,6 @@
         "leaflet": "^1.9.4",
         "moment": "^2.29.4",
         "sass-embedded": "^1.86.0",
-        "stimulus": "^3.0.0",
         "stimulus-rails-nested-form": "^4.1.0",
         "sweetalert2": "^11.11.1",
         "tom-select": "^2.6.0",
