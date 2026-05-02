@@ -3,15 +3,19 @@ import { Controller } from "@hotwired/stimulus"
 // Replaces the legacy app/assets/javascripts/admin/question_templates.js
 // jQuery-based TemplateLoader class.
 //
+// This controller should be placed on a wrapper element that contains both
+// the trigger button and the <dialog> rendered by Admin::ModalComponent.
+// The ModalComponent sets data-template-loader-target="dialog" on the <dialog>.
+//
 // Behaviour:
 //   * On connect, reads two <meta> tags:
 //       - templates-base-url  — JSON endpoint for the template list
 //       - templates-items-type — "questions" or "jobs"
-//   * Fetches the template list and populates #template_list (the modal
+//   * Fetches the template list and populates the list target (the modal
 //     dropdown) via the native fetch API (no jQuery).
-//   * When the user picks a template, shows a summary in #template_summary
-//     and enables the #template_load button.
-//   * When the user clicks #template_load, for each template item it:
+//   * When the user picks a template, shows a summary in the summary target
+//     and enables the loadButton target.
+//   * When the user clicks loadButton, for each template item it:
 //       1. Queues the item in #insertQueue.
 //       2. Processes the queue one item at a time:
 //          a. Sets #pendingItem to the next queued item.
@@ -37,6 +41,8 @@ import { Controller } from "@hotwired/stimulus"
 // this controller set the meta tags in <head> (inside content_for :head),
 // which keeps the view diff minimal and avoids threading values through partials.
 export default class extends Controller {
+  static targets = ["dialog", "list", "summary", "loadButton"]
+
   #baseUrl = null
   #itemsType = null
   #allTemplates = []
@@ -47,6 +53,7 @@ export default class extends Controller {
   #insertQueue = []
   // The item currently waiting to be populated by the MutationObserver
   #pendingItem = null
+
   connect() {
     this.#baseUrl = document.querySelector('meta[name="templates-base-url"]')?.content
     this.#itemsType = document.querySelector('meta[name="templates-items-type"]')?.content
@@ -61,6 +68,20 @@ export default class extends Controller {
   disconnect() {
     this.#observer?.disconnect()
     this.#observer = null
+  }
+
+  // Public Stimulus actions
+
+  open() {
+    this.dialogTarget.showModal()
+  }
+
+  close() {
+    this.dialogTarget.close()
+  }
+
+  backdropClose({ target }) {
+    if (target === this.dialogTarget) this.dialogTarget.close()
   }
 
   // Private
@@ -143,26 +164,23 @@ export default class extends Controller {
   }
 
   #bindListDropdown() {
-    const list = document.getElementById("template_list")
-    const loadButton = document.getElementById("template_load")
-    if (!list || !loadButton) return
+    if (!this.hasListTarget || !this.hasLoadButtonTarget) return
 
-    list.addEventListener("change", () => this.#handleTemplateSelection())
-    loadButton.addEventListener("click", () => this.#loadTemplate())
+    this.listTarget.addEventListener("change", () => this.#handleTemplateSelection())
+    this.loadButtonTarget.addEventListener("click", () => this.#loadTemplate())
   }
 
   #handleTemplateSelection() {
-    const list = document.getElementById("template_list")
-    const loadButton = document.getElementById("template_load")
-    const summary = document.getElementById("template_summary")
-    if (!list || !loadButton || !summary) return
+    const list = this.listTarget
+    const loadButton = this.loadButtonTarget
+    const summary = this.summaryTarget
 
     const templateId = list.value
 
     if (!templateId) {
       summary.innerHTML = ""
       this.#globalData = null
-      loadButton.classList.add("disabled")
+      loadButton.disabled = true
       return
     }
 
@@ -171,36 +189,67 @@ export default class extends Controller {
     if (selected) {
       this.#globalData = selected
       this.#updateSummary()
-      loadButton.classList.remove("disabled")
+      loadButton.disabled = false
     } else {
       console.error("Selected template not found:", templateId)
       summary.innerHTML = "<p>Error: Template not found</p>"
-      loadButton.classList.add("disabled")
+      loadButton.disabled = true
     }
   }
 
   #updateSummary() {
-    const summary = document.getElementById("template_summary")
-    if (!summary) return
+    const summary = this.summaryTarget
+    const fragment = document.createDocumentFragment()
 
-    const items = this.#itemsType === "questions"
-      ? (this.#globalData.questions ?? []).map((q) => q.question_text)
-      : (this.#globalData.staffing_jobs ?? []).map((j) => j.name)
+    const heading = document.createElement("p")
+    heading.className = "text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3 mb-1"
+    heading.textContent = "Preview"
+    fragment.appendChild(heading)
 
     const list = document.createElement("ul")
-    list.id = "template_items_list"
-    items.forEach((text) => {
-      const li = document.createElement("li")
-      li.textContent = text
-      list.appendChild(li)
-    })
+    list.className = "space-y-1"
 
-    summary.innerHTML = "<h3>Items</h3>"
-    summary.appendChild(list)
+    if (this.#itemsType === "questions") {
+      const questions = this.#globalData.questions ?? []
+      questions.forEach((q) => {
+        const li = document.createElement("li")
+        li.className = "flex items-start gap-2 text-sm py-1 border-b border-gray-100 last:border-0"
+
+        const text = document.createElement("span")
+        text.className = "flex-1 text-gray-800"
+        text.textContent = q.question_text ?? ""
+
+        if (q.response_type) {
+          const badge = document.createElement("span")
+          badge.className = "text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 shrink-0 font-mono"
+          badge.textContent = q.response_type.replace(/_/g, " ")
+          li.appendChild(text)
+          li.appendChild(badge)
+        } else {
+          li.appendChild(text)
+        }
+
+        list.appendChild(li)
+      })
+    } else {
+      const jobs = this.#globalData.staffing_jobs ?? []
+      jobs.forEach((j) => {
+        const li = document.createElement("li")
+        li.className = "text-sm text-gray-800 py-1 border-b border-gray-100 last:border-0"
+        li.textContent = j.name ?? ""
+        list.appendChild(li)
+      })
+    }
+
+    fragment.appendChild(list)
+    summary.innerHTML = ""
+    summary.appendChild(fragment)
   }
 
   #loadTemplate() {
     if (!this.#globalData) return
+
+    this.dialogTarget.close()
 
     this.#insertQueue = []
 
@@ -321,8 +370,7 @@ export default class extends Controller {
         }
 
         this.#allTemplates = data
-        const list = document.getElementById("template_list")
-        if (!list) return
+        const list = this.listTarget
 
         data.forEach((template) => {
           const option = document.createElement("option")

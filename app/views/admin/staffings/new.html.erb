@@ -3,33 +3,35 @@
   <meta name="templates-items-type" content="jobs">
 <% end %>
 
-<%= simple_horizontal_form_for @staffing do |f| %>
-  <% content_for :extra_form_actions do %>
-    <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#template_modal">Load Template</button>
-  <% end %>
+<div data-controller="template-loader">
+  <%= simple_horizontal_form_for @staffing do |f| %>
+    <% content_for :extra_form_actions do %>
+      <button type="button" class="btn btn-secondary" data-action="click->template-loader#open">Load Template</button>
+    <% end %>
 
-  <%= render('shared/pages/form', f: f) do %>
-    <%= render 'form_base', f: f %>
+    <%= render('shared/pages/form', f: f) do %>
+      <%= render 'form_base', f: f %>
 
-    <div id="dates_container" data-controller="staffing-date-fields">
-      <h3>Dates</h3>
-      <a class="btn btn-secondary" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</a>
+      <div id="dates_container" data-controller="staffing-date-fields">
+        <h3>Dates</h3>
+        <a class="btn btn-secondary" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</a>
 
-      <div style="display: none" class="control-group datetime" data-staffing-date-fields-target="blueprint">
-        <div class="row">
-          <div class="col-md">
-            <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_start_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="start_datetime">
-          </div>
-          <div class="col-md">
-            <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="end_time">
-          </div>
-          <div class="col-md-auto">
-            <a class="btn btn-danger mb-2"><%= remove_button_text %></a>
+        <div style="display: none" class="control-group datetime" data-staffing-date-fields-target="blueprint">
+          <div class="row">
+            <div class="col-md">
+              <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_start_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="start_datetime">
+            </div>
+            <div class="col-md">
+              <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="end_time">
+            </div>
+            <div class="col-md-auto">
+              <a class="btn btn-danger mb-2"><%= remove_button_text %></a>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    <% end %>
   <% end %>
-<% end %>
 
-<%= render '/shared/form/template_modal', header: 'Select Jobs from Template', template_model: Admin::StaffingTemplate %>
+  <%= render '/shared/form/template_modal', header: 'Select Jobs from Template', template_model: Admin::StaffingTemplate %>
+</div>
