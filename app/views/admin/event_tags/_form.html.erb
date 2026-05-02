@@ -5,11 +5,10 @@
     <%= f.input :name %>
     <%= f.input :ordering, hint: 'Lowest will appear at the top.' %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :description, rows: 12 )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :description, rows: 12 ) %>
 
-    <hr>
-    <h5>Debt Recommendations (Optional)</h5>
-    <p class="text-muted small">
+    <h3>Debt Recommendations (Optional)</h3>
+    <p class="text-muted small mx-2 mb-3">
       Set recommended debt amounts for shows with this tag. This helps debt managers remember
       standard amounts but doesn't enforce them. Leave blank if this tag has no debt recommendations.
     </p>
