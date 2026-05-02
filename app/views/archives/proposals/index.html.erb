@@ -1,26 +1,24 @@
-<% 
+<%
 search_fields = {
   show_title_cont:      { slug: 'defaults.proposal_title' },
   users_full_name_cont: { slug: 'defaults.user' },
-  
+
   proposal_text_cont:   { slug: 'defaults.proposal_text' },
   publicity_text_cont:  { slug: 'defaults.publicity_text' },
 
   date_range:           { type: :date_range, options: {  start_date_attribute: 'call_submission_deadline', end_date_attribute: 'call_editing_deadline'} },
 
   random_button:        { type: :submit_button, action: :Random },
-} 
-
-search_form = render('/shared/pages/public/partials/search_form', search_fields: search_fields)
+}
 %>
 
 <% content_for :proposal_archive_content do %>
   <% if @proposals.any? %>
     <% @proposals.each do |call, proposals| %>
-      <% div_name = "call_" + call.id.to_s + "_proposals" %>
-      <% title_right = "<span class=\"float-right mt-2 mr-1\">Submission Deadline: #{l call.submission_deadline, format: :short } | Editing Deadline: #{l call.editing_deadline, format: :short }</span>".html_safe %>
-
-      <%= render layout: '/shared/collapsible_section', locals: { id: div_name, title: call.name, title_right: title_right, header_class: 'p-0', body_class: "pt-1 pb-0" } do %>
+      <%= render Admin::CollapsibleSectionComponent.new(
+              title: call.name,
+              title_right: tag.span("Submission Deadline: #{l call.submission_deadline, format: :short} | Editing Deadline: #{l call.editing_deadline, format: :short}", class: "text-sm text-gray-500 mr-2")
+            ) do %>
         <% proposals.each do |proposal| %>
           <div>
             <%= get_link proposal, :show %>
