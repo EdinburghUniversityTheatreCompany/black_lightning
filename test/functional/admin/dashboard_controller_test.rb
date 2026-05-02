@@ -15,7 +15,6 @@ class Admin::DashboardControllerTest < ActionController::TestCase
   # This is pretty much covered by the test for debts#show
   test "debt widget" do
     assert_widget_does_not_error "debt"
-    assert_match "You are #{@user.debt_message_suffix}", response.body
 
     # Check if it renders the debts@show page
     assert_match "not associated with any debt", response.body
