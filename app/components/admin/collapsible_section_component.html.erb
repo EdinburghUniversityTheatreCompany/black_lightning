@@ -2,7 +2,7 @@
      data-controller="collapsible"
      data-collapsible-open-value="<%= @start_open %>">
   <button type="button"
-          class="w-full px-4 py-3 border-b font-medium flex items-center text-left <%= header_classes %>"
+          class="w-full px-4 py-3 border-b font-medium flex items-center text-left [&_a]:!text-inherit [&_a]:no-underline <%= header_classes %>"
           data-action="click->collapsible#toggle">
     <span class="text-base font-semibold flex-1"><%= @title %></span>
     <% if @title_right %>
