@@ -1,10 +1,5 @@
 <% @hide_alert = true %>
 
-<% content_for :head do %>
-  <%= vite_client_tag %>
-  <%= vite_stylesheet_tag "admin.scss" %>
-<% end %>
-
 <div class="container">
   <div id="login_form" class="row">
     <div class="span4 offset4">
@@ -21,7 +16,7 @@
 
   <div class="">
     <%= button_tag(type: 'submit', class: "btn btn-secondary") do %>
-      <i class="fa-solid fa-check" aria-hidden="true”></i> Reset Password
+      <i class="fa-solid fa-check" aria-hidden=”true”></i> Reset Password
     <% end %>
     <%#= render "devise/shared/links" %>
   </div>
