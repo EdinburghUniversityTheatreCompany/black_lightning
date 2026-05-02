@@ -2,7 +2,9 @@
 <%# KEEP%>
 
 
-<div class="card">
+<div class="card"
+     data-controller="live-search"
+     data-action="input->live-search#scheduleSearch change->live-search#scheduleSearch submit->live-search#scheduleSearch">
   <div class="card-header">
     <span class="card-title">Search</span>
   </div>

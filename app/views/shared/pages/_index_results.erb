@@ -1,0 +1,27 @@
+<%# locals: (resources:, resource_class:, field_sets: nil, headers: nil, include_edit_button: true, include_link_to_item: true, content: nil, include_pagination: true) %>
+<%# KEEP %>
+<div class="card">
+  <div class="card-header">
+    <span class="card-title"><%= @title %></span>
+
+    <% if include_pagination %>
+      <div class="card-tools"><%= paginate resources %></div>
+    <% end %>
+  </div>
+
+  <div class="card-body">
+    <% if content.present? %>
+      <%= content %>
+    <% else %>
+      <%= render('shared/index_table', headers: headers, field_sets: field_sets,
+                 include_edit_button: include_edit_button, include_link_to_item: include_link_to_item,
+                 resource_class: resource_class) %>
+    <% end %>
+  </div>
+
+  <% if include_pagination %>
+    <div class="card-footer clearfix">
+      <%= paginate(resources) %>
+    </div>
+  <% end %>
+</div>

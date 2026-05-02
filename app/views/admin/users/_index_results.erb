@@ -1,0 +1,17 @@
+<%# locals: () %>
+<% headers = [:name, :email, :student_id, :associate_id] %>
+
+<% field_sets = @users.map { |user| {
+  fields: [
+    user,
+    user.email,
+    user.student_id,
+    user.associate_id
+  ]
+} } %>
+
+<%= render 'shared/pages/index_results',
+      resources: @users,
+      resource_class: User,
+      headers: headers,
+      field_sets: field_sets %>
