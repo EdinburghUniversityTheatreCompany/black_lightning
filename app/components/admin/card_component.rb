@@ -5,7 +5,7 @@ class Admin::CardComponent < ViewComponent::Base
     success: "bg-green-600 text-white border-green-600",
     warning: "bg-yellow-500 text-white border-yellow-500",
     info:    "bg-blue-500 text-white border-blue-500",
-    primary: "bg-primary text-white border-primary",
+    primary: "bg-primary text-white border-primary"
   }.freeze
 
   def initialize(title:, variant: :default, flush: false, html_class: "")
