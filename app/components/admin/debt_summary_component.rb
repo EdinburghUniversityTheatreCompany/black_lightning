@@ -23,23 +23,23 @@ class Admin::DebtSummaryComponent < ViewComponent::Base
     @check_only = @allow_compact && !full_access? && helpers.can?(:check_debt, Admin::Debt)
   end
 
-  def card_class
+  def card_variant
     if @user.in_debt
-      "card-danger"
+      :danger
     elsif has_upcoming?
-      "card-warning"
+      :warning
     else
-      "card-success"
+      :success
     end
   end
 
-  def badge_class
+  def status_badge_class
     if @user.in_debt
-      "badge-danger"
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
     elsif has_upcoming?
-      "badge-warning"
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
     else
-      "badge-success"
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
     end
   end
 
@@ -47,9 +47,18 @@ class Admin::DebtSummaryComponent < ViewComponent::Base
     if @user.in_debt
       @user.debt_message_suffix.capitalize
     elsif has_upcoming?
-      "not in debt, but has upcoming unfulfilled debts"
+      "Not in debt, but has upcoming unfulfilled debts"
     else
-      "not in debt"
+      "Not in debt"
+    end
+  end
+
+  def tailwind_row_class(bootstrap_class)
+    case bootstrap_class
+    when "table-danger"  then "bg-red-50"
+    when "table-warning" then "bg-yellow-50"
+    when "table-success" then "bg-green-50"
+    else ""
     end
   end
 
