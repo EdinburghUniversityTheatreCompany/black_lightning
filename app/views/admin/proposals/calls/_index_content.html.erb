@@ -11,7 +11,7 @@
   <% end %>
 </div>
 
-<h2>Open Calls</h2>
+<h3>Open Calls</h3>
 
 <% if @open_calls.any? %>
   <% @open_calls.each do |call| %>
@@ -31,7 +31,7 @@
   <p><em>There are no open calls.</em></p>
 <% end %>
 
-<h2 class="mt-4">Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h2>
+<h3 class="mt-4">Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h3>
 
 <% awaiting_by_call = @awaiting_approval.group_by(&:call) %>
 
@@ -72,7 +72,7 @@
   <p><em>No proposals are awaiting approval.</em></p>
 <% end %>
 
-<h2 class="mt-4">Approved (Awaiting GM Outcome) <span class="badge bg-secondary"><%= @approved.size %></span></h2>
+<h3 class="mt-4">Approved (Awaiting GM Outcome) <span class="badge bg-secondary"><%= @approved.size %></span></h3>
 
 <% if @approved.any? %>
   <% @approved.group_by(&:call).each do |call, proposals| %>
