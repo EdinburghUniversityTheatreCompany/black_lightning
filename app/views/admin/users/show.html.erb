@@ -23,6 +23,6 @@
     detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:"
 } } ) %>
 
-<%= render 'admin/users/debt_summary', user: @user %>
+<%= render Admin::DebtSummaryComponent.new(user: @user, current_user: current_user) %>
 
 <%= render(template:'users/show', locals: { display_title: false }) %>

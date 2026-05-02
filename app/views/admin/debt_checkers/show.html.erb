@@ -7,4 +7,4 @@
 
 <%= render 'admin/debt_checkers/user_lookup', selected_user: @user %>
 
-<%= render 'admin/users/debt_summary', user: @user, allow_compact: true %>
+<%= render Admin::DebtSummaryComponent.new(user: @user, current_user: current_user, allow_compact: true) %>
