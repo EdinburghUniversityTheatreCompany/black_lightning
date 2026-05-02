@@ -7,7 +7,7 @@
     <li class="list-group-item text-muted">No committee members found.</li>
   <% else %>
     <% committee.each do |person| %>
-      <li class="list-group-item flex gap-4">
+      <li class="list-group-item flex gap-4 py-1">
         <span class="shrink-0"><%= person.name %></span>
         <span class="text-muted ml-auto">
           <%= person.staffing_jobs.where(name: "Committee Rep").select { |j| j.staffable.start_time.between?(start_of_year, christmas) }.count %>
