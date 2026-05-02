@@ -3,8 +3,8 @@ require "commonmarker"
 module MdHelper
   MARKDOWN_OPTIONS = {
     parse: { smart: true },
-    render: { hardbreaks: true },
-    extension: { strikethrough: true, table: true, autolink: true, tagfilter: true }
+    render: { hardbreaks: true, unsafe: true },
+    extension: { strikethrough: true, table: true, autolink: true, tagfilter: false }
   }.freeze
 
   def render_markdown(md)
@@ -19,7 +19,8 @@ module MdHelper
       a img
       table thead tbody tfoot tr td th
       div span
-    ], attributes: %w[id class href src alt title width height style])
+      iframe
+    ], attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow])
     %(<div class="markdown-body">#{sanitized}</div>).html_safe
   end
 

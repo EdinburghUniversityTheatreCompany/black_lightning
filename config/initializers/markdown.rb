@@ -5,8 +5,8 @@ class ActionView::Template
     class Markdown
       OPTIONS = {
         parse: { smart: true },
-        render: { hardbreaks: true },
-        extension: { strikethrough: true, table: true, autolink: true, tagfilter: true }
+        render: { hardbreaks: true, unsafe: true },
+        extension: { strikethrough: true, table: true, autolink: true, tagfilter: false }
       }.freeze
 
       def call(template, source)
