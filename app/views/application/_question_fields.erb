@@ -4,10 +4,10 @@
   f: f,
   div_class_additions: 'question'
 } do %>
-    <%= render layout: '/shared/form/md_editor', locals: { f: f, field: :question_text, rows: 6, show_side_help: false } do %>
-      <%= f.input :response_type, collection: Admin::Question.response_types, horizontal_form: false, wrapper: :vertical_form %>
-      
-      <%= link_to_remove f %>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :question_text, rows: 6) do |c| %>
+      <% c.with_side_content do %>
+        <%= f.input :response_type, collection: Admin::Question.response_types %>
+        <%= link_to_remove f %>
+      <% end %>
     <% end %>
-    <hr />
 <% end %>
