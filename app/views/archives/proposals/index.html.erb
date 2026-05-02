@@ -6,31 +6,39 @@ search_fields = {
   proposal_text_cont:   { slug: 'defaults.proposal_text' },
   publicity_text_cont:  { slug: 'defaults.publicity_text' },
 
-  date_range:           { type: :date_range, options: {  start_date_attribute: 'call_submission_deadline', end_date_attribute: 'call_editing_deadline'} },
+  date_range:           { type: :date_range, options: { start_date_attribute: 'call_submission_deadline', end_date_attribute: 'call_editing_deadline' } },
 
   random_button:        { type: :submit_button, action: :Random },
 }
+
+status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejected" => 3, "awaiting_approval" => 4 }
 %>
 
 <% content_for :proposal_archive_content do %>
   <% if @proposals.any? %>
-    <% @proposals.each do |call, proposals| %>
-      <%= render Admin::CollapsibleSectionComponent.new(
-              title: call.name,
-              title_right: tag.span("Submission Deadline: #{l call.submission_deadline, format: :short} | Editing Deadline: #{l call.editing_deadline, format: :short}", class: "text-sm text-gray-500 mr-2")
-            ) do %>
-        <% proposals.each do |proposal| %>
-          <div>
-            <%= get_link proposal, :show %>
-            <%= proposal.labels true, show_debtors: false %>
+    <% @proposals.each_with_index do |(call, proposals), index| %>
+      <% unless index.zero? %>
+        <hr class="border-gray-200 my-4">
+      <% end %>
+
+      <h5 class="font-semibold text-gray-800 mb-2">
+        <%= call.name %>
+        <span class="font-normal text-sm text-gray-600">(Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %>)</span>
+      </h5>
+
+      <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
+        <div class="flex items-center py-1.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 -mx-4 px-4">
+          <%= get_link proposal, :show %>
+          <div class="flex gap-1 ml-2">
+            <%= proposal.labels false, show_debtors: false %>
           </div>
-        <% end %>
+        </div>
       <% end %>
     <% end %>
   <% else %>
-    There are no proposals found for this search.
+    <p class="text-gray-500">There are no proposals found for this search.</p>
   <% end %>
 <% end %>
 
-<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, content: yield(:proposal_archive_content), 
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, content: yield(:proposal_archive_content),
   show_new_button: false, search_fields: search_fields %>
