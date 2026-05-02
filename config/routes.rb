@@ -348,7 +348,6 @@ ChaosRails::Application.routes.draw do
     end
 
     get "committee", to: "static#committee", as: :committee
-    get "bootstrap_test", to: "static#bootstrap_test", as: :bootstrap_test
     # Catch all 404's on the admin site.
     get "*page", to: "static#error", as: :static
 
