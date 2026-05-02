@@ -709,7 +709,7 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
 }
 
 /* Markdown-rendered content */
-.markdown-body > p:last-child {
+.markdown-body>p:last-child {
   margin-bottom: 0;
 }
 
@@ -792,13 +792,18 @@ img.float-right {
 }
 
 .bg-rainbow-rotate,
-.bg-rainbow-rotate > a {
+.bg-rainbow-rotate>a {
   color: #fff !important;
 }
 
 @keyframes rainbow-rotate {
-  0%   { background-position: 0 0; }
-  100% { background-position: 800% 0; }
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 800% 0;
+  }
 }
 
 .bg-admin-rotate {
@@ -808,11 +813,16 @@ img.float-right {
 }
 
 .bg-admin-rotate,
-.bg-admin-rotate > a {
+.bg-admin-rotate>a {
   color: #fff !important;
 }
 
 @keyframes admin-rotate {
-  0%   { background-position: 0 0; }
-  100% { background-position: 800% 0; }
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 800% 0;
+  }
 }
