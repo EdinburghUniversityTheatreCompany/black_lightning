@@ -44,7 +44,7 @@ SimpleForm.setup do |config|
     end
     b.wrapper :grid_wrapper, tag: "div", class: grid_class do |wr|
       wr.wrapper :form_check_wrapper, tag: "div", class: "flex items-center gap-2" do |bb|
-        bb.use :input, class: "cursor-pointer", error_class: invalid_class, valid_class: valid_class
+        bb.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0", error_class: invalid_class, valid_class: valid_class
         bb.use :full_error, wrap_with: { tag: "div", class: error_class }
         bb.use :hint, wrap_with: { tag: "small", class: hint_class }
       end
@@ -60,7 +60,7 @@ SimpleForm.setup do |config|
     b.optional :readonly
     b.use :label, class: label_class
     b.wrapper :grid_wrapper, tag: "div", class: grid_class do |ba|
-      ba.use :input, error_class: invalid_class, valid_class: valid_class
+      ba.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0", error_class: invalid_class, valid_class: valid_class
       ba.use :full_error, wrap_with: { tag: "div", class: error_class }
       ba.use :hint, wrap_with: { tag: "small", class: hint_class }
     end
