@@ -87,10 +87,8 @@ Thumbs.db
 /.sass-cache/
 /tmp/cache/
 
-# Yarn and NPM
-yarn-error.log
+# pnpm / NPM logs
 npm-debug.log*
-.yarn-integrity
 
 # Other Common Files
 *.pid

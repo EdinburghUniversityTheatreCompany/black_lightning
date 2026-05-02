@@ -8,7 +8,7 @@ echo "=== Installing gems ==="
 bundle install
 
 echo "=== Installing JS packages ==="
-yarn install
+pnpm install
 
 echo "=== Waiting for MySQL to be ready ==="
 until mysql -h "$DB_HOST" -u "$DB_USERNAME" -p"$DB_PASSWORD" --skip-ssl -e "SELECT 1" >/dev/null 2>&1; do

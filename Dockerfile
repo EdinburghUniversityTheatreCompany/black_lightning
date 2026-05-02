@@ -64,8 +64,8 @@ RUN bundle install && \
     find "${BUNDLE_PATH}" -name "*.o" -delete
 
 # Install JavaScript dependencies
-COPY package.json yarn.lock* ./
-RUN npm install -g yarn && yarn install --frozen-lockfile
+COPY package.json pnpm-lock.yaml* ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Copy application code
 COPY . .

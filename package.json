@@ -32,6 +32,9 @@
     "browserslist": [
         "defaults"
     ],
+    "pnpm": {
+        "onlyBuiltDependencies": ["@fortawesome/fontawesome-free", "admin-lte"]
+    },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "eslint": "^10.3.0",

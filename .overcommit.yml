@@ -20,8 +20,8 @@ PreCommit:
 
   EsLint:
     enabled: true
-    required_executable: 'yarn'
-    command: ['yarn', 'eslint']
+    required_executable: 'pnpm'
+    command: ['pnpm', 'exec', 'eslint']
     flags: ['--format', 'compact']
     include:
       - 'app/javascript/controllers/**/*.js'

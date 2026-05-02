@@ -59,9 +59,7 @@ version
 /public/packs
 /public/packs-test
 /node_modules
-/yarn-error.log
-yarn-debug.log*
-.yarn-integrity
+npm-debug.log*
 
 /app/assets/builds/*
 !/app/assets/builds/.keep
