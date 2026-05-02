@@ -42,7 +42,7 @@ SimpleForm.setup do |config|
     b.wrapper tag: "label", class: label_class do |ba|
       ba.use :label_text
     end
-    b.wrapper :grid_wrapper, tag: "div", class: grid_class do |wr|
+    b.wrapper :grid_wrapper, tag: "div", class: "#{grid_class} py-1.5" do |wr|
       wr.wrapper :form_check_wrapper, tag: "div", class: "flex items-center gap-2" do |bb|
         bb.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0", error_class: invalid_class, valid_class: valid_class
         bb.use :full_error, wrap_with: { tag: "div", class: error_class }
