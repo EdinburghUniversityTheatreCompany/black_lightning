@@ -17,9 +17,6 @@ status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejec
 <% content_for :proposal_archive_content do %>
   <% if @proposals.any? %>
     <% @proposals.each_with_index do |(call, proposals), index| %>
-      <% unless index.zero? %>
-        <hr class="border-gray-200 my-4">
-      <% end %>
 
       <h5 class="font-semibold text-gray-800 mb-2">
         <%= call.name %>
