@@ -12,12 +12,7 @@
       <%= f.input :student_id, hint: 'Optional - format: s1234567' %>
       <%= f.input :associate_id, hint: 'Optional - format: ASSOC123' %>
 
-      <div class="form-group">
-        <div class="form-check">
-          <%= check_box_tag 'user[is_member]', '1', false, class: 'form-check-input', id: 'user_is_member' %>
-          <%= label_tag 'user_is_member', 'Make this user a member immediately', class: 'form-check-label' %>
-        </div>
-      </div>
+      <%= f.input :is_member, as: :fake_checkbox, label: 'Make member', hint: 'Make this user a member immediately' %>
 
       <%= f.button :submit, "Send Profile Completion Email", class: 'btn btn-primary' %>
     <% end %>

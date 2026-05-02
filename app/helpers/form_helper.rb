@@ -5,6 +5,7 @@ module FormHelper
         wrapper: :tailwind_horizontal_form,
         wrapper_mappings: {
           boolean:       :tailwind_horizontal_boolean,
+          fake_checkbox: :tailwind_horizontal_boolean,
           check_boxes:   :tailwind_horizontal_collection,
           date:          :tailwind_horizontal_multi_select,
           datetime:      :tailwind_horizontal_multi_select,
