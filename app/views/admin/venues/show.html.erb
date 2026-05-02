@@ -6,7 +6,7 @@
   description: render_markdown(@venue.description),
   image: { type: 'image', image: @venue.fetch_image, variant: slideshow_variant },
   map:  { type: 'content', header: 'Map', content: @venue.location.present? ? venue_map(@venue).html_safe : 'No location data set' },
-  gallery: { type: 'content', content: render('/shared/gallery', pictures: @venue.pictures.accessible_by(current_ability, :show)) }
+  gallery: { type: 'content', content: render('/admin/shared/gallery', pictures: @venue.pictures.accessible_by(current_ability, :show)) }
 } %>
 
 <% content_for :extra_show_actions do %>
