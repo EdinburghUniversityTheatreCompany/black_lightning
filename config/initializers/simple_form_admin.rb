@@ -4,7 +4,7 @@
 # Used exclusively via simple_horizontal_form_for (see FormHelper#horizontal_form_options).
 # The public-facing site continues to use the Bootstrap wrappers in simple_form_bootstrap.rb.
 #
-# This file is listed as a Tailwind @source in admin_new.css so Vite picks up all utility classes.
+# This file is listed as a Tailwind @source in admin.css so Vite picks up all utility classes.
 
 SimpleForm.setup do |config|
   input_class   = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"

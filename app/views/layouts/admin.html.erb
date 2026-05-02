@@ -1,151 +1,52 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en" class="h-full">
 <head>
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
-  
+
   <%= vite_client_tag %>
   <%= vite_javascript_tag "admin" %>
-  <%= vite_stylesheet_tag "admin.scss" %>
+  <%= vite_stylesheet_tag "admin.css" %>
 
   <%= csrf_meta_tags %>
-
   <%= yield :head %>
 
   <% if Rails.env.test? %>
     <style>*, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }</style>
   <% end %>
 
-  <meta name="viewport" content="initial-scale = 1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 
-<body class="hold-transition sidebar-mini layout-fixed"
-      data-controller="konami-code form-validator select"
+<body class="h-full bg-gray-100 font-sans"
+      data-controller="admin--sidebar konami-code form-validator select"
       data-action="keydown@window->konami-code#keyDown"
       data-konami-code-heads-value="<%= itify_head_urls.to_json %>"
       data-konami-code-pineapple-value="<%= asset_path('easter_egg/pineapple.png') %>">
-  <div class="wrapper">
-    <div class="preloader flex-column justify-content-center align-items-center">
-      <img class="" src="https://eutc.azureedge.net/img/logos/svg/bedlam-logo_base-multiline.svg"
-        alt="Bedlam Theatre EUTC Logo" height="120" /><br />
-      <div class="spinner-border" role="status">
-        <span class="sr-only">Loading...</span>
-      </div>
-    </div>
 
-    <!-- Navbar -->
-    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-      <!-- Left navbar links -->
-      <ul class="navbar-nav">
-        <li class="nav-item">
-          <a class="nav-link" data-widget="pushmenu" href="#" role="button" data-enable-remember="true"><i
-              class="fa-solid fa-bars"></i></a>
-        </li>
-        <li class="nav-item d-none d-inline-block">
-          <a href="/" class="nav-link">Back to Main Site</a>
-        </li>
-      </ul>
+  <div class="flex h-full overflow-hidden">
+    <%= render Admin::SidebarComponent.new(
+          nav_items: admin_navbar_items,
+          current_user: current_user,
+          current_path: request.fullpath
+        ) %>
 
-      <!-- Right navbar links -->
-      <ul class="navbar-nav ml-auto">
-        <!-- Notifications Dropdown Menu -->
-        <li class="nav-item dropdown">
-          <% @header_user = current_user %>
-          <a class="nav-link" data-toggle="dropdown" href="#">
-            <i class="fa-solid fa-bell"></i>
-            <span
-              class="badge badge-danger navbar-badge <%= 'd-none' unless @header_user.in_debt %> ">!!</span>
-          </a>
-          <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-            <span class="dropdown-header">Notifications</span>
+    <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <%= render Admin::NavbarComponent.new(current_user: current_user, title: @title, header_badges: @header_badges) %>
 
-            <a href="/admin/debts/<%= @header_user.id %>" class="dropdown-item">
-              <% debt_icon = @header_user.in_debt ? 'fa-exclamation-circle' : 'fa-check' %>
-              <i class="fa-solid <%= debt_icon %> mr-2"></i>
-              You are <%= @header_user.debt_message_suffix %>
-            </a>
-        </li>
-      </ul>
-    </nav>
-    <!-- /.navbar -->
+      <% @header_user ||= current_user %>
 
-    <!-- Main Sidebar Container -->
-    <aside class="main-sidebar sidebar-dark-primary elevation-4">
-      <!-- Brand Logo -->
-      <div class="brand-link d-flex align-items-center">
-        <a href="/admin/" class="brand-link logo-switch">
-          <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_square-white.png"
-            alt="Bedlam Theatre Square Small Logo" class="brand-image-xl logo-xs">
-          <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_single-line-white-for-red.png"
-            alt="Bedlam Theatre EUTC Logo" class="brand-image-xs logo-xl" style="left: 12px">
-        </a>
-      </div>
+      <%= render "/layouts/alert_div" %>
 
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <!-- Sidebar user panel optional) -->
-        <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-          <div class="image">
-            <a href="#" data-controller="user-modal"
-              data-action="click->user-modal#open"
-              data-user-modal-url-value="<%= admin_user_path(current_user) %>"
-              data-user-modal-name-value="<%= current_user.first_name.presence || current_user.email %>">
-              <% if @header_user.avatar.present? %>
-              <%= render 'shared/image', image: @header_user.avatar, variant: square_thumb_variant, eager_load: false, image_options: { class: "img-circle elevation-2" } %>
-              <% else %>
-              <img src="/images/userdef.png" class="img-circle elevation-2" alt="User Image">
-              <% end %>
-            </a>
-          </div>
-          <div class="info text-white">
-            <span>Welcome,
-              <a href="#" data-controller="user-modal"
-                data-action="click->user-modal#open"
-                data-user-modal-url-value="<%= admin_user_path(current_user) %>"
-                data-user-modal-name-value="<%= current_user.first_name.presence || current_user.email %>"><%= current_user.first_name.presence || current_user.email %></a></span>
-          </div>
-        </div>
-
-        <!-- Sidebar Menu -->
-        <nav class="mt-2">
-          <ul class="nav nav-pills nav-sidebar flex-column nav-child-indent" data-widget="treeview" role="menu"
-            data-accordion="false">
-            <li class="nav-item">
-              <a href="/admin/" class="nav-link <%='active' if request.fullpath == "/admin" %>">
-                <i class="fa-solid fa-home nav-icon"></i>
-                <p>Home</p>
-              </a>
-            </li>
-            <%= render 'layouts/admin/nav_item', items: admin_navbar_items %>
-          </ul>
-        </nav>
-        <!-- /.sidebar-menu -->
-
-      </div>
-      <!-- /.sidebar -->
-    </aside>
-
-    <!-- Content Wrapper. Contains page content -->
-    <div class="content-wrapper">
-      <%= content_for?(:content_header) ? yield(:content_header) : render('shared/admin_page_header', title: @title, header_badges: @header_badges) %>
-
-      <%= render '/layouts/alert_div' %>
-      
-      <div class="content">
-        <div class="container-fluid">
+      <main class="flex-1 overflow-y-auto flex flex-col">
+        <div class="px-6 py-4 flex-1">
           <%= content_for?(:content) ? yield(:content) : yield %>
         </div>
-      </div>
+
+        <footer class="border-t border-gray-200 bg-white">
+          <%= render "layouts/footer" %>
+        </footer>
+      </main>
     </div>
-    <!-- /.content-wrapper -->
-
-    <!-- Main Footer -->
-    <footer class="main-footer p-0">
-      <%= render "layouts/footer" %>
-    </footer>
   </div>
-  <!-- ./wrapper -->
-
 </body>
-
 </html>

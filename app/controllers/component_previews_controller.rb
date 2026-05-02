@@ -1,5 +1,5 @@
 class ComponentPreviewsController < ViewComponentsController
-  layout "admin_new"
+  layout "admin"
 
   helper_method :current_user
 
