@@ -2,12 +2,12 @@
 
 <h5 class="mb-3">Bulk Check</h5>
 
-<%= render 'admin/shared/import_form',
-           preview_path: preview_admin_debt_checkers_path,
-           cancel_path: can?(:index, Admin::Debt) ? admin_debts_path : root_path,
-           cancel_text: can?(:index, Admin::Debt) ? "Back to Debts" : "Back",
-           columns_description: "Name | ID (optional, you can have multiple ID columns for different types: Student ID, Associate ID, User ID) | Email (optional)",
-           placeholder_text: "Name\tID\tEmail\nFinbar the Viking\ts1234567\tfinbar@viking.se\nErik Bloodaxe\t42\t" do %>
+<%= render Admin::ImportFormComponent.new(
+      preview_path: preview_admin_debt_checkers_path,
+      cancel_path: can?(:index, Admin::Debt) ? admin_debts_path : root_path,
+      cancel_text: can?(:index, Admin::Debt) ? "Back to Debts" : "Back",
+      columns_description: "Name | ID (optional, you can have multiple ID columns for different types: Student ID, Associate ID, User ID) | Email (optional)",
+      placeholder_text: "Name\tID\tEmail\nFinbar the Viking\ts1234567\tfinbar@viking.se\nErik Bloodaxe\t42\t") do %>
   <p>Paste or upload a list of people to check their <strong>debt</strong> and <strong>membership</strong> status.</p>
   <ol>
     <li><strong>ID match:</strong> If a user with the same User ID, Student ID, or Associate ID exists, their debt status will be shown</li>

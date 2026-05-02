@@ -1,0 +1,17 @@
+<%= render Admin::ImportFormComponent.new(
+      preview_path: "#",
+      cancel_path: "#",
+      cancel_text: "Back to Users",
+      columns_description: "ID | Name | Date Purchased | Member Type | Purchaser Email",
+      placeholder_text: "s9988776\tFinbar the Viking\t14/01/1980 14:25\tStudent\tfinbar@viking.se") do %>
+  <p>The import process matches each row against existing users in the following order:</p>
+  <ol>
+    <li><strong>ID match:</strong> Activated by User ID, Student ID, or Associate ID</li>
+    <li><strong>Email match:</strong> Activated by email address</li>
+    <li><strong>Name match:</strong> Users with the same last name and similar first name</li>
+    <li><strong>No match:</strong> A new user account will be created</li>
+  </ol>
+  <p class="mb-0 text-muted">
+    <strong>Note:</strong> Placeholder emails and missing IDs will be filled in automatically.
+  </p>
+<% end %>
