@@ -24,8 +24,9 @@ class Admin::DebtCheckersController < AdminController
   def lookup
     authorize! :check_debt, Admin::Debt
 
-    if params[:user_id].present?
-      redirect_to admin_debt_checker_path(params[:user_id])
+    user_id = params.dig(:debt_checker, :user_id) || params[:user_id]
+    if user_id.present?
+      redirect_to admin_debt_checker_path(user_id)
     else
       redirect_to new_admin_debt_checker_path, alert: "Please select a user"
     end
