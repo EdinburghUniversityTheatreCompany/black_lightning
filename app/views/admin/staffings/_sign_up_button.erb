@@ -1,16 +1,15 @@
 <%# locals: (job:) %>
 
-<% sign_up_text = '<i class="fa-solid fa-pen-to-square" aria-hidden=”true”></i> Sign Up'.html_safe %>
-
+<% sign_up_text = '<i class="fa-solid fa-pen-to-square" aria-hidden="true"></i> Sign Up'.html_safe %>
 <% date = l job.staffable.start_time, format: :long %>
-<%= button_to sign_up_text, admin_staffing_sign_up_path(job), method: :put,
-            class: "btn btn-secondary staffing-sign-up",
-            data: { job_id: job.id },
-            form: {
-              data: {
-                controller: "staffing-signup",
-                action: "submit->staffing-signup#signUp",
-                staffing_signup_job_id_value: job.id,
-                staffing_signup_confirm_message_value: "Confirm staffing as #{job.name} for #{job.staffable.show_title} on #{date}"
-              }
-            } %>
+
+<turbo-frame id="<%= dom_id(job, :sign_up) %>">
+  <%= button_to sign_up_text, admin_staffing_sign_up_path(job), method: :put,
+      class: "btn btn-secondary staffing-sign-up",
+      form: {
+        data: {
+          turbo: true,
+          turbo_confirm: "Confirm staffing as #{job.name} for #{job.staffable.show_title} on #{date}"
+        }
+      } %>
+</turbo-frame>

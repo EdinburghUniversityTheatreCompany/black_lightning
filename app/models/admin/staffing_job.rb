@@ -35,20 +35,6 @@ class Admin::StaffingJob < ApplicationRecord
   # The functions that use staffable don't check if it's a staffing instead of a template.
   # They should just hard-fail when the staffable is a template. That situation should simply not occur.
 
-  ##
-  # Get the start time in a js friendly fashion (UTC)
-  ##
-  def js_start_time
-    staffable.start_time.utc.to_i
-  end
-
-  ##
-  # Get the end time in a js friendly fashion (UTC)
-  ##
-  def js_end_time
-    staffable.end_time.utc.to_i
-  end
-
   def completed?
     staffable.end_time < DateTime.current
   end
