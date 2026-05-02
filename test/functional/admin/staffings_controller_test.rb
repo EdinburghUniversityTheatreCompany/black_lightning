@@ -97,7 +97,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_not assigns(:can_sign_up)
-    assert_match "you need to provide a MOBILE phone number", response.body
+    assert_match "you need to provide a mobile phone number", response.body
   end
 
   test "should show staffing" do
@@ -119,7 +119,7 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     assert_response :success
     assert_not assigns(:can_sign_up)
-    assert_match "you need to provide a MOBILE phone number", response.body
+    assert_match "you need to provide a mobile phone number", response.body
   end
 
   test "normal users cannot see the phone number column" do
