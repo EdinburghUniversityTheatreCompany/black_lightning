@@ -1,9 +1,3 @@
-<div class="card">
-    <div class="card-body">
-    <%= display_block("Staffing", true) %>
-  </div>
-</div>
-
 <% webcal_url = staffing_calendar_url(token: current_user.calendar_token).sub(/\Ahttps?:\/\//, "webcal://") %>
 <% https_url  = staffing_calendar_url(token: current_user.calendar_token) %>
 <div class="card mb-4">
@@ -43,6 +37,12 @@
   date_range: { type: :date_range, options: { start_date_attribute: 'start_time', end_date_attribute: 'start_time' } }
 } %>
 <%= render 'shared/search_form', input_fields: search_fields, columns: 2, url: admin_staffings_path %>
+
+<div class="card">
+    <div class="card-body">
+    <%= display_block("Staffing", true) %>
+  </div>
+</div>
 
 <div class="card mb-4">
   <div class="card-header">
