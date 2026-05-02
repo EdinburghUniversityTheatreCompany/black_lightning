@@ -653,9 +653,9 @@ select.simple-select2 {
     @apply bg-primary text-white border-primary;
   }
 
-  /* Sidebar collapsed state */
+  /* Sidebar collapsed state — !important needed to override the flex utility on the sidebar element */
   .sidebar-collapsed {
-    @apply hidden;
+    display: none !important;
   }
 
 }
