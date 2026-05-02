@@ -27,7 +27,7 @@ class SelectTest < ApplicationSystemTestCase
 
     # Tom Select hides the original <select> but keeps it in the DOM
     # (it moves it adjacent to the wrapper, not inside it)
-    assert_selector "select.simple-select2", wait: 3
+    assert_selector "select.simple-select2", wait: 3, visible: :any
   end
 
   # ── AJAX remote source ───────────────────────────────────────────────────────
