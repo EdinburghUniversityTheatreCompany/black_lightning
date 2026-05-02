@@ -9,7 +9,7 @@ import "../controllers"
 import "../sweetalert"
 
 import { Turbo } from "@hotwired/turbo-rails";
-Turbo.session.drive = false;
+Turbo.session.drive = false; // Enable after removing jQuery by removing this line.
 
 Turbo.config.forms.confirm = (message) => {
   return window.Swal.fire({
@@ -23,7 +23,7 @@ Turbo.config.forms.confirm = (message) => {
   }).then(result => result.isConfirmed)
 }
 
-Turbo.StreamActions.toast = function() {
+Turbo.StreamActions.toast = function () {
   window.Toast.fire({ icon: this.getAttribute("type"), html: this.getAttribute("message") })
 }
 
