@@ -48,7 +48,7 @@
 
 <%= render(Admin::Form::GalleryComponent.new(f: f)) %>
 
-<%= render 'shared/form/sections/attachments', f: f %>
+<%= render Admin::Form::AttachmentsComponent.new(f: f) %>
 
 <%= render Admin::Form::VideoLinksComponent.new(f: f) %>
 

@@ -21,6 +21,6 @@
       <strong>Other files</strong> (PDFs, documents): upload via the Attachments section below, then link from the editor using <code>[link text](/attachments/attachmentname)</code>.
     </small>
 
-    <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
+    <%= render Admin::Form::AttachmentsComponent.new(f: f) %>
   <% end %>
 <% end %>

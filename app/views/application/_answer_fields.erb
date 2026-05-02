@@ -16,7 +16,7 @@
           <%= f.input :answer, collection: ['Yes', 'No'], label: question_text, as: :radio_buttons %>
         <% when "File" %>
           <%= f.label :answer, question_text %>
-          <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
+          <%= render Admin::Form::AttachmentsComponent.new(f: f) %>
         <% else %>
           <%= f.input :answer, as: :string, label: question_text %>
       <% end %>
