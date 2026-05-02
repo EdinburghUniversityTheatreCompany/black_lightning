@@ -506,6 +506,61 @@ select.simple-select2 {
     @apply xl:w-2/12 px-2;
   }
 
+  /* Responsive row-cols — Bootstrap 5 pattern for gallery grids */
+  /* Plain CSS (no @apply) so these compile correctly inside @layer + @media */
+  @media (min-width: 576px) {
+    .row-cols-sm-1>.col { width: 100%; flex: none; }
+    .row-cols-sm-2>.col { width: 50%; flex: none; }
+    .row-cols-sm-3>.col { width: 33.3333%; flex: none; }
+    .row-cols-sm-4>.col { width: 25%; flex: none; }
+  }
+
+  @media (min-width: 768px) {
+    .row-cols-md-1>.col { width: 100%; flex: none; }
+    .row-cols-md-2>.col { width: 50%; flex: none; }
+    .row-cols-md-3>.col { width: 33.3333%; flex: none; }
+    .row-cols-md-4>.col { width: 25%; flex: none; }
+  }
+
+  @media (min-width: 992px) {
+    .row-cols-lg-1>.col { width: 100%; flex: none; }
+    .row-cols-lg-2>.col { width: 50%; flex: none; }
+    .row-cols-lg-3>.col { width: 33.3333%; flex: none; }
+    .row-cols-lg-4>.col { width: 25%; flex: none; }
+  }
+
+  /* Bootstrap gap utilities */
+  .g-1 { gap: 0.25rem; }
+  .g-2 { gap: 0.5rem; }
+  .g-3 { gap: 1rem; }
+  .g-4 { gap: 1.5rem; }
+  .g-5 { gap: 3rem; }
+
+  /* Bootstrap height utility — cards with h-100 use flex-col so card-body fills remaining height */
+  .h-100 { height: 100%; }
+  .card.h-100 { display: flex; flex-direction: column; }
+  .card.h-100 > .card-body { flex: 1 1 auto; }
+
+  /* Bootstrap card image/text utilities */
+  .card-img-top {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 0.375rem 0.375rem 0 0;
+  }
+
+  .card-text {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  /* Bootstrap flex utilities */
+  .flex-column { flex-direction: column; }
+  .flex-row { flex-direction: row; }
+
+  /* Bootstrap text utilities */
+  .text-muted { color: #6c757d; }
+
   /* Vertical divider between columns */
   .vertical-rule>[class*="col-"]:not(:first-child) {
     @apply border-l border-gray-200 pl-4;

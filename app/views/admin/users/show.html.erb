@@ -46,4 +46,4 @@
           { content: "<b>Position</b>: #{team_membership.position}".html_safe, class: 'mt-auto' }
         ] } } %>
 
-<%= render('shared/pages/public/events_grid', items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>
+<%= render Admin::EventsGridComponent.new(items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>
