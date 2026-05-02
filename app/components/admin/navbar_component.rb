@@ -1,11 +1,11 @@
 class Admin::NavbarComponent < ViewComponent::Base
-  def initialize(current_user:)
+  def initialize(current_user:, title: nil, header_badges: [])
     @current_user = current_user
+    @title = title
+    @header_badges = header_badges || []
   end
 
   private
 
-  def user_display_name
-    @current_user.first_name.presence || @current_user.email
-  end
+  def has_badges? = @header_badges.any?
 end

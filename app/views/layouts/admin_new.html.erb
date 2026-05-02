@@ -31,11 +31,9 @@
         ) %>
 
     <div class="flex flex-col flex-1 min-w-0 overflow-hidden">
-      <%= render Admin::NavbarComponent.new(current_user: current_user) %>
+      <%= render Admin::NavbarComponent.new(current_user: current_user, title: @title, header_badges: @header_badges) %>
 
       <% @header_user ||= current_user %>
-      <%= content_for?(:content_header) ? yield(:content_header) :
-          render(Admin::PageHeaderComponent.new(title: @title, header_badges: @header_badges)) %>
 
       <%= render "/layouts/alert_div" %>
 
