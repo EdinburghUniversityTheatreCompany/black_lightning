@@ -1,0 +1,3 @@
+<%= render(Admin::CollapsibleSectionComponent.new(title: 'Video Links')) do %>
+  <%= render('shared/form/sections/nested_fields', f: @f, association_name: :video_links, partial_name: 'video_link_fields') %>
+<% end %>

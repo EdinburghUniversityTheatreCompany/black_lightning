@@ -50,7 +50,7 @@
 
 <%= render 'shared/form/sections/attachments', f: f %>
 
-<%= render 'shared/form/sections/video_links', f: f %>
+<%= render Admin::Form::VideoLinksComponent.new(f: f) %>
 
 <%= render(Admin::CollapsibleSectionComponent.new(title: 'Pretix Widget Configuration')) do %>
     <%= f.input :pretix_shown, hint: 'Display the Pretix widget for this event.' %>
