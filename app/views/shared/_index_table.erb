@@ -1,4 +1,4 @@
-<%# locals: (headers:, field_sets:, resource_class:, include_edit_button: true, include_link_to_item: true) -%>
+<%# locals: (headers:, field_sets:, resource_class:, include_edit_button: true, include_link_to_item: true, col_widths: []) -%>
 
 <% headers << '' if can?(:edit, resource_class) && include_edit_button %>
 
@@ -14,4 +14,4 @@
   <% end %>
 <% end %>
 
-<%= render 'shared/table', headers: headers, field_sets: field_sets %>
+<%= render 'shared/table', headers: headers, field_sets: field_sets, col_widths: col_widths %>
