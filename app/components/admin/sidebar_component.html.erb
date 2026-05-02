@@ -36,7 +36,7 @@
       <% if category[:is_logout] %>
         <%= button_to category[:path], method: :delete,
               class: "w-full flex items-center gap-2 px-4 py-2 hover:bg-white/10 text-left text-sidebar-text",
-              form: { data: { turbo_confirm: false } } do %>
+              form: { data: { controller: "confirm", action: "submit->confirm#confirm", confirm_message_value: "Are you sure you want to log out?" } } do %>
           <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
           <span><%= category[:title] %></span>
         <% end %>
