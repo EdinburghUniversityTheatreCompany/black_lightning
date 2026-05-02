@@ -21,7 +21,7 @@ module MdHelper
       div span
       iframe
     ], attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow])
-    %(<div class="markdown-body">#{sanitized}</div>).html_safe
+    %(<div class="markdown-body prose">#{sanitized}</div>).html_safe
   end
 
   def render_plain(md)
