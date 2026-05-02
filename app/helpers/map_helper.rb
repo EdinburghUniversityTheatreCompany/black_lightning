@@ -11,7 +11,7 @@ module MapHelper
         map_zoom_value: center[:zoom],
         map_markers_value: markers.compact.to_json
       },
-      style: "height: 400px; width: 100%;"
+      style: "height: 75vh; width: 100%;"
   end
 
   def venue_map(venue)
