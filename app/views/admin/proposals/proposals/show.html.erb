@@ -12,7 +12,7 @@
   publicity_text: render_markdown(@proposal.publicity_text),
   proposal_text: render_markdown(@proposal.proposal_text),
   team_members: { type: 'content', content: render('/shared/admin_show_team_members', team_members: @proposal.team_members, deadline: @proposal.call.editing_deadline) },
-  questions_and_answers: { type: 'content', header: 'Questions', content: render('/shared/questions_and_answers', answers: @proposal.answers) }
+  questions_and_answers: { type: 'content', header: 'Questions', content: render(Admin::QuestionsAndAnswersComponent.new(answers: @proposal.answers)) }
 } %>
 
 <% content_for :extra_show_actions do %>

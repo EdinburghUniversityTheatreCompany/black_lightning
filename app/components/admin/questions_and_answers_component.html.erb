@@ -1,0 +1,28 @@
+<% @answers.each_with_index do |answer, index| %>
+  <div class="<%= index > 0 ? 'border-t border-gray-200 pt-4 mt-4' : '' %>">
+    <div class="mb-1">
+      <div class="text-sm text-gray-900 mt-0.5">
+        <%= helpers.render_markdown answer.question.question_text %>
+      </div>
+    </div>
+
+    <div class="mt-3 bg-gray-50 rounded p-3">
+      <div class="text-sm text-gray-700 mt-0.5">
+        <% if answer.attachments.present? %>
+          <%# There should not be more than 1, but it is technically possible. This is just in case. %>
+          <% if answer.attachments.count == 1 %>
+            <%= render 'shared/show_attachment', attachment: answer.attachments.first %>
+          <% else %>
+            <%= render 'shared/attachments_gallery', attachments: answer.attachments %>
+          <% end %>
+        <% end %>
+
+        <% if answer.answer.present? %>
+          <%= helpers.render_markdown answer.answer %>
+        <% elsif answer.attachments.empty? %>
+          <span class="italic text-gray-400">This question has not been answered.</span>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>
