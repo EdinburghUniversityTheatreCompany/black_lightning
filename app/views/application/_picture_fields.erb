@@ -1,25 +1,21 @@
 <%# locals: (f:, dynamic: nil) %>
 
-<%= render layout: '/shared/form/fields_for_template', locals: {
-        f: f,
-        div_class_additions: 'col-4'
-    } do %>
+<%= render layout: '/shared/form/fields_for_template', locals: { f: f, div_class_additions: '' } do %>
+  <div class="card">
     <% if f.object.persisted? %>
-      <%= render 'shared/image', image: f.object.fetch_image, variant: thumb_variant, eager_load: false, image_options: { class: "img-thumbnail" } %>
+      <%= render 'shared/image', image: f.object.fetch_image, variant: thumb_variant(2), eager_load: false, image_options: { class: "card-img-top w-full" } %>
     <% elsif f.object.image.attached? && f.object.image.blob.persisted? %>
-      <%= render 'shared/image', image: f.object.image, variant: thumb_variant, eager_load: false, image_options: { class: "img-thumbnail" } %>
+      <%= render 'shared/image', image: f.object.image, variant: thumb_variant(2), eager_load: false, image_options: { class: "card-img-top w-full" } %>
       <%= f.hidden_field :image, value: f.object.image.blob.signed_id %>
     <% end %>
-    <br>
-
-    <%= render 'shared/form/file_field', f: f, field_name: :image %>
-
-    <%= f.input :description, input_html: { rows: 3 } %>
-
-    <%= f.input :access_level, collection: Picture::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>
-
-    <%= f.association(:picture_tags, collection: PictureTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>
-
-    <%= link_to_remove f %>
-    <hr>
+    <div class="card-body">
+      <%= render 'shared/form/file_field', f: f, field_name: :image %>
+      <%= f.input :description, input_html: { rows: 3 } %>
+      <%= f.input :access_level, collection: Picture::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>
+      <%= f.association(:picture_tags, collection: PictureTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>
+    </div>
+    <div class="card-footer">
+      <%= link_to_remove f %>
+    </div>
+  </div>
 <% end %>

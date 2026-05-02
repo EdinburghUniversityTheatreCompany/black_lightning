@@ -1,6 +1,12 @@
 <div class="gallery-form">
   <%= render(Admin::CollapsibleSectionComponent.new(title: 'Gallery', start_open: true)) do %>
-    <%= render('shared/form/sections/nested_fields', f: @f, association_name: :pictures, partial_name: 'picture_fields') %>
+    <%= render('shared/form/sections/nested_fields', 
+      f: @f,
+      association_name: :pictures,
+      partial_name: 'picture_fields',
+      container_class: 'row',
+      wrapper_class: 'col-4') 
+    %>
 
     <%= render 'shared/form/dropzone/dropzone_pictures' %>
   <% end %>
