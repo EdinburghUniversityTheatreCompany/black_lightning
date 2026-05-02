@@ -37,7 +37,7 @@ const ajaxCache = {
 // Usage: Add data-controller="select" to any element that contains
 // <select class="simple-select2"> descendants. All selects within the
 // controller element are initialised automatically on connect, and any
-// dynamically inserted selects (e.g. via Cocoon) are picked up by a
+// dynamically inserted selects (e.g. via stimulus-rails-nested-form) are picked up by a
 // MutationObserver scoped to the controller's element.
 //
 // Supported data attributes on the <select> element:
@@ -56,11 +56,8 @@ export default class extends Controller {
   connect() {
     this.#initAll(this.element)
 
-    // Watch for dynamically inserted selects (Cocoon, Turbo frames, etc.).
-    // We can't rely on `addEventListener("cocoon:after-insert")` because
-    // Cocoon fires via jQuery's custom event system, which doesn't dispatch
-    // a native CustomEvent. MutationObserver is library-agnostic and survives
-    // the eventual Cocoon → stimulus-rails-nested-form migration in Task 10.
+    // Watch for dynamically inserted selects (stimulus-rails-nested-form, Turbo frames, etc.).
+    // MutationObserver is library-agnostic.
     this.#observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         for (const node of mutation.addedNodes) {
