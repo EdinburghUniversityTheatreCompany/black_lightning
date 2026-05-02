@@ -2,6 +2,6 @@
 
 <ul class="list-group list-group-flush">
   <% get_navbar_children('admin/resources').each do |subpage| %>
-    <li class="list-group-item"><%= link_to subpage[:title], subpage[:path] %></li>
+    <li class="list-group-item py-1"><%= link_to subpage[:title], subpage[:path] %></li>
   <% end %>
 </ul>
