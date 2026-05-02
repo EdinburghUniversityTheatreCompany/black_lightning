@@ -3,6 +3,6 @@
 <% if current_user.phone_number.blank? %>
   <div class="alert alert-danger" role="alert">
     In order to sign up for staffing you need to provide a mobile phone number so we are able to get in touch if necessary.
-    You can do so <%= link_to 'here', edit_admin_user_path(current_user) %>.
+    You can do so <%= link_to 'here', edit_admin_user_path(current_user), class: "alert-link" %>.
   </div>
 <% end %>

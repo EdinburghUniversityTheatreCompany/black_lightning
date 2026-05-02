@@ -615,6 +615,10 @@ select.simple-select2 {
     @apply bg-blue-50 border-blue-200 text-blue-800;
   }
 
+  .alert-link {
+    @apply font-semibold underline;
+  }
+
   .pagination {
     @apply flex gap-1 list-none;
   }
