@@ -1,4 +1,3 @@
-
 # Black Lightning - Claude Code Guidelines
 
 
@@ -7,7 +6,7 @@ Ruby on Rails 8.1
 
 Use pnpm for package management rather than npm, yarn, or bun.
 
-The public facing website uses Bootstrap 5. The admin website currently uses Bootstrap 4.3 with AdminLTE but the plan is to migrate away to ViewComponents with Tailwind
+The public facing website uses Bootstrap 5. The admin website currently uses ViewComponents with Tailwind v4.
 
 Use stimulus for all JavaScript sprinkles. We use Vite rather than jsbundling, cssbundling and importmaps. We use propshaft too to serve some images and JavaScript files that are only used on a few pages
 
