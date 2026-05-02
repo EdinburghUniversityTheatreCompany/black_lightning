@@ -6,6 +6,7 @@
     <div class="flex gap-2">
       <button type="button" class="btn btn-secondary" data-action="click->template-loader#close">Close</button>
       <button type="button"
+              id="template_load"
               class="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               data-template-loader-target="loadButton"
               disabled>Load Template</button>
@@ -13,9 +14,9 @@
   <% end %>
 
   <form id="template_selector">
-    <select data-template-loader-target="list" class="w-full simple-select2">
+    <select id="template_list" name="template_list" data-template-loader-target="list" class="w-full">
       <option></option>
     </select>
-    <div data-template-loader-target="summary" class="mt-3"></div>
+    <div id="template_summary" data-template-loader-target="summary" class="mt-3"></div>
   </form>
 <% end %>

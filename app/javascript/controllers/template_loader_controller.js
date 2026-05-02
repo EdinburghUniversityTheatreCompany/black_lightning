@@ -207,6 +207,7 @@ export default class extends Controller {
     fragment.appendChild(heading)
 
     const list = document.createElement("ul")
+    list.id = "template_items_list"
     list.className = "space-y-1"
 
     if (this.#itemsType === "questions") {
