@@ -1,5 +1,7 @@
 <% if flash[:error].present? %>
-  <turbo-stream action="toast" type="error" message="<%= j flash[:error] %>"></turbo-stream>
+  <% error_message = flash[:error].count == 1 ? flash[:error].first : flash[:error].join("<br><br>").html_safe %>
+  <turbo-stream action="toast" type="error" message="<%= j error_message %>"></turbo-stream>
+  <% flash.discard %>
 <% else %>
   <% calendar_title = "#{@job.name} - #{@job.staffable.show_title}" %>
   <% start_str = @job.staffable.start_time.utc.strftime("%Y%m%dT%H%M%SZ") %>
