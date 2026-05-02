@@ -65,5 +65,8 @@ The `get_link` helper provides:
 <%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
 ```
 
+## ViewComponents
+When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
+
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
