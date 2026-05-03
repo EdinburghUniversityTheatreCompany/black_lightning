@@ -11,6 +11,8 @@ function buildColorMap(years) {
   return map
 }
 
+const HOP_CLASSES = "hop-1 hop-2 hop-3 hop-far"
+
 export default class extends Controller {
   static values = { nodes: Array, edges: Array }
 
@@ -76,6 +78,27 @@ export default class extends Controller {
             "border-color": "#1d4ed8",
           },
         },
+        // Edge hop highlighting — applied after a node is clicked
+        {
+          selector: "edge.hop-1",
+          style: { "line-color": "#111827", "target-arrow-color": "#111827", width: 3, opacity: 1 },
+        },
+        {
+          selector: "edge.hop-2",
+          style: { "line-color": "#6b7280", "target-arrow-color": "#6b7280", width: 2, opacity: 0.8 },
+        },
+        {
+          selector: "edge.hop-3",
+          style: { "line-color": "#9ca3af", "target-arrow-color": "#9ca3af", width: 1.5, opacity: 0.5 },
+        },
+        {
+          selector: "edge.hop-far",
+          style: { opacity: 0.1 },
+        },
+        {
+          selector: "node.hop-far",
+          style: { opacity: 0.2 },
+        },
       ],
       userZoomingEnabled: true,
       userPanningEnabled: true,
@@ -86,7 +109,14 @@ export default class extends Controller {
 
     this.#cy.on("tap", "node", evt => {
       const root = evt.target
-      this.#cy.elements().removeClass("focused")
+
+      // Click the focused node again to reset highlighting
+      if (root.hasClass("focused")) {
+        this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
+        return
+      }
+
+      this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
       root.addClass("focused")
 
       const distances = {}
@@ -94,6 +124,24 @@ export default class extends Controller {
         roots: root,
         visit: (v, _e, _u, _i, depth) => { distances[v.id()] = depth },
         directed: false,
+      })
+
+      // Dim nodes beyond 3 hops
+      this.#cy.nodes().forEach(n => {
+        const d = distances[n.id()]
+        if (d === undefined || d > 3) n.addClass("hop-far")
+      })
+
+      // Classify edges by the distance of their nearest endpoint to root
+      this.#cy.edges().forEach(e => {
+        const d = Math.min(
+          distances[e.source().id()] ?? Infinity,
+          distances[e.target().id()] ?? Infinity
+        )
+        if (d === 0)      e.addClass("hop-1")
+        else if (d === 1) e.addClass("hop-2")
+        else if (d === 2) e.addClass("hop-3")
+        else              e.addClass("hop-far")
       })
 
       const maxDepth = Math.max(...Object.values(distances), 1)
