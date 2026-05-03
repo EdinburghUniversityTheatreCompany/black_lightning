@@ -1,0 +1,17 @@
+<%# locals: () %>
+
+<% headers = [:name, :start_date, :tagline] %>
+
+<% field_sets = @events.map { |event| {
+  fields: [
+    event,
+    event.date_range(true, :short),
+    event.short_blurb
+  ]
+} } %>
+
+<%= render 'shared/pages/index_results',
+      resources: @events,
+      resource_class: @events.klass,
+      headers: headers,
+      field_sets: field_sets %>

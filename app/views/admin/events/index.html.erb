@@ -1,13 +1,4 @@
-<% 
-headers = [:name, :start_date, :tagline]
-
-field_sets = @events.map { |event| { 
-  fields: [
-    event,
-    event.date_range(true, :short),
-    event.short_blurb
-  ] } }
-
+<%
 if current_user.present? && current_user.has_role?('Member')
   members_only_text_entry = { slug: 'defaults.members_only_text' }
 else
@@ -37,5 +28,5 @@ if @events.klass == Show && can?(:debt_overview, Event)
 end
 %>
 
-<%= render 'shared/pages/index', resource_class: @events.klass, resources: @events, headers: headers, field_sets: field_sets, search_fields: search_fields,
+<%= render 'shared/pages/index', resource_class: @events.klass, resources: @events, content: render('admin/events/index_results'), search_fields: search_fields,
   show_new_button: @events.klass != Event, quick_actions: quick_actions %>
