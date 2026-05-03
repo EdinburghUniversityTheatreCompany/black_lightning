@@ -1,6 +1,6 @@
 require "test_helper"
 
-class Devise::SessionsControllerTest < ActionController::TestCase
+class Users::SessionsControllerTest < ActionController::TestCase
   test "Signing in with @sms.ed.ac.uk for account with @ed.ac.uk works" do
     @request.env["devise.mapping"] = Devise.mappings[:user]
 
