@@ -6,19 +6,19 @@
 
 <% if cast.any? %>
   <h3>Cast</h3>
-    <% cast.each do |team_member| %>
-      <p class="py-0 my-0">
-        <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
+  <% cast.each do |team_member| %>
+    <p class="py-0 my-0">
+      <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
-        <%# Show the badges if the current team_member has a user, AND if the currently signed-in user is part of the team for the teamwork OR can view users, AND we are on the admin site. %>
-        <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
-          <% team_member_labels_for(team_member, deadline).each do |label| %>
-            <%= generate_label(label[:label_class], label[:text]) %>
-          <% end %>
+      <%# Show the badges if the current team_member has a user, AND if the currently signed-in user is part of the team for the teamwork OR can view users, AND we are on the admin site. %>
+      <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
+        <% team_member_labels_for(team_member, deadline).each do |label| %>
+          <%= generate_label(label[:label_class], label[:text]) %>
         <% end %>
-      </p>
-    <% end %>
+      <% end %>
+    </p>
   <% end %>
+
 <% end %>
 
 <% if crew.any? %>
