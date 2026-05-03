@@ -16,7 +16,6 @@
         "channels": "^0.0.4",
         "cytoscape": "^3.33.3",
         "dropzone": "^5.9.2",
-        "jquery": "^3.7.1",
         "leaflet": "^1.9.4",
         "moment": "^2.29.4",
         "sass-embedded": "^1.86.0",
