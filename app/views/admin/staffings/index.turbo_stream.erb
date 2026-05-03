@@ -1,0 +1,6 @@
+<%= turbo_stream.update "upcoming-staffings" do %>
+  <%= render 'upcoming_results' %>
+<% end %>
+<%= turbo_stream.update "archived-staffings" do %>
+  <%= render 'archived_results' %>
+<% end %>

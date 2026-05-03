@@ -44,33 +44,10 @@
   </div>
 </div>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="card-title">Upcoming Positions</h5>
-    <div class="card-tools">
-      <%= get_link Admin::Staffing, :new %>
-      <%= get_link Admin::StaffingTemplate, :index %>
-    </div>
-  </div>
-  <div class="card-body <%= 'p-0' if @upcoming_staffings.any? %>">
-    <% if @upcoming_staffings.any? %>
-      <%= render Admin::StaffingIndexRowComponent.new(staffings_hash: @upcoming_staffings) %>
-    <% else %>
-      <p class="mb-0">There are no upcoming staffing positions.</p>
-    <% end %>
-  </div>
+<div id="upcoming-staffings">
+  <%= render 'upcoming_results' %>
 </div>
 
-<% if @archived_staffings.any? %>
-  <div class="card">
-    <div class="card-header">
-      <h5 class="card-title">Old Positions</h5>
-    </div>
-    <div class="card-body p-0">
-      <%= render Admin::StaffingIndexRowComponent.new(staffings_hash: @archived_staffings, archived: true) %>
-    </div>
-    <div class="card-footer">
-      <%= paginate @archived_staffings_pagination %>
-    </div>
-  </div>
-<% end %>
+<div id="archived-staffings">
+  <%= render 'archived_results' %>
+</div>

@@ -46,6 +46,7 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       format.html # index.html.erb
+      format.turbo_stream
       # format.json { render json: @staffings }
     end
   end
