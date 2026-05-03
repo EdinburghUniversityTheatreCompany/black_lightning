@@ -7,7 +7,13 @@ class Admin::MembershipCardsController < AdminController
   ##
   def index
     @title = "Membership Cards"
-    @cards = @membership_cards.page(params[:page]).per(15)
+    @q = @membership_cards.ransack(params[:q])
+    @cards = @q.result.page(params[:page]).per(15)
+
+    respond_to do |format|
+      format.html
+      format.turbo_stream { render "shared/pages/index" }
+    end
   end
 
   ##
