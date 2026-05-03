@@ -1,11 +1,7 @@
 require "commonmarker"
 
 module MdHelper
-  MARKDOWN_OPTIONS = {
-    parse: { smart: true },
-    render: { hardbreaks: true, unsafe: true },
-    extension: { strikethrough: true, table: true, autolink: true, tagfilter: false }
-  }.freeze
+  MARKDOWN_OPTIONS = ActionView::Template::Handlers::Markdown::OPTIONS
 
   def render_markdown(md)
     return "" if md.blank?
