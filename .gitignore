@@ -72,3 +72,5 @@ npm-debug.log*
 # https://vitejs.dev/guide/env-and-mode.html#env-files
 *.local
 
+# rollup-plugin-visualizer output
+stats.html 
