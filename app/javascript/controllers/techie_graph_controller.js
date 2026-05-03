@@ -173,6 +173,12 @@ export default class extends Controller {
       else e.addClass("hop-far")
     })
 
+    // Snapshot positions before layout so we can animate FROM them
+    const startPositions = {}
+    this.#cy.nodes().forEach(n => {
+      startPositions[n.id()] = { x: n.position("x"), y: n.position("y") }
+    })
+
     const maxDepth = Math.max(...Object.values(distances), 1)
 
     const conLayout = this.#cy.layout({
@@ -182,20 +188,45 @@ export default class extends Controller {
         return d !== undefined ? maxDepth - d + 1 : 0
       },
       levelWidth: () => 1,
-      animate: true,
-      animationDuration: 600,
-      animationEasing: "ease-in-out-cubic",
+      animate: false,
       fit: false,
     })
 
     conLayout.on("layoutstop", () => {
-      if (zoomIn) {
-        this.#cy.animate(
-          { fit: { eles: root.closedNeighborhood(), padding: 80 } },
-          { duration: 400 }
+      // Translate concentric positions so the root lands on the current viewport centre.
+      // cy.extent() is the visible model-space rectangle; its centre never changes when
+      // fit:false is used, so we can safely read it after the layout has run.
+      const extent = this.#cy.extent()
+      const vcx = (extent.x1 + extent.x2) / 2
+      const vcy = (extent.y1 + extent.y2) / 2
+      const dx = vcx - root.position("x")
+      const dy = vcy - root.position("y")
+
+      const endPositions = {}
+      this.#cy.nodes().forEach(n => {
+        endPositions[n.id()] = { x: n.position("x") + dx, y: n.position("y") + dy }
+      })
+
+      // Reset nodes to where they were — animation will carry them to the targets
+      this.#cy.nodes().forEach(n => {
+        n.position(startPositions[n.id()])
+      })
+
+      const animDuration = 600
+      this.#cy.nodes().forEach(n => {
+        n.animate(
+          { position: endPositions[n.id()] },
+          { duration: animDuration, easing: "ease-in-out-cubic" }
         )
-      } else {
-        this.#cy.animate({ center: { eles: root } }, { duration: 200 })
+      })
+
+      if (zoomIn) {
+        setTimeout(() => {
+          this.#cy.animate(
+            { fit: { eles: root.closedNeighborhood(), padding: 80 } },
+            { duration: 400 }
+          )
+        }, animDuration + 50)
       }
     })
 
