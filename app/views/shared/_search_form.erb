@@ -3,10 +3,21 @@
 
 
 <div class="card"
-     data-controller="live-search"
+     data-controller="search-form-mobile live-search"
      data-action="input->live-search#scheduleSearch change->live-search#scheduleSearch submit->live-search#scheduleSearch">
   <div class="card-header">
-    <span class="card-title">Search</span>
+    <span class="card-title my-0 align-middle">Search</span>
+
+    <%# Mobile toggle — hidden by default; controller shows it on mobile %>
+    <button type="button"
+            hidden
+            class="btn btn-sm ms-auto float-end"
+            data-search-form-mobile-target="toggle"
+            data-action="search-form-mobile#toggle">
+      <i class="fas fa-filter"></i>
+      Filters
+      <i class="fas fa-chevron-down"></i>
+    </button>
   </div>
 
   <% input_fields_in_collapse, input_fields_outside_collapse, button_params = split_search_form_input_fields(input_fields, columns) %>
@@ -15,24 +26,26 @@
   <% columns = input_fields_outside_collapse.count if input_fields_in_collapse.empty? && input_fields_outside_collapse.count < columns %>
 
   <%= search_form_for(@q, builder: SimpleForm::FormBuilder, url: url, html: { id: "search", class: "search-form" }, **horizontal_form_options) do |f| %>
-    <div class="card-body">
-      <%= render_search_form_fields(f, input_fields_outside_collapse, columns) %>
+    <div data-search-form-mobile-target="body">
+      <div class="card-body">
+        <%= render_search_form_fields(f, input_fields_outside_collapse, columns) %>
 
-      <% if input_fields_in_collapse.any? %>
-        <%= render layout: '/shared/collapsible_section', locals: { card_class: 'mb-0', title: 'More' } do %>
-          <%= render_search_form_fields(f, input_fields_in_collapse, columns) %>
+        <% if input_fields_in_collapse.any? %>
+          <%= render layout: '/shared/collapsible_section', locals: { card_class: 'mb-0 search-form-inner-collapse', title: 'More' } do %>
+            <%= render_search_form_fields(f, input_fields_in_collapse, columns) %>
+          <% end %>
         <% end %>
-      <% end %>
-    </div>
+      </div>
 
-    <div class="card-footer">
-      <%= f.button :button, class: 'btn btn-primary', name: 'commit' do %>
-        <%= generate_icon_prefix('magnifying-glass', 'Search').html_safe %>
-      <% end %>
+      <div class="card-footer">
+        <%= f.button :button, class: 'btn btn-primary', name: 'commit' do %>
+          <%= generate_icon_prefix('magnifying-glass', 'Search').html_safe %>
+        <% end %>
 
-      <% button_params.each do |key, params| %>
-        <%= f.submit(params[:action], class: 'btn btn-secondary') %>
-      <% end %>
+        <% button_params.each do |key, params| %>
+          <%= f.submit(params[:action], class: 'btn btn-secondary') %>
+        <% end %>
+      </div>
     </div>
   <% end %>
 </div>

@@ -25,3 +25,14 @@
 }
 
 // END FORMS
+
+// On mobile: force the inner search collapse open and hide its toggle
+@media (max-width: 767.98px) {
+  .search-form-inner-collapse > .card-header {
+    display: none !important;
+  }
+
+  .search-form-inner-collapse .collapse {
+    display: block !important;
+  }
+}

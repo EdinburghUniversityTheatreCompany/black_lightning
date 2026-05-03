@@ -832,6 +832,17 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   display: inline;
 }
 
+/* On mobile: force the inner search collapse open and hide its toggle */
+@media (max-width: 767.98px) {
+  .search-form-inner-collapse [data-collapsible-target="content"] {
+    display: block !important;
+  }
+
+  .search-form-inner-collapse button[data-action*="collapsible#toggle"] {
+    display: none !important;
+  }
+}
+
 /* Leaflet map container default dimensions */
 .leaflet-container {
   height: 400px;

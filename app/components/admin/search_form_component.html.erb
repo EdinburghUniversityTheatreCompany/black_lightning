@@ -1,38 +1,52 @@
 <div class="card"
-     data-controller="live-search"
+     data-controller="search-form-mobile live-search"
      data-action="input->live-search#scheduleSearch change->live-search#scheduleSearch submit->live-search#scheduleSearch">
   <div class="card-header">
     <span class="card-title">Search</span>
+
+    <%# Mobile toggle — hidden by default; controller shows it on mobile %>
+    <button type="button"
+            hidden
+            class="btn btn-sm btn-outline-secondary ml-auto"
+            data-search-form-mobile-target="toggle"
+            data-action="search-form-mobile#toggle">
+      <i class="fas fa-filter"></i>
+      Filters
+      <i class="fas fa-chevron-down transition-transform duration-200"
+         data-search-form-mobile-target="chevron"></i>
+    </button>
   </div>
 
   <%= helpers.search_form_for(@q, builder: SimpleForm::FormBuilder, url: form_url,
         html: { id: "search", class: "search-form" }, **helpers.horizontal_form_options) do |f| %>
-    <div class="card-body">
-      <%= helpers.render_search_form_fields(f, fields_outside_collapse, effective_columns) %>
+    <div data-search-form-mobile-target="body">
+      <div class="card-body">
+        <%= helpers.render_search_form_fields(f, fields_outside_collapse, effective_columns) %>
 
-      <% if fields_in_collapse.any? %>
-        <div data-controller="collapsible">
-          <div data-collapsible-target="content" class="hidden">
-            <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
+        <% if fields_in_collapse.any? %>
+          <div class="search-form-inner-collapse" data-controller="collapsible">
+            <div data-collapsible-target="content" class="hidden">
+              <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+                    data-action="collapsible#toggle">
+              <span class="when-closed">More <i class="fas fa-chevron-down"></i></span>
+              <span class="when-open">Less <i class="fas fa-chevron-up"></i></span>
+            </button>
           </div>
+        <% end %>
+      </div>
 
-          <button type="button" class="btn btn-outline-secondary btn-sm w-100"
-                  data-action="collapsible#toggle">
-            <span class="when-closed">More <i class="fas fa-chevron-down"></i></span>
-            <span class="when-open">Less <i class="fas fa-chevron-up"></i></span>
-          </button>
-        </div>
-      <% end %>
-    </div>
+      <div class="card-footer">
+        <%= f.button :button, class: "btn btn-primary", name: "commit" do %>
+          <%= helpers.generate_icon_prefix("magnifying-glass", "Search") %>
+        <% end %>
 
-    <div class="card-footer">
-      <%= f.button :button, class: "btn btn-primary", name: "commit" do %>
-        <%= helpers.generate_icon_prefix("magnifying-glass", "Search") %>
-      <% end %>
-
-      <% button_params.each do |_key, params| %>
-        <%= f.submit(params[:action], class: "btn btn-secondary") %>
-      <% end %>
+        <% button_params.each do |_key, params| %>
+          <%= f.submit(params[:action], class: "btn btn-secondary") %>
+        <% end %>
+      </div>
     </div>
   <% end %>
 </div>
