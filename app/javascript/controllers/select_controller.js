@@ -135,6 +135,12 @@ export default class extends Controller {
       options.preload     = false
     }
 
+    // TomSelect hides the native <select> with CSS. If the native select is
+    // required, the browser's validation will try to focus a hidden element
+    // on submit and emit "not focusable" warnings. Remove required here —
+    // server-side (ActiveRecord) validations enforce the constraint instead.
+    el.removeAttribute("required")
+
     const ts = new TomSelect(el, options)
     this.#instances.set(el, ts)
   }
