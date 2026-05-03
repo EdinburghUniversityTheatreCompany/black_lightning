@@ -134,6 +134,10 @@ class ApplicationController < ActionController::Base
     is_a?(ProfileCompletionsController) || auth_controller?
   end
 
+  def after_sign_in_path_for(resource)
+    stored_location_for(resource) || admin_path
+  end
+
   def auth_controller?
     devise_controller? ||
     is_a?(DevAuthController) ||
