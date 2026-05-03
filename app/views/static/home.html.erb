@@ -4,7 +4,7 @@
 <% end %>
 
 <div class="row">
-  <div class="col-md-8">
+  <div class="col-md-6 col-xl-8">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
     <%= render 'shared/carousel',
           id: 'homeCarousel',
@@ -33,7 +33,7 @@
     </div>
   </div>
 
-  <div class="col-md-4">
+  <div class="col-md-6 col-xl-4">
       <div class="card mt-3 mt-md-0 ">
         <div class="card-header"><h4>Book Now</h4></div>
         <div class="card-body">
