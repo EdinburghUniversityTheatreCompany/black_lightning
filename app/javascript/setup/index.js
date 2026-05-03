@@ -5,7 +5,6 @@ import "../controllers"
 import "../sweetalert"
 
 import { Turbo } from "@hotwired/turbo-rails";
-Turbo.session.drive = false; // Enable after removing jQuery by removing this line.
 
 Turbo.config.forms.confirm = (message) => {
   return window.Swal.fire({
