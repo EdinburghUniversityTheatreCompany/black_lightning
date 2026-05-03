@@ -13,8 +13,12 @@ export default class extends Controller {
   static targets = ["input"];
 
   async connect() {
-    const _Dropzone = await import("dropzone")
-    const Dropzone = _Dropzone.default ?? _Dropzone
+    const [_DropzoneModule] = await Promise.all([
+      import("dropzone"),
+      import("dropzone/dist/dropzone.css"),
+    ])
+    const _Dropzone = _DropzoneModule.default
+    const Dropzone = _Dropzone?.default ?? _Dropzone
     Dropzone.autoDiscover = false
 
     this.dropZone = createDropZone(this, Dropzone)
