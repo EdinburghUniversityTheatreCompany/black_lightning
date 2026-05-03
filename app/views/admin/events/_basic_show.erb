@@ -5,14 +5,14 @@
 <% # Note: If you update the ransack search form, this has some things with q that need to be changed. %>
 
 <%= content_for :publicity_and_members do %>
-  <div class="row vertical-rule">
+  <div class="row">
     <div class="col-<%= event.team_members.any? ? 'xl-6' : '12' %>">
       <h3>Publicity Text</h3>
       <%= render_markdown event.publicity_text %>
     </div>
 
     <% if event.team_members.any? %>
-      <div class="col-xl-6">
+      <div class="col-xl-6 lg:border-l lg:border-gray-200 lg:pl-4">
           <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered %>
       </div>
     <% end %>

@@ -636,11 +636,6 @@ select.simple-select2 {
     color: #6c757d;
   }
 
-  /* Vertical divider between columns */
-  .vertical-rule>[class*="col-"]:not(:first-child) {
-    @apply border-l border-gray-200 pl-4;
-  }
-
   /* Bootstrap utility aliases */
   .container-fluid {
     @apply w-full px-4;
