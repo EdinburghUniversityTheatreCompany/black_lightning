@@ -31,13 +31,16 @@ export default class extends Controller {
       container: this.element,
       elements,
       layout: {
-        name: "breadthfirst",
-        circle: true,
-        directed: true,
+        name: "cose",
         animate: false,
+        randomize: false,
         fit: true,
         padding: 30,
-        spacingFactor: 1.5,
+        nodeRepulsion: () => 8000,
+        idealEdgeLength: () => 80,
+        edgeElasticity: () => 100,
+        gravity: 0.25,
+        numIter: 2500,
       },
       style: [
         {
