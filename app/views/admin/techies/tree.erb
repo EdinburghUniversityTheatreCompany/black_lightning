@@ -3,27 +3,36 @@
   <%= get_link Techie, :new, html_class: 'btn btn-secondary' %>
 <% end %>
 
-<div class="row">
-    <div class="col">
-        <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies, html: { id: 'search', class: 'form-search form-inline mt-3'} do |f| %>
-            <%= f.input :id_eq, collection: Techie.all.select('id', 'name'), include_blank: true, label: 'Techie Name' %>
-            <div class="mr-2"></div>
-            <%= f.submit :Search, class: 'btn btn-secondary' %>
-            <% if @base_techie.size == 1 %>
-              <%= link_to "Clear", tree_admin_techies_path, class: 'btn btn-outline-secondary ms-2' %>
-            <% end %>
-        <% end %>
-    </div>
-</div>
-
 <%
   graph_nodes = @techies.map { |t| { id: t.id.to_s, label: t.name, entry_year: t.entry_year } }
   graph_edges = @techies.flat_map do |t|
     t.children.select { |c| @techies.include?(c) }.map { |c| { from: t.id.to_s, to: c.id.to_s } }
   end
+  selected_id = @base_techie.size == 1 ? @base_techie.first.id.to_s : ""
 %>
-<div style="width: 100%; height: calc(100vh - 200px);"
-     data-controller="techie-graph"
-     data-techie-graph-nodes-value="<%= graph_nodes.to_json %>"
-     data-techie-graph-edges-value="<%= graph_edges.to_json %>"
-     data-techie-graph-selected-value="<%= @base_techie.size == 1 ? @base_techie.first.id.to_s : "" %>"></div>
+
+<div class="card mt-3">
+  <div class="card-header d-flex align-items-center gap-2">
+    <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies,
+          html: { class: 'd-flex align-items-center gap-2 mb-0' } do |f| %>
+      <%= f.input :id_eq,
+            collection: Techie.all.select('id', 'name'),
+            include_blank: true,
+            label: false,
+            wrapper_html: { class: 'mb-0' },
+            input_html: { style: 'min-width: 220px' } %>
+      <%= f.submit 'Search', class: 'btn btn-secondary btn-sm' %>
+      <% if selected_id.present? %>
+        <%= link_to 'Clear', tree_admin_techies_path, class: 'btn btn-outline-secondary btn-sm' %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="card-body p-0 position-relative"
+       data-controller="techie-graph"
+       data-techie-graph-nodes-value="<%= graph_nodes.to_json %>"
+       data-techie-graph-edges-value="<%= graph_edges.to_json %>"
+       data-techie-graph-selected-value="<%= selected_id %>">
+    <div data-techie-graph-target="canvas" style="height: calc(100vh - 260px);"></div>
+  </div>
+</div>
