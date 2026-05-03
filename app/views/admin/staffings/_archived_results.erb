@@ -7,7 +7,7 @@
       <%= render Admin::StaffingIndexRowComponent.new(staffings_hash: @archived_staffings, archived: true) %>
     </div>
     <div class="card-footer">
-      <%= paginate @archived_staffings_pagination %>
+      <%= paginate @archived_staffings_pagination, window: 2 %>
     </div>
   </div>
 <% end %>

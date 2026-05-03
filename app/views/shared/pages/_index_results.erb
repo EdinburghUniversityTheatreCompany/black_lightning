@@ -5,7 +5,7 @@
     <span class="card-title"><%= @title %></span>
 
     <% if include_pagination %>
-      <div class="card-tools"><%= paginate resources %></div>
+      <div class="card-tools"><%= paginate resources, window: 2 %></div>
     <% end %>
   </div>
 
@@ -21,7 +21,7 @@
 
   <% if include_pagination && resources.respond_to?(:total_pages) && resources.total_pages > 1 %>
     <div class="card-footer clearfix">
-      <%= paginate(resources) %>
+      <%= paginate resources, window: 2 %>
     </div>
   <% end %>
 </div>
