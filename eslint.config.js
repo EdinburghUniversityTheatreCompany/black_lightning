@@ -14,6 +14,7 @@ export default [
       globals: {
         ...globals.browser,
         Swal: "readonly",   // SweetAlert2 loaded as global
+        Turbo: "readonly",  // Turbo loaded as global
       },
     },
     rules: {
