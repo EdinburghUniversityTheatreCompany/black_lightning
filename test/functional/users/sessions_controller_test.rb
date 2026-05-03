@@ -10,6 +10,6 @@ class Users::SessionsControllerTest < ActionController::TestCase
 
     post :create, params: { user: { "email" => "s1234567@sms.ed.ac.uk", password: } }
 
-    assert_redirected_to "/", "If this does not redirect, it likely loaded the same page again with some error"
+    assert_redirected_to "/admin", "If this does not redirect, it likely loaded the same page again with some error"
   end
 end
