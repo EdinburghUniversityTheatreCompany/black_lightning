@@ -1,13 +1,10 @@
-// Tom Select (Bootstrap 5 theme) - replaces Select2
+// Bundled statically to avoid FOUC on selects and because admin needs a different CSS.
 @use "tom-select/dist/css/tom-select.bootstrap5";
 
 // Icon font — imported here (not via JS) to avoid FOUC on page load
 @use "@fortawesome/fontawesome-free/css/fontawesome.css";
 @use "@fortawesome/fontawesome-free/css/solid.css";
 @use "@fortawesome/fontawesome-free/css/brands.css";
-
-// Toast UI Editor
-@use "@toast-ui/editor/dist/toastui-editor.css";
 
 // NOTE THAT THINGS PLACED HERE DO NOT WORK FOR THE BACKEND
 // This file has to be at the top because it also loads Bootstrap 5.
@@ -20,9 +17,5 @@
 
 @use '../styles/swalCustomTheme';
 
-// Fancybox lightbox
-@use "@fancyapps/ui/dist/fancybox/fancybox";
-
-// Leaflet maps
-@use "leaflet/dist/leaflet";
-
+// toast-ui, fancybox, and leaflet CSS are loaded dynamically
+// by their respective Stimulus controllers (markdown-editor, fancybox, map).

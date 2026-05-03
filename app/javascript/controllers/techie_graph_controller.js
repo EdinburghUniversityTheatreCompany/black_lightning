@@ -1,5 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import Cytoscape from "cytoscape"
 
 // Stable color per year — derived from the year itself so the same year always
 // gets the same hue regardless of which other years are in the current dataset.
@@ -14,8 +13,10 @@ export default class extends Controller {
   static values = { nodes: Array, edges: Array, selected: String }
   static targets = ["canvas", "legend"]
 
-  connect() {
+  async connect() {
     this.#renderLegend()
+
+    const { default: Cytoscape } = await import("cytoscape")
 
     const elements = [
       ...this.nodesValue.map(({ id, label, entry_year }) => ({

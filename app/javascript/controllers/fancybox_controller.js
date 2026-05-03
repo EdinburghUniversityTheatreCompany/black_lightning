@@ -1,13 +1,19 @@
 import { Controller } from "@hotwired/stimulus"
-import { Fancybox } from "@fancyapps/ui"
 
 export default class extends Controller {
-  connect() {
+  async connect() {
+    const [{ Fancybox }] = await Promise.all([
+      import("@fancyapps/ui"),
+      import("@fancyapps/ui/dist/fancybox/fancybox.css"),
+    ])
+    this.#Fancybox = Fancybox
     Fancybox.bind(this.element, "[data-fancybox]", {})
   }
 
   disconnect() {
-    Fancybox.unbind(this.element)
-    Fancybox.close()
+    this.#Fancybox?.unbind(this.element)
+    this.#Fancybox?.close()
   }
+
+  #Fancybox = null
 }

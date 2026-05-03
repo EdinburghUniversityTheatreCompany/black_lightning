@@ -1,5 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import Editor from "@toast-ui/editor"
 
 export default class extends Controller {
   static values = {
@@ -9,13 +8,18 @@ export default class extends Controller {
     itemId: String
   }
 
-  connect() {
+  async connect() {
     this.#textarea = this.element.querySelector("textarea")
     if (!this.#textarea) return
 
     // Capture form ref now — Toast UI Editor clears this.element's innerHTML on
     // init, detaching the textarea from the DOM and making textarea.form null.
     const form = this.#textarea.closest("form")
+
+    const [Editor] = await Promise.all([
+      import("@toast-ui/editor").then(m => m.default),
+      import("@toast-ui/editor/dist/toastui-editor.css"),
+    ])
 
     this.#editor = new Editor({
       el: this.element,

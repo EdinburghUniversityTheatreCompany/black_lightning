@@ -1,15 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import L from "leaflet"
-
-// Leaflet's default icon path-detection reads from CSS, which breaks when bundled.
-// Delete _getIconUrl to bypass detection and use our explicit paths instead.
-// Images are served from public/leaflet/ (same pattern as FontAwesome in public/webfonts/).
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconUrl: "/leaflet/marker-icon.png",
-  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
-  shadowUrl: "/leaflet/marker-shadow.png",
-})
 
 export default class extends Controller {
   static values = {
@@ -18,7 +7,22 @@ export default class extends Controller {
     markers: { type: Array, default: [] }
   }
 
-  connect() {
+  async connect() {
+    const [L] = await Promise.all([
+      import("leaflet").then(m => m.default),
+      import("leaflet/dist/leaflet.css"),
+    ])
+
+    // Leaflet's default icon path-detection reads from CSS, which breaks when bundled.
+    // Delete _getIconUrl to bypass detection and use our explicit paths instead.
+    // Images are served from public/leaflet/ (same pattern as FontAwesome in public/webfonts/).
+    delete L.Icon.Default.prototype._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconUrl: "/leaflet/marker-icon.png",
+      iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+      shadowUrl: "/leaflet/marker-shadow.png",
+    })
+
     this.map = L.map(this.element).setView(this.centerValue, this.zoomValue)
 
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {

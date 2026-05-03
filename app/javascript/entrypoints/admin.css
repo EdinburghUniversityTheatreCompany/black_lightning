@@ -12,12 +12,11 @@ select.simple-select2 {
 @import "@fortawesome/fontawesome-free/css/solid.css";
 @import "@fortawesome/fontawesome-free/css/brands.css";
 
-/* Third-party component styles that carry over from the old admin */
-@import "dropzone/dist/dropzone.css";
-@import "@toast-ui/editor/dist/toastui-editor.css";
-@import "@fancyapps/ui/dist/fancybox/fancybox.css";
-@import "leaflet/dist/leaflet.css";
+/* Bundled statically to avoid FOUC and because the styling is different for the public site */
 @import "tom-select/dist/css/tom-select.css";
+
+/* dropzone, toast-ui, fancybox, and leaflet CSS are loaded dynamically
+   by their respective Stimulus controllers */
 
 @source "../../../app/views/**/*.erb";
 @source "../../../app/components/**/*.html.erb";

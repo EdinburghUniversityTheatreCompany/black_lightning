@@ -1,8 +1,4 @@
-import _Dropzone from "dropzone";
 import { Controller } from "@hotwired/stimulus";
-
-const Dropzone = _Dropzone.default ?? _Dropzone;
-Dropzone.autoDiscover = false;
 import { DirectUpload } from "@rails/activestorage";
 import {
   getMetaValue,
@@ -16,10 +12,14 @@ import {
 export default class extends Controller {
   static targets = ["input"];
 
-  connect() {
-    this.dropZone = createDropZone(this);
-    this.hideFileInput();
-    this.bindEvents();
+  async connect() {
+    const _Dropzone = await import("dropzone")
+    const Dropzone = _Dropzone.default ?? _Dropzone
+    Dropzone.autoDiscover = false
+
+    this.dropZone = createDropZone(this, Dropzone)
+    this.hideFileInput()
+    this.bindEvents(Dropzone)
   }
 
   disconnect() {
@@ -33,10 +33,10 @@ export default class extends Controller {
     this.inputTarget.style.display = "none";
   }
 
-  bindEvents() {
+  bindEvents(Dropzone) {
     this.dropZone.on("addedfile", file => {
       setTimeout(() => {
-        file.accepted && createDirectUploadController(this, file).start();
+        file.accepted && new DirectUploadController(this, file, Dropzone).start();
       }, 500);
     });
 
@@ -75,10 +75,11 @@ export default class extends Controller {
 }
 
 class DirectUploadController {
-  constructor(source, file) {
+  constructor(source, file, Dropzone) {
     this.directUpload = createDirectUpload(file, source.url, this);
     this.source = source;
     this.file = file;
+    this.Dropzone = Dropzone;
   }
 
   start() {
@@ -124,32 +125,28 @@ class DirectUploadController {
   }
 
   emitDropzoneUploading() {
-    this.file.status = Dropzone.UPLOADING;
+    this.file.status = this.Dropzone.UPLOADING;
     this.source.dropZone.emit("processing", this.file);
   }
 
   emitDropzoneError(error) {
-    this.file.status = Dropzone.ERROR;
+    this.file.status = this.Dropzone.ERROR;
     this.source.dropZone.emit("error", this.file, error);
     this.source.dropZone.emit("complete", this.file);
   }
 
   emitDropzoneSuccess() {
-    this.file.status = Dropzone.SUCCESS;
+    this.file.status = this.Dropzone.SUCCESS;
     this.source.dropZone.emit("success", this.file);
     this.source.dropZone.emit("complete", this.file);
   }
-}
-
-function createDirectUploadController(source, file) {
-  return new DirectUploadController(source, file);
 }
 
 function createDirectUpload(file, url, controller) {
   return new DirectUpload(file, url, controller);
 }
 
-function createDropZone(controller) {
+function createDropZone(controller, Dropzone) {
   return new Dropzone(controller.element, {
     url: controller.url,
     headers: controller.headers,

@@ -1,5 +1,4 @@
 import { Controller } from "@hotwired/stimulus"
-import TomSelect from "tom-select"
 
 // Shared AJAX cache for all remote-source selects on this page.
 // Cache is automatically cleared on page navigation (appropriate for user data).
@@ -52,8 +51,11 @@ export default class extends Controller {
   // Holds {element => TomSelect} so we can destroy on disconnect
   #instances = new Map()
   #observer = null
+  #TomSelect = null
 
-  connect() {
+  async connect() {
+    this.#TomSelect = await import("tom-select").then(m => m.default)
+
     this.#initAll(this.element)
 
     // Watch for dynamically inserted selects (stimulus-rails-nested-form, Turbo frames, etc.).
@@ -141,7 +143,7 @@ export default class extends Controller {
     // server-side (ActiveRecord) validations enforce the constraint instead.
     el.removeAttribute("required")
 
-    const ts = new TomSelect(el, options)
+    const ts = new this.#TomSelect(el, options)
     this.#instances.set(el, ts)
   }
 
