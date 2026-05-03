@@ -68,13 +68,16 @@
     <div class="row">
       <div class="col">
         <div id="index-results">
-          <%= render 'shared/pages/index_results',
-                resources: resources, resource_class: resource_class,
-                headers: headers, field_sets: field_sets,
-                include_edit_button: include_edit_button,
-                include_link_to_item: include_link_to_item,
-                content: content,
-                include_pagination: include_pagination %>
+          <% if content.present? %>
+            <%= content %>
+          <% else %>
+            <%= render 'shared/pages/index_results',
+                  resources: resources, resource_class: resource_class,
+                  headers: headers, field_sets: field_sets,
+                  include_edit_button: include_edit_button,
+                  include_link_to_item: include_link_to_item,
+                  include_pagination: include_pagination %>
+          <% end %>
         </div>
       </div>
     </div>
