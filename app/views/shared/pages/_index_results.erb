@@ -19,7 +19,7 @@
     <% end %>
   </div>
 
-  <% if include_pagination %>
+  <% if include_pagination && resources.respond_to?(:total_pages) && resources.total_pages > 1 %>
     <div class="card-footer clearfix">
       <%= paginate(resources) %>
     </div>
