@@ -38,5 +38,5 @@ Rails.application.configure do
 
   # Report violations without enforcing the policy (report-only mode).
   # This allows us to monitor violations in development without breaking functionality.
-  config.content_security_policy_report_only = true
+  # config.content_security_policy_report_only = true
 end
