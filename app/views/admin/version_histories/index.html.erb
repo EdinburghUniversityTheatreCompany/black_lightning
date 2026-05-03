@@ -1,7 +1,5 @@
 <%= render('shared/quick_actions_card') do %>
-  <div class="btn-group">
-    <%= get_link @parent_record, :show, link_text: "Back to #{get_object_name(@parent_record)}" %>
-  </div>
+  <%= get_link @parent_record, :show, link_text: "Back to #{get_object_name(@parent_record)}" %>
 <% end %>
 
 <div class="card">
