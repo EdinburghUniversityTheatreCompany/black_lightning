@@ -4,10 +4,12 @@
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
 
-    <h3>Notify Emails</h3>
-    <%= render('shared/form/sections/nested_fields', f: f, association_name: :notify_emails, partial_name: 'notify_email_fields') %>
+    <div name="notify-emails" class="mb-3">
+      <h3>Notify Emails</h3>
+      <%= render('shared/form/sections/nested_fields', f: f, association_name: :notify_emails, partial_name: 'notify_email_fields') %>
+    </div>
 
-    <div name="questions">
+    <div name="questions" class="mb-3">
       <h3>Questions</h3>
       <%= render('shared/form/sections/nested_fields', f: f, association_name: :questions, partial_name: 'question_fields') %>
     </div>

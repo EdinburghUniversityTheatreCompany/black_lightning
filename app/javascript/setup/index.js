@@ -1,8 +1,6 @@
 // Import jQuery setup first - this exposes jQuery globally before other plugins load
+// (needed by the old admin.js/login stack; can be removed once login is migrated)
 import './jquery-global'
-
-// Plugins that depend on global jQuery
-import "jquery-slimscroll"
 
 // Load all the stimulus controllers
 import "../controllers"
@@ -11,11 +9,24 @@ import "../controllers"
 import "../sweetalert"
 
 import { Turbo } from "@hotwired/turbo-rails";
-Turbo.session.drive = false;
+Turbo.session.drive = false; // Enable after removing jQuery by removing this line.
+
+Turbo.config.forms.confirm = (message) => {
+  return window.Swal.fire({
+    icon: "warning",
+    html: message,
+    title: "Are you sure?",
+    showCancelButton: true,
+    confirmButtonText: "Yes",
+    cancelButtonText: "Cancel",
+    buttonsStyling: true,
+  }).then(result => result.isConfirmed)
+}
+
+Turbo.StreamActions.toast = function () {
+  window.Toast.fire({ icon: this.getAttribute("type"), html: this.getAttribute("message") })
+}
 
 import * as ActiveStorage from "@rails/activestorage"
 ActiveStorage.start()
 
-import "@fortawesome/fontawesome-free/css/fontawesome.css"
-import "@fortawesome/fontawesome-free/css/solid.css"
-import "@fortawesome/fontawesome-free/css/brands.css"

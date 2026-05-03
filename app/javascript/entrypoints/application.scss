@@ -1,6 +1,11 @@
 // Tom Select (Bootstrap 5 theme) - replaces Select2
 @use "tom-select/dist/css/tom-select.bootstrap5";
 
+// Icon font — imported here (not via JS) to avoid FOUC on page load
+@use "@fortawesome/fontawesome-free/css/fontawesome.css";
+@use "@fortawesome/fontawesome-free/css/solid.css";
+@use "@fortawesome/fontawesome-free/css/brands.css";
+
 // Toast UI Editor
 @use "@toast-ui/editor/dist/toastui-editor.css";
 

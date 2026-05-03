@@ -18,11 +18,32 @@
     <% end %>
 <% end %>
 
-<%= render('shared/pages/show', object: @user, fields: fields, show_actions_args: { destroy_link_params: {
+<%= render('shared/quick_actions_card') do %>
+  <%= render '/shared/show_actions', object: @user, destroy_link_params: {
     type_confirm: @user.name,
     detail: "If you delete a user, you may also break content which belongs to them. Do not take this decision lightly\n\nPlease type the user's full name:"
-} } ) %>
+  } %>
+<% end %>
 
-<%= render 'admin/users/debt_summary', user: @user %>
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-3">
+  <div>
+    <%= render Admin::UserBioComponent.new(user: @user) %>
+  </div>
+  <div class="xl:col-span-2">
+    <div class="card">
+      <%= render 'shared/basic_fields', fields: fields %>
+    </div>
+    <%= render Admin::DebtSummaryComponent.new(user: @user, current_user: current_user) %>
+  </div>
+</div>
 
-<%= render(template:'users/show', locals: { display_title: false }) %>
+<h3>Projects</h3>
+<% items = @team_memberships.collect { |team_membership| {
+        event: team_membership.teamwork,
+        paragraphs: [
+          { content: team_membership.teamwork.date_range(true), small: true },
+          { content: team_membership.teamwork.short_blurb },
+          { content: "<b>Position</b>: #{team_membership.position}".html_safe, class: 'mt-auto' }
+        ] } } %>
+
+<%= render Admin::EventsGridComponent.new(items: items, col_size: 12, link_to_admin_events: @link_to_admin_events) %>

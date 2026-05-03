@@ -1,35 +1,39 @@
 <%# locals: () %>
 
-<%- # Very similar to proposals call _form. %>
+<%# Very similar to proposals call _form. %>
 <% content_for :head do %>
-  <meta name="templates-base-url" content="/admin/questionnaires/questionnaire_templates" />
-  <meta name="templates-items-type" content="questions" />
+  <meta name="templates-base-url" content="/admin/questionnaires/questionnaire_templates">
+  <meta name="templates-items-type" content="questions">
 <% end %>
 
-<%= simple_horizontal_form_for(@questionnaire) do |f| %>
-  <% content_for :extra_form_actions do %>
-    <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#template_modal">Load Template</button>
-  <% end %>
-
-  <%= render('shared/pages/form', f: f) do %>
-    <% if @questionnaire.persisted? %>
-      <p>
-        <b>Event:</b> <%= get_link @questionnaire.event, :show %>
-      </p>
-    <% else %>
-      <%= f.association :event, collection: @events_collection, selected: @event, disabled: @questionnaire.persisted? %>
+<div data-controller="template-loader">
+  <%= simple_horizontal_form_for(@questionnaire) do |f| %>
+    <% content_for :extra_form_actions do %>
+      <button type="button" class="btn btn-secondary" data-action="click->template-loader#open">Load Template</button>
     <% end %>
 
-    <%= f.input :name %>
+    <%= render('shared/pages/form', f: f) do %>
+      <% if @questionnaire.persisted? %>
+        <p>
+          <b>Event:</b> <%= get_link @questionnaire.event, :show %>
+        </p>
+      <% else %>
+        <%= f.association :event, collection: @events_collection, selected: @event, disabled: @questionnaire.persisted? %>
+      <% end %>
 
-    <h3>Notify Emails</h3>
-    <%= render('shared/form/sections/nested_fields', f: f, association_name: :notify_emails, partial_name: 'notify_email_fields') %>
+      <%= f.input :name %>
 
-    <div id="questions">
-      <h3>Questions</h3>
-      <%= render('shared/form/sections/nested_fields', f: f, association_name: :questions, partial_name: 'question_fields') %>
-    </div>
+      <div id="notify-emails" class="mb-3">
+        <h3>Notify Emails</h3>
+        <%= render('shared/form/sections/nested_fields', f: f, association_name: :notify_emails, partial_name: 'notify_email_fields') %>
+      </div>
+
+      <div id="questions" class="mb-3">
+        <h3>Questions</h3>
+        <%= render('shared/form/sections/nested_fields', f: f, association_name: :questions, partial_name: 'question_fields') %>
+      </div>
+    <% end %>
   <% end %>
-<% end %>
 
-<%= render '/shared/form/template_modal', header: 'Select Questions from Template', template_model: Admin::Questionnaires::QuestionnaireTemplate %>
+  <%= render '/shared/form/template_modal', header: 'Select Questions from Template', template_model: Admin::Questionnaires::QuestionnaireTemplate %>
+</div>

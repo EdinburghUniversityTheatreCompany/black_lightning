@@ -2,6 +2,9 @@
 inherit_gem:
   rubocop-rails-omakase: rubocop.yml
 
+plugins:
+  - rubocop-view_component
+
 # Project-specific exclusions
 AllCops:
   Exclude:
@@ -9,3 +12,7 @@ AllCops:
     - db/schema.rb
     - db/queue_schema.rb
     - db/cache_schema.rb
+
+ViewComponent/MissingPreview:
+  Exclude:
+    - "**/application_component.rb"

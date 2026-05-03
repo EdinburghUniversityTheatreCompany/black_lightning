@@ -1,3 +1,7 @@
 <%# locals: () %>
 
-<%= render 'layouts/sidebar/sidebar_links', subpages: get_navbar_children('admin/resources') %>
+<ul class="list-group list-group-flush">
+  <% get_navbar_children('admin/resources').each do |subpage| %>
+    <li class="list-group-item py-1"><%= link_to subpage[:title], subpage[:path] %></li>
+  <% end %>
+</ul>

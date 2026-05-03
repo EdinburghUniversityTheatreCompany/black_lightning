@@ -19,6 +19,6 @@
     <%= f.input :subject %>
     <%= f.input :send_date %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :body, rows: 12 %>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :body, rows: 12 )%>
   <% end %>
 <% end %>

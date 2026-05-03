@@ -36,8 +36,8 @@
   publicity_and_members: { type: 'content', content: yield(:publicity_and_members) },
   content_warnings: { type: 'content', markdown: event.content_warnings },
   members_only_text: { type: 'markdown', markdown: event.members_only_text },
-  gallery:        { type: 'content', content: render('/shared/gallery', pictures: event.pictures.accessible_by(current_ability, :show)) },
-  attachments:    { type: 'content', content: render('shared/attachments_gallery', attachments: event.all_attachments.accessible_by(current_ability, :show)) },
+  gallery:        { type: 'content', content: render('/admin/shared/gallery', pictures: event.pictures.accessible_by(current_ability, :show)) },
+  attachments:    { type: 'content', content: render('admin/shared/attachments_gallery', attachments: event.all_attachments.accessible_by(current_ability, :show)) },
   video_links:    { type: 'content', content: render('shared/video_link_gallery', video_links: event.video_links.accessible_by(current_ability, :show)) },
   questionnaires: { type: 'content', content: render('admin/events/questionnaires', event: event) }
 } %>

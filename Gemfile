@@ -66,6 +66,7 @@ gem "csv"
 gem "puma"
 
 gem "vite_rails"
+gem "view_component"
 
 group :development, :test do
   gem "byebug"
@@ -78,6 +79,7 @@ group :development, :test do
   gem "rdoc"
   gem "rubocop-rails-omakase"
   gem "rubocop-faker"
+  gem "rubocop-view_component", require: false
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false

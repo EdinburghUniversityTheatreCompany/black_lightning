@@ -1,0 +1,21 @@
+<% if flash[:error].present? %>
+  <% error_message = flash[:error].count == 1 ? flash[:error].first : flash[:error].join("<br><br>").html_safe %>
+  <turbo-stream action="toast" type="error" message="<%= j error_message %>"></turbo-stream>
+  <% flash.discard %>
+<% else %>
+  <% calendar_title = "#{@job.name} - #{@job.staffable.show_title}" %>
+  <% start_str = @job.staffable.start_time.utc.strftime("%Y%m%dT%H%M%SZ") %>
+  <% end_str = @job.staffable.end_time.utc.strftime("%Y%m%dT%H%M%SZ") %>
+  <% google_calendar_url = "http://www.google.com/calendar/event?action=TEMPLATE" \
+    "&text=#{ERB::Util.url_encode(calendar_title)}" \
+    "&dates=#{start_str}/#{end_str}" \
+    "&location=Bedlam Theatre, Edinburgh" \
+    "&trp=true" \
+    "&sprop=website:http://www.bedlamtheatre.co.uk" \
+    "&sprop=name:Bedlam Theatre" %>
+  <% toast_message = "<p>Thank you for choosing to staff #{@job.staffable.show_title} as #{@job.name} on #{l @job.staffable.start_time, format: :short}.</p>" \
+    "<p><a href=\"#{google_calendar_url}\" target=\"_blank\" rel=\"noopener\">Add to Google Calendar</a></p>" %>
+
+  <%= turbo_stream.replace dom_id(@job, :sign_up), partial: "sign_up_result", locals: { job: @job } %>
+  <turbo-stream action="toast" type="success" message="<%= j toast_message %>"></turbo-stream>
+<% end %>

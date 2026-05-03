@@ -1,10 +1,11 @@
 <div class="card">
   <div class="card-body">
-    <h5>Create New User</h5>
+    <h3>Create New User</h3>
     <%= simple_horizontal_form_for(@user, url: activate_admin_users_path, method: :post) do |f| %>
       <%= f.error_notification %>
 
-      <p>Enter the details of a new member here to send them a profile completion email.</p>
+      <%# TODO: Needs proper margins. It's slightly off %>
+      <p class="text-muted text-sm px-2 mb-2">Enter the details of a new member here to send them a profile completion email.</p>
 
       <%= f.input :email, required: true, autofocus: true %>
       <%= f.input :first_name, required: true %>
@@ -12,12 +13,7 @@
       <%= f.input :student_id, hint: 'Optional - format: s1234567' %>
       <%= f.input :associate_id, hint: 'Optional - format: ASSOC123' %>
 
-      <div class="form-group">
-        <div class="form-check">
-          <%= check_box_tag 'user[is_member]', '1', false, class: 'form-check-input', id: 'user_is_member' %>
-          <%= label_tag 'user_is_member', 'Make this user a member immediately', class: 'form-check-label' %>
-        </div>
-      </div>
+      <%= f.input :is_member, as: :fake_checkbox, label: 'Make member', hint: 'Make this user a member immediately' %>
 
       <%= f.button :submit, "Send Profile Completion Email", class: 'btn btn-primary' %>
     <% end %>
@@ -26,7 +22,7 @@
 
 <div class="card mt-3">
   <div class="card-body">
-    <h5>Granting Membership To Existing Users</h5>
+    <h3>Granting Membership To Existing Users</h3>
     <p>If you need to grant membership to an existing user,
       please edit their profile and grant them the member role,
       or import a spreadsheet of members using the bulk import feature below.</p>
@@ -35,8 +31,8 @@
 
 <div class="card mt-3">
   <div class="card-body">
-    <h5>Bulk Import</h5>
-    <p>Need to activate many members at once? Import from a spreadsheet or paste data directly.</p>
+    <h3>Bulk Import</h3>
+    <p class="mb-2">Need to activate many members at once? Import from a spreadsheet or paste data directly.</p>
     <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: "btn btn-primary" %>
   </div>
 </div>

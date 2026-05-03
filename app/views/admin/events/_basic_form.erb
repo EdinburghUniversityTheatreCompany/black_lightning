@@ -40,22 +40,20 @@
 
 <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the image that appears in the slideshow on the frontpage, and as the header image on your event page. The apect ratio should be approximately 48/25.' %>
 
-<%= render "/shared/form/md_editor", f: f, field: :publicity_text %>
+<%= render Admin::MdEditorComponent.new(f: f, field: :publicity_text )%>
 
-<%= render "/shared/form/md_editor", f: f, field: :content_warnings %>
+<%= render Admin::MdEditorComponent.new(f: f, field: :content_warnings )%>
 
-<%= render "/shared/form/md_editor", f: f, field: :members_only_text %>
+<%= render Admin::MdEditorComponent.new(f: f, field: :members_only_text )%>
 
-<%= render '/shared/form/sections/gallery', f: f %>
+<%= render(Admin::Form::GalleryComponent.new(f: f)) %>
 
-<%= render 'shared/form/sections/attachments', f: f %>
+<%= render Admin::Form::AttachmentsComponent.new(f: f) %>
 
-<%= render 'shared/form/sections/video_links', f: f %>
+<%= render Admin::Form::VideoLinksComponent.new(f: f) %>
 
-<h3>Pretix Widget Configuration</h3>
-<%= render layout: '/shared/collapsible_section', locals: { title: 'Pretix Widget Configuration' } do %>
+<%= render(Admin::CollapsibleSectionComponent.new(title: 'Pretix Widget Configuration')) do %>
     <%= f.input :pretix_shown, hint: 'Display the Pretix widget for this event.' %>
     <%= f.input :pretix_slug_override, hint: ' Leave blank to use the slug for this event as the Pretix slug' %>
     <%= f.input :pretix_view, collection: ['list','week','month'], default: 'list', hint: "See Pretix's documentation for examples" %>
-  </div>
 <% end %>

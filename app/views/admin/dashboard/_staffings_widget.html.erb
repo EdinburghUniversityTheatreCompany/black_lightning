@@ -2,17 +2,26 @@
 
 <% upcoming_staffing = Admin::Staffing.accessible_by(current_ability).future.order('start_time ASC').first(5) %>
 
-<% upcoming_staffing.each do |staffing| %>
-  <p>
-    <%= link_to (l staffing.start_time, format: :short) + ": " + staffing.show_title, admin_staffing_path(staffing) %>
-
-    <% remaining_positions = staffing.staffing_jobs.count - staffing.filled_jobs %>
-    <% if remaining_positions > 0 %>
-      <%= generate_label('bg-danger', remaining_positions.to_s, rounded=true) %>
+<ul class="list-group list-group-flush">
+  <% if upcoming_staffing.empty? %>
+    <li class="list-group-item text-muted">There are no upcoming staffing slots.</li>
+  <% else %>
+    <% upcoming_staffing.each do |staffing| %>
+      <li class="list-group-item">
+        <% total_positions = staffing.staffing_jobs.count %>
+        <% filled_positions = staffing.filled_jobs %>
+        <% unfilled_positions = total_positions - filled_positions %>
+        <div class="row align-items-center">
+          <div class="col-3 text-muted"><%= staffing.start_time.strftime("%-d %B %H:%M") %>-<%= staffing.end_time.strftime("%H:%M") %></div>
+          <div class="col-9 d-flex justify-content-between align-items-center truncate pl-0 pr-0">
+            <%= link_to staffing.show_title, admin_staffing_path(staffing) %>
+            <% if total_positions > 0 %>
+              <% text_class = unfilled_positions > 0 ? 'text-danger' : 'text-muted' %>
+              <small class="<%= text_class %> text-nowrap ms-2"><%= filled_positions %> of <%= total_positions %></small>
+            <% end %>
+          </div>
+        </div>
+      </li>
     <% end %>
-  </p>
-<% end %>
-
-<% if upcoming_staffing.empty? then %>
-  <p>There are no upcoming staffing slots.</p>
-<% end %>
+  <% end %>
+</ul>

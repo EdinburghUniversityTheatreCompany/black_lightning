@@ -22,6 +22,8 @@
 #++
 
 class Admin::EditableBlock < ApplicationRecord
+  include MdHelper
+
   resourcify
   has_paper_trail meta: { version_note: :version_note }
 
@@ -45,15 +47,21 @@ class Admin::EditableBlock < ApplicationRecord
   end
 
   def cached_rendered_content
-    Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}", expires_in: 7.days) do
-      ::Commonmarker.to_html(content || "", options: MdHelper::MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
+    Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}_v2", expires_in: 7.days) do
+      render_markdown(content)
     end
   end
 
   private
 
   def clear_navbar_cache
-    section = url&.split("/")&.first
-    Rails.cache.delete("navbar_editable_blocks/#{section}") if section.present?
+    return if url.blank?
+
+    # Clear cache for each URL prefix, since get_subpage_editable_blocks caches
+    # by the full subpage_type path (e.g. "admin/resources"), not just the first segment.
+    parts = url.split("/")
+    parts.length.times do |i|
+      Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}")
+    end
   end
 end

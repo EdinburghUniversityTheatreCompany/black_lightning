@@ -5,12 +5,12 @@
 
     <%= f.association :category %>
 
-    <%= render "/shared/form/md_editor", f: f, field: :description %>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :description )%>
 
     <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the main image that will appear in the listing for this category.' %>
 
     <p>Please try to limit the amount of pictures you upload to 5.</p>
-    <%= render '/shared/form/sections/gallery', f: f %>
+    <%= render(Admin::Form::GalleryComponent.new(f: f)) %>
 
     <br>
     <%= link_to_remove f, link_text: 'Remove Category' %>

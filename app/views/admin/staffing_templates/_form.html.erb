@@ -4,7 +4,7 @@
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
 
-    <div id="staffing-jobs">
+    <div id="staffing-jobs" class="mb-3">
       <h3>Jobs</h3>
       <%= render('shared/form/sections/nested_fields', f: f, association_name: :staffing_jobs, partial_name: 'staffing_job_fields') %>
     </div>

@@ -1,6 +1,3 @@
-/* eslint no-console:0 */
 import "../setup"
 
-import("@popperjs/core")
-
-import "bootstrap"
+import "bootstrap/dist/js/bootstrap.bundle.min.js"

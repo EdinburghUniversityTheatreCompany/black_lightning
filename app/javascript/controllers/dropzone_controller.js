@@ -1,5 +1,8 @@
-import Dropzone from "dropzone";
+import _Dropzone from "dropzone";
 import { Controller } from "@hotwired/stimulus";
+
+const Dropzone = _Dropzone.default ?? _Dropzone;
+Dropzone.autoDiscover = false;
 import { DirectUpload } from "@rails/activestorage";
 import {
   getMetaValue,
@@ -17,7 +20,6 @@ export default class extends Controller {
     this.dropZone = createDropZone(this);
     this.hideFileInput();
     this.bindEvents();
-    Dropzone.autoDiscover = false; // necessary quirk for Dropzone error in console
   }
 
   disconnect() {

@@ -9,14 +9,14 @@
 
       <% case f.object.question.response_type %>
         <% when "Long Text" %>
-          <%= render "/shared/form/md_editor", f: f, field: :answer, input_field_args: { label: question_text }  %>
+          <%= render Admin::MdEditorComponent.new(f: f, field: :answer, input_field_args: { label: question_text }) %>
         <% when "Number" %>
           <%= f.input :answer, as: :decimal, label: question_text %>
         <% when "Yes/No" %>
           <%= f.input :answer, collection: ['Yes', 'No'], label: question_text, as: :radio_buttons %>
         <% when "File" %>
           <%= f.label :answer, question_text %>
-          <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
+          <%= render Admin::Form::AttachmentsComponent.new(f: f) %>
         <% else %>
           <%= f.input :answer, as: :string, label: question_text %>
       <% end %>
@@ -24,5 +24,3 @@
       <%= f.input_field :question_id, value: f.object.question.id, as: :hidden %>
   <% end %>
 <% end %>
-
-<hr>

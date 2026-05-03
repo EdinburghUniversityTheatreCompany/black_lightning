@@ -1,30 +1,36 @@
-<%= display_block("Staffing", true) %>
-
 <% webcal_url = staffing_calendar_url(token: current_user.calendar_token).sub(/\Ahttps?:\/\//, "webcal://") %>
 <% https_url  = staffing_calendar_url(token: current_user.calendar_token) %>
-<div class="input-group my-3">
-  <span class="input-group-text">Your staffing calendar</span>
-  <input type="text" class="form-control" value="<%= https_url %>" id="staffings-calendar-url" readonly autocomplete="off">
-  <button class="btn btn-secondary" type="button"
-          onclick="navigator.clipboard.writeText('<%= j(https_url) %>');
-                   this.textContent='Copied!';
-                   setTimeout(() => this.textContent='Copy', 2000)">
-    Copy
-  </button>
-  <%= link_to "Subscribe", webcal_url, class: "btn btn-primary" %>
-  <%= button_to "Regenerate link", regenerate_calendar_token_path,
-              method: :post,
-              class: "btn btn-danger",
-              form: {
-                style: "display:contents",
-                data: {
-                  controller: "confirm",
-                  action: "submit->confirm#confirm",
-                  confirm_message_value: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?"
-                }
-              } %>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title">Your Staffing Calendar</h5>
+  </div>
+  <div class="card-body">
+    <div class="input-group">
+      <input type="text" class="form-control" value="<%= https_url %>" id="staffings-calendar-url" readonly autocomplete="off">
+      <button class="btn btn-secondary" type="button"
+              onclick="navigator.clipboard.writeText('<%= j(https_url) %>');
+                       this.textContent='Copied!';
+                       setTimeout(() => this.textContent='Copy', 2000)">
+        Copy
+      </button>
+      <%= link_to "Subscribe", webcal_url, class: "btn btn-primary" %>
+      <%= button_to "Regenerate link", regenerate_calendar_token_path,
+                  method: :post,
+                  class: "btn btn-danger",
+                  form: {
+                    style: "display:contents",
+                    data: {
+                      controller: "confirm",
+                      action: "submit->confirm#confirm",
+                      confirm_message_value: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?"
+                    }
+                  } %>
+    </div>
+  </div>
+  <div class="card-footer text-muted small">
+    Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.
+  </div>
 </div>
-<p class="text-muted small mb-3">Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.</p>
 
 <% search_fields = {
   show_title_cont: { slug: 'defaults.show_title' },
@@ -32,18 +38,39 @@
 } %>
 <%= render 'shared/search_form', input_fields: search_fields, columns: 2, url: admin_staffings_path %>
 
-<h3>Upcoming Positions</h3>
-<% if @upcoming_staffings.any? %>
-  <%= render 'staffing_index_row', staffings_hash: @upcoming_staffings %>
-<% else %>
-  <p>There are no upcoming staffing positions.</p>
-<% end %>
+<div class="card">
+    <div class="card-body">
+    <%= display_block("Staffing", true) %>
+  </div>
+</div>
 
-<%= get_link Admin::Staffing, :new %>
-<%= get_link Admin::StaffingTemplate, :index %>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title">Upcoming Positions</h5>
+    <div class="card-tools">
+      <%= get_link Admin::Staffing, :new %>
+      <%= get_link Admin::StaffingTemplate, :index %>
+    </div>
+  </div>
+  <div class="card-body <%= 'p-0' if @upcoming_staffings.any? %>">
+    <% if @upcoming_staffings.any? %>
+      <%= render Admin::StaffingIndexRowComponent.new(staffings_hash: @upcoming_staffings) %>
+    <% else %>
+      <p class="mb-0">There are no upcoming staffing positions.</p>
+    <% end %>
+  </div>
+</div>
 
 <% if @archived_staffings.any? %>
-  <h3>Old Positions</h3>
-  <%= render 'staffing_index_row', staffings_hash: @archived_staffings, archived: true %>
-  <%= paginate @archived_staffings_pagination %>
+  <div class="card">
+    <div class="card-header">
+      <h5 class="card-title">Old Positions</h5>
+    </div>
+    <div class="card-body p-0">
+      <%= render Admin::StaffingIndexRowComponent.new(staffings_hash: @archived_staffings, archived: true) %>
+    </div>
+    <div class="card-footer">
+      <%= paginate @archived_staffings_pagination %>
+    </div>
+  </div>
 <% end %>

@@ -4,29 +4,31 @@
   <div class="card-header">
     <h5 class="mb-0">Quick Lookup</h5>
   </div>
-  <div class="card-body">
-    <p class="text-muted">Search for a specific user to check their debt status.</p>
-    <%= form_with url: lookup_admin_debt_checkers_path, method: :get, local: true do %>
-      <div class="row align-items-end">
-        <div class="col-md-6">
-          <label for="user_id" class="form-label">User</label>
-          <select name="user_id" id="user_id" class="simple-select2"
-                  data-remote-source="/admin/users/autocomplete_list"
-                  data-show-non-members="1"
-                  data-query-field="q[full_name_cont]"
-                  data-placeholder="Search by name..."
-                  data-minimum-input-length="2"
-                  data-allow-clear="true"
-                  required>
-            <option></option>
-            <% if selected_user %>
-              <option value="<%= selected_user.id %>" selected><%= selected_user.name_or_email %></option>
-            <% end %>
-          </select>
+  <div class="card-body" data-controller="select">
+    <%= simple_form_for :debt_checker, url: lookup_admin_debt_checkers_path, method: :get do |f| %>
+      <div class="flex gap-2 items-center">
+        <%= f.label :user_id, "Search for a specific user to check their debt status.",
+                    class: "text-sm font-medium text-gray-700 shrink-0 whitespace-nowrap" %>
+        <div class="flex-1 min-w-0">
+          <%= f.input :user_id,
+                      as: :select,
+                      label: false,
+                      collection: selected_user ? [[selected_user.name_or_email, selected_user.id]] : [],
+                      selected: selected_user&.id,
+                      required: true,
+                      wrapper: false,
+                      input_html: {
+                        class: "simple-select2 w-full",
+                        data: {
+                          remote_source: "/admin/users/autocomplete_list",
+                          show_non_members: "1",
+                          query_field: "q[full_name_cont]",
+                          placeholder: "Search by name...",
+                          minimum_input_length: "2"
+                        }
+                      } %>
         </div>
-        <div class="col-md-6">
-          <button type="submit" class="btn btn-primary">Check Debt</button>
-        </div>
+        <%= f.submit "Check Debt", class: "btn btn-primary shrink-0" %>
       </div>
     <% end %>
   </div>

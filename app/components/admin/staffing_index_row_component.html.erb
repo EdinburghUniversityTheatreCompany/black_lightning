@@ -1,0 +1,18 @@
+<table class="table table-hover mb-0">
+  <thead>
+    <tr>
+      <th scope="col" style="width: 48%;">Name</th>
+      <th scope="col" style="width: 40%;">Dates</th>
+      <th scope="col" style="width: 12%;">Positions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% rows.each do |row| %>
+      <tr class="<%= 'table-warning' if row[:show_warning] %>">
+        <td><%= link_to row[:show_title], helpers.grid_admin_staffings_path(row[:url], archived: @archived), class: "block" %></td>
+        <td><%= link_to row[:date_range], helpers.grid_admin_staffings_path(row[:url], archived: @archived), class: "block" %></td>
+        <td><%= link_to row[:positions_filled], helpers.grid_admin_staffings_path(row[:url], archived: @archived), class: "block" %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

@@ -23,7 +23,7 @@ class UsersController < ApplicationController
   def consent
     authorize! :edit, @user
 
-    @user.touch(:consented)
+    @user.update_column(:consented, Date.current)
 
     redirect_to(admin_path)
   end

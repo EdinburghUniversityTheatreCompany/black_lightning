@@ -10,4 +10,4 @@
 
 <%= f.input :url, hint: 'Enter "https://print.publication" if this review only appeared in print.' %>
 
-<%= render "/shared/form/md_editor", f: f, field: :body %>
+<%= render Admin::MdEditorComponent.new(f: f, field: :body )%>

@@ -1,0 +1,31 @@
+<% return if @items.empty? %>
+
+<div class="<%= grid_classes %>">
+  <% @items.each do |item| %>
+    <% url = url_for_item(item) %>
+    <div class="bg-white rounded border border-gray-200 flex flex-col overflow-hidden">
+      <%= link_to url do %>
+        <div class="aspect-[576/300] overflow-hidden bg-gray-100">
+          <%= render 'shared/image',
+                image: item[:event].fetch_image,
+                variant: helpers.medium_variant,
+                proxy: true,
+                image_options: { class: 'object-cover w-full h-full' } %>
+        </div>
+      <% end %>
+      <div class="p-4 flex flex-col flex-1">
+        <%= link_to item[:event].name_and_author, url,
+              class: "font-semibold text-primary hover:text-primary-dark block mb-2 leading-snug" %>
+        <% item[:paragraphs].each do |paragraph| %>
+          <p class="text-sm <%= paragraph[:class] %>">
+            <% if paragraph[:small] %>
+              <span class="text-gray-500 text-xs"><%= paragraph[:content] %></span>
+            <% else %>
+              <%= paragraph[:content] %>
+            <% end %>
+          </p>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

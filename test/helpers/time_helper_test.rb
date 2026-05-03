@@ -36,8 +36,8 @@ class TimeHelperTest < ActionView::TestCase
   test "with different start and end date, with different format" do
     end_date = @start_date.advance(days: 3)
 
-    assert_equal "May 15 - May 18", time_range_string(@start_date, end_date, false, :short)
-    assert_equal "May 15 - May 18 2020", time_range_string(@start_date, end_date, true, :short)
+    assert_equal "15 May - 18 May", time_range_string(@start_date, end_date, false, :short)
+    assert_equal "15 May - 18 May 2020", time_range_string(@start_date, end_date, true, :short)
   end
 
   test "with time on different dates" do

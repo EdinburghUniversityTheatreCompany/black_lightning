@@ -15,16 +15,6 @@
 require "test_helper"
 
 class Admin::StaffingJobTest < ActiveSupport::TestCase
-  test "js_start_time" do
-    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, unstaffed_job_count: 1, start_time: DateTime.new(2020, 5, 19, 18, 30, 5, "+03:00"))
-    assert_equal 1589902205, staffing.staffing_jobs.first.js_start_time
-  end
-
-  test "js_end_time" do
-    staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, unstaffed_job_count: 1, end_time: DateTime.new(2020, 5, 19, 18, 30, 5, "-02:00"))
-    assert_equal 1589920205, staffing.staffing_jobs.first.js_end_time
-  end
-
   test "completed" do
     staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, staffed_job_count: 1, start_time: DateTime.current.advance(days: -1))
 

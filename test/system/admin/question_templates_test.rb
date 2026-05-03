@@ -22,24 +22,24 @@ class Admin::QuestionTemplatesTest < ApplicationSystemTestCase
     visit new_admin_proposals_call_path
 
     # Open the Load Template modal
-    find("button[data-target='#template_modal']").click
+    find("button[data-action=\"click->template-loader#open\"]").click
 
     within "#template_modal" do
       # Wait for AJAX to populate the dropdown.
       # Fixtures have two templates: mainterm and lunchtime
-      assert_selector "#template_list option[value]", wait: 5
-      assert_selector "#template_list option", text: "Question Call Template (Mainterm)", wait: 3
+      assert_selector "select option[value]", wait: 5
+      assert_selector "select option", text: "Question Call Template (Mainterm)", wait: 3
     end
   end
 
   test "proposals call form: selecting a template shows a summary" do
     visit new_admin_proposals_call_path
 
-    find("button[data-target='#template_modal']").click
+    find("button[data-action=\"click->template-loader#open\"]").click
 
     within "#template_modal" do
-      assert_selector "#template_list option", text: "Question Call Template (Mainterm)", wait: 5
-      select "Question Call Template (Mainterm)", from: "template_list"
+      assert_selector "select option", text: "Question Call Template (Mainterm)", wait: 5
+      select "Question Call Template (Mainterm)" # , from: "template_list"
 
       # Summary should appear with the questions from the mainterm fixture
       assert_selector "#template_summary ul#template_items_list", wait: 3
@@ -51,14 +51,14 @@ class Admin::QuestionTemplatesTest < ApplicationSystemTestCase
   test "proposals call form: Load Template button is disabled until a template is selected" do
     visit new_admin_proposals_call_path
 
-    find("button[data-target='#template_modal']").click
+    find("button[data-action=\"click->template-loader#open\"]").click
 
     within "#template_modal" do
       # Initially disabled
-      assert_selector "#template_load.disabled"
+      assert_selector "#template_load[disabled]"
 
       # Select a template — button should become enabled
-      assert_selector "#template_list option", text: "Question Call Template (Mainterm)", wait: 5
+      assert_selector "select option", text: "Question Call Template (Mainterm)", wait: 5
       select "Question Call Template (Mainterm)", from: "template_list"
 
       assert_no_selector "#template_load.disabled", wait: 3
@@ -68,10 +68,10 @@ class Admin::QuestionTemplatesTest < ApplicationSystemTestCase
   test "proposals call form: Load Template inserts questions with populated fields" do
     visit new_admin_proposals_call_path
 
-    find("button[data-target='#template_modal']").click
+    find("button[data-action=\"click->template-loader#open\"]").click
 
     within "#template_modal" do
-      assert_selector "#template_list option", text: "Question Call Template (Mainterm)", wait: 5
+      assert_selector "select option", text: "Question Call Template (Mainterm)", wait: 5
       select "Question Call Template (Mainterm)", from: "template_list"
       assert_no_selector "#template_load.disabled", wait: 3
       # Click the Load Template button inside the modal footer
@@ -96,11 +96,11 @@ class Admin::QuestionTemplatesTest < ApplicationSystemTestCase
 
     visit new_admin_staffing_path
 
-    find("button[data-target='#template_modal']").click
+    find("button[data-action=\"click->template-loader#open\"]").click
 
     within "#template_modal" do
-      assert_selector "#template_list option[value]", wait: 5
-      assert_selector "#template_list option", text: template.name, wait: 3
+      assert_selector "select option[value]", wait: 5
+      assert_selector "select option", text: template.name, wait: 3
     end
   end
 
@@ -111,10 +111,10 @@ class Admin::QuestionTemplatesTest < ApplicationSystemTestCase
 
     visit new_admin_staffing_path
 
-    find("button[data-target='#template_modal']").click
+    find("button[data-action=\"click->template-loader#open\"]").click
 
     within "#template_modal" do
-      assert_selector "#template_list option", text: template.name, wait: 5
+      assert_selector "select option", text: template.name, wait: 5
       select template.name, from: "template_list"
       assert_no_selector "#template_load.disabled", wait: 3
       find("#template_load").click

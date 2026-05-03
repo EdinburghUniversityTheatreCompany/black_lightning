@@ -1,0 +1,17 @@
+<%# locals: (attachments:, include_item_link: false, include_header: true) -%>
+
+<% if attachments.any? %>
+  <div data-controller="fancybox">
+    <% if include_header %>
+      <h3>Attachments</h3>
+    <% end %>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <% attachments.each do |attachment| %>
+        <%= render 'shared/show_attachment', attachment: attachment, include_item_link: include_item_link %>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<div class="mb-3"></div>

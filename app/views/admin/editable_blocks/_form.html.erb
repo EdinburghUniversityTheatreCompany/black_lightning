@@ -10,7 +10,7 @@
 
     <%= f.input :ordering, hint: 'The ordering in the subpage layer. Unused in other situations. From low to high.'%>
 
-    <%= render "/shared/form/md_editor", f: f, field: :content, rows: 12 %>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :content, rows: 12 )%>
 
     <% if @editable_block.persisted? %>
       <%= f.input :version_note, label: "Edit summary", hint: "Briefly describe what you changed (optional)", input_html: { maxlength: 255 } %>
@@ -21,6 +21,6 @@
       <strong>Other files</strong> (PDFs, documents): upload via the Attachments section below, then link from the editor using <code>[link text](/attachments/attachmentname)</code>.
     </small>
 
-    <%= render 'shared/form/sections/attachments', f: f, include_header: false %>
+    <%= render Admin::Form::AttachmentsComponent.new(f: f) %>
   <% end %>
 <% end %>

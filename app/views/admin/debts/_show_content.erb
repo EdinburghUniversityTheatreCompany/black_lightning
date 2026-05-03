@@ -1,19 +1,25 @@
 <%# locals: () %>
 
 <ul class="list-group list-group-flush">
-    <li class="list-group-item px-0 pt-0 pb-2">
-        <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id), class: 'btn btn-secondary' %>  
-        <%= "(#{@user.debt_causing_maintenance_debts.count} now) (#{@user.upcoming_maintenance_debts.count} upcoming)" %>
-    </li>
-
-    <li class="list-group-item px-0 py-2">
-        <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id), class: 'btn btn-secondary' %> 
-        <%= "(#{@user.debt_causing_staffing_debts.count} now) (#{@user.upcoming_staffing_debts.count} upcoming)" %>
-</li>
-
-    <li class="list-group-item px-0 pt-2 pb-0">
-        <% unassociated_job_count = @user.staffing_jobs.includes(:staffable).unassociated_staffing_jobs_that_count_towards_debt.size %>
-        <% unassociated_sessions_count = @user.maintenance_attendances.unassociated.size %>
-        <%= "#{(@user == current_user) ? "You have": "#{@user.name(current_user)} has"} staffed #{pluralize(unassociated_job_count, 'staffing slot', 'staffing slots')} and attendended #{pluralize(unassociated_sessions_count, 'maintenance session', 'maintenance sessions')} that are not associated with any debt." %>
-    </li>
+  <li class="list-group-item flex items-center gap-3">
+    <%= link_to 'Maintenance Debts', admin_maintenance_debts_path(user_id: @user.id) %>
+    <span class="ml-auto flex gap-2">
+      <% maint_now = @user.debt_causing_maintenance_debts.count %>
+      <%= generate_label(maint_now > 0 ? 'bg-danger' : 'bg-secondary', "#{maint_now} now", false, true) %>
+      <%= generate_label('bg-secondary', "#{@user.upcoming_maintenance_debts.count} upcoming", false, true) %>
+    </span>
+  </li>
+  <li class="list-group-item flex items-center gap-3">
+    <%= link_to 'Staffing Debts', admin_staffing_debts_path(user_id: @user.id) %>
+    <span class="ml-auto flex gap-2">
+      <% staffing_now = @user.debt_causing_staffing_debts.count %>
+      <%= generate_label(staffing_now > 0 ? 'bg-danger' : 'bg-secondary', "#{staffing_now} now", false, true) %>
+      <%= generate_label('bg-secondary', "#{@user.upcoming_staffing_debts.count} upcoming", false, true) %>
+    </span>
+  </li>
+  <li class="list-group-item text-sm text-muted">
+    <% unassociated_job_count = @user.staffing_jobs.includes(:staffable).unassociated_staffing_jobs_that_count_towards_debt.size %>
+    <% unassociated_sessions_count = @user.maintenance_attendances.unassociated.size %>
+    <%= "#{(@user == current_user) ? "You have" : "#{@user.name(current_user)} has"} staffed #{pluralize(unassociated_job_count, 'staffing slot', 'staffing slots')} and attended #{pluralize(unassociated_sessions_count, 'maintenance session', 'maintenance sessions')} that are not associated with any debt." %>
+  </li>
 </ul>

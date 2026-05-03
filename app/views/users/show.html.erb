@@ -4,14 +4,12 @@
 <% end %>
 
 <div class="card">
-  <div class="card-body">
+  <div class="card-body overflow-hidden">
     <% if @user.avatar.present? %>
       <%# Proxy URL is safe here: UsersController#show authorizes :view_shows_and_bio, which is only granted for public_profile: true users %>
-      <%= render 'shared/image', image: @user.avatar, variant: square_thumb_variant, proxy: true, eager_load: false, image_options: { class: "img-thumbnail zoomable float-end ms-3 mb-3" } %>
+      <%= render 'shared/image', image: @user.avatar, variant: square_thumb_variant, proxy: true, eager_load: false, image_options: { class: "img-thumbnail zoomable float-end ms-3 mb-2" } %>
     <% end %>
-
     <%= render_markdown @user.bio %>
-
     <%= get_link @user, :edit, html_class: 'btn btn-primary' %>
   </div>
 </div>

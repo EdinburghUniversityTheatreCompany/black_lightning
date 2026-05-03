@@ -10,7 +10,7 @@
   <% children_by_year = @techie.children.group_by(&:entry_year).sort_by { |year, children| year || Float::INFINITY }.reverse %>
   <% children_by_year.each do |year, children| %>
     <div class="mb-3">
-      <h6 class="text-secondary"><%= year ? year : "No Entry Year" %></h6>
+      <h6 class="text-gray-500"><%= year ? year : "No Entry Year" %></h6>
       <ul>
         <% children.sort_by(&:name).each do |child| %>
           <li><%= get_link child, :show %></li>

@@ -3,27 +3,31 @@ import { Controller } from "@hotwired/stimulus"
 // Replaces the legacy app/assets/javascripts/admin/question_templates.js
 // jQuery-based TemplateLoader class.
 //
+// This controller should be placed on a wrapper element that contains both
+// the trigger button and the <dialog> rendered by Admin::ModalComponent.
+// The ModalComponent sets data-template-loader-target="dialog" on the <dialog>.
+//
 // Behaviour:
 //   * On connect, reads two <meta> tags:
 //       - templates-base-url  — JSON endpoint for the template list
 //       - templates-items-type — "questions" or "jobs"
-//   * Fetches the template list and populates #template_list (the modal
+//   * Fetches the template list and populates the list target (the modal
 //     dropdown) via the native fetch API (no jQuery).
-//   * When the user picks a template, shows a summary in #template_summary
-//     and enables the #template_load button.
-//   * When the user clicks #template_load, for each template item it:
+//   * When the user picks a template, shows a summary in the summary target
+//     and enables the loadButton target.
+//   * When the user clicks loadButton, for each template item it:
 //       1. Queues the item in #insertQueue.
 //       2. Processes the queue one item at a time:
 //          a. Sets #pendingItem to the next queued item.
-//          b. Clicks the appropriate Cocoon "add fields" button.
+//          b. Clicks the appropriate stimulus-rails-nested-form "add" button.
 //          c. The MutationObserver detects the inserted DOM node, fills it
 //             from #pendingItem, then advances to the next queued item.
 //
-// Why MutationObserver instead of `addEventListener("cocoon:after-insert")`:
-//   Cocoon fires its events via jQuery's custom-event system, not the browser's
-//   native CustomEvent dispatch. Standard `addEventListener` cannot receive them.
-//   MutationObserver is library-agnostic and survives the eventual Cocoon →
-//   stimulus-rails-nested-form migration in Task 10.
+// Why MutationObserver:
+//   stimulus-rails-nested-form inserts a cloned <template> synchronously on
+//   button click, but we use the MutationObserver as a fallback in case the
+//   synchronous count-check misses the insertion. MutationObserver is
+//   library-agnostic and works reliably regardless of insertion mechanism.
 //
 // Why a queue (not a simple forEach + null reset):
 //   MutationObserver callbacks are delivered as microtasks — asynchronously
@@ -37,6 +41,8 @@ import { Controller } from "@hotwired/stimulus"
 // this controller set the meta tags in <head> (inside content_for :head),
 // which keeps the view diff minimal and avoids threading values through partials.
 export default class extends Controller {
+  static targets = ["dialog", "list", "summary", "loadButton"]
+
   #baseUrl = null
   #itemsType = null
   #allTemplates = []
@@ -47,6 +53,7 @@ export default class extends Controller {
   #insertQueue = []
   // The item currently waiting to be populated by the MutationObserver
   #pendingItem = null
+
   connect() {
     this.#baseUrl = document.querySelector('meta[name="templates-base-url"]')?.content
     this.#itemsType = document.querySelector('meta[name="templates-items-type"]')?.content
@@ -61,6 +68,20 @@ export default class extends Controller {
   disconnect() {
     this.#observer?.disconnect()
     this.#observer = null
+  }
+
+  // Public Stimulus actions
+
+  open() {
+    this.dialogTarget.showModal()
+  }
+
+  close() {
+    this.dialogTarget.close()
+  }
+
+  backdropClose({ target }) {
+    if (target === this.dialogTarget) this.dialogTarget.close()
   }
 
   // Private
@@ -83,9 +104,10 @@ export default class extends Controller {
     return true
   }
 
-  // Watch for DOM nodes added by Cocoon so we can populate them with template
-  // data. We observe the entire document body because Cocoon inserts nodes at
-  // the form level, which may be outside this controller's element (the modal).
+  // Watch for DOM nodes added by stimulus-rails-nested-form so we can
+  // populate them with template data. We observe the entire document body
+  // because nested-form inserts nodes at the form level, outside this
+  // controller's element.
   #setupObserver() {
     this.#observer = new MutationObserver((mutations) => {
       if (!this.#pendingItem) return
@@ -94,10 +116,9 @@ export default class extends Controller {
         for (const node of mutation.addedNodes) {
           if (node.nodeType !== Node.ELEMENT_NODE) continue
           if (this.#fillInsertedNode(node)) {
-            // Successfully filled this node. Defer the advance so this
-            // callback fully completes before the next add-button click fires.
-            // This prevents Cocoon's second insertion from landing in the same
-            // observer batch as the first, which would cause it to be skipped.
+            // Defer the advance so this callback fully completes before the
+            // next add-button click fires, preventing multiple insertions from
+            // landing in the same observer batch.
             queueMicrotask(() => this.#advanceQueue())
             return
           }
@@ -110,7 +131,7 @@ export default class extends Controller {
 
   // Try to populate the inserted node. Returns true if this node matched and
   // was filled (even if some fields were absent), false if the node is not a
-  // recognisable Cocoon-inserted row for our item type.
+  // recognisable nested-form-inserted row for our item type.
   #fillInsertedNode(node) {
     const item = this.#pendingItem
 
@@ -143,26 +164,23 @@ export default class extends Controller {
   }
 
   #bindListDropdown() {
-    const list = document.getElementById("template_list")
-    const loadButton = document.getElementById("template_load")
-    if (!list || !loadButton) return
+    if (!this.hasListTarget || !this.hasLoadButtonTarget) return
 
-    list.addEventListener("change", () => this.#handleTemplateSelection())
-    loadButton.addEventListener("click", () => this.#loadTemplate())
+    this.listTarget.addEventListener("change", () => this.#handleTemplateSelection())
+    this.loadButtonTarget.addEventListener("click", () => this.#loadTemplate())
   }
 
   #handleTemplateSelection() {
-    const list = document.getElementById("template_list")
-    const loadButton = document.getElementById("template_load")
-    const summary = document.getElementById("template_summary")
-    if (!list || !loadButton || !summary) return
+    const list = this.listTarget
+    const loadButton = this.loadButtonTarget
+    const summary = this.summaryTarget
 
     const templateId = list.value
 
     if (!templateId) {
       summary.innerHTML = ""
       this.#globalData = null
-      loadButton.classList.add("disabled")
+      loadButton.disabled = true
       return
     }
 
@@ -171,36 +189,68 @@ export default class extends Controller {
     if (selected) {
       this.#globalData = selected
       this.#updateSummary()
-      loadButton.classList.remove("disabled")
+      loadButton.disabled = false
     } else {
       console.error("Selected template not found:", templateId)
       summary.innerHTML = "<p>Error: Template not found</p>"
-      loadButton.classList.add("disabled")
+      loadButton.disabled = true
     }
   }
 
   #updateSummary() {
-    const summary = document.getElementById("template_summary")
-    if (!summary) return
+    const summary = this.summaryTarget
+    const fragment = document.createDocumentFragment()
 
-    const items = this.#itemsType === "questions"
-      ? (this.#globalData.questions ?? []).map((q) => q.question_text)
-      : (this.#globalData.staffing_jobs ?? []).map((j) => j.name)
+    const heading = document.createElement("p")
+    heading.className = "text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3 mb-1"
+    heading.textContent = "Preview"
+    fragment.appendChild(heading)
 
     const list = document.createElement("ul")
     list.id = "template_items_list"
-    items.forEach((text) => {
-      const li = document.createElement("li")
-      li.textContent = text
-      list.appendChild(li)
-    })
+    list.className = "space-y-1"
 
-    summary.innerHTML = "<h3>Items</h3>"
-    summary.appendChild(list)
+    if (this.#itemsType === "questions") {
+      const questions = this.#globalData.questions ?? []
+      questions.forEach((q) => {
+        const li = document.createElement("li")
+        li.className = "flex items-start gap-2 text-sm py-1 border-b border-gray-100 last:border-0"
+
+        const text = document.createElement("span")
+        text.className = "flex-1 text-gray-800"
+        text.textContent = q.question_text ?? ""
+
+        if (q.response_type) {
+          const badge = document.createElement("span")
+          badge.className = "text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 shrink-0 font-mono"
+          badge.textContent = q.response_type.replace(/_/g, " ")
+          li.appendChild(text)
+          li.appendChild(badge)
+        } else {
+          li.appendChild(text)
+        }
+
+        list.appendChild(li)
+      })
+    } else {
+      const jobs = this.#globalData.staffing_jobs ?? []
+      jobs.forEach((j) => {
+        const li = document.createElement("li")
+        li.className = "text-sm text-gray-800 py-1 border-b border-gray-100 last:border-0"
+        li.textContent = j.name ?? ""
+        list.appendChild(li)
+      })
+    }
+
+    fragment.appendChild(list)
+    summary.innerHTML = ""
+    summary.appendChild(fragment)
   }
 
   #loadTemplate() {
     if (!this.#globalData) return
+
+    this.dialogTarget.close()
 
     this.#insertQueue = []
 
@@ -225,9 +275,9 @@ export default class extends Controller {
   }
 
   // Pull the next item off the queue. Each item is processed in a separate
-  // setTimeout(0) task to ensure the previous Cocoon DOM insertion has fully
-  // settled (including jQuery animations and TomSelect initialisation) before
-  // the next add-button click fires.
+  // setTimeout(0) task to ensure the previous nested-form DOM insertion has
+  // fully settled (including TomSelect initialisation) before the next
+  // add-button click fires.
   #advanceQueue() {
     if (this.#insertQueue.length === 0) {
       this.#pendingItem = null
@@ -247,7 +297,7 @@ export default class extends Controller {
 
     const button = document.querySelector(`.${addButtonClass}`)
     if (!button) {
-      console.error(`Cocoon add button not found: .${addButtonClass}`)
+      console.error(`nested-form add button not found: .${addButtonClass}`)
       this.#advanceQueue()
       return
     }
@@ -264,7 +314,7 @@ export default class extends Controller {
 
     button.click()
 
-    // jQuery/Cocoon inserts synchronously. Fill the new row immediately.
+    // stimulus-rails-nested-form inserts synchronously. Fill the new row immediately.
     if (containerSelector && countBefore >= 0) {
       const rows = document.querySelectorAll(containerSelector)
       if (rows.length > countBefore) {
@@ -321,8 +371,7 @@ export default class extends Controller {
         }
 
         this.#allTemplates = data
-        const list = document.getElementById("template_list")
-        if (!list) return
+        const list = this.listTarget
 
         data.forEach((template) => {
           const option = document.createElement("option")

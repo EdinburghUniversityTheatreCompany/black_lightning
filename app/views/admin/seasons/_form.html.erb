@@ -4,7 +4,7 @@
   <%= render('shared/pages/form', f: f) do %>
     <%= render 'admin/events/basic_form', f: f %>
 
-    <%= render '/shared/form/sections/team_members', f: f %>
+    <%= render(Admin::Form::TeamMembersComponent.new(f: f)) %>
 
     <%= render '/admin/events/reviews_form_partial', f: f %>
 
@@ -12,7 +12,7 @@
     <% if @season.new_record? %>
       You can add events after creating the season.
     <% else%>
-      <%= render layout: '/shared/collapsible_section', locals: { title: 'Events' } do %>
+      <%= render(Admin::CollapsibleSectionComponent.new(title: 'Events')) do %>
         <% if f.object.errors[:events].present? then %>
           <p id="events_errors" class="alert alert-danger">
             <%= f.error :events %>

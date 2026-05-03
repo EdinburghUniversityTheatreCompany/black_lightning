@@ -119,7 +119,7 @@
   <%# Bucket 3: Fuzzy Name Match without Overlapping Years %>
   <% if @duplicates[:fuzzy_name_non_overlapping].any? %>
     <div class="card mb-3">
-      <div class="card-header bg-info text-white">
+      <div class="card-header bg-info text-dark">
         <strong>Possible Duplicates (Name Match, Different Time Periods)</strong> - <%= @duplicates[:fuzzy_name_non_overlapping].size %> pair(s)
       </div>
       <div class="card-body">
@@ -225,7 +225,7 @@
   <%# Bucket 5: Fuzzy Both Names + No Overlapping Years %>
   <% if @duplicates[:fuzzy_both_no_overlap].any? %>
     <div class="card mb-3">
-      <div class="card-header bg-light">
+      <div class="card-header bg-light text-dark border-bottom border-secondary">
         <strong>Fuzzy Name Match (Both Names) - No Overlapping Years</strong> - <%= @duplicates[:fuzzy_both_no_overlap].size %> pair(s)
       </div>
       <div class="card-body">

@@ -1,0 +1,19 @@
+<div class="flex flex-wrap mb-4 items-start">
+  <div class="w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700 shrink-0">
+    <%= @f.label @field, **@input_field_args %>
+  </div>
+
+  <div class="w-9/12 px-2">
+    <div data-controller="markdown-editor"
+         data-markdown-editor-upload-url-value="<%= upload_url %>"
+         data-markdown-editor-item-type-value="<%= item_type %>"
+         data-markdown-editor-item-id-value="<%= item_id %>"
+         data-markdown-editor-height-value="<%= editor_height %>">
+      <%= @f.input_field @field, class: "form-control", rows: @rows, **@input_field_args %>
+      <div class="invalid-feedback">
+        <%= @f.full_error @field %>
+      </div>
+    </div>
+    <%= side_content if side_content? %>
+  </div>
+</div>
