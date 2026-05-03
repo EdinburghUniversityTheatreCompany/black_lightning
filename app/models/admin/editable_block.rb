@@ -22,6 +22,8 @@
 #++
 
 class Admin::EditableBlock < ApplicationRecord
+  include MdHelper
+
   resourcify
   has_paper_trail meta: { version_note: :version_note }
 
@@ -45,8 +47,8 @@ class Admin::EditableBlock < ApplicationRecord
   end
 
   def cached_rendered_content
-    Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}", expires_in: 7.days) do
-      ::Commonmarker.to_html(content || "", options: MdHelper::MARKDOWN_OPTIONS, plugins: { syntax_highlighter: nil })
+    Rails.cache.fetch("editable_block_#{id}_#{updated_at.to_i}_v2", expires_in: 7.days) do
+      render_markdown(content)
     end
   end
 
