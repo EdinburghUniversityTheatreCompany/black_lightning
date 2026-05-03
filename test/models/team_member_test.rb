@@ -150,12 +150,12 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal "The King, The Beggar", TeamMember.new(position: "Actor (The King, The Beggar)").cast_display_name
   end
 
-  test "cast_display_name appends crew roles with Crew() wrapper" do
-    assert_equal "The King / Crew(Stage Manager)", TeamMember.new(position: "Actor (The King) / Stage Manager").cast_display_name
+  test "cast_display_name appends crew roles with Crew () wrapper" do
+    assert_equal "The King / Crew<wbr>(Stage Manager)</wbr>", TeamMember.new(position: "Actor (The King) / Stage Manager").cast_display_name
   end
 
   test "cast_display_name handles multiple crew roles" do
-    assert_equal "King / Crew(Sound Designer, Lighting Designer)", TeamMember.new(position: "Actor (King) / Sound Designer / Lighting Designer").cast_display_name
+    assert_equal "King / Crew<wbr>(Sound Designer, Lighting Designer)</wbr>", TeamMember.new(position: "Actor (King) / Sound Designer / Lighting Designer").cast_display_name
   end
 
   # ordered scope

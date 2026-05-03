@@ -49,7 +49,7 @@ class TeamMember < ActiveRecord::Base
       .filter_map { |s| s.match(ACTOR_PATTERN)&.[](2)&.strip }
       .join(", ")
     crew = position_segments.reject { |s| s.match?(ACTOR_PATTERN) }.map(&:strip)
-    crew.any? ? "#{acting} / Crew(#{crew.join(", ")})" : acting
+    crew.any? ? Rails::Html::SafeListSanitizer.new.sanitize("#{acting} / Crew<wbr>(#{crew.join(", ")})", tags: [ "wbr" ]).html_safe : acting
   end
 
   def self.ransackable_attributes(auth_object = nil)
