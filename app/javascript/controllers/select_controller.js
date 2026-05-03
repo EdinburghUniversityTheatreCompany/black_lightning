@@ -121,6 +121,55 @@ export default class extends Controller {
     if (hasTags) {
       options.create = true
       options.placeholder = "Select option or enter custom value..."
+
+      // When the dropdown opens with one item already selected, move that
+      // item's text into the editable input so the user can amend it in place.
+      let savedValue   = null
+      let lastTyped    = null
+      let inputListener = null
+
+      options.onDropdownOpen = function () {
+        if (this.items.length !== 1) return
+        savedValue = this.items[0]
+        const text = (this.options[savedValue] || {}).text || savedValue
+        this.removeItem(savedValue, true)
+        this.setTextboxValue(text)
+        lastTyped = text
+
+        // Track user keystrokes via the native input event.
+        // Programmatic setTextboxValue() does not fire 'input', so this only
+        // captures what the user actually typed, not TomSelect's own clear-on-close.
+        inputListener = (e) => { lastTyped = e.target.value }
+        this.control_input.addEventListener("input", inputListener)
+      }
+
+      // On close, commit whatever the user typed (or restore if they cleared it).
+      // onDropdownClose fires after TomSelect has already called setTextboxValue('')
+      // so we rely on lastTyped captured above, not the now-empty input.
+      options.onDropdownClose = function () {
+        if (inputListener) {
+          this.control_input.removeEventListener("input", inputListener)
+          inputListener = null
+        }
+
+        if (savedValue !== null && this.items.length === 0) {
+          const textToSave = lastTyped && lastTyped.trim()
+          if (textToSave) {
+            if (!this.options[textToSave]) {
+              this.addOption({ value: textToSave, text: textToSave })
+            }
+            this.addItem(textToSave, true)
+          } else {
+            // User cleared the input entirely — restore the original value.
+            if (!this.options[savedValue]) {
+              this.addOption({ value: savedValue, text: savedValue })
+            }
+            this.addItem(savedValue, true)
+          }
+        }
+        savedValue    = null
+        lastTyped     = null
+      }
     }
 
     if (remoteUrl) {
