@@ -18,6 +18,7 @@ Rails.application.configure do
     # Allow @vite/client to hot reload style changes in development
     policy.style_src *policy.style_src, :unsafe_inline if Rails.env.development?
 
+    policy.frame_src "https://calendar.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
     policy.img_src :self, :data, :https
     policy.font_src :self
     policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk"
