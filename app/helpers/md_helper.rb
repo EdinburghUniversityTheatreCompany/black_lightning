@@ -19,6 +19,8 @@ module MdHelper
       details summary
     ], attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow])
     %(<div class="markdown-body prose max-w-none">#{sanitized}</div>).html_safe
+    # Note that these classes are also added in the markdown_editor_controller to the preview rendered there
+    # so it matches. Search for previewContents.classList
   end
 
   def render_plain(md)

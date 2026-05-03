@@ -41,7 +41,7 @@ export default class extends Controller {
     const previewContents = this.element.querySelector(".toastui-editor-contents")
     if (previewContents) {
       previewContents.classList.remove("toastui-editor-contents")
-      previewContents.classList.add("markdown-body", "prose")
+      previewContents.classList.add("markdown-body", "prose", "max-w-none")
     }
 
     this.#editor.on("change", () => this.#sync())
