@@ -12,8 +12,7 @@ class UsersMailerTest < ActionMailer::TestCase
     assert_equal [ user.email ], mail.to
     assert_equal "Welcome to Bedlam Theatre", mail.subject
 
-    assert_includes mail.html_part.to_s, "This is the test welcome email content"
-
-    assert_includes mail.text_part.to_s, "This is the test welcome email content"
+    assert_match "This is the test welcome email content for non-members", mail.text_part.decoded
+    assert_match "This is the test welcome email content for non-members", mail.html_part.decoded
   end
 end
