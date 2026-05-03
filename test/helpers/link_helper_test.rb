@@ -63,10 +63,10 @@ class LinkHelperTest < ActionView::TestCase
   end
 
   test "remove_button_text" do
-    default_remove_button_text = '<span class="no-wrap"><i class="fa-solid fa-trash" aria-hidden=”true”></i> Remove</span>'.html_safe
+    default_remove_button_text = '<span class="no-wrap"><i class="fa-solid fa-trash" aria-hidden=”true”></i> <span class="hidden md:inline">Remove</span></span>'.html_safe
     assert_equal default_remove_button_text, remove_button_text
 
-    other_remove_button_text = '<span class="no-wrap"><i class="fa-solid fa-trash" aria-hidden=”true”></i> Pineapple</span>'.html_safe
+    other_remove_button_text = '<span class="no-wrap"><i class="fa-solid fa-trash" aria-hidden=”true”></i> <span class="hidden md:inline">Pineapple</span></span>'.html_safe
 
     assert_equal other_remove_button_text, remove_button_text("Pineapple")
   end

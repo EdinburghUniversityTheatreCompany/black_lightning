@@ -37,7 +37,9 @@ module LinkHelper
   def remove_button_text(text = nil)
     text ||= "Remove"
 
-    generate_icon_prefix("trash", text)
+    text_with_span = "<span class=\"hidden md:inline\">#{text}</span>"
+
+    generate_icon_prefix("trash", text_with_span)
   end
 
   def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
