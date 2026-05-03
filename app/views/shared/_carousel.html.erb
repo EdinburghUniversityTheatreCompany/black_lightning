@@ -20,7 +20,7 @@
           <% end %>
         </div>
 
-        <div class="carousel-caption-below d-block card w-100" data-carousel-equalizer-target="caption">
+        <div class="text-center d-block card w-100" data-carousel-equalizer-target="caption">
           <div class="card-body">
             <h5><%= item[:url].present? ? link_to(item[:title], item[:url]) : item[:title] %></h5>
             <p><%= item[:tagline] %></p>
