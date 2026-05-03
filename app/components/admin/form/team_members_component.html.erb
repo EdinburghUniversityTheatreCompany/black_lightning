@@ -1,7 +1,7 @@
 <div class="form-horizontal">
   <%= render(Admin::CollapsibleSectionComponent.new(title: 'Team Members')) do %>
     <div>
-      <%= display_block("Adding Team Members Explanation", false) %>
+      <%= helpers.display_block("Adding Team Members Explanation", false) %>
     </div>
 
     <% if show_bulk_import_link? %>
