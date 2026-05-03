@@ -1,7 +1,5 @@
-<%# locals: (categories:) %>
-
 <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
-  <% categories.each do |category| %>
+  <% @categories.each do |category| %>
     <div class="col">
       <div class="card h-100">
         <% img = capture do %><%= render 'shared/image', image: category.fetch_image, variant: square_thumb_variant(300), image_options: { class: 'card-img-top h-auto' } %><% end %>
