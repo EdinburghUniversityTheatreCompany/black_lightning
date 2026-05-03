@@ -8,8 +8,8 @@
 
 SimpleForm.setup do |config|
   input_class   = "w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-  label_class   = "w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700 shrink-0"
-  grid_class    = "w-9/12 px-2"
+  label_class   = "w-full md:w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700"
+  grid_class    = "w-full md:w-9/12 px-2"
   row_class     = "flex flex-wrap mb-4 items-start"
   error_class   = "block text-xs text-red-600 mt-1"
   hint_class    = "block mt-1 text-xs text-gray-500"
