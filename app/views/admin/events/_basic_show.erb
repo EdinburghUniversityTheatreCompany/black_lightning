@@ -12,7 +12,9 @@
     </div>
 
     <% if event.team_members.any? %>
-      <div class="col-xl-6 xl:border-l xl:border-gray-200 xl:pl-4">
+    <%# The col forces it to use full-width in single column mode. Surely there's an easier way, but I can't find it right now. %>
+    <%# Don't add col to the publicity text section too or it will always have two cols. %>
+      <div class="col col-xl-6 xl:border-l xl:border-gray-200 xl:pl-4">
           <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered %>
       </div>
     <% end %>
