@@ -1,40 +1,80 @@
 <%# locals: (team_members:, deadline: nil) -%>
 <%# KEEP %>
 
+<%# TODO: This would be much nicer with components and using Tailwind helpers, but not right now. %>
+<%# It can also generally be better. It's a bit janky, but it mostly works. %>
+
 <% current_user_is_part_of_teamwork = team_members.collect(&:user).include?(current_user) %>
 <% cast, crew = team_members.partition(&:cast?) %>
 
+<style>
+
+  
+  .team-grid {
+    display: grid;
+    grid-template-columns: fit-content(35%) 1fr;
+    gap: 0.25rem 1rem;
+    align-items: start;
+  }
+
+  @media (max-width: 576px) {
+    .team-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .team-role {
+    word-break: break-word;
+    font-weight: 600;
+  }
+
+  .team-user {
+    min-width: 0;
+  }
+</style>
+
 <% if cast.any? %>
   <h3>Cast</h3>
-  <% cast.each do |team_member| %>
-    <p class="py-0 my-0">
-      <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
-      <%# Show the badges if the current team_member has a user, AND if the currently signed-in user is part of the team for the teamwork OR can view users, AND we are on the admin site. %>
-      <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
-        <% team_member_labels_for(team_member, deadline).each do |label| %>
-          <%= generate_label(label[:label_class], label[:text]) %>
+  <div class="team-grid">
+    <% cast.each do |team_member| %>
+      <div class="team-role">
+        <%= team_member.cast_display_name %>
+      </div>
+
+      <div class="team-user">
+        <%= user_link(team_member.user, true) %>
+
+        <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
+          <% team_member_labels_for(team_member, deadline).each do |label| %>
+            <%= generate_label(label[:label_class], label[:text]) %>
+          <% end %>
         <% end %>
-      <% end %>
-    </p>
-  <% end %>
-
+      </div>
+    <% end %>
+  </div>
 <% end %>
 
 <% if crew.any? %>
   <h3 class="mt-3">Production Team</h3>
-  <% crew.each do |team_member| %>
-    <p class="py-0 my-0">
-      <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
-      <%# Show the badges if the current team_member has a user, AND if the currently signed-in user is part of the team for the teamwork OR can view users, AND we are on the admin site. %>
-      <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
-        <% team_member_labels_for(team_member, deadline).each do |label| %>
-          <%= generate_label(label[:label_class], label[:text]) %>
+  <div class="team-grid">
+    <% crew.each do |team_member| %>
+      <div class="team-role">
+        <%= team_member.position %>
+      </div>
+
+      <div class="team-user">
+        <%= user_link(team_member.user, true) %>
+
+        <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
+          <% team_member_labels_for(team_member, deadline).each do |label| %>
+            <%= generate_label(label[:label_class], label[:text]) %>
+          <% end %>
         <% end %>
-      <% end %>
-    </p>
-  <% end %>
+      </div>
+    <% end %>
+  </div>
 <% elsif cast.empty? %>
   <p class="text-muted">No team members yet.</p>
 <% end %>
