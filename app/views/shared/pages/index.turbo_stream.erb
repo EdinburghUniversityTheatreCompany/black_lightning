@@ -1,3 +1,3 @@
-<%= turbo_stream.replace "index-results" do %>
+<%= turbo_stream.update "index-results" do %>
   <%= render "#{controller_path}/index_results" %>
 <% end %>
