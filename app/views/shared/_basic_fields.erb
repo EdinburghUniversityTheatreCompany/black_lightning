@@ -15,11 +15,11 @@
     <%# If the value is a hash, it is a special kind of field, so render a heading and a hash. %>
     <% if value.is_a?(Hash) %>
       <% if value[:type] == 'markdown' %>
-        <h3><%= title %></h3>
+        <h3 id="<%= label %>"><%= title %></h3>
 
         <%= render_markdown(value[:markdown]) %>
       <% elsif value[:type] == 'image' %>
-        <h3><%= title %></h3>
+        <h3 id="<%= label %>"><%= title %></h3>
 
         <%# Check if the image is attached and if it is not a default image. If so, display the image. %>
         <% if value[:image].attached? && !value[:image].filename.to_s.starts_with?(ActiveStorageHelper::PREFIX) %>
@@ -32,7 +32,7 @@
         <% end %>
       <% elsif value[:type] == 'content' %>
         <% if value.key?(:header) %>
-          <h3><%= value[:header] %></h3>
+          <h3 id="<%= label %>"><%= value[:header] %></h3>
         <% end %>
 
         <%= value[:content] %>
