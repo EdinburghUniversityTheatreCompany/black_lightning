@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_03_210737) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -707,6 +707,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_01_120000) do
 
   create_table "team_members", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", precision: nil, null: false
+    t.integer "display_order"
     t.string "position"
     t.integer "teamwork_id"
     t.string "teamwork_type"

@@ -13,7 +13,7 @@
 
     <% if event.team_members.any? %>
       <div class="col-xl-6">
-          <%= render '/shared/admin_show_team_members', team_members: event.team_members %>
+          <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered %>
       </div>
     <% end %>
   </div>

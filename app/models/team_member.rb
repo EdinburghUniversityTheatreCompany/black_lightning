@@ -31,7 +31,10 @@ class TeamMember < ActiveRecord::Base
 
   normalizes :position, with: ->(position) { position&.strip }
 
-  default_scope -> { order("position ASC") }
+  scope :ordered, -> {
+    joins(:user)
+      .order(Arel.sql("ISNULL(team_members.display_order), team_members.display_order ASC, users.first_name ASC, users.last_name ASC"))
+  }
 
   after_create :sync_debts_if_show
 

@@ -1,0 +1,38 @@
+# Fixtures for team_member model tests.
+# Uses explicit user_ids matching the ids in users.yml:
+#   admin=1 (Peter Peanut), user=2 (Cyclops Cat), committee=3 (Sophie Sombrero), member=4 (Darren Dinosaur)
+# Uses teamwork_id 9001/9002 (no DB FK on polymorphic) to avoid conflicts with other tests.
+
+# ordered scope: display_order 0, 1, then null — expect [ordered_first, ordered_second, ordered_null]
+ordered_first:
+  user_id: 4
+  position: "Producer"
+  display_order: 0
+  teamwork_id: 9001
+  teamwork_type: "Event"
+
+ordered_second:
+  user_id: 3
+  position: "Director"
+  display_order: 1
+  teamwork_id: 9001
+  teamwork_type: "Event"
+
+ordered_null:
+  user_id: 1
+  position: "Stage Manager"
+  teamwork_id: 9001
+  teamwork_type: "Event"
+
+# ordered scope alphabetical fallback: two null-order members, Darren (D) before Peter (P)
+alpha_first:
+  user_id: 4
+  position: "Tech Manager"
+  teamwork_id: 9002
+  teamwork_type: "Event"
+
+alpha_last:
+  user_id: 1
+  position: "Lighting Designer"
+  teamwork_id: 9002
+  teamwork_type: "Event"

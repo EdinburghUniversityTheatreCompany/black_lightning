@@ -32,7 +32,7 @@
           <h4 class="card-title">Cast and Crew</span>
         </div>
         <div class="card-body">
-          <%= render '/shared/admin_show_team_members', team_members: event.team_members  %>
+          <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered %>
         </div>
       </div>
     </div>

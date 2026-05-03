@@ -157,4 +157,23 @@ class TeamMemberTest < ActiveSupport::TestCase
   test "cast_display_name handles multiple crew roles" do
     assert_equal "King / Crew(Sound Designer, Lighting Designer)", TeamMember.new(position: "Actor (King) / Sound Designer / Lighting Designer").cast_display_name
   end
+
+  # ordered scope
+
+  test "ordered scope sorts by display_order with nulls last" do
+    first_id  = team_members(:ordered_first).id
+    second_id = team_members(:ordered_second).id
+    null_id   = team_members(:ordered_null).id
+
+    ordered = TeamMember.where(id: [ first_id, second_id, null_id ]).ordered
+    assert_equal [ first_id, second_id, null_id ], ordered.map(&:id)
+  end
+
+  test "ordered scope sorts null display_order records alphabetically by name" do
+    alpha_id = team_members(:alpha_first).id
+    last_id  = team_members(:alpha_last).id
+
+    ordered = TeamMember.where(id: [ alpha_id, last_id ]).ordered
+    assert_equal [ alpha_id, last_id ], ordered.map(&:id)
+  end
 end

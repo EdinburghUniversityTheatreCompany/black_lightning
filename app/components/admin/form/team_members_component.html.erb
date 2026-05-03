@@ -15,6 +15,6 @@
       </div>
     <% end %>
 
-    <%= render('shared/form/sections/nested_fields', f: @f, association_name: :team_members, partial_name: 'team_member_fields') %>
+    <%= render('shared/form/sections/nested_fields', f: @f, association_name: :team_members, partial_name: 'team_member_fields', sortable: true) %>
   <% end %>
 </div>

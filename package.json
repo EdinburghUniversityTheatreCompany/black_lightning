@@ -19,6 +19,7 @@
         "leaflet": "^1.9.4",
         "moment": "^2.29.4",
         "sass-embedded": "^1.86.0",
+        "sortablejs": "^1.15.7",
         "stimulus-rails-nested-form": "^4.1.0",
         "sweetalert2": "^11.11.1",
         "tailwindcss": "^4.2.4",
