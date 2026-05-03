@@ -30,7 +30,7 @@ module SearchFormHelper
 
     raise(ArgumentError, "The amount of column should be a divisor of 12") unless [ 1, 2, 3, 4, 6, 12 ].include?(columns)
 
-    output += "<div class=\"row row-cols-#{columns}\">"
+    output += "<div class=\"row row-cols-1 row-cols-lg-#{columns}\">"
 
     input_fields.each_with_index do |(key, params), i|
       output += render_search_form_field(f, key, params)
