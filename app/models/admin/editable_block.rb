@@ -55,7 +55,13 @@ class Admin::EditableBlock < ApplicationRecord
   private
 
   def clear_navbar_cache
-    section = url&.split("/")&.first
-    Rails.cache.delete("navbar_editable_blocks/#{section}") if section.present?
+    return if url.blank?
+
+    # Clear cache for each URL prefix, since get_subpage_editable_blocks caches
+    # by the full subpage_type path (e.g. "admin/resources"), not just the first segment.
+    parts = url.split("/")
+    parts.length.times do |i|
+      Rails.cache.delete("navbar_editable_blocks/#{parts[0..i].join("/")}")
+    end
   end
 end
