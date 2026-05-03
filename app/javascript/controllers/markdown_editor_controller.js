@@ -32,6 +32,14 @@ export default class extends Controller {
     this.#textarea.style.display = "none"
     this.element.appendChild(this.#textarea)
 
+    // Replace the preview container's class so it renders with the same styles
+    // as server-rendered markdown (commonmarker).
+    const previewContents = this.element.querySelector(".toastui-editor-contents")
+    if (previewContents) {
+      previewContents.classList.remove("toastui-editor-contents")
+      previewContents.classList.add("markdown-body", "prose")
+    }
+
     this.#editor.on("change", () => this.#sync())
 
     this.#boundSync = () => this.#sync()
