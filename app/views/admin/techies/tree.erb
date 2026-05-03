@@ -1,9 +1,3 @@
-<% content_for :head do %>
-    <%= javascript_include_tag 'raphael-min.js' %>
-    <%= javascript_include_tag 'dracula_graffle.js' %>
-    <%= javascript_include_tag 'dracula_graph.js' %>
-<% end %>
-
 <%= render('shared/quick_actions_card') do %>
   <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
   <%= get_link Techie, :new, html_class: 'btn btn-secondary' %>
@@ -12,7 +6,6 @@
 <div class="row">
     <div class="col">
         <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies, html: { id: 'search', class: 'form-search form-inline mt-3'} do |f| %>
-            <% #= f.select :id_eq, options_from_collection_for_select(Techie.all, "id", "name", @q.id_eq), include_blank: true %>
             <%= f.input :id_eq, collection: Techie.all.select('id', 'name'), include_blank: true, label: 'Techie Name' %>
             <div class="mr-2"></div>
             <%= f.submit :Search, class: 'btn btn-secondary' %>
@@ -21,13 +14,12 @@
 </div>
 
 <%
-  graph_nodes = @techies.map { |t| { id: t.id.to_s, label: t.name } }
+  graph_nodes = @techies.map { |t| { id: t.id.to_s, label: t.name, entry_year: t.entry_year } }
   graph_edges = @techies.flat_map do |t|
     t.children.select { |c| @techies.include?(c) }.map { |c| { from: t.id.to_s, to: c.id.to_s } }
   end
 %>
-<div id="canvas"
-     style="width: 940px; height: 1500px;"
+<div style="width: 100%; height: calc(100vh - 200px);"
      data-controller="techie-graph"
      data-techie-graph-nodes-value="<%= graph_nodes.to_json %>"
      data-techie-graph-edges-value="<%= graph_edges.to_json %>"></div>
