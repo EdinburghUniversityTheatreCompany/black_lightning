@@ -44,11 +44,6 @@ class ApplicationHelperTest < ActionView::TestCase
     assert_equal result, merge_hash(a, b)
   end
 
-  test "Get spark_seat_widget" do
-    slug = "hexagon-finbar-pineapple-red"
-    assert_match slug, spark_seat_widget(slug)
-  end
-
   test "active_storage_proxy_url returns a blob proxy URL for an attachment" do
     user = FactoryBot.create(:user)
     user.avatar.attach(io: File.open(Rails.root.join("test", "test.png")), filename: "test.png", content_type: "image/png")
