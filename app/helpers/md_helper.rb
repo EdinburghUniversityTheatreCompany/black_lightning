@@ -16,7 +16,7 @@ module MdHelper
       table thead tbody tfoot tr td th
       div span
       iframe
-      details
+      details summary
     ], attributes: %w[id class href src alt title width height style frameborder allowfullscreen allow])
     %(<div class="markdown-body prose max-w-none">#{sanitized}</div>).html_safe
   end
