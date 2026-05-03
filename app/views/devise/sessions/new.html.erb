@@ -5,7 +5,12 @@
         <h2>Existing Members</h2>
 
         <%= simple_form_for(resource, as: resource_name, url: session_path(resource_name)) do |f| %>
-        <%= f.error_notification %>
+        <%# Don't show f.error_notification because the "review the problems below" is unnecessary. The error that's displayed is likely just "Invalid email or password". %>
+
+        <%# Only base errors as the others would attach to a specific field. %>
+        <% resource.errors[:base].each do |error_message| %>
+          <%= content_tag(:div, error_message, class: "alert alert-danger") %>
+        <% end %>
 
         <div class="form-inputs">
           <%= f.input :email, required: false, autofocus: true, input_html: { nojsvalidation: 'true' } %>

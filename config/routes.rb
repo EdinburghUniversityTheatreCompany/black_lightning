@@ -1,7 +1,7 @@
 require "silencer"
 
 ChaosRails::Application.routes.draw do
-  devise_for :users
+  devise_for :users, controllers: { sessions: "users/sessions" }
 
   use_doorkeeper
   use_doorkeeper_openid_connect

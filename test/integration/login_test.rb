@@ -1,6 +1,13 @@
 require "test_helper"
 
 class LoginTest < ActionDispatch::IntegrationTest
+  test "shows error message with invalid credentials" do
+    post user_session_path, params: { user: { email: "wrong@example.com", password: "wrongpassword" } }
+
+    assert_response :unprocessable_entity
+    assert_match "Invalid email or password.", response.body
+  end
+
   test "user can log in with valid credentials" do
     password = "123Hel#2"
     user = FactoryBot.create(:user, email: "integration_test@example.com", password:)
