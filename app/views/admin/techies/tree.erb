@@ -22,4 +22,5 @@
 <div style="width: 100%; height: calc(100vh - 200px);"
      data-controller="techie-graph"
      data-techie-graph-nodes-value="<%= graph_nodes.to_json %>"
-     data-techie-graph-edges-value="<%= graph_edges.to_json %>"></div>
+     data-techie-graph-edges-value="<%= graph_edges.to_json %>"
+     data-techie-graph-selected-value="<%= @base_techie.size == 1 ? @base_techie.first.id.to_s : "" %>"></div>

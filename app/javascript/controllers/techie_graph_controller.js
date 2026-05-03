@@ -14,7 +14,7 @@ function buildColorMap(years) {
 const HOP_CLASSES = "hop-1 hop-2 hop-3 hop-far"
 
 export default class extends Controller {
-  static values = { nodes: Array, edges: Array }
+  static values = { nodes: Array, edges: Array, selected: String }
 
   connect() {
     const years = this.nodesValue.map(n => n.entry_year)
@@ -32,18 +32,6 @@ export default class extends Controller {
     this.#cy = Cytoscape({
       container: this.element,
       elements,
-      layout: {
-        name: "cose",
-        animate: false,
-        randomize: false,
-        fit: true,
-        padding: 30,
-        nodeRepulsion: () => 8000,
-        idealEdgeLength: () => 80,
-        edgeElasticity: () => 100,
-        gravity: 0.25,
-        numIter: 2500,
-      },
       style: [
         {
           selector: "node",
@@ -68,6 +56,9 @@ export default class extends Controller {
             "line-color": "#d1d5db",
             "target-arrow-color": "#d1d5db",
             "target-arrow-shape": "triangle",
+            "mid-target-arrow-shape": "triangle",
+            "mid-target-arrow-color": "#d1d5db",
+            "arrow-scale": 1.8,
             "curve-style": "bezier",
           },
         },
@@ -81,15 +72,15 @@ export default class extends Controller {
         // Edge hop highlighting — applied after a node is clicked
         {
           selector: "edge.hop-1",
-          style: { "line-color": "#111827", "target-arrow-color": "#111827", width: 3, opacity: 1 },
+          style: { "line-color": "#111827", "target-arrow-color": "#111827", "mid-target-arrow-color": "#111827", width: 3, opacity: 1 },
         },
         {
           selector: "edge.hop-2",
-          style: { "line-color": "#6b7280", "target-arrow-color": "#6b7280", width: 2, opacity: 0.8 },
+          style: { "line-color": "#6b7280", "target-arrow-color": "#6b7280", "mid-target-arrow-color": "#6b7280", width: 2, opacity: 0.8 },
         },
         {
           selector: "edge.hop-3",
-          style: { "line-color": "#9ca3af", "target-arrow-color": "#9ca3af", width: 1.5, opacity: 0.5 },
+          style: { "line-color": "#9ca3af", "target-arrow-color": "#9ca3af", "mid-target-arrow-color": "#9ca3af", width: 1.5, opacity: 0.5 },
         },
         {
           selector: "edge.hop-far",
@@ -107,59 +98,29 @@ export default class extends Controller {
       maxZoom: 3,
     })
 
-    this.#cy.on("tap", "node", evt => {
-      const root = evt.target
+    this.#cy.on("tap", "node", evt => this.#selectNode(evt.target))
 
-      // Click the focused node again to reset highlighting
-      if (root.hasClass("focused")) {
-        this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
-        return
-      }
-
-      this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
-      root.addClass("focused")
-
-      const distances = {}
-      this.#cy.elements().bfs({
-        roots: root,
-        visit: (v, _e, _u, _i, depth) => { distances[v.id()] = depth },
-        directed: false,
-      })
-
-      // Dim nodes beyond 3 hops
-      this.#cy.nodes().forEach(n => {
-        const d = distances[n.id()]
-        if (d === undefined || d > 3) n.addClass("hop-far")
-      })
-
-      // Classify edges by the distance of their nearest endpoint to root
-      this.#cy.edges().forEach(e => {
-        const d = Math.min(
-          distances[e.source().id()] ?? Infinity,
-          distances[e.target().id()] ?? Infinity
-        )
-        if (d === 0)      e.addClass("hop-1")
-        else if (d === 1) e.addClass("hop-2")
-        else if (d === 2) e.addClass("hop-3")
-        else              e.addClass("hop-far")
-      })
-
-      const maxDepth = Math.max(...Object.values(distances), 1)
-
-      this.#cy.layout({
-        name: "concentric",
-        concentric: (n) => {
-          const d = distances[n.id()]
-          return d !== undefined ? maxDepth - d + 1 : 0
-        },
-        levelWidth: () => 1,
-        animate: true,
-        animationDuration: 600,
-        animationEasing: "ease-in-out-cubic",
-        fit: true,
-        padding: 30,
-      }).run()
+    const layout = this.#cy.layout({
+      name: "cose",
+      animate: false,
+      randomize: false,
+      fit: true,
+      padding: 30,
+      nodeRepulsion: () => 8000,
+      idealEdgeLength: () => 80,
+      edgeElasticity: () => 100,
+      gravity: 0.25,
+      numIter: 2500,
     })
+
+    layout.on("layoutstop", () => {
+      if (this.selectedValue) {
+        const node = this.#cy.getElementById(this.selectedValue)
+        if (node.length) this.#selectNode(node)
+      }
+    })
+
+    layout.run()
   }
 
   disconnect() {
@@ -168,4 +129,61 @@ export default class extends Controller {
   }
 
   #cy = null
+
+  #selectNode(root) {
+    // Click the focused node again to reset highlighting
+    if (root.hasClass("focused")) {
+      this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
+      return
+    }
+
+    this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
+    root.addClass("focused")
+
+    const distances = {}
+    this.#cy.elements().bfs({
+      roots: root,
+      visit: (v, _e, _u, _i, depth) => { distances[v.id()] = depth },
+      directed: false,
+    })
+
+    // Dim nodes beyond 3 hops
+    this.#cy.nodes().forEach(n => {
+      const d = distances[n.id()]
+      if (d === undefined || d > 3) n.addClass("hop-far")
+    })
+
+    // Classify edges by the distance of their nearest endpoint to root
+    this.#cy.edges().forEach(e => {
+      const d = Math.min(
+        distances[e.source().id()] ?? Infinity,
+        distances[e.target().id()] ?? Infinity
+      )
+      if (d === 0)      e.addClass("hop-1")
+      else if (d === 1) e.addClass("hop-2")
+      else if (d === 2) e.addClass("hop-3")
+      else              e.addClass("hop-far")
+    })
+
+    const maxDepth = Math.max(...Object.values(distances), 1)
+
+    const conLayout = this.#cy.layout({
+      name: "concentric",
+      concentric: (n) => {
+        const d = distances[n.id()]
+        return d !== undefined ? maxDepth - d + 1 : 0
+      },
+      levelWidth: () => 1,
+      animate: true,
+      animationDuration: 600,
+      animationEasing: "ease-in-out-cubic",
+      fit: false,
+    })
+
+    conLayout.on("layoutstop", () => {
+      this.#cy.animate({ center: { eles: root } }, { duration: 200 })
+    })
+
+    conLayout.run()
+  }
 }
