@@ -1,0 +1,10 @@
+<% headers = [:title, :publish_date, :show_public] %>
+
+<% field_sets = @news.map { |news| {
+  fields: [
+    news,
+    l(news.publish_date, format: :short),
+    bool_icon(news.show_public)
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @news, resource_class: News, headers: headers, field_sets: field_sets %>

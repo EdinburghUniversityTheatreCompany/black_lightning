@@ -67,27 +67,16 @@
     </div>
     <div class="row">
       <div class="col">
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title"><%= @title %></span>
-
-            <% if include_pagination %>
-              <div class="card-tools"> <%= paginate resources %></div>
-            <% end %>
-          </div>
-
+        <div id="index-results">
           <% if content.present? %>
-            <div class="card-body">
-              <%= content %>
-            </div>
+            <%= content %>
           <% else %>
-            <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: include_edit_button, include_link_to_item: include_link_to_item, resource_class: resource_class) %>
-          <% end %>
-
-          <% if include_pagination && resources.respond_to?(:total_pages) && resources.total_pages > 1 %>
-            <div class="card-footer clearfix">
-              <%= paginate(resources) %>
-            </div>
+            <%= render 'shared/pages/index_results',
+                  resources: resources, resource_class: resource_class,
+                  headers: headers, field_sets: field_sets,
+                  include_edit_button: include_edit_button,
+                  include_link_to_item: include_link_to_item,
+                  include_pagination: include_pagination %>
           <% end %>
         </div>
       </div>

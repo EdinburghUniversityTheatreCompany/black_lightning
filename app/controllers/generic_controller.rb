@@ -21,6 +21,13 @@ module GenericController
     respond_to do |format|
       format.html { render index_filename }
       format.json { render json: resources } if json_enabled_for_index?
+      format.turbo_stream do
+        if lookup_context.exists?("#{controller_path}/index_results", [], true)
+          render "shared/pages/index"
+        else
+          head :ok
+        end
+      end
     end
   end
 

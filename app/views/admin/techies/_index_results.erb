@@ -1,0 +1,5 @@
+<% headers = [:name, :entry_year] %>
+
+<% field_sets = @techies.map { |techie| { fields: [techie, techie.entry_year] } } %>
+
+<%= render 'shared/pages/index_results', resources: @techies, resource_class: Techie, headers: headers, field_sets: field_sets %>

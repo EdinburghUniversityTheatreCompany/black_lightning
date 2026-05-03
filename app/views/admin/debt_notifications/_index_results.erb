@@ -1,0 +1,11 @@
+<% headers = [:user, :sent_on, :notification_type] %>
+
+<% field_sets = @debt_notifications.map { |debt_notification| {
+  fields: [
+    debt_notification,
+    user_link(debt_notification.user, false),
+    debt_notification.sent_on,
+    debt_notification.notification_type
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @debt_notifications, resource_class: Admin::DebtNotification, headers: headers, field_sets: field_sets, include_edit_button: false, include_link_to_item: false %>

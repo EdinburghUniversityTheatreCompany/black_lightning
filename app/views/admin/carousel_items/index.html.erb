@@ -1,14 +1,3 @@
-<% headers = [:title, :tagline, :carousel_name, :is_active, :ordering] %>
-
-<% field_sets = @carousel_items.map { |carousel_item| { 
-  fields: [
-    carousel_item, 
-    carousel_item.tagline,
-    carousel_item.carousel_name,
-    bool_icon(carousel_item.is_active),
-    carousel_item.ordering
-  ] } } %>
-
 <% search_fields = {
     title_cont:       { slug: 'defaults.title' },
     tagline_cont:     { slug: 'defaults.tagline' },
@@ -16,4 +5,4 @@
     show_active_only: { slug: 'defaults.show_active_only', type: :boolean },
 } %>
 
-<%= render 'shared/pages/index', resource_class: CarouselItem, resources: @carousel_items, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: CarouselItem, resources: @carousel_items, content: render('index_results'), search_fields: search_fields %>

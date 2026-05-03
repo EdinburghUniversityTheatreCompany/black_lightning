@@ -7,7 +7,7 @@
 Rails.application.configure do
   config.content_security_policy do |policy|
     policy.default_src :self
-    policy.script_src :self, "https://pretix.eu", :unsafe_inline, :unsafe_eval
+    policy.script_src :self, "https://pretix.eu", "https://apis.google.com", :unsafe_inline, :unsafe_eval
     # Allow @vite/client to hot reload javascript changes in development
     policy.script_src *policy.script_src, :unsafe_eval, "http://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
 
@@ -18,10 +18,10 @@ Rails.application.configure do
     # Allow @vite/client to hot reload style changes in development
     policy.style_src *policy.style_src, :unsafe_inline if Rails.env.development?
 
-    policy.frame_src "https://calendar.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
+    policy.frame_src "https://calendar.google.com", "https://accounts.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
     policy.img_src :self, :data, :https
     policy.font_src :self
-    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk"
+    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk", "https://www.gstatic.com", "https://apis.google.com", "https://clients6.google.com", "https://www.googleapis.com", "https://calendar.googleapis.com"
     # Allow @vite/client to hot reload changes in development
     policy.connect_src *policy.connect_src, "ws://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
 

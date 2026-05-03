@@ -1,15 +1,6 @@
-<% headers = [:title, :publish_date, :show_public] %>
-
-<% field_sets = @news.map { |news| { 
-  fields: [
-    news,
-    l(news.publish_date, format: :short),
-    bool_icon(news.show_public)
-  ] } } %>
-
 <% search_fields = {
     title_cont: { slug: 'defaults.title' },
     body_cont:  { slug: 'defaults.body' }
 } %>
 
-<%= render 'shared/pages/index', resource_class: News, resources: @news, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: News, resources: @news, content: render('index_results'), search_fields: search_fields %>

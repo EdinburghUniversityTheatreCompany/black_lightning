@@ -1,24 +1,4 @@
 <%# locals: (debts:, debt_class:, convert_permission:, is_specific_user:, forgive_partial:, from_type:, to_type:) %>
-<% headers = [:user_full_name, :show_name, :due_by, :status] %>
-<% headers << '' if can?(:show, debt_class) %>
-<% headers << '' if can?(:forgive, debt_class) %>
-<% headers << '' if can?(convert_permission, debt_class) %>
-
-<% field_sets = debts.map do |debt| {
-  fields: [
-    debt,
-    user_link(debt.user, false),
-    get_link(debt.show, :show),
-    debt.due_by,
-    formatted_status_for_debt(debt),
-    get_link(debt, :show, link_text: "View / Edit"),
-    render(forgive_partial, debt: debt),
-    render('admin/shared/debt_convert_button', debt: debt, convert_action: convert_permission,
-           from_type: from_type, to_type: to_type)
-  ],
-  class: debt.css_class
-} end %>
-
 <% search_fields = is_specific_user ? nil : {
   user_full_name_cont:  { slug: 'defaults.user' },
   show_name_cont:       { slug: 'defaults.show_name' },
@@ -27,5 +7,6 @@
 } %>
 
 <%= render 'shared/pages/index', resource_class: debt_class, resources: debts,
-  headers: headers, field_sets: field_sets, search_fields: search_fields,
+  content: render("#{controller_path}/index_results"),
+  search_fields: search_fields,
   include_edit_button: false, include_link_to_item: false %>

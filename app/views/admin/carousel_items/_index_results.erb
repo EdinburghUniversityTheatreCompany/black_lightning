@@ -1,0 +1,12 @@
+<% headers = [:title, :tagline, :carousel_name, :is_active, :ordering] %>
+
+<% field_sets = @carousel_items.map { |carousel_item| {
+  fields: [
+    carousel_item,
+    carousel_item.tagline,
+    carousel_item.carousel_name,
+    bool_icon(carousel_item.is_active),
+    carousel_item.ordering
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @carousel_items, resource_class: CarouselItem, headers: headers, field_sets: field_sets %>

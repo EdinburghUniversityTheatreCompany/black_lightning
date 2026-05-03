@@ -1,0 +1,5 @@
+<% headers = [:name] %>
+
+<% field_sets = @staffing_templates.map { |staffing_template| { fields: [staffing_template] } } %>
+
+<%= render 'shared/pages/index_results', resources: @staffing_templates, resource_class: Admin::StaffingTemplate, headers: headers, field_sets: field_sets %>

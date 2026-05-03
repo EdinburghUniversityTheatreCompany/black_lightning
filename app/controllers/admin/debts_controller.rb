@@ -15,6 +15,7 @@ class Admin::DebtsController < AdminController
 
     respond_to do |format|
       format.html
+      format.turbo_stream { render "shared/pages/index" }
     end
   end
 

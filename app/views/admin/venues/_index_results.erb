@@ -1,0 +1,9 @@
+<% headers = [:name, :tagline] %>
+
+<% field_sets = @venues.map { |venue| {
+  fields: [
+    venue,
+    venue.tagline
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @venues, resource_class: Venue, headers: headers, field_sets: field_sets %>

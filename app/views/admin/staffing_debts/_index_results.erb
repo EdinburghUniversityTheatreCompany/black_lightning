@@ -1,0 +1,8 @@
+<%= render 'admin/shared/debts_index_results',
+      debts: @staffing_debts,
+      debt_class: Admin::StaffingDebt,
+      convert_permission: :convert_to_maintenance_debt,
+      is_specific_user: @is_specific_user,
+      forgive_partial: 'admin/staffing_debts/forgive_button',
+      from_type: 'Staffing',
+      to_type: 'Maintenance' %>

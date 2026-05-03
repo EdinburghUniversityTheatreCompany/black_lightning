@@ -1,14 +1,6 @@
-<% headers = [:card_number, :member_name] %>
-
-<% field_sets = @news.map { |news| {
-  fields: [
-    card,
-    user_link(card.user, false)
-  ] } } %>
-
 <% search_fields = {
     card_number_cont: { slug: 'defaults.card_number' },
-    user_full_name_cont:  { slug: 'defaults.name' }
+    user_full_name_cont: { slug: 'defaults.name' }
 } %>
 
-<%= render 'shared/pages/index', resource_class: MembershipCard, resources: @cards, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: MembershipCard, resources: @cards, content: render('index_results'), search_fields: search_fields %>

@@ -1,0 +1,5 @@
+<% headers = [:name] %>
+
+<% field_sets = @call_question_templates.map { |template| { fields: [template] } } %>
+
+<%= render 'shared/pages/index_results', resources: @call_question_templates, resource_class: Admin::Proposals::CallQuestionTemplate, headers: headers, field_sets: field_sets %>

@@ -1,16 +1,6 @@
-<% headers = [:name, :user_full_name, :approved, 'Categories'] %>
-
-<% field_sets = @profiles.map { |profile| {
-  fields: [
-    profile,  
-    profile.user.present? ? user_link(profile.user, true) : 'No User',
-    bool_icon(profile.approved),
-    profile.categories.collect(&:name).to_sentence
-  ] } } %>
-
 <% search_fields = {
     name_cont:  { slug: 'defaults.name' },
     about_cont: { slug: 'defaults.about'}
 } %>
 
-<%= render 'shared/pages/index', resource_class: MarketingCreatives::Profile, resources: @profiles, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: MarketingCreatives::Profile, resources: @profiles, content: render('index_results'), search_fields: search_fields %>

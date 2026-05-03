@@ -1,0 +1,14 @@
+<% headers = [:card_number, :member_name] %>
+
+<% field_sets = @cards.map { |card| {
+  fields: [
+    card,
+    user_link(card.user, false)
+  ]
+} } %>
+
+<%= render 'shared/pages/index_results',
+      resources: @cards,
+      resource_class: MembershipCard,
+      headers: headers,
+      field_sets: field_sets %>

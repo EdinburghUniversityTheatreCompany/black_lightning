@@ -1,0 +1,15 @@
+<% headers = [:item, :severity, :status, :reported_by, :created_at, :updated_at] %>
+
+<% field_sets = @fault_reports.map { |fault_report| {
+  fields: [
+    fault_report,
+    fault_report.severity.humanize,
+    fault_report.status.humanize,
+    fault_report.reported_by_name,
+    l(fault_report.created_at, format: :short),
+    l(fault_report.updated_at, format: :short)
+  ],
+  class: fault_report.css_class
+ } } %>
+
+<%= render 'shared/pages/index_results', resources: @fault_reports, resource_class: FaultReport, headers: headers, field_sets: field_sets %>

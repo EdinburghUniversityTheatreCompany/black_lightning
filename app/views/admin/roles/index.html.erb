@@ -1,9 +1,5 @@
-<% headers = [:name, 'Amount of Users'] %>
-
-<% field_sets = @roles.map { |role| { fields: [role, role.users.size] } } %>
-
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' }
 } %>
 
-<%= render 'shared/pages/index', resource_class: Role, resources: @roles, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: Role, resources: @roles, content: render('index_results'), search_fields: search_fields %>

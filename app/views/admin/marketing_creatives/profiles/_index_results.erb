@@ -1,0 +1,11 @@
+<% headers = [:name, :user_full_name, :approved, 'Categories'] %>
+
+<% field_sets = @profiles.map { |profile| {
+  fields: [
+    profile,
+    profile.user.present? ? user_link(profile.user, true) : 'No User',
+    bool_icon(profile.approved),
+    profile.categories.collect(&:name).to_sentence
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @profiles, resource_class: MarketingCreatives::Profile, headers: headers, field_sets: field_sets %>
