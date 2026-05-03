@@ -4,8 +4,9 @@
   <title><%= "#{@title} | " unless @title.nil? %>Bedlam Theatre Members</title>
 
   <%= vite_client_tag %>
-  <%= vite_javascript_tag "admin" %>
-  <%= vite_stylesheet_tag "admin.css" %>
+  <%# Force reload of the page if these tags change so that we don't persist the wrong JavaScript or css when transitioning from public to admin or vice-versa. %>
+  <%= vite_javascript_tag "admin", "data-turbo-track": "reload" %>
+  <%= vite_stylesheet_tag "admin.css", "data-turbo-track": "reload" %>
 
   <%= csrf_meta_tags %>
   <%= yield :head %>

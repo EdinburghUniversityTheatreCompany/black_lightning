@@ -4,9 +4,9 @@
 <head>
   <title><%= "#{@title}" unless @title.nil? %></title>
   <%= vite_client_tag %>
-  <%= vite_javascript_tag "login" %>
-
-  <%= vite_stylesheet_tag "login.css" %>
+<%# Force reload of the page if these tags change so that we don't persist the wrong JavaScript or css when transitioning from public to admin or vice-versa. %>
+  <%= vite_javascript_tag "login", "data-turbo-track": "reload" %>
+  <%= vite_stylesheet_tag "login.css", "data-turbo-track": "reload" %>
 
   <%= csrf_meta_tags %>
 
