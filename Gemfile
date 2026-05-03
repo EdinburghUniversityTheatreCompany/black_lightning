@@ -51,7 +51,7 @@ gem "nokogiri"
 
 gem "paper_trail"
 gem "diffy"
-gem "rack", "~> 2.0"
+gem "rack"
 gem "rack-cors"
 
 gem "stringex"
