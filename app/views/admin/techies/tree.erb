@@ -23,7 +23,7 @@
             input_html: { style: 'min-width: 220px' } %>
       <%= f.submit 'Search', class: 'btn btn-secondary btn-sm' %>
       <% if selected_id.present? %>
-        <%= link_to 'Clear', tree_admin_techies_path, class: 'btn btn-outline-secondary btn-sm' %>
+        <%= link_to 'Clear', tree_admin_techies_path, class: 'btn btn-secondary btn-sm' %>
       <% end %>
     <% end %>
   </div>
@@ -34,5 +34,8 @@
        data-techie-graph-edges-value="<%= graph_edges.to_json %>"
        data-techie-graph-selected-value="<%= selected_id %>">
     <div data-techie-graph-target="canvas" style="height: calc(100vh - 260px);"></div>
+    <div data-techie-graph-target="legend"
+         class="px-3 py-2 border-top d-flex flex-wrap gap-3"
+         style="font-size: 11px;"></div>
   </div>
 </div>

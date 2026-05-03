@@ -1,28 +1,25 @@
 import { Controller } from "@hotwired/stimulus"
 import Cytoscape from "cytoscape"
 
-function buildColorMap(years) {
-  const unique = [...new Set(years.filter(y => y != null))].sort()
-  const map = {}
-  unique.forEach((year, i) => {
-    const hue = Math.round((i / unique.length) * 360)
-    map[year] = `hsl(${hue}, 60%, 65%)`
-  })
-  return map
+// Stable color per year — derived from the year itself so the same year always
+// gets the same hue regardless of which other years are in the current dataset.
+// The golden angle (137°) spreads consecutive years far apart visually.
+function yearToColor(year) {
+  return `hsl(${(year * 137) % 360}, 60%, 65%)`
 }
 
 const HOP_CLASSES = "hop-1 hop-2 hop-3 hop-far"
 
 export default class extends Controller {
   static values = { nodes: Array, edges: Array, selected: String }
+  static targets = ["canvas", "legend"]
 
   connect() {
-    const years = this.nodesValue.map(n => n.entry_year)
-    const colorMap = buildColorMap(years)
+    this.#renderLegend()
 
     const elements = [
       ...this.nodesValue.map(({ id, label, entry_year }) => ({
-        data: { id, label, entry_year, color: colorMap[entry_year] ?? "#9ca3af" },
+        data: { id, label, entry_year, color: entry_year != null ? yearToColor(entry_year) : "#9ca3af" },
       })),
       ...this.edgesValue.map(({ from, to }) => ({
         data: { id: `${from}-${to}`, source: from, target: to },
@@ -30,7 +27,7 @@ export default class extends Controller {
     ]
 
     this.#cy = Cytoscape({
-      container: this.element,
+      container: this.canvasTarget,
       elements,
       style: [
         {
@@ -64,10 +61,7 @@ export default class extends Controller {
         },
         {
           selector: "node.focused",
-          style: {
-            "border-width": 3,
-            "border-color": "#1d4ed8",
-          },
+          style: { "border-width": 3, "border-color": "#1d4ed8" },
         },
         // Edge hop highlighting — applied after a node is clicked
         {
@@ -116,7 +110,7 @@ export default class extends Controller {
     layout.on("layoutstop", () => {
       if (this.selectedValue) {
         const node = this.#cy.getElementById(this.selectedValue)
-        if (node.length) this.#selectNode(node)
+        if (node.length) this.#selectNode(node, { zoomIn: true })
       }
     })
 
@@ -130,8 +124,22 @@ export default class extends Controller {
 
   #cy = null
 
-  #selectNode(root) {
-    // Click the focused node again to reset highlighting
+  #renderLegend() {
+    const years = [...new Set(this.nodesValue.map(n => n.entry_year).filter(y => y != null))].sort()
+    const hasUnknown = this.nodesValue.some(n => n.entry_year == null)
+
+    const swatch = (color, label) =>
+      `<span class="d-flex align-items-center gap-1">` +
+      `<span style="width:12px;height:12px;background:${color};border-radius:2px;flex-shrink:0"></span>` +
+      `${label}</span>`
+
+    const items = years.map(y => swatch(yearToColor(y), y))
+    if (hasUnknown) items.push(swatch("#9ca3af", "No year"))
+
+    this.legendTarget.innerHTML = items.join("")
+  }
+
+  #selectNode(root, { zoomIn = false } = {}) {
     if (root.hasClass("focused")) {
       this.#cy.elements().removeClass(`focused ${HOP_CLASSES}`)
       return
@@ -159,10 +167,10 @@ export default class extends Controller {
         distances[e.source().id()] ?? Infinity,
         distances[e.target().id()] ?? Infinity
       )
-      if (d === 0)      e.addClass("hop-1")
+      if (d === 0) e.addClass("hop-1")
       else if (d === 1) e.addClass("hop-2")
       else if (d === 2) e.addClass("hop-3")
-      else              e.addClass("hop-far")
+      else e.addClass("hop-far")
     })
 
     const maxDepth = Math.max(...Object.values(distances), 1)
@@ -181,7 +189,14 @@ export default class extends Controller {
     })
 
     conLayout.on("layoutstop", () => {
-      this.#cy.animate({ center: { eles: root } }, { duration: 200 })
+      if (zoomIn) {
+        this.#cy.animate(
+          { fit: { eles: root.closedNeighborhood(), padding: 80 } },
+          { duration: 400 }
+        )
+      } else {
+        this.#cy.animate({ center: { eles: root } }, { duration: 200 })
+      }
     })
 
     conLayout.run()
