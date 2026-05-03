@@ -2,14 +2,28 @@
 <%# KEEP %>
 
 <% current_user_is_part_of_teamwork = team_members.collect(&:user).include?(current_user) %>
+<% cast, crew = team_members.partition(&:cast?) %>
 
-<h3>Team</h3>
+<% if cast.any? %>
+  <h3>Cast</h3>
+    <% cast.each do |team_member| %>
+      <p class="py-0 my-0">
+        <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
-<% if team_members.any? %>
-  <%# Loop over each team_member (user and position) on this teamwork (usually, event or proposal). %>
-  <% team_members.each do |team_member| %>
-    <% continue if team_member.nil? %>
+        <%# Show the badges if the current team_member has a user, AND if the currently signed-in user is part of the team for the teamwork OR can view users, AND we are on the admin site. %>
+        <% if team_member.user.present? && (current_user_is_part_of_teamwork || can?(:show, team_member.user) && @admin_site) %>
+          <% team_member_labels_for(team_member, deadline).each do |label| %>
+            <%= generate_label(label[:label_class], label[:text]) %>
+          <% end %>
+        <% end %>
+      </p>
+    <% end %>
+  <% end %>
+<% end %>
 
+<% if crew.any? %>
+  <h3 class="mt-3">Production Team</h3>
+  <% crew.each do |team_member| %>
     <p class="py-0 my-0">
       <b><%= team_member.position %></b> <%= user_link(team_member.user, true) %>
 
@@ -21,6 +35,6 @@
       <% end %>
     </p>
   <% end %>
-<% else %>
+<% elsif cast.empty? %>
   <p class="text-muted">No team members yet.</p>
 <% end %>

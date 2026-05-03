@@ -103,4 +103,58 @@ class TeamMemberTest < ActiveSupport::TestCase
       end
     end
   end
+
+  # cast? and cast_display_name
+
+  test "cast? is true for Actor position" do
+    assert TeamMember.new(position: "Actor (King)").cast?
+  end
+
+  test "cast? is true for Cast position" do
+    assert TeamMember.new(position: "Cast (King)").cast?
+  end
+
+  test "cast? is true for Actor position with loose casing and whitespace" do
+    assert TeamMember.new(position: "aCtor ( King ) ").cast?
+  end
+
+  test "cast? is true for Cast position with loose casing" do
+    assert TeamMember.new(position: "CAST ( Queen ) ").cast?
+  end
+
+  test "cast? is true when Actor is first of multiple segments" do
+    assert TeamMember.new(position: "Actor (The King) / Stage Manager").cast?
+  end
+
+  test "cast? is false for crew-only position" do
+    assert_not TeamMember.new(position: "Director").cast?
+  end
+
+  test "cast? is false for multi-role crew position" do
+    assert_not TeamMember.new(position: "Tech Manager / Lighting Designer").cast?
+  end
+
+  test "cast_display_name returns role name for simple actor" do
+    assert_equal "King", TeamMember.new(position: "Actor (King)").cast_display_name
+  end
+
+  test "cast_display_name returns role name for Cast keyword" do
+    assert_equal "King", TeamMember.new(position: "Cast (King)").cast_display_name
+  end
+
+  test "cast_display_name strips whitespace from role name" do
+    assert_equal "King", TeamMember.new(position: "aCtor ( King ) ").cast_display_name
+  end
+
+  test "cast_display_name returns multiple character names as comma list" do
+    assert_equal "The King, The Beggar", TeamMember.new(position: "Actor (The King, The Beggar)").cast_display_name
+  end
+
+  test "cast_display_name appends crew roles with Crew() wrapper" do
+    assert_equal "The King / Crew(Stage Manager)", TeamMember.new(position: "Actor (The King) / Stage Manager").cast_display_name
+  end
+
+  test "cast_display_name handles multiple crew roles" do
+    assert_equal "King / Crew(Sound Designer, Lighting Designer)", TeamMember.new(position: "Actor (King) / Sound Designer / Lighting Designer").cast_display_name
+  end
 end

@@ -35,11 +35,29 @@ class TeamMember < ActiveRecord::Base
 
   after_create :sync_debts_if_show
 
+  ACTOR_PATTERN = /\A(actor|cast)\s*\((.+)\)\s*\z/i
+
+  def cast?
+    position_segments.any? { |s| s.match?(ACTOR_PATTERN) }
+  end
+
+  def cast_display_name
+    acting = position_segments
+      .filter_map { |s| s.match(ACTOR_PATTERN)&.[](2)&.strip }
+      .join(", ")
+    crew = position_segments.reject { |s| s.match?(ACTOR_PATTERN) }.map(&:strip)
+    crew.any? ? "#{acting} / Crew(#{crew.join(", ")})" : acting
+  end
+
   def self.ransackable_attributes(auth_object = nil)
     %w[position user_id teamwork_id teamwork_type]
   end
 
   private
+
+  def position_segments
+    position.split("/").map(&:strip)
+  end
 
   def sync_debts_if_show
     return unless teamwork.is_a?(Show)
