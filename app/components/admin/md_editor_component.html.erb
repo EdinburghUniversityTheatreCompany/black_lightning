@@ -1,9 +1,9 @@
 <div class="flex flex-wrap mb-4 items-start">
-  <div class="w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700 shrink-0">
+  <div class="w-full md:w-3/12 px-2 py-1.5 text-sm font-medium text-gray-700">
     <%= @f.label @field, **@input_field_args %>
   </div>
 
-  <div class="w-9/12 px-2">
+  <div class="w-full md:w-9/12 px-2">
     <div data-controller="markdown-editor"
          data-markdown-editor-upload-url-value="<%= upload_url %>"
          data-markdown-editor-item-type-value="<%= item_type %>"
