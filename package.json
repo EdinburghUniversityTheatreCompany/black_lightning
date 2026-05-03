@@ -15,8 +15,6 @@
         "bootstrap-icons": "^1.11.3",
         "channels": "^0.0.4",
         "cytoscape": "^3.33.3",
-        "cytoscape-dagre": "^2.5.0",
-        "dagre": "^0.8.5",
         "dropzone": "^5.9.2",
         "jquery": "^3.7.1",
         "leaflet": "^1.9.4",

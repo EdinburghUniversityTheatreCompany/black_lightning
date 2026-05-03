@@ -1,8 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
 import Cytoscape from "cytoscape"
-import CytoscapeDagre from "cytoscape-dagre"
-
-Cytoscape.use(CytoscapeDagre)
 
 function buildColorMap(years) {
   const unique = [...new Set(years.filter(y => y != null))].sort()
@@ -23,10 +20,7 @@ export default class extends Controller {
 
     const elements = [
       ...this.nodesValue.map(({ id, label, entry_year }) => ({
-        data: { id, label, entry_year },
-        style: {
-          "background-color": colorMap[entry_year] ?? "#9ca3af",
-        },
+        data: { id, label, entry_year, color: colorMap[entry_year] ?? "#9ca3af" },
       })),
       ...this.edgesValue.map(({ from, to }) => ({
         data: { id: `${from}-${to}`, source: from, target: to },
@@ -37,27 +31,29 @@ export default class extends Controller {
       container: this.element,
       elements,
       layout: {
-        name: "dagre",
-        rankDir: "TB",
-        nodeSep: 50,
-        rankSep: 80,
+        name: "breadthfirst",
+        circle: true,
+        directed: true,
         animate: false,
+        fit: true,
+        padding: 30,
+        spacingFactor: 1.5,
       },
       style: [
         {
           selector: "node",
           style: {
             label: "data(label)",
+            "background-color": "data(color)",
             "text-valign": "center",
             "text-halign": "center",
             "font-size": "12px",
-            width: "label",
-            height: "label",
-            padding: "8px",
             shape: "roundrectangle",
             color: "#1f2937",
             "text-wrap": "wrap",
-            "text-max-width": "120px",
+            "text-max-width": "140px",
+            width: 140,
+            height: 36,
           },
         },
         {
@@ -86,10 +82,32 @@ export default class extends Controller {
     })
 
     this.#cy.on("tap", "node", evt => {
-      const node = evt.target
+      const root = evt.target
       this.#cy.elements().removeClass("focused")
-      node.addClass("focused")
-      this.#cy.animate({ center: { eles: node }, zoom: 1.2 }, { duration: 400 })
+      root.addClass("focused")
+
+      const distances = {}
+      this.#cy.elements().bfs({
+        roots: root,
+        visit: (v, _e, _u, _i, depth) => { distances[v.id()] = depth },
+        directed: false,
+      })
+
+      const maxDepth = Math.max(...Object.values(distances), 1)
+
+      this.#cy.layout({
+        name: "concentric",
+        concentric: (n) => {
+          const d = distances[n.id()]
+          return d !== undefined ? maxDepth - d + 1 : 0
+        },
+        levelWidth: () => 1,
+        animate: true,
+        animationDuration: 600,
+        animationEasing: "ease-in-out-cubic",
+        fit: true,
+        padding: 30,
+      }).run()
     })
   }
 
