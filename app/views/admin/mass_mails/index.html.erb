@@ -1,15 +1,6 @@
-<% headers = [:subject, :draft, :send_date] %>
-
-<% field_sets = @mass_mails.map { |mass_mail| { 
-  fields: [
-    mass_mail,  
-    bool_icon(mass_mail.draft),
-    get_send_date(mass_mail)
-  ] } } %>
-
 <% search_fields = {
     subject_cont: { slug: 'defaults.subject' },
     body_cont:    { slug: 'defaults.description' }
 } %>
 
-<%= render 'shared/pages/index', resource_class: MassMail, resources: @mass_mails, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: MassMail, resources: @mass_mails, content: render('index_results'), search_fields: search_fields %>

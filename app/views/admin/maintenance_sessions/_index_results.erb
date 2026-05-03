@@ -1,0 +1,8 @@
+<% headers = [:date] %>
+
+<% field_sets = @maintenance_sessions.map { |maintenance_session| {
+  fields: [
+    maintenance_session
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @maintenance_sessions, resource_class: MaintenanceSession, headers: headers, field_sets: field_sets %>

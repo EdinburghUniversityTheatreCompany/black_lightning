@@ -1,19 +1,7 @@
-<% headers = [:title, :creator_full_name, :expiry_date, :approved] %>
-
-<% field_sets = @opportunities.map { | opportunity| { 
-    fields: [
-        opportunity,
-        user_link(opportunity.creator, false),
-        l(opportunity.expiry_date, format: :longy),
-        bool_icon(opportunity.approved)
-    ],
-    class: can?(:manage, Opportunity) ? opportunity.css_class : '' 
-} } %>
-
 <% search_fields = {
     title_cont:             { slug: 'defaults.title' },
     description_cont:       { slug: 'defaults.description' },
     creator_full_name_cont: { slug: 'defaults.creator' }
 } %>
 
-<%= render 'shared/pages/index', resource_class: Opportunity, resources: @opportunities, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: Opportunity, resources: @opportunities, content: render('index_results'), search_fields: search_fields %>

@@ -1,15 +1,6 @@
-<% headers = [:name, :ordering, ''] %>
-
-<% field_sets = @attachment_tags.map { |attachment_tag| { 
-  fields: [
-    attachment_tag,
-    attachment_tag.ordering,
-    get_link_to_attachments_for_tag(attachment_tag)
-  ] } } %>
-
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },
     description_cont: { slug: 'defaults.description'}
 } %>
 
-<%= render 'shared/pages/index', resource_class: AttachmentTag, resources: @attachment_tags, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: AttachmentTag, resources: @attachment_tags, content: render('index_results'), search_fields: search_fields %>

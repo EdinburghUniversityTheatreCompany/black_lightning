@@ -1,0 +1,9 @@
+<% headers = [:name, :group] %>
+
+<% field_sets = @editable_blocks.map { |editable_block| {
+  fields: [
+    editable_block,
+    editable_block.group,
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @editable_blocks, resource_class: Admin::EditableBlock, headers: headers, field_sets: field_sets %>

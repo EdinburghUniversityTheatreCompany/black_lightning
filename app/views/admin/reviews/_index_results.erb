@@ -1,0 +1,12 @@
+<% headers = [:title, :show, :reviewer, :rating, :review_date] %>
+
+<% field_sets = @reviews.map { |review| {
+  fields: [
+    review,
+    get_link(review.event, :show),
+    review.reviewer_with_organisation,
+    star_rating(review.rating),
+    l(review.review_date, format: :longy)
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @reviews, resource_class: Review, headers: headers, field_sets: field_sets %>

@@ -1,10 +1,6 @@
-<% headers = [:name, :ordering] %>
-
-<% field_sets = @event_tags.map { |event_tag| { fields: [event_tag, event_tag.ordering] } } %>
-
 <% search_fields = {
     name_cont:        { slug: 'defaults.name' },
     description_cont: { slug: 'defaults.description'}
 } %>
 
-<%= render 'shared/pages/index', resource_class: EventTag, resources: @event_tags, headers: headers, field_sets: field_sets, search_fields: search_fields %>
+<%= render 'shared/pages/index', resource_class: EventTag, resources: @event_tags, content: render('index_results'), search_fields: search_fields %>

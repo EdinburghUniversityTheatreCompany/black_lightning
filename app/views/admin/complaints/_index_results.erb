@@ -1,0 +1,9 @@
+<% headers = [:subject, :created_at] %>
+
+<% field_sets = @complaints.map { |complaint| {
+  fields: [
+    complaint,
+    l(complaint.created_at, format: :longy)
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @complaints, resource_class: Complaint, headers: headers, field_sets: field_sets %>

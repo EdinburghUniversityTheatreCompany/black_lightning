@@ -1,0 +1,11 @@
+<% headers = ['View', :date, :user, :debt] %>
+
+<% field_sets = @maintenance_attendances.map { |maintenance_attendance| {
+  fields: [
+    maintenance_attendance,
+    get_link(maintenance_attendance.maintenance_session, :show),
+    user_link(maintenance_attendance.user, false),
+    maintenance_attendance.maintenance_debt.present? ? get_link(maintenance_attendance.maintenance_debt, :show, link_text: "'#{maintenance_attendance.maintenance_debt.show.name}' due on #{maintenance_attendance.maintenance_debt.due_by}") : 'No Debt'
+  ] } } %>
+
+<%= render 'shared/pages/index_results', resources: @maintenance_attendances, resource_class: MaintenanceAttendance, headers: headers, field_sets: field_sets %>

@@ -1,0 +1,5 @@
+<% headers = [:name, :ordering] %>
+
+<% field_sets = @event_tags.map { |event_tag| { fields: [event_tag, event_tag.ordering] } } %>
+
+<%= render 'shared/pages/index_results', resources: @event_tags, resource_class: EventTag, headers: headers, field_sets: field_sets %>
