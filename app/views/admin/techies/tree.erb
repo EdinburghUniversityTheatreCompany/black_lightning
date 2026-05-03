@@ -9,6 +9,9 @@
             <%= f.input :id_eq, collection: Techie.all.select('id', 'name'), include_blank: true, label: 'Techie Name' %>
             <div class="mr-2"></div>
             <%= f.submit :Search, class: 'btn btn-secondary' %>
+            <% if @base_techie.size == 1 %>
+              <%= link_to "Clear", tree_admin_techies_path, class: 'btn btn-outline-secondary ms-2' %>
+            <% end %>
         <% end %>
     </div>
 </div>
