@@ -100,7 +100,7 @@ class Admin::RolesController < AdminController
   end
 
   def permitted_params
-    [ :name ]
+    [ :name, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]
   end
 
   def order_args

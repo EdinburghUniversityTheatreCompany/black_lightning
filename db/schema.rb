@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_03_210737) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -584,6 +584,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_03_210737) do
     t.index ["resource_type", "resource_id"], name: "index_roles_on_resource_type_and_resource_id"
   end
 
+  create_table "roles_parents", id: false, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+    t.integer "parent_id", null: false
+    t.integer "role_id", null: false
+    t.index ["parent_id"], name: "fk_rails_4fa933eab8"
+    t.index ["role_id"], name: "fk_rails_b8a5e5be6a"
+  end
+
   create_table "solid_queue_blocked_executions", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "concurrency_key", null: false
     t.datetime "created_at", null: false
@@ -827,6 +834,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_03_210737) do
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
+  add_foreign_key "roles_parents", "roles"
+  add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

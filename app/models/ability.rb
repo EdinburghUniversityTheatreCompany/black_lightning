@@ -86,8 +86,6 @@ class Ability
     # Alias :delete to :destroy because they're easy to mix up and
     # because the current permission actions use :delete and the controller actions use :destroy
     alias_action :destroy, to: :delete
-    # Alias remove_user and add_user to manage_trained_roles for roles
-    alias_action :remove_user, :add_user, to: :manage_trained_roles
 
     # You must also update opportunity.rb when editing this.
     can :read, Opportunity, approved: true, expiry_date: Time.current..DateTime::Infinity.new
@@ -136,7 +134,7 @@ class Ability
     return if user.nil?
 
     # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
-    can :read, Role, id: Role.trained.pluck(:id)
+    can [ :read, :update ], Role, id: Role.trained.pluck(:id) + user.roles.collect { |role| role.children }.flatten.pluck(:id)
 
     # All users can edit and see themselves.
     # All users can consent for themselves.
@@ -236,11 +234,8 @@ class Ability
       can [ :add_user, :remove_user ], Role
     end
 
-    # Allow users with manage_trained_roles permission to add/remove users from trained roles only
-    if can? :manage_trained_roles, Role
-      can [ :add_user, :remove_user ], Role do |role|
-        role&.trained_role?
-      end
+    can [ :add_user, :remove_user ], Role do |role|
+      role&.parents.any? { |p| user&.has_role?(p) }
     end
 
     can :show, Admin::EditableBlock if can? :access, :backend

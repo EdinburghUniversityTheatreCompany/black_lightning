@@ -26,10 +26,14 @@ class Role < ApplicationRecord
 
   before_destroy :prevent_hardcoded_or_non_purgeable_destruction
 
+  has_and_belongs_to_many :parents, class_name: "Role", join_table: :roles_parents, foreign_key: :role_id, association_foreign_key: :parent_id
+  has_and_belongs_to_many :children, class_name: "Role", join_table: :roles_parents, foreign_key: :parent_id, association_foreign_key: :role_id
   has_and_belongs_to_many :users, join_table: :users_roles
   has_and_belongs_to_many :permissions, class_name: "Admin::Permission"
 
   belongs_to :resource, polymorphic: true, optional: true
+
+  accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
   scope :trained, -> { where("name LIKE ?", "%Trained%") }
 
@@ -69,6 +73,14 @@ class Role < ApplicationRecord
     end
   end
 
+  def children_attributes=(attributes)
+    cycle_through_attributes(attributes, children)
+  end
+
+  def parents_attributes=(attributes)
+    cycle_through_attributes(attributes, parents)
+  end
+
   def name_not_hardcoded
     errors.add(:name, "is hardcoded and cannot be altered") if Role::HARDCODED_NAMES.include?(name_was) && name != name_was
   end
@@ -92,6 +104,19 @@ class Role < ApplicationRecord
     elsif NON_PURGEABLE_ROLES.include?(name&.downcase&.strip)
       errors.add(:base, "Cannot delete role '#{name}' as it is protected from deletion")
       throw(:abort)
+    end
+  end
+
+  def cycle_through_attributes(attributes, collection)
+    attributes.each do |attribute|
+      id = attribute[1][:id]
+      next if id == ""
+
+      role = Role.find(id)
+
+      collection << role unless collection.all.include?(role)
+
+      collection.delete(role) if attribute[1][:_destroy] == "1"
     end
   end
 end
