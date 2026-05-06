@@ -8,7 +8,7 @@
 <% end %>
 
 <% data_controllers = sortable ? "nested-form sortable" : "nested-form" %>
-<div class="<%= container_class %>" data-controller="<%= data_controllers %>">
+<div class="<%= container_class %> mb-3" data-controller="<%= data_controllers %>">
   <%= f.simple_fields_for(association_name) do |nested_f| %>
     <% wrapper_data = { new_record: nested_f.object.new_record? } %>
     <% wrapper_data[:sortable_item] = true if sortable %>
