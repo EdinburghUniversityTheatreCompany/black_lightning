@@ -134,7 +134,8 @@ class Ability
     return if user.nil?
 
     # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
-    can [ :read, :update ], Role, id: Role.trained.pluck(:id) + user.roles.collect { |role| role.children }.flatten.pluck(:id)
+    can [ :read ], Role, id: Role.trained.pluck(:id)
+    can [ :read, :update ], Role, id: user.roles.collect { |role| role.children }.flatten.pluck(:id)
 
     # All users can edit and see themselves.
     # All users can consent for themselves.

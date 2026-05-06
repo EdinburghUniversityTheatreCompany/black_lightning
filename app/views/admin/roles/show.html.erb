@@ -1,7 +1,7 @@
 <% if @role.name != 'admin' %>
   <% fields = {
-    parent_roles: @role.parents.collect { |role| role.name.titleize }.to_sentence,
-    child_roles: @role.children.collect { |role| role.name.titleize }.to_sentence,
+    overlords: @role.parents.collect { |role| role.name.titleize }.to_sentence,
+    underlings: @role.children.collect { |role| role.name.titleize }.to_sentence,
   } %>
 <% else %>
   <% fields = {} %>

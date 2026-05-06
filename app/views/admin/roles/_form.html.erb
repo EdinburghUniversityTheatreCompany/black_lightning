@@ -1,17 +1,17 @@
 <%# locals: () %>
 
 <%= simple_horizontal_form_for [:admin, @role] do |f| %>
-    <%= render('shared/pages/form', f: f) do %>
+    <%= render("shared/pages/form", f: f) do %>
         <% name_disabled = Role::HARDCODED_NAMES.include?(@role.name)%>
 
-        <%= f.input :name, readonly: name_disabled, hint: name_disabled ? 'You cannot change the name of this role.' : '' %>
+        <%= f.input :name, readonly: name_disabled, hint: name_disabled ? "You cannot change the name of this role." : "" %>
         <%= f.hidden_field :name if name_disabled %>
-        <% if current_user.has_role?('Admin') %>
-            <h3>Parents</h3>
-            <%= render('shared/form/sections/nested_fields', f: f, association_name: :parents, partial_name: 'parent_fields') %>
+        <% if current_user.has_role?("Admin") && @role.name != "Admin" %>
+            <h3>Overlords</h3>
+            <%= render("shared/form/sections/nested_fields", f: f, association_name: :parents, partial_name: "parent_fields") %>
 
-            <h3>Children</h3>
-            <%= render('shared/form/sections/nested_fields', f: f, association_name: :children, partial_name: 'child_fields') %>
+            <h3>Underlings</h3>
+            <%= render("shared/form/sections/nested_fields", f: f, association_name: :children, partial_name: "child_fields") %>
         <% end %>
     <% end %>
 <% end %>
