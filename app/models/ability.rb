@@ -133,10 +133,6 @@ class Ability
     # Stop if the user is not logged in.
     return if user.nil?
 
-    # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
-    can [ :read ], Role, id: Role.trained.pluck(:id)
-    can [ :read, :update ], Role, id: user.roles.collect { |role| role.children }.flatten.pluck(:id)
-
     # All users can edit and see themselves.
     # All users can consent for themselves.
     can %I[show debt_status update edit consent], User, id: user.id
@@ -235,9 +231,13 @@ class Ability
       can [ :add_user, :remove_user ], Role
     end
 
-    can [ :add_user, :remove_user ], Role do |role|
-      role&.parents.any? { |p| user&.has_role?(p) }
-    end
+    # All users with role X control the roles which have X as a parent.
+    child_roles = User.find_by_sql([ "SELECT rp.role_id FROM users_roles ur, roles_parents rp WHERE ur.user_id = ? AND ur.role_id = rp.parent_id", user.id ]).pluck(:role_id)
+    can [ :read, :update, :add_user, :remove_user ], Role, id: child_roles
+
+    # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
+    can [ :read ], Role, id: Role.trained.pluck(:id)
+
 
     can :show, Admin::EditableBlock if can? :access, :backend
 
