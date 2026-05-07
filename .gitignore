@@ -73,4 +73,7 @@ npm-debug.log*
 *.local
 
 # rollup-plugin-visualizer output
-stats.html 
+stats.html
+
+# pnpm store
+.pnpm-store/

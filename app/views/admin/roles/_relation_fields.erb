@@ -1,0 +1,8 @@
+<%# locals: (f:, dynamic: nil) %>
+
+<%= render '/shared/form/inline_fields_for_template',
+    f: f,
+    fields: [
+        { field: f.input_field(:id, collection: Role.where.not(id: @role.id).where.not(name: "Admin"), wrapper: :inline_form) },
+        { field: link_to_remove(f), col_modifier: 'auto' }
+] %>
