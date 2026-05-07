@@ -635,8 +635,9 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
       assert @ability.can?(permission.action.to_sym, subject), "The user cannot perform the action :#{permission.action} on #{permission.subject_class} even though it should be able to"
 
-      # For Role :read, check a non-trained role instance since all logged-in users can read trained roles at the class level.
-      check_subject = (permission.action.to_sym == :read && subject == Role) ? other_role.first : subject
+      # For Role :read, :edit,
+      # check a non-trained role instance since all logged-in users can read trained roles and edit child roles.
+      check_subject = subject == Role && (permission.action.to_sym == :read || permission.action.to_sym == :update) ? other_role.first : subject
       assert other_ability.cannot?(permission.action.to_sym, check_subject), "The other user can perform the action :#{permission.action} on #{permission.subject_class} but it should not be able to"
     end
   end
