@@ -916,6 +916,15 @@ img.float-right {
   background: transparent;
 }
 
+/* Permissions grid — changed cell highlight */
+td.permission-changed {
+  background-color: rgb(146, 193, 255) !important; /* !important overrides table-hover */
+}
+
+td.permission-changed input[type="checkbox"] {
+  accent-color: #3b82f6; /* blue-500 */
+}
+
 /* Version diff output (diffy gem) */
 .diff-container {
   overflow-x: auto;

@@ -16,7 +16,8 @@
         <% title = "Hard Coded" %>
       <% end %>
     <% end %>
-    
-    <%= check_box_tag "[#{role.name}][#{model.name}]#{action}", action, checked, title: title, disabled: disabled %>
+
+    <%= check_box_tag "[#{role.name}][#{model.name}]#{action}", action, checked, title: title, disabled: disabled,
+        data: { action: "change->admin--permissions-grid#markChanged" } %>
   </td>
 <% end %>
