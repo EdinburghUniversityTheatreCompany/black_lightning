@@ -48,11 +48,7 @@
           <span><%= category[:title] %></span>
         </a>
       <% else %>
-        <% if category_open?(category) %>
-          <details class="group" open>
-        <% else %>
-          <details class="group">
-        <% end %>
+        <details class="group" <%= category_open?(category) ? "open" : nil %>>
           <summary class="flex items-center gap-2 px-4 py-2 cursor-pointer hover:bg-white/10 list-none">
             <i class="fas <%= category[:fa_icon] %> w-4" aria-hidden="true"></i>
             <span class="flex-1"><%= category[:title] %></span>
