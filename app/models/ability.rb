@@ -232,8 +232,9 @@ class Ability
     end
 
     # All users with role X control the roles which have X as a parent.
-    child_roles = User.find_by_sql([ "SELECT rp.role_id FROM users_roles ur, roles_parents rp WHERE ur.user_id = ? AND ur.role_id = rp.parent_id", user.id ]).pluck(:role_id)
-    can [ :read, :update, :add_user, :remove_user ], Role, id: child_roles
+    child_roles_this_user_can_manage = Role.joins(:parents).where(parents_roles: { id: user.roles }).pluck(:id)
+
+    can [ :read, :update, :add_user, :remove_user ], Role, id: child_roles_this_user_can_manage
 
     # All logged-in users can view trained roles (e.g. DM Trained, Bar Trained).
     can [ :read ], Role, id: Role.trained.pluck(:id)
