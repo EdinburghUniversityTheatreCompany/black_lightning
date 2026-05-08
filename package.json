@@ -15,6 +15,7 @@
         "bootstrap-icons": "^1.13.1",
         "channels": "^0.0.4",
         "cytoscape": "^3.33.3",
+        "cytoscape-fcose": "^2.2.0",
         "dropzone": "^5.9.3",
         "leaflet": "^1.9.4",
         "moment": "^2.30.1",

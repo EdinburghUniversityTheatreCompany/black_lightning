@@ -16,7 +16,11 @@ export default class extends Controller {
   async connect() {
     this.#renderLegend()
 
-    const { default: Cytoscape } = await import("cytoscape")
+    const [{ default: Cytoscape }, { default: fcose }] = await Promise.all([
+      import("cytoscape"),
+      import("cytoscape-fcose"),
+    ])
+    Cytoscape.use(fcose)
 
     const elements = [
       ...this.nodesValue.map(({ id, label, entry_year }) => ({
@@ -96,16 +100,16 @@ export default class extends Controller {
     this.#cy.on("tap", "node", evt => this.#selectNode(evt.target))
 
     const layout = this.#cy.layout({
-      name: "cose",
+      name: "fcose",
       animate: false,
-      randomize: false,
       fit: true,
       padding: 30,
-      nodeRepulsion: () => 8000,
-      idealEdgeLength: () => 80,
-      edgeElasticity: () => 100,
+      nodeRepulsion: 8000,
+      idealEdgeLength: 80,
+      edgeElasticity: 0.45,
       gravity: 0.25,
       numIter: 2500,
+      tile: true,
     })
 
     layout.on("layoutstop", () => {
