@@ -1,4 +1,4 @@
-<% if @role.name != 'admin' %>
+<% if @role.name.downcase != 'admin' %>
   <% fields = {
     overlords: @role.parents.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe,
     underlings: @role.children.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe,
