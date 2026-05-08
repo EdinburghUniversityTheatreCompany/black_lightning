@@ -37,20 +37,16 @@
 
         <%= value[:content] %>
       <% end %>
-    <%# If not a hash, just render a normal key-value pair. %>
+    <%# If not a hash, just render inline. Short values like booleans, URLs, names fit naturally on one line. %>
     <% else %>
       <%# If a boolean, render a nice text rather than true or false. %>
       <% if [true, false].include?(value) %>
         <% value = bool_text(value) %>
       <% end %>
 
-      <div class="row">
-        <div class="col-xl-2 col-sm-3">
-          <b><%= title %>:</b>
-        </div>
-        <div class="col-xl-10 col-sm-9">
-          <%= value %>
-        </div>
+      <div class="md:flex md:items-baseline">
+        <b class="md:w-3/12 xl:w-2/12 md:shrink-0"><%= title %>:</b>
+        <span class="md:min-w-0"><%= value %></span>
       </div>
     <% end %>
     </li>
