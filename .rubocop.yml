@@ -6,6 +6,7 @@ require:
   - ./lib/rubocop/cop/rails/unsafe_html_safe
 
 plugins:
+  - rubocop-rails
   - rubocop-view_component
 
 # Project-specific exclusions
