@@ -10,10 +10,12 @@ $danger: #212529;
 $link-color: $red;
 $headings-color: $red;
 
-@use "bootstrap/scss/bootstrap" with (
-  $primary: $red,
+@use "bootstrap/scss/bootstrap" with ($primary: $red,
   $secondary: #fdc5b6,
   $danger: #212529,
   $link-color: $red,
-  $headings-color: $red
-);
+  $headings-color: $red);
+
+.turbo-progress-bar {
+  background-color: $red;
+}
