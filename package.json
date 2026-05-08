@@ -11,6 +11,7 @@
         "@milkdown/plugin-upload": "^7.20.0",
         "@milkdown/preset-commonmark": "^7.20.0",
         "@milkdown/preset-gfm": "^7.20.0",
+        "@milkdown/prose/state": "7.20.0",
         "@milkdown/utils": "^7.20.0",
         "@popperjs/core": "^2.11.8",
         "@rails/activestorage": "^8.1.300",

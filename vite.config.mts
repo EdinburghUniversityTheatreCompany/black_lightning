@@ -17,6 +17,6 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['dropzone'],
+    include: ['dropzone', '@milkdown/prose/state'],
   },
 })

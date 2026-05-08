@@ -41,6 +41,9 @@ importers:
       '@milkdown/preset-gfm':
         specifier: ^7.20.0
         version: 7.20.0
+      '@milkdown/prose':
+        specifier: 7.20.0
+        version: 7.20.0
       '@milkdown/utils':
         specifier: ^7.20.0
         version: 7.20.0
