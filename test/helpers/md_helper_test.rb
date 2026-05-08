@@ -82,4 +82,48 @@ class MdHelperTest < ActionView::TestCase
     assert_includes result, "<tbody>"
     assert_includes result, "Header"
   end
+
+  test "IAL block syntax applies class to previous element" do
+    markdown = "Some text\n\n{ .card-body }"
+    result = render_markdown(markdown)
+    assert_includes result, 'class="card-body"'
+    assert_not_includes result, "{ .card-body }"
+  end
+
+  test "IAL inline syntax applies class to same element" do
+    result = render_markdown("## My Heading { .text-danger }")
+    assert_includes result, 'class="text-danger"'
+    assert_includes result, "My Heading"
+    assert_not_includes result, "{ .text-danger }"
+  end
+
+  test "IAL supports multiple classes" do
+    result = render_markdown("A paragraph { .lead .text-muted }")
+    assert_includes result, "lead"
+    assert_includes result, "text-muted"
+    assert_not_includes result, "{ .lead .text-muted }"
+  end
+
+  test "IAL supports id token" do
+    result = render_markdown("## Heading { #my-anchor }")
+    assert_includes result, 'id="my-anchor"'
+    assert_not_includes result, "{ #my-anchor }"
+  end
+
+  test "IAL block syntax without previous element is ignored safely" do
+    result = render_markdown("{ .orphan }")
+    assert_not_includes result, "{ .orphan }"
+  end
+
+  test "IAL immediately after inline element applies to that element" do
+    result = render_markdown("[This is a link](https://bedlamfringe.co.uk){ .card-body }")
+    assert_match(/<a[^>]*class="card-body"[^>]*>/, result)
+    assert_not_includes result, "{ .card-body }"
+  end
+
+  test "IAL immediately after image applies to the img element" do
+    result = render_markdown("![alt text](/images/test.png){ .rounded .img-fluid }")
+    assert_match(/<img[^>]*class="rounded img-fluid"[^>]*>/, result)
+    assert_not_includes result, "{ .rounded .img-fluid }"
+  end
 end
