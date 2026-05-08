@@ -16,7 +16,12 @@ export default class extends Controller {
     this.#textarea.style.display = "none"
 
     this.#buildShell()
-    await this.#mountEditor()
+    try {
+      await this.#mountEditor()
+    } catch {
+      this.#textarea.style.display = ""
+      return
+    }
 
     // Textarea is kept current via listenerCtx, but sync on submit as safety net
     this.#boundSync = () => this.#syncFromEditor()
@@ -37,7 +42,7 @@ export default class extends Controller {
     if (mode !== this.#mode) this.#switchTo(mode)
   }
 
-  bold()  {
+  bold() {
     this.#mode === "source"
       ? this.#sourceInline("**", "**", "bold")
       : this.#insertInlineMark("strong", this.#cmds.toggleStrongCommand, "bold")
@@ -96,11 +101,8 @@ export default class extends Controller {
   }
 
   insertLink(event) { this.#showLinkDialog(event) }
-  insertImage()     { this.#fileInput?.click() }
-
-  insertTable(event) {
-    this.#showTableDialog(event)
-  }
+  insertImage() { this.#fileInput?.click() }
+  insertTable(event) { this.#showTableDialog(event) }
 
   undo() { if (this.#mode === "edit") this.#cmd(this.#cmds.undoCommand) }
   redo() { if (this.#mode === "edit") this.#cmd(this.#cmds.redoCommand) }
@@ -121,7 +123,16 @@ export default class extends Controller {
   #linkDialogResolve = null
   #tableDialog = null
   #tableDialogResolve = null
+
+  // Command definitions (objects with .key, used with commandsCtx.call())
   #cmds = {}
+  // Milkdown context keys (used with ctx.get())
+  #ctx = {}
+  // Milkdown utility functions stored after dynamic import
+  #callCommand = null
+  #TextSelection = null
+  #replaceAll = null
+  #insert = null
 
   #buildShell() {
     const toolbar = document.createElement("div")
@@ -174,8 +185,8 @@ export default class extends Controller {
     toolbar.addEventListener("mousedown", e => {
       if (e.target.closest(".milkdown-btn, .milkdown-tab")) {
         e.preventDefault()
-        if (this.#editor && this.#cmds.editorViewCtx) {
-          this.#editor.action(ctx => ctx.get(this.#cmds.editorViewCtx).focus())
+        if (this.#editor && this.#ctx.editorViewCtx) {
+          this.#editor.action(ctx => ctx.get(this.#ctx.editorViewCtx).focus())
         }
       }
     })
@@ -264,13 +275,13 @@ export default class extends Controller {
       { Editor, defaultValueCtx, rootCtx, editorViewCtx, commandsCtx },
       { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand,
         wrapInBulletListCommand, wrapInOrderedListCommand, wrapInBlockquoteCommand,
-        createCodeBlockCommand, toggleInlineCodeCommand, updateLinkCommand },
+        createCodeBlockCommand, toggleInlineCodeCommand },
       { gfm, toggleStrikethroughCommand, insertTableCommand },
       { history, undoCommand, redoCommand },
       { clipboard },
       { listener, listenerCtx },
       { upload, uploadConfig },
-      { callCommand },
+      { callCommand, replaceAll, insert },
       { TextSelection }
     ] = await Promise.all([
       import("@milkdown/core"),
@@ -286,13 +297,17 @@ export default class extends Controller {
 
     import("../styles/milkdown_editor.css")
 
+    this.#ctx = { editorViewCtx, commandsCtx }
+    this.#callCommand = callCommand
+    this.#TextSelection = TextSelection
+    this.#replaceAll = replaceAll
+    this.#insert = insert
+
     this.#cmds = {
       toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand,
       wrapInBulletListCommand, wrapInOrderedListCommand, wrapInBlockquoteCommand,
       createCodeBlockCommand, toggleInlineCodeCommand, toggleStrikethroughCommand,
-      insertTableCommand, updateLinkCommand,
-      undoCommand, redoCommand,
-      callCommand, editorViewCtx, commandsCtx, TextSelection
+      insertTableCommand, undoCommand, redoCommand
     }
 
     this.#editor = await Editor.make()
@@ -320,9 +335,16 @@ export default class extends Controller {
   }
 
   async #destroyEditor() {
-    await this.#editor?.destroy()
+    const editor = this.#editor
+    // Null eagerly so a reconnect racing this async destruction sees a clean slate
     this.#editor = null
     this.#cmds = {}
+    this.#ctx = {}
+    this.#callCommand = null
+    this.#TextSelection = null
+    this.#replaceAll = null
+    this.#insert = null
+    await editor?.destroy()
   }
 
   async #switchTo(mode) {
@@ -343,9 +365,9 @@ export default class extends Controller {
 
     if (mode === "edit") {
       if (prev === "source") {
-        await this.#destroyEditor()
-        this.#editorEl.innerHTML = ""
-        await this.#mountEditor(this.#textarea.value)
+        // Replace content in the live editor — preserves the editor instance and plugins
+        // flush=true re-creates ProseMirror state (clearing undo history) to match source edits
+        this.#editor.action(this.#replaceAll(this.#textarea.value, true))
       }
       this.#editorEl.style.display = ""
     } else if (mode === "source") {
@@ -363,7 +385,7 @@ export default class extends Controller {
     const response = await fetch("/markdown/preview", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
-      body: JSON.stringify({ input_html: encodeURIComponent(this.#textarea.value) })
+      body: JSON.stringify({ input_html: this.#textarea.value })
     })
     if (response.ok) {
       const { rendered_md } = await response.json()
@@ -380,9 +402,12 @@ export default class extends Controller {
 
   #cmd(cmdDef, payload = undefined) {
     if (!this.#editor || this.#mode !== "edit" || !cmdDef) return
-    // Focus in a separate action first to avoid interfering with the command's selection read
-    this.#editor.action(ctx => ctx.get(this.#cmds.editorViewCtx).focus())
-    this.#editor.action(this.#cmds.callCommand(cmdDef.key, payload))
+    // Focus and dispatch the command in a single action so ProseMirror reads the selection
+    // from the already-focused view, avoiding ordering assumptions across two action calls.
+    this.#editor.action(ctx => {
+      ctx.get(this.#ctx.editorViewCtx).focus()
+      this.#callCommand(cmdDef.key, payload)(ctx)
+    })
   }
 
   // ── Source-mode helpers ──────────────────────────────────────────────────────
@@ -430,16 +455,15 @@ export default class extends Controller {
   // on existing selections as usual.
   #insertInlineMark(markName, cmdDef, placeholder) {
     if (!this.#editor || this.#mode !== "edit") return
-    const { editorViewCtx, commandsCtx, TextSelection } = this.#cmds
 
     this.#editor.action(ctx => {
-      const view = ctx.get(editorViewCtx)
+      const view = ctx.get(this.#ctx.editorViewCtx)
       view.focus()
       const { state } = view
       const { selection } = state
 
       if (!selection.empty) {
-        ctx.get(commandsCtx).call(cmdDef.key)
+        ctx.get(this.#ctx.commandsCtx).call(cmdDef.key)
         return
       }
 
@@ -450,17 +474,16 @@ export default class extends Controller {
       const node = state.schema.text(placeholder, [markType.create()])
       // Pass false so ProseMirror doesn't strip the mark by inheriting from the cursor position
       const tr = state.tr.replaceSelectionWith(node, false)
-      tr.setSelection(TextSelection.create(tr.doc, from, from + placeholder.length))
+      tr.setSelection(this.#TextSelection.create(tr.doc, from, from + placeholder.length))
       view.dispatch(tr)
     })
   }
 
   #toggleTaskList() {
     if (!this.#editor || this.#mode !== "edit") return
-    const { editorViewCtx, commandsCtx, wrapInBulletListCommand } = this.#cmds
 
     this.#editor.action(ctx => {
-      const view = ctx.get(editorViewCtx)
+      const view = ctx.get(this.#ctx.editorViewCtx)
       const { state, dispatch } = view
       const { $from } = state.selection
 
@@ -477,7 +500,7 @@ export default class extends Controller {
           checked: node.attrs.checked == null ? false : null
         }))
       } else {
-        ctx.get(commandsCtx).call(wrapInBulletListCommand)
+        ctx.get(this.#ctx.commandsCtx).call(this.#cmds.wrapInBulletListCommand.key)
         const { $from: f } = view.state.selection
         for (let d = f.depth; d >= 0; d--) {
           if (f.node(d).type.name === "list_item") {
@@ -501,7 +524,7 @@ export default class extends Controller {
       selectedText = ta.value.substring(ta.selectionStart, ta.selectionEnd)
     } else if (this.#editor) {
       this.#editor.action(ctx => {
-        const view = ctx.get(this.#cmds.editorViewCtx)
+        const view = ctx.get(this.#ctx.editorViewCtx)
         const { state } = view
         if (!state.selection.empty) {
           selectedText = state.doc.textBetween(state.selection.from, state.selection.to)
@@ -535,7 +558,7 @@ export default class extends Controller {
     }
 
     this.#editor.action(ctx => {
-      const view = ctx.get(this.#cmds.editorViewCtx)
+      const view = ctx.get(this.#ctx.editorViewCtx)
       const { state, dispatch } = view
       const { selection, schema } = state
       const linkMark = schema.marks.link?.create({ href, title: "" })
@@ -546,7 +569,6 @@ export default class extends Controller {
         dispatch(state.tr.addMark(selection.from, selection.to, linkMark))
       } else {
         // Insert linked text, using insertText + addMark to avoid mark inheritance stripping
-        const linkText = text?.trim() || href
         const from = selection.from
         const tr = state.tr.insertText(linkText, from)
         tr.addMark(from, from + linkText.length, linkMark)
@@ -558,7 +580,7 @@ export default class extends Controller {
 
   #buildTableDialog() {
     const dialog = document.createElement("dialog")
-    dialog.className = "milkdown-link-dialog"
+    dialog.className = "milkdown-table-dialog"
     dialog.innerHTML = `
       <form class="milkdown-link-dialog__form">
         <p class="milkdown-link-dialog__title">Insert table</p>
@@ -610,23 +632,23 @@ export default class extends Controller {
 
     if (this.#mode === "source") {
       const header = "| " + Array(cols).fill("Header").join(" | ") + " |"
-      const sep    = "| " + Array(cols).fill("---").join(" | ") + " |"
-      const row    = "| " + Array(cols).fill("Cell").join(" | ") + " |"
-      const table  = [header, sep, ...Array(rows - 1).fill(row)].join("\n")
+      const sep = "| " + Array(cols).fill("---").join(" | ") + " |"
+      const row = "| " + Array(cols).fill("Cell").join(" | ") + " |"
+      const table = [header, sep, ...Array(rows - 1).fill(row)].join("\n")
       this.#sourceBlock("", "\n", table)
       return
     }
 
     // WYSIWYG: build table nodes from schema
     this.#editor.action(ctx => {
-      const view = ctx.get(this.#cmds.editorViewCtx)
+      const view = ctx.get(this.#ctx.editorViewCtx)
       view.focus()
       const { state, dispatch } = view
       const { schema } = state
       const { table, table_row, table_cell, table_header } = schema.nodes
 
       if (!table || !table_row || !table_cell) {
-        ctx.get(this.#cmds.commandsCtx).call(this.#cmds.insertTableCommand.key)
+        ctx.get(this.#ctx.commandsCtx).call(this.#cmds.insertTableCommand.key)
         return
       }
 
@@ -636,7 +658,7 @@ export default class extends Controller {
       }
 
       const headerRow = table_row.create(null, Array.from({ length: cols }, () => makeCell(true)))
-      const bodyRows  = Array.from({ length: Math.max(rows - 1, 0) }, () =>
+      const bodyRows = Array.from({ length: Math.max(rows - 1, 0) }, () =>
         table_row.create(null, Array.from({ length: cols }, () => makeCell(false)))
       )
       const tableNode = table.create(null, [headerRow, ...bodyRows])
@@ -658,41 +680,44 @@ export default class extends Controller {
     const files = this.#fileInput.files
     if (!files?.length || !this.#editor) return
 
-    const { editorViewCtx } = this.#cmds
-    const schema = this.#editor.action(ctx => ctx.get(editorViewCtx).state.schema)
-    const nodes = await this.#uploadFiles(files, schema)
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+    const results = await Promise.all(
+      Array.from(files)
+        .filter(f => f.type.startsWith("image/"))
+        .map(f => this.#uploadOneFile(f, csrfToken))
+    )
 
-    if (nodes.length) {
-      this.#editor.action(ctx => {
-        const view = ctx.get(editorViewCtx)
-        let tr = view.state.tr
-        nodes.forEach(node => { tr = tr.replaceSelectionWith(node) })
-        view.dispatch(tr)
-      })
+    for (const { url, alt } of results.filter(Boolean)) {
+      this.#editor.action(this.#insert(`![${alt || "image"}](${url})`))
     }
     this.#fileInput.value = ""
   }
 
+  // Used by plugin-upload (drag/drop/paste) — returns ProseMirror nodes
   async #uploadFiles(files, schema) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
-    const nodes = []
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) continue
-      const formData = new FormData()
-      formData.append("image", file, file.name || "upload.png")
-      if (this.itemTypeValue) formData.append("item_type", this.itemTypeValue)
-      if (this.itemIdValue) formData.append("item_id", this.itemIdValue)
-      const response = await fetch(this.uploadUrlValue, {
-        method: "POST",
-        headers: { "X-CSRF-Token": csrfToken },
-        body: formData
-      })
-      if (response.ok) {
-        const { url, alt } = await response.json()
-        const node = schema.nodes.image?.createAndFill({ src: url, alt })
-        if (node) nodes.push(node)
-      }
-    }
-    return nodes
+    const results = await Promise.all(
+      Array.from(files)
+        .filter(f => f.type.startsWith("image/"))
+        .map(f => this.#uploadOneFile(f, csrfToken))
+    )
+    return results
+      .filter(Boolean)
+      .map(({ url, alt }) => schema.nodes.image?.createAndFill({ src: url, alt }))
+      .filter(Boolean)
+  }
+
+  async #uploadOneFile(file, csrfToken) {
+    const formData = new FormData()
+    formData.append("image", file, file.name || "upload.png")
+    if (this.itemTypeValue) formData.append("item_type", this.itemTypeValue)
+    if (this.itemIdValue) formData.append("item_id", this.itemIdValue)
+    const response = await fetch(this.uploadUrlValue, {
+      method: "POST",
+      headers: { "X-CSRF-Token": csrfToken },
+      body: formData
+    })
+    if (!response.ok) return null
+    return response.json()
   }
 }
