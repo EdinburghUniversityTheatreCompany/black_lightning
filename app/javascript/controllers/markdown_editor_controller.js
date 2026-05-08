@@ -26,6 +26,7 @@ export default class extends Controller {
   disconnect() {
     this.#form?.removeEventListener("submit", this.#boundSync, { capture: true })
     this.#linkDialog?.remove()
+    this.#tableDialog?.remove()
     this.#destroyEditor()
   }
 
@@ -36,23 +37,73 @@ export default class extends Controller {
     if (mode !== this.#mode) this.#switchTo(mode)
   }
 
-  bold() { this.#insertInlineMark("strong", this.#cmds.toggleStrongCommand, "bold") }
-  italic() { this.#insertInlineMark("emphasis", this.#cmds.toggleEmphasisCommand, "italic") }
-  strike() { this.#insertInlineMark("strike_through", this.#cmds.toggleStrikethroughCommand, "strikethrough") }
-  h1() { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 1 }) }
-  h2() { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 2 }) }
-  h3() { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 3 }) }
-  bulletList() { this.#cmd(this.#cmds.wrapInBulletListCommand) }
-  orderedList() { this.#cmd(this.#cmds.wrapInOrderedListCommand) }
-  taskList() { this.#toggleTaskList() }
-  blockquote() { this.#cmd(this.#cmds.wrapInBlockquoteCommand) }
-  inlineCode() { this.#insertInlineMark("inlineCode", this.#cmds.toggleInlineCodeCommand, "code") }
-  codeBlock() { this.#cmd(this.#cmds.createCodeBlockCommand) }
+  bold()  {
+    this.#mode === "source"
+      ? this.#sourceInline("**", "**", "bold")
+      : this.#insertInlineMark("strong", this.#cmds.toggleStrongCommand, "bold")
+  }
+
+  italic() {
+    this.#mode === "source"
+      ? this.#sourceInline("*", "*", "italic")
+      : this.#insertInlineMark("emphasis", this.#cmds.toggleEmphasisCommand, "italic")
+  }
+
+  strike() {
+    this.#mode === "source"
+      ? this.#sourceInline("~~", "~~", "strikethrough")
+      : this.#insertInlineMark("strike_through", this.#cmds.toggleStrikethroughCommand, "strikethrough")
+  }
+
+  h1() {
+    this.#mode === "source" ? this.#sourceLinePrefix("# ") : this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 1 })
+  }
+
+  h2() {
+    this.#mode === "source" ? this.#sourceLinePrefix("## ") : this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 2 })
+  }
+
+  h3() {
+    this.#mode === "source" ? this.#sourceLinePrefix("### ") : this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 3 })
+  }
+
+  bulletList() {
+    this.#mode === "source" ? this.#sourceLinePrefix("- ") : this.#cmd(this.#cmds.wrapInBulletListCommand)
+  }
+
+  orderedList() {
+    this.#mode === "source" ? this.#sourceLinePrefix("1. ") : this.#cmd(this.#cmds.wrapInOrderedListCommand)
+  }
+
+  taskList() {
+    this.#mode === "source" ? this.#sourceLinePrefix("- [ ] ") : this.#toggleTaskList()
+  }
+
+  blockquote() {
+    this.#mode === "source" ? this.#sourceLinePrefix("> ") : this.#cmd(this.#cmds.wrapInBlockquoteCommand)
+  }
+
+  inlineCode() {
+    this.#mode === "source"
+      ? this.#sourceInline("`", "`", "code")
+      : this.#insertInlineMark("inlineCode", this.#cmds.toggleInlineCodeCommand, "code")
+  }
+
+  codeBlock() {
+    this.#mode === "source"
+      ? this.#sourceBlock("```\n", "\n```", "code")
+      : this.#cmd(this.#cmds.createCodeBlockCommand)
+  }
+
   insertLink(event) { this.#showLinkDialog(event) }
-  insertImage() { this.#fileInput?.click() }
-  insertTable() { this.#cmd(this.#cmds.insertTableCommand) }
-  undo() { this.#cmd(this.#cmds.undoCommand) }
-  redo() { this.#cmd(this.#cmds.redoCommand) }
+  insertImage()     { this.#fileInput?.click() }
+
+  insertTable(event) {
+    this.#showTableDialog(event)
+  }
+
+  undo() { if (this.#mode === "edit") this.#cmd(this.#cmds.undoCommand) }
+  redo() { if (this.#mode === "edit") this.#cmd(this.#cmds.redoCommand) }
 
   // Private
 
@@ -68,6 +119,8 @@ export default class extends Controller {
   #fileInput = null
   #linkDialog = null
   #linkDialogResolve = null
+  #tableDialog = null
+  #tableDialogResolve = null
   #cmds = {}
 
   #buildShell() {
@@ -157,6 +210,9 @@ export default class extends Controller {
 
     this.#linkDialog = this.#buildLinkDialog()
     document.body.appendChild(this.#linkDialog)
+
+    this.#tableDialog = this.#buildTableDialog()
+    document.body.appendChild(this.#tableDialog)
   }
 
   #buildLinkDialog() {
@@ -324,10 +380,49 @@ export default class extends Controller {
 
   #cmd(cmdDef, payload = undefined) {
     if (!this.#editor || this.#mode !== "edit" || !cmdDef) return
-    this.#editor.action(ctx => {
-      ctx.get(this.#cmds.editorViewCtx).focus()
-      ctx.get(this.#cmds.commandsCtx).call(cmdDef.key, payload)
-    })
+    // Focus in a separate action first to avoid interfering with the command's selection read
+    this.#editor.action(ctx => ctx.get(this.#cmds.editorViewCtx).focus())
+    this.#editor.action(this.#cmds.callCommand(cmdDef.key, payload))
+  }
+
+  // ── Source-mode helpers ──────────────────────────────────────────────────────
+
+  // Wraps selected text (or inserts placeholder) with before/after syntax.
+  #sourceInline(before, after, placeholder) {
+    const ta = this.#sourceTextarea
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const selected = ta.value.substring(start, end)
+    const text = selected || placeholder
+    ta.value = ta.value.substring(0, start) + before + text + after + ta.value.substring(end)
+    ta.setSelectionRange(start + before.length, start + before.length + text.length)
+    this.#textarea.value = ta.value
+    ta.focus()
+  }
+
+  // Inserts a markdown prefix at the start of the current line.
+  #sourceLinePrefix(prefix) {
+    const ta = this.#sourceTextarea
+    const pos = ta.selectionStart
+    const lineStart = ta.value.lastIndexOf("\n", pos - 1) + 1
+    ta.value = ta.value.substring(0, lineStart) + prefix + ta.value.substring(lineStart)
+    ta.setSelectionRange(pos + prefix.length, pos + prefix.length)
+    this.#textarea.value = ta.value
+    ta.focus()
+  }
+
+  // Wraps selected text (or placeholder) in a block-level syntax (e.g. fenced code).
+  #sourceBlock(before, after, placeholder) {
+    const ta = this.#sourceTextarea
+    const start = ta.selectionStart
+    const end = ta.selectionEnd
+    const selected = ta.value.substring(start, end)
+    const text = selected || placeholder
+    const insertion = before + text + after
+    ta.value = ta.value.substring(0, start) + insertion + ta.value.substring(end)
+    ta.setSelectionRange(start + before.length, start + before.length + text.length)
+    this.#textarea.value = ta.value
+    ta.focus()
   }
 
   // For inline marks: inserts placeholder text with the mark applied when nothing
@@ -395,27 +490,24 @@ export default class extends Controller {
   }
 
   async #showLinkDialog(event) {
-    if (!this.#editor || this.#mode !== "edit") return
+    if (this.#mode === "preview") return
 
-    // Position dialog below the clicked button
-    if (event?.currentTarget) {
-      const rect = event.currentTarget.getBoundingClientRect()
-      this.#linkDialog.style.margin = "0"
-      this.#linkDialog.style.position = "fixed"
-      this.#linkDialog.style.left = `${Math.min(rect.left, window.innerWidth - 340)}px`
-      this.#linkDialog.style.top = `${rect.bottom + 6}px`
-    }
+    this.#positionDialog(this.#linkDialog, event, 340)
 
-    // Pre-fill text field if editor has a selection
-    const { editorViewCtx } = this.#cmds
+    // Pre-fill text field from current selection
     let selectedText = ""
-    this.#editor.action(ctx => {
-      const view = ctx.get(editorViewCtx)
-      const { state } = view
-      if (!state.selection.empty) {
-        selectedText = state.doc.textBetween(state.selection.from, state.selection.to)
-      }
-    })
+    if (this.#mode === "source") {
+      const ta = this.#sourceTextarea
+      selectedText = ta.value.substring(ta.selectionStart, ta.selectionEnd)
+    } else if (this.#editor) {
+      this.#editor.action(ctx => {
+        const view = ctx.get(this.#cmds.editorViewCtx)
+        const { state } = view
+        if (!state.selection.empty) {
+          selectedText = state.doc.textBetween(state.selection.from, state.selection.to)
+        }
+      })
+    }
 
     const form = this.#linkDialog.querySelector("form")
     form.reset()
@@ -428,9 +520,22 @@ export default class extends Controller {
     if (!result?.href) return
 
     const { href, text } = result
+    const linkText = text?.trim() || href
+
+    if (this.#mode === "source") {
+      const ta = this.#sourceTextarea
+      const start = ta.selectionStart
+      const end = ta.selectionEnd
+      const insertion = `[${linkText}](${href})`
+      ta.value = ta.value.substring(0, start) + insertion + ta.value.substring(end)
+      ta.setSelectionRange(start + insertion.length, start + insertion.length)
+      this.#textarea.value = ta.value
+      ta.focus()
+      return
+    }
 
     this.#editor.action(ctx => {
-      const view = ctx.get(editorViewCtx)
+      const view = ctx.get(this.#cmds.editorViewCtx)
       const { state, dispatch } = view
       const { selection, schema } = state
       const linkMark = schema.marks.link?.create({ href, title: "" })
@@ -449,6 +554,104 @@ export default class extends Controller {
       }
       view.focus()
     })
+  }
+
+  #buildTableDialog() {
+    const dialog = document.createElement("dialog")
+    dialog.className = "milkdown-link-dialog"
+    dialog.innerHTML = `
+      <form class="milkdown-link-dialog__form">
+        <p class="milkdown-link-dialog__title">Insert table</p>
+        <div style="display:flex;gap:0.75rem">
+          <label class="milkdown-link-dialog__label" style="flex:1">Rows
+            <input type="number" name="rows" class="form-control form-control-sm mt-1" value="3" min="1" max="20">
+          </label>
+          <label class="milkdown-link-dialog__label" style="flex:1">Columns
+            <input type="number" name="cols" class="form-control form-control-sm mt-1" value="3" min="1" max="10">
+          </label>
+        </div>
+        <div class="milkdown-link-dialog__actions">
+          <button type="button" class="btn btn-sm btn-secondary" data-cancel>Cancel</button>
+          <button type="submit" class="btn btn-sm btn-primary">Insert</button>
+        </div>
+      </form>
+    `
+
+    const form = dialog.querySelector("form")
+    form.addEventListener("submit", e => {
+      e.preventDefault()
+      const data = new FormData(form)
+      const result = { rows: parseInt(data.get("rows"), 10) || 3, cols: parseInt(data.get("cols"), 10) || 3 }
+      dialog.close()
+      this.#tableDialogResolve?.(result)
+      this.#tableDialogResolve = null
+    })
+
+    dialog.querySelector("[data-cancel]").addEventListener("click", () => dialog.close())
+    dialog.addEventListener("close", () => {
+      this.#tableDialogResolve?.(null)
+      this.#tableDialogResolve = null
+    })
+
+    return dialog
+  }
+
+  async #showTableDialog(event) {
+    if (this.#mode === "preview") return
+
+    this.#positionDialog(this.#tableDialog, event, 260)
+    this.#tableDialog.showModal()
+    this.#tableDialog.querySelector("[name='rows']").focus()
+
+    const result = await new Promise(resolve => { this.#tableDialogResolve = resolve })
+    if (!result) return
+
+    const { rows, cols } = result
+
+    if (this.#mode === "source") {
+      const header = "| " + Array(cols).fill("Header").join(" | ") + " |"
+      const sep    = "| " + Array(cols).fill("---").join(" | ") + " |"
+      const row    = "| " + Array(cols).fill("Cell").join(" | ") + " |"
+      const table  = [header, sep, ...Array(rows - 1).fill(row)].join("\n")
+      this.#sourceBlock("", "\n", table)
+      return
+    }
+
+    // WYSIWYG: build table nodes from schema
+    this.#editor.action(ctx => {
+      const view = ctx.get(this.#cmds.editorViewCtx)
+      view.focus()
+      const { state, dispatch } = view
+      const { schema } = state
+      const { table, table_row, table_cell, table_header } = schema.nodes
+
+      if (!table || !table_row || !table_cell) {
+        ctx.get(this.#cmds.commandsCtx).call(this.#cmds.insertTableCommand.key)
+        return
+      }
+
+      const makeCell = (isHeader) => {
+        const type = (isHeader && table_header) ? table_header : table_cell
+        return type.createAndFill()
+      }
+
+      const headerRow = table_row.create(null, Array.from({ length: cols }, () => makeCell(true)))
+      const bodyRows  = Array.from({ length: Math.max(rows - 1, 0) }, () =>
+        table_row.create(null, Array.from({ length: cols }, () => makeCell(false)))
+      )
+      const tableNode = table.create(null, [headerRow, ...bodyRows])
+      dispatch(state.tr.replaceSelectionWith(tableNode))
+    })
+  }
+
+  // Positions a dialog element anchored below the triggering button.
+  #positionDialog(dialog, event, maxWidth = 340) {
+    if (!event?.currentTarget) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    dialog.style.margin = "0"
+    dialog.style.position = "fixed"
+    dialog.style.left = `${Math.min(rect.left, window.innerWidth - maxWidth - 16)}px`
+    dialog.style.top = `${rect.bottom + 6}px`
   }
 
   async #handleFileInputChange() {
