@@ -1,63 +1,82 @@
-<%= form_with(url: admin_permissions_path.to_s, method: 'post', local: true) do %>
-<table class="table table-hover">
-  <colgroup>
-    <col span="1" style="border-right: 1px solid #dddddd;">
+<%= render Admin::CardComponent.new(title: "Permissions", flush: true) do %>
+  <%= form_with(url: admin_permissions_path.to_s, method: "post", local: true,
+                data: { controller: "admin--permissions-grid",
+                        action: "submit->admin--permissions-grid#confirmSubmit" }) do %>
+    <div class="overflow-auto max-h-[calc(100vh-12rem)]">
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th class="sticky top-0 left-0 z-40 bg-gray-50"></th>
+            <% @roles.each do |role| %>
+              <th colspan="<%= @actions.count %>" class="sticky top-0 z-30 bg-gray-50 whitespace-nowrap"><%= role.name %></th>
+            <% end %>
+          </tr>
+          <tr>
+            <th class="sticky top-9.25 left-0 z-30 bg-gray-50 whitespace-nowrap">Subject Class</th>
+            <% @roles.each do |role| %>
+              <% @actions.each do |action| %>
+                <th title="<%= action %>" class="sticky top-9.25 z-20 bg-gray-50"><%= action[0].capitalize %></th>
+              <% end %>
+            <% end %>
+          </tr>
+        </thead>
 
-    <% @roles.each do |role| %>
-      <col span="<%= @actions.count - 1%>">
-      <col span="1" style="border-right: 1px solid #dddddd;">
-    <% end %>
-  </colgroup>
-  <thead>
-    <tr>
-      <th></th>
-      <% @roles.each do |role| %>
-        <th colspan="<%= @actions.count %>"><%= role.name %></th>
-      <% end %>
-    </tr>
+        <tbody>
+          <% @models.each do |model| %>
+            <tr>
+              <td class="sticky left-0 z-10 bg-white whitespace-nowrap"><%= model.name %></td>
 
-    <tr>
-      <th>Subject Class</th>
-      <% @roles.each do |role| %>
-        <% @actions.each do |action|%>
-        <th title="<%= action %>"><%= action[0].capitalize %></th>
-        <%end%>
-      <% end %>
-    </tr>
-  </thead>
-
-  <tbody>
-    <% @models.each do |model| %>
-      <tr>
-        <td><%= model.name %></td>
-
-        <% @roles.each do |role| %>
-          <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
-          <%= render 'permission_grid', role: role, model: model, permission: permission %>
-        <% end %>
-      </tr>
-    <% end %>
-    <% @miscellaneous_permission_subject_classes.each do |subject_class, actions| %>
-      <tr>
-        <% actions.each do |action, description| %>
-          <td><%= description %></td>
-          
-          <% @roles.each do |role| %>
-            <td colspan="<%= @actions.count %>">
-              <% # Check if there is an instance of the permission model for this role with the correct subject_class and action. %>
-              <% # If so, that means the box should start off as ticked. %>
-              <% checked = role.permissions.select{ |p| p.subject_class == subject_class && p.action == action }.any? %>
-
-              <% # Render the tickbox for this role/action combination. %>
-              <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", "#{action}", checked, title: description %>
-            </td>
+              <% @roles.each do |role| %>
+                <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
+                <%= render "permission_grid", role: role, model: model, permission: permission %>
+              <% end %>
+            </tr>
           <% end %>
-        <% end %>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
 
-<%= submit_tag("Update", class: 'btn btn-secondary') %>
+          <% @miscellaneous_permission_subject_classes.each do |subject_class, actions| %>
+            <% actions.each do |action, description| %>
+              <tr>
+                <td class="sticky left-0 z-10 bg-white whitespace-nowrap"><%= description %></td>
 
+                <% @roles.each do |role| %>
+                  <td colspan="<%= @actions.count %>">
+                    <% checked = role.permissions.select{ |p| p.subject_class == subject_class && p.action == action }.any? %>
+                    <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", action, checked,
+                        title: description,
+                        data: { action: "change->admin--permissions-grid#markChanged" } %>
+                  </td>
+                <% end %>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="px-4 py-3 border-t border-gray-200 flex items-center gap-3">
+      <%= submit_tag("Update", class: "btn btn-secondary") %>
+      <span class="text-sm text-gray-500 hidden" data-admin--permissions-grid-target="changeCount">
+        <span data-admin--permissions-grid-target="changeCountText"></span> pending change(s)
+      </span>
+    </div>
+
+    <div class="hidden fixed inset-0 z-50 items-center justify-center"
+         data-admin--permissions-grid-target="modal"
+         role="dialog" aria-modal="true">
+      <div class="absolute inset-0 bg-black/50" data-action="click->admin--permissions-grid#backdropClick"></div>
+      <div class="relative bg-white rounded shadow-lg w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
+           data-admin--permissions-grid-target="dialog">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <h5 class="text-base font-semibold text-gray-800">Confirm Permission Changes</h5>
+          <button type="button" class="text-gray-500 hover:text-gray-700 text-xl leading-none cursor-pointer bg-transparent border-0"
+                  data-action="click->admin--permissions-grid#cancelSubmit">&times;</button>
+        </div>
+        <div class="p-4 overflow-auto flex-1" data-admin--permissions-grid-target="changeList"></div>
+        <div class="flex items-center gap-2 justify-end px-4 py-3 border-t border-gray-200">
+          <button type="button" class="btn btn-secondary" data-action="click->admin--permissions-grid#cancelSubmit">Cancel</button>
+          <button type="button" class="btn btn-success" data-action="click->admin--permissions-grid#approveSubmit">Apply Changes</button>
+        </div>
+      </div>
+    </div>
+  <% end %>
 <% end %>
