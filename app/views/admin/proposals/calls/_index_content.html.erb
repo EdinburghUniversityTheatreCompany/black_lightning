@@ -1,106 +1,126 @@
 <% can_act = can?(:approve, Admin::Proposals::Proposal) %>
 <% redirect_param = { redirect_to: admin_proposals_calls_path } %>
 
-<div class="callout callout-info">
-  <p>
-    Active proposals across every call. Awaiting Approval decisions happen before the General Meeting;
-    Approved proposals are set to successful or unsuccessful after the General Meeting.
-  </p>
-  <% unless can_act %>
-    <p class="mb-0"><em>You have view-only access. Contact an approver to make changes.</em></p>
+<div class="card mb-4">
+  <div class="card-body callout callout-info mb-0">
+    <p>
+      Active proposals across every call. Awaiting Approval decisions happen before the General Meeting;
+      Approved proposals are set to successful or unsuccessful after the General Meeting.
+    </p>
+    <% unless can_act %>
+      <p class="mb-0"><em>You have view-only access. Contact an approver to make changes.</em></p>
+    <% end %>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">Open Calls</h5>
+  </div>
+  <div class="card-body">
+    <% if @open_calls.any? %>
+      <% @open_calls.each do |call| %>
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center <%= 'mt-3' unless call == @open_calls.first %>">
+          <div>
+            <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
+            <small class="text-muted">
+              Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+              &middot;
+              Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+            </small>
+          </div>
+          <%= get_link(Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_proposal_path(call_id: call.id), link_text: "New Proposal") %>
+        </div>
+      <% end %>
+    <% else %>
+      <p class="mb-0"><em>There are no open calls.</em></p>
+    <% end %>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h5>
+  </div>
+  <% awaiting_by_call = @awaiting_approval.group_by(&:call) %>
+  <% if awaiting_by_call.any? %>
+    <% awaiting_by_call.sort_by { |call, _| call.editing_deadline }.each do |call, proposals| %>
+      <div class="card-body border-bottom pb-2">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+          <div>
+            <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
+            <small class="text-muted">
+              Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+              &middot;
+              Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+            </small>
+          </div>
+        </div>
+
+        <% headers = [ "Show Title" ] %>
+        <% headers << "Actions" if can_act %>
+
+        <% field_sets = proposals.map do |proposal|
+          fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
+          if can_act
+            approve_link = proposal.has_debtors ?
+              get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
+              get_link(proposal, :approve, query_params: redirect_param)
+
+            fields << safe_join([
+              approve_link,
+              get_link(proposal, :reject, query_params: redirect_param)
+            ].compact, " ")
+          end
+          { fields: fields }
+        end %>
+
+        <%= render "shared/table", headers: headers, field_sets: field_sets, col_widths: ["70%", "30%"] %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="card-body">
+      <p class="mb-0"><em>No proposals are awaiting approval.</em></p>
+    </div>
   <% end %>
 </div>
 
-<h3>Open Calls</h3>
+<div class="card mb-4">
+  <div class="card-header">
+    <h5 class="card-title mb-0">Approved (Awaiting GM Outcome) <span class="badge bg-secondary"><%= @approved.size %></span></h5>
+  </div>
+  <% if @approved.any? %>
+    <% @approved.group_by(&:call).each do |call, proposals| %>
+      <div class="card-body border-bottom pb-2">
+        <div class="mb-2">
+          <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
+          <small class="text-muted">
+            Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+            &middot;
+            Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+          </small>
+        </div>
 
-<% if @open_calls.any? %>
-  <% @open_calls.each do |call| %>
-    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
-      <div>
-        <h4 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
-        <small class="text-muted">
-          Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
-          &middot;
-          Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
-        </small>
+        <% headers = [ "Show Title" ] %>
+        <% headers << "Actions" if can_act %>
+
+        <% field_sets = proposals.map do |proposal|
+          fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
+          if can_act
+            fields << safe_join([
+              get_link(proposal, :mark_successful, query_params: redirect_param),
+              get_link(proposal, :mark_unsuccessful, query_params: redirect_param)
+            ].compact, " ")
+          end
+          { fields: fields }
+        end %>
+
+        <%= render "shared/table", headers: headers, field_sets: field_sets, col_widths: ["70%", "30%"] %>
       </div>
-      <%= get_link(Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_proposal_path(call_id: call.id), link_text: "New Proposal") %>
+    <% end %>
+  <% else %>
+    <div class="card-body">
+      <p class="mb-0"><em>No approved proposals are awaiting a GM outcome.</em></p>
     </div>
   <% end %>
-<% else %>
-  <p><em>There are no open calls.</em></p>
-<% end %>
-
-<h3 class="mt-4">Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h3>
-
-<% awaiting_by_call = @awaiting_approval.group_by(&:call) %>
-
-<% if awaiting_by_call.any? %>
-  <% awaiting_by_call.sort_by { |call, _| call.editing_deadline }.each do |call, proposals| %>
-    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
-      <div>
-        <h4 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
-        <small class="text-muted">
-          Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
-          &middot;
-          Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
-        </small>
-      </div>
-    </div>
-
-    <% headers = [ "Show Title" ] %>
-    <% headers << "Actions" if can_act %>
-
-    <% field_sets = proposals.map do |proposal|
-      fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
-      if can_act
-        approve_link = proposal.has_debtors ?
-          get_link(proposal, :approve, query_params: redirect_param, confirm: "Approving #{proposal.show_title}", detail: "Warning: You are attempting to approve a show with debtors.\n Please type 'Ignoring Debt' to confirm", type_confirm: "Ignoring Debt") :
-          get_link(proposal, :approve, query_params: redirect_param)
-
-        fields << safe_join([
-          approve_link,
-          get_link(proposal, :reject, query_params: redirect_param)
-        ].compact, " ")
-      end
-      { fields: fields }
-    end %>
-
-    <%= render "shared/table", headers: headers, field_sets: field_sets, col_widths: ["70%", "30%"] %>
-  <% end %>
-<% else %>
-  <p><em>No proposals are awaiting approval.</em></p>
-<% end %>
-
-<h3 class="mt-4">Approved (Awaiting GM Outcome) <span class="badge bg-secondary"><%= @approved.size %></span></h3>
-
-<% if @approved.any? %>
-  <% @approved.group_by(&:call).each do |call, proposals| %>
-    <div class="mt-3">
-      <h4 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h4>
-      <small class="text-muted">
-        Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
-        &middot;
-        Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
-      </small>
-    </div>
-
-    <% headers = [ "Show Title" ] %>
-    <% headers << "Actions" if can_act %>
-
-    <% field_sets = proposals.map do |proposal|
-      fields = [ get_link(proposal, :show, link_text: proposal.show_title) ]
-      if can_act
-        fields << safe_join([
-          get_link(proposal, :mark_successful, query_params: redirect_param),
-          get_link(proposal, :mark_unsuccessful, query_params: redirect_param)
-        ].compact, " ")
-      end
-      { fields: fields }
-    end %>
-
-    <%= render "shared/table", headers: headers, field_sets: field_sets, col_widths: ["70%", "30%"] %>
-  <% end %>
-<% else %>
-  <p><em>No approved proposals are awaiting a GM outcome.</em></p>
-<% end %>
+</div>
