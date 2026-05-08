@@ -820,10 +820,19 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
 }
 
 .page-jump-input {
+  margin-top: -0.25rem;
   width: 3rem !important;
+  height: 1.95rem;
   text-align: center;
+  border-radius: 0.25rem;
+  box-shadow: none !important;
   -moz-appearance: textfield;
   appearance: textfield;
+}
+
+.page-jump-input::placeholder {
+  color: inherit;
+  opacity: 0.6;
 }
 
 .page-jump-input::-webkit-outer-spin-button,

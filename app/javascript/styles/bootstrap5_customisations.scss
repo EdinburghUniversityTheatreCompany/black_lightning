@@ -22,9 +22,17 @@ $headings-color: $red;
 
 .page-jump-input {
   width: 3rem;
+  height: 1.95rem;
   text-align: center;
+  border-radius: 0;
+  box-shadow: none;
   -moz-appearance: textfield;
   appearance: textfield;
+
+  &::placeholder {
+    color: var(--bs-pagination-color);
+    opacity: 1;
+  }
 
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
