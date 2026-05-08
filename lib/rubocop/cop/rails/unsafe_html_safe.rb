@@ -15,7 +15,7 @@ module RuboCop
       #   safe_join(items, ", ")
       #   to_sentence(items)
       class UnsafeHtmlSafe < RuboCop::Cop::Base
-        extend AutoCorrector
+        extend RuboCop::Cop::AutoCorrector
 
         MSG_JOIN = "Use `safe_join(array, separator)` instead of `array.join(...).html_safe`."
         MSG_TO_SENTENCE = "Use the `to_sentence(array)` view helper instead of `array.to_sentence.html_safe`."
