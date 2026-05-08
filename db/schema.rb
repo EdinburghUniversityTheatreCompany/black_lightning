@@ -584,7 +584,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
     t.index ["resource_type", "resource_id"], name: "index_roles_on_resource_type_and_resource_id"
   end
 
-  create_table "roles_parents", id: false, charset: "utf8mb4", collation: "utf8mb4_0900_ai_ci", force: :cascade do |t|
+  create_table "roles_parents", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.integer "parent_id", null: false
     t.integer "role_id", null: false
     t.index ["parent_id"], name: "fk_rails_4fa933eab8"
