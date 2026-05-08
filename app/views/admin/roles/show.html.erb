@@ -1,7 +1,7 @@
 <% if @role.name.downcase != 'admin' %>
   <% fields = {
-    overlords: @role.parents.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe,
-    underlings: @role.children.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe,
+    overlords: @role.parents.any? ? @role.parents.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe : "None set",
+    underlings: @role.children.any? ? @role.children.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe : "None set",
   } %>
 <% else %>
   <% fields = {} %>
