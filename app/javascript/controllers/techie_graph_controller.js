@@ -104,12 +104,14 @@ export default class extends Controller {
       animate: false,
       fit: true,
       padding: 30,
-      nodeRepulsion: 8000,
-      idealEdgeLength: 80,
+      nodeRepulsion: 200000,
+      idealEdgeLength: 100,
       edgeElasticity: 0.45,
       gravity: 0.25,
       numIter: 2500,
-      tile: true,
+      tile: false,
+      nodeDimensionsIncludeLabels: true,
+      uniformNodeDimensions: false,
     })
 
     layout.on("layoutstop", () => {
