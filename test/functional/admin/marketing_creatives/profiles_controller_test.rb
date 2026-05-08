@@ -30,7 +30,7 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
 
     get :show, params: { id: @profile }
 
-    assert_includes response.body, "<b>Approved:</b>"
+    assert_select "b", text: "Approved:"
   end
 
   test "random people cannot see the approved status when approved" do
@@ -40,7 +40,7 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
 
     get :show, params: { id: @profile }
 
-    assert_not_includes response.body, "<b>Approved:</b>"
+    assert_select "b", text: "Approved:", count: 0
   end
 
   test "people who can reject can always see the approved state" do
@@ -49,7 +49,7 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     get :show, params: { id: @profile }
     assert_response :success
 
-    assert_includes response.body, "<b>Approved:</b>"
+    assert_select "b", text: "Approved:"
   end
 
   test "people without manage permission cannot see ID and user" do
@@ -60,8 +60,8 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
     get :show, params: { id: @profile }
     assert_response :success
 
-    assert_not_includes response.body, "<b>ID:</b>"
-    assert_not_includes response.body, "<b>User:</b>"
+    assert_select "b", text: "ID:", count: 0
+    assert_select "b", text: "User:", count: 0
   end
 
   test "people with manage permission can see ID and user" do
@@ -69,8 +69,8 @@ class Admin::MarketingCreatives::ProfilesControllerTest < ActionController::Test
 
     get :show, params: { id: @profile }
 
-    assert_includes response.body, "<b>ID:</b>"
-    assert_includes response.body, "<b>User:</b>"
+    assert_select "b", text: "ID:"
+    assert_select "b", text: "User:"
   end
 
   test "should get new" do
