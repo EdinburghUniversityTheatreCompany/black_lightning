@@ -7,7 +7,7 @@
     <li class="list-group-item text-muted">There are no upcoming staffing slots.</li>
   <% else %>
     <% upcoming_staffing.each do |staffing| %>
-      <li class="list-group-item">
+      <li class="list-group-item py-1">
         <% total_positions = staffing.staffing_jobs.count %>
         <% filled_positions = staffing.filled_jobs %>
         <% unfilled_positions = total_positions - filled_positions %>

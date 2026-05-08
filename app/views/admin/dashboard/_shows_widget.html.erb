@@ -6,7 +6,7 @@
     <li class="list-group-item text-muted">There are no upcoming shows.</li>
   <% else %>
     <% future_shows.each do |show| %>
-      <li class="list-group-item">
+      <li class="list-group-item py-1">
         <div class="row">
           <div class="col-3 text-muted"><%= show.date_range(false, :short) %></div>
           <div class="col-9"><%= link_to show.name, admin_show_path(show) %></div>
