@@ -1,5 +1,6 @@
 /* Milkdown WYSIWYG editor */
 
+/* Editor content area */
 .milkdown-editor-wrap {
   overflow-y: auto;
 }
@@ -8,23 +9,125 @@
   height: 100%;
 }
 
-/* Remove default ProseMirror focus outline — the wrapper border handles focus */
 .milkdown-editor-wrap .ProseMirror {
   outline: none;
   cursor: text;
   min-height: 100%;
-  /* Headings, paragraphs, lists get sensible defaults from prose/markdown-body */
 }
 
-.milkdown-editor-wrap .ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: #adb5bd;
-  pointer-events: none;
-  height: 0;
-}
-
-/* Ensure code blocks display correctly */
 .milkdown-editor-wrap .ProseMirror pre {
   white-space: pre-wrap;
+}
+
+/* Tabs */
+.milkdown-tabs {
+  display: flex;
+  align-self: stretch;
+  gap: 1px;
+  align-items: flex-end;
+}
+
+.milkdown-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px 5px;
+  border: 1px solid transparent;
+  border-radius: 5px 5px 0 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #6c757d;
+  cursor: pointer;
+  background: transparent;
+  line-height: 1.4;
+  white-space: nowrap;
+  /* Extend 1px down to cover the toolbar's bottom border when active */
+  margin-bottom: -1px;
+  position: relative;
+  z-index: 1;
+  transition: background-color 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.milkdown-tab:hover:not(.active) {
+  background: #e9ecef;
+  color: #343a40;
+  border-color: #ced4da;
+  border-bottom-color: transparent;
+}
+
+.milkdown-tab.active {
+  background: #ffffff;
+  color: #212529;
+  font-weight: 600;
+  border-color: #dee2e6;
+  border-bottom-color: #ffffff;
+}
+
+/* Toolbar shell */
+.milkdown-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 6px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem 0.375rem 0 0;
+  /* Allow tabs to extend below the bottom border */
+  overflow: visible;
+}
+
+.milkdown-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+/* Flat icon button */
+.milkdown-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  color: #495057;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  transition: background-color 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+
+.milkdown-btn:hover {
+  background: #e2e6ea;
+  color: #212529;
+}
+
+.milkdown-btn:active {
+  background: #ced4da;
+}
+
+/* Text-label variant (H1, H2, H3) — slightly narrower font, same click area */
+.milkdown-btn--text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  width: 26px;
+}
+
+/* Separators */
+.milkdown-sep {
+  width: 1px;
+  height: 20px;
+  background: #6c757d;
+  opacity: 0.2;
+  margin: 0 3px;
+  flex-shrink: 0;
+}
+
+.milkdown-sep--strong {
+  opacity: 0.5;
 }

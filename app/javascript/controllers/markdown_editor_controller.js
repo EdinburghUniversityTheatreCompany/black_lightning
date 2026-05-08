@@ -35,19 +35,23 @@ export default class extends Controller {
     if (mode !== this.#mode) this.#switchTo(mode)
   }
 
-  bold()        { this.#cmd(this.#cmds.toggleStrongCommand) }
-  italic()      { this.#cmd(this.#cmds.toggleEmphasisCommand) }
-  strike()      { this.#cmd(this.#cmds.toggleStrikethroughCommand) }
-  h1()          { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 1 }) }
-  h2()          { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 2 }) }
-  h3()          { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 3 }) }
-  bulletList()  { this.#cmd(this.#cmds.wrapInBulletListCommand) }
+  bold() { this.#cmd(this.#cmds.toggleStrongCommand) }
+  italic() { this.#cmd(this.#cmds.toggleEmphasisCommand) }
+  strike() { this.#cmd(this.#cmds.toggleStrikethroughCommand) }
+  h1() { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 1 }) }
+  h2() { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 2 }) }
+  h3() { this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 3 }) }
+  bulletList() { this.#cmd(this.#cmds.wrapInBulletListCommand) }
   orderedList() { this.#cmd(this.#cmds.wrapInOrderedListCommand) }
-  blockquote()  { this.#cmd(this.#cmds.wrapInBlockquoteCommand) }
-  codeBlock()   { this.#cmd(this.#cmds.createCodeBlockCommand) }
-  inlineCode()  { this.#cmd(this.#cmds.toggleInlineCodeCommand) }
-  undo()        { this.#cmd(this.#cmds.undoCommand) }
-  redo()        { this.#cmd(this.#cmds.redoCommand) }
+  taskList() { this.#toggleTaskList() }
+  blockquote() { this.#cmd(this.#cmds.wrapInBlockquoteCommand) }
+  inlineCode() { this.#cmd(this.#cmds.toggleInlineCodeCommand) }
+  codeBlock() { this.#cmd(this.#cmds.createCodeBlockCommand) }
+  insertLink() { this.#insertLink() }
+  insertImage() { this.#fileInput?.click() }
+  insertTable() { this.#cmd(this.#cmds.insertTableCommand) }
+  undo() { this.#cmd(this.#cmds.undoCommand) }
+  redo() { this.#cmd(this.#cmds.redoCommand) }
 
   // Private
 
@@ -60,35 +64,53 @@ export default class extends Controller {
   #sourceEl = null
   #sourceTextarea = null
   #previewEl = null
+  #fileInput = null
   #cmds = {}
 
   #buildShell() {
     const toolbar = document.createElement("div")
-    toolbar.className = "milkdown-toolbar d-flex align-items-center gap-1 flex-wrap border rounded-top bg-light p-1"
+    toolbar.className = "milkdown-toolbar"
     toolbar.innerHTML = `
-      <div class="btn-group btn-group-sm" role="group" aria-label="Editor mode">
-        <button type="button" class="btn btn-outline-secondary active" data-mode="edit"    data-action="click->markdown-editor#setMode">Edit</button>
-        <button type="button" class="btn btn-outline-secondary"        data-mode="source"  data-action="click->markdown-editor#setMode">Source</button>
-        <button type="button" class="btn btn-outline-secondary"        data-mode="preview" data-action="click->markdown-editor#setMode">Preview</button>
+      <div class="milkdown-tabs" role="tablist">
+        <button type="button" class="milkdown-tab active" data-mode="edit"    data-action="click->markdown-editor#setMode" role="tab">Edit</button>
+        <button type="button" class="milkdown-tab"        data-mode="source"  data-action="click->markdown-editor#setMode" role="tab">Source</button>
+        <button type="button" class="milkdown-tab"        data-mode="preview" data-action="click->markdown-editor#setMode" role="tab">Preview</button>
       </div>
-      <div class="vr mx-1"></div>
-      <button type="button" class="btn btn-sm btn-outline-secondary fw-bold"  title="Bold"         data-action="click->markdown-editor#bold">B</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary fst-italic" title="Italic"     data-action="click->markdown-editor#italic">I</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary text-decoration-line-through" title="Strikethrough" data-action="click->markdown-editor#strike">S</button>
-      <div class="vr mx-1"></div>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Heading 1"     data-action="click->markdown-editor#h1">H1</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Heading 2"     data-action="click->markdown-editor#h2">H2</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Heading 3"     data-action="click->markdown-editor#h3">H3</button>
-      <div class="vr mx-1"></div>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Bullet list"   data-action="click->markdown-editor#bulletList">&#8226; List</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Ordered list"  data-action="click->markdown-editor#orderedList">1. List</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Blockquote"    data-action="click->markdown-editor#blockquote">&#10078;</button>
-      <div class="vr mx-1"></div>
-      <button type="button" class="btn btn-sm btn-outline-secondary font-monospace" title="Inline code" data-action="click->markdown-editor#inlineCode">\`code\`</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary font-monospace" title="Code block"  data-action="click->markdown-editor#codeBlock">{ }</button>
-      <div class="vr mx-1"></div>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Undo (Ctrl+Z)" data-action="click->markdown-editor#undo">&#8617;</button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" title="Redo (Ctrl+Y)" data-action="click->markdown-editor#redo">&#8618;</button>
+      <div class="milkdown-sep milkdown-sep--strong"></div>
+      <div class="milkdown-toolbar__group">
+        <button type="button" class="milkdown-btn" title="Bold (Ctrl+B)"   data-action="click->markdown-editor#bold"><i class="fa-solid fa-bold"></i></button>
+        <button type="button" class="milkdown-btn" title="Italic (Ctrl+I)" data-action="click->markdown-editor#italic"><i class="fa-solid fa-italic"></i></button>
+        <button type="button" class="milkdown-btn" title="Strikethrough"   data-action="click->markdown-editor#strike"><i class="fa-solid fa-strikethrough"></i></button>
+      </div>
+      <div class="milkdown-sep"></div>
+      <div class="milkdown-toolbar__group">
+        <button type="button" class="milkdown-btn milkdown-btn--text" title="Heading 1" data-action="click->markdown-editor#h1">H1</button>
+        <button type="button" class="milkdown-btn milkdown-btn--text" title="Heading 2" data-action="click->markdown-editor#h2">H2</button>
+        <button type="button" class="milkdown-btn milkdown-btn--text" title="Heading 3" data-action="click->markdown-editor#h3">H3</button>
+      </div>
+      <div class="milkdown-sep"></div>
+      <div class="milkdown-toolbar__group">
+        <button type="button" class="milkdown-btn" title="Bullet list"  data-action="click->markdown-editor#bulletList"><i class="fa-solid fa-list-ul"></i></button>
+        <button type="button" class="milkdown-btn" title="Ordered list" data-action="click->markdown-editor#orderedList"><i class="fa-solid fa-list-ol"></i></button>
+        <button type="button" class="milkdown-btn" title="Task list"    data-action="click->markdown-editor#taskList"><i class="fa-solid fa-list-check"></i></button>
+        <button type="button" class="milkdown-btn" title="Blockquote"   data-action="click->markdown-editor#blockquote"><i class="fa-solid fa-quote-left"></i></button>
+      </div>
+      <div class="milkdown-sep"></div>
+      <div class="milkdown-toolbar__group">
+        <button type="button" class="milkdown-btn" title="Inline code" data-action="click->markdown-editor#inlineCode"><i class="fa-solid fa-code"></i></button>
+        <button type="button" class="milkdown-btn" title="Code block"  data-action="click->markdown-editor#codeBlock"><i class="fa-solid fa-file-code"></i></button>
+      </div>
+      <div class="milkdown-sep"></div>
+      <div class="milkdown-toolbar__group">
+        <button type="button" class="milkdown-btn" title="Insert link"  data-action="click->markdown-editor#insertLink"><i class="fa-solid fa-link"></i></button>
+        <button type="button" class="milkdown-btn" title="Upload image" data-action="click->markdown-editor#insertImage"><i class="fa-solid fa-image"></i></button>
+        <button type="button" class="milkdown-btn" title="Insert table" data-action="click->markdown-editor#insertTable"><i class="fa-solid fa-table"></i></button>
+      </div>
+      <div class="milkdown-sep milkdown-sep--strong"></div>
+      <div class="milkdown-toolbar__group">
+        <button type="button" class="milkdown-btn" title="Undo (Ctrl+Z)" data-action="click->markdown-editor#undo"><i class="fa-solid fa-rotate-left"></i></button>
+        <button type="button" class="milkdown-btn" title="Redo (Ctrl+Y)" data-action="click->markdown-editor#redo"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
     `
     this.element.appendChild(toolbar)
 
@@ -110,17 +132,24 @@ export default class extends Controller {
     this.#previewEl.className = "markdown-body prose max-w-none p-3 border rounded-bottom"
     this.#previewEl.style.display = "none"
     this.element.appendChild(this.#previewEl)
+
+    this.#fileInput = document.createElement("input")
+    this.#fileInput.type = "file"
+    this.#fileInput.accept = "image/*"
+    this.#fileInput.style.display = "none"
+    this.#fileInput.addEventListener("change", () => this.#handleFileInputChange())
+    this.element.appendChild(this.#fileInput)
   }
 
   async #mountEditor(value = null) {
     const markdown = value ?? this.#textarea.value
 
     const [
-      { Editor, defaultValueCtx, rootCtx },
+      { Editor, defaultValueCtx, rootCtx, editorViewCtx, commandsCtx },
       { commonmark, toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand,
         wrapInBulletListCommand, wrapInOrderedListCommand, wrapInBlockquoteCommand,
-        createCodeBlockCommand, toggleInlineCodeCommand },
-      { gfm, toggleStrikethroughCommand },
+        createCodeBlockCommand, toggleInlineCodeCommand, updateLinkCommand },
+      { gfm, toggleStrikethroughCommand, insertTableCommand },
       { history, undoCommand, redoCommand },
       { clipboard },
       { listener, listenerCtx },
@@ -137,14 +166,15 @@ export default class extends Controller {
       import("@milkdown/utils")
     ])
 
-    // Inject editor CSS once — Vite handles deduplication
     import("../styles/milkdown_editor.css")
 
     this.#cmds = {
       toggleStrongCommand, toggleEmphasisCommand, wrapInHeadingCommand,
       wrapInBulletListCommand, wrapInOrderedListCommand, wrapInBlockquoteCommand,
       createCodeBlockCommand, toggleInlineCodeCommand, toggleStrikethroughCommand,
-      undoCommand, redoCommand, callCommand
+      insertTableCommand, updateLinkCommand,
+      undoCommand, redoCommand,
+      callCommand, editorViewCtx, commandsCtx
     }
 
     this.#editor = await Editor.make()
@@ -195,7 +225,7 @@ export default class extends Controller {
 
     if (mode === "edit") {
       if (prev === "source") {
-        this.#destroyEditor()
+        await this.#destroyEditor()
         this.#editorEl.innerHTML = ""
         await this.#mountEditor(this.#textarea.value)
       }
@@ -233,6 +263,66 @@ export default class extends Controller {
   #cmd(cmdDef, payload = undefined) {
     if (!this.#editor || this.#mode !== "edit" || !cmdDef) return
     this.#editor.action(this.#cmds.callCommand(cmdDef.key, payload))
+  }
+
+  #toggleTaskList() {
+    if (!this.#editor || this.#mode !== "edit") return
+    const { editorViewCtx, commandsCtx, wrapInBulletListCommand } = this.#cmds
+
+    this.#editor.action(ctx => {
+      const view = ctx.get(editorViewCtx)
+      const { state, dispatch } = view
+      const { $from } = state.selection
+
+      let listItemDepth = null
+      for (let d = $from.depth; d >= 0; d--) {
+        if ($from.node(d).type.name === "list_item") { listItemDepth = d; break }
+      }
+
+      if (listItemDepth !== null) {
+        const node = $from.node(listItemDepth)
+        const pos = $from.before(listItemDepth)
+        dispatch(state.tr.setNodeMarkup(pos, null, {
+          ...node.attrs,
+          checked: node.attrs.checked == null ? false : null
+        }))
+      } else {
+        // Wrap in bullet list, then set the new list item as a task
+        ctx.get(commandsCtx).call(wrapInBulletListCommand)
+        const { $from: f } = view.state.selection
+        for (let d = f.depth; d >= 0; d--) {
+          if (f.node(d).type.name === "list_item") {
+            view.dispatch(view.state.tr.setNodeMarkup(f.before(d), null, { ...f.node(d).attrs, checked: false }))
+            break
+          }
+        }
+      }
+    })
+  }
+
+  #insertLink() {
+    if (!this.#editor || this.#mode !== "edit") return
+    const href = window.prompt("Link URL:")
+    if (href) this.#cmd(this.#cmds.updateLinkCommand, { href, title: "" })
+  }
+
+  async #handleFileInputChange() {
+    const files = this.#fileInput.files
+    if (!files?.length || !this.#editor) return
+
+    const { editorViewCtx } = this.#cmds
+    const schema = this.#editor.action(ctx => ctx.get(editorViewCtx).state.schema)
+    const nodes = await this.#uploadFiles(files, schema)
+
+    if (nodes.length) {
+      this.#editor.action(ctx => {
+        const view = ctx.get(editorViewCtx)
+        let tr = view.state.tr
+        nodes.forEach(node => { tr = tr.replaceSelectionWith(node) })
+        view.dispatch(tr)
+      })
+    }
+    this.#fileInput.value = ""
   }
 
   async #uploadFiles(files, schema) {
