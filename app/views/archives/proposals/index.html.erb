@@ -17,23 +17,27 @@ status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejec
 <% content_for :proposal_archive_content do %>
   <% if @proposals.any? %>
     <% @proposals.each_with_index do |(call, proposals), index| %>
-
-      <h5 class="font-semibold text-gray-800 mb-2">
-        <%= call.name %>
-        <span class="font-normal text-sm text-gray-600">(Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %>)</span>
-      </h5>
-
-      <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
-        <div class="flex items-center py-1.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 -mx-4 px-4">
-          <%= get_link proposal, :show %>
-          <div class="flex gap-1 ml-2">
-            <%= proposal.labels false, show_debtors: false %>
-          </div>
+      <div class="card <%= 'mb-3' unless index == @proposals.size - 1 %>">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <%= call.name %>
+            <small class="text-muted fw-normal">Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %></small>
+          </h5>
         </div>
-      <% end %>
+        <div class="card-body p-0">
+          <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
+            <div class="d-flex align-items-center py-2 px-3 border-bottom">
+              <%= get_link proposal, :show %>
+              <div class="d-flex gap-1 ms-2">
+                <%= proposal.labels false, show_debtors: false %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
     <% end %>
   <% else %>
-    <p class="text-gray-500">There are no proposals found for this search.</p>
+    <p class="text-muted"><em>There are no proposals found for this search.</em></p>
   <% end %>
 <% end %>
 
