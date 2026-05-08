@@ -64,7 +64,7 @@ RUN bundle install && \
     find "${BUNDLE_PATH}" -name "*.o" -delete
 
 # Install JavaScript dependencies
-COPY package.json pnpm-lock.yaml* ./
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml* ./
 RUN npm install -g pnpm && pnpm install --frozen-lockfile
 
 # Copy application code
