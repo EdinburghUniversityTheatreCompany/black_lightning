@@ -1,4 +1,8 @@
-<aside class="sidebar w-64 bg-sidebar-bg text-sidebar-text flex flex-col h-full shrink-0"
+<div class="hidden fixed inset-0 bg-black/50 z-30"
+     data-admin--sidebar-target="backdrop"
+     data-action="click->admin--sidebar#toggle"></div>
+
+<aside class="sidebar md:w-64 bg-sidebar-bg text-sidebar-text flex flex-col h-full shrink-0 max-md:fixed max-md:inset-0 max-md:z-40 max-md:overflow-y-auto"
        data-admin--sidebar-target="sidebar">
   <%# Brand %>
   <div class="p-4 border-b border-white/10">

@@ -4,7 +4,7 @@ const STORAGE_KEY = "admin-sidebar-open"
 const MOBILE_BREAKPOINT = 768
 
 export default class extends Controller {
-  static targets = ["sidebar"]
+  static targets = ["sidebar", "backdrop"]
 
   connect() {
     const isMobile = window.innerWidth < MOBILE_BREAKPOINT
@@ -34,5 +34,8 @@ export default class extends Controller {
 
   #applyState(open) {
     this.sidebarTarget.classList.toggle("sidebar-collapsed", !open)
+    if (this.hasBackdropTarget) {
+      this.backdropTarget.classList.toggle("hidden", !(open && window.innerWidth < MOBILE_BREAKPOINT))
+    }
   }
 }
