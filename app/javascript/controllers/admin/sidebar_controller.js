@@ -7,8 +7,9 @@ export default class extends Controller {
   static targets = ["sidebar"]
 
   connect() {
+    const isMobile = window.innerWidth < MOBILE_BREAKPOINT
     const stored = localStorage.getItem(STORAGE_KEY)
-    const isOpen = stored === null ? true : stored === "true"
+    const isOpen = isMobile ? false : (stored === null ? true : stored === "true")
     this.#applyState(isOpen)
     document.addEventListener("turbo:before-visit", this.#collapseOnNavigate)
   }
@@ -19,7 +20,9 @@ export default class extends Controller {
 
   toggle() {
     const isOpen = !this.sidebarTarget.classList.contains("sidebar-collapsed")
-    localStorage.setItem(STORAGE_KEY, String(!isOpen))
+    if (window.innerWidth >= MOBILE_BREAKPOINT) {
+      localStorage.setItem(STORAGE_KEY, String(!isOpen))
+    }
     this.#applyState(!isOpen)
   }
 
