@@ -21,9 +21,9 @@
             label: false,
             wrapper_html: { class: 'mb-0' },
             input_html: { style: 'min-width: 220px' } %>
-      <%= f.submit 'Search', class: 'btn btn-secondary btn-sm' %>
+      <%= f.submit 'Search', class: 'btn btn-secondary' %>
       <% if selected_id.present? %>
-        <%= link_to 'Clear', tree_admin_techies_path, class: 'btn btn-secondary btn-sm' %>
+        <%= link_to 'Clear', tree_admin_techies_path, class: 'btn btn-secondary' %>
       <% end %>
     <% end %>
   </div>
