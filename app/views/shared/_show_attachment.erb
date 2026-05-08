@@ -12,9 +12,9 @@
 
     <% fullsize_url = url_for(attachment.file) %>
 
-    <%= link_to(img, fullsize_url, { class: "card-img-top h-auto", rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant)))  %>
+    <%= link_to(img, fullsize_url, { class: "card-img-top h-auto", rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant))) %>
   <% rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable %>
-    <% # It is impossible to create a thumbnail, so do nothing. %>
+    <%# It is impossible to create a thumbnail, so do nothing. %>
   <% end %>
 
   <div class="card-text m-2">
@@ -28,10 +28,7 @@
 
     <% if attachment.attachment_tags.present? %>
       <hr class="m-1">
-      <%= attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }.to_sentence.html_safe %>
+      <%= to_sentence(ttachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }) %>
     <% end %>
   </div>
 </div>
-
-
-

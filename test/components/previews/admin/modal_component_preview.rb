@@ -30,7 +30,7 @@ class Admin::ModalComponentPreview < Admin::ApplicationComponentPreview
         tag.div(class: "border border-gray-200 rounded p-3 mt-3") do
           tag.p("Preview", class: "text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1") +
           tag.ul(class: "space-y-1") do
-            [
+            ActionController::Base.helpers.safe_join([
               [ "What show are you applying for?", "short_answer" ],
               [ "Why do you want to join?", "long_answer" ],
               [ "Are you available on weekends?", "yes_no" ]
@@ -39,7 +39,7 @@ class Admin::ModalComponentPreview < Admin::ApplicationComponentPreview
                 tag.span(question, class: "flex-1 text-gray-800") +
                 tag.span(type.gsub("_", " "), class: "text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 shrink-0 font-mono")
               end
-            end.join.html_safe
+            end)
           end
         end
       end

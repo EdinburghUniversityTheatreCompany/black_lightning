@@ -1,12 +1,12 @@
 <%# locals: (pictures:, header_size: 3) -%>
-<%# KEEP%>
+<%# KEEP %>
 
 
 <% if pictures.any? then %>
 <div data-controller="fancybox">
 <div class="row">
   <div class="col">
-    <% header_tag = "h#{header_size}"%>
+    <% header_tag = "h#{header_size}" %>
     <<%= header_tag %>>Gallery</<%= header_tag %>>
     <i>Click on a thumbnail to see the image in large size</i>
 
@@ -32,7 +32,7 @@
 
                 <% if @admin_site && picture.picture_tags.present? %>
                   <hr class="m-1">
-                  <%= picture.picture_tags.map {|tag| link_to(tag.name, admin_picture_tag_path(tag)) }.to_sentence.html_safe %>
+                  <%= to_sentence(picture.picture_tags.map {|tag| link_to(tag.name, admin_picture_tag_path(tag)) }) %>
                 <% end %>
             </div>
           </div>
@@ -44,5 +44,5 @@
 </div>
 <% end %>
 
-<% # Add a margin below. %>
+<%# Add a margin below. %>
 <div class="mb-3"></div>

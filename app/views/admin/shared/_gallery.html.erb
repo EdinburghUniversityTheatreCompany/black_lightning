@@ -27,7 +27,7 @@
 
             <% if @admin_site && picture.picture_tags.present? %>
               <hr class="my-1">
-              <%= picture.picture_tags.map { |tag| link_to(tag.name, admin_picture_tag_path(tag)) }.to_sentence.html_safe %>
+              <%= to_sentence(picture.picture_tags.map { |tag| link_to(tag.name, admin_picture_tag_path(tag)) }) %>
             <% end %>
           </div>
         </div>

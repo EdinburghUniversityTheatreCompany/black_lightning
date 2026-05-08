@@ -2,6 +2,9 @@
 inherit_gem:
   rubocop-rails-omakase: rubocop.yml
 
+require:
+  - ./lib/rubocop/cop/rails/unsafe_html_safe
+
 plugins:
   - rubocop-view_component
 
@@ -12,6 +15,9 @@ AllCops:
     - db/schema.rb
     - db/queue_schema.rb
     - db/cache_schema.rb
+
+Rails/UnsafeHtmlSafe:
+  Enabled: true
 
 ViewComponent/MissingPreview:
   Exclude:

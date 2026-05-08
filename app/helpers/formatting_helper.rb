@@ -8,7 +8,7 @@ module FormattingHelper
     list.map! { |item| ActionController::Base.helpers.sanitize(item) }
 
     content_tag(wrap_tag) do
-      list.map { |item| content_tag(:li, item) }.join.html_safe
+      ActionController::Base.helpers.safe_join(list.map { |item| content_tag(:li, item) })
     end
   end
 

@@ -96,7 +96,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
     labels << generate_label("bg-danger", "Late") if late
     labels << generate_label("bg-danger", "Has Debtors") if show_debtors && has_debtors
 
-    labels_html = labels.join("\n").html_safe
+    labels_html = safe_join(labels, "\n")
 
     # Wrap the whole list of labels in a float right so that the margins stay preserved.
     return "<div class=\"float-right\">#{labels_html}</div>".html_safe if pull_right
