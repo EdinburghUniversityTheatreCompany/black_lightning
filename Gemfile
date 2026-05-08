@@ -96,11 +96,12 @@ group :development, :test do
   gem "annotate"
 
   gem "bullet"
+  gem "rack-mini-profiler"
 
   gem "faker"
 
   gem "test-prof"
-  gem "stackprof", ">= 0.2.9", require: false
+  gem "stackprof", ">= 0.2.9"
 
   gem "rdbg"
   gem "ruby-lsp-rails"

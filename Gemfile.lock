@@ -352,6 +352,8 @@ GEM
     rack (2.2.23)
     rack-cors (2.0.2)
       rack (>= 2.0.0)
+    rack-mini-profiler (4.0.1)
+      rack (>= 1.2.0)
     rack-proxy (0.7.7)
       rack
     rack-session (1.0.2)
@@ -651,6 +653,7 @@ DEPENDENCIES
   puma
   rack
   rack-cors
+  rack-mini-profiler
   rack-timeout
   rails (~> 8.1)
   rails-controller-testing
