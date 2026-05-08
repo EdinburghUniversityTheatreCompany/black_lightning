@@ -131,3 +131,44 @@
 .milkdown-sep--strong {
   opacity: 0.5;
 }
+
+/* Link insertion dialog */
+.milkdown-link-dialog {
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+  padding: 0;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  min-width: 320px;
+}
+
+.milkdown-link-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.milkdown-link-dialog__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.milkdown-link-dialog__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.milkdown-link-dialog__label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.milkdown-link-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
