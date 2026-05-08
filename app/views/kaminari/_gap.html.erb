@@ -1,3 +1,11 @@
-<li class='page-item disabled'>
-  <%= link_to raw(t 'views.pagination.truncate'), '#', class: 'page-link' %>
+<li class="page-item" data-controller="page-jump">
+  <input
+    type="number"
+    class="page-link page-jump-input"
+    min="1"
+    placeholder="…"
+    data-page-jump-target="input"
+    autocomplete="off"
+    data-action="keydown.enter->page-jump#jump blur->page-jump#jump"
+  >
 </li>
