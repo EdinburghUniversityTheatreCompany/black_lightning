@@ -15,7 +15,7 @@ select.simple-select2 {
 /* Bundled statically to avoid FOUC and because the styling is different for the public site */
 @import "tom-select/dist/css/tom-select.css";
 
-/* dropzone, toast-ui, fancybox, and leaflet CSS are loaded dynamically
+/* dropzone, fancybox, and leaflet CSS are loaded dynamically
    by their respective Stimulus controllers */
 
 @source "../../../app/views/**/*.erb";

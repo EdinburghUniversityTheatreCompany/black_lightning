@@ -1,0 +1,30 @@
+/* Milkdown WYSIWYG editor */
+
+.milkdown-editor-wrap {
+  overflow-y: auto;
+}
+
+.milkdown-editor-wrap .milkdown {
+  height: 100%;
+}
+
+/* Remove default ProseMirror focus outline — the wrapper border handles focus */
+.milkdown-editor-wrap .ProseMirror {
+  outline: none;
+  cursor: text;
+  min-height: 100%;
+  /* Headings, paragraphs, lists get sensible defaults from prose/markdown-body */
+}
+
+.milkdown-editor-wrap .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Ensure code blocks display correctly */
+.milkdown-editor-wrap .ProseMirror pre {
+  white-space: pre-wrap;
+}
