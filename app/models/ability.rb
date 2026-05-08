@@ -53,12 +53,6 @@ class Ability
       ##############################################
       can :manage, :all
 
-      # Even admins should not be able to read proposals before the submission deadline has been passed.
-      cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
-
-      can [ :update, :read, :delete ], Admin::Proposals::Proposal, users: { id: user.id }
-      can [ :index, :create ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
-
       cannot :manage, Complaint
       can :create, Complaint
 
@@ -72,8 +66,14 @@ class Ability
       # Can view the error details on the error page.
       can :view_details, :errors
 
-      # To override restrictions if the admin has the appropriate role.
+      # Apply role-based grid permissions before proposal restrictions so the proposal rules always take precedence.
       set_permissions_based_on_grid(user)
+
+      # Even admins should not be able to read proposals before the submission deadline has been passed.
+      # These must come after set_permissions_based_on_grid so the grid cannot override them.
+      cannot :manage, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
+      can [ :update, :read, :delete ], Admin::Proposals::Proposal, users: { id: user.id }
+      can [ :index, :create ], Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current..DateTime::Infinity.new }
 
       return
     end

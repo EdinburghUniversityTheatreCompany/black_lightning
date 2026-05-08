@@ -49,7 +49,7 @@ class Admin::PermissionsController < AdminController
       "Event" => { "add_non_members" => "Add non-members to events, mainly for archiving purposes" }
     }
 
-    @models = (ApplicationRecord.descendants + [ Admin::Debt, Season, Doorkeeper::Application ] - [ MarketingCreatives::CategoryInfo ]).uniq
+    @models = (ApplicationRecord.descendants + [ Admin::Debt, Season, Doorkeeper::Application ] - [ MarketingCreatives::CategoryInfo, Admin::Proposals::Proposal ]).uniq
 
     role_exclude = [ "admin", "Proposal Checker" ]
     @roles = Role.includes(:permissions).where.not(name: role_exclude).all.left_joins(:permissions).group(:id).order("COUNT(admin_permissions.id) DESC")
