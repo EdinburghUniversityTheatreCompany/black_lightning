@@ -6,28 +6,32 @@
 <div class="row">
   <div class="col-md-6 col-xl-8">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
-    <%= render 'shared/carousel',
-          id: 'homeCarousel',
-          carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items),
-          aspect_ratio: carousel_config[:aspect_ratio]&.join("/"),
-          fit_mode: carousel_config.fetch(:fit_mode, "cover") %>
+    <% cache [ @carousel_events, @standard_carousel_items ] do %>
+      <%= render 'shared/carousel',
+            id: 'homeCarousel',
+            carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items),
+            aspect_ratio: carousel_config[:aspect_ratio]&.join("/"),
+            fit_mode: carousel_config.fetch(:fit_mode, "cover") %>
+    <% end %>
 
     <div class="card mt-3">
       <div class="card-header">
         <h4>What's On</h4>
       </div>
       <div class="card-body">
-        <% if @events.empty? %>
-          <%= display_block("Home - No Events On", false) %>
-        <% else %>
-          <% items = @events.collect { |event| {
-            event: event,
-            paragraphs: [
-              { content: event.date_and_price, small: true },
-              { content: event.short_blurb },
-              { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
-            ] } } %>
-          <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
+        <% cache @events do %>
+          <% if @events.empty? %>
+            <%= display_block("Home - No Events On", false) %>
+          <% else %>
+            <% items = @events.collect { |event| {
+              event: event,
+              paragraphs: [
+                { content: event.date_and_price, small: true },
+                { content: event.short_blurb },
+                { content: link_to('View Details', event, class: 'btn btn-primary'), class: 'mt-auto' }
+              ] } } %>
+            <%= render('shared/pages/public/events_grid', items: items, col_size: 8) %>
+          <% end %>
         <% end %>
       </div>
     </div>
@@ -54,16 +58,18 @@
         <li class="list-group-item">
           <%= display_block("Home - News", false) %>
         </li>
-        <% @news.each do |news_item| %>
-          <li class="list-group-item">
-            <h5 class="card-title"><%= link_to news_item.title, news_path(news_item) %></h5>
+        <% cache @news do %>
+          <% @news.each do |news_item| %>
+            <li class="list-group-item">
+              <h5 class="card-title"><%= link_to news_item.title, news_path(news_item) %></h5>
 
-            <p class="card-text"><small class="text-muted"><%= l(news_item.publish_date, format: :longy) %> by <%= news_item.author.name(@current_user) %></small></p>
+              <p class="card-text"><small class="text-muted"><%= l(news_item.publish_date, format: :longy) %> by <%= news_item.author.name %></small></p>
 
-            <p class="card-text"><%= render_plain(news_item.preview) %></p>
+              <p class="card-text"><%= render_plain(news_item.preview) %></p>
 
-            <p class="card-text"><%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %></p>
-          </li>
+              <p class="card-text"><%= link_to 'Read More', news_path(news_item), class: 'btn btn-primary' %></p>
+            </li>
+          <% end %>
         <% end %>
       </ul>
 
