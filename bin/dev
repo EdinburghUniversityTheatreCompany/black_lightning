@@ -7,5 +7,6 @@ fi
 
 # Default to port 3000 if not specified
 export PORT="${PORT:-3000}"
+export BINDING="${BINDING:-localhost}"
 
 exec foreman start -f Procfile.dev "$@"

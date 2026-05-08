@@ -4,7 +4,7 @@
     associate_id: @user.associate_id.present? ? @user.associate_id : 'Not set',
     phone_number: @user.phone_number.present? ? link_to(@user.phone_number, "tel: #{@user.phone_number}") : 'Not set',
     calendar_email: @user.calendar_email.present? ? @user.calendar_email : 'Not set',
-    roles: @user.roles.collect {|role| role.name.titleize }.to_sentence,
+    roles: @user.roles.collect { |role| get_link role, :show, link_text: role.name.titleize }.to_sentence.html_safe,
     years_active: @user.years_active.map { |y| format_academic_year(y) }.join(", ").presence || "No events",
     marketing_creative_profile: @user.marketing_creatives_profile.present? ? get_link(@user.marketing_creatives_profile, :show) : 'This user has no Marketing Creative Profile.',
     'Sign-in Count' => @user.sign_in_count,

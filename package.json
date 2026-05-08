@@ -37,7 +37,8 @@
     ],
     "pnpm": {
         "onlyBuiltDependencies": [
-            "@fortawesome/fontawesome-free"
+            "@fortawesome/fontawesome-free",
+            "@parcel/watcher"
         ]
     },
     "devDependencies": {

@@ -239,7 +239,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
   end
 
-  test "should remove user from trained role with manage_trained_roles permission" do
+  test "should remove user from role if has parent role" do
     sign_out @admin
 
     # Create a user with manage_trained_roles permission
@@ -250,6 +250,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     # Create a trained role and add a user to it
     trained_role = FactoryBot.create(:role, name: "Test Trained")
+    trained_role.parents << roles(:committee)
     user_to_remove = FactoryBot.create(:user, first_name: "Test", last_name: "User")
     user_to_remove.add_role(trained_role.name)
 
@@ -262,14 +263,12 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(trained_role)
   end
 
-  test "should not remove user from non-trained role without admin permission" do
+  test "should not remove user from arbitrary role without admin permission" do
     sign_out @admin
 
     # Create a user with manage_trained_roles permission
     user_with_permission = FactoryBot.create(:user)
-    permission = Admin::Permission.find_or_create_by(action: "manage_trained_roles", subject_class: "Role")
     role = FactoryBot.create(:role, name: "Test Manager")
-    role.permissions << permission
     user_with_permission.add_role(role.name)
     sign_in user_with_permission
 
@@ -303,7 +302,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
     assert_redirected_to admin_role_url(@role)
   end
 
-  test "should add user to trained role with manage_trained_roles permission" do
+  test "should add user to role if has parent role" do
     sign_out @admin
 
     # Create a user with manage_trained_roles permission
@@ -315,6 +314,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     # Create a trained role and try to add a user to it
     trained_role = FactoryBot.create(:role, name: "Test Trained")
+    trained_role.parents << roles(:committee)
     user_to_add = FactoryBot.create(:user, first_name: "Test", last_name: "User")
 
     assert_not user_to_add.has_role?(trained_role.name)
