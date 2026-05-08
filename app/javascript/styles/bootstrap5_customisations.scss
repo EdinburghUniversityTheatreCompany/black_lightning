@@ -28,6 +28,7 @@ $headings-color: $red;
   box-shadow: none;
   -moz-appearance: textfield;
   appearance: textfield;
+  cursor: text;
 
   &::placeholder {
     color: var(--bs-pagination-color);
@@ -39,4 +40,10 @@ $headings-color: $red;
     -webkit-appearance: none;
     margin: 0;
   }
+}
+
+.page-item.active .page-jump-input {
+  background-color: #fff;
+  color: var(--bs-pagination-active-bg);
+  border-color: var(--bs-pagination-active-bg);
 }

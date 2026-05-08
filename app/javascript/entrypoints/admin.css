@@ -828,6 +828,11 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   box-shadow: none !important;
   -moz-appearance: textfield;
   appearance: textfield;
+  cursor: text;
+}
+
+.page-item.active .page-jump-input {
+  @apply bg-white text-primary border-primary;
 }
 
 .page-jump-input::placeholder {

@@ -12,6 +12,11 @@
           <%= gap_tag %>
         <% end %>
       <% end %>
+      <% if current_page > total_pages %>
+        <%= tag.li class: "page-item active" do %>
+          <% tag.input type: "number", class: "page-link page-jump-input", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump blur->page-jump#jump" }, autocomplete: "off" %>
+        <% end %>
+      <% end %>
       <%= next_page_tag %>
       <%= last_page_tag %>
     </ul>
