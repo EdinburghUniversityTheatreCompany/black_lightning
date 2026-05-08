@@ -1,14 +1,9 @@
-<% content_for :deadlines do %>
-  <i>Submission Deadline:</i> <%= l @proposal.call.submission_deadline, format: :longy %>
-  <br>
-  <i>Editing Deadline:</i> <%= l @proposal.call.editing_deadline, format: :longy %>
-<% end %>
-
 <% fields = {
   proposal_labels: { type: 'content', content: @proposal.labels(false) },
   status: @proposal.formatted_status,
   call: get_link(@proposal.call, :show),
-  deadlines: { type: 'content', content: yield(:deadlines) },
+  submission_deadline:  l(@proposal.call.submission_deadline, format: :longy),
+  editing_deadline: l(@proposal.call.editing_deadline, format: :longy),
   publicity_text: render_markdown(@proposal.publicity_text),
   proposal_text: render_markdown(@proposal.proposal_text),
   team_members: { type: 'content', content: render('/shared/admin_show_team_members', team_members: @proposal.team_members.ordered, deadline: @proposal.call.editing_deadline) },
