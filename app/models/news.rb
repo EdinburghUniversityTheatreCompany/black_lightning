@@ -113,7 +113,7 @@ class News < ApplicationRecord
     content = body
 
     begin
-      preview = ""
+      preview = String.new
 
       while content.present?
         partition = content.partition(/(\n)|(<\/p>)/)
