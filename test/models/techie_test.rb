@@ -69,6 +69,9 @@ class TechieTest < ActionView::TestCase
     base = created_techies.sample
 
     techies = base.get_relatives(3, false)
+
+    assert_kind_of Array, techies
+    assert_includes techies, base
   end
 
   test "create relationships returns false if the line does not contain a >, and no techies are created." do
