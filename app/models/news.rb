@@ -113,7 +113,7 @@ class News < ApplicationRecord
     content = body
 
     begin
-      preview = String.new
+      preview = String.new(encoding: Encoding::UTF_8)
 
       while content.present?
         partition = content.partition(/(\n)|(<\/p>)/)
