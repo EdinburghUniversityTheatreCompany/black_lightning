@@ -1,5 +1,5 @@
 <% fields = {
-  proposal_labels: { type: 'content', content: @proposal.labels(false) },
+  proposal_labels: { type: 'content', content: proposal_labels(@proposal, false) },
   status: @proposal.formatted_status,
   call: get_link(@proposal.call, :show),
   submission_deadline:  l(@proposal.call.submission_deadline, format: :longy),

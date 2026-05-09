@@ -120,4 +120,17 @@ module LabelHelper
 
         "<span class=\"badge #{label_class}#{' float-right' if pull_right}\">#{message}</span>".html_safe
     end
+
+    def proposal_labels(proposal, pull_right, show_debtors: true)
+        labels = []
+        labels << generate_label(proposal.label_css_class, proposal.formatted_status)
+        labels << generate_label("bg-danger", "Late") if proposal.late
+        labels << generate_label("bg-danger", "Has Debtors") if show_debtors && proposal.has_debtors
+
+        labels_html = safe_join(labels, "\n")
+
+        return content_tag(:div, labels_html, class: "float-right") if pull_right
+
+        labels_html
+    end
 end

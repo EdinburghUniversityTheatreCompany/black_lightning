@@ -19,7 +19,6 @@
 # == Schema Information End
 #++
 class Admin::Proposals::Proposal < ApplicationRecord
-  include LabelHelper
   has_paper_trail
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true
@@ -86,22 +85,6 @@ class Admin::Proposals::Proposal < ApplicationRecord
     when "rejected", "unsuccessful"
       "bg-danger"
     end
-  end
-
-  # Generates a list of html labels with info about the proposal.
-  def labels(pull_right, show_debtors: true)
-    labels = []
-
-    labels << generate_label(label_css_class, formatted_status)
-    labels << generate_label("bg-danger", "Late") if late
-    labels << generate_label("bg-danger", "Has Debtors") if show_debtors && has_debtors
-
-    labels_html = ActionController::Base.helpers.safe_join(labels, "\n")
-
-    # Wrap the whole list of labels in a float right so that the margins stay preserved.
-    return "<div class=\"float-right\">#{labels_html}</div>".html_safe if pull_right
-
-    labels_html
   end
 
   ##

@@ -29,7 +29,7 @@ status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejec
             <div class="d-flex align-items-center py-2 px-3 border-bottom">
               <%= get_link proposal, :show %>
               <div class="d-flex gap-1 ms-2">
-                <%= proposal.labels false, show_debtors: false %>
+                <%= proposal_labels(proposal, false, show_debtors: false) %>
               </div>
             </div>
           <% end %>
