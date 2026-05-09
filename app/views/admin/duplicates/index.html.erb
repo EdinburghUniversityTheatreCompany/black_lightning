@@ -24,7 +24,7 @@
         <strong>Definite Duplicates (Same Student/Associate ID)</strong> - <%= @duplicates[:same_id].size %> group(s)
       </div>
       <div class="card-body">
-        <p class="text-muted">These users share the same student or associate ID. They are almost certainly duplicates and should be merged.</p>
+        <p class="text-muted">These users share the same student or associate ID, or have equivalent email addresses (e.g. s1234567@sms.ed.ac.uk and s1234567@ed.ac.uk). They are almost certainly duplicates and should be merged.</p>
         <table class="table table-sm table-hover">
           <thead>
             <tr>

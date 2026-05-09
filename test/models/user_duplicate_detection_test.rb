@@ -191,6 +191,19 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     assert_includes same_id_matches.first[:users], user2
   end
 
+  test "find_potential_duplicates finds users with equivalent sms and non-sms emails as definite duplicates" do
+    user1 = FactoryBot.create(:user, email: "s1234567@ed.ac.uk")
+    user2 = FactoryBot.create(:user)
+    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's1234567@sms.ed.ac.uk' WHERE id = #{user2.id}")
+
+    duplicates = User.find_potential_duplicates
+
+    same_id_matches = duplicates[:same_id].select { |d| d[:match_type] == :email && d[:id_value] == "s1234567@ed.ac.uk" }
+    assert_equal 1, same_id_matches.size
+    assert_includes same_id_matches.first[:users], user1
+    assert_includes same_id_matches.first[:users], user2
+  end
+
   test "find_potential_duplicates finds fuzzy name matches" do
     user1 = FactoryBot.create(:user, first_name: "Leonardo", last_name: "OConnor")
     user2 = FactoryBot.create(:user, first_name: "Leo", last_name: "OConnor")

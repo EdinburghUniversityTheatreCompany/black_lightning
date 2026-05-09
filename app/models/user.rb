@@ -763,6 +763,17 @@ class User < ApplicationRecord
       end
     end
 
+    # Bucket 1c: Equivalent SMS email (s1234567@sms.ed.ac.uk == s1234567@ed.ac.uk)
+    # Catches legacy records that predate the @sms.ed.ac.uk normalization
+    sms_email_users = unscoped.where("email LIKE ?", "%@sms.ed.ac.uk").to_a
+    sms_email_users.each do |sms_user|
+      normalized_email = sms_user.email.sub("@sms.ed.ac.uk", "@ed.ac.uk")
+      counterpart = find_by(email: normalized_email)
+      next unless counterpart
+      next if sms_user.marked_not_duplicate?(counterpart)
+      duplicates[:same_id] << { users: [ sms_user, counterpart ], match_type: :email, id_value: normalized_email }
+    end
+
     # Bucket 2 & 3: Same last name with fuzzy first name match
     # Step 1: Get all last names that appear more than once
     duplicate_last_names = unscoped.where.not(last_name: [ nil, "" ])
