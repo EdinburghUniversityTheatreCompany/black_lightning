@@ -8,7 +8,7 @@ class ChaosRails::FixturesGeneratorTest < Rails::Generators::TestCase
 
   test "generator runs without errors" do
     assert_nothing_raised do
-      run_generator [ "Test::Fixtures", [ "code:int", "name:string" ] ]
+      run_generator [ "Test::Fixtures", [ "code:integer", "name:string" ] ]
     end
   end
 end
