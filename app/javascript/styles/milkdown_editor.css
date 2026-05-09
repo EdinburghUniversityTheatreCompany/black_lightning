@@ -1,5 +1,11 @@
 /* Milkdown WYSIWYG editor */
 
+/* Shared panel border — matches Bootstrap's form-control border colour */
+.milkdown-panel {
+  border: 1px solid #dee2e6;
+  border-top: none;
+}
+
 /* Editor content area */
 .milkdown-editor-wrap {
   overflow-y: auto;

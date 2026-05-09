@@ -197,7 +197,7 @@ export default class extends Controller {
     this.element.appendChild(toolbar)
 
     this.#editorEl = document.createElement("div")
-    this.#editorEl.className = "milkdown-editor-wrap border border-top-0 rounded-bottom"
+    this.#editorEl.className = "milkdown-editor-wrap milkdown-panel rounded-bottom"
     this.#editorEl.style.minHeight = this.heightValue
     this.element.appendChild(this.#editorEl)
 
@@ -211,7 +211,7 @@ export default class extends Controller {
     this.element.appendChild(this.#sourceEl)
 
     this.#previewEl = document.createElement("div")
-    this.#previewEl.className = "markdown-body prose max-w-none p-3 border rounded-bottom"
+    this.#previewEl.className = "markdown-body prose max-w-none p-3 milkdown-panel rounded-bottom"
     this.#previewEl.style.display = "none"
     this.element.appendChild(this.#previewEl)
 
