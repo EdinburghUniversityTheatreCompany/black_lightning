@@ -59,7 +59,7 @@ class TeamMember < ActiveRecord::Base
   private
 
   def position_segments
-    position.split("/").map(&:strip)
+    position.split(/\/(?![^(]*\))/).map(&:strip)
   end
 
   def sync_debts_if_show

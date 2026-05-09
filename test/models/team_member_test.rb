@@ -158,6 +158,14 @@ class TeamMemberTest < ActiveSupport::TestCase
     assert_equal "King / Crew<wbr>(Sound Designer, Lighting Designer)</wbr>", TeamMember.new(position: "Actor (King) / Sound Designer / Lighting Designer").cast_display_name
   end
 
+  test "cast? is true when actor name contains a slash" do
+    assert TeamMember.new(position: "Actor (Gustave/Franz)").cast?
+  end
+
+  test "cast_display_name returns role name containing a slash" do
+    assert_equal "Gustave/Franz", TeamMember.new(position: "Actor (Gustave/Franz)").cast_display_name
+  end
+
   # ordered scope
 
   test "ordered scope sorts by display_order with nulls last" do
