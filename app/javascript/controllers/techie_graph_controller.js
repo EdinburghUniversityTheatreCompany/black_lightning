@@ -10,7 +10,7 @@ function yearToColor(year) {
 const HOP_CLASSES = "hop-1 hop-2 hop-3 hop-far"
 
 export default class extends Controller {
-  static values = { nodes: Array, edges: Array, selected: String }
+  static values = { nodes: Array, edges: Array, selected: String, cacheVersion: String }
   static targets = ["canvas", "legend"]
 
   async connect() {
@@ -99,29 +99,43 @@ export default class extends Controller {
 
     this.#cy.on("tap", "node", evt => this.#selectNode(evt.target))
 
-    const layout = this.#cy.layout({
-      name: "fcose",
-      animate: false,
-      fit: true,
-      padding: 30,
-      nodeRepulsion: 200000,
-      idealEdgeLength: 100,
-      edgeElasticity: 0.45,
-      gravity: 0.25,
-      numIter: 2500,
-      tile: false,
-      nodeDimensionsIncludeLabels: true,
-      uniformNodeDimensions: false,
-    })
-
-    layout.on("layoutstop", () => {
+    const cachedPositions = this.#loadPositions()
+    if (cachedPositions) {
+      this.#cy.nodes().forEach(n => {
+        const pos = cachedPositions[n.id()]
+        if (pos) n.position(pos)
+      })
+      this.#cy.fit(this.#cy.elements(), 30)
       if (this.selectedValue) {
         const node = this.#cy.getElementById(this.selectedValue)
         if (node.length) this.#selectNode(node, { zoomIn: true })
       }
-    })
+    } else {
+      const layout = this.#cy.layout({
+        name: "fcose",
+        animate: false,
+        fit: true,
+        padding: 30,
+        nodeRepulsion: 200000,
+        idealEdgeLength: 100,
+        edgeElasticity: 0.45,
+        gravity: 0.25,
+        numIter: 2500,
+        tile: false,
+        nodeDimensionsIncludeLabels: true,
+        uniformNodeDimensions: false,
+      })
 
-    layout.run()
+      layout.on("layoutstop", () => {
+        this.#savePositions()
+        if (this.selectedValue) {
+          const node = this.#cy.getElementById(this.selectedValue)
+          if (node.length) this.#selectNode(node, { zoomIn: true })
+        }
+      })
+
+      layout.run()
+    }
   }
 
   disconnect() {
@@ -144,6 +158,23 @@ export default class extends Controller {
     if (hasUnknown) items.push(swatch("#9ca3af", "No year"))
 
     this.legendTarget.innerHTML = items.join("")
+  }
+
+  #positionKey() { return `techie_tree_positions_${this.cacheVersionValue}` }
+
+  #loadPositions() {
+    try { const raw = localStorage.getItem(this.#positionKey()); return raw ? JSON.parse(raw) : null }
+    catch { return null }
+  }
+
+  #savePositions() {
+    try {
+      const positions = {}
+      this.#cy.nodes().forEach(n => { positions[n.id()] = n.position() })
+      localStorage.setItem(this.#positionKey(), JSON.stringify(positions))
+    } catch {
+      console.warning("Techie Graph: Unable to save positions. Probably quota exceeded or private browsing.")
+    }
   }
 
   #selectNode(root, { zoomIn = false } = {}) {
