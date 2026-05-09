@@ -29,17 +29,22 @@ class Admin::TechiesController < AdminController
     @title = "Techie Family Tree"
 
     @q = Techie.ransack(params[:q], auth_object: current_ability)
-
-    include_siblings_of_related = false
-    amount_of_generations = 10
-
     @base_techie = @q.result(distinct: true)
 
+    version = Techie.maximum(:updated_at).to_i
+    @cache_version = "#{version}-#{@base_techie.size == 1 ? @base_techie.first.id : 'all'}"
+
     if @base_techie.size == 1
-      @techies = @base_techie.first.get_relatives(amount_of_generations, include_siblings_of_related)
+      techies = @base_techie.first.get_relatives(10, false)
+      @graph_data = compute_graph_data(techies)
     else
-      @techies = @base_techie.includes(:children, :parents)
+      @graph_data = Rails.cache.fetch("techie_tree/#{version}") do
+        techies = Techie.includes(:children, :parents).to_a
+        compute_graph_data(techies)
+      end
     end
+
+    @selected_id = @base_techie.size == 1 ? @base_techie.first.id.to_s : ""
   end
 
   def mass_new
@@ -86,6 +91,14 @@ class Admin::TechiesController < AdminController
   end
 
   private
+
+  def compute_graph_data(techies)
+    nodes = techies.map { |t| { id: t.id.to_s, label: t.name, entry_year: t.entry_year } }
+    edges = techies.flat_map do |t|
+      t.children.select { |c| techies.include?(c) }.map { |c| { from: t.id.to_s, to: c.id.to_s } }
+    end
+    { nodes: nodes, edges: edges }
+  end
 
   def permitted_params
     [ :name, :entry_year, children_attributes: [ :id, :_destroy, :name ], parents_attributes: [ :id, :_destroy, :name ] ]

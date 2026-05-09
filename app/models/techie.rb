@@ -18,9 +18,11 @@ class Techie < ApplicationRecord
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :entry_year, numericality: { greater_than: 1950, less_than_or_equal_to: ->(_) { Time.current.year + 1 } }, allow_nil: true
 
-  has_and_belongs_to_many :parents, class_name: "Techie", foreign_key: "child_id", association_foreign_key: "techie_id", join_table: "children_techies"
+  has_and_belongs_to_many :parents, class_name: "Techie", foreign_key: "child_id", association_foreign_key: "techie_id", join_table: "children_techies",
+                          after_add: :touch_for_cache, after_remove: :touch_for_cache
 
-  has_and_belongs_to_many :children, class_name: "Techie", foreign_key: "techie_id", association_foreign_key: "child_id", join_table: "children_techies"
+  has_and_belongs_to_many :children, class_name: "Techie", foreign_key: "techie_id", association_foreign_key: "child_id", join_table: "children_techies",
+                          after_add: :touch_for_cache, after_remove: :touch_for_cache
 
   accepts_nested_attributes_for :children, :parents, reject_if: :all_blank, allow_destroy: true
 
@@ -81,6 +83,8 @@ class Techie < ApplicationRecord
   end
 
   private
+
+  def touch_for_cache(_) = touch
 
   def cycle_through_attributes(attributes, collection)
     attributes.each do |attribute|
