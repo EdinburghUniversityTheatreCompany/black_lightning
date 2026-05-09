@@ -28,7 +28,7 @@
 
     <% if attachment.attachment_tags.present? %>
       <hr class="m-1">
-      <%= to_sentence(ttachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }) %>
+      <%= to_sentence(attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }) %>
     <% end %>
   </div>
 </div>
