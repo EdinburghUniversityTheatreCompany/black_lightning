@@ -84,7 +84,9 @@ class Techie < ApplicationRecord
 
   private
 
-  def touch_for_cache(_) = touch
+  def touch_for_cache(_)
+    touch if persisted?
+  end
 
   def cycle_through_attributes(attributes, collection)
     attributes.each do |attribute|
