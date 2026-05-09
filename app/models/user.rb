@@ -547,6 +547,11 @@ class User < ApplicationRecord
           end
         end
       end
+      # If source_user's email normalizes to the same value as ours (e.g. sms.ed.ac.uk vs ed.ac.uk),
+      # it will cause a spurious uniqueness conflict during save — move it out of the way first.
+      if source_user.email == email
+        source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+      end
       save! if changed?
 
       # Handle email for legacy behavior (unknown_ email replacement) when not explicitly chosen
@@ -556,8 +561,11 @@ class User < ApplicationRecord
 
         if target_has_unknown && !source_has_unknown
           source_email = source_user.email
-          source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
-          update!(email: source_email)
+          # Skip if another user (not involved in this merge) already holds the normalized email
+          unless User.where.not(id: [ id, source_user.id ]).exists?(email: source_email)
+            source_user.update_column(:email, "temp_#{SecureRandom.hex(8)}@bedlamtheatre.co.uk")
+            update!(email: source_email)
+          end
         end
       end
 

@@ -698,4 +698,34 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_includes result[:transferred][:roles], "Committee"
     assert_not_includes result[:transferred][:roles], "Admin"
   end
+
+  test "absorb succeeds when source email is sms.ed.ac.uk variant of target email" do
+    # Simulate pre-normalization DB state: two records whose emails normalize to the same value.
+    # Raw SQL bypasses the Rails normalizes callback, which would otherwise prevent storing sms.ed.ac.uk.
+    target = FactoryBot.create(:user, email: "s9911001@ed.ac.uk")
+    source = FactoryBot.create(:user)
+    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9911001@sms.ed.ac.uk' WHERE id = #{source.id}")
+    source.reload
+
+    result = target.absorb(source)
+
+    assert result[:success], result[:errors].inspect
+    assert_raises(ActiveRecord::RecordNotFound) { source.reload }
+  end
+
+  test "absorb succeeds when source sms.ed.ac.uk email normalizes to email held by a third user" do
+    # Simulate legacy DB state: source has raw sms.ed.ac.uk while a separate user holds the
+    # normalized ed.ac.uk form. The merge should succeed without corrupting the third user.
+    third_user = FactoryBot.create(:user, email: "s9922002@ed.ac.uk")
+    source     = FactoryBot.create(:user)
+    ActiveRecord::Base.connection.execute("UPDATE users SET email = 's9922002@sms.ed.ac.uk' WHERE id = #{source.id}")
+    source.reload
+    target = FactoryBot.create(:user, email: "unknown_abc123@bedlamtheatre.co.uk")
+
+    result = target.absorb(source)
+
+    assert result[:success], result[:errors].inspect
+    assert_raises(ActiveRecord::RecordNotFound) { source.reload }
+    assert_equal "s9922002@ed.ac.uk", third_user.reload.email
+  end
 end
