@@ -20,7 +20,7 @@
   <%# Bucket 1: Same ID (Definite Duplicates) %>
   <% if @duplicates[:same_id].any? %>
     <div class="card mb-3">
-      <div class="card-header bg-danger text-white">
+      <div class="card-header bg-danger text-dark">
         <strong>Definite Duplicates (Same Student/Associate ID)</strong> - <%= @duplicates[:same_id].size %> group(s)
       </div>
       <div class="card-body">
