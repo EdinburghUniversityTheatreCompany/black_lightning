@@ -61,15 +61,15 @@ export default class extends Controller {
   }
 
   h1() {
-    this.#mode === "source" ? this.#sourceLinePrefix("# ") : this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 1 })
+    this.#mode === "source" ? this.#sourceLinePrefix("# ") : this.#cmd(this.#cmds.wrapInHeadingCommand, 1)
   }
 
   h2() {
-    this.#mode === "source" ? this.#sourceLinePrefix("## ") : this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 2 })
+    this.#mode === "source" ? this.#sourceLinePrefix("## ") : this.#cmd(this.#cmds.wrapInHeadingCommand, 2)
   }
 
   h3() {
-    this.#mode === "source" ? this.#sourceLinePrefix("### ") : this.#cmd(this.#cmds.wrapInHeadingCommand, { level: 3 })
+    this.#mode === "source" ? this.#sourceLinePrefix("### ") : this.#cmd(this.#cmds.wrapInHeadingCommand, 3)
   }
 
   bulletList() {
