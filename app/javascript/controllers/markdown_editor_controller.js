@@ -129,7 +129,6 @@ export default class extends Controller {
   // Milkdown context keys (used with ctx.get())
   #ctx = {}
   // Milkdown utility functions stored after dynamic import
-  #callCommand = null
   #TextSelection = null
   #replaceAll = null
   #insert = null
@@ -281,7 +280,7 @@ export default class extends Controller {
       { clipboard },
       { listener, listenerCtx },
       { upload, uploadConfig },
-      { callCommand, replaceAll, insert },
+      { replaceAll, insert },
       { TextSelection }
     ] = await Promise.all([
       import("@milkdown/core"),
@@ -298,7 +297,6 @@ export default class extends Controller {
     import("../styles/milkdown_editor.css")
 
     this.#ctx = { editorViewCtx, commandsCtx }
-    this.#callCommand = callCommand
     this.#TextSelection = TextSelection
     this.#replaceAll = replaceAll
     this.#insert = insert
@@ -340,7 +338,6 @@ export default class extends Controller {
     this.#editor = null
     this.#cmds = {}
     this.#ctx = {}
-    this.#callCommand = null
     this.#TextSelection = null
     this.#replaceAll = null
     this.#insert = null
@@ -406,7 +403,7 @@ export default class extends Controller {
     // from the already-focused view, avoiding ordering assumptions across two action calls.
     this.#editor.action(ctx => {
       ctx.get(this.#ctx.editorViewCtx).focus()
-      this.#callCommand(cmdDef.key, payload)(ctx)
+      ctx.get(this.#ctx.commandsCtx).call(cmdDef.key, payload)
     })
   }
 
