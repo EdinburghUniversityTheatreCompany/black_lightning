@@ -5,7 +5,7 @@ class Tasks::Logic::MarketingCreatives
 
     if new_sign_ups.any?
       MarketingCreativesMailer.notify_of_new_sign_ups(new_sign_ups).deliver_now
-      p "Notified the Marketing Manager of #{new_sign_ups.count} new sign-ups."
+      Rails.logger.info "Notified the Marketing Manager of #{new_sign_ups.count} new sign-ups."
     end
   end
 end

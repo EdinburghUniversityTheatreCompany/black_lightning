@@ -36,7 +36,9 @@ class Admin::Proposals::CallTest < ActiveSupport::TestCase
   end
 
   test "instantiates answers on proposals after save" do
-    call = FactoryBot.create(:proposal_call)
+    call = FactoryBot.create(:proposal_call, question_count: 2, proposal_count: 2)
+
+    assert_not_empty call.proposals
 
     call.proposals.each do |proposal|
       assert_equal call.questions.count, proposal.questions.count

@@ -101,11 +101,11 @@ class Admin::Proposals::Proposal < ApplicationRecord
   ##
   def convert_to_show
     unless successful?
-      p "The proposal #{show_title} was not successful and cannot be converted to a show"
+      Rails.logger.warn "The proposal #{show_title} was not successful and cannot be converted to a show"
       raise ArgumentError, "This proposal was not successful"
     end
 
-    p "Converting #{show_title} from proposal to show"
+    Rails.logger.info "Converting #{show_title} from proposal to show"
 
     @show = Show.new
     @show.name = show_title
@@ -115,7 +115,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     # Check if the slug already exists on an event
     if Event.find_by(slug: @show.slug).present?
-      p "Found a show with the same slug, which is #{@show.slug}."
+      Rails.logger.info "Found a show with the same slug, which is #{@show.slug}."
       original_slug = @show.slug
 
       max_number = 30
@@ -146,13 +146,13 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
     unless @show.save
       @show.errors.full_messages.each do |error|
-        p error
+        Rails.logger.warn error
       end
-      p "Converting the proposal to a show failed for the above reasons."
+      Rails.logger.warn "Converting the proposal to a show failed for the above reasons."
       raise ActiveRecord::RecordNotSaved, "Could not save the new show based on #{show_title}. #{@show.errors.full_messages.join(' ,')}"
     end
 
-    p "Adding Team Members"
+    Rails.logger.info "Adding Team Members"
     @show.team_members << team_members.collect(&:dup)
 
     @show.proposal = self
@@ -161,14 +161,12 @@ class Admin::Proposals::Proposal < ApplicationRecord
     # :nocov:
     unless save
       message = "Couldn't set the 'successful' flag on the proposal, couldn't add the team members to the show, or couldn't set the show proposal to this one. This will need to be done manually."
-      p message
+      Rails.logger.error message
       raise ActiveRecord::RecordNotSaved, message
     end
     # :nocov:
 
-    p "Created Show:"
-    p "Name: #{@show.name}"
-    p "Slug: #{@show.slug}"
+    Rails.logger.info "Created Show: #{@show.name} (#{@show.slug})"
   end
   # Convert to show asynchronously using ActiveJob
   def convert_to_show_async

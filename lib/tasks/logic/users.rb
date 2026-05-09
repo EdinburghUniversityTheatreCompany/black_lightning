@@ -4,11 +4,11 @@ class Tasks::Logic::Users
 
     users.each do |user|
       user.phone_number = nil
-      p "#{user.name_or_email}: Cleared phone number"
+      Rails.logger.info "#{user.name_or_email}: Cleared phone number"
 
       unless user.save
         # :nocov:
-        p "WARNING: Could not save #{user.name_or_email}"
+        Rails.logger.warn "WARNING: Could not save #{user.name_or_email}"
         # :nocov:
       end
     end

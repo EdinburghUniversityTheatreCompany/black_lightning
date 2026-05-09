@@ -1,3 +1,11 @@
+# Suppress frozen-string-literal warnings from the marcel gem (third-party,
+# unfixable by us) so they don't obscure test output.
+module Warning
+  def warn(msg, category: nil)
+    super unless msg.include?("/gems/marcel-")
+  end
+end
+
 if ENV["COVERAGE"]
   require "simplecov"
   require "simplecov-rcov"
