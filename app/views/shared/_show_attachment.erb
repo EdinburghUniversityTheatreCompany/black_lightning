@@ -2,17 +2,17 @@
 
 <% url = attachment_path(attachment.slug) %>
 
-<div class="card h-100 mb-0">
+<div class="card mb-0 flex flex-col">
   <% begin %>
     <% if attachment.file.previewable? %>
-      <% img = image_tag attachment.file.preview(thumb_variant) %>
+      <% img = image_tag attachment.file.preview(thumb_variant), class: "card-img-top h-auto" %>
     <% else %>
-      <% img = image_tag attachment.file.variant(thumb_variant) %>
+      <% img = image_tag attachment.file.variant(thumb_variant), class: "card-img-top h-auto" %>
     <% end %>
 
     <% fullsize_url = url_for(attachment.file) %>
 
-    <%= link_to(img, fullsize_url, { class: "card-img-top h-auto", rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant))) %>
+    <%= link_to(img, fullsize_url, { rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant))) %>
   <% rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable %>
     <%# It is impossible to create a thumbnail, so do nothing. %>
   <% end %>
