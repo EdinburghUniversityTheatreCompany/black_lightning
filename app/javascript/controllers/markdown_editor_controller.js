@@ -16,6 +16,8 @@ export default class extends Controller {
     this.#textarea.style.display = "none"
 
     this.#buildShell()
+    this.#boundKeydown = (e) => this.#handleKeydown(e)
+    this.element.addEventListener("keydown", this.#boundKeydown)
     try {
       await this.#mountEditor()
     } catch {
@@ -29,6 +31,7 @@ export default class extends Controller {
   }
 
   disconnect() {
+    this.element.removeEventListener("keydown", this.#boundKeydown)
     this.#form?.removeEventListener("submit", this.#boundSync, { capture: true })
     this.#linkDialog?.remove()
     this.#tableDialog?.remove()
@@ -113,6 +116,7 @@ export default class extends Controller {
   #editor = null
   #form = null
   #boundSync = null
+  #boundKeydown = null
   #mode = "edit"
   #editorEl = null
   #sourceEl = null
@@ -168,7 +172,7 @@ export default class extends Controller {
       </div>
       <div class="milkdown-sep"></div>
       <div class="milkdown-toolbar__group">
-        <button type="button" class="milkdown-btn" title="Insert link"  data-action="click->markdown-editor#insertLink"><i class="fa-solid fa-link"></i></button>
+        <button type="button" class="milkdown-btn" title="Insert link (Ctrl+K)"  data-action="click->markdown-editor#insertLink"><i class="fa-solid fa-link"></i></button>
         <button type="button" class="milkdown-btn" title="Upload image" data-action="click->markdown-editor#insertImage"><i class="fa-solid fa-image"></i></button>
         <button type="button" class="milkdown-btn" title="Insert table" data-action="click->markdown-editor#insertTable"><i class="fa-solid fa-table"></i></button>
       </div>
@@ -661,6 +665,23 @@ export default class extends Controller {
       const tableNode = table.create(null, [headerRow, ...bodyRows])
       dispatch(state.tr.replaceSelectionWith(tableNode))
     })
+  }
+
+  #handleKeydown(event) {
+    const ctrl = event.ctrlKey || event.metaKey
+    if (!ctrl) return
+
+    switch (event.key) {
+      case "b":
+        if (this.#mode === "source") { event.preventDefault(); this.bold() }
+        break
+      case "i":
+        if (this.#mode === "source") { event.preventDefault(); this.italic() }
+        break
+      case "k":
+        if (this.#mode !== "preview") { event.preventDefault(); this.#showLinkDialog(null) }
+        break
+    }
   }
 
   // Positions a dialog element anchored below the triggering button.
