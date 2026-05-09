@@ -516,7 +516,7 @@ export default class extends Controller {
   async #showLinkDialog(event) {
     if (this.#mode === "preview") return
 
-    this.#positionDialog(this.#linkDialog, event, 340)
+    this.#positionDialog(this.#linkDialog, event ?? this.#getCursorCoords(), 340)
 
     // Pre-fill text field from current selection
     let selectedText = ""
@@ -684,14 +684,43 @@ export default class extends Controller {
     }
   }
 
-  // Positions a dialog element anchored below the triggering button.
-  #positionDialog(dialog, event, maxWidth = 340) {
-    if (!event?.currentTarget) return
-    const rect = event.currentTarget.getBoundingClientRect()
+  // Returns {left, bottom} for the current cursor position, used to anchor dialogs
+  // opened via keyboard shortcut. Edit mode uses ProseMirror's coordsAtPos; source
+  // mode falls back to the top of the textarea.
+  #getCursorCoords() {
+    if (this.#mode === "edit" && this.#editor) {
+      let coords = null
+      this.#editor.action(ctx => {
+        const view = ctx.get(this.#ctx.editorViewCtx)
+        const c = view.coordsAtPos(view.state.selection.from)
+        coords = { left: c.left, bottom: c.bottom }
+      })
+      if (coords) return coords
+    }
+    if (this.#sourceTextarea) {
+      const rect = this.#sourceTextarea.getBoundingClientRect()
+      return { left: rect.left, bottom: rect.top + 28 }
+    }
+    return null
+  }
+
+  // Positions a dialog anchored below a button event or a {left, bottom} coord pair.
+  #positionDialog(dialog, anchor, maxWidth = 340) {
+    let left, bottom
+    if (anchor?.currentTarget) {
+      const rect = anchor.currentTarget.getBoundingClientRect()
+      left = rect.left
+      bottom = rect.bottom
+    } else if (anchor != null) {
+      left = anchor.left
+      bottom = anchor.bottom
+    } else {
+      return
+    }
     dialog.style.margin = "0"
     dialog.style.position = "fixed"
-    dialog.style.left = `${Math.min(rect.left, window.innerWidth - maxWidth - 16)}px`
-    dialog.style.top = `${rect.bottom + 6}px`
+    dialog.style.left = `${Math.min(left, window.innerWidth - maxWidth - 16)}px`
+    dialog.style.top = `${bottom + 6}px`
   }
 
   async #handleFileInputChange() {
