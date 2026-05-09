@@ -36,7 +36,9 @@
           </thead>
           <tbody>
             <% @duplicates[:same_id].each do |dup| %>
-              <tr>
+              <% same_id_target = dup[:users].first %>
+              <% same_id_source = dup[:users].second %>
+              <tr id="pair-<%= same_id_target.id %>-<%= same_id_source.id %>">
                 <td><span class="badge bg-danger"><%= dup[:match_type].to_s.titleize %></span></td>
                 <td><code><%= dup[:id_value] %></code></td>
                 <td>
@@ -53,7 +55,7 @@
                 <td>
                   <% target = dup[:users].first %>
                   <% source = dup[:users].second %>
-                  <%= link_to "Merge", merge_admin_user_path(target, source_user_id: source.id), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(target, source_user_id: source.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
                 </td>
               </tr>
             <% end %>
@@ -85,7 +87,7 @@
               <% cache = dup[:years_active_cache] %>
               <% u1_years = cached_years_active(u1, cache) %>
               <% u2_years = cached_years_active(u2, cache) %>
-              <tr>
+              <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                   <small class="text-muted"><%= u1.email %></small><br>
@@ -105,7 +107,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
                   <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
                 </td>
               </tr>
@@ -138,7 +140,7 @@
               <% cache = dup[:years_active_cache] %>
               <% u1_years = cached_years_active(u1, cache) %>
               <% u2_years = cached_years_active(u2, cache) %>
-              <tr>
+              <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                   <small class="text-muted"><%= u1.email %></small><br>
@@ -158,7 +160,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
                   <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
                 </td>
               </tr>
@@ -191,7 +193,7 @@
               <% cache = dup[:years_active_cache] %>
               <% u1_years = cached_years_active(u1, cache) %>
               <% u2_years = cached_years_active(u2, cache) %>
-              <tr>
+              <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                   <small class="text-muted"><%= u1.email %></small><br>
@@ -211,7 +213,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
                   <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
                 </td>
               </tr>
@@ -244,7 +246,7 @@
               <% cache = dup[:years_active_cache] %>
               <% u1_years = cached_years_active(u1, cache) %>
               <% u2_years = cached_years_active(u2, cache) %>
-              <tr>
+              <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                   <small class="text-muted"><%= u1.email %></small><br>
@@ -264,7 +266,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
                   <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
                 </td>
               </tr>
@@ -276,3 +278,13 @@
   <% end %>
 
 <% end %>
+
+<dialog id="merge-modal-dialog"
+        data-controller="merge-modal"
+        data-action="click->merge-modal#backdropClose"
+        class="bg-transparent border-0 p-0 w-full max-w-5xl m-auto max-h-screen overflow-y-auto backdrop:bg-black/50">
+  <turbo-frame id="merge-modal"
+               data-merge-modal-target="frame"
+               data-action="turbo:frame-load->merge-modal#frameLoaded">
+  </turbo-frame>
+</dialog>

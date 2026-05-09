@@ -34,8 +34,8 @@
     <h5 class="mb-0">Merge Preview</h5>
   </div>
 
-  <%= form_with url: absorb_admin_user_path(target), method: :post, local: true,
-              data: { controller: "field-choice" } do |f| %>
+  <%= form_with url: absorb_admin_user_path(target), method: :post,
+              data: { controller: "field-choice", turbo: local_assigns[:in_modal] ? nil : false } do |f| %>
     <%= hidden_field_tag :source_user_id, source.id %>
 
     <div class="card-body">
@@ -215,7 +215,11 @@
     </div>
 
     <div class="card-footer d-flex justify-content-between">
-      <%= link_to "Cancel", admin_user_path(target), class: "btn btn-secondary" %>
+      <% if local_assigns[:in_modal] %>
+        <button type="button" class="btn btn-secondary" data-action="click->merge-modal#close">Cancel</button>
+      <% else %>
+        <%= link_to "Cancel", admin_user_path(target), class: "btn btn-secondary" %>
+      <% end %>
       <button type="submit" class="btn btn-danger">Confirm Merge</button>
     </div>
   <% end %>

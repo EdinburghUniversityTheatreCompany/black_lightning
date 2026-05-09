@@ -1,0 +1,3 @@
+<%= turbo_stream.remove "pair-#{@user.id}-#{@source_user.id}" %>
+<turbo-stream action="dismissMergeModal"></turbo-stream>
+<turbo-stream action="toast" type="success" message="<%= @success_message %>"></turbo-stream>

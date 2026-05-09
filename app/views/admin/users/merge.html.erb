@@ -28,8 +28,8 @@
   </div>
 </div>
 
-<div id="merge_preview_container">
+<%= turbo_frame_tag "merge-modal" do %>
   <% if @source_user %>
-    <%= render partial: "merge_modal", locals: { target: @user, source: @source_user } %>
+    <%= render partial: "merge_modal", locals: { target: @user, source: @source_user, in_modal: turbo_frame_request? } %>
   <% end %>
-</div>
+<% end %>

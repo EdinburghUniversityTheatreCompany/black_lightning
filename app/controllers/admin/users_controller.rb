@@ -59,17 +59,27 @@ class Admin::UsersController < AdminController
   end
 
   def absorb
-    source_user = User.find(params[:source_user_id])
+    @source_user = User.find(params[:source_user_id])
     keep_from_source = params[:keep_from_source] || []
-    result = @user.absorb(source_user, keep_from_source: keep_from_source)
+    result = @user.absorb(@source_user, keep_from_source: keep_from_source)
 
-    respond_to do |format|
-      if result[:success]
-        flash[:success] = "Successfully merged #{source_user.name_or_email} into #{@user.name_or_email}"
-        format.html { redirect_to admin_user_url(@user) }
-      else
-        flash[:error] = result[:errors].join(", ")
-        format.html { redirect_back fallback_location: admin_user_url(@user) }
+    if result[:success]
+      @success_message = "Successfully merged #{@source_user.name_or_email} into #{@user.name_or_email}"
+      respond_to do |format|
+        format.turbo_stream
+        format.html do
+          flash[:success] = @success_message
+          redirect_to admin_user_url(@user)
+        end
+      end
+    else
+      @error_message = result[:errors].join(", ")
+      respond_to do |format|
+        format.turbo_stream { render "absorb_error" }
+        format.html do
+          flash[:error] = @error_message
+          redirect_back fallback_location: admin_user_url(@user)
+        end
       end
     end
   end
