@@ -9,7 +9,7 @@
 <% field_sets = @proposals.map do |proposal|
   fields = [
     proposal,
-    "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal.labels(true)}".html_safe
+    "#{get_link(proposal, :show, link_target: admin_proposals_proposal_path(proposal))} #{proposal_labels(proposal, true)}".html_safe
   ]
 
   if can_act
@@ -39,6 +39,7 @@ end %>
   editing_deadline: l(@call.editing_deadline, format: :longy),
 } %>
 
-<%= render 'shared/basic_fields', fields: call_info_fields %>
-
-<%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal) %>
+<%= render Admin::CardComponent.new(title: "Proposals", flush: true) do %>
+  <%= render 'shared/basic_fields', fields: call_info_fields %>
+  <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal) %>
+<% end %>
