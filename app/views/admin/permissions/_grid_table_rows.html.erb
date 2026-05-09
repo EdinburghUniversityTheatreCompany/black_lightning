@@ -1,0 +1,29 @@
+<tbody>
+  <% @models.each do |model| %>
+    <tr>
+      <td class="sticky left-0 z-10 bg-white whitespace-nowrap"><%= model.name %></td>
+
+      <% @roles.each do |role| %>
+        <% permission = role.permissions.select{ |p| p.subject_class == model.name } %>
+        <%= render "permission_grid", role: role, model: model, permission: permission %>
+      <% end %>
+    </tr>
+  <% end %>
+
+  <% @miscellaneous_permission_subject_classes.each do |subject_class, actions| %>
+    <% actions.each do |action, description| %>
+      <tr>
+        <td class="sticky left-0 z-10 bg-white whitespace-nowrap"><%= description %></td>
+
+        <% @roles.each do |role| %>
+          <td colspan="<%= @actions.count %>">
+            <% checked = role.permissions.select{ |p| p.subject_class == subject_class && p.action == action }.any? %>
+            <%= check_box_tag "[#{role.name}][#{subject_class}]#{action}", action, checked,
+                title: description,
+                data: { action: "change->admin--permissions-grid#markChanged" } %>
+          </td>
+        <% end %>
+      </tr>
+    <% end %>
+  <% end %>
+</tbody>

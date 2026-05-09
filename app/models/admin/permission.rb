@@ -19,9 +19,8 @@
 class Admin::Permission < ApplicationRecord
   has_and_belongs_to_many :roles
 
-  # Distinguishing between update, create, and delete does not make sense for the permissions.
-  # Users with :manage permission will be able to edit the permissions.
   DISABLED_PERMISSIONS = %w[update create delete].freeze
+  EXCLUDED_ROLES = [ "Admin", "Proposal Checker" ].freeze
 
   ##
   # Creates, Adds an existing or Removes a Admin::Permission from a role for the

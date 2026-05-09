@@ -1,0 +1,22 @@
+<%= render Admin::CardComponent.new(title: "Permissions — #{@role.name}", flush: true, html_class: "w-fit") do %>
+  <%= form_with(url: permissions_admin_role_path(@role), method: "post", local: true,
+                data: { controller: "admin--permissions-grid",
+                        action: "submit->admin--permissions-grid#confirmSubmit" }) do %>
+    <div class="overflow-auto max-h-[calc(100vh-12rem)]">
+      <table class="table table-hover w-auto">
+        <thead>
+          <tr>
+            <th class="sticky top-0 left-0 z-40 bg-gray-50 whitespace-nowrap">Subject Class</th>
+            <% @actions.each do |action| %>
+              <th title="<%= action %>" class="sticky top-0 z-20 bg-gray-50"><%= action[0].capitalize %></th>
+            <% end %>
+          </tr>
+        </thead>
+
+        <%= render "grid_table_rows" %>
+      </table>
+    </div>
+
+    <%= render "grid_controls" %>
+  <% end %>
+<% end %>

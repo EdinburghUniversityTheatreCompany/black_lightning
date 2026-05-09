@@ -236,6 +236,8 @@ ChaosRails::Application.routes.draw do
 
     resources :roles do
       member do
+        get "permissions", to: "permissions#role_grid", as: "permissions"
+        post "permissions", to: "permissions#update_role_grid"
         post "add_user", to: "roles#add_user"
         delete "remove_user/:user_id", to: "roles#remove_user", as: "remove_user"
         delete "purge", to: "roles#purge"

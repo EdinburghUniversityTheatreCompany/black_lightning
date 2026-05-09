@@ -36,6 +36,10 @@
 <% fields[:users] = { type: 'content', header: "Users (#{@users.count})", content: render('shared/users_table', users: @users, url: admin_role_url(@role), show_remove_buttons: show_remove, remove_url_helper: remove_url_lambda) } %>
 
 <% content_for :extra_show_actions do %>
+  <% if can?(:manage, Admin::Permission) && !Admin::Permission::EXCLUDED_ROLES.include?(@role.name) %>
+    <%= link_to "Permissions", permissions_admin_role_path(@role), class: "btn btn-secondary" %>
+  <% end %>
+
   <%= get_link @role, :archive, link_text: 'Archive Role', http_method: :put, html_class: 'btn btn-secondary',
       confirm: "Archiving #{@role.name}", detail: "This will create a new role labelled with the current academic year ('#{@role.name} #{academic_year_shorthand}') and will move all users to it, while leaving all permissions on this role." %>
 

@@ -1,0 +1,25 @@
+<div class="px-4 py-3 border-t border-gray-200 flex items-center gap-3">
+  <%= submit_tag("Update", class: "btn btn-secondary") %>
+  <span class="text-sm text-gray-500 hidden" data-admin--permissions-grid-target="changeCount">
+    <span data-admin--permissions-grid-target="changeCountText"></span>
+  </span>
+</div>
+
+<div class="hidden fixed inset-0 z-50 items-center justify-center"
+     data-admin--permissions-grid-target="modal"
+     role="dialog" aria-modal="true">
+  <div class="absolute inset-0 bg-black/50" data-action="click->admin--permissions-grid#backdropClick"></div>
+  <div class="relative bg-white rounded shadow-lg w-full max-w-lg mx-4 max-h-[80vh] flex flex-col"
+       data-admin--permissions-grid-target="dialog">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+      <h5 class="text-base font-semibold text-gray-800">Confirm Permission Changes</h5>
+      <button type="button" class="text-gray-500 hover:text-gray-700 text-xl leading-none cursor-pointer bg-transparent border-0"
+              data-action="click->admin--permissions-grid#cancelSubmit">&times;</button>
+    </div>
+    <div class="p-4 overflow-auto flex-1" data-admin--permissions-grid-target="changeList"></div>
+    <div class="flex items-center gap-2 justify-end px-4 py-3 border-t border-gray-200">
+      <button type="button" class="btn btn-secondary" data-action="click->admin--permissions-grid#cancelSubmit">Cancel</button>
+      <button type="button" class="btn btn-success" data-action="click->admin--permissions-grid#approveSubmit">Apply Changes</button>
+    </div>
+  </div>
+</div>
