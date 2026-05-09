@@ -24,7 +24,7 @@ class Tasks::Logic::Debt
     new_debtors = debtors - User.in_debt(Date.current.advance(days: -1))
     failed_notifications = []
     new_debtors.each do |user|
-      p "Notifying #{user.name_or_email} of debt"
+      Rails.logger.info "Notifying #{user.name_or_email} of debt"
       begin
         DebtMailer.mail_debtor(user, true).deliver_now
       rescue Net::SMTPServerBusy, Net::SMTPError, Net::SMTPFatalError => e
@@ -36,7 +36,7 @@ class Tasks::Logic::Debt
     # Finds long time debtors after notifications have been added for all the new debtors.
     long_time_debtors = debtors - User.notified_since(Date.current.advance(days: -14))
     long_time_debtors.each do |user|
-      p "Reminding #{user.name_or_email} of debt"
+      Rails.logger.info "Reminding #{user.name_or_email} of debt"
       begin
         DebtMailer.mail_debtor(user, false).deliver_now
       rescue Net::SMTPServerBusy, Net::SMTPError, Net::SMTPFatalError => e
