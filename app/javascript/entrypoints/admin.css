@@ -213,6 +213,26 @@ select.simple-select2 {
     @apply overflow-x-auto;
   }
 
+  .table-danger td {
+    @apply bg-red-100;
+  }
+
+  .table-warning td {
+    @apply bg-yellow-100;
+  }
+
+  .table-success td {
+    @apply bg-green-100;
+  }
+
+  .table-info td {
+    @apply bg-blue-100;
+  }
+
+  .table-primary td {
+    @apply bg-blue-100;
+  }
+
   /* Bootstrap form compat */
   .form-control {
     @apply w-full rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30;
