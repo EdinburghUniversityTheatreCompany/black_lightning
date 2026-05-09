@@ -59,7 +59,7 @@ module RuboCop
           path = node.location.expression&.source_buffer&.name.to_s
           if path.include?("/components/")
             "helpers."
-          elsif path.include?("/helpers/")
+          elsif path.include?("/helpers/") || path.include?("/models/")
             "ActionController::Base.helpers."
           else
             ""
