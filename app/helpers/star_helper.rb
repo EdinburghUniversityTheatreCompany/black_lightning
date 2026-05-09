@@ -9,7 +9,7 @@ module StarHelper
 
     half_star = rating_decimal >= 0.5
 
-    stars = ""
+    stars = String.new
 
     # Appends a star equal to the whole number part of the rating.
     amount_of_stars = rating.floor
