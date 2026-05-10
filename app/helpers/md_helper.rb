@@ -3,8 +3,8 @@ require "commonmarker"
 module MdHelper
   MARKDOWN_OPTIONS = ActionView::Template::Handlers::Markdown::OPTIONS
 
-  IAL_INLINE_PATTERN = /\A(.*?)\s*\{\s*((?:[.#][\w-]+\s*)+)\}\s*\z/m
-  IAL_BLOCK_PATTERN  = /\A\{\s*((?:[.#][\w-]+\s*)+)\}\z/
+  IAL_INLINE_PATTERN = /\A(.*?)\s*\{\s*:?\s*((?:[.#][\w-]+\s*)+)\}\s*\z/m
+  IAL_BLOCK_PATTERN  = /\A\{\s*:?\s*((?:[.#][\w-]+\s*)+)\}\z/
 
   def render_markdown(md)
     return "" if md.blank?
