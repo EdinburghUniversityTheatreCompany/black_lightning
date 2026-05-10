@@ -10,7 +10,7 @@
         <span >Page: </span>
       </li>
       <li class="page-item">
-        <%= tag.input type: "number", class: "page-link page-jump-input", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump blur->page-jump#jump" }, autocomplete: "off" %>
+        <%= tag.input type: "number", class: "page-link page-jump-input", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump change->page-jump#jump" }, autocomplete: "off" %>
       </li>
       <li class="page-item disabled">
         <span> of <%= total_pages %></span>
