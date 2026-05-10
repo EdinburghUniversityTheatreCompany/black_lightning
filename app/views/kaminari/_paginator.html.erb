@@ -5,18 +5,16 @@
     <ul class="pagination pagination-sm m-0 <%= 'float-right' if @admin_site %>">
       <%= first_page_tag %>
       <%= prev_page_tag %>
-      <% each_page do |page| %>
-        <% if page.left_outer? || page.right_outer? || page.inside_window? %>
-          <%= page_tag page %>
-        <% elsif !page.was_truncated? -%>
-          <%= gap_tag %>
-        <% end %>
-      <% end %>
-      <% if current_page > total_pages %>
-        <%= tag.li class: "page-item active" do %>
-          <% tag.input type: "number", class: "page-link page-jump-input", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump blur->page-jump#jump" }, autocomplete: "off" %>
-        <% end %>
-      <% end %>
+
+      <li class="page-item">
+        <span >Page: </span>
+      </li>
+      <li class="page-item">
+        <%= tag.input type: "number", class: "page-link page-jump-input", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump blur->page-jump#jump" }, autocomplete: "off" %>
+      </li>
+      <li class="page-item disabled">
+        <span> of <%= total_pages %></span>
+      </li>
       <%= next_page_tag %>
       <%= last_page_tag %>
     </ul>
