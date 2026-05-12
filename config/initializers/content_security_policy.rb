@@ -21,7 +21,7 @@ Rails.application.configure do
     policy.frame_src "https://tickets.bedlamtheatre.co.uk", "https://calendar.google.com", "https://accounts.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
     policy.img_src :self, :data, :https
     policy.font_src :self
-    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk", "https://www.gstatic.com", "https://apis.google.com", "https://clients6.google.com", "https://www.googleapis.com", "https://calendar.googleapis.com"
+    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk", "https://www.gstatic.com", "https://apis.google.com", "https://clients6.google.com", "https://www.googleapis.com", "https://calendar.googleapis.com", "https://bedlam-theatre-website.s3.eu-central-1.wasabisys.com"
     # Allow @vite/client to hot reload changes in development
     policy.connect_src *policy.connect_src, "ws://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
 
