@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -143,6 +143,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
     t.bigint "status", null: false
     t.datetime "updated_at", precision: nil, null: false
     t.index ["call_id"], name: "index_admin_proposals_proposals_on_call_id"
+    t.index ["status"], name: "index_admin_proposals_proposals_on_status"
   end
 
   create_table "admin_questionnaires_questionnaire_templates", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -180,6 +181,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
     t.bigint "state", default: 0, null: false
     t.datetime "updated_at", precision: nil, null: false
     t.integer "user_id"
+    t.index ["admin_staffing_job_id"], name: "index_admin_staffing_debts_on_admin_staffing_job_id"
     t.index ["due_by", "state"], name: "index_admin_staffing_debts_on_due_by_and_state"
     t.index ["show_id"], name: "index_admin_staffing_debts_on_show_id"
     t.index ["user_id", "due_by", "state"], name: "index_staffing_debts_on_user_date_state"
@@ -196,6 +198,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
     t.string "staffable_type"
     t.datetime "updated_at", precision: nil, null: false
     t.integer "user_id"
+    t.index ["reminder_sent_at"], name: "index_admin_staffing_jobs_on_reminder_sent_at"
     t.index ["staffable_type", "staffable_id"], name: "index_admin_staffing_jobs_on_staffable"
     t.index ["staffable_type"], name: "index_admin_staffing_jobs_on_staffable_type"
     t.index ["user_id"], name: "index_admin_staffing_jobs_on_user_id"
@@ -249,6 +252,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
     t.string "item_type"
     t.string "name"
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["editable_block_id"], name: "index_attachments_on_editable_block_id"
     t.index ["item_type", "item_id"], name: "index_attachments_on_item_type_and_item_id"
   end
 
@@ -802,6 +806,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
   create_table "users_roles", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.integer "role_id"
     t.integer "user_id"
+    t.index ["role_id"], name: "index_users_roles_on_role_id"
     t.index ["user_id", "role_id"], name: "index_users_roles_on_user_id_and_role_id"
   end
 
