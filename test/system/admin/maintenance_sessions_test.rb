@@ -15,20 +15,18 @@ class Admin::MaintenanceSessionsTest < ApplicationSystemTestCase
   end
 
   test "should create Maintenance session" do
-    visit admin_maintenance_sessions_url
-    click_on "New Maintenance Session"
+    visit new_admin_maintenance_session_url
 
-    fill_in "Date", with: @admin_maintenance_session.date
+    set_date_field "Date", @admin_maintenance_session.date
     click_on "Create Maintenance session"
 
     assert_text "was successfully created."
   end
 
   test "should update Maintenance session" do
-    visit admin_maintenance_session_url(@admin_maintenance_session)
-    click_on "Edit", match: :prefer_exact
+    visit edit_admin_maintenance_session_url(@admin_maintenance_session)
 
-    fill_in "Date", with: @admin_maintenance_session.date
+    set_date_field "Date", @admin_maintenance_session.date
     click_on "Update Maintenance session"
 
     assert_text "was successfully updated."
