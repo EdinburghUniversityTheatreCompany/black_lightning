@@ -5,16 +5,22 @@ on:
   push:
     branches: [ main ]
 
+permissions: {}
+
 jobs:
   scan_ruby:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@b8d447ba7506ac7e0c8fbc50762276fb3b7df731 # v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
@@ -30,12 +36,17 @@ jobs:
 
   lint_ruby:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@b8d447ba7506ac7e0c8fbc50762276fb3b7df731 # v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
@@ -48,17 +59,22 @@ jobs:
 
   lint_js:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6
         with:
-          version: latest
+          version: 10.33.2
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -71,10 +87,13 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
 
     services:
       mysql:
-        image: mysql
+        image: mysql:8.4@sha256:c36050afdca850f23cef85703f84c7531a5ae155a11b5ee1c60acb09937c4084
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: true
         ports:
@@ -94,21 +113,23 @@ jobs:
           libvips-dev
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
       - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@b8d447ba7506ac7e0c8fbc50762276fb3b7df731 # v1
         with:
           ruby-version: .ruby-version
           bundler-cache: true
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6
         with:
-          version: latest
+          version: 10.33.2
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
         with:
           node-version-file: .node-version
           cache: pnpm
@@ -133,7 +154,7 @@ jobs:
         run: bin/rails db:test:prepare test test:system
 
       - name: Keep screenshots from failed system tests
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: failure()
         with:
           name: screenshots
