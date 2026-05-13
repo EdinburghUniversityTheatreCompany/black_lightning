@@ -1,5 +1,5 @@
 class AddDisplayOrderIndexToTeamMembers < ActiveRecord::Migration[8.1]
   def change
-    add_index :team_members, :display_order
+    add_index :team_members, :display_order, if_not_exists: true
   end
 end
