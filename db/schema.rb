@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_155235) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -74,6 +74,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
     t.bigint "ordering"
     t.datetime "updated_at", precision: nil, null: false
     t.string "url"
+    t.index ["ordering"], name: "index_admin_editable_blocks_on_ordering"
   end
 
   create_table "admin_feedbacks", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -231,6 +232,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
     t.string "name"
     t.bigint "ordering"
     t.datetime "updated_at", null: false
+    t.index ["ordering"], name: "index_attachment_tags_on_ordering"
   end
 
   create_table "attachment_tags_attachments", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -276,6 +278,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
     t.string "title"
     t.datetime "updated_at", null: false
     t.string "url"
+    t.index ["is_active", "ordering"], name: "index_carousel_items_on_is_active_and_ordering"
   end
 
   create_table "children_techies", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -330,6 +333,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
     t.integer "recommended_maintenance_debts"
     t.integer "recommended_staffing_debts"
     t.datetime "updated_at", null: false
+    t.index ["ordering"], name: "index_event_tags_on_ordering"
   end
 
   create_table "event_tags_events", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -745,6 +749,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
     t.string "teamwork_type"
     t.datetime "updated_at", precision: nil, null: false
     t.integer "user_id"
+    t.index ["display_order"], name: "index_team_members_on_display_order"
     t.index ["teamwork_id", "teamwork_type", "user_id"], name: "index_team_members_on_teamwork_and_user", unique: true
     t.index ["teamwork_id"], name: "index_team_members_on_teamwork_id"
     t.index ["teamwork_type", "teamwork_id"], name: "index_team_members_on_teamwork_type_and_id"
@@ -799,6 +804,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_153819) do
     t.index ["calendar_token"], name: "index_users_on_calendar_token", unique: true
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["last_name"], name: "index_users_on_last_name"
+    t.index ["profile_completed_at"], name: "index_users_on_profile_completed_at"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["student_id"], name: "index_users_on_student_id"
   end
