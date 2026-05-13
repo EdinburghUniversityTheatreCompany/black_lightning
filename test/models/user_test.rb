@@ -37,6 +37,30 @@ class Admin::UserTest < ActiveSupport::TestCase
     @user = users(:user)
   end
 
+  test "search_by_name finds users by full name" do
+    alice = FactoryBot.create(:user, first_name: "Alice", last_name: "Smith")
+    bob   = FactoryBot.create(:user, first_name: "Bob", last_name: "Jones")
+
+    results = User.search_by_name("Alice Smith")
+    assert_includes results, alice
+    assert_not_includes results, bob
+  end
+
+  test "search_by_name is case insensitive" do
+    alice = FactoryBot.create(:user, first_name: "Alice", last_name: "Smith")
+
+    assert_includes User.search_by_name("alice smith"), alice
+  end
+
+  test "order_by_last_name_first sorts by last name then first name" do
+    FactoryBot.create(:user, first_name: "Zara", last_name: "Abbott")
+    FactoryBot.create(:user, first_name: "Anna", last_name: "Zeller")
+    FactoryBot.create(:user, first_name: "Beth", last_name: "Abbott")
+
+    ordered = User.order_by_last_name_first.map { |u| [ u.last_name, u.first_name ] }
+    assert_equal ordered, ordered.sort
+  end
+
   test "sort by first name" do
     FactoryBot.create :user
 

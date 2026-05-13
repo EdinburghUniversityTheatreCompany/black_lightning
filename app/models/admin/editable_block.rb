@@ -38,6 +38,8 @@ class Admin::EditableBlock < ApplicationRecord
 
   after_commit :clear_navbar_cache
 
+  scope :for_subpage, ->(subpage_type) { where("url LIKE ?", "#{subpage_type}%") }
+
   def self.groups
     select("`group`").distinct.map(&:group).reject(&:blank?)
   end

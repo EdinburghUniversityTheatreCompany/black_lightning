@@ -19,6 +19,8 @@
 class Admin::StaffingJob < ApplicationRecord
   validates :name, presence: true
 
+  scope :pending_reminder, -> { where(reminder_sent_at: nil).where.not(user: nil) }
+
   belongs_to :staffable, polymorphic: true
   belongs_to :user, optional: true
   has_one :staffing_debt, class_name: "Admin::StaffingDebt", foreign_key: "admin_staffing_job_id"

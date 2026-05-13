@@ -107,4 +107,12 @@ class TechieTest < ActionView::TestCase
     techie_without_year = Techie.new(name: "Jane Doe", entry_year: nil)
     assert_equal "Jane Doe", techie_without_year.name_with_entry_year
   end
+
+  test "without_entry_year returns techies with no entry year" do
+    with_year    = FactoryBot.create(:techie, entry_year: 2020)
+    without_year = FactoryBot.create(:techie, entry_year: nil)
+
+    assert_includes Techie.without_entry_year, without_year
+    assert_not_includes Techie.without_entry_year, with_year
+  end
 end

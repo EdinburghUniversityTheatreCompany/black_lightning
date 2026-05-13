@@ -16,6 +16,16 @@
 require "test_helper"
 
 class Admin::Proposals::CallTest < ActiveSupport::TestCase
+  test "not_archived excludes archived calls" do
+    active   = FactoryBot.create(:proposal_call, archived: false)
+    nil_arch = FactoryBot.create(:proposal_call, archived: nil)
+    archived = FactoryBot.create(:proposal_call, archived: true)
+
+    assert_includes Admin::Proposals::Call.not_archived, active
+    assert_includes Admin::Proposals::Call.not_archived, nil_arch
+    assert_not_includes Admin::Proposals::Call.not_archived, archived
+  end
+
   test "open" do
     old_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: -1), editing_deadline: DateTime.current.advance(days: 1))
     new_call = FactoryBot.create(:proposal_call, submission_deadline: DateTime.current.advance(days: 1))

@@ -32,6 +32,7 @@ class Admin::Proposals::Call < ApplicationRecord
   normalizes :name, with: ->(name) { name&.strip }
 
   scope :open, -> { where(submission_deadline: DateTime.current..DateTime::Infinity.new) }
+  scope :not_archived, -> { where(archived: [ false, nil ]) }
 
   def self.ransackable_attributes(auth_object = nil)
     %w[archived editing_deadline name submission_deadline]

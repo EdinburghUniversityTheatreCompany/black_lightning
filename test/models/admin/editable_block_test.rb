@@ -27,6 +27,17 @@ class Admin::EditableBlockTest < ActiveSupport::TestCase
     assert groups & Admin::EditableBlock.groups == groups
   end
 
+  test "for_subpage returns blocks whose url starts with the given prefix" do
+    about_block   = FactoryBot.create(:editable_block, url: "about/team")
+    contact_block = FactoryBot.create(:editable_block, url: "contact/info")
+    root_block    = FactoryBot.create(:editable_block, url: nil)
+
+    results = Admin::EditableBlock.for_subpage("about")
+    assert_includes results, about_block
+    assert_not_includes results, contact_block
+    assert_not_includes results, root_block
+  end
+
   test "url is downcased after saving" do
     block = FactoryBot.create(:editable_block, url: "About/Team")
 

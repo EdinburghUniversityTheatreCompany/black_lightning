@@ -21,7 +21,7 @@ module SubpageHelper
 
   def get_subpage_editable_blocks(subpage_type)
     Rails.cache.fetch("navbar_editable_blocks/#{subpage_type}", expires_in: 1.day) do
-      subpage_editable_blocks = Admin::EditableBlock.where("url LIKE ?", "#{subpage_type}%")
+      subpage_editable_blocks = Admin::EditableBlock.for_subpage(subpage_type)
       # Organise according to ordering, and if those are equal, alphabetically.
       # Reject the subpages that are further than one layer deep.
       # Example: (about/tree -> tree -> does not contain a / so is kept) (about/tree/apple -> tree/apple -> contains a / so is rejected)

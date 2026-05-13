@@ -15,6 +15,16 @@
 require "test_helper"
 
 class Admin::StaffingJobTest < ActiveSupport::TestCase
+  test "pending_reminder returns jobs with no reminder sent and a user assigned" do
+    staffed_no_reminder = FactoryBot.create(:staffed_staffing_job, reminder_sent_at: nil)
+    staffed_reminded    = FactoryBot.create(:staffed_staffing_job, reminder_sent_at: 1.day.ago)
+    unstaffed           = FactoryBot.create(:unstaffed_staffing_job, reminder_sent_at: nil)
+
+    assert_includes Admin::StaffingJob.pending_reminder, staffed_no_reminder
+    assert_not_includes Admin::StaffingJob.pending_reminder, staffed_reminded
+    assert_not_includes Admin::StaffingJob.pending_reminder, unstaffed
+  end
+
   test "completed" do
     staffing = FactoryBot.create(:staffing_that_does_count_towards_debt, staffed_job_count: 1, start_time: DateTime.current.advance(days: -1))
 

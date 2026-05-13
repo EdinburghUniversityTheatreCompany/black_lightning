@@ -110,6 +110,8 @@ class User < ApplicationRecord
 
   scope :profile_incomplete, -> { where(profile_completed_at: nil) }
   scope :profile_complete, -> { where.not(profile_completed_at: nil) }
+  scope :order_by_last_name_first, -> { order(:last_name, :first_name) }
+  scope :search_by_name, ->(q) { where("CONCAT(first_name, ' ', last_name) LIKE ?", "%#{q}%") }
 
   # Also change the method 'consented'
   def self.not_consented

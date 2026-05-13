@@ -7,7 +7,7 @@ class Admin::MaintenanceSessionsController < AdminController
   def show
     @q = @maintenance_session.users.ransack(params[:q], auth_object: current_ability)
 
-    @users = @q.result.accessible_by(current_ability).order(:last_name, :first_name)
+    @users = @q.result.accessible_by(current_ability).order_by_last_name_first
 
     super
   end

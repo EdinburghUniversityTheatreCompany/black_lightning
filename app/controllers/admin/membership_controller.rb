@@ -24,7 +24,7 @@ class Admin::MembershipController < AdminController
 
     # Else, search for a user
     q = "%#{search}%"
-    user ||= User.where("CONCAT(first_name, ' ', last_name) like ?", q).first
+    user ||= User.search_by_name(search).first
 
     if user.nil?
       render json: { response: "Member not found" }, status: :not_found

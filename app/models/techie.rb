@@ -30,6 +30,8 @@ class Techie < ApplicationRecord
 
   default_scope -> { order("name ASC") }
 
+  scope :without_entry_year, -> { where(entry_year: nil) }
+
   def self.ransackable_attributes(auth_object = nil)
     %w[id name entry_year]
   end
