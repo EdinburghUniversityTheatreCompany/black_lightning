@@ -10,36 +10,8 @@ search_fields = {
 
   random_button:        { type: :submit_button, action: :Random },
 }
-
-status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejected" => 3, "awaiting_approval" => 4 }
 %>
 
-<% content_for :proposal_archive_content do %>
-  <% if @proposals.any? %>
-    <% @proposals.each_with_index do |(call, proposals), index| %>
-      <div class="card <%= 'mb-3' unless index == @proposals.size - 1 %>">
-        <div class="card-header">
-          <h5 class="card-title mb-0">
-            <%= call.name %>
-            <small class="text-muted fw-normal">Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %></small>
-          </h5>
-        </div>
-        <div class="card-body p-0">
-          <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
-            <div class="d-flex align-items-center py-2 px-3 border-bottom">
-              <%= get_link proposal, :show %>
-              <div class="d-flex gap-1 ms-2">
-                <%= proposal_labels(proposal, false, show_debtors: false) %>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
-  <% else %>
-    <p class="text-muted"><em>There are no proposals found for this search.</em></p>
-  <% end %>
-<% end %>
-
-<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls, content: yield(:proposal_archive_content),
+<%= render 'shared/pages/index', resource_class: Admin::Proposals::Call, resources: @calls,
+  content: render('archives/proposals/index_results'),
   show_new_button: false, search_fields: search_fields %>
