@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_152300) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -50,8 +50,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152300) do
     t.datetime "file_updated_at", precision: nil
     t.integer "question_id"
     t.datetime "updated_at", precision: nil, null: false
-    t.index ["answerable_id"], name: "index_admin_answers_on_answerable_id"
-    t.index ["answerable_id"], name: "index_admin_proposals_answers_on_proposal_id"
     t.index ["answerable_type", "answerable_id"], name: "index_admin_answers_on_answerable_type_and_answerable_id"
     t.index ["answerable_type"], name: "index_admin_answers_on_answerable_type"
     t.index ["question_id"], name: "index_admin_proposals_answers_on_question_id"
@@ -192,8 +190,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152300) do
     t.string "staffable_type"
     t.datetime "updated_at", precision: nil, null: false
     t.integer "user_id"
-    t.index ["staffable_id"], name: "index_admin_staffing_jobs_on_staffable_id"
-    t.index ["staffable_id"], name: "index_admin_staffing_jobs_on_staffing_id"
     t.index ["staffable_type", "staffable_id"], name: "index_admin_staffing_jobs_on_staffable"
     t.index ["staffable_type"], name: "index_admin_staffing_jobs_on_staffable_type"
     t.index ["user_id"], name: "index_admin_staffing_jobs_on_user_id"
