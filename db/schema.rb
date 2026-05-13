@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_152300) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -52,6 +52,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
     t.datetime "updated_at", precision: nil, null: false
     t.index ["answerable_id"], name: "index_admin_answers_on_answerable_id"
     t.index ["answerable_id"], name: "index_admin_proposals_answers_on_proposal_id"
+    t.index ["answerable_type", "answerable_id"], name: "index_admin_answers_on_answerable_type_and_answerable_id"
     t.index ["answerable_type"], name: "index_admin_answers_on_answerable_type"
     t.index ["question_id"], name: "index_admin_proposals_answers_on_question_id"
   end
@@ -162,6 +163,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
     t.string "response_type"
     t.datetime "updated_at", precision: nil, null: false
     t.index ["questionable_id"], name: "index_admin_questions_on_questionable_id"
+    t.index ["questionable_type", "questionable_id"], name: "index_admin_questions_on_questionable_type_and_questionable_id"
     t.index ["questionable_type"], name: "index_admin_questions_on_questionable_type"
   end
 
@@ -227,6 +229,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
   create_table "attachment_tags_attachments", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "attachment_id", null: false
     t.bigint "attachment_tag_id", null: false
+    t.index ["attachment_id"], name: "index_attachment_tags_attachments_on_attachment_id"
+    t.index ["attachment_tag_id"], name: "index_attachment_tags_attachments_on_attachment_tag_id"
   end
 
   create_table "attachments", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -322,6 +326,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
   create_table "event_tags_events", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "event_id", null: false
     t.bigint "event_tag_id", null: false
+    t.index ["event_id"], name: "index_event_tags_events_on_event_id"
+    t.index ["event_tag_id"], name: "index_event_tags_events_on_event_tag_id"
   end
 
   create_table "events", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -438,6 +444,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
   create_table "mass_mails_users", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.integer "mass_mail_id"
     t.integer "user_id"
+    t.index ["mass_mail_id"], name: "index_mass_mails_users_on_mass_mail_id"
+    t.index ["user_id"], name: "index_mass_mails_users_on_user_id"
   end
 
   create_table "membership_cards", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -543,6 +551,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
   create_table "picture_tags_pictures", id: false, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "picture_id", null: false
     t.bigint "picture_tag_id", null: false
+    t.index ["picture_id"], name: "index_picture_tags_pictures_on_picture_id"
+    t.index ["picture_tag_id"], name: "index_picture_tags_pictures_on_picture_tag_id"
   end
 
   create_table "pictures", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -557,6 +567,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_06_142336) do
     t.datetime "image_updated_at", precision: nil
     t.datetime "updated_at", precision: nil, null: false
     t.index ["gallery_id"], name: "index_pictures_on_gallery_id"
+    t.index ["gallery_type", "gallery_id"], name: "index_pictures_on_gallery_type_and_gallery_id"
     t.index ["gallery_type"], name: "index_pictures_on_gallery_type"
   end
 
