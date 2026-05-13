@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_13_152826) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -81,6 +81,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.datetime "created_at", precision: nil, null: false
     t.integer "show_id"
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["show_id"], name: "index_admin_feedbacks_on_show_id"
   end
 
   create_table "admin_maintenance_debts", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -110,6 +111,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
   create_table "admin_permissions_roles", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.integer "permission_id"
     t.integer "role_id"
+    t.index ["permission_id"], name: "index_admin_permissions_roles_on_permission_id"
     t.index ["role_id"], name: "index_admin_permissions_roles_on_role_id"
   end
 
@@ -126,6 +128,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.string "name"
     t.datetime "submission_deadline", precision: nil
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["archived"], name: "index_admin_proposals_calls_on_archived"
+    t.index ["editing_deadline"], name: "index_admin_proposals_calls_on_editing_deadline"
+    t.index ["submission_deadline"], name: "index_admin_proposals_calls_on_submission_deadline"
   end
 
   create_table "admin_proposals_proposals", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -151,6 +156,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.integer "event_id"
     t.string "name"
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["event_id"], name: "index_admin_questionnaires_questionnaires_on_event_id"
   end
 
   create_table "admin_questions", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -211,7 +217,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.string "slug"
     t.datetime "start_time", precision: nil
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["end_time"], name: "index_admin_staffings_on_end_time"
     t.index ["slug"], name: "index_admin_staffings_on_slug"
+    t.index ["start_time"], name: "index_admin_staffings_on_start_time"
   end
 
   create_table "attachment_tags", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -271,6 +279,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.datetime "created_at", precision: nil, null: false
     t.integer "techie_id"
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["child_id"], name: "index_children_techies_on_child_id"
     t.index ["techie_id"], name: "index_children_techies_on_techie_id"
   end
 
@@ -435,6 +444,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.integer "sender_id"
     t.string "subject"
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["sender_id"], name: "index_mass_mails_on_sender_id"
   end
 
   create_table "mass_mails_users", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -474,6 +484,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.datetime "created_at", precision: nil, null: false
     t.string "email"
     t.datetime "updated_at", precision: nil, null: false
+    t.index ["email"], name: "index_newsletter_subscribers_on_email", unique: true
   end
 
   create_table "oauth_access_grants", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -535,6 +546,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.string "title"
     t.datetime "updated_at", precision: nil, null: false
     t.index ["approved", "expiry_date"], name: "index_opportunities_on_approved_and_expiry"
+    t.index ["approver_id"], name: "index_opportunities_on_approver_id"
+    t.index ["creator_id"], name: "index_opportunities_on_creator_id"
   end
 
   create_table "picture_tags", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -578,6 +591,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_13_152547) do
     t.string "title"
     t.datetime "updated_at", precision: nil, null: false
     t.string "url"
+    t.index ["event_id"], name: "index_reviews_on_event_id"
   end
 
   create_table "roles", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
