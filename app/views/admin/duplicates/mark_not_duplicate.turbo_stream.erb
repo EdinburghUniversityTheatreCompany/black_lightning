@@ -1,0 +1,2 @@
+<%= turbo_stream.remove "pair-#{@user1.id}-#{@user2.id}" %>
+<turbo-stream action="toast" type="success" message="<%= @user1.name_or_email %> and <%= @user2.name_or_email %> marked as not duplicates"></turbo-stream>

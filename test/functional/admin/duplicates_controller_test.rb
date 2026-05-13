@@ -26,7 +26,7 @@ class Admin::DuplicatesControllerTest < ActionController::TestCase
     assert_includes same_id_dups.first[:users], user2
   end
 
-  test "should mark users as not duplicates" do
+  test "should mark users as not duplicates and redirect for HTML" do
     user1 = FactoryBot.create(:user, first_name: "John", last_name: "UniqueTestSmith")
     user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "UniqueTestSmith")
 
@@ -35,6 +35,19 @@ class Admin::DuplicatesControllerTest < ActionController::TestCase
     post :mark_not_duplicate, params: { user_id: user1.id, other_user_id: user2.id }
 
     assert_redirected_to admin_duplicates_path
+    assert user1.reload.marked_not_duplicate?(user2)
+  end
+
+  test "should mark users as not duplicates and return turbo stream" do
+    user1 = FactoryBot.create(:user, first_name: "John", last_name: "UniqueTestSmith2")
+    user2 = FactoryBot.create(:user, first_name: "Jon", last_name: "UniqueTestSmith2")
+
+    post :mark_not_duplicate, params: { user_id: user1.id, other_user_id: user2.id },
+         format: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_includes response.body, "pair-#{user1.id}-#{user2.id}"
     assert user1.reload.marked_not_duplicate?(user2)
   end
 
