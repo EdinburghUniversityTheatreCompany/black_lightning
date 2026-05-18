@@ -29,5 +29,7 @@ class StaticController < ApplicationController
     @carousel_events = @carousel_events.where.not(type: "Workshop").first(3)
 
     @standard_carousel_items = CarouselItem.where(carousel_name: "Home").active_and_ordered.includes(image_attachment: :blob)
+
+    @home_opportunities = Opportunity.active.limit(5)
   end
 end

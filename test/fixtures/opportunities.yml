@@ -1,0 +1,23 @@
+active_opportunity:
+  title: "Stage Manager Needed"
+  description: "We are looking for a stage manager for our upcoming production."
+  approved: true
+  expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
+  creator: admin
+  show_email: false
+
+expired_opportunity:
+  title: "Old Opportunity"
+  description: "This opportunity has already expired."
+  approved: true
+  expiry_date: <%= 1.week.ago.to_fs(:db) %>
+  creator: admin
+  show_email: false
+
+unapproved_opportunity:
+  title: "Pending Approval"
+  description: "This opportunity is awaiting approval."
+  approved: false
+  expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
+  creator: admin
+  show_email: false

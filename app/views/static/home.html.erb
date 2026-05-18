@@ -1,8 +1,3 @@
-<% content_for :head do %>
-            <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
-            <script type="text/javascript" src="https://pretix.eu/widget/v1.en.js" async></script>
-<% end %>
-
 <div class="row">
   <div class="col-md-6 col-xl-8">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
@@ -38,16 +33,7 @@
   </div>
 
   <div class="col-md-6 col-xl-4">
-      <div class="card mt-3 mt-md-0 ">
-        <div class="card-header"><h4>Book Now</h4></div>
-        <div class="card-body">
-          <div class="card-text">
-            <%= display_block("Home - Book Now", false) %>
-
-            <pretix-widget event="https://tickets.bedlamtheatre.co.uk/" style="list"></pretix-widget>
-          </div>
-        </div>
-      </div>
+    <%= render "static/opportunities_widget" %>
 
     <div class="card mt-3">
       <div class="card-header">
