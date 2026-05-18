@@ -6,9 +6,9 @@
     <h3>Videos</h3>
   <% end %>
 
-  <div class="row g-3 grid lg:grid-cols-2 gap-4">
+  <div class="<%= @admin_site ? 'grid lg:grid-cols-2 gap-4' : 'row g-3 row-cols-lg-2' %>">
     <% video_links.each do |video_link| %>
-      <div class="col-12 col-lg-6">
+      <div class="<%= 'col-12 col-lg-6' unless @admin_site %>">
         <div class="card">
           <h4 class="card-header"><%= video_link.name %></h4>
           <div class="card-body">
