@@ -1,9 +1,9 @@
 <%# locals: (reviews:) %>
 
 <% if reviews.any? %>
-  <div class="row g-3">
+  <div class="grid gap-4 <%= 'lg:grid-cols-2' if reviews.count > 1 %>">
     <% reviews.each do |review| %>
-      <div class="col-12 <%= 'col-lg-6' if reviews.count > 1 %>">
+      <div>
         <div class="card">
             <div class="card-header">
               <h4>
