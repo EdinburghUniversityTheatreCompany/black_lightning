@@ -4,7 +4,7 @@
   <div class="row row-cols-auto g-3 row-cols-1 <%= 'row-cols-lg-2' if reviews.count > 1 %> ">
     <% reviews.each do |review| %>
       <div class="col">
-        <div class="card h-100">
+        <div class="card">
             <div class="card-header">
               <h4>
                 <%= review.title %><%= " - <span class=\"no-wrap\">#{star_rating(review.rating)}</span>".html_safe %>
