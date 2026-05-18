@@ -3,6 +3,7 @@
 <% url = attachment_path(attachment.slug) %>
 
 <div class="card mb-0 flex flex-col">
+  <% fullsize_url = url_for(attachment.file) %>
   <% begin %>
     <% if attachment.file.previewable? %>
       <% img = image_tag attachment.file.preview(thumb_variant), class: "card-img-top h-auto" %>
@@ -10,11 +11,19 @@
       <% img = image_tag attachment.file.variant(thumb_variant), class: "card-img-top h-auto" %>
     <% end %>
 
-    <% fullsize_url = url_for(attachment.file) %>
-
     <%= link_to(img, fullsize_url, { rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant))) %>
   <% rescue ActiveStorage::InvariableError, ActiveStorage::Unpreviewable %>
-    <%# It is impossible to create a thumbnail, so do nothing. %>
+    <%# We can't generate a thumbnail, so show an icon. %>
+    <% icon_class = case attachment.file.content_type
+      when "application/pdf" then "fa-file-pdf"
+      when "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword" then "fa-file-word"
+      when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel" then "fa-file-excel"
+      when "text/plain" then "fa-file-lines"
+      else "fa-file"
+    end %>
+    <%= link_to fullsize_url, title: attachment.name do %>
+      <i class="fas <%= icon_class %> fa-5x m-3 text-muted"></i>
+    <% end %>
   <% end %>
 
   <div class="card-text m-2">

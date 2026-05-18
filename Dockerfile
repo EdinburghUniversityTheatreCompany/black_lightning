@@ -29,6 +29,7 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       curl \
       libjemalloc2 \
       libvips \
+      poppler-utils \
       default-mysql-client \
       tzdata \
       cron && \
