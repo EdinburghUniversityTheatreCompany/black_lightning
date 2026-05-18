@@ -6,9 +6,9 @@
     <h3>Videos</h3>
   <% end %>
 
-  <div class="row row-cols-auto row-cols-1 row-cols-lg-2 g-3">
+  <div class="row g-3">
     <% video_links.each do |video_link| %>
-      <div class="col">
+      <div class="col-12 col-lg-6">
         <div class="card h-100">
           <h4 class="card-header"><%= video_link.name %></h4>
           <div class="card-body">
