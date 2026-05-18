@@ -70,3 +70,8 @@ can_manage_users:
   id: 13
   action: manage
   subject_class: User
+
+can_create_opportunity:
+  id: 14
+  action: create
+  subject_class: Opportunity

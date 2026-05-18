@@ -377,6 +377,8 @@ ChaosRails::Application.routes.draw do
 
   get "get_involved", to: "get_involved#page", as: :get_involved_index
   get "get_involved/opportunities", to: "get_involved#opportunities", as: :get_involved_opportunities
+  get "get_involved/opportunities/new", to: "get_involved#new", as: :new_get_involved_opportunity
+  post "get_involved/opportunities", to: "get_involved#create"
   get "get_involved/(*page)", to: "get_involved#page", as: :get_involved
 
   get "youth", to: redirect("/getinvolved/youth_project")

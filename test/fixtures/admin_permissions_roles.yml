@@ -53,3 +53,7 @@ welfare_can_read_complaint:
 welfare_can_update_complaint:
   role_id: 4
   permission_id: 10
+
+member_can_create_opportunity:
+  role_id: 1
+  permission_id: 14

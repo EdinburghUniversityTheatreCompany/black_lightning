@@ -14,3 +14,9 @@
     <%= link_to link_text, admin_opportunities_url %>
   <% end %>
 <% end %>
+
+<% if can? :create, Opportunity %>
+  <div class="mt-2">
+    <%= link_to "Submit Opportunity", new_get_involved_opportunity_path, class: "btn btn-sm btn-outline-primary" %>
+  </div>
+<% end %>

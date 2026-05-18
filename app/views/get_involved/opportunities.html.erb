@@ -1,8 +1,10 @@
 <h1>Opportunities</h1>
 
+<% if @editable_block %>
 <div class="mb-3">
   <%= display_block(@editable_block.name, false) %>
 </div>
+<% end %>
 
 <% if @opportunities.count == 0 %>
   <%= display_block("No Opportunities", false) %>

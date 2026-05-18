@@ -1,0 +1,23 @@
+<h1>Submit an Opportunity</h1>
+
+<p class="lead">Share an opportunity with the Bedlam community. Your submission will be reviewed before it appears publicly.</p>
+
+<div class="row">
+  <div class="col-md-8">
+    <%= simple_form_for @opportunity, url: get_involved_opportunities_path do |f| %>
+      <%= f.error_notification %>
+
+      <div class="form-inputs">
+        <%= f.input :title %>
+        <%= f.input :description, as: :text, input_html: { rows: 8 } %>
+        <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
+        <%= f.input :show_email, as: :boolean, hint: "Turning this on will make your email (#{current_user.email}) publicly visible on this opportunity. If you prefer not to, include an alternative contact method in the description." %>
+      </div>
+
+      <div class="form-actions d-flex gap-2">
+        <%= f.button :submit, "Submit Opportunity", class: "btn btn-primary" %>
+        <%= link_to "Cancel", get_involved_opportunities_path, class: "btn btn-secondary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

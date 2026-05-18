@@ -77,3 +77,5 @@ stats.html
 
 # pnpm store
 .pnpm-store/
+
+.claude
