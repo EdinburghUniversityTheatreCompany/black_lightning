@@ -30,7 +30,8 @@ class StaticControllerTest < ActionController::TestCase
   test "home limits @home_opportunities to 5" do
     get :home
 
-    assert assigns(:home_opportunities).count <= 5
+    # 6 active fixtures exist, so a real limit is needed to get exactly 5
+    assert_equal 5, assigns(:home_opportunities).count
   end
 
   test "should get contact" do
