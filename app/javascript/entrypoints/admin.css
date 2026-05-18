@@ -438,92 +438,54 @@ select.simple-select2 {
     @apply w-1/12 px-2;
   }
 
-  .col-md-12 {
-    @apply md:w-full px-2;
+  /* Responsive col-md-* — plain CSS inside @media (no @apply variants, which don't work in Tailwind v4) */
+  .col-md-12, .col-md-11, .col-md-10, .col-md-9, .col-md-8, .col-md-7,
+  .col-md-6, .col-md-5, .col-md-4, .col-md-3, .col-md-2, .col-md-1 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
-  .col-md-11 {
-    @apply md:w-11/12 px-2;
+  @media (min-width: 768px) {
+    .col-md-12 { width: 100%; }
+    .col-md-11 { width: 91.6667%; }
+    .col-md-10 { width: 83.3333%; }
+    .col-md-9  { width: 75%; }
+    .col-md-8  { width: 66.6667%; }
+    .col-md-7  { width: 58.3333%; }
+    .col-md-6  { width: 50%; }
+    .col-md-5  { width: 41.6667%; }
+    .col-md-4  { width: 33.3333%; }
+    .col-md-3  { width: 25%; }
+    .col-md-2  { width: 16.6667%; }
+    .col-md-1  { width: 8.3333%; }
   }
 
-  .col-md-10 {
-    @apply md:w-10/12 px-2;
+  /* Responsive col-lg-* */
+  .col-lg-8, .col-lg-6, .col-lg-4, .col-lg-3 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
-  .col-md-9 {
-    @apply md:w-9/12 px-2;
+  @media (min-width: 992px) {
+    .col-lg-8 { width: 66.6667%; }
+    .col-lg-6 { width: 50%; }
+    .col-lg-4 { width: 33.3333%; }
+    .col-lg-3 { width: 25%; }
   }
 
-  .col-md-8 {
-    @apply md:w-8/12 px-2;
+  /* Responsive col-xl-* */
+  .col-xl-12, .col-xl-8, .col-xl-6, .col-xl-4, .col-xl-3, .col-xl-2 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
-  .col-md-7 {
-    @apply md:w-7/12 px-2;
-  }
-
-  .col-md-6 {
-    @apply md:w-6/12 px-2;
-  }
-
-  .col-md-5 {
-    @apply md:w-5/12 px-2;
-  }
-
-  .col-md-4 {
-    @apply md:w-4/12 px-2;
-  }
-
-  .col-md-3 {
-    @apply md:w-3/12 px-2;
-  }
-
-  .col-md-2 {
-    @apply md:w-2/12 px-2;
-  }
-
-  .col-md-1 {
-    @apply md:w-1/12 px-2;
-  }
-
-  .col-lg-8 {
-    @apply lg:w-8/12 px-2;
-  }
-
-  .col-lg-6 {
-    @apply lg:w-6/12 px-2;
-  }
-
-  .col-lg-4 {
-    @apply lg:w-4/12 px-2;
-  }
-
-  .col-lg-3 {
-    @apply lg:w-3/12 px-2;
-  }
-
-  .col-xl-12 {
-    @apply xl:w-full px-2;
-  }
-
-  .col-xl-8 {
-    @apply xl:w-8/12 px-2;
-  }
-
-  .col-xl-6 {
-    @apply xl:w-6/12 px-2;
-  }
-
-  .col-xl-4 {
-    @apply xl:w-4/12 px-2;
-  }
-
-  .col-xl-3 {
-    @apply xl:w-3/12 px-2;
-  }
-
-  .col-xl-2 {
-    @apply xl:w-2/12 px-2;
+  @media (min-width: 1200px) {
+    .col-xl-12 { width: 100%; }
+    .col-xl-8  { width: 66.6667%; }
+    .col-xl-6  { width: 50%; }
+    .col-xl-4  { width: 33.3333%; }
+    .col-xl-3  { width: 25%; }
+    .col-xl-2  { width: 16.6667%; }
   }
 
   /* Responsive row-cols — Bootstrap 5 pattern for gallery grids */
