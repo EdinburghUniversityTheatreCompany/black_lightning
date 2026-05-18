@@ -17,6 +17,6 @@
 
 <% if can? :create, Opportunity %>
   <div class="mt-2">
-    <%= link_to "Submit Opportunity", new_get_involved_opportunity_path, class: "btn btn-sm btn-outline-primary" %>
+    <%= get_link Opportunity, :new, link_text: "Submit Opportunity", link_target: new_get_involved_opportunity_path %>
   </div>
 <% end %>
