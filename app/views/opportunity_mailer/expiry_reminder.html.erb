@@ -1,0 +1,19 @@
+<% url = edit_admin_opportunity_url(@opportunity) %>
+
+<p>Dear <%= @user.first_name %>,</p>
+
+<p>
+  Your opportunity "<%= @opportunity.title %>" is expiring in 3 days
+  (on <%= l @opportunity.expiry_date, format: :long %>).
+</p>
+
+<p>
+  If you'd like to extend it or repost it, you can edit it at
+  <%= link_to url, url %>.
+</p>
+
+<p>Regards,</p>
+
+<p>EUTC Committee</p>
+
+<%= render partial: "shared/mail/call_to_action", locals: { text: "Edit Opportunity", cta_url: url } %>

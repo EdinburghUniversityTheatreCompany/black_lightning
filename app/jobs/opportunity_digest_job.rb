@@ -8,8 +8,9 @@ class OpportunityDigestJob < ApplicationJob
 
     reviewers = Role.find_by(name: "Opportunity Reviewer")&.users || []
 
+    opportunities_list = opportunities.to_a
     reviewers.each do |user|
-      OpportunityDigestMailer.digest(user, opportunities).deliver_later
+      OpportunityDigestMailer.digest(user, opportunities_list).deliver_later
     end
   end
 end

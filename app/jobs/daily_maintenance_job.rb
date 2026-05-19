@@ -19,6 +19,9 @@ class DailyMaintenanceJob < ApplicationJob
     Honeybadger.context(current_step: "notify_debtors")
     notify_debtors
 
+    Honeybadger.context(current_step: "notify_expiring_opportunities")
+    notify_expiring_opportunities
+
     Honeybadger.context(current_step: "send_test_email")
     send_test_email
 
@@ -59,6 +62,13 @@ class DailyMaintenanceJob < ApplicationJob
   def notify_debtors
     Rails.logger.info "Notifying debtors"
     Tasks::Logic::Debt.notify_debtors
+  end
+
+  def notify_expiring_opportunities
+    Rails.logger.info "Notifying creators of expiring opportunities"
+    expiring = Opportunity.where(approved: true).where(expiry_date: Date.current + 3.days)
+    expiring.each { |opp| OpportunityMailer.expiry_reminder(opp).deliver_later }
+    Rails.logger.info "Queued expiry reminders for #{expiring.count} opportunities"
   end
 
   def send_test_email

@@ -1,0 +1,11 @@
+Dear <%= @user.first_name %>,
+
+Your opportunity "<%= @opportunity.title %>" is expiring in 3 days
+(on <%= l @opportunity.expiry_date, format: :long %>).
+
+If you'd like to extend it or repost it, you can edit it at:
+<%= edit_admin_opportunity_url(@opportunity) %>
+
+Regards,
+
+EUTC Committee

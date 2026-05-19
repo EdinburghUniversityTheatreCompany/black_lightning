@@ -5,7 +5,7 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
     # Ensure no unapproved non-expired opportunities exist
     Opportunity.where(approved: false).where("expiry_date > ?", Date.current).destroy_all
 
-    assert_no_enqueued_emails do
+    assert_no_enqueued_jobs only: MailDeliveryJob do
       OpportunityDigestJob.perform_now
     end
   end
@@ -20,14 +20,9 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
     assert Role.find_by(name: "Opportunity Reviewer")&.users&.include?(reviewer),
            "Expected committee user to have Opportunity Reviewer role"
 
-    assert_enqueued_emails(1) do
+    assert_enqueued_jobs(1, only: MailDeliveryJob) do
       OpportunityDigestJob.perform_now
     end
-
-    enqueued = ActionMailer::Base.deliveries
-    # With deliver_later in test mode (inline delivery), check enqueued jobs
-    job_data = enqueued_jobs.last
-    assert_not_nil job_data
   end
 
   test "sends one email per reviewer" do
@@ -37,7 +32,7 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
 
     assert opportunities(:unapproved_opportunity).expiry_date > Date.current
 
-    assert_enqueued_emails(reviewer_count) do
+    assert_enqueued_jobs(reviewer_count, only: MailDeliveryJob) do
       OpportunityDigestJob.perform_now
     end
   end
