@@ -14,6 +14,7 @@
         <h4>What's On</h4>
       </div>
       <div class="card-body">
+        <%# Cache key is the @events AR collection; changes to pretix_shown/pretix_slug bust it correctly %>
         <% cache @events do %>
           <% if @events.empty? %>
             <%= display_block("Home - No Events On", false) %>

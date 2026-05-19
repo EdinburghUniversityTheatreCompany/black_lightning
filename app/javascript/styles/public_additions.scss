@@ -26,6 +26,13 @@
 
 // END FORMS
 
+// CAROUSEL
+// z-index needed so caption card sits above .carousel-indicators (which spans the full carousel height)
+.carousel-caption-card {
+  position: relative;
+  z-index: 2;
+}
+
 // PRETIX MODAL
 dialog.pretix-modal {
   border: none;

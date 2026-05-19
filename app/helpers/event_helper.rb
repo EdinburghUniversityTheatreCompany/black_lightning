@@ -15,6 +15,7 @@ module EventHelper
       tagline: "<small>#{h(event.date_and_price)}</small><br>#{h(event.short_blurb)}".html_safe,
       image: event.fetch_image,
       url: url,
+      # nil when pretix is not shown; present? in the carousel handles both nil and missing key
       pretix_slug: event.pretix_shown? ? event.pretix_slug : nil
     }
   end
