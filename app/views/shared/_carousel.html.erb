@@ -20,10 +20,15 @@
           <% end %>
         </div>
 
-        <div class="text-center d-block card w-100" data-carousel-equalizer-target="caption">
+        <div class="text-center d-block card w-100 position-relative" style="z-index: 2;" data-carousel-equalizer-target="caption">
           <div class="card-body">
             <h5><%= item[:url].present? ? link_to(item[:title], item[:url]) : item[:title] %></h5>
             <p><%= item[:tagline] %></p>
+            <% if item[:pretix_slug].present? %>
+              <button class="btn btn-success btn-sm" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>">
+                Buy Tickets
+              </button>
+            <% end %>
           </div>
         </div>
       </div>

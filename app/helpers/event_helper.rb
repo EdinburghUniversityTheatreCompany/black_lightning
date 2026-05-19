@@ -14,7 +14,8 @@ module EventHelper
       title: event.name_and_author,
       tagline: "<small>#{h(event.date_and_price)}</small><br>#{h(event.short_blurb)}".html_safe,
       image: event.fetch_image,
-      url: url
+      url: url,
+      pretix_slug: event.pretix_shown? ? event.pretix_slug : nil
     }
   end
 end

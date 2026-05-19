@@ -14,14 +14,14 @@ Rails.application.configure do
     # You may need to enable this in production as well depending on your setup.
     # policy.script_src *policy.script_src, :blob if Rails.env.test?
 
-    policy.style_src :self, :unsafe_inline, "https://eutc.azureedge.net"
+    policy.style_src :self, :unsafe_inline, "https://eutc.azureedge.net", "https://pretix.eu"
     # Allow @vite/client to hot reload style changes in development
     policy.style_src *policy.style_src, :unsafe_inline if Rails.env.development?
 
     policy.frame_src "https://tickets.bedlamtheatre.co.uk", "https://calendar.google.com", "https://accounts.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
     policy.img_src :self, :data, :https
     policy.font_src :self
-    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk", "https://www.gstatic.com", "https://apis.google.com", "https://clients6.google.com", "https://www.googleapis.com", "https://calendar.googleapis.com", "https://bedlam-theatre-website.s3.eu-central-1.wasabisys.com"
+    policy.connect_src :self, "https://tickets.bedlamtheatre.co.uk", "https://pretix.eu", "https://www.gstatic.com", "https://apis.google.com", "https://clients6.google.com", "https://www.googleapis.com", "https://calendar.googleapis.com", "https://bedlam-theatre-website.s3.eu-central-1.wasabisys.com"
     # Allow @vite/client to hot reload changes in development
     policy.connect_src *policy.connect_src, "ws://#{ ViteRuby.config.host_with_port }" if Rails.env.development?
 
