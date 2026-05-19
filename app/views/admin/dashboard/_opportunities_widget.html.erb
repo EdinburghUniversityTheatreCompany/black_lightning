@@ -1,22 +1,39 @@
 <%# locals: (opportunities: Opportunity.active, displayed_opportunities_count: 5) %>
 
-<% if opportunities.empty? then %>
-  <div>
+<% pending = Opportunity.where(approved: false).where("expiry_date > ?", Date.current) %>
+
+<% if can?(:manage, Opportunity) && pending.any? %>
+  <div class="border-b border-amber-200 bg-amber-50 px-4 py-2">
+    <p class="text-sm font-medium text-amber-800">
+      <%= link_to "#{pluralize(pending.count, 'opportunity', 'opportunities')} awaiting review →", admin_opportunities_path(q: { approved_eq: false }), class: "underline hover:no-underline" %>
+    </p>
+  </div>
+<% end %>
+
+<% if opportunities.empty? %>
+  <div class="px-4 py-3 text-sm text-gray-500">
     <%= display_block("No Opportunities", false) %>
   </div>
 <% else %>
-  <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
-    <p><%= link_to opportunity.title, admin_opportunity_path(opportunity) %></p>
-  <% end %>
+  <ul class="divide-y divide-gray-100">
+    <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
+      <li class="px-4 py-3">
+        <%= link_to opportunity.title, admin_opportunity_path(opportunity), class: "font-medium text-sm hover:underline" %>
+        <p class="text-xs text-gray-500 mt-0.5">Expires <%= opportunity.expiry_date.strftime("%-d %b %Y") %></p>
+        <p class="text-xs text-gray-600 mt-1 line-clamp-2"><%= truncate_markdown(opportunity.description, 100) %></p>
+      </li>
+    <% end %>
+  </ul>
 
   <% if opportunities.count > displayed_opportunities_count %>
-    <% link_text = "#{pluralize(opportunities.count - displayed_opportunities_count, 'more opportunity', 'more opportunities')} available." %>
-    <%= link_to link_text, admin_opportunities_url %>
+    <div class="px-4 py-2 border-t border-gray-100">
+      <%= link_to "#{pluralize(opportunities.count - displayed_opportunities_count, 'more opportunity', 'more opportunities')} →", admin_opportunities_path, class: "text-xs text-gray-500 hover:underline" %>
+    </div>
   <% end %>
 <% end %>
 
-<% if can? :create, Opportunity %>
-  <div class="mt-2">
+<% if can?(:create, Opportunity) %>
+  <div class="px-4 py-3 border-t border-gray-100">
     <%= get_link Opportunity, :new, link_text: "Submit Opportunity", link_target: new_get_involved_opportunity_path %>
   </div>
 <% end %>
