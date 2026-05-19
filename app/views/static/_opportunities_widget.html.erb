@@ -1,16 +1,13 @@
 <%# locals: (home_opportunities:) %>
 <% cache home_opportunities do %>
 <div class="card mt-3 mt-md-0">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header">
     <h4 class="mb-0">Opportunities</h4>
-    <% if can?(:create, Opportunity) %>
-      <%= link_to "Submit an Opportunity", new_get_involved_opportunity_path, class: "btn btn-primary btn-sm" %>
-    <% end %>
   </div>
 
   <% if home_opportunities.empty? %>
     <div class="card-body">
-      <p class="card-text text-muted">No active opportunities right now. Check back soon!</p>
+      <%= display_block("No Opportunities", false) %>
     </div>
   <% else %>
     <ul class="list-group list-group-flush">
@@ -30,8 +27,11 @@
     </ul>
   <% end %>
 
-  <div class="card-footer">
+  <div class="card-footer d-flex justify-content-between align-items-center">
     <%= link_to "View all opportunities →", get_involved_opportunities_path %>
+    <% if can?(:create, Opportunity) %>
+      <%= link_to "Submit an Opportunity", new_get_involved_opportunity_path, class: "btn btn-primary btn-sm" %>
+    <% end %>
   </div>
 </div>
 <% end %>
