@@ -134,6 +134,26 @@ class RoleTest < ActionView::TestCase
     assert_not admin_role.trained_role?, "trained_role? should return false for roles without 'Trained' in name"
   end
 
+  test "Opportunity Reviewer is in HARDCODED_NAMES" do
+    assert_includes Role::HARDCODED_NAMES, "Opportunity Reviewer"
+  end
+
+  test "cannot change Opportunity Reviewer role name" do
+    role = Role.find_or_create_by!(name: "Opportunity Reviewer")
+
+    role.name = "Something Else"
+    assert_not role.valid?, "Hardcoded name validation did not fail for Opportunity Reviewer"
+    assert_includes role.errors.full_messages, "Name is hardcoded and cannot be altered"
+  end
+
+  test "cannot destroy Opportunity Reviewer role" do
+    role = Role.find_or_create_by!(name: "Opportunity Reviewer")
+
+    assert_not role.destroy, "Opportunity Reviewer role should not be destroyable"
+    assert_includes role.errors.full_messages, "Cannot delete hardcoded role 'Opportunity Reviewer' as it is referenced in code"
+    assert role.persisted?, "Opportunity Reviewer role should still exist in database"
+  end
+
   test "trained_role? returns false for nil name" do
     role_with_nil_name = Role.new(name: nil)
     assert_not role_with_nil_name.trained_role?, "trained_role? should return false for nil name"

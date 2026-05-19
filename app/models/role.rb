@@ -18,7 +18,7 @@
 class Role < ApplicationRecord
   # The roles that are referenced directly in the code.
   # Changing the name would break the website, so this list is used to prevent name changes for these roles.
-  HARDCODED_NAMES = [ "Admin", "Committee", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained" ].freeze
+  HARDCODED_NAMES = [ "Admin", "Committee", "DM Trained", "Business Manager", "First Aid Trained", "Bar Trained", "Tool Trained", "Opportunity Reviewer" ].freeze
   NON_PURGEABLE_ROLES = [ "member", "life member" ]
 
   validates :name, presence: true

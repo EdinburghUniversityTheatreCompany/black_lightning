@@ -5,7 +5,8 @@
         <%= render Admin::CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true) do %>
           <%= render "debt_widget" %>
         <% end %>
-        <%= render Admin::CollapsibleSectionComponent.new(title: link_to("Opportunities", admin_opportunities_path), start_open: true) do %>
+        <% pending_opportunities_count = can?(:manage, Opportunity) ? Opportunity.where(approved: false).where("expiry_date > ?", Date.current).count : 0 %>
+        <%= render Admin::CollapsibleSectionComponent.new(title: link_to("Opportunities", admin_opportunities_path), start_open: true, title_right: pending_opportunities_count > 0 ? link_to(content_tag(:span, pending_opportunities_count, class: "bg-red-600 text-white text-xs font-bold px-2 py-0.5 rounded-full"), admin_opportunities_path(q: { approved_eq: false })) : nil) do %>
           <%= render "opportunities_widget" %>
         <% end %>
         <%= render Admin::CollapsibleSectionComponent.new(title: "Resources", flush: true, start_open: true) do %>
