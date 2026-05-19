@@ -1,21 +1,14 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static targets = ["dialog", "widget"]
+  static targets = ["dialog", "widget", "title"]
   static values = { baseUrl: { type: String, default: "https://tickets.bedlamtheatre.co.uk/" } }
 
-  open({ params: { slug } }) {
+  open({ params: { slug, name } }) {
     this.widgetTarget.setAttribute("event", `${this.baseUrlValue}${slug}/`)
+    if (this.hasTitleTarget && name) this.titleTarget.textContent = name
     this.#loadPretix()
     this.dialogTarget.showModal()
-  }
-
-  close() {
-    this.dialogTarget.close()
-  }
-
-  backdropClose({ target }) {
-    if (target === this.dialogTarget) this.dialogTarget.close()
   }
 
   #loadPretix() {

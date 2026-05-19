@@ -24,10 +24,17 @@
           <div class="card-body">
             <h5><%= item[:url].present? ? link_to(item[:title], item[:url]) : item[:title] %></h5>
             <p><%= item[:tagline] %></p>
-            <% if item[:pretix_slug].present? %>
-              <button class="btn btn-success btn-sm" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>">
-                Buy Tickets
-              </button>
+            <% if item[:url].present? || item[:pretix_slug].present? %>
+              <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <% if item[:url].present? %>
+                  <%= link_to "Details", item[:url], class: "btn btn-primary btn-sm" %>
+                <% end %>
+                <% if item[:pretix_slug].present? %>
+                  <button class="btn btn-success btn-sm" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>" data-pretix-modal-name-param="<%= item[:title] %>">
+                    Buy Tickets
+                  </button>
+                <% end %>
+              </div>
             <% end %>
           </div>
         </div>

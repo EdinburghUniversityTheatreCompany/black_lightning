@@ -26,6 +26,57 @@
 
 // END FORMS
 
+// PRETIX MODAL
+dialog.pretix-modal {
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0;
+  max-width: min(640px, 95vw);
+  width: 100%;
+  margin: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
+.pretix-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: $primary;
+  border-radius: 0.5rem 0.5rem 0 0;
+
+  h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fff;  // override $headings-color: $red
+  }
+}
+
+.pretix-modal-close {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #fff;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
+.pretix-modal-body {
+  padding: 1.25rem;
+}
+
+// END PRETIX MODAL
+
 // On mobile: force the inner search collapse open and hide its toggle
 @media (max-width: 767.98px) {
   .search-form-inner-collapse > .card-header {

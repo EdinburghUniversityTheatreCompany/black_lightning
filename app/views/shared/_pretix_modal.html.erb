@@ -1,41 +1,13 @@
-<style>
-  dialog.pretix-modal {
-    border: none;
-    border-radius: 0.5rem;
-    padding: 0;
-    max-width: min(600px, 95vw);
-    width: 100%;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  }
-
-  dialog.pretix-modal::backdrop {
-    background: rgba(0, 0, 0, 0.6);
-  }
-
-  .pretix-modal-inner {
-    padding: 1.25rem;
-  }
-
-  .pretix-modal-close {
-    display: block;
-    margin-left: auto;
-    margin-bottom: 0.75rem;
-    background: none;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-
-  .pretix-modal-close:hover {
-    background: #f0f0f0;
-  }
-</style>
-
-<dialog class="pretix-modal" data-pretix-modal-target="dialog" data-action="click->pretix-modal#backdropClose">
-  <div class="pretix-modal-inner">
-    <button class="pretix-modal-close" data-action="click->pretix-modal#close">✕ Close</button>
+<dialog id="pretix-modal"
+        class="pretix-modal"
+        data-controller="modal"
+        data-action="click->modal#backdropClose"
+        data-pretix-modal-target="dialog">
+  <div class="pretix-modal-header">
+    <h5 data-pretix-modal-target="title">Book Tickets</h5>
+    <button type="button" class="pretix-modal-close" data-action="click->modal#close" aria-label="Close">&times; Close</button>
+  </div>
+  <div class="pretix-modal-body">
     <pretix-widget data-pretix-modal-target="widget"></pretix-widget>
   </div>
 </dialog>
