@@ -12,3 +12,8 @@ refresh_fuzzy_duplicates:
   class: RefreshFuzzyBothDuplicatesJob
   queue: default
   schedule: at 4am every day
+
+opportunity_digest:
+  class: OpportunityDigestJob
+  queue: default
+  schedule: at 9am every day

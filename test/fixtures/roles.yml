@@ -45,3 +45,7 @@ first_aid_trained:
 
 tool_trained:
   name: "Tool Trained"
+
+opportunity_reviewer:
+  id: 10
+  name: "Opportunity Reviewer"

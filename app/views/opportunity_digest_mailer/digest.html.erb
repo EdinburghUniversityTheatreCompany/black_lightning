@@ -1,0 +1,29 @@
+<p>Dear <%= @user.first_name %>,</p>
+
+<p>The following <%= @opportunities.count == 1 ? "opportunity is" : "opportunities are" %> awaiting your review:</p>
+
+<table style="border-collapse: collapse; width: 100%;">
+  <thead>
+    <tr>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Title</th>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Submitted by</th>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Submitted on</th>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @opportunities.each do |opportunity| %>
+      <% url = admin_opportunity_url(opportunity) %>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= opportunity.title %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= opportunity.creator.full_name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= l opportunity.created_at.to_date, format: :long %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= link_to "Review", url %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p>Regards,</p>
+
+<p>Pineapple</p>

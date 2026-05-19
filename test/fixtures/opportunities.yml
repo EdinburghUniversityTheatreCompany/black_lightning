@@ -61,3 +61,11 @@ active_opportunity_6:
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
   creator: admin
   show_email: false
+
+pending_digest_opportunity:
+  title: "Digest Test Opportunity"
+  description: "This opportunity is used for digest mailer tests."
+  approved: false
+  expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
+  creator_id: 1
+  show_email: false
