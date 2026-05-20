@@ -50,7 +50,6 @@ DEFAULT_PATHS = [
     "/news",
     "/venues",
     "/get_involved",
-    "/get_involved/opportunities/new",
     "/about",
     "/complaints/new",
     "/users/sign_in",
