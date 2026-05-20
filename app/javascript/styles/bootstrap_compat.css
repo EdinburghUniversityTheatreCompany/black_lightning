@@ -905,7 +905,7 @@
 .justify-content-between { justify-content: space-between; }
 .align-items-start { align-items: flex-start; }
 .flex-wrap {
-  @apply flex-wrap;
+  flex-wrap: wrap;
 }
 .ms-auto { margin-left: auto; }
 .ms-1 { margin-left: 0.25rem; }
@@ -920,8 +920,14 @@
 .mb-3 { margin-bottom: 1rem; }
 .mb-4 { margin-bottom: 1.5rem; }
 .mb-5 { margin-bottom: 3rem; }
-.mb-md-0 { margin-bottom: 1rem; }  /* default (mobile) */
-@media (min-width: 768px) { .mb-md-0 { margin-bottom: 0 !important; } }
+.mb-md-0 {
+  margin-bottom: 0;
+}
+@media (min-width: 768px) {
+  .mb-md-0 {
+    margin-bottom: 0 !important;
+  }
+}
 .mt-1 { margin-top: 0.25rem; }
 .mt-2 { margin-top: 0.5rem; }
 .mt-3 { margin-top: 1rem; }
@@ -950,6 +956,25 @@
 @media (min-width: 576px) { .d-sm-none { display: none; } }
 .d-sm-block { display: none; }
 @media (min-width: 576px) { .d-sm-block { display: block; } }
+
+/* Bootstrap 5 gap utilities (used in public views with d-flex gap-N) */
+.gap-1 { gap: 0.25rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 1rem; }
+.gap-4 { gap: 1.5rem; }
+
+/* Responsive flex direction */
+@media (min-width: 768px) {
+  .flex-md-row { flex-direction: row; }
+}
+
+/* Responsive display flex utilities */
+@media (min-width: 768px) {
+  .d-md-flex  { display: flex; }
+}
+@media (min-width: 992px) {
+  .d-lg-flex  { display: flex; }
+}
 
 /* Bootstrap row-cols additional variants not in admin.css */
 .row-cols-auto > .col {
