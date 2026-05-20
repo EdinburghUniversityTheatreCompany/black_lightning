@@ -1,0 +1,240 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/typography";
+
+/* Icon fonts — loaded here to avoid FOUC */
+@import "@fortawesome/fontawesome-free/css/fontawesome.css";
+@import "@fortawesome/fontawesome-free/css/solid.css";
+@import "@fortawesome/fontawesome-free/css/brands.css";
+
+/* Tom-select — Bootstrap 5 theme for now; will switch when Bootstrap is fully removed */
+@import "tom-select/dist/css/tom-select.bootstrap5.css";
+
+/* SweetAlert2 — base CSS + Bedlam custom toast colour overrides */
+@import "sweetalert2/dist/sweetalert2.min.css";
+
+/* Bootstrap compatibility shims — maps Bootstrap class names to Tailwind utilities */
+@import "../styles/bootstrap_compat.css";
+
+/* dropzone, fancybox, and leaflet CSS are loaded dynamically
+   by their respective Stimulus controllers */
+
+/* Tailwind source scanning — needed so Vite picks up classes used in views/components */
+@source "../../../app/views/**/*.erb";
+@source "../../../app/components/**/*.html.erb";
+@source "../../../app/components/**/*.rb";
+@source "../controllers/**/*.js";
+@source "../../../config/initializers/**/*.rb";
+
+@theme {
+  --color-primary: #ba0204;
+  --color-primary-dark: #8a0103;
+  --color-secondary: #fdc5b6;
+  --font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ============================================================
+   Public site global styles
+   ============================================================ */
+
+/* Links in main content area — styled with brand colour */
+main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link):not(.nav-link) {
+  @apply text-primary hover:text-primary-dark;
+}
+
+/* Links on primary-coloured backgrounds (navbar, footer) must stay white */
+.bg-primary a,
+footer a,
+.navbar-dark a {
+  color: white !important;
+}
+
+.turbo-progress-bar {
+  background-color: var(--color-primary);
+}
+
+/* Public navbar branding text — centred at lg+ breakpoints like Bootstrap's text-lg-center */
+.bedlam-nav-text {
+  @apply text-white font-bold;
+}
+@media (min-width: 992px) {
+  .bedlam-nav-text { text-align: center; }
+}
+
+/* Navbar toggler — white border and icon on dark background */
+.navbar-dark .navbar-toggler {
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.navbar-dark .navbar-toggler-icon {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 1%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+}
+
+/* ============================================================
+   Leaflet map
+   ============================================================ */
+.leaflet-container {
+  height: 400px;
+  width: 100%;
+}
+
+/* ============================================================
+   Markdown-rendered content
+   ============================================================ */
+.markdown-body > p:last-child {
+  margin-bottom: 0;
+}
+
+.captioned-image {
+  max-width: 192px;
+  font-size: smaller;
+}
+
+.captioned-image p:last-child {
+  margin: 0;
+}
+
+img.float-left,
+img.float-right {
+  max-width: 192px;
+  height: auto;
+}
+
+/* ============================================================
+   General utility classes (from shared_additions)
+   ============================================================ */
+.no-wrap {
+  white-space: nowrap;
+}
+
+.center {
+  text-align: center;
+}
+
+/* ============================================================
+   Carousel image wrapper (shared with admin via shared_additions.scss)
+   ============================================================ */
+.carousel-image-wrapper {
+  overflow: hidden;
+  display: block;
+}
+
+.carousel-image-wrapper img,
+.carousel-image-wrapper a {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.carousel-image-wrapper img {
+  object-fit: cover;
+}
+
+.carousel-image-wrapper.carousel-image-wrapper--contain img {
+  object-fit: contain;
+  background: transparent;
+}
+
+/* Carousel caption card — z-index so it sits above .carousel-indicators */
+.carousel-caption-card {
+  position: relative;
+  z-index: 2;
+}
+
+/* ============================================================
+   Search form — mobile: keep inner collapse open
+   The inner section uses Bootstrap collapse (.collapse class) until
+   _collapsible_section.erb is converted to the collapsible Stimulus controller.
+   ============================================================ */
+@media (max-width: 767.98px) {
+  .search-form-inner-collapse > .card-header {
+    display: none !important;
+  }
+
+  .search-form-inner-collapse .collapse {
+    display: block !important;
+  }
+}
+
+/* ============================================================
+   Collapsible Stimulus controller state classes
+   ============================================================ */
+[data-controller="collapsible"] .when-open {
+  display: none;
+}
+
+[data-controller="collapsible"].is-open .when-closed {
+  display: none;
+}
+
+[data-controller="collapsible"].is-open .when-open {
+  display: inline;
+}
+
+/* ============================================================
+   Pretix modal (public ticketing widget)
+   ============================================================ */
+dialog.pretix-modal {
+  width: 100%;
+  max-width: min(640px, 95vw);
+  padding: 0;
+  border: none;
+  border-radius: 0.5rem;
+  margin: auto;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+dialog.pretix-modal::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.pretix-modal-header {
+  @apply bg-primary text-white px-4 py-3 flex items-center justify-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.pretix-modal-header h5 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.pretix-modal-close {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 0.25rem;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #fff;
+}
+
+.pretix-modal-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.pretix-modal-body {
+  padding: 1.25rem;
+}
+
+/* ============================================================
+   SweetAlert2 — brand colour overrides
+   ============================================================ */
+.swal2-confirm {
+  @apply bg-primary border-primary;
+}
+
+.swal2-confirm:focus {
+  box-shadow: 0 0 0 3px rgba(186, 2, 4, 0.4);
+}
+
+/* Coloured toast variants (matches swalCustomTheme.scss) */
+.colored-toast.swal2-icon-success  { background-color: #28a745 !important; }
+.colored-toast.swal2-icon-error    { background-color: #dc3545 !important; }
+.colored-toast.swal2-icon-warning  { background-color: #ffc107 !important; }
+.colored-toast.swal2-icon-info     { background-color: #17a2b8 !important; }
+.colored-toast.swal2-icon-question { background-color: #6c757d !important; }
+.colored-toast .swal2-title        { color: white !important; }
+.colored-toast .swal2-close        { color: white !important; }
+.colored-toast .swal2-html-container { color: white !important; }
