@@ -823,6 +823,8 @@
   background: transparent;
   border: 0;
   cursor: pointer;
+  width: 100%;
+  text-align: left;
 }
 
 /* Bootstrap navbar compat */
@@ -862,10 +864,11 @@
 .navbar-toggler {
   border: 1px solid currentColor;
   border-radius: 0.25rem;
-  padding: 0.25rem;
+  padding: 0.375rem 0.75rem;
   cursor: pointer;
   background: transparent;
-  line-height: 1;
+  line-height: 1.5;
+  font-size: 1.25rem;
 }
 /* Collapse behaviour — toggled by Stimulus navbar controller */
 /* Note: the .collapse class on the element sets visibility: collapse in some browsers;
