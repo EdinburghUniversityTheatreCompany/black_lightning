@@ -1021,6 +1021,13 @@
   .d-lg-flex  { display: flex; }
 }
 
+/* Bootstrap rounded utilities */
+.rounded-1 { border-radius: 0.25rem; }
+.rounded-2 { border-radius: 0.375rem; }
+.rounded-3 { border-radius: 0.5rem; }
+.rounded-4 { border-radius: 1rem; }
+.rounded-5 { border-radius: 2rem; }
+
 /* Bootstrap row-cols additional variants not in admin.css */
 .row-cols-auto > .col {
   width: auto;

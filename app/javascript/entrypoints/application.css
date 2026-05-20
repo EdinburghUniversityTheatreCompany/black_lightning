@@ -44,10 +44,11 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link):not(.
   @apply text-primary hover:text-primary-dark;
 }
 
-/* Links on primary-coloured backgrounds (navbar, footer) must stay white */
-.bg-primary a,
+/* Links on primary-coloured backgrounds (navbar, footer) must stay white.
+   Exclude .dropdown-item — dropdown menus appear on white and need dark text. */
+.bg-primary a:not(.dropdown-item),
 footer a,
-.navbar-dark a {
+.navbar-dark a:not(.dropdown-item) {
   color: white !important;
 }
 
