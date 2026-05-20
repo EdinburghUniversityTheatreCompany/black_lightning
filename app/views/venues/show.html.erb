@@ -1,6 +1,6 @@
-<%= render 'shared/pages/public/basic_info', header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [
+<%= render Public::BasicInfoComponent.new(header: @venue.name, image: @venue.fetch_image, tagline: @venue.tagline, details: [
   { key: 'Address', value: render_markdown(@venue.address) }
-] %>
+], admin_site: @admin_site) %>
 
 <div class="row">
   <div class="col-md-6">
