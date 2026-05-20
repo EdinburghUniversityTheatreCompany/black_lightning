@@ -96,15 +96,15 @@ export default class extends Controller {
 
   #initSelect(el) {
     const placeholder = el.dataset.placeholder || "Select an option..."
-    const allowClear  = el.dataset.allowClear === "true"
-    const hasTags     = el.getAttribute("select2-with-tags") === "true"
-    const remoteUrl   = el.dataset.remoteSource
-    const minLength   = parseInt(el.dataset.minimumInputLength ?? (remoteUrl ? "2" : "0"), 10)
+    const allowClear = el.dataset.allowClear === "true"
+    const hasTags = el.getAttribute("select2-with-tags") === "true"
+    const remoteUrl = el.dataset.remoteSource
+    const minLength = parseInt(el.dataset.minimumInputLength ?? (remoteUrl ? "2" : "0"), 10)
 
     const plugins = []
     if (allowClear) { plugins.push("clear_button") }
 
-    const theme = window.location.pathname.startsWith("/admin") ? "default" : "bootstrap5"
+    const theme = "default";
 
     const options = {
       theme,
@@ -124,8 +124,8 @@ export default class extends Controller {
 
       // When the dropdown opens with one item already selected, move that
       // item's text into the editable input so the user can amend it in place.
-      let savedValue   = null
-      let lastTyped    = null
+      let savedValue = null
+      let lastTyped = null
       let inputListener = null
 
       options.onDropdownOpen = function () {
@@ -167,23 +167,22 @@ export default class extends Controller {
             this.addItem(savedValue, true)
           }
         }
-        savedValue    = null
-        lastTyped     = null
+        savedValue = null
+        lastTyped = null
       }
     }
 
     if (remoteUrl) {
       // Use the dropdown_input plugin so the search box appears inside the
-      // dropdown (Bootstrap 5 theme is designed for this layout) and the
-      // placeholder is shown correctly in the collapsed control.
+      // dropdown placeholder is shown correctly in the collapsed control.
       options.plugins = [...plugins, "dropdown_input"]
-      options.valueField  = "id"
-      options.labelField  = "text"
+      options.valueField = "id"
+      options.labelField = "text"
       options.searchField = ["text"]
-      options.shouldLoad  = (query) => query.length >= minLength
-      options.load        = (query, callback) => this.#ajaxLoad(el, query, callback)
+      options.shouldLoad = (query) => query.length >= minLength
+      options.load = (query, callback) => this.#ajaxLoad(el, query, callback)
       // Don't pre-load options — only fetch when the user types
-      options.preload     = false
+      options.preload = false
     }
 
     // TomSelect hides the native <select> with CSS. If the native select is
@@ -197,9 +196,9 @@ export default class extends Controller {
   }
 
   #ajaxLoad(el, query, callback) {
-    const remoteUrl       = el.dataset.remoteSource
-    const queryField      = el.dataset.queryField || "q"
-    const showNonMembers  = el.dataset.showNonMembers
+    const remoteUrl = el.dataset.remoteSource
+    const queryField = el.dataset.queryField || "q"
+    const showNonMembers = el.dataset.showNonMembers
 
     const params = {
       page: 1,
@@ -211,8 +210,8 @@ export default class extends Controller {
       params.show_non_members = showNonMembers
     }
 
-    const cacheKey  = ajaxCache.generateKey(remoteUrl, params)
-    const cached    = ajaxCache.get(cacheKey)
+    const cacheKey = ajaxCache.generateKey(remoteUrl, params)
+    const cached = ajaxCache.get(cacheKey)
 
     if (cached) {
       // Return cached data asynchronously to match AJAX behaviour
