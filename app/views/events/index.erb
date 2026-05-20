@@ -1,4 +1,4 @@
-<% 
+<%
 if @show_search_form
   # Essentially the same as in the admin events index, so likely edit that too if you edit this.
   search_fields = {
@@ -13,16 +13,12 @@ if @show_search_form
 
     random_button:      { type: :submit_button, action: :Random },
     on_this_day_button: { type: :submit_button, action: 'On This Day' }
-  } 
-
-  search_form = render '/shared/pages/public/partials/search_form', search_fields: search_fields
-else
-  search_form = nil
+  }
 end
 %>
 
 
-<% items = @events.collect { |event| { 
+<% items = @events.collect { |event| {
   url: url_for(event),
   image: event.fetch_image,
   header: event.name,
@@ -34,4 +30,12 @@ end
   } }
 %>
 
-<%= render 'shared/pages/public/index', search_form: search_form, items: items, resources: @events %>
+<%= render Public::IndexPageComponent.new(title: @title, editable_block_name: @editable_block_name, resources: @events, items: items) do |c| %>
+  <% if @show_search_form %>
+    <% c.with_search_form do %>
+      <div class="mb-3">
+        <%= render('shared/search_form', input_fields: search_fields, columns: 2) %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

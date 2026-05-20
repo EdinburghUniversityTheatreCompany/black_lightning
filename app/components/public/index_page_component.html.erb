@@ -1,0 +1,34 @@
+<h1><%= @title %></h1>
+
+<div class="mb-3">
+  <%= helpers.display_block(@editable_block_name, false) %>
+</div>
+
+<% if search_form? %>
+  <%= search_form %>
+<% end %>
+
+<div class="row">
+  <div class="col">
+    <% if !any_items? %>
+      <%= helpers.display_block("#{@editable_block_name} - No Resources", false) %>
+    <% else %>
+      <% @items.each do |item| %>
+        <div class="d-flex flex-column flex-md-row">
+          <%= render("shared/image", image: item[:image], variant: helpers.thumb_variant_public(), eager_load: false, proxy: true, image_options: { class: "img-thumbnail" }) %>
+
+          <div class="flex-fill ms-3">
+            <h4 class="media-heading"><%= link_to item[:header], item[:url] %></h4>
+
+            <%= render("shared/pages/public/partials/card_paragraphs", paragraphs: item[:paragraphs]) %>
+
+            <p class="card-text"><%= link_to item[:button_text], item[:url], class: "btn btn-primary" %></p>
+          </div>
+        </div>
+        <hr />
+      <% end %>
+
+      <%= helpers.paginate(@resources, window: 2) %>
+    <% end %>
+  </div>
+</div>

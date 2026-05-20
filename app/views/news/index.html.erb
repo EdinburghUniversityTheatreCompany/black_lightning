@@ -6,9 +6,7 @@
 
 } %>
 
-<% search_form = render('shared/pages/public/partials/search_form', search_fields: search_fields) %>
-
-<% items = @news.collect { |news| { 
+<% items = @news.collect { |news| {
   url: url_for(news),
   image: news.fetch_image,
   header: news.title,
@@ -20,8 +18,14 @@
   } }
 %>
 
-<%= render 'shared/pages/public/index', search_form: search_form, items: items, resources: @news %>
+<%= render Public::IndexPageComponent.new(title: @title, editable_block_name: @editable_block_name, resources: @news, items: items) do |c| %>
+  <% c.with_search_form do %>
+    <div class="mb-3">
+      <%= render('shared/search_form', input_fields: search_fields, columns: 2) %>
+    </div>
+  <% end %>
+<% end %>
 
 
-<% rss_icon = '<i class=”fa-solid fa-square-rss” aria-hidden=”true”></i> RSS Feed' %>
+<% rss_icon = '<i class="fa-solid fa-square-rss" aria-hidden="true"></i> RSS Feed' %>
 <%= link_to(rss_icon.html_safe, news_index_path(format: :rss), class: 'btn btn-secondary') %>
