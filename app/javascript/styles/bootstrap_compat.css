@@ -833,8 +833,10 @@
   justify-content: space-between;
   padding: 0.5rem 1rem;
 }
-.navbar-expand-lg .navbar-nav {
-  flex-direction: row;
+@media (min-width: 992px) {
+  .navbar-expand-lg .navbar-nav {
+    flex-direction: row;
+  }
 }
 .navbar-nav {
   display: flex;

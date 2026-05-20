@@ -11,7 +11,7 @@
         <i class="fa-solid fa-bars" aria-hidden="true"></i>
       </button>
       <div class="collapse navbar-collapse" data-navbar-target="menu">
-        <ul class="navbar-nav w-full flex flex-row justify-between items-center">
+        <ul class="navbar-nav w-full flex flex-col lg:flex-row lg:justify-between lg:items-center">
           <% public_navbar_items().each do |navbar_item| %>
             <% if navbar_item[:children].present? %>
               <li class="nav-item dropdown">
