@@ -13,7 +13,7 @@
     <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
       <% pictures.includes(image_attachment: :blob).each do |picture| %>
         <div class="col">
-          <div class="card h-100 mb-0">
+          <div class="card h-full mb-0">
             <% lightbox_url = active_storage_proxy_url(picture.fetch_image.variant(large_display_variant)) %>
             <% download_url = active_storage_proxy_url(picture.fetch_image) %>
 

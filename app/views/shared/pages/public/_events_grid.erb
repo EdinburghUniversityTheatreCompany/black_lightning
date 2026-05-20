@@ -23,7 +23,7 @@
   <div class="row g-3 row-cols-auto row-cols-1 <%= num_cols.map { |type, num| "row-cols-#{type}-#{num}" }.join(' ') %>">
     <% items.each do |item| %>
       <div class="col">
-        <div class="card h-100">
+        <div class="card h-full">
           <% url = link_to_admin_events ? [:admin, item[:event]] : item[:event] %>
           <%= link_to url do %>
             <%= render 'shared/image', image: item[:event].fetch_image, variant: medium_variant, proxy: true, image_options: { class: 'card-img-top h-auto' } %>
