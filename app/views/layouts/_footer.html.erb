@@ -9,7 +9,7 @@
       { icon: 'youtube',    url: 'https://www.youtube.com/channel/UCXxyhjT8bPvnl1oVAdRJW1Q' }
     ] %>
 
-    <div class="flex justify-center my-3">
+    <div class="flex justify-center my-3 gap-3">
       <% social_media_icons.each do |icon| %>
         <a href="<%= icon[:url] %>" target="_blank"><i class="fa-brands fa-<%= icon[:icon] %> fa-inverse fs-2 px-3"></i></a>
       <% end %>
