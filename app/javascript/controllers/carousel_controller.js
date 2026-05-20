@@ -64,7 +64,7 @@ export default class extends Controller {
     inEl.style.transform = `translateX(${direction * 100}%)`
 
     // Force reflow to commit the no-transition jump before re-enabling transitions
-    inEl.offsetWidth // eslint-disable-line no-unused-expressions
+    inEl.offsetWidth
 
     inEl.style.transition = ""
     inEl.style.transform = "translateX(0)"
