@@ -919,16 +919,18 @@
   overflow: hidden;
 }
 .carousel-inner {
-  position: relative;
+  display: grid;
   width: 100%;
   overflow: hidden;
 }
 .carousel-item {
-  display: none;
+  grid-area: 1/1;
   width: 100%;
+  visibility: hidden;
+  transition: transform 0.5s ease-in-out;
 }
 .carousel-item.active {
-  display: block;
+  visibility: visible;
 }
 .carousel-indicators {
   position: absolute;
