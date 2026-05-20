@@ -13,7 +13,10 @@ pages:
   - /complaints/new
   - /users/sign_in
 
-  # Workshop pages (real slugs from DB)
-  - /workshops
+  # Detail pages with real slugs
+  - /shows/odyssey
+  - /venues/980190962-bedlam-theatre
   - /workshops/voice-and-breath-for-actors
-  - /workshops/movement-for-performers
+
+  # Workshop index (shows as logged-in member)
+  - /workshops

@@ -16,7 +16,7 @@
 
         <% if event.content_warnings.present? %>
           <div class="mt-4">
-            <%= render layout: '/shared/collapsible_section', locals: { title: 'Content Warnings' } do %>
+            <%= render CollapsibleSectionComponent.new(title: 'Content Warnings') do %>
               <%= render_markdown event.content_warnings %>
             <% end %>
           </div>

@@ -125,6 +125,21 @@
     @apply bg-primary text-white;
   }
 
+  /* Bootstrap text colour utilities */
+  .text-dark  { color: #212529; }
+  .text-body  { color: #212529; }
+  .text-black { color: #000; }
+
+  /* Bootstrap background utilities */
+  .bg-light      { background-color: #f8f9fa; }
+  .bg-white      { background-color: #fff; }
+  .bg-dark       { background-color: #343a40; color: #fff; }
+  .bg-transparent { background-color: transparent; }
+
+  /* Bootstrap border-colour utilities */
+  .border-secondary { border-color: #6c757d; }
+  .border-primary   { border-color: var(--color-primary); }
+
   /* Bootstrap table compat */
   .table {
     @apply w-full text-sm;
