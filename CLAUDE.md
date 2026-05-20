@@ -6,7 +6,7 @@ Ruby on Rails 8.1
 
 Use pnpm for package management rather than npm, yarn, or bun.
 
-The public facing website uses Bootstrap 5. The admin website currently uses ViewComponents with Tailwind v4.
+The entire site currently uses Tailwind v4
 
 Use stimulus for all JavaScript sprinkles. We use Vite rather than jsbundling, cssbundling and importmaps. We use propshaft too to serve some images and JavaScript files that are only used on a few pages
 
@@ -31,7 +31,7 @@ Always use the link helper for links, including external and non-model links. th
 **Use `get_link` from `LinkHelper` for button-style links to model resources.**
 
 The `get_link` helper provides:
-- Consistent Bootstrap styling based on action type
+- Consistent styling based on action type
 - Automatic CanCanCan permission checking
 - Automatic path generation for model resources
 
