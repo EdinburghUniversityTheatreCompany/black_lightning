@@ -60,8 +60,10 @@ footer h1, footer h2, footer h3, footer h4, footer h5, footer h6 {
   color: white;
 }
 
-/* Links in main content area — styled with brand colour */
-main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link):not(.nav-link) {
+/* Global link colour — matches Bootstrap's $link-color: $red.
+   Exceptions: nav-link (white on red navbar), dropdown-item (dark on white menu),
+   pagination (page-link), buttons, badges, and text-reset (inherits parent colour). */
+a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link):not(.nav-link):not(.text-reset) {
   @apply text-primary hover:text-primary-dark;
 }
 
