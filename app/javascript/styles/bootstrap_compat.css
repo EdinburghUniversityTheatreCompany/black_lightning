@@ -904,6 +904,9 @@
 /* Additional spacing/flex utilities used in public views but missing from admin shims */
 .justify-content-between { justify-content: space-between; }
 .align-items-start { align-items: flex-start; }
+.flex-wrap {
+  @apply flex-wrap;
+}
 .ms-auto { margin-left: auto; }
 .ms-1 { margin-left: 0.25rem; }
 .ms-2 { margin-left: 0.5rem; }
