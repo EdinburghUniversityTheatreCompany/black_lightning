@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# Sole SimpleForm configuration for this application.
+# The generator-created simple_form.rb has been absorbed into this file.
+#
 # Tailwind-based SimpleForm wrappers for both the public site (vertical layout)
 # and the admin site (horizontal layout).
 #
@@ -20,10 +23,12 @@ SimpleForm.setup do |config|
   config.boolean_style = :inline
   config.item_wrapper_tag = :div
   config.include_default_input_wrapper_class = false
+  config.error_notification_tag = :div
   config.error_notification_class = "alert alert-danger"
   config.error_method = :to_sentence
   config.input_field_error_class = "is-invalid"
   config.input_field_valid_class = "is-valid"
+  config.browser_validations = true
 
   # === Vertical wrappers (public site defaults) ===
   # Use Tailwind utility classes. form-control/is-invalid/invalid-feedback are
@@ -138,22 +143,6 @@ SimpleForm.setup do |config|
     b.use :input, class: "w-full accent-primary", error_class: invalid_class, valid_class: valid_class_f
     b.use :full_error, wrap_with: { tag: "div", class: "#{error_class} block" }
     b.use :hint, wrap_with: { tag: "small", class: hint_class }
-  end
-
-  config.wrappers :inline_form,
-      tag: "span",
-      error_class: "has-error", valid_class: "has-success" do |b|
-    b.use :html5
-    b.use :placeholder
-    b.optional :maxlength
-    b.optional :minlength
-    b.optional :pattern
-    b.optional :min_max
-    b.optional :readonly
-    b.use :label, class: "sr-only"
-    b.use :input, class: input_class, error_class: invalid_class, valid_class: valid_class_f
-    b.use :error, wrap_with: { tag: "div", class: error_class }
-    b.optional :hint, wrap_with: { tag: "small", class: hint_class }
   end
 
   # === Public horizontal wrappers (used via simple_horizontal_form_for on non-admin controllers) ===
@@ -359,6 +348,23 @@ SimpleForm.setup do |config|
     end
   end
 
+  # Inline wrapper — used in admin nested form fields
+  config.wrappers :inline_form,
+      tag: "span",
+      error_class: "has-error", valid_class: "has-success" do |b|
+    b.use :html5
+    b.use :placeholder
+    b.optional :maxlength
+    b.optional :minlength
+    b.optional :pattern
+    b.optional :min_max
+    b.optional :readonly
+    b.use :label, class: "sr-only"
+    b.use :input, class: adm_input_class, error_class: adm_invalid_class, valid_class: adm_valid_class
+    b.use :error, wrap_with: { tag: "div", class: adm_error_class }
+    b.optional :hint, wrap_with: { tag: "small", class: adm_hint_class }
+  end
+
   # === Defaults (public site) ===
   config.default_wrapper = :vertical_form
   config.wrapper_mappings = {
@@ -371,4 +377,14 @@ SimpleForm.setup do |config|
     range:         :vertical_range,
     time:          :vertical_multi_select
   }
+end
+
+# Force HTML5 date/time inputs (overrides SimpleForm's default which falls back to
+# select-based inputs). Absorbed from the generator-created simple_form.rb.
+class DateTimeInput < SimpleForm::Inputs::DateTimeInput
+  private
+
+  def use_html5_inputs?
+    input_options.fetch(:html5, true)
+  end
 end
