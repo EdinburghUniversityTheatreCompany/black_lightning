@@ -2,11 +2,10 @@
   <div class="col-md-6 col-xl-8">
     <% carousel_config = CarouselItem::CAROUSEL_CONFIG.fetch("Home", {}) %>
     <% cache [ @carousel_events, @standard_carousel_items ] do %>
-      <%= render 'shared/carousel',
-            id: 'homeCarousel',
+      <%= render Public::CarouselComponent.new(
             carousel_items: combine_events_with_carousel_items(@carousel_events, @standard_carousel_items),
             aspect_ratio: carousel_config[:aspect_ratio]&.join("/"),
-            fit_mode: carousel_config.fetch(:fit_mode, "cover") %>
+            fit_mode: carousel_config.fetch(:fit_mode, "cover")) %>
     <% end %>
 
     <div class="card mt-3">
