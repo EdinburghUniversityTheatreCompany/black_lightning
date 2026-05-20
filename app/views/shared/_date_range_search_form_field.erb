@@ -1,10 +1,10 @@
 <%# locals: (f:, end_year: max_end_year(), start_year: Rails.configuration.start_year, start_date_attribute: 'start_date', end_date_attribute: 'end_date') -%>
 <%# KEEP %>
 
-<div class="col">
+<div>
     <%= f.input "#{end_date_attribute}_gteq",   as: :date, label: "Start Date", start_year: start_year, end_year: end_year, include_blank: true, required: false %>
 </div>
 
-<div class="col">
+<div>
     <%= f.input "#{start_date_attribute}_lteq", as: :date, label: "End Date",   start_year: start_year, end_year: end_year, include_blank: true, required: false %>
 </div>
