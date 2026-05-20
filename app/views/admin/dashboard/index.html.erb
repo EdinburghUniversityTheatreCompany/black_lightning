@@ -1,7 +1,7 @@
 <div class="content">
   <div class="container-fluid">
-    <div class="row">
-      <div class="col-md">
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr] gap-4">
+      <div>
         <%= render Admin::CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true) do %>
           <%= render "debt_widget" %>
         <% end %>
@@ -16,7 +16,7 @@
           <%= render "resources_widget" %>
         <% end %>
       </div>
-      <div class="col-md-6">
+      <div>
         <%= render Admin::CollapsibleSectionComponent.new(title: link_to("News", admin_news_index_path), flush: true, start_open: true) do %>
           <%= render "news_widget" %>
         <% end %>
@@ -27,7 +27,7 @@
           <%= render "proposals_widget" %>
         <% end %>
       </div>
-      <div class="col-xl">
+      <div>
         <%= render Admin::CollapsibleSectionComponent.new(title: link_to("Staffing", admin_staffings_path), flush: true, start_open: true) do %>
           <%= render "staffings_widget" %>
         <% end %>
