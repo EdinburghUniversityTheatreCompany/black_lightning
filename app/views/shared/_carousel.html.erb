@@ -1,6 +1,6 @@
-<%# locals: (id:, carousel_items:, aspect_ratio: nil, fit_mode: "cover") -%>
+<%# locals: (id: nil, carousel_items:, aspect_ratio: nil, fit_mode: "cover") -%>
 
-<div class="carousel carousel-dark slide" data-controller="carousel carousel-equalizer" data-carousel-interval-value="6000">
+<div class="carousel carousel-dark slide" data-controller="carousel carousel-equalizer" data-action="mouseenter->carousel#pause mouseleave->carousel#resume">
   <div class="carousel-indicators">
     <% carousel_items.each_with_index do |item, index| %>
       <button type="button" data-carousel-target="indicator" data-action="click->carousel#goTo" data-index="<%= index %>" aria-label="<%= item[:title] %>"
