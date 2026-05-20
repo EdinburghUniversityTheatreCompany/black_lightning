@@ -31,7 +31,13 @@ class Admin::RolesController < AdminController
       helpers.append_to_flash(:error, "This user does not exist.")
     end
 
-    redirect_to admin_role_url(@role)
+    @q = @role.users.ransack(nil, auth_object: current_ability)
+    @users = @q.result
+
+    respond_to do |format|
+      format.html { redirect_to admin_role_url(@role) }
+      format.turbo_stream
+    end
   end
 
   def remove_user
