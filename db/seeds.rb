@@ -9,7 +9,12 @@ seed_files = %w[
   staffing
   maintenance
   proposals
+  questionnaires
+  fault_reports
+  techies
   content
+  media
+  debts
 ]
 
 seed_files.each do |file|
