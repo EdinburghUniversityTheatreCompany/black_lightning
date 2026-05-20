@@ -39,9 +39,17 @@
    Public site global styles
    ============================================================ */
 
-/* Headings — red like Bootstrap's $headings-color: $red.
-   Exceptions: navbar (white text), bg-primary (white), pretix modal (overridden inline). */
+/* Headings — restore Bootstrap's type scale (Tailwind Preflight resets all to 1em)
+   and apply brand red to match Bootstrap's $headings-color: $red. */
+h1 { font-size: 2.5rem; }
+h2 { font-size: 2rem; }
+h3 { font-size: 1.75rem; }
+h4 { font-size: 1.5rem; }
+h5 { font-size: 1.25rem; }
+h6 { font-size: 1rem; }
 h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
+  line-height: 1.2;
   color: var(--color-primary);
 }
 .navbar-dark h1, .navbar-dark h2, .navbar-dark h3,
