@@ -11,7 +11,7 @@ Generates an index.html with all screenshots in a responsive grid.
 """
 
 import argparse
-import os
+import html
 import socket
 import sys
 import threading
@@ -132,15 +132,15 @@ def generate_index_html(output_dir: Path, results: list[tuple[str, str | None, s
         if filename and (output_dir / filename).exists():
             rows.append(f"""
     <figure class="screenshot-card">
-      <img src="{filename}" alt="{path}" loading="lazy">
-      <figcaption><code>{path}</code></figcaption>
+      <img src="{html.escape(filename)}" alt="{html.escape(path)}" loading="lazy">
+      <figcaption><code>{html.escape(path)}</code></figcaption>
     </figure>""")
         else:
-            msg = error or "Unknown error"
+            msg = html.escape(error or "Unknown error")
             rows.append(f"""
     <figure class="screenshot-card error">
       <div class="error-placeholder">Failed to capture</div>
-      <figcaption><code>{path}</code><br><small class="error-msg">{msg}</small></figcaption>
+      <figcaption><code>{html.escape(path)}</code><br><small class="error-msg">{msg}</small></figcaption>
     </figure>""")
 
     cards_html = "\n".join(rows)
@@ -247,12 +247,13 @@ def main():
     parser.add_argument("--workers", type=int, default=4, help="Parallel browser workers")
     args = parser.parse_args()
 
+    project_root = find_project_root()
+
     # Determine which pages to screenshot
     if args.paths:
         pages = args.paths
         print(f"Using {len(pages)} paths from CLI arguments.")
     else:
-        project_root = find_project_root()
         config_path = project_root / "config" / "screenshots.yml"
         pages = load_pages_from_config(config_path)
         if pages:
@@ -262,7 +263,6 @@ def main():
             print(f"Using {len(pages)} default pages.")
 
     # Create output directory
-    project_root = find_project_root()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir = project_root / "tmp" / "screenshots" / f"batch_{timestamp}"
     output_dir.mkdir(parents=True, exist_ok=True)
