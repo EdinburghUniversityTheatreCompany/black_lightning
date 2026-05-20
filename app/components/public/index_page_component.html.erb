@@ -9,24 +9,27 @@
 <% end %>
 
 <div>
-    <% if !any_items? %>
-      <%= helpers.display_block("#{@editable_block_name} - No Resources", false) %>
-    <% else %>
+  <% if !any_items? %>
+    <%= helpers.display_block("#{@editable_block_name} - No Resources", false) %>
+  <% else %>
+    <div class="space-y-6 mt-6">
       <% @items.each do |item| %>
-        <div class="d-flex flex-column flex-md-row">
-          <%= render("shared/image", image: item[:image], variant: helpers.thumb_variant_public(), eager_load: false, proxy: true, image_options: { class: "img-thumbnail" }) %>
+        <div class="flex flex-col md:flex-row gap-4 border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+          <div class="shrink-0">
+            <%= render("shared/image", image: item[:image], variant: helpers.thumb_variant_public(), eager_load: false, proxy: true, image_options: { class: "img-thumbnail" }) %>
+          </div>
 
-          <div class="flex-fill ms-3">
-            <h4 class="media-heading"><%= link_to item[:header], item[:url] %></h4>
+          <div class="flex-1">
+            <h4 class="text-lg font-semibold mb-1"><%= link_to item[:header], item[:url] %></h4>
 
             <%= render("shared/pages/public/partials/card_paragraphs", paragraphs: item[:paragraphs]) %>
 
-            <p class="card-text"><%= link_to item[:button_text], item[:url], class: "btn btn-primary" %></p>
+            <p class="mt-3"><%= link_to item[:button_text], item[:url], class: "btn btn-primary" %></p>
           </div>
         </div>
-        <hr />
       <% end %>
+    </div>
 
-      <%= helpers.paginate(@resources, window: 2) %>
-    <% end %>
+    <%= helpers.paginate(@resources, window: 2) %>
+  <% end %>
 </div>
