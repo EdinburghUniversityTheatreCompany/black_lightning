@@ -728,6 +728,48 @@
 @media (min-width: 1200px) { .container { max-width: 1140px; } }
 @media (min-width: 1400px) { .container { max-width: 1320px; } }
 
+/* Bootstrap dropdown compat — hover-based for public navbar */
+.nav-item.dropdown {
+  position: relative;
+}
+.nav-item.dropdown .dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: auto;
+  min-width: 10rem;
+  background: white;
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 0.25rem;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.175);
+  z-index: 1000;
+  list-style: none;
+  padding: 0.25rem 0;
+  margin: 0;
+}
+.nav-item.dropdown:hover .dropdown-menu,
+.nav-item.dropdown:focus-within .dropdown-menu {
+  display: block;
+}
+.nav-item.dropdown .dropdown-menu .dropdown-item {
+  display: block;
+  padding: 0.375rem 1rem;
+  color: #212529;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.nav-item.dropdown .dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+.nav-item.dropdown > button.nav-link {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+}
+
 /* Bootstrap navbar compat */
 .navbar {
   display: flex;
