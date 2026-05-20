@@ -8,8 +8,7 @@
   <%= search_form %>
 <% end %>
 
-<div class="row">
-  <div class="col">
+<div>
     <% if !any_items? %>
       <%= helpers.display_block("#{@editable_block_name} - No Resources", false) %>
     <% else %>
@@ -30,5 +29,4 @@
 
       <%= helpers.paginate(@resources, window: 2) %>
     <% end %>
-  </div>
 </div>
