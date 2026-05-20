@@ -1033,3 +1033,15 @@
   width: auto;
   flex: none;
 }
+
+/* Bootstrap font-size scale (fs-1 through fs-6) */
+.fs-1 { font-size: 2.5rem; }
+.fs-2 { font-size: 2rem; }
+.fs-3 { font-size: 1.75rem; }
+.fs-4 { font-size: 1.5rem; }
+.fs-5 { font-size: 1.25rem; }
+.fs-6 { font-size: 1rem; }
+
+/* Bootstrap text colour utilities missing from Tailwind */
+.text-reset { color: inherit !important; }
+.text-light { color: rgba(255, 255, 255, 0.75); }
