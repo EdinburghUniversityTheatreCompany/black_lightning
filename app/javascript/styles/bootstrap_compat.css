@@ -737,7 +737,6 @@
   position: absolute;
   top: 100%;
   left: 0;
-  right: auto;
   min-width: 10rem;
   background: white;
   border: 1px solid rgba(0,0,0,0.15);
@@ -766,8 +765,6 @@
   background: transparent;
   border: 0;
   cursor: pointer;
-  color: white;
-  font-weight: bold;
 }
 
 /* Bootstrap navbar compat */
@@ -811,8 +808,11 @@
   line-height: 1;
 }
 /* Collapse behaviour — toggled by Stimulus navbar controller */
+/* Note: the .collapse class on the element sets visibility: collapse in some browsers;
+   override explicitly so nav links are always visible when display is active. */
 .navbar-collapse {
   display: none;
+  visibility: visible;
   width: 100%;
 }
 .navbar-collapse.show {
@@ -820,8 +820,11 @@
 }
 @media (min-width: 992px) {
   .navbar-collapse {
-    display: flex;
-    flex: 1;
+    display: flex !important;
+    flex: 1 1 0%;
+  }
+  .navbar-expand-lg .navbar-toggler {
+    display: none;
   }
 }
 /* navbar-dark variant */
