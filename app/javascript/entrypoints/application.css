@@ -10,8 +10,6 @@
 /* Tom-select */
 @import "tom-select/dist/css/tom-select.css";
 
-/* SweetAlert2 — base CSS + Bedlam custom toast colour overrides */
-@import "sweetalert2/dist/sweetalert2.min.css";
 
 /* Bootstrap compatibility shims — maps Bootstrap class names to Tailwind utilities */
 @import "../styles/bootstrap_compat.css";

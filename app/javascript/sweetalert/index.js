@@ -1,4 +1,5 @@
 import swal from 'sweetalert2/dist/sweetalert2.js'
+import '../styles/swalCustomTheme.scss'
 import './alerts'
 
 window.Swal = swal;
