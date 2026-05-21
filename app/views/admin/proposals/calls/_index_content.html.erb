@@ -14,16 +14,16 @@
 </div>
 
 <div class="card mb-4">
-  <div class="card-header d-flex justify-content-between align-items-center">
+  <div class="card-header flex justify-between items-center">
     <h5 class="card-title mb-0">Open Calls</h5>
   </div>
   <div class="card-body">
     <% if @open_calls.any? %>
       <% @open_calls.each do |call| %>
-        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center <%= 'mt-3' unless call == @open_calls.first %>">
+        <div class="flex flex-wrap gap-2 justify-between items-center <%= 'mt-3' unless call == @open_calls.first %>">
           <div>
             <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
-            <small class="text-muted">
+            <small class="text-gray-500">
               Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
               &middot;
               Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
@@ -46,10 +46,10 @@
   <% if awaiting_by_call.any? %>
     <% awaiting_by_call.sort_by { |call, _| call.editing_deadline }.each do |call, proposals| %>
       <div class="card-body border-bottom pb-2">
-        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-2">
+        <div class="flex flex-wrap gap-2 justify-between items-center mb-2">
           <div>
             <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
-            <small class="text-muted">
+            <small class="text-gray-500">
               Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
               &middot;
               Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
@@ -94,7 +94,7 @@
       <div class="card-body border-bottom pb-2">
         <div class="mb-2">
           <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
-          <small class="text-muted">
+          <small class="text-gray-500">
             Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
             &middot;
             Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
