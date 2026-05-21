@@ -260,279 +260,6 @@
     @apply text-gray-500 hover:text-gray-700 text-xl leading-none cursor-pointer bg-transparent border-0;
   }
 
-  /* Bootstrap grid compat */
-  .row {
-    @apply flex flex-wrap -mx-2;
-  }
-
-  /* row-cols-N: each .col takes 1/N of the row width */
-  .row-cols-1>.col {
-    @apply w-full flex-none;
-  }
-
-  .row-cols-2>.col {
-    @apply w-1/2 flex-none;
-  }
-
-  .row-cols-3>.col {
-    @apply w-1/3 flex-none;
-  }
-
-  .row-cols-4>.col {
-    @apply w-1/4 flex-none;
-  }
-
-  .row-cols-6>.col {
-    @apply w-1/6 flex-none;
-  }
-
-  .col {
-    @apply flex-1 px-2;
-  }
-
-  .col-auto {
-    @apply w-auto px-2;
-  }
-
-  /* Responsive auto cols (no number suffix) — admin is desktop-first so we always activate */
-  .col-sm {
-    @apply flex-1 px-2;
-  }
-
-  .col-md {
-    @apply flex-1 px-2;
-  }
-
-  .col-lg {
-    @apply flex-1 px-2;
-  }
-
-  .col-xl {
-    @apply flex-1 px-2;
-  }
-
-  .col-sm-1 {
-    @apply w-1/12 px-2;
-  }
-
-  .col-sm-2 {
-    @apply w-2/12 px-2;
-  }
-
-  .col-sm-3 {
-    @apply w-3/12 px-2;
-  }
-
-  .col-sm-4 {
-    @apply w-4/12 px-2;
-  }
-
-  .col-sm-6 {
-    @apply w-6/12 px-2;
-  }
-
-  .col-sm-8 {
-    @apply w-8/12 px-2;
-  }
-
-  .col-sm-9 {
-    @apply w-9/12 px-2;
-  }
-
-  .col-sm-10 {
-    @apply w-10/12 px-2;
-  }
-
-  .col-sm-12 {
-    @apply w-full px-2;
-  }
-
-  .col-12 {
-    @apply w-full px-2;
-  }
-
-  .col-11 {
-    @apply w-11/12 px-2;
-  }
-
-  .col-10 {
-    @apply w-10/12 px-2;
-  }
-
-  .col-9 {
-    @apply w-9/12 px-2;
-  }
-
-  .col-8 {
-    @apply w-8/12 px-2;
-  }
-
-  .col-7 {
-    @apply w-7/12 px-2;
-  }
-
-  .col-6 {
-    @apply w-6/12 px-2;
-  }
-
-  .col-5 {
-    @apply w-5/12 px-2;
-  }
-
-  .col-4 {
-    @apply w-4/12 px-2;
-  }
-
-  .col-3 {
-    @apply w-3/12 px-2;
-  }
-
-  .col-2 {
-    @apply w-2/12 px-2;
-  }
-
-  .col-1 {
-    @apply w-1/12 px-2;
-  }
-
-  /* Responsive col-md-* — plain CSS inside @media (no @apply variants, which don't work in Tailwind v4) */
-  .col-md-12, .col-md-11, .col-md-10, .col-md-9, .col-md-8, .col-md-7,
-  .col-md-6, .col-md-5, .col-md-4, .col-md-3, .col-md-2, .col-md-1 {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  @media (min-width: 768px) {
-    .col-md-12 { width: 100%; }
-    .col-md-11 { width: 91.6667%; }
-    .col-md-10 { width: 83.3333%; }
-    .col-md-9  { width: 75%; }
-    .col-md-8  { width: 66.6667%; }
-    .col-md-7  { width: 58.3333%; }
-    .col-md-6  { width: 50%; }
-    .col-md-5  { width: 41.6667%; }
-    .col-md-4  { width: 33.3333%; }
-    .col-md-3  { width: 25%; }
-    .col-md-2  { width: 16.6667%; }
-    .col-md-1  { width: 8.3333%; }
-  }
-
-  /* Responsive col-lg-* */
-  .col-lg-8, .col-lg-6, .col-lg-4, .col-lg-3 {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  @media (min-width: 992px) {
-    .col-lg-8 { width: 66.6667%; }
-    .col-lg-6 { width: 50%; }
-    .col-lg-4 { width: 33.3333%; }
-    .col-lg-3 { width: 25%; }
-  }
-
-  /* Responsive col-xl-* */
-  .col-xl-12, .col-xl-8, .col-xl-6, .col-xl-4, .col-xl-3, .col-xl-2 {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  @media (min-width: 1200px) {
-    .col-xl-12 { width: 100%; }
-    .col-xl-8  { width: 66.6667%; }
-    .col-xl-6  { width: 50%; }
-    .col-xl-4  { width: 33.3333%; }
-    .col-xl-3  { width: 25%; }
-    .col-xl-2  { width: 16.6667%; }
-  }
-
-  /* Responsive row-cols — Bootstrap 5 pattern for gallery grids */
-  /* Plain CSS (no @apply) so these compile correctly inside @layer + @media */
-  @media (min-width: 576px) {
-    .row-cols-sm-1>.col {
-      width: 100%;
-      flex: none;
-    }
-
-    .row-cols-sm-2>.col {
-      width: 50%;
-      flex: none;
-    }
-
-    .row-cols-sm-3>.col {
-      width: 33.3333%;
-      flex: none;
-    }
-
-    .row-cols-sm-4>.col {
-      width: 25%;
-      flex: none;
-    }
-  }
-
-  @media (min-width: 768px) {
-    .row-cols-md-1>.col {
-      width: 100%;
-      flex: none;
-    }
-
-    .row-cols-md-2>.col {
-      width: 50%;
-      flex: none;
-    }
-
-    .row-cols-md-3>.col {
-      width: 33.3333%;
-      flex: none;
-    }
-
-    .row-cols-md-4>.col {
-      width: 25%;
-      flex: none;
-    }
-  }
-
-  @media (min-width: 992px) {
-    .row-cols-lg-1>.col {
-      width: 100%;
-      flex: none;
-    }
-
-    .row-cols-lg-2>.col {
-      width: 50%;
-      flex: none;
-    }
-
-    .row-cols-lg-3>.col {
-      width: 33.3333%;
-      flex: none;
-    }
-
-    .row-cols-lg-4>.col {
-      width: 25%;
-      flex: none;
-    }
-  }
-
-  /* Bootstrap gap utilities */
-  .g-1 {
-    gap: 0.25rem;
-  }
-
-  .g-2 {
-    gap: 0.5rem;
-  }
-
-  .g-3 {
-    gap: 1rem;
-  }
-
-  .g-4 {
-    gap: 1.5rem;
-  }
-
-  .g-5 {
-    gap: 3rem;
-  }
 
   /* Bootstrap height utility — cards with h-100 use flex-col so card-body fills remaining height */
   .h-100 {
@@ -581,60 +308,9 @@
     margin-bottom: 0.5rem;
   }
 
-  /* Bootstrap flex utilities */
-  .flex-column {
-    flex-direction: column;
-  }
-
-  .flex-row {
-    flex-direction: row;
-  }
-
-  /* Bootstrap text utilities */
-
   /* Bootstrap utility aliases */
   .container-fluid {
     @apply w-full px-4;
-  }
-
-  .d-flex {
-    @apply flex;
-  }
-
-  .d-none {
-    @apply hidden;
-  }
-
-  .d-block {
-    @apply block;
-  }
-
-  .flex-grow-1 {
-    @apply flex-1;
-  }
-
-  .align-items-center {
-    @apply items-center;
-  }
-
-  .justify-content-center {
-    @apply justify-center;
-  }
-
-  .float-sm-right {
-    @apply float-right;
-  }
-
-  .text-right {
-    @apply text-right;
-  }
-
-  .text-muted {
-    @apply text-gray-500;
-  }
-
-  .text-white {
-    @apply text-white;
   }
 
   .text-danger {
@@ -647,14 +323,6 @@
 
   .text-warning {
     @apply text-yellow-600;
-  }
-
-  .font-weight-bold {
-    @apply font-bold;
-  }
-
-  .no-wrap {
-    @apply whitespace-nowrap;
   }
 
   .breadcrumb {
@@ -741,10 +409,6 @@
     border-color: var(--color-primary);
   }
 
-  .img-circle {
-    @apply rounded-full;
-  }
-
   /* Breadcrumb links */
   .breadcrumb-item a {
     @apply text-primary hover:text-primary-dark;
@@ -772,19 +436,6 @@
    Admin site uses admin.css-specific rules for these concepts.
    ============================================================ */
 
-/* Bootstrap container — max-width breakpoints */
-.container {
-  width: 100%;
-  padding-left: 1rem;
-  padding-right: 1rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-@media (min-width: 576px)  { .container { max-width: 540px; } }
-@media (min-width: 768px)  { .container { max-width: 720px; } }
-@media (min-width: 992px)  { .container { max-width: 960px; } }
-@media (min-width: 1200px) { .container { max-width: 1140px; } }
-@media (min-width: 1400px) { .container { max-width: 1320px; } }
 
 /* Bootstrap dropdown compat — hover-based for public navbar */
 .nav-item.dropdown {
@@ -1022,21 +673,12 @@
 }
 
 /* Additional spacing/flex utilities used in public views but missing from admin shims */
-.justify-content-between { justify-content: space-between; }
 .align-items-start { align-items: flex-start; }
 .flex-wrap {
   flex-wrap: wrap;
 }
-.ms-auto { margin-left: auto; }
-.ms-1 { margin-left: 0.25rem; }
-.ms-2 { margin-left: 0.5rem; }
 .ms-3 { margin-left: 1rem; }
-.me-1 { margin-right: 0.25rem; }
-.me-2 { margin-right: 0.5rem; }
 .me-3 { margin-right: 1rem; }
-.float-end { float: right; }
-.mb-1 { margin-bottom: 0.25rem; }
-.mb-2 { margin-bottom: 0.5rem; }
 .mb-3 { margin-bottom: 1rem; }
 .mb-4 { margin-bottom: 1.5rem; }
 .mb-5 { margin-bottom: 3rem; }
@@ -1048,18 +690,14 @@
     margin-bottom: 0 !important;
   }
 }
-.mt-1 { margin-top: 0.25rem; }
-.mt-2 { margin-top: 0.5rem; }
 .mt-3 { margin-top: 1rem; }
 .mt-4 { margin-top: 1.5rem; }
 .mt-5 { margin-top: 3rem; }
-.mx-auto { margin-left: auto; margin-right: auto; }
 .py-3 { padding-top: 1rem; padding-bottom: 1rem; }
 .py-4 { padding-top: 1.5rem; padding-bottom: 1.5rem; }
 .py-5 { padding-top: 3rem; padding-bottom: 3rem; }
 .px-3 { padding-left: 1rem; padding-right: 1rem; }
 .px-4 { padding-left: 1.5rem; padding-right: 1.5rem; }
-.p-0 { padding: 0; }
 .p-3 { padding: 1rem; }
 .p-4 { padding: 1.5rem; }
 
@@ -1078,8 +716,6 @@
 @media (min-width: 576px) { .d-sm-block { display: block; } }
 
 /* Bootstrap 5 gap utilities (used in public views with d-flex gap-N) */
-.gap-1 { gap: 0.25rem; }
-.gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 1rem; }
 .gap-4 { gap: 1.5rem; }
 
