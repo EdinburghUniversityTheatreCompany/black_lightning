@@ -2,7 +2,7 @@
 
 <div class="card mb-3">
   <div class="card-header">
-    <small class="text-muted"><%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %></small>
+    <small class="text-gray-500"><%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %></small>
   </div>
 
   <%= render 'shared/image', image: @news.fetch_image, variant: medium_variant, image_options: { class: "card-img-top h-auto" } %>
@@ -11,7 +11,7 @@
     <%= render_markdown @news.body %>
 
     <% if @news.created_at != @news.updated_at %>
-      <p class="card-text"><small class="text-muted">Last updated: <%= l @news.updated_at, format: :longy %></small></p>
+      <p class="card-text"><small class="text-gray-500">Last updated: <%= l @news.updated_at, format: :longy %></small></p>
     <% end %>
   </div>
 </div>

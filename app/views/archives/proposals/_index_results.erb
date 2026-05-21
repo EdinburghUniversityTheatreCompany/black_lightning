@@ -14,14 +14,14 @@ status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejec
       <div class="card-header">
         <h5 class="card-title mb-0">
           <%= call.name %>
-          <small class="text-muted fw-normal">Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %></small>
+          <small class="text-gray-500 fw-normal">Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %></small>
         </h5>
       </div>
       <div class="card-body p-0">
         <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
-          <div class="d-flex align-items-center py-2 px-3 border-bottom">
+          <div class="flex items-center py-2 px-3 border-bottom">
             <%= get_link proposal, :show %>
-            <div class="d-flex gap-1 ms-2">
+            <div class="flex gap-1 ms-2">
               <%= proposal_labels(proposal, false, show_debtors: false) %>
             </div>
           </div>
@@ -30,7 +30,7 @@ status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejec
     </div>
   <% end %>
 <% else %>
-  <p class="text-muted"><em>There are no proposals found for this search.</em></p>
+  <p class="text-gray-500"><em>There are no proposals found for this search.</em></p>
 <% end %>
 
 <% if @calls.total_pages > 1 %>
