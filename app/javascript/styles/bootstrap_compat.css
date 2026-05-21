@@ -70,61 +70,6 @@
     @apply bg-transparent border-0 text-inherit opacity-70 hover:opacity-100 p-1 cursor-pointer rounded inline-flex items-center justify-center leading-none;
   }
 
-  /* Bootstrap badge compat */
-  .badge {
-    @apply inline-flex items-center rounded px-2 py-0.5 text-xs font-medium;
-    margin: -0.25em 0;
-  }
-
-  .badge-primary {
-    @apply bg-primary text-white;
-  }
-
-  .badge-success {
-    @apply bg-green-100 text-green-800;
-  }
-
-  .badge-danger {
-    @apply bg-red-100 text-red-800;
-  }
-
-  .badge-warning {
-    @apply bg-yellow-100 text-yellow-800;
-  }
-
-  .badge-info {
-    @apply bg-blue-100 text-blue-800;
-  }
-
-  .badge-secondary {
-    @apply bg-gray-100 text-gray-800;
-  }
-
-  /* Bootstrap 5 bg-* badge variants */
-  .bg-success {
-    @apply bg-green-100 text-green-800;
-  }
-
-  .bg-danger {
-    @apply bg-red-100 text-red-800;
-  }
-
-  .bg-warning {
-    @apply bg-yellow-100 text-yellow-800;
-  }
-
-  .bg-info {
-    @apply bg-blue-100 text-blue-800;
-  }
-
-  .bg-secondary {
-    @apply bg-gray-100 text-gray-800;
-  }
-
-  .bg-primary {
-    @apply bg-primary text-white;
-  }
-
   /* Bootstrap text colour utilities */
   .text-dark  { color: #212529; }
   .text-body  { color: #212529; }
@@ -345,30 +290,6 @@
     @apply px-4 py-2 text-xs font-semibold text-gray-500 uppercase;
   }
 
-  .alert {
-    @apply p-4 rounded border mb-4;
-  }
-
-  .alert-danger {
-    @apply bg-red-50 border-red-200 text-red-800;
-  }
-
-  .alert-success {
-    @apply bg-green-50 border-green-200 text-green-800;
-  }
-
-  .alert-warning {
-    @apply bg-yellow-50 border-yellow-200 text-yellow-800;
-  }
-
-  .alert-info {
-    @apply bg-blue-50 border-blue-200 text-blue-800;
-  }
-
-  .alert-link {
-    @apply font-semibold underline;
-  }
-
   .pagination {
     @apply flex gap-1 list-none;
   }
@@ -412,19 +333,6 @@
   /* Breadcrumb links */
   .breadcrumb-item a {
     @apply text-primary hover:text-primary-dark;
-  }
-
-  /* Bootstrap list-group compat */
-  .list-group {
-    @apply flex flex-col;
-  }
-
-  .list-group-item {
-    @apply px-5 py-3 border-b border-gray-200 last:border-b-0;
-  }
-
-  .list-group-item.active {
-    @apply bg-primary text-white border-primary;
   }
 
 
