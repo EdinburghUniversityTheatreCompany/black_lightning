@@ -7,9 +7,9 @@
       Shows in the current academic year and future. Color-coded to help identify which shows need debt configuration.
     </p>
     <div class="mb-0">
-      <span class="badge bg-warning text-dark">Yellow</span> = Has tags with debt recommendations but no debts configured<br>
-      <span class="badge bg-danger">Red</span> = Has debts configured that don't match tag recommendations<br>
-      <span class="badge bg-success">Green</span> = Debts match tag recommendations
+      <%= render(BadgeComponent.new(type: :warning)) { "Yellow" } %> = Has tags with debt recommendations but no debts configured<br>
+      <%= render(BadgeComponent.new(type: :danger)) { "Red" } %> = Has debts configured that don't match tag recommendations<br>
+      <%= render(BadgeComponent.new(type: :success)) { "Green" } %> = Debts match tag recommendations
     </div>
   </div>
 </div>
@@ -45,7 +45,7 @@
                 <td>
                   <% if show.event_tags.any? %>
                     <% show.event_tags.each do |tag| %>
-                      <span class="badge bg-secondary"><%= tag.name %></span>
+                      <%= render(BadgeComponent.new(type: :secondary)) { tag.name } %>
                     <% end %>
                   <% else %>
                     <span class="text-gray-500">No tags</span>

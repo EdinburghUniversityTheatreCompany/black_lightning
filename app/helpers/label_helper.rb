@@ -109,16 +109,26 @@ module LabelHelper
         user_labels_for(user, nil, :always, true)
     end
 
+    BADGE_CLASS_MAP = {
+      "bg-primary"   => "bg-primary text-white",
+      "bg-success"   => "bg-success/15 text-success",
+      "bg-danger"    => "bg-danger/15 text-danger",
+      "bg-warning"   => "bg-warning/15 text-warning",
+      "bg-info"      => "bg-info/15 text-info",
+      "bg-secondary" => "bg-gray-100 text-gray-700",
+      "bg-dark"      => "bg-gray-700 text-white",
+      "bg-light"     => "bg-gray-100 text-gray-800"
+    }.freeze
+
     def generate_label(label_class, message, pull_right = false, rounded = false)
         label_class = label_class&.to_s
-
-        label_class = "#{label_class} text-dark" if %w[bg-warning bg-info bg-light].include?(label_class)
-
-        label_class = "#{label_class} rounded-pill" if rounded
+        mapped = BADGE_CLASS_MAP[label_class] || label_class
+        mapped += " rounded-full" if rounded
+        mapped += " float-right" if pull_right
 
         message = ActionController::Base.helpers.sanitize message
 
-        "<span class=\"badge #{label_class}#{' float-right' if pull_right}\">#{message}</span>".html_safe
+        "<span class=\"inline-flex items-center rounded px-2 py-0.5 text-xs font-medium #{mapped}\">#{message}</span>".html_safe
     end
 
     def proposal_labels(proposal, pull_right, show_debtors: true)

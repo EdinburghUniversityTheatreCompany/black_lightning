@@ -25,7 +25,7 @@
   <div class="card mb-3">
     <div class="card-header bg-success text-white">
       <strong>Matched Users</strong>
-      <span class="badge bg-light text-dark ml-2"><%= @exact_matches.size %></span>
+      <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @exact_matches.size.to_s } %>
     </div>
     <div class="card-body p-0">
       <table class="table table-sm table-hover mb-0">
@@ -48,16 +48,16 @@
               <td><%= match[:match_type] %></td>
               <td>
                 <% if @member_ids.include?(user.id) %>
-                  <span class="badge bg-success">Member</span>
+                  <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
                 <% else %>
-                  <span class="badge bg-secondary">Not a member</span>
+                  <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
                 <% end %>
               </td>
               <td>
                 <% if in_debt %>
-                  <span class="badge bg-danger"><%= user.debt_message_suffix.capitalize %></span>
+                  <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
                 <% else %>
-                  <span class="badge bg-success">Not in debt</span>
+                  <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
                 <% end %>
               </td>
             </tr>
@@ -73,7 +73,7 @@
   <div class="card mb-3">
     <div class="card-header bg-warning">
       <strong>Possible Matches (Review Manually)</strong>
-      <span class="badge bg-dark ml-2"><%= @fuzzy_matches.size %></span>
+      <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { @fuzzy_matches.size.to_s } %>
       <small class="float-right">Name matched — verify these are the right people</small>
     </div>
     <div class="card-body p-0">
@@ -107,16 +107,16 @@
                 </td>
                 <td>
                   <% if @member_ids.include?(user.id) %>
-                    <span class="badge bg-success">Member</span>
+                    <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
                   <% else %>
-                    <span class="badge bg-secondary">Not a member</span>
+                    <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
                   <% end %>
                 </td>
                 <td>
                   <% if in_debt %>
-                    <span class="badge bg-danger"><%= user.debt_message_suffix.capitalize %></span>
+                    <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
                   <% else %>
-                    <span class="badge bg-success">Not in debt</span>
+                    <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
                   <% end %>
                 </td>
               </tr>
@@ -133,7 +133,7 @@
   <div class="card mb-3">
     <div class="card-header bg-secondary text-white">
       <strong>Not Found</strong>
-      <span class="badge bg-light text-dark ml-2"><%= @unmatched.size %></span>
+      <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @unmatched.size.to_s } %>
       <small class="float-right">No matching user in the system</small>
     </div>
     <div class="card-body p-0">

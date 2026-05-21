@@ -15,7 +15,7 @@
     <div class="card mb-3">
       <div class="card-header bg-success text-white">
         <strong>Matched by ID</strong>
-        <span class="badge bg-light text-dark ml-2"><%= @import.categorized[:exact_match_id].size %></span>
+        <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:exact_match_id].size.to_s } %>
         <small class="float-right">Users already exist - no action needed</small>
       </div>
       <div class="card-body p-0">
@@ -45,7 +45,7 @@
                 </td>
                 <td>
                   <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
-                  <span class="badge bg-success">Already Exists</span>
+                  <%= render(BadgeComponent.new(type: :success)) { "Already Exists" } %>
                 </td>
               </tr>
             <% end %>
@@ -60,7 +60,7 @@
     <div class="card mb-3">
       <div class="card-header bg-success text-white">
         <strong>Matched by Email</strong>
-        <span class="badge bg-light text-dark ml-2"><%= @import.categorized[:exact_match_email].size %></span>
+        <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:exact_match_email].size.to_s } %>
         <small class="float-right">Users already exist - no action needed</small>
       </div>
       <div class="card-body p-0">
@@ -81,7 +81,7 @@
                 <td><span class="font-monospace"><%= item[:row][:email] %></span></td>
                 <td>
                   <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
-                  <span class="badge bg-success">Already Exists</span>
+                  <%= render(BadgeComponent.new(type: :success)) { "Already Exists" } %>
                 </td>
               </tr>
             <% end %>
@@ -96,7 +96,7 @@
     <div class="card mb-3">
       <div class="card-header bg-warning">
         <strong>Possible Matches (Review Required)</strong>
-        <span class="badge bg-dark ml-2"><%= @import.categorized[:fuzzy_match].size %></span>
+        <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { @import.categorized[:fuzzy_match].size.to_s } %>
         <small class="float-right">Please decide for each row</small>
       </div>
       <div class="card-body p-0">
@@ -164,7 +164,7 @@
     <div class="card mb-3">
       <div class="card-header bg-primary text-white">
         <strong>New Users to Create</strong>
-        <span class="badge bg-light text-dark ml-2"><%= @import.categorized[:create_new].size %></span>
+        <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:create_new].size.to_s } %>
         <small class="float-right">Will create new user accounts</small>
       </div>
       <div class="card-body p-0">

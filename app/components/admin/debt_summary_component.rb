@@ -35,11 +35,11 @@ class Admin::DebtSummaryComponent < ViewComponent::Base
 
   def status_badge_class
     if @user.in_debt
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-danger/15 text-danger"
     elsif has_upcoming?
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-warning/15 text-warning"
     else
-      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+      "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success/15 text-success"
     end
   end
 

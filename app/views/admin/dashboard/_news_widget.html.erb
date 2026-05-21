@@ -8,7 +8,7 @@
   <ul class="list-group list-group-flush">
     <% current_news.each do |news| %>
       <li class="list-group-item py-1">
-        <p class="mb-1"><%= link_to news.title, admin_news_path(news) %> <%= content_tag(:span, "Members", class: "badge bg-info") unless news.show_public %></p>
+        <p class="mb-1"><%= link_to news.title, admin_news_path(news) %> <%= render(BadgeComponent.new(type: :info)) { "Members" } unless news.show_public %></p>
         <p class="text-gray-500 text-sm mb-0 line-clamp-2"><%= truncate_markdown(news.body, 300) %></p>
       </li>
     <% end %>

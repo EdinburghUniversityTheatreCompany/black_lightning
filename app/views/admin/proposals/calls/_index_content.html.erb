@@ -40,7 +40,7 @@
 
 <div class="card mb-4">
   <div class="card-header">
-    <h5 class="card-title mb-0">Awaiting Approval <span class="badge bg-secondary"><%= @awaiting_approval.size %></span></h5>
+    <h5 class="card-title mb-0">Awaiting Approval <%= render(BadgeComponent.new(type: :secondary)) { @awaiting_approval.size.to_s } %></h5>
   </div>
   <% awaiting_by_call = @awaiting_approval.group_by(&:call) %>
   <% if awaiting_by_call.any? %>
@@ -87,7 +87,7 @@
 
 <div class="card mb-4">
   <div class="card-header">
-    <h5 class="card-title mb-0">Approved (Awaiting GM Outcome) <span class="badge bg-secondary"><%= @approved.size %></span></h5>
+    <h5 class="card-title mb-0">Approved (Awaiting GM Outcome) <%= render(BadgeComponent.new(type: :secondary)) { @approved.size.to_s } %></h5>
   </div>
   <% if @approved.any? %>
     <% @approved.group_by(&:call).each do |call, proposals| %>

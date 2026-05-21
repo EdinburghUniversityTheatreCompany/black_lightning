@@ -15,7 +15,7 @@
     <div class="card mb-3">
       <div class="card-header bg-warning">
         <strong>Already on Team (Review Required)</strong>
-        <span class="badge bg-dark ml-2"><%= @existing_team_members.size %></span>
+        <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { @existing_team_members.size.to_s } %>
         <small class="float-right">These people are already on <%= @event.name %></small>
       </div>
       <div class="card-body p-0">
@@ -63,7 +63,7 @@
       <div class="card mb-3">
         <div class="card-header bg-success text-white">
           <strong>Matched by ID</strong>
-          <span class="badge bg-light text-dark ml-2"><%= items_not_on_team.size %></span>
+          <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { items_not_on_team.size.to_s } %>
           <small class="float-right">Will add to crew</small>
         </div>
         <div class="card-body p-0">
@@ -96,7 +96,7 @@
                   <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                   <td>
                     <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
-                    <span class="badge bg-success">Will Add</span>
+                    <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
                   </td>
                 </tr>
               <% end %>
@@ -114,7 +114,7 @@
       <div class="card mb-3">
         <div class="card-header bg-success text-white">
           <strong>Matched by Email</strong>
-          <span class="badge bg-light text-dark ml-2"><%= items_not_on_team.size %></span>
+          <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { items_not_on_team.size.to_s } %>
           <small class="float-right">Will add to crew</small>
         </div>
         <div class="card-body p-0">
@@ -135,7 +135,7 @@
                   <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                   <td>
                     <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
-                    <span class="badge bg-success">Will Add</span>
+                    <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
                   </td>
                 </tr>
               <% end %>
@@ -153,7 +153,7 @@
       <div class="card mb-3">
         <div class="card-header bg-warning">
           <strong>Possible Matches (Review Required)</strong>
-          <span class="badge bg-dark ml-2"><%= items_not_on_team.size %></span>
+          <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { items_not_on_team.size.to_s } %>
           <small class="float-right">Please decide for each row</small>
         </div>
         <div class="card-body p-0">
@@ -218,7 +218,7 @@
     <div class="card mb-3">
       <div class="card-header bg-primary text-white">
         <strong>New Users to Create</strong>
-        <span class="badge bg-light text-dark ml-2"><%= @import.categorized[:create_new].size %></span>
+        <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:create_new].size.to_s } %>
         <small class="float-right">Will create and add to crew</small>
       </div>
       <div class="card-body p-0">

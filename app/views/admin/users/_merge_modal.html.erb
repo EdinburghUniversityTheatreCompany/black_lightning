@@ -49,11 +49,11 @@
           <tr>
             <th style="width: 20%">Field</th>
             <th style="width: 40%">
-              <span class="badge bg-primary">TARGET</span>
+              <%= render(BadgeComponent.new(type: :primary)) { "TARGET" } %>
               <%= target.name_or_email %>
             </th>
             <th style="width: 40%">
-              <span class="badge bg-secondary">SOURCE</span>
+              <%= render(BadgeComponent.new(type: :secondary)) { "SOURCE" } %>
               <%= source.name_or_email %>
               <small class="text-gray-500">(will be deleted)</small>
             </th>
@@ -152,7 +152,7 @@
         <li class="list-group-item flex justify-between items-center">
           Team memberships
           <span>
-            <span class="badge bg-primary rounded-pill"><%= stats[:team_memberships][:total] %></span>
+            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:team_memberships][:total].to_s } %>
             <% if stats[:team_memberships][:overlapping] > 0 %>
               <small class="text-gray-500">(<%= stats[:team_memberships][:overlapping] %> overlap - roles will be merged with "/")</small>
             <% end %>
@@ -161,7 +161,7 @@
         <li class="list-group-item flex justify-between items-center">
           Staffing jobs
           <span>
-            <span class="badge bg-primary rounded-pill"><%= stats[:staffing_jobs][:total] %></span>
+            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:staffing_jobs][:total].to_s } %>
             <% if stats[:staffing_jobs][:unlinked] > 0 %>
               <small class="text-warning">(<%= stats[:staffing_jobs][:unlinked] %> unlinked)</small>
             <% end %>
@@ -170,7 +170,7 @@
         <li class="list-group-item flex justify-between items-center">
           Staffing debts
           <span>
-            <span class="badge bg-primary rounded-pill"><%= stats[:staffing_debts][:total] %></span>
+            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:staffing_debts][:total].to_s } %>
             <% if stats[:staffing_debts][:unlinked] > 0 %>
               <small class="text-warning">(<%= stats[:staffing_debts][:unlinked] %> unlinked)</small>
             <% end %>
@@ -179,7 +179,7 @@
         <li class="list-group-item flex justify-between items-center">
           Maintenance debts
           <span>
-            <span class="badge bg-primary rounded-pill"><%= stats[:maintenance_debts][:total] %></span>
+            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_debts][:total].to_s } %>
             <% if stats[:maintenance_debts][:unlinked] > 0 %>
               <small class="text-warning">(<%= stats[:maintenance_debts][:unlinked] %> unlinked)</small>
             <% end %>
@@ -188,7 +188,7 @@
         <li class="list-group-item flex justify-between items-center">
           Maintenance attendances
           <span>
-            <span class="badge bg-primary rounded-pill"><%= stats[:maintenance_attendances][:total] %></span>
+            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_attendances][:total].to_s } %>
             <% if stats[:maintenance_attendances][:unlinked] > 0 %>
               <small class="text-warning">(<%= stats[:maintenance_attendances][:unlinked] %> unlinked)</small>
             <% end %>
@@ -199,7 +199,7 @@
             Roles
             <span>
               <% stats[:roles].each do |role| %>
-                <span class="badge bg-info"><%= role %></span>
+                <%= render(BadgeComponent.new(type: :info)) { role } %>
               <% end %>
             </span>
           </li>

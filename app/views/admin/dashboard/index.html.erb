@@ -7,7 +7,7 @@
         <% end %>
         <%= render CollapsibleSectionComponent.new(start_open: true, flush: true, title: begin
           pending_count = can?(:manage, Opportunity) ? Opportunity.where(approved: false).where("expiry_date > ?", Date.current).count : 0
-          badge = pending_count > 0 ? link_to(content_tag(:span, pending_count, class: "ml-2 inline-flex items-center justify-center bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full"), admin_opportunities_path(q: { approved_eq: false })) : ""
+          badge = pending_count > 0 ? link_to(content_tag(:span, pending_count, class: "ml-2 inline-flex items-center justify-center bg-danger text-white text-xs font-bold w-5 h-5 rounded-full"), admin_opportunities_path(q: { approved_eq: false })) : ""
           safe_join([link_to("Opportunities", admin_opportunities_path), badge])
         end) do %>
           <%= render "opportunities_widget" %>

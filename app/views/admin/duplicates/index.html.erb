@@ -39,7 +39,7 @@
               <% same_id_target = dup[:users].first %>
               <% same_id_source = dup[:users].second %>
               <tr id="pair-<%= same_id_target.id %>-<%= same_id_source.id %>">
-                <td><span class="badge bg-danger"><%= dup[:match_type].to_s.titleize %></span></td>
+                <td><%= render(BadgeComponent.new(type: :danger)) { dup[:match_type].to_s.titleize } %></td>
                 <td><code><%= dup[:id_value] %></code></td>
                 <td>
                   <% dup[:users].each do |user| %>
