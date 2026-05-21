@@ -16,7 +16,7 @@
       <div class="card-header bg-warning">
         <strong>Already on Team (Review Required)</strong>
         <span class="badge bg-dark ms-2"><%= @existing_team_members.size %></span>
-        <small class="float-end">These people are already on <%= @event.name %></small>
+        <small class="float-right">These people are already on <%= @event.name %></small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -64,7 +64,7 @@
         <div class="card-header bg-success text-white">
           <strong>Matched by ID</strong>
           <span class="badge bg-light text-dark ms-2"><%= items_not_on_team.size %></span>
-          <small class="float-end">Will add to crew</small>
+          <small class="float-right">Will add to crew</small>
         </div>
         <div class="card-body p-0">
           <table class="table table-sm table-hover mb-0">
@@ -82,7 +82,7 @@
                   <td><%= item[:row][:original_name] %></td>
                   <td>
                     <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
-                    <small class="text-muted">
+                    <small class="text-gray-500">
                       <% case item[:match_type] %>
                       <% when :user_id %>
                         Matched by User ID
@@ -115,7 +115,7 @@
         <div class="card-header bg-success text-white">
           <strong>Matched by Email</strong>
           <span class="badge bg-light text-dark ms-2"><%= items_not_on_team.size %></span>
-          <small class="float-end">Will add to crew</small>
+          <small class="float-right">Will add to crew</small>
         </div>
         <div class="card-body p-0">
           <table class="table table-sm table-hover mb-0">
@@ -154,7 +154,7 @@
         <div class="card-header bg-warning">
           <strong>Possible Matches (Review Required)</strong>
           <span class="badge bg-dark ms-2"><%= items_not_on_team.size %></span>
-          <small class="float-end">Please decide for each row</small>
+          <small class="float-right">Please decide for each row</small>
         </div>
         <div class="card-body p-0">
           <table class="table table-sm table-hover mb-0">
@@ -172,15 +172,15 @@
                   <td>
                     <strong><%= item[:row][:original_name] %></strong><br>
                     <% if item[:row][:email].present? %>
-                      <small class="text-muted"><%= item[:row][:email] %></small>
+                      <small class="text-gray-500"><%= item[:row][:email] %></small>
                     <% end %>
                   </td>
                   <td>
                     <% item[:existing_users].each_with_index do |user, i| %>
                       <% years = @import.years_active_cache[user.id] %>
                       <%= link_to user.name_or_email, admin_user_path(user) %>
-                      <small class="text-muted">(<%= format_years_active_label(years) %>)</small><br>
-                      <small class="text-muted"><%= user.email %></small>
+                      <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small><br>
+                      <small class="text-gray-500"><%= user.email %></small>
                       <% if i < item[:existing_users].size - 1 %>
                         <hr class="my-1">
                       <% end %>
@@ -219,7 +219,7 @@
       <div class="card-header bg-primary text-white">
         <strong>New Users to Create</strong>
         <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:create_new].size %></span>
-        <small class="float-end">Will create and add to crew</small>
+        <small class="float-right">Will create and add to crew</small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -239,10 +239,10 @@
                   <% if item[:row][:email].present? %>
                     <span class="font-monospace"><%= item[:row][:email] %></span>
                     <% if item[:row][:student_id].present? && item[:row][:email] == "#{item[:row][:student_id]}@ed.ac.uk" %>
-                      <br><small class="text-muted">(auto-generated)</small>
+                      <br><small class="text-gray-500">(auto-generated)</small>
                     <% end %>
                   <% else %>
-                    <em class="text-muted">(will generate placeholder)</em>
+                    <em class="text-gray-500">(will generate placeholder)</em>
                   <% end %>
                 </td>
                 <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
@@ -265,7 +265,7 @@
   <% end %>
 
   <div class="card">
-    <div class="card-footer d-flex justify-content-between">
+    <div class="card-footer flex justify-between">
       <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: "btn btn-secondary" %>
       <%= f.submit "Confirm Import", class: "btn btn-success" %>
     </div>
