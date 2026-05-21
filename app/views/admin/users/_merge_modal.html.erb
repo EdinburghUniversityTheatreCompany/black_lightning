@@ -148,8 +148,8 @@
       </table>
 
       <h6 class="mt-4">Associations to transfer from SOURCE (<%= source.name_or_email %>):</h6>
-      <ul class="list-group list-group-flush mb-3">
-        <li class="list-group-item flex justify-between items-center">
+      <ul class="flex flex-col mb-3">
+        <li class="list-row flex justify-between items-center">
           Team memberships
           <span>
             <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:team_memberships][:total].to_s } %>
@@ -158,7 +158,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item flex justify-between items-center">
+        <li class="list-row flex justify-between items-center">
           Staffing jobs
           <span>
             <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:staffing_jobs][:total].to_s } %>
@@ -167,7 +167,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item flex justify-between items-center">
+        <li class="list-row flex justify-between items-center">
           Staffing debts
           <span>
             <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:staffing_debts][:total].to_s } %>
@@ -176,7 +176,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item flex justify-between items-center">
+        <li class="list-row flex justify-between items-center">
           Maintenance debts
           <span>
             <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_debts][:total].to_s } %>
@@ -185,7 +185,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item flex justify-between items-center">
+        <li class="list-row flex justify-between items-center">
           Maintenance attendances
           <span>
             <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_attendances][:total].to_s } %>
@@ -195,7 +195,7 @@
           </span>
         </li>
         <% if stats[:roles].any? %>
-          <li class="list-group-item flex justify-between items-center">
+          <li class="list-row flex justify-between items-center">
             Roles
             <span>
               <% stats[:roles].each do |role| %>

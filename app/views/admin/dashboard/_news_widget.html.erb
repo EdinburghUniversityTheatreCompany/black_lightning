@@ -5,9 +5,9 @@
 <% if current_news.empty? %>
   <p>There is no news.</p>
 <% else %>
-  <ul class="list-group list-group-flush">
+  <ul class="flex flex-col">
     <% current_news.each do |news| %>
-      <li class="list-group-item py-1">
+      <li class="list-row py-1">
         <p class="mb-1"><%= link_to news.title, admin_news_path(news) %> <%= render(BadgeComponent.new(type: :info)) { "Members" } unless news.show_public %></p>
         <p class="text-gray-500 text-sm mb-0 line-clamp-2"><%= truncate_markdown(news.body, 300) %></p>
       </li>

@@ -10,9 +10,9 @@
       <%= display_block("No Opportunities", false) %>
     </div>
   <% else %>
-    <ul class="list-group list-group-flush">
+    <ul class="flex flex-col">
       <% home_opportunities.each do |opportunity| %>
-        <li class="list-group-item">
+        <li class="list-row">
           <h5 class="card-title mb-1">
             <%= link_to opportunity.title, get_involved_opportunities_path %>
           </h5>

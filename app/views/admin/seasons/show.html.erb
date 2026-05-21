@@ -1,7 +1,7 @@
 <% content_for :event_labels do %>
-  <ul class="list-group list-group-flush">
+  <ul class="flex flex-col">
     <% @season.events.reorder(:start_date).each do |event| %>
-      <li class="list-group-item py-1">
+      <li class="list-row py-1">
         <%= render 'event_label', event: event %>
       </li>
     <% end %>

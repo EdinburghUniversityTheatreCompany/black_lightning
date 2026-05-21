@@ -1,12 +1,12 @@
 <%# locals: () %>
 
 <% future_shows = Show.future.reorder('start_date ASC').first(5) %>
-<ul class="list-group list-group-flush">
+<ul class="flex flex-col">
   <% if future_shows.empty? %>
-    <li class="list-group-item text-gray-500">There are no upcoming shows.</li>
+    <li class="list-row text-gray-500">There are no upcoming shows.</li>
   <% else %>
     <% future_shows.each do |show| %>
-      <li class="list-group-item py-1">
+      <li class="list-row py-1">
         <div class="flex gap-2">
           <div class="w-1/4 shrink-0 text-gray-500"><%= show.date_range(false, :short) %></div>
           <div class="flex-1"><%= link_to show.name, admin_show_path(show) %></div>

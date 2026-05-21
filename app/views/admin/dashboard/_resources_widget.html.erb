@@ -1,7 +1,7 @@
 <%# locals: () %>
 
-<ul class="list-group list-group-flush">
+<ul class="flex flex-col">
   <% get_navbar_children('admin/resources').each do |subpage| %>
-    <li class="list-group-item py-1"><%= link_to subpage[:title], subpage[:path] %></li>
+    <li class="list-row py-1"><%= link_to subpage[:title], subpage[:path] %></li>
   <% end %>
 </ul>

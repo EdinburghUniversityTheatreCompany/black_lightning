@@ -2,12 +2,12 @@
 
 <% upcoming_staffing = Admin::Staffing.accessible_by(current_ability).future.order('start_time ASC').first(5) %>
 
-<ul class="list-group list-group-flush">
+<ul class="flex flex-col">
   <% if upcoming_staffing.empty? %>
-    <li class="list-group-item text-gray-500">There are no upcoming staffing slots.</li>
+    <li class="list-row text-gray-500">There are no upcoming staffing slots.</li>
   <% else %>
     <% upcoming_staffing.each do |staffing| %>
-      <li class="list-group-item py-1">
+      <li class="list-row py-1">
         <% total_positions = staffing.staffing_jobs.count %>
         <% filled_positions = staffing.filled_jobs %>
         <% unfilled_positions = total_positions - filled_positions %>

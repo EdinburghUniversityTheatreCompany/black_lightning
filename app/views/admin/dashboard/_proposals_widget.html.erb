@@ -2,12 +2,12 @@
 
 <% open_calls = Admin::Proposals::Call.open %>
 
-<ul class="list-group list-group-flush">
+<ul class="flex flex-col">
   <% if open_calls.empty? %>
-    <li class="list-group-item text-gray-500">There are no open proposal calls.</li>
+    <li class="list-row text-gray-500">There are no open proposal calls.</li>
   <% else %>
     <% open_calls.each do |call| %>
-      <li class="list-group-item"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></li>
+      <li class="list-row"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></li>
     <% end %>
   <% end %>
 </ul>

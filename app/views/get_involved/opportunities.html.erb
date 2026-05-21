@@ -10,9 +10,9 @@
   <%= display_block("No Opportunities", false) %>
 <% else %>
   <div class="card mb-3">
-    <ul class="list-group list-group-flush">
+    <ul class="flex flex-col">
     <% @opportunities.each do |opportunity| %>
-        <li class="list-group-item">
+        <li class="list-row">
           <h4><%= opportunity.title %></h4>
           
           <p><small class="text-gray-500"><%= opportunity.creator&.name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>

@@ -10,3 +10,11 @@
   --color-info: #1e40af;
   --font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif;
 }
+
+@layer components {
+  /* Reusable list row: border-separated items with standard padding.
+     Override py-* inline to adjust density (e.g. class="list-row py-1"). */
+  .list-row {
+    @apply px-5 py-3 border-b border-gray-200 last:border-b-0;
+  }
+}
