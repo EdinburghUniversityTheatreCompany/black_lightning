@@ -14,7 +14,7 @@
     <% else%>
       <%= render(CollapsibleSectionComponent.new(title: 'Events')) do %>
         <% if f.object.errors[:events].present? then %>
-          <p id="events_errors" class="alert alert-danger">
+          <p id="events_errors" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
             <%= f.error :events %>
           </p>
         <% end %>

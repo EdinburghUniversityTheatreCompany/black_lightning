@@ -206,12 +206,12 @@
         <% end %>
       </ul>
 
-      <div class="alert alert-warning">
+      <%= render AlertComponent.new(type: :warning) do %>
         <strong>Warning:</strong> <strong><%= source.name_or_email %></strong> will be permanently deleted after merge.
         <% if stats[:team_memberships][:overlapping] > 0 %>
           <br><small>Team members on the same shows will have their roles concatenated with "/".</small>
         <% end %>
-      </div>
+      <% end %>
     </div>
 
     <div class="card-footer flex justify-between">

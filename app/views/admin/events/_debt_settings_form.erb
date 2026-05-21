@@ -18,7 +18,7 @@
 <% end %>
 
 <% if event.tag_debt_recommendations.any? %>
-    <div class="alert alert-info">
+    <%= render AlertComponent.new(type: :info) do %>
         <p class="text-xs font-semibold uppercase tracking-wide mb-1">Tag recommendations</p>
         <% event.tag_debt_recommendations.each do |rec| %>
             <p class="text-sm mb-0">
@@ -26,7 +26,7 @@
                 <span class="font-medium"><%= rec[:maintenance] || 0 %> maintenance, <%= rec[:staffing] || 0 %> staffing</span>
             </p>
         <% end %>
-    </div>
+    <% end %>
 <% end %>
 
 <%= simple_horizontal_form_for event, url: polymorphic_path([:update_debt_settings, :admin, event]), method: :patch do |f| %>

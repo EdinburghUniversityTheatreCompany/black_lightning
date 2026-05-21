@@ -7,7 +7,9 @@
 
         <%# Only base errors as the others would attach to a specific field. %>
         <% resource.errors[:base].each do |error_message| %>
-          <%= content_tag(:div, error_message, class: "alert alert-danger") %>
+          <%= render AlertComponent.new(type: :danger) do %>
+            <%= error_message %>
+          <% end %>
         <% end %>
 
         <div class="form-inputs">

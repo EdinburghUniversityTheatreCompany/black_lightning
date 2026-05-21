@@ -2,7 +2,7 @@
 <%# KEEP%>
 
 <% if f.object.errors[association_name].present? then %>
-  <p id="<%= association_name %>_errors" class="alert alert-danger">
+  <p id="<%= association_name %>_errors" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
     <%= f.error association_name %>
   </p>
 <% end %>

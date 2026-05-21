@@ -1,9 +1,9 @@
 <% content_for :content do %>
   <div class="doorkeeper-admin max-w-4xl">
     <%- if flash[:notice].present? %>
-      <div class="alert alert-info mb-4" role="alert">
+      <%= render AlertComponent.new(type: :info) do %>
         <%= flash[:notice] %>
-      </div>
+      <% end %>
     <% end -%>
 
     <%= yield %>

@@ -9,7 +9,7 @@
 <% fuzzy_in_debt = @fuzzy_matches.sum { |m| m[:candidates].any? { |c| @in_debt_ids.include?(c.id) } ? 1 : 0 } %>
 <% total_in_debt = @in_debt_count + fuzzy_in_debt %>
 
-<div class="alert <%= total_in_debt > 0 ? 'alert-danger' : 'alert-success' %>">
+<%= render AlertComponent.new(type: total_in_debt > 0 ? :danger : :success) do %>
   <strong>Checked <%= @total_rows %> row(s):</strong>
   <%= matched_count %> matched,
   <%= @unmatched.size %> not found.
@@ -18,7 +18,7 @@
   <% else %>
     No one is in debt.
   <% end %>
-</div>
+<% end %>
 
 <%# Exact matches (by ID and email) %>
 <% if @exact_matches.any? %>

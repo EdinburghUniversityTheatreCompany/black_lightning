@@ -1,6 +1,6 @@
 <%= form_for application, url: doorkeeper_submit_path(application), as: :doorkeeper_application, html: { role: 'form' } do |f| %>
   <% if application.errors.any? %>
-    <div class="alert alert-danger" data-alert><p><%= t('doorkeeper.applications.form.error') %></p></div>
+    <div class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger" data-alert><p><%= t('doorkeeper.applications.form.error') %></p></div>
   <% end %>
 
   <div class="form-group grid grid-cols-1 sm:grid-cols-12 gap-x-4 items-start mb-3">

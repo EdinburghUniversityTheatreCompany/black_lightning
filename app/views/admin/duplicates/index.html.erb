@@ -12,9 +12,9 @@
 <% total_count = @duplicates[:same_id].size + @duplicates[:fuzzy_name_overlapping].size + @duplicates[:fuzzy_name_non_overlapping].size + @duplicates[:fuzzy_both_overlapping].size + @duplicates[:fuzzy_both_no_overlap].size %>
 
 <% if total_count == 0 %>
-  <div class="alert alert-success">
+  <%= render AlertComponent.new(type: :success) do %>
     <strong>No potential duplicates found!</strong> All users appear to be unique.
-  </div>
+  <% end %>
 <% else %>
 
   <%# Bucket 1: Same ID (Definite Duplicates) %>

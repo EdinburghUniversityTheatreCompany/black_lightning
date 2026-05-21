@@ -9,7 +9,7 @@
     </div>
   </div>
 
-  <div class="alert alert-danger">
+  <%= render AlertComponent.new(type: :danger) do %>
     <h4><b>Errors:</b></h4>
     <%= render_as_list(@error_messages, 'ul') %>
 
@@ -17,5 +17,5 @@
       <h4><b>Backtrace:</b></h4>
       <%= render_as_list(@exception_backtrace, 'ol') %>
     <% end %>
-  </div>
+  <% end %>
 </div>
