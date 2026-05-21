@@ -19,8 +19,6 @@
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.2.4",
-    "bootstrap": "^5.3.8",
-    "bootstrap-icons": "^1.13.1",
     "channels": "^0.0.4",
     "cytoscape": "^3.33.3",
     "cytoscape-fcose": "^2.2.0",

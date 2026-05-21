@@ -21,7 +21,7 @@ end
 
 <% if eager_load %>
   <% # I am not entirely sure it actually needs these classes. %>
-  <% image_options = image_options.merge({ loading: 'eager', class: "w-100 h-auto #{image_options[:class]}" }) %>
+  <% image_options = image_options.merge({ loading: 'eager', class: "w-full h-auto #{image_options[:class]}" }) %>
 <% end %>
 
 

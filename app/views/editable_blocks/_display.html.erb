@@ -1,9 +1,5 @@
 <%# locals: (display_edit: true) %>
 
-<div class="row">
-  <div class="col">
-    <%= @editable_block.cached_rendered_content.html_safe %>
+<%= @editable_block.cached_rendered_content.html_safe %>
 
-    <%= get_link @editable_block, :edit, html_class: 'btn btn-secondary', additional_condition: display_edit %>
-  </div>
-</div>
+<%= get_link @editable_block, :edit, html_class: 'btn btn-secondary', additional_condition: display_edit %>

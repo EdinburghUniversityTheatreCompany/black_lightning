@@ -1,10 +1,10 @@
 <%# locals: (f:, field:, rows: 10, show_side_help: true, input_field_args: {}) %>
-<div class="form-group row">
-  <div class="col-sm-3">
+<div class="flex flex-col sm:flex-row gap-2 mb-4">
+  <div class="sm:w-1/4">
     <%= f.label field, **input_field_args %>
   </div>
 
-  <div class="col-sm-9">
+  <div class="flex-1">
     <div data-controller="markdown-editor"
          data-markdown-editor-upload-url-value="<%= markdown_upload_path %>"
          data-markdown-editor-item-type-value="<%= f.object.class.name %>"

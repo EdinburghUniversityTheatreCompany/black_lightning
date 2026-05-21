@@ -1,11 +1,10 @@
 <%# locals: (event:) %>
 
-<div class="row">
-  <div class="col-md-<%= event.team_members.any? ? '8' : '12' %>">
-    <% # This margin only appears below md size so there is a small gap if the cards are stacked vertically. %>
+<div class="flex flex-col md:flex-row gap-4">
+  <div class="w-full<%= ' md:w-2/3' if event.team_members.any? %>">
     <div class="card mb-3 mb-md-0">
       <div class="card-header">
-        <h4 class="card-title">Description</span>
+        <h4 class="card-title">Description</h4>
       </div>
       <div class="card-body">
         <%= render_markdown event.publicity_text %>
@@ -16,7 +15,7 @@
 
         <% if event.content_warnings.present? %>
           <div class="mt-4">
-            <%= render layout: '/shared/collapsible_section', locals: { title: 'Content Warnings' } do %>
+            <%= render CollapsibleSectionComponent.new(title: 'Content Warnings') do %>
               <%= render_markdown event.content_warnings %>
             <% end %>
           </div>
@@ -26,10 +25,10 @@
   </div>
 
   <% if event.team_members.any? %>
-    <div class="col-md-4">
-      <div class="card h-100">
+    <div class="w-full md:w-1/3">
+      <div class="card h-full">
         <div class="card-header">
-          <h4 class="card-title">Cast and Crew</span>
+          <h4 class="card-title">Cast and Crew</h4>
         </div>
         <div class="card-body">
           <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered %>

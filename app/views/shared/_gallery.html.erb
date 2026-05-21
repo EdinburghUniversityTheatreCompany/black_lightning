@@ -1,48 +1,42 @@
 <%# locals: (pictures:, header_size: 3) -%>
 <%# KEEP %>
 
-
-<% if pictures.any? then %>
+<% if pictures.any? %>
 <div data-controller="fancybox">
-<div class="row">
-  <div class="col">
-    <% header_tag = "h#{header_size}" %>
-    <<%= header_tag %>>Gallery</<%= header_tag %>>
-    <i>Click on a thumbnail to see the image in large size</i>
+  <% header_tag = "h#{header_size}" %>
+  <<%= header_tag %>>Gallery</<%= header_tag %>>
+  <i>Click on a thumbnail to see the image in large size</i>
 
-    <div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
-      <% pictures.includes(image_attachment: :blob).each do |picture| %>
-        <div class="col">
-          <div class="card h-100 mb-0">
-            <% lightbox_url = active_storage_proxy_url(picture.fetch_image.variant(large_display_variant)) %>
-            <% download_url = active_storage_proxy_url(picture.fetch_image) %>
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-3">
+    <% pictures.includes(image_attachment: :blob).each do |picture| %>
+      <div>
+        <div class="card h-full mb-0">
+          <% lightbox_url = active_storage_proxy_url(picture.fetch_image.variant(large_display_variant)) %>
+          <% download_url = active_storage_proxy_url(picture.fetch_image) %>
 
-            <%= link_to lightbox_url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" do %>
-              <%= render 'shared/image', image: picture.fetch_image, variant: medium_variant, proxy: true, image_options: { class: "card-img-top h-auto" } %>
+          <%= link_to lightbox_url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" do %>
+            <%= render 'shared/image', image: picture.fetch_image, variant: medium_variant, proxy: true, image_options: { class: "card-img-top h-auto" } %>
+          <% end %>
+
+          <div class="card-text m-2">
+            <% gallery_name = picture.gallery_name %>
+            <% begin %>
+              <%= link_to(gallery_name, picture.gallery) %>
+            <% rescue NoMethodError %>
+              <%= gallery_name %>
             <% end %>
+            - <%= link_to picture.filename, download_url, title: "Download original", target: "_blank" %>
 
-            <div class="card-text m-2">
-                <% gallery_name = picture.gallery_name %>
-                <% begin %>
-                  <%= link_to(gallery_name, picture.gallery) %>
-                <% rescue NoMethodError %>
-                  <%= gallery_name %>
-                <% end %>
-                - <%= link_to picture.filename, download_url, title: "Download original", target: "_blank" %>
-
-                <% if @admin_site && picture.picture_tags.present? %>
-                  <hr class="m-1">
-                  <%= to_sentence(picture.picture_tags.map {|tag| link_to(tag.name, admin_picture_tag_path(tag)) }) %>
-                <% end %>
-            </div>
+            <% if @admin_site && picture.picture_tags.present? %>
+              <hr class="m-1">
+              <%= to_sentence(picture.picture_tags.map {|tag| link_to(tag.name, admin_picture_tag_path(tag)) }) %>
+            <% end %>
           </div>
         </div>
-      <% end %>
-    </div>
+      </div>
+    <% end %>
   </div>
-</div>
 </div>
 <% end %>
 
-<%# Add a margin below. %>
 <div class="mb-3"></div>

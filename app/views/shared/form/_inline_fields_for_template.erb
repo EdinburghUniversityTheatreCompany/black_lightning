@@ -1,15 +1,13 @@
 <%# locals: (f:, fields:, div_class_additions: '') %>
 
-<%- # Wrap a row around the columns which will also be on the outer wrapper div of the nested fields. %>
-<%- div_class_additions = div_class_additions + ' row' %>
+<%- div_class_additions = div_class_additions + ' flex flex-row flex-wrap items-end gap-2' %>
 
-<%= render layout: '/shared/form/fields_for_template', locals: { 
+<%= render layout: '/shared/form/fields_for_template', locals: {
   f: f,
-  div_class_additions: div_class_additions + ' form-inline'
+  div_class_additions: div_class_additions
 } do %>
-    <% fields.each_with_index do |field, i| %>
-        <% col_modifier = field[:col_modifier] %>
-        <div class="col-sm<%= "-#{col_modifier}" if col_modifier %>">
+    <% fields.each do |field| %>
+        <div class="<%= field[:col_modifier] == 'auto' ? 'shrink-0' : 'flex-1' %>">
             <%= field[:field] %>
         </div>
     <% end %>

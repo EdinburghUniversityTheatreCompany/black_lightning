@@ -2,11 +2,11 @@
 <% # Currently unused :( %>
 
 <% content_for :content do %>
-  <div class="row">
-    <div class="col-3">
+  <div class="flex gap-4">
+    <div class="w-1/4">
       <%= render('layouts/sidebar/sidebar', title: @sidebar_title, subpages: @subpages) %>
     </div>
-    <div class="col-9">
+    <div class="w-3/4">
       <div class="card">
         <div class="card-body">
           <%= yield %>

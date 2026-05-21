@@ -1,35 +1,22 @@
 <% # This page is currently unused and has no route leading to it. %>
 
 <div class="container">
-  <div class="row">
-    <div class="col">
-      <h1>Your Membership Has Expired</h1>
+  <h1>Your Membership Has Expired</h1>
 
-      <p>
-        Please either renew your membership online, or go to Box Office.
-      </p>
-    </div>
-  </div>
+  <p>Please either renew your membership online, or go to Box Office.</p>
 
-  <div class="row">
-    <div class="col-6">
+  <div class="flex flex-col sm:flex-row gap-6 mt-4">
+    <div class="w-full sm:w-1/2">
       <h2>Renew Online</h2>
-
       Coming Soon...
     </div>
 
-    <div class="col-6">
+    <div class="w-full sm:w-1/2">
       <h2>Reactivate Membership</h2>
 
-      <p>
-        If you have renewed your membership at Box Office, please enter your
-        new membership number.
-      </p>
+      <p>If you have renewed your membership at Box Office, please enter your new membership number.</p>
 
-      <p>
-        Note that if you already have a new-style membership card (with a
-        QR code on it), you should continue to use that card.
-      </p>
+      <p>Note that if you already have a new-style membership card (with a QR code on it), you should continue to use that card.</p>
 
       <%= simple_form_for(current_user, url: reactivate_user_path, method: :post) do |f| %>
         <%= f.error_notification %>

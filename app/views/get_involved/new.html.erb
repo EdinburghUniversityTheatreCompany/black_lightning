@@ -2,9 +2,8 @@
 
 <p class="lead">Share an opportunity with the Bedlam community. Your submission will be reviewed before it appears publicly.</p>
 
-<div class="row">
-  <div class="col-md-8">
-    <%= simple_form_for @opportunity, url: get_involved_opportunities_path do |f| %>
+<div class="max-w-2xl">
+  <%= simple_form_for @opportunity, url: get_involved_opportunities_path do |f| %>
       <%= f.error_notification %>
 
       <div class="form-inputs">
@@ -24,6 +23,5 @@
         <%= f.button :submit, "Submit Opportunity", class: "btn btn-primary" %>
         <%= link_to "Cancel", get_involved_opportunities_path, class: "btn btn-secondary" %>
       </div>
-    <% end %>
-  </div>
+  <% end %>
 </div>

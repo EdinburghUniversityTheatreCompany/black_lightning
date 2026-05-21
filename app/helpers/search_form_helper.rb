@@ -4,6 +4,15 @@ module SearchFormHelper
   NUMBER_OUTSIDE_COLLAPSE = 3
   NUMBER_BEFORE_COLLAPSE = 5
 
+  GRID_COLS_CLASSES = {
+    1  => "lg:grid-cols-1",
+    2  => "lg:grid-cols-2",
+    3  => "lg:grid-cols-3",
+    4  => "lg:grid-cols-4",
+    6  => "lg:grid-cols-6",
+    12 => "lg:grid-cols-12"
+  }.freeze
+
   def split_search_form_input_fields(input_fields, columns)
     # Do not include fields that have no params
     input_fields = input_fields.reject { |key, params| params.nil? }
@@ -30,7 +39,7 @@ module SearchFormHelper
 
     raise(ArgumentError, "The amount of column should be a divisor of 12") unless [ 1, 2, 3, 4, 6, 12 ].include?(columns)
 
-    output += "<div class=\"row row-cols-1 row-cols-lg-#{columns}\">"
+    output += "<div class=\"grid grid-cols-1 #{GRID_COLS_CLASSES[columns]} gap-2\">"
 
     input_fields.each_with_index do |(key, params), i|
       output += render_search_form_field(f, key, params)
@@ -86,6 +95,6 @@ module SearchFormHelper
 
     # Render the input itself, unless it was caught by the switch earlier and is already rendered.
     # Wrap the input in a col so we cal columnise the form.
-    "  <div class=\"col\">\n  #{f.input(key, params)}\n  </div>\n"
+    "  <div>\n  #{f.input(key, params)}\n  </div>\n"
   end
 end

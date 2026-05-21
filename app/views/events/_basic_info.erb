@@ -8,4 +8,4 @@
 <% details << {   key: 'Author',  value: link_to(event.author, archives_events_url('q[author_cont]' => event.author)) } if event.author? %>
 <% details << {   key: 'Season',  value: link_to(event.season.name, event.season) } if event.season.present?  %>
 
-<%= render 'shared/pages/public/basic_info', header: event.name, image: event.fetch_image, tagline: event.tagline, details: details %>
+<%= render Public::BasicInfoComponent.new(header: event.name, image: event.fetch_image, tagline: event.tagline, details: details, admin_site: @admin_site) %>

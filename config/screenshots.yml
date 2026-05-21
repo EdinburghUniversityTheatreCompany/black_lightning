@@ -1,0 +1,22 @@
+# Pages to capture with bin/screenshots
+# Run `bin/screenshots` to capture all pages in parallel.
+# You can also pass paths directly: `bin/screenshots / /shows /news`
+pages:
+  # Core public pages
+  - /
+  - /shows
+  - /news
+  - /venues
+  - /get_involved
+  - /get_involved/opportunities/new
+  - /about
+  - /complaints/new
+  - /users/sign_in
+
+  # Detail pages with real slugs
+  - /shows/odyssey
+  - /venues/980190962-bedlam-theatre
+  - /workshops/voice-and-breath-for-actors
+
+  # Workshop index (shows as logged-in member)
+  - /workshops
