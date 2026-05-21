@@ -6,6 +6,8 @@ Ruby on Rails 8.1
 
 Use pnpm for package management rather than npm, yarn, or bun.
 
+We use minitest for testing.
+
 The entire site currently uses Tailwind v4
 
 Use stimulus for all JavaScript sprinkles. We use Vite rather than jsbundling, cssbundling and importmaps. We use propshaft too to serve some images and JavaScript files that are only used on a few pages
