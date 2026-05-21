@@ -1,7 +1,7 @@
-<div class="row row-cols-auto row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+<div class="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
   <% @categories.each do |category| %>
-    <div class="col">
-      <div class="card h-100">
+    <div>
+      <div class="card h-full">
         <% img = capture do %><%= render 'shared/image', image: category.fetch_image, variant: square_thumb_variant(300), image_options: { class: 'card-img-top h-auto' } %><% end %>
         <%= get_link category, :show, link_text: img %>
 
