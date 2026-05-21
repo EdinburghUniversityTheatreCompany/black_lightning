@@ -2,16 +2,16 @@
   <%= link_to @cancel_text, @cancel_path, class: "btn btn-secondary" %>
 <% end %>
 
-<div class="row">
-  <div class="col-md-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
+  <div>
     <div class="card">
       <div class="card-header">
         <h5 class="mb-0">Option 1: Paste Data</h5>
       </div>
       <div class="card-body">
         <%= form_with url: @preview_path, method: :post, local: true do |f| %>
-          <p class="text-muted">Paste tab-separated data from Excel/spreadsheet. Expected columns:</p>
-          <span class="font-monospace d-block mb-3"><%= @columns_description %></span>
+          <p class="text-gray-500">Paste tab-separated data from Excel/spreadsheet. Expected columns:</p>
+          <span class="font-monospace block mb-3"><%= @columns_description %></span>
 
           <%= f.text_area :paste_data, rows: 15, class: "form-control font-monospace",
               placeholder: @placeholder_text %>
@@ -24,14 +24,14 @@
     </div>
   </div>
 
-  <div class="col-md-6">
+  <div>
     <div class="card">
       <div class="card-header">
         <h5 class="mb-0">Option 2: Upload XLSX</h5>
       </div>
       <div class="card-body">
         <%= form_with url: @preview_path, method: :post, local: true, multipart: true do |f| %>
-          <p class="text-muted">Upload an Excel file (.xlsx) with the same column structure.</p>
+          <p class="text-gray-500">Upload an Excel file (.xlsx) with the same column structure.</p>
 
           <div class="mb-3">
             <%= f.file_field :xlsx_file, accept: ".xlsx", class: "form-control" %>

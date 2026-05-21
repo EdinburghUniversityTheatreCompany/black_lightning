@@ -1,9 +1,9 @@
 <%= render(CollapsibleSectionComponent.new(title: 'Attachments')) do %>
-  <%= render('shared/form/sections/nested_fields', 
+  <%= render('shared/form/sections/nested_fields',
     f: @f,
     association_name: :attachments,
     partial_name: 'attachment_fields',
-    container_class: 'row',
-    wrapper_class: 'col-12 col-lg-6 col-xl-4')
+    container_class: 'grid grid-cols-12 gap-x-4',
+    wrapper_class: 'col-span-12 lg:col-span-6 xl:col-span-4')
   %>
 <% end %>
