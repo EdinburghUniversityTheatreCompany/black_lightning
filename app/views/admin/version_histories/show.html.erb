@@ -13,7 +13,7 @@
     </h5>
 
     <% if @version.version_note.present? %>
-      <p class="text-muted"><em><%= @version.version_note %></em></p>
+      <p class="text-gray-500"><em><%= @version.version_note %></em></p>
     <% end %>
 
     <hr>
@@ -35,7 +35,7 @@
         <% end %>
       <% end %>
     <% else %>
-      <p class="text-muted">No attribute changes detected for this version.</p>
+      <p class="text-gray-500">No attribute changes detected for this version.</p>
     <% end %>
   </div>
 </div>

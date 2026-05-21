@@ -2,9 +2,7 @@
   <ul class="list-group list-group-flush">
     <% @season.events.reorder(:start_date).each do |event| %>
       <li class="list-group-item py-1">
-        <div class="row">
-          <%= render 'event_label', event: event %>
-        </div>
+        <%= render 'event_label', event: event %>
       </li>
     <% end %>
   </ul>
