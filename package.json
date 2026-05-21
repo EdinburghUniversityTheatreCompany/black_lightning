@@ -5,7 +5,7 @@
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo-rails": "^8.0.23",
     "@milkdown/core": "^7.20.0",
-    "@milkdown/plugin-clipboard": "^7.20.0",
+    "@milkdown/plugin-clipboard": "^7.21.1",
     "@milkdown/plugin-history": "^7.20.0",
     "@milkdown/plugin-listener": "^7.20.0",
     "@milkdown/plugin-upload": "^7.20.0",
