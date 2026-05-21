@@ -17,7 +17,7 @@
             <%= link_to staffing.show_title, admin_staffing_path(staffing) %>
             <% if total_positions > 0 %>
               <% text_class = unfilled_positions > 0 ? 'text-danger' : 'text-gray-500' %>
-              <small class="<%= text_class %> text-nowrap ms-2"><%= filled_positions %> of <%= total_positions %></small>
+              <small class="<%= text_class %> text-nowrap ml-2"><%= filled_positions %> of <%= total_positions %></small>
             <% end %>
           </div>
         </div>

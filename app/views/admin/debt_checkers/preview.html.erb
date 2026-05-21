@@ -25,7 +25,7 @@
   <div class="card mb-3">
     <div class="card-header bg-success text-white">
       <strong>Matched Users</strong>
-      <span class="badge bg-light text-dark ms-2"><%= @exact_matches.size %></span>
+      <span class="badge bg-light text-dark ml-2"><%= @exact_matches.size %></span>
     </div>
     <div class="card-body p-0">
       <table class="table table-sm table-hover mb-0">
@@ -73,7 +73,7 @@
   <div class="card mb-3">
     <div class="card-header bg-warning">
       <strong>Possible Matches (Review Manually)</strong>
-      <span class="badge bg-dark ms-2"><%= @fuzzy_matches.size %></span>
+      <span class="badge bg-dark ml-2"><%= @fuzzy_matches.size %></span>
       <small class="float-right">Name matched — verify these are the right people</small>
     </div>
     <div class="card-body p-0">
@@ -133,7 +133,7 @@
   <div class="card mb-3">
     <div class="card-header bg-secondary text-white">
       <strong>Not Found</strong>
-      <span class="badge bg-light text-dark ms-2"><%= @unmatched.size %></span>
+      <span class="badge bg-light text-dark ml-2"><%= @unmatched.size %></span>
       <small class="float-right">No matching user in the system</small>
     </div>
     <div class="card-body p-0">

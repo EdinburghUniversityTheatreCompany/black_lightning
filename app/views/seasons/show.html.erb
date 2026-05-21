@@ -15,7 +15,7 @@
             <div class="flex flex-col md:flex-row">
             <%= render('shared/image', image: event.fetch_image, variant: thumb_variant_public, eager_load: false, proxy: true, image_options: { class: 'img-thumbnail'}) %>
 
-            <div class="flex-1 ms-3">
+            <div class="flex-1 ml-3">
               <h4 class="media-heading"><%= link_to event.name, event %></h4>
               
               <p>

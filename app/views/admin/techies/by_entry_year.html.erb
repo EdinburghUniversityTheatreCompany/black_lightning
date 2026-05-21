@@ -30,12 +30,12 @@
               <h3 class="text-primary"><%= year %></h3>
 
               <% if parent_groups.empty? %>
-                <p class="text-gray-500 ms-3">No techies found for this year.</p>
+                <p class="text-gray-500 ml-3">No techies found for this year.</p>
               <% else %>
                 <% parent_groups.each do |parent_group, techies| %>
-                  <div class="ms-3 mb-3">
+                  <div class="ml-3 mb-3">
                     <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
-                    <ul class="ms-3">
+                    <ul class="ml-3">
                       <% techies.each do |techie| %>
                         <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
                       <% end %>
@@ -51,9 +51,9 @@
               <h3 class="text-secondary">No Entry Year</h3>
 
               <% @grouped_no_year.each do |parent_group, techies| %>
-                <div class="ms-3 mb-3">
+                <div class="ml-3 mb-3">
                   <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
-                  <ul class="ms-3">
+                  <ul class="ml-3">
                     <% techies.each do |techie| %>
                       <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
                     <% end %>
