@@ -140,6 +140,10 @@ module LinkHelper
     link_to("View on Main Site", new_url, class: "btn btn-secondary") if new_url != request.original_fullpath
   end
 
+  def btn_classes(variant = :secondary, size = :md)
+    ButtonComponent.classes_for(variant: variant, size: size)
+  end
+
   private
 
   def generate_link_text(link_text, object, action, prefix, append_name)

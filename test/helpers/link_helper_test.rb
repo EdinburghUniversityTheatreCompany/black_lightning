@@ -430,4 +430,21 @@ class LinkHelperTest < ActionView::TestCase
     }
     assert_equal overridden_destroy_hash, get_confirm_data(object, :destroy, nil, "Pineapple", nil)
   end
+
+  test "btn_classes returns string for primary" do
+    classes = btn_classes(:primary)
+    assert_includes classes, "text-primary"
+    assert_includes classes, "border-primary"
+  end
+
+  test "btn_classes returns string for danger sm" do
+    classes = btn_classes(:danger, :sm)
+    assert_includes classes, "bg-danger"
+    assert_includes classes, "text-xs"
+  end
+
+  test "btn_classes defaults to secondary" do
+    classes = btn_classes
+    assert_includes classes, "border-slate-400"
+  end
 end
