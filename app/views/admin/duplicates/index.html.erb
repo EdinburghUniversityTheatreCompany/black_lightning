@@ -24,7 +24,7 @@
         <strong>Definite Duplicates (Same Student/Associate ID)</strong> - <%= @duplicates[:same_id].size %> group(s)
       </div>
       <div class="card-body">
-        <p class="text-muted">These users share the same student or associate ID, or have equivalent email addresses (e.g. s1234567@sms.ed.ac.uk and s1234567@ed.ac.uk). They are almost certainly duplicates and should be merged.</p>
+        <p class="text-gray-500">These users share the same student or associate ID, or have equivalent email addresses (e.g. s1234567@sms.ed.ac.uk and s1234567@ed.ac.uk). They are almost certainly duplicates and should be merged.</p>
         <table class="table table-sm table-hover">
           <thead>
             <tr>
@@ -45,9 +45,9 @@
                   <% dup[:users].each do |user| %>
                     <% years = cached_years_active(user, dup[:years_active_cache]) %>
                     <%= link_to user.name_or_email, admin_user_path(user) %>
-                    <small class="text-muted">(<%= user.email %>)</small>
+                    <small class="text-gray-500">(<%= user.email %>)</small>
                     <% if years.any? %>
-                      <small class="text-muted">- Active: <%= years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                      <small class="text-gray-500">- Active: <%= years.map { |y| format_academic_year(y) }.join(", ") %></small>
                     <% end %>
                     <br>
                   <% end %>
@@ -72,7 +72,7 @@
         <strong>Likely Duplicates (Name Match + Overlapping Activity)</strong> - <%= @duplicates[:fuzzy_name_overlapping].size %> pair(s)
       </div>
       <div class="card-body">
-        <p class="text-muted">These users have matching last names, similar first names, and were active during overlapping time periods. They are likely the same person.</p>
+        <p class="text-gray-500">These users have matching last names, similar first names, and were active during overlapping time periods. They are likely the same person.</p>
         <table class="table table-sm table-hover">
           <thead>
             <tr>
@@ -90,20 +90,20 @@
               <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
-                  <small class="text-muted"><%= u1.email %></small><br>
+                  <small class="text-gray-500"><%= u1.email %></small><br>
                   <% if u1_years.any? %>
-                    <small class="text-muted">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
                   <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
-                  <small class="text-muted"><%= u2.email %></small><br>
+                  <small class="text-gray-500"><%= u2.email %></small><br>
                   <% if u2_years.any? %>
-                    <small class="text-muted">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
@@ -125,7 +125,7 @@
         <strong>Possible Duplicates (Name Match, Different Time Periods)</strong> - <%= @duplicates[:fuzzy_name_non_overlapping].size %> pair(s)
       </div>
       <div class="card-body">
-        <p class="text-muted">These users have matching names but were active in different time periods (more than 4 years apart). They are less likely to be the same person, but you may want to review them.</p>
+        <p class="text-gray-500">These users have matching names but were active in different time periods (more than 4 years apart). They are less likely to be the same person, but you may want to review them.</p>
         <table class="table table-sm table-hover">
           <thead>
             <tr>
@@ -143,20 +143,20 @@
               <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
-                  <small class="text-muted"><%= u1.email %></small><br>
+                  <small class="text-gray-500"><%= u1.email %></small><br>
                   <% if u1_years.any? %>
-                    <small class="text-muted">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
                   <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
-                  <small class="text-muted"><%= u2.email %></small><br>
+                  <small class="text-gray-500"><%= u2.email %></small><br>
                   <% if u2_years.any? %>
-                    <small class="text-muted">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
@@ -178,7 +178,7 @@
         <strong>Fuzzy Name Match (Both Names) - Overlapping Years</strong> - <%= @duplicates[:fuzzy_both_overlapping].size %> pair(s)
       </div>
       <div class="card-body">
-        <p class="text-muted">Users with similar first AND last names who were active during overlapping years.</p>
+        <p class="text-gray-500">Users with similar first AND last names who were active during overlapping years.</p>
         <table class="table table-sm table-hover">
           <thead>
             <tr>
@@ -196,20 +196,20 @@
               <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
-                  <small class="text-muted"><%= u1.email %></small><br>
+                  <small class="text-gray-500"><%= u1.email %></small><br>
                   <% if u1_years.any? %>
-                    <small class="text-muted">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
                   <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
-                  <small class="text-muted"><%= u2.email %></small><br>
+                  <small class="text-gray-500"><%= u2.email %></small><br>
                   <% if u2_years.any? %>
-                    <small class="text-muted">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
@@ -231,7 +231,7 @@
         <strong>Fuzzy Name Match (Both Names) - No Overlapping Years</strong> - <%= @duplicates[:fuzzy_both_no_overlap].size %> pair(s)
       </div>
       <div class="card-body">
-        <p class="text-muted">Users with similar first AND last names active in different time periods (lower confidence).</p>
+        <p class="text-gray-500">Users with similar first AND last names active in different time periods (lower confidence).</p>
         <table class="table table-sm table-hover">
           <thead>
             <tr>
@@ -249,20 +249,20 @@
               <tr id="pair-<%= u1.id %>-<%= u2.id %>">
                 <td>
                   <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
-                  <small class="text-muted"><%= u1.email %></small><br>
+                  <small class="text-gray-500"><%= u1.email %></small><br>
                   <% if u1_years.any? %>
-                    <small class="text-muted">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>
                   <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
-                  <small class="text-muted"><%= u2.email %></small><br>
+                  <small class="text-gray-500"><%= u2.email %></small><br>
                   <% if u2_years.any? %>
-                    <small class="text-muted">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
+                    <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
                   <% else %>
-                    <small class="text-muted">No activity recorded</small>
+                    <small class="text-gray-500">No activity recorded</small>
                   <% end %>
                 </td>
                 <td>

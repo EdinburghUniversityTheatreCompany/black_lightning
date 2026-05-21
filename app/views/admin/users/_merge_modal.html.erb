@@ -39,7 +39,7 @@
     <%= hidden_field_tag :source_user_id, source.id %>
 
     <div class="card-body">
-      <p class="text-muted mb-3">
+      <p class="text-gray-500 mb-3">
         Select which values to keep for each field. All associations will be transferred from
         <strong><%= source.name_or_email %></strong> to <strong><%= target.name_or_email %></strong>.
       </p>
@@ -55,7 +55,7 @@
             <th style="width: 40%">
               <span class="badge bg-secondary">SOURCE</span>
               <%= source.name_or_email %>
-              <small class="text-muted">(will be deleted)</small>
+              <small class="text-gray-500">(will be deleted)</small>
             </th>
           </tr>
         </thead>
@@ -63,7 +63,7 @@
           <% fields.each do |field_key, label, target_val, source_val| %>
             <% select_source = default_selection(target_val, source_val) == :source %>
             <% same_values = values_same?(target_val, source_val) %>
-            <tr class="<%= 'table-secondary text-muted' if same_values %>">
+            <tr class="<%= 'table-secondary text-gray-500' if same_values %>">
               <td><strong><%= label %></strong></td>
               <td>
                 <div class="form-check">
@@ -75,7 +75,7 @@
                          data-action="change->field-choice#toggle"
                          <%= "checked" unless select_source %>>
                   <label class="form-check-label" for="keep_target_<%= field_key %>">
-                    <%= target_val.presence || tag.em("(empty)", class: "text-muted") %>
+                    <%= target_val.presence || tag.em("(empty)", class: "text-gray-500") %>
                   </label>
                 </div>
               </td>
@@ -89,7 +89,7 @@
                          data-action="change->field-choice#toggle"
                          <%= "checked" if select_source %>>
                   <label class="form-check-label" for="keep_source_<%= field_key %>">
-                    <%= source_val.presence || tag.em("(empty)", class: "text-muted") %>
+                    <%= source_val.presence || tag.em("(empty)", class: "text-gray-500") %>
                   </label>
                   <% if select_source %>
                     <input type="hidden" name="keep_from_source[]" value="<%= field_key %>" id="hidden_<%= field_key %>">
@@ -102,7 +102,7 @@
           <%# Avatar row %>
           <% avatar_select_source = default_selection(target.avatar.attached?, source.avatar.attached?) == :source %>
           <% avatar_same = target.avatar.attached? == source.avatar.attached? && (!target.avatar.attached? || target.avatar.blob_id == source.avatar.blob_id) %>
-          <tr class="<%= 'table-secondary text-muted' if avatar_same %>">
+          <tr class="<%= 'table-secondary text-gray-500' if avatar_same %>">
             <td><strong>Avatar</strong></td>
             <td>
               <div class="form-check">
@@ -117,7 +117,7 @@
                   <% if target.avatar.attached? %>
                     <%= render 'shared/image', image: target.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
                   <% else %>
-                    <em class="text-muted">(no avatar)</em>
+                    <em class="text-gray-500">(no avatar)</em>
                   <% end %>
                 </label>
               </div>
@@ -135,7 +135,7 @@
                   <% if source.avatar.attached? %>
                     <%= render 'shared/image', image: source.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
                   <% else %>
-                    <em class="text-muted">(no avatar)</em>
+                    <em class="text-gray-500">(no avatar)</em>
                   <% end %>
                 </label>
                 <% if avatar_select_source %>
@@ -149,16 +149,16 @@
 
       <h6 class="mt-4">Associations to transfer from SOURCE (<%= source.name_or_email %>):</h6>
       <ul class="list-group list-group-flush mb-3">
-        <li class="list-group-item d-flex justify-content-between align-items-center">
+        <li class="list-group-item flex justify-between items-center">
           Team memberships
           <span>
             <span class="badge bg-primary rounded-pill"><%= stats[:team_memberships][:total] %></span>
             <% if stats[:team_memberships][:overlapping] > 0 %>
-              <small class="text-muted">(<%= stats[:team_memberships][:overlapping] %> overlap - roles will be merged with "/")</small>
+              <small class="text-gray-500">(<%= stats[:team_memberships][:overlapping] %> overlap - roles will be merged with "/")</small>
             <% end %>
           </span>
         </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
+        <li class="list-group-item flex justify-between items-center">
           Staffing jobs
           <span>
             <span class="badge bg-primary rounded-pill"><%= stats[:staffing_jobs][:total] %></span>
@@ -167,7 +167,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
+        <li class="list-group-item flex justify-between items-center">
           Staffing debts
           <span>
             <span class="badge bg-primary rounded-pill"><%= stats[:staffing_debts][:total] %></span>
@@ -176,7 +176,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
+        <li class="list-group-item flex justify-between items-center">
           Maintenance debts
           <span>
             <span class="badge bg-primary rounded-pill"><%= stats[:maintenance_debts][:total] %></span>
@@ -185,7 +185,7 @@
             <% end %>
           </span>
         </li>
-        <li class="list-group-item d-flex justify-content-between align-items-center">
+        <li class="list-group-item flex justify-between items-center">
           Maintenance attendances
           <span>
             <span class="badge bg-primary rounded-pill"><%= stats[:maintenance_attendances][:total] %></span>
@@ -195,7 +195,7 @@
           </span>
         </li>
         <% if stats[:roles].any? %>
-          <li class="list-group-item d-flex justify-content-between align-items-center">
+          <li class="list-group-item flex justify-between items-center">
             Roles
             <span>
               <% stats[:roles].each do |role| %>
@@ -214,7 +214,7 @@
       </div>
     </div>
 
-    <div class="card-footer d-flex justify-content-between">
+    <div class="card-footer flex justify-between">
       <% if local_assigns[:in_modal] %>
         <button type="button" class="btn btn-secondary" data-action="click->merge-modal#close">Cancel</button>
       <% else %>
