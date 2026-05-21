@@ -3,7 +3,7 @@
     <h5 class="card-title mb-0">Debt Overview</h5>
   </div>
   <div class="card-body">
-    <p class="text-muted mb-2">
+    <p class="text-gray-500 mb-2">
       Shows in the current academic year and future. Color-coded to help identify which shows need debt configuration.
     </p>
     <div class="mb-0">
@@ -48,7 +48,7 @@
                       <span class="badge bg-secondary"><%= tag.name %></span>
                     <% end %>
                   <% else %>
-                    <span class="text-muted">No tags</span>
+                    <span class="text-gray-500">No tags</span>
                   <% end %>
                 </td>
                 <td>
@@ -58,7 +58,7 @@
                       (due <%= show.maintenance_debt_start.strftime("%d %b %y") %>)
                     <% end %>
                   <% else %>
-                    <span class="text-muted">Not configured</span>
+                    <span class="text-gray-500">Not configured</span>
                   <% end %>
                 </td>
                 <td>
@@ -68,7 +68,7 @@
                       (due <%= show.staffing_debt_start.strftime("%d %b %y") %>)
                     <% end %>
                   <% else %>
-                    <span class="text-muted">Not configured</span>
+                    <span class="text-gray-500">Not configured</span>
                   <% end %>
                 </td>
                 <td>

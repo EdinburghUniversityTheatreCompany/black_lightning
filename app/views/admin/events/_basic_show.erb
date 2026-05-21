@@ -5,16 +5,14 @@
 <% # Note: If you update the ransack search form, this has some things with q that need to be changed. %>
 
 <%= content_for :publicity_and_members do %>
-  <div class="row">
-    <div class="col-<%= event.team_members.any? ? 'xl-6' : '12' %>">
+  <div class="grid grid-cols-12">
+    <div class="<%= event.team_members.any? ? 'col-span-12 xl:col-span-6' : 'col-span-12' %>">
       <h3>Publicity Text</h3>
       <%= render_markdown event.publicity_text %>
     </div>
 
     <% if event.team_members.any? %>
-    <%# The col forces it to use full-width in single column mode. Surely there's an easier way, but I can't find it right now. %>
-    <%# Don't add col to the publicity text section too or it will always have two cols. %>
-      <div class="col col-xl-6 xl:border-l xl:border-gray-200 xl:pl-4">
+      <div class="col-span-12 xl:col-span-6 xl:border-l xl:border-gray-200 xl:pl-4">
           <%= render '/shared/admin_show_team_members', team_members: event.team_members.ordered %>
       </div>
     <% end %>

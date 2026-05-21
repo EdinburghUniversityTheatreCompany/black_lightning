@@ -2,17 +2,17 @@
 
 <% if reviews.any? %>
   <% multi = reviews.count > 1 %>
-  <div class="<%= @admin_site ? "grid gap-4 #{'lg:grid-cols-2' if multi}" : "row g-3 #{'row-cols-lg-2' if multi}" %>">
+  <div class="grid gap-4 <%= 'lg:grid-cols-2' if multi %>">
     <% reviews.each do |review| %>
-      <div class="<%= 'col-12 col-lg-6' unless @admin_site %>">
+      <div>
         <div class="card">
             <div class="card-header">
               <h4>
-                <%= review.title %><%= " - <span class=\"no-wrap\">#{star_rating(review.rating)}</span>".html_safe %>
+                <%= review.title %><%= " - <span class=\"whitespace-nowrap\">#{star_rating(review.rating)}</span>".html_safe %>
               </h4>
             </div>
           <div class="card-body">
-            <p class="card-text"><small class="text-muted"><%= l review.review_date, format: :long %> - By <%= review.reviewer_with_organisation %></small></p>
+            <p class="card-text"><small class="text-gray-500"><%= l review.review_date, format: :long %> - By <%= review.reviewer_with_organisation %></small></p>
 
             <%= render_markdown review.body %>
           </div>
