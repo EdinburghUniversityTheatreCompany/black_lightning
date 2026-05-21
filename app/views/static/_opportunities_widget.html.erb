@@ -17,7 +17,7 @@
             <%= link_to opportunity.title, get_involved_opportunities_path %>
           </h5>
           <p class="card-text mb-1">
-            <small class="text-muted">Expires <%= opportunity.expiry_date.strftime("%-d %B %Y") %></small>
+            <small class="text-gray-500">Expires <%= opportunity.expiry_date.strftime("%-d %B %Y") %></small>
           </p>
           <p class="card-text">
             <%= truncate_markdown(opportunity.description, 100) %>
@@ -27,7 +27,7 @@
     </ul>
   <% end %>
 
-  <div class="card-footer d-flex justify-content-between align-items-center">
+  <div class="card-footer flex justify-between items-center">
     <%= link_to "View all opportunities →", get_involved_opportunities_path %>
     <% if can?(:create, Opportunity) %>
       <%= link_to "Submit an Opportunity", new_get_involved_opportunity_path, class: "btn btn-primary btn-sm" %>

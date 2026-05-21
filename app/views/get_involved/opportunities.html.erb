@@ -15,7 +15,7 @@
         <li class="list-group-item">
           <h4><%= opportunity.title %></h4>
           
-          <p><small class="text-muted"><%= opportunity.creator&.name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
+          <p><small class="text-gray-500"><%= opportunity.creator&.name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
 
           <p> <%= render_markdown opportunity.description %></p>
 
