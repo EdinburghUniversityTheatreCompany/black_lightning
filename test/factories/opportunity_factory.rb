@@ -19,7 +19,7 @@ FactoryBot.define do
   factory :opportunity do
     title        { generate(:random_string) }
     description  { generate(:random_text) }
-    show_email   { [ true, false ].sample }
+    email_visibility { Opportunity.email_visibilities.keys.sample }
     expiry_date  { [ -1.days.from_now, 1.days.from_now ].sample }
     approved     { [ true, false ].sample }
 

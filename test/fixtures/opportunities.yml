@@ -4,7 +4,7 @@ active_opportunity:
   approved: true
   expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 expired_opportunity:
   title: "Old Opportunity"
@@ -12,7 +12,7 @@ expired_opportunity:
   approved: true
   expiry_date: <%= 1.week.ago.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 unapproved_opportunity:
   title: "Pending Approval"
@@ -20,7 +20,7 @@ unapproved_opportunity:
   approved: false
   expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 active_opportunity_2:
   title: "Sound Designer Needed"
@@ -28,7 +28,7 @@ active_opportunity_2:
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 active_opportunity_3:
   title: "Lighting Operator Needed"
@@ -36,7 +36,7 @@ active_opportunity_3:
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 active_opportunity_4:
   title: "Props Maker Needed"
@@ -44,7 +44,7 @@ active_opportunity_4:
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 active_opportunity_5:
   title: "Costume Designer Needed"
@@ -52,7 +52,7 @@ active_opportunity_5:
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 active_opportunity_6:
   title: "Marketing Help Needed"
@@ -60,7 +60,7 @@ active_opportunity_6:
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
   creator: admin
-  show_email: false
+  email_visibility: 0
 
 expiring_soon_opportunity:
   title: "Expiring Soon Opportunity"
@@ -68,7 +68,7 @@ expiring_soon_opportunity:
   approved: true
   expiry_date: <%= 3.days.from_now.to_fs(:db) %>
   creator_id: 1
-  show_email: false
+  email_visibility: 0
 
 pending_digest_opportunity:
   title: "Digest Test Opportunity"
@@ -76,4 +76,4 @@ pending_digest_opportunity:
   approved: false
   expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
   creator_id: 1
-  show_email: false
+  email_visibility: 0

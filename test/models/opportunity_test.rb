@@ -33,6 +33,30 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunity.active?
   end
 
+  test "email_visibility defaults to no_one" do
+    opp = Opportunity.new
+    assert opp.no_one?
+  end
+
+  test "email_visibility enum has correct values" do
+    assert_equal 0, Opportunity.email_visibilities[:no_one]
+    assert_equal 1, Opportunity.email_visibilities[:members_only]
+    assert_equal 2, Opportunity.email_visibilities[:everyone]
+  end
+
+  test "contact_email is optional" do
+    opp = opportunities(:active_opportunity)
+    opp.contact_email = nil
+    assert opp.valid?
+  end
+
+  test "contact_email validates format when present" do
+    opp = opportunities(:active_opportunity)
+    opp.contact_email = "not-an-email"
+    assert_not opp.valid?
+    assert_includes opp.errors[:contact_email], "is invalid"
+  end
+
   test "should return the correct css class" do
     opportunity = FactoryBot.create :opportunity, expiry_date: Date.current.advance(days: -1)
 

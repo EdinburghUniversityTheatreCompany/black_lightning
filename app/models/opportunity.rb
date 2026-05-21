@@ -19,7 +19,10 @@ class Opportunity < ApplicationRecord
   belongs_to :creator,  class_name: "User"
   belongs_to :approver, class_name: "User", optional: true
 
+  enum :email_visibility, { no_one: 0, members_only: 1, everyone: 2 }, default: :no_one
+
   validates :title, :expiry_date, :description, :creator_id, presence: true
+  validates :contact_email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
 
   normalizes :title, with: ->(title) { title&.strip }
 
@@ -28,7 +31,7 @@ class Opportunity < ApplicationRecord
   scope :active, -> { where("approved = true AND expiry_date > ?", Time.current).order("expiry_date ASC") }
 
   def self.ransackable_attributes(auth_object = nil)
-    [ "approved", "description", "expiry_date", "show_email", "title" ]
+    [ "approved", "contact_email", "description", "email_visibility", "expiry_date", "title" ]
   end
 
   def self.ransackable_associations(auth_object = nil)
