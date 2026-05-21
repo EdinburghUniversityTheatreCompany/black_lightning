@@ -1,5 +1,5 @@
 <div class="content">
-  <div class="container-fluid">
+  <div class="w-full px-4">
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_2fr] xl:grid-cols-[1fr_2fr_1fr] gap-4">
       <div>
         <%= render CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true) do %>

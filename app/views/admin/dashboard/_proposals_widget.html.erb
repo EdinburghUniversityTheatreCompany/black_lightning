@@ -4,7 +4,7 @@
 
 <ul class="list-group list-group-flush">
   <% if open_calls.empty? %>
-    <li class="list-group-item text-muted">There are no open proposal calls.</li>
+    <li class="list-group-item text-gray-500">There are no open proposal calls.</li>
   <% else %>
     <% open_calls.each do |call| %>
       <li class="list-group-item"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></li>
