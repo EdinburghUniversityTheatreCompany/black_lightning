@@ -6,7 +6,10 @@
     description: { type: 'markdown', markdown: @opportunity.description },
 } %>
 
-<% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.creator.name} by emailing them at #{mail_to @opportunity.creator.email}.".html_safe } if @opportunity.show_email %>
+<% if @opportunity.members_only? || @opportunity.everyone? %>
+  <% display_email = @opportunity.contact_email.presence || @opportunity.creator.email %>
+  <% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.creator.name} by emailing them at #{mail_to display_email}.".html_safe } %>
+<% end %>
 
 <% content_for :extra_show_actions do %>
   <%= get_link @opportunity, :approve, condition: !@opportunity.approved %>

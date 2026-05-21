@@ -39,6 +39,6 @@ class GetInvolvedController < ApplicationController
   private
 
   def opportunity_params
-    params.require(:opportunity).permit(:title, :description, :expiry_date, :show_email)
+    params.require(:opportunity).permit(:title, :description, :expiry_date, :email_visibility, :contact_email)
   end
 end
