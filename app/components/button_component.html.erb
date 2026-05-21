@@ -1,0 +1,7 @@
+<% if @href %>
+  <%= link_to @href, class: button_classes, **@html_options do %>
+    <%= content %>
+  <% end %>
+<% else %>
+  <%= content_tag :button, content, type: @type, class: button_classes, disabled: @disabled, **@html_options %>
+<% end %>
