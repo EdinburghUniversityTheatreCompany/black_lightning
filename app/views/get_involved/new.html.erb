@@ -19,7 +19,7 @@
             hint: "Optional. If left blank and email visibility is enabled, your account email (#{current_user.email}) will be shown instead." %>
       </div>
 
-      <div class="form-actions d-flex gap-2">
+      <div class="form-actions flex gap-2">
         <%= f.button :submit, "Submit Opportunity", class: "btn btn-primary" %>
         <%= link_to "Cancel", get_involved_opportunities_path, class: "btn btn-secondary" %>
       </div>
