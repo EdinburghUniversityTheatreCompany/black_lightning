@@ -10,7 +10,7 @@
     "@milkdown/plugin-listener": "^7.20.0",
     "@milkdown/plugin-upload": "^7.20.0",
     "@milkdown/preset-commonmark": "^7.20.0",
-    "@milkdown/preset-gfm": "^7.20.0",
+    "@milkdown/preset-gfm": "^7.21.1",
     "@milkdown/prose": "7.20.0",
     "@milkdown/utils": "^7.20.0",
     "@popperjs/core": "^2.11.8",
