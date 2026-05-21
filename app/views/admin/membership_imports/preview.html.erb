@@ -16,7 +16,7 @@
       <div class="card-header bg-info text-white">
         <strong>Activate by Email Match</strong>
         <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:activate_by_email].size %></span>
-        <small class="float-end">Will be activated automatically</small>
+        <small class="float-right">Will be activated automatically</small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -34,7 +34,7 @@
                 <td>
                   <%= item[:row][:original_name] %>
                   <% if item[:row][:student_id] || item[:row][:associate_id] %>
-                    <br><small class="text-muted">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %> (will be added)</small>
+                    <br><small class="text-gray-500">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %> (will be added)</small>
                   <% end %>
                 </td>
                 <td>
@@ -62,7 +62,7 @@
       <div class="card-header bg-warning">
         <strong>Possible Matches (Review Required)</strong>
         <span class="badge bg-dark ms-2"><%= @import.categorized[:propose_merge].size %></span>
-        <small class="float-end">Please decide for each row</small>
+        <small class="float-right">Please decide for each row</small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -78,19 +78,19 @@
               <tr>
                 <td>
                   <strong><%= item[:row][:original_name] %></strong><br>
-                  <small class="text-muted"><%= item[:row][:email] %></small>
+                  <small class="text-gray-500"><%= item[:row][:email] %></small>
                   <% if item[:row][:student_id] || item[:row][:associate_id] %>
-                    <br><small class="text-muted">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %></small>
+                    <br><small class="text-gray-500">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %></small>
                   <% end %>
                 </td>
                 <td>
                   <% item[:existing_users].each_with_index do |user, i| %>
                     <% years = @import.years_active_cache[user.id] %>
                     <%= link_to user.name_or_email, admin_user_path(user) %>
-                    <small class="text-muted">(<%= format_years_active_label(years) %>)</small><br>
-                    <small class="text-muted"><%= user.email %></small>
+                    <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small><br>
+                    <small class="text-gray-500"><%= user.email %></small>
                     <% if user.student_id.present? %>
-                      <br><small class="text-muted">ID: <%= user.student_id %></small>
+                      <br><small class="text-gray-500">ID: <%= user.student_id %></small>
                     <% end %>
                     <% if i < item[:existing_users].size - 1 %>
                       <hr class="my-1">
@@ -128,7 +128,7 @@
       <div class="card-header bg-primary text-white">
         <strong>New Users to Create</strong>
         <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:create_new].size %></span>
-        <small class="float-end">Will create and activate</small>
+        <small class="float-right">Will create and activate</small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -148,14 +148,14 @@
                   <% if item[:row][:email].present? %>
                     <span class="font-monospace"><%= item[:row][:email] %></span>
                   <% else %>
-                    <em class="text-muted">(will generate placeholder)</em>
+                    <em class="text-gray-500">(will generate placeholder)</em>
                   <% end %>
                 </td>
                 <td>
                   <% if item[:row][:student_id] || item[:row][:associate_id] %>
                     <span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span>
                   <% else %>
-                    <em class="text-muted">-</em>
+                    <em class="text-gray-500">-</em>
                   <% end %>
                 </td>
                 <td>
@@ -182,7 +182,7 @@
       <div class="card-header bg-secondary text-white">
         <strong>Already Active Members</strong>
         <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:already_active].size %></span>
-        <small class="float-end">No action needed</small>
+        <small class="float-right">No action needed</small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -226,7 +226,7 @@
       <div class="card-header bg-info text-white">
         <strong>Activate by ID</strong>
         <span class="badge bg-light text-dark ms-2"><%= @import.categorized[:activate_by_id].size %></span>
-        <small class="float-end">Will be activated automatically</small>
+        <small class="float-right">Will be activated automatically</small>
       </div>
       <div class="card-body p-0">
         <table class="table table-sm table-hover mb-0">
@@ -244,7 +244,7 @@
                 <td><%= item[:row][:original_name] %></td>
                 <td>
                   <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
-                  <br><small class="text-muted"><%= item[:existing_user].email %></small>
+                  <br><small class="text-gray-500"><%= item[:existing_user].email %></small>
                 </td>
                 <td>
                   <% case item[:match_type] %>
@@ -269,7 +269,7 @@
   <% end %>
 
   <div class="card">
-    <div class="card-footer d-flex justify-content-between">
+    <div class="card-footer flex justify-between">
       <%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
       <%= f.submit "Confirm Import", class: "btn btn-success" %>
     </div>
