@@ -74,7 +74,7 @@
     <div class="card-header bg-warning">
       <strong>Possible Matches (Review Manually)</strong>
       <span class="badge bg-dark ms-2"><%= @fuzzy_matches.size %></span>
-      <small class="float-end">Name matched — verify these are the right people</small>
+      <small class="float-right">Name matched — verify these are the right people</small>
     </div>
     <div class="card-body p-0">
       <table class="table table-sm table-hover mb-0">
@@ -96,14 +96,14 @@
                   <td rowspan="<%= match[:candidates].size %>">
                     <strong><%= match[:row][:original_name] %></strong>
                     <% if match[:row][:email].present? %>
-                      <br><small class="text-muted"><%= match[:row][:email] %></small>
+                      <br><small class="text-gray-500"><%= match[:row][:email] %></small>
                     <% end %>
                   </td>
                 <% end %>
                 <td>
                   <%= link_to user.name_or_email, admin_user_path(user) %>
-                  <small class="text-muted">(<%= format_years_active_label(years) %>)</small>
-                  <br><small class="text-muted"><%= user.email %></small>
+                  <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small>
+                  <br><small class="text-gray-500"><%= user.email %></small>
                 </td>
                 <td>
                   <% if @member_ids.include?(user.id) %>
@@ -134,7 +134,7 @@
     <div class="card-header bg-secondary text-white">
       <strong>Not Found</strong>
       <span class="badge bg-light text-dark ms-2"><%= @unmatched.size %></span>
-      <small class="float-end">No matching user in the system</small>
+      <small class="float-right">No matching user in the system</small>
     </div>
     <div class="card-body p-0">
       <table class="table table-sm table-hover mb-0">

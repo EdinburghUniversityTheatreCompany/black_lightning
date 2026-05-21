@@ -17,14 +17,14 @@
         <a class="btn btn-secondary" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</a>
 
         <div style="display: none" class="control-group datetime" data-staffing-date-fields-target="blueprint">
-          <div class="row">
-            <div class="col-md">
+          <div class="flex flex-wrap items-center gap-2">
+            <div class="flex-1">
               <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_start_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="start_datetime">
             </div>
-            <div class="col-md">
+            <div class="flex-1">
               <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="end_time">
             </div>
-            <div class="col-md-auto">
+            <div class="shrink-0">
               <a class="btn btn-danger mb-2"><%= remove_button_text %></a>
             </div>
           </div>
