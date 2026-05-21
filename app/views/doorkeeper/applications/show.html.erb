@@ -2,8 +2,8 @@
   <h1><%= t('.title', name: @application.name) %></h1>
 </div>
 
-<div class="row">
-  <div class="col-md-8">
+<div class="grid grid-cols-12 gap-x-4">
+  <div class="col-span-12 md:col-span-8">
     <h4><%= t('.application_id') %>:</h4>
     <p><code class="bg-light" id="application_id"><%= @application.uid %></code></p>
 
@@ -12,7 +12,7 @@
       <code class="bg-light" id="secret">
         <% secret = flash[:application_secret].presence || @application.plaintext_secret %>
         <% if secret.blank? && Doorkeeper.config.application_secret_hashed? %>
-          <span class="bg-light font-italic text-uppercase text-muted"><%= t('.secret_hashed') %></span>
+          <span class="bg-light font-italic text-uppercase text-gray-500"><%= t('.secret_hashed') %></span>
         <% else %>
           <%= secret %>
         <% end %>
@@ -25,7 +25,7 @@
         <% if @application.scopes.present? %>
           <%= @application.scopes %>
         <% else %>
-          <span class="bg-light font-italic text-uppercase text-muted"><%= t('.not_defined') %></span>
+          <span class="bg-light font-italic text-uppercase text-gray-500"><%= t('.not_defined') %></span>
         <% end %>
       </code>
     </p>
@@ -49,11 +49,11 @@
         <% end %>
       </table>
     <% else %>
-      <span class="bg-light font-italic text-uppercase text-muted"><%= t('.not_defined') %></span>
+      <span class="bg-light font-italic text-uppercase text-gray-500"><%= t('.not_defined') %></span>
     <% end %>
   </div>
 
-  <div class="col-md-4">
+  <div class="col-span-12 md:col-span-4">
     <h3><%= t('.actions') %></h3>
 
     <p><%= link_to t('doorkeeper.applications.buttons.edit'), edit_oauth_application_path(@application), class: 'btn btn-primary' %></p>
