@@ -1,6 +1,6 @@
 <%# locals: (subpages:) %>
 
-<ul class="nav nav-tabs flex-column">
+<ul class="nav nav-tabs flex-col">
     <% subpages.each do |subpage| %>
         <li class="nav-item"><%= link_to(subpage[:title], subpage[:path], class: 'nav-link') %></li>
     <% end %>
