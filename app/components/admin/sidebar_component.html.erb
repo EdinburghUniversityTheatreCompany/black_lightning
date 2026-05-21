@@ -5,7 +5,7 @@
 <aside class="sidebar md:w-64 bg-sidebar-bg text-sidebar-text flex flex-col h-full shrink-0 max-md:fixed max-md:inset-0 max-md:z-40 max-md:overflow-y-auto"
        data-admin--sidebar-target="sidebar">
   <%# Brand %>
-  <div class="p-4 border-b border-white/10 flex items-center justify-between">
+  <div class="h-14 px-4 border-b border-white/10 flex items-center justify-between">
     <a href="/">
       <img src="https://eutc.azureedge.net/img/logos/png/bedlam-logo_single-line-white-for-red.png"
            alt="Bedlam Theatre" class="h-8 w-auto">
@@ -19,9 +19,9 @@
 
   <%# User panel %>
   <a href="<%= helpers.admin_user_path(@current_user) %>"
-     class="p-4 border-b border-white/10 flex items-center gap-3 hover:bg-white/10">
+     class="px-4 py-2 border-b border-white/10 flex items-center gap-3 hover:bg-white/10">
 
-    <div class="w-8 h-8">
+    <div class="w-10 h-10">
       <% if @current_user.avatar.present? %>
         <%= render 'shared/image', image: @current_user.avatar, variant: helpers.square_thumb_variant, eager_load: true, image_options: { class: "rounded-full" } %>
       <% else %>
