@@ -21,12 +21,12 @@
           <% end %>
         </div>
 
-        <div class="text-center d-block card w-full carousel-caption-card" data-carousel-equalizer-target="caption">
+        <div class="text-center block card w-full carousel-caption-card" data-carousel-equalizer-target="caption">
           <div class="card-body">
             <h5><%= item[:url].present? ? link_to(item[:title], item[:url]) : item[:title] %></h5>
             <p><%= item[:tagline] %></p>
             <% if item[:url].present? || item[:pretix_slug].present? %>
-              <div class="d-flex gap-2 justify-content-center flex-wrap">
+              <div class="flex gap-2 justify-center flex-wrap">
                 <% if item[:url].present? %>
                   <%= link_to "Details", item[:url], class: "btn btn-primary btn-sm" %>
                 <% end %>

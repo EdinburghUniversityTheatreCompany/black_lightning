@@ -3,19 +3,19 @@
 <% header_badges = [] if header_badges.nil? %>
 
 <div class="content-header">
-    <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="flex-grow-1 ml-2">
+    <div class="w-full px-4">
+        <div class="flex items-center mb-2">
+            <div class="flex-1 ml-2">
                 <h1 class="m-0"><%= title %></h1>
                 <% header_badges.each do |label| %>
                   <%= generate_label(label[:label_class], label[:text]) %>
                 <% end %>
-            </div><!-- /.col -->
-            <div class="col-auto">
-                <ol class="breadcrumb float-sm-right">
+            </div>
+            <div>
+                <ol class="breadcrumb float-right">
                     <li class="breadcrumb-item active"><%= render_breadcrumbs :separator => " / " %></li>
                 </ol>
-            </div><!-- /.col -->
-        </div><!-- /.row -->
+            </div>
+        </div>
     </div>
 </div>
