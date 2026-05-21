@@ -4,9 +4,9 @@
 <% end %>
 
 <div class="card mt-3">
-  <div class="card-header d-flex align-items-center gap-2">
+  <div class="card-header flex items-center gap-2">
     <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies,
-          html: { class: 'd-flex align-items-center gap-2 mb-0' } do |f| %>
+          html: { class: 'flex items-center gap-2 mb-0' } do |f| %>
       <%= f.input :id_eq,
             collection: Techie.all.select('id', 'name'),
             include_blank: true,
@@ -28,7 +28,7 @@
        data-techie-graph-cache-version-value="<%= @cache_version %>">
     <div data-techie-graph-target="canvas" style="height: calc(100vh - 260px);"></div>
     <div data-techie-graph-target="legend"
-         class="px-3 py-2 border-top d-flex flex-wrap gap-3"
+         class="px-3 py-2 border-top flex flex-wrap gap-3"
          style="font-size: 11px;"></div>
   </div>
 </div>

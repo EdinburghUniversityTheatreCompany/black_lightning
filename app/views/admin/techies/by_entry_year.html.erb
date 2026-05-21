@@ -4,39 +4,33 @@
   link_to(generate_icon_prefix('user-group', 'Mass Add Techies'), mass_new_admin_techies_url, class: 'btn btn-secondary'),
 ] %>
 
-<div class="row">
-  <div class="col">
-    <% unless quick_actions.blank? %>
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Quick actions</span>
-        </div>
-        <div class="card-body">
-          <% quick_actions.each do |quick_action| %>
-            <%= quick_action %>
-          <% end %>
-        </div>
-      </div>
-    <% end %>
+<% unless quick_actions.blank? %>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Quick actions</span>
+    </div>
+    <div class="card-body">
+      <% quick_actions.each do |quick_action| %>
+        <%= quick_action %>
+      <% end %>
+    </div>
   </div>
-</div>
+<% end %>
 
-<div class="row">
-  <div class="col">
-    <div class="card">
+<div class="card">
       <div class="card-header">
         <span class="card-title"><%= @title %></span>
       </div>
       <div class="card-body">
         <% if @grouped_data.empty? && @grouped_no_year.empty? %>
-          <p class="text-muted">No techies found.</p>
+          <p class="text-gray-500">No techies found.</p>
         <% else %>
           <% @grouped_data.each do |year, parent_groups| %>
             <div class="mb-4">
               <h3 class="text-primary"><%= year %></h3>
 
               <% if parent_groups.empty? %>
-                <p class="text-muted ms-3">No techies found for this year.</p>
+                <p class="text-gray-500 ms-3">No techies found for this year.</p>
               <% else %>
                 <% parent_groups.each do |parent_group, techies| %>
                   <div class="ms-3 mb-3">
@@ -71,5 +65,3 @@
         <% end %>
       </div>
     </div>
-  </div>
-</div>
