@@ -1,0 +1,12 @@
+@theme {
+  --color-primary: #ba0204;
+  --color-primary-dark: #8a0103;
+  --color-secondary: #fdc5b6;
+  --color-wine: #7f1d1d;
+  --color-wine-dark: #5c1313;
+  --color-danger: #991b1b;
+  --color-warning: #92400e;
+  --color-success: #166534;
+  --color-info: #1e40af;
+  --font-sans: "Source Sans Pro", ui-sans-serif, system-ui, sans-serif;
+}
