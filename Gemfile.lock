@@ -508,7 +508,7 @@ GEM
     simplecov_json_formatter (0.1.4)
     skylight (7.1.1)
       activesupport (>= 7.2.0)
-    solargraph (0.59.1)
+    solargraph (0.59.2)
       ast (~> 2.4.3)
       backport (~> 1.2)
       benchmark (~> 0.4)
