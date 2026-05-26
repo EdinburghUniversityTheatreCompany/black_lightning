@@ -1,8 +1,8 @@
 <%# locals: (current_page:, total_pages:, remote: nil) %>
-<li class="page-item active">
+<li class="contents">
   <input
     type="number"
-    class="page-link page-jump-input"
+    class="-mt-1 w-12 h-[1.95rem] text-center text-primary bg-white border border-primary rounded px-0 shadow-none cursor-text placeholder:text-primary placeholder:opacity-60 [appearance:textfield] [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
     value="<%= current_page %>"
     min="1"
     max="<%= total_pages %>"

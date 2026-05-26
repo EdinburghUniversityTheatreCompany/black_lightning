@@ -3,7 +3,7 @@
 <% if page.current? %>
   <%= render "kaminari/current_page_input", current_page: page, total_pages: total_pages, remote: remote %>
 <% else %>
-  <li class="page-item">
-    <%= link_to page, url, remote: remote, rel: page.rel, class: 'page-link' %>
+  <li>
+    <%= link_to page, url, remote: remote, rel: page.rel, class: 'px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50' %>
   </li>
 <% end %>

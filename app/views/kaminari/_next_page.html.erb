@@ -1,5 +1,5 @@
 <%# locals: (current_page:, url:, remote:, per_page:, total_pages:) %>
 
-<li class="page-item <%= "disabled" if current_page.last? %>">
-  <%= link_to url, rel: 'next', remote: remote, class: 'page-link' do %><span class="hidden md:inline">Next </span>&rsaquo;<% end %>
+<li>
+  <%= link_to url, rel: 'next', remote: remote, class: "px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded #{current_page.last? ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-50'}" do %><span class="hidden md:inline">Next </span>&rsaquo;<% end %>
 </li>

@@ -2,17 +2,17 @@
 
 <%= paginator.render do %>
   <nav aria-label="Page Navigation" class="mb-1">
-    <ul class="pagination pagination-sm m-0 <%= 'float-right' if @admin_site %>">
+    <ul class="flex gap-1 list-none m-0 <%= 'ml-auto' if @admin_site %>">
       <%= first_page_tag %>
       <%= prev_page_tag %>
 
-      <li class="page-item">
-        <span >Page: </span>
+      <li>
+        <span>Page: </span>
       </li>
-      <li class="page-item">
-        <%= tag.input type: "number", class: "page-link page-jump-input", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump change->page-jump#jump" }, autocomplete: "off" %>
+      <li>
+        <%= tag.input type: "number", class: "-mt-1 w-12 h-[1.95rem] text-center text-primary bg-white border border-primary rounded px-0 shadow-none cursor-text placeholder:text-primary placeholder:opacity-60 [appearance:textfield] [-moz-appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none", value: current_page, min: 1, max: total_pages, data: { controller: "page-jump", action: "keydown.enter->page-jump#jump change->page-jump#jump" }, autocomplete: "off" %>
       </li>
-      <li class="page-item disabled">
+      <li>
         <span> of <%= total_pages %></span>
       </li>
       <%= next_page_tag %>
