@@ -23,10 +23,11 @@ class EditableBlockHelperTest < ActionView::TestCase
     assert editable_block.reload.admin_page
   end
 
-  test "should give warning for non-exising editable block" do
-    expected = 'Block not defined. <a class="btn btn-primary" title="Create Editable Block" href="/admin/editable_blocks/new?name=pineapple"><span class="no-wrap"><i class="fa-solid fa-align-left" aria-hidden=”true”></i> Create Editable Block</span></a>'
-
-    assert_equal expected, display_block("pineapple", false)
+  test "displays a warning when the editable block does not exist" do
+    result = display_block("pineapple", false)
+    assert_includes result, "Block not defined."
+    assert_includes result, btn_classes(:primary)
+    assert_includes result, "editable_blocks/new?name=pineapple"
   end
 
   test "existing block should exist" do

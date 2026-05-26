@@ -15,7 +15,7 @@ module LinkHelper
 
   def link_to_add(form, attribute_name, object_name: nil, html_class: nil)
     object_name ||= format_class_name(attribute_name.to_s, true)
-    html_class ||= "btn btn-secondary #{object_name.parameterize.underscore}_add_button"
+    html_class ||= "#{btn_classes(:secondary)} #{object_name.parameterize.underscore}_add_button"
 
     button = button_tag(add_button_text(object_name), type: "button", class: html_class,
                         data: { action: "nested-form#add" })
@@ -28,7 +28,7 @@ module LinkHelper
   end
 
   def link_to_remove(form, link_text: nil, html_class: nil)
-    html_class ||= "btn btn-danger"
+    html_class ||= btn_classes(:danger)
 
     button_tag(remove_button_text(link_text), type: "button", class: html_class,
                data: { action: "nested-form#remove" })
@@ -42,7 +42,7 @@ module LinkHelper
     generate_icon_prefix("trash", text_with_span)
   end
 
-  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
+  def get_link(object, action, link_text: nil, prefix: nil, append_name: nil, link_target: nil, condition: nil, additional_condition: true, return_link_text_if_no_permission: nil, html_class: nil, variant: nil, wrap_tag: nil, admin: true, confirm: nil, detail: nil, type_confirm: nil, http_method: nil, title: nil, anchor: nil, target: nil, no_wrap: false, query_params: {})
     raise(ArgumentError, "The object is nil") if object.nil?
 
     # Make sure the action is a symbol. This works even if the action is already a symbol.
@@ -93,15 +93,15 @@ module LinkHelper
 
     link_target = get_default_link_target(object, action, namespace, anchor, query_params) if link_target.nil?
     http_method = get_default_http_method(action) if http_method.nil?
-    html_class = get_default_html_class(action) if html_class.nil?
-
-    html_class = "#{html_class} no-wrap" if no_wrap
+    resolved_variant = variant || get_default_variant(action)
+    button_class = html_class || (resolved_variant ? ButtonComponent.classes_for(variant: resolved_variant) : "")
+    button_class = "#{button_class} no-wrap".strip if no_wrap
 
     # Removes prepending pencil tags and such.
     title ||= strip_tags(link_text).strip
 
     if http_method.nil? || http_method == :get
-      link = link_to(link_text, link_target, class: html_class, data: (confirm_data || {}), title: title, target: target)
+      link = link_to(link_text, link_target, class: button_class, data: (confirm_data || {}), title: title, target: target)
     else
       confirm_message = confirm_data&.dig(:turbo_confirm)
       form_data = confirm_message.present? ? {
@@ -110,7 +110,7 @@ module LinkHelper
         confirm_message_value: confirm_message
       } : {}
       link = button_to(link_text.html_safe, link_target, method: http_method,
-                       class: html_class, title: title,
+                       class: button_class, title: title,
                        form: { style: "display:contents", data: form_data })
     end
 
@@ -132,12 +132,12 @@ module LinkHelper
   end
 
   def generate_icon_prefix(icon_name, prefix)
-    "<span class=\"no-wrap\"><i class=\"fa-solid fa-#{icon_name}\" aria-hidden=”true”></i> #{prefix}</span>".html_safe
+    "<span class=\"no-wrap\"><i class=\"fa-solid fa-#{icon_name}\" aria-hidden=\"true\"></i> #{prefix}</span>".html_safe
   end
 
   def view_page_on_main_site_button
     new_url = request.original_fullpath.delete_prefix("/admin")
-    link_to("View on Main Site", new_url, class: "btn btn-secondary") if new_url != request.original_fullpath
+    link_to("View on Main Site", new_url, class: btn_classes(:secondary)) if new_url != request.original_fullpath
   end
 
   def btn_classes(variant = :secondary, size = :md)
@@ -176,18 +176,13 @@ module LinkHelper
     link_text.to_s
   end
 
-  def get_default_html_class(action)
+  def get_default_variant(action)
     case action
-    when :show
-      ""
-    when :new
-      "btn btn-primary"
-    when :destroy, :reject, :mark_unsuccessful
-      "btn btn-danger"
-    when :approve, :mark_successful
-      "btn btn-success"
-    else
-      "btn btn-secondary"
+    when :show     then nil
+    when :new      then :primary
+    when :destroy, :reject, :mark_unsuccessful then :danger
+    when :approve, :mark_successful then :success
+    else :secondary
     end
   end
 
