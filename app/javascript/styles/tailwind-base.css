@@ -5,6 +5,7 @@
 @source "../../../app/views/**/*.erb";
 @source "../../../app/components/**/*.html.erb";
 @source "../../../app/components/**/*.rb";
+@source "../../../app/helpers/**/*.rb";
 @source "../controllers/**/*.js";
 @source "../../../config/initializers/**/*.rb";
 
