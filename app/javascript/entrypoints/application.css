@@ -1,10 +1,5 @@
 @import "../styles/tailwind-base.css";
 
-/* Icon fonts — loaded here to avoid FOUC */
-@import "@fortawesome/fontawesome-free/css/fontawesome.css";
-@import "@fortawesome/fontawesome-free/css/solid.css";
-@import "@fortawesome/fontawesome-free/css/brands.css";
-
 /* Tom-select */
 @import "tom-select/dist/css/tom-select.css";
 
