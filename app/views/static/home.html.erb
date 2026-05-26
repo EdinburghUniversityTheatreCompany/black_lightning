@@ -20,10 +20,10 @@
           <% else %>
             <% items = @events.collect { |event|
               buttons = tag.div(class: "flex gap-2 flex-wrap") do
-                concat link_to('View Details', event, class: 'btn btn-primary')
+                concat link_to('View Details', event, class: btn_classes(:primary))
                 if event.pretix_shown?
                   concat tag.button("Buy Tickets",
-                    class: "btn btn-success",
+                    class: btn_classes(:success),
                     data: { action: "click->pretix-modal#open",
                             pretix_modal_slug_param: event.pretix_slug,
                             pretix_modal_name_param: event.name })

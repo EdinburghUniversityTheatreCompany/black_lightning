@@ -9,7 +9,7 @@
 <div data-controller="template-loader">
   <%= simple_horizontal_form_for(@call) do |f| %>
     <% content_for :extra_form_actions do %>
-      <button type="button" class="btn btn-secondary" data-action="click->template-loader#open">Load Template</button>
+      <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->template-loader#open">Load Template</button>
     <% end %>
 
     <%= render('shared/pages/form', f: f) do %>

@@ -2,12 +2,12 @@
 
 <%= render Admin::ModalComponent.new(id: "template_modal", title: header, dialog_data: { template_loader_target: "dialog" }) do |modal| %>
   <% modal.with_footer do %>
-    <%= get_link(template_model, :index, link_text: "Edit Templates", html_class: "btn btn-secondary") %>
+    <%= get_link(template_model, :index, link_text: "Edit Templates", variant: :secondary) %>
     <div class="flex gap-2">
-      <button type="button" class="btn btn-secondary" data-action="click->template-loader#close">Close</button>
+      <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->template-loader#close">Close</button>
       <button type="button"
               id="template_load"
-              class="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              class="<%= btn_classes(:primary) %> disabled:opacity-50 disabled:cursor-not-allowed"
               data-template-loader-target="loadButton"
               disabled>Load Template</button>
     </div>

@@ -72,7 +72,7 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to 'Configure', admin_show_path(show, anchor: 'debt_settings'), class: 'btn btn-sm btn-primary' %>
+                  <%= link_to 'Configure', admin_show_path(show, anchor: 'debt_settings'), class: btn_classes(:primary, :sm) %>
                 </td>
               </tr>
               <% if show_debt_recommendation_details?(show) %>

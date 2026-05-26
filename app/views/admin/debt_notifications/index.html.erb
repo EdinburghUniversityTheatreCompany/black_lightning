@@ -12,7 +12,7 @@
 
 <% quick_actions = [] %>
 <% if can?(:debt_overview, Event) %>
-  <% quick_actions << link_to('Show Debt Overview', debt_overview_admin_events_path, class: 'btn btn-primary') %>
+  <% quick_actions << link_to('Show Debt Overview', debt_overview_admin_events_path, class: btn_classes(:primary)) %>
 <% end %>
 
 <%= render 'shared/pages/index', resource_class: Admin::DebtNotification, resources: @debt_notifications, content: render('index_results'), search_fields: search_fields,

@@ -7,8 +7,8 @@
   <% content_for :override_card_footer do %>
     <%- # You cannot use the form actions for this one. %>
     <div class="form-actions">
-      <%= f.button :submit, class: "btn btn-primary" %>
-      <%= get_link @show, :show, link_text: 'Back to Show', html_class: 'btn btn-secondary' %>
+      <%= f.button :submit, class: btn_classes(:primary) %>
+      <%= get_link @show, :show, link_text: 'Back to Show', variant: :secondary %>
     </div>
   <% end %>
 

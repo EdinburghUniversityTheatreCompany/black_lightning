@@ -1,7 +1,7 @@
 <%# locals: (object:, destroy_link_params: {}, index_link_params: {}) -%>
 <%# KEEP %>
 
-<%= get_link object, :edit, html_class: 'btn btn-primary' %>
+<%= get_link object, :edit, variant: :primary %>
 
 <%# Allows passing a whole replacement button (or '') to destroy_link_params to replace the button. %>
 <% if destroy_link_params.is_a?(Hash) %>

@@ -2,7 +2,7 @@
   <h1><%= t('.title') %></h1>
 </div>
 
-<p><%= link_to t('.new'), new_oauth_application_path, class: 'btn btn-success' %></p>
+<p><%= link_to t('.new'), new_oauth_application_path, class: btn_classes(:success) %></p>
 
 <table class="table table-striped">
   <thead>
@@ -27,7 +27,7 @@
         <%= application.confidential? ? t('doorkeeper.applications.index.confidentiality.yes') : t('doorkeeper.applications.index.confidentiality.no') %>
       </td>
       <td class="align-middle">
-        <%= link_to t('doorkeeper.applications.buttons.edit'), edit_oauth_application_path(application), class: 'btn btn-link' %>
+        <%= link_to t('doorkeeper.applications.buttons.edit'), edit_oauth_application_path(application), class: btn_classes(:link) %>
       </td>
       <td class="align-middle">
         <%= render 'delete_form', application: application %>

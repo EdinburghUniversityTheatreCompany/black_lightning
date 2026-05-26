@@ -11,7 +11,7 @@
     <%# Mobile toggle — hidden by default; controller shows it on mobile %>
     <button type="button"
             hidden
-            class="btn btn-sm ml-auto float-right"
+            class="<%= btn_classes(:secondary, :sm) %> ml-auto float-right"
             data-search-form-mobile-target="toggle"
             data-action="search-form-mobile#toggle">
       <i class="fas fa-filter"></i>
@@ -38,12 +38,12 @@
       </div>
 
       <div class="card-footer">
-        <%= f.button :button, class: 'btn btn-primary', name: 'commit' do %>
+        <%= f.button :button, class: btn_classes(:primary), name: 'commit' do %>
           <%= generate_icon_prefix('magnifying-glass', 'Search').html_safe %>
         <% end %>
 
         <% button_params.each do |key, params| %>
-          <%= f.submit(params[:action], class: 'btn btn-secondary') %>
+          <%= f.submit(params[:action], class: btn_classes(:secondary)) %>
         <% end %>
       </div>
     </div>

@@ -43,7 +43,7 @@
               <code class="bg-light"><%= uri %></code>
             </td>
             <td>
-              <%= link_to t('doorkeeper.applications.buttons.authorize'), oauth_authorization_path(client_id: @application.uid, redirect_uri: uri, response_type: 'code', scope: @application.scopes), class: 'btn btn-success', target: '_blank' %>
+              <%= link_to t('doorkeeper.applications.buttons.authorize'), oauth_authorization_path(client_id: @application.uid, redirect_uri: uri, response_type: 'code', scope: @application.scopes), class: btn_classes(:success), target: '_blank' %>
             </td>
           </tr>
         <% end %>
@@ -56,8 +56,8 @@
   <div class="col-span-12 md:col-span-4">
     <h3><%= t('.actions') %></h3>
 
-    <p><%= link_to t('doorkeeper.applications.buttons.edit'), edit_oauth_application_path(@application), class: 'btn btn-primary' %></p>
+    <p><%= link_to t('doorkeeper.applications.buttons.edit'), edit_oauth_application_path(@application), class: btn_classes(:primary) %></p>
 
-    <p><%= render 'delete_form', application: @application, submit_btn_css: 'btn btn-danger' %></p>
+    <p><%= render 'delete_form', application: @application, submit_btn_css: btn_classes(:danger) %></p>
   </div>
 </div>

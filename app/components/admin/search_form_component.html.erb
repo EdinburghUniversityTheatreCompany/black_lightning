@@ -7,7 +7,7 @@
     <%# Mobile toggle — hidden by default; controller shows it on mobile %>
     <button type="button"
             hidden
-            class="btn btn-sm btn-outline-secondary ml-auto"
+            class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> ml-auto"
             data-search-form-mobile-target="toggle"
             data-action="search-form-mobile#toggle">
       <i class="fas fa-filter"></i>
@@ -29,7 +29,7 @@
               <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
             </div>
 
-            <button type="button" class="btn btn-outline-secondary btn-sm w-100"
+            <button type="button" class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> w-100"
                     data-action="collapsible#toggle">
               <span class="when-closed">More <i class="fas fa-chevron-down"></i></span>
               <span class="when-open">Less <i class="fas fa-chevron-up"></i></span>
@@ -39,12 +39,12 @@
       </div>
 
       <div class="card-footer">
-        <%= f.button :button, class: "btn btn-primary", name: "commit" do %>
+        <%= f.button :button, class: ButtonComponent.classes_for(variant: :primary), name: "commit" do %>
           <%= helpers.generate_icon_prefix("magnifying-glass", "Search") %>
         <% end %>
 
         <% button_params.each do |_key, params| %>
-          <%= f.submit(params[:action], class: "btn btn-secondary") %>
+          <%= f.submit(params[:action], class: ButtonComponent.classes_for(variant: :secondary)) %>
         <% end %>
       </div>
     </div>

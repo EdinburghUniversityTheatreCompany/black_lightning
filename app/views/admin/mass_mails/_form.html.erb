@@ -3,7 +3,7 @@
 <%= simple_horizontal_form_for [:admin, @mass_mail] do |f| %>
   <% content_for :extra_form_actions do %>
     <% if @mass_mail.persisted? %>
-      <%= submit_tag :Send, name: 'send', class: "btn btn-primary", 
+      <%= submit_tag :Send, name: 'send', class: btn_classes(:primary),
                     data: { title: "Send Mass Mail",
                             confirm: """
                                     Are you sure you wish to continue? The mass mail will be send at the time specified.<br><br>

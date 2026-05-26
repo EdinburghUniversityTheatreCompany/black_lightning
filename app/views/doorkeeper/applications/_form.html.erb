@@ -52,8 +52,8 @@
 
   <div class="form-group grid grid-cols-1 sm:grid-cols-12 gap-x-4 mb-3">
     <div class="sm:col-span-10 sm:col-start-3">
-      <%= f.submit t('doorkeeper.applications.buttons.submit'), class: 'btn btn-primary' %>
-      <%= link_to t('doorkeeper.applications.buttons.cancel'), oauth_applications_path, class: 'btn btn-secondary' %>
+      <%= f.submit t('doorkeeper.applications.buttons.submit'), class: btn_classes(:primary) %>
+      <%= link_to t('doorkeeper.applications.buttons.cancel'), oauth_applications_path, class: btn_classes(:secondary) %>
     </div>
   </div>
 <% end %>

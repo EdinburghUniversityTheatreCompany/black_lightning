@@ -21,8 +21,8 @@
       </div>
 
       <div class="card-footer mt-3">
-        <%= link_to "Cancel", admin_user_path(@user), class: "btn btn-secondary" %>
-        <button type="submit" class="btn btn-primary">Preview Merge</button>
+        <%= link_to "Cancel", admin_user_path(@user), class: btn_classes(:secondary) %>
+        <button type="submit" class="<%= btn_classes(:primary) %>">Preview Merge</button>
       </div>
     <% end %>
   </div>

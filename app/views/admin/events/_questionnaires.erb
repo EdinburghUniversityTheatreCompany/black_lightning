@@ -11,8 +11,8 @@
             <tr>
               <%= get_link questionnaire, :answer, http_method: :get, html_class: '', append_name: true, wrap_tag: 'td' %>   
 
-              <%= get_link questionnaire, :show, prefix: 'View', append_name: cannot?(:answer, questionnaire), 
-                           html_class: ('btn btn-secondary' if can?(:answer, questionnaire)), wrap_tag: 'td' 
+              <%= get_link questionnaire, :show, prefix: 'View', append_name: cannot?(:answer, questionnaire),
+                           html_class: (btn_classes(:secondary) if can?(:answer, questionnaire)), wrap_tag: 'td'
               %>
 
               <%= get_link questionnaire, :edit, wrap_tag: 'td' %>
@@ -22,8 +22,8 @@
     </table>
 <% end %>
 
-<%= get_link Admin::Questionnaires::Questionnaire, :new, 
-             html_class: (questionnaires.empty? ? 'btn btn-secondary' : 'btn btn-primary'), 
+<%= get_link Admin::Questionnaires::Questionnaire, :new,
+             html_class: (questionnaires.empty? ? btn_classes(:secondary) : btn_classes(:primary)),
              link_target: new_admin_questionnaires_questionnaire_url(event_id: event.id), 
              additional_condition: event.end_date > Date.current 
 %>

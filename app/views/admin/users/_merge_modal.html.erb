@@ -216,11 +216,11 @@
 
     <div class="card-footer flex justify-between">
       <% if local_assigns[:in_modal] %>
-        <button type="button" class="btn btn-secondary" data-action="click->merge-modal#close">Cancel</button>
+        <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->merge-modal#close">Cancel</button>
       <% else %>
-        <%= link_to "Cancel", admin_user_path(target), class: "btn btn-secondary" %>
+        <%= link_to "Cancel", admin_user_path(target), class: btn_classes(:secondary) %>
       <% end %>
-      <button type="submit" class="btn btn-danger">Confirm Merge</button>
+      <button type="submit" class="<%= btn_classes(:danger) %>">Confirm Merge</button>
     </div>
   <% end %>
 </div>

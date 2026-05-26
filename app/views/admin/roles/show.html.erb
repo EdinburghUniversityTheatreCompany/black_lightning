@@ -13,7 +13,7 @@
       <% if can? :create, User %>
         Please add members from the membership activation page.
         <br>
-        <%= link_to 'Activate Membership', activate_admin_users_path, class: 'btn btn-primary' %>
+        <%= link_to 'Activate Membership', activate_admin_users_path, class: btn_classes(:primary) %>
       <% else %>
         You are not allowed to add members. Please ask the secretary to add new members.
       <% end %>
@@ -23,7 +23,7 @@
 
         <%= f.input :user_id, collection: User.order_by_last_name_first %>
 
-        <%= submit_tag "Add User to Role", class: 'btn btn-secondary' %>
+        <%= submit_tag "Add User to Role", class: btn_classes(:secondary) %>
       <% end %>
     <% end %>
   <% end %>
@@ -43,15 +43,15 @@
 
 <% content_for :extra_show_actions do %>
   <% if can?(:manage, Admin::Permission) && !Admin::Permission::EXCLUDED_ROLES.include?(@role.name) %>
-    <%= link_to "Permissions", permissions_admin_role_path(@role), class: "btn btn-secondary" %>
+    <%= link_to "Permissions", permissions_admin_role_path(@role), class: btn_classes(:secondary) %>
   <% end %>
 
-  <%= get_link @role, :archive, link_text: 'Archive Role', http_method: :put, html_class: 'btn btn-secondary',
+  <%= get_link @role, :archive, link_text: 'Archive Role', http_method: :put, variant: :secondary,
       confirm: "Archiving #{@role.name}", detail: "This will create a new role labelled with the current academic year ('#{@role.name} #{academic_year_shorthand}') and will move all users to it, while leaving all permissions on this role." %>
 
   <%# Only show the purge button if this role can be purged. %>
   <% if !Role::NON_PURGEABLE_ROLES.include?(@role.name.downcase.strip) %>
-    <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, html_class: 'btn btn-danger',
+    <%= get_link @role, :purge, link_text: 'Remove All Users From Role', http_method: :delete, variant: :danger,
       confirm: "Removing users from #{@role.name}", detail: "Are you sure you want to remove all users from the Role '#{@role.name}'?" %>
   <% end %>
 <% end %>

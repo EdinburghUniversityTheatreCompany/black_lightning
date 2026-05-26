@@ -7,7 +7,7 @@
   <% headers = [:name, 'Actions'] %>
   <% field_sets = users.map { |user| { fields: [
     user,
-    button_to('Remove', remove_url_helper.call(user.id), method: :delete, class: 'btn btn-sm btn-danger',
+    button_to('Remove', remove_url_helper.call(user.id), method: :delete, class: btn_classes(:danger, :sm),
       form: { style: "display:contents", data: { controller: "confirm", action: "submit->confirm#confirm", confirm_message_value: "Remove #{user.name} from this role?" } })
   ] } } %>
 <% else %>

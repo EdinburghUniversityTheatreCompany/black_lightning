@@ -11,12 +11,12 @@
 <% if request.remote_ip == "79.77.20.249" %>
   <%= button_tag "Print Receipt",
       type: "button",
-      class: "btn btn-primary",
+      class: btn_classes(:primary),
       data: { controller: "print", print_url_value: "http://192.168.1.254:8179/print/#{@card.card_number}", action: "click->print#send" } %>
 <% end %>
 <%= button_tag "Print Stall Receipt",
     type: "button",
-    class: "btn btn-primary",
+    class: btn_classes(:primary),
     data: { controller: "print", print_url_value: "http://localhost:5000/print/#{@card.card_number}", action: "click->print#send" } %>
 
-<%= link_to "Print Card", admin_membership_card_generate_card_path(@card), class: "btn btn-secondary" %>
+<%= link_to "Print Card", admin_membership_card_generate_card_path(@card), class: btn_classes(:secondary) %>

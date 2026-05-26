@@ -4,7 +4,7 @@
 } %>
 
 <% content_for :extra_show_actions do %>
-  <%= get_link @questionnaire, :answer, http_method: :get, html_class: 'btn btn-primary' %>
+  <%= get_link @questionnaire, :answer, http_method: :get, variant: :primary %>
 <% end %>
 
 <%= render('shared/pages/show', object: @questionnaire, fields: fields) %>

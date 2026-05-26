@@ -5,7 +5,7 @@
 
 <turbo-frame id="<%= dom_id(job, :sign_up) %>">
   <%= button_to sign_up_text, admin_staffing_sign_up_path(job), method: :put,
-      class: "btn btn-secondary staffing-sign-up",
+      class: "#{btn_classes(:secondary)} staffing-sign-up",
       form: {
         data: {
           turbo: true,

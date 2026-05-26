@@ -1,6 +1,6 @@
 <%= render('shared/quick_actions_card') do %>
-  <%= get_link Techie, :index, html_class: 'btn btn-primary' %>
-  <%= get_link Techie, :new, html_class: 'btn btn-secondary' %>
+  <%= get_link Techie, :index, variant: :primary %>
+  <%= get_link Techie, :new, variant: :secondary %>
 <% end %>
 
 <div class="card mt-3">
@@ -13,9 +13,9 @@
             label: false,
             wrapper_html: { class: 'mb-0' },
             input_html: { style: 'min-width: 220px' } %>
-      <%= f.submit 'Search', class: 'btn btn-secondary' %>
+      <%= f.submit 'Search', class: btn_classes(:secondary) %>
       <% if @selected_id.present? %>
-        <%= link_to 'Clear', tree_admin_techies_path, class: 'btn btn-secondary' %>
+        <%= link_to 'Clear', tree_admin_techies_path, class: btn_classes(:secondary) %>
       <% end %>
     <% end %>
   </div>

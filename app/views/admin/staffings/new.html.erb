@@ -6,7 +6,7 @@
 <div data-controller="template-loader">
   <%= simple_horizontal_form_for @staffing do |f| %>
     <% content_for :extra_form_actions do %>
-      <button type="button" class="btn btn-secondary" data-action="click->template-loader#open">Load Template</button>
+      <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->template-loader#open">Load Template</button>
     <% end %>
 
     <%= render('shared/pages/form', f: f) do %>
@@ -14,7 +14,7 @@
 
       <div id="dates_container" data-controller="staffing-date-fields">
         <h3>Dates</h3>
-        <a class="btn btn-secondary" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</a>
+        <a class="<%= btn_classes(:secondary) %>" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</a>
 
         <div style="display: none" class="control-group datetime" data-staffing-date-fields-target="blueprint">
           <div class="flex flex-wrap items-center gap-2">
@@ -25,7 +25,7 @@
               <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" id="end_time">
             </div>
             <div class="shrink-0">
-              <a class="btn btn-danger mb-2"><%= remove_button_text %></a>
+              <a class="<%= btn_classes(:danger) %> mb-2"><%= remove_button_text %></a>
             </div>
           </div>
         </div>

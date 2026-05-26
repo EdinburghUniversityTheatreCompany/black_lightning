@@ -30,7 +30,7 @@
   <div class="card-footer flex justify-between items-center">
     <%= link_to "View all opportunities →", get_involved_opportunities_path %>
     <% if can?(:create, Opportunity) %>
-      <%= link_to "Submit an Opportunity", new_get_involved_opportunity_path, class: "btn btn-primary btn-sm" %>
+      <%= link_to "Submit an Opportunity", new_get_involved_opportunity_path, class: btn_classes(:primary, :sm) %>
     <% end %>
   </div>
 </div>

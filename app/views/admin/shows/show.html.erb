@@ -1,5 +1,5 @@
 <% content_for :extra_show_actions do %>
-    <%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), html_class: 'btn btn-secondary' %>
+    <%= get_link Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show), variant: :secondary %>
 
     <%= get_link Admin::Feedback, :index, link_text: 'Show Feedback', link_target: admin_show_feedbacks_path(@show), 
                 additional_condition: @show.feedbacks.any? 

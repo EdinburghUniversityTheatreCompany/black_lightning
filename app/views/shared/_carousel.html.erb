@@ -28,10 +28,10 @@
             <% if item[:url].present? || item[:pretix_slug].present? %>
               <div class="flex gap-2 justify-center flex-wrap">
                 <% if item[:url].present? %>
-                  <%= link_to "Details", item[:url], class: "btn btn-primary btn-sm" %>
+                  <%= link_to "Details", item[:url], class: btn_classes(:primary, :sm) %>
                 <% end %>
                 <% if item[:pretix_slug].present? %>
-                  <button class="btn btn-success btn-sm" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>" data-pretix-modal-name-param="<%= item[:title] %>">
+                  <button class="<%= btn_classes(:success, :sm) %>" data-action="click->pretix-modal#open" data-pretix-modal-slug-param="<%= item[:pretix_slug] %>" data-pretix-modal-name-param="<%= item[:title] %>">
                     Buy Tickets
                   </button>
                 <% end %>

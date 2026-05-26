@@ -26,7 +26,7 @@
                 <% if version.event != "create" %>
                   <%= link_to "View changes",
                       admin_editable_block_version_history_path(@parent_record, version),
-                      class: "btn btn-sm btn-secondary" %>
+                      class: btn_classes(:secondary, :sm) %>
                 <% end %>
               </td>
             </tr>

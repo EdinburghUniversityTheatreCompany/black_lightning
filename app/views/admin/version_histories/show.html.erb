@@ -1,8 +1,8 @@
 <%= render('shared/quick_actions_card') do %>
   <%= link_to "Back to History",
       admin_editable_block_version_histories_path(@parent_record),
-      class: "btn btn-secondary" %>
-  <%= get_link @parent_record, :show, link_text: "View", html_class: "btn btn-secondary" %>
+      class: btn_classes(:secondary) %>
+  <%= get_link @parent_record, :show, link_text: "View", variant: :secondary %>
 <% end %>
 
 <div class="card">

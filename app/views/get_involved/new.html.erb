@@ -20,8 +20,8 @@
       </div>
 
       <div class="form-actions flex gap-2">
-        <%= f.button :submit, "Submit Opportunity", class: "btn btn-primary" %>
-        <%= link_to "Cancel", get_involved_opportunities_path, class: "btn btn-secondary" %>
+        <%= f.button :submit, "Submit Opportunity", class: btn_classes(:primary) %>
+        <%= link_to "Cancel", get_involved_opportunities_path, class: btn_classes(:secondary) %>
       </div>
   <% end %>
 </div>

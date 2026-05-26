@@ -10,7 +10,7 @@
       <%= render 'shared/image', image: @user.avatar, variant: square_thumb_variant, proxy: true, eager_load: false, image_options: { class: "img-thumbnail zoomable float-right ml-3 mb-2" } %>
     <% end %>
     <%= render_markdown @user.bio %>
-    <%= get_link @user, :edit, html_class: 'btn btn-primary' %>
+    <%= get_link @user, :edit, variant: :primary %>
   </div>
 </div>
 

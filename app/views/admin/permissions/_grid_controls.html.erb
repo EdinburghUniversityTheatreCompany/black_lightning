@@ -1,5 +1,5 @@
 <div class="px-4 py-3 border-t border-gray-200 flex items-center gap-3">
-  <%= submit_tag("Update", class: "btn btn-secondary") %>
+  <%= submit_tag("Update", class: btn_classes(:secondary)) %>
   <span class="text-sm text-gray-500 hidden" data-admin--permissions-grid-target="changeCount">
     <span data-admin--permissions-grid-target="changeCountText"></span>
   </span>
@@ -18,8 +18,8 @@
     </div>
     <div class="p-4 overflow-auto flex-1" data-admin--permissions-grid-target="changeList"></div>
     <div class="flex items-center gap-2 justify-end px-4 py-3 border-t border-gray-200">
-      <button type="button" class="btn btn-secondary" data-action="click->admin--permissions-grid#cancelSubmit">Cancel</button>
-      <button type="button" class="btn btn-success" data-action="click->admin--permissions-grid#approveSubmit">Apply Changes</button>
+      <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->admin--permissions-grid#cancelSubmit">Cancel</button>
+      <button type="button" class="<%= btn_classes(:success) %>" data-action="click->admin--permissions-grid#approveSubmit">Apply Changes</button>
     </div>
   </div>
 </div>

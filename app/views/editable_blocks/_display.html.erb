@@ -2,4 +2,4 @@
 
 <%= @editable_block.cached_rendered_content.html_safe %>
 
-<%= get_link @editable_block, :edit, html_class: 'btn btn-secondary', additional_condition: display_edit %>
+<%= get_link @editable_block, :edit, variant: :secondary, additional_condition: display_edit %>

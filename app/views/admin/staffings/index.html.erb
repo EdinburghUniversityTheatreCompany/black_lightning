@@ -7,16 +7,16 @@
   <div class="card-body">
     <div class="input-group">
       <input type="text" class="form-control" value="<%= https_url %>" id="staffings-calendar-url" readonly autocomplete="off">
-      <button class="btn btn-secondary" type="button"
+      <button class="<%= btn_classes(:secondary) %>" type="button"
               onclick="navigator.clipboard.writeText('<%= j(https_url) %>');
                        this.textContent='Copied!';
                        setTimeout(() => this.textContent='Copy', 2000)">
         Copy
       </button>
-      <%= link_to "Subscribe", webcal_url, class: "btn btn-primary" %>
+      <%= link_to "Subscribe", webcal_url, class: btn_classes(:primary) %>
       <%= button_to "Regenerate link", regenerate_calendar_token_path,
                   method: :post,
-                  class: "btn btn-danger",
+                  class: btn_classes(:danger),
                   form: {
                     style: "display:contents",
                     data: {

@@ -15,7 +15,7 @@
 
       <%= f.input :is_member, as: :fake_checkbox, label: 'Make member', hint: 'Make this user a member immediately' %>
 
-      <%= f.button :submit, "Send Profile Completion Email", class: 'btn btn-primary' %>
+      <%= f.button :submit, "Send Profile Completion Email", class: btn_classes(:primary) %>
     <% end %>
   </div>
 </div>
@@ -33,6 +33,6 @@
   <div class="card-body">
     <h3>Bulk Import</h3>
     <p class="mb-2">Need to activate many members at once? Import from a spreadsheet or paste data directly.</p>
-    <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: "btn btn-primary" %>
+    <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: btn_classes(:primary) %>
   </div>
 </div>

@@ -16,7 +16,7 @@
     <% else %>
       <%= get_link(
         debt, :convert_to_staffing_debt,
-        html_class: 'btn btn-secondary', http_method: :put, 
+        variant: :secondary, http_method: :put,
         confirm: "Converting the Maintenance Debt to Staffing Debt", 
         detail: "Are you sure you want to convert #{debt.user.name current_user}'s Maintenance Debt into a Staffing Debt?" 
       ) %>
@@ -31,7 +31,7 @@
     <% else %>
       <%= get_link(
         debt, :convert_to_maintenance_debt,
-        html_class: 'btn btn-secondary', http_method: :put, 
+        variant: :secondary, http_method: :put,
         confirm: "Converting the Staffing Debt to Maintenance Debt", 
         detail: "Are you sure you want to convert #{debt.user.name current_user}'s Staffing Debt into a Maintenance Debt?"
       ) %>

@@ -55,7 +55,7 @@
                 <td>
                   <% target = dup[:users].first %>
                   <% source = dup[:users].second %>
-                  <%= link_to "Merge", merge_admin_user_path(target, source_user_id: source.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
+                  <%= link_to "Merge", merge_admin_user_path(target, source_user_id: source.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
                 </td>
               </tr>
             <% end %>
@@ -107,8 +107,8 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
-                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
+                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: btn_classes(:secondary, :sm) %>
                 </td>
               </tr>
             <% end %>
@@ -160,8 +160,8 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
-                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
+                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: btn_classes(:secondary, :sm) %>
                 </td>
               </tr>
             <% end %>
@@ -213,8 +213,8 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
-                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
+                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: btn_classes(:secondary, :sm) %>
                 </td>
               </tr>
             <% end %>
@@ -266,8 +266,8 @@
                   <% end %>
                 </td>
                 <td>
-                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: "btn btn-sm btn-warning", data: { turbo_frame: "merge-modal" } %>
-                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: "btn btn-sm btn-secondary" %>
+                  <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
+                  <%= button_to "Not Duplicates", mark_not_duplicate_admin_duplicates_path(user_id: u1.id, other_user_id: u2.id), method: :post, class: btn_classes(:secondary, :sm) %>
                 </td>
               </tr>
             <% end %>

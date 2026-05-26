@@ -1,46 +1,5 @@
 @layer components {
 
-  /* Bootstrap button compat */
-  .btn {
-    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium cursor-pointer no-underline transition-colors;
-  }
-
-  .btn-primary {
-    @apply bg-white border border-primary text-primary hover:bg-primary hover:text-white;
-  }
-
-  .btn-secondary {
-    @apply bg-white border border-slate-400 text-slate-600 hover:bg-slate-50;
-  }
-
-  .btn-danger {
-    @apply bg-wine border-0 text-white hover:bg-wine-dark;
-  }
-
-  .btn-success {
-    @apply bg-green-600 border-0 text-white hover:bg-green-700;
-  }
-
-  .btn-warning {
-    @apply bg-yellow-500 border-0 text-white hover:bg-yellow-600;
-  }
-
-  .btn-info {
-    @apply bg-blue-500 border-0 text-white hover:bg-blue-600;
-  }
-
-  .btn-link {
-    @apply bg-transparent border-0 text-primary underline hover:text-primary-dark px-0;
-  }
-
-  .btn-sm {
-    @apply text-xs px-2 py-1;
-  }
-
-  .btn-lg {
-    @apply text-base px-4 py-2;
-  }
-
   /* Bootstrap card compat */
   .card {
     @apply bg-white rounded border border-gray-200 mb-4;

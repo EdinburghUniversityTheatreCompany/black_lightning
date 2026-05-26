@@ -1,5 +1,5 @@
 <%= render('shared/quick_actions_card') do %>
-  <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: "btn btn-secondary" %>
+  <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: btn_classes(:secondary) %>
 <% end %>
 
 <% total = @import.rows.size %>
@@ -266,8 +266,8 @@
 
   <div class="card">
     <div class="card-footer flex justify-between">
-      <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: "btn btn-secondary" %>
-      <%= f.submit "Confirm Import", class: "btn btn-success" %>
+      <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: btn_classes(:secondary) %>
+      <%= f.submit "Confirm Import", class: btn_classes(:success) %>
     </div>
   </div>
 <% end %>
