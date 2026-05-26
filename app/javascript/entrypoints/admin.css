@@ -1,6 +1,4 @@
-@import "tailwindcss";
-@plugin "@tailwindcss/forms";
-@plugin "@tailwindcss/typography";
+@import "../styles/tailwind-base.css";
 
 /* Icon font and tom-select — imported here (not via JS) to avoid FOUC on page load */
 /* Hide native selects until TomSelect initialises them (it sets display:none on them anyway) */
@@ -17,14 +15,6 @@ select.simple-select2 {
 
 /* dropzone, fancybox, and leaflet CSS are loaded dynamically
    by their respective Stimulus controllers */
-
-@source "../../../app/views/**/*.erb";
-@source "../../../app/components/**/*.html.erb";
-@source "../../../app/components/**/*.rb";
-@source "../controllers/**/*.js";
-@source "../../../config/initializers/**/*.rb";
-
-@import "../styles/theme.css";
 
 @theme {
   --color-sidebar-bg: #343a40;

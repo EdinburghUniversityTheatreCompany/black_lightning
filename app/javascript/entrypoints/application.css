@@ -1,6 +1,4 @@
-@import "tailwindcss";
-@plugin "@tailwindcss/forms";
-@plugin "@tailwindcss/typography";
+@import "../styles/tailwind-base.css";
 
 /* Icon fonts — loaded here to avoid FOUC */
 @import "@fortawesome/fontawesome-free/css/fontawesome.css";
@@ -10,19 +8,11 @@
 /* Tom-select */
 @import "tom-select/dist/css/tom-select.css";
 
-
 /* Bootstrap compatibility shims — maps Bootstrap class names to Tailwind utilities */
 @import "../styles/bootstrap_compat.css";
 
 /* dropzone, fancybox, and leaflet CSS are loaded dynamically
    by their respective Stimulus controllers */
-
-/* Tailwind source scanning — needed so Vite picks up classes used in views/components */
-@source "../../../app/views/**/*.erb";
-@source "../../../app/components/**/*.html.erb";
-@source "../../../app/components/**/*.rb";
-@source "../controllers/**/*.js";
-@source "../../../config/initializers/**/*.rb";
 
 @utility container {
   margin-left: auto;
@@ -36,8 +26,6 @@
   @media (min-width: 1200px) { max-width: 1140px; }
   @media (min-width: 1400px) { max-width: 1320px; }
 }
-
-@import "../styles/theme.css";
 
 /* ============================================================
    Public site global styles

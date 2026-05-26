@@ -1,3 +1,5 @@
+@import "../styles/tailwind-base.css";
+
 @import "@fortawesome/fontawesome-free/css/fontawesome.css";
 @import "@fortawesome/fontawesome-free/css/solid.css";
 @import "@fortawesome/fontawesome-free/css/brands.css";
@@ -47,7 +49,7 @@ a:hover {
 }
 
 label {
-    display: inline-block;
+    display: block;
     margin-bottom: 0.5rem;
 }
 
@@ -164,7 +166,7 @@ fieldset {
 
 /* Buttons */
 .btn {
-    display: inline-block;
+    display: block;
     font-weight: 400;
     color: #212529;
     text-align: center;
