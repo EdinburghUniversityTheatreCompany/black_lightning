@@ -26,45 +26,54 @@ If you learn something about the project that would be useful context for other 
 ## URL as state
 Always maintain the URL as state with readable parameters where possible for GET actions.
 
-## Link Helper
+## Button Styling
 
-Always use the link helper for links, including external and non-model links. this keeps styling consistent
+`ButtonComponent` (`app/components/button_component.rb`) is the single source of truth for all button styles. **Never use Bootstrap `btn btn-*` classes** — those shims have been removed.
+
+### Variants: `:primary`, `:secondary`, `:danger`, `:success`, `:warning`, `:info`, `:link`
+### Sizes: `:sm`, `:md` (default), `:lg`
+
+### How to render a button
+
+**Model resource links — use `get_link` (handles permissions + path generation):**
+```erb
+<%= get_link(@user, :edit) %>
+<%= get_link(@user, :destroy) %>
+<%= get_link(User, :new) %>
+<%# Override variant explicitly %>
+<%= get_link(@user, :show, variant: :primary) %>
+<%# Custom link target for nested routes %>
+<%= get_link(Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show)) %>
+```
+
+**Non-model links — use `link_to` with `btn_classes`:**
+```erb
+<%= link_to "Cancel", some_path, class: btn_classes(:secondary) %>
+<%= link_to "Import", new_admin_membership_import_path, class: btn_classes(:primary, :sm) %>
+```
+
+**Form submits — use `btn_classes`:**
+```erb
+<%= f.submit "Save", class: btn_classes(:primary) %>
+<%= f.button :submit, "Agree", class: btn_classes(:success) %>
+```
+
+**Inside ViewComponent templates — use `ButtonComponent.classes_for` directly** (components don't get helpers auto-included):
+```erb
+<%= link_to "Cancel", @cancel_path, class: ButtonComponent.classes_for(variant: :secondary) %>
+<%= f.submit "Save", class: ButtonComponent.classes_for(variant: :primary, size: :sm) %>
+```
+
+**To change a colour or add a variant, edit only `ButtonComponent::VARIANT_CLASSES`.**
+
+## Link Helper
 
 **Use `get_link` from `LinkHelper` for button-style links to model resources.**
 
 The `get_link` helper provides:
-- Consistent styling based on action type
+- Consistent styling via `ButtonComponent` based on action type (auto-detected)
 - Automatic CanCanCan permission checking
 - Automatic path generation for model resources
-
-### Usage Examples
-
-```erb
-<%# For model class actions (index, new) - pass the Class %>
-<%= get_link(User, :index, link_text: "Back to Users") %>
-<%= get_link(User, :new) %>
-<%= get_link(Admin::Questionnaires::Questionnaire, :new) %>
-
-<%# For model instance actions (show, edit, destroy) - pass the instance %>
-<%= get_link(@user, :edit) %>
-<%= get_link(@user, :destroy) %>
-<%= get_link(@user, :show) %>
-
-<%# With custom options %>
-<%= get_link(@user, :show, link_text: "View Profile", html_class: "btn btn-lg btn-primary") %>
-
-<%# With custom link target (for nested routes or non-standard paths) %>
-<%= get_link(Admin::Feedback, :new, link_text: "Submit Feedback", link_target: new_admin_show_feedback_path(@show)) %>
-```
-
-### When to use plain `link_to`
-
-
-```erb
-<%# Non-model controller - use link_to with explicit path and class %>
-<%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: "btn btn-primary" %>
-<%= link_to "Cancel", new_admin_membership_import_path, class: "btn btn-secondary" %>
-```
 
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
