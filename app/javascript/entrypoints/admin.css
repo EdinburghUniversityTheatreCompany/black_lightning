@@ -19,6 +19,9 @@ select.simple-select2 {
 
 @import "../styles/bootstrap_compat.css";
 
+/* Styles shared with the public site entrypoint */
+@import "../styles/shared.css";
+
 @layer components {
   /* AdminLTE card color variants — admin-only */
   .card-danger>.card-header {
@@ -72,22 +75,6 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   color: white !important;
 }
 
-.turbo-progress-bar {
-  background-color: var(--color-primary);
-}
-
-[data-controller="collapsible"] .when-open {
-  display: none;
-}
-
-[data-controller="collapsible"].is-open .when-closed {
-  display: none;
-}
-
-[data-controller="collapsible"].is-open .when-open {
-  display: inline;
-}
-
 /* On mobile: force the inner search collapse open and hide its toggle */
 @media (max-width: 767.98px) {
   .search-form-inner-collapse [data-collapsible-target="content"] {
@@ -97,53 +84,6 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   .search-form-inner-collapse button[data-action*="collapsible#toggle"] {
     display: none !important;
   }
-}
-
-/* Leaflet map container default dimensions */
-.leaflet-container {
-  height: 400px;
-  width: 100%;
-}
-
-/* Markdown-rendered content */
-.markdown-body>p:last-child {
-  margin-bottom: 0;
-}
-
-.captioned-image {
-  max-width: 192px;
-  font-size: smaller;
-}
-
-.captioned-image p:last-child {
-  margin: 0;
-}
-
-img.float-left,
-img.float-right {
-  max-width: 192px;
-  height: auto;
-}
-
-.carousel-image-wrapper {
-  overflow: hidden;
-  display: block;
-}
-
-.carousel-image-wrapper img,
-.carousel-image-wrapper a {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.carousel-image-wrapper img {
-  object-fit: cover;
-}
-
-.carousel-image-wrapper.carousel-image-wrapper--contain img {
-  object-fit: contain;
-  background: transparent;
 }
 
 /* Permissions grid — changed cell highlight */

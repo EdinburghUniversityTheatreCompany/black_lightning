@@ -6,6 +6,9 @@
 /* Bootstrap compatibility shims — maps Bootstrap class names to Tailwind utilities */
 @import "../styles/bootstrap_compat.css";
 
+/* Styles shared with the admin entrypoint */
+@import "../styles/shared.css";
+
 /* dropzone, fancybox, and leaflet CSS are loaded dynamically
    by their respective Stimulus controllers */
 
@@ -62,10 +65,6 @@ footer a,
   color: white !important;
 }
 
-.turbo-progress-bar {
-  background-color: var(--color-primary);
-}
-
 /* Public navbar branding text — centred at lg+ breakpoints like Bootstrap's text-lg-center */
 .bedlam-nav-text {
   @apply text-white font-bold;
@@ -84,36 +83,6 @@ footer a,
 }
 
 /* ============================================================
-   Leaflet map
-   ============================================================ */
-.leaflet-container {
-  height: 400px;
-  width: 100%;
-}
-
-/* ============================================================
-   Markdown-rendered content
-   ============================================================ */
-.markdown-body > p:last-child {
-  margin-bottom: 0;
-}
-
-.captioned-image {
-  max-width: 192px;
-  font-size: smaller;
-}
-
-.captioned-image p:last-child {
-  margin: 0;
-}
-
-img.float-left,
-img.float-right {
-  max-width: 192px;
-  height: auto;
-}
-
-/* ============================================================
    General utility classes (from shared_additions)
    ============================================================ */
 .no-wrap {
@@ -122,30 +91,6 @@ img.float-right {
 
 .center {
   text-align: center;
-}
-
-/* ============================================================
-   Carousel image wrapper (shared with admin via shared_additions.scss)
-   ============================================================ */
-.carousel-image-wrapper {
-  overflow: hidden;
-  display: block;
-}
-
-.carousel-image-wrapper img,
-.carousel-image-wrapper a {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.carousel-image-wrapper img {
-  object-fit: cover;
-}
-
-.carousel-image-wrapper.carousel-image-wrapper--contain img {
-  object-fit: contain;
-  background: transparent;
 }
 
 /* Carousel caption card — z-index so it sits above .carousel-indicators */
@@ -167,21 +112,6 @@ img.float-right {
   .search-form-inner-collapse .collapse {
     display: block !important;
   }
-}
-
-/* ============================================================
-   Collapsible Stimulus controller state classes
-   ============================================================ */
-[data-controller="collapsible"] .when-open {
-  display: none;
-}
-
-[data-controller="collapsible"].is-open .when-closed {
-  display: none;
-}
-
-[data-controller="collapsible"].is-open .when-open {
-  display: inline;
 }
 
 /* ============================================================
