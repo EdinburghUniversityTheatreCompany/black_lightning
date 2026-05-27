@@ -23,26 +23,6 @@ select.simple-select2 {
 @import "../styles/shared.css";
 
 @layer components {
-  /* AdminLTE card color variants — admin-only */
-  .card-danger>.card-header {
-    @apply bg-red-600 text-white border-red-600;
-  }
-
-  .card-success>.card-header {
-    @apply bg-green-600 text-white border-green-600;
-  }
-
-  .card-warning>.card-header {
-    @apply bg-yellow-500 text-white border-yellow-500;
-  }
-
-  .card-info>.card-header {
-    @apply bg-blue-500 text-white border-blue-500;
-  }
-
-  .card-primary>.card-header {
-    @apply bg-primary text-white border-primary;
-  }
 
   /* Sidebar collapsed state — !important needed to override the flex utility on the sidebar element */
   .sidebar-collapsed {
@@ -65,16 +45,6 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   @apply text-primary hover:text-primary-dark;
 }
 
-/* Links inside primary-colored backgrounds (footer, etc.) must stay white */
-.bg-primary a,
-.card-danger>.card-header a,
-.card-success>.card-header a,
-.card-warning>.card-header a,
-.card-info>.card-header a,
-.card-primary>.card-header a {
-  color: white !important;
-}
-
 /* On mobile: force the inner search collapse open and hide its toggle */
 @media (max-width: 767.98px) {
   .search-form-inner-collapse [data-collapsible-target="content"] {
@@ -88,11 +58,13 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
 
 /* Permissions grid — changed cell highlight */
 td.permission-changed {
-  background-color: rgb(146, 193, 255) !important; /* !important overrides table-hover */
+  background-color: rgb(146, 193, 255) !important;
+  /* !important overrides table-hover */
 }
 
 td.permission-changed input[type="checkbox"] {
-  accent-color: #3b82f6; /* blue-500 */
+  accent-color: #3b82f6;
+  /* blue-500 */
 }
 
 /* Version diff output (diffy gem) */
