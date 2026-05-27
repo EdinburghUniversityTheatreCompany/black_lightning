@@ -9,6 +9,6 @@
 
 <%= render('shared/pages/show', object: @questionnaire, fields: fields) %>
 
-<%= render Admin::CardComponent.new(title: "Questions", flush: true) do %>
+<%= render CardComponent.new(title: "Questions", flush: true) do %>
   <%= render Admin::QuestionsAndAnswersComponent.new(answers: @questionnaire.answers, flush: true) %>
 <% end %>

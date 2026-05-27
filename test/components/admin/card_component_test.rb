@@ -2,7 +2,7 @@ require "test_helper"
 
 class Admin::CardComponentTest < ViewComponent::TestCase
   test "renders title" do
-    render_inline Admin::CardComponent.new(title: "My Card") do
+    render_inline CardComponent.new(title: "My Card") do
       "<p>Content</p>"
     end
 
@@ -10,7 +10,7 @@ class Admin::CardComponentTest < ViewComponent::TestCase
   end
 
   test "renders content" do
-    render_inline Admin::CardComponent.new(title: "My Card") do
+    render_inline CardComponent.new(title: "My Card") do
       "<p>Some content</p>"
     end
 
@@ -18,7 +18,7 @@ class Admin::CardComponentTest < ViewComponent::TestCase
   end
 
   test "wraps content in padding div by default" do
-    render_inline Admin::CardComponent.new(title: "My Card") do
+    render_inline CardComponent.new(title: "My Card") do
       "<p>Content</p>"
     end
 
@@ -26,7 +26,7 @@ class Admin::CardComponentTest < ViewComponent::TestCase
   end
 
   test "flush mode skips padding wrapper" do
-    render_inline Admin::CardComponent.new(title: "My Card", flush: true) do
+    render_inline CardComponent.new(title: "My Card", flush: true) do
       "<p>Content</p>"
     end
 
@@ -34,7 +34,7 @@ class Admin::CardComponentTest < ViewComponent::TestCase
   end
 
   test "applies danger variant header classes" do
-    render_inline Admin::CardComponent.new(title: "My Card", variant: :danger) do
+    render_inline CardComponent.new(title: "My Card", variant: :danger) do
       "<p>Content</p>"
     end
 
@@ -42,7 +42,7 @@ class Admin::CardComponentTest < ViewComponent::TestCase
   end
 
   test "applies success variant header classes" do
-    render_inline Admin::CardComponent.new(title: "My Card", variant: :success) do
+    render_inline CardComponent.new(title: "My Card", variant: :success) do
       "<p>Content</p>"
     end
 

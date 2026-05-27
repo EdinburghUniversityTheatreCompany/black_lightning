@@ -1,6 +1,6 @@
 <%# locals: () %>
 
-<%= render Admin::CardComponent.new(title: "Questionnaires", flush: true) do %>
+<%= render CardComponent.new(title: "Questionnaires", flush: true) do %>
   <% if @show_current_term_only %>
     <p class="px-4 py-3 mb-0">By default, this display only includes questionnaires for events taking place during the current semester. Please use the search form if you want to view older questionnaires.</p>
   <% elsif @questionnaires.empty? %>

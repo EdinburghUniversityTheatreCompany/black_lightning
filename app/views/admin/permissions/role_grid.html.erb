@@ -1,4 +1,4 @@
-<%= render Admin::CardComponent.new(title: "Permissions — #{@role.name}", flush: true, html_class: "w-fit") do %>
+<%= render CardComponent.new(title: "Permissions — #{@role.name}", flush: true, html_class: "w-fit") do %>
   <%= form_with(url: permissions_admin_role_path(@role), method: "post", local: true,
                 data: { controller: "admin--permissions-grid",
                         action: "submit->admin--permissions-grid#confirmSubmit" }) do %>

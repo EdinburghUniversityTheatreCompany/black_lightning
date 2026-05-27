@@ -39,7 +39,7 @@ end %>
   editing_deadline: l(@call.editing_deadline, format: :longy),
 } %>
 
-<%= render Admin::CardComponent.new(title: "Proposals", flush: true) do %>
+<%= render CardComponent.new(title: "Proposals", flush: true) do %>
   <%= render 'shared/basic_fields', fields: call_info_fields %>
   <%= render('shared/index_table', headers: headers, field_sets: field_sets, include_edit_button: true, include_link_to_item: false, resource_class: Admin::Proposals::Proposal) %>
 <% end %>
