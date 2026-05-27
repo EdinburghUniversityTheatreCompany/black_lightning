@@ -1,7 +1,7 @@
 <%# locals: (f:) %>
 
-<div class="card">
-  <div class="card-body">
+<%= render CardComponent.new(flush: true) do %>
+  <div class="p-4">
     <%= f.error_notification %>
 
     <div class="form-inputs">
@@ -9,11 +9,11 @@
     </div>
   </div>
 
-    <div class="card-footer">
+  <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
     <% if content_for?(:override_card_footer) %>
       <%= yield(:override_card_footer) %>
     <% else %>
       <%= render '/shared/form/form_actions', f: f %>
     <% end %>
   </div>
-</div>
+<% end %>

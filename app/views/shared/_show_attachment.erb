@@ -2,13 +2,13 @@
 
 <% url = attachment_path(attachment.slug) %>
 
-<div class="card mb-0 flex flex-col">
+<%= render CardComponent.new(html_class: "mb-0 flex flex-col", flush: true) do %>
   <% fullsize_url = url_for(attachment.file) %>
   <% begin %>
     <% if attachment.file.previewable? %>
-      <% img = image_tag attachment.file.preview(thumb_variant), class: "card-img-top h-auto" %>
+      <% img = image_tag attachment.file.preview(thumb_variant), class: "block w-full h-auto rounded-t" %>
     <% else %>
-      <% img = image_tag attachment.file.variant(thumb_variant), class: "card-img-top h-auto" %>
+      <% img = image_tag attachment.file.variant(thumb_variant), class: "block w-full h-auto rounded-t" %>
     <% end %>
 
     <%= link_to(img, fullsize_url, { rel: 'group', title: attachment.name, 'data-title' => attachment.name }.merge(variant_width_and_height_html(thumb_variant))) %>
@@ -26,7 +26,7 @@
     <% end %>
   <% end %>
 
-  <div class="card-text m-2">
+  <div class="m-2 block mb-2">
     <%= link_to attachment.name, url, rel: 'group', title: attachment.name %>
     <% if include_item_link && attachment.item.present? %>
       <hr class="m-1">
@@ -40,4 +40,4 @@
       <%= to_sentence(attachment.attachment_tags.map {|tag| link_to(tag.name, admin_attachment_tag_path(tag)) }) %>
     <% end %>
   </div>
-</div>
+<% end %>

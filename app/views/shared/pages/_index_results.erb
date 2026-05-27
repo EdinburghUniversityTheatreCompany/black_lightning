@@ -1,16 +1,18 @@
 <%# locals: (resources:, resource_class:, field_sets: nil, headers: nil, include_edit_button: true, include_link_to_item: true, content: nil, include_pagination: true) %>
 <%# KEEP %>
-<div class="card">
-  <div class="card-header">
-    <span class="card-title"><%= @title %></span>
-
-    <% if include_pagination %>
-      <div class="card-tools"><%= paginate resources, window: 2 %></div>
+<%= render CardComponent.new(title: @title, flush: true) do |c| %>
+  <% if include_pagination %>
+    <% c.with_tools do %>
+      <%= paginate resources, window: 2 %>
     <% end %>
-  </div>
-
+  <% end %>
+  <% if include_pagination && resources.respond_to?(:total_pages) && resources.total_pages > 1 %>
+    <% c.with_footer do %>
+      <div class="clearfix"><%= paginate resources, window: 2 %></div>
+    <% end %>
+  <% end %>
   <% if content.present? %>
-    <div class="card-body">
+    <div class="p-4">
       <%= content %>
     </div>
   <% else %>
@@ -18,10 +20,4 @@
                include_edit_button: include_edit_button, include_link_to_item: include_link_to_item,
                resource_class: resource_class) %>
   <% end %>
-
-  <% if include_pagination && resources.respond_to?(:total_pages) && resources.total_pages > 1 %>
-    <div class="card-footer clearfix">
-      <%= paginate resources, window: 2 %>
-    </div>
-  <% end %>
-</div>
+<% end %>

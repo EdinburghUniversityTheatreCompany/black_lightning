@@ -1,10 +1,10 @@
 <%# locals: () -%>
 
-<div class="card">
-  <div class="card-body py-2 px-3">
+<%= render CardComponent.new(flush: true) do %>
+  <div class="py-2 px-3">
     <div class="flex flex-wrap items-center gap-2">
       <span class="text-sm font-semibold whitespace-nowrap shrink-0">Quick actions</span>
       <%= yield %>
     </div>
   </div>
-</div>
+<% end %>

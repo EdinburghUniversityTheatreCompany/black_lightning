@@ -1,7 +1,7 @@
 <%# locals: (paragraphs:) -%>
 
 <% paragraphs.each do |paragraph| %>
-  <p class="card-text <%= paragraph[:class] %>">
+  <p class="block mb-2 <%= paragraph[:class] %>">
     <%= '<small class="text-gray-500">'.html_safe if paragraph[:small] %>
     <%= paragraph[:content] %>
     <%= '</small>'.html_safe if paragraph[:small] %>

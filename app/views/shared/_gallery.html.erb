@@ -10,15 +10,15 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mt-3">
     <% pictures.includes(image_attachment: :blob).each do |picture| %>
       <div>
-        <div class="card h-full mb-0">
+        <%= render CardComponent.new(html_class: "h-full mb-0", flush: true) do %>
           <% lightbox_url = active_storage_proxy_url(picture.fetch_image.variant(large_display_variant)) %>
           <% download_url = active_storage_proxy_url(picture.fetch_image) %>
 
           <%= link_to lightbox_url, class: "fancybox", rel: 'group', title: picture.description, 'data-title' => picture.description, 'data-fancybox' => "gallery" do %>
-            <%= render 'shared/image', image: picture.fetch_image, variant: medium_variant, proxy: true, image_options: { class: "card-img-top h-auto" } %>
+            <%= render 'shared/image', image: picture.fetch_image, variant: medium_variant, proxy: true, image_options: { class: "block w-full h-auto rounded-t" } %>
           <% end %>
 
-          <div class="card-text m-2">
+          <div class="m-2 block mb-2">
             <% gallery_name = picture.gallery_name %>
             <% begin %>
               <%= link_to(gallery_name, picture.gallery) %>
@@ -32,7 +32,7 @@
               <%= to_sentence(picture.picture_tags.map {|tag| link_to(tag.name, admin_picture_tag_path(tag)) }) %>
             <% end %>
           </div>
-        </div>
+        <% end %>
       </div>
     <% end %>
   </div>

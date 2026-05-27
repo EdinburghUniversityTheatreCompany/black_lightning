@@ -7,8 +7,9 @@ class CardComponent < ViewComponent::Base
     danger:  "bg-red-600 text-white border-red-600",
     success: "bg-green-600 text-white border-green-600",
     warning: "bg-yellow-500 text-white border-yellow-500",
-    info:    "bg-blue-500 text-white border-blue-500",
-    primary: "bg-primary text-white border-primary"
+    info:      "bg-blue-500 text-white border-blue-500",
+    primary:   "bg-primary text-white border-primary",
+    secondary: "bg-gray-500 text-white border-gray-500"
   }.freeze
 
   def initialize(title: nil, variant: :default, flush: false, html_class: "")

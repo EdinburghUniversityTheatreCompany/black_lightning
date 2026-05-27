@@ -21,8 +21,8 @@
           <% end %>
         </div>
 
-        <div class="text-center block card w-full carousel-caption-card" data-carousel-equalizer-target="caption">
-          <div class="card-body">
+        <div class="text-center bg-white rounded border border-gray-200 w-full carousel-caption-card" data-carousel-equalizer-target="caption">
+          <div class="p-4">
             <h5><%= item[:url].present? ? link_to(item[:title], item[:url]) : item[:title] %></h5>
             <p><%= item[:tagline] %></p>
             <% if item[:url].present? || item[:pretix_slug].present? %>

@@ -9,6 +9,6 @@
   <% end %>
 <% end %>
 
-<div class="card">
+<%= render CardComponent.new(flush: true) do %>
   <%= render 'shared/basic_fields', fields: fields %>
-</div>
+<% end %>

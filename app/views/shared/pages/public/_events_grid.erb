@@ -23,18 +23,18 @@
   <div class="<%= grid_class %>">
     <% items.each do |item| %>
       <div class="flex flex-col">
-        <div class="card h-full">
+        <%= render CardComponent.new(html_class: "h-full", flush: true) do %>
           <% url = link_to_admin_events ? [:admin, item[:event]] : item[:event] %>
           <%= link_to url do %>
-            <%= render 'shared/image', image: item[:event].fetch_image, variant: medium_variant, proxy: true, image_options: { class: 'card-img-top h-auto' } %>
+            <%= render 'shared/image', image: item[:event].fetch_image, variant: medium_variant, proxy: true, image_options: { class: 'block w-full h-auto rounded-t' } %>
           <% end %>
 
-          <div class="card-body flex flex-col">
-            <%= link_to(item[:event].name_and_author, url, class: 'card-title') %>
+          <div class="p-4 flex flex-col">
+            <%= link_to(item[:event].name_and_author, url, class: 'text-base font-semibold') %>
 
             <%= render('shared/pages/public/partials/card_paragraphs', paragraphs: item[:paragraphs]) %>
           </div>
-        </div>
+        <% end %>
       </div>
     <% end %>
   </div>
