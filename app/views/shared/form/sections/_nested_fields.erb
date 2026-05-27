@@ -35,6 +35,8 @@
   </template>
 
   <% if display_link_to_add %>
-    <%= link_to_add f, association_name, div_html_class: wrapper_class %>
+    <div class="mt-2">
+      <%= link_to_add f, association_name, div_html_class: wrapper_class %>
+    </div>
   <% end %>
 </div>
