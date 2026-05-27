@@ -10,268 +10,261 @@
 
 <%= form_with url: confirm_admin_membership_imports_path, method: :post, local: true do |f| %>
   <%= hidden_field_tag :cache_key, @cache_key %>
+
   <%# Bucket 3: Activate by Email %>
   <% if @import.categorized[:activate_by_email].any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-info text-white">
-        <strong>Activate by Email Match</strong>
+    <%= render CardComponent.new(variant: :info, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">Activate by Email Match</span>
         <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:activate_by_email].size.to_s } %>
-        <small class="float-right">Will be activated automatically</small>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-          <thead class="table-light">
+        <small class="ml-auto">Will be activated automatically</small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Import Name</th>
+            <th>Existing User</th>
+            <th>Email Match</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.categorized[:activate_by_email].each do |item| %>
             <tr>
-              <th>Import Name</th>
-              <th>Existing User</th>
-              <th>Email Match</th>
-              <th>Action</th>
+              <td>
+                <%= item[:row][:original_name] %>
+                <% if item[:row][:student_id] || item[:row][:associate_id] %>
+                  <br><small class="text-gray-500">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %> (will be added)</small>
+                <% end %>
+              </td>
+              <td>
+                <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
+                <% if item[:existing_user].student_id.blank? && item[:row][:student_id].present? %>
+                  <br><small class="text-success">+ will add student ID</small>
+                <% end %>
+              </td>
+              <td><span class="font-monospace"><%= item[:row][:email] %></span></td>
+              <td>
+                <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
+                <%= render(BadgeComponent.new(type: :info)) { "Will Activate" } %>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            <% @import.categorized[:activate_by_email].each do |item| %>
-              <tr>
-                <td>
-                  <%= item[:row][:original_name] %>
-                  <% if item[:row][:student_id] || item[:row][:associate_id] %>
-                    <br><small class="text-gray-500">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %> (will be added)</small>
-                  <% end %>
-                </td>
-                <td>
-                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
-                  <% if item[:existing_user].student_id.blank? && item[:row][:student_id].present? %>
-                    <br><small class="text-success">+ will add student ID</small>
-                  <% end %>
-                </td>
-                <td><span class="font-monospace"><%= item[:row][:email] %></span></td>
-                <td>
-                  <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
-                  <%= render(BadgeComponent.new(type: :info)) { "Will Activate" } %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   <% end %>
 
   <%# Bucket 4: Propose Merge - secretary decides %>
   <% if @import.categorized[:propose_merge].any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-warning">
-        <strong>Possible Matches (Review Required)</strong>
+    <%= render CardComponent.new(variant: :warning, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">Possible Matches (Review Required)</span>
         <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { @import.categorized[:propose_merge].size.to_s } %>
-        <small class="float-right">Please decide for each row</small>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-          <thead class="table-light">
+        <small class="ml-auto">Please decide for each row</small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Import Data</th>
+            <th>Possible Match(es)</th>
+            <th style="width: 280px;">Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.categorized[:propose_merge].each do |item| %>
             <tr>
-              <th>Import Data</th>
-              <th>Possible Match(es)</th>
-              <th style="width: 280px;">Decision</th>
+              <td>
+                <strong><%= item[:row][:original_name] %></strong><br>
+                <small class="text-gray-500"><%= item[:row][:email] %></small>
+                <% if item[:row][:student_id] || item[:row][:associate_id] %>
+                  <br><small class="text-gray-500">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %></small>
+                <% end %>
+              </td>
+              <td>
+                <% item[:existing_users].each_with_index do |user, i| %>
+                  <% years = @import.years_active_cache[user.id] %>
+                  <%= link_to user.name_or_email, admin_user_path(user) %>
+                  <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small><br>
+                  <small class="text-gray-500"><%= user.email %></small>
+                  <% if user.student_id.present? %>
+                    <br><small class="text-gray-500">ID: <%= user.student_id %></small>
+                  <% end %>
+                  <% if i < item[:existing_users].size - 1 %>
+                    <hr class="my-1">
+                  <% end %>
+                <% end %>
+              </td>
+              <td>
+                <% item[:existing_users].each_with_index do |user, i| %>
+                  <% years = @import.years_active_cache[user.id] %>
+                  <div class="form-check">
+                    <%= radio_button_tag "actions[#{item[:index]}]", "merge_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_merge_#{user.id}" %>
+                    <%= label_tag "action_#{item[:index]}_merge_#{user.id}", "Merge with #{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
+                  </div>
+                <% end %>
+                <div class="form-check">
+                  <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
+                  <%= label_tag "action_#{item[:index]}_create", "Create New", class: "form-check-label" %>
+                </div>
+                <div class="form-check">
+                  <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
+                  <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            <% @import.categorized[:propose_merge].each do |item| %>
-              <tr>
-                <td>
-                  <strong><%= item[:row][:original_name] %></strong><br>
-                  <small class="text-gray-500"><%= item[:row][:email] %></small>
-                  <% if item[:row][:student_id] || item[:row][:associate_id] %>
-                    <br><small class="text-gray-500">ID: <%= item[:row][:student_id] || item[:row][:associate_id] %></small>
-                  <% end %>
-                </td>
-                <td>
-                  <% item[:existing_users].each_with_index do |user, i| %>
-                    <% years = @import.years_active_cache[user.id] %>
-                    <%= link_to user.name_or_email, admin_user_path(user) %>
-                    <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small><br>
-                    <small class="text-gray-500"><%= user.email %></small>
-                    <% if user.student_id.present? %>
-                      <br><small class="text-gray-500">ID: <%= user.student_id %></small>
-                    <% end %>
-                    <% if i < item[:existing_users].size - 1 %>
-                      <hr class="my-1">
-                    <% end %>
-                  <% end %>
-                </td>
-                <td>
-                  <% item[:existing_users].each_with_index do |user, i| %>
-                    <% years = @import.years_active_cache[user.id] %>
-                    <div class="form-check">
-                      <%= radio_button_tag "actions[#{item[:index]}]", "merge_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_merge_#{user.id}" %>
-                      <%= label_tag "action_#{item[:index]}_merge_#{user.id}", "Merge with #{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
-                    </div>
-                  <% end %>
-                  <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
-                    <%= label_tag "action_#{item[:index]}_create", "Create New", class: "form-check-label" %>
-                  </div>
-                  <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
-                    <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   <% end %>
 
   <%# Bucket 5: Create New %>
   <% if @import.categorized[:create_new].any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-primary text-white">
-        <strong>New Users to Create</strong>
+    <%= render CardComponent.new(variant: :primary, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">New Users to Create</span>
         <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:create_new].size.to_s } %>
-        <small class="float-right">Will create and activate</small>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-          <thead class="table-light">
+        <small class="ml-auto">Will create and activate</small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>ID</th>
+            <th style="width: 150px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.categorized[:create_new].each do |item| %>
             <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>ID</th>
-              <th style="width: 150px;">Action</th>
+              <td><%= item[:row][:original_name] %></td>
+              <td>
+                <% if item[:row][:email].present? %>
+                  <span class="font-monospace"><%= item[:row][:email] %></span>
+                <% else %>
+                  <em class="text-gray-500">(will generate placeholder)</em>
+                <% end %>
+              </td>
+              <td>
+                <% if item[:row][:student_id] || item[:row][:associate_id] %>
+                  <span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span>
+                <% else %>
+                  <em class="text-gray-500">-</em>
+                <% end %>
+              </td>
+              <td>
+                <div class="form-check">
+                  <%= radio_button_tag "actions[#{item[:index]}]", "create", true, class: "form-check-input", id: "action_#{item[:index]}_create" %>
+                  <%= label_tag "action_#{item[:index]}_create", "Create & Activate", class: "form-check-label" %>
+                </div>
+                <div class="form-check">
+                  <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
+                  <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            <% @import.categorized[:create_new].each do |item| %>
-              <tr>
-                <td><%= item[:row][:original_name] %></td>
-                <td>
-                  <% if item[:row][:email].present? %>
-                    <span class="font-monospace"><%= item[:row][:email] %></span>
-                  <% else %>
-                    <em class="text-gray-500">(will generate placeholder)</em>
-                  <% end %>
-                </td>
-                <td>
-                  <% if item[:row][:student_id] || item[:row][:associate_id] %>
-                    <span class="font-monospace"><%= item[:row][:student_id] || item[:row][:associate_id] %></span>
-                  <% else %>
-                    <em class="text-gray-500">-</em>
-                  <% end %>
-                </td>
-                <td>
-                  <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "create", true, class: "form-check-input", id: "action_#{item[:index]}_create" %>
-                    <%= label_tag "action_#{item[:index]}_create", "Create & Activate", class: "form-check-label" %>
-                  </div>
-                  <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
-                    <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   <% end %>
 
-    <%# Bucket 1: Already Active - just show, no action needed %>
+  <%# Bucket 1: Already Active - just show, no action needed %>
   <% if @import.categorized[:already_active].any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-secondary text-white">
-        <strong>Already Active Members</strong>
+    <%= render CardComponent.new(variant: :secondary, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">Already Active Members</span>
         <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:already_active].size.to_s } %>
-        <small class="float-right">No action needed</small>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-          <thead class="table-light">
-            <tr>
-              <th>Import Name</th>
-              <th>Existing User</th>
-              <th>ID</th>
-              <th>Status</th>
+        <small class="ml-auto">No action needed</small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Import Name</th>
+            <th>Existing User</th>
+            <th>ID</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.categorized[:already_active].each do |item| %>
+            <tr class="table-secondary">
+              <td><%= item[:row][:original_name] %></td>
+              <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
+              <td>
+                <% case item[:match_type] %>
+                <% when :user_id %>
+                  <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
+                <% when :student_id %>
+                  <span class="font-monospace"><%= item[:row][:student_id] %></span>
+                <% when :associate_id %>
+                  <span class="font-monospace"><%= item[:row][:associate_id] %></span>
+                <% else %>
+                  <span class="font-monospace"><%= item[:row][:email] %></span>
+                <% end %>
+              </td>
+              <td><%= render(BadgeComponent.new(type: :success)) { "Already Member" } %></td>
             </tr>
-          </thead>
-          <tbody>
-            <% @import.categorized[:already_active].each do |item| %>
-              <tr class="table-secondary">
-                <td><%= item[:row][:original_name] %></td>
-                <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
-                <td>
-                  <% case item[:match_type] %>
-                  <% when :user_id %>
-                    <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
-                  <% when :student_id %>
-                    <span class="font-monospace"><%= item[:row][:student_id] %></span>
-                  <% when :associate_id %>
-                    <span class="font-monospace"><%= item[:row][:associate_id] %></span>
-                  <% else %>
-                    <span class="font-monospace"><%= item[:row][:email] %></span>
-                  <% end %>
-                </td>
-                <td><%= render(BadgeComponent.new(type: :success)) { "Already Member" } %></td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   <% end %>
 
   <%# Bucket 2: Activate by ID - auto-activate %>
   <% if @import.categorized[:activate_by_id].any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-info text-white">
-        <strong>Activate by ID</strong>
+    <%= render CardComponent.new(variant: :info, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">Activate by ID</span>
         <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:activate_by_id].size.to_s } %>
-        <small class="float-right">Will be activated automatically</small>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-          <thead class="table-light">
+        <small class="ml-auto">Will be activated automatically</small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Import Name</th>
+            <th>Existing User</th>
+            <th>ID Match</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.categorized[:activate_by_id].each do |item| %>
             <tr>
-              <th>Import Name</th>
-              <th>Existing User</th>
-              <th>ID Match</th>
-              <th>Action</th>
+              <td><%= item[:row][:original_name] %></td>
+              <td>
+                <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
+                <br><small class="text-gray-500"><%= item[:existing_user].email %></small>
+              </td>
+              <td>
+                <% case item[:match_type] %>
+                <% when :user_id %>
+                  <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
+                <% when :student_id %>
+                  <span class="font-monospace"><%= item[:row][:student_id] %></span>
+                <% when :associate_id %>
+                  <span class="font-monospace"><%= item[:row][:associate_id] %></span>
+                <% end %>
+              </td>
+              <td>
+                <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
+                <%= render(BadgeComponent.new(type: :info)) { "Will Activate" } %>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            <% @import.categorized[:activate_by_id].each do |item| %>
-              <tr>
-                <td><%= item[:row][:original_name] %></td>
-                <td>
-                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %>
-                  <br><small class="text-gray-500"><%= item[:existing_user].email %></small>
-                </td>
-                <td>
-                  <% case item[:match_type] %>
-                  <% when :user_id %>
-                    <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
-                  <% when :student_id %>
-                    <span class="font-monospace"><%= item[:row][:student_id] %></span>
-                  <% when :associate_id %>
-                    <span class="font-monospace"><%= item[:row][:associate_id] %></span>
-                  <% end %>
-                </td>
-                <td>
-                  <input type="hidden" name="actions[<%= item[:index] %>]" value="activate">
-                  <%= render(BadgeComponent.new(type: :info)) { "Will Activate" } %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   <% end %>
 
-  <div class="card">
-    <div class="card-footer flex justify-between">
-      <%= link_to "Cancel", new_admin_membership_import_path, class: btn_classes(:secondary) %>
-      <%= f.submit "Confirm Import", class: btn_classes(:success) %>
-    </div>
-  </div>
+  <%= render CardComponent.new(flush: true) do |c| %>
+    <% c.with_footer do %>
+      <div class="flex justify-between">
+        <%= link_to "Cancel", new_admin_membership_import_path, class: btn_classes(:secondary) %>
+        <%= f.submit "Confirm Import", class: btn_classes(:success) %>
+      </div>
+    <% end %>
+  <% end %>
 <% end %>

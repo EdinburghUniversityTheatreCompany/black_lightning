@@ -1,9 +1,7 @@
 <% if current_user.nil? %>
-  <div class="card">
-    <div class="card-body">
-      <%= display_block('Marketing Creatives Profile Sign Up Instructions', true) %>
-    </div>
-  </div>
+  <%= render CardComponent.new do %>
+    <%= display_block('Marketing Creatives Profile Sign Up Instructions', true) %>
+  <% end %>
 <% end %>
 
 <%= render 'form' %>

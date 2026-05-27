@@ -5,18 +5,13 @@
   <div class="grid gap-4 <%= 'lg:grid-cols-2' if multi %>">
     <% reviews.each do |review| %>
       <div>
-        <div class="card">
-            <div class="card-header">
-              <h4>
-                <%= review.title %><%= " - <span class=\"whitespace-nowrap\">#{star_rating(review.rating)}</span>".html_safe %>
-              </h4>
-            </div>
-          <div class="card-body">
-            <p class="card-text"><small class="text-gray-500"><%= l review.review_date, format: :long %> - By <%= review.reviewer_with_organisation %></small></p>
-
-            <%= render_markdown review.body %>
-          </div>
-        </div>
+        <%= render CardComponent.new(title: review.title) do |c| %>
+          <% c.with_tools do %>
+            <span class="whitespace-nowrap ml-2"><%= star_rating(review.rating) %></span>
+          <% end %>
+          <p><small class="text-gray-500"><%= l review.review_date, format: :long %> - By <%= review.reviewer_with_organisation %></small></p>
+          <%= render_markdown review.body %>
+        <% end %>
       </div>
     <% end %>
   </div>

@@ -1,8 +1,8 @@
 <% can_act = can?(:approve, Admin::Proposals::Proposal) %>
 <% redirect_param = { redirect_to: admin_proposals_calls_path } %>
 
-<div class="card mb-4">
-  <div class="card-body callout callout-info mb-0">
+<%= render CardComponent.new do %>
+  <div class="callout callout-info mb-0">
     <p>
       Active proposals across every call. Awaiting Approval decisions happen before the General Meeting;
       Approved proposals are set to successful or unsuccessful after the General Meeting.
@@ -11,41 +11,37 @@
       <p class="mb-0"><em>You have view-only access. Contact an approver to make changes.</em></p>
     <% end %>
   </div>
-</div>
+<% end %>
 
-<div class="card mb-4">
-  <div class="card-header flex justify-between items-center">
-    <h5 class="card-title mb-0">Open Calls</h5>
-  </div>
-  <div class="card-body">
-    <% if @open_calls.any? %>
-      <% @open_calls.each do |call| %>
-        <div class="flex flex-wrap gap-2 justify-between items-center <%= 'mt-3' unless call == @open_calls.first %>">
-          <div>
-            <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
-            <small class="text-gray-500">
-              Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
-              &middot;
-              Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
-            </small>
-          </div>
-          <%= get_link(Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_proposal_path(call_id: call.id), link_text: "New Proposal") %>
+<%= render CardComponent.new(title: "Open Calls") do %>
+  <% if @open_calls.any? %>
+    <% @open_calls.each do |call| %>
+      <div class="flex flex-wrap gap-2 justify-between items-center <%= 'mt-3' unless call == @open_calls.first %>">
+        <div>
+          <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
+          <small class="text-gray-500">
+            Submission deadline: <%= l(call.submission_deadline, format: :longy) %>
+            &middot;
+            Editing deadline: <%= l(call.editing_deadline, format: :longy) %>
+          </small>
         </div>
-      <% end %>
-    <% else %>
-      <p class="mb-0"><em>There are no open calls.</em></p>
+        <%= get_link(Admin::Proposals::Proposal, :new, link_target: new_admin_proposals_proposal_path(call_id: call.id), link_text: "New Proposal") %>
+      </div>
     <% end %>
-  </div>
-</div>
+  <% else %>
+    <p class="mb-0"><em>There are no open calls.</em></p>
+  <% end %>
+<% end %>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="card-title mb-0">Awaiting Approval <%= render(BadgeComponent.new(type: :secondary)) { @awaiting_approval.size.to_s } %></h5>
-  </div>
+<%= render CardComponent.new(flush: true) do |c| %>
+  <% c.with_tools do %>
+    <span class="text-base font-semibold flex-1">Awaiting Approval</span>
+    <%= render(BadgeComponent.new(type: :secondary)) { @awaiting_approval.size.to_s } %>
+  <% end %>
   <% awaiting_by_call = @awaiting_approval.group_by(&:call) %>
   <% if awaiting_by_call.any? %>
     <% awaiting_by_call.sort_by { |call, _| call.editing_deadline }.each do |call, proposals| %>
-      <div class="card-body border-bottom pb-2">
+      <div class="p-4 border-b pb-2">
         <div class="flex flex-wrap gap-2 justify-between items-center mb-2">
           <div>
             <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
@@ -79,19 +75,20 @@
       </div>
     <% end %>
   <% else %>
-    <div class="card-body">
+    <div class="p-4">
       <p class="mb-0"><em>No proposals are awaiting approval.</em></p>
     </div>
   <% end %>
-</div>
+<% end %>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="card-title mb-0">Approved (Awaiting GM Outcome) <%= render(BadgeComponent.new(type: :secondary)) { @approved.size.to_s } %></h5>
-  </div>
+<%= render CardComponent.new(flush: true) do |c| %>
+  <% c.with_tools do %>
+    <span class="text-base font-semibold flex-1">Approved (Awaiting GM Outcome)</span>
+    <%= render(BadgeComponent.new(type: :secondary)) { @approved.size.to_s } %>
+  <% end %>
   <% if @approved.any? %>
     <% @approved.group_by(&:call).each do |call, proposals| %>
-      <div class="card-body border-bottom pb-2">
+      <div class="p-4 border-b pb-2">
         <div class="mb-2">
           <h6 class="mb-0"><%= link_to call.name, admin_proposals_call_proposals_path(call) %></h6>
           <small class="text-gray-500">
@@ -119,8 +116,8 @@
       </div>
     <% end %>
   <% else %>
-    <div class="card-body">
+    <div class="p-4">
       <p class="mb-0"><em>No approved proposals are awaiting a GM outcome.</em></p>
     </div>
   <% end %>
-</div>
+<% end %>

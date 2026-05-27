@@ -5,63 +5,53 @@
 ] %>
 
 <% unless quick_actions.blank? %>
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">Quick actions</span>
-    </div>
-    <div class="card-body">
-      <% quick_actions.each do |quick_action| %>
-        <%= quick_action %>
-      <% end %>
-    </div>
-  </div>
+  <%= render CardComponent.new(title: "Quick actions") do %>
+    <% quick_actions.each do |quick_action| %>
+      <%= quick_action %>
+    <% end %>
+  <% end %>
 <% end %>
 
-<div class="card">
-      <div class="card-header">
-        <span class="card-title"><%= @title %></span>
-      </div>
-      <div class="card-body">
-        <% if @grouped_data.empty? && @grouped_no_year.empty? %>
-          <p class="text-gray-500">No techies found.</p>
+<%= render CardComponent.new(title: @title) do %>
+  <% if @grouped_data.empty? && @grouped_no_year.empty? %>
+    <p class="text-gray-500">No techies found.</p>
+  <% else %>
+    <% @grouped_data.each do |year, parent_groups| %>
+      <div class="mb-4">
+        <h3 class="text-primary"><%= year %></h3>
+
+        <% if parent_groups.empty? %>
+          <p class="text-gray-500 ml-3">No techies found for this year.</p>
         <% else %>
-          <% @grouped_data.each do |year, parent_groups| %>
-            <div class="mb-4">
-              <h3 class="text-primary"><%= year %></h3>
-
-              <% if parent_groups.empty? %>
-                <p class="text-gray-500 ml-3">No techies found for this year.</p>
-              <% else %>
-                <% parent_groups.each do |parent_group, techies| %>
-                  <div class="ml-3 mb-3">
-                    <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
-                    <ul class="ml-3">
-                      <% techies.each do |techie| %>
-                        <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
-                      <% end %>
-                    </ul>
-                  </div>
+          <% parent_groups.each do |parent_group, techies| %>
+            <div class="ml-3 mb-3">
+              <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
+              <ul class="ml-3">
+                <% techies.each do |techie| %>
+                  <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
                 <% end %>
-              <% end %>
-            </div>
-          <% end %>
-
-          <% unless @grouped_no_year.empty? %>
-            <div class="mb-4">
-              <h3 class="text-secondary">No Entry Year</h3>
-
-              <% @grouped_no_year.each do |parent_group, techies| %>
-                <div class="ml-3 mb-3">
-                  <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
-                  <ul class="ml-3">
-                    <% techies.each do |techie| %>
-                      <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
-                    <% end %>
-                  </ul>
-                </div>
-              <% end %>
+              </ul>
             </div>
           <% end %>
         <% end %>
       </div>
-    </div>
+    <% end %>
+
+    <% unless @grouped_no_year.empty? %>
+      <div class="mb-4">
+        <h3 class="text-secondary">No Entry Year</h3>
+
+        <% @grouped_no_year.each do |parent_group, techies| %>
+          <div class="ml-3 mb-3">
+            <h5 class="text-secondary mb-2"><%= parent_group %>:</h5>
+            <ul class="ml-3">
+              <% techies.each do |techie| %>
+                <li><%= link_to techie.name, admin_techie_path(techie), class: 'text-decoration-none' %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

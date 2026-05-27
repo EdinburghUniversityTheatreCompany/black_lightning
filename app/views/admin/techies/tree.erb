@@ -3,8 +3,8 @@
   <%= get_link Techie, :new, variant: :secondary %>
 <% end %>
 
-<div class="card mt-3">
-  <div class="card-header flex items-center gap-2">
+<%= render CardComponent.new(flush: true, html_class: "mt-3") do |c| %>
+  <% c.with_tools do %>
     <%= search_form_for @q, builder: SimpleForm::FormBuilder, url: :tree_admin_techies,
           html: { class: 'flex items-center gap-2 mb-0' } do |f| %>
       <%= f.input :id_eq,
@@ -18,9 +18,8 @@
         <%= link_to 'Clear', tree_admin_techies_path, class: btn_classes(:secondary) %>
       <% end %>
     <% end %>
-  </div>
-
-  <div class="card-body p-0 position-relative"
+  <% end %>
+  <div class="position-relative"
        data-controller="techie-graph"
        data-techie-graph-nodes-value="<%= @graph_data[:nodes].to_json %>"
        data-techie-graph-edges-value="<%= @graph_data[:edges].to_json %>"
@@ -31,4 +30,4 @@
          class="px-3 py-2 border-top flex flex-wrap gap-3"
          style="font-size: 11px;"></div>
   </div>
-</div>
+<% end %>

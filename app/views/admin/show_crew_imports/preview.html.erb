@@ -10,100 +10,97 @@
 
 <%= form_with url: confirm_admin_show_show_crew_imports_path(@event), method: :post, local: true do |f| %>
   <%= hidden_field_tag :cache_key, @cache_key %>
+
   <%# Existing team members that appear in import %>
   <% if @existing_team_members.any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-warning">
-        <strong>Already on Team (Review Required)</strong>
+    <%= render CardComponent.new(variant: :warning, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">Already on Team (Review Required)</span>
         <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { @existing_team_members.size.to_s } %>
-        <small class="float-right">These people are already on <%= @event.name %></small>
-      </div>
-      <div class="card-body p-0">
-        <table class="table table-sm table-hover mb-0">
-          <thead class="table-light">
+        <small class="ml-auto">These people are already on <%= @event.name %></small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Team Member</th>
+            <th>Current Position</th>
+            <th>Import Position</th>
+            <th style="width: 200px;">Decision</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @existing_team_members.each do |user_id, data| %>
             <tr>
-              <th>Team Member</th>
-              <th>Current Position</th>
-              <th>Import Position</th>
-              <th style="width: 200px;">Decision</th>
+              <td><%= data["user_name"] %></td>
+              <td><span class="font-monospace"><%= data["current_position"] %></span></td>
+              <td><span class="font-monospace"><%= data["new_position"] %></span></td>
+              <td>
+                <div class="form-check">
+                  <%= radio_button_tag "existing_actions[#{user_id}]", "skip", true, class: "form-check-input", id: "existing_action_#{user_id}_skip" %>
+                  <%= label_tag "existing_action_#{user_id}_skip", "Skip (keep current)", class: "form-check-label" %>
+                </div>
+                <div class="form-check">
+                  <%= radio_button_tag "existing_actions[#{user_id}]", "merge", false, class: "form-check-input", id: "existing_action_#{user_id}_merge" %>
+                  <%= label_tag "existing_action_#{user_id}_merge", "Merge positions", class: "form-check-label" %>
+                </div>
+                <div class="form-check">
+                  <%= radio_button_tag "existing_actions[#{user_id}]", "replace", false, class: "form-check-input", id: "existing_action_#{user_id}_replace" %>
+                  <%= label_tag "existing_action_#{user_id}_replace", "Replace with new", class: "form-check-label" %>
+                </div>
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            <% @existing_team_members.each do |user_id, data| %>
-              <tr>
-                <td><%= data["user_name"] %></td>
-                <td><span class="font-monospace"><%= data["current_position"] %></span></td>
-                <td><span class="font-monospace"><%= data["new_position"] %></span></td>
-                <td>
-                  <div class="form-check">
-                    <%= radio_button_tag "existing_actions[#{user_id}]", "skip", true, class: "form-check-input", id: "existing_action_#{user_id}_skip" %>
-                    <%= label_tag "existing_action_#{user_id}_skip", "Skip (keep current)", class: "form-check-label" %>
-                  </div>
-                  <div class="form-check">
-                    <%= radio_button_tag "existing_actions[#{user_id}]", "merge", false, class: "form-check-input", id: "existing_action_#{user_id}_merge" %>
-                    <%= label_tag "existing_action_#{user_id}_merge", "Merge positions", class: "form-check-label" %>
-                  </div>
-                  <div class="form-check">
-                    <%= radio_button_tag "existing_actions[#{user_id}]", "replace", false, class: "form-check-input", id: "existing_action_#{user_id}_replace" %>
-                    <%= label_tag "existing_action_#{user_id}_replace", "Replace with new", class: "form-check-label" %>
-                  </div>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
-      </div>
-    </div>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
   <% end %>
 
   <%# Bucket 1: Exact match by ID %>
   <% if @import.categorized[:exact_match_id].any? %>
     <% items_not_on_team = @import.categorized[:exact_match_id].reject { |item| @existing_team_members.key?(item[:existing_user]&.id) } %>
     <% if items_not_on_team.any? %>
-      <div class="card mb-3">
-        <div class="card-header bg-success text-white">
-          <strong>Matched by ID</strong>
+      <%= render CardComponent.new(variant: :success, flush: true) do |c| %>
+        <% c.with_tools do %>
+          <span class="text-base font-semibold flex-1">Matched by ID</span>
           <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { items_not_on_team.size.to_s } %>
-          <small class="float-right">Will add to crew</small>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-sm table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Import Name</th>
-                <th>Existing User</th>
-                <th>Position</th>
-                <th>Action</th>
+          <small class="ml-auto">Will add to crew</small>
+        <% end %>
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Import Name</th>
+              <th>Existing User</th>
+              <th>Position</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% items_not_on_team.each do |item| %>
+              <tr class="table-success">
+                <td><%= item[:row][:original_name] %></td>
+                <td>
+                  <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
+                  <small class="text-gray-500">
+                    <% case item[:match_type] %>
+                    <% when :user_id %>
+                      Matched by User ID
+                    <% when :student_id %>
+                      Matched by Student ID
+                    <% when :associate_id %>
+                      Matched by Associate ID
+                    <% end %>
+                  </small>
+                </td>
+                <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                <td>
+                  <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
+                  <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              <% items_not_on_team.each do |item| %>
-                <tr class="table-success">
-                  <td><%= item[:row][:original_name] %></td>
-                  <td>
-                    <%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %><br>
-                    <small class="text-gray-500">
-                      <% case item[:match_type] %>
-                      <% when :user_id %>
-                        Matched by User ID
-                      <% when :student_id %>
-                        Matched by Student ID
-                      <% when :associate_id %>
-                        Matched by Associate ID
-                      <% end %>
-                    </small>
-                  </td>
-                  <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
-                  <td>
-                    <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
-                    <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
     <% end %>
   <% end %>
 
@@ -111,38 +108,36 @@
   <% if @import.categorized[:exact_match_email].any? %>
     <% items_not_on_team = @import.categorized[:exact_match_email].reject { |item| @existing_team_members.key?(item[:existing_user]&.id) } %>
     <% if items_not_on_team.any? %>
-      <div class="card mb-3">
-        <div class="card-header bg-success text-white">
-          <strong>Matched by Email</strong>
+      <%= render CardComponent.new(variant: :success, flush: true) do |c| %>
+        <% c.with_tools do %>
+          <span class="text-base font-semibold flex-1">Matched by Email</span>
           <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { items_not_on_team.size.to_s } %>
-          <small class="float-right">Will add to crew</small>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-sm table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Import Name</th>
-                <th>Existing User</th>
-                <th>Position</th>
-                <th>Action</th>
+          <small class="ml-auto">Will add to crew</small>
+        <% end %>
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Import Name</th>
+              <th>Existing User</th>
+              <th>Position</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% items_not_on_team.each do |item| %>
+              <tr class="table-success">
+                <td><%= item[:row][:original_name] %></td>
+                <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
+                <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+                <td>
+                  <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
+                  <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              <% items_not_on_team.each do |item| %>
-                <tr class="table-success">
-                  <td><%= item[:row][:original_name] %></td>
-                  <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
-                  <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
-                  <td>
-                    <input type="hidden" name="actions[<%= item[:index] %>]" value="link">
-                    <%= render(BadgeComponent.new(type: :success)) { "Will Add" } %>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </div>
+            <% end %>
+          </tbody>
+        </table>
+      <% end %>
     <% end %>
   <% end %>
 
@@ -150,106 +145,53 @@
   <% if @import.categorized[:fuzzy_match].any? %>
     <% items_not_on_team = @import.categorized[:fuzzy_match].reject { |item| item[:existing_users].all? { |u| @existing_team_members.key?(u.id) } } %>
     <% if items_not_on_team.any? %>
-      <div class="card mb-3">
-        <div class="card-header bg-warning">
-          <strong>Possible Matches (Review Required)</strong>
+      <%= render CardComponent.new(variant: :warning, flush: true) do |c| %>
+        <% c.with_tools do %>
+          <span class="text-base font-semibold flex-1">Possible Matches (Review Required)</span>
           <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { items_not_on_team.size.to_s } %>
-          <small class="float-right">Please decide for each row</small>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-sm table-hover mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Import Data</th>
-                <th>Possible Match(es)</th>
-                <th>Position</th>
-                <th style="width: 280px;">Decision</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% items_not_on_team.each do |item| %>
-                <tr>
-                  <td>
-                    <strong><%= item[:row][:original_name] %></strong><br>
-                    <% if item[:row][:email].present? %>
-                      <small class="text-gray-500"><%= item[:row][:email] %></small>
-                    <% end %>
-                  </td>
-                  <td>
-                    <% item[:existing_users].each_with_index do |user, i| %>
-                      <% years = @import.years_active_cache[user.id] %>
-                      <%= link_to user.name_or_email, admin_user_path(user) %>
-                      <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small><br>
-                      <small class="text-gray-500"><%= user.email %></small>
-                      <% if i < item[:existing_users].size - 1 %>
-                        <hr class="my-1">
-                      <% end %>
-                    <% end %>
-                  </td>
-                  <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
-                  <td>
-                    <% item[:existing_users].each_with_index do |user, i| %>
-                      <% years = @import.years_active_cache[user.id] %>
-                      <div class="form-check">
-                        <%= radio_button_tag "actions[#{item[:index]}]", "link_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_link_#{user.id}" %>
-                        <%= label_tag "action_#{item[:index]}_link_#{user.id}", "#{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
-                      </div>
-                    <% end %>
-                    <div class="form-check">
-                      <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
-                      <%= label_tag "action_#{item[:index]}_create", "Different person (create new)", class: "form-check-label" %>
-                    </div>
-                    <div class="form-check">
-                      <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
-                      <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
-                    </div>
-                  </td>
-                </tr>
-              <% end %>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    <% end %>
-  <% end %>
-
-  <%# Bucket 4: Create new %>
-  <% if @import.categorized[:create_new].any? %>
-    <div class="card mb-3">
-      <div class="card-header bg-primary text-white">
-        <strong>New Users to Create</strong>
-        <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:create_new].size.to_s } %>
-        <small class="float-right">Will create and add to crew</small>
-      </div>
-      <div class="card-body p-0">
+          <small class="ml-auto">Please decide for each row</small>
+        <% end %>
         <table class="table table-sm table-hover mb-0">
           <thead class="table-light">
             <tr>
-              <th>Name</th>
-              <th>Email</th>
+              <th>Import Data</th>
+              <th>Possible Match(es)</th>
               <th>Position</th>
-              <th style="width: 150px;">Action</th>
+              <th style="width: 280px;">Decision</th>
             </tr>
           </thead>
           <tbody>
-            <% @import.categorized[:create_new].each do |item| %>
+            <% items_not_on_team.each do |item| %>
               <tr>
-                <td><%= item[:row][:original_name] %></td>
                 <td>
+                  <strong><%= item[:row][:original_name] %></strong><br>
                   <% if item[:row][:email].present? %>
-                    <span class="font-monospace"><%= item[:row][:email] %></span>
-                    <% if item[:row][:student_id].present? && item[:row][:email] == "#{item[:row][:student_id]}@ed.ac.uk" %>
-                      <br><small class="text-gray-500">(auto-generated)</small>
+                    <small class="text-gray-500"><%= item[:row][:email] %></small>
+                  <% end %>
+                </td>
+                <td>
+                  <% item[:existing_users].each_with_index do |user, i| %>
+                    <% years = @import.years_active_cache[user.id] %>
+                    <%= link_to user.name_or_email, admin_user_path(user) %>
+                    <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small><br>
+                    <small class="text-gray-500"><%= user.email %></small>
+                    <% if i < item[:existing_users].size - 1 %>
+                      <hr class="my-1">
                     <% end %>
-                  <% else %>
-                    <em class="text-gray-500">(will generate placeholder)</em>
                   <% end %>
                 </td>
                 <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
                 <td>
+                  <% item[:existing_users].each_with_index do |user, i| %>
+                    <% years = @import.years_active_cache[user.id] %>
+                    <div class="form-check">
+                      <%= radio_button_tag "actions[#{item[:index]}]", "link_#{user.id}", i == 0, class: "form-check-input", id: "action_#{item[:index]}_link_#{user.id}" %>
+                      <%= label_tag "action_#{item[:index]}_link_#{user.id}", "#{user.name_or_email} (#{format_years_active_label(years)})", class: "form-check-label" %>
+                    </div>
+                  <% end %>
                   <div class="form-check">
-                    <%= radio_button_tag "actions[#{item[:index]}]", "create", true, class: "form-check-input", id: "action_#{item[:index]}_create" %>
-                    <%= label_tag "action_#{item[:index]}_create", "Create & Add", class: "form-check-label" %>
+                    <%= radio_button_tag "actions[#{item[:index]}]", "create", false, class: "form-check-input", id: "action_#{item[:index]}_create" %>
+                    <%= label_tag "action_#{item[:index]}_create", "Different person (create new)", class: "form-check-label" %>
                   </div>
                   <div class="form-check">
                     <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
@@ -260,14 +202,65 @@
             <% end %>
           </tbody>
         </table>
-      </div>
-    </div>
+      <% end %>
+    <% end %>
   <% end %>
 
-  <div class="card">
-    <div class="card-footer flex justify-between">
-      <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: btn_classes(:secondary) %>
-      <%= f.submit "Confirm Import", class: btn_classes(:success) %>
-    </div>
-  </div>
+  <%# Bucket 4: Create new %>
+  <% if @import.categorized[:create_new].any? %>
+    <%= render CardComponent.new(variant: :primary, flush: true) do |c| %>
+      <% c.with_tools do %>
+        <span class="text-base font-semibold flex-1">New Users to Create</span>
+        <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @import.categorized[:create_new].size.to_s } %>
+        <small class="ml-auto">Will create and add to crew</small>
+      <% end %>
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Position</th>
+            <th style="width: 150px;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @import.categorized[:create_new].each do |item| %>
+            <tr>
+              <td><%= item[:row][:original_name] %></td>
+              <td>
+                <% if item[:row][:email].present? %>
+                  <span class="font-monospace"><%= item[:row][:email] %></span>
+                  <% if item[:row][:student_id].present? && item[:row][:email] == "#{item[:row][:student_id]}@ed.ac.uk" %>
+                    <br><small class="text-gray-500">(auto-generated)</small>
+                  <% end %>
+                <% else %>
+                  <em class="text-gray-500">(will generate placeholder)</em>
+                <% end %>
+              </td>
+              <td><span class="font-monospace"><%= item[:row][:position] %></span></td>
+              <td>
+                <div class="form-check">
+                  <%= radio_button_tag "actions[#{item[:index]}]", "create", true, class: "form-check-input", id: "action_#{item[:index]}_create" %>
+                  <%= label_tag "action_#{item[:index]}_create", "Create & Add", class: "form-check-label" %>
+                </div>
+                <div class="form-check">
+                  <%= radio_button_tag "actions[#{item[:index]}]", "skip", false, class: "form-check-input", id: "action_#{item[:index]}_skip" %>
+                  <%= label_tag "action_#{item[:index]}_skip", "Skip", class: "form-check-label" %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    <% end %>
+  <% end %>
+
+  <%= render CardComponent.new(flush: true) do |c| %>
+    <% c.with_footer do %>
+      <div class="flex justify-between">
+        <%= link_to "Cancel", new_admin_show_show_crew_import_path(@event), class: btn_classes(:secondary) %>
+        <%= f.submit "Confirm Import", class: btn_classes(:success) %>
+      </div>
+    <% end %>
+  <% end %>
 <% end %>
