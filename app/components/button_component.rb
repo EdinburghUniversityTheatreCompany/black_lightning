@@ -1,5 +1,5 @@
 class ButtonComponent < ViewComponent::Base
-  BASE_CLASSES = "inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium cursor-pointer no-underline transition-colors".freeze
+  BASE_CLASSES = "btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium cursor-pointer no-underline transition-colors".freeze
 
   VARIANT_CLASSES = {
     primary:   "bg-white border border-primary text-primary hover:bg-primary hover:text-white",
