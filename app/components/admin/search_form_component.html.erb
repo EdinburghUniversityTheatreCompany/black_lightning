@@ -1,52 +1,51 @@
-<div class="card"
-     data-controller="search-form-mobile live-search"
+<div data-controller="search-form-mobile live-search"
      data-action="input->live-search#scheduleSearch change->live-search#scheduleSearch submit->live-search#scheduleSearch">
-  <div class="card-header">
-    <span class="card-title">Search</span>
+  <%= render CardComponent.new(title: "Search", flush: true, html_class: "mb-0") do |c| %>
+    <% c.with_tools do %>
+      <%# Mobile toggle — hidden by default; controller shows it on mobile %>
+      <button type="button"
+              hidden
+              class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> ml-auto"
+              data-search-form-mobile-target="toggle"
+              data-action="search-form-mobile#toggle">
+        <i class="fas fa-filter"></i>
+        Filters
+        <i class="fas fa-chevron-down transition-transform duration-200"
+           data-search-form-mobile-target="chevron"></i>
+      </button>
+    <% end %>
 
-    <%# Mobile toggle — hidden by default; controller shows it on mobile %>
-    <button type="button"
-            hidden
-            class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> ml-auto"
-            data-search-form-mobile-target="toggle"
-            data-action="search-form-mobile#toggle">
-      <i class="fas fa-filter"></i>
-      Filters
-      <i class="fas fa-chevron-down transition-transform duration-200"
-         data-search-form-mobile-target="chevron"></i>
-    </button>
-  </div>
+    <%= helpers.search_form_for(@q, builder: SimpleForm::FormBuilder, url: form_url,
+          html: { id: "search", class: "search-form" }, **helpers.horizontal_form_options) do |f| %>
+      <div data-search-form-mobile-target="body">
+        <div class="p-4">
+          <%= helpers.render_search_form_fields(f, fields_outside_collapse, effective_columns) %>
 
-  <%= helpers.search_form_for(@q, builder: SimpleForm::FormBuilder, url: form_url,
-        html: { id: "search", class: "search-form" }, **helpers.horizontal_form_options) do |f| %>
-    <div data-search-form-mobile-target="body">
-      <div class="card-body">
-        <%= helpers.render_search_form_fields(f, fields_outside_collapse, effective_columns) %>
+          <% if fields_in_collapse.any? %>
+            <div class="search-form-inner-collapse" data-controller="collapsible">
+              <div data-collapsible-target="content" class="hidden">
+                <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
+              </div>
 
-        <% if fields_in_collapse.any? %>
-          <div class="search-form-inner-collapse" data-controller="collapsible">
-            <div data-collapsible-target="content" class="hidden">
-              <%= helpers.render_search_form_fields(f, fields_in_collapse, effective_columns) %>
+              <button type="button" class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> w-full"
+                      data-action="collapsible#toggle">
+                <span class="when-closed">More <i class="fas fa-chevron-down"></i></span>
+                <span class="when-open">Less <i class="fas fa-chevron-up"></i></span>
+              </button>
             </div>
+          <% end %>
+        </div>
 
-            <button type="button" class="<%= ButtonComponent.classes_for(variant: :secondary, size: :sm) %> w-full"
-                    data-action="collapsible#toggle">
-              <span class="when-closed">More <i class="fas fa-chevron-down"></i></span>
-              <span class="when-open">Less <i class="fas fa-chevron-up"></i></span>
-            </button>
-          </div>
-        <% end %>
+        <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
+          <%= f.button :button, class: ButtonComponent.classes_for(variant: :primary), name: "commit" do %>
+            <%= helpers.generate_icon_prefix("magnifying-glass", "Search") %>
+          <% end %>
+
+          <% button_params.each do |_key, params| %>
+            <%= f.submit(params[:action], class: ButtonComponent.classes_for(variant: :secondary)) %>
+          <% end %>
+        </div>
       </div>
-
-      <div class="card-footer">
-        <%= f.button :button, class: ButtonComponent.classes_for(variant: :primary), name: "commit" do %>
-          <%= helpers.generate_icon_prefix("magnifying-glass", "Search") %>
-        <% end %>
-
-        <% button_params.each do |_key, params| %>
-          <%= f.submit(params[:action], class: ButtonComponent.classes_for(variant: :secondary)) %>
-        <% end %>
-      </div>
-    </div>
+    <% end %>
   <% end %>
 </div>
