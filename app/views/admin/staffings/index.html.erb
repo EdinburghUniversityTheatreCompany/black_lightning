@@ -1,36 +1,33 @@
 <% webcal_url = staffing_calendar_url(token: current_user.calendar_token).sub(/\Ahttps?:\/\//, "webcal://") %>
 <% https_url  = staffing_calendar_url(token: current_user.calendar_token) %>
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="card-title">Your Staffing Calendar</h5>
+<%= render CardComponent.new(title: "Your Staffing Calendar") do |c| %>
+  <% c.with_footer do %>
+    <p class="text-gray-500 text-sm mb-0">
+      Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.
+    </p>
+  <% end %>
+  <div class="input-group">
+    <input type="text" class="form-control" value="<%= https_url %>" id="staffings-calendar-url" readonly autocomplete="off">
+    <button class="<%= btn_classes(:secondary) %>" type="button"
+            onclick="navigator.clipboard.writeText('<%= j(https_url) %>');
+                     this.textContent='Copied!';
+                     setTimeout(() => this.textContent='Copy', 2000)">
+      Copy
+    </button>
+    <%= link_to "Subscribe", webcal_url, class: btn_classes(:primary) %>
+    <%= button_to "Regenerate link", regenerate_calendar_token_path,
+                method: :post,
+                class: btn_classes(:danger),
+                form: {
+                  style: "display:contents",
+                  data: {
+                    controller: "confirm",
+                    action: "submit->confirm#confirm",
+                    confirm_message_value: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?"
+                  }
+                } %>
   </div>
-  <div class="card-body">
-    <div class="input-group">
-      <input type="text" class="form-control" value="<%= https_url %>" id="staffings-calendar-url" readonly autocomplete="off">
-      <button class="<%= btn_classes(:secondary) %>" type="button"
-              onclick="navigator.clipboard.writeText('<%= j(https_url) %>');
-                       this.textContent='Copied!';
-                       setTimeout(() => this.textContent='Copy', 2000)">
-        Copy
-      </button>
-      <%= link_to "Subscribe", webcal_url, class: btn_classes(:primary) %>
-      <%= button_to "Regenerate link", regenerate_calendar_token_path,
-                  method: :post,
-                  class: btn_classes(:danger),
-                  form: {
-                    style: "display:contents",
-                    data: {
-                      controller: "confirm",
-                      action: "submit->confirm#confirm",
-                      confirm_message_value: "This will invalidate your current link. Any subscribed calendar apps will break until you re-add the new link. Continue?"
-                    }
-                  } %>
-    </div>
-  </div>
-  <div class="card-footer text-gray-500 small">
-    Calendar invites are sent to <strong><%= current_user.calendar_email_for_invites %></strong>. You can set a different address in <%= link_to "account settings", edit_user_registration_path %>.
-  </div>
-</div>
+<% end %>
 
 <% search_fields = {
   show_title_cont: { slug: 'defaults.show_title' },
@@ -38,11 +35,9 @@
 } %>
 <%= render 'shared/search_form', input_fields: search_fields, columns: 2, url: admin_staffings_path %>
 
-<div class="card">
-    <div class="card-body">
-    <%= display_block("Staffing", true) %>
-  </div>
-</div>
+<%= render CardComponent.new do %>
+  <%= display_block("Staffing", true) %>
+<% end %>
 
 <div id="upcoming-staffings">
   <%= render 'upcoming_results' %>

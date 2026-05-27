@@ -15,47 +15,42 @@
 <%# Show the phone number column if the user has read permission on any of the users, apart from themselves. %>
 <% show_phone_number_column = @staffing.users.accessible_by(current_ability).where.not(id: current_user.id).any? %>
 
-<div class="card">
-  <div class="card-header">
-    <h5 class="card-title">Staffing Jobs</h5>
-  </div>
-  <div class="card-body p-0">
-    <table class="table table-hover mb-0">
-      <thead>
+<%= render CardComponent.new(title: "Staffing Jobs", flush: true) do %>
+  <table class="table table-hover mb-0">
+    <thead>
+      <tr>
+        <th>Staffing Job</th>
+        <th>Staffed By</th>
+
+        <% if show_phone_number_column %>
+          <th>Phone Number</th>
+        <% end %>
+      </tr>
+    </thead>
+    <tbody>
+      <% @staffing.staffing_jobs.each do |staffing_job| %>
         <tr>
-          <th>Staffing Job</th>
-          <th>Staffed By</th>
+          <td><%= staffing_job.name %></td>
+
+          <% user = staffing_job.user %>
+
+          <td>
+            <% if user.present? %>
+              <%= user_link(user, false) %>
+            <% elsif @can_sign_up %>
+              <%= render 'sign_up_button', job: staffing_job %>
+            <% end %>
+          </td>
 
           <% if show_phone_number_column %>
-            <th>Phone Number</th>
-          <% end %>
-        </tr>
-      </thead>
-      <tbody>
-        <% @staffing.staffing_jobs.each do |staffing_job| %>
-          <tr>
-            <td><%= staffing_job.name %></td>
-
-            <% user = staffing_job.user %>
-
             <td>
-              <% if user.present? %>
-                <%= user_link(user, false) %>
-              <% elsif @can_sign_up %>
-                <%= render 'sign_up_button', job: staffing_job %>
+              <% if can? :read, user %>
+                <%= user&.phone_number %>
               <% end %>
             </td>
-
-            <% if show_phone_number_column %>
-              <td>
-                <% if can? :read, user %>
-                  <%= user&.phone_number %>
-                <% end %>
-              </td>
-            <% end %>
-          </tr>
-        <% end %>
-      </tbody>
-    </table>
-  </div>
-</div>
+          <% end %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
