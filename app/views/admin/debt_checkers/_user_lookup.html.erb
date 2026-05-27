@@ -1,10 +1,7 @@
 <%# locals: (selected_user: nil) %>
 
-<div class="card mb-4">
-  <div class="card-header">
-    <h5 class="mb-0">Quick Lookup</h5>
-  </div>
-  <div class="card-body" data-controller="select">
+<%= render CardComponent.new(title: "Quick Lookup") do %>
+  <div data-controller="select">
     <%= simple_form_for :debt_checker, url: lookup_admin_debt_checkers_path, method: :get do |f| %>
       <div class="flex gap-2 items-center">
         <%= f.label :user_id, "Search for a specific user to check their debt status.",
@@ -32,4 +29,4 @@
       </div>
     <% end %>
   </div>
-</div>
+<% end %>

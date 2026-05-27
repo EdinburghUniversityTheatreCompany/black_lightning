@@ -29,16 +29,12 @@
   stats = source.merge_stats_as_source(target)
 %>
 
-<div class="card">
-  <div class="card-header">
-    <h5 class="mb-0">Merge Preview</h5>
-  </div>
-
+<%= render CardComponent.new(title: "Merge Preview", flush: true) do %>
   <%= form_with url: absorb_admin_user_path(target), method: :post,
               data: { controller: "field-choice", turbo: local_assigns[:in_modal] ? nil : false } do |f| %>
     <%= hidden_field_tag :source_user_id, source.id %>
 
-    <div class="card-body">
+    <div class="p-4">
       <p class="text-gray-500 mb-3">
         Select which values to keep for each field. All associations will be transferred from
         <strong><%= source.name_or_email %></strong> to <strong><%= target.name_or_email %></strong>.
@@ -214,7 +210,7 @@
       <% end %>
     </div>
 
-    <div class="card-footer flex justify-between">
+    <div class="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-between">
       <% if local_assigns[:in_modal] %>
         <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->merge-modal#close">Cancel</button>
       <% else %>
@@ -223,4 +219,4 @@
       <button type="submit" class="<%= btn_classes(:danger) %>">Confirm Merge</button>
     </div>
   <% end %>
-</div>
+<% end %>

@@ -1,5 +1,3 @@
-<div class="card">
-  <div class="card-body">
-    <%= render 'admin/debts/show_content' %>
-  </div>
-</div>
+<%= render CardComponent.new do %>
+  <%= render 'admin/debts/show_content' %>
+<% end %>

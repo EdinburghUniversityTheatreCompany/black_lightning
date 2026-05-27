@@ -22,30 +22,80 @@
 
 <%# Exact matches (by ID and email) %>
 <% if @exact_matches.any? %>
-  <div class="card mb-3">
-    <div class="card-header bg-success text-white">
-      <strong>Matched Users</strong>
-      <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @exact_matches.size.to_s } %>
-    </div>
-    <div class="card-body p-0">
-      <table class="table table-sm table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Import Name</th>
-            <th>Matched User</th>
-            <th>Matched By</th>
-            <th>Member?</th>
-            <th>Debt Status</th>
+  <%= render CardComponent.new(title: "Matched Users (#{@exact_matches.size})", variant: :success, flush: true) do %>
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Import Name</th>
+          <th>Matched User</th>
+          <th>Matched By</th>
+          <th>Member?</th>
+          <th>Debt Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @exact_matches.each do |match| %>
+          <% user = match[:user] %>
+          <% in_debt = @in_debt_ids.include?(user.id) %>
+          <tr class="<%= in_debt ? 'table-danger' : '' %>">
+            <td><%= match[:row][:original_name] %></td>
+            <td><%= link_to user.name_or_email, admin_user_path(user) %></td>
+            <td><%= match[:match_type] %></td>
+            <td>
+              <% if @member_ids.include?(user.id) %>
+                <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
+              <% else %>
+                <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
+              <% end %>
+            </td>
+            <td>
+              <% if in_debt %>
+                <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
+              <% else %>
+                <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
+              <% end %>
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          <% @exact_matches.each do |match| %>
-            <% user = match[:user] %>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+<% end %>
+
+<%# Fuzzy matches %>
+<% if @fuzzy_matches.any? %>
+  <%= render CardComponent.new(title: "Possible Matches — Review Manually (#{@fuzzy_matches.size})", variant: :warning, flush: true) do |c| %>
+    <% c.with_tools do %>
+      <small>Name matched — verify these are the right people</small>
+    <% end %>
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Import Name</th>
+          <th>Possible Match(es)</th>
+          <th>Member?</th>
+          <th>Debt Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @fuzzy_matches.each do |match| %>
+          <% match[:candidates].each_with_index do |user, i| %>
             <% in_debt = @in_debt_ids.include?(user.id) %>
+            <% years = match[:years_active_cache][user.id] %>
             <tr class="<%= in_debt ? 'table-danger' : '' %>">
-              <td><%= match[:row][:original_name] %></td>
-              <td><%= link_to user.name_or_email, admin_user_path(user) %></td>
-              <td><%= match[:match_type] %></td>
+              <% if i == 0 %>
+                <td rowspan="<%= match[:candidates].size %>">
+                  <strong><%= match[:row][:original_name] %></strong>
+                  <% if match[:row][:email].present? %>
+                    <br><small class="text-gray-500"><%= match[:row][:email] %></small>
+                  <% end %>
+                </td>
+              <% end %>
+              <td>
+                <%= link_to user.name_or_email, admin_user_path(user) %>
+                <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small>
+                <br><small class="text-gray-500"><%= user.email %></small>
+              </td>
               <td>
                 <% if @member_ids.include?(user.id) %>
                   <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
@@ -62,99 +112,35 @@
               </td>
             </tr>
           <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
-<% end %>
-
-<%# Fuzzy matches %>
-<% if @fuzzy_matches.any? %>
-  <div class="card mb-3">
-    <div class="card-header bg-warning">
-      <strong>Possible Matches (Review Manually)</strong>
-      <%= render(BadgeComponent.new(type: :dark, html_class: "ml-2")) { @fuzzy_matches.size.to_s } %>
-      <small class="float-right">Name matched — verify these are the right people</small>
-    </div>
-    <div class="card-body p-0">
-      <table class="table table-sm table-hover mb-0">
-        <thead class="table-light">
-          <tr>
-            <th>Import Name</th>
-            <th>Possible Match(es)</th>
-            <th>Member?</th>
-            <th>Debt Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @fuzzy_matches.each do |match| %>
-            <% match[:candidates].each_with_index do |user, i| %>
-              <% in_debt = @in_debt_ids.include?(user.id) %>
-              <% years = match[:years_active_cache][user.id] %>
-              <tr class="<%= in_debt ? 'table-danger' : '' %>">
-                <% if i == 0 %>
-                  <td rowspan="<%= match[:candidates].size %>">
-                    <strong><%= match[:row][:original_name] %></strong>
-                    <% if match[:row][:email].present? %>
-                      <br><small class="text-gray-500"><%= match[:row][:email] %></small>
-                    <% end %>
-                  </td>
-                <% end %>
-                <td>
-                  <%= link_to user.name_or_email, admin_user_path(user) %>
-                  <small class="text-gray-500">(<%= format_years_active_label(years) %>)</small>
-                  <br><small class="text-gray-500"><%= user.email %></small>
-                </td>
-                <td>
-                  <% if @member_ids.include?(user.id) %>
-                    <%= render(BadgeComponent.new(type: :success)) { "Member" } %>
-                  <% else %>
-                    <%= render(BadgeComponent.new(type: :secondary)) { "Not a member" } %>
-                  <% end %>
-                </td>
-                <td>
-                  <% if in_debt %>
-                    <%= render(BadgeComponent.new(type: :danger)) { user.debt_message_suffix.capitalize } %>
-                  <% else %>
-                    <%= render(BadgeComponent.new(type: :success)) { "Not in debt" } %>
-                  <% end %>
-                </td>
-              </tr>
-            <% end %>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
 <% end %>
 
 <%# Unmatched %>
 <% if @unmatched.any? %>
-  <div class="card mb-3">
-    <div class="card-header bg-secondary text-white">
-      <strong>Not Found</strong>
-      <%= render(BadgeComponent.new(type: :light, html_class: "ml-2")) { @unmatched.size.to_s } %>
-      <small class="float-right">No matching user in the system</small>
-    </div>
-    <div class="card-body p-0">
-      <table class="table table-sm table-hover mb-0">
-        <thead class="table-light">
+  <%= render CardComponent.new(title: "Not Found (#{@unmatched.size})", variant: :secondary, flush: true) do |c| %>
+    <% c.with_tools do %>
+      <small>No matching user in the system</small>
+    <% end %>
+    <table class="table table-sm table-hover mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Student ID</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @unmatched.each do |row| %>
           <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Student ID</th>
+            <td><%= row[:original_name] %></td>
+            <td><%= row[:email] %></td>
+            <td><%= row[:student_id] %></td>
           </tr>
-        </thead>
-        <tbody>
-          <% @unmatched.each do |row| %>
-            <tr>
-              <td><%= row[:original_name] %></td>
-              <td><%= row[:email] %></td>
-              <td><%= row[:student_id] %></td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
-  </div>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
 <% end %>

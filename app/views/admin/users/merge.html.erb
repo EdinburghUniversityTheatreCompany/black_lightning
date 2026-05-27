@@ -1,6 +1,6 @@
-<div class="card mb-3">
-  <div class="card-body">
-    <%= form_with url: merge_preview_admin_user_path(@user), method: :post do %>
+<%= render CardComponent.new(flush: true, html_class: "mb-3") do %>
+  <%= form_with url: merge_preview_admin_user_path(@user), method: :post do %>
+    <div class="p-4">
       <p>Select the user to merge <strong>from</strong>. All their associations (team memberships, staffing jobs, debts, etc.) will be transferred to <%= @user.name_or_email %>, and the selected user will be deleted.</p>
 
       <div class="form-group">
@@ -19,14 +19,14 @@
           <% end %>
         </select>
       </div>
+    </div>
 
-      <div class="card-footer mt-3">
-        <%= link_to "Cancel", admin_user_path(@user), class: btn_classes(:secondary) %>
-        <button type="submit" class="<%= btn_classes(:primary) %>">Preview Merge</button>
-      </div>
-    <% end %>
-  </div>
-</div>
+    <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
+      <%= link_to "Cancel", admin_user_path(@user), class: btn_classes(:secondary) %>
+      <button type="submit" class="<%= btn_classes(:primary) %>">Preview Merge</button>
+    </div>
+  <% end %>
+<% end %>
 
 <%= turbo_frame_tag "merge-modal" do %>
   <% if @source_user %>

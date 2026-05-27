@@ -1,38 +1,29 @@
-<div class="card">
-  <div class="card-body">
-    <h3>Create New User</h3>
-    <%= simple_horizontal_form_for(@user, url: activate_admin_users_path, method: :post) do |f| %>
-      <%= f.error_notification %>
+<%= render CardComponent.new(title: "Create New User") do %>
+  <%= simple_horizontal_form_for(@user, url: activate_admin_users_path, method: :post) do |f| %>
+    <%= f.error_notification %>
 
-      <%# TODO: Needs proper margins. It's slightly off %>
-      <p class="text-gray-500 text-sm px-2 mb-2">Enter the details of a new member here to send them a profile completion email.</p>
+    <%# TODO: Needs proper margins. It's slightly off %>
+    <p class="text-gray-500 text-sm px-2 mb-2">Enter the details of a new member here to send them a profile completion email.</p>
 
-      <%= f.input :email, required: true, autofocus: true %>
-      <%= f.input :first_name, required: true %>
-      <%= f.input :last_name, required: true %>
-      <%= f.input :student_id, hint: 'Optional - format: s1234567' %>
-      <%= f.input :associate_id, hint: 'Optional - format: ASSOC123' %>
+    <%= f.input :email, required: true, autofocus: true %>
+    <%= f.input :first_name, required: true %>
+    <%= f.input :last_name, required: true %>
+    <%= f.input :student_id, hint: 'Optional - format: s1234567' %>
+    <%= f.input :associate_id, hint: 'Optional - format: ASSOC123' %>
 
-      <%= f.input :is_member, as: :fake_checkbox, label: 'Make member', hint: 'Make this user a member immediately' %>
+    <%= f.input :is_member, as: :fake_checkbox, label: 'Make member', hint: 'Make this user a member immediately' %>
 
-      <%= f.button :submit, "Send Profile Completion Email", class: btn_classes(:primary) %>
-    <% end %>
-  </div>
-</div>
+    <%= f.button :submit, "Send Profile Completion Email", class: btn_classes(:primary) %>
+  <% end %>
+<% end %>
 
-<div class="card mt-3">
-  <div class="card-body">
-    <h3>Granting Membership To Existing Users</h3>
-    <p>If you need to grant membership to an existing user,
-      please edit their profile and grant them the member role,
-      or import a spreadsheet of members using the bulk import feature below.</p>
-  </div>
-</div>
+<%= render CardComponent.new(title: "Granting Membership To Existing Users") do %>
+  <p>If you need to grant membership to an existing user,
+    please edit their profile and grant them the member role,
+    or import a spreadsheet of members using the bulk import feature below.</p>
+<% end %>
 
-<div class="card mt-3">
-  <div class="card-body">
-    <h3>Bulk Import</h3>
-    <p class="mb-2">Need to activate many members at once? Import from a spreadsheet or paste data directly.</p>
-    <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: btn_classes(:primary) %>
-  </div>
-</div>
+<%= render CardComponent.new(title: "Bulk Import") do %>
+  <p class="mb-2">Need to activate many members at once? Import from a spreadsheet or paste data directly.</p>
+  <%= link_to "Bulk Membership Import", new_admin_membership_import_path, class: btn_classes(:primary) %>
+<% end %>

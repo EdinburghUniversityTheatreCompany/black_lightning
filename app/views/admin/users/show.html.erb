@@ -30,9 +30,9 @@
     <%= render Admin::UserBioComponent.new(user: @user) %>
   </div>
   <div class="xl:col-span-2">
-    <div class="card">
+    <%= render CardComponent.new(flush: true) do %>
       <%= render 'shared/basic_fields', fields: fields %>
-    </div>
+    <% end %>
     <%= render Admin::DebtSummaryComponent.new(user: @user, current_user: current_user) %>
   </div>
 </div>
