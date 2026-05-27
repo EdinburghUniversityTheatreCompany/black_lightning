@@ -5,7 +5,7 @@
     <!-- Standalone logout item -->
     <li class="nav-item">
       <%= button_to item[:path], method: item[:method],
-          class: "nav-link w-100 text-start bg-transparent border-0",
+          class: "nav-link w-full text-start bg-transparent border-0",
           form: {
             style: "display:contents",
             data: {
@@ -31,16 +31,16 @@
             </p>
         </a>
         <ul class="nav nav-treeview">
-            <% item[:children].each do |subitem|%>
+            <% item[:children].each do |subitem| %>
             <% is_active = @current_path == subitem[:path] %>
             <li class="nav-item">
-                <a href="<%=subitem[:path]%>" class="nav-link <%='active' if is_active %>">
+                <a href="<%= subitem[:path] %>" class="nav-link <%= 'active' if is_active %>">
                     <i class="fa-solid <%= subitem[:fa_icon] %> nav-icon"></i>
                     <p><%= subitem[:title] %></p>
                 </a>
             </li>
 
-        <%end%>
+        <% end %>
         </ul>
     </li>
   <% end %>

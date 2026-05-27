@@ -30,7 +30,7 @@ class VideoLink < ApplicationRecord
   VIDEO_EMBED_WIDTH = 700
   VIDEO_EMBED_HEIGHT = 400
 
-  SHARED_ATTRIBUTES = "width=\"#{VIDEO_EMBED_WIDTH}\" height=\"#{VIDEO_EMBED_HEIGHT}\" frameborder=\"0\" allowfullscreen=\"true\" allow=\"autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share\" class=\"w-100\""
+  SHARED_ATTRIBUTES = "width=\"#{VIDEO_EMBED_WIDTH}\" height=\"#{VIDEO_EMBED_HEIGHT}\" frameborder=\"0\" allowfullscreen=\"true\" allow=\"autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share\" class=\"w-full\""
 
   YOUTUBE_ID_REGEX = %r{^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*}
 
