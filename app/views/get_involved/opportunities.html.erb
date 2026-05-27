@@ -9,12 +9,12 @@
 <% if @opportunities.count == 0 %>
   <%= display_block("No Opportunities", false) %>
 <% else %>
-  <div class="card mb-3">
+  <%= render CardComponent.new(flush: true) do %>
     <ul class="flex flex-col">
     <% @opportunities.each do |opportunity| %>
         <li class="list-row">
           <h4><%= opportunity.title %></h4>
-          
+
           <p><small class="text-gray-500"><%= opportunity.creator&.name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
 
           <p> <%= render_markdown opportunity.description %></p>
@@ -29,7 +29,7 @@
         </li>
       <% end %>
     </ul>
-  </div>
+  <% end %>
 <% end %>
 
 <div class="mb-3"></div>

@@ -1,17 +1,17 @@
 <h1><%= @title %></h1>
 
-<div class="card mb-3">
-  <div class="card-header">
-    <small class="text-gray-500"><%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %></small>
+<%= render CardComponent.new(flush: true) do %>
+  <div class="px-4 py-3 border-b border-gray-200 bg-gray-50 text-sm text-gray-500">
+    <%= l(@news.publish_date, format: :longy) %> by <%= link_to(@news.author.name(@current_user), news_index_url('q[author_full_name_cont]' => @news.author.name(@current_user))) %>
   </div>
 
-  <%= render 'shared/image', image: @news.fetch_image, variant: medium_variant, image_options: { class: "card-img-top h-auto" } %>
+  <%= render 'shared/image', image: @news.fetch_image, variant: medium_variant, image_options: { class: "block w-full h-auto" } %>
 
-  <div class="card-body">
+  <div class="p-4">
     <%= render_markdown @news.body %>
 
     <% if @news.created_at != @news.updated_at %>
-      <p class="card-text"><small class="text-gray-500">Last updated: <%= l @news.updated_at, format: :longy %></small></p>
+      <p class="block mb-2"><small class="text-gray-500">Last updated: <%= l @news.updated_at, format: :longy %></small></p>
     <% end %>
   </div>
-</div>
+<% end %>

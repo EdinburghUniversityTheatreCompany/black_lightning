@@ -4,20 +4,16 @@
 
 <div class="flex flex-col md:flex-row gap-4">
   <div class="w-full md:w-1/2">
-    <div class="card">
-      <div class="card-header"><h4>Description</h4></div>
-      <div class="card-body">
-        <%= render_markdown @venue.description %>
-      </div>
-    </div>
+    <%= render CardComponent.new(title: "Description", html_class: "mb-0") do %>
+      <%= render_markdown @venue.description %>
+    <% end %>
   </div>
 
   <div class="w-full md:w-1/2">
     <% if @venue.location.present? %>
-      <div class="card">
-        <div class="card-header"><h4>Map</h4></div>
+      <%= render CardComponent.new(title: "Map", flush: true, html_class: "mb-0") do %>
         <%= venue_map(@venue) %>
-      </div>
+      <% end %>
     <% end %>
   </div>
 </div>

@@ -1,13 +1,11 @@
 <%# locals: (error_header:) %>
 
 <div class="mx-auto">
-  <div class="card mb-4">
-    <div class="card-body text-center">
-      <%= image_tag "HAL9000.png", style: "width: 250px;", class: 'mb-3 mx-auto block', alt: "HAL 9000" %>
-      <h3 class="text-danger"><b><%= error_header %></b></h3>
-      <%= yield %>
-    </div>
-  </div>
+  <%= render CardComponent.new do %>
+    <%= image_tag "HAL9000.png", style: "width: 250px;", class: 'mb-3 mx-auto block', alt: "HAL 9000" %>
+    <h3 class="text-danger"><b><%= error_header %></b></h3>
+    <%= yield %>
+  <% end %>
 
   <%= render AlertComponent.new(type: :danger) do %>
     <h4><b>Errors:</b></h4>

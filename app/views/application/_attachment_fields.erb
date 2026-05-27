@@ -1,15 +1,13 @@
 <%# locals: (f:, dynamic: nil) %>
 
 <%= render layout: '/shared/form/fields_for_template', locals: { f: f, div_class_additions: '' } do %>
-  <div class="card">
-    <div class="card-body">
-      <%= f.input :name, placeholder: "Attachment Name" %>
-      <%= render 'shared/form/file_field', f: f, field_name: :file %>
-      <%= f.input :access_level, collection: Attachment::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>
-      <%= f.association(:attachment_tags, collection: AttachmentTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>
-    </div>
-    <div class="card-footer">
+  <%= render CardComponent.new do |c| %>
+    <% c.with_footer do %>
       <%= link_to_remove f %>
-    </div>
-  </div>
+    <% end %>
+    <%= f.input :name, placeholder: "Attachment Name" %>
+    <%= render 'shared/form/file_field', f: f, field_name: :file %>
+    <%= f.input :access_level, collection: Attachment::ACCESS_LEVELS, hint: 'Note that the user also needs to have access to the object the item is attached to.', include_blank: false %>
+    <%= f.association(:attachment_tags, collection: AttachmentTag.accessible_by(current_ability), input_html: { multiple: 'multiple' }) %>
+  <% end %>
 <% end %>

@@ -10,24 +10,19 @@ status_order = { "successful" => 0, "unsuccessful" => 1, "approved" => 2, "rejec
 
 <% if @proposals.any? %>
   <% @proposals.each_with_index do |(call, proposals), index| %>
-    <div class="card <%= 'mb-3' unless index == @proposals.size - 1 %>">
-      <div class="card-header">
-        <h5 class="card-title mb-0">
-          <%= call.name %>
-          <small class="text-gray-500 fw-normal">Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %></small>
-        </h5>
-      </div>
-      <div class="card-body p-0">
-        <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
-          <div class="flex items-center py-2 px-3 border-bottom">
-            <%= get_link proposal, :show %>
-            <div class="flex gap-1 ml-2">
-              <%= proposal_labels(proposal, false, show_debtors: false) %>
-            </div>
+    <%= render CardComponent.new(title: call.name, flush: true, html_class: (index == @proposals.size - 1 ? 'mb-0' : '')) do |c| %>
+      <% c.with_tools do %>
+        <small class="text-gray-500 font-normal ml-2">Submission: <%= l call.submission_deadline, format: :longy %> | Editing: <%= l call.editing_deadline, format: :longy %></small>
+      <% end %>
+      <% proposals.sort_by { |p| status_order.fetch(p.status, 99) }.each do |proposal| %>
+        <div class="flex items-center py-2 px-3 border-bottom">
+          <%= get_link proposal, :show %>
+          <div class="flex gap-1 ml-2">
+            <%= proposal_labels(proposal, false, show_debtors: false) %>
           </div>
-        <% end %>
-      </div>
-    </div>
+        </div>
+      <% end %>
+    <% end %>
   <% end %>
 <% else %>
   <p class="text-gray-500"><em>There are no proposals found for this search.</em></p>
