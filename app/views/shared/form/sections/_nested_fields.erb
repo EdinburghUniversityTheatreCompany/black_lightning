@@ -1,5 +1,5 @@
 <%# locals: (f:, partial_name:, association_name:, display_link_to_add: true, container_class: nil, wrapper_class: nil, sortable: false) %>
-<%# KEEP%>
+<%# KEEP %>
 
 <% if f.object.errors[association_name].present? then %>
   <p id="<%= association_name %>_errors" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
@@ -33,6 +33,6 @@
   </template>
 
   <% if display_link_to_add %>
-    <%= link_to_add f, association_name %>
+    <%= link_to_add f, association_name, div_html_class: wrapper_class %>
   <% end %>
 </div>

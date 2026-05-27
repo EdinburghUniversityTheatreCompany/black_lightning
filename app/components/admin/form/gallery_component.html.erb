@@ -4,8 +4,8 @@
       f: @f,
       association_name: :pictures,
       partial_name: 'picture_fields',
-      container_class: 'grid grid-cols-12 gap-x-4',
-      wrapper_class: 'col-span-12 lg:col-span-6 xl:col-span-4')
+      container_class: 'grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-x-4',
+      wrapper_class: nil)
     %>
 
     <%= render 'shared/form/dropzone/dropzone_pictures' %>

@@ -13,14 +13,14 @@ module LinkHelper
     end
   end
 
-  def link_to_add(form, attribute_name, object_name: nil, html_class: nil)
+  def link_to_add(form, attribute_name, object_name: nil, html_class: nil, div_html_class: nil)
     object_name ||= format_class_name(attribute_name.to_s, true)
     html_class ||= "#{btn_classes(:secondary)} #{object_name.parameterize.underscore}_add_button"
 
     button = button_tag(add_button_text(object_name), type: "button", class: html_class,
                         data: { action: "nested-form#add" })
 
-    "<div>#{button}</div>".html_safe
+    "<div class=\"#{div_html_class}\">#{button}</div>".html_safe
   end
 
   def add_button_text(object_name)
