@@ -216,9 +216,11 @@ class Event < ApplicationRecord
   def set_default_members_only_text
     return if !has_attribute?(:members_only_text) || members_only_text.present?
 
-    editable_block = Admin::EditableBlock.find_by(name: "Event Members-Only Text Default")
+    content = Rails.cache.fetch("admin/editable_block/event_members_only_text_default", expires_in: 5.minutes) do
+      Admin::EditableBlock.find_by(name: "Event Members-Only Text Default")&.content || ""
+    end
 
-    self.members_only_text = editable_block.present? ? editable_block.content : ""
+    self.members_only_text = content
   end
 
   def as_json(options = {})
