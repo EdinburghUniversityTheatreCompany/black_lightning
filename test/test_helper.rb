@@ -31,6 +31,7 @@ require "rails/test_help"
 
 class ActiveSupport::TestCase
   include ActionMailer::TestHelper
+  include BLFactoryRoleHelper
 
   # Setup all fixtures in test/fixtures/*.(yml|csv) for all tests in alphabetical order.
   #

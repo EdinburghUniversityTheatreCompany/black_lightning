@@ -164,13 +164,13 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     members = User.with_role(:member)
 
     members.each do |member|
-      member.remove_role :member
+      bl_remove_role(member, :member)
     end
 
     helper_test_send_mail_with_errors(mass_mail)
 
     members.each do |member|
-      member.add_role :member
+      bl_add_role(member, :member)
     end
   end
 
