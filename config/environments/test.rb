@@ -64,4 +64,10 @@ Rails.application.configure do
 
   # Set job adapter for tests
   config.active_job.queue_adapter = :test
+
+  config.after_initialize do
+    Prosopite.rails_logger = true
+    # Set to true once existing N+1s are resolved to enforce strict mode in CI
+    Prosopite.raise = true
+  end
 end

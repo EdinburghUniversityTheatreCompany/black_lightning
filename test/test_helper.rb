@@ -38,7 +38,10 @@ class ActiveSupport::TestCase
   # -- they do not yet inherit this setting
   fixtures :all
 
+  setup { Prosopite.scan }
+
   teardown do
+    Prosopite.finish
     FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
     if ENV["VALIDATE"]
       validate_html

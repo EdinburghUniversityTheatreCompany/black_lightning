@@ -8,6 +8,7 @@ class ApplicationController < ActionController::Base
   before_action :set_globals
   before_action :require_profile_completion!
   around_action :set_statement_timeout
+  around_action :n_plus_one_detection, if: -> { Rails.env.development? }
 
   check_authorization unless: :auth_controller?
 
@@ -78,6 +79,13 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  def n_plus_one_detection
+    Prosopite.scan
+    yield
+  ensure
+    Prosopite.finish
+  end
 
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:account_update, keys: [ :calendar_email ])
