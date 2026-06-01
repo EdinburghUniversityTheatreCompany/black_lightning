@@ -175,6 +175,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
   def set_default_proposal_text
     return if !has_attribute?(:proposal_text) || proposal_text.present?
 
-    self.proposal_text = Admin::EditableBlock.find_by(name: "Proposals - Proposal Text Default").try(:content) || ""
+    self.proposal_text = Rails.cache.fetch("admin/editable_block/proposals_proposal_text_default", expires_in: 5.minutes) do
+      Admin::EditableBlock.find_by(name: "Proposals - Proposal Text Default")&.content || ""
+    end
   end
 end
