@@ -15,12 +15,18 @@
 FactoryBot.define do
   factory :maintenance_debt, class: Admin::MaintenanceDebt do
     association :user, factory: :member
-    show { Show.first || FactoryBot.create(:show) }
+    show { $bl_cached_show ||= Show.first || FactoryBot.create(:show) }
     due_by { Date.current + 1 }
     converted_from_staffing_debt { false }
 
     transient do
       with_attendance { false }
+    end
+
+    to_create do |instance|
+      Thread.current[:bl_skip_debt_realloc] = true
+      instance.save!
+      Thread.current[:bl_skip_debt_realloc] = nil
     end
 
     after(:create) do |maintenance_debt, evaluator|

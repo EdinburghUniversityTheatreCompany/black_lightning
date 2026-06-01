@@ -20,7 +20,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
   validates :due_by, :show_id, :user_id, :state, presence: true
   validates :converted_from_staffing_debt, inclusion: [ true, false ]
 
-  after_save :associate_with_attendance
+  after_save :associate_with_attendance, unless: -> { Thread.current[:bl_skip_debt_realloc] }
   after_destroy { associate_with_attendance(true) }
 
   # the progress of a maintenance debt is tracked by its state enum

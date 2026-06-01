@@ -19,7 +19,7 @@ class MaintenanceAttendance < ApplicationRecord
   has_one :maintenance_debt, class_name: "Admin::MaintenanceDebt", dependent: :nullify
   delegate :date, to: :maintenance_session
 
-  after_save :associate_with_debt
+  after_save :associate_with_debt, unless: -> { Thread.current[:bl_skip_debt_realloc] }
   after_destroy { associate_with_debt(true) }
 
   def self.ransackable_attributes(auth_object = nil)

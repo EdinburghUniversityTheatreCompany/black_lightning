@@ -22,7 +22,7 @@ class Admin::StaffingDebt < ApplicationRecord
   belongs_to :show, class_name: "Event", foreign_key: :show_id
   belongs_to :admin_staffing_job, class_name: "Admin::StaffingJob", optional: true
 
-  after_save :associate_with_staffing_job
+  after_save :associate_with_staffing_job, unless: -> { Thread.current[:bl_skip_debt_realloc] }
   after_destroy { associate_with_staffing_job(true) }
 
 

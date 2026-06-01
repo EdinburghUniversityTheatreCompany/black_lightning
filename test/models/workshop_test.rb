@@ -61,8 +61,9 @@ class WorkshopTest < ActiveSupport::TestCase
       workshop.sync_debts_for_all_users
     end
 
+    debt_counts = Admin::StaffingDebt.where(show: workshop, user_id: workshop.users.pluck(:id)).group(:user_id).count
     workshop.users.each do |user|
-      assert_equal 1, user.admin_staffing_debts.where(show: workshop).count
+      assert_equal 1, debt_counts[user.id]
     end
   end
 

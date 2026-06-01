@@ -180,6 +180,27 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert_equal [ @user ], User.in_debt.to_a
   end
 
+  test "reallocate_maintenance_debts_for_users links debts to attendances for multiple users" do
+    user_a = FactoryBot.create(:user)
+    user_b = FactoryBot.create(:user)
+    show = $bl_cached_show ||= FactoryBot.create(:show)
+
+    debt_a = FactoryBot.create(:maintenance_debt, user: user_a, show: show)
+    debt_b = FactoryBot.create(:maintenance_debt, user: user_b, show: show)
+    att_a  = FactoryBot.create(:maintenance_attendance, user: user_a)
+    att_b  = FactoryBot.create(:maintenance_attendance, user: user_b)
+
+    User.reallocate_maintenance_debts_for_users([ user_a, user_b ])
+
+    assert_equal att_a, debt_a.reload.maintenance_attendance
+    assert_equal att_b, debt_b.reload.maintenance_attendance
+  end
+
+  test "reallocate_staffing_debts_for_users is idempotent and handles empty list" do
+    assert_nothing_raised { User.reallocate_staffing_debts_for_users([]) }
+    assert_nothing_raised { User.reallocate_maintenance_debts_for_users([]) }
+  end
+
   test "test notified since returns only users who are in debt and have not received a notification" do
     date = Date.current.advance(days: -7)
 

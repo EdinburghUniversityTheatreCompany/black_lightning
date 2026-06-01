@@ -18,7 +18,14 @@ FactoryBot.define do
     end
 
     after(:create) do |maintenance_session, evaluator|
-      create_list(:maintenance_attendance, evaluator.attendances_count, maintenance_session: maintenance_session)
+      attendances = nil
+      Thread.current[:bl_skip_debt_realloc] = true
+      begin
+        attendances = create_list(:maintenance_attendance, evaluator.attendances_count, maintenance_session: maintenance_session)
+      ensure
+        Thread.current[:bl_skip_debt_realloc] = nil
+      end
+      User.reallocate_maintenance_debts_for_users(attendances.map(&:user).uniq)
     end
   end
 end

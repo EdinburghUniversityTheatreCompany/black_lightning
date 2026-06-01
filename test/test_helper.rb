@@ -43,6 +43,11 @@ class ActiveSupport::TestCase
 
   teardown do
     Prosopite.finish
+    # Reset factory caches so rolled-back records don't leak to the next test
+    $bl_cached_venue_id = nil
+    $bl_cached_show = nil
+    $bl_role_cache = nil
+    $bl_cached_user_id = nil
     FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
     if ENV["VALIDATE"]
       validate_html

@@ -130,16 +130,16 @@ class DebtTaskTest < ActiveSupport::TestCase
 
     # Mock the mailer to raise an error for the failing user
     original_method = DebtMailer.method(:mail_debtor)
-    DebtMailer.define_singleton_method(:mail_debtor) do |user, new_debtor|
+    DebtMailer.define_singleton_method(:mail_debtor) do |user, new_debtor, debt_moment: nil|
       if user.id == failing_debt.user.id
         # Create a message delivery that will raise SMTP error
-        message = original_method.call(user, new_debtor)
+        message = original_method.call(user, new_debtor, debt_moment: debt_moment)
         message.define_singleton_method(:deliver_now) do
           raise Net::SMTPServerBusy.new("450 Message not queued: recipient is suppressed")
         end
         message
       else
-        original_method.call(user, new_debtor)
+        original_method.call(user, new_debtor, debt_moment: debt_moment)
       end
     end
 
@@ -173,8 +173,8 @@ class DebtTaskTest < ActiveSupport::TestCase
 
     # Mock the mailer to raise an error for reminder emails
     original_method = DebtMailer.method(:mail_debtor)
-    DebtMailer.define_singleton_method(:mail_debtor) do |user, new_debtor|
-      message = original_method.call(user, new_debtor)
+    DebtMailer.define_singleton_method(:mail_debtor) do |user, new_debtor, debt_moment: nil|
+      message = original_method.call(user, new_debtor, debt_moment: debt_moment)
       if !new_debtor # This is a reminder
         message.define_singleton_method(:deliver_now) do
           raise Net::SMTPFatalError.new("550 Invalid recipient")
