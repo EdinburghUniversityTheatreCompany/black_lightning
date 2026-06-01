@@ -7,6 +7,10 @@ module ActiveStorageHelper
     # It's not an issue if they do match, but it makes life a little bit harder when you want to replace the default image.
     key_filename = "#{PREFIX}/#{default_image_filename}"
 
+    # Memoize per-request to avoid one query per news item on index pages.
+    @default_image_blobs ||= {}
+    return @default_image_blobs[key_filename] if @default_image_blobs.key?(key_filename)
+
     blob = ActiveStorage::Blob.find_by(filename: key_filename)
 
     if blob.nil?
@@ -21,7 +25,7 @@ module ActiveStorageHelper
       end
     end
 
-    blob
+    @default_image_blobs[key_filename] = blob
   end
 
   def get_file_attached_hint(file)

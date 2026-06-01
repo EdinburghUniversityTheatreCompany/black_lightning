@@ -48,6 +48,7 @@ class ActiveSupport::TestCase
     $bl_cached_show = nil
     $bl_role_cache = nil
     $bl_cached_user_id = nil
+    $bl_cached_news_author = nil
     FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
     if ENV["VALIDATE"]
       validate_html

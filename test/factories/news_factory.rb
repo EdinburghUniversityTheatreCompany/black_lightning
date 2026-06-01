@@ -31,6 +31,6 @@ FactoryBot.define do
     publish_date { generate(:random_date) }
     show_public  { [ true, false ].sample }
 
-    author { User.first || FactoryBot.create(:user) }
+    author { $bl_cached_news_author ||= User.first || FactoryBot.create(:user) }
   end
 end

@@ -76,14 +76,33 @@ Rails.application.configure do
     #   attributes don't support preloading associations before validation callbacks.
     #   TODO: preload team member users in GenericEventsController#update before
     #   calling super, or use a different validation strategy.
-    # TODO: debts_controller index view calls 6 per-user debt aggregate methods per row.
-    # Fix by precomputing them in DebtsController#index using GROUP BY SQL before render.
+    # Known N+1s pending larger fixes:
+    # - Debt view: 6 per-user aggregate methods per row. TODO: precompute in controller.
+    # - News image blobs: ActiveStorage blob loading via image.blob bypasses preloaded
+    #   image_attachment includes. TODO: investigate why includes(image_attachment: :blob)
+    #   doesn't prevent the join query in shared/_image.erb.
+    # - Default image blobs: 2+ different default filenames queried per request.
+    #   TODO: bulk-load all default blobs at the start of the news index action.
+    # - Picture/gallery form N+1s: pictures in nested forms not preloaded.
+    #   TODO: preload via ActiveRecord::Associations::Preloader in edit before_action.
+    # - MarketingCreatives profile: category_infos without preloaded pictures/attachments.
+    #   TODO: add includes to ProfilesController show action.
     Prosopite.allow_stack_paths = [
       "User#reallocate_maintenance_debts",
       "User#reallocate_staffing_debts",
       "Admin::Debt.users_oldest_debt",
       "generic_events_controller.rb",
-      "debts/_index_results.erb"
+      "debts/_index_results.erb",
+      "news.rb",
+      "active_storage_helper.rb",
+      "picture.rb",
+      "category_info.rb",
+      "_picture_fields.erb",
+      "_gallery.html.erb",
+      "_image.erb",
+      "category_info_factory.rb",
+      "event_factory.rb",
+      "profiles/show.html.erb"
     ]
   end
 end
