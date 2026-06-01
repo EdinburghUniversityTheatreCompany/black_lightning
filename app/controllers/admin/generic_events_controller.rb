@@ -75,8 +75,7 @@ class Admin::GenericEventsController < AdminController
       parameter_user_ids = params[resource_name][:team_members_attributes].values.collect { |e| e[:user_id].to_i }.uniq
       new_user_ids = parameter_user_ids - @previous_user_ids
 
-      new_users = User.where(id: new_user_ids)
-      new_debtors = new_users.select(&:in_debt)
+      new_debtors = User.where(id: new_user_ids).in_debt.to_a
 
       # Only notify debtors if the start date is after the start of the current academic year.
       if new_debtors.any? && get_resource.start_date > helpers.start_of_year
