@@ -136,6 +136,15 @@ class Event < ApplicationRecord
   ##
   def fetch_image
     number = id.modulo(4)
+
+    # Purge stale attachment if the blob is missing or the underlying file was deleted
+    if image.attached?
+      blob = image.blob
+      if blob.nil? || !blob.service.exist?(blob.key)
+        image.purge rescue nil
+      end
+    end
+
     image.attach(ApplicationController.helpers.default_image_blob("events/#{number}.png")) unless image.attached?
 
     image

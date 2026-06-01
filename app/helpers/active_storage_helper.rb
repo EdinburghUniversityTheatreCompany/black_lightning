@@ -9,9 +9,22 @@ module ActiveStorageHelper
 
     # Memoize per-request to avoid one query per news item on index pages.
     @default_image_blobs ||= {}
-    return @default_image_blobs[key_filename] if @default_image_blobs.key?(key_filename)
+
+    # Validate cached blob is still usable; clear stale entry if file was deleted.
+    if @default_image_blobs.key?(key_filename)
+      cached = @default_image_blobs[key_filename]
+      return cached if cached.present? && cached.service.exist?(cached.key)
+      @default_image_blobs.delete(key_filename)
+    end
 
     blob = ActiveStorage::Blob.find_by(filename: key_filename)
+
+    # If the blob record exists but the file is gone (e.g. test teardown deleted tmp/storage),
+    # remove the orphaned record and create a fresh one.
+    if blob.present? && !blob.service.exist?(blob.key)
+      blob.delete
+      blob = nil
+    end
 
     if blob.nil?
       begin
