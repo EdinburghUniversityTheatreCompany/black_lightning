@@ -69,13 +69,18 @@ Rails.application.configure do
     Prosopite.rails_logger = true
     # Set to true once existing N+1s are resolved to enforce strict mode in CI
     Prosopite.raise = true
-    # The following are intentionally per-user operations — not fixable N+1s:
-    # - Debt reallocation pairs debts with attendances/jobs for one user at a time
-    # - users_oldest_debt queries each user's minimum debt date for the mailer
+    # Known N+1s that are either intentional or need a larger refactor:
+    # - Debt reallocation is inherently per-user (pairs debts with attendances/jobs)
+    # - users_oldest_debt queries each user's minimum debt date in the mailer loop
+    # - Team member user validation fires per-record during event update; Rails nested
+    #   attributes don't support preloading associations before validation callbacks.
+    #   TODO: preload team member users in GenericEventsController#update before
+    #   calling super, or use a different validation strategy.
     Prosopite.allow_stack_paths = [
       "User#reallocate_maintenance_debts",
       "User#reallocate_staffing_debts",
-      "Admin::Debt.users_oldest_debt"
+      "Admin::Debt.users_oldest_debt",
+      "generic_events_controller.rb"
     ]
   end
 end

@@ -18,14 +18,14 @@
 # == Schema Information End
 #++
 class TeamMember < ActiveRecord::Base
-  validates :position, :user_id, presence: true
+  validates :position, :user, presence: true
   validates_uniqueness_of :user_id, scope: [ :teamwork_type, :teamwork_id ]
   validate :uniqueness_in_parent_collection
 
   # It should not be optional, but otherwise this fails on creation when immediately attaching team members.
   # A little bit annoying, definitely.
   belongs_to :teamwork, polymorphic: true, optional: true
-  belongs_to :user, optional: true
+  belongs_to :user
 
   delegate :name, to: :user, prefix: true
 
