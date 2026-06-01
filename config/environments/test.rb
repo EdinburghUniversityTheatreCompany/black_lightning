@@ -69,5 +69,13 @@ Rails.application.configure do
     Prosopite.rails_logger = true
     # Set to true once existing N+1s are resolved to enforce strict mode in CI
     Prosopite.raise = true
+    # The following are intentionally per-user operations — not fixable N+1s:
+    # - Debt reallocation pairs debts with attendances/jobs for one user at a time
+    # - users_oldest_debt queries each user's minimum debt date for the mailer
+    Prosopite.allow_stack_paths = [
+      "User#reallocate_maintenance_debts",
+      "User#reallocate_staffing_debts",
+      "Admin::Debt.users_oldest_debt"
+    ]
   end
 end

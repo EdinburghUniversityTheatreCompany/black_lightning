@@ -23,12 +23,6 @@ FactoryBot.define do
       with_attendance { false }
     end
 
-    to_create do |instance|
-      Thread.current[:bl_skip_debt_realloc] = true
-      instance.save!
-      Thread.current[:bl_skip_debt_realloc] = nil
-    end
-
     after(:create) do |maintenance_debt, evaluator|
       FactoryBot.create(:maintenance_attendance, maintenance_debt: maintenance_debt, user: evaluator.user) if evaluator.with_attendance
     end

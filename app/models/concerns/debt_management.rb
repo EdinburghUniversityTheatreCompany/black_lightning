@@ -96,8 +96,8 @@ module DebtManagement
       Thread.current[:bl_skip_debt_realloc] = nil
     end
 
-    User.reallocate_maintenance_debts_for_users(users_needing_maint_realloc)
-    User.reallocate_staffing_debts_for_users(users_needing_staff_realloc)
+    users_needing_maint_realloc.each(&:reallocate_maintenance_debts)
+    users_needing_staff_realloc.each(&:reallocate_staffing_debts)
 
     totals
   end
