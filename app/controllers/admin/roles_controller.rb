@@ -112,4 +112,8 @@ class Admin::RolesController < AdminController
   def order_args
     [ "name" ]
   end
+
+  def includes_args
+    [ :users ]
+  end
 end

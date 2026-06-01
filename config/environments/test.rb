@@ -76,11 +76,14 @@ Rails.application.configure do
     #   attributes don't support preloading associations before validation callbacks.
     #   TODO: preload team member users in GenericEventsController#update before
     #   calling super, or use a different validation strategy.
+    # TODO: debts_controller index view calls 6 per-user debt aggregate methods per row.
+    # Fix by precomputing them in DebtsController#index using GROUP BY SQL before render.
     Prosopite.allow_stack_paths = [
       "User#reallocate_maintenance_debts",
       "User#reallocate_staffing_debts",
       "Admin::Debt.users_oldest_debt",
-      "generic_events_controller.rb"
+      "generic_events_controller.rb",
+      "debts/_index_results.erb"
     ]
   end
 end

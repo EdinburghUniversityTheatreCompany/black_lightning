@@ -31,34 +31,25 @@ class Admin::Permission < ApplicationRecord
   #
   # The actions array has to contain strings.
   ##
-  def self.update_permission(role, subject_class, actions)
-    # Get all existing permissions for this subject_class and role.
-    existing_permissions = role.permissions.where(subject_class: subject_class)
+  def self.update_permission(role, subject_class, actions, all_role_permissions = nil)
+    # Filter from preloaded set if provided, otherwise query per subject_class.
+    existing_permissions = if all_role_permissions
+      all_role_permissions.select { |p| p.subject_class == subject_class }
+    else
+      role.permissions.where(subject_class: subject_class).to_a
+    end
 
-    # For all of those permissions, check if it still has those permissions with the updated actions.
-    existing_permissions&.each do |permission|
-      unless actions.include? permission.action
-        # The role no longer has this permission.
-        # Remove the role from the permission, but keep the permission.
+    existing_permissions.each do |permission|
+      unless actions.include?(permission.action)
         role.permissions.delete(permission)
       end
     end
 
     actions.each do |action|
-      next if existing_permissions&.find_by_action(action)
+      next if existing_permissions.any? { |p| p.action == action }
 
-      # Try to find if a permission with this action and subject_class already exists.
-      permission = Admin::Permission.where(action: action, subject_class: subject_class).first
-
-      # If it doesn't, create it.
-      if permission.nil?
-        permission = Admin::Permission.new
-        permission.action = action
-        permission.subject_class = subject_class
-      end
-
-      # Add the current role to the permission.
-      permission.roles << role
+      permission = Admin::Permission.find_or_initialize_by(action: action, subject_class: subject_class)
+      permission.roles << role unless permission.persisted? && permission.roles.include?(role)
       permission.save!
     end
 
