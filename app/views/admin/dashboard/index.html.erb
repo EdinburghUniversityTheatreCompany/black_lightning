@@ -14,11 +14,11 @@
         <% end %>
       </div>
       <div>
-        <%= render CollapsibleSectionComponent.new(title: link_to("News", admin_news_index_path), flush: true, start_open: true) do %>
-          <%= render "news_widget" %>
-        <% end %>
         <%= render CollapsibleSectionComponent.new(title: link_to("Upcoming Shows", admin_shows_path), flush: true, start_open: true) do %>
           <%= render "shows_widget" %>
+        <% end %>
+        <%= render CollapsibleSectionComponent.new(title: link_to("News", admin_news_index_path), flush: true, start_open: true) do %>
+          <%= render "news_widget" %>
         <% end %>
       </div>
       <div>
