@@ -180,7 +180,7 @@ GEM
     docile (1.4.1)
     doorkeeper (5.9.1)
       railties (>= 5)
-    doorkeeper-openid_connect (1.9.0)
+    doorkeeper-openid_connect (1.10.0)
       doorkeeper (>= 5.5, < 6.0)
       jwt (>= 2.5)
       ostruct (>= 0.5)
@@ -341,7 +341,7 @@ GEM
       actionpack (>= 7.0.0)
       activesupport (>= 7.0.0)
       rack
-    psych (5.3.1)
+    psych (5.4.0)
       date
       stringio
     public_suffix (7.0.5)
@@ -603,7 +603,7 @@ GEM
       yard (>= 0.8)
     yard-solargraph (0.1.0)
       yard (~> 0.9)
-    zeitwerk (2.8.1)
+    zeitwerk (2.8.2)
 
 PLATFORMS
   x86_64-linux
