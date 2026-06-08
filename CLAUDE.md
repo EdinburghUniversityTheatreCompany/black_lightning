@@ -95,6 +95,16 @@ When writing a ViewComponent, check for an applicable skill, and make sure to cr
 
 The permission grid auto-discovers models via `ApplicationRecord.descendants` in `Admin::PermissionsController#set_models_and_roles`. A new top-level model appears in the grid automatically; a nested child model managed only through its parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) should be added to the exclusion list there.
 
+## Opportunities
+
+An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
+
+- **Submission is public.** Anyone may submit via `GetInvolvedController#new/#create`; logged-out submitters provide `submitter_name`/`submitter_email` (creator is `nil` → `external?`), protected by a honeypot + reCAPTCHA. Members are attributed to their account; managers can override the creator on the admin form. All submissions are `approved: false` until reviewed. `creator_or_submitter` requires one or the other.
+- **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company/compensation/experience) + a `?category=` tab, sorted EUTC-first. `active` = `listable` ordered internal-first. Per-society shareable links use `?q[company_slug_eq]=…`.
+- **Display:** one `OpportunityCardComponent` renders the project + role sub-list for the public list and the home/dashboard widgets.
+- **Review:** `Opportunity Reviewer` role; approve/reject email the submitter (`OpportunityMailer`, `notification_email`) with an optional note. Reviewers also get the `OpportunityDigestJob` digest.
+- `Company` (name + `acts_as_url` slug + `internal` EUTC flag) is admin-managed via `Admin::CompaniesController`.
+
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
 
