@@ -36,4 +36,22 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
       OpportunityDigestJob.perform_now
     end
   end
+
+  test "renders the digest for external (creator-less) pending submissions without error" do
+    Opportunity.create!(
+      title: "External pending opportunity",
+      description: "External pending submission for the digest.",
+      expiry_date: 2.weeks.from_now,
+      approved: false,
+      submitter_name: "Casey External",
+      submitter_email: "casey@example.com"
+    )
+
+    # perform_enqueued_jobs actually renders the digest, so a nil-creator row would raise here.
+    perform_enqueued_jobs do
+      OpportunityDigestJob.perform_now
+    end
+
+    assert ActionMailer::Base.deliveries.any?, "Expected the reviewer digest to be delivered"
+  end
 end
