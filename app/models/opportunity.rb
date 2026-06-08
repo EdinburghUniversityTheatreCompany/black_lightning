@@ -62,10 +62,19 @@ class Opportunity < ApplicationRecord
 
   # If you update this, you must also update the active? method and the permission somewhere at the top of ability.rb.
   # You might also have to update the opportunities helper.
+  # +listable+ is the unordered "publicly visible" set, used as a base for filtering/sorting
+  # (e.g. the public listing applies Ransack on top). +active+ adds the internal-first ordering.
+  scope :listable, -> { where("approved = true AND expiry_date > ?", Time.current) }
   scope :active, -> {
-    where("approved = true AND expiry_date > ?", Time.current)
+    listable
       .left_joins(:company)
       .order(Arel.sql("companies.internal DESC, expiry_date ASC"))
+  }
+
+  # Opportunities recruiting for a role in the given category, without joining roles
+  # (avoids row multiplication, so it composes cleanly with ordering and Ransack).
+  scope :with_role_category, ->(category) {
+    where(id: OpportunityRole.where(category: category).select(:opportunity_id))
   }
 
   def self.ransackable_attributes(auth_object = nil)

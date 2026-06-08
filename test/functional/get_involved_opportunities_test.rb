@@ -113,4 +113,64 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
 
     assert_equal false, Opportunity.last.approved
   end
+
+  # ---------------------------------------------------------------------------
+  # GET opportunities (public listing, filtering, sorting)
+  # ---------------------------------------------------------------------------
+
+  test "opportunities lists only approved, unexpired opportunities" do
+    get :opportunities
+    assert_response :success
+
+    assert_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
+    assert_not_includes assigns(:opportunities), opportunities(:expired_opportunity)
+    assert_not_includes assigns(:opportunities), opportunities(:unapproved_opportunity)
+  end
+
+  test "opportunities sorts internal (EUTC) companies first" do
+    get :opportunities
+
+    listed = assigns(:opportunities).to_a
+    internal_index = listed.index(opportunities(:internal_project_opportunity))
+    external_index = listed.index(opportunities(:external_project_opportunity))
+
+    assert internal_index < external_index, "internal company opportunities should be listed first"
+  end
+
+  test "opportunities filters by role category" do
+    get :opportunities, params: { category: "stage" }
+
+    assert_equal "stage", assigns(:selected_category)
+    assert_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
+    assert_not_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+  end
+
+  test "opportunities ignores an unknown category" do
+    get :opportunities, params: { category: "not-a-category" }
+
+    assert_nil assigns(:selected_category)
+    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+  end
+
+  test "opportunities filters by company slug" do
+    get :opportunities, params: { q: { company_slug_eq: companies(:gutter_theatre).slug } }
+
+    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+    assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
+  end
+
+  test "opportunities filters by compensation type" do
+    get :opportunities, params: { q: { compensation_type_eq: Opportunity.compensation_types[:paid] } }
+
+    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+    assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
+  end
+
+  test "opportunities exposes the available categories for the tabs" do
+    get :opportunities
+
+    assert_includes assigns(:available_categories), "stage"
+    assert_includes assigns(:available_categories), "lighting"
+    assert_not_includes assigns(:available_categories), "acting"
+  end
 end

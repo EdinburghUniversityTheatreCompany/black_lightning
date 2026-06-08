@@ -47,8 +47,13 @@ class OpportunityRole < ApplicationRecord
   # Most categories humanise nicely; a few need a custom display label.
   CATEGORY_LABELS = { "foh" => "FOH" }.freeze
 
+  # Display label for a category key (string), e.g. for tabs that iterate over keys.
+  def self.category_label(key)
+    CATEGORY_LABELS[key.to_s] || key.to_s.humanize
+  end
+
   def category_label
-    CATEGORY_LABELS[category] || category.humanize
+    self.class.category_label(category)
   end
 
   def self.ransackable_attributes(auth_object = nil)

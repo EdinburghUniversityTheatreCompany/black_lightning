@@ -6,7 +6,48 @@
 </div>
 <% end %>
 
-<% if @opportunities.count == 0 %>
+<%# Category tabs — preserve the active filters (q) when switching category. %>
+<% if @available_categories.any? %>
+  <nav class="flex flex-wrap gap-2 mb-3">
+    <% tab_class = ->(active) { "px-3 py-1 rounded-full text-sm #{active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}" } %>
+    <%= link_to "All", get_involved_opportunities_path(q: request.query_parameters["q"]), class: tab_class.call(@selected_category.nil?) %>
+    <% @available_categories.each do |category| %>
+      <%= link_to OpportunityRole.category_label(category),
+            get_involved_opportunities_path(category: category, q: request.query_parameters["q"]),
+            class: tab_class.call(@selected_category == category) %>
+    <% end %>
+  </nav>
+<% end %>
+
+<%# Filters — submit via GET so the URL stays shareable (e.g. for the societies cheat sheet). %>
+<% select_class = "border border-gray-300 rounded px-2 py-1 text-sm" %>
+<%= search_form_for @q, url: get_involved_opportunities_path, html: { method: :get } do |f| %>
+  <%= hidden_field_tag :category, @selected_category if @selected_category %>
+  <div class="flex flex-wrap items-end gap-2 mb-4">
+    <div>
+      <%= f.label :company_slug_eq, "Company", class: "block text-xs text-gray-500" %>
+      <%= f.select :company_slug_eq,
+            options_for_select(Company.internal_first.pluck(:name, :slug), @q.company_slug_eq),
+            { include_blank: "All companies" }, class: select_class %>
+    </div>
+    <div>
+      <%= f.label :compensation_type_eq, "Compensation", class: "block text-xs text-gray-500" %>
+      <%= f.select :compensation_type_eq,
+            options_for_select(Opportunity.compensation_types.except("tbc").map { |k, v| [ k.humanize, v ] }, @q.compensation_type_eq),
+            { include_blank: "Any" }, class: select_class %>
+    </div>
+    <div>
+      <%= f.label :experience_level_eq, "Experience", class: "block text-xs text-gray-500" %>
+      <%= f.select :experience_level_eq,
+            options_for_select(Opportunity.experience_levels.except("any").map { |k, v| [ k.humanize, v ] }, @q.experience_level_eq),
+            { include_blank: "Any" }, class: select_class %>
+    </div>
+    <%= f.submit "Filter", class: btn_classes(:primary, :sm) %>
+    <%= link_to "Clear", get_involved_opportunities_path, class: btn_classes(:secondary, :sm) %>
+  </div>
+<% end %>
+
+<% if @opportunities.empty? %>
   <%= display_block("No Opportunities", false) %>
 <% else %>
   <%= render CardComponent.new(flush: true) do %>
