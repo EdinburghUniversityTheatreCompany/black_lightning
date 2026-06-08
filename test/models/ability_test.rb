@@ -15,7 +15,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt,
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo,
                   Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture, MaintenanceAttendance,
-                  Role ]
+                  Role, Company ]
 
     (models - exclusions).each do |model|
       helper_test_actions(model, model.name, @ability, [], all_actions)
@@ -38,6 +38,13 @@ class Admin::AbilityTest < ActiveSupport::TestCase
 
     assert ability.can?(:read, FactoryBot.create(:news, show_public: true)), "Guests cannot read public news"
     assert ability.cannot?(:read, FactoryBot.create(:news, show_public: false)), "Guest can read news that is not public"
+  end
+
+  test "guests can read companies" do
+    ability = Ability.new(nil)
+
+    assert ability.can?(:read, Company), "Guests cannot read companies, needed for filtering opportunities"
+    assert ability.cannot?(:create, Company), "Guests should not be able to create companies"
   end
 
   test "guests can read public events" do

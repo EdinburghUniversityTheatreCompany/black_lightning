@@ -1,0 +1,12 @@
+<% fields = {
+  name: @company.name,
+  internal: @company.internal,
+  website: @company.website,
+  slug: @company.slug
+} %>
+
+<% content_for :extra_show_actions do %>
+  <%= get_link(Opportunity, :index, link_text: 'View Opportunities', query_params: { 'q[company_id_eq]' => @company.id } ) %>
+<% end %>
+
+<%= render('shared/pages/show', object: @company, fields: fields) %>

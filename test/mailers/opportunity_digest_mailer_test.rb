@@ -51,6 +51,23 @@ class OpportunityDigestMailerTest < ActionMailer::TestCase
     assert_includes html_body, opportunity.creator.full_name
   end
 
+  test "digest renders external (creator-less) submissions using the submitter name" do
+    user = users(:committee)
+    external = Opportunity.create!(
+      title: "External pending opportunity",
+      description: "Submitted by someone without an account.",
+      expiry_date: 2.weeks.from_now,
+      approved: false,
+      submitter_name: "Casey External",
+      submitter_email: "casey@example.com"
+    )
+
+    email = OpportunityDigestMailer.digest(user, [ external ])
+
+    assert_includes email.html_part.body.to_s, "Casey External"
+    assert_includes email.text_part.body.to_s, "Casey External"
+  end
+
   test "digest renders correctly for multiple opportunities" do
     user = users(:committee)
     opportunity = opportunities(:pending_digest_opportunity)

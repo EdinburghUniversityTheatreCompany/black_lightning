@@ -1,0 +1,10 @@
+<%# locals: () %>
+
+<%= simple_horizontal_form_for [:admin, @company] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <%= f.input :name %>
+    <%= f.input :internal, label: 'Internal (EUTC)',
+                hint: 'Tick for EUTC and affiliated companies. Internal opportunities are shown first in listings.' %>
+    <%= f.input :website, hint: 'Optional. Full URL including https://.' %>
+  <% end %>
+<% end %>

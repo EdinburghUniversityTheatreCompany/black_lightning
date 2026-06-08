@@ -15,8 +15,8 @@
     <% @opportunities.each do |opportunity| %>
       <% url = admin_opportunity_url(opportunity) %>
       <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= opportunity.title %></td>
-        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= opportunity.creator.full_name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= opportunity.display_title %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= opportunity.creator&.full_name || opportunity.submitter_name %></td>
         <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= l opportunity.created_at.to_date, format: :long %></td>
         <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= link_to "Review", url %></td>
       </tr>

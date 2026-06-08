@@ -45,6 +45,7 @@ en:
         gallery: "Gallery"
         group: "Group"
         hint: "Hint"
+        internal: "Internal (EUTC)"
         item: "Item"
         job: "Job"
         maintenance_debts: "Maintenance Debts"
@@ -93,6 +94,12 @@ en:
         user: "User"
         user_full_name: "User Name"
         venue: "Venue"
+        website: "Website"
+        project: "Project"
+        company: "Company"
+        compensation_type: "Compensation"
+        experience_level: "Experience Level"
+        apply_url: "Apply-Through Link"
 
     # Examples
     # labels:

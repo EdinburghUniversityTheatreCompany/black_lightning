@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_21_123407) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_08_120300) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -290,6 +290,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_123407) do
     t.index ["techie_id"], name: "index_children_techies_on_techie_id"
   end
 
+  create_table "companies", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "internal", default: false, null: false
+    t.string "name", null: false
+    t.string "slug"
+    t.datetime "updated_at", null: false
+    t.string "website"
+    t.index ["slug"], name: "index_companies_on_slug", unique: true
+  end
+
   create_table "complaints", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "comments", size: :medium
     t.datetime "created_at", null: false
@@ -544,19 +554,39 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_123407) do
   end
 
   create_table "opportunities", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "apply_url"
     t.boolean "approved"
     t.integer "approver_id"
+    t.string "author"
+    t.bigint "company_id"
+    t.integer "compensation_type", default: 4, null: false
     t.string "contact_email"
     t.datetime "created_at", precision: nil, null: false
     t.integer "creator_id"
     t.text "description", size: :medium
     t.integer "email_visibility", default: 0, null: false
+    t.integer "experience_level", default: 0, null: false
     t.date "expiry_date"
+    t.string "project"
+    t.string "submitter_email"
+    t.string "submitter_name"
     t.string "title"
     t.datetime "updated_at", precision: nil, null: false
     t.index ["approved", "expiry_date"], name: "index_opportunities_on_approved_and_expiry"
     t.index ["approver_id"], name: "index_opportunities_on_approver_id"
+    t.index ["company_id"], name: "index_opportunities_on_company_id"
     t.index ["creator_id"], name: "index_opportunities_on_creator_id"
+  end
+
+  create_table "opportunity_roles", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.integer "category", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.string "note"
+    t.integer "opportunity_id", null: false
+    t.integer "ordering"
+    t.string "position", null: false
+    t.datetime "updated_at", null: false
+    t.index ["opportunity_id"], name: "index_opportunity_roles_on_opportunity_id"
   end
 
   create_table "picture_tags", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -867,6 +897,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_21_123407) do
   add_foreign_key "oauth_access_grants", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
+  add_foreign_key "opportunities", "companies"
+  add_foreign_key "opportunity_roles", "opportunities"
   add_foreign_key "roles_parents", "roles"
   add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

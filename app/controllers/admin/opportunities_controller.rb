@@ -15,7 +15,7 @@ class Admin::OpportunitiesController < AdminController
   # POST /admin/opportunity.json
   ##
   def create
-    @opportunity.creator = current_user
+    assign_default_creator
 
     # Make sure users cannot create an opportunity that is approved.
     # They should manually approve it.
@@ -92,13 +92,30 @@ class Admin::OpportunitiesController < AdminController
 
   private
 
+  # Attribute the opportunity to the current user, unless a manager is explicitly
+  # setting a different creator or an external submitter on someone else's behalf.
+  def assign_default_creator
+    manager_override = @opportunity.creator_id.present? ||
+                       (@opportunity.submitter_name.present? && @opportunity.submitter_email.present?)
+    return if can?(:manage, Opportunity) && manager_override
+
+    @opportunity.creator = current_user
+  end
+
   def permitted_params
-    # Do not include information about the approver and creator. That should only be settable by the controller.
-    [ :description, :email_visibility, :contact_email, :title, :expiry_date ]
+    # Do not include information about the approver. That should only be settable by the controller.
+    params = [ :description, :email_visibility, :contact_email, :title, :expiry_date,
+               :company_id, :project, :author, :apply_url, :compensation_type, :experience_level,
+               roles_attributes: [ :id, :position, :category, :note, :ordering, :_destroy ] ]
+
+    # Only managers may attribute an opportunity to a different creator or an external submitter.
+    params = [ :creator_id, :submitter_name, :submitter_email ] + params if can? :manage, Opportunity
+
+    params
   end
 
   def includes_args
-    [ :creator ]
+    [ :creator, :company, :roles ]
   end
 
   def order_args
