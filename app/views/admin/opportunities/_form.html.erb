@@ -12,7 +12,7 @@
       </small>
     <% end %>
 
-    <%= f.input :title, hint: "Optional if a company and project are given — a heading is then generated automatically." %>
+    <%= f.input :title, hint: "Optional. If a company and project are given, a heading is generated automatically." %>
 
     <%= f.association :company,
         collection: Company.accessible_by(current_ability).internal_first,
