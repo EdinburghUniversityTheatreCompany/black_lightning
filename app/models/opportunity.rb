@@ -25,6 +25,10 @@
 # == Schema Information End
 #++
 class Opportunity < ApplicationRecord
+  # Virtual fields used by the public submission form:
+  # +company_name+ is resolved to a Company by the controller; +website_url+ is a spam honeypot.
+  attr_accessor :company_name, :website_url
+
   belongs_to :creator,  class_name: "User", optional: true
   belongs_to :approver, class_name: "User", optional: true
   belongs_to :company, optional: true
@@ -98,6 +102,11 @@ class Opportunity < ApplicationRecord
   # Display heading for a posting: explicit title, else "Company: Project".
   def display_title
     title.presence || [ company&.name, project ].compact_blank.join(": ").presence
+  end
+
+  # Used by get_object_name / SimpleForm so title-less postings still show a sensible label.
+  def to_label
+    display_title.presence || "Untitled opportunity"
   end
 
   # Best email to reach the poster on, preferring an explicit contact address.

@@ -7,17 +7,50 @@
       <%= f.error_notification %>
 
       <div class="form-inputs">
-        <%= f.input :title %>
+        <%= f.input :title, hint: "Optional if you give a company and project below." %>
+        <%= f.input :company_name, label: "Company / Society",
+            hint: "The company or society offering this. We'll match an existing one or add it." %>
+        <%= f.input :project, label: "Play / Show", hint: "Optional. The production this is for." %>
+        <%= f.input :author, hint: "Optional. The playwright." %>
+
         <%= f.input :description, as: :text, input_html: { rows: 8 } %>
         <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
-        <%= f.input :email_visibility,
-            as: :select,
-            collection: Opportunity.email_visibilities.keys.map { |k| [k.humanize, k] },
-            hint: "Controls who can see a contact email for this opportunity." %>
 
+        <%= f.input :compensation_type, as: :select,
+            collection: Opportunity.compensation_types.keys.map { |k| [ k.humanize, k ] }, include_blank: false %>
+        <%= f.input :experience_level, as: :select,
+            collection: Opportunity.experience_levels.keys.map { |k| [ k.humanize, k ] }, include_blank: false %>
+
+        <%= f.input :apply_url, label: "Apply-through link",
+            hint: "Optional. A link to apply through (e.g. an application form), instead of social media." %>
+
+        <%= f.input :email_visibility, as: :select,
+            collection: Opportunity.email_visibilities.keys.map { |k| [ k.humanize, k ] },
+            hint: "Controls who can see a contact email for this opportunity." %>
         <%= f.input :contact_email,
-            hint: "Optional. If left blank and email visibility is enabled, your account email (#{current_user.email}) will be shown instead." %>
+            hint: "Optional.#{" If left blank, your account email (#{current_user.email}) will be shown instead." if user_signed_in?}" %>
+
+        <% unless user_signed_in? %>
+          <h3>Your details</h3>
+          <p class="text-gray-500 small mb-2">So we can contact you about this submission. Not shown publicly unless you set a contact email above.</p>
+          <%= f.input :submitter_name, label: "Your name", required: true %>
+          <%= f.input :submitter_email, label: "Your email", required: true %>
+        <% end %>
+
+        <h3>Roles</h3>
+        <p class="text-gray-500 small mb-2">Add each position you're recruiting for.</p>
+        <%= render("shared/form/sections/nested_fields", f: f, association_name: :roles, partial_name: "admin/opportunities/opportunity_role_fields") %>
       </div>
+
+      <%# Honeypot: real users leave this empty; bots tend to fill it in. %>
+      <div class="hidden" aria-hidden="true">
+        <%= f.input :website_url, label: "Leave this field blank", required: false,
+            input_html: { autocomplete: "off", tabindex: -1 } %>
+      </div>
+
+      <% unless user_signed_in? %>
+        <%= recaptcha_v3(action: "submit_opportunity") %>
+      <% end %>
 
       <div class="form-actions flex gap-2">
         <%= f.button :submit, "Submit Opportunity", class: btn_classes(:primary) %>

@@ -115,6 +115,10 @@ class Ability
     # Everyone can create a complaint.
     can [ :create ], Complaint
 
+    # Anyone (including logged-out external submitters) can submit an opportunity.
+    # Submissions are unapproved until reviewed, and the public form is reCAPTCHA/honeypot protected.
+    can :create, Opportunity
+
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil
 

@@ -64,8 +64,9 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     active_opportunity = FactoryBot.create(:opportunity, approved: true, expiry_date: Date.current.advance(days: 1))
     inactive_opportunity = FactoryBot.create(:opportunity, approved: false)
 
+    # new/create are allowed for everyone (public submission); not tested here.
     allowed_actions = %I[show read index]
-    forbidden_actions = %I[update new create delete destroy]
+    forbidden_actions = %I[update delete destroy]
 
     helper_test_actions(active_opportunity, "an active opportunity", @ability, allowed_actions, forbidden_actions)
 
@@ -411,8 +412,9 @@ class Admin::AbilityTest < ActiveSupport::TestCase
   end
 
   test "users can edit and read opportunities that they created" do
+    # new/create are allowed for everyone (public submission), so they are tested separately below.
     allowed_actions = %I[show read index edit update]
-    forbidden_actions = %I[new create delete destroy]
+    forbidden_actions = %I[delete destroy]
 
     created_opportunity = FactoryBot.create(:opportunity, approved: false)
     other_opportunity = FactoryBot.create(:opportunity, approved: false)
@@ -422,6 +424,11 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     helper_test_actions(created_opportunity, "an opportunity they created", ability, allowed_actions, forbidden_actions)
 
     helper_test_actions(other_opportunity, "an opportuniy they did not create", ability, [], allowed_actions + forbidden_actions)
+  end
+
+  test "anyone can create an opportunity (public submission)" do
+    assert Ability.new(nil).can?(:create, Opportunity), "Guests should be able to submit opportunities"
+    assert Ability.new(users(:member)).can?(:create, Opportunity), "Members should be able to submit opportunities"
   end
 
   ##

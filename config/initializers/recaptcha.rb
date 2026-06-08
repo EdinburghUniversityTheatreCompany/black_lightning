@@ -8,4 +8,8 @@ Recaptcha.configure do |config|
     config.site_key = "placeholder"
     config.secret_key = "placeholder"
   end
+
+  # Don't call out to Google with placeholder keys. The gem already skips "test"/"cypress";
+  # add development so local opportunity/complaint submissions aren't blocked.
+  config.skip_verify_env += [ "development" ] unless config.skip_verify_env.include?("development")
  end
