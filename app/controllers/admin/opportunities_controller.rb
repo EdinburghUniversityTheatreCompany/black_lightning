@@ -52,11 +52,12 @@ class Admin::OpportunitiesController < AdminController
     @opportunity.approver = current_user
 
     if @opportunity.save
-      flash[:success] = "#{@opportunity.title} has been approved"
+      notified = notify_submitter(:approved)
+      flash[:success] = "#{@opportunity.display_title} has been approved#{' and the submitter has been notified' if notified}"
     else
       # I can see that this will work, but I cannot get it to fail.
       # :nocov:
-      flash[:error] = "Could not approve #{@opportunity.title}"
+      flash[:error] = "Could not approve #{@opportunity.display_title}"
       # :nocov:
     end
 
@@ -76,11 +77,12 @@ class Admin::OpportunitiesController < AdminController
     @opportunity.approver = nil
 
     if @opportunity.save
-      flash[:success] = "#{@opportunity.title} has been rejected"
+      notified = notify_submitter(:rejected)
+      flash[:success] = "#{@opportunity.display_title} has been rejected#{' and the submitter has been notified' if notified}"
     else
       # I can see that this will work, but I cannot get it to fail.
       # :nocov:
-      flash[:error] = "Could not reject #{@opportunity.title}"
+      flash[:error] = "Could not reject #{@opportunity.display_title}"
       # :nocov:
     end
 
@@ -91,6 +93,15 @@ class Admin::OpportunitiesController < AdminController
   end
 
   private
+
+  # Email the submitter about an approval/rejection decision, with the reviewer's optional note.
+  # Returns true when an email was enqueued; skipped when there is no address to notify.
+  def notify_submitter(decision)
+    return false if @opportunity.notification_email.blank?
+
+    OpportunityMailer.public_send(decision, @opportunity, params[:approval_note]).deliver_later
+    true
+  end
 
   # Attribute the opportunity to the current user, unless a manager is explicitly
   # setting a different creator or an external submitter on someone else's behalf.

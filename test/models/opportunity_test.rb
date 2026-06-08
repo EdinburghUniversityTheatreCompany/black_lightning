@@ -123,6 +123,17 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_equal "explicit@example.com", opp.resolved_contact_email
   end
 
+  test "notification_email targets the submitter, ignoring the public contact_email" do
+    # External submission: notify the submitter, not the (possibly third-party) contact_email.
+    external = opportunities(:external_project_opportunity)
+    external.contact_email = "someone-else@example.com"
+    assert_equal "jane@example.com", external.notification_email
+
+    # Member submission: notify the creator's account.
+    internal = opportunities(:internal_project_opportunity)
+    assert_equal internal.creator.email, internal.notification_email
+  end
+
   test "submitter_email validates format when present" do
     opp = opportunities(:external_project_opportunity)
     opp.submitter_email = "nope"

@@ -1,0 +1,21 @@
+<% url = get_involved_opportunities_url %>
+
+<p>Dear <%= @opportunity.submitter_display_name %>,</p>
+
+<p>
+  Good news — your opportunity "<%= @opportunity.display_title %>" has been approved
+  and is now live on the Bedlam Theatre website.
+</p>
+
+<% if @note %>
+  <p>A note from the reviewer:</p>
+  <blockquote><%= @note %></blockquote>
+<% end %>
+
+<p>You can view it at <%= link_to url, url %>.</p>
+
+<p>Regards,</p>
+
+<p>EUTC Committee</p>
+
+<%= render partial: "shared/mail/call_to_action", locals: { text: "View Opportunities", cta_url: url } %>

@@ -201,6 +201,31 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_redirected_to admin_opportunity_path(assigns(:opportunity))
   end
 
+  test "approving emails the submitter" do
+    @opportunity.update!(approved: false)
+
+    assert_enqueued_email_with OpportunityMailer, :approved, args: [ @opportunity, "Welcome aboard" ], queue: "mailers" do
+      put :approve, params: { id: @opportunity, approval_note: "Welcome aboard" }
+    end
+  end
+
+  test "rejecting emails the submitter" do
+    @opportunity.update!(approved: true)
+
+    assert_enqueued_email_with OpportunityMailer, :rejected, args: [ @opportunity, "Not this time" ], queue: "mailers" do
+      put :reject, params: { id: @opportunity, approval_note: "Not this time" }
+    end
+  end
+
+  test "approving does not email when there is no recipient" do
+    opportunity = FactoryBot.create(:opportunity, approved: false)
+    opportunity.update_columns(creator_id: nil, submitter_name: "Someone", submitter_email: nil)
+
+    assert_no_enqueued_emails do
+      put :approve, params: { id: opportunity }
+    end
+  end
+
   test "should reject opportunity" do
     @opportunity.approved = true
     @opportunity.save

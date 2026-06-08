@@ -83,7 +83,7 @@ internal_project_opportunity:
   description: "EUTC production looking for crew."
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   company: eutc
   project: "Eurydice"
   author: "Sarah Ruhl"

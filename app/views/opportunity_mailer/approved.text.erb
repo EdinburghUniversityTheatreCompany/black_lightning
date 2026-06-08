@@ -1,0 +1,16 @@
+Dear <%= @opportunity.submitter_display_name %>,
+
+Good news — your opportunity "<%= @opportunity.display_title %>" has been approved
+and is now live on the Bedlam Theatre website.
+<% if @note %>
+
+A note from the reviewer:
+<%= @note %>
+<% end %>
+
+You can view it at:
+<%= get_involved_opportunities_url %>
+
+Regards,
+
+EUTC Committee

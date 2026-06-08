@@ -14,9 +14,18 @@
   <% end %>
 <% end %>
 
-<% content_for :extra_show_actions do %>
-  <%= get_link @opportunity, :approve, condition: !@opportunity.approved %>
-  <%= get_link @opportunity, :reject, condition: @opportunity.approved %>
+<% if can?(:approve, @opportunity) %>
+  <% content_for :extra_show_actions do %>
+    <% action_path, button_variant, button_label =
+        @opportunity.approved ? [ reject_admin_opportunity_path(@opportunity), :danger, "Reject" ]
+                              : [ approve_admin_opportunity_path(@opportunity), :success, "Approve" ] %>
+    <%= form_with url: action_path, method: :put do %>
+      <%= label_tag :approval_note, "Note to submitter (optional)", class: "block text-sm text-gray-600" %>
+      <%= text_area_tag :approval_note, nil, rows: 2, class: "w-full border border-gray-300 rounded px-2 py-1 text-sm mb-2",
+            placeholder: "Included in the email sent to the submitter." %>
+      <%= submit_tag button_label, class: btn_classes(button_variant) %>
+    <% end %>
+  <% end %>
 <% end %>
 
 <%= render('shared/pages/show', object: @opportunity, fields: fields) %>

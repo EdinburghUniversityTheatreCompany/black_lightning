@@ -114,6 +114,12 @@ class Opportunity < ApplicationRecord
     contact_email.presence || submitter_email.presence || creator&.email
   end
 
+  # Where to send submission notifications (approval/rejection): the submitter themselves,
+  # not the public contact address, which may belong to someone else.
+  def notification_email
+    creator&.email || submitter_email.presence
+  end
+
   # Human name of whoever posted this, account holder or external submitter.
   def submitter_display_name(viewer = nil)
     creator&.name(viewer) || submitter_name
