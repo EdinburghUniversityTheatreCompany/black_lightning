@@ -78,11 +78,19 @@ The `get_link` helper provides:
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
 
+## Dev Server
+
+- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
+- **`touch tmp/restart.txt` does NOT work** — that is a Passenger trick, and this project uses Puma. Don't rely on it.
+- **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
+- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`**. It sends `SIGUSR2` to the running Puma, which hot-restarts in place (same PID), so foreman keeps the dev group alive and Vite is untouched.
+- **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
+
 ## Database & Migrations
 
 - **Multi-database app.** `bin/rails db:rollback` errors with "must run the namespaced task". Use `bin/rails db:rollback:primary STEP=n` (namespaces: `primary`, `queue`, `cache`).
 - **Legacy tables use integer primary keys, not bigint.** `opportunities` and other older tables have `id: :integer`. A new child table's foreign key to such a table must use `t.references :parent, type: :integer` (or `t.integer`), otherwise the FK migration aborts with a column-type mismatch. New tables you create default to bigint `id`, which is fine for FKs pointing *to* them.
-- **The running dev server caches the DB schema at boot.** After a migration that adds columns, the already-running server will 500 (e.g. "Undeclared attribute type for enum ... must be backed by a database column") until it is restarted. Restart the dev server after migrating.
+- **The running dev server caches the DB schema at boot.** After a migration that adds columns, the already-running server will 500 (e.g. "Undeclared attribute type for enum ... must be backed by a database column") until it is restarted. Run `bin/restart-web` after migrating (see **Dev Server** above).
 
 ## Permissions
 
