@@ -81,9 +81,8 @@ When writing a ViewComponent, check for an applicable skill, and make sure to cr
 ## Dev Server
 
 - **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
-- **`touch tmp/restart.txt` does NOT work** — that is a Passenger trick, and this project uses Puma. Don't rely on it.
 - **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
-- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`**. It sends `SIGUSR2` to the running Puma, which hot-restarts in place (same PID), so foreman keeps the dev group alive and Vite is untouched.
+- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here.
 - **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
 
 ## Database & Migrations
