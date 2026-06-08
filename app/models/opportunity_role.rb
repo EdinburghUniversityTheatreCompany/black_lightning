@@ -20,7 +20,7 @@
 # The +category+ enum drives the public listing's tabs and filters.
 ##
 class OpportunityRole < ApplicationRecord
-  belongs_to :opportunity
+  belongs_to :opportunity, touch: true
 
   enum :category, {
     acting: 0,
@@ -43,6 +43,13 @@ class OpportunityRole < ApplicationRecord
   normalizes :position, with: ->(position) { position&.strip }
 
   default_scope { order(:ordering) }
+
+  # Most categories humanise nicely; a few need a custom display label.
+  CATEGORY_LABELS = { "foh" => "FOH" }.freeze
+
+  def category_label
+    CATEGORY_LABELS[category] || category.humanize
+  end
 
   def self.ransackable_attributes(auth_object = nil)
     %w[category position note ordering]

@@ -10,22 +10,14 @@
   <%= display_block("No Opportunities", false) %>
 <% else %>
   <%= render CardComponent.new(flush: true) do %>
-    <ul class="flex flex-col">
-    <% @opportunities.each do |opportunity| %>
-        <li class="list-row">
-          <h4><%= opportunity.display_title %></h4>
-
-          <p><small class="text-gray-500"><%= opportunity.submitter_display_name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
-
-          <p> <%= render_markdown opportunity.description %></p>
-
-          <% show_contact = opportunity.everyone? || (opportunity.members_only? && can?(:access, :backend)) %>
-          <% if show_contact %>
-            <% contact_email = opportunity.resolved_contact_email %>
-            <% if contact_email.present? %>
-              <p>Please contact <%= opportunity.submitter_display_name(@current_user) %> by clicking <%= mail_to contact_email, 'here' %>.</p>
-            <% end %>
-          <% end %>
+    <ul class="flex flex-col divide-y divide-gray-100 px-4">
+      <% @opportunities.each do |opportunity| %>
+        <li>
+          <%= render OpportunityCardComponent.new(
+                opportunity: opportunity,
+                current_user: @current_user,
+                backend_access: can?(:access, :backend),
+                detailed: true) %>
         </li>
       <% end %>
     </ul>

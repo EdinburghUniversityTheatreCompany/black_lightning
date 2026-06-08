@@ -8,7 +8,7 @@ class GetInvolvedController < ApplicationController
   before_action :authenticate_user!, only: [ :new, :create ]
 
   def opportunities
-    @opportunities = Opportunity.active
+    @opportunities = Opportunity.active.includes(:company, :roles, :creator)
 
     @editable_block = Admin::EditableBlock.find_by(url: "get_involved/opportunities")
   end

@@ -1,4 +1,4 @@
-<%# locals: (opportunities: Opportunity.active, displayed_opportunities_count: 5) %>
+<%# locals: (opportunities: Opportunity.active.includes(:company, :roles), displayed_opportunities_count: 5) %>
 
 <% pending = Opportunity.where(approved: false).where("expiry_date > ?", Date.current) %>
 
@@ -15,12 +15,10 @@
     <%= display_block("No Opportunities", false) %>
   </div>
 <% else %>
-  <ul class="divide-y divide-gray-100">
+  <ul class="divide-y divide-gray-100 px-4">
     <% opportunities.first(displayed_opportunities_count).each do |opportunity| %>
-      <li class="px-4 py-3">
-        <%= link_to opportunity.title, admin_opportunity_path(opportunity), class: "font-medium text-sm hover:underline" %>
-        <p class="text-xs text-gray-500 mt-0.5">Expires <%= opportunity.expiry_date.strftime("%-d %b %Y") %></p>
-        <p class="text-xs text-gray-600 mt-1 line-clamp-2"><%= truncate_markdown(opportunity.description, 100) %></p>
+      <li>
+        <%= render OpportunityCardComponent.new(opportunity: opportunity, heading_url: admin_opportunity_path(opportunity)) %>
       </li>
     <% end %>
   </ul>

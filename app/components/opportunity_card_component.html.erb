@@ -1,0 +1,54 @@
+<div class="py-3">
+  <div class="flex items-start justify-between gap-2">
+    <h4 class="text-base font-semibold mb-0">
+      <% if heading_url %>
+        <%= link_to heading, heading_url, class: "hover:underline" %>
+      <% else %>
+        <%= heading %>
+      <% end %>
+    </h4>
+    <% if internal? %>
+      <%= render(BadgeComponent.new(type: :info, pill: true)) do %>EUTC<% end %>
+    <% end %>
+  </div>
+
+  <p class="mt-1 mb-2 text-xs text-gray-500">
+    Expires <%= l opportunity.expiry_date, format: :longy %>
+    <% if compensation_label %>· <%= compensation_label %><% end %>
+    <% if experience_label %>· <%= experience_label %><% end %>
+  </p>
+
+  <% if roles.any? %>
+    <ul class="flex flex-col gap-1 mb-2">
+      <% roles.each do |role| %>
+        <li class="flex items-center gap-2 text-sm">
+          <span class="font-medium"><%= role.position %></span>
+          <%= render(BadgeComponent.new(type: :secondary)) do %><%= role.category_label %><% end %>
+          <% if role.note.present? %>
+            <span class="text-xs text-gray-500"><%= role.note %></span>
+          <% end %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+
+  <% if detailed %>
+    <div class="prose prose-sm max-w-none mb-2">
+      <%= helpers.render_markdown opportunity.description %>
+    </div>
+
+    <% if submitter_name.present? %>
+      <p class="text-xs text-gray-500 mb-1">Posted by <%= submitter_name %>.</p>
+    <% end %>
+
+    <% if opportunity.apply_url.present? %>
+      <p class="text-sm mb-1">
+        <%= link_to "Apply here →", opportunity.apply_url, class: "text-primary hover:underline", target: "_blank", rel: "noopener" %>
+      </p>
+    <% end %>
+
+    <% if show_contact? && contact_email.present? %>
+      <p class="text-sm">Or get in touch by clicking <%= mail_to contact_email, "here" %>.</p>
+    <% end %>
+  <% end %>
+</div>

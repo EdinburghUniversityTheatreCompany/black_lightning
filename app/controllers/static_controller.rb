@@ -30,6 +30,6 @@ class StaticController < ApplicationController
 
     @standard_carousel_items = CarouselItem.where(carousel_name: "Home").active_and_ordered.includes(image_attachment: :blob)
 
-    @home_opportunities = Opportunity.active.limit(5)
+    @home_opportunities = Opportunity.active.includes(:company, :roles).limit(5)
   end
 end

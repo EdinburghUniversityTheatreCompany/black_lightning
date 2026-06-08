@@ -24,4 +24,9 @@ class OpportunityRoleTest < ActiveSupport::TestCase
   test "stores an optional note" do
     assert_equal "Build weekends only", opportunity_roles(:internal_set_manager).note
   end
+
+  test "category_label humanises most categories and special-cases FOH" do
+    assert_equal "Stage", OpportunityRole.new(category: :stage).category_label
+    assert_equal "FOH", OpportunityRole.new(category: :foh).category_label
+  end
 end

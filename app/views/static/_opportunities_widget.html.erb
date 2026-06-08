@@ -1,5 +1,5 @@
 <%# locals: (home_opportunities:) %>
-<% cache home_opportunities do %>
+<% cache [home_opportunities, Company.maximum(:updated_at)] do %>
   <%= render CardComponent.new(title: "Opportunities", flush: true) do |c| %>
     <% c.with_footer do %>
       <div class="flex justify-between items-center">
@@ -14,18 +14,10 @@
         <%= display_block("No Opportunities", false) %>
       </div>
     <% else %>
-      <ul class="flex flex-col">
+      <ul class="flex flex-col divide-y divide-gray-100 px-4">
         <% home_opportunities.each do |opportunity| %>
-          <li class="list-row">
-            <h5 class="text-base font-semibold mb-1">
-              <%= link_to opportunity.title, get_involved_opportunities_path %>
-            </h5>
-            <p class="block mb-1">
-              <small class="text-gray-500">Expires <%= opportunity.expiry_date.strftime("%-d %B %Y") %></small>
-            </p>
-            <p class="block mb-2">
-              <%= truncate_markdown(opportunity.description, 100) %>
-            </p>
+          <li>
+            <%= render OpportunityCardComponent.new(opportunity: opportunity, heading_url: get_involved_opportunities_path) %>
           </li>
         <% end %>
       </ul>
