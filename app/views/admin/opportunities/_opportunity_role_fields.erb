@@ -8,11 +8,11 @@
                     f.hidden_field(:ordering, data: { display_order: true }) +
                     content_tag(:span, "⠿", data: { sortable_handle: true }, style: "cursor: grab; font-size: 1.2rem; color: #aaa;"),
                     col_modifier: 'auto' },
-        { field: f.input_field(:position, placeholder: "Position (e.g. Stage Manager)", wrapper: :inline_form) },
-        { field: f.input_field(:category,
+        { field: f.input(:position, placeholder: "Position (e.g. Stage Manager)", wrapper: :inline_form) },
+        { field: f.input(:category,
                     collection: OpportunityRole.categories.keys.map { |k| [k.humanize, k] },
                     include_blank: false,
                     wrapper: :inline_form) },
-        { field: f.input_field(:note, placeholder: "Optional note", wrapper: :inline_form) },
+        { field: f.input(:note, placeholder: "Optional note", wrapper: :inline_form) },
         { field: link_to_remove(f), col_modifier: 'auto' },
 ] %>
