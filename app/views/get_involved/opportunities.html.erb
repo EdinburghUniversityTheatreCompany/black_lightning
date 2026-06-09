@@ -6,30 +6,18 @@
 </div>
 <% end %>
 
-<% if @opportunities.count == 0 %>
-  <%= display_block("No Opportunities", false) %>
-<% else %>
-  <%= render CardComponent.new(flush: true) do %>
-    <ul class="flex flex-col">
-    <% @opportunities.each do |opportunity| %>
-        <li class="list-row">
-          <h4><%= opportunity.title %></h4>
+<%# Filters via the shared (non-admin) search form. Submits as q[...] params, so the URLs stay
+    shareable (e.g. ?q[company_slug_eq]=… for the societies cheat sheet). %>
+<% search_fields = {
+     roles_category_eq:    { type: :select, label: "Category",     collection: OpportunityRole.categories.map { |k, v| [ OpportunityRole.category_label(k), v ] } },
+     company_slug_eq:      { type: :select, label: "Company",      collection: Company.internal_first.pluck(:name, :slug) },
+     compensation_type_eq: { type: :select, label: "Compensation", collection: Opportunity.compensation_types.except("tbc").map { |k, v| [ k.humanize, v ] } },
+     experience_level_eq:  { type: :select, label: "Experience",   collection: Opportunity.experience_levels.except("any").map { |k, v| [ k.humanize, v ] } }
+   } %>
+<%= render "shared/search_form", input_fields: search_fields, columns: 4, url: get_involved_opportunities_path %>
 
-          <p><small class="text-gray-500"><%= opportunity.creator&.name(@current_user) %> | This opportunity expires at <%= l opportunity.expiry_date, format: :longy %>.</small></p>
-
-          <p> <%= render_markdown opportunity.description %></p>
-
-          <% if opportunity.creator %>
-            <% show_contact = opportunity.everyone? || (opportunity.members_only? && can?(:access, :backend)) %>
-            <% if show_contact %>
-              <% contact_email = opportunity.contact_email.presence || opportunity.creator.email %>
-              <p>Please contact <%= opportunity.creator.name(@current_user) %> by clicking <%= mail_to contact_email, 'here' %>.</p>
-            <% end %>
-          <% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% end %>
-<% end %>
+<div id="index-results">
+  <%= render "opportunities_results" %>
+</div>
 
 <div class="mb-3"></div>

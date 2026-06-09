@@ -77,3 +77,30 @@ pending_digest_opportunity:
   expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
   creator_id: 1
   email_visibility: 0
+
+internal_project_opportunity:
+  title: ~
+  description: "EUTC production looking for crew."
+  approved: true
+  expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
+  creator_id: 1
+  company: eutc
+  project: "Eurydice"
+  author: "Sarah Ruhl"
+  compensation_type: 0
+  experience_level: 1
+  email_visibility: 0
+
+external_project_opportunity:
+  title: "Gutter Theatre crew call"
+  description: "External company looking for technicians."
+  approved: true
+  expiry_date: <%= 4.weeks.from_now.to_fs(:db) %>
+  company: gutter_theatre
+  project: "Eurydice"
+  author: "Sarah Ruhl"
+  submitter_name: "Jane Director"
+  submitter_email: "jane@example.com"
+  compensation_type: 2
+  experience_level: 3
+  email_visibility: 2

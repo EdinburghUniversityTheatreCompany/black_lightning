@@ -100,6 +100,9 @@ class Ability
     # Guests can see all Event Tags.
     can :read, EventTag
 
+    # Guests can see all Companies (used for filtering opportunities by company/society).
+    can :read, Company
+
     # Have a specific view_shows_and_bio permission because it is a bad idea to give normal users full :read permission for users.
     can :view_shows_and_bio, User, public_profile: true
 
@@ -111,6 +114,10 @@ class Ability
 
     # Everyone can create a complaint.
     can [ :create ], Complaint
+
+    # Anyone (including logged-out external submitters) can submit an opportunity.
+    # Submissions are unapproved until reviewed, and the public form is reCAPTCHA/honeypot protected.
+    can :create, Opportunity
 
     can :show, Admin::EditableBlock, admin_page: false
     can :show, Admin::EditableBlock, admin_page: nil

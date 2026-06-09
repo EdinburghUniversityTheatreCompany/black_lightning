@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+# Hot-restart the running Puma dev server in place (SIGUSR2).
+#
+# Puma re-execs itself on SIGUSR2, keeping the same PID, so foreman does not
+# see a child die and tear down the whole dev group — Vite keeps running.
+# Use this to reload boot-time state: config/initializers, config/*, Gemfile,
+# env vars, and new/enum-backed DB columns. Everyday app code (models,
+# controllers, views) is auto-reloaded and needs no restart.
+#
+# Note: this is NOT `touch tmp/restart.txt` — that only works with Passenger,
+# which this project does not use.
+
+set -e
+
+pid=$(pgrep -f 'puma .* \[BlackLightning\]' || true)
+
+if [ -z "$pid" ]; then
+  echo "No running Puma dev server found (is bin/dev running?)." >&2
+  exit 1
+fi
+
+echo "Hot-restarting Puma (pid $pid) via SIGUSR2..."
+kill -USR2 "$pid"
+echo "Done. Watch the bin/dev terminal for the restart log."

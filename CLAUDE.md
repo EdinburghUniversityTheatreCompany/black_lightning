@@ -78,5 +78,38 @@ The `get_link` helper provides:
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
 
+## Dev Server
+
+- **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
+- **No restart needed for app code** — models, controllers, views, etc. are auto-reloaded on the next request.
+- **To reload boot-time state** (`config/initializers`, `config/*`, `Gemfile`, env vars, new/enum-backed DB columns): run **`bin/restart-web`** — see its header comment for the mechanics and why `touch tmp/restart.txt` does nothing here.
+- **For a full stack restart** (e.g. `vite.config` or JS dependency changes): `Ctrl-C` the `bin/dev` terminal and rerun it, or in VS Code run the "Dev server" task again (Tasks: Restart Running Task).
+
+## Database & Migrations
+
+- **Multi-database app.** `bin/rails db:rollback` errors with "must run the namespaced task". Use `bin/rails db:rollback:primary STEP=n` (namespaces: `primary`, `queue`, `cache`).
+- **Legacy tables use integer primary keys, not bigint.** `opportunities` and other older tables have `id: :integer`. A new child table's foreign key to such a table must use `t.references :parent, type: :integer` (or `t.integer`), otherwise the FK migration aborts with a column-type mismatch. New tables you create default to bigint `id`, which is fine for FKs pointing *to* them.
+- **The running dev server caches the DB schema at boot.** After a migration that adds columns, the already-running server will 500 (e.g. "Undeclared attribute type for enum ... must be backed by a database column") until it is restarted. Run `bin/restart-web` after migrating (see **Dev Server** above).
+
+## Permissions
+
+The permission grid auto-discovers models via `ApplicationRecord.descendants` in `Admin::PermissionsController#set_models_and_roles`. A new top-level model appears in the grid automatically; a nested child model managed only through its parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) should be added to the exclusion list there.
+
+## Opportunities
+
+An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
+
+- **Submission is public.** Anyone may submit via `GetInvolvedController#new/#create`; logged-out submitters provide `submitter_name`/`submitter_email` (creator is `nil` → `external?`), protected by a honeypot + reCAPTCHA. Members are attributed to their account; managers can override the creator on the admin form. All submissions are `approved: false` until reviewed. `creator_or_submitter` requires one or the other.
+- **Listing** (`get_involved#opportunities`): `Opportunity.listable` (the public set) + Ransack filters (company/compensation/experience) + a `?category=` tab, sorted EUTC-first. `active` = `listable` ordered internal-first. Per-society shareable links use `?q[company_slug_eq]=…`.
+- **Display:** one `OpportunityCardComponent` renders the project + role sub-list for the public list and the home/dashboard widgets.
+- **Review:** `Opportunity Reviewer` role; approve/reject email the submitter (`OpportunityMailer`, `notification_email`) with an optional note. Reviewers also get the `OpportunityDigestJob` digest.
+- `Company` (name + `acts_as_url` slug + `internal` EUTC flag) is admin-managed via `Admin::CompaniesController`.
+
 # Testing
 Start the test database using `docker start /mysql8` before running any tests.
+
+- **Validation/error messages are i18n-customised** (e.g. presence reads "must not be blank.", not Rails' default "can't be blank"). Assert on `errors[:field].present?` rather than the literal default string.
+- **Admin search-form/index table headers** translate symbol headers via `t("simple_form.labels.defaults.<key>")` (see `SearchFormHelper` and `shared/_table.erb`). A new column used as a header or search field needs a matching key in `config/locales/simple_form.en.yml` under `simple_form.labels.defaults`, or the page raises "Translation missing".
+- **The markdown editor (`Admin::MdEditorComponent`) cannot be driven by Playwright `fill`** — it syncs its contenteditable into the hidden description textarea on submit, overwriting injected values, so the form re-renders with a blank-description error. Cover any form with a description editor via request-level functional tests (`post :create`) rather than a browser submit; form rendering and other Stimulus interactions (e.g. the `nested-form` Add/Remove buttons) still verify fine in the browser.
+- **Fixtures with an explicit `id:` break association-by-label references.** Some fixtures set an explicit `id:` (e.g. `test/fixtures/users.yml` `admin` has `id: 1`). Referencing such a record by label in another fixture's association (`creator: admin`) sets the foreign key to `ActiveRecord::FixtureSet.identify(:admin)` — a *hashed* id that does **not** equal the explicit `id`, so the loaded association (`opportunity.creator`) comes back `nil` even though `creator_id` is set. When a test relies on the association resolving, reference the explicit id directly (`creator_id: 1`), not the label.
+- **No mocking library:** the suite has neither mocha nor `minitest/mock` (minitest 6 dropped it). Don't write `.stubs`/`.stub`. Stub external services by toggling their config instead (e.g. force a reCAPTCHA failure with `Recaptcha.configuration.skip_verify_env.delete("test")` and no token in the request).

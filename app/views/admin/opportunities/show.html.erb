@@ -1,19 +1,31 @@
 <% fields = {
     expiry_date: l(@opportunity.expiry_date, format: :longy),
     approved_by: (@opportunity.approver.nil? ? 'Not Approved' : @opportunity.approver.name if can?(:edit, @opportunity) || can?(:approve, @opportunity)),
-    created_by: @opportunity.creator.name(@current_user),
+    created_by: @opportunity.submitter_display_name(@current_user),
+    external: @opportunity.external? ? 'Submitted externally (no account)' : nil,
     active: @opportunity.active? ? 'This opportunity is currently active' : 'This opportunity is not active. An opportunity is only active when the expiration date has not been reached and it has been approved.',
     description: { type: 'markdown', markdown: @opportunity.description },
 } %>
 
 <% if @opportunity.members_only? || @opportunity.everyone? %>
-  <% display_email = @opportunity.contact_email.presence || @opportunity.creator.email %>
-  <% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.creator.name} by emailing them at #{mail_to display_email}.".html_safe } %>
+  <% display_email = @opportunity.resolved_contact_email %>
+  <% if display_email.present? %>
+    <% fields[:contact] = { type: 'content', content: "You can contact #{@opportunity.submitter_display_name} by emailing them at #{mail_to display_email}.".html_safe } %>
+  <% end %>
 <% end %>
 
-<% content_for :extra_show_actions do %>
-  <%= get_link @opportunity, :approve, condition: !@opportunity.approved %>
-  <%= get_link @opportunity, :reject, condition: @opportunity.approved %>
+<% if can?(:approve, @opportunity) %>
+  <% content_for :extra_show_actions do %>
+    <% action_path, button_variant, button_label =
+        @opportunity.approved ? [ reject_admin_opportunity_path(@opportunity), :danger, "Reject" ]
+                              : [ approve_admin_opportunity_path(@opportunity), :success, "Approve" ] %>
+    <%= form_with url: action_path, method: :put do %>
+      <%= label_tag :approval_note, "Note to submitter (optional)", class: "block text-sm text-gray-600" %>
+      <%= text_area_tag :approval_note, nil, rows: 2, class: "w-full border border-gray-300 rounded px-2 py-1 text-sm mb-2",
+            placeholder: "Included in the email sent to the submitter." %>
+      <%= submit_tag button_label, class: btn_classes(button_variant) %>
+    <% end %>
+  <% end %>
 <% end %>
 
 <%= render('shared/pages/show', object: @opportunity, fields: fields) %>

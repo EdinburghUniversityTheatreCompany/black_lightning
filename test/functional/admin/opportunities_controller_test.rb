@@ -107,6 +107,79 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "should create opportunity with company and nested roles" do
+    attributes = FactoryBot.attributes_for(:opportunity).merge(
+      company_id: companies(:gutter_theatre).id,
+      project: "Eurydice",
+      author: "Sarah Ruhl",
+      roles_attributes: {
+        "0" => { position: "Stage Manager", category: "stage", ordering: "0" },
+        "1" => { position: "Sound Technician", category: "sound", ordering: "1" }
+      }
+    )
+
+    assert_difference("Opportunity.count") do
+      assert_difference("OpportunityRole.count", 2) do
+        post :create, params: { opportunity: attributes }
+      end
+    end
+
+    opportunity = assigns(:opportunity)
+    assert_equal companies(:gutter_theatre), opportunity.company
+    assert_equal "Eurydice", opportunity.project
+    assert_equal "Sarah Ruhl", opportunity.author
+    assert_equal %w[Stage\ Manager Sound\ Technician], opportunity.roles.order(:ordering).map(&:position)
+  end
+
+  test "blank role rows are dropped instead of failing validation" do
+    attributes = FactoryBot.attributes_for(:opportunity).merge(
+      roles_attributes: {
+        "0" => { position: "Stage Manager", category: "stage" },
+        "1" => { position: "", category: "other" }  # accidental empty row, category defaults present
+      }
+    )
+
+    assert_difference("Opportunity.count") do
+      assert_difference("OpportunityRole.count", 1) do
+        post :create, params: { opportunity: attributes }
+      end
+    end
+
+    assert_redirected_to admin_opportunity_path(assigns(:opportunity))
+    assert_equal [ "Stage Manager" ], assigns(:opportunity).roles.map(&:position)
+  end
+
+  test "should show an external (creator-less) opportunity" do
+    external = opportunities(:external_project_opportunity)
+    assert_nil external.creator_id
+
+    get :show, params: { id: external }
+    assert_response :success
+  end
+
+  test "manager can attribute an opportunity to an external submitter" do
+    attributes = FactoryBot.attributes_for(:opportunity).merge(
+      submitter_name: "Jane External",
+      submitter_email: "jane.external@example.com"
+    )
+
+    post :create, params: { opportunity: attributes }
+
+    opportunity = assigns(:opportunity)
+    assert_nil opportunity.creator_id, "creator should not be forced to current_user when a submitter is given"
+    assert opportunity.external?
+    assert_equal "Jane External", opportunity.submitter_name
+  end
+
+  test "manager can attribute an opportunity to a different user" do
+    other = FactoryBot.create(:member)
+    attributes = FactoryBot.attributes_for(:opportunity).merge(creator_id: other.id)
+
+    post :create, params: { opportunity: attributes }
+
+    assert_equal other.id, assigns(:opportunity).creator_id
+  end
+
   test "should destroy opportunity" do
     assert_difference("Opportunity.count", -1) do
       delete :destroy, params: { id: @opportunity }
@@ -126,6 +199,31 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_equal @user, assigns(:opportunity).approver
 
     assert_redirected_to admin_opportunity_path(assigns(:opportunity))
+  end
+
+  test "approving emails the submitter" do
+    @opportunity.update!(approved: false)
+
+    assert_enqueued_email_with OpportunityMailer, :approved, args: [ @opportunity, "Welcome aboard" ], queue: "mailers" do
+      put :approve, params: { id: @opportunity, approval_note: "Welcome aboard" }
+    end
+  end
+
+  test "rejecting emails the submitter" do
+    @opportunity.update!(approved: true)
+
+    assert_enqueued_email_with OpportunityMailer, :rejected, args: [ @opportunity, "Not this time" ], queue: "mailers" do
+      put :reject, params: { id: @opportunity, approval_note: "Not this time" }
+    end
+  end
+
+  test "approving does not email when there is no recipient" do
+    opportunity = FactoryBot.create(:opportunity, approved: false)
+    opportunity.update_columns(creator_id: nil, submitter_name: "Someone", submitter_email: nil)
+
+    assert_no_enqueued_emails do
+      put :approve, params: { id: opportunity }
+    end
   end
 
   test "should reject opportunity" do

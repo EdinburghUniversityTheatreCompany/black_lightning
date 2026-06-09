@@ -15,7 +15,7 @@ class Admin::OpportunitiesController < AdminController
   # POST /admin/opportunity.json
   ##
   def create
-    @opportunity.creator = current_user
+    assign_default_creator
 
     # Make sure users cannot create an opportunity that is approved.
     # They should manually approve it.
@@ -52,11 +52,12 @@ class Admin::OpportunitiesController < AdminController
     @opportunity.approver = current_user
 
     if @opportunity.save
-      flash[:success] = "#{@opportunity.title} has been approved"
+      notified = notify_submitter(:approved)
+      flash[:success] = "#{@opportunity.display_title} has been approved#{' and the submitter has been notified' if notified}"
     else
       # I can see that this will work, but I cannot get it to fail.
       # :nocov:
-      flash[:error] = "Could not approve #{@opportunity.title}"
+      flash[:error] = "Could not approve #{@opportunity.display_title}"
       # :nocov:
     end
 
@@ -76,11 +77,12 @@ class Admin::OpportunitiesController < AdminController
     @opportunity.approver = nil
 
     if @opportunity.save
-      flash[:success] = "#{@opportunity.title} has been rejected"
+      notified = notify_submitter(:rejected)
+      flash[:success] = "#{@opportunity.display_title} has been rejected#{' and the submitter has been notified' if notified}"
     else
       # I can see that this will work, but I cannot get it to fail.
       # :nocov:
-      flash[:error] = "Could not reject #{@opportunity.title}"
+      flash[:error] = "Could not reject #{@opportunity.display_title}"
       # :nocov:
     end
 
@@ -92,13 +94,39 @@ class Admin::OpportunitiesController < AdminController
 
   private
 
+  # Email the submitter about an approval/rejection decision, with the reviewer's optional note.
+  # Returns true when an email was enqueued; skipped when there is no address to notify.
+  def notify_submitter(decision)
+    return false if @opportunity.notification_email.blank?
+
+    OpportunityMailer.public_send(decision, @opportunity, params[:approval_note]).deliver_later
+    true
+  end
+
+  # Attribute the opportunity to the current user, unless a manager is explicitly
+  # setting a different creator or an external submitter on someone else's behalf.
+  def assign_default_creator
+    manager_override = @opportunity.creator_id.present? ||
+                       (@opportunity.submitter_name.present? && @opportunity.submitter_email.present?)
+    return if can?(:manage, Opportunity) && manager_override
+
+    @opportunity.creator = current_user
+  end
+
   def permitted_params
-    # Do not include information about the approver and creator. That should only be settable by the controller.
-    [ :description, :email_visibility, :contact_email, :title, :expiry_date ]
+    # Do not include information about the approver. That should only be settable by the controller.
+    params = [ :description, :email_visibility, :contact_email, :title, :expiry_date,
+               :company_id, :project, :author, :apply_url, :compensation_type, :experience_level,
+               roles_attributes: [ :id, :position, :category, :note, :ordering, :_destroy ] ]
+
+    # Only managers may attribute an opportunity to a different creator or an external submitter.
+    params = [ :creator_id, :submitter_name, :submitter_email ] + params if can? :manage, Opportunity
+
+    params
   end
 
   def includes_args
-    [ :creator ]
+    [ :creator, :company, :roles ]
   end
 
   def order_args

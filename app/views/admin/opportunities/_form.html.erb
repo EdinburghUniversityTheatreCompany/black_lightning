@@ -3,26 +3,67 @@
 <%= simple_horizontal_form_for [:admin, @opportunity] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <% if @opportunity.approved %>
-      <small>
+      <%= render AlertComponent.new(type: :info) do %>
         <% if can? :approve, @opportunity %>
-          Note: Because you can approve opportunities, this opportunity will stay approved after editing it.
+          Because you can approve opportunities, this opportunity will stay approved after editing it.
         <% else %>
-          Note: Editing this opportunity will result in it being hidden until it is re-approved.
+          Editing this opportunity will hide it until it is re-approved.
         <% end %>
-      </small>
+      <% end %>
     <% end %>
-    
-    <%= f.input :title %>
+
+    <%= f.input :title, hint: "Optional. If a company and project are given, a heading is generated automatically." %>
+
+    <%= f.association :company,
+        collection: Company.accessible_by(current_ability).internal_first,
+        include_blank: "— None —",
+        hint: "The company or society offering this opportunity." %>
+    <%= f.input :project, hint: "Optional. The play, show, or production this is for." %>
+    <%= f.input :author, hint: "Optional. The playwright." %>
 
     <%= f.input :expiry_date %>
+
+    <%= f.input :compensation_type,
+        as: :select,
+        collection: Opportunity.compensation_types.keys.map { |k| [k.humanize, k] },
+        include_blank: false %>
+    <%= f.input :experience_level,
+        as: :select,
+        collection: Opportunity.experience_levels.keys.map { |k| [k.humanize, k] },
+        include_blank: false %>
+
+    <%= f.input :apply_url, label: "Apply-through link",
+        hint: "Optional. A link people should apply through (e.g. an application form), instead of social media." %>
+
     <%= f.input :email_visibility,
         as: :select,
         collection: Opportunity.email_visibilities.keys.map { |k| [k.humanize, k] },
         hint: "Controls who can see a contact email for this opportunity. 'Members only' shows it to logged-in members with backend access." %>
 
     <%= f.input :contact_email,
-        hint: "Optional. If left blank and email visibility is enabled, your account email (#{current_user.email}) will be shown instead." %>
+        hint: "Optional. If left blank and email visibility is enabled, the submitter's account email will be shown instead." %>
 
     <%= render Admin::MdEditorComponent.new(f: f, field: :description, rows: 12) %>
+
+    <h3>Roles</h3>
+    <p class="text-gray-500 small mx-2 mb-3">
+      Add each position this opportunity is recruiting for. These appear as a sub-list under the
+      opportunity, and people can filter the listings by role category.
+    </p>
+    <%= render("shared/form/sections/nested_fields", f: f, association_name: :roles, partial_name: "opportunity_role_fields", sortable: true) %>
+
+    <% if can? :manage, Opportunity %>
+      <h3>Attribution (optional)</h3>
+      <p class="text-gray-500 small mx-2 mb-3">
+        Submit on someone else's behalf. Either pick an existing user, or enter the name and email
+        of an external submitter. Leave blank to attribute it to yourself.
+      </p>
+      <%= f.association :creator,
+          collection: User.accessible_by(current_ability).order(:first_name, :last_name),
+          include_blank: "— Me / external —",
+          label: "Creator (user)" %>
+      <%= f.input :submitter_name, label: "External submitter name" %>
+      <%= f.input :submitter_email, label: "External submitter email" %>
+    <% end %>
   <% end %>
 <% end %>

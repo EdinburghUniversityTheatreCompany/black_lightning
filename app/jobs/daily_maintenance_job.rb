@@ -66,7 +66,8 @@ class DailyMaintenanceJob < ApplicationJob
 
   def notify_expiring_opportunities
     Rails.logger.info "Notifying creators of expiring opportunities"
-    expiring = Opportunity.where(approved: true).where(expiry_date: Date.current + 3.days)
+    # Only account holders get the "edit your opportunity" reminder; external submissions have no creator/account.
+    expiring = Opportunity.where(approved: true).where(expiry_date: Date.current + 3.days).where.not(creator_id: nil)
     expiring.each { |opp| OpportunityMailer.expiry_reminder(opp).deliver_later }
     Rails.logger.info "Queued expiry reminders for #{expiring.count} opportunities"
   end

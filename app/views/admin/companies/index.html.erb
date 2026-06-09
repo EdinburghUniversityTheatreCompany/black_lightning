@@ -1,0 +1,6 @@
+<% search_fields = {
+    name_cont:    { slug: 'defaults.name' },
+    internal_eq:  { type: :boolean, label: 'Internal (EUTC)' }
+} %>
+
+<%= render 'shared/pages/index', resource_class: Company, resources: @companies, content: render('index_results'), search_fields: search_fields %>

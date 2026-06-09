@@ -1,0 +1,17 @@
+<p>Dear <%= @opportunity.submitter_display_name %>,</p>
+
+<p>
+  Thank you for submitting your opportunity "<%= @opportunity.display_title %>".
+  Unfortunately it has not been approved for the Bedlam Theatre website at this time.
+</p>
+
+<% if @note %>
+  <p>A note from the reviewer:</p>
+  <blockquote><%= @note %></blockquote>
+<% end %>
+
+<p>If you have any questions, just reply to this email.</p>
+
+<p>Regards,</p>
+
+<p>EUTC Committee</p>

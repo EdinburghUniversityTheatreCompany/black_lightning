@@ -71,4 +71,81 @@ class Admin::OpportunityTest < ActionView::TestCase
 
     assert_equal "table-success".html_safe, opportunity.css_class
   end
+
+  test "is valid with a creator and no submitter details" do
+    assert opportunities(:active_opportunity).valid?
+  end
+
+  test "is valid as an external submission with submitter name and email" do
+    opp = opportunities(:external_project_opportunity)
+    assert_nil opp.creator_id
+    assert opp.valid?
+  end
+
+  test "is invalid without a creator or submitter" do
+    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now)
+    assert_not opp.valid?
+    assert_includes opp.errors[:base], "must have a creator or a submitter name and email"
+  end
+
+  test "is valid without a title when a company and project provide a heading" do
+    opp = opportunities(:internal_project_opportunity)
+    assert_nil opp.title
+    assert opp.valid?, opp.errors.full_messages.to_sentence
+  end
+
+  test "is invalid with neither a title nor a company/project heading" do
+    opp = Opportunity.new(description: "D", expiry_date: 1.week.from_now, creator: users(:admin))
+    assert_not opp.valid?
+    assert_includes opp.errors[:base], "must have a title, or a company and project"
+  end
+
+  test "external? is true only when there is no creator" do
+    assert opportunities(:external_project_opportunity).external?
+    assert_not opportunities(:internal_project_opportunity).external?
+  end
+
+  test "display_title falls back to company and project" do
+    opp = opportunities(:internal_project_opportunity)
+    assert_nil opp.title
+    assert_equal "Edinburgh University Theatre Company: Eurydice", opp.display_title
+  end
+
+  test "display_title prefers an explicit title" do
+    assert_equal "Gutter Theatre crew call", opportunities(:external_project_opportunity).display_title
+  end
+
+  test "resolved_contact_email prefers contact_email then submitter then creator" do
+    opp = opportunities(:external_project_opportunity)
+    assert_equal "jane@example.com", opp.resolved_contact_email
+
+    opp.contact_email = "explicit@example.com"
+    assert_equal "explicit@example.com", opp.resolved_contact_email
+  end
+
+  test "notification_email targets the submitter, ignoring the public contact_email" do
+    # External submission: notify the submitter, not the (possibly third-party) contact_email.
+    external = opportunities(:external_project_opportunity)
+    external.contact_email = "someone-else@example.com"
+    assert_equal "jane@example.com", external.notification_email
+
+    # Member submission: notify the creator's account.
+    internal = opportunities(:internal_project_opportunity)
+    assert_equal internal.creator.email, internal.notification_email
+  end
+
+  test "submitter_email validates format when present" do
+    opp = opportunities(:external_project_opportunity)
+    opp.submitter_email = "nope"
+    assert_not opp.valid?
+    assert_includes opp.errors[:submitter_email], "is invalid"
+  end
+
+  test "active orders internal companies first" do
+    active = Opportunity.active.to_a
+    assert_includes active, opportunities(:internal_project_opportunity)
+    internal_index = active.index(opportunities(:internal_project_opportunity))
+    external_index = active.index(opportunities(:external_project_opportunity))
+    assert internal_index < external_index, "internal company opportunities should sort before external ones"
+  end
 end

@@ -1,0 +1,5 @@
+<% headers = [:name, :internal, :website] %>
+
+<% field_sets = @companies.map { |company| { fields: [company, bool_icon(company.internal), company.website] } } %>
+
+<%= render 'shared/pages/index_results', resources: @companies, resource_class: Company, headers: headers, field_sets: field_sets %>

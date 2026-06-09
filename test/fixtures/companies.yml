@@ -1,0 +1,16 @@
+eutc:
+  name: "Edinburgh University Theatre Company"
+  slug: "edinburgh-university-theatre-company"
+  internal: true
+  website: "https://bedlamtheatre.co.uk"
+
+gutter_theatre:
+  name: "Gutter Theatre"
+  slug: "gutter-theatre"
+  internal: false
+  website: "https://example.com/gutter"
+
+paradok:
+  name: "Theatre Paradok"
+  slug: "theatre-paradok"
+  internal: false
