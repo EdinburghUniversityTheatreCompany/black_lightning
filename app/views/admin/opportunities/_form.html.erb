@@ -3,13 +3,13 @@
 <%= simple_horizontal_form_for [:admin, @opportunity] do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <% if @opportunity.approved %>
-      <small>
+      <%= render AlertComponent.new(type: :info) do %>
         <% if can? :approve, @opportunity %>
-          Note: Because you can approve opportunities, this opportunity will stay approved after editing it.
+          Because you can approve opportunities, this opportunity will stay approved after editing it.
         <% else %>
-          Note: Editing this opportunity will result in it being hidden until it is re-approved.
+          Editing this opportunity will hide it until it is re-approved.
         <% end %>
-      </small>
+      <% end %>
     <% end %>
 
     <%= f.input :title, hint: "Optional. If a company and project are given, a heading is generated automatically." %>
