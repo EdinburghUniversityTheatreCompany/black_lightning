@@ -41,14 +41,14 @@
       <p class="text-xs text-gray-500 mb-1">Posted by <%= submitter_name %>.</p>
     <% end %>
 
-    <% if opportunity.apply_url.present? %>
-      <p class="text-sm mb-1">
-        <%= link_to "Apply here →", opportunity.apply_url, class: "text-primary hover:underline", target: "_blank", rel: "noopener" %>
+    <% apply = opportunity.apply_url.present? %>
+    <% contact = show_contact? && contact_email.present? %>
+    <% if apply || contact %>
+      <p class="text-sm">
+        <% if apply %><%= link_to "Apply here", opportunity.apply_url, class: "text-primary hover:underline", target: "_blank", rel: "noopener" %><% end %>
+        <% if apply && contact %> or <% end %>
+        <% if contact %><%= apply ? "get in touch by clicking" : "Get in touch by clicking" %> <%= mail_to contact_email, "here" %><% end %>.
       </p>
-    <% end %>
-
-    <% if show_contact? && contact_email.present? %>
-      <p class="text-sm">Or get in touch by clicking <%= mail_to contact_email, "here" %>.</p>
     <% end %>
   <% end %>
 </div>
