@@ -7,8 +7,9 @@ class MassMailJob < ApplicationJob
 
     # Each email is enqueued as a separate job so it can be retried independently
     # if rate limited. ApplicationJob handles retry with exponential backoff.
+    # Pass email as a plain string to avoid ActiveJob deserializing User per delivery job.
     mass_mail.recipients.each do |recipient|
-      MassMailer.send_mail(mass_mail, recipient).deliver_later
+      MassMailer.send_mail(mass_mail, recipient.email).deliver_later
     end
   end
 end

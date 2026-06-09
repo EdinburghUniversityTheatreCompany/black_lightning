@@ -65,7 +65,7 @@ class TeamMember < ActiveRecord::Base
   def sync_debts_if_show
     return unless teamwork.is_a?(Show)
 
-    teamwork.sync_debts_for_user(user)
+    teamwork.sync_debts_for_team_member_record(self)
   end
 
   def uniqueness_in_parent_collection

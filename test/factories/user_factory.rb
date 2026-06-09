@@ -31,6 +31,35 @@
 # == Schema Information End
 #++
 
+# Avoid Rolify's per-user role lookups when creating many users in a loop.
+# Caches the Role record and inserts the join row directly via SQL.
+module BLFactoryRoleHelper
+  def bl_add_role(user, role_name)
+    cache = $bl_role_cache ||= {}
+    role = cache[role_name.to_s] ||=
+      Role.find_or_create_by!(name: role_name.to_s, resource_type: nil, resource_id: nil)
+    uid = user.id.to_i
+    rid = role.id.to_i
+    ActiveRecord::Base.connection.execute(
+      "INSERT IGNORE INTO users_roles (user_id, role_id) VALUES (#{uid}, #{rid})"
+    )
+  end
+
+  def bl_remove_role(user, role_name)
+    cache = $bl_role_cache ||= {}
+    role = cache[role_name.to_s] ||=
+           Role.find_by(name: role_name.to_s, resource_type: nil, resource_id: nil)
+    return unless role
+    uid = user.id.to_i
+    rid = role.id.to_i
+    ActiveRecord::Base.connection.execute(
+      "DELETE FROM users_roles WHERE user_id = #{uid} AND role_id = #{rid}"
+    )
+  end
+end
+
+FactoryBot::SyntaxRunner.include(BLFactoryRoleHelper)
+
 FactoryBot.define do
   factory :user do
     first_name            { Faker::Name.first_name }
@@ -44,7 +73,7 @@ FactoryBot.define do
 
     factory :member do
       after(:create) do |user, _evaluator|
-        user.add_role :member
+        bl_add_role(user, :member)
       end
 
       factory :member_with_phone_number do
@@ -54,14 +83,14 @@ FactoryBot.define do
 
     factory :committee do
       after(:create) do |user, _evaluator|
-        user.add_role :member
-        user.add_role "Committee"
+        bl_add_role(user, :member)
+        bl_add_role(user, "Committee")
       end
     end
 
     factory :admin do
       after(:create) do |user, _evaluator|
-        user.add_role :admin
+        bl_add_role(user, :admin)
       end
     end
   end

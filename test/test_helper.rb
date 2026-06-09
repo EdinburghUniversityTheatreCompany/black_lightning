@@ -31,6 +31,7 @@ require "rails/test_help"
 
 class ActiveSupport::TestCase
   include ActionMailer::TestHelper
+  include BLFactoryRoleHelper
 
   # Setup all fixtures in test/fixtures/*.(yml|csv) for all tests in alphabetical order.
   #
@@ -38,7 +39,16 @@ class ActiveSupport::TestCase
   # -- they do not yet inherit this setting
   fixtures :all
 
+  setup { Prosopite.scan }
+
   teardown do
+    Prosopite.finish
+    # Reset factory caches so rolled-back records don't leak to the next test
+    $bl_cached_venue_id = nil
+    $bl_cached_show = nil
+    $bl_role_cache = nil
+    $bl_cached_user_id = nil
+    $bl_cached_news_author = nil
     FileUtils.rm_rf(Rails.root.join("tmp", "storage"))
     if ENV["VALIDATE"]
       validate_html

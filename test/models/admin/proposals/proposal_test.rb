@@ -97,7 +97,7 @@ class Admin::Proposals::ProposalTest < ActiveSupport::TestCase
     assert_equal Date.current, show.end_date
     assert_not show.is_public
 
-    assert_equal @proposal.user_ids.sort, show.user_ids.sort
+    assert_equal @proposal.team_members.pluck(:user_id).sort, show.team_members.pluck(:user_id).sort
     assert_equal @proposal, show.proposal
 
     assert_equal venues(:unknown), show.venue

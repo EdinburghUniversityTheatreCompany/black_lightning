@@ -58,13 +58,10 @@ class Admin::Proposals::Proposal < ApplicationRecord
 
   # Creates an instance of Admin::Answer for every question in the call.
   def instantiate_answers!
+    existing_question_ids = Admin::Answer.where(answerable: self).pluck(:question_id).to_set
     call.questions&.each do |question|
-      next if question.answers.where(answerable: self).any?
-
-      answer = Admin::Answer.new
-      answer.question = question
-
-      answers.push(answer)
+      next if existing_question_ids.include?(question.id)
+      answers.push(Admin::Answer.new(question: question))
     end
   end
 
@@ -153,7 +150,7 @@ class Admin::Proposals::Proposal < ApplicationRecord
     end
 
     Rails.logger.info "Adding Team Members"
-    @show.team_members << team_members.collect(&:dup)
+    @show.team_members << team_members.includes(:user).collect { |tm| tm.dup.tap { |d| d.user = tm.user } }
 
     @show.proposal = self
 
@@ -178,6 +175,8 @@ class Admin::Proposals::Proposal < ApplicationRecord
   def set_default_proposal_text
     return if !has_attribute?(:proposal_text) || proposal_text.present?
 
-    self.proposal_text = Admin::EditableBlock.find_by(name: "Proposals - Proposal Text Default").try(:content) || ""
+    self.proposal_text = Rails.cache.fetch("admin/editable_block/proposals_proposal_text_default", expires_in: 5.minutes) do
+      Admin::EditableBlock.find_by(name: "Proposals - Proposal Text Default")&.content || ""
+    end
   end
 end

@@ -152,7 +152,7 @@ class Ability
     # Users can see all approved proposals after the deadline and once the call has closed. Whether current or archived.
     can :read, Admin::Proposals::Proposal, status: [ :approved, :successful, :unsuccessful ]
 
-    if user.has_role?("Proposal Checker") || user.has_role?("Committee")
+    if user.roles.where(name: [ "Proposal Checker", "Committee" ]).exists?
       # If the user is a proposal checker, they should be able to read any proposal after the submission deadline, no matter if they are approved, rejected, or awaiting, after the submission deadline.
       can :read, Admin::Proposals::Proposal, call: { submission_deadline: DateTime.current.advance(years: -100)..DateTime.current }
 

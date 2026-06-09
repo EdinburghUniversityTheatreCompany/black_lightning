@@ -10,7 +10,7 @@ class MassMailerTest < ActionMailer::TestCase
     mail = nil
 
     assert_difference "ActionMailer::Base.deliveries.count" do
-      mail = MassMailer.send_mail(mass_mail, recipient).deliver_now
+      mail = MassMailer.send_mail(mass_mail, recipient.email).deliver_now
     end
 
     assert_equal [ recipient.email ], mail.to

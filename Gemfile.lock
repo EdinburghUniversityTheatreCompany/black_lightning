@@ -123,9 +123,6 @@ GEM
     breadcrumbs_on_rails (4.1.0)
       railties (>= 5.0)
     builder (3.3.0)
-    bullet (8.1.1)
-      activesupport (>= 3.0.0)
-      uniform_notifier (~> 1.11)
     bundler-audit (0.9.3)
       bundler (>= 1.2.0)
       thor (~> 1.0)
@@ -341,6 +338,7 @@ GEM
       actionpack (>= 7.0.0)
       activesupport (>= 7.0.0)
       rack
+    prosopite (2.2.0)
     psych (5.3.1)
       date
       stringio
@@ -573,7 +571,6 @@ GEM
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
     unicode-emoji (4.2.0)
-    uniform_notifier (1.18.0)
     uri (1.1.1)
     useragent (0.16.11)
     view_component (4.11.0)
@@ -617,7 +614,6 @@ DEPENDENCIES
   binding_of_caller
   brakeman
   breadcrumbs_on_rails
-  bullet
   bundler-audit (~> 0.9.3)
   byebug
   cancancan
@@ -651,6 +647,7 @@ DEPENDENCIES
   overcommit
   paper_trail
   propshaft
+  prosopite
   puma
   rack
   rack-cors

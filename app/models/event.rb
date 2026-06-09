@@ -136,6 +136,15 @@ class Event < ApplicationRecord
   ##
   def fetch_image
     number = id.modulo(4)
+
+    # Purge stale attachment if the blob is missing or the underlying file was deleted
+    if image.attached?
+      blob = image.blob
+      if blob.nil? || !blob.service.exist?(blob.key)
+        image.purge rescue nil
+      end
+    end
+
     image.attach(ApplicationController.helpers.default_image_blob("events/#{number}.png")) unless image.attached?
 
     image
@@ -216,9 +225,11 @@ class Event < ApplicationRecord
   def set_default_members_only_text
     return if !has_attribute?(:members_only_text) || members_only_text.present?
 
-    editable_block = Admin::EditableBlock.find_by(name: "Event Members-Only Text Default")
+    content = Rails.cache.fetch("admin/editable_block/event_members_only_text_default", expires_in: 5.minutes) do
+      Admin::EditableBlock.find_by(name: "Event Members-Only Text Default")&.content || ""
+    end
 
-    self.members_only_text = editable_block.present? ? editable_block.content : ""
+    self.members_only_text = content
   end
 
   def as_json(options = {})

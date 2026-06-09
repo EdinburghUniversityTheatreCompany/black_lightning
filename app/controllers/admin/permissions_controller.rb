@@ -36,9 +36,10 @@ class Admin::PermissionsController < AdminController
 
     models = params["[#{@role.name}]"]
     if models
+      all_role_permissions = @role.permissions.to_a
       (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
         actions = models[model_name]&.keys || []
-        Admin::Permission.update_permission(@role, model_name, actions)
+        Admin::Permission.update_permission(@role, model_name, actions, all_role_permissions)
       end
     end
 
@@ -58,10 +59,11 @@ class Admin::PermissionsController < AdminController
       # submit values when checked).
       next unless models
 
+      all_role_permissions = role.permissions.to_a
       (@models.map(&:name) + @miscellaneous_permission_subject_classes.keys).uniq.each do |model_name|
         actions = models[model_name]&.keys || []
 
-        Admin::Permission.update_permission(role, model_name, actions)
+        Admin::Permission.update_permission(role, model_name, actions, all_role_permissions)
       end
     end
 

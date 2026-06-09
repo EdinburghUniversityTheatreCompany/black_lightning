@@ -10,7 +10,7 @@ class Tasks::Logic::Debt
   def self.notify_debtors
     debtors = User.in_debt.includes(:admin_maintenance_debts, :admin_staffing_debts)
 
-    # Reallocate the debts for each debtors in case they do have enough
+    # Reallocate the debts for each debtor in case they have enough
     # staffing jobs/attendances to cover their debt, but something went wrong allocating previously.
     debtors.each do |debtor|
       debtor.reallocate_staffing_debts

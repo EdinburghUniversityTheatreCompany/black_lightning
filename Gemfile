@@ -95,7 +95,7 @@ group :development, :test do
 
   gem "annotate"
 
-  gem "bullet"
+  gem "prosopite"
   gem "rack-mini-profiler"
 
   gem "faker"

@@ -45,7 +45,7 @@ FactoryBot.define do
     pretix_view  { [ "list", "week", "month" ].sample }
 
     # Use fixture venue - fixtures are loaded in tests
-    venue_id { Venue.first&.id }
+    venue_id { $bl_cached_venue_id ||= Venue.order(:id).first&.id }
 
     transient do
       team_member_count { 0 }

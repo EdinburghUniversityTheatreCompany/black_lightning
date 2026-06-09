@@ -75,13 +75,29 @@ module DebtManagement
     return { maintenance: 0, staffing: 0 } unless debt_configuration_active?
     return { maintenance: 0, staffing: 0 } unless end_date && end_date > start_of_year
 
-    totals = { maintenance: 0, staffing: 0 }
+    user_ids = team_members.pluck(:user_id)
+    maint_counts = Admin::MaintenanceDebt.where(show: self, user_id: user_ids).group(:user_id).count
+    staff_counts = Admin::StaffingDebt.where(show: self, user_id: user_ids).group(:user_id).count
 
-    team_members.includes(:user).find_each do |team_member|
-      result = sync_debts_for_team_member(team_member)
-      totals[:maintenance] += result[:maintenance]
-      totals[:staffing] += result[:staffing]
+    totals = { maintenance: 0, staffing: 0 }
+    users_needing_maint_realloc = []
+    users_needing_staff_realloc = []
+
+    Thread.current[:bl_skip_debt_realloc] = true
+    begin
+      team_members.includes(:user).find_each do |team_member|
+        result = sync_debts_for_team_member(team_member, maint_counts, staff_counts)
+        users_needing_maint_realloc << team_member.user if result[:maintenance] > 0
+        users_needing_staff_realloc << team_member.user if result[:staffing] > 0
+        totals[:maintenance] += result[:maintenance]
+        totals[:staffing] += result[:staffing]
+      end
+    ensure
+      Thread.current[:bl_skip_debt_realloc] = nil
     end
+
+    users_needing_maint_realloc.each(&:reallocate_maintenance_debts)
+    users_needing_staff_realloc.each(&:reallocate_staffing_debts)
 
     totals
   end
@@ -102,6 +118,15 @@ module DebtManagement
     sync_debts_for_team_member(team_member)
   end
 
+  # Called from TeamMember#after_create to avoid loading the user association
+  def sync_debts_for_team_member_record(team_member)
+    return { maintenance: 0, staffing: 0 } unless debt_configuration_active?
+    return { maintenance: 0, staffing: 0 } unless maintenance_debt_start.present? || staffing_debt_start.present?
+    return { maintenance: 0, staffing: 0 } unless end_date && end_date > start_of_year
+
+    sync_debts_for_team_member(team_member)
+  end
+
   private
 
   ##
@@ -118,12 +143,12 @@ module DebtManagement
   # Applies position-based rules for staffing debts
   # Returns hash with counts: { maintenance: X, staffing: Y }
   ##
-  def sync_debts_for_team_member(team_member)
+  def sync_debts_for_team_member(team_member, precomputed_maint_counts = nil, precomputed_staff_counts = nil)
     user = team_member.user
     created = { maintenance: 0, staffing: 0 }
 
     if maintenance_debt_amount.present? && maintenance_debt_start.present?
-      existing = user.admin_maintenance_debts.where(show: self).count
+      existing = precomputed_maint_counts ? (precomputed_maint_counts[user.id] || 0) : user.admin_maintenance_debts.where(show: self).count
       needed = maintenance_debt_amount - existing
 
       needed.times do
@@ -139,7 +164,7 @@ module DebtManagement
     end
 
     if staffing_debt_amount.present? && staffing_debt_start.present?
-      existing = user.admin_staffing_debts.where(show: self).count
+      existing = precomputed_staff_counts ? (precomputed_staff_counts[user.id] || 0) : user.admin_staffing_debts.where(show: self).count
       amount = staffing_debt_amount_for_position(team_member.position, staffing_debt_amount)
       needed = amount - existing
 
