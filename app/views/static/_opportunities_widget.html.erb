@@ -1,6 +1,6 @@
 <%# locals: (home_opportunities:) %>
 <% cache [home_opportunities, Company.maximum(:updated_at)] do %>
-  <%= render CardComponent.new(title: "Opportunities", flush: true) do |c| %>
+  <%= render CardComponent.new(title: link_to("Opportunities", get_involved_opportunities_path, class: "hover:underline"), flush: true) do |c| %>
     <% c.with_footer do %>
       <div class="flex justify-between items-center">
         <%= link_to "View all opportunities →", get_involved_opportunities_path %>
