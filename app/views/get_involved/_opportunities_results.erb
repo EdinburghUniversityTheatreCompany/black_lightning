@@ -1,0 +1,17 @@
+<% if @opportunities.empty? %>
+  <%= display_block("No Opportunities", false) %>
+<% else %>
+  <%= render CardComponent.new(flush: true) do %>
+    <ul class="flex flex-col divide-y divide-gray-100 px-4">
+      <% @opportunities.each do |opportunity| %>
+        <li>
+          <%= render OpportunityCardComponent.new(
+                opportunity: opportunity,
+                current_user: @current_user,
+                backend_access: can?(:access, :backend),
+                detailed: true) %>
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>

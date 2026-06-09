@@ -226,19 +226,19 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert internal_index < external_index, "internal company opportunities should be listed first"
   end
 
-  test "opportunities filters by role category" do
-    get :opportunities, params: { category: "stage" }
+  test "opportunities filters by role category via the search form" do
+    get :opportunities, params: { q: { roles_category_eq: OpportunityRole.categories[:stage] } }
 
-    assert_equal "stage", assigns(:selected_category)
     assert_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
     assert_not_includes assigns(:opportunities), opportunities(:external_project_opportunity)
   end
 
-  test "opportunities ignores an unknown category" do
-    get :opportunities, params: { category: "not-a-category" }
+  test "opportunities does not duplicate a posting with several matching roles" do
+    # internal_project_opportunity has Stage, Set and Sound roles; filtering on one must not dup it.
+    get :opportunities, params: { q: { roles_category_eq: OpportunityRole.categories[:stage] } }
 
-    assert_nil assigns(:selected_category)
-    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+    matches = assigns(:opportunities).to_a.select { |o| o == opportunities(:internal_project_opportunity) }
+    assert_equal 1, matches.length
   end
 
   test "opportunities filters by company slug" do
@@ -255,11 +255,11 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_not_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
   end
 
-  test "opportunities exposes the available categories for the tabs" do
-    get :opportunities
+  test "opportunities responds to a turbo_stream request (live search)" do
+    get :opportunities, params: { q: { company_slug_eq: companies(:gutter_theatre).slug } }, format: :turbo_stream
 
-    assert_includes assigns(:available_categories), "stage"
-    assert_includes assigns(:available_categories), "lighting"
-    assert_not_includes assigns(:available_categories), "acting"
+    assert_response :success
+    assert_match "index-results", response.body
+    assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
   end
 end

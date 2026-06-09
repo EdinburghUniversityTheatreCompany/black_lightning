@@ -75,10 +75,14 @@ class Opportunity < ApplicationRecord
       .order(Arel.sql("companies.internal DESC, expiry_date ASC"))
   }
 
-  # Opportunities recruiting for a role in the given category, without joining roles
-  # (avoids row multiplication, so it composes cleanly with ordering and Ransack).
-  scope :with_role_category, ->(category) {
-    where(id: OpportunityRole.where(category: category).select(:opportunity_id))
+  # EUTC (internal) opportunities first, then by expiry. Orders by a CASE on the opportunities
+  # table only (no companies join), so it stays valid alongside SELECT DISTINCT — needed because
+  # filtering by role category joins the roles has-many.
+  scope :eutc_first, -> {
+    ids = Company.where(internal: true).ids
+    return reorder("expiry_date ASC") if ids.empty?
+
+    reorder(Arel.sql("CASE WHEN opportunities.company_id IN (#{ids.join(',')}) THEN 0 ELSE 1 END, expiry_date ASC"))
   }
 
   def self.ransackable_attributes(auth_object = nil)
