@@ -115,6 +115,32 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_equal "Gutter Theatre crew call", opportunities(:external_project_opportunity).display_title
   end
 
+  test "company_name falls back to the associated company" do
+    assert_equal companies(:gutter_theatre).name, opportunities(:external_project_opportunity).company_name
+  end
+
+  test "company_name resolves to an existing company (case-insensitive)" do
+    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                          company_name: companies(:gutter_theatre).name.upcase)
+    opp.validate
+    assert_equal companies(:gutter_theatre), opp.company
+  end
+
+  test "company_name creates a new, unreviewed company when it does not match" do
+    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                          company_name: "A Brand New Society")
+    assert_difference("Company.count", 1) { opp.save! }
+    assert_equal "A Brand New Society", opp.company.name
+    assert_not opp.company.reviewed, "newly created companies should be unreviewed"
+  end
+
+  test "blank company_name clears the company" do
+    opp = opportunities(:external_project_opportunity)
+    opp.company_name = ""
+    opp.validate
+    assert_nil opp.company
+  end
+
   test "resolved_contact_email prefers contact_email then submitter then creator" do
     opp = opportunities(:external_project_opportunity)
     assert_equal "jane@example.com", opp.resolved_contact_email

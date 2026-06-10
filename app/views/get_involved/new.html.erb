@@ -8,8 +8,9 @@
 
       <div class="form-inputs">
         <%= f.input :title, hint: "Optional if you give a company and project below." %>
-        <%= f.input :company_name, label: "Company / Society",
-            hint: "The company or society offering this. We'll match an existing one or add it." %>
+        <%= f.input :company_name, as: :select, label: "Company / Society",
+            collection: Company.order(:name).pluck(:name), allow_custom_input: true, include_blank: true,
+            hint: "The company or society offering this. Pick one, or type a new name to add it." %>
         <%= f.input :project, label: "Play / Show", hint: "Optional. The production this is for." %>
         <%= f.input :author, hint: "Optional. The playwright." %>
 

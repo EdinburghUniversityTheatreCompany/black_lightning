@@ -8,6 +8,7 @@
 # *internal*::   <tt>boolean, default(FALSE), not null</tt>
 # *website*::    <tt>string(255)</tt>
 # *instagram*::  <tt>string(255)</tt>
+# *reviewed*::   <tt>boolean, default(FALSE), not null</tt>
 # *created_at*:: <tt>datetime, not null</tt>
 # *updated_at*:: <tt>datetime, not null</tt>
 #--
@@ -31,6 +32,16 @@ class Company < ApplicationRecord
   normalizes :instagram, with: ->(value) { value&.strip&.delete_prefix("@").presence }
 
   scope :internal_first, -> { order(internal: :desc, name: :asc) }
+  scope :unreviewed, -> { where(reviewed: false) }
+
+  # Find an existing company by name (case-insensitive) or build a new, unreviewed one.
+  # The new record is persisted via belongs_to autosave when the parent opportunity is saved.
+  def self.find_or_build_by_name(name)
+    name = name.to_s.strip
+    return if name.blank?
+
+    find_by("LOWER(name) = LOWER(?)", name) || new(name: name)
+  end
 
   # Full Instagram URL for the stored handle (accepts a bare handle or a full URL).
   def instagram_url
@@ -41,7 +52,7 @@ class Company < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[name slug internal website instagram]
+    %w[name slug internal website instagram reviewed]
   end
 
   def self.ransackable_associations(auth_object = nil)

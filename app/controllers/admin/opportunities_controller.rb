@@ -116,7 +116,7 @@ class Admin::OpportunitiesController < AdminController
   def permitted_params
     # Do not include information about the approver. That should only be settable by the controller.
     params = [ :description, :email_visibility, :contact_email, :title, :expiry_date,
-               :company_id, :project, :author, :apply_url, :compensation_type, :experience_level,
+               :company_name, :project, :author, :apply_url, :compensation_type, :experience_level,
                roles_attributes: [ :id, :position, :category, :note, :ordering, :_destroy ] ]
 
     # Only managers may attribute an opportunity to a different creator or an external submitter.

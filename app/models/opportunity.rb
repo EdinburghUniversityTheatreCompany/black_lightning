@@ -25,13 +25,16 @@
 # == Schema Information End
 #++
 class Opportunity < ApplicationRecord
-  # Virtual fields used by the public submission form:
-  # +company_name+ is resolved to a Company by the controller; +website_url+ is a spam honeypot.
-  attr_accessor :company_name, :website_url
+  # +website_url+ is a spam honeypot. +company_name+ is a virtual field on both the admin and public
+  # forms: it is resolved to a Company (created if it doesn't exist) by a before_validation hook.
+  attr_accessor :website_url
+  attr_writer :company_name
 
   belongs_to :creator,  class_name: "User", optional: true
   belongs_to :approver, class_name: "User", optional: true
   belongs_to :company, optional: true
+
+  before_validation :assign_company_from_name
 
   has_many :roles, class_name: "OpportunityRole", dependent: :destroy
   # A role is only meaningful with a position, so silently drop rows left blank (e.g. an
@@ -103,6 +106,13 @@ class Opportunity < ApplicationRecord
     creator_id.nil?
   end
 
+  # The typed company name, falling back to the associated company so the form pre-fills on edit.
+  def company_name
+    return @company_name if defined?(@company_name)
+
+    company&.name
+  end
+
   # Display heading for a posting: explicit title, else "Company: Project".
   def display_title
     title.presence || [ company&.name, project ].compact_blank.join(": ").presence
@@ -140,6 +150,15 @@ class Opportunity < ApplicationRecord
   end
 
   private
+
+  # Resolve the typed company name to a Company (creating an unreviewed one if it doesn't exist).
+  # Only runs when company_name was explicitly provided on this save (admin or public form).
+  def assign_company_from_name
+    return unless defined?(@company_name)
+
+    name = @company_name.to_s.strip
+    self.company = name.present? ? Company.find_or_build_by_name(name) : nil
+  end
 
   # A posting must be attributable to either a logged-in creator or a named external submitter.
   def creator_or_submitter

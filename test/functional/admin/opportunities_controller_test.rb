@@ -109,7 +109,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
 
   test "should create opportunity with company and nested roles" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
-      company_id: companies(:gutter_theatre).id,
+      company_name: companies(:gutter_theatre).name,
       project: "Eurydice",
       author: "Sarah Ruhl",
       roles_attributes: {

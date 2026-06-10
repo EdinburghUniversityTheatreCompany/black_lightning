@@ -14,10 +14,10 @@
 
     <%= f.input :title, hint: "Optional. If a company and project are given, a heading is generated automatically." %>
 
-    <%= f.association :company,
-        collection: Company.accessible_by(current_ability).internal_first,
-        include_blank: "— None —",
-        hint: "The company or society offering this opportunity." %>
+    <%= f.input :company_name, as: :select, label: "Company",
+        collection: Company.internal_first.pluck(:name),
+        allow_custom_input: true, include_blank: "— None —",
+        hint: "The company or society. Pick one, or type a new name to add it (it'll be flagged for review)." %>
     <%= f.input :project, hint: "Optional. The play, show, or production this is for." %>
     <%= f.input :author, hint: "Optional. The playwright." %>
 
