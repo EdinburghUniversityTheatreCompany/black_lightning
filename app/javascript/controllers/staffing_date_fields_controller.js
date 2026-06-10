@@ -10,8 +10,8 @@ export default class extends Controller {
     newFields.style.display = "block"
     newFields.removeAttribute("data-staffing-date-fields-target")
 
-    newFields.querySelector("#start_datetime").setAttribute("name", `start_times[${this.#counter}]`)
-    newFields.querySelector("#end_time").setAttribute("name", `end_times[${this.#counter}]`)
+    newFields.querySelector("[data-staffing-field='start']").setAttribute("name", `start_times[${this.#counter}]`)
+    newFields.querySelector("[data-staffing-field='end']").setAttribute("name", `end_times[${this.#counter}]`)
 
     this.#counter++
     this.addButtonTarget.before(newFields)

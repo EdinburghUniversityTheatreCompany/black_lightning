@@ -28,6 +28,12 @@ class Admin::StaffingDateFieldsTest < ApplicationSystemTestCase
     # A cloned, visible date row should appear (no JS error).
     assert_selector ".control-group.datetime", count: 1
 
+    # The cloned inputs are wired up with indexed names so the row submits.
+    within(".control-group.datetime") do
+      assert_selector "input[name='start_times[0]']"
+      assert_selector "input[name='end_times[0]']"
+    end
+
     within(".control-group.datetime") do
       find("a[data-action~='click->staffing-date-fields#removeDate']").click
     end
