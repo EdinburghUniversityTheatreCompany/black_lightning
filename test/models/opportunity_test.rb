@@ -167,6 +167,35 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_includes opp.errors[:submitter_email], "is invalid"
   end
 
+  test "destroying an opportunity destroys its unreviewed company when it has no other opportunities" do
+    opp = Opportunity.create!(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                              company_name: "Orphan Society", approved: false)
+    company = opp.company
+    assert_not company.reviewed
+
+    assert_difference("Company.count", -1) { opp.destroy }
+    assert_raises(ActiveRecord::RecordNotFound) { company.reload }
+  end
+
+  test "destroying an opportunity keeps its unreviewed company when it has other opportunities" do
+    opp1 = Opportunity.create!(title: "T1", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                               company_name: "Shared Society", approved: false)
+    opp2 = Opportunity.create!(title: "T2", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                               company_name: "Shared Society", approved: false)
+    company = opp1.company
+
+    assert_no_difference("Company.count") { opp1.destroy }
+    assert company.reload.persisted?
+  end
+
+  test "destroying an opportunity keeps a reviewed company" do
+    opp = Opportunity.create!(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                              company_name: companies(:gutter_theatre).name, approved: false)
+    assert companies(:gutter_theatre).reviewed
+
+    assert_no_difference("Company.count") { opp.destroy }
+  end
+
   test "active orders internal companies first" do
     active = Opportunity.active.to_a
     assert_includes active, opportunities(:internal_project_opportunity)

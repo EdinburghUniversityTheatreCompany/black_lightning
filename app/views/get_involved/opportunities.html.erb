@@ -15,7 +15,7 @@
     shareable (e.g. ?q[company_slug_eq]=… for the societies cheat sheet). %>
 <% search_fields = {
      roles_department_id_eq: { type: :select, label: "Department",  collection: Department.order(:ordering).pluck(:name, :id) },
-     company_slug_eq:      { type: :select, label: "Company",      collection: Company.internal_first.pluck(:name, :slug) },
+     company_slug_eq:      { type: :select, label: "Company",      collection: Company.where(reviewed: true).internal_first.pluck(:name, :slug) },
      compensation_type_eq: { type: :select, label: "Compensation", collection: Opportunity.compensation_types.except("tbc").map { |k, v| [ k.humanize, v ] } },
      experience_level_eq:  { type: :select, label: "Experience",   collection: Opportunity.experience_levels.except("any").map { |k, v| [ k.humanize, v ] } }
    } %>

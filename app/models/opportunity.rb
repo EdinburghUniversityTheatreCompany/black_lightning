@@ -37,6 +37,7 @@ class Opportunity < ApplicationRecord
   belongs_to :company, optional: true
 
   before_validation :assign_company_from_name
+  after_destroy :cleanup_orphaned_company
 
   has_many :roles, class_name: "OpportunityRole", dependent: :destroy
   # A role is only meaningful with a position, so silently drop rows left blank (e.g. an
@@ -156,6 +157,13 @@ class Opportunity < ApplicationRecord
 
     name = @company_name.to_s.strip
     self.company = name.present? ? Company.find_or_build_by_name(name) : nil
+  end
+
+  # When an opportunity is destroyed, remove its company if it was never reviewed and now has
+  # no other opportunities — prevents orphaned company records from spam/rejected submissions.
+  def cleanup_orphaned_company
+    return unless company&.reviewed == false
+    company.destroy if company.opportunities.none?
   end
 
   # A posting must be attributable to either a logged-in creator or a named external submitter.
