@@ -1,5 +1,8 @@
-<% headers = [:name, :internal, :website] %>
+<% headers = [:name, :internal, :website, "Status"] %>
 
-<% field_sets = @companies.map { |company| { fields: [company, bool_icon(company.internal), company.website] } } %>
+<% field_sets = @companies.map do |company|
+  status = company.reviewed ? "" : render(BadgeComponent.new(type: :warning).with_content("Needs review"))
+  { fields: [ company, bool_icon(company.internal), company.website, status ] }
+end %>
 
 <%= render 'shared/pages/index_results', resources: @companies, resource_class: Company, headers: headers, field_sets: field_sets %>

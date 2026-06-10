@@ -3,14 +3,23 @@ eutc:
   slug: "edinburgh-university-theatre-company"
   internal: true
   website: "https://bedlamtheatre.co.uk"
+  reviewed: true
 
 gutter_theatre:
   name: "Gutter Theatre"
   slug: "gutter-theatre"
   internal: false
   website: "https://example.com/gutter"
+  reviewed: true
 
 paradok:
   name: "Theatre Paradok"
   slug: "theatre-paradok"
   internal: false
+  reviewed: true
+
+unreviewed_company:
+  name: "Freshly Added Players"
+  slug: "freshly-added-players"
+  internal: false
+  reviewed: false

@@ -28,4 +28,12 @@
   <% end %>
 <% end %>
 
+<% if @opportunity.company && !@opportunity.company.reviewed && can?(:update, @opportunity.company) %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    "<%= @opportunity.company.name %>" was just added and hasn't been checked yet.
+    <%= link_to "Add its details", edit_admin_company_path(@opportunity.company), class: "underline font-medium" %>
+    (website, Instagram, whether it's EUTC).
+  <% end %>
+<% end %>
+
 <%= render('shared/pages/show', object: @opportunity, fields: fields) %>

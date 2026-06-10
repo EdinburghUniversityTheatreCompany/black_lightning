@@ -52,6 +52,21 @@ class Admin::CompaniesControllerTest < ActionController::TestCase
     assert_redirected_to admin_company_path(@company)
   end
 
+  test "editing a company marks it reviewed" do
+    company = companies(:unreviewed_company)
+    assert_not company.reviewed
+
+    put :update, params: { id: company, company: { website: "https://example.com/added" } }
+
+    assert company.reload.reviewed
+  end
+
+  test "creating a company via the admin marks it reviewed" do
+    post :create, params: { company: { name: "Curated Company" } }
+
+    assert assigns(:company).reviewed
+  end
+
   test "should destroy company" do
     company = Company.create!(name: "Disposable Company")
 

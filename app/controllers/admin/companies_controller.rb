@@ -9,6 +9,18 @@ class Admin::CompaniesController < AdminController
 
   load_and_authorize_resource
 
+  # Editing a company through the admin counts as reviewing it, clearing the
+  # "needs review" prompt on opportunities that reference it.
+  def create
+    @company.reviewed = true
+    super
+  end
+
+  def update
+    @company.reviewed = true
+    super
+  end
+
   private
 
   def permitted_params

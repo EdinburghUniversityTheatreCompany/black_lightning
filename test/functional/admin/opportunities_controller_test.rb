@@ -107,6 +107,24 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "show warns when the opportunity's company is unreviewed" do
+    @opportunity.update!(company: companies(:unreviewed_company))
+
+    get :show, params: { id: @opportunity }
+
+    assert_response :success
+    assert_match "hasn't been checked", response.body
+    assert_match companies(:unreviewed_company).name, response.body
+  end
+
+  test "show does not warn when the company is reviewed" do
+    @opportunity.update!(company: companies(:gutter_theatre))
+
+    get :show, params: { id: @opportunity }
+
+    assert_no_match "hasn't been checked", response.body
+  end
+
   test "should create opportunity with company and nested roles" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       company_name: companies(:gutter_theatre).name,
