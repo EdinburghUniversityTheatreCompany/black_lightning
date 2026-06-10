@@ -67,3 +67,9 @@ img.float-right {
   object-fit: contain;
   background: transparent;
 }
+
+/* Nested-form rows only get a drag handle when the list is sortable
+   (the wrapper gains data-sortable-item then). Hide the inert handle otherwise. */
+.nested-form-wrapper:not([data-sortable-item]) [data-sortable-handle] {
+  display: none;
+}

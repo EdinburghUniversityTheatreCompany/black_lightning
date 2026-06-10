@@ -3,7 +3,7 @@ active_opportunity:
   description: "We are looking for a stage manager for our upcoming production."
   approved: true
   expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 expired_opportunity:
@@ -11,7 +11,7 @@ expired_opportunity:
   description: "This opportunity has already expired."
   approved: true
   expiry_date: <%= 1.week.ago.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 unapproved_opportunity:
@@ -19,7 +19,7 @@ unapproved_opportunity:
   description: "This opportunity is awaiting approval."
   approved: false
   expiry_date: <%= 2.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 active_opportunity_2:
@@ -27,7 +27,7 @@ active_opportunity_2:
   description: "Looking for a sound designer."
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 active_opportunity_3:
@@ -35,7 +35,7 @@ active_opportunity_3:
   description: "Looking for a lighting operator."
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 active_opportunity_4:
@@ -43,7 +43,7 @@ active_opportunity_4:
   description: "Looking for a props maker."
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 active_opportunity_5:
@@ -51,7 +51,7 @@ active_opportunity_5:
   description: "Looking for a costume designer."
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 active_opportunity_6:
@@ -59,7 +59,7 @@ active_opportunity_6:
   description: "Looking for marketing assistance."
   approved: true
   expiry_date: <%= 3.weeks.from_now.to_fs(:db) %>
-  creator: admin
+  creator_id: 1
   email_visibility: 0
 
 expiring_soon_opportunity:

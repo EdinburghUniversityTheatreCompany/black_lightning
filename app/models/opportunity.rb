@@ -71,15 +71,11 @@ class Opportunity < ApplicationRecord
   # +listable+ is the unordered "publicly visible" set, used as a base for filtering/sorting
   # (e.g. the public listing applies Ransack on top). +active+ adds the internal-first ordering.
   scope :listable, -> { where("approved = true AND expiry_date > ?", Time.current) }
-  scope :active, -> {
-    listable
-      .left_joins(:company)
-      .order(Arel.sql("companies.internal DESC, expiry_date ASC"))
-  }
+  scope :active, -> { listable.eutc_first }
 
   # EUTC (internal) opportunities first, then by expiry. Orders by a CASE on the opportunities
   # table only (no companies join), so it stays valid alongside SELECT DISTINCT — needed because
-  # filtering by role category joins the roles has-many.
+  # filtering by role department joins the roles has-many.
   scope :eutc_first, -> {
     ids = Company.where(internal: true).ids
     return reorder("expiry_date ASC") if ids.empty?

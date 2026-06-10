@@ -14,7 +14,7 @@
         <%= f.input :project, label: "Play / Show", hint: "Optional. The production this is for." %>
         <%= f.input :author, hint: "Optional. The playwright." %>
 
-        <%= f.input :description, as: :text, input_html: { rows: 8 } %>
+        <%= render "/shared/form/md_editor", f: f, field: :description %>
         <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
 
         <%= f.input :compensation_type, as: :select,

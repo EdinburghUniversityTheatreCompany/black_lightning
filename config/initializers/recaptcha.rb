@@ -7,6 +7,9 @@ Recaptcha.configure do |config|
   elsif !Rails.env.production?
     config.site_key = "placeholder"
     config.secret_key = "placeholder"
+  else
+    # In production with no keys, verify_recaptcha rejects every logged-out submission silently.
+    Rails.logger.warn("[recaptcha] No credentials configured — public submissions will be blocked.")
   end
 
   # Don't call out to Google with placeholder keys. The gem already skips "test"/"cypress";
