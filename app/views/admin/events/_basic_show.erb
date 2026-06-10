@@ -27,6 +27,7 @@
   'Date(s)' =>    event.date_range(true),
   venue:          event.venue.present? ? link_to(event.venue.name, admin_events_url('q[venue_id_eq]' => event.venue.id)) : 'No Venue specified',
   author:         event.author.present? ? link_to(event.author, admin_events_url('q[author_cont]' => event.author)) : 'No author specified',
+  company:        (event.company.present? ? link_to(event.company.name, admin_company_path(event.company)) : 'No society specified'),
   price:          event.price,
   season:         event.season.present? ? get_link(event.season, :show) : 'Not part of a season',
   proposal:       'No proposal linked',

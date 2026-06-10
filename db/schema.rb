@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_10_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_10_130808) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -366,6 +366,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_10_120000) do
 
   create_table "events", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "author"
+    t.bigint "company_id"
     t.text "content_warnings", size: :medium
     t.datetime "created_at", precision: nil, null: false
     t.date "end_date"
@@ -396,6 +397,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_10_120000) do
     t.integer "venue_id"
     t.integer "xts_id"
     t.index ["author"], name: "index_events_on_author"
+    t.index ["company_id"], name: "index_events_on_company_id"
     t.index ["end_date", "is_public"], name: "index_events_on_end_date_and_is_public"
     t.index ["proposal_id"], name: "index_events_on_proposal_id"
     t.index ["season_id"], name: "index_events_on_season_id"
@@ -904,6 +906,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_10_120000) do
   add_foreign_key "cached_duplicates", "users", column: "user1_id"
   add_foreign_key "cached_duplicates", "users", column: "user2_id"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
+  add_foreign_key "events", "companies"
   add_foreign_key "maintenance_attendances", "users"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_profiles", column: "profile_id"

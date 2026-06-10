@@ -6,6 +6,7 @@
 <% details << {   key: 'Venue',   value: link_to(event.venue.name, event.venue) } if event.venue.present? %>
 <% details << {   key: 'Price',   value: event.price } if event.price? %>
 <% details << {   key: 'Author',  value: link_to(event.author, archives_events_url('q[author_cont]' => event.author)) } if event.author? %>
-<% details << {   key: 'Season',  value: link_to(event.season.name, event.season) } if event.season.present?  %>
+<% details << {   key: 'Society', value: link_to(event.company.name, archives_events_url('q[company_id_eq]' => event.company.id)) } if event.company.present? %>
+<% details << {   key: 'Season',  value: link_to(event.season.name, event.season) } if event.season.present? %>
 
 <%= render Public::BasicInfoComponent.new(header: event.name, image: event.fetch_image, tagline: event.tagline, details: details, admin_site: @admin_site) %>

@@ -47,6 +47,9 @@ class Event < ApplicationRecord
   include DebtManagement
   include Sluggable
 
+  # +company_name+ is a virtual field resolved to a Company (created if needed) by a before_validation hook.
+  attr_writer :company_name
+
   has_paper_trail
   resourcify
 
@@ -64,6 +67,7 @@ class Event < ApplicationRecord
 
   # Relationships #
 
+  belongs_to :company, optional: true
   belongs_to :proposal, class_name: "Admin::Proposals::Proposal", optional: true
 
   has_many :team_members, class_name: "::TeamMember", as: :teamwork, dependent: :destroy
@@ -107,9 +111,10 @@ class Event < ApplicationRecord
   default_scope -> { order("end_date DESC") }
 
   # Callbacks
-  before_validation :generate_slug_from_name
+  before_validation :generate_slug_from_name, :assign_company_from_name
   after_initialize :set_default_members_only_text
   after_update :recache_author_list_if_changed
+  after_destroy :cleanup_orphaned_company
 
   # Returns the last event to have finished.
   def self.last_event
@@ -121,12 +126,16 @@ class Event < ApplicationRecord
     pluck(:name, :id)
   end
 
+  def company_name
+    company&.name
+  end
+
   def self.ransackable_attributes(auth_object = nil)
-    %w[author end_date is_public maintenance_debt_start members_only_text name pretix_shown price proposal_id publicity_text season_id slug staffing_debt_start start_date tagline type venue_id]
+    %w[author company_id end_date is_public maintenance_debt_start members_only_text name pretix_shown price proposal_id publicity_text season_id slug staffing_debt_start start_date tagline type venue_id]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    [ "attachments", "event_tags", "pictures", "proposal", "questionnaires", "reviews", "roles", "season", "team_members", "users", "venue", "versions", "video_links" ]
+    [ "attachments", "company", "event_tags", "pictures", "proposal", "questionnaires", "reviews", "roles", "season", "team_members", "users", "venue", "versions", "video_links" ]
   end
 
   ##
@@ -290,5 +299,17 @@ class Event < ApplicationRecord
     if end_date < start_date
       errors.add(:end_date, "must be after or equal to start date")
     end
+  end
+
+  def assign_company_from_name
+    return if @company_name.nil?
+
+    self.company = @company_name.present? ? Company.find_or_build_by_name(@company_name) : nil
+  end
+
+  def cleanup_orphaned_company
+    return unless company.present?
+
+    company.destroy if !company.reviewed? && company.opportunities.none? && company.events.none?
   end
 end

@@ -294,4 +294,73 @@ class EventTest < ActionView::TestCase
     event = FactoryBot.build(:event, slug: "my-event-2024")
     assert event.valid?
   end
+
+  # Company association via company_name virtual field
+
+  test "company_name returns the associated company name" do
+    event = FactoryBot.create(:event)
+    event.company = companies(:gutter_theatre)
+    assert_equal companies(:gutter_theatre).name, event.company_name
+  end
+
+  test "company_name returns nil when no company is set" do
+    event = FactoryBot.build(:event)
+    assert_nil event.company_name
+  end
+
+  test "company_name= resolves to an existing company (case-insensitive)" do
+    event = FactoryBot.build(:event, company_name: companies(:gutter_theatre).name.upcase)
+    event.validate
+    assert_equal companies(:gutter_theatre), event.company
+  end
+
+  test "company_name= creates a new, unreviewed company when it does not match" do
+    event = FactoryBot.build(:event, company_name: "A Brand New Society")
+    assert_difference("Company.count", 1) { event.save! }
+    assert_equal "A Brand New Society", event.company.name
+    assert_not event.company.reviewed, "newly created companies should be unreviewed"
+  end
+
+  test "blank company_name= clears the company" do
+    event = FactoryBot.create(:event)
+    event.company = companies(:gutter_theatre)
+    event.company_name = ""
+    event.validate
+    assert_nil event.company
+  end
+
+  test "destroying an event destroys its unreviewed company when it has no other opportunities or events" do
+    event = FactoryBot.create(:event, company_name: "Orphan Society")
+    company = event.company
+    assert_not company.reviewed
+
+    assert_difference("Company.count", -1) { event.destroy }
+    assert_raises(ActiveRecord::RecordNotFound) { company.reload }
+  end
+
+  test "destroying an event keeps its unreviewed company when shared with another event" do
+    event1 = FactoryBot.create(:event, company_name: "Shared Society")
+    event2 = FactoryBot.create(:event, company_name: "Shared Society")
+    company = event1.company
+
+    assert_no_difference("Company.count") { event1.destroy }
+    assert company.reload.persisted?
+  end
+
+  test "destroying an event keeps its unreviewed company when shared with an opportunity" do
+    event = FactoryBot.create(:event, company_name: "Shared Society")
+    Opportunity.create!(title: "T", description: "D", expiry_date: 1.week.from_now, creator_id: 1,
+                        company_name: event.company.name, approved: false)
+    company = event.company
+
+    assert_no_difference("Company.count") { event.destroy }
+    assert company.reload.persisted?
+  end
+
+  test "destroying an event keeps a reviewed company" do
+    event = FactoryBot.create(:event, company_name: companies(:gutter_theatre).name)
+    assert companies(:gutter_theatre).reviewed
+
+    assert_no_difference("Company.count") { event.destroy }
+  end
 end

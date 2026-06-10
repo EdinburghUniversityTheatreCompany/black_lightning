@@ -22,6 +22,9 @@
 
 <%= f.input :author, collection: Event.author_name_list, allow_custom_input: true %>
 
+<%= f.input :company_name, collection: Company.internal_first.pluck(:name), allow_custom_input: true,
+      hint: 'Society or company that put on this event. Type to select an existing entry or enter a new name. New societies will be flagged for admin review.' %>
+
 <%= f.input :price %>
 
 <% unless f.object.is_a? Season %>
@@ -40,11 +43,11 @@
 
 <%= render 'shared/form/file_field', f: f, field_name: :image, hint: 'This is the image that appears in the slideshow on the frontpage, and as the header image on your event page. The apect ratio should be approximately 48/25.' %>
 
-<%= render Admin::MdEditorComponent.new(f: f, field: :publicity_text )%>
+<%= render Admin::MdEditorComponent.new(f: f, field: :publicity_text) %>
 
-<%= render Admin::MdEditorComponent.new(f: f, field: :content_warnings )%>
+<%= render Admin::MdEditorComponent.new(f: f, field: :content_warnings) %>
 
-<%= render Admin::MdEditorComponent.new(f: f, field: :members_only_text )%>
+<%= render Admin::MdEditorComponent.new(f: f, field: :members_only_text) %>
 
 <%= render(Admin::Form::GalleryComponent.new(f: f)) %>
 

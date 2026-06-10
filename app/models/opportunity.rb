@@ -163,7 +163,7 @@ class Opportunity < ApplicationRecord
   # no other opportunities — prevents orphaned company records from spam/rejected submissions.
   def cleanup_orphaned_company
     return unless company&.reviewed == false
-    company.destroy if company.opportunities.none?
+    company.destroy if company.opportunities.none? && company.events.none?
   end
 
   # A posting must be attributable to either a logged-in creator or a named external submitter.

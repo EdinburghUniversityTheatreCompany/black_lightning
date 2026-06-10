@@ -23,6 +23,7 @@
 ##
 class Company < ApplicationRecord
   has_many :opportunities, dependent: :nullify
+  has_many :events, dependent: :nullify
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
 
@@ -56,6 +57,6 @@ class Company < ApplicationRecord
   end
 
   def self.ransackable_associations(auth_object = nil)
-    %w[opportunities]
+    %w[opportunities events]
   end
 end
