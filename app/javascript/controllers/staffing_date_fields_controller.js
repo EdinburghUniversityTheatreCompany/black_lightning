@@ -13,9 +13,12 @@ export default class extends Controller {
     newFields.querySelector("#start_datetime").setAttribute("name", `start_times[${this.#counter}]`)
     newFields.querySelector("#end_time").setAttribute("name", `end_times[${this.#counter}]`)
 
-    newFields.querySelector("a.btn-danger").addEventListener("click", () => newFields.remove())
-
     this.#counter++
     this.addButtonTarget.before(newFields)
+  }
+
+  removeDate(event) {
+    event.preventDefault()
+    event.currentTarget.closest(".control-group.datetime").remove()
   }
 }
