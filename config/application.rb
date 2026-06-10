@@ -15,6 +15,7 @@ require "action_cable/engine"
 require "rails/test_unit/railtie"
 
 require "image_processing/mini_magick"
+require "image_processing/vips"
 require_relative "../lib/cloudflare_ips"
 require_relative "../app/middleware/cloudflare_ip_sanitizer"
 

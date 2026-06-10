@@ -18,7 +18,10 @@ class ActiveStorage::Representations::RedirectController < ActiveStorage::BaseCo
 
     expires_in ActiveStorage.service_urls_expire_in
     redirect_to @blob.representation(params[:variation_key]).processed.url(disposition: params[:disposition]), allow_other_host: true
-  rescue Vips::Error, MiniMagick::Error => e
+    # LoadError covers an image backend that fails to load its native library
+    # (e.g. ruby-vips/libvips missing). It is not a StandardError, so it must be
+    # listed explicitly or the controller would 500 instead of degrading to 404.
+  rescue Vips::Error, MiniMagick::Error, LoadError => e
     Honeybadger.notify(e)
     head :not_found
   end
