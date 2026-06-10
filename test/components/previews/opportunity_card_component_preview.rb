@@ -39,9 +39,9 @@ class OpportunityCardComponentPreview < ViewComponent::Preview
       submitter_name: "Jane Director",
       submitter_email: "jane@example.com",
       roles: [
-        OpportunityRole.new(position: "Stage Manager", category: :stage, ordering: 0),
-        OpportunityRole.new(position: "Set Manager", category: :set, note: "Build weekends only", ordering: 1),
-        OpportunityRole.new(position: "Sound Technician", category: :sound, ordering: 2)
+        OpportunityRole.new(position: "Stage Manager", department: Department.new(name: "Stage Management"), ordering: 0),
+        OpportunityRole.new(position: "Set Manager", department: Department.new(name: "Set"), note: "Build weekends only", ordering: 1),
+        OpportunityRole.new(position: "Sound Technician", department: Department.new(name: "Sound"), ordering: 2)
       ]
     )
   end

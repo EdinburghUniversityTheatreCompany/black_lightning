@@ -38,8 +38,7 @@ class Opportunity < ApplicationRecord
 
   has_many :roles, class_name: "OpportunityRole", dependent: :destroy
   # A role is only meaningful with a position, so silently drop rows left blank (e.g. an
-  # accidental "Add role" click) — the category select always has a default value, so
-  # :all_blank would not catch them.
+  # accidental "Add role" click).
   accepts_nested_attributes_for :roles, allow_destroy: true, reject_if: ->(attrs) { attrs["position"].blank? }
 
   enum :email_visibility, { no_one: 0, members_only: 1, everyone: 2 }, default: :no_one

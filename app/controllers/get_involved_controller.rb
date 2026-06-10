@@ -66,7 +66,7 @@ class GetInvolvedController < ApplicationController
   def opportunity_params
     permitted = [ :title, :description, :expiry_date, :email_visibility, :contact_email,
                   :company_name, :project, :author, :apply_url, :compensation_type, :experience_level,
-                  roles_attributes: [ :position, :category, :note, :_destroy ] ]
+                  roles_attributes: [ :position, :department_name, :note, :_destroy ] ]
     # External (logged-out) submitters identify themselves; members are taken from current_user.
     permitted += [ :submitter_name, :submitter_email ] unless user_signed_in?
 

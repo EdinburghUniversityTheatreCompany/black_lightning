@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_09_120100) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_09_120400) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -327,6 +327,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_120100) do
     t.index ["priority", "run_at"], name: "delayed_jobs_priority"
   end
 
+  create_table "departments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "match_terms"
+    t.string "name", null: false
+    t.integer "ordering"
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_departments_on_name", unique: true
+  end
+
   create_table "emails", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "attached_object_id", null: false
     t.string "attached_object_type", null: false
@@ -581,13 +590,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_120100) do
   end
 
   create_table "opportunity_roles", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
-    t.integer "category", default: 0, null: false
     t.datetime "created_at", null: false
+    t.bigint "department_id"
     t.string "note"
     t.integer "opportunity_id", null: false
     t.integer "ordering"
     t.string "position", null: false
     t.datetime "updated_at", null: false
+    t.index ["department_id"], name: "index_opportunity_roles_on_department_id"
     t.index ["opportunity_id"], name: "index_opportunity_roles_on_opportunity_id"
   end
 
@@ -900,6 +910,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_120100) do
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_openid_requests", "oauth_access_grants", column: "access_grant_id", on_delete: :cascade
   add_foreign_key "opportunities", "companies"
+  add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
   add_foreign_key "roles_parents", "roles"
   add_foreign_key "roles_parents", "roles", column: "parent_id"

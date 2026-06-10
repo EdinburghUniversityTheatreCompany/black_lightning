@@ -23,9 +23,9 @@ eurydice = find_or_seed(Opportunity, { project: "Eurydice", company: eutc }, {
 
 if eurydice.roles.empty?
   eurydice.roles.create!([
-    { position: "Stage Manager", category: :stage, ordering: 0 },
-    { position: "Set Manager", category: :set, note: "Build weekends only", ordering: 1 },
-    { position: "Sound Technician", category: :sound, ordering: 2 }
+    { position: "Stage Manager", department: Department.find_by(name: "Stage Management"), ordering: 0 },
+    { position: "Set Manager", department: Department.find_by(name: "Set"), note: "Build weekends only", ordering: 1 },
+    { position: "Sound Technician", department: Department.find_by(name: "Sound"), ordering: 2 }
   ])
 end
 
@@ -43,5 +43,5 @@ foh = find_or_seed(Opportunity, { title: "Front of House volunteers", company: g
 })
 
 if foh.roles.empty?
-  foh.roles.create!([ { position: "Front of House Manager", category: :foh, ordering: 0 } ])
+  foh.roles.create!([ { position: "Front of House Manager", department: Department.find_by(name: "Front of House"), ordering: 0 } ])
 end

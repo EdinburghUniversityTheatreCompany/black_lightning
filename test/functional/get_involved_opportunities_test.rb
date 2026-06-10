@@ -74,7 +74,7 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
           submitter_name: "Jane External",
           submitter_email: "jane.external@example.com",
           company_name: "Brand New Society",
-          roles_attributes: { "0" => { position: "Stage Manager", category: "stage" } }
+          roles_attributes: { "0" => { position: "Stage Manager", department_name: "Stage Management" } }
         }
       }
     end
@@ -226,16 +226,16 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert internal_index < external_index, "internal company opportunities should be listed first"
   end
 
-  test "opportunities filters by role category via the search form" do
-    get :opportunities, params: { q: { roles_category_eq: OpportunityRole.categories[:stage] } }
+  test "opportunities filters by role department via the search form" do
+    get :opportunities, params: { q: { roles_department_id_eq: departments(:stage_management).id } }
 
     assert_includes assigns(:opportunities), opportunities(:internal_project_opportunity)
     assert_not_includes assigns(:opportunities), opportunities(:external_project_opportunity)
   end
 
   test "opportunities does not duplicate a posting with several matching roles" do
-    # internal_project_opportunity has Stage, Set and Sound roles; filtering on one must not dup it.
-    get :opportunities, params: { q: { roles_category_eq: OpportunityRole.categories[:stage] } }
+    # internal_project_opportunity has Stage, Set and Sound roles; filtering must not dup it.
+    get :opportunities, params: { q: { roles_department_id_eq: departments(:stage_management).id } }
 
     matches = assigns(:opportunities).to_a.select { |o| o == opportunities(:internal_project_opportunity) }
     assert_equal 1, matches.length

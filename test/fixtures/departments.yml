@@ -1,0 +1,24 @@
+stage_management:
+  name: "Stage Management"
+  match_terms: "stage manager, sm, asm"
+  ordering: 0
+
+lighting:
+  name: "Lighting"
+  match_terms: "light, lx, lighting"
+  ordering: 1
+
+sound:
+  name: "Sound"
+  match_terms: "sound, sfx, audio"
+  ordering: 2
+
+set:
+  name: "Set"
+  match_terms: "set, scenic, build"
+  ordering: 3
+
+acting:
+  name: "Acting"
+  match_terms: "actor, acting, cast"
+  ordering: 4

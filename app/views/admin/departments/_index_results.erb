@@ -1,0 +1,5 @@
+<% headers = [:name, :ordering, "Match terms"] %>
+
+<% field_sets = @departments.map { |department| { fields: [department, department.ordering, department.match_terms] } } %>
+
+<%= render 'shared/pages/index_results', resources: @departments, resource_class: Department, headers: headers, field_sets: field_sets %>

@@ -1,24 +1,24 @@
 internal_stage_manager:
   opportunity: internal_project_opportunity
   position: "Stage Manager"
-  category: 2
+  department: stage_management
   ordering: 0
 
 internal_set_manager:
   opportunity: internal_project_opportunity
   position: "Set Manager"
-  category: 5
+  department: set
   note: "Build weekends only"
   ordering: 1
 
 internal_sound_tech:
   opportunity: internal_project_opportunity
   position: "Sound Technician"
-  category: 4
+  department: sound
   ordering: 2
 
 external_lighting:
   opportunity: external_project_opportunity
   position: "Lighting Designer"
-  category: 3
+  department: lighting
   ordering: 0

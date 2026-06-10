@@ -64,14 +64,13 @@ class OpportunityCardComponentTest < ViewComponent::TestCase
     assert_no_text "Any"
   end
 
-  test "renders the FOH category label rather than a humanised 'Foh'" do
+  test "renders the role's department name as a badge" do
     opp = Opportunity.new(title: "FoH call", description: "d", expiry_date: 2.weeks.from_now,
                           submitter_name: "S", submitter_email: "s@example.com",
-                          roles: [ OpportunityRole.new(position: "FoH Manager", category: :foh) ])
+                          roles: [ OpportunityRole.new(position: "FoH Manager", department: departments(:lighting)) ])
 
     render_inline(OpportunityCardComponent.new(opportunity: opp))
-    assert_text "FOH"
-    assert_no_text "Foh"
+    assert_text "Lighting"
   end
 
   test "compact mode links the heading and omits the description" do

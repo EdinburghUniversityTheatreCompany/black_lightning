@@ -23,7 +23,9 @@
       <% roles.each do |role| %>
         <li class="flex items-center gap-2 text-sm">
           <span class="font-medium"><%= role.position %></span>
-          <%= render(BadgeComponent.new(type: :secondary)) do %><%= role.category_label %><% end %>
+          <% if role.department %>
+            <%= render(BadgeComponent.new(type: :secondary)) do %><%= role.department.name %><% end %>
+          <% end %>
           <% if role.note.present? %>
             <span class="text-xs text-gray-500"><%= role.note %></span>
           <% end %>

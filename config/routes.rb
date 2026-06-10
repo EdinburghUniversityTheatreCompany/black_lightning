@@ -170,6 +170,7 @@ ChaosRails::Application.routes.draw do
     resources :attachment_tags
     resources :picture_tags
     resources :companies
+    resources :departments
 
     resources :attachments, only: [ :index ]
     resources :pictures, only: [ :index ]

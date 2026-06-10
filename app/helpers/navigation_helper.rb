@@ -56,6 +56,7 @@ module NavigationHelper
     children << { title: "Opportunities", path: admin_opportunities_path, fa_icon: "fa-lightbulb" }                                    if can? :index, Opportunity
     # Companies are publicly readable (for filtering), so gate this on the ability to manage them.
     children << { title: "Companies", path: admin_companies_path, fa_icon: "fa-building" }                                            if can? :create, Company
+    children << { title: "Departments", path: admin_departments_path, fa_icon: "fa-sitemap" }                                         if can? :create, Department
     children << { title: "Marketing Creatives", path: admin_marketing_creatives_categories_path, fa_icon: "fa-wand-magic-sparkles" }             if can? :index, MarketingCreatives::Category
     children << { title: "Marketing Creatives Profile List", path: admin_marketing_creatives_profiles_path, fa_icon: "fa-users-rectangle" }  if can? :index, MarketingCreatives::Profile
 

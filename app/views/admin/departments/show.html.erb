@@ -1,0 +1,11 @@
+<% fields = {
+  name: @department.name,
+  ordering: @department.ordering,
+  match_terms: @department.match_terms
+} %>
+
+<% content_for :extra_show_actions do %>
+  <%= get_link(Opportunity, :index, link_text: 'View Opportunities', query_params: { 'q[roles_department_id_eq]' => @department.id } ) %>
+<% end %>
+
+<%= render('shared/pages/show', object: @department, fields: fields) %>

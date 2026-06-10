@@ -4,8 +4,8 @@
 #
 # *id*::             <tt>bigint, not null, primary key</tt>
 # *opportunity_id*:: <tt>integer, not null</tt>
+# *department_id*::  <tt>bigint</tt>
 # *position*::       <tt>string(255)</tt>
-# *category*::       <tt>integer, default(0), not null</tt>
 # *note*::           <tt>string(255)</tt>
 # *ordering*::       <tt>integer</tt>
 # *created_at*::     <tt>datetime, not null</tt>
@@ -17,50 +17,48 @@
 ##
 # A single role/position within an Opportunity (e.g. "Stage Manager").
 #
-# The +category+ enum drives the public listing's tabs and filters.
+# Each role belongs to a Department (the grouping used by the public listing's filter). The
+# department is usually auto-suggested from the position text; +department_name+ is a virtual
+# field so the form can submit (and, on the admin form, create) a department by name.
 ##
 class OpportunityRole < ApplicationRecord
   belongs_to :opportunity, touch: true
+  belongs_to :department, optional: true
 
-  enum :category, {
-    acting: 0,
-    directing: 1,
-    stage: 2,
-    lighting: 3,
-    sound: 4,
-    set: 5,
-    costume: 6,
-    writing: 7,
-    production: 8,
-    marketing: 9,
-    foh: 10,
-    other: 11
-  }, default: :other
+  # +department_name+ resolves to a Department (created if needed) in a before_validation hook.
+  # Only the admin role form offers tagging, so in practice public submitters pick an existing
+  # department rather than creating one.
+  attr_writer :department_name
+
+  before_validation :assign_department_from_name
 
   validates :position, presence: true
-  validates :category, presence: true
 
   normalizes :position, with: ->(position) { position&.strip }
 
   default_scope { order(:ordering) }
 
-  # Most categories humanise nicely; a few need a custom display label.
-  CATEGORY_LABELS = { "foh" => "FOH" }.freeze
+  # The typed department name, falling back to the associated department so the form pre-fills.
+  def department_name
+    return @department_name if defined?(@department_name)
 
-  # Display label for a category key (string), e.g. for tabs that iterate over keys.
-  def self.category_label(key)
-    CATEGORY_LABELS[key.to_s] || key.to_s.humanize
-  end
-
-  def category_label
-    self.class.category_label(category)
+    department&.name
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[category position note ordering]
+    %w[position note ordering department_id]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    %w[opportunity]
+    %w[opportunity department]
+  end
+
+  private
+
+  def assign_department_from_name
+    return unless defined?(@department_name)
+
+    name = @department_name.to_s.strip
+    self.department = name.present? ? Department.find_or_build_by_name(name) : nil
   end
 end

@@ -1,0 +1,10 @@
+<%# locals: () %>
+
+<%= simple_horizontal_form_for [:admin, @department] do |f| %>
+  <%= render('shared/pages/form', f: f) do %>
+    <%= f.input :name %>
+    <%= f.input :ordering, hint: 'Lowest appears first, and is matched first when auto-suggesting.' %>
+    <%= f.input :match_terms, as: :text, input_html: { rows: 3 },
+                hint: 'Comma or newline separated. A role whose position contains any of these is suggested this department (e.g. "stage manager, asm, set").' %>
+  <% end %>
+<% end %>

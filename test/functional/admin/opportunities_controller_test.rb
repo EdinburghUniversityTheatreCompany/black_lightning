@@ -131,8 +131,8 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
       project: "Eurydice",
       author: "Sarah Ruhl",
       roles_attributes: {
-        "0" => { position: "Stage Manager", category: "stage", ordering: "0" },
-        "1" => { position: "Sound Technician", category: "sound", ordering: "1" }
+        "0" => { position: "Stage Manager", department_name: "Stage Management", ordering: "0" },
+        "1" => { position: "Sound Technician", department_name: "Sound", ordering: "1" }
       }
     )
 
@@ -152,8 +152,8 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
   test "blank role rows are dropped instead of failing validation" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       roles_attributes: {
-        "0" => { position: "Stage Manager", category: "stage" },
-        "1" => { position: "", category: "other" }  # accidental empty row, category defaults present
+        "0" => { position: "Stage Manager", department_name: "Stage Management" },
+        "1" => { position: "", department_name: "Other" }  # accidental empty row
       }
     )
 

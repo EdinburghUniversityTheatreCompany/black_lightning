@@ -6,6 +6,7 @@ seed_files = %w[
   event_tags
   users
   companies
+  departments
   opportunities
   events
   staffing
