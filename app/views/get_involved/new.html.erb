@@ -49,7 +49,7 @@
       </div>
 
       <%# Honeypot: real users leave this empty; bots tend to fill it in. %>
-      <div class="hidden" aria-hidden="true">
+      <div class="absolute -left-[9999px] overflow-hidden" aria-hidden="true">
         <%= f.input :website_url, label: "Leave this field blank", required: false,
             input_html: { autocomplete: "off", tabindex: -1 } %>
       </div>
