@@ -1,7 +1,5 @@
 module RQRCode
   # :nocov:
-  # CURRENTLY UNUSED BUT TEST IT WHEN YOU ARE USING IT AGAIN.
-  # maybe there is a gem that can handle this, if you fancy not maintaining it yourself.
   module Renderers
     class SVG
       class << self
@@ -17,21 +15,21 @@ module RQRCode
           color   = options[:color]       || "000"
           unit    = options[:unit]        || 11
 
-          # height and width dependent on offset and QR complexity
-          dimension = (qrcode.module_count * unit) + (2 * offset)
+          modules   = qrcode.modules
+          size      = modules.length
+          dimension = (size * unit) + (2 * offset)
 
           xml_tag   = %(<?xml version="1.0" standalone="yes"?>)
           open_tag  = %(<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:ev="http://www.w3.org/2001/xml-events" width="#{dimension}" height="#{dimension}">)
           close_tag = "</svg>"
 
           result = []
-          qrcode.modules.each_index do |c|
+          modules.each_with_index do |row, r|
             tmp = []
-            qrcode.modules.each_index do |r|
-              y = c * unit + offset
-              x = r * unit + offset
-
-              next unless qrcode.is_dark(c, r)
+            row.each_with_index do |dark, c|
+              next unless dark
+              x = c * unit + offset
+              y = r * unit + offset
               tmp << %(<rect width="#{unit}" height="#{unit}" x="#{x}" y="#{y}" style="fill:##{color}"/>)
             end
             result << tmp.join
@@ -41,24 +39,29 @@ module RQRCode
             result.unshift %(<rect width="#{dimension}" height="#{dimension}" x="0" y="0" style="fill:##{options[:fill]}"/>)
           end
 
-          svg = [ xml_tag, open_tag, result, close_tag ].flatten.join("\n")
+          [ xml_tag, open_tag, result, close_tag ].flatten.join("\n")
         end
       end
     end
 
     class PNG
       def self.render(qrcode, options = {})
-        svg = RQRCode::Renderers::SVG.render(qrcode, options)
+        unit   = options[:unit]        || 11
+        offset = options[:offset].to_i || 0
 
-        image = MiniMagick::Image.read(svg) { |i| i.format "svg" }
-        image.format :png
+        modules     = qrcode.modules
+        size        = modules.length
+        pixel_array = modules.map { |row| row.map { |dark| dark ? 0 : 255 } }
 
-        blob = image.to_blob
+        img = Vips::Image.new_from_array(pixel_array).cast(:uchar)
+        img = img.zoom(unit, unit) if unit > 1
 
-        # Tidy up
-        image.destroy!
+        if offset > 0
+          padded = size * unit + 2 * offset
+          img = img.embed(offset, offset, padded, padded, extend: :white)
+        end
 
-        blob
+        img.write_to_buffer(".png")
       end
     end
   end

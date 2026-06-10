@@ -21,7 +21,7 @@ class ActiveStorage::Representations::RedirectController < ActiveStorage::BaseCo
     # LoadError covers an image backend that fails to load its native library
     # (e.g. ruby-vips/libvips missing). It is not a StandardError, so it must be
     # listed explicitly or the controller would 500 instead of degrading to 404.
-  rescue Vips::Error, MiniMagick::Error, LoadError => e
+  rescue Vips::Error, LoadError => e
     Honeybadger.notify(e)
     head :not_found
   end
