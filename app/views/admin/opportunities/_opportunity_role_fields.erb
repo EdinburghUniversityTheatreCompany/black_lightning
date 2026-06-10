@@ -14,7 +14,7 @@
                       input_html: { data: { department_suggest_target: "position", action: "input->department-suggest#positionChanged" } }) },
           { field: f.input(:department_name, as: :select, label: false,
                       collection: Department.order(:ordering).pluck(:name),
-                      allow_custom_input: @admin_site, include_blank: true, wrapper: :inline_form,
+                      allow_custom_input: true, include_blank: true, wrapper: :inline_form,
                       input_html: { data: { department_suggest_target: "department", action: "change->department-suggest#departmentChanged" } }) },
           { field: f.input(:note, placeholder: "Optional note", wrapper: :inline_form) },
           { field: link_to_remove(f), col_modifier: 'auto' },
