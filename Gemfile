@@ -43,6 +43,7 @@ gem "active_storage_validations"
 gem "aws-sdk-s3", require: false
 gem "image_processing"
 gem "mini_magick"
+gem "ruby-vips"
 
 gem "chronic"
 gem "ransack"

@@ -200,6 +200,7 @@ GEM
       railties (>= 6.1.0)
     faker (3.8.0)
       i18n (>= 1.8.11, < 2)
+    ffi (1.17.4-x86_64-linux-gnu)
     foreman (0.90.0)
       thor (~> 1.4)
     fugit (1.12.2)
@@ -482,6 +483,9 @@ GEM
     ruby-lsp-rails (0.4.8)
       ruby-lsp (>= 0.26.0, < 0.27.0)
     ruby-progressbar (1.13.0)
+    ruby-vips (2.3.0)
+      ffi (~> 1.12)
+      logger
     rubyzip (3.3.1)
     securerandom (0.4.1)
     selenium-webdriver (4.44.0)
@@ -666,6 +670,7 @@ DEPENDENCIES
   rubocop-rails-omakase
   rubocop-view_component
   ruby-lsp-rails
+  ruby-vips
   selenium-webdriver (>= 4.8.2)
   silencer
   simple_form
