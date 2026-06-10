@@ -12,7 +12,7 @@ class Admin::CompaniesController < AdminController
   private
 
   def permitted_params
-    [ :name, :internal, :website ]
+    [ :name, :internal, :website, :instagram ]
   end
 
   def order_args

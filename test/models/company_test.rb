@@ -26,4 +26,21 @@ class CompanyTest < ActiveSupport::TestCase
   test "defaults to external" do
     assert_not Company.new.internal
   end
+
+  test "normalizes an instagram handle (strips @) and builds a URL" do
+    company = Company.new(instagram: " @bedlamtheatre ")
+    company.valid?
+    assert_equal "bedlamtheatre", company.instagram
+    assert_equal "https://instagram.com/bedlamtheatre", company.instagram_url
+  end
+
+  test "instagram_url passes through a full URL" do
+    company = Company.new(instagram: "https://instagram.com/foo")
+    company.valid?
+    assert_equal "https://instagram.com/foo", company.instagram_url
+  end
+
+  test "instagram_url is nil when blank" do
+    assert_nil Company.new.instagram_url
+  end
 end
