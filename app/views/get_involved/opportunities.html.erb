@@ -1,4 +1,9 @@
-<h1>Opportunities</h1>
+<div class="flex flex-wrap items-center justify-between gap-2">
+  <h1 class="mb-0">Opportunities</h1>
+  <% if can?(:create, Opportunity) %>
+    <%= link_to "Submit an Opportunity", new_get_involved_opportunity_path, class: btn_classes(:primary) %>
+  <% end %>
+</div>
 
 <% if @editable_block %>
 <div class="mb-3">
