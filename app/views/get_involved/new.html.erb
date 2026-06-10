@@ -14,6 +14,11 @@
         <%= f.input :project, label: "Play / Show", hint: "Optional. The production this is for." %>
         <%= f.input :author, hint: "Optional. The playwright." %>
 
+        <%= f.input :dates, hint: "Optional, free text. e.g. 'Rehearsals from 5 May, performances 10-14 June'." %>
+        <%= f.input :location, as: :select, collection: Venue.order(:name).pluck(:name),
+            allow_custom_input: true, include_blank: true,
+            hint: "Optional. Pick a venue or type another location." %>
+
         <%= render "/shared/form/md_editor", f: f, field: :description %>
         <%= f.input :expiry_date, html5: true, input_html: { min: Date.current }, hint: "After this date the opportunity will no longer be shown." %>
 

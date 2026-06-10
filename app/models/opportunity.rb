@@ -19,6 +19,8 @@
 # *submitter_email*::  <tt>string(255)</tt>
 # *compensation_type*::<tt>integer, default(4), not null</tt>
 # *experience_level*:: <tt>integer, default(0), not null</tt>
+# *dates*::            <tt>string(255)</tt>
+# *location*::         <tt>string(255)</tt>
 # *created_at*::       <tt>datetime, not null</tt>
 # *updated_at*::       <tt>datetime, not null</tt>
 #--
@@ -85,7 +87,8 @@ class Opportunity < ApplicationRecord
 
   def self.ransackable_attributes(auth_object = nil)
     [ "approved", "contact_email", "description", "email_visibility", "expiry_date", "title",
-      "project", "author", "apply_url", "compensation_type", "experience_level", "company_id" ]
+      "project", "author", "apply_url", "compensation_type", "experience_level", "company_id",
+      "dates", "location" ]
   end
 
   def self.ransackable_associations(auth_object = nil)

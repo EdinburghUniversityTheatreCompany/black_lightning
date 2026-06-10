@@ -14,9 +14,14 @@
 
   <p class="mt-1 mb-2 text-xs text-gray-500">
     Expires <%= l opportunity.expiry_date, format: :longy %>
+    <% if opportunity.location.present? %>· <%= opportunity.location %><% end %>
     <% if compensation_label %>· <%= compensation_label %><% end %>
     <% if experience_label %>· <%= experience_label %><% end %>
   </p>
+
+  <% if opportunity.dates.present? %>
+    <p class="mb-2 text-xs text-gray-500"><%= opportunity.dates %></p>
+  <% end %>
 
   <% if roles.any? %>
     <ul class="flex flex-col gap-1 mb-2">

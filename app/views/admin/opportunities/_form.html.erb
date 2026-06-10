@@ -21,6 +21,11 @@
     <%= f.input :project, hint: "Optional. The play, show, or production this is for." %>
     <%= f.input :author, hint: "Optional. The playwright." %>
 
+    <%= f.input :dates, hint: "Optional, free text. e.g. 'Rehearsals from 5 May, performances 10-14 June'." %>
+    <%= f.input :location, as: :select, collection: Venue.order(:name).pluck(:name),
+        allow_custom_input: true, include_blank: true,
+        hint: "Optional. Pick a venue or type another location." %>
+
     <%= f.input :expiry_date %>
 
     <%= f.input :compensation_type,

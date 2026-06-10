@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_09_120400) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_10_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -574,10 +574,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_09_120400) do
     t.string "contact_email"
     t.datetime "created_at", precision: nil, null: false
     t.integer "creator_id"
+    t.string "dates"
     t.text "description", size: :medium
     t.integer "email_visibility", default: 0, null: false
     t.integer "experience_level", default: 0, null: false
     t.date "expiry_date"
+    t.string "location"
     t.string "project"
     t.string "submitter_email"
     t.string "submitter_name"

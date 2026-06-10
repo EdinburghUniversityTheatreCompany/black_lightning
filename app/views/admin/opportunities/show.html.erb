@@ -13,6 +13,8 @@
     company: @opportunity.company&.name,
     project: @opportunity.project,
     author: @opportunity.author,
+    dates: @opportunity.dates,
+    location: @opportunity.location,
     expiry_date: l(@opportunity.expiry_date, format: :longy),
     compensation: @opportunity.compensation_type.humanize,
     experience_level: @opportunity.experience_level.humanize,

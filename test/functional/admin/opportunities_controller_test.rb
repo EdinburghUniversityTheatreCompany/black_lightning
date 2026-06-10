@@ -160,6 +160,19 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_equal %w[Stage\ Manager Sound\ Technician], opportunity.roles.order(:ordering).map(&:position)
   end
 
+  test "should save free-text dates and location" do
+    attributes = FactoryBot.attributes_for(:opportunity).merge(
+      dates: "Rehearsals from 5 May, performances 10-14 June",
+      location: "Bedlam Theatre"
+    )
+
+    post :create, params: { opportunity: attributes }
+
+    opportunity = assigns(:opportunity)
+    assert_equal "Rehearsals from 5 May, performances 10-14 June", opportunity.dates
+    assert_equal "Bedlam Theatre", opportunity.location
+  end
+
   test "blank role rows are dropped instead of failing validation" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       roles_attributes: {
