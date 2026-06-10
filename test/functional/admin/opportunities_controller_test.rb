@@ -107,6 +107,17 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :unprocessable_entity
   end
 
+  test "show displays the company, project, compensation and roles" do
+    get :show, params: { id: opportunities(:internal_project_opportunity) }
+
+    assert_response :success
+    assert_match companies(:eutc).name, response.body
+    assert_match "Eurydice", response.body                 # project
+    assert_match "Stage Manager", response.body            # a role position
+    assert_match "Stage Management", response.body          # the role's department
+    assert_match "Unpaid", response.body                   # compensation
+  end
+
   test "show warns when the opportunity's company is unreviewed" do
     @opportunity.update!(company: companies(:unreviewed_company))
 

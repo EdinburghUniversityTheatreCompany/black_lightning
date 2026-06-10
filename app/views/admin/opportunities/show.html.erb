@@ -1,8 +1,27 @@
+<% roles_content = nil %>
+<% if @opportunity.roles.any? %>
+  <% roles_html = @opportunity.roles.map do |role|
+       label = content_tag(:strong, role.position)
+       label += " — #{role.department.name}".html_safe if role.department
+       label += " (#{role.note})".html_safe if role.note.present?
+       content_tag(:li, label)
+     end %>
+  <% roles_content = { type: 'content', header: 'Roles', content: content_tag(:ul, safe_join(roles_html), class: 'list-disc pl-5') } %>
+<% end %>
+
 <% fields = {
+    company: @opportunity.company&.name,
+    project: @opportunity.project,
+    author: @opportunity.author,
     expiry_date: l(@opportunity.expiry_date, format: :longy),
-    approved_by: (@opportunity.approver.nil? ? 'Not Approved' : @opportunity.approver.name if can?(:edit, @opportunity) || can?(:approve, @opportunity)),
+    compensation: @opportunity.compensation_type.humanize,
+    experience_level: @opportunity.experience_level.humanize,
+    visibility: @opportunity.email_visibility.humanize,
+    "Apply link" => (@opportunity.apply_url.present? ? link_to(@opportunity.apply_url, @opportunity.apply_url, target: '_blank', rel: 'noopener') : nil),
+    roles: roles_content,
     created_by: @opportunity.submitter_display_name(@current_user),
     external: @opportunity.external? ? 'Submitted externally (no account)' : nil,
+    approved_by: (@opportunity.approver.nil? ? 'Not Approved' : @opportunity.approver.name if can?(:edit, @opportunity) || can?(:approve, @opportunity)),
     active: @opportunity.active? ? 'This opportunity is currently active' : 'This opportunity is not active. An opportunity is only active when the expiration date has not been reached and it has been approved.',
     description: { type: 'markdown', markdown: @opportunity.description },
 } %>
