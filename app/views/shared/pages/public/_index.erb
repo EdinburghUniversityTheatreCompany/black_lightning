@@ -1,0 +1,18 @@
+<%# locals: (title:, editable_block_name:, results_partial:, search_fields: nil) %>
+<h1><%= title %></h1>
+
+<div class="mb-3">
+  <%= display_block(editable_block_name, false) %>
+</div>
+
+<% if search_fields.present? %>
+  <div class="mb-3">
+    <%= render "shared/search_form", input_fields: search_fields, columns: 2 %>
+  </div>
+<% end %>
+
+<div>
+  <div id="index-results">
+    <%= render results_partial %>
+  </div>
+</div>

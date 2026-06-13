@@ -33,6 +33,13 @@ class GenericEventsController < ApplicationController
     "/events/index"
   end
 
+  # All event-type controllers (events, shows, workshops, seasons, and their
+  # archives/public variants) render events/index, so they share one results
+  # partial regardless of their own controller_path.
+  def index_results_partial
+    "events/index_results"
+  end
+
   def includes_args
     [ image_attachment: :blob ]
   end

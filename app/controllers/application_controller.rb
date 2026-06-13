@@ -77,7 +77,18 @@ class ApplicationController < ActionController::Base
     render_error_page(exception, "errors/404", 404)
   end
 
+  helper_method :index_results_partial
+
   private
+
+  # Partial used to render an index page's results list. Both the full-page index
+  # wrapper and the turbo_stream (live-search) response render this, so they stay
+  # in sync. Defaults to the controller's own partial; controllers that render a
+  # shared index template (e.g. the event controllers, which all render
+  # events/index) override this to point at the shared partial.
+  def index_results_partial
+    "#{controller_path}/index_results"
+  end
 
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:account_update, keys: [ :calendar_email ])

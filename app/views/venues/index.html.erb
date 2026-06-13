@@ -5,21 +5,8 @@
     address_cont:     { slug: 'defaults.address'}
 } %>
 
-<% items = @venues.collect { |venue| {
-  url: url_for(venue),
-  image: venue.fetch_image,
-  header: venue.name,
-  paragraphs: [
-    { content: venue.tagline }
-  ],
-  button_text: 'View Details'
-  } }
-%>
-
-<%= render Public::IndexPageComponent.new(title: @title, editable_block_name: @editable_block_name, resources: @venues, items: items) do |c| %>
-  <% c.with_search_form do %>
-    <div class="mb-3">
-      <%= render('shared/search_form', input_fields: search_fields, columns: 2) %>
-    </div>
-  <% end %>
-<% end %>
+<%= render "shared/pages/public/index",
+      title: @title,
+      editable_block_name: @editable_block_name,
+      search_fields: search_fields,
+      results_partial: index_results_partial %>

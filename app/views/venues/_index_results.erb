@@ -1,0 +1,11 @@
+<% items = @venues.collect { |venue| {
+  url: url_for(venue),
+  image: venue.fetch_image,
+  header: venue.name,
+  paragraphs: [
+    { content: venue.tagline }
+  ],
+  button_text: 'View Details'
+} } %>
+
+<%= render "shared/pages/public/index_list", items: items, resources: @venues, editable_block_name: @editable_block_name %>
