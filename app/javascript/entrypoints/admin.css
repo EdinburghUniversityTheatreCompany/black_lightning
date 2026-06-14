@@ -45,6 +45,14 @@ main a:not(.btn):not([class*="badge"]):not(.dropdown-item):not(.page-link) {
   @apply text-primary hover:text-primary-dark;
 }
 
+/* Links on primary-coloured backgrounds (footer) must stay white.
+   The admin footer lives inside <main>, so the rule above would otherwise
+   colour it red on the red background. Mirrors application.css. */
+.bg-primary a:not(.dropdown-item),
+footer a {
+  color: white !important;
+}
+
 /* On mobile: force the inner search collapse open and hide its toggle */
 @media (max-width: 767.98px) {
   .search-form-inner-collapse [data-collapsible-target="content"] {
