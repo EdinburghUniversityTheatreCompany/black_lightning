@@ -17,6 +17,7 @@ require "rails/test_unit/railtie"
 require "image_processing/vips"
 require_relative "../lib/cloudflare_ips"
 require_relative "../app/middleware/cloudflare_ip_sanitizer"
+require_relative "../app/middleware/malformed_request_handler"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -43,6 +44,12 @@ module ChaosRails
 
     # Strip spoofed HTTP_CLIENT_IP headers from Cloudflare requests
     config.middleware.insert_before ActionDispatch::RemoteIp, CloudflareIpSanitizer
+
+    # Return 400 (instead of an uncaught 500) for malformed requests that Rack
+    # cannot parse — e.g. bots POSTing gzip-encoded multipart bodies with a
+    # missing boundary. Rack::MethodOverride raises these outside
+    # ActionDispatch::ShowExceptions, so they must be caught here.
+    config.middleware.insert_before Rack::MethodOverride, MalformedRequestHandler
 
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
     # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
