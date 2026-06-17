@@ -109,4 +109,43 @@ class AttachmentTest < ActionView::TestCase
     attachment.file.attach(io: StringIO.new("fake docx"), filename: "document.docx", content_type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     assert attachment.valid?
   end
+
+  # filename + the content type a browser realistically declares on upload
+  # (zip/xml/octet-stream for the container-based and unknown formats).
+  SHEET_MUSIC_UPLOADS = [
+    [ "score.mscz",      "application/zip" ],
+    [ "score.mscx",      "application/xml" ],
+    [ "score.musicxml",  "application/xml" ],
+    [ "score.mxl",       "application/zip" ],
+    [ "score.mid",       "audio/midi" ],
+    [ "score.midi",      "audio/midi" ],
+    [ "score.sib",       "application/octet-stream" ],
+    [ "score.ly",        "text/plain" ],
+    [ "score.abc",       "text/plain" ]
+  ].freeze
+
+  SHEET_MUSIC_UPLOADS.each do |filename, content_type|
+    test "allows sheet music file #{filename}" do
+      editable_block = admin_editable_blocks(:public)
+      attachment = FactoryBot.build(:attachment, item: editable_block)
+      attachment.file.attach(io: StringIO.new("fake sheet music"), filename: filename, content_type: content_type)
+      assert attachment.valid?, "expected #{filename} (#{content_type}) to be allowed, got: #{attachment.errors[:file].to_sentence}"
+    end
+  end
+
+  test "still rejects a plain zip upload" do
+    editable_block = admin_editable_blocks(:public)
+    attachment = FactoryBot.build(:attachment, item: editable_block)
+    attachment.file.attach(io: StringIO.new("fake zip"), filename: "archive.zip", content_type: "application/zip")
+    assert_not attachment.valid?
+    assert_not attachment.errors[:file].empty?
+  end
+
+  test "still rejects a plain xml upload" do
+    editable_block = admin_editable_blocks(:public)
+    attachment = FactoryBot.build(:attachment, item: editable_block)
+    attachment.file.attach(io: StringIO.new("<root/>"), filename: "data.xml", content_type: "application/xml")
+    assert_not attachment.valid?
+    assert_not attachment.errors[:file].empty?
+  end
 end

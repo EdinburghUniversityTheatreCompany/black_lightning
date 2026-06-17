@@ -19,6 +19,9 @@
       when "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "application/msword" then "fa-file-word"
       when "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel" then "fa-file-excel"
       when "text/plain" then "fa-file-lines"
+      when "application/x-musescore", "application/x-musescore+xml",
+           "application/vnd.recordare.musicxml+xml", "application/vnd.recordare.musicxml",
+           "audio/midi", "application/x-sibelius", "text/x-lilypond", "text/vnd.abc" then "fa-file-audio"
       else "fa-file"
     end %>
     <%= link_to fullsize_url, title: attachment.name do %>

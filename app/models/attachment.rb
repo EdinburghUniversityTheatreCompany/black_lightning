@@ -27,6 +27,8 @@ class Attachment < ApplicationRecord
 
   belongs_to :item, polymorphic: true, optional: true
 
+  # Sheet-music / music-notation content types are registered with Marcel in
+  # config/initializers/sheet_music_mime_types.rb so they resolve correctly here.
   ALLOWED_CONTENT_TYPES = %w[
     application/pdf
     image/png image/jpeg image/gif image/webp
@@ -34,6 +36,11 @@ class Attachment < ApplicationRecord
     application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
     application/msword application/vnd.ms-excel
     text/plain
+    application/x-musescore application/x-musescore+xml
+    application/vnd.recordare.musicxml+xml application/vnd.recordare.musicxml
+    audio/midi
+    application/x-sibelius
+    text/x-lilypond text/vnd.abc
   ].freeze
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }
