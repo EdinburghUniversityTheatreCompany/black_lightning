@@ -21,6 +21,13 @@
     .team-grid {
       grid-template-columns: 1fr;
     }
+
+    /* In a single column the uniform row gap no longer separates one member
+       from the next, so add spacing before each member's role (every role
+       except the first starts a new member). */
+    .team-grid .team-role:not(:first-child) {
+      margin-top: 0.75rem;
+    }
   }
 
   .team-role {

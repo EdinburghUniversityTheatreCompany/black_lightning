@@ -9,7 +9,7 @@
   <div class="grid gap-3 lg:grid-cols-2">
     <% video_links.each do |video_link| %>
       <div>
-        <%= render CardComponent.new(title: video_link.name) do %>
+        <%= render CardComponent.new(title: video_link.name, html_class: "h-full mb-0") do %>
           <%= video_link.embed_code %>
         <% end %>
       </div>
