@@ -28,7 +28,7 @@
           <%= render_search_form_fields(f, input_fields_outside_collapse, columns) %>
 
           <% if input_fields_in_collapse.any? %>
-            <%= render CollapsibleSectionComponent.new(title: 'More', html_class: 'mb-0 search-form-inner-collapse') do %>
+            <%= render CollapsibleSectionComponent.new(title: 'More', html_class: 'search-form-inner-collapse') do %>
               <%= render_search_form_fields(f, input_fields_in_collapse, columns) %>
             <% end %>
           <% end %>

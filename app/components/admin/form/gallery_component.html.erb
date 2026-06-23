@@ -1,5 +1,5 @@
 <div class="gallery-form">
-  <%= render(CollapsibleSectionComponent.new(title: 'Gallery', start_open: true)) do %>
+  <%= render(CollapsibleSectionComponent.new(title: 'Gallery', start_open: true, html_class: "mb-4")) do %>
     <%= render('shared/form/sections/nested_fields', 
       f: @f,
       association_name: :pictures,

@@ -1,5 +1,5 @@
 <%# locals_binary_0.5: (f:) %>
 
-<%= render(CollapsibleSectionComponent.new(title: 'Reviews')) do %>
+<%= render(CollapsibleSectionComponent.new(title: 'Reviews', html_class: "mb-4")) do %>
   <%= render('shared/form/sections/nested_fields', f: f, association_name: :reviews, partial_name: 'admin/events/review_fields') %>
 <% end %>
