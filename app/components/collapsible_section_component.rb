@@ -8,7 +8,7 @@ class CollapsibleSectionComponent < ViewComponent::Base
     primary: "bg-primary text-white border-primary"
   }.freeze
 
-  def initialize(title:, variant: :default, flush: false, start_open: false, title_right: nil, html_class: "")
+  def initialize(title:, variant: :default, flush: false, start_open: false, title_right: nil, html_class: "mb-4")
     @title = title
     @variant = variant.to_sym
     @flush = flush

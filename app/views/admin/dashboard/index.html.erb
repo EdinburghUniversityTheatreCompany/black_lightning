@@ -1,11 +1,11 @@
 <div class="content">
   <div class="w-full">
     <div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1.5fr] xl:grid-cols-[1.5fr_1.5fr_1fr] gap-4">
-      <div>
-        <%= render CollapsibleSectionComponent.new(title: link_to("Open Proposal Calls", admin_proposals_calls_path), flush: true, start_open: true) do %>
+      <div class="flex flex-col gap-4">
+        <%= render CollapsibleSectionComponent.new(title: link_to("Open Proposal Calls", admin_proposals_calls_path), flush: true, start_open: true, html_class: "mb-0") do %>
           <%= render "proposals_widget" %>
         <% end %>
-        <%= render CollapsibleSectionComponent.new(start_open: true, flush: true, title: begin
+        <%= render CollapsibleSectionComponent.new(start_open: true, flush: true, html_class: "mb-0", title: begin
           pending_count = can?(:manage, Opportunity) ? Opportunity.where(approved: false).where("expiry_date > ?", Date.current).count : 0
           badge = pending_count > 0 ? link_to(content_tag(:span, pending_count, class: "ml-2 inline-flex items-center justify-center bg-danger text-white text-xs font-bold w-5 h-5 rounded-full"), admin_opportunities_path(q: { approved_eq: false })) : ""
           safe_join([link_to("Opportunities", admin_opportunities_path), badge])
@@ -13,26 +13,26 @@
           <%= render "opportunities_widget" %>
         <% end %>
       </div>
-      <div>
-        <%= render CollapsibleSectionComponent.new(title: link_to("Upcoming Shows", admin_shows_path), flush: true, start_open: true) do %>
+      <div class="flex flex-col gap-4">
+        <%= render CollapsibleSectionComponent.new(title: link_to("Upcoming Shows", admin_shows_path), flush: true, start_open: true, html_class: "mb-0") do %>
           <%= render "shows_widget" %>
         <% end %>
-        <%= render CollapsibleSectionComponent.new(title: link_to("News", admin_news_index_path), flush: true, start_open: true) do %>
+        <%= render CollapsibleSectionComponent.new(title: link_to("News", admin_news_index_path), flush: true, start_open: true, html_class: "mb-0") do %>
           <%= render "news_widget" %>
         <% end %>
       </div>
-      <div>
-        <%= render CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true) do %>
+      <div class="flex flex-col gap-4">
+        <%= render CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true, html_class: "mb-0") do %>
           <%= render "debt_widget" %>
         <% end %>
-        <%= render CollapsibleSectionComponent.new(title: link_to("Staffing", admin_staffings_path), flush: true, start_open: true) do %>
+        <%= render CollapsibleSectionComponent.new(title: link_to("Staffing", admin_staffings_path), flush: true, start_open: true, html_class: "mb-0") do %>
           <%= render "staffings_widget" %>
         <% end %>
-        <%= render CollapsibleSectionComponent.new(title: "Resources", flush: true, start_open: true) do %>
+        <%= render CollapsibleSectionComponent.new(title: "Resources", flush: true, start_open: true, html_class: "mb-0") do %>
           <%= render "resources_widget" %>
         <% end %>
         <% if current_user.has_role?("Committee") || can?(:manage, Admin::Staffing) %>
-          <%= render CollapsibleSectionComponent.new(title: "Committee Staffing", flush: true, start_open: true) do %>
+          <%= render CollapsibleSectionComponent.new(title: "Committee Staffing", flush: true, start_open: true, html_class: "mb-0") do %>
             <%= render "committee_staffing_widget" %>
           <% end %>
         <% end %>
