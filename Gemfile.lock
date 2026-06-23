@@ -88,7 +88,7 @@ GEM
       rake (>= 0.8.7)
     ast (2.4.3)
     aws-eventstream (1.4.0)
-    aws-partitions (1.1261.0)
+    aws-partitions (1.1262.0)
     aws-sdk-core (3.252.0)
       aws-eventstream (~> 1, >= 1.3.0)
       aws-partitions (~> 1, >= 1.992.0)
@@ -182,7 +182,7 @@ GEM
     docile (1.4.1)
     doorkeeper (5.9.3)
       railties (>= 5)
-    doorkeeper-openid_connect (1.10.1)
+    doorkeeper-openid_connect (1.10.2)
       doorkeeper (>= 5.5, < 6.0)
       jwt (>= 2.5)
       ostruct (>= 0.5)
@@ -217,7 +217,7 @@ GEM
       ostruct
     html_acceptance (0.1.19)
     htmlentities (4.4.2)
-    i18n (1.15.0)
+    i18n (1.15.2)
       concurrent-ruby (~> 1.0)
     icalendar (2.12.3)
       base64
@@ -242,7 +242,7 @@ GEM
     json (2.19.9)
     jwt (3.2.0)
       base64
-    kamal (2.11.0)
+    kamal (2.12.0)
       activesupport (>= 7.0)
       base64 (~> 0.2)
       bcrypt_pbkdf (~> 1.0)
@@ -315,7 +315,7 @@ GEM
       net-protocol
     net-ssh (7.3.2)
     nio4r (2.7.5)
-    nokogiri (1.19.3-x86_64-linux-gnu)
+    nokogiri (1.19.4-x86_64-linux-gnu)
       racc (~> 1.4)
     observer (0.1.2)
     open3 (0.2.1)
@@ -337,7 +337,7 @@ GEM
     parser (3.3.11.1)
       ast (~> 2.4.1)
       racc
-    pp (0.6.3)
+    pp (0.6.4)
       prettyprint
     prettyprint (0.2.0)
     prism (1.9.0)
@@ -409,7 +409,7 @@ GEM
       activerecord (>= 7.2)
       activesupport (>= 7.2)
       i18n
-    rbs (4.0.2)
+    rbs (4.0.3)
       logger
       prism (>= 1.6.0)
       tsort
@@ -466,7 +466,7 @@ GEM
       lint_roller (~> 1.1)
       rubocop (>= 1.75.0, < 2.0)
       rubocop-ast (>= 1.47.1, < 2.0)
-    rubocop-rails (2.35.4)
+    rubocop-rails (2.35.5)
       activesupport (>= 4.2.0)
       lint_roller (~> 1.1)
       rack (>= 1.1)
@@ -514,7 +514,7 @@ GEM
     simplecov_json_formatter (0.1.4)
     skylight (7.1.1)
       activesupport (>= 7.2.0)
-    solargraph (0.60.0)
+    solargraph (0.60.1)
       ast (~> 2.4.3)
       backport (~> 1.2)
       benchmark (~> 0.4)
@@ -549,7 +549,7 @@ GEM
       fugit (~> 1.11)
       railties (>= 7.1)
       thor (>= 1.3.1)
-    sorbet-runtime (0.6.13306)
+    sorbet-runtime (0.6.13310)
     sord (7.1.0)
       commander (~> 5.0)
       parlour (~> 9.1)
