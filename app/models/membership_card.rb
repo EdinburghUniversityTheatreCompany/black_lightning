@@ -1,15 +1,18 @@
 # == Schema Information
 #
 # Table name: membership_cards
+# Database name: primary
 #
-# *id*::          <tt>integer, not null, primary key</tt>
-# *card_number*:: <tt>string(255)</tt>
-# *user_id*::     <tt>integer</tt>
-# *created_at*::  <tt>datetime, not null</tt>
-# *updated_at*::  <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id          :integer          not null, primary key
+#  card_number :string(255)
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  user_id     :integer
+#
+# Indexes
+#
+#  index_membership_cards_on_user_id  (user_id)
+#
 class MembershipCard < ApplicationRecord
   before_create :set_card_number
 

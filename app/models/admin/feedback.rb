@@ -4,15 +4,18 @@
 # == Schema Information
 #
 # Table name: admin_feedbacks
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *show_id*::    <tt>integer</tt>
-# *body*::       <tt>text(65535)</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :integer          not null, primary key
+#  body       :text(16777215)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  show_id    :integer
+#
+# Indexes
+#
+#  index_admin_feedbacks_on_show_id  (show_id)
+#
 class Admin::Feedback < ApplicationRecord
   validates :show_id, :body, presence: true
   belongs_to :show, class_name: "Show"

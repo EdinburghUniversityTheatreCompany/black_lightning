@@ -1,18 +1,3 @@
-# == Schema Information
-#
-# Table name: opportunity_roles
-#
-# *id*::             <tt>bigint, not null, primary key</tt>
-# *opportunity_id*:: <tt>integer, not null</tt>
-# *department_id*::  <tt>bigint</tt>
-# *position*::       <tt>string(255)</tt>
-# *note*::           <tt>string(255)</tt>
-# *ordering*::       <tt>integer</tt>
-# *created_at*::     <tt>datetime, not null</tt>
-# *updated_at*::     <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
 
 ##
 # A single role/position within an Opportunity (e.g. "Stage Manager").
@@ -21,6 +6,30 @@
 # department is usually auto-suggested from the position text; +department_name+ is a virtual
 # field so the form can submit (and, on the admin form, create) a department by name.
 ##
+# == Schema Information
+#
+# Table name: opportunity_roles
+# Database name: primary
+#
+#  id             :bigint           not null, primary key
+#  note           :string(255)
+#  ordering       :integer
+#  position       :string(255)      not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  department_id  :bigint
+#  opportunity_id :integer          not null
+#
+# Indexes
+#
+#  index_opportunity_roles_on_department_id   (department_id)
+#  index_opportunity_roles_on_opportunity_id  (opportunity_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (department_id => departments.id)
+#  fk_rails_...  (opportunity_id => opportunities.id)
+#
 class OpportunityRole < ApplicationRecord
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true

@@ -5,16 +5,21 @@
 # == Schema Information
 #
 # Table name: roles
+# Database name: primary
 #
-# *id*::            <tt>integer, not null, primary key</tt>
-# *name*::          <tt>string(255)</tt>
-# *created_at*::    <tt>datetime, not null</tt>
-# *updated_at*::    <tt>datetime, not null</tt>
-# *resource_type*:: <tt>string(255)</tt>
-# *resource_id*::   <tt>bigint</tt>
-#--
-# == Schema Information End
-#++
+#  id            :integer          not null, primary key
+#  name          :string(255)
+#  resource_type :string(255)
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  resource_id   :bigint
+#
+# Indexes
+#
+#  index_roles_on_name                                    (name)
+#  index_roles_on_name_and_resource_type_and_resource_id  (name,resource_type,resource_id)
+#  index_roles_on_resource_type_and_resource_id           (resource_type,resource_id)
+#
 class Role < ApplicationRecord
   # The roles that are referenced directly in the code.
   # Changing the name would break the website, so this list is used to prevent name changes for these roles.

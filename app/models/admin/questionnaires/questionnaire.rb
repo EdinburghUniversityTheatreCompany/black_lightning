@@ -4,15 +4,18 @@
 # == Schema Information
 #
 # Table name: admin_questionnaires_questionnaires
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *event_id*::   <tt>integer</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-# *name*::       <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
+#  id         :integer          not null, primary key
+#  name       :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  event_id   :integer
+#
+# Indexes
+#
+#  index_admin_questionnaires_questionnaires_on_event_id  (event_id)
+#
 class Admin::Questionnaires::Questionnaire < ApplicationRecord
   validates :event, :name, presence: true
 

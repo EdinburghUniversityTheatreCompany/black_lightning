@@ -7,15 +7,14 @@
 # == Schema Information
 #
 # Table name: admin_permissions
+# Database name: primary
 #
-# *id*::            <tt>integer, not null, primary key</tt>
-# *action*::        <tt>string(255)</tt>
-# *subject_class*:: <tt>string(255)</tt>
-# *created_at*::    <tt>datetime, not null</tt>
-# *updated_at*::    <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id            :integer          not null, primary key
+#  action        :string(255)
+#  subject_class :string(255)
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#
 class Admin::Permission < ApplicationRecord
   has_and_belongs_to_many :roles
 

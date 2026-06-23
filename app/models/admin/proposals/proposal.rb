@@ -4,20 +4,23 @@
 # == Schema Information
 #
 # Table name: admin_proposals_proposals
+# Database name: primary
 #
-# *id*::             <tt>integer, not null, primary key</tt>
-# *call_id*::        <tt>integer</tt>
-# *show_title*::     <tt>string(255)</tt>
-# *publicity_text*:: <tt>text(65535)</tt>
-# *proposal_text*::  <tt>text(65535)</tt>
-# *created_at*::     <tt>datetime, not null</tt>
-# *updated_at*::     <tt>datetime, not null</tt>
-# *late*::           <tt>boolean</tt>
-# *approved*::       <tt>boolean</tt>
-# *successful*::     <tt>boolean</tt>
-#--
-# == Schema Information End
-#++
+#  id             :integer          not null, primary key
+#  late           :boolean
+#  proposal_text  :text(16777215)
+#  publicity_text :text(16777215)
+#  show_title     :string(255)
+#  status         :bigint           not null
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  call_id        :integer
+#
+# Indexes
+#
+#  index_admin_proposals_proposals_on_call_id  (call_id)
+#  index_admin_proposals_proposals_on_status   (status)
+#
 class Admin::Proposals::Proposal < ApplicationRecord
   has_paper_trail
 

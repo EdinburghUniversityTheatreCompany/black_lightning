@@ -4,17 +4,22 @@
 # == Schema Information
 #
 # Table name: admin_proposals_calls
+# Database name: primary
 #
-# *id*::                  <tt>integer, not null, primary key</tt>
-# *submission_deadline*:: <tt>datetime</tt>
-# *name*::                <tt>string(255)</tt>
-# *created_at*::          <tt>datetime, not null</tt>
-# *updated_at*::          <tt>datetime, not null</tt>
-# *archived*::            <tt>boolean</tt>
-# *editing_deadline*::    <tt>datetime</tt>
-#--
-# == Schema Information End
-#++
+#  id                  :integer          not null, primary key
+#  archived            :boolean
+#  editing_deadline    :datetime
+#  name                :string(255)
+#  submission_deadline :datetime
+#  created_at          :datetime         not null
+#  updated_at          :datetime         not null
+#
+# Indexes
+#
+#  index_admin_proposals_calls_on_archived             (archived)
+#  index_admin_proposals_calls_on_editing_deadline     (editing_deadline)
+#  index_admin_proposals_calls_on_submission_deadline  (submission_deadline)
+#
 class Admin::Proposals::Call < ApplicationRecord
   validates :submission_deadline, :editing_deadline, :name, presence: true
 

@@ -1,18 +1,27 @@
 # == Schema Information
 #
 # Table name: marketing_creatives_profiles
+# Database name: primary
 #
-# *id*::         <tt>bigint, not null, primary key</tt>
-# *name*::       <tt>string(255)</tt>
-# *url*::        <tt>string(255)</tt>
-# *about*::      <tt>text(65535)</tt>
-# *approved*::   <tt>boolean</tt>
-# *user_id*::    <tt>integer</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :bigint           not null, primary key
+#  about      :text(16777215)
+#  approved   :boolean
+#  contact    :text(16777215)
+#  name       :string(255)
+#  url        :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  user_id    :integer
+#
+# Indexes
+#
+#  index_marketing_creatives_profiles_on_url      (url)
+#  index_marketing_creatives_profiles_on_user_id  (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#
 class MarketingCreatives::Profile < ApplicationRecord
   validates :name, :about, :contact, :url, presence: true
   validates :user, :name, :url, uniqueness: { case_sensitive: true }, allow_nil: true

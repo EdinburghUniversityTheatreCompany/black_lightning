@@ -1,19 +1,22 @@
 # == Schema Information
 #
 # Table name: video_links
+# Database name: primary
 #
-# *id*::           <tt>bigint, not null, primary key</tt>
-# *name*::         <tt>string(255), not null</tt>
-# *link*::         <tt>string(255), not null</tt>
-# *access_level*:: <tt>integer, default(1), not null</tt>
-# *order*::        <tt>integer</tt>
-# *item_type*::    <tt>string(255)</tt>
-# *item_id*::      <tt>bigint</tt>
-# *created_at*::   <tt>datetime, not null</tt>
-# *updated_at*::   <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id           :bigint           not null, primary key
+#  access_level :integer          default(1), not null
+#  item_type    :string(255)
+#  link         :string(255)      not null
+#  name         :string(255)      not null
+#  order        :integer
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  item_id      :bigint
+#
+# Indexes
+#
+#  index_video_links_on_item_type_and_item_id  (item_type,item_id)
+#
 class VideoLink < ApplicationRecord
   belongs_to :item, polymorphic: true
 

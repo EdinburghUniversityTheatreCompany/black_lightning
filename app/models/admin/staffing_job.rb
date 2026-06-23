@@ -4,18 +4,25 @@
 # == Schema Information
 #
 # Table name: admin_staffing_jobs
+# Database name: primary
 #
-# *id*::                  <tt>integer, not null, primary key</tt>
-# *name*::                <tt>string(255)</tt>
-# *staffable_id*::        <tt>integer</tt>
-# *user_id*::             <tt>integer</tt>
-# *created_at*::          <tt>datetime, not null</tt>
-# *updated_at*::          <tt>datetime, not null</tt>
-# *staffable_type*::      <tt>string(255)</tt>
-# *calendar_sequence*::   <tt>integer, default: 0, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                :integer          not null, primary key
+#  calendar_sequence :integer          default(0), not null
+#  name              :string(255)
+#  reminder_sent_at  :datetime
+#  staffable_type    :string(255)
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  staffable_id      :integer
+#  user_id           :integer
+#
+# Indexes
+#
+#  index_admin_staffing_jobs_on_reminder_sent_at  (reminder_sent_at)
+#  index_admin_staffing_jobs_on_staffable         (staffable_type,staffable_id)
+#  index_admin_staffing_jobs_on_staffable_type    (staffable_type)
+#  index_admin_staffing_jobs_on_user_id           (user_id)
+#
 class Admin::StaffingJob < ApplicationRecord
   validates :name, presence: true
 

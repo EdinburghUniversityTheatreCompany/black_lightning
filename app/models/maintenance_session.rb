@@ -1,14 +1,13 @@
 # == Schema Information
 #
 # Table name: maintenance_sessions
+# Database name: primary
 #
-# *id*::         <tt>bigint, not null, primary key</tt>
-# *date*::       <tt>date</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :bigint           not null, primary key
+#  date       :date
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
 class MaintenanceSession < ApplicationRecord
     validates :date, presence: true
 

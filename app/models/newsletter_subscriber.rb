@@ -8,14 +8,17 @@
 # == Schema Information
 #
 # Table name: newsletter_subscribers
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *email*::      <tt>string(255)</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :integer          not null, primary key
+#  email      :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_newsletter_subscribers_on_email  (email) UNIQUE
+#
 class NewsletterSubscriber < ApplicationRecord
   validates :email, presence: true
 

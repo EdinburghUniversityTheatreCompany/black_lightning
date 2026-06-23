@@ -93,7 +93,7 @@ group :development, :test do
   gem "coffee-script-source", "1.12.2"
   gem "tzinfo-data"
 
-  gem "annotate"
+  gem "annotaterb"
 
   gem "bullet"
   gem "rack-mini-profiler"

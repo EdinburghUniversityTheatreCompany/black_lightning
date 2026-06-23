@@ -1,15 +1,21 @@
 # == Schema Information
 #
 # Table name: event_tags
+# Database name: primary
 #
-# *id*::          <tt>bigint, not null, primary key</tt>
-# *name*::        <tt>string(255)</tt>
-# *description*:: <tt>text(65535)</tt>
-# *created_at*::  <tt>datetime, not null</tt>
-# *updated_at*::  <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                            :bigint           not null, primary key
+#  description                   :text(16777215)
+#  name                          :string(255)
+#  ordering                      :bigint
+#  recommended_maintenance_debts :integer
+#  recommended_staffing_debts    :integer
+#  created_at                    :datetime         not null
+#  updated_at                    :datetime         not null
+#
+# Indexes
+#
+#  index_event_tags_on_ordering  (ordering)
+#
 class EventTag < ApplicationRecord
   validates :name, :description, presence: true
   validates :name, uniqueness: { case_sensitive: false }

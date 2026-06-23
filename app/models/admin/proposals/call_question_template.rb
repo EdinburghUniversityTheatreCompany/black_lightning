@@ -4,14 +4,13 @@
 # == Schema Information
 #
 # Table name: admin_proposals_call_question_templates
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *name*::       <tt>string(255)</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :integer          not null, primary key
+#  name       :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
 class Admin::Proposals::CallQuestionTemplate < ApplicationRecord
   include ApplicationHelper
 

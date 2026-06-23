@@ -1,19 +1,22 @@
 # == Schema Information
 #
 # Table name: carousel_items
+# Database name: primary
 #
-# *id*::            <tt>bigint, not null, primary key</tt>
-# *title*::         <tt>string(255)</tt>
-# *tagline*::       <tt>text(65535)</tt>
-# *is_active*::     <tt>boolean</tt>
-# *carousel_name*:: <tt>string(255)</tt>
-# *ordering*::      <tt>integer</tt>
-# *created_at*::    <tt>datetime, not null</tt>
-# *updated_at*::    <tt>datetime, not null</tt>
-# *url*::           <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
+#  id            :bigint           not null, primary key
+#  carousel_name :string(255)
+#  is_active     :boolean
+#  ordering      :integer
+#  tagline       :text(16777215)
+#  title         :string(255)
+#  url           :string(255)
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#
+# Indexes
+#
+#  index_carousel_items_on_is_active_and_ordering  (is_active,ordering)
+#
 class CarouselItem < ApplicationRecord
   CAROUSEL_NAMES = [ "Home" ].freeze
 

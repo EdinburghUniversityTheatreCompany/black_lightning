@@ -1,16 +1,20 @@
 # == Schema Information
 #
 # Table name: emails
+# Database name: primary
 #
-# *id*::                   <tt>bigint, not null, primary key</tt>
-# *email*::                <tt>string(255)</tt>
-# *attached_object_type*:: <tt>string(255), not null</tt>
-# *attached_object_id*::   <tt>bigint, not null</tt>
-# *created_at*::           <tt>datetime, not null</tt>
-# *updated_at*::           <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                   :bigint           not null, primary key
+#  attached_object_type :string(255)      not null
+#  email                :string(255)
+#  created_at           :datetime         not null
+#  updated_at           :datetime         not null
+#  attached_object_id   :bigint           not null
+#
+# Indexes
+#
+#  index_emails_on_attached_object            (attached_object_type,attached_object_id)
+#  index_emails_on_email_and_attached_object  (email,attached_object_id,attached_object_type) UNIQUE
+#
 class Email < ApplicationRecord
   belongs_to :attached_object, polymorphic: true, optional: false
   validates :email, presence: true

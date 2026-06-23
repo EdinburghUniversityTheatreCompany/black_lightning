@@ -3,29 +3,14 @@
 Upgrades that could **not** be applied during the dependency sweep on 2026-06-23, with the
 reason and the manual steps needed to land them later.
 
-## `annotate` 2.6.5 → 3.x (Ruby) — needs a gem swap to `annotaterb`
+## ~~`annotate` 2.6.5 → 3.x~~ — DONE: swapped to `annotaterb`
 
-**Why deferred:** The `annotate` gem (ctran/annotate_models) is unmaintained and incompatible
-with this app:
-
-- `annotate` 3.2.0 (the latest) requires `activerecord >= 3.2, < 8.0`. This app is on Rails
-  **8.1**, so bundler refuses the bump and holds it at 2.6.5.
-- The installed `annotate` 2.6.5 binary is **already broken** on Ruby 4.0: its `bin/annotate`
-  calls `File.exists?`, removed in Ruby 3.2 (`undefined method 'exists?' for class File`). So the
-  command does not run today — this is a pre-existing breakage, not a regression from this sweep.
-
-**Recommended fix:** migrate to **`annotaterb`** (drwl/annotaterb), the maintained drop-in
-successor that supports Rails 8.x and Ruby 4.x. Manual steps:
-
-1. In the `Gemfile`, replace `gem "annotate"` with `gem "annotate_rb"` (in the same
-   `:development, :test` group).
-2. `bundle install`.
-3. `bundle exec annotaterb install` to generate `.annotaterb.yml` and the
-   `lib/tasks/auto_annotate_models.rake` hook.
-4. Note the v3 behaviour change carried over from `annotate`: models are **not** annotated unless
-   `models: true` (config) / `--models` (CLI) is set — set `models: true` in `.annotaterb.yml`.
-5. `bundle exec annotaterb models` to regenerate the `== Schema Information` blocks, review the
-   diff, and commit.
+**Resolved** in the annotaterb migration commit. The unmaintained `annotate` gem
+(ctran/annotate_models) capped at `activerecord < 8.0` and its 2.6.5 binary was already broken
+on Ruby 4.0 (`File.exists?`), so it was replaced with **`annotaterb` 4.22.0** (drwl/annotaterb),
+the maintained drop-in that supports Rails 8.x / Ruby 4.x. The legacy malformed RDoc schema
+blocks were stripped and regenerated in the standard plain format (RDoc format is non-idempotent
+in annotaterb). See the **Schema annotations** note in `CLAUDE.md` for the resulting setup.
 
 ## `diff-lcs` 1.6.2 → 2.0.0 (Ruby) — blocked by an upstream constraint
 

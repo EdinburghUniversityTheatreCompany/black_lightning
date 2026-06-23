@@ -1,17 +1,31 @@
 # == Schema Information
 #
 # Table name: admin_maintenance_debts
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *user_id*::    <tt>integer</tt>
-# *due_by*::     <tt>date</tt>
-# *show_id*::    <tt>integer</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-# *state*::      <tt>integer, default("unfulfilled")</tt>
-#--
-# == Schema Information End
-#++
+#  id                           :integer          not null, primary key
+#  converted_from_staffing_debt :boolean          default(FALSE), not null
+#  due_by                       :date
+#  state                        :integer          default("normal")
+#  created_at                   :datetime         not null
+#  updated_at                   :datetime         not null
+#  maintenance_attendance_id    :bigint
+#  show_id                      :integer
+#  user_id                      :integer
+#
+# Indexes
+#
+#  index_admin_maintenance_debts_on_due_by_and_state           (due_by,state)
+#  index_admin_maintenance_debts_on_maintenance_attendance_id  (maintenance_attendance_id)
+#  index_admin_maintenance_debts_on_show_and_converted         (show_id,converted_from_staffing_debt)
+#  index_admin_maintenance_debts_on_user_id                    (user_id)
+#  index_maintenance_debts_on_user_date_state                  (user_id,due_by,state)
+#  index_maintenance_debts_reallocation                        (user_id,state,maintenance_attendance_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (maintenance_attendance_id => maintenance_attendances.id)
+#
 class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show, class_name: "Event", foreign_key: :show_id

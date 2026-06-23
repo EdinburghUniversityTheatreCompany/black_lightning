@@ -6,17 +6,26 @@
 # == Schema Information
 #
 # Table name: team_members
+# Database name: primary
 #
-# *id*::            <tt>integer, not null, primary key</tt>
-# *position*::      <tt>string(255)</tt>
-# *user_id*::       <tt>integer</tt>
-# *teamwork_id*::   <tt>integer</tt>
-# *created_at*::    <tt>datetime, not null</tt>
-# *updated_at*::    <tt>datetime, not null</tt>
-# *teamwork_type*:: <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
+#  id            :integer          not null, primary key
+#  display_order :integer
+#  position      :string(255)
+#  teamwork_type :string(255)
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  teamwork_id   :integer
+#  user_id       :integer
+#
+# Indexes
+#
+#  index_team_members_on_display_order         (display_order)
+#  index_team_members_on_teamwork_and_user     (teamwork_id,teamwork_type,user_id) UNIQUE
+#  index_team_members_on_teamwork_id           (teamwork_id)
+#  index_team_members_on_teamwork_type         (teamwork_type)
+#  index_team_members_on_teamwork_type_and_id  (teamwork_type,teamwork_id)
+#  index_team_members_on_user_id               (user_id)
+#
 class TeamMember < ActiveRecord::Base
   validates :position, :user, presence: true
   validates_uniqueness_of :user_id, scope: [ :teamwork_type, :teamwork_id ]
