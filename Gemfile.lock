@@ -409,7 +409,7 @@ GEM
       activerecord (>= 7.2)
       activesupport (>= 7.2)
       i18n
-    rbs (4.0.2)
+    rbs (4.0.3)
       logger
       prism (>= 1.6.0)
       tsort
@@ -514,7 +514,7 @@ GEM
     simplecov_json_formatter (0.1.4)
     skylight (7.1.1)
       activesupport (>= 7.2.0)
-    solargraph (0.60.0)
+    solargraph (0.60.1)
       ast (~> 2.4.3)
       backport (~> 1.2)
       benchmark (~> 0.4)
@@ -549,7 +549,7 @@ GEM
       fugit (~> 1.11)
       railties (>= 7.1)
       thor (>= 1.3.1)
-    sorbet-runtime (0.6.13306)
+    sorbet-runtime (0.6.13310)
     sord (7.1.0)
       commander (~> 5.0)
       parlour (~> 9.1)
