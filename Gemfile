@@ -120,7 +120,7 @@ end
 
 
 # Deploy with Kamal
-gem "kamal", "~> 2.0"
+gem "kamal", "~> 2.12"
 gem "thruster"
 
 gem "bcrypt_pbkdf"

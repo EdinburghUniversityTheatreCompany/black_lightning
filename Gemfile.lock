@@ -217,7 +217,7 @@ GEM
       ostruct
     html_acceptance (0.1.19)
     htmlentities (4.4.2)
-    i18n (1.15.0)
+    i18n (1.15.2)
       concurrent-ruby (~> 1.0)
     icalendar (2.12.3)
       base64
@@ -242,7 +242,7 @@ GEM
     json (2.19.9)
     jwt (3.2.0)
       base64
-    kamal (2.11.0)
+    kamal (2.12.0)
       activesupport (>= 7.0)
       base64 (~> 0.2)
       bcrypt_pbkdf (~> 1.0)
@@ -658,7 +658,7 @@ DEPENDENCIES
   icalendar
   image_processing
   json
-  kamal (~> 2.0)
+  kamal (~> 2.12)
   kaminari
   mission_control-jobs
   mysql2
