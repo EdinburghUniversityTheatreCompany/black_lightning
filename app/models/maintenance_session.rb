@@ -19,8 +19,10 @@ class MaintenanceSession < ApplicationRecord
     has_many :users, through: :maintenance_attendances
 
     # allow_destroy gives the association autosave, so attendances built/marked for destruction in
-    # #maintenance_attendances_attributes= are persisted/deleted when the session is saved.
-    accepts_nested_attributes_for :maintenance_attendances, reject_if: :all_blank, allow_destroy: true
+    # #maintenance_attendances_attributes= are persisted/deleted when the session is saved. (That
+    # custom setter fully replaces Rails' generated one, so reject_if would never run — blank rows
+    # are skipped there instead.)
+    accepts_nested_attributes_for :maintenance_attendances, allow_destroy: true
 
     # Building/destroying N attendances for one user would otherwise fire that user's debt
     # reallocation N times (each attendance's after_save/after_destroy). Suppress the per-attendance
@@ -40,9 +42,10 @@ class MaintenanceSession < ApplicationRecord
     end
 
     # One representative attendance per user, carrying the user's credit count as +quantity+, so the
-    # form can show a single row per person instead of one row per credit.
+    # form can show a single row per person instead of one row per credit. Iterates the in-memory
+    # association (not a fresh query) so unsaved built rows survive a failed-save form re-render.
     def attendees_for_form
-        maintenance_attendances.includes(:user)
+        maintenance_attendances
             .reject(&:marked_for_destruction?)
             .group_by(&:user_id)
             .map { |_user_id, group| group.first.tap { |rep| rep.quantity = group.size } }

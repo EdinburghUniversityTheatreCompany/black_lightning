@@ -46,6 +46,17 @@ class MaintenanceSessionTest < ActiveSupport::TestCase
     assert_nil User.suppress_maintenance_reallocation
   end
 
+  test "attendees_for_form reflects unsaved built attendances (form re-render after a failed save)" do
+    session = MaintenanceSession.create!(date: Date.current)
+    # Assign without saving, as a failed save (e.g. blank date) would leave the form.
+    session.maintenance_attendances_attributes = { "0" => { user_id: users(:member).id, quantity: "2" } }
+
+    lines = session.attendees_for_form
+
+    assert_equal 1, lines.size
+    assert_equal 2, lines.first.quantity
+  end
+
   test "attendees_for_form groups a user's attendances into one row carrying the credit count" do
     session = MaintenanceSession.create!(date: Date.current)
     user = users(:member)
