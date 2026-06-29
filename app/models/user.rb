@@ -348,9 +348,16 @@ class User < ApplicationRecord
     results.sort_by { |tm| tm.teamwork.start_date || Date.current }
   end
 
+  # When true, per-attendance maintenance reallocation is skipped. Set while a MaintenanceSession
+  # persists a batch of attendances so the session can reallocate each affected user once instead
+  # of once per attendance (see MaintenanceSession#reallocate_attendee_debts_once).
+  thread_mattr_accessor :suppress_maintenance_reallocation, instance_accessor: false
+
   # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
   # It then matches all the soonest debt with attendances.
   def reallocate_maintenance_debts
+    return if self.class.suppress_maintenance_reallocation
+
     # Remove unnecessary reload calls and optimize query
     # Preload maintenance_attendance to prevent N+1 queries
     debts = admin_maintenance_debts

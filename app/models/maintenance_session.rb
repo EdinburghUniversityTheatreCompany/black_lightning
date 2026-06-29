@@ -22,6 +22,11 @@ class MaintenanceSession < ApplicationRecord
     # #maintenance_attendances_attributes= are persisted/deleted when the session is saved.
     accepts_nested_attributes_for :maintenance_attendances, reject_if: :all_blank, allow_destroy: true
 
+    # Building/destroying N attendances for one user would otherwise fire that user's debt
+    # reallocation N times (each attendance's after_save/after_destroy). Suppress the per-attendance
+    # reallocation during the save and run it once per affected user afterwards instead.
+    around_save :reallocate_attendee_debts_once
+
     def self.ransackable_attributes(auth_object = nil)
         %w[date name]
     end
@@ -76,12 +81,37 @@ class MaintenanceSession < ApplicationRecord
 
             if want > have.size
                 (want - have.size).times { maintenance_attendances.build(user_id: user_id) }
+                pending_reallocation_user_ids << user_id
             elsif want < have.size
                 # Destroy surplus, preferring attendances not yet matched to a debt.
                 have.sort_by { |att| att.maintenance_debt ? 1 : 0 }
                     .first(have.size - want)
                     .each(&:mark_for_destruction)
+                pending_reallocation_user_ids << user_id
             end
         end
+    end
+
+    private
+
+    # Users whose credit count changed in this save and so need their debts rematched once.
+    def pending_reallocation_user_ids
+        @pending_reallocation_user_ids ||= Set.new
+    end
+
+    # Suppresses each attendance's inline reallocation while the batch of built/destroyed
+    # attendances is persisted, then reallocates every affected user exactly once. The flush runs
+    # only on a successful save and stays inside the save transaction (matching the old behaviour).
+    def reallocate_attendee_debts_once
+        previous = User.suppress_maintenance_reallocation
+        User.suppress_maintenance_reallocation = true
+        yield
+        User.suppress_maintenance_reallocation = previous
+
+        ids = pending_reallocation_user_ids
+        User.where(id: ids).find_each(&:reallocate_maintenance_debts) if ids.any?
+        @pending_reallocation_user_ids = Set.new
+    ensure
+        User.suppress_maintenance_reallocation = previous
     end
 end

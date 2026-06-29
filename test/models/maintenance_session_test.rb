@@ -32,6 +32,20 @@ class MaintenanceSessionTest < ActiveSupport::TestCase
     assert_equal MaintenanceSession::MAX_CREDITS_PER_ATTENDEE, session.maintenance_attendances.size
   end
 
+  test "a bulk credit grant matches the user's debts once and leaves no suppression leakage" do
+    user = users(:member)
+    3.times { FactoryBot.create(:maintenance_debt, user: user) }
+
+    session = MaintenanceSession.create!(date: Date.current,
+      maintenance_attendances_attributes: { "0" => { user_id: user.id, quantity: "3" } })
+
+    assert_equal 3, session.maintenance_attendances.count
+    # Reallocation still ran (once, after the batch) and matched every debt to an attendance.
+    assert_equal 3, Admin::MaintenanceDebt.where(user: user).where.not(maintenance_attendance_id: nil).count
+    # The thread-local suppression flag is not left set after the save.
+    assert_nil User.suppress_maintenance_reallocation
+  end
+
   test "attendees_for_form groups a user's attendances into one row carrying the credit count" do
     session = MaintenanceSession.create!(date: Date.current)
     user = users(:member)
