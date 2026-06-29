@@ -22,6 +22,16 @@ class MaintenanceSessionTest < ActiveSupport::TestCase
     assert_equal session.date, session.to_label
   end
 
+  test "clamps the requested credits to the per-attendee maximum" do
+    session = MaintenanceSession.new(date: Date.current)
+    over_max = MaintenanceSession::MAX_CREDITS_PER_ATTENDEE + 50
+
+    # Assign without saving: the cap is enforced as records are built in memory.
+    session.maintenance_attendances_attributes = { "0" => { user_id: users(:member).id, quantity: over_max.to_s } }
+
+    assert_equal MaintenanceSession::MAX_CREDITS_PER_ATTENDEE, session.maintenance_attendances.size
+  end
+
   test "attendees_for_form groups a user's attendances into one row carrying the credit count" do
     session = MaintenanceSession.create!(date: Date.current)
     user = users(:member)

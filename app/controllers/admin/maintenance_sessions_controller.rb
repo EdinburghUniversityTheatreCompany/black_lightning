@@ -7,7 +7,9 @@ class Admin::MaintenanceSessionsController < AdminController
   def show
     @q = @maintenance_session.users.ransack(params[:q], auth_object: current_ability)
 
-    @users = @q.result.accessible_by(current_ability).order_by_last_name_first
+    # A user attends (earns a credit) once per attendance, so dedupe for display and show the count.
+    @users = @q.result.accessible_by(current_ability).order_by_last_name_first.distinct
+    @credit_counts = @maintenance_session.maintenance_attendances.group(:user_id).count
 
     super
   end

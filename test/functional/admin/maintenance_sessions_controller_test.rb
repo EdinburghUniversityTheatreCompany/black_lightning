@@ -91,18 +91,16 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
     assert_equal 3, assigns(:maintenance_session).maintenance_attendances.count
   end
 
-  test "should clamp credits to the per-attendee maximum" do
-    over_max = MaintenanceSession::MAX_CREDITS_PER_ATTENDEE + 10
-    params = {
-      maintenance_session: {
-        date: Date.current,
-        maintenance_attendances_attributes: { "0" => { user_id: @user.id, quantity: over_max.to_s } }
-      }
-    }
+  test "should show credit counts on the session page" do
+    session = MaintenanceSession.create!(date: Date.current)
+    2.times { session.maintenance_attendances.create!(user: @user) }
 
-    assert_difference("MaintenanceAttendance.count", MaintenanceSession::MAX_CREDITS_PER_ATTENDEE) do
-      post :create, params: params
-    end
+    get :show, params: { id: session }
+
+    assert_response :success
+    assert_equal({ @user.id => 2 }, assigns(:credit_counts))
+    # The attendee appears once (deduped), not once per credit.
+    assert_equal 1, assigns(:users).to_a.count { |u| u.id == @user.id }
   end
 
   test "should create maintenance_session with a name" do
