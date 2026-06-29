@@ -19,9 +19,14 @@ linter:
   # # Valid: error (default) | warning | info | hint
   # failLevel: error
 
-  # # Restrict or extend which files are linted (defaults cover **/*.html.erb etc.)
-  # exclude:
-  #   - 'app/views/admin/**/*'
+  # The HTML-email header/footer are intentional FRAGMENTS: _header opens the table/div/body
+  # structure and _footer closes it, so neither is well-formed HTML on its own and herb's
+  # per-file parser always reports unmatched-tag errors (30 of them). They're hand-tuned,
+  # MSO-conditional email markup that works in clients; restructuring into a single layout
+  # would be high-risk for no rendering benefit. Excluded from herb (decision: 2026-06).
+  exclude:
+    - 'app/views/shared/mail/_header.html.erb'
+    - 'app/views/shared/mail/_footer.html.erb'
 
   rules:
     # Instance variables in partials are a long-standing, widely-accepted Rails pattern in this
@@ -30,6 +35,14 @@ linter:
     # and little correctness benefit, so this rule is intentionally disabled (decision: 2026-06).
     # All other recommended herb rules stay enabled and are enforced.
     erb-no-instance-variables-in-partials:
+      enabled: false
+    # This codebase builds view-data structures in `<% %>` — `fields = { ... link_to/render ... }`,
+    # `quick_actions << link_to(...)`, `html = roles.map { ... }` — consumed by the shared show/index
+    # page framework and rendered later. All 37 flags were this assignment/collection pattern (helper
+    # output IS used, not swallowed); switching them to `<%=` would wrongly emit the assignment value.
+    # Intentionally disabled (decision: 2026-06). Genuine swallowed-output would still be a code review
+    # catch. (Verified: every occurrence was an assignment, not standalone output.)
+    actionview-no-silent-helper:
       enabled: false
 
 # Formatter — enabled so the Herb language server can format ERB on save in the editor.

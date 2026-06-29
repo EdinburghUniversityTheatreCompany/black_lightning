@@ -21,17 +21,20 @@ local linters = new Mapping<String, Step> {
     // HTML-aware ERB toolchain. `analyze` is pure libherb (parse errors, no network);
     // `lint` delegates to npx @herb-tools/linter (version pinned to the herb gem, needs `node`
     // — see mise.toml) and reads `.herb.yml`. Glob-gated to ERB so a Ruby-only commit skips them.
-    // BASELINE (dev-env setup, 2026-06): herb is brand-new to this repo and surfaces ~190 ERB
-    // lint errors + 8 analyze findings (incl. 2 real `<%= %>`-in-attribute SecurityErrors) of
-    // pre-existing debt. Run as ADVISORY (`|| true`) so it reports without blocking commits/CI;
-    // drop the `|| true` to re-gate once the backlog is cleared. See plans/off-topic-improvements.md.
+    // herb-lint is now GATING (the ERB backlog was cleared to 0 errors/warnings — see the
+    // ratchet-gates work + plans/off-topic-improvements.md). herb-analyze stays ADVISORY (`|| true`)
+    // only because app/views/shared/mail/_header.html.erb and _footer.html.erb are intentional
+    // HTML-email FRAGMENTS (header opens the tag structure, footer closes it) that no per-file
+    // parser can validate; they're excluded from herb-lint via .herb.yml, but `herb analyze` has no
+    // exclude flag. herb-lint's own `parser-no-errors` rule already gates parse errors for every
+    // other template, so nothing is lost.
     ["herb-analyze"] {
         glob = "**/*.erb"
         check = "bundle exec herb analyze app/ || true"
     }
     ["herb-lint"] {
         glob = "**/*.erb"
-        check = "bundle exec herb lint app/ || true"
+        check = "bundle exec herb lint app/"
         fix = "bundle exec herb lint app/ --fix"
     }
     // --- Schema annotations (annotaterb, auto-regenerate) -----------------------

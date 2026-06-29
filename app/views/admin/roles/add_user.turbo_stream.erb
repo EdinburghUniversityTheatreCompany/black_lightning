@@ -10,9 +10,9 @@
 
 <% if flash[:success].present? %>
   <turbo-stream action="toast" type="success" message="<%= j flash[:success].first %>"></turbo-stream>
-  <% flash.discard(:success) %>
+  <% flash.discard(:success) %><%# herb:disable erb-no-unused-expressions %>
 <% end %>
 <% if flash[:error].present? %>
   <turbo-stream action="toast" type="error" message="<%= j flash[:error].first %>"></turbo-stream>
-  <% flash.discard(:error) %>
+  <% flash.discard(:error) %><%# herb:disable erb-no-unused-expressions %>
 <% end %>

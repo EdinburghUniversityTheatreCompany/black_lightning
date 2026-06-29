@@ -4,7 +4,10 @@
 
 <%
   def cached_years_active(user, cache = nil)
-    cache ? (cache[user.id] || []) : user.years_active
+    return user.years_active unless cache
+
+    years = cache[user.id] || []
+    years
   end
 %>
 

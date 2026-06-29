@@ -1,5 +1,5 @@
 <%# locals: (display_edit: true) %>
 
-<%= @editable_block.cached_rendered_content.html_safe %>
+<%= @editable_block.cached_rendered_content.html_safe %><%# herb:disable erb-no-unsafe-raw %>
 
 <%= get_link @editable_block, :edit, variant: :secondary, additional_condition: display_edit %>

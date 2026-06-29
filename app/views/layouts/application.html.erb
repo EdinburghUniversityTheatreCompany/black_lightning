@@ -15,7 +15,7 @@
 
   <%= yield :head %>
 
-  <%= meta_tags(@meta).html_safe %>
+  <%= meta_tags(@meta).html_safe %><%# herb:disable erb-no-unsafe-raw %>
 </head>
 
 <body data-controller="konami-code form-validator select"

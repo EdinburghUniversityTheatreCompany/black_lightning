@@ -34,6 +34,6 @@
   <%= render('shared/pages/public/events_grid', items: items, col_size: 12) %>
 <% end %>
 
-<p class="mb-3"><%= link_to('View Past Shows', archives_events_url('q[venue_id_eq]' => @venue.id)) %>
+<p class="mb-3"><%= link_to('View Past Shows', archives_events_url('q[venue_id_eq]' => @venue.id)) %></p>
 
 <%= render Public::GalleryComponent.new(pictures: @venue.pictures.accessible_by(current_ability, :show)) %>

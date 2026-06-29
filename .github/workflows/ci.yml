@@ -58,16 +58,17 @@ jobs:
         # rubocop loads the rubocop-rails/-view_component/-minitest plugins via .rubocop.yml.
         run: bin/rubocop -f github
 
-      # BASELINE (dev-env setup): herb is new here and reports ~190 ERB lint errors + 8 analyze
-      # findings of pre-existing debt. ADVISORY (`|| true`) so it annotates without failing CI;
-      # drop the `|| true` to re-gate once the backlog is cleared (see plans/off-topic-improvements.md).
-      - name: Analyze ERB templates for parse errors (herb, advisory)
+      # herb-lint GATES (ERB backlog cleared to 0 — see plans/off-topic-improvements.md).
+      # herb-analyze stays advisory only because the two HTML-email fragment partials
+      # (shared/mail/_header|_footer) can't be parsed standalone and `herb analyze` has no exclude
+      # flag; herb-lint's parser-no-errors rule covers parse errors for every other template.
+      - name: Analyze ERB templates for parse errors (herb, advisory — email fragments only)
         run: bundle exec herb analyze app/ || true
 
-      - name: Lint ERB templates (herb, advisory)
+      - name: Lint ERB templates (herb)
         # `herb lint` delegates to npx @herb-tools/linter (version pinned to the herb gem); the
         # runner ships Node. --github emits Actions annotations.
-        run: bundle exec herb lint app/ --github || true
+        run: bundle exec herb lint app/ --github
 
       - name: Executable bits on shipped scripts
         # Any tracked file whose first line is a shebang must be mode 100755 in the index — with

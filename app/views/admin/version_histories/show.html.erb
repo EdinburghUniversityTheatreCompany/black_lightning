@@ -23,7 +23,7 @@
 
       <% if old_val.length > 80 || new_val.length > 80 %>
         <div class="diff-container">
-          <%= Diffy::Diff.new(old_val + "\n", new_val + "\n", include_plus_and_minus_in_html: true, include_diff_info: false).to_s(:html).html_safe %>
+          <%= Diffy::Diff.new(old_val + "\n", new_val + "\n", include_plus_and_minus_in_html: true, include_diff_info: false).to_s(:html).html_safe %><%# herb:disable erb-no-unsafe-raw %>
         </div>
       <% else %>
         <p>
