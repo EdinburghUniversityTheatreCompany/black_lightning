@@ -4,7 +4,7 @@
   <div id="login_form" class="flex justify-center">
     <div class="w-full max-w-md">
       <h2>
-        <% if params[:initial] then %>
+        <% if params[:initial] %>
           Set your password
         <% else %>
           Change your password
@@ -28,7 +28,7 @@
           <%= f.button :submit, "Change my password", class: btn_classes(:primary) %>
         </div>
 
-        <% if params[:initial] then %>
+        <% if params[:initial] %>
           <p style="font-size: x-small; line-height: normal;">
             By logging in, you agree that this website may store both a session
             cookie to allow you to log in, and any other cookies including tracking cookies.
