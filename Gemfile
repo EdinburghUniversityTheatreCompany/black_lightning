@@ -80,9 +80,17 @@ group :development, :test do
   gem "rubocop-rails-omakase"
   gem "rubocop-faker"
   gem "rubocop-view_component", require: false
+  gem "rubocop-minitest", require: false
 
   # Static analysis for security vulnerabilities [https://brakemanscanner.org/]
   gem "brakeman", require: false
+
+  # dev-env standard audits (dev-hooks:dev-env-setup) — run via hk + CI.
+  gem "debride", require: false                # dead-method detection
+  gem "flay", require: false                   # Ruby structural duplication (advisory)
+  gem "fasterer", require: false               # perf anti-pattern advisory
+  gem "herb", require: false                   # HTML-aware ERB analyze + lint
+  gem "database_consistency", require: false   # model vs schema consistency
 
   # Adds support for Capybara system testing and selenium driver
   gem "capybara", ">= 2.15"
@@ -107,8 +115,6 @@ group :development, :test do
   gem "ruby-lsp-rails"
   gem "solargraph", require: false
   gem "foreman"
-
-  gem "overcommit", require: false
 end
 
 group :test do
@@ -125,5 +131,10 @@ gem "thruster"
 
 gem "bcrypt_pbkdf"
 gem "ed25519"
+
+# Guards against unsafe migrations (NOT NULL adds, column removes, in-transaction backfills).
+# Runtime gem (ungrouped, not require:false): its initializer references the StrongMigrations
+# constant in every environment, so a :development-only gem would crash the test/production boot.
+gem "strong_migrations"
 
 gem "bundler-audit", "~> 0.9.3", group: :development
