@@ -215,7 +215,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
     new_user = User.find_by(student_id: "s8888888")
     assert new_user.present?
-    assert new_user.email.match?(/\Aunknown_\w+@bedlamtheatre\.co\.uk\z/)
+    assert_match /\Aunknown_\w+@bedlamtheatre\.co\.uk\z/, new_user.email
   end
 
   test "confirm handles multiple actions in single import" do

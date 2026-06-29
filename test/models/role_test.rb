@@ -77,7 +77,7 @@ class RoleTest < ActionView::TestCase
     # Archive existing role.
     role.archive(suffix)
 
-    assert role.reload.users.empty?, "There are still users on the original role after archiving."
+    assert_empty role.reload.users, "There are still users on the original role after archiving."
 
     # Find the archival role and make sure it is the same, and that the old one has not been replaced.
     assert_equal archival_role, Role.find_by(name: "#{role.name} #{suffix}")

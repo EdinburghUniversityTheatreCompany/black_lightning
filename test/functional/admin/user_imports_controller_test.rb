@@ -152,7 +152,7 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
     new_user = User.find_by(first_name: "No", last_name: "Email User")
     assert new_user.present?, "New user should be created"
-    assert new_user.email.match?(/\Aunknown_\w+@bedlamtheatre\.co\.uk\z/), "Email should be placeholder, got: #{new_user.email}"
+    assert_match /\Aunknown_\w+@bedlamtheatre\.co\.uk\z/, new_user.email, "Email should be placeholder, got: #{new_user.email}"
   end
 
   test "confirm handles multiple actions in single import" do

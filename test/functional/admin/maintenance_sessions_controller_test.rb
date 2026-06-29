@@ -31,7 +31,7 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
       post :create, params: @params
     end
 
-    assert assigns(:maintenance_session).users.include?(@user), "User is not added to the session"
+    assert_includes assigns(:maintenance_session).users, @user, "User is not added to the session"
 
     assert_redirected_to admin_maintenance_session_url(assigns(:maintenance_session))
   end
