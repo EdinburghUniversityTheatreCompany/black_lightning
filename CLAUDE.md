@@ -78,6 +78,27 @@ The `get_link` helper provides:
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
 
+## Dev Environment (mise + hk)
+
+Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `pkl`, `gitleaks`,
+`node 24.13.0`). Pre-commit checks run through **hk** (`hk.pkl`) — this **replaced overcommit**
+(`.overcommit.yml` and the `overcommit` gem are gone). After pulling these changes, run
+`mise install && hk install` once to swap the git hooks over.
+
+- **Run all checks** (what CI mirrors): `hk run check`. Autofix: `hk run fix`.
+- **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint` (Stimulus JS), `herb` (ERB),
+  `annotate-models` (see below), `brakeman`, `bundler-audit`, `fasterer`, `database_consistency`,
+  `debride`/`flay`/`jscpd` (dead-code + duplication), `gitleaks`, exec-bit + large-file guards.
+  `bin/rails test` also runs as an hk step.
+- **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
+  auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and
+  skips cleanly when no dev/test DB is reachable, and never runs as a CI gate.
+- **Baselined gates (advisory for now — see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
+  `herb-lint`/`herb-analyze` and `database_consistency` run with `|| true` (large pre-existing
+  backlogs); `jscpd` threshold is set to 1.5% (current ~1.0%). Ratchet these down over time.
+- **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
+  `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider migrating to fnox.
+
 ## Dev Server
 
 - **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
