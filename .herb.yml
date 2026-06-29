@@ -23,10 +23,14 @@ linter:
   # exclude:
   #   - 'app/views/admin/**/*'
 
-  # rules:
-  #   # All recommended rules are enabled by default; disable one like so:
-  #   erb-no-extra-newline:
-  #     enabled: false
+  rules:
+    # Instance variables in partials are a long-standing, widely-accepted Rails pattern in this
+    # codebase (38 partials read @ivars set by their parent view). Converting every partial to
+    # explicit locals + updating all render call sites is a large refactor with regression risk
+    # and little correctness benefit, so this rule is intentionally disabled (decision: 2026-06).
+    # All other recommended herb rules stay enabled and are enforced.
+    erb-no-instance-variables-in-partials:
+      enabled: false
 
 # Formatter — enabled so the Herb language server can format ERB on save in the editor.
 # CI does not format; `lint-on-edit` applies `herb lint --fix` on write.
