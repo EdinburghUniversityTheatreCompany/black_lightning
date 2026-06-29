@@ -22,7 +22,7 @@ class Admin::MaintenanceSessionsController < AdminController
   def permitted_params
     # Make sure that references have _id appended to the end of them.
     # Check existing controllers for inspiration.
-    [ :date, maintenance_attendances_attributes: [ :id, :_destroy, :user, :user_id ] ]
+    [ :date, :name, maintenance_attendances_attributes: [ :id, :_destroy, :user, :user_id, :quantity ] ]
   end
 
   def order_args

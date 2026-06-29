@@ -19,6 +19,11 @@
 #  fk_rails_...  (user_id => users.id)
 #
 class MaintenanceAttendance < ApplicationRecord
+  # Virtual, non-persisted. Used only by the maintenance session form: a representative attendance
+  # carries the user's credit count here so one row can stand in for N attendances.
+  # See MaintenanceSession#attendees_for_form and #maintenance_attendances_attributes=.
+  attr_accessor :quantity
+
   validates :maintenance_session, :user, presence: true
 
   belongs_to :user

@@ -1,5 +1,7 @@
-<%# locals: (f:, partial_name:, association_name:, display_link_to_add: true, container_class: nil, wrapper_class: nil, sortable: false) %>
+<%# locals: (f:, partial_name:, association_name:, display_link_to_add: true, container_class: nil, wrapper_class: nil, sortable: false, collection: nil) %>
 <%# KEEP %>
+<%# Pass `collection:` to render a custom set of records (e.g. one grouped representative per user)
+    instead of the bare association. Omit it to keep the default behaviour. %>
 
 <% if f.object.errors[association_name].present? then %>
   <p id="<%= association_name %>_errors" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
@@ -10,7 +12,7 @@
 <% data_controllers = sortable ? "nested-form sortable" : "nested-form" %>
 <div data-controller="<%= data_controllers %>">
   <div class="<%= container_class %> mb-3">
-    <%= f.simple_fields_for(association_name) do |nested_f| %>
+    <%= f.simple_fields_for(*[ association_name, collection ].compact) do |nested_f| %>
       <% wrapper_data = { new_record: nested_f.object.new_record? } %>
       <% wrapper_data[:sortable_item] = true if sortable %>
       <%= content_tag :div, class: "nested-form-wrapper #{wrapper_class}", data: wrapper_data do %>
