@@ -11,7 +11,7 @@
 #
 class MaintenanceSession < ApplicationRecord
     # Upper bound on how many credits (attendances) a single person can be granted in one session.
-    MAX_CREDITS_PER_ATTENDEE = 20
+    MAX_CREDITS_PER_ATTENDEE = 200
 
     validates :date, presence: true
 
