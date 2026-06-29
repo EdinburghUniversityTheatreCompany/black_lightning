@@ -55,7 +55,32 @@ jobs:
         run: chmod +x bin/*
 
       - name: Lint Ruby code for consistent style
+        # rubocop loads the rubocop-rails/-view_component/-minitest plugins via .rubocop.yml.
         run: bin/rubocop -f github
+
+      # BASELINE (dev-env setup): herb is new here and reports ~190 ERB lint errors + 8 analyze
+      # findings of pre-existing debt. ADVISORY (`|| true`) so it annotates without failing CI;
+      # drop the `|| true` to re-gate once the backlog is cleared (see plans/off-topic-improvements.md).
+      - name: Analyze ERB templates for parse errors (herb, advisory)
+        run: bundle exec herb analyze app/ || true
+
+      - name: Lint ERB templates (herb, advisory)
+        # `herb lint` delegates to npx @herb-tools/linter (version pinned to the herb gem); the
+        # runner ships Node. --github emits Actions annotations.
+        run: bundle exec herb lint app/ --github || true
+
+      - name: Executable bits on shipped scripts
+        # Any tracked file whose first line is a shebang must be mode 100755 in the index — with
+        # core.fileMode=false a local chmod never reaches git, and a 100644 script dies with exit
+        # 126 on every fresh clone. Checks the INDEX, so the `chmod +x bin/*` step doesn't mask it.
+        # Mirrors the hk `exec-bit-scripts` step so CI and pre-commit agree.
+        run: |
+          bad=$(git ls-files -s | awk -F'\t' '$1 ~ /^100644/ { if ((getline line < $2) > 0 && line ~ /^#!/) print $2; close($2) }')
+          if [ -n "$bad" ]; then
+            echo "Shebang scripts missing the executable bit in the git index. Fix: git update-index --chmod=+x <file>"
+            echo "$bad"
+            exit 1
+          fi
 
   lint_js:
     runs-on: ubuntu-latest
@@ -153,6 +178,16 @@ jobs:
           # REDIS_URL: redis://localhost:6379/0
         run: bin/rails db:test:prepare test test:system
 
+      - name: Model/DB consistency (database_consistency, advisory)
+        # BASELINE (dev-env setup): ADVISORY (`|| true`) — ~380 pre-existing findings, mostly the
+        # documented legacy integer-PK schema (see CLAUDE.md › Database). Reports without failing
+        # CI; drop the `|| true` to re-gate once addressed (see plans/off-topic-improvements.md).
+        env:
+          RAILS_ENV: test
+          DB_USERNAME: root
+          DB_PASSWORD: ""
+        run: bundle exec database_consistency || true
+
       - name: Keep screenshots from failed system tests
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
@@ -160,3 +195,72 @@ jobs:
           name: screenshots
           path: ${{ github.workspace }}/tmp/screenshots
           if-no-files-found: ignore
+
+  # Run the MIT-licensed gitleaks CLI (via mise, version-pinned in mise.lock) rather than
+  # gitleaks/gitleaks-action: the action requires a paid GITLEAKS_LICENSE on org-owned repos,
+  # while the CLI is free for all repos and is exactly what the local hk pre-commit hook runs.
+  gitleaks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # gitleaks git scans the full commit history
+
+      - name: Set up mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+
+      - name: Scan git history for secrets
+        run: mise exec -- gitleaks git --redact --no-banner .
+
+  # Noisier audits — mirror the hk `check` hook (debride, flay, fasterer, jscpd, large files).
+  audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@9eb537ca036ebaed86729dcb9309076e4c5c3b74 # v1.314.0
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+
+      - name: Set up Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+
+      - name: Dead code (debride)
+        run: bundle exec debride .
+
+      - name: Duplication (flay — Ruby structural, advisory)
+        run: bundle exec flay . || true # flay exits 0 anyway; surfaces structural clones
+
+      - name: Performance anti-patterns (fasterer — advisory)
+        run: bundle exec fasterer || true
+
+      - name: Duplication (jscpd — polyglot gate)
+        # Runner + version policy (latest on a 4-day cooldown, floored at v5) are shared with the
+        # hk pre-commit gate via scripts/run-jscpd.sh; --require keeps CI strict (unrunnable jscpd
+        # fails the job). .jscpd.json carries minTokens/threshold/reporters/gitignore/ignore globs.
+        run: bash scripts/run-jscpd.sh --require ruby,erb,javascript,typescript,css,scss,sass,vue
+
+      - name: Large files
+        run: |
+          limit=512000
+          large=$(git ls-files | while read -r f; do
+            s=$(stat -c%s "$f" 2>/dev/null || echo 0)
+            if [ "$s" -gt "$limit" ]; then echo "$f ($s bytes)"; fi
+          done)
+          if [ -n "$large" ]; then echo "Files exceed ${limit} bytes:"; echo "$large"; exit 1; fi

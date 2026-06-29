@@ -1,0 +1,36 @@
+# Herb config (dev-env standard, dev-hooks:dev-env-setup) — installs as .herb.yml.
+# Generated from `herb lint --init` (current schema) — the recommended ruleset is ON by default,
+# so an empty `rules:` block already lints HTML/ERB best practices, accessibility, and Rails
+# idioms. Uncomment + set `enabled: false` to opt a rule out. Regenerate the version line with
+# `herb lint --upgrade` after bumping the herb gem.
+#
+# Website: https://herb-tools.dev  ·  Configuration: https://herb-tools.dev/configuration
+
+version: 0.10.1
+
+# # Framework / template engine (defaults: ruby / erubi)
+# framework: ruby
+# template_engine: erubi
+
+linter:
+  enabled: true
+
+  # # Exit with error code when diagnostics of this severity or higher are present.
+  # # Valid: error (default) | warning | info | hint
+  # failLevel: error
+
+  # # Restrict or extend which files are linted (defaults cover **/*.html.erb etc.)
+  # exclude:
+  #   - 'app/views/admin/**/*'
+
+  # rules:
+  #   # All recommended rules are enabled by default; disable one like so:
+  #   erb-no-extra-newline:
+  #     enabled: false
+
+# Formatter — enabled so the Herb language server can format ERB on save in the editor.
+# CI does not format; `lint-on-edit` applies `herb lint --fix` on write.
+formatter:
+  enabled: true
+  indentWidth: 2
+  maxLineLength: 120   # Rails-friendly
