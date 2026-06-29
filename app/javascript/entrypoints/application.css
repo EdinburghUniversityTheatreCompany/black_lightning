@@ -9,9 +9,6 @@
 /* Styles shared with the admin entrypoint */
 @import "../styles/shared.css";
 
-/* dropzone, fancybox, and leaflet CSS are loaded dynamically
-   by their respective Stimulus controllers */
-
 @utility container {
   margin-left: auto;
   margin-right: auto;

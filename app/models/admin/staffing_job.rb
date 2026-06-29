@@ -60,33 +60,14 @@ class Admin::StaffingJob < ApplicationRecord
     cal.prodid = "-//Bedlam Theatre//BlackLightning//EN"
     cal.ip_method = method.to_s.upcase
 
-    event = Icalendar::Event.new
-    event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
-    event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
-    event.dtend         = Icalendar::Values::DateTime.new(staffable.end_time.utc, "tzid" => "UTC")
-    event.summary       = "#{staffable.show_title} — #{name}"
-    event.description   = "You are staffing #{staffable.show_title} as #{name}."
-    event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
-    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffable.updated_at ].max.utc, "tzid" => "UTC")
-    event.sequence      = calendar_sequence
-
-    cal.add_event(event)
+    cal.add_event(build_ical_event)
     cal
   end
 
   def to_ical_event
     require "icalendar"
 
-    event = Icalendar::Event.new
-    event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
-    event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
-    event.dtend         = Icalendar::Values::DateTime.new(staffable.end_time.utc, "tzid" => "UTC")
-    event.summary       = "#{staffable.show_title} — #{name}"
-    event.description   = "You are staffing #{staffable.show_title} as #{name}."
-    event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
-    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffable.updated_at ].max.utc, "tzid" => "UTC")
-    event.sequence      = calendar_sequence
-    event
+    build_ical_event
   end
 
   def counts_towards_debt?
@@ -102,6 +83,21 @@ class Admin::StaffingJob < ApplicationRecord
   end
 
   private
+
+  # Build the Icalendar::Event describing this staffing job.
+  # Callers must already have required "icalendar".
+  def build_ical_event
+    event = Icalendar::Event.new
+    event.uid           = "staffing-job-#{id}@bedlamtheatre.co.uk"
+    event.dtstart       = Icalendar::Values::DateTime.new(staffable.start_time.utc, "tzid" => "UTC")
+    event.dtend         = Icalendar::Values::DateTime.new(staffable.end_time.utc, "tzid" => "UTC")
+    event.summary       = "#{staffable.show_title} — #{name}"
+    event.description   = "You are staffing #{staffable.show_title} as #{name}."
+    event.location      = "Bedlam Theatre, 11b Bristo Place, Edinburgh EH1 1EZ"
+    event.last_modified = Icalendar::Values::DateTime.new([ updated_at, staffable.updated_at ].max.utc, "tzid" => "UTC")
+    event.sequence      = calendar_sequence
+    event
+  end
 
   def send_calendar_invite_email
     # Skip for template-based jobs — they have no real date/time

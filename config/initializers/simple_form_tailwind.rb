@@ -41,6 +41,21 @@ SimpleForm.setup do |config|
   invalid_class = "border-red-500"
   valid_class_f = "border-green-500"
 
+  # Shared wrapper body for the vertical collection wrappers (regular + inline).
+  # The two wrappers differ only in their item_wrapper_class (set on the
+  # config.wrappers call); the builder steps below are identical.
+  vertical_collection_body = lambda do |b|
+    b.use :html5
+    b.optional :readonly
+    b.wrapper :legend_tag, tag: "legend", class: "block text-sm font-medium text-gray-700 mb-1" do |ba|
+      ba.use :label_text
+    end
+    b.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0",
+                  error_class: invalid_class, valid_class: valid_class_f
+    b.use :full_error, wrap_with: { tag: "div", class: "#{error_class} block" }
+    b.use :hint, wrap_with: { tag: "small", class: hint_class }
+  end
+
   config.wrappers :vertical_form,
       tag: "div", class: "mb-4",
       error_class: "has-error", valid_class: "has-success" do |b|
@@ -75,33 +90,13 @@ SimpleForm.setup do |config|
       item_wrapper_class: "flex items-center gap-2 mb-1",
       item_label_class: "text-sm text-gray-700",
       tag: "fieldset", class: "mb-4",
-      error_class: "has-error", valid_class: "has-success" do |b|
-    b.use :html5
-    b.optional :readonly
-    b.wrapper :legend_tag, tag: "legend", class: "block text-sm font-medium text-gray-700 mb-1" do |ba|
-      ba.use :label_text
-    end
-    b.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0",
-                  error_class: invalid_class, valid_class: valid_class_f
-    b.use :full_error, wrap_with: { tag: "div", class: "#{error_class} block" }
-    b.use :hint, wrap_with: { tag: "small", class: hint_class }
-  end
+      error_class: "has-error", valid_class: "has-success", &vertical_collection_body
 
   config.wrappers :vertical_collection_inline,
       item_wrapper_class: "inline-flex items-center gap-2 mr-4",
       item_label_class: "text-sm text-gray-700",
       tag: "fieldset", class: "mb-4",
-      error_class: "has-error", valid_class: "has-success" do |b|
-    b.use :html5
-    b.optional :readonly
-    b.wrapper :legend_tag, tag: "legend", class: "block text-sm font-medium text-gray-700 mb-1" do |ba|
-      ba.use :label_text
-    end
-    b.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0",
-                  error_class: invalid_class, valid_class: valid_class_f
-    b.use :full_error, wrap_with: { tag: "div", class: "#{error_class} block" }
-    b.use :hint, wrap_with: { tag: "small", class: hint_class }
-  end
+      error_class: "has-error", valid_class: "has-success", &vertical_collection_body
 
   config.wrappers :vertical_file,
       tag: "div", class: "mb-4",
@@ -148,6 +143,20 @@ SimpleForm.setup do |config|
   # === Public horizontal wrappers (used via simple_horizontal_form_for on non-admin controllers) ===
   # These retain Bootstrap class names for compatibility with the public site's Bootstrap stylesheet.
 
+  # Shared wrapper body for the horizontal collection wrappers (regular + inline).
+  # The two wrappers differ only in their item_wrapper_class (set on the
+  # config.wrappers call); the builder steps below are identical.
+  horizontal_collection_body = lambda do |b|
+    b.use :html5
+    b.optional :readonly
+    b.use :label, class: "col-sm-3 col-form-label pt-0"
+    b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
+      ba.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
+      ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
+      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
+    end
+  end
+
   config.wrappers :horizontal_form, tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
     b.use :html5
     b.use :placeholder
@@ -179,27 +188,9 @@ SimpleForm.setup do |config|
     end
   end
 
-  config.wrappers :horizontal_collection, item_wrapper_class: "form-check", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
-    b.use :html5
-    b.optional :readonly
-    b.use :label, class: "col-sm-3 col-form-label pt-0"
-    b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
-      ba.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
-      ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
-    end
-  end
+  config.wrappers :horizontal_collection, item_wrapper_class: "form-check", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid", &horizontal_collection_body
 
-  config.wrappers :horizontal_collection_inline, item_wrapper_class: "form-check form-check-inline", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
-    b.use :html5
-    b.optional :readonly
-    b.use :label, class: "col-sm-3 col-form-label pt-0"
-    b.wrapper :grid_wrapper, tag: "div", class: "col-sm-9" do |ba|
-      ba.use :input, class: "form-check-input", error_class: "is-invalid", valid_class: "is-valid"
-      ba.use :full_error, wrap_with: { tag: "div", class: "invalid-feedback d-block" }
-      ba.use :hint, wrap_with: { tag: "small", class: "form-text text-muted" }
-    end
-  end
+  config.wrappers :horizontal_collection_inline, item_wrapper_class: "form-check form-check-inline", item_label_class: "form-check-label", tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid", &horizontal_collection_body
 
   config.wrappers :horizontal_file, tag: "div", class: "form-group row", error_class: "form-group-invalid", valid_class: "form-group-valid" do |b|
     b.use :html5
@@ -253,6 +244,18 @@ SimpleForm.setup do |config|
   adm_invalid_class = "border-red-500"
   adm_valid_class   = "border-green-500"
 
+  # Shared label + input-grid fragment for the admin Tailwind text-style wrappers
+  # (used by tailwind_horizontal_form and tailwind_horizontal_range, which share
+  # the same label/input/error/hint layout but differ in their preceding optionals).
+  adm_label_and_input_grid = lambda do |b|
+    b.use :label, class: adm_label_class
+    b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
+      ba.use :input, class: adm_input_class, error_class: adm_invalid_class, valid_class: adm_valid_class
+      ba.use :full_error, wrap_with: { tag: "div", class: adm_error_class }
+      ba.use :hint, wrap_with: { tag: "small", class: adm_hint_class }
+    end
+  end
+
   config.wrappers :tailwind_horizontal_form,
       tag: "div", class: adm_row_class,
       error_class: "has-error", valid_class: "has-success" do |b|
@@ -263,12 +266,7 @@ SimpleForm.setup do |config|
     b.optional :pattern
     b.optional :min_max
     b.optional :readonly
-    b.use :label, class: adm_label_class
-    b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
-      ba.use :input, class: adm_input_class, error_class: adm_invalid_class, valid_class: adm_valid_class
-      ba.use :full_error, wrap_with: { tag: "div", class: adm_error_class }
-      ba.use :hint, wrap_with: { tag: "small", class: adm_hint_class }
-    end
+    adm_label_and_input_grid.call(b)
   end
 
   config.wrappers :tailwind_horizontal_boolean,
@@ -340,12 +338,7 @@ SimpleForm.setup do |config|
     b.use :placeholder
     b.optional :readonly
     b.optional :step
-    b.use :label, class: adm_label_class
-    b.wrapper :grid_wrapper, tag: "div", class: adm_grid_class do |ba|
-      ba.use :input, class: adm_input_class, error_class: adm_invalid_class, valid_class: adm_valid_class
-      ba.use :full_error, wrap_with: { tag: "div", class: adm_error_class }
-      ba.use :hint, wrap_with: { tag: "small", class: adm_hint_class }
-    end
+    adm_label_and_input_grid.call(b)
   end
 
   # Inline wrapper — used in admin nested form fields

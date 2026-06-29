@@ -5,15 +5,8 @@ new_writing_tag = EventTag.find_by!(name: "New Writing")
 musical_tag = EventTag.find_by!(name: "Musical")
 teatime_tag = EventTag.find_by!(name: "Teatime")
 
-alice = User.find_by!(email: "alice.jones@sms.ed.ac.uk")
-ben = User.find_by!(email: "ben.mackenzie@sms.ed.ac.uk")
-chloe = User.find_by!(email: "chloe.harvey@sms.ed.ac.uk")
-david = User.find_by!(email: "david.osei@sms.ed.ac.uk")
-emma = User.find_by!(email: "emma.thornton@sms.ed.ac.uk")
-finn = User.find_by!(email: "finn.obrien@sms.ed.ac.uk")
-grace = User.find_by!(email: "grace.liu@sms.ed.ac.uk")
-harry = User.find_by!(email: "harry.walsh@sms.ed.ac.uk")
-isla = User.find_by!(email: "isla.ferguson@sms.ed.ac.uk")
+alice, ben, chloe, david, emma, finn, grace, harry, isla =
+  seed_demo_users.values_at(:alice, :ben, :chloe, :david, :emma, :finn, :grace, :harry, :isla)
 
 def seed_season(name:, start_date:, end_date:, venue:)
   season = Season.find_or_initialize_by(slug: name.to_url)

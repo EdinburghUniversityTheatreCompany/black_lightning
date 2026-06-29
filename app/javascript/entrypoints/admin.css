@@ -9,9 +9,6 @@ select.simple-select2 {
 /* Bundled statically to avoid FOUC and because the styling is different for the public site */
 @import "tom-select/dist/css/tom-select.css";
 
-/* dropzone, fancybox, and leaflet CSS are loaded dynamically
-   by their respective Stimulus controllers */
-
 @theme {
   --color-sidebar-bg: #343a40;
   --color-sidebar-text: #c2c7d0;

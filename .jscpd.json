@@ -1,7 +1,6 @@
 {
   "minTokens": 70,
-  "_threshold_note": "Baseline 1.5% — current duplication is ~1.0% (32 clones of pre-existing debt). This blocks NEW duplication above the baseline; ratchet toward the standard's 0 as clones are refactored. See plans/off-topic-improvements.md.",
-  "threshold": 1.5,
+  "threshold": 0,
   "reporters": ["ai", "threshold"],
   "gitignore": true,
   "ignore": [
@@ -13,6 +12,8 @@
     "**/build/**",
     "**/db/schema.rb",
     "**/db/structure.sql",
-    "**/app/assets/builds/**"
+    "**/app/assets/builds/**",
+    "**/bin/**",
+    "**/app/javascript/styles/swalCustomTheme.scss"
   ]
 }

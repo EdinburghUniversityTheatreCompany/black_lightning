@@ -75,22 +75,11 @@ class UserImport
   end
 
   def categorize_rows
-    result = BUCKETS.index_with { |_| [] }
-
     # For fuzzy matching, only consider "active" users (with recent team memberships)
     # Use the same threshold as the duplicates index
     @active_user_ids = active_user_ids_for_matching
 
-    @rows.each_with_index do |row, index|
-      bucket, match, match_type = determine_bucket(row)
-      if bucket == :fuzzy_match
-        result[bucket] << { row: row, existing_users: match, index: index, match_type: match_type }
-      else
-        result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
-      end
-    end
-
-    result
+    build_categorized_result(multi_match_bucket: :fuzzy_match)
   end
 
   def determine_bucket(row)

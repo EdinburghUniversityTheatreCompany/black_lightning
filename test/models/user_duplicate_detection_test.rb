@@ -40,11 +40,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     user1 = FactoryBot.create(:user)
     user2 = FactoryBot.create(:user)
 
-    show1 = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
-    show2 = FactoryBot.create(:show, start_date: Date.new(2023, 11, 1), end_date: Date.new(2023, 11, 5))
-
-    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
-    TeamMember.create!(user: user2, teamwork: show2, position: "Actor")
+    place_users_on_overlapping_shows(user1, user2)
 
     assert user1.years_overlap?(user2), "Users active in the same year should overlap"
   end
@@ -53,11 +49,7 @@ class UserDuplicateDetectionTest < ActiveSupport::TestCase
     user1 = FactoryBot.create(:user)
     user2 = FactoryBot.create(:user)
 
-    show1 = FactoryBot.create(:show, start_date: Date.new(2015, 10, 1), end_date: Date.new(2015, 10, 5))
-    show2 = FactoryBot.create(:show, start_date: Date.new(2023, 10, 1), end_date: Date.new(2023, 10, 5))
-
-    TeamMember.create!(user: user1, teamwork: show1, position: "Actor")
-    TeamMember.create!(user: user2, teamwork: show2, position: "Actor")
+    place_users_on_non_overlapping_shows(user1, user2)
 
     assert_not user1.years_overlap?(user2), "Users 8 years apart should not overlap with default threshold of 4"
   end

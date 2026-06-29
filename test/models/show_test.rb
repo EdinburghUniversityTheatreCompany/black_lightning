@@ -128,17 +128,7 @@ class ShowTest < ActiveSupport::TestCase
 
   test "sync_debts_for_all_users creates staffing debts" do
     due_by = Date.current
-    # Create show without debt configuration and with known team members
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0
-    )
-    # Add 3 users with Director position (not capped)
-    3.times do
-      user = FactoryBot.create(:user)
-      FactoryBot.create(:team_member, teamwork: show, user: user, position: "Director")
-    end
+    show = create_show_with_directors
 
     show.update!(staffing_debt_start: due_by, staffing_debt_amount: 2)
 
@@ -153,17 +143,7 @@ class ShowTest < ActiveSupport::TestCase
 
   test "sync_debts_for_all_users tops up to configured amount" do
     due_by = Date.current
-    # Create show without debt configuration and with 3 known team members
-    show = FactoryBot.create(:show,
-      start_date: start_of_year,
-      end_date: start_of_year.advance(days: 5),
-      team_member_count: 0
-    )
-    # Add 3 users with Director position (not capped)
-    3.times do
-      user = FactoryBot.create(:user)
-      FactoryBot.create(:team_member, teamwork: show, user: user, position: "Director")
-    end
+    show = create_show_with_directors
 
     show.update!(staffing_debt_start: due_by, staffing_debt_amount: 1)
     show.sync_debts_for_all_users
@@ -411,5 +391,22 @@ class ShowTest < ActiveSupport::TestCase
     assert json.key? "venue"
     assert json.key? "season"
     assert json.key? "reviews"
+  end
+
+  private
+
+  # Create a show with no debt configuration and `count` team members in the
+  # uncapped "Director" position, returning the show.
+  def create_show_with_directors(count: 3)
+    show = FactoryBot.create(:show,
+      start_date: start_of_year,
+      end_date: start_of_year.advance(days: 5),
+      team_member_count: 0
+    )
+    count.times do
+      user = FactoryBot.create(:user)
+      FactoryBot.create(:team_member, teamwork: show, user: user, position: "Director")
+    end
+    show
   end
 end

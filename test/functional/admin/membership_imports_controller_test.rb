@@ -71,15 +71,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert_not user.has_role?(:member)
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [
-        { "row" => { "original_name" => "Test User", "student_id" => "s1234567", "email" => "test@example.com" }, "existing_user_id" => user.id, "index" => 0 }
-      ],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets(
+      activate_by_id: [
+        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "test@example.com")
+      ]
+    ))
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
 
@@ -90,15 +86,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
   test "confirm creates new user" do
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "Brand New User", "first_name" => "Brand", "last_name" => "New User", "student_id" => "s9999999", "email" => "brandnew@example.com" }, "existing_user_id" => nil, "index" => 0 }
+    write_import_cache(cache_key, membership_import_buckets(
+      create_new: [
+        import_entry(index: 0, original_name: "Brand New User", first_name: "Brand", last_name: "New User", student_id: "s9999999", email: "brandnew@example.com")
       ]
-    }, expires_in: 1.hour)
+    ))
 
     assert_difference "User.count", 1 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
@@ -116,15 +108,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user = FactoryBot.create(:user, student_id: "s1234567")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [
-        { "row" => { "original_name" => "Test User", "student_id" => "s1234567", "email" => "test@example.com" }, "existing_user_id" => user.id, "index" => 0 }
-      ],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets(
+      activate_by_id: [
+        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "test@example.com")
+      ]
+    ))
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "skip" } }
 
@@ -139,15 +127,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     assert user.student_id.blank?
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [],
-      "activate_by_email" => [],
-      "propose_merge" => [
-        { "row" => { "original_name" => "Johnny Smith", "first_name" => "Johnny", "last_name" => "Smith", "student_id" => "s1234567", "email" => "johnny@example.com" }, "existing_user_id" => user.id, "index" => 0 }
-      ],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets(
+      propose_merge: [
+        import_entry(index: 0, existing_user_id: user.id, original_name: "Johnny Smith", first_name: "Johnny", last_name: "Smith", student_id: "s1234567", email: "johnny@example.com")
+      ]
+    ))
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "merge" } }
 
@@ -163,15 +147,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user = FactoryBot.create(:user, student_id: "s1234567", email: "unknown_abcd1234@bedlamtheatre.co.uk")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [
-        { "row" => { "original_name" => "Test User", "student_id" => "s1234567", "email" => "real@example.com" }, "existing_user_id" => user.id, "index" => 0 }
-      ],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets(
+      activate_by_id: [
+        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "real@example.com")
+      ]
+    ))
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
 
@@ -182,15 +162,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user = FactoryBot.create(:user, student_id: nil, email: "existing@example.com")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [],
-      "activate_by_email" => [
-        { "row" => { "original_name" => "Test User", "student_id" => "s1234567", "email" => "existing@example.com" }, "existing_user_id" => user.id, "index" => 0 }
-      ],
-      "propose_merge" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets(
+      activate_by_email: [
+        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", student_id: "s1234567", email: "existing@example.com")
+      ]
+    ))
 
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "activate" } }
 
@@ -199,15 +175,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
   test "confirm generates placeholder email for new user without email" do
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "No Email User", "first_name" => "No", "last_name" => "Email User", "student_id" => "s8888888", "email" => nil }, "existing_user_id" => nil, "index" => 0 }
+    write_import_cache(cache_key, membership_import_buckets(
+      create_new: [
+        import_entry(index: 0, original_name: "No Email User", first_name: "No", last_name: "Email User", student_id: "s8888888", email: nil)
       ]
-    }, expires_in: 1.hour)
+    ))
 
     assert_difference "User.count", 1 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
@@ -222,18 +194,12 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user_to_activate = FactoryBot.create(:user, student_id: "s1111111")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [
-        { "row" => { "original_name" => "Activate Me", "student_id" => "s1111111", "email" => "activate@example.com" }, "existing_user_id" => user_to_activate.id, "index" => 0 }
+    write_import_cache(cache_key, membership_import_buckets(
+      activate_by_id: [
+        import_entry(index: 0, existing_user_id: user_to_activate.id, original_name: "Activate Me", student_id: "s1111111", email: "activate@example.com")
       ],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "Create Me", "first_name" => "Create", "last_name" => "Me", "student_id" => "s2222222", "email" => "create@example.com" }, "existing_user_id" => nil, "index" => 1 },
-        { "row" => { "original_name" => "Skip Me", "first_name" => "Skip", "last_name" => "Me", "student_id" => "s3333333", "email" => "skip@example.com" }, "existing_user_id" => nil, "index" => 2 }
-      ]
-    }, expires_in: 1.hour)
+      create_new: create_me_and_skip_me_entries
+    ))
 
     assert_difference "User.count", 1 do
       post :confirm, params: {
@@ -253,13 +219,7 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
 
   test "confirm clears cache after processing" do
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [],
-      "activate_by_email" => [],
-      "propose_merge" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets)
 
     post :confirm, params: { cache_key: cache_key }
 
@@ -271,15 +231,11 @@ class Admin::MembershipImportsControllerTest < ActionController::TestCase
     user2 = FactoryBot.create(:user, first_name: "Alexander", last_name: "Kerr", email: "unknown_bbb@bedlamtheatre.co.uk")
 
     cache_key = "membership_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "already_active" => [],
-      "activate_by_id" => [],
-      "activate_by_email" => [],
-      "propose_merge" => [
-        { "row" => { "original_name" => "Alex Kerr", "first_name" => "Alex", "last_name" => "Kerr", "student_id" => nil, "email" => "alex@example.com" }, "existing_user_ids" => [ user1.id, user2.id ], "index" => 0 }
-      ],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, membership_import_buckets(
+      propose_merge: [
+        import_entry(index: 0, existing_user_ids: [ user1.id, user2.id ], original_name: "Alex Kerr", first_name: "Alex", last_name: "Kerr", student_id: nil, email: "alex@example.com")
+      ]
+    ))
 
     # Select user2 specifically
     post :confirm, params: { cache_key: cache_key, actions: { "0" => "merge_#{user2.id}" } }
