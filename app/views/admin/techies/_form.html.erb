@@ -4,8 +4,8 @@
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
     <%= f.input :entry_year %>
-    
-    <%- # parent_fields and child_fields are a wrapper around relations_field that needs to exist so link_to_add works properly. %>
+
+    <%# parent_fields and child_fields are a wrapper around relations_field that needs to exist so link_to_add works properly. %>
 
     <h3>Parents</h3>
     <%= render('shared/form/sections/nested_fields', f: f, association_name: :parents, partial_name: 'parent_fields') %>

@@ -2,12 +2,12 @@
 
 <%= render '/events/publicity_text_and_team_members', event: @season %>
 
-<% @events.each do |day, events_by_day|%>
+<% @events.each do |day, events_by_day| %>
   <%= render CardComponent.new(title: day) do %>
     <% if @events.empty? %>
       There are no events attached to this festival.
     <% else %>
-      <% events_by_day.each do |event|%>
+      <% events_by_day.each do |event| %>
           <div class="flex flex-col md:flex-row">
           <%= render('shared/image', image: event.fetch_image, variant: thumb_variant_public, eager_load: false, proxy: true, image_options: { class: 'img-thumbnail'}) %>
 
@@ -27,9 +27,9 @@
           </div>
         </div>
 
-        <% # Add a separator unless this is the last element. %>
+        <%# Add a separator unless this is the last element. %>
         <% if event.id != events_by_day.last.id %>
-          <hr />
+          <hr>
         <% end %>
       <% end %>
     <% end %>

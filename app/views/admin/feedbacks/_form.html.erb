@@ -1,11 +1,11 @@
 <%# locals: () %>
 
-<% # Not quite sure why the form can't figure it out himself, but this next line is necessary %>
+<%# Not quite sure why the form can't figure it out himself, but this next line is necessary %>
 <% url = @feedback.persisted? ? admin_show_feedback_url : admin_show_feedbacks_url %>
 
 <%= simple_horizontal_form_for([@show, @feedback], url: url) do |f| %>
   <% content_for :override_card_footer do %>
-    <%- # You cannot use the form actions for this one. %>
+    <%# You cannot use the form actions for this one. %>
     <div class="form-actions">
       <%= f.button :submit, class: btn_classes(:primary) %>
       <%= get_link @show, :show, link_text: 'Back to Show', variant: :secondary %>
@@ -13,6 +13,6 @@
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>
-    <%= render Admin::MdEditorComponent.new(f: f, field: :body )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :body ) %>
   <% end %>
 <% end %>

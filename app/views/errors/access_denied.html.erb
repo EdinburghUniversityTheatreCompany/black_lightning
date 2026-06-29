@@ -1,19 +1,21 @@
 <% error_header = "I'm sorry#{" #{current_user.first_name}" if current_user&.first_name.present?}, I can't let you do that." %>
 
 <%= render '/errors/template', error_header: error_header do %>
-<br>
+  <br>
   <% if current_user.present? %>
-    <% if current_user.has_role?('Member') %>
-      <p>
+    <p>
+      <% if current_user.has_role?('Member') %>
+
         If you've recently renewed your membership, you might need to <%= button_to "log out", destroy_user_session_path, method: :delete, class: "#{btn_classes(:link)} p-0 align-baseline", form: { style: "display:contents" } %> and log back in again to regain access to members only pages.
-      </p>
-    <% else %>
-      <p>
-        You are not a member at the moment, which might cause this error. 
+
+      <% else %>
+
+        You are not a member at the moment, which might cause this error.
 
         <b>Please buy membership on the EUSA website</b> and email the secretary at <a href="mailto:secretary@bedlamtheatre.co.uk">secretary@bedlamtheatre.co.uk</a> afterwards to ask if they can (re)activate your membership.
-      </p>
-    <% end %>
+
+      <% end %>
+    </p>
   <% end %>
 
   <br>

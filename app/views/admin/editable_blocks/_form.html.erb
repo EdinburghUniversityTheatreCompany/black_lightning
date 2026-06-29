@@ -8,9 +8,9 @@
 
     <%= f.input :group, collection: Admin::EditableBlock.groups, include_blank: false, allow_custom_input: true, hint: "The section which the block should be displayed under in the admin site" %>
 
-    <%= f.input :ordering, hint: 'The ordering in the subpage layer. Unused in other situations. From low to high.'%>
+    <%= f.input :ordering, hint: 'The ordering in the subpage layer. Unused in other situations. From low to high.' %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :content, rows: 12 )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :content, rows: 12 ) %>
 
     <% if @editable_block.persisted? %>
       <%= f.input :version_note, label: "Edit summary", hint: "Briefly describe what you changed (optional)", input_html: { maxlength: 255 } %>

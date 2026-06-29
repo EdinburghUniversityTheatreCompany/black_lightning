@@ -81,20 +81,24 @@
               <td>
                 <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                 <small class="text-gray-500"><%= u1.email %></small><br>
-                <% if u1_years.any? %>
-                  <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u1_years.any? %>
+                    Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
                 <small class="text-gray-500"><%= u2.email %></small><br>
-                <% if u2_years.any? %>
-                  <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u2_years.any? %>
+                    Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
@@ -129,20 +133,24 @@
               <td>
                 <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                 <small class="text-gray-500"><%= u1.email %></small><br>
-                <% if u1_years.any? %>
-                  <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u1_years.any? %>
+                    Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
                 <small class="text-gray-500"><%= u2.email %></small><br>
-                <% if u2_years.any? %>
-                  <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u2_years.any? %>
+                    Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
@@ -177,20 +185,24 @@
               <td>
                 <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                 <small class="text-gray-500"><%= u1.email %></small><br>
-                <% if u1_years.any? %>
-                  <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u1_years.any? %>
+                    Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
                 <small class="text-gray-500"><%= u2.email %></small><br>
-                <% if u2_years.any? %>
-                  <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u2_years.any? %>
+                    Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
@@ -225,20 +237,24 @@
               <td>
                 <%= link_to u1.name_or_email, admin_user_path(u1) %><br>
                 <small class="text-gray-500"><%= u1.email %></small><br>
-                <% if u1_years.any? %>
-                  <small class="text-gray-500">Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u1_years.any? %>
+                    Active: <%= u1_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to u2.name_or_email, admin_user_path(u2) %><br>
                 <small class="text-gray-500"><%= u2.email %></small><br>
-                <% if u2_years.any? %>
-                  <small class="text-gray-500">Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %></small>
-                <% else %>
-                  <small class="text-gray-500">No activity recorded</small>
-                <% end %>
+                <small class="text-gray-500">
+                  <% if u2_years.any? %>
+                    Active: <%= u2_years.map { |y| format_academic_year(y) }.join(", ") %>
+                  <% else %>
+                    No activity recorded
+                  <% end %>
+                </small>
               </td>
               <td>
                 <%= link_to "Merge", merge_admin_user_path(u1, source_user_id: u2.id), class: btn_classes(:warning, :sm), data: { turbo_frame: "merge-modal" } %>
