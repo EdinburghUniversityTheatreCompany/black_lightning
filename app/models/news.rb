@@ -4,24 +4,35 @@
 # == Schema Information
 #
 # Table name: news
+# Database name: primary
 #
-# *id*::                 <tt>integer, not null, primary key</tt>
-# *title*::              <tt>string(255)</tt>
-# *body*::               <tt>text(65535)</tt>
-# *slug*::               <tt>string(255)</tt>
-# *publish_date*::       <tt>datetime</tt>
-# *show_public*::        <tt>boolean</tt>
-# *created_at*::         <tt>datetime, not null</tt>
-# *updated_at*::         <tt>datetime, not null</tt>
-# *image_file_name*::    <tt>string(255)</tt>
-# *image_content_type*:: <tt>string(255)</tt>
-# *image_file_size*::    <tt>integer</tt>
-# *image_updated_at*::   <tt>datetime</tt>
-# *author_id*::          <tt>integer</tt>
-#--
-# == Schema Information End
-#++
+#  id                 :integer          not null, primary key
+#  body               :text(16777215)
+#  image_content_type :string(255)
+#  image_file_name    :string(255)
+#  image_file_size    :integer
+#  image_updated_at   :datetime
+#  publish_date       :datetime
+#  show_public        :boolean
+#  slug               :string(255)
+#  title              :string(255)
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  author_id          :integer
+#
+# Indexes
+#
+#  index_news_on_author_id                     (author_id)
+#  index_news_on_show_public_and_publish_date  (show_public,publish_date)
+#  index_news_on_slug                          (slug)
+#
 class News < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :title, length: { maximum: 255 }
+  validates :body, length: { maximum: 16777215 }
+  validates :slug, length: { maximum: 255 }
+  validates :image_file_name, length: { maximum: 255 }
+  validates :image_content_type, length: { maximum: 255 }
   include Sluggable
 
   resourcify

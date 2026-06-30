@@ -1,16 +1,24 @@
 # == Schema Information
 #
 # Table name: admin_debt_notifications
+# Database name: primary
 #
-# *id*::                <tt>integer, not null, primary key</tt>
-# *user_id*::           <tt>integer</tt>
-# *sent_on*::           <tt>date</tt>
-# *created_at*::        <tt>datetime, not null</tt>
-# *updated_at*::        <tt>datetime, not null</tt>
-# *notification_type*:: <tt>integer</tt>
-#--
-# == Schema Information End
-#++
+#  id                :integer          not null, primary key
+#  notification_type :integer
+#  sent_on           :date
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  user_id           :integer
+#
+# Indexes
+#
+#  index_admin_debt_notifications_on_sent_on  (sent_on)
+#  index_admin_debt_notifications_on_user_id  (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#
 class Admin::DebtNotification < ApplicationRecord
   enum :notification_type,
     initial_notification: 0,

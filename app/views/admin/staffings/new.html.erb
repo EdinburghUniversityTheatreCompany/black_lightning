@@ -14,18 +14,18 @@
 
       <div id="dates_container" data-controller="staffing-date-fields">
         <h3>Dates</h3>
-        <a class="<%= btn_classes(:secondary) %>" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</a>
+        <button type="button" class="<%= btn_classes(:secondary) %>" data-action="click->staffing-date-fields#addDate" data-staffing-date-fields-target="addButton"><i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Add Date</button>
 
         <div style="display: none" class="control-group datetime" data-staffing-date-fields-target="blueprint">
           <div class="flex flex-wrap items-center gap-2">
             <div class="flex-1">
-              <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_start_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" data-staffing-field="start">
+              <input class="form-control is-valid datetime required mb-2" required aria-required="true" autocomplete="off" value="<%= @default_start_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" data-staffing-field="start">
             </div>
             <div class="flex-1">
-              <input class="form-control is-valid datetime required mb-2" required="required" aria-required="true" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" data-staffing-field="end">
+              <input class="form-control is-valid datetime required mb-2" required aria-required="true" autocomplete="off" value="<%= @default_end_time.strftime("%Y-%m-%dT%T") %>" type="datetime-local" data-staffing-field="end">
             </div>
             <div class="shrink-0">
-              <a class="<%= btn_classes(:danger) %> mb-2" data-action="click->staffing-date-fields#removeDate"><%= remove_button_text %></a>
+              <button type="button" class="<%= btn_classes(:danger) %> mb-2" data-action="click->staffing-date-fields#removeDate"><%= remove_button_text %></button>
             </div>
           </div>
         </div>

@@ -11,9 +11,9 @@
     <h3>Events</h3>
     <% if @season.new_record? %>
       You can add events after creating the season.
-    <% else%>
-      <%= render(CollapsibleSectionComponent.new(title: 'Events')) do %>
-        <% if f.object.errors[:events].present? then %>
+    <% else %>
+      <%= render(CollapsibleSectionComponent.new(title: 'Events', html_class: "mb-4")) do %>
+        <% if f.object.errors[:events].present? %>
           <p id="events_errors" class="p-4 rounded border mb-4 bg-danger/10 border-danger/30 text-danger">
             <%= f.error :events %>
           </p>
@@ -23,9 +23,9 @@
           The list of events that can be added to the season will not automatically update after changing the start or end date.
           You have to save the season and start editing it again to refresh the list.
         </p>
-        
+
         <%= f.input(:event_ids, collection: @season.simultaneous_events, as: :check_boxes, label: false, label_method: ->(event) { render('event_label', event: event) }) %>
-      <% end%>
+      <% end %>
     <% end %>
   <% end %>
 <% end %>

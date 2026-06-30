@@ -284,7 +284,7 @@ class Admin::ShowsControllerTest < ActionController::TestCase
     end
 
     assert_redirected_to admin_show_path(@show)
-    assert flash[:success].first.include?("Debt settings saved")
+    assert_includes flash[:success].first, "Debt settings saved"
   end
 
   test "should update debt settings without creating duplicate debts" do

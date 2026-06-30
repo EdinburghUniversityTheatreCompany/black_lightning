@@ -400,7 +400,7 @@ class Admin::UserTest < ActiveSupport::TestCase
 
   # Profile completion tests
   test "profile_completed_at can be set and read" do
-    assert @user.respond_to?(:profile_completed_at), "User should have profile_completed_at attribute"
+    assert_respond_to @user, :profile_completed_at, "User should have profile_completed_at attribute"
 
     timestamp = Time.current
     @user.update!(profile_completed_at: timestamp)

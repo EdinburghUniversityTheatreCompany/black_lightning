@@ -1,19 +1,25 @@
 # == Schema Information
 #
 # Table name: mass_mails
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *sender_id*::  <tt>integer</tt>
-# *subject*::    <tt>string(255)</tt>
-# *body*::       <tt>text(65535)</tt>
-# *send_date*::  <tt>datetime</tt>
-# *draft*::      <tt>boolean</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :integer          not null, primary key
+#  body       :text(16777215)
+#  draft      :boolean
+#  send_date  :datetime
+#  subject    :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#  sender_id  :integer
+#
+# Indexes
+#
+#  index_mass_mails_on_sender_id  (sender_id)
+#
 class MassMail < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :subject, length: { maximum: 255 }
+  validates :body, length: { maximum: 16777215 }
   validate :send_date_is_not_in_the_past
   validates :subject, :body, presence: true
 

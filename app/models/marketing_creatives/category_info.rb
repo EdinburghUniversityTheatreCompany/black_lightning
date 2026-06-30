@@ -1,17 +1,28 @@
 # == Schema Information
 #
 # Table name: marketing_creatives_category_infos
+# Database name: primary
 #
-# *id*::          <tt>bigint, not null, primary key</tt>
-# *profile_id*::  <tt>bigint</tt>
-# *category_id*:: <tt>bigint</tt>
-# *description*:: <tt>text(65535)</tt>
-# *created_at*::  <tt>datetime, not null</tt>
-# *updated_at*::  <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id          :bigint           not null, primary key
+#  description :text(16777215)
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#  category_id :bigint
+#  profile_id  :bigint
+#
+# Indexes
+#
+#  index_marketing_creatives_category_infos_on_category_id  (category_id)
+#  index_marketing_creatives_category_infos_on_profile_id   (profile_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (category_id => marketing_creatives_categories.id)
+#  fk_rails_...  (profile_id => marketing_creatives_profiles.id)
+#
 class MarketingCreatives::CategoryInfo < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :description, length: { maximum: 16777215 }
   validates :profile, :category, :image, presence: true
 
   # Validate the uniqueness of the pair of profile and category, so that every profile can only have one entry for each category.

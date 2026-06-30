@@ -11,7 +11,7 @@
 
       <% if event.content_warnings.present? %>
         <div class="mt-4">
-          <%= render CollapsibleSectionComponent.new(title: 'Content Warnings') do %>
+          <%= render CollapsibleSectionComponent.new(title: 'Content Warnings', html_class: "mb-4") do %>
             <%= render_markdown event.content_warnings %>
           <% end %>
         </div>

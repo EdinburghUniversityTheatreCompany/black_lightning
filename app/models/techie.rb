@@ -1,20 +1,20 @@
 ##
 # Represents a techie that will be an entry in the techie family tree.
 #
-#++
-#
 # == Schema Information
 #
 # Table name: techies
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *name*::       <tt>string(255)</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id         :integer          not null, primary key
+#  entry_year :integer
+#  name       :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
 class Techie < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :entry_year, numericality: { greater_than: 1950, less_than_or_equal_to: ->(_) { Time.current.year + 1 } }, allow_nil: true
 

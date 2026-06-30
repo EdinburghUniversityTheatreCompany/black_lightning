@@ -1,16 +1,3 @@
-# == Schema Information
-#
-# Table name: departments
-#
-# *id*::          <tt>bigint, not null, primary key</tt>
-# *name*::        <tt>string(255)</tt>
-# *match_terms*:: <tt>text(65535)</tt>
-# *ordering*::    <tt>integer</tt>
-# *created_at*::  <tt>datetime, not null</tt>
-# *updated_at*::  <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
 
 ##
 # A grouping for opportunity roles (e.g. "Stage Management", "Lighting").
@@ -19,7 +6,26 @@
 # of a department's terms is suggested that department (see Department.match_for and the
 # department-suggest Stimulus controller).
 ##
+# == Schema Information
+#
+# Table name: departments
+# Database name: primary
+#
+#  id          :bigint           not null, primary key
+#  match_terms :text(65535)
+#  name        :string(255)      not null
+#  ordering    :integer
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_departments_on_name  (name) UNIQUE
+#
 class Department < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :match_terms, length: { maximum: 65535 }
   has_many :opportunity_roles, dependent: :nullify
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }

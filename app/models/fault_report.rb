@@ -1,20 +1,29 @@
 # == Schema Information
 #
 # Table name: fault_reports
+# Database name: primary
 #
-# *id*::             <tt>integer, not null, primary key</tt>
-# *item*::           <tt>string(255)</tt>
-# *description*::    <tt>text(65535)</tt>
-# *severity*::       <tt>integer, default("annoying")</tt>
-# *status*::         <tt>integer, default("reported")</tt>
-# *reported_by_id*:: <tt>integer</tt>
-# *fixed_by_id*::    <tt>integer</tt>
-# *created_at*::     <tt>datetime, not null</tt>
-# *updated_at*::     <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id             :integer          not null, primary key
+#  description    :text(16777215)
+#  item           :string(255)
+#  severity       :integer          default("annoying")
+#  status         :integer          default("reported")
+#  created_at     :datetime         not null
+#  updated_at     :datetime         not null
+#  fixed_by_id    :integer
+#  reported_by_id :integer
+#
+# Indexes
+#
+#  index_fault_reports_on_fixed_by_id     (fixed_by_id)
+#  index_fault_reports_on_reported_by_id  (reported_by_id)
+#  index_fault_reports_on_severity        (severity)
+#  index_fault_reports_on_status          (status)
+#
 class FaultReport < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :item, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
   validates :item, :description, presence: true
 
   belongs_to :reported_by,  class_name: "User"

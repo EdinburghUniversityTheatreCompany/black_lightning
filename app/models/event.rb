@@ -5,40 +5,76 @@
 # Therefore, all lookups must be done as follows:
 #  @event = Event.find_by_slug(params[:id])
 #
+
 # == Schema Information
 #
 # Table name: events
+# Database name: primary
 #
-# *id*::                     <tt>integer, not null, primary key</tt>
-# *name*::                   <tt>string(255)</tt>
-# *tagline*::                <tt>string(255)</tt>
-# *slug*::                   <tt>string(255)</tt>
-# *publicity_text*::         <tt>text(65535)</tt>
-# *members_only_text*::      <tt>text(65535)</tt>
-# *xts_id*::                 <tt>integer</tt>
-# *created_at*::             <tt>datetime, not null</tt>
-# *updated_at*::             <tt>datetime, not null</tt>
-# *is_public*::              <tt>boolean</tt>
-# *image_file_name*::        <tt>string(255)</tt>
-# *image_content_type*::     <tt>string(255)</tt>
-# *image_file_size*::        <tt>integer</tt>
-# *image_updated_at*::       <tt>datetime</tt>
-# *start_date*::             <tt>date</tt>
-# *end_date*::               <tt>date</tt>
-# *venue_id*::               <tt>integer</tt>
-# *season_id*::              <tt>integer</tt>
-# *author*::                 <tt>string(255)</tt>
-# *type*::                   <tt>string(255)</tt>
-# *price*::                  <tt>string(255)</tt>
-# *spark_seat_slug*::        <tt>string(255)</tt>
-# *maintenance_debt_start*:: <tt>date</tt>
-# *staffing_debt_start*::    <tt>date</tt>
-# *proposal_id*::            <tt>integer</tt>
-#--
-# == Schema Information End
-#++
-
+#  id                      :integer          not null, primary key
+#  author                  :string(255)
+#  content_warnings        :text(16777215)
+#  end_date                :date
+#  image_content_type      :string(255)
+#  image_file_name         :string(255)
+#  image_file_size         :integer
+#  image_updated_at        :datetime
+#  is_public               :boolean
+#  maintenance_debt_amount :integer
+#  maintenance_debt_start  :date
+#  members_only_text       :text(16777215)
+#  name                    :string(255)
+#  pretix_shown            :boolean
+#  pretix_slug_override    :string(255)
+#  pretix_view             :string(255)
+#  price                   :string(255)
+#  publicity_text          :text(16777215)
+#  slug                    :string(255)
+#  spark_seat_slug         :string(255)
+#  staffing_debt_amount    :integer
+#  staffing_debt_start     :date
+#  start_date              :date
+#  tagline                 :string(255)
+#  type                    :string(255)
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  company_id              :bigint
+#  proposal_id             :integer
+#  season_id               :integer
+#  venue_id                :integer
+#  xts_id                  :integer
+#
+# Indexes
+#
+#  index_events_on_author                  (author)
+#  index_events_on_company_id              (company_id)
+#  index_events_on_date_range              (start_date,end_date)
+#  index_events_on_end_date_and_is_public  (end_date,is_public)
+#  index_events_on_proposal_id             (proposal_id)
+#  index_events_on_season_id               (season_id)
+#  index_events_on_venue_id                (venue_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (company_id => companies.id)
+#  fk_rails_...  (proposal_id => admin_proposals_proposals.id)
+#
 class Event < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :tagline, length: { maximum: 255 }
+  validates :slug, length: { maximum: 255 }
+  validates :publicity_text, length: { maximum: 16777215 }
+  validates :image_file_name, length: { maximum: 255 }
+  validates :image_content_type, length: { maximum: 255 }
+  validates :author, length: { maximum: 255 }
+  validates :type, length: { maximum: 255 }
+  validates :price, length: { maximum: 255 }
+  validates :spark_seat_slug, length: { maximum: 255 }
+  validates :members_only_text, length: { maximum: 16777215 }
+  validates :pretix_slug_override, length: { maximum: 255 }
+  validates :pretix_view, length: { maximum: 255 }
+  validates :content_warnings, length: { maximum: 16777215 }
   include TimeHelper
   include ApplicationHelper
   include AttachmentItem

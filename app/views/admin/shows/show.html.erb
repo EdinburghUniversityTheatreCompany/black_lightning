@@ -18,7 +18,7 @@
   reviews:   { type: 'content', header: 'Reviews', content: render('/admin/events/reviews', reviews: @show.reviews.accessible_by(current_ability)) }
 } %>
 
-<% # Only show the Debt stuff if the show is in the current academic year. %>
+<%# Only show the Debt stuff if the show is in the current academic year. %>
 <% if @show.end_date > start_of_year && (can?(:create, Admin::MaintenanceDebt) || can?(:create, Admin::StaffingDebt)) %>
     <% content_for :debt_settings do %>
         <%= render 'admin/events/debt_settings_form', event: @show %>

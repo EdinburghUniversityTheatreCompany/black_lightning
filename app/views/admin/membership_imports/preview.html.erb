@@ -194,16 +194,18 @@
               <td><%= item[:row][:original_name] %></td>
               <td><%= link_to item[:existing_user].name_or_email, admin_user_path(item[:existing_user]) %></td>
               <td>
-                <% case item[:match_type] %>
-                <% when :user_id %>
-                  <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
-                <% when :student_id %>
-                  <span class="font-monospace"><%= item[:row][:student_id] %></span>
-                <% when :associate_id %>
-                  <span class="font-monospace"><%= item[:row][:associate_id] %></span>
-                <% else %>
-                  <span class="font-monospace"><%= item[:row][:email] %></span>
-                <% end %>
+                <span class="font-monospace">
+                  <% case item[:match_type] %>
+                    <% when :user_id %>
+                      User ID <%= item[:row][:user_id] %>
+                    <% when :student_id %>
+                      <%= item[:row][:student_id] %>
+                    <% when :associate_id %>
+                      <%= item[:row][:associate_id] %>
+                    <% else %>
+                      <%= item[:row][:email] %>
+                  <% end %>
+                </span>
               </td>
               <td><%= render(BadgeComponent.new(type: :success)) { "Already Member" } %></td>
             </tr>
@@ -240,12 +242,12 @@
               </td>
               <td>
                 <% case item[:match_type] %>
-                <% when :user_id %>
-                  <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
-                <% when :student_id %>
-                  <span class="font-monospace"><%= item[:row][:student_id] %></span>
-                <% when :associate_id %>
-                  <span class="font-monospace"><%= item[:row][:associate_id] %></span>
+                  <% when :user_id %>
+                    <span class="font-monospace">User ID <%= item[:row][:user_id] %></span>
+                  <% when :student_id %>
+                    <span class="font-monospace"><%= item[:row][:student_id] %></span>
+                  <% when :associate_id %>
+                    <span class="font-monospace"><%= item[:row][:associate_id] %></span>
                 <% end %>
               </td>
               <td>

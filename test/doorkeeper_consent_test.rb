@@ -21,7 +21,7 @@ class DoorkeeperConsentTest < ApplicationIntegrationTest
 
     # Doorkeeper may auto-approve or show consent depending on configuration
     # We expect a 200 or 302 (redirect to callback with code) response
-    assert [ 200, 302 ].include?(response.status), "Expected 200 or 302, got #{response.status}: #{response.body}"
+    assert_includes [ 200, 302 ], response.status, "Expected 200 or 302, got #{response.status}: #{response.body}"
 
     if response.status == 200
       assert_includes response.body, "Authorize"

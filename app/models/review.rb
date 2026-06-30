@@ -4,22 +4,31 @@
 # == Schema Information
 #
 # Table name: reviews
+# Database name: primary
 #
-# *id*::           <tt>integer, not null, primary key</tt>
-# *event_id*::     <tt>integer</tt>
-# *reviewer*::     <tt>string(255)</tt>
-# *body*::         <tt>text(65535)</tt>
-# *rating*::       <tt>decimal(2, 1)</tt>
-# *review_date*::  <tt>date</tt>
-# *created_at*::   <tt>datetime, not null</tt>
-# *updated_at*::   <tt>datetime, not null</tt>
-# *title*::        <tt>string(255)</tt>
-# *url*::          <tt>string(255)</tt>
-# *organisation*:: <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
+#  id           :integer          not null, primary key
+#  body         :text(16777215)
+#  organisation :string(255)
+#  rating       :decimal(2, 1)
+#  review_date  :date
+#  reviewer     :string(255)
+#  title        :string(255)
+#  url          :string(255)
+#  created_at   :datetime         not null
+#  updated_at   :datetime         not null
+#  event_id     :integer
+#
+# Indexes
+#
+#  index_reviews_on_event_id  (event_id)
+#
 class Review < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :reviewer, length: { maximum: 255 }
+  validates :body, length: { maximum: 16777215 }
+  validates :organisation, length: { maximum: 255 }
+  validates :title, length: { maximum: 255 }
+  validates :url, length: { maximum: 255 }
   validates :body, :reviewer, :review_date, :title, presence: true
   validates :rating, numericality: { greater_than: 0, allow_blank: true }
 

@@ -1,7 +1,10 @@
 <div class="content">
   <div class="w-full">
-    <div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1.5fr] xl:grid-cols-[1.5fr_1.5fr_1fr] gap-4">
-      <div>
+    <div class="grid grid-cols-1 lg:grid-cols-[1.5fr_1.5fr_1fr] gap-4">
+      <div class="flex flex-col gap-4">
+        <%= render CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true) do %>
+          <%= render "debt_widget" %>
+        <% end %>
         <%= render CollapsibleSectionComponent.new(title: link_to("Open Proposal Calls", admin_proposals_calls_path), flush: true, start_open: true) do %>
           <%= render "proposals_widget" %>
         <% end %>
@@ -13,7 +16,7 @@
           <%= render "opportunities_widget" %>
         <% end %>
       </div>
-      <div>
+      <div class="flex flex-col gap-4">
         <%= render CollapsibleSectionComponent.new(title: link_to("Upcoming Shows", admin_shows_path), flush: true, start_open: true) do %>
           <%= render "shows_widget" %>
         <% end %>
@@ -21,10 +24,7 @@
           <%= render "news_widget" %>
         <% end %>
       </div>
-      <div>
-        <%= render CollapsibleSectionComponent.new(title: link_to("You are #{current_user.debt_message_suffix}", admin_debt_path(current_user.id)), variant: current_user.in_debt ? :danger : :success, flush: true, start_open: true) do %>
-          <%= render "debt_widget" %>
-        <% end %>
+      <div class="flex flex-col gap-4">
         <%= render CollapsibleSectionComponent.new(title: link_to("Staffing", admin_staffings_path), flush: true, start_open: true) do %>
           <%= render "staffings_widget" %>
         <% end %>

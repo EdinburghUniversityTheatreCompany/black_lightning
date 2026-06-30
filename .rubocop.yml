@@ -8,6 +8,7 @@ require:
 plugins:
   - rubocop-rails
   - rubocop-view_component
+  - rubocop-minitest
 
 # Project-specific exclusions
 AllCops:

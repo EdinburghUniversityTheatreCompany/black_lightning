@@ -1,19 +1,3 @@
-# == Schema Information
-#
-# Table name: companies
-#
-# *id*::         <tt>bigint, not null, primary key</tt>
-# *name*::       <tt>string(255)</tt>
-# *slug*::       <tt>string(255)</tt>
-# *internal*::   <tt>boolean, default(FALSE), not null</tt>
-# *website*::    <tt>string(255)</tt>
-# *instagram*::  <tt>string(255)</tt>
-# *reviewed*::   <tt>boolean, default(FALSE), not null</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
 
 ##
 # A theatre company or society that posts opportunities.
@@ -21,7 +5,31 @@
 # +internal+ marks EUTC/affiliated companies, which are surfaced first in listings.
 # The +slug+ (generated from the name) gives stable, shareable per-company filter URLs.
 ##
+# == Schema Information
+#
+# Table name: companies
+# Database name: primary
+#
+#  id         :bigint           not null, primary key
+#  instagram  :string(255)
+#  internal   :boolean          default(FALSE), not null
+#  name       :string(255)      not null
+#  reviewed   :boolean          default(FALSE), not null
+#  slug       :string(255)
+#  website    :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_companies_on_slug  (slug) UNIQUE
+#
 class Company < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :slug, length: { maximum: 255 }
+  validates :website, length: { maximum: 255 }
+  validates :instagram, length: { maximum: 255 }
   has_many :opportunities, dependent: :nullify
   has_many :events, dependent: :nullify
 

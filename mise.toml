@@ -1,2 +1,29 @@
 [tools]
 ruby = "4.0.2"
+node = "24.13.0"  # matches .node-version; provides npx for jscpd + `herb lint` (both npm-distributed)
+hk = "latest"
+pkl = "latest"
+gitleaks = "latest"
+zizmor = "latest"       # GitHub Actions security static analysis (hk `zizmor` step + CI)
+actionlint = "latest"   # GitHub Actions workflow linter — syntax/expressions (hk `actionlint` step + CI)
+# jscpd is NOT a mise tool — it's a Rust binary shipped via npm optional platform packages that
+# npx resolves but the mise npm backend does not. `herb lint` likewise delegates to
+# npx @herb-tools/linter (version pinned to the herb gem). flay + debride + herb + brakeman +
+# bundler-audit + fasterer + database_consistency are Gemfile dev-group gems; strong_migrations
+# is a runtime gem.
+
+[settings]
+# Maintain mise.lock (resolved versions + per-platform checksums) on every install.
+# Tools stay spec'd "latest"; the lock records what that resolved to so installs are
+# reproducible + checksum-verified (aqua-backed tools add Cosign/SLSA). Upgrade with
+# `mise upgrade`, then commit the changed mise.lock.
+lockfile = true
+# Prevent `mise upgrade` from resolving a tool version published in the last 4 days — same
+# supply-chain window as the Bundler/uv/npm dependency cooldowns. `mise install` is unaffected
+# (it always reproduces the locked version from mise.lock).
+minimum_release_age = "4d"
+
+[env]
+# dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
+# hand-edit — bump it by running the skill's upgrade path.
+DEV_ENV_VERSION = "18"

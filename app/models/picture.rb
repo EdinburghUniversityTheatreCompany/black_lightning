@@ -4,21 +4,32 @@
 # == Schema Information
 #
 # Table name: pictures
+# Database name: primary
 #
-# *id*::                 <tt>integer, not null, primary key</tt>
-# *description*::        <tt>text(65535)</tt>
-# *gallery_id*::         <tt>integer</tt>
-# *gallery_type*::       <tt>string(255)</tt>
-# *image_file_name*::    <tt>string(255)</tt>
-# *image_content_type*:: <tt>string(255)</tt>
-# *image_file_size*::    <tt>integer</tt>
-# *image_updated_at*::   <tt>datetime</tt>
-# *created_at*::         <tt>datetime, not null</tt>
-# *updated_at*::         <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                 :integer          not null, primary key
+#  access_level       :integer          default(2), not null
+#  description        :text(16777215)
+#  gallery_type       :string(255)
+#  image_content_type :string(255)
+#  image_file_name    :string(255)
+#  image_file_size    :integer
+#  image_updated_at   :datetime
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#  gallery_id         :integer
+#
+# Indexes
+#
+#  index_pictures_on_gallery_id                   (gallery_id)
+#  index_pictures_on_gallery_type                 (gallery_type)
+#  index_pictures_on_gallery_type_and_gallery_id  (gallery_type,gallery_id)
+#
 class Picture < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :description, length: { maximum: 16777215 }
+  validates :gallery_type, length: { maximum: 255 }
+  validates :image_file_name, length: { maximum: 255 }
+  validates :image_content_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :gallery, polymorphic: true

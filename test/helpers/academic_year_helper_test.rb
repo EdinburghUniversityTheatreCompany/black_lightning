@@ -3,25 +3,13 @@ require "test_helper"
 class AcademicYearHelperTest < ActionView::TestCase
   test "february" do
     travel_to Time.zone.local(2020, 2, 2, 1, 4, 44)
-
-    assert_equal Date.new(2019, 9, 1), start_of_year
-    assert_equal Date.new(2019, 12, 25), christmas
-    assert_equal Date.new(2020, 9, 1), next_year_start
-    assert_equal Date.new(2019, 12, 25), start_of_term
-    assert_equal Date.new(2020, 9, 1), end_of_term
-
+    assert_2019_20_academic_year
     travel_back
   end
 
   test "july" do
     travel_to Time.zone.local(2020, 7, 2, 1, 4, 44)
-
-    assert_equal Date.new(2019, 9, 1), start_of_year
-    assert_equal Date.new(2019, 12, 25), christmas
-    assert_equal Date.new(2020, 9, 1), next_year_start
-    assert_equal Date.new(2019, 12, 25), start_of_term
-    assert_equal Date.new(2020, 9, 1), end_of_term
-
+    assert_2019_20_academic_year
     travel_back
   end
 
@@ -93,5 +81,17 @@ class AcademicYearHelperTest < ActionView::TestCase
 
   test "format_years_active_label with multiple gaps" do
     assert_equal "active 15/16, 18/19-19/20, 23/24", format_years_active_label([ 2015, 2018, 2019, 2023 ])
+  end
+
+  private
+
+  # Both the February and July cases fall within the 2019/20 academic year and
+  # must report identical boundary dates.
+  def assert_2019_20_academic_year
+    assert_equal Date.new(2019, 9, 1), start_of_year
+    assert_equal Date.new(2019, 12, 25), christmas
+    assert_equal Date.new(2020, 9, 1), next_year_start
+    assert_equal Date.new(2019, 12, 25), start_of_term
+    assert_equal Date.new(2020, 9, 1), end_of_term
   end
 end

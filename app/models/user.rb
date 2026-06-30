@@ -4,36 +4,78 @@
 # == Schema Information
 #
 # Table name: users
+# Database name: primary
 #
-# *id*::                     <tt>integer, not null, primary key</tt>
-# *email*::                  <tt>string(255), default(""), not null</tt>
-# *encrypted_password*::     <tt>string(255), default(""), not null</tt>
-# *reset_password_token*::   <tt>string(255)</tt>
-# *reset_password_sent_at*:: <tt>datetime</tt>
-# *remember_created_at*::    <tt>datetime</tt>
-# *sign_in_count*::          <tt>integer, default(0)</tt>
-# *current_sign_in_at*::     <tt>datetime</tt>
-# *last_sign_in_at*::        <tt>datetime</tt>
-# *current_sign_in_ip*::     <tt>string(255)</tt>
-# *last_sign_in_ip*::        <tt>string(255)</tt>
-# *first_name*::             <tt>string(255)</tt>
-# *last_name*::              <tt>string(255)</tt>
-# *created_at*::             <tt>datetime, not null</tt>
-# *updated_at*::             <tt>datetime, not null</tt>
-# *phone_number*::           <tt>string(255)</tt>
-# *public_profile*::         <tt>boolean, default(TRUE)</tt>
-# *bio*::                    <tt>text(65535)</tt>
-# *avatar_file_name*::       <tt>string(255)</tt>
-# *avatar_content_type*::    <tt>string(255)</tt>
-# *avatar_file_size*::       <tt>integer</tt>
-# *avatar_updated_at*::      <tt>datetime</tt>
-# *username*::               <tt>string(255)</tt>
-# *remember_token*::         <tt>string(255)</tt>
-# *consented*::              <tt>date</tt>
-#--
-# == Schema Information End
-#++
+#  id                      :integer          not null, primary key
+#  avatar_content_type     :string(255)
+#  avatar_file_name        :string(255)
+#  avatar_file_size        :integer
+#  avatar_updated_at       :datetime
+#  bio                     :text(16777215)
+#  calendar_email          :string(255)
+#  calendar_token          :string(255)
+#  consented               :date
+#  current_sign_in_at      :datetime
+#  current_sign_in_ip      :string(255)
+#  email                   :string(255)      default(""), not null
+#  encrypted_password      :string(255)      default(""), not null
+#  first_name              :string(255)
+#  google_access_token     :text(65535)
+#  google_refresh_token    :text(65535)
+#  google_token_expires_at :datetime
+#  last_name               :string(255)
+#  last_sign_in_at         :datetime
+#  last_sign_in_ip         :string(255)
+#  not_duplicate_user_ids  :json
+#  phone_number            :string(255)
+#  profile_completed_at    :datetime
+#  profile_completion_salt :string(255)
+#  public_profile          :boolean          default(TRUE)
+#  remember_created_at     :datetime
+#  remember_token          :string(255)
+#  reset_password_sent_at  :datetime
+#  reset_password_token    :string(255)
+#  sign_in_count           :integer          default(0)
+#  username                :string(255)
+#  created_at              :datetime         not null
+#  updated_at              :datetime         not null
+#  associate_id            :string(255)
+#  google_calendar_id      :string(255)
+#  student_id              :string(255)
+#
+# Indexes
+#
+#  index_users_on_associate_id          (associate_id)
+#  index_users_on_calendar_token        (calendar_token) UNIQUE
+#  index_users_on_email                 (email) UNIQUE
+#  index_users_on_last_name             (last_name)
+#  index_users_on_profile_completed_at  (profile_completed_at)
+#  index_users_on_reset_password_token  (reset_password_token) UNIQUE
+#  index_users_on_student_id            (student_id)
+#
 class User < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :email, length: { maximum: 255 }
+  validates :encrypted_password, length: { maximum: 255 }
+  validates :reset_password_token, length: { maximum: 255 }
+  validates :current_sign_in_ip, length: { maximum: 255 }
+  validates :last_sign_in_ip, length: { maximum: 255 }
+  validates :first_name, length: { maximum: 255 }
+  validates :last_name, length: { maximum: 255 }
+  validates :phone_number, length: { maximum: 255 }
+  validates :bio, length: { maximum: 16777215 }
+  validates :avatar_file_name, length: { maximum: 255 }
+  validates :avatar_content_type, length: { maximum: 255 }
+  validates :username, length: { maximum: 255 }
+  validates :remember_token, length: { maximum: 255 }
+  validates :student_id, length: { maximum: 255 }
+  validates :associate_id, length: { maximum: 255 }
+  validates :calendar_token, length: { maximum: 255 }
+  validates :calendar_email, length: { maximum: 255 }
+  validates :google_access_token, length: { maximum: 65535 }
+  validates :google_refresh_token, length: { maximum: 65535 }
+  validates :google_calendar_id, length: { maximum: 255 }
+  validates :profile_completion_salt, length: { maximum: 255 }
   before_save :unify_numbers
   before_save :ensure_calendar_token
   before_save :ensure_profile_completion_salt
@@ -328,9 +370,16 @@ class User < ApplicationRecord
     results.sort_by { |tm| tm.teamwork.start_date || Date.current }
   end
 
+  # When true, per-attendance maintenance reallocation is skipped. Set while a MaintenanceSession
+  # persists a batch of attendances so the session can reallocate each affected user once instead
+  # of once per attendance (see MaintenanceSession#reallocate_attendee_debts_once).
+  thread_mattr_accessor :suppress_maintenance_reallocation, instance_accessor: false
+
   # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
   # It then matches all the soonest debt with attendances.
   def reallocate_maintenance_debts
+    return if self.class.suppress_maintenance_reallocation
+
     # Remove unnecessary reload calls and optimize query
     # Preload maintenance_attendance to prevent N+1 queries
     debts = admin_maintenance_debts

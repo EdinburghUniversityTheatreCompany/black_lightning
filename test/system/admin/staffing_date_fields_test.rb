@@ -23,7 +23,7 @@ class Admin::StaffingDateFieldsTest < ApplicationSystemTestCase
     # The blueprint row is display:none, so no date rows are visible initially.
     assert_selector ".control-group.datetime", count: 0
 
-    find("a[data-action~='click->staffing-date-fields#addDate']").click
+    find("button[data-action~='click->staffing-date-fields#addDate']").click
 
     # A cloned, visible date row should appear (no JS error).
     assert_selector ".control-group.datetime", count: 1
@@ -35,7 +35,7 @@ class Admin::StaffingDateFieldsTest < ApplicationSystemTestCase
     end
 
     within(".control-group.datetime") do
-      find("a[data-action~='click->staffing-date-fields#removeDate']").click
+      find("button[data-action~='click->staffing-date-fields#removeDate']").click
     end
 
     # The row is removed again.

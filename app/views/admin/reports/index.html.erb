@@ -1,8 +1,8 @@
 <%= display_block('About Reports', true) %>
 
 <ul>
-  <% # List Reports is a method of the helper class. %>
-  <% # This code is also used in the reports widget. %>
+  <%# List Reports is a method of the helper class. %>
+  <%# This code is also used in the reports widget. %>
   <% list_reports.each do |report, report_name| %>
     <li><%= get_report_link report, report_name %></li>
   <% end %>

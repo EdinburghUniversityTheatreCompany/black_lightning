@@ -1,19 +1,27 @@
 # == Schema Information
 #
 # Table name: admin_staffing_debts
+# Database name: primary
 #
-# *id*::                    <tt>integer, not null, primary key</tt>
-# *user_id*::               <tt>integer</tt>
-# *show_id*::               <tt>integer</tt>
-# *due_by*::                <tt>date</tt>
-# *admin_staffing_job_id*:: <tt>integer</tt>
-# *created_at*::            <tt>datetime, not null</tt>
-# *updated_at*::            <tt>datetime, not null</tt>
-# *converted*::             <tt>boolean</tt>
-# *forgiven*::              <tt>boolean, default(FALSE)</tt>
-#--
-# == Schema Information End
-#++
+#  id                              :integer          not null, primary key
+#  converted_from_maintenance_debt :boolean          default(FALSE)
+#  due_by                          :date
+#  state                           :bigint           default("normal"), not null
+#  created_at                      :datetime         not null
+#  updated_at                      :datetime         not null
+#  admin_staffing_job_id           :integer
+#  show_id                         :integer
+#  user_id                         :integer
+#
+# Indexes
+#
+#  index_admin_staffing_debts_on_admin_staffing_job_id  (admin_staffing_job_id)
+#  index_admin_staffing_debts_on_due_by_and_state       (due_by,state)
+#  index_admin_staffing_debts_on_show_id                (show_id)
+#  index_admin_staffing_debts_on_user_id                (user_id)
+#  index_staffing_debts_on_user_date_state              (user_id,due_by,state)
+#  index_staffing_debts_reallocation                    (user_id,state,admin_staffing_job_id)
+#
 class Admin::StaffingDebt < ApplicationRecord
   validates :due_by, :show_id, :user_id, :state, presence: true
   validates :converted_from_maintenance_debt, inclusion: [ true, false ]

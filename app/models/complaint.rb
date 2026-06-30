@@ -1,17 +1,21 @@
 # == Schema Information
 #
 # Table name: complaints
+# Database name: primary
 #
-# *id*::          <tt>bigint, not null, primary key</tt>
-# *subject*::     <tt>text(65535)</tt>
-# *description*:: <tt>text(65535)</tt>
-# *comments*::    <tt>text(65535)</tt>
-# *created_at*::  <tt>datetime, not null</tt>
-# *updated_at*::  <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id          :bigint           not null, primary key
+#  comments    :text(16777215)
+#  description :text(16777215)
+#  resolved    :boolean
+#  subject     :string(255)
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
 class Complaint < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :subject, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
+  validates :comments, length: { maximum: 16777215 }
   has_paper_trail
 
   validates :subject, :description, presence: true

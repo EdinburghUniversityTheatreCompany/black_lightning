@@ -1,28 +1,38 @@
-#++
-#
 # See AttachmentController for fetching of attachments.
 #
 # Note that attachments are not stored in the public directory to prevent them from being
 # accessed without authentication.
 #
+
 # == Schema Information
 #
 # Table name: attachments
+# Database name: primary
 #
-# *id*::                <tt>integer, not null, primary key</tt>
-# *editable_block_id*:: <tt>integer</tt>
-# *name*::              <tt>string(255)</tt>
-# *file_file_name*::    <tt>string(255)</tt>
-# *file_content_type*:: <tt>string(255)</tt>
-# *file_file_size*::    <tt>integer</tt>
-# *file_updated_at*::   <tt>datetime</tt>
-# *created_at*::        <tt>datetime, not null</tt>
-# *updated_at*::        <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
-
+#  id                :integer          not null, primary key
+#  access_level      :integer          default(1), not null
+#  file_content_type :string(255)
+#  file_file_name    :string(255)
+#  file_file_size    :integer
+#  file_updated_at   :datetime
+#  item_type         :string(255)
+#  name              :string(255)
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  editable_block_id :integer
+#  item_id           :bigint
+#
+# Indexes
+#
+#  index_attachments_on_editable_block_id      (editable_block_id)
+#  index_attachments_on_item_type_and_item_id  (item_type,item_id)
+#
 class Attachment < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :file_file_name, length: { maximum: 255 }
+  validates :file_content_type, length: { maximum: 255 }
+  validates :item_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :item, polymorphic: true, optional: true

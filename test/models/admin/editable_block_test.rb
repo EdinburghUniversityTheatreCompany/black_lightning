@@ -24,7 +24,7 @@ class Admin::EditableBlockTest < ActiveSupport::TestCase
 
     # Assert the intersection between groups and the result equals groups
     # aka, the result has to contain all groups.
-    assert groups & Admin::EditableBlock.groups == groups
+    assert_equal groups & Admin::EditableBlock.groups, groups
   end
 
   test "for_subpage returns blocks whose url starts with the given prefix" do

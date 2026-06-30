@@ -28,9 +28,14 @@ ENV["RAILS_ENV"] = "test"
 require File.expand_path("../../config/environment", __FILE__)
 require "rails/test_help"
 
+# Shared test helper modules
+require_relative "support/import_cache_test_helpers"
+require_relative "support/team_membership_test_helpers"
+
 
 class ActiveSupport::TestCase
   include ActionMailer::TestHelper
+  include TeamMembershipTestHelpers
 
   # Setup all fixtures in test/fixtures/*.(yml|csv) for all tests in alphabetical order.
   #
@@ -65,6 +70,7 @@ end
 class ActionController::TestCase
   include Devise::Test::ControllerHelpers
   include ActionMailer::TestHelper
+  include ImportCacheTestHelpers
 
   teardown do
     FileUtils.rm_rf(Rails.root.join("tmp", "storage"))

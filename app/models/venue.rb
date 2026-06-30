@@ -8,22 +8,30 @@
 # == Schema Information
 #
 # Table name: venues
+# Database name: primary
 #
-# *id*::                 <tt>integer, not null, primary key</tt>
-# *name*::               <tt>string(255)</tt>
-# *tagline*::            <tt>string(255)</tt>
-# *description*::        <tt>text(65535)</tt>
-# *location*::           <tt>string(255)</tt>
-# *image_file_name*::    <tt>string(255)</tt>
-# *image_content_type*:: <tt>string(255)</tt>
-# *image_file_size*::    <tt>integer</tt>
-# *image_updated_at*::   <tt>datetime</tt>
-# *created_at*::         <tt>datetime, not null</tt>
-# *updated_at*::         <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                 :integer          not null, primary key
+#  address            :text(16777215)
+#  description        :text(16777215)
+#  image_content_type :string(255)
+#  image_file_name    :string(255)
+#  image_file_size    :integer
+#  image_updated_at   :datetime
+#  location           :string(255)
+#  name               :string(255)
+#  tagline            :string(255)
+#  created_at         :datetime         not null
+#  updated_at         :datetime         not null
+#
 class Venue < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :tagline, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
+  validates :location, length: { maximum: 255 }
+  validates :image_file_name, length: { maximum: 255 }
+  validates :image_content_type, length: { maximum: 255 }
+  validates :address, length: { maximum: 16777215 }
   include FormattingHelper
 
   validates :name, :description, presence: true

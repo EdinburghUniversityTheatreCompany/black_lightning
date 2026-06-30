@@ -6,21 +6,30 @@
 # == Schema Information
 #
 # Table name: admin_staffings
+# Database name: primary
 #
-# *id*::                  <tt>integer, not null, primary key</tt>
-# *start_time*::          <tt>datetime</tt>
-# *show_title*::          <tt>string(255)</tt>
-# *created_at*::          <tt>datetime, not null</tt>
-# *updated_at*::          <tt>datetime, not null</tt>
-# *reminder_job_executed*:: <tt>boolean, default: false</tt>
-# *scheduled_job_id*::    <tt>string</tt>
-# *end_time*::            <tt>datetime</tt>
-# *counts_towards_debt*:: <tt>boolean</tt>
-# *slug*::                <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
+#  id                    :integer          not null, primary key
+#  counts_towards_debt   :boolean
+#  end_time              :datetime
+#  reminder_job_executed :boolean          default(FALSE)
+#  show_title            :string(255)
+#  slug                  :string(255)
+#  start_time            :datetime
+#  created_at            :datetime         not null
+#  updated_at            :datetime         not null
+#  scheduled_job_id      :string(255)
+#
+# Indexes
+#
+#  index_admin_staffings_on_end_time    (end_time)
+#  index_admin_staffings_on_slug        (slug)
+#  index_admin_staffings_on_start_time  (start_time)
+#
 class Admin::Staffing < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :show_title, length: { maximum: 255 }
+  validates :slug, length: { maximum: 255 }
+  validates :scheduled_job_id, length: { maximum: 255 }
   validates :show_title, presence: true
   validates :start_time, :end_time, presence: true, on: [ :create, :update ]
 

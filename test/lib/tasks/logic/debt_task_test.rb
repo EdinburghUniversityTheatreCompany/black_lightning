@@ -55,11 +55,11 @@ class DebtTaskTest < ActiveSupport::TestCase
 
     Tasks::Logic::Debt.clear_all_debts
 
-    assert Admin::MaintenanceDebt.all.empty?
-    assert Admin::StaffingDebt.all.empty?
-    assert Admin::DebtNotification.all.empty?
-    assert Admin::Staffing.all.empty?
-    assert Admin::StaffingJob.all.empty?
+    assert_empty Admin::MaintenanceDebt.all
+    assert_empty Admin::StaffingDebt.all
+    assert_empty Admin::DebtNotification.all
+    assert_empty Admin::Staffing.all
+    assert_empty Admin::StaffingJob.all
   end
 
   test "expire outdated debt should remove staffing debts older than a year but preserve younger debts" do

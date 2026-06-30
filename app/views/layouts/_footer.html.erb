@@ -11,7 +11,7 @@
 
     <div class="flex justify-center my-3 gap-3">
       <% social_media_icons.each do |icon| %>
-        <a href="<%= icon[:url] %>" target="_blank"><i class="fa-brands fa-<%= icon[:icon] %> fa-inverse fs-2 px-3"></i></a>
+        <a href="<%= icon[:url] %>" target="_blank"><i class="fa-brands fa-<%= icon[:icon] %> fa-inverse fs-2 px-3"></i></a><%# herb:disable erb-no-interpolated-class-names %>
       <% end %>
     </div>
 

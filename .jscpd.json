@@ -1,0 +1,19 @@
+{
+  "minTokens": 70,
+  "threshold": 0,
+  "reporters": ["ai", "threshold"],
+  "gitignore": true,
+  "ignore": [
+    "**/__pycache__/**",
+    "**/.venv/**",
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/db/schema.rb",
+    "**/db/structure.sql",
+    "**/app/assets/builds/**",
+    "**/bin/**",
+    "**/app/javascript/styles/swalCustomTheme.scss"
+  ]
+}

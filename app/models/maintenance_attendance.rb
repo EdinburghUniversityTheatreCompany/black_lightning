@@ -1,16 +1,29 @@
 # == Schema Information
 #
 # Table name: maintenance_attendances
+# Database name: primary
 #
-# *id*::                     <tt>bigint, not null, primary key</tt>
-# *maintenance_session_id*:: <tt>bigint, not null</tt>
-# *user_id*::                <tt>integer, not null</tt>
-# *created_at*::             <tt>datetime, not null</tt>
-# *updated_at*::             <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                     :bigint           not null, primary key
+#  created_at             :datetime         not null
+#  updated_at             :datetime         not null
+#  maintenance_session_id :bigint           not null
+#  user_id                :integer          not null
+#
+# Indexes
+#
+#  index_maintenance_attendances_on_maintenance_session_id  (maintenance_session_id)
+#  index_maintenance_attendances_on_user_id                 (user_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (user_id => users.id)
+#
 class MaintenanceAttendance < ApplicationRecord
+  # Virtual, non-persisted. Used only by the maintenance session form: a representative attendance
+  # carries the user's credit count here so one row can stand in for N attendances.
+  # See MaintenanceSession#attendees_for_form and #maintenance_attendances_attributes=.
+  attr_accessor :quantity
+
   validates :maintenance_session, :user, presence: true
 
   belongs_to :user

@@ -55,7 +55,7 @@
 
 <%= render Admin::Form::VideoLinksComponent.new(f: f) %>
 
-<%= render(CollapsibleSectionComponent.new(title: 'Pretix Widget Configuration')) do %>
+<%= render(CollapsibleSectionComponent.new(title: 'Pretix Widget Configuration', html_class: "mb-4")) do %>
     <%= f.input :pretix_shown, hint: 'Display the Pretix widget for this event.' %>
     <%= f.input :pretix_slug_override, hint: ' Leave blank to use the slug for this event as the Pretix slug' %>
     <%= f.input :pretix_view, collection: ['list','week','month'], default: 'list', hint: "See Pretix's documentation for examples" %>

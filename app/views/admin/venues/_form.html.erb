@@ -4,13 +4,13 @@
   <%= render('shared/pages/form', f: f) do %>
     <%= f.input :name %>
     <%= f.input :tagline %>
-    <%= f.input :location, label: "Location - #{link_to('About Setting Locations', admin_help_venue_location_path, target: '_blank')}".html_safe %>
+    <%= f.input :location, label: "Location - #{link_to('About Setting Locations', admin_help_venue_location_path, target: '_blank')}".html_safe %><%# herb:disable erb-no-unsafe-raw %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :address, rows: 4 )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :address, rows: 4 ) %>
 
-    <%= render Admin::MdEditorComponent.new(f: f, field: :description )%>
+    <%= render Admin::MdEditorComponent.new(f: f, field: :description ) %>
 
-    <%= render 'shared/form/file_field', f: f, field_name: :image%>
+    <%= render 'shared/form/file_field', f: f, field_name: :image %>
 
     <%= render(Admin::Form::GalleryComponent.new(f: f)) %>
   <% end %>

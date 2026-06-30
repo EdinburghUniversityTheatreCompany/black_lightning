@@ -2,7 +2,7 @@
 
 <% @actions.each do |action| %>
   <td>
-    <% if permission then %>
+    <% if permission %>
       <% action_permission = permission.select { |p| p.action == action } %>
       <% checked = action_permission.count > 0 %>
     <% end %>
@@ -10,8 +10,8 @@
     <% title = "#{role.name.titleize} #{model.name} #{action.titleize}" %>
 
     <%# Disable the permissions that are included in the disabled_permissions property of the record. %>
-    <% if model.const_defined? :DISABLED_PERMISSIONS then %>
-      <% if model::DISABLED_PERMISSIONS.include?(action) then %>
+    <% if model.const_defined? :DISABLED_PERMISSIONS %>
+      <% if model::DISABLED_PERMISSIONS.include?(action) %>
         <% disabled = true %>
         <% title = "Hard Coded" %>
       <% end %>

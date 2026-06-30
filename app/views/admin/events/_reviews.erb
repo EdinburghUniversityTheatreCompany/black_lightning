@@ -5,7 +5,7 @@
   <div class="grid gap-4 <%= 'lg:grid-cols-2' if multi %>">
     <% reviews.each do |review| %>
       <div>
-        <%= render CardComponent.new(title: review.title) do |c| %>
+        <%= render CardComponent.new(title: review.title, html_class: "h-full mb-0") do |c| %>
           <% c.with_tools do %>
             <span class="whitespace-nowrap ml-2"><%= star_rating(review.rating) %></span>
           <% end %>

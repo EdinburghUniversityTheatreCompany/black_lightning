@@ -1,6 +1,9 @@
 /* ============================================================
    Styles shared between the public site and admin entrypoints.
    Imported by both application.css and admin.css.
+
+   Note: dropzone, fancybox, and leaflet CSS are loaded dynamically
+   by their respective Stimulus controllers (not bundled here).
    ============================================================ */
 
 .turbo-progress-bar {

@@ -4,24 +4,32 @@
 # IMPORTANT: The admin_page property is used to ensure that visitors that are not logged in
 # cannot access any Attachment belonging to this block.
 #
+
 # == Schema Information
 #
 # Table name: admin_editable_blocks
+# Database name: primary
 #
-# *id*::         <tt>integer, not null, primary key</tt>
-# *name*::       <tt>string(255)</tt>
-# *content*::    <tt>text(65535)</tt>
-# *created_at*:: <tt>datetime, not null</tt>
-# *updated_at*:: <tt>datetime, not null</tt>
-# *admin_page*:: <tt>boolean</tt>
-# *group*::      <tt>string(255)</tt>
-# *url*::        <tt>string(255)</tt>
-# *ordering*::   <tt>bigint</tt>
-#--
-# == Schema Information End
-#++
-
+#  id         :integer          not null, primary key
+#  admin_page :boolean
+#  content    :text(16777215)
+#  group      :string(255)
+#  name       :string(255)
+#  ordering   :bigint
+#  url        :string(255)
+#  created_at :datetime         not null
+#  updated_at :datetime         not null
+#
+# Indexes
+#
+#  index_admin_editable_blocks_on_ordering  (ordering)
+#
 class Admin::EditableBlock < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :content, length: { maximum: 16777215 }
+  validates :group, length: { maximum: 255 }
+  validates :url, length: { maximum: 255 }
   include MdHelper
 
   resourcify

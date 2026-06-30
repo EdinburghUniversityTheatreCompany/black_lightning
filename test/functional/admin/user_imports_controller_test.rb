@@ -75,14 +75,11 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm creates new user" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "exact_match_id" => [],
-      "exact_match_email" => [],
-      "fuzzy_match" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "Brand New User", "first_name" => "Brand", "last_name" => "New User", "student_id" => "s9999999", "email" => "brandnew@example.com" }, "existing_user_id" => nil, "index" => 0 }
+    write_import_cache(cache_key, user_import_buckets(
+      create_new: [
+        import_entry(index: 0, original_name: "Brand New User", first_name: "Brand", last_name: "New User", student_id: "s9999999", email: "brandnew@example.com")
       ]
-    }, expires_in: 1.hour)
+    ))
 
     assert_difference "User.count", 1 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
@@ -97,14 +94,11 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm skips when action is skip" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "exact_match_id" => [],
-      "exact_match_email" => [],
-      "fuzzy_match" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "Skip User", "first_name" => "Skip", "last_name" => "User", "student_id" => "s8888888", "email" => "skip@example.com" }, "existing_user_id" => nil, "index" => 0 }
+    write_import_cache(cache_key, user_import_buckets(
+      create_new: [
+        import_entry(index: 0, original_name: "Skip User", first_name: "Skip", last_name: "User", student_id: "s8888888", email: "skip@example.com")
       ]
-    }, expires_in: 1.hour)
+    ))
 
     assert_no_difference "User.count" do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "skip" } }
@@ -118,14 +112,11 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
     user = FactoryBot.create(:user, student_id: "s1234567")
 
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "exact_match_id" => [
-        { "row" => { "original_name" => "Test User", "first_name" => "Test", "last_name" => "User", "student_id" => "s1234567", "email" => "test@example.com" }, "existing_user_id" => user.id, "index" => 0 }
-      ],
-      "exact_match_email" => [],
-      "fuzzy_match" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, user_import_buckets(
+      exact_match_id: [
+        import_entry(index: 0, existing_user_id: user.id, original_name: "Test User", first_name: "Test", last_name: "User", student_id: "s1234567", email: "test@example.com")
+      ]
+    ))
 
     assert_no_difference "User.count" do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "link" } }
@@ -137,14 +128,11 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm generates placeholder email for new user without email" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "exact_match_id" => [],
-      "exact_match_email" => [],
-      "fuzzy_match" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "No Email User", "first_name" => "No", "last_name" => "Email User", "student_id" => nil, "email" => nil }, "existing_user_id" => nil, "index" => 0 }
+    write_import_cache(cache_key, user_import_buckets(
+      create_new: [
+        import_entry(index: 0, original_name: "No Email User", first_name: "No", last_name: "Email User", student_id: nil, email: nil)
       ]
-    }, expires_in: 1.hour)
+    ))
 
     assert_difference "User.count", 1 do
       post :confirm, params: { cache_key: cache_key, actions: { "0" => "create" } }
@@ -152,24 +140,19 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
     new_user = User.find_by(first_name: "No", last_name: "Email User")
     assert new_user.present?, "New user should be created"
-    assert new_user.email.match?(/\Aunknown_\w+@bedlamtheatre\.co\.uk\z/), "Email should be placeholder, got: #{new_user.email}"
+    assert_match /\Aunknown_\w+@bedlamtheatre\.co\.uk\z/, new_user.email, "Email should be placeholder, got: #{new_user.email}"
   end
 
   test "confirm handles multiple actions in single import" do
     existing_user = FactoryBot.create(:user, student_id: "s1111111")
 
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "exact_match_id" => [
-        { "row" => { "original_name" => "Existing User", "first_name" => "Existing", "last_name" => "User", "student_id" => "s1111111", "email" => "existing@example.com" }, "existing_user_id" => existing_user.id, "index" => 0 }
+    write_import_cache(cache_key, user_import_buckets(
+      exact_match_id: [
+        import_entry(index: 0, existing_user_id: existing_user.id, original_name: "Existing User", first_name: "Existing", last_name: "User", student_id: "s1111111", email: "existing@example.com")
       ],
-      "exact_match_email" => [],
-      "fuzzy_match" => [],
-      "create_new" => [
-        { "row" => { "original_name" => "Create Me", "first_name" => "Create", "last_name" => "Me", "student_id" => "s2222222", "email" => "create@example.com" }, "existing_user_id" => nil, "index" => 1 },
-        { "row" => { "original_name" => "Skip Me", "first_name" => "Skip", "last_name" => "Me", "student_id" => "s3333333", "email" => "skip@example.com" }, "existing_user_id" => nil, "index" => 2 }
-      ]
-    }, expires_in: 1.hour)
+      create_new: create_me_and_skip_me_entries
+    ))
 
     assert_difference "User.count", 1 do
       post :confirm, params: {
@@ -188,12 +171,7 @@ class Admin::UserImportsControllerTest < ActionController::TestCase
 
   test "confirm clears cache after processing" do
     cache_key = "user_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "exact_match_id" => [],
-      "exact_match_email" => [],
-      "fuzzy_match" => [],
-      "create_new" => []
-    }, expires_in: 1.hour)
+    write_import_cache(cache_key, user_import_buckets)
 
     post :confirm, params: { cache_key: cache_key }
 

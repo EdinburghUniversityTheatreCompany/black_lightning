@@ -1,25 +1,6 @@
-class Admin::CollapsibleSectionComponentPreview < Admin::ApplicationComponentPreview
-  def default
-    render CollapsibleSectionComponent.new(title: "Example Section") do
-      "<p class='text-sm text-gray-700'>Collapsible content goes here.</p>".html_safe
-    end
-  end
-
-  def start_open
-    render CollapsibleSectionComponent.new(title: "Open by Default", start_open: true) do
-      "<p class='text-sm text-gray-700'>This section starts expanded.</p>".html_safe
-    end
-  end
-
-  def danger_variant
-    render CollapsibleSectionComponent.new(title: "Warning", variant: :danger, start_open: true) do
-      "<p class='text-sm'>Important notice.</p>".html_safe
-    end
-  end
-
-  def with_title_right
-    render CollapsibleSectionComponent.new(title: "Section with Badge", title_right: "<span class='badge badge-primary'>New</span>".html_safe) do
-      "<p class='text-sm text-gray-700'>Content here.</p>".html_safe
-    end
-  end
+# The admin and public previews of CollapsibleSectionComponent are identical;
+# inherit the public preview's examples so they live in one place. The "admin"
+# layout is applied by ComponentPreviewsController, not by the base class, so
+# subclassing the public preview here keeps the admin rendering unchanged.
+class Admin::CollapsibleSectionComponentPreview < CollapsibleSectionComponentPreview
 end

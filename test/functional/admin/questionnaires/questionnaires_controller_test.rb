@@ -70,7 +70,7 @@ class Admin::Questionnaires::QuestionnairesControllerTest < ActionController::Te
   test "should not get new when there are no future shows" do
     Event.all.delete_all
 
-    assert Event.all.empty?
+    assert_empty Event.all
 
     get :new
     assert_redirected_to admin_questionnaires_questionnaires_path

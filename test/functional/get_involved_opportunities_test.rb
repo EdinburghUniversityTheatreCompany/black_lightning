@@ -61,7 +61,7 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     opportunity = Opportunity.last
     assert_equal "Backstage crew needed", opportunity.title
     assert_equal users(:member), opportunity.creator
-    assert_equal false, opportunity.approved
+    refute opportunity.approved
   end
 
   test "create lets a logged-out visitor submit with submitter details, company and roles" do
@@ -85,7 +85,7 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     assert_equal "Jane External", opportunity.submitter_name
     assert_equal "Brand New Society", opportunity.company&.name
     assert_equal [ "Stage Manager" ], opportunity.roles.map(&:position)
-    assert_equal false, opportunity.approved
+    refute opportunity.approved
   end
 
   test "create rejects a logged-out submission without submitter details" do
@@ -200,7 +200,7 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
       }
     }
 
-    assert_equal false, Opportunity.last.approved
+    refute Opportunity.last.approved
   end
 
   # ---------------------------------------------------------------------------

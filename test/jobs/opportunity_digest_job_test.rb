@@ -17,7 +17,7 @@ class OpportunityDigestJobTest < ActiveJob::TestCase
 
     # committee fixture has the opportunity_reviewer role via users_roles fixture
     reviewer = users(:committee)
-    assert Role.find_by(name: "Opportunity Reviewer")&.users&.include?(reviewer),
+    assert_includes Role.find_by(name: "Opportunity Reviewer")&.users, reviewer,
            "Expected committee user to have Opportunity Reviewer role"
 
     assert_enqueued_jobs(1, only: MailDeliveryJob) do

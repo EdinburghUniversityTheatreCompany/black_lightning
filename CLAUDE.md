@@ -78,6 +78,32 @@ The `get_link` helper provides:
 ## ViewComponents
 When writing a ViewComponent, check for an applicable skill, and make sure to create a preview to pass the cop.
 
+## Dev Environment (mise + hk)
+
+Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `pkl`, `gitleaks`,
+`node 24.13.0`). Pre-commit checks run through **hk** (`hk.pkl`) — this **replaced overcommit**
+(`.overcommit.yml` and the `overcommit` gem are gone). After pulling these changes, run
+`mise install && hk install` once to swap the git hooks over.
+
+- **Run all checks** (what CI mirrors): `hk run check`. Autofix: `hk run fix`.
+- **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint` (Stimulus JS), `herb` (ERB),
+  `annotate-models` (see below), `brakeman`, `bundler-audit`, `fasterer`, `database_consistency`,
+  `debride`/`flay`/`jscpd` (dead-code + duplication), `gitleaks`, `actionlint` + `zizmor`
+  (GitHub Actions correctness + security), exec-bit + large-file guards.
+  `bin/rails test` also runs as an hk step.
+- **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
+  auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and
+  skips cleanly when no dev/test DB is reachable, and never runs as a CI gate.
+- **Gate status (see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
+  `herb-lint` (ERB) and `jscpd` (duplication, threshold 0) are **gating** — their backlogs were
+  ratcheted to 0. `herb-analyze` stays advisory (`|| true`) only for the two HTML-email fragment
+  partials it can't parse standalone. `database_consistency` is still advisory: its length
+  validations are satisfied and the legacy integer-PK checkers are scoped in `.database_consistency.yml`,
+  but the remaining NOT-NULL / FK / unique-index findings need data-aware backfill migrations on the
+  legacy DB (a documented follow-up). Two herb rules are intentionally disabled in `.herb.yml`.
+- **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
+  `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider migrating to fnox.
+
 ## Dev Server
 
 - **Run with `bin/dev`** — foreman ([Procfile.dev](Procfile.dev)) supervising Puma (`bin/rails server`) + Vite (`bin/vite dev`). Assume it is already running; ask the user to start it rather than starting one yourself.
@@ -90,6 +116,10 @@ When writing a ViewComponent, check for an applicable skill, and make sure to cr
 - **Multi-database app.** `bin/rails db:rollback` errors with "must run the namespaced task". Use `bin/rails db:rollback:primary STEP=n` (namespaces: `primary`, `queue`, `cache`).
 - **Legacy tables use integer primary keys, not bigint.** `opportunities` and other older tables have `id: :integer`. A new child table's foreign key to such a table must use `t.references :parent, type: :integer` (or `t.integer`), otherwise the FK migration aborts with a column-type mismatch. New tables you create default to bigint `id`, which is fine for FKs pointing *to* them.
 - **The running dev server caches the DB schema at boot.** After a migration that adds columns, the already-running server will 500 (e.g. "Undeclared attribute type for enum ... must be backed by a database column") until it is restarted. Run `bin/restart-web` after migrating (see **Dev Server** above).
+
+## Schema annotations
+
+Models carry `# == Schema Information` blocks maintained by **`annotaterb`** (replaced the unmaintained, Rails-8-incompatible `annotate` gem). Config is `.annotaterb.yml`; the `lib/tasks/annotate_rb.rake` hook re-annotates models automatically on `db:migrate` in development. Regenerate manually with `bundle exec annotaterb models`. **Keep `:format_rdoc: false` (plain format)** — annotaterb's RDoc output is non-idempotent (it re-appends the Foreign Keys section + terminator on each run), causing endless churn. Only models are annotated (`exclude_factories/fixtures/tests: true`).
 
 ## Attachments — allowed file types
 

@@ -1,32 +1,53 @@
 # == Schema Information
 #
 # Table name: opportunities
+# Database name: primary
 #
-# *id*::               <tt>integer, not null, primary key</tt>
-# *title*::            <tt>string(255)</tt>
-# *description*::      <tt>text(16777215)</tt>
-# *approved*::         <tt>boolean</tt>
-# *creator_id*::       <tt>integer</tt>
-# *approver_id*::      <tt>integer</tt>
-# *expiry_date*::      <tt>date</tt>
-# *email_visibility*:: <tt>integer, default(0), not null</tt>
-# *contact_email*::    <tt>string(255)</tt>
-# *company_id*::       <tt>bigint</tt>
-# *project*::          <tt>string(255)</tt>
-# *author*::           <tt>string(255)</tt>
-# *apply_url*::        <tt>string(255)</tt>
-# *submitter_name*::   <tt>string(255)</tt>
-# *submitter_email*::  <tt>string(255)</tt>
-# *compensation_type*::<tt>integer, default(4), not null</tt>
-# *experience_level*:: <tt>integer, default(0), not null</tt>
-# *dates*::            <tt>string(255)</tt>
-# *location*::         <tt>string(255)</tt>
-# *created_at*::       <tt>datetime, not null</tt>
-# *updated_at*::       <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id                :integer          not null, primary key
+#  apply_url         :string(255)
+#  approved          :boolean
+#  author            :string(255)
+#  compensation_type :integer          default("tbc"), not null
+#  contact_email     :string(255)
+#  dates             :string(255)
+#  description       :text(16777215)
+#  email_visibility  :integer          default("no_one"), not null
+#  experience_level  :integer          default("any"), not null
+#  expiry_date       :date
+#  location          :string(255)
+#  project           :string(255)
+#  submitter_email   :string(255)
+#  submitter_name    :string(255)
+#  title             :string(255)
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  approver_id       :integer
+#  company_id        :bigint
+#  creator_id        :integer
+#
+# Indexes
+#
+#  index_opportunities_on_approved_and_expiry  (approved,expiry_date)
+#  index_opportunities_on_approver_id          (approver_id)
+#  index_opportunities_on_company_id           (company_id)
+#  index_opportunities_on_creator_id           (creator_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (company_id => companies.id)
+#
 class Opportunity < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :title, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
+  validates :contact_email, length: { maximum: 255 }
+  validates :project, length: { maximum: 255 }
+  validates :author, length: { maximum: 255 }
+  validates :apply_url, length: { maximum: 255 }
+  validates :submitter_name, length: { maximum: 255 }
+  validates :submitter_email, length: { maximum: 255 }
+  validates :dates, length: { maximum: 255 }
+  validates :location, length: { maximum: 255 }
   # +website_url+ is a spam honeypot. +company_name+ is a virtual field on both the admin and public
   # forms: it is resolved to a Company (created if it doesn't exist) by a before_validation hook.
   attr_accessor :website_url

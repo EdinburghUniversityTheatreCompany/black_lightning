@@ -1,4 +1,4 @@
-<%# locals: (users:, url:, show_remove_buttons: false, remove_url_helper: nil) -%>
+<%# locals: (users:, url:, show_remove_buttons: false, remove_url_helper: nil, credit_counts: nil) -%>
 
 <% search_fields = { full_name_cont:   { slug: 'defaults.name' } } %>
 <%= render('shared/search_form', input_fields: search_fields, url: url, columns: 1) %>
@@ -10,6 +10,9 @@
     button_to('Remove', remove_url_helper.call(user.id), method: :delete, class: btn_classes(:danger, :sm),
       form: { style: "display:contents", data: { controller: "confirm", action: "submit->confirm#confirm", confirm_message_value: "Remove #{user.name} from this role?" } })
   ] } } %>
+<% elsif credit_counts %>
+  <% headers = [:name, 'Credits'] %>
+  <% field_sets = users.map { |user| { fields: [user, credit_counts[user.id] || 1] } } %>
 <% else %>
   <% headers = [:name] %>
   <% field_sets = users.map { |user| { fields: [user] } } %>

@@ -2,14 +2,16 @@
 <%
   # Helper to determine default selection for a field
   # Returns :source if source should be selected by default
+  #   - Target empty + source present: prefer source
+  #   - Both equal: prefer source (arbitrary but consistent)
+  #   - Otherwise (target has a differing value, or source empty): prefer target
   def default_selection(target_value, source_value)
-    if target_value.blank? && source_value.present?
-      :source  # Target empty, source has value
-    elsif target_value.present? && target_value == source_value
-      :source  # Both equal, prefer source (arbitrary but consistent)
-    else
-      :target  # Target has value (different or source empty)
-    end
+    prefer_source = (target_value.blank? && source_value.present?) ||
+                    (target_value.present? && target_value == source_value)
+    # Assigned to a local (rather than returned bare) so herb's erb-no-unused-literals rule —
+    # which can't tell a bare symbol literal is this inline-ERB def's return value — sees it used.
+    selection = prefer_source ? :source : :target
+    selection
   end
 
   # Helper to check if values are effectively the same (both blank or equal)
@@ -63,13 +65,13 @@
               <td><strong><%= label %></strong></td>
               <td>
                 <div class="form-check">
-                  <input type="radio"
-                         class="form-check-input"
-                         name="field_choice[<%= field_key %>]"
-                         id="keep_target_<%= field_key %>"
-                         value="target"
-                         data-action="change->field-choice#toggle"
-                         <%= "checked" unless select_source %>>
+                  <%= tag.input(type: "radio",
+                         class: "form-check-input",
+                         name: "field_choice[#{field_key}]",
+                         id: "keep_target_#{field_key}",
+                         value: "target",
+                         checked: !select_source,
+                         data: { action: "change->field-choice#toggle" }) %>
                   <label class="form-check-label" for="keep_target_<%= field_key %>">
                     <%= target_val.presence || tag.em("(empty)", class: "text-gray-500") %>
                   </label>
@@ -77,13 +79,13 @@
               </td>
               <td>
                 <div class="form-check">
-                  <input type="radio"
-                         class="form-check-input"
-                         name="field_choice[<%= field_key %>]"
-                         id="keep_source_<%= field_key %>"
-                         value="source"
-                         data-action="change->field-choice#toggle"
-                         <%= "checked" if select_source %>>
+                  <%= tag.input(type: "radio",
+                         class: "form-check-input",
+                         name: "field_choice[#{field_key}]",
+                         id: "keep_source_#{field_key}",
+                         value: "source",
+                         checked: select_source,
+                         data: { action: "change->field-choice#toggle" }) %>
                   <label class="form-check-label" for="keep_source_<%= field_key %>">
                     <%= source_val.presence || tag.em("(empty)", class: "text-gray-500") %>
                   </label>
@@ -102,13 +104,13 @@
             <td><strong>Avatar</strong></td>
             <td>
               <div class="form-check">
-                <input type="radio"
-                       class="form-check-input"
-                       name="field_choice[avatar]"
-                       id="keep_target_avatar"
-                       value="target"
-                       data-action="change->field-choice#toggle"
-                       <%= "checked" unless avatar_select_source %>>
+                <%= tag.input(type: "radio",
+                       class: "form-check-input",
+                       name: "field_choice[avatar]",
+                       id: "keep_target_avatar",
+                       value: "target",
+                       checked: !avatar_select_source,
+                       data: { action: "change->field-choice#toggle" }) %>
                 <label class="form-check-label" for="keep_target_avatar">
                   <% if target.avatar.attached? %>
                     <%= render 'shared/image', image: target.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>
@@ -120,13 +122,13 @@
             </td>
             <td>
               <div class="form-check">
-                <input type="radio"
-                       class="form-check-input"
-                       name="field_choice[avatar]"
-                       id="keep_source_avatar"
-                       value="source"
-                       data-action="change->field-choice#toggle"
-                       <%= "checked" if avatar_select_source %>>
+                <%= tag.input(type: "radio",
+                       class: "form-check-input",
+                       name: "field_choice[avatar]",
+                       id: "keep_source_avatar",
+                       value: "source",
+                       checked: avatar_select_source,
+                       data: { action: "change->field-choice#toggle" }) %>
                 <label class="form-check-label" for="keep_source_avatar">
                   <% if source.avatar.attached? %>
                     <%= render 'shared/image', image: source.avatar, variant: square_thumb_variant(50), eager_load: false, image_options: { class: "rounded" } %>

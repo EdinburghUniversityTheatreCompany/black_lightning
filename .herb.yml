@@ -1,0 +1,53 @@
+# Herb config (dev-env standard, dev-hooks:dev-env-setup) — installs as .herb.yml.
+# Generated from `herb lint --init` (current schema) — the recommended ruleset is ON by default,
+# so an empty `rules:` block already lints HTML/ERB best practices, accessibility, and Rails
+# idioms. Uncomment + set `enabled: false` to opt a rule out. Regenerate the version line with
+# `herb lint --upgrade` after bumping the herb gem.
+#
+# Website: https://herb-tools.dev  ·  Configuration: https://herb-tools.dev/configuration
+
+version: 0.10.1
+
+# # Framework / template engine (defaults: ruby / erubi)
+# framework: ruby
+# template_engine: erubi
+
+linter:
+  enabled: true
+
+  # # Exit with error code when diagnostics of this severity or higher are present.
+  # # Valid: error (default) | warning | info | hint
+  # failLevel: error
+
+  # The HTML-email header/footer are intentional FRAGMENTS: _header opens the table/div/body
+  # structure and _footer closes it, so neither is well-formed HTML on its own and herb's
+  # per-file parser always reports unmatched-tag errors (30 of them). They're hand-tuned,
+  # MSO-conditional email markup that works in clients; restructuring into a single layout
+  # would be high-risk for no rendering benefit. Excluded from herb (decision: 2026-06).
+  exclude:
+    - 'app/views/shared/mail/_header.html.erb'
+    - 'app/views/shared/mail/_footer.html.erb'
+
+  rules:
+    # Instance variables in partials are a long-standing, widely-accepted Rails pattern in this
+    # codebase (38 partials read @ivars set by their parent view). Converting every partial to
+    # explicit locals + updating all render call sites is a large refactor with regression risk
+    # and little correctness benefit, so this rule is intentionally disabled (decision: 2026-06).
+    # All other recommended herb rules stay enabled and are enforced.
+    erb-no-instance-variables-in-partials:
+      enabled: false
+    # This codebase builds view-data structures in `<% %>` — `fields = { ... link_to/render ... }`,
+    # `quick_actions << link_to(...)`, `html = roles.map { ... }` — consumed by the shared show/index
+    # page framework and rendered later. All 37 flags were this assignment/collection pattern (helper
+    # output IS used, not swallowed); switching them to `<%=` would wrongly emit the assignment value.
+    # Intentionally disabled (decision: 2026-06). Genuine swallowed-output would still be a code review
+    # catch. (Verified: every occurrence was an assignment, not standalone output.)
+    actionview-no-silent-helper:
+      enabled: false
+
+# Formatter — enabled so the Herb language server can format ERB on save in the editor.
+# CI does not format; `lint-on-edit` applies `herb lint --fix` on write.
+formatter:
+  enabled: true
+  indentWidth: 2
+  maxLineLength: 120   # Rails-friendly

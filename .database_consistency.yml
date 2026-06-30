@@ -1,0 +1,32 @@
+# database_consistency configuration.
+# Format: top-level model names disable per-model; `DatabaseConsistencyCheckers: <Name>: enabled: false`
+# disables a checker globally; Model -> column -> Checker nesting scopes a single finding.
+
+# Rails false positives (ActionText / ActiveStorage internal tables) — from the gem's rails_defaults.
+ActionText::RichText:
+  enabled: false
+ActiveStorage::Attachment:
+  enabled: false
+ActiveStorage::Blob:
+  enabled: false
+ActiveStorage::VariantRecord:
+  enabled: false
+
+DatabaseConsistencyCheckers:
+  # Legacy integer primary keys (and the integer FK columns that point at them) are intentional
+  # and documented (CLAUDE.md › Database & Migrations — "Legacy tables use integer primary keys,
+  # not bigint"). Converting them to bigint would require rewriting every PK + FK across the
+  # legacy schema, which is out of scope and high-risk. These two checkers are scoped out.
+  PrimaryKeyTypeChecker:
+    enabled: false
+  ForeignKeyTypeChecker:
+    enabled: false
+  # NOTE: the remaining schema-level checkers (ColumnPresenceChecker = NOT NULL,
+  # ForeignKeyChecker, MissingUniqueIndexChecker, ThreeStateBooleanChecker, and the index
+  # checkers) stay ENABLED but report findings that require data-aware backfill migrations on the
+  # legacy production database (adding NOT NULL / FKs / unique indexes to columns that may contain
+  # nulls or duplicates). strong_migrations correctly blocks those as unsafe, and they need a
+  # production data audit, so they are a documented follow-up project — see
+  # plans/off-topic-improvements.md — and database_consistency remains advisory (|| true) in hk.pkl
+  # / ci.yml until that work is done. LengthConstraintChecker IS satisfied (model length
+  # validations were added) and stays enforced.

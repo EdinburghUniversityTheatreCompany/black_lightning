@@ -6,18 +6,27 @@
 # == Schema Information
 #
 # Table name: admin_questions
+# Database name: primary
 #
-# *id*::                <tt>integer, not null, primary key</tt>
-# *question_text*::     <tt>text(65535)</tt>
-# *response_type*::     <tt>string(255)</tt>
-# *created_at*::        <tt>datetime, not null</tt>
-# *updated_at*::        <tt>datetime, not null</tt>
-# *questionable_id*::   <tt>integer</tt>
-# *questionable_type*:: <tt>string(255)</tt>
-#--
-# == Schema Information End
-#++
+#  id                :integer          not null, primary key
+#  question_text     :text(16777215)
+#  questionable_type :string(255)
+#  response_type     :string(255)
+#  created_at        :datetime         not null
+#  updated_at        :datetime         not null
+#  questionable_id   :integer
+#
+# Indexes
+#
+#  index_admin_questions_on_questionable_id                        (questionable_id)
+#  index_admin_questions_on_questionable_type                      (questionable_type)
+#  index_admin_questions_on_questionable_type_and_questionable_id  (questionable_type,questionable_id)
+#
 class Admin::Question < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :question_text, length: { maximum: 16777215 }
+  validates :response_type, length: { maximum: 255 }
+  validates :questionable_type, length: { maximum: 255 }
   validates :question_text, :response_type, presence: true
 
   belongs_to :questionable, polymorphic: true

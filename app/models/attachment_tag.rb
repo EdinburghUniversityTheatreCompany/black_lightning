@@ -1,16 +1,23 @@
 # == Schema Information
 #
 # Table name: attachment_tags
+# Database name: primary
 #
-# *id*::          <tt>bigint, not null, primary key</tt>
-# *name*::        <tt>string(255)</tt>
-# *description*:: <tt>text(65535)</tt>
-# *created_at*::  <tt>datetime, not null</tt>
-# *updated_at*::  <tt>datetime, not null</tt>
-#--
-# == Schema Information End
-#++
+#  id          :bigint           not null, primary key
+#  description :text(16777215)
+#  name        :string(255)
+#  ordering    :bigint
+#  created_at  :datetime         not null
+#  updated_at  :datetime         not null
+#
+# Indexes
+#
+#  index_attachment_tags_on_ordering  (ordering)
+#
 class AttachmentTag < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
   validates :name, :description, presence: true
   validates :name, uniqueness: { case_sensitive: false }
 

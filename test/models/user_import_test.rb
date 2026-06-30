@@ -96,7 +96,7 @@ class UserImportTest < ActiveSupport::TestCase
     import = UserImport.new("", input_type: :paste, import_mode: :user)
 
     assert_not import.valid?
-    assert import.rows.empty?
+    assert_empty import.rows
   end
 
   test "returns invalid with only header row" do
@@ -105,7 +105,7 @@ class UserImportTest < ActiveSupport::TestCase
     import = UserImport.new(tsv, input_type: :paste, import_mode: :user)
 
     assert_not import.valid?
-    assert import.rows.empty?
+    assert_empty import.rows
   end
 
   # Categorization tests
@@ -200,7 +200,7 @@ class UserImportTest < ActiveSupport::TestCase
     # Should match by student_id, not email
     assert_equal 1, import.categorized[:exact_match_id].size
     assert_equal user, import.categorized[:exact_match_id].first[:existing_user]
-    assert import.categorized[:exact_match_email].empty?
+    assert_empty import.categorized[:exact_match_email]
   end
 
   test "handles multiple rows with different categorizations" do

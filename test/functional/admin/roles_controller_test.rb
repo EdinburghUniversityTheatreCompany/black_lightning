@@ -207,7 +207,7 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     delete :purge, params: { id: role }
 
-    assert User.with_role(role.name).empty?
+    assert_empty User.with_role(role.name)
     assert role.persisted?
 
     assert_redirected_to admin_role_url(role)
@@ -335,12 +335,12 @@ class Admin::RolesControllerTest < ActionController::TestCase
 
     put :archive, params: { id: @role }
 
-    assert @role.users.empty?, "There are still users attached to the old role."
+    assert_empty @role.users, "There are still users attached to the old role."
     assert @role.persisted?
 
     new_role = Role.find_by(name: "#{@role.name} #{academic_year_shorthand}")
     assert new_role.present?
-    assert new_role.users.include?(user), "The user did not get moved to the new role."
+    assert_includes new_role.users, user, "The user did not get moved to the new role."
 
     assert_redirected_to admin_role_url(@role)
 

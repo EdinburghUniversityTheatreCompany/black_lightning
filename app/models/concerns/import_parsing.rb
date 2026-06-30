@@ -16,6 +16,29 @@ module ImportParsing
 
   private
 
+  # Build the categorized-rows result hash.
+  #
+  # Initializes one empty list per bucket (from the including class's BUCKETS),
+  # then routes each row through `determine_bucket`. Rows landing in
+  # `multi_match_bucket` carry a list of candidate users under `:existing_users`;
+  # all other rows carry a single `:existing_user`.
+  #
+  # The including class must define BUCKETS and `determine_bucket(row)`.
+  def build_categorized_result(multi_match_bucket:)
+    result = self.class::BUCKETS.index_with { |_| [] }
+
+    @rows.each_with_index do |row, index|
+      bucket, match, match_type = determine_bucket(row)
+      if bucket == multi_match_bucket
+        result[bucket] << { row: row, existing_users: match, index: index, match_type: match_type }
+      else
+        result[bucket] << { row: row, existing_user: match, index: index, match_type: match_type }
+      end
+    end
+
+    result
+  end
+
   def parse_data(data, input_type)
     case input_type
     when :paste

@@ -37,7 +37,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
 
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 1, start_time: start_time)
 
-    assert_equal false, staffing.reminder_job_executed, "Reminder job should not be executed yet"
+    refute staffing.reminder_job_executed, "Reminder job should not be executed yet"
     assert_not_nil staffing.scheduled_job_id, "Staffing should have a scheduled job ID"
   end
 
@@ -54,7 +54,7 @@ class Admin::StaffingTest < ActiveSupport::TestCase
   test "send_reminder with ActiveJob" do
     staffing = FactoryBot.create(:staffing, unstaffed_job_count: 5, start_time: DateTime.current.advance(days: 1))
 
-    assert_equal false, staffing.reload.reminder_job_executed, "Reminder job should not be executed initially"
+    refute staffing.reload.reminder_job_executed, "Reminder job should not be executed initially"
     user = FactoryBot.create(:user)
 
     staffing.staffing_jobs.first.update_attribute(:user, user)

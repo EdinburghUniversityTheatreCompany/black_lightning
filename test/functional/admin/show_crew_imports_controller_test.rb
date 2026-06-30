@@ -185,28 +185,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   test "confirm merges positions for existing team member" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-    team_member = @show.team_members.create!(user: user, position: "Producer")
-
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {
-        user.id.to_s => {
-          "user_id" => user.id,
-          "user_name" => user.name_or_email,
-          "current_position" => "Producer",
-          "new_position" => "Director",
-          "index" => 0
-        }
-      }
-    }, expires_in: 1.hour)
+    user, team_member, cache_key = setup_existing_team_member_cache
 
     post :confirm, params: { show_id: @show.slug, cache_key: cache_key, existing_actions: { user.id.to_s => "merge" } }
 
@@ -217,28 +196,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   test "confirm replaces position for existing team member" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-    team_member = @show.team_members.create!(user: user, position: "Producer")
-
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {
-        user.id.to_s => {
-          "user_id" => user.id,
-          "user_name" => user.name_or_email,
-          "current_position" => "Producer",
-          "new_position" => "Director",
-          "index" => 0
-        }
-      }
-    }, expires_in: 1.hour)
+    user, team_member, cache_key = setup_existing_team_member_cache
 
     post :confirm, params: { show_id: @show.slug, cache_key: cache_key, existing_actions: { user.id.to_s => "replace" } }
 
@@ -248,28 +206,7 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
   end
 
   test "confirm skips existing team member when action is skip" do
-    user = FactoryBot.create(:user, student_id: "s1234567")
-    team_member = @show.team_members.create!(user: user, position: "Producer")
-
-    cache_key = "crew_import_test_#{SecureRandom.uuid}"
-    Rails.cache.write(cache_key, {
-      "event_id" => @show.id,
-      "categorized" => {
-        "exact_match_id" => [],
-        "exact_match_email" => [],
-        "fuzzy_match" => [],
-        "create_new" => []
-      },
-      "existing_team_members" => {
-        user.id.to_s => {
-          "user_id" => user.id,
-          "user_name" => user.name_or_email,
-          "current_position" => "Producer",
-          "new_position" => "Director",
-          "index" => 0
-        }
-      }
-    }, expires_in: 1.hour)
+    user, team_member, cache_key = setup_existing_team_member_cache
 
     post :confirm, params: { show_id: @show.slug, cache_key: cache_key, existing_actions: { user.id.to_s => "skip" } }
 
@@ -345,5 +282,37 @@ class Admin::ShowCrewImportsControllerTest < ActionController::TestCase
     assert_equal "Director", @show.team_members.find_by(user_id: user2.id).position
     # user1 should NOT have been added
     assert_nil @show.team_members.find_by(user_id: user1.id)
+  end
+
+  private
+
+  # Create an existing team member (position "Producer") on @show and write a
+  # crew-import cache entry proposing a "Director" position for them.
+  # Returns [user, team_member, cache_key].
+  def setup_existing_team_member_cache
+    user = FactoryBot.create(:user, student_id: "s1234567")
+    team_member = @show.team_members.create!(user: user, position: "Producer")
+
+    cache_key = "crew_import_test_#{SecureRandom.uuid}"
+    Rails.cache.write(cache_key, {
+      "event_id" => @show.id,
+      "categorized" => {
+        "exact_match_id" => [],
+        "exact_match_email" => [],
+        "fuzzy_match" => [],
+        "create_new" => []
+      },
+      "existing_team_members" => {
+        user.id.to_s => {
+          "user_id" => user.id,
+          "user_name" => user.name_or_email,
+          "current_position" => "Producer",
+          "new_position" => "Director",
+          "index" => 0
+        }
+      }
+    }, expires_in: 1.hour)
+
+    [ user, team_member, cache_key ]
   end
 end

@@ -5,5 +5,8 @@
     div_class_additions: 'maintenance_attendance',
     fields: [
         { field: f.hidden_field(:id) + render('shared/form/user_field', f: f, wrapper: :inline_form) },
+        { field: f.input(:quantity, as: :integer, label: 'Credits', wrapper: :inline_form,
+            input_html: { value: f.object.quantity || 1, min: 1, max: MaintenanceSession::MAX_CREDITS_PER_ATTENDEE }),
+          col_modifier: 'auto' },
         { field: link_to_remove(f), col_modifier: 'auto' },
 ] %>
