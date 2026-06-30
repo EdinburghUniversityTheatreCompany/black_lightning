@@ -26,6 +26,10 @@
 #  index_admin_staffings_on_start_time  (start_time)
 #
 class Admin::Staffing < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :show_title, length: { maximum: 255 }
+  validates :slug, length: { maximum: 255 }
+  validates :scheduled_job_id, length: { maximum: 255 }
   validates :show_title, presence: true
   validates :start_time, :end_time, presence: true, on: [ :create, :update ]
 

@@ -31,6 +31,9 @@
 #  fk_rails_...  (opportunity_id => opportunities.id)
 #
 class OpportunityRole < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :position, length: { maximum: 255 }
+  validates :note, length: { maximum: 255 }
   belongs_to :opportunity, touch: true
   belongs_to :department, optional: true
 

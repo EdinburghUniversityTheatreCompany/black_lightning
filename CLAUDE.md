@@ -93,9 +93,13 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 - **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
   auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and
   skips cleanly when no dev/test DB is reachable, and never runs as a CI gate.
-- **Baselined gates (advisory for now — see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
-  `herb-lint`/`herb-analyze` and `database_consistency` run with `|| true` (large pre-existing
-  backlogs); `jscpd` threshold is set to 1.5% (current ~1.0%). Ratchet these down over time.
+- **Gate status (see [plans/off-topic-improvements.md](plans/off-topic-improvements.md)):**
+  `herb-lint` (ERB) and `jscpd` (duplication, threshold 0) are **gating** — their backlogs were
+  ratcheted to 0. `herb-analyze` stays advisory (`|| true`) only for the two HTML-email fragment
+  partials it can't parse standalone. `database_consistency` is still advisory: its length
+  validations are satisfied and the legacy integer-PK checkers are scoped in `.database_consistency.yml`,
+  but the remaining NOT-NULL / FK / unique-index findings need data-aware backfill migrations on the
+  legacy DB (a documented follow-up). Two herb rules are intentionally disabled in `.herb.yml`.
 - **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
   `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider migrating to fnox.
 

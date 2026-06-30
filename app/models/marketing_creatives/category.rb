@@ -15,6 +15,10 @@
 #  index_marketing_creatives_categories_on_url  (url)
 #
 class MarketingCreatives::Category < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :name_on_profile, length: { maximum: 255 }
+  validates :url, length: { maximum: 255 }
   validates :name, :url, :name_on_profile, presence: true, uniqueness: { case_sensitive: true }
 
   acts_as_url :name

@@ -25,6 +25,11 @@
 #  index_admin_editable_blocks_on_ordering  (ordering)
 #
 class Admin::EditableBlock < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :content, length: { maximum: 16777215 }
+  validates :group, length: { maximum: 255 }
+  validates :url, length: { maximum: 255 }
   include MdHelper
 
   resourcify

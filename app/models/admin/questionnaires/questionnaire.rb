@@ -17,6 +17,8 @@
 #  index_admin_questionnaires_questionnaires_on_event_id  (event_id)
 #
 class Admin::Questionnaires::Questionnaire < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
   validates :event, :name, presence: true
 
   belongs_to :event

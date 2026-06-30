@@ -21,6 +21,8 @@
 #  index_admin_proposals_calls_on_submission_deadline  (submission_deadline)
 #
 class Admin::Proposals::Call < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
   validates :submission_deadline, :editing_deadline, :name, presence: true
 
   has_paper_trail

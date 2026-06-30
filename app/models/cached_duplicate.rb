@@ -24,6 +24,8 @@
 #  fk_rails_...  (user2_id => users.id)
 #
 class CachedDuplicate < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :bucket_type, length: { maximum: 255 }
   belongs_to :user1, class_name: "User"
   belongs_to :user2, class_name: "User"
 

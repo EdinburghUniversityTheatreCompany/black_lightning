@@ -24,6 +24,14 @@
 #  updated_at         :datetime         not null
 #
 class Venue < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :tagline, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
+  validates :location, length: { maximum: 255 }
+  validates :image_file_name, length: { maximum: 255 }
+  validates :image_content_type, length: { maximum: 255 }
+  validates :address, length: { maximum: 16777215 }
   include FormattingHelper
 
   validates :name, :description, presence: true

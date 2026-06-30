@@ -28,6 +28,11 @@
 #  index_attachments_on_item_type_and_item_id  (item_type,item_id)
 #
 class Attachment < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :file_file_name, length: { maximum: 255 }
+  validates :file_content_type, length: { maximum: 255 }
+  validates :item_type, length: { maximum: 255 }
   include NameHelper
 
   belongs_to :item, polymorphic: true, optional: true

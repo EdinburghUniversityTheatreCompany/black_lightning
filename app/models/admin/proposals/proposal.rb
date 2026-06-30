@@ -22,6 +22,10 @@
 #  index_admin_proposals_proposals_on_status   (status)
 #
 class Admin::Proposals::Proposal < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :show_title, length: { maximum: 255 }
+  validates :publicity_text, length: { maximum: 16777215 }
+  validates :proposal_text, length: { maximum: 16777215 }
   has_paper_trail
 
   validates :show_title, :proposal_text, :publicity_text, :call_id, :status, presence: true

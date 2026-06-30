@@ -13,28 +13,36 @@ recorded for later. Each is optional.
   representations controller no longer references `MiniMagick::Error`); otherwise add ImageMagick
   to the Docker image so it actually works.
 
-## dev-env standard (v17) — gate baselines to ratchet down
+## dev-env standard (v17) — gate ratchet status
 
-The dev-env-setup (replacing overcommit with hk, 2026-06) introduced strict gates that surface
-pre-existing debt overcommit never checked. They were set to a **green baseline** so the setup is
-usable today; tighten each over time and remove the baseline marker when clean:
+The dev-env-setup (replacing overcommit with hk, 2026-06) introduced strict gates that surfaced
+pre-existing debt overcommit never checked. Ratchet status (the `ratchet-gates` work, 2026-06):
 
-- **herb (ERB lint + analyze) — currently ADVISORY (`|| true`) in `hk.pkl` + `ci.yml`.**
-  `herb lint app/` reports ~190 errors across ~91 files; `herb analyze app/` reports 8 files,
-  **including 2 genuine `<%= %>`-in-attribute-position SecurityErrors worth fixing first**:
-  `app/components/admin/sidebar_component.html.erb:60` and
-  `app/views/admin/users/_merge_modal.html.erb:72`. Work the backlog down (`herb lint app/ --fix`
-  handles the autocorrectable ones), then drop the `|| true` to re-gate. Noisiest rules:
-  `erb-no-instance-variables-in-partials` (165), `actionview-no-silent-helper` (75),
-  `erb-no-duplicate-branch-elements` (57) — can be disabled per-rule in `.herb.yml` if not wanted.
-- **jscpd duplication — threshold baselined at 1.5% in `.jscpd.json`** (current ~1.0%, 32 clones).
-  Blocks NEW duplication above the baseline. Refactor clones and ratchet toward the standard's `0`.
-  `npx skills add https://github.com/kucherenko/jscpd --skill dry-refactoring` can auto-fix clones.
-- **database_consistency — currently ADVISORY (`|| true`) in `hk.pkl` + `ci.yml`.** ~380 findings,
-  mostly the documented legacy integer-PK schema (`PrimaryKeyTypeChecker` 31, `LengthConstraintChecker`
-  144, `ColumnPresenceChecker` 101, missing FKs 22). Address via `strong_migrations`-guarded
-  migrations and/or a `.database_consistency.yml` to scope out intentional legacy choices, then
-  drop the `|| true`.
+- **herb (ERB lint) — DONE, now GATING.** The backlog was driven from ~190 errors to **0 errors /
+  0 warnings** and `herb-lint` no longer carries `|| true` in `hk.pkl` / `ci.yml`. Two over-broad
+  rules are intentionally disabled in `.herb.yml` with rationale (`erb-no-instance-variables-in-partials`
+  and `actionview-no-silent-helper` — the latter's 37 flags were all the codebase's
+  `fields = {...}` / `quick_actions << link_to` view-data pattern, not swallowed output). 8 reviewed-safe
+  `raw`/`html_safe` uses carry same-line `herb:disable`. `herb-analyze` stays advisory ONLY because the
+  two HTML-email fragment partials (`shared/mail/_header|_footer`) can't be parsed standalone (excluded
+  from herb-lint; `herb analyze` has no exclude flag). Real fixes included two `<%= %>`-in-attribute
+  SecurityErrors (sidebar_component, _merge_modal radios → `tag.*` helpers) and several parse bugs.
+- **jscpd duplication — DONE, now GATING at threshold 0.** Driven from 32 clones / 1.0% to **0 / 0.0%**.
+  `swalCustomTheme.scss` (CSS theme variants) and `bin/**` (generated binstubs) are excluded in
+  `.jscpd.json`; the real code clones were refactored (shared `import_parsing` concern, `build_ical_event`,
+  simple_form wrapper procs, `db/seeds/helpers.rb`, and `test/support/` helpers).
+- **database_consistency — PARTIALLY ratcheted, still ADVISORY (`|| true`).** Reduced from ~382 findings:
+  - **Done:** all 144 `LengthConstraintChecker` findings fixed with model `length: { maximum: N }`
+    validations; the legacy integer-PK checkers (`PrimaryKeyTypeChecker` 31 + `ForeignKeyTypeChecker` 17)
+    scoped out in `.database_consistency.yml` (documented — see CLAUDE.md › Database).
+  - **Deferred (the remaining ~170 findings — a real follow-up SCHEMA-MIGRATION project):**
+    `ColumnPresenceChecker` (101 → add NOT NULL), `ForeignKeyChecker` (22 → add FKs),
+    `MissingUniqueIndexChecker` (21), `ThreeStateBooleanChecker` (15 → NOT NULL boolean + default),
+    and the remaining index checkers. These require **data-aware backfill migrations on the legacy
+    production DB** (columns may contain nulls / duplicates), which `strong_migrations` correctly
+    blocks as unsafe and which need a production data audit. Do them as guarded multi-step migrations
+    (backfill → add constraint) once the data is verified; then drop the `|| true` to gate. Note the
+    legacy integer-PK FK columns also can't take a `t.references ... type: :integer` FK trivially.
 
 Note (RESOLVED): the standard's hk `test` step would run the **full `bin/rails test` suite on every
 commit** staging a `.rb` file (~minutes on this repo). It has been moved to the `check` hook only

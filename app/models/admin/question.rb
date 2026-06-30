@@ -23,6 +23,10 @@
 #  index_admin_questions_on_questionable_type_and_questionable_id  (questionable_type,questionable_id)
 #
 class Admin::Question < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :question_text, length: { maximum: 16777215 }
+  validates :response_type, length: { maximum: 255 }
+  validates :questionable_type, length: { maximum: 255 }
   validates :question_text, :response_type, presence: true
 
   belongs_to :questionable, polymorphic: true

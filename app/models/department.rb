@@ -23,6 +23,9 @@
 #  index_departments_on_name  (name) UNIQUE
 #
 class Department < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :match_terms, length: { maximum: 65535 }
   has_many :opportunity_roles, dependent: :nullify
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }

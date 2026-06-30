@@ -37,6 +37,17 @@
 #  fk_rails_...  (company_id => companies.id)
 #
 class Opportunity < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :title, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
+  validates :contact_email, length: { maximum: 255 }
+  validates :project, length: { maximum: 255 }
+  validates :author, length: { maximum: 255 }
+  validates :apply_url, length: { maximum: 255 }
+  validates :submitter_name, length: { maximum: 255 }
+  validates :submitter_email, length: { maximum: 255 }
+  validates :dates, length: { maximum: 255 }
+  validates :location, length: { maximum: 255 }
   # +website_url+ is a spam honeypot. +company_name+ is a virtual field on both the admin and public
   # forms: it is resolved to a Company (created if it doesn't exist) by a before_validation hook.
   attr_accessor :website_url

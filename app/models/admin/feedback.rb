@@ -17,6 +17,8 @@
 #  index_admin_feedbacks_on_show_id  (show_id)
 #
 class Admin::Feedback < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :body, length: { maximum: 16777215 }
   validates :show_id, :body, presence: true
   belongs_to :show, class_name: "Show"
 

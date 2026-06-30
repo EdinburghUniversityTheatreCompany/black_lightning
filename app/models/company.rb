@@ -25,6 +25,11 @@
 #  index_companies_on_slug  (slug) UNIQUE
 #
 class Company < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :slug, length: { maximum: 255 }
+  validates :website, length: { maximum: 255 }
+  validates :instagram, length: { maximum: 255 }
   has_many :opportunities, dependent: :nullify
   has_many :events, dependent: :nullify
 

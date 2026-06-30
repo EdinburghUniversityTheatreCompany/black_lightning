@@ -24,6 +24,9 @@
 #  index_admin_staffing_jobs_on_user_id           (user_id)
 #
 class Admin::StaffingJob < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :staffable_type, length: { maximum: 255 }
   validates :name, presence: true
 
   scope :pending_reminder, -> { where(reminder_sent_at: nil).where.not(user: nil) }

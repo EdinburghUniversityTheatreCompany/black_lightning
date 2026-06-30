@@ -13,6 +13,8 @@
 #  updated_at :datetime         not null
 #
 class Techie < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
   validates :name, presence: true, uniqueness: { case_sensitive: false }
   validates :entry_year, numericality: { greater_than: 1950, less_than_or_equal_to: ->(_) { Time.current.year + 1 } }, allow_nil: true
 

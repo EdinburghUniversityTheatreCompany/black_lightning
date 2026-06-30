@@ -10,6 +10,8 @@
 #  updated_at :datetime         not null
 #
 class MaintenanceSession < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
     # Upper bound on how many credits (attendances) a single person can be granted in one session.
     MAX_CREDITS_PER_ATTENDEE = 200
 

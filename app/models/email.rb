@@ -16,6 +16,9 @@
 #  index_emails_on_email_and_attached_object  (email,attached_object_id,attached_object_type) UNIQUE
 #
 class Email < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :email, length: { maximum: 255 }
+  validates :attached_object_type, length: { maximum: 255 }
   belongs_to :attached_object, polymorphic: true, optional: false
   validates :email, presence: true
 

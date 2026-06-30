@@ -10,6 +10,9 @@
 #  updated_at  :datetime         not null
 #
 class PictureTag < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :description, length: { maximum: 16777215 }
   validates :name, :description, presence: true
   validates :name, uniqueness: { case_sensitive: false }
 

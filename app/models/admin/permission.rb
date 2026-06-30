@@ -16,6 +16,9 @@
 #  updated_at    :datetime         not null
 #
 class Admin::Permission < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :action, length: { maximum: 255 }
+  validates :subject_class, length: { maximum: 255 }
   has_and_belongs_to_many :roles
 
   DISABLED_PERMISSIONS = %w[update create delete].freeze

@@ -54,6 +54,28 @@
 #  index_users_on_student_id            (student_id)
 #
 class User < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :email, length: { maximum: 255 }
+  validates :encrypted_password, length: { maximum: 255 }
+  validates :reset_password_token, length: { maximum: 255 }
+  validates :current_sign_in_ip, length: { maximum: 255 }
+  validates :last_sign_in_ip, length: { maximum: 255 }
+  validates :first_name, length: { maximum: 255 }
+  validates :last_name, length: { maximum: 255 }
+  validates :phone_number, length: { maximum: 255 }
+  validates :bio, length: { maximum: 16777215 }
+  validates :avatar_file_name, length: { maximum: 255 }
+  validates :avatar_content_type, length: { maximum: 255 }
+  validates :username, length: { maximum: 255 }
+  validates :remember_token, length: { maximum: 255 }
+  validates :student_id, length: { maximum: 255 }
+  validates :associate_id, length: { maximum: 255 }
+  validates :calendar_token, length: { maximum: 255 }
+  validates :calendar_email, length: { maximum: 255 }
+  validates :google_access_token, length: { maximum: 65535 }
+  validates :google_refresh_token, length: { maximum: 65535 }
+  validates :google_calendar_id, length: { maximum: 255 }
+  validates :profile_completion_salt, length: { maximum: 255 }
   before_save :unify_numbers
   before_save :ensure_calendar_token
   before_save :ensure_profile_completion_salt

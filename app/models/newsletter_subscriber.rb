@@ -20,6 +20,8 @@
 #  index_newsletter_subscribers_on_email  (email) UNIQUE
 #
 class NewsletterSubscriber < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :email, length: { maximum: 255 }
   validates :email, presence: true
 
   normalizes :email, with: ->(email) { email&.downcase&.strip }

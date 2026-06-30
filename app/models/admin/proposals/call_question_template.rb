@@ -12,6 +12,8 @@
 #  updated_at :datetime         not null
 #
 class Admin::Proposals::CallQuestionTemplate < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
   include ApplicationHelper
 
   validates :name, presence: true, uniqueness: { case_sensitive: false }

@@ -23,6 +23,11 @@
 #  fk_rails_...  (user_id => users.id)
 #
 class MarketingCreatives::Profile < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :name, length: { maximum: 255 }
+  validates :url, length: { maximum: 255 }
+  validates :about, length: { maximum: 16777215 }
+  validates :contact, length: { maximum: 16777215 }
   validates :name, :about, :contact, :url, presence: true
   validates :user, :name, :url, uniqueness: { case_sensitive: true }, allow_nil: true
 

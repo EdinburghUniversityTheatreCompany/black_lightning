@@ -23,6 +23,12 @@
 #  index_reviews_on_event_id  (event_id)
 #
 class Review < ApplicationRecord
+  # Length validations enforcing database column limits
+  validates :reviewer, length: { maximum: 255 }
+  validates :body, length: { maximum: 16777215 }
+  validates :organisation, length: { maximum: 255 }
+  validates :title, length: { maximum: 255 }
+  validates :url, length: { maximum: 255 }
   validates :body, :reviewer, :review_date, :title, presence: true
   validates :rating, numericality: { greater_than: 0, allow_blank: true }
 
