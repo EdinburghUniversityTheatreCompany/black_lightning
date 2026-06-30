@@ -218,6 +218,31 @@ jobs:
       - name: Scan git history for secrets
         run: mise exec -- gitleaks git --redact --no-banner .
 
+  # GitHub Actions static analysis: actionlint (correctness — schema/expressions) +
+  # zizmor (security — credential persistence, template injection, token scope). Mirrors the hk
+  # actionlint/zizmor steps. Both tools are mise-pinned (mise.lock).
+  actions-lint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+
+      - name: Lint workflows (actionlint)
+        # -shellcheck= disables actionlint's shellcheck-of-run: pass (run: blocks word-split
+        # deliberately; real *.sh files are covered by other checks).
+        run: actionlint -shellcheck=
+
+      - name: Scan workflows with zizmor
+        run: zizmor --no-progress .github/workflows/
+
   # Noisier audits — mirror the hk `check` hook (debride, flay, fasterer, jscpd, large files).
   audit:
     runs-on: ubuntu-latest

@@ -4,6 +4,8 @@ node = "24.13.0"  # matches .node-version; provides npx for jscpd + `herb lint` 
 hk = "latest"
 pkl = "latest"
 gitleaks = "latest"
+zizmor = "latest"       # GitHub Actions security static analysis (hk `zizmor` step + CI)
+actionlint = "latest"   # GitHub Actions workflow linter — syntax/expressions (hk `actionlint` step + CI)
 # jscpd is NOT a mise tool — it's a Rust binary shipped via npm optional platform packages that
 # npx resolves but the mise npm backend does not. `herb lint` likewise delegates to
 # npx @herb-tools/linter (version pinned to the herb gem). flay + debride + herb + brakeman +
@@ -24,4 +26,4 @@ minimum_release_age = "4d"
 [env]
 # dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
 # hand-edit — bump it by running the skill's upgrade path.
-DEV_ENV_VERSION = "17"
+DEV_ENV_VERSION = "18"

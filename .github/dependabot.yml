@@ -9,12 +9,21 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    # Supply-chain cooldown so Dependabot doesn't PR a freshly-published release (same idea as
+    # the Bundler/npm cooldowns + mise minimum_release_age). 7 days: zizmor's dependabot-cooldown
+    # audit treats anything under a week as insufficient.
+    cooldown:
+      default-days: 7
   - package-ecosystem: "npm" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: daily
     open-pull-requests-limit: 10
+    cooldown:
+      default-days: 7

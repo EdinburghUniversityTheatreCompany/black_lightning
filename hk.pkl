@@ -117,6 +117,14 @@ local linters = new Mapping<String, Step> {
         glob = List("db/schema.rb", "db/structure.sql", "app/models/**/*.rb")
         check = "if bin/rails runner \"ActiveRecord::Base.connection\" >/dev/null 2>&1; then bundle exec database_consistency || true; else echo 'database_consistency: no DB reachable, skipping'; fi"
     }
+    // GitHub Actions correctness (schema/typo/expression errors). hk builtin, glob-gated to
+    // workflow files. -shellcheck= turns off actionlint's shellcheck-of-run: pass — the standard's
+    // run: blocks deliberately word-split ($files), and real *.sh files are covered elsewhere.
+    ["actionlint"] = (Builtins.actionlint) {
+        check = "actionlint -shellcheck= {{ files }}"
+    }
+    // GitHub Actions security (credential persistence, template injection, token scope). hk builtin.
+    ["zizmor"] = Builtins.zizmor
     // Secret scanning (defense-in-depth alongside fnox). hk builtin.
     ["gitleaks"] = Builtins.gitleaks
     // Block accidentally-committed large files. hk builtin.
