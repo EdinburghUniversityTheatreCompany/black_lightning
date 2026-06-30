@@ -1,14 +1,42 @@
-FROM ruby:4.0.2
+# syntax=docker/dockerfile:1
+# Development container for BlackLightning.
+#
+# mise (mise.toml + mise.lock at the repo root) is the SINGLE SOURCE OF TRUTH for the
+# toolchain: Ruby, Node, and the hk / pkl / gitleaks / zizmor / actionlint dev tools.
+# This image therefore installs ONLY mise plus the OS libraries needed to *build* and
+# *run* that toolchain — it pins no language versions itself. The actual tools are
+# installed by `mise install` in setup.sh (postCreateCommand), where the bind-mounted
+# mise.toml/mise.lock are available, so the container always matches the checked-out
+# versions. Do NOT add `apt-get install nodejs` or a `ruby:x.y` base back here — that
+# reintroduces the drift this setup exists to remove. To change a tool version, edit
+# mise.toml.
+FROM debian:bookworm-slim
 
-# Install system dependencies
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y \
+# System packages, in three groups:
+#  - core dev/devcontainer tooling (git, curl, sudo, ca-certificates, gnupg, extrepo)
+#  - ruby-build's compile dependencies (mise builds Ruby from source via ruby-build)
+#  - the app's native dependencies + MySQL client (libmariadb, libvips, mysql client)
+RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y -o Acquire::Retries=3 \
       build-essential \
-      git \
+      ca-certificates \
       curl \
+      git \
+      gnupg \
       sudo \
-      libmariadb-dev-compat \
+      extrepo \
+      autoconf \
+      libssl-dev \
+      zlib1g-dev \
+      libreadline-dev \
       libyaml-dev \
+      libffi-dev \
+      libgdbm-dev \
+      libncurses-dev \
+      libgmp-dev \
+      uuid-dev \
+      libmariadb-dev-compat \
       pkg-config \
       default-mysql-client \
       libvips \
@@ -16,20 +44,37 @@ RUN apt-get update -qq && \
       tzdata && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 22
-ARG NODE_VERSION=22
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs && \
+# Install mise from its official apt repository instead of `curl | sh`. Debian's
+# `extrepo` enables the curated mise repo and verifies its metadata against keys
+# shipped in extrepo-data, so the mise package is installed GPG-verified via apt —
+# in line with this repo's supply-chain posture (gitleaks, pinned/checksummed deps).
+RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
+    extrepo enable mise && \
+    apt-get update -qq && \
+    apt-get install --no-install-recommends -y -o Acquire::Retries=3 mise && \
     rm -rf /var/lib/apt/lists/*
 
-# Install pnpm
-RUN npm install -g pnpm
-
-# Create non-root user with passwordless sudo (standard devcontainer pattern)
+# Create non-root user with passwordless sudo (standard devcontainer pattern).
 # Container runs as root so volume mounts are writable; remoteUser in
 # devcontainer.json switches the developer shell to vscode.
 RUN groupadd --gid 1000 vscode && \
     useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode && \
     echo "vscode ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/vscode
+
+USER vscode
+
+# The mise toolchain lives under MISE_DATA_DIR, which compose mounts as a named
+# volume so `mise install` (incl. the one-time Ruby compile) is cached across
+# container rebuilds. Put the shims on PATH for non-interactive commands (VS Code
+# tasks) and activate mise in interactive shells.
+ENV MISE_DATA_DIR=/home/vscode/.local/share/mise
+ENV PATH=${MISE_DATA_DIR}/shims:${PATH}
+# Pre-create the mise data + state dirs as the vscode user *before* the volume mounts.
+# The compose `mise-data` volume mounts at MISE_DATA_DIR; creating its parents here
+# (owned by vscode) means (a) a fresh volume initialises with vscode ownership and
+# (b) mounting it does not leave ~/.local owned by root — which would block mise from
+# writing ~/.local/state/mise (its trusted-configs live there).
+RUN mkdir -p "${MISE_DATA_DIR}" /home/vscode/.local/state/mise && \
+    echo 'eval "$(mise activate bash)"' >> /home/vscode/.bashrc
 
 WORKDIR /workspaces/BlackLightning

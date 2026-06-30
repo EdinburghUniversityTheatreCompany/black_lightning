@@ -103,6 +103,14 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
   legacy DB (a documented follow-up). Two herb rules are intentionally disabled in `.herb.yml`.
 - **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
   `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider migrating to fnox.
+- **The dev container is mise-driven — keep it in sync.** [.devcontainer/Dockerfile.dev](.devcontainer/Dockerfile.dev)
+  installs *only* the `mise` binary plus OS build/runtime libs; `mise.toml`/`mise.lock` are the single
+  source of truth for Ruby, Node, and the dev tools, installed by `mise install` in
+  [.devcontainer/setup.sh](.devcontainer/setup.sh). **Never** pin a language version in the devcontainer
+  (no `ruby:x.y` base, no `apt-get install nodejs`) — that reintroduces drift. When you change the
+  toolchain (a new mise tool, a Ruby/Node bump) or the dev-env standard (`DEV_ENV_VERSION`), check
+  whether the devcontainer needs a matching change: new native build deps go in `Dockerfile.dev`, new
+  bootstrap steps go in `setup.sh`. The mise toolchain is cached on the `mise-data` compose volume.
 
 ## Dev Server
 

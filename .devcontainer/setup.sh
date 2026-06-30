@@ -1,14 +1,28 @@
 #!/bin/sh
 set -e
 
-echo "=== Fixing bundle cache permissions ==="
-sudo chown -R "$(whoami)" /bundle
+# Named volumes mount owned by root; hand them to the vscode user before use.
+echo "=== Fixing cache permissions ==="
+sudo chown -R "$(whoami)" /bundle "$MISE_DATA_DIR"
+
+# mise (mise.toml + mise.lock) owns the toolchain. Trust the bind-mounted config,
+# then install the pinned Ruby, Node, and dev tools. The first run compiles Ruby
+# from source (~minutes); it is cached on the mise-data volume for later rebuilds.
+echo "=== Installing toolchain via mise (Ruby, Node, hk, ...) ==="
+mise trust --yes
+mise install
+# pnpm is intentionally NOT a mise tool (see mise.toml); install it into mise's Node.
+mise exec -- npm install -g pnpm
+mise reshim
+
+echo "=== Installing git hooks (hk) ==="
+mise exec -- hk install
 
 echo "=== Installing gems ==="
-bundle install
+mise exec -- bundle install
 
 echo "=== Installing JS packages ==="
-pnpm install
+mise exec -- pnpm install
 
 echo "=== Waiting for MySQL to be ready ==="
 until mysql -h "$DB_HOST" -u "$DB_USERNAME" -p"$DB_PASSWORD" --skip-ssl -e "SELECT 1" >/dev/null 2>&1; do
@@ -23,15 +37,15 @@ DB_EXISTS=$(mysql -h "$DB_HOST" -u "$DB_USERNAME" -p"$DB_PASSWORD" --skip-ssl \
 
 if [ "$DB_EXISTS" -gt 0 ]; then
   echo "=== Database exists, running migrations ==="
-  bin/rails db:migrate
+  mise exec -- bin/rails db:migrate
 elif [ -f .devcontainer/dump.sql.gz ] && [ "$(zcat .devcontainer/dump.sql.gz | wc -c)" -gt 0 ]; then
   echo "=== Importing database dump ==="
   zcat .devcontainer/dump.sql.gz | mysql -h "$DB_HOST" -u "$DB_USERNAME" -p"$DB_PASSWORD" --skip-ssl
-  bin/rails db:migrate
+  mise exec -- bin/rails db:migrate
   echo "  Import complete."
 else
   echo "=== Setting up fresh database ==="
-  bin/rails db:prepare
+  mise exec -- bin/rails db:prepare
 fi
 
 echo "=== Done! Run 'bin/dev' to start the server ==="

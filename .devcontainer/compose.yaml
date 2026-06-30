@@ -6,6 +6,9 @@ services:
     volumes:
       - ..:/workspaces/BlackLightning:cached
       - bundle-cache:/bundle
+      # Persist the mise toolchain (Ruby/Node/hk/...) across rebuilds so the one-time
+      # Ruby compile in `mise install` is not repeated. Path matches MISE_DATA_DIR.
+      - mise-data:/home/vscode/.local/share/mise
     command: sleep infinity
     environment:
       BUNDLE_PATH: /bundle/vendor
@@ -31,3 +34,4 @@ services:
 volumes:
   mysql-data:
   bundle-cache:
+  mise-data:
