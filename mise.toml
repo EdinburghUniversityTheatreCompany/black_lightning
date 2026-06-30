@@ -11,6 +11,9 @@ actionlint = "latest"   # GitHub Actions workflow linter — syntax/expressions 
 # npx @herb-tools/linter (version pinned to the herb gem). flay + debride + herb + brakeman +
 # bundler-audit + fasterer + database_consistency are Gemfile dev-group gems; strong_migrations
 # is a runtime gem.
+# pnpm is NOT a mise tool either — it's pinned via the `packageManager` field in package.json and
+# provided by corepack (enabled by the postinstall hook below). That one pin is read by corepack
+# (host + dev container) AND by pnpm/action-setup in CI, so all three stay on the same pnpm.
 
 [settings]
 # Maintain mise.lock (resolved versions + per-platform checksums) on every install.
@@ -22,6 +25,14 @@ lockfile = true
 # supply-chain window as the Bundler/uv/npm dependency cooldowns. `mise install` is unaffected
 # (it always reproduces the locked version from mise.lock).
 minimum_release_age = "4d"
+# Required for [hooks] (the corepack postinstall hook below).
+experimental = true
+
+[hooks]
+# Enable corepack after `mise install` so the pnpm version pinned in package.json's
+# `packageManager` field is available (corepack downloads + verifies it on first use).
+# Keeps pnpm in lockstep across host, dev container, and CI without making it a mise tool.
+postinstall = "corepack enable"
 
 [env]
 # dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not

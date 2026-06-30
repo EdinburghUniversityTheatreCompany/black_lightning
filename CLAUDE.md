@@ -4,7 +4,12 @@
 ## Packages
 Ruby on Rails 8.1 
 
-Use pnpm for package management rather than npm, yarn, or bun.
+Use pnpm for package management rather than npm, yarn, or bun. The pnpm version is pinned in
+`package.json`'s `packageManager` field (the single source of truth) and provided by **corepack**:
+the dev container and host enable it via the `corepack enable` mise `postinstall` hook (`mise.toml`,
+requires `experimental = true`), and CI's `pnpm/action-setup` reads the same field (no `version:`
+pin). To bump pnpm, run `corepack use pnpm@<version>` (it rewrites `packageManager` with a fresh
+integrity hash) — do not hand-edit the hash.
 
 We use minitest for testing.
 

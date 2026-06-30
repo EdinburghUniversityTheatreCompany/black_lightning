@@ -10,10 +10,9 @@ sudo chown -R "$(whoami)" /bundle "$MISE_DATA_DIR"
 # from source (~minutes); it is cached on the mise-data volume for later rebuilds.
 echo "=== Installing toolchain via mise (Ruby, Node, hk, ...) ==="
 mise trust --yes
+# `mise install` also runs the corepack-enable postinstall hook (see mise.toml), which makes
+# the pnpm version pinned in package.json's `packageManager` field available via corepack.
 mise install
-# pnpm is intentionally NOT a mise tool (see mise.toml); install it into mise's Node.
-mise exec -- npm install -g pnpm
-mise reshim
 
 echo "=== Installing git hooks (hk) ==="
 mise exec -- hk install
