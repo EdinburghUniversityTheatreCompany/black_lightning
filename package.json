@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@fancyapps/ui": "^6.1.14",
-    "@fortawesome/fontawesome-free": "7.2.0",
+    "@fortawesome/fontawesome-free": "7.3.0",
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/turbo-rails": "^8.0.23",
     "@milkdown/core": "^7.21.2",
@@ -31,7 +31,7 @@
     "sweetalert2": "^11.26.25",
     "tailwindcss": "^4.3.1",
     "tom-select": "^2.6.1",
-    "vite": "^8.0.16",
+    "vite": "^8.1.0",
     "vite-plugin-ruby": "^5.2.2"
   },
   "scripts": {
@@ -52,7 +52,7 @@
     "@eslint/js": "^10.0.1",
     "eslint": "^10.5.0",
     "eslint-formatter-compact": "^9.0.1",
-    "globals": "^17.6.0",
+    "globals": "^17.7.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "stimulus-vite-helpers": "^3.1.0"
   }
