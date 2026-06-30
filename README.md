@@ -6,6 +6,8 @@ It got a big upgrade in the summer of 2020 to Rails 6 and some useful features g
 
 In 2022 Alex Mohan Morzeria-Davidovitch and Mick Zijdel redesigned the website, making it more responsive and modern. A great many features were also polished over this time, and acts almost as a Version 2 of the website. It was also upgraded to Rails 7 and Node 16 during this time.
 
+The website currently uses Vite, Node, Tailwind v4
+
 If you would like to get involved in editing/running the Bedlam website, please contact the EUTC's IT Subcommittee (it@bedlamtheatre.co.uk). You can find a guide at https://wiki.bedlamtheatre.co.uk/en/docs/it/website/development.
 
 ## Tech stack
