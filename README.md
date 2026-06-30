@@ -20,7 +20,7 @@ Current key versions (kept in sync with the manifests — `Gemfile.lock`, `packa
 | Auth | Devise | 5.0 |
 | Components | ViewComponent | 4.12 |
 | Hotwire | Turbo | 8.0 |
-| JS bundler | Vite (`vite_rails`) | 8.0 / 3.11 |
+| JS bundler | Vite (`vite_rails`) | 8.1 / 3.11 |
 | JS runtime | Node | 24.13.0 |
 | JS sprinkles | Stimulus | 3.2 |
 | CSS | Tailwind | v4 |
