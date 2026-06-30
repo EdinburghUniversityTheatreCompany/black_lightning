@@ -8,7 +8,9 @@
   def default_selection(target_value, source_value)
     prefer_source = (target_value.blank? && source_value.present?) ||
                     (target_value.present? && target_value == source_value)
-    selection = [:target, :source][prefer_source ? 1 : 0]
+    # Assigned to a local (rather than returned bare) so herb's erb-no-unused-literals rule —
+    # which can't tell a bare symbol literal is this inline-ERB def's return value — sees it used.
+    selection = prefer_source ? :source : :target
     selection
   end
 
