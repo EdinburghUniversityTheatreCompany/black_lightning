@@ -4,7 +4,8 @@
     {
       "label": "Start MySQL (docker)",
       "type": "shell",
-      "command": "docker start mysql8",
+      "//": "Host-only: starts the local `mysql8` container. In a devcontainer MySQL runs as the compose `mysql` service (started automatically via depends_on), and there is no docker CLI in the container — so skip there instead of erroring.",
+      "command": "if [ -n \"$REMOTE_CONTAINERS$CODESPACES\" ] || ! command -v docker >/dev/null 2>&1; then echo 'Devcontainer: MySQL runs as the compose service (no action needed).'; else docker start mysql8; fi",
       "presentation": { "reveal": "silent", "panel": "shared", "close": true },
       "problemMatcher": []
     },
