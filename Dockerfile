@@ -50,9 +50,11 @@ RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
       curl && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* /tmp/* /var/tmp/*
 
-# Install Node.js for Vite asset bundling
-ARG NODE_VERSION=22
-RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
+# Install Node.js for Vite asset bundling. The major version is read from
+# .node-version — the single source of truth shared with mise.toml and the dev
+# container — so production can't drift from the Node version developers and CI run.
+COPY .node-version ./
+RUN curl -fsSL "https://deb.nodesource.com/setup_$(cut -d. -f1 < .node-version).x" | bash - && \
     apt-get install -y nodejs
 
 # Install application gems (persist directly in image layer so runtime

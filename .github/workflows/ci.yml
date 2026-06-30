@@ -111,6 +111,38 @@ jobs:
       - name: Lint JavaScript code for consistent style
         run: pnpm lint
 
+  # Guard against toolchain drift: Ruby/Node are pinned in several places (mise.toml is the
+  # source of truth; .ruby-version/.node-version feed CI + setup-ruby/-node; the prod Dockerfile
+  # bakes them into the image). This is the bug that let the prod image ship Node 22 while
+  # everything else ran 24 — fail CI if they ever diverge again. CI-only meta-check (no hk mirror).
+  versions:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Toolchain versions are consistent
+        run: |
+          fail=0
+          ruby_file=$(tr -d '[:space:]' < .ruby-version)
+          node_file=$(tr -d '[:space:]' < .node-version)
+          ruby_mise=$(sed -n 's/^ruby[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)
+          node_mise=$(sed -n 's/^node[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)
+          ruby_docker=$(sed -n 's/^ARG RUBY_VERSION=//p' Dockerfile | tr -d '[:space:]')
+          echo "ruby -> .ruby-version=$ruby_file mise.toml=$ruby_mise Dockerfile=$ruby_docker"
+          echo "node -> .node-version=$node_file mise.toml=$node_mise (Dockerfile derives major)"
+          [ "$ruby_file" = "$ruby_mise" ] || { echo "::error::mise.toml ruby ($ruby_mise) != .ruby-version ($ruby_file)"; fail=1; }
+          [ "$ruby_file" = "$ruby_docker" ] || { echo "::error::Dockerfile ARG RUBY_VERSION ($ruby_docker) != .ruby-version ($ruby_file)"; fail=1; }
+          [ "$node_file" = "$node_mise" ] || { echo "::error::mise.toml node ($node_mise) != .node-version ($node_file)"; fail=1; }
+          grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo "::error::prod Dockerfile must derive the Node major from .node-version, not hardcode it"; fail=1; }
+          ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo "::error::remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version"; fail=1; }
+          exit $fail
+
   test:
     runs-on: ubuntu-latest
     permissions:
