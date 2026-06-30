@@ -10,7 +10,13 @@
 # versions. Do NOT add `apt-get install nodejs` or a `ruby:x.y` base back here — that
 # reintroduces the drift this setup exists to remove. To change a tool version, edit
 # mise.toml.
-FROM debian:bookworm-slim
+#
+# Base: debian:trixie-slim — the SAME Debian release the production `ruby:4.0.2-slim`
+# image is built on (Debian 13 / glibc 2.41). Keeping the dev base in lockstep with
+# prod's glibc means native gems compiled in the persistent /bundle volume load in
+# both; a mismatch (e.g. bookworm's glibc 2.36) makes prod-built *.so files fail with
+# "GLIBC_2.xx not found". If you bump the Ruby image's Debian release, bump this too.
+FROM debian:trixie-slim
 
 # System packages, in three groups:
 #  - core dev/devcontainer tooling (git, curl, sudo, ca-certificates, gnupg, extrepo)
