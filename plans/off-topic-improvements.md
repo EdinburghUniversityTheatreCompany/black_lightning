@@ -28,3 +28,14 @@ what remains (~170 findings) is a real **schema-migration project**:
   production data audit. Do them as guarded multi-step migrations (backfill → add constraint) once
   the data is verified, then drop the `|| true` to make the gate enforce. Note the legacy
   integer-PK FK columns can't take a `t.references ... type: :integer` FK trivially.
+
+## Production Dockerfile is not mise-driven
+
+- The dev container now installs the mise-pinned toolchain (`mise.toml`/`mise.lock` as single
+  source of truth). The **production** [Dockerfile](Dockerfile) still hard-codes Node via
+  nodesource (`ARG NODE_VERSION=22`) and Ruby via the `ruby:4.0.2-slim` base — so prod can drift
+  from `.node-version` (24.13.0) / `mise.toml` just like the dev container did. Consider making
+  the prod build mise-driven too (or at least bumping `NODE_VERSION` to match and adding a check),
+  so all three environments (host, dev container, prod) share one pinned Node/Ruby.
+- Consider upstreaming devcontainer-mise support into the `dev-hooks:dev-env-setup` skill: it
+  already standardises mise + hk + CI, but doesn't yet template a mise-driven `.devcontainer/`.
