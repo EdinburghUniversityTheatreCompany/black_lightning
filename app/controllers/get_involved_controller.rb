@@ -16,7 +16,18 @@ class GetInvolvedController < ApplicationController
 
     respond_to do |format|
       format.html
-      format.turbo_stream
+      # Only genuine live-search fetches (from live_search_controller) should get the
+      # #index-results fragment — they always carry q[...] params. A Turbo form-submission redirect
+      # (e.g. after #create) follows the 302 with the same turbo_stream Accept header but no q
+      # params; answering it with the fragment would silently do nothing on the form page (which has
+      # no #index-results element), so serve the full HTML page and let the flash + navigation show.
+      format.turbo_stream do
+        if params[:q].present?
+          render
+        else
+          render :opportunities, formats: :html, content_type: "text/html"
+        end
+      end
     end
   end
 
