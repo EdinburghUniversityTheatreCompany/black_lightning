@@ -3,8 +3,9 @@
 #
 # mise (mise.toml + mise.lock at the repo root) is the SINGLE SOURCE OF TRUTH for the
 # toolchain: Ruby, Node, and the hk / pkl / gitleaks / zizmor / actionlint dev tools.
-# This image therefore installs ONLY mise plus the OS libraries needed to *build* and
-# *run* that toolchain — it pins no language versions itself. The actual tools are
+# This image therefore installs ONLY mise plus the OS libraries needed to *run* the
+# toolchain and to *compile the app's native gems* — it pins no language versions
+# itself. The actual tools are
 # installed by `mise install` in setup.sh (postCreateCommand), where the bind-mounted
 # mise.toml/mise.lock are available, so the container always matches the checked-out
 # versions. Do NOT add `apt-get install nodejs` or a `ruby:x.y` base back here — that
@@ -20,7 +21,9 @@ FROM debian:trixie-slim
 
 # System packages, in three groups:
 #  - core dev/devcontainer tooling (git, curl, sudo, ca-certificates, gnupg, extrepo)
-#  - ruby-build's compile dependencies (mise builds Ruby from source via ruby-build)
+#  - C toolchain + headers for compiling the app's native gems (bcrypt, mysql2, nio4r,
+#    puma, …). Ruby itself is now a precompiled portable build (mise `compile = false`,
+#    jdx/ruby — see mise.toml), so these are NO longer needed to build Ruby, only gems.
 #  - the app's native dependencies + MySQL client (libmariadb, libvips, mysql client)
 RUN --mount=type=cache,id=apt-cache-dev,target=/var/cache/apt,sharing=locked \
     apt-get update -qq && \
@@ -70,8 +73,8 @@ RUN groupadd --gid 1000 vscode && \
 USER vscode
 
 # The mise toolchain lives under MISE_DATA_DIR, which compose mounts as a named
-# volume so `mise install` (incl. the one-time Ruby compile) is cached across
-# container rebuilds. Put the shims on PATH for non-interactive commands (VS Code
+# volume so `mise install` (the precompiled-Ruby download + Node + dev tools) is
+# cached across container rebuilds. Put the shims on PATH for non-interactive commands (VS Code
 # tasks) and activate mise in interactive shells.
 ENV MISE_DATA_DIR=/home/vscode/.local/share/mise
 ENV PATH=${MISE_DATA_DIR}/shims:${PATH}
