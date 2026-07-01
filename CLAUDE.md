@@ -90,6 +90,17 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 (`.overcommit.yml` and the `overcommit` gem are gone). After pulling these changes, run
 `mise install && hk install` once to swap the git hooks over.
 
+- **Ruby is installed precompiled, not built from source.** `mise.toml` pins
+  `ruby = { version = "…", compile = false }`, so mise downloads a precompiled portable Ruby from
+  **jdx/ruby** (its default provider) instead of compiling via ruby-build — a ~12s download vs
+  minutes. jdx/ruby's Linux builds run in manylinux2014 containers (glibc 2.17 floor) and bundle
+  their own OpenSSL/libyaml/libffi, so the binary is portable across glibc ≥ 2.17 (the Debian-trixie
+  devcontainer + CI are fine) and needs no build toolchain *for Ruby*. `compile = false` is set
+  explicitly so a contributor's global mise `compile` default can't flip `mise.lock`. The devcontainer
+  still ships a C toolchain + headers because the app's **native gems** (bcrypt, mysql2, nio4r, puma, …)
+  are compiled by `bundle install`. Only `linux-x64`, `linux-arm64`, and `macos-arm64` have jdx/ruby
+  builds; `macos-x64` (Intel Mac) falls back to a source compile.
+
 - **Run all checks** (what CI mirrors): `hk run check`. Autofix: `hk run fix`.
 - **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint` (Stimulus JS), `herb` (ERB),
   `annotate-models` (see below), `brakeman`, `bundler-audit`, `fasterer`, `database_consistency`,
