@@ -1,5 +1,11 @@
 [tools]
-ruby = "4.0.2"
+# `compile = false` installs a precompiled portable Ruby from jdx/ruby (mise's default
+# precompiled provider) instead of building from source via ruby-build. The jdx/ruby Linux
+# builds run in manylinux2014 containers (glibc 2.17 floor) and bundle their own OpenSSL +
+# libyaml + libffi, so the binary is portable across glibc >= 2.17 and needs no build
+# toolchain — the devcontainer therefore ships no build-essential/libssl-dev/libyaml-dev.
+# Set explicitly so a contributor's global mise `compile` default can't flip mise.lock.
+ruby = { version = "4.0.2", compile = false }
 node = "24.13.0"  # matches .node-version; provides npx for jscpd + `herb lint` (both npm-distributed)
 hk = "latest"
 pkl = "latest"
