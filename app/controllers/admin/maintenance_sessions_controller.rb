@@ -9,7 +9,7 @@ class Admin::MaintenanceSessionsController < AdminController
 
     # A user attends (earns a credit) once per attendance, so dedupe for display and show the count.
     @users = @q.result.accessible_by(current_ability).order_by_last_name_first.distinct
-    @credit_counts = @maintenance_session.maintenance_attendances.group(:user_id).count
+    @credit_counts = @maintenance_session.maintenance_credits.group(:user_id).count
 
     super
   end
@@ -24,7 +24,7 @@ class Admin::MaintenanceSessionsController < AdminController
   def permitted_params
     # Make sure that references have _id appended to the end of them.
     # Check existing controllers for inspiration.
-    [ :date, :name, maintenance_attendances_attributes: [ :id, :_destroy, :user, :user_id, :quantity ] ]
+    [ :date, :name, maintenance_credits_attributes: [ :id, :_destroy, :user, :user_id, :quantity ] ]
   end
 
   def order_args

@@ -5,6 +5,6 @@
     <%= f.input :name %>
     <%= f.input :date %>
 
-    <%= render('shared/form/sections/nested_fields', f: f, association_name: :maintenance_attendances, partial_name: 'maintenance_attendance_fields', collection: @maintenance_session.attendees_for_form) %>
+    <%= render('shared/form/sections/nested_fields', f: f, association_name: :maintenance_credits, partial_name: 'maintenance_credit_fields', collection: @maintenance_session.attendees_for_form) %>
   <% end %>
 <% end %>

@@ -1,6 +1,6 @@
 # == Schema Information
 #
-# Table name: maintenance_attendances
+# Table name: maintenance_credits
 # Database name: primary
 #
 #  id                     :bigint           not null, primary key
@@ -11,17 +11,17 @@
 #
 # Indexes
 #
-#  index_maintenance_attendances_on_maintenance_session_id  (maintenance_session_id)
-#  index_maintenance_attendances_on_user_id                 (user_id)
+#  index_maintenance_credits_on_maintenance_session_id  (maintenance_session_id)
+#  index_maintenance_credits_on_user_id                 (user_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (user_id => users.id)
 #
-class MaintenanceAttendance < ApplicationRecord
-  # Virtual, non-persisted. Used only by the maintenance session form: a representative attendance
-  # carries the user's credit count here so one row can stand in for N attendances.
-  # See MaintenanceSession#attendees_for_form and #maintenance_attendances_attributes=.
+class MaintenanceCredit < ApplicationRecord
+  # Virtual, non-persisted. Used only by the maintenance session form: a representative credit
+  # carries the user's credit count here so one row can stand in for N credits.
+  # See MaintenanceSession#attendees_for_form and #maintenance_credits_attributes=.
   attr_accessor :quantity
 
   validates :maintenance_session, :user, presence: true
@@ -43,7 +43,7 @@ class MaintenanceAttendance < ApplicationRecord
     %w[user maintenance_session]
   end
 
-  # Returns all maintenance attendances without a debt associated.
+  # Returns all maintenance credits without a debt associated.
   def self.unassociated
     where.missing(:maintenance_debt)
   end

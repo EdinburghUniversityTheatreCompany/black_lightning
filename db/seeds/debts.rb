@@ -35,10 +35,10 @@ end
 
 # ── Maintenance Debts ──────────────────────────────────────────────────────────
 maintenance_debts = [
-  # Fulfilled debt (linked to an attendance)
+  # Fulfilled debt (linked to an credit)
   { user: alice,  show: hamlet,    due_by: Date.new(2023, 12, 1),  state: :normal, converted_from_staffing_debt: false },
   { user: ben,    show: cabaret,   due_by: Date.new(2024, 4, 1),   state: :forgiven, converted_from_staffing_debt: false },
-  # Causing debt (overdue, no attendance)
+  # Causing debt (overdue, no credit)
   { user: david,  show: midsummer, due_by: Date.new(2024, 12, 1),  state: :normal, converted_from_staffing_debt: false },
   # Upcoming
   { user: chloe,  show: rent,      due_by: Date.new(2025, 9, 1),   state: :normal, converted_from_staffing_debt: false },
@@ -54,9 +54,9 @@ maintenance_debts.each do |attrs|
 
   debt = Admin::MaintenanceDebt.create!(attrs)
 
-  # Link the fulfilled debt for alice/hamlet to an attendance she has
+  # Link the fulfilled debt for alice/hamlet to an credit she has
   if attrs[:user] == alice && attrs[:show] == hamlet
-    attendance = MaintenanceAttendance.find_by(user: alice)
-    debt.update_column(:maintenance_attendance_id, attendance.id) if attendance
+    credit = MaintenanceCredit.find_by(user: alice)
+    debt.update_column(:maintenance_credit_id, credit.id) if credit
   end
 end

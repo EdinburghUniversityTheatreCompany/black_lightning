@@ -18,7 +18,7 @@ FactoryBot.define do
     end
 
     after(:create) do |maintenance_session, evaluator|
-      create_list(:maintenance_attendance, evaluator.attendances_count, maintenance_session: maintenance_session)
+      create_list(:maintenance_credit, evaluator.attendances_count, maintenance_session: maintenance_session)
     end
   end
 end

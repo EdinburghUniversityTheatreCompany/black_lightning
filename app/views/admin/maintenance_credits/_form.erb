@@ -1,6 +1,6 @@
 <%# locals: () %>
 
-<%= simple_horizontal_form_for([:admin, @maintenance_attendance]) do |f| %>
+<%= simple_horizontal_form_for([:admin, @maintenance_credit]) do |f| %>
   <%= render('shared/pages/form', f: f) do %>
     <%= f.association :maintenance_session %>
     <%= f.association :user %>

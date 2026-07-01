@@ -110,15 +110,15 @@ class UserAbsorbTest < ActiveSupport::TestCase
     assert_equal @target_user.id, notification.reload.user_id
   end
 
-  # Maintenance attendance tests
+  # Maintenance credit tests
 
-  test "absorb transfers maintenance attendances" do
-    attendance = FactoryBot.create(:maintenance_attendance, user: @source_user)
+  test "absorb transfers maintenance credits" do
+    credit = FactoryBot.create(:maintenance_credit, user: @source_user)
 
     result = @target_user.absorb(@source_user)
 
     assert result[:success], "Absorb should succeed: #{result[:errors]}"
-    assert_equal @target_user.id, attendance.reload.user_id
+    assert_equal @target_user.id, credit.reload.user_id
   end
 
   # Role tests

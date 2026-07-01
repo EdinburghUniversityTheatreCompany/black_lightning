@@ -1,13 +1,13 @@
-class Admin::MaintenanceAttendancesController < AdminController
+class Admin::MaintenanceCreditsController < AdminController
   include GenericController
   load_and_authorize_resource
 
-  # INDEX:  /maintenance_attendances
-  # SHOW:   /maintenance_attendances/1
-  # EDIT:   /maintenance_attendances/1/edit
-  # UPDATE: /maintenance_attendances/1
-  # NEW:    /maintenance_attendances/new
-  # CREATE: /maintenance_attendances
+  # INDEX:  /maintenance_credits
+  # SHOW:   /maintenance_credits/1
+  # EDIT:   /maintenance_credits/1/edit
+  # UPDATE: /maintenance_credits/1
+  # NEW:    /maintenance_credits/new
+  # CREATE: /maintenance_credits
 
   private
 

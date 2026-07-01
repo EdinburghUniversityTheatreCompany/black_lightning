@@ -123,8 +123,8 @@ module Admin::SharedDebtHelper
       end
     elsif debt.is_a?(Admin::MaintenanceDebt)
       # Make the attendance into a link if the user has permission, and there is an attendance.
-      if debt.maintenance_attendance.present?
-        get_link(debt.maintenance_attendance, :show, link_text: debt.formatted_status)
+      if debt.maintenance_credit.present?
+        get_link(debt.maintenance_credit, :show, link_text: debt.formatted_status)
       else
         debt.formatted_status
       end

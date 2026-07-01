@@ -29,6 +29,6 @@ sessions_with_attendees = [
 sessions_with_attendees.each do |date, attendees|
   session = MaintenanceSession.find_or_create_by(date: date)
   attendees.each do |user|
-    MaintenanceAttendance.find_or_create_by(maintenance_session: session, user: user)
+    MaintenanceCredit.find_or_create_by(maintenance_session: session, user: user)
   end
 end

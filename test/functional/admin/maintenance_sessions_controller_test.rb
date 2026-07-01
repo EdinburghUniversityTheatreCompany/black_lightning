@@ -10,7 +10,7 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
     @params = {
       maintenance_session: {
         date: @admin_maintenance_session.date,
-        maintenance_attendances_attributes: { "0" => { id: "", user_id: @user.id, _destroy: "false" } }
+        maintenance_credits_attributes: { "0" => { id: "", user_id: @user.id, _destroy: "false" } }
       }
     }
   end
@@ -80,20 +80,20 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
     params = {
       maintenance_session: {
         date: Date.current,
-        maintenance_attendances_attributes: { "0" => { user_id: @user.id, quantity: "3" } }
+        maintenance_credits_attributes: { "0" => { user_id: @user.id, quantity: "3" } }
       }
     }
 
-    assert_difference("MaintenanceAttendance.count", 3) do
+    assert_difference("MaintenanceCredit.count", 3) do
       post :create, params: params
     end
 
-    assert_equal 3, assigns(:maintenance_session).maintenance_attendances.count
+    assert_equal 3, assigns(:maintenance_session).maintenance_credits.count
   end
 
   test "should show credit counts on the session page" do
     session = MaintenanceSession.create!(date: Date.current)
-    2.times { session.maintenance_attendances.create!(user: @user) }
+    2.times { session.maintenance_credits.create!(user: @user) }
 
     get :show, params: { id: session }
 
@@ -121,29 +121,29 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
 
   test "should reconcile credits up and down when editing" do
     session = MaintenanceSession.create!(date: Date.current)
-    3.times { session.maintenance_attendances.create!(user: @user) }
+    3.times { session.maintenance_credits.create!(user: @user) }
 
-    credit_count = -> { MaintenanceAttendance.where(user: @user, maintenance_session: session).count }
+    credit_count = -> { MaintenanceCredit.where(user: @user, maintenance_session: session).count }
     assert_equal 3, credit_count.call
 
     # Increase 3 -> 5 (builds 2)
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
-      maintenance_attendances_attributes: { "0" => { user_id: @user.id, quantity: "5" } }
+      maintenance_credits_attributes: { "0" => { user_id: @user.id, quantity: "5" } }
     } }
     assert_equal 5, credit_count.call
 
     # Decrease 5 -> 1 (destroys 4)
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
-      maintenance_attendances_attributes: { "0" => { user_id: @user.id, quantity: "1" } }
+      maintenance_credits_attributes: { "0" => { user_id: @user.id, quantity: "1" } }
     } }
     assert_equal 1, credit_count.call
 
     # Remove the row entirely (destroys all)
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
-      maintenance_attendances_attributes: { "0" => { user_id: @user.id, _destroy: "1" } }
+      maintenance_credits_attributes: { "0" => { user_id: @user.id, _destroy: "1" } }
     } }
     assert_equal 0, credit_count.call
   end
@@ -151,15 +151,15 @@ class Admin::MaintenanceSessionsControllerTest < ActionController::TestCase
   test "reassigning a row to another user moves the credits" do
     other = users(:committee)
     session = MaintenanceSession.create!(date: Date.current)
-    2.times { session.maintenance_attendances.create!(user: @user) }
+    2.times { session.maintenance_credits.create!(user: @user) }
 
     # The single rendered row now points at a different user.
     patch :update, params: { id: session, maintenance_session: {
       date: session.date,
-      maintenance_attendances_attributes: { "0" => { user_id: other.id, quantity: "2" } }
+      maintenance_credits_attributes: { "0" => { user_id: other.id, quantity: "2" } }
     } }
 
-    assert_equal 0, MaintenanceAttendance.where(user: @user, maintenance_session: session).count
-    assert_equal 2, MaintenanceAttendance.where(user: other, maintenance_session: session).count
+    assert_equal 0, MaintenanceCredit.where(user: @user, maintenance_session: session).count
+    assert_equal 2, MaintenanceCredit.where(user: other, maintenance_session: session).count
   end
 end

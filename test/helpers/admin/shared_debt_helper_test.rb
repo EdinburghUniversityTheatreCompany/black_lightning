@@ -94,10 +94,10 @@ class Admin::SharedDebtHelperTest < ActionView::TestCase
   test "formatted status for maintenance debt with attendance" do
     @current_user = users(:admin)
 
-    maintenance_debt = FactoryBot.create(:maintenance_debt, with_attendance: true)
+    maintenance_debt = FactoryBot.create(:maintenance_debt, with_credit: true)
 
     assert_match "Completed", formatted_status_for_debt(maintenance_debt)
-    assert_match url_for([ :admin, maintenance_debt.maintenance_attendance ]), formatted_status_for_debt(maintenance_debt)
+    assert_match url_for([ :admin, maintenance_debt.maintenance_credit ]), formatted_status_for_debt(maintenance_debt)
   end
 
   test "formatted status for staffing debt" do

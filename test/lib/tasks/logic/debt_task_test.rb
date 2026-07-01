@@ -112,7 +112,7 @@ class DebtTaskTest < ActiveSupport::TestCase
     forgiven_maintenance_debt = FactoryBot.create(:maintenance_debt,  due_by: Date.current - 2.years, state: :forgiven)
     converted_maintenance_debt = FactoryBot.create(:maintenance_debt, due_by: Date.current - 2.years, state: :converted)
     expired_maintenance_debt = FactoryBot.create(:maintenance_debt,   due_by: Date.current - 2.years, state: :expired)
-    attended_maintenance_debt = FactoryBot.create(:maintenance_debt,  due_by: Date.current - 2.years, state: :normal, with_attendance: true)
+    attended_maintenance_debt = FactoryBot.create(:maintenance_debt,  due_by: Date.current - 2.years, state: :normal, with_credit: true)
 
     Tasks::Logic::Debt.expire_outdated_debt
 

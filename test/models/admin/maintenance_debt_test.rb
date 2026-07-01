@@ -58,9 +58,9 @@ class Admin::MaintenanceDebtTest < ActiveSupport::TestCase
     assert_equal "Causing Debt", @maintenance_debt.formatted_status(@maintenance_debt.due_by.advance(days: 1))
     assert_equal "table-danger", @maintenance_debt.css_class(@maintenance_debt.due_by.advance(days: 1))
 
-    @maintenance_debt.maintenance_attendance = FactoryBot.create(:maintenance_attendance, user: @maintenance_debt.user)
+    @maintenance_debt.maintenance_credit = FactoryBot.create(:maintenance_credit, user: @maintenance_debt.user)
     assert_equal :completed, @maintenance_debt.status
-    assert_equal "Completed on #{@maintenance_debt.maintenance_attendance.date}", @maintenance_debt.formatted_status
+    assert_equal "Completed on #{@maintenance_debt.maintenance_credit.date}", @maintenance_debt.formatted_status
     assert_equal "table-success", @maintenance_debt.css_class
   end
 end

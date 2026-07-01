@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_29_210826) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_01_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -89,16 +89,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_210826) do
     t.boolean "converted_from_staffing_debt", default: false, null: false
     t.datetime "created_at", precision: nil, null: false
     t.date "due_by"
-    t.bigint "maintenance_attendance_id"
+    t.bigint "maintenance_credit_id"
     t.integer "show_id"
     t.integer "state", default: 0
     t.datetime "updated_at", precision: nil, null: false
     t.integer "user_id"
     t.index ["due_by", "state"], name: "index_admin_maintenance_debts_on_due_by_and_state"
-    t.index ["maintenance_attendance_id"], name: "index_admin_maintenance_debts_on_maintenance_attendance_id"
+    t.index ["maintenance_credit_id"], name: "index_admin_maintenance_debts_on_maintenance_credit_id"
     t.index ["show_id", "converted_from_staffing_debt"], name: "index_admin_maintenance_debts_on_show_and_converted"
     t.index ["user_id", "due_by", "state"], name: "index_maintenance_debts_on_user_date_state"
-    t.index ["user_id", "state", "maintenance_attendance_id"], name: "index_maintenance_debts_reallocation"
+    t.index ["user_id", "state", "maintenance_credit_id"], name: "index_maintenance_debts_reallocation"
     t.index ["user_id"], name: "index_admin_maintenance_debts_on_user_id"
   end
 
@@ -420,13 +420,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_210826) do
     t.index ["status"], name: "index_fault_reports_on_status"
   end
 
-  create_table "maintenance_attendances", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+  create_table "maintenance_credits", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "maintenance_session_id", null: false
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
-    t.index ["maintenance_session_id"], name: "index_maintenance_attendances_on_maintenance_session_id"
-    t.index ["user_id"], name: "index_maintenance_attendances_on_user_id"
+    t.index ["maintenance_session_id"], name: "index_maintenance_credits_on_maintenance_session_id"
+    t.index ["user_id"], name: "index_maintenance_credits_on_user_id"
   end
 
   create_table "maintenance_sessions", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -903,12 +903,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_29_210826) do
 
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "admin_debt_notifications", "users"
-  add_foreign_key "admin_maintenance_debts", "maintenance_attendances"
+  add_foreign_key "admin_maintenance_debts", "maintenance_credits"
   add_foreign_key "cached_duplicates", "users", column: "user1_id"
   add_foreign_key "cached_duplicates", "users", column: "user2_id"
   add_foreign_key "events", "admin_proposals_proposals", column: "proposal_id"
   add_foreign_key "events", "companies"
-  add_foreign_key "maintenance_attendances", "users"
+  add_foreign_key "maintenance_credits", "users"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_categories", column: "category_id"
   add_foreign_key "marketing_creatives_category_infos", "marketing_creatives_profiles", column: "profile_id"
   add_foreign_key "marketing_creatives_profiles", "users"

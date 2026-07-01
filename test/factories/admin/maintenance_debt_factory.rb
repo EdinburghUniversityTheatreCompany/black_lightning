@@ -20,11 +20,11 @@ FactoryBot.define do
     converted_from_staffing_debt { false }
 
     transient do
-      with_attendance { false }
+      with_credit { false }
     end
 
     after(:create) do |maintenance_debt, evaluator|
-      FactoryBot.create(:maintenance_attendance, maintenance_debt: maintenance_debt, user: evaluator.user) if evaluator.with_attendance
+      FactoryBot.create(:maintenance_credit, maintenance_debt: maintenance_debt, user: evaluator.user) if evaluator.with_credit
     end
 
     factory :overdue_maintenance_debt do

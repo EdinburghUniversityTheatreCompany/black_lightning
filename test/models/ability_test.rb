@@ -14,7 +14,7 @@ class Admin::AbilityTest < ActiveSupport::TestCase
     exclusions = [ Admin::Debt, Admin::Feedback, Event, Show, Workshop, Season, News, Venue, Opportunity,
                   Admin::Questionnaires::Questionnaire, User, Admin::MaintenanceDebt, Admin::StaffingDebt,
                   Admin::Proposals::Proposal, Admin::Proposals::Call, MarketingCreatives::Profile, MarketingCreatives::CategoryInfo,
-                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture, MaintenanceAttendance,
+                  Complaint, Doorkeeper::Application, Attachment, VideoLink, Admin::EditableBlock, EventTag, Review, Picture, MaintenanceCredit,
                   Role, Company ]
 
     (models - exclusions).each do |model|

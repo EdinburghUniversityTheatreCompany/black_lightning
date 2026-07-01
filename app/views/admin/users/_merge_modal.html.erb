@@ -184,11 +184,11 @@
           </span>
         </li>
         <li class="list-row flex justify-between items-center">
-          Maintenance attendances
+          Maintenance credits
           <span>
-            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_attendances][:total].to_s } %>
-            <% if stats[:maintenance_attendances][:unlinked] > 0 %>
-              <small class="text-warning">(<%= stats[:maintenance_attendances][:unlinked] %> unlinked)</small>
+            <%= render(BadgeComponent.new(type: :primary, pill: true)) { stats[:maintenance_credits][:total].to_s } %>
+            <% if stats[:maintenance_credits][:unlinked] > 0 %>
+              <small class="text-warning">(<%= stats[:maintenance_credits][:unlinked] %> unlinked)</small>
             <% end %>
           </span>
         </li>

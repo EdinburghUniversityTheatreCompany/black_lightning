@@ -155,7 +155,7 @@ ChaosRails::Application.routes.draw do
     end
 
     resources :maintenance_sessions
-    resources :maintenance_attendances
+    resources :maintenance_credits
 
     resources :venues do
       collection do

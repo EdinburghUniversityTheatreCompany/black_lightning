@@ -133,7 +133,7 @@ class User < ApplicationRecord
   has_many :admin_maintenance_debts, class_name: "Admin::MaintenanceDebt", dependent: :restrict_with_error
   has_many :admin_staffing_debts, class_name: "Admin::StaffingDebt", dependent: :restrict_with_error
   has_many :admin_debt_notifications, class_name: "Admin::DebtNotification", dependent: :destroy
-  has_many :maintenance_attendances, class_name: "MaintenanceAttendance", dependent: :restrict_with_error
+  has_many :maintenance_credits, class_name: "MaintenanceCredit", dependent: :restrict_with_error
 
   has_one_attached :avatar
 
@@ -334,7 +334,7 @@ class User < ApplicationRecord
 
     maintenance_debt_subquery = Admin::MaintenanceDebt
       .where(state: :normal)
-      .where.missing(:maintenance_attendance)
+      .where.missing(:maintenance_credit)
       .where("due_by < ?", on_date)
       .select(:user_id)
 
@@ -370,32 +370,32 @@ class User < ApplicationRecord
     results.sort_by { |tm| tm.teamwork.start_date || Date.current }
   end
 
-  # When true, per-attendance maintenance reallocation is skipped. Set while a MaintenanceSession
-  # persists a batch of attendances so the session can reallocate each affected user once instead
-  # of once per attendance (see MaintenanceSession#reallocate_attendee_debts_once).
+  # When true, per-credit maintenance reallocation is skipped. Set while a MaintenanceSession
+  # persists a batch of credits so the session can reallocate each affected user once instead
+  # of once per credit (see MaintenanceSession#reallocate_attendee_debts_once).
   thread_mattr_accessor :suppress_maintenance_reallocation, instance_accessor: false
 
-  # This method looks for all debts in the future and their attendances, all unallocated attendances, and all past debts without attendances.
-  # It then matches all the soonest debt with attendances.
+  # This method looks for all debts in the future and their credits, all unallocated credits, and all past debts without credits.
+  # It then matches all the soonest debt with credits.
   def reallocate_maintenance_debts
     return if self.class.suppress_maintenance_reallocation
 
     # Remove unnecessary reload calls and optimize query
-    # Preload maintenance_attendance to prevent N+1 queries
+    # Preload maintenance_credit to prevent N+1 queries
     debts = admin_maintenance_debts
-      .includes(:maintenance_attendance)
+      .includes(:maintenance_credit)
       .where("due_by >= ? ", Date.current)
-      .or(admin_maintenance_debts.includes(:maintenance_attendance).where(maintenance_attendance: nil))
+      .or(admin_maintenance_debts.includes(:maintenance_credit).where(maintenance_credit: nil))
       .where(state: :normal)
       .order(due_by: :asc)
       .to_a
 
-    attendances = maintenance_attendances
+    credits = maintenance_credits
       .includes(:maintenance_debt)
       .where(admin_maintenance_debts: { id: [ nil ] + debts.map(&:id) })
       .to_a
 
-    amount_of_pairs = [ debts.size, attendances.size ].min
+    amount_of_pairs = [ debts.size, credits.size ].min
 
     # Use transaction for bulk operations
     ActiveRecord::Base.transaction do
@@ -405,28 +405,28 @@ class User < ApplicationRecord
 
       # Link them as far as there are pairs
       (0...amount_of_pairs).each do |i|
-        if debts[i].maintenance_attendance != attendances[i]
-          updates_to_link << { id: debts[i].id, maintenance_attendance_id: attendances[i].id }
+        if debts[i].maintenance_credit != credits[i]
+          updates_to_link << { id: debts[i].id, maintenance_credit_id: credits[i].id }
         end
       end
 
       # Unlink the rest
       (amount_of_pairs...debts.size).each do |i|
-        if debts[i].maintenance_attendance.present?
-          updates_to_unlink << { id: debts[i].id, maintenance_attendance_id: nil }
+        if debts[i].maintenance_credit.present?
+          updates_to_unlink << { id: debts[i].id, maintenance_credit_id: nil }
         end
       end
 
       # Perform bulk updates using update_all (more appropriate since we're only updating existing records)
       if updates_to_link.any?
         updates_to_link.each do |update|
-          Admin::MaintenanceDebt.where(id: update[:id]).update_all(maintenance_attendance_id: update[:maintenance_attendance_id])
+          Admin::MaintenanceDebt.where(id: update[:id]).update_all(maintenance_credit_id: update[:maintenance_credit_id])
         end
       end
 
       if updates_to_unlink.any?
         debt_ids = updates_to_unlink.map { |u| u[:id] }
-        Admin::MaintenanceDebt.where(id: debt_ids).update_all(maintenance_attendance_id: nil)
+        Admin::MaintenanceDebt.where(id: debt_ids).update_all(maintenance_credit_id: nil)
       end
     end
   end
@@ -506,14 +506,14 @@ class User < ApplicationRecord
     admin_staffing_debts.where(admin_staffing_job_id: nil, state: :normal).count
   end
 
-  # Returns count of maintenance debts not linked to any attendance
+  # Returns count of maintenance debts not linked to any credit
   def maintenance_debts_unlinked_count
-    admin_maintenance_debts.where(maintenance_attendance_id: nil, state: :normal).count
+    admin_maintenance_debts.where(maintenance_credit_id: nil, state: :normal).count
   end
 
-  # Returns count of maintenance attendances not linked to any debt
-  def maintenance_attendances_unlinked_count
-    maintenance_attendances.left_joins(:maintenance_debt).where(admin_maintenance_debts: { id: nil }).count
+  # Returns count of maintenance credits not linked to any debt
+  def maintenance_credits_unlinked_count
+    maintenance_credits.left_joins(:maintenance_debt).where(admin_maintenance_debts: { id: nil }).count
   end
 
   # Returns count of team memberships that overlap with another user (same show/event)
@@ -545,9 +545,9 @@ class User < ApplicationRecord
         total: admin_maintenance_debts.count,
         unlinked: maintenance_debts_unlinked_count
       },
-      maintenance_attendances: {
-        total: maintenance_attendances.count,
-        unlinked: maintenance_attendances_unlinked_count
+      maintenance_credits: {
+        total: maintenance_credits.count,
+        unlinked: maintenance_credits_unlinked_count
       },
       roles: roles.pluck(:name)
     }
@@ -567,7 +567,7 @@ class User < ApplicationRecord
       maintenance_debts: 0,
       staffing_debts: 0,
       debt_notifications: 0,
-      maintenance_attendances: 0,
+      maintenance_credits: 0,
       roles: []
     }
 
@@ -645,8 +645,8 @@ class User < ApplicationRecord
       # 4. Transfer Debt Notifications
       transferred[:debt_notifications] = source_user.admin_debt_notifications.update_all(user_id: id)
 
-      # 5. Transfer Maintenance Attendances
-      transferred[:maintenance_attendances] = source_user.maintenance_attendances.update_all(user_id: id)
+      # 5. Transfer Maintenance Credits
+      transferred[:maintenance_credits] = source_user.maintenance_credits.update_all(user_id: id)
 
       # 6. Merge Roles (union)
       source_user.roles.each do |role|
@@ -679,7 +679,7 @@ class User < ApplicationRecord
         end
       end
 
-      # 10. Reallocate debts after transfer to properly link jobs/attendances
+      # 10. Reallocate debts after transfer to properly link jobs/credits
       reallocate_maintenance_debts
       reallocate_staffing_debts
 

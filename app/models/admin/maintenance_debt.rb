@@ -9,33 +9,33 @@
 #  state                        :integer          default("normal")
 #  created_at                   :datetime         not null
 #  updated_at                   :datetime         not null
-#  maintenance_attendance_id    :bigint
+#  maintenance_credit_id        :bigint
 #  show_id                      :integer
 #  user_id                      :integer
 #
 # Indexes
 #
-#  index_admin_maintenance_debts_on_due_by_and_state           (due_by,state)
-#  index_admin_maintenance_debts_on_maintenance_attendance_id  (maintenance_attendance_id)
-#  index_admin_maintenance_debts_on_show_and_converted         (show_id,converted_from_staffing_debt)
-#  index_admin_maintenance_debts_on_user_id                    (user_id)
-#  index_maintenance_debts_on_user_date_state                  (user_id,due_by,state)
-#  index_maintenance_debts_reallocation                        (user_id,state,maintenance_attendance_id)
+#  index_admin_maintenance_debts_on_due_by_and_state       (due_by,state)
+#  index_admin_maintenance_debts_on_maintenance_credit_id  (maintenance_credit_id)
+#  index_admin_maintenance_debts_on_show_and_converted     (show_id,converted_from_staffing_debt)
+#  index_admin_maintenance_debts_on_user_id                (user_id)
+#  index_maintenance_debts_on_user_date_state              (user_id,due_by,state)
+#  index_maintenance_debts_reallocation                    (user_id,state,maintenance_credit_id)
 #
 # Foreign Keys
 #
-#  fk_rails_...  (maintenance_attendance_id => maintenance_attendances.id)
+#  fk_rails_...  (maintenance_credit_id => maintenance_credits.id)
 #
 class Admin::MaintenanceDebt < ApplicationRecord
   belongs_to :user
   belongs_to :show, class_name: "Event", foreign_key: :show_id
-  belongs_to :maintenance_attendance, optional: true
+  belongs_to :maintenance_credit, optional: true
 
   validates :due_by, :show_id, :user_id, :state, presence: true
   validates :converted_from_staffing_debt, inclusion: [ true, false ]
 
-  after_save :associate_with_attendance
-  after_destroy { associate_with_attendance(true) }
+  after_save :associate_with_credit
+  after_destroy { associate_with_credit(true) }
 
   # the progress of a maintenance debt is tracked by its state enum
   # with status being used to retrieve if the debt has become overdue and is causing debt
@@ -54,33 +54,33 @@ class Admin::MaintenanceDebt < ApplicationRecord
   end
 
   # A maintenance debt is fulfilled if it is either: attended, converted, or forgiven. Otherwise, it is not fulfilled.
-  # Or phrased differently, if the state is normal and there is no maintenance attendance, it is not fulfilled yet.
+  # Or phrased differently, if the state is normal and there is no maintenance credit, it is not fulfilled yet.
   def self.unfulfilled
-    where(state: 0).where.missing(:maintenance_attendance)
+    where(state: 0).where.missing(:maintenance_credit)
   end
 
   # Optimized scope for debt calculations - combines unfulfilled check with date filter
   def self.unfulfilled_before_date(on_date)
     where(state: :normal)
-      .where.missing(:maintenance_attendance)
+      .where.missing(:maintenance_credit)
       .where("due_by < ?", on_date)
   end
 
   def self.unfulfilled_after_date(from_date)
     where(state: :normal)
-      .where.missing(:maintenance_attendance)
+      .where.missing(:maintenance_credit)
       .where("due_by >= ?", from_date)
   end
 
   # See above for an explanation.
   def unfulfilled?
-    state == "normal" && maintenance_attendance.nil?
+    state == "normal" && maintenance_credit.nil?
   end
 
   def convert_to_staffing_debt
     ActiveRecord::Base.transaction do
       Admin::StaffingDebt.create(due_by: due_by, show_id: show_id, user_id: user_id, state: :normal, converted_from_maintenance_debt: true)
-      update(state: :converted, maintenance_attendance: nil)
+      update(state: :converted, maintenance_credit: nil)
     end
   end
 
@@ -97,7 +97,7 @@ class Admin::MaintenanceDebt < ApplicationRecord
     when "converted"
       :converted
     else
-      if maintenance_attendance.present?
+      if maintenance_credit.present?
         return :completed
       end
 
@@ -112,8 +112,8 @@ class Admin::MaintenanceDebt < ApplicationRecord
   def formatted_status(on_date = Date.current)
     local_status = status(on_date)
 
-    if local_status == :completed && maintenance_attendance.present?
-      "Completed on #{maintenance_attendance.date}"
+    if local_status == :completed && maintenance_credit.present?
+      "Completed on #{maintenance_credit.date}"
     else
       local_status.to_s.titleize
     end
@@ -130,17 +130,17 @@ class Admin::MaintenanceDebt < ApplicationRecord
     end
   end
 
-  # Associates itself with the soonest upcoming Maintenance Attendance
-  def associate_with_attendance(skip_check = false)
+  # Associates itself with the soonest upcoming Maintenance Credit
+  def associate_with_credit(skip_check = false)
     relevant_keys = previous_changes.keys.excluding("created_at", "updated_at")
 
-    # Clear the attendance if the state has changed, just in case.
-    # Otherwise, setting a debt with an attached attendance to forgiven or converted
-    # will keep the attendance attached.
-    update(maintenance_attendance: nil) if relevant_keys.include?("state")
+    # Clear the credit if the state has changed, just in case.
+    # Otherwise, setting a debt with an attached credit to forgiven or converted
+    # will keep the credit attached.
+    update(maintenance_credit: nil) if relevant_keys.include?("state")
 
-    # Only reallocate if we are not checking for changes or the changes are not just the attendance.
-    # if we keep reallocating when the attendance changes, we will end up with a loop.
-    user.reallocate_maintenance_debts if skip_check || relevant_keys != [ "maintenance_attendance_id" ]
+    # Only reallocate if we are not checking for changes or the changes are not just the credit.
+    # if we keep reallocating when the credit changes, we will end up with a loop.
+    user.reallocate_maintenance_debts if skip_check || relevant_keys != [ "maintenance_credit_id" ]
   end
 end

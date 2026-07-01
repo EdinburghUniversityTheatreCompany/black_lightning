@@ -2,7 +2,7 @@
 
 <%= render '/shared/form/inline_fields_for_template',
     f: f,
-    div_class_additions: 'maintenance_attendance',
+    div_class_additions: 'maintenance_credit',
     fields: [
         { field: f.hidden_field(:id) + render('shared/form/user_field', f: f, wrapper: :inline_form) },
         { field: f.input(:quantity, as: :integer, label: 'Credits', wrapper: :inline_form,

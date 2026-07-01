@@ -1,6 +1,6 @@
 # == Schema Information
 #
-# Table name: maintenance_attendances
+# Table name: maintenance_credits
 #
 # *id*::                     <tt>bigint, not null, primary key</tt>
 # *maintenance_session_id*:: <tt>bigint, not null</tt>
@@ -10,6 +10,9 @@
 #--
 # == Schema Information End
 #++
-one:
-  user: iolanthe_faerie
-  maintenance_session: one
+FactoryBot.define do
+  factory :maintenance_credit do
+    maintenance_session
+    user
+  end
+end
