@@ -259,7 +259,21 @@ class GetInvolvedOpportunitiesTest < ActionController::TestCase
     get :opportunities, params: { q: { company_slug_eq: companies(:gutter_theatre).slug } }, format: :turbo_stream
 
     assert_response :success
-    assert_match "index-results", response.body
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_match(/<turbo-stream[^>]*target="index-results"/, response.body)
     assert_includes assigns(:opportunities), opportunities(:external_project_opportunity)
+  end
+
+  # A Turbo form submission that redirects to this action (e.g. after #create) makes the browser
+  # follow the 302 while still sending Accept: text/vnd.turbo-stream.html, but with no q params.
+  # If we answered that with the #index-results fragment, the redirect would silently do nothing on
+  # the submission form page (which has no #index-results element) — so serve the full HTML page.
+  test "opportunities serves a full HTML page for a paramless turbo_stream request" do
+    get :opportunities, format: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_no_match(/<turbo-stream/, response.body)
+    assert_match(/<h1[^>]*>\s*Opportunities/, response.body)
   end
 end
