@@ -37,7 +37,7 @@ class OpportunityMailer < ApplicationMailer
   private
 
   def notification_recipient(opportunity)
-    name = opportunity.submitter_display_name
+    name = opportunity.notification_name
     email_address_with_name(opportunity.notification_email, name.presence || opportunity.notification_email)
   end
 end

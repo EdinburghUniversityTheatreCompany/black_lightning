@@ -160,6 +160,21 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_equal internal.creator.email, internal.notification_email
   end
 
+  test "submitter_display_name prefers the external submitter over the account creator" do
+    # A posting can carry both an account creator and an external submitter (e.g. a manager
+    # attributes it to an account but records who actually submitted). The displayed contact name
+    # must match resolved_contact_email, which prefers the submitter — otherwise the show page
+    # pairs the creator's name with the submitter's email.
+    opp = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
+                          creator_id: 1, submitter_name: "Jane Director",
+                          submitter_email: "jane@example.com")
+    assert_equal "Jane Director", opp.submitter_display_name
+
+    # With no external submitter, fall back to the account creator.
+    member = opportunities(:internal_project_opportunity)
+    assert_equal member.creator.name, member.submitter_display_name
+  end
+
   test "submitter_email validates format when present" do
     opp = opportunities(:external_project_opportunity)
     opp.submitter_email = "nope"

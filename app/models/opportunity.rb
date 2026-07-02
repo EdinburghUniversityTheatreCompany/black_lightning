@@ -154,9 +154,16 @@ class Opportunity < ApplicationRecord
     creator&.email || submitter_email.presence
   end
 
-  # Human name of whoever posted this, account holder or external submitter.
+  # Name of the notification recipient, mirroring notification_email's creator-first precedence so
+  # the salutation always matches whoever the email is actually addressed to.
+  def notification_name
+    creator&.name || submitter_name
+  end
+
+  # Human name of whoever posted this. Prefer the external submitter, mirroring
+  # resolved_contact_email, so the displayed name and email always describe the same person.
   def submitter_display_name(viewer = nil)
-    creator&.name(viewer) || submitter_name
+    submitter_name.presence || creator&.name(viewer)
   end
 
   def css_class
