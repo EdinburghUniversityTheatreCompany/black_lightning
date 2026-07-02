@@ -46,7 +46,7 @@ class Admin::StaffingsController < AdminController
 
     respond_to do |format|
       format.html # index.html.erb
-      format.turbo_stream
+      format.turbo_stream { render_index_stream_or_full(fragment: "admin/staffings/index") }
       # format.json { render json: @staffings }
     end
   end
