@@ -64,9 +64,9 @@
 
 <%# Fuzzy matches %>
 <% if @fuzzy_matches.any? %>
-  <%= render CardComponent.new(title: "Possible Matches — Review Manually (#{@fuzzy_matches.size})", variant: :warning, flush: true) do |c| %>
+  <%= render CardComponent.new(title: "Possible Matches. Review Manually (#{@fuzzy_matches.size})", variant: :warning, flush: true) do |c| %>
     <% c.with_tools do %>
-      <small>Name matched — verify these are the right people</small>
+      <small>Name matched. Verify these are the right people</small>
     <% end %>
     <table class="table table-sm table-hover mb-0">
       <thead class="table-light">

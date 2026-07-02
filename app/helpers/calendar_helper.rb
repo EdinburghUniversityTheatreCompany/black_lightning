@@ -54,7 +54,7 @@ module CalendarHelper
       }
       concat content_tag(:p) {
         concat content_tag(:strong, "Apple Calendar: ")
-        concat "Click the webcal:// link above — macOS/iOS will prompt you to subscribe."
+        concat "Click the webcal:// link above. macOS/iOS will prompt you to subscribe."
       }
     end
   end
