@@ -76,4 +76,26 @@ class Admin::CompaniesControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_companies_path
   end
+
+  # A live-search fetch (from live_search_controller) requests the index as turbo_stream with q[...]
+  # params, and gets the #index-results fragment for in-place filtering.
+  test "index responds to a turbo_stream request with q params using the results fragment" do
+    get :index, params: { q: { name_cont: @company.name } }, format: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_match(/<turbo-stream[^>]*target="index-results"/, response.body)
+  end
+
+  # GenericController#destroy redirects to :index. Because a destroy is a Turbo form submission, the
+  # browser follows the 302 with the same turbo_stream Accept header but no q params. Answering that
+  # with the #index-results fragment would silently do nothing when the redirect lands somewhere
+  # without that element (e.g. a show page) and the flash would never show — so serve the full page.
+  test "index serves a full HTML page for a paramless turbo_stream request" do
+    get :index, format: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_no_match(/<turbo-stream/, response.body)
+  end
 end

@@ -22,7 +22,14 @@ module GenericController
       format.html { render index_filename }
       format.json { render json: resources } if json_enabled_for_index?
       format.turbo_stream do
-        if lookup_context.exists?(index_results_partial, [], true)
+        if params[:q].blank?
+          # Not a live search. A Turbo form-submission redirect (e.g. after #destroy, which
+          # redirects to :index) follows the 302 with the same turbo_stream Accept header but no q
+          # params; answering it with the #index-results fragment would silently do nothing when the
+          # redirect lands somewhere without that element (e.g. a show page) and the flash would
+          # never show. Serve the full HTML page so Turbo performs a real navigation.
+          render index_filename, formats: :html, content_type: "text/html"
+        elsif lookup_context.exists?(index_results_partial, [], true)
           render "shared/pages/index"
         else
           head :ok
