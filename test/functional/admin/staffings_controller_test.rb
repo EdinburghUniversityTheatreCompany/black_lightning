@@ -338,4 +338,25 @@ class Admin::StaffingsControllerTest < ActionController::TestCase
 
     assert_redirected_to admin_staffing_path(job.staffable)
   end
+
+  # Live-search fetch: turbo_stream + q[...] params → the results fragment (staffings updates its
+  # upcoming-/archived-staffings containers).
+  test "index responds to a turbo_stream request with q params using the results fragment" do
+    get :index, params: { q: { show_title_cont: "anything" } }, format: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/vnd.turbo-stream.html", response.media_type
+    assert_match(/<turbo-stream/, response.body)
+  end
+
+  # A paramless turbo_stream request (e.g. a Turbo form-submission redirect, since GenericController
+  # #destroy redirects to :index) must render the full HTML page, not the fragment. See
+  # ApplicationController#render_index_stream_or_full.
+  test "index serves a full HTML page for a paramless turbo_stream request" do
+    get :index, format: :turbo_stream
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_no_match(/<turbo-stream/, response.body)
+  end
 end

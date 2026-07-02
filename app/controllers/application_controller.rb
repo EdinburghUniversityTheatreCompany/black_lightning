@@ -90,6 +90,22 @@ class ApplicationController < ActionController::Base
     "#{controller_path}/index_results"
   end
 
+  # Renders an index/list action's turbo_stream response safely.
+  #
+  # Live-search fetches (from live_search_controller) always carry q[...] params and want the
+  # `fragment` (which updates an in-page container such as #index-results). But a Turbo
+  # form-submission redirect (e.g. after #destroy) follows the 302 with the same turbo_stream Accept
+  # header and NO q params; answering that with the fragment silently does nothing when the redirect
+  # lands on a page without the target container (e.g. a show page), and the flash never shows. For a
+  # paramless turbo_stream request, render the full HTML page so Turbo performs a real navigation.
+  def render_index_stream_or_full(fragment:, full: "index")
+    if params[:q].present?
+      render fragment
+    else
+      render full, formats: :html, content_type: "text/html"
+    end
+  end
+
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:account_update, keys: [ :calendar_email ])
   end

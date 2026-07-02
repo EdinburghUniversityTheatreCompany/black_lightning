@@ -36,3 +36,14 @@ Keep `build-essential`, `libssl-dev`, `zlib1g-dev`, `libyaml-dev`, `libffi-dev`,
 `libmariadb-dev-compat`, `pkg-config` (native gem builds). Before removing anything, verify with a
 real `bundle install` in a trixie container using the pruned set — don't remove on inspection alone.
 Payoff is modest (small image/layer shrink); the Ruby-compile time saving is already captured.
+
+## Admin::MembershipCardsController is unrouted dead code
+
+`admin/membership_cards` has **no routes** — the `resources :membership_cards` line in
+`config/routes.rb` is commented out (~line 233) and `bin/rails routes -c admin/membership_cards`
+returns nothing. The controller (whose own header says "Has been severely neglected. Can probably
+use the GenericController.") and its views (`index`/`show`/`_index_results`) are therefore
+unreachable. Its `index` still renders the unguarded `shared/pages/index` turbo_stream fragment, but
+that's moot while unrouted. Decide to either **remove** the controller + views + empty test, or
+**wire it up** (route it and convert to `GenericController`, which already guards the index
+turbo_stream via `render_index_stream_or_full`). Left untouched for now since it can't be triggered.
