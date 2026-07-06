@@ -79,7 +79,9 @@ local linters = new Mapping<String, Step> {
     // commit skips them.
     ["debride"] {
         glob = "**/*.rb"
-        check = "bundle exec debride ."
+        // Exclude vendor (CI's bundler-cache lands gems in vendor/bundle) + other non-source dirs,
+        // else debride reports every gem's source as dead code. Mirrors the CI audit job.
+        check = "bundle exec debride --exclude vendor,node_modules,tmp,log ."
     }
     ["flay"] {
         glob = "**/*.rb"
