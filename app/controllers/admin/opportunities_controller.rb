@@ -103,12 +103,11 @@ class Admin::OpportunitiesController < AdminController
     true
   end
 
-  # Attribute the opportunity to the current user, unless a manager is explicitly
-  # setting a different creator or an external submitter on someone else's behalf.
+  # Attribute the opportunity to the current user, unless a manager explicitly picked a
+  # different creator. A manager entering an external submitter is still recorded as the
+  # creator, so the posting shows as created on the submitter's behalf (see #on_behalf_of?).
   def assign_default_creator
-    manager_override = @opportunity.creator_id.present? ||
-                       (@opportunity.submitter_name.present? && @opportunity.submitter_email.present?)
-    return if can?(:manage, Opportunity) && manager_override
+    return if can?(:manage, Opportunity) && @opportunity.creator_id.present?
 
     @opportunity.creator = current_user
   end

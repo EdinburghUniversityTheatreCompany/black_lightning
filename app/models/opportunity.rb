@@ -126,6 +126,12 @@ class Opportunity < ApplicationRecord
     creator_id.nil?
   end
 
+  # An opportunity entered by a user (the creator) on behalf of an external submitter, so the
+  # display can credit both instead of implying the external person created it themselves.
+  def on_behalf_of?
+    creator_id.present? && submitter_name.present?
+  end
+
   # The typed company name, falling back to the associated company so the form pre-fills on edit.
   def company_name
     return @company_name if defined?(@company_name)
@@ -149,15 +155,16 @@ class Opportunity < ApplicationRecord
   end
 
   # Where to send submission notifications (approval/rejection): the submitter themselves,
-  # not the public contact address, which may belong to someone else.
+  # not the public contact address, which may belong to someone else. Prefer the external
+  # submitter so on-behalf postings notify the person the posting is for, not who typed it in.
   def notification_email
-    creator&.email || submitter_email.presence
+    submitter_email.presence || creator&.email
   end
 
-  # Name of the notification recipient, mirroring notification_email's creator-first precedence so
-  # the salutation always matches whoever the email is actually addressed to.
+  # Name of the notification recipient, mirroring notification_email's submitter-first precedence
+  # so the salutation always matches whoever the email is actually addressed to.
   def notification_name
-    creator&.name || submitter_name
+    submitter_name.presence || creator&.name
   end
 
   # Human name of whoever posted this. Prefer the external submitter, mirroring

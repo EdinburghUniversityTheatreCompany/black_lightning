@@ -61,7 +61,8 @@
       <h3>Attribution (optional)</h3>
       <p class="text-gray-500 small mx-2 mb-3">
         Submit on someone else's behalf. Either pick an existing user, or enter the name and email
-        of an external submitter. Leave blank to attribute it to yourself.
+        of an external submitter — you will be recorded as having created it on their behalf.
+        Leave blank to attribute it to yourself.
       </p>
       <%= f.association :creator,
           collection: User.accessible_by(current_ability).order(:first_name, :last_name),

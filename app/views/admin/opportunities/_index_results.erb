@@ -3,6 +3,9 @@
 <% field_sets = @opportunities.map do |opportunity|
   submitter = if opportunity.external?
     safe_join([ opportunity.submitter_name.to_s, " ", render(BadgeComponent.new(type: :warning).with_content("External")) ])
+  elsif opportunity.on_behalf_of?
+    safe_join([ user_link(opportunity.creator, false), " on behalf of #{opportunity.submitter_name} ",
+                render(BadgeComponent.new(type: :warning).with_content("External")) ])
   else
     user_link(opportunity.creator, false)
   end

@@ -199,7 +199,7 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
   end
 
-  test "manager can attribute an opportunity to an external submitter" do
+  test "manager submitting for an external person is recorded as creating it on their behalf" do
     attributes = FactoryBot.attributes_for(:opportunity).merge(
       submitter_name: "Jane External",
       submitter_email: "jane.external@example.com"
@@ -208,9 +208,31 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     post :create, params: { opportunity: attributes }
 
     opportunity = assigns(:opportunity)
-    assert_nil opportunity.creator_id, "creator should not be forced to current_user when a submitter is given"
-    assert opportunity.external?
+    assert_equal @user, opportunity.creator, "the manager who entered the posting should be recorded as its creator"
+    assert opportunity.on_behalf_of?
+    assert_not opportunity.external?
     assert_equal "Jane External", opportunity.submitter_name
+  end
+
+  test "show labels an on-behalf opportunity with both the creator and the external submitter" do
+    @opportunity.update!(submitter_name: "Jane External", submitter_email: "jane.external@example.com")
+
+    get :show, params: { id: @opportunity }
+
+    assert_response :success
+    assert_match "on behalf of", response.body
+    assert_match "Jane External", response.body
+    assert_match @opportunity.creator.name, response.body
+  end
+
+  test "index labels an on-behalf opportunity with the creator and the external submitter" do
+    @opportunity.update!(submitter_name: "Jane External", submitter_email: "jane.external@example.com")
+
+    get :index
+
+    assert_response :success
+    assert_match "on behalf of", response.body
+    assert_match "Jane External", response.body
   end
 
   test "manager can attribute an opportunity to a different user" do

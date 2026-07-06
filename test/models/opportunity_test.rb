@@ -105,6 +105,16 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_not opportunities(:internal_project_opportunity).external?
   end
 
+  test "on_behalf_of? is true only when a creator recorded an external submitter" do
+    assert_not opportunities(:internal_project_opportunity).on_behalf_of?, "creator-only posting is not on behalf"
+    assert_not opportunities(:external_project_opportunity).on_behalf_of?, "creator-less posting is external, not on behalf"
+
+    on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
+                                creator_id: 1, submitter_name: "Jane Director",
+                                submitter_email: "jane@example.com")
+    assert on_behalf.on_behalf_of?
+  end
+
   test "display_title falls back to company and project" do
     opp = opportunities(:internal_project_opportunity)
     assert_nil opp.title
@@ -158,6 +168,16 @@ class Admin::OpportunityTest < ActionView::TestCase
     # Member submission: notify the creator's account.
     internal = opportunities(:internal_project_opportunity)
     assert_equal internal.creator.email, internal.notification_email
+  end
+
+  test "notification_email and notification_name prefer the external submitter for on-behalf postings" do
+    # When a manager posts on an external person's behalf, the creator records who entered it,
+    # but approval/rejection decisions should still reach the external person.
+    on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
+                                creator: users(:admin), submitter_name: "Jane Director",
+                                submitter_email: "jane@example.com")
+    assert_equal "jane@example.com", on_behalf.notification_email
+    assert_equal "Jane Director", on_behalf.notification_name
   end
 
   test "submitter_display_name prefers the external submitter over the account creator" do
