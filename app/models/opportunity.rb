@@ -132,6 +132,12 @@ class Opportunity < ApplicationRecord
     creator_id.present? && submitter_name.present?
   end
 
+  # Immediately expire the posting so it drops out of the public listing. The column is a date,
+  # so today's date already compares as past against Time.current.
+  def close
+    update(expiry_date: Date.current)
+  end
+
   # The typed company name, falling back to the associated company so the form pre-fills on edit.
   def company_name
     return @company_name if defined?(@company_name)

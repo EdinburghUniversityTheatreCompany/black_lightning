@@ -80,6 +80,8 @@ class Ability
 
     # If you can approve something, you can also reject it, and mark proposals successful/unsuccessful.
     alias_action :reject, :mark_successful, :mark_unsuccessful, to: :approve
+    # Closing an opportunity (expiring it immediately) is just an edit of its expiry date.
+    alias_action :close, to: :update
     # Alias grid to read
     alias_action :grid, to: :read
     alias_action :debt_status, to: :read

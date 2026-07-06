@@ -290,6 +290,37 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     end
   end
 
+  test "should close an active opportunity" do
+    @opportunity.update!(approved: true, approver: @user, expiry_date: 2.weeks.from_now)
+    assert @opportunity.active?
+
+    put :close, params: { id: @opportunity }
+
+    assert_equal Date.current, assigns(:opportunity).reload.expiry_date
+    assert_not assigns(:opportunity).active?
+    assert_redirected_to admin_opportunity_path(assigns(:opportunity))
+  end
+
+  test "the creator can close their own opportunity" do
+    creator = FactoryBot.create(:member)
+    opportunity = FactoryBot.create(:opportunity, creator: creator, expiry_date: 2.weeks.from_now)
+    sign_in creator
+
+    put :close, params: { id: opportunity }
+
+    assert_equal Date.current, opportunity.reload.expiry_date
+  end
+
+  test "cannot close an opportunity without update permission" do
+    @opportunity.update!(expiry_date: 2.weeks.from_now)
+    sign_in FactoryBot.create(:member)
+
+    put :close, params: { id: @opportunity }
+
+    assert_response :forbidden
+    assert_not_equal Date.current, @opportunity.reload.expiry_date
+  end
+
   test "should reject opportunity" do
     @opportunity.approved = true
     @opportunity.save

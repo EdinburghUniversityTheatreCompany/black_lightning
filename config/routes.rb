@@ -179,6 +179,7 @@ ChaosRails::Application.routes.draw do
       member do
         put "approve"
         put "reject"
+        put "close"
       end
     end
 

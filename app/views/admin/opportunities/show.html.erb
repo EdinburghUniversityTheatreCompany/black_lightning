@@ -60,6 +60,15 @@
   <% end %>
 <% end %>
 
+<% if can?(:close, @opportunity) && @opportunity.expiry_date > Time.current %>
+  <% content_for :extra_show_actions do %>
+    <%= form_with url: close_admin_opportunity_path(@opportunity), method: :put do %>
+      <%= submit_tag "Close now", class: btn_classes(:warning),
+            data: { turbo_confirm: "Close #{@opportunity.display_title}? It will expire immediately and disappear from the public listing." } %>
+    <% end %>
+  <% end %>
+<% end %>
+
 <% if @opportunity.company && !@opportunity.company.reviewed && can?(:update, @opportunity.company) %>
   <%= render AlertComponent.new(type: :warning) do %>
     "<%= @opportunity.company.name %>" was just added and hasn't been checked yet.

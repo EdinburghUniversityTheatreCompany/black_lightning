@@ -92,6 +92,22 @@ class Admin::OpportunitiesController < AdminController
     end
   end
 
+  ##
+  # PUT /admin/opportunity/1/close
+  ##
+  def close
+    if @opportunity.close
+      flash[:success] = "#{@opportunity.display_title} has been closed and no longer appears in the public listing"
+    else
+      # A valid record cannot fail to close, but legacy records may carry validation errors.
+      # :nocov:
+      flash[:error] = "Could not close #{@opportunity.display_title}"
+      # :nocov:
+    end
+
+    redirect_to admin_opportunity_url(@opportunity)
+  end
+
   private
 
   # Email the submitter about an approval/rejection decision, with the reviewer's optional note.

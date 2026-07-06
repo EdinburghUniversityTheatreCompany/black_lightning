@@ -231,6 +231,17 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_no_difference("Company.count") { opp.destroy }
   end
 
+  test "close expires the posting immediately" do
+    opp = opportunities(:active_opportunity)
+    assert opp.active?
+
+    assert opp.close
+
+    assert_equal Date.current, opp.expiry_date
+    assert_not opp.active?
+    assert_not Opportunity.listable.exists?(opp.id), "a closed posting should drop out of the public listing"
+  end
+
   test "active orders internal companies first" do
     active = Opportunity.active.to_a
     assert_includes active, opportunities(:internal_project_opportunity)
