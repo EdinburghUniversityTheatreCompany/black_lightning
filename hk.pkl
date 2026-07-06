@@ -50,6 +50,15 @@ local linters = new Mapping<String, Step> {
         glob = List("db/schema.rb", "app/models/**/*.rb")
         fix = "if bin/rails runner \"ActiveRecord::Base.connection\" >/dev/null 2>&1; then bundle exec annotaterb models; else echo 'annotaterb: no DB reachable, skipping'; fi"
     }
+    // Guard against toolchain drift: Ruby/Node are pinned in mise.toml (source of truth),
+    // .ruby-version/.node-version (feed CI + setup-ruby/-node), and the prod Dockerfile
+    // (bakes them into the image). This is the bug that let the prod image ship Node 22
+    // while everything else ran 24 — fail if they ever diverge again. Mirrors the CI
+    // `versions` job (ci.yml) so pre-commit and CI agree; keep both in sync by hand.
+    ["versions"] {
+        glob = List("mise.toml", ".ruby-version", ".node-version", "Dockerfile")
+        check = "fail=0; ruby_file=$(tr -d '[:space:]' < .ruby-version); node_file=$(tr -d '[:space:]' < .node-version); ruby_mise=$(sed -n 's/^ruby[[:space:]]*=[^\"]*\"\\([^\"]*\\)\".*/\\1/p' mise.toml); node_mise=$(sed -n 's/^node[[:space:]]*=[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p' mise.toml); ruby_docker=$(sed -n 's/^ARG RUBY_VERSION=//p' Dockerfile | tr -d '[:space:]'); [ \"$ruby_file\" = \"$ruby_mise\" ] || { echo \"mise.toml ruby ($ruby_mise) != .ruby-version ($ruby_file)\"; fail=1; }; [ \"$ruby_file\" = \"$ruby_docker\" ] || { echo \"Dockerfile ARG RUBY_VERSION ($ruby_docker) != .ruby-version ($ruby_file)\"; fail=1; }; [ \"$node_file\" = \"$node_mise\" ] || { echo \"mise.toml node ($node_mise) != .node-version ($node_file)\"; fail=1; }; grep -qF 'setup_$(cut -d. -f1 < .node-version)' Dockerfile || { echo 'prod Dockerfile must derive the Node major from .node-version, not hardcode it'; fail=1; }; ! grep -q '^ARG NODE_VERSION=' Dockerfile || { echo 'remove hardcoded ARG NODE_VERSION from Dockerfile; derive it from .node-version'; fail=1; }; exit $fail"
+    }
     // Shipped scripts (bin/*, script/*) must carry the executable bit IN THE GIT INDEX
     // (mode 100755): with core.fileMode=false a local chmod +x never reaches git, so
     // clones get binstubs that die with exit 126 "Permission denied". Detects scripts

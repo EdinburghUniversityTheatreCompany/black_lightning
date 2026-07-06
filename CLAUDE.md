@@ -105,7 +105,8 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
 - **hk steps:** `rubocop` (+`rubocop-minitest`), `eslint` (Stimulus JS), `herb` (ERB),
   `annotate-models` (see below), `brakeman`, `bundler-audit`, `fasterer`, `database_consistency`,
   `debride`/`flay`/`jscpd` (dead-code + duplication), `gitleaks`, `actionlint` + `zizmor`
-  (GitHub Actions correctness + security), exec-bit + large-file guards.
+  (GitHub Actions correctness + security), exec-bit + large-file guards, and `versions`
+  (toolchain-drift guard — mirrors the CI `versions` job; keep the two in sync by hand).
   `bin/rails test` also runs as an hk step.
 - **`annotate-models` is a fix-only pre-commit step**: committing a model or `db/schema.rb`
   auto-regenerates the `# == Schema Information` blocks via `annotaterb models`. It DB-probes and

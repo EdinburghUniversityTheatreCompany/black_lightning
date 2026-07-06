@@ -114,7 +114,8 @@ jobs:
   # Guard against toolchain drift: Ruby/Node are pinned in several places (mise.toml is the
   # source of truth; .ruby-version/.node-version feed CI + setup-ruby/-node; the prod Dockerfile
   # bakes them into the image). This is the bug that let the prod image ship Node 22 while
-  # everything else ran 24 — fail CI if they ever diverge again. CI-only meta-check (no hk mirror).
+  # everything else ran 24 — fail CI if they ever diverge again. Mirrors the hk `versions`
+  # step (hk.pkl) so pre-commit and CI agree; keep both in sync by hand.
   versions:
     runs-on: ubuntu-latest
     permissions:
@@ -131,7 +132,7 @@ jobs:
           fail=0
           ruby_file=$(tr -d '[:space:]' < .ruby-version)
           node_file=$(tr -d '[:space:]' < .node-version)
-          ruby_mise=$(sed -n 's/^ruby[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)
+          ruby_mise=$(sed -n 's/^ruby[[:space:]]*=[^"]*"\([^"]*\)".*/\1/p' mise.toml)
           node_mise=$(sed -n 's/^node[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' mise.toml)
           ruby_docker=$(sed -n 's/^ARG RUBY_VERSION=//p' Dockerfile | tr -d '[:space:]')
           echo "ruby -> .ruby-version=$ruby_file mise.toml=$ruby_mise Dockerfile=$ruby_docker"
