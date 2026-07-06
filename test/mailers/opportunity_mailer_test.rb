@@ -64,19 +64,19 @@ class OpportunityMailerTest < ActionMailer::TestCase
     assert_equal [ "jane@example.com" ], email.to
   end
 
-  test "approved goes to the external submitter, not the account creator, when both are present" do
-    # A posting with both an account creator and an external submitter was created on the
-    # submitter's behalf (see Opportunity#on_behalf_of?). The decision email is sent to the
-    # external person (notification_email), so the salutation must name them too — otherwise we
-    # address the wrong person in their own inbox.
+  test "approved goes to the account creator, not the external submitter, when both are present" do
+    # A posting with both an account creator and an external submitter was entered by the creator
+    # on the submitter's behalf (see Opportunity#on_behalf_of?). The creator is the one who
+    # actually submitted it, so the decision email goes to their account — addressed to them,
+    # not to the external person, otherwise we address the wrong person in their own inbox.
     opportunity = opportunities(:internal_project_opportunity)
     opportunity.update_columns(submitter_name: "Jane Director", submitter_email: "jane@example.com")
 
     email = OpportunityMailer.approved(opportunity)
 
-    assert_equal [ "jane@example.com" ], email.to
-    assert_includes email.html_part.body.to_s, "Dear Jane Director"
-    assert_not_includes email.html_part.body.to_s, opportunity.creator.name
+    assert_equal [ opportunity.creator.email ], email.to
+    assert_includes email.html_part.body.to_s, "Dear #{opportunity.creator.name}"
+    assert_not_includes email.html_part.body.to_s, "Jane Director"
   end
 
   test "approved includes the reviewer note when given" do

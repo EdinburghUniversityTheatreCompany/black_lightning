@@ -132,6 +132,7 @@ class Opportunity < ApplicationRecord
     creator_id.present? && submitter_name.present?
   end
 
+
   # Immediately expire the posting so it drops out of the public listing. The column is a date,
   # so today's date already compares as past against Time.current.
   def close
@@ -160,17 +161,18 @@ class Opportunity < ApplicationRecord
     contact_email.presence || submitter_email.presence || creator&.email
   end
 
-  # Where to send submission notifications (approval/rejection): the submitter themselves,
-  # not the public contact address, which may belong to someone else. Prefer the external
-  # submitter so on-behalf postings notify the person the posting is for, not who typed it in.
+  # Where to send submission notifications (approval/rejection): whoever actually submitted the
+  # posting, not the public contact address, which may belong to someone else. For on-behalf
+  # postings that is the account creator who entered it — they can pass the decision on to the
+  # external person — and only creator-less (truly external) submissions notify the submitter.
   def notification_email
-    submitter_email.presence || creator&.email
+    creator&.email || submitter_email.presence
   end
 
-  # Name of the notification recipient, mirroring notification_email's submitter-first precedence
+  # Name of the notification recipient, mirroring notification_email's creator-first precedence
   # so the salutation always matches whoever the email is actually addressed to.
   def notification_name
-    submitter_name.presence || creator&.name
+    creator&.name || submitter_name
   end
 
   # Human name of whoever posted this. Prefer the external submitter, mirroring

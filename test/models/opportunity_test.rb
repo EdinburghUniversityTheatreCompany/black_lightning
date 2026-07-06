@@ -115,6 +115,7 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert on_behalf.on_behalf_of?
   end
 
+
   test "display_title falls back to company and project" do
     opp = opportunities(:internal_project_opportunity)
     assert_nil opp.title
@@ -170,14 +171,14 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert_equal internal.creator.email, internal.notification_email
   end
 
-  test "notification_email and notification_name prefer the external submitter for on-behalf postings" do
-    # When a manager posts on an external person's behalf, the creator records who entered it,
-    # but approval/rejection decisions should still reach the external person.
+  test "notification_email and notification_name target the creator for on-behalf postings" do
+    # When a user posts on an external person's behalf, the creator is the one who actually
+    # submitted it, so approval/rejection decisions go to them — they can pass the news on.
     on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
                                 creator: users(:admin), submitter_name: "Jane Director",
                                 submitter_email: "jane@example.com")
-    assert_equal "jane@example.com", on_behalf.notification_email
-    assert_equal "Jane Director", on_behalf.notification_name
+    assert_equal users(:admin).email, on_behalf.notification_email
+    assert_equal users(:admin).name, on_behalf.notification_name
   end
 
   test "submitter_display_name prefers the external submitter over the account creator" do
