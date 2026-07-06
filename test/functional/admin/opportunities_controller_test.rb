@@ -222,7 +222,9 @@ class Admin::OpportunitiesControllerTest < ActionController::TestCase
     assert_response :success
     assert_match "on behalf of", response.body
     assert_match "Jane External", response.body
-    assert_match @opportunity.creator.name, response.body
+    # creator.name is Faker-generated; the view HTML-escapes it (e.g. O'Reilly -> O&#39;Reilly),
+    # so match the escaped form or the assertion is flaky on names with ' & < >.
+    assert_match ERB::Util.html_escape(@opportunity.creator.name), response.body
   end
 
   test "index labels an on-behalf opportunity with the creator and the external submitter" do
