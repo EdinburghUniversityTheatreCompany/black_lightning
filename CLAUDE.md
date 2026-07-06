@@ -126,6 +126,9 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
   `.gitleaksignore` (each entry commented with why) — the default ruleset still fails on any NEW
   secret. We deliberately don't rewrite history to purge them: they're all dead, and it would
   reSHA ~3900 commits (back to the 2012 root) while GitHub may still cache the old objects.
+- **Large-file guard:** committed files over 512 KB fail CI's `audit` job (and hk's
+  `check-added-large-files`). PNG illustrations that trip it compress well as PNG8 palette
+  (`convert … PNG8:out.png && optipng -o5`) with no visible loss — they're flat-colour art.
 - **The dev container is mise-driven — keep it in sync.** [.devcontainer/Dockerfile.dev](.devcontainer/Dockerfile.dev)
   installs *only* the `mise` binary plus OS build/runtime libs; `mise.toml`/`mise.lock` are the single
   source of truth for Ruby, Node, and the dev tools, installed by `mise install` in
