@@ -47,3 +47,13 @@ unreachable. Its `index` still renders the unguarded `shared/pages/index` turbo_
 that's moot while unrouted. Decide to either **remove** the controller + views + empty test, or
 **wire it up** (route it and convert to `GenericController`, which already guards the index
 turbo_stream via `render_index_stream_or_full`). Left untouched for now since it can't be triggered.
+
+## Opportunity show contact line drops the viewer context
+
+`app/views/admin/opportunities/show.html.erb`'s contact field calls
+`@opportunity.submitter_display_name` **without** passing `@current_user`, unlike the other
+call sites (`OpportunityCardComponent`, the created_by field before it was restructured), so
+`User#name(current_user = nil)` renders the creator's name without viewer-aware formatting.
+Probably harmless (admins see full names anyway), but inconsistent — pass `@current_user` or
+document why it's omitted. Also, `Opportunity#css_class` calls `.html_safe` on the literal
+strings `"table-success"`/`"table-danger"` for no reason; plain strings would do.
