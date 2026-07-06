@@ -1,0 +1,8 @@
+# Fasterer perf-antipattern scan (advisory CI step + hk).
+# Exclude non-source dirs: CI's bundler-cache installs gems into vendor/bundle inside the
+# repo, so without this fasterer scans every gem's source (and any built JS deps / tmp / logs).
+exclude_paths:
+  - 'vendor/**/*.rb'
+  - 'node_modules/**/*.rb'
+  - 'tmp/**/*.rb'
+  - 'log/**/*.rb'
