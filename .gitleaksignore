@@ -1,0 +1,36 @@
+# gitleaks baseline — reviewed historical findings that are NOT live secrets.
+#
+# gitleaks auto-loads this file (fingerprint = commit:file:rule:startline) from the scan
+# root, so both CI's `gitleaks git` job and the local hk `gitleaks` step honour it. It
+# suppresses ONLY these exact findings at these exact locations in history; the full default
+# ruleset stays active, so any NEW secret still fails the gate.
+#
+# Each entry below was individually inspected (see the session notes / git blame of this file).
+# None are exploitable: they are documentation examples, a bare PEM marker line, or secrets
+# that were rotated out long ago (the app moved to Rails credentials / secret_key_base; the
+# Errbit host is dead). They live only in git history reaching back to 2012 — rewriting
+# history across ~3900 commits to purge dead values isn't worth the disruption.
+
+# Documentation example RSA key shipped in a `.dist` template ("The result should look
+# like:" — copied from the OpenSSL/doorkeeper docs). File no longer tracked.
+c84c089e5a2db547ec2f554c6a8adacd2d541157:config/openid_signing_key.dist:private-key:6
+
+# False positive: the bare `-----BEGIN RSA PRIVATE KEY-----` marker inside a heredoc. The
+# real key is interpolated from Rails secrets at runtime; nothing is hardcoded here.
+59406a550b2f6e9f1edd96d74b9765ff1a877119:config/initializers/doorkeeper_openid_connect.rb:private-key:9
+
+# Devise's shipped example `config.secret_key` default (commented out; Devise uses
+# secret_key_base). The current tree already carries an inline `# gitleaks:allow` on this line.
+38923103a458a4364986ad1a99751f9596f93e68:config/initializers/devise.rb:generic-api-key:11
+
+# Old Devise `config.secret_key` values, uncommented in these historical revisions. Devise
+# has since defaulted to secret_key_base; these keys are dead.
+f69cdb623cfe2518cf615f62dcac9ee00397e844:config/initializers/devise.rb:generic-api-key:11
+d4182ca69a2105230c4217c42cd4ea42785e5644:config/initializers/devise.rb:generic-api-key:7
+
+# Old Airbrake/Errbit API key pointing at errbit.mercuric.co.uk (a dead host).
+100be8d8a231927f9a40436e4aa84a809e73aeb2:config/initializers/errbit.rb:generic-api-key:2
+
+# Rails 3-era `secret_token` from the 2012 initial commit. The secret_token mechanism is
+# obsolete (the app uses secret_key_base via credentials).
+d647cd889ff60994e9a7edc71a515b3f9ae74a00:config/initializers/secret_token.rb:generic-api-key:7

@@ -120,6 +120,12 @@ Toolchain is pinned with **mise** (`mise.toml` + committed `mise.lock`; `hk`, `p
   legacy DB (a documented follow-up). Two herb rules are intentionally disabled in `.herb.yml`.
 - **Secrets:** `gitleaks` scans the whole tree; gitignored secret/runtime paths are allowlisted in
   `.gitleaks.toml`. Real plaintext secrets still live in `config/` — consider migrating to fnox.
+  The **CI `gitleaks git` job scans full history** (the hk step only scans the working tree), so
+  it surfaces dead secrets committed years ago. Reviewed historical findings that are NOT live
+  (doc examples, PEM marker lines, rotated/dead keys) are baselined by fingerprint in
+  `.gitleaksignore` (each entry commented with why) — the default ruleset still fails on any NEW
+  secret. We deliberately don't rewrite history to purge them: they're all dead, and it would
+  reSHA ~3900 commits (back to the 2012 root) while GitHub may still cache the old objects.
 - **The dev container is mise-driven — keep it in sync.** [.devcontainer/Dockerfile.dev](.devcontainer/Dockerfile.dev)
   installs *only* the `mise` binary plus OS build/runtime libs; `mise.toml`/`mise.lock` are the single
   source of truth for Ruby, Node, and the dev tools, installed by `mise install` in
