@@ -137,8 +137,7 @@ class Opportunity < ApplicationRecord
     creator_id.present? && submitter_name.present?
   end
 
-  # Who to credit for the posting: the external submitter, the account creator, or both for
-  # postings entered on an external person's behalf.
+  # Who to credit for the posting; on-behalf postings credit both parties.
   def attribution_label(viewer = nil, include_submitter_email: false)
     return submitter_name if external?
     return creator&.name(viewer) unless on_behalf_of?
@@ -146,7 +145,6 @@ class Opportunity < ApplicationRecord
     email = " (#{submitter_email})" if include_submitter_email && submitter_email.present?
     "#{creator&.name(viewer)}, on behalf of #{submitter_name}#{email}"
   end
-
 
   # Immediately expire the posting so it drops out of the public listing. The column is a date,
   # so today's date already compares as past against Time.current.
@@ -177,9 +175,9 @@ class Opportunity < ApplicationRecord
   end
 
   # Where to send submission notifications (approval/rejection): whoever actually submitted the
-  # posting, not the public contact address, which may belong to someone else. For on-behalf
-  # postings that is the account creator who entered it — they can pass the decision on to the
-  # external person — and only creator-less (truly external) submissions notify the submitter.
+  # posting, not the public contact address, which may belong to someone else. On-behalf
+  # postings notify the account creator who entered them; only creator-less (truly external)
+  # submissions notify the external submitter.
   def notification_email
     creator&.email || submitter_email.presence
   end
