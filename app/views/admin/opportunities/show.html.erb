@@ -9,17 +9,6 @@
   <% roles_content = { type: 'content', header: 'Roles', content: content_tag(:ul, safe_join(roles_html), class: 'list-disc pl-5') } %>
 <% end %>
 
-<%# Credit both people when a user entered the posting for an external submitter, so it does
-    not read as if the external person created it themselves. %>
-<% created_by = if @opportunity.external?
-     @opportunity.submitter_name
-   elsif @opportunity.on_behalf_of?
-     "#{@opportunity.creator&.name(@current_user)}, on behalf of #{@opportunity.submitter_name}" +
-       (@opportunity.submitter_email.present? ? " (#{@opportunity.submitter_email})" : "")
-   else
-     @opportunity.creator&.name(@current_user)
-   end %>
-
 <% fields = {
     company: @opportunity.company&.name,
     project: @opportunity.project,
@@ -32,7 +21,7 @@
     visibility: @opportunity.email_visibility.humanize,
     "Apply link" => (@opportunity.apply_url.present? ? link_to(@opportunity.apply_url, @opportunity.apply_url, target: '_blank', rel: 'noopener') : nil),
     roles: roles_content,
-    created_by: created_by,
+    created_by: @opportunity.attribution_label(@current_user, include_submitter_email: true),
     external: @opportunity.external? ? 'Submitted externally (no account)' : nil,
     approved_by: (@opportunity.approver.nil? ? 'Not Approved' : @opportunity.approver.name if can?(:edit, @opportunity) || can?(:approve, @opportunity)),
     active: @opportunity.active? ? 'This opportunity is currently active' : 'This opportunity is not active. An opportunity is only active when the expiration date has not been reached and it has been approved.',
@@ -60,12 +49,11 @@
   <% end %>
 <% end %>
 
-<% if can?(:close, @opportunity) && @opportunity.expiry_date > Time.current %>
+<%# get_link checks can?(:close) itself (aliased to :update in Ability). %>
+<% unless @opportunity.expired? %>
   <% content_for :extra_show_actions do %>
-    <%= form_with url: close_admin_opportunity_path(@opportunity), method: :put do %>
-      <%= submit_tag "Close now", class: btn_classes(:warning),
-            data: { turbo_confirm: "Close #{@opportunity.display_title}? It will expire immediately and disappear from the public listing." } %>
-    <% end %>
+    <%= get_link(@opportunity, :close, link_text: "Close now", http_method: :put, variant: :warning,
+          detail: "Close #{@opportunity.display_title}? It will expire immediately and disappear from the public listing.") %>
   <% end %>
 <% end %>
 

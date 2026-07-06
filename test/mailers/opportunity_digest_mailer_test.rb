@@ -68,6 +68,24 @@ class OpportunityDigestMailerTest < ActionMailer::TestCase
     assert_includes email.text_part.body.to_s, "Casey External"
   end
 
+  test "digest credits both parties for an on-behalf submission" do
+    user = users(:committee)
+    on_behalf = Opportunity.create!(
+      title: "On-behalf pending opportunity",
+      description: "Entered by a manager for an external person.",
+      expiry_date: 2.weeks.from_now,
+      approved: false,
+      creator_id: 1,
+      submitter_name: "Casey External",
+      submitter_email: "casey@example.com"
+    )
+
+    email = OpportunityDigestMailer.digest(user, [ on_behalf ])
+
+    assert_includes email.html_part.body.to_s, "on behalf of Casey External"
+    assert_includes email.text_part.body.to_s, "on behalf of Casey External"
+  end
+
   test "digest renders correctly for multiple opportunities" do
     user = users(:committee)
     opportunity = opportunities(:pending_digest_opportunity)

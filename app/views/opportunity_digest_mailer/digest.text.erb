@@ -4,7 +4,7 @@ The following <%= @opportunities.count == 1 ? "opportunity is" : "opportunities 
 
 <% @opportunities.each do |opportunity| %>
 - <%= opportunity.display_title %>
-  Submitted by: <%= opportunity.creator&.full_name || opportunity.submitter_name %>
+  Submitted by: <%= opportunity.attribution_label %>
   Submitted on: <%= l opportunity.created_at.to_date, format: :long %>
   Review at: <%= admin_opportunity_url(opportunity) %>
 

@@ -115,6 +115,25 @@ class Admin::OpportunityTest < ActionView::TestCase
     assert on_behalf.on_behalf_of?
   end
 
+  test "attribution_label credits the submitter, the creator, or both for on-behalf postings" do
+    assert_equal "Jane Director", opportunities(:external_project_opportunity).attribution_label
+
+    internal = opportunities(:internal_project_opportunity)
+    assert_equal internal.creator.name, internal.attribution_label
+
+    on_behalf = Opportunity.new(title: "T", description: "D", expiry_date: 1.week.from_now,
+                                creator_id: 1, submitter_name: "Jane Director",
+                                submitter_email: "jane@example.com")
+    assert_equal "#{users(:admin).name}, on behalf of Jane Director", on_behalf.attribution_label
+    assert_equal "#{users(:admin).name}, on behalf of Jane Director (jane@example.com)",
+                 on_behalf.attribution_label(include_submitter_email: true)
+  end
+
+  test "expired? is true once the expiry date has passed" do
+    assert opportunities(:expired_opportunity).expired?
+    assert_not opportunities(:active_opportunity).expired?
+  end
+
 
   test "display_title falls back to company and project" do
     opp = opportunities(:internal_project_opportunity)

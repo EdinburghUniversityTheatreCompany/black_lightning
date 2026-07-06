@@ -118,7 +118,12 @@ class Opportunity < ApplicationRecord
   end
 
   def active?
-    approved && expiry_date > Time.current
+    approved && !expired?
+  end
+
+  # The expiry date has passed: the posting no longer appears publicly, approved or not.
+  def expired?
+    expiry_date <= Time.current
   end
 
   # An opportunity submitted by someone without a user account (a public/external submission).
@@ -130,6 +135,16 @@ class Opportunity < ApplicationRecord
   # display can credit both instead of implying the external person created it themselves.
   def on_behalf_of?
     creator_id.present? && submitter_name.present?
+  end
+
+  # Who to credit for the posting: the external submitter, the account creator, or both for
+  # postings entered on an external person's behalf.
+  def attribution_label(viewer = nil, include_submitter_email: false)
+    return submitter_name if external?
+    return creator&.name(viewer) unless on_behalf_of?
+
+    email = " (#{submitter_email})" if include_submitter_email && submitter_email.present?
+    "#{creator&.name(viewer)}, on behalf of #{submitter_name}#{email}"
   end
 
 
@@ -182,7 +197,7 @@ class Opportunity < ApplicationRecord
   end
 
   def css_class
-    return "" unless expiry_date > Time.current
+    return "" if expired?
 
     if active?
       "table-success".html_safe
