@@ -19,11 +19,16 @@ class Tasks::Logic::MarkdownHeadingFix
   # non-breaking space that some pasted content uses (which CommonMark does NOT
   # accept as the heading space, so it must be normalised too).
   LEAD_GAP = /\A[ \t ]+/
-  # Safe closing sequence: `#`s preceded by whitespace (CommonMark's own rule) OR
-  # a run of 2+ `#`. Spares a lone `#` glued to a word such as `C#`/`F#`.
+  # How to strip a closing sequence once we've decided a line needs changing.
+  # Safe: `#`s preceded by whitespace (CommonMark's own rule) or a run of 2+.
+  # Aggressive (strip_all): any trailing run, including a single glued `#`.
   TRAILING_SAFE = /(?:[ \t]+#+|\#{2,})[ \t]*\z/
-  # Aggressive: any trailing run of `#`s, including a single glued one.
   TRAILING_ALL = /[ \t]*#+[ \t]*\z/
+  # Whether a line's tail renders a closing `#` LITERALLY (glued, no space before
+  # it) and so is worth fixing. Space-preceded closers render clean already, and a
+  # lone glued `#` (safe mode) is spared to protect words like `C#`/`F#`.
+  TRAILING_BAD_SAFE = /(?:[^ \t#]|\A)\#{2,}[ \t]*\z/
+  TRAILING_BAD_ALL = /(?:[^ \t#]|\A)#+[ \t]*\z/
 
   # Every Markdown-authored column in the app, keyed by model name. Kept as
   # strings so the file can be required outside a fully-booted autoload context.
@@ -133,12 +138,20 @@ class Tasks::Logic::MarkdownHeadingFix
       m = body.match(HEADING_RE)
       return nil unless m
 
-      content = m[3].sub(LEAD_GAP, "").sub(strip_all ? TRAILING_ALL : TRAILING_SAFE, "").strip
+      tail = m[3]
+      content = tail.sub(LEAD_GAP, "").sub(strip_all ? TRAILING_ALL : TRAILING_SAFE, "").strip
       return nil if content.empty?
+
+      glued = content.end_with?("#")
+      # Only rewrite lines that actually render wrong: a missing/non-ASCII leading
+      # gap, or a literal (glued) trailing `#`. Cosmetic-only differences (trailing
+      # whitespace, a space-preceded closer) render fine and are left as-is.
+      leading_ok = tail.start_with?(" ", "\t")
+      trailing_bad = tail.match?(strip_all ? TRAILING_BAD_ALL : TRAILING_BAD_SAFE)
+      return { type: :clean, glued: glued } if leading_ok && !trailing_bad
       return { type: :skip, reason: "too long (#{content.length} > #{max_len} chars)" } if content.length > max_len
 
       new_line = "#{m[1]}#{m[2]} #{content}#{cr}"
-      glued = content.end_with?("#")
       new_line == line ? { type: :clean, glued: glued } : { type: :fix, after: new_line, glued: glued }
     end
 

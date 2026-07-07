@@ -39,8 +39,11 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_empty skipped
   end
 
-  test "collapses extra spaces after the hashes" do
-    assert_equal "## Foo", Logic.fix_text("##   Foo").first
+  test "leaves cosmetic-only differences alone (they render identically)" do
+    # extra spaces after the hashes, and trailing whitespace, render the same
+    assert_empty Logic.fix_text("##   Foo").second
+    assert_equal "### Set   ", Logic.fix_text("### Set   ").first
+    assert_empty Logic.fix_text("### Set   ").second
   end
 
   test "allows up to three leading spaces but treats four as indented code" do
@@ -119,8 +122,10 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_equal "## Publicity Text", Logic.fix_text("## Publicity Text##").first
   end
 
-  test "strips a space-preceded closing hash, matching CommonMark" do
-    assert_equal "## Foo", Logic.fix_text("## Foo ##").first
+  test "leaves a space-preceded closing sequence alone (CommonMark already strips it)" do
+    # renders "Foo" as-is, so no rewrite — but if the line is touched for another
+    # reason (here a missing leading space) the closer is cleaned up too.
+    assert_empty Logic.fix_text("## Foo ##").second
     assert_equal "## Foo", Logic.fix_text("##Foo #").first
   end
 
