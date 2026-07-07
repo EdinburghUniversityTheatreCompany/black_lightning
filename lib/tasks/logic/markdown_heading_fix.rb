@@ -1,23 +1,36 @@
 # Backfill fix for Markdown headings authored without the space after the `#`s
-# (e.g. `##Description` -> `## Description`). Such lines are NOT headings under the
-# CommonMark spec used by MdHelper#render_markdown, so they currently render as
-# literal `##Description` text. See lib/tasks/markdown.rake for the runnable task.
+# (e.g. `##Description` -> `## Description`) and/or with a decorative closing
+# sequence of `#`s (e.g. `## Week 5##` -> `## Week 5`). Under the CommonMark spec
+# used by MdHelper#render_markdown, `##Description` is not a heading at all (it
+# renders as literal text), and a closing `##` not preceded by a space renders
+# literally too. See lib/tasks/markdown.rake for the runnable task.
 class Tasks::Logic::MarkdownHeadingFix
-  # Cap on heading-text length: prose lines are long, real headings are short.
-  MAX_HEADING_LEN = 64
+  # Cap on cleaned heading-text length: guards against turning a long paragraph
+  # that merely starts with `#` into a heading. Overridable per-run.
+  MAX_HEADING_LEN = 133
 
-  # Line-start ATX heading with the space missing: 0-3 leading spaces, 1-6 `#`,
-  # then a non-space non-`#` char. 4+ spaces is indented code; 7+ `#` is never a
-  # heading — both fail to match and are left alone. `\#` is escaped to avoid `#{`
-  # being read as string interpolation.
-  HEADING_RE = /\A( {0,3})(\#{1,6})([^\s#].*)\z/
+  # A fenced code block opener/closer: up to 3 leading spaces then 3+ ` or ~.
+  FENCE_RE = /\A {0,3}(`{3,}|~{3,})/
+  # Line-start ATX heading: 0-3 leading spaces, 1-6 `#`, then anything NOT a 7th
+  # `#`. 4+ spaces is indented code and 7+ `#` is never a heading — both fail to
+  # match. `\#` is escaped so `#{` is not read as string interpolation.
+  HEADING_RE = /\A( {0,3})(\#{1,6})(?!#)(.*)\z/
+  # The gap between the hashes and the title — a normal space, tab, or the
+  # non-breaking space that some pasted content uses (which CommonMark does NOT
+  # accept as the heading space, so it must be normalised too).
+  LEAD_GAP = /\A[ \t ]+/
+  # Safe closing sequence: `#`s preceded by whitespace (CommonMark's own rule) OR
+  # a run of 2+ `#`. Spares a lone `#` glued to a word such as `C#`/`F#`.
+  TRAILING_SAFE = /(?:[ \t]+#+|\#{2,})[ \t]*\z/
+  # Aggressive: any trailing run of `#`s, including a single glued one.
+  TRAILING_ALL = /[ \t]*#+[ \t]*\z/
 
-  # Every Markdown-authored column in the app, keyed by model name. Kept as strings
-  # so the file can be required outside a fully-booted autoload context.
+  # Every Markdown-authored column in the app, keyed by model name. Kept as
+  # strings so the file can be required outside a fully-booted autoload context.
   #
   # CarouselItem#tagline is intentionally absent: it is authored in the Markdown
-  # editor but rendered as PLAIN text, so a fix there would change the literal string
-  # users see rather than repair a heading (see plans/off-topic-improvements.md).
+  # editor but rendered as PLAIN text, so a fix there would change the literal
+  # string users see rather than repair a heading (see plans/off-topic-improvements.md).
   TARGETS = {
     "FaultReport" => [ :description ],
     "PictureTag" => [ :description ],
@@ -44,145 +57,168 @@ class Tasks::Logic::MarkdownHeadingFix
     # Summary of the most recent `run`, for callers/tests that need the counts.
     attr_reader :last_summary
 
-    # Pure transform. Returns [new_string, changes, skipped] where:
-    #   changes = [{ line_no:, before:, after: }]  (lines a space was inserted into)
-    #   skipped = [{ line_no:, text:, reason: }]   (heading-shaped lines left alone, for review)
+    # Pure transform. Returns [new_string, changes, skipped, glued] where:
+    #   changes = [{ line_no:, before:, after: }]  (a space inserted / tail trimmed)
+    #   skipped = [{ line_no:, text:, reason: }]   (heading-shaped but over the cap)
+    #   glued   = [{ line_no:, text: }]            (heading left ending in a lone `#`,
+    #                                               e.g. `C#` — spared in safe mode)
     # No database access — this is the unit-tested core.
-    def fix_text(str, max_len: MAX_HEADING_LEN)
-      return [ str, [], [] ] if str.blank?
+    def fix_text(str, max_len: MAX_HEADING_LEN, strip_all: false)
+      return [ str, [], [], [] ] if str.blank?
 
       changes = []
       skipped = []
+      glued = []
       in_fence = false
       fence_char = nil
 
       # split("\n", -1) keeps trailing empty fields so join round-trips exactly.
       new_lines = str.split("\n", -1).each_with_index.map do |line, idx|
-        if (fence = line.match(/\A {0,3}(`{3,}|~{3,})/))
+        if (fence = line.match(FENCE_RE))
           char = fence[1][0]
-          if in_fence
-            in_fence = false if char == fence_char
-          else
-            in_fence = true
-            fence_char = char
-          end
+          fence_char, in_fence = toggle_fence(in_fence, fence_char, char)
           next line
         end
-
         next line if in_fence
 
-        m = line.match(HEADING_RE)
-        next line unless m
+        res = classify_heading(line, max_len, strip_all)
+        next line unless res
 
-        leading, hashes, rest = m[1], m[2], m[3]
-        if (reason = skip_reason(rest, max_len))
-          skipped << { line_no: idx + 1, text: line, reason: reason }
-          next line
-        end
-
-        fixed = "#{leading}#{hashes} #{rest}"
-        changes << { line_no: idx + 1, before: line, after: fixed }
-        fixed
+        record(res, idx + 1, line, changes, skipped, glued)
       end
 
-      [ new_lines.join("\n"), changes, skipped ]
+      [ new_lines.join("\n"), changes, skipped, glued ]
     end
 
     # :nocov:
     # Iterate the target columns, print what would change, and (unless dry_run) write it.
-    def run(dry_run: true, only: nil, max_len: MAX_HEADING_LEN)
+    def run(dry_run: true, only: nil, max_len: MAX_HEADING_LEN, strip_all: false)
       targets = only ? TARGETS.slice(only) : TARGETS
       warn "No target model named #{only.inspect}." if only && targets.empty?
 
-      scanned = 0
-      records_changed = 0
-      columns_changed = 0
-      headings_fixed = 0
-      skipped_total = 0
+      counts = Hash.new(0)
+      glued_all = []
 
       targets.each do |model_name, columns|
         klass = model_name.constantize
         has_updated_at = klass.column_names.include?("updated_at")
 
         klass.find_each do |record|
-          scanned += 1
-          record_touched = false
-
-          columns.each do |col|
-            value = record.public_send(col)
-            next if value.blank?
-
-            fixed, changes, skipped = fix_text(value, max_len: max_len)
-
-            if changes.any?
-              columns_changed += 1
-              headings_fixed += changes.size
-              record_touched = true
-              print_changes(model_name, record.id, col, changes)
-
-              unless dry_run
-                attrs = { col => fixed }
-                attrs[:updated_at] = Time.current if has_updated_at
-                record.update_columns(attrs)
-              end
-            end
-
-            if skipped.any?
-              skipped_total += skipped.size
-              print_skipped(model_name, record.id, col, skipped)
-            end
-          end
-
-          records_changed += 1 if record_touched
+          counts[:scanned] += 1
+          scan_record(record, model_name, columns, max_len, strip_all, dry_run, has_updated_at, counts, glued_all)
         end
       end
 
-      @last_summary = {
-        dry_run: dry_run,
-        scanned: scanned,
-        records_changed: records_changed,
-        columns_changed: columns_changed,
-        headings_fixed: headings_fixed,
-        skipped: skipped_total
-      }
+      print_glued(glued_all)
+      @last_summary = counts.merge(dry_run: dry_run, glued: glued_all.size)
       print_summary(@last_summary)
       @last_summary
     end
+    # :nocov:
 
     private
 
-    def skip_reason(rest, max_len)
-      text = rest.strip
-      return "starts with a non-letter" unless text.match?(/\A[[:alpha:]]/)
-      return "too long (#{text.length} > #{max_len} chars)" if text.length > max_len
-      return "ends with a period" if text.end_with?(".")
+    def toggle_fence(in_fence, fence_char, char)
+      if in_fence
+        char == fence_char ? [ nil, false ] : [ fence_char, true ]
+      else
+        [ char, true ]
+      end
+    end
 
-      nil
+    # Returns nil (not a heading) or a hash describing what to do with the line.
+    def classify_heading(line, max_len, strip_all)
+      cr = line.end_with?("\r") ? "\r" : ""
+      body = cr.empty? ? line : line[0...-1]
+      m = body.match(HEADING_RE)
+      return nil unless m
+
+      content = m[3].sub(LEAD_GAP, "").sub(strip_all ? TRAILING_ALL : TRAILING_SAFE, "").strip
+      return nil if content.empty?
+      return { type: :skip, reason: "too long (#{content.length} > #{max_len} chars)" } if content.length > max_len
+
+      new_line = "#{m[1]}#{m[2]} #{content}#{cr}"
+      glued = content.end_with?("#")
+      new_line == line ? { type: :clean, glued: glued } : { type: :fix, after: new_line, glued: glued }
+    end
+
+    # Records a classification into the collections and returns the line to emit.
+    def record(res, line_no, line, changes, skipped, glued)
+      case res[:type]
+      when :fix
+        changes << { line_no: line_no, before: line, after: res[:after] }
+        glued << { line_no: line_no, text: res[:after] } if res[:glued]
+        res[:after]
+      when :skip
+        skipped << { line_no: line_no, text: line, reason: res[:reason] }
+        line
+      else # :clean
+        glued << { line_no: line_no, text: line } if res[:glued]
+        line
+      end
+    end
+
+    # :nocov:
+    def scan_record(record, model_name, columns, max_len, strip_all, dry_run, has_updated_at, counts, glued_all)
+      touched = false
+      columns.each do |col|
+        value = record.public_send(col)
+        next if value.blank?
+
+        fixed, changes, skipped, glued = fix_text(value, max_len: max_len, strip_all: strip_all)
+        glued.each { |g| glued_all << "#{model_name}##{record.id}.#{col} L#{g[:line_no]}  #{g[:text].inspect}" }
+        if skipped.any?
+          counts[:skipped] += skipped.size
+          print_skipped(model_name, record.id, col, skipped)
+        end
+        next if changes.empty?
+
+        counts[:columns_changed] += 1
+        counts[:headings_fixed] += changes.size
+        touched = true
+        print_changes(model_name, record.id, col, changes)
+        write(record, col, fixed, has_updated_at) unless dry_run
+      end
+      counts[:records_changed] += 1 if touched
+    end
+
+    def write(record, col, fixed, has_updated_at)
+      attrs = { col => fixed }
+      attrs[:updated_at] = Time.current if has_updated_at
+      record.update_columns(attrs)
     end
 
     def print_changes(model_name, id, col, changes)
-      puts "#{model_name}##{id}.#{col}"
+      puts "== #{model_name}##{id}.#{col} =="
       changes.each do |c|
-        puts "  L#{c[:line_no]}  - #{c[:before]}"
-        puts "  L#{c[:line_no]}  + #{c[:after]}"
+        puts "  L#{c[:line_no]}  - #{c[:before].inspect}"
+        puts "  L#{c[:line_no]}  + #{c[:after].inspect}"
       end
     end
 
     def print_skipped(model_name, id, col, skipped)
-      puts "#{model_name}##{id}.#{col}  skipped (review by hand):"
       skipped.each do |s|
-        puts "  L#{s[:line_no]}  #{s[:text]}   (#{s[:reason]})"
+        puts "  SKIP #{model_name}##{id}.#{col} L#{s[:line_no]}  #{s[:text].inspect}   (#{s[:reason]})"
       end
+    end
+
+    def print_glued(glued_all)
+      return if glued_all.empty?
+
+      puts "\n== REVIEW: headings left ending in a single '#' (spared in safe mode) =="
+      puts "   If any is really a closing decoration rather than e.g. C#/F#, re-run with STRIP_ALL=1."
+      glued_all.each { |g| puts "  #{g}" }
     end
 
     def print_summary(summary)
       puts
       puts "== Summary (#{summary[:dry_run] ? 'DRY RUN' : 'APPLIED'}) =="
-      puts "  records scanned:  #{summary[:scanned]}"
-      puts "  records changed:  #{summary[:records_changed]}"
-      puts "  columns changed:  #{summary[:columns_changed]}"
-      puts "  headings fixed:   #{summary[:headings_fixed]}"
-      puts "  candidates skipped: #{summary[:skipped]}"
+      puts "  records scanned:    #{summary[:scanned]}"
+      puts "  records changed:    #{summary[:records_changed]}"
+      puts "  columns changed:    #{summary[:columns_changed]}"
+      puts "  headings fixed:     #{summary[:headings_fixed]}"
+      puts "  skipped (too long): #{summary[:skipped]}"
+      puts "  glued '#' to review: #{summary[:glued]}"
     end
     # :nocov:
   end

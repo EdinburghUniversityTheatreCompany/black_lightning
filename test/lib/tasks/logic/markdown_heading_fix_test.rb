@@ -3,21 +3,23 @@ require "#{Rails.root}/lib/tasks/logic/markdown_heading_fix"
 
 # Tests the markdown:fix_heading_spaces task logic.
 #
-# The pure `fix_text` transform is the risky part (heading heuristic + fenced-code
-# tracking), so it gets exhaustive unit coverage. `run` gets a couple of DB-backed
-# tests to prove the dry-run/apply distinction and the update_columns write path.
+# The pure `fix_text` transform is the risky part (heading heuristic, fenced-code
+# tracking, and trailing closing-sequence stripping), so it gets exhaustive unit
+# coverage. `run` gets DB-backed tests to prove the dry-run/apply distinction, the
+# update_columns write path, and that every print branch works.
 class MarkdownHeadingFixTest < ActiveSupport::TestCase
   Logic = Tasks::Logic::MarkdownHeadingFix
 
-  # --- fix_text: the pure transform ---------------------------------------
+  # --- fix_text: leading space insertion ----------------------------------
 
   test "inserts a space in a bare ATX heading missing one" do
-    result, changes, skipped = Logic.fix_text("##Description")
+    result, changes, skipped, glued = Logic.fix_text("##Description")
 
     assert_equal "## Description", result
     assert_equal 1, changes.size
     assert_equal({ line_no: 1, before: "##Description", after: "## Description" }, changes.first)
     assert_empty skipped
+    assert_empty glued
   end
 
   test "handles every heading level 1 through 6" do
@@ -37,15 +39,16 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_empty skipped
   end
 
-  test "allows up to three leading spaces but treats four as indented code" do
-    result, changes, = Logic.fix_text("   ##Indented three")
-    assert_equal "   ## Indented three", result
-    assert_equal 1, changes.size
+  test "collapses extra spaces after the hashes" do
+    assert_equal "## Foo", Logic.fix_text("##   Foo").first
+  end
 
-    result, changes, skipped = Logic.fix_text("    ##Indented four")
+  test "allows up to three leading spaces but treats four as indented code" do
+    assert_equal "   ## Indented three", Logic.fix_text("   ##Indented three").first
+
+    result, changes, = Logic.fix_text("    ##Indented four")
     assert_equal "    ##Indented four", result, "four-space indent is a code block, leave it"
     assert_empty changes
-    assert_empty skipped
   end
 
   test "does not touch seven or more hashes" do
@@ -56,109 +59,137 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
     assert_empty skipped
   end
 
-  test "skips candidates whose text does not start with a letter" do
-    [ "#1 rule of the show", "#!bang", "#-dash", "#(paren" ].each do |line|
-      result, changes, skipped = Logic.fix_text(line)
-
-      assert_equal line, result, "#{line.inspect} should be left alone"
-      assert_empty changes
-      assert_equal 1, skipped.size
-      assert_match(/letter/, skipped.first[:reason])
-    end
+  test "treats a non-breaking space after the hashes as a missing space" do
+    assert_equal "## Selected", Logic.fix_text("## Selected").first
   end
 
-  test "skips over-length headings as prose" do
-    long = "##" + ("a" * 65)
-    result, changes, skipped = Logic.fix_text(long)
+  # --- fix_text: loosened content rules -----------------------------------
 
-    assert_equal long, result
+  test "fixes headings that start with markdown emphasis, quotes or digits" do
+    assert_equal "## **Synopsis**", Logic.fix_text("##**Synopsis**").first
+    assert_equal "# “Well done”", Logic.fix_text("#“Well done”").first
+    assert_equal "## 2017/18 Committee", Logic.fix_text("##2017/18 Committee").first
+  end
+
+  test "allows headings that end in a period" do
+    assert_equal "###### The King.", Logic.fix_text("######The King.").first
+  end
+
+  test "skips only lines longer than the cap" do
+    long = "##" + ("a" * 134)
+    _result, changes, skipped = Logic.fix_text(long)
     assert_empty changes
     assert_equal 1, skipped.size
     assert_match(/too long/, skipped.first[:reason])
+
+    ok = "##" + ("a" * 100)
+    _r, changes2, = Logic.fix_text(ok)
+    assert_equal 1, changes2.size
   end
 
-  test "respects a custom max_len" do
-    _result, changes, skipped = Logic.fix_text("##Short heading", max_len: 3)
-    assert_empty changes
-    assert_match(/too long/, skipped.first[:reason])
+  test "measures length on the cleaned content, not the raw hashes" do
+    # trailing ## would push a 3-char heading over a tiny cap if counted raw
+    _result, changes, skipped = Logic.fix_text("##Foo##", max_len: 3)
+    assert_equal 1, changes.size, "content 'Foo' is 3 chars, within the cap"
+    assert_empty skipped
   end
 
-  test "skips headings that end in a sentence period" do
-    line = "##This is really a sentence."
-    result, changes, skipped = Logic.fix_text(line)
-
-    assert_equal line, result
-    assert_empty changes
-    assert_match(/period/, skipped.first[:reason])
-  end
-
-  test "allows question and exclamation endings" do
-    assert_equal "## Really?", Logic.fix_text("##Really?").first
-    assert_equal "## Wow!", Logic.fix_text("##Wow!").first
-  end
+  # --- fix_text: fenced code ----------------------------------------------
 
   test "never touches lines inside a fenced code block" do
-    input = "##Real heading\n\n```\n##not a heading\n### also code\n```\n\n##Another real"
+    input = "##Real\n\n```\n##not a heading\n### also code\n```\n\n##Also real"
     result, changes, = Logic.fix_text(input)
 
-    expected = "## Real heading\n\n```\n##not a heading\n### also code\n```\n\n## Another real"
-    assert_equal expected, result
-    assert_equal 2, changes.size
+    assert_equal "## Real\n\n```\n##not a heading\n### also code\n```\n\n## Also real", result
     assert_equal [ 1, 8 ], changes.map { |c| c[:line_no] }
   end
 
   test "handles tilde fences too" do
-    input = "~~~\n##code\n~~~\n##heading"
-    result, changes, = Logic.fix_text(input)
-
+    result, changes, = Logic.fix_text("~~~\n##code\n~~~\n##heading")
     assert_equal "~~~\n##code\n~~~\n## heading", result
     assert_equal 1, changes.size
     assert_equal 4, changes.first[:line_no]
   end
 
+  # --- fix_text: trailing closing-sequence stripping ----------------------
+
+  test "strips a trailing closing sequence of two or more hashes" do
+    assert_equal "## Week 5", Logic.fix_text("##Week 5##").first
+    assert_equal "### Overview:", Logic.fix_text("###Overview:###").first
+    assert_equal "## Publicity Text", Logic.fix_text("## Publicity Text##").first
+  end
+
+  test "strips a space-preceded closing hash, matching CommonMark" do
+    assert_equal "## Foo", Logic.fix_text("## Foo ##").first
+    assert_equal "## Foo", Logic.fix_text("##Foo #").first
+  end
+
+  test "safe mode spares a single hash glued to the text (e.g. C#) and flags it" do
+    # already a valid heading, only the glued # — must stay byte-for-byte identical
+    result, changes, _skipped, glued = Logic.fix_text("## Programming in C#")
+    assert_equal "## Programming in C#", result
+    assert_empty changes
+    assert_equal 1, glued.size
+    assert_equal "## Programming in C#", glued.first[:text]
+  end
+
+  test "safe mode still fixes the leading space but leaves a glued single hash, flagging it" do
+    result, changes, _skipped, glued = Logic.fix_text("#Tech#")
+    assert_equal "# Tech#", result
+    assert_equal 1, changes.size
+    assert_equal 1, glued.size
+  end
+
+  test "strip_all removes even a single glued trailing hash" do
+    assert_equal "# Tech", Logic.fix_text("#Tech#", strip_all: true).first
+    result, _changes, _skipped, glued = Logic.fix_text("## Programming in C#", strip_all: true)
+    assert_equal "## Programming in C", result
+    assert_empty glued, "nothing left to flag once everything is stripped"
+  end
+
+  # --- fix_text: misc ------------------------------------------------------
+
   test "fixes multiple broken headings across a multi-line string" do
-    input = "##One\n\nSome body text.\n\n###Two\n\nMore text\n\n####Three"
+    input = "##One\n\nBody.\n\n###Two##\n\nMore\n\n####Three"
     result, changes, = Logic.fix_text(input)
 
-    assert_equal "## One\n\nSome body text.\n\n### Two\n\nMore text\n\n#### Three", result
+    assert_equal "## One\n\nBody.\n\n### Two\n\nMore\n\n#### Three", result
     assert_equal 3, changes.size
   end
 
-  test "preserves trailing content and blank lines exactly" do
-    input = "##Heading with trailing spaces   \nbody\n"
-    result, = Logic.fix_text(input)
-
-    assert_equal "## Heading with trailing spaces   \nbody\n", result
+  test "ignores an empty heading" do
+    assert_equal "##", Logic.fix_text("##").first
+    assert_equal "## ", Logic.fix_text("## ").first
   end
 
-  test "returns blank input unchanged with no changes" do
-    assert_equal [ nil, [], [] ], Logic.fix_text(nil)
-    assert_equal [ "", [], [] ], Logic.fix_text("")
-    assert_equal [ "   ", [], [] ], Logic.fix_text("   ")
+  test "returns blank input unchanged with empty collections" do
+    assert_equal [ nil, [], [], [] ], Logic.fix_text(nil)
+    assert_equal [ "", [], [], [] ], Logic.fix_text("")
+    assert_equal [ "   ", [], [], [] ], Logic.fix_text("   ")
   end
 
   # --- run: DB-backed dry-run / apply -------------------------------------
 
   test "dry-run reports changes but writes nothing" do
     opp = FactoryBot.create(:opportunity, description: "##Description\n\nBody")
-    original_updated_at = opp.updated_at
+    original = opp.updated_at
 
-    summary = capture_io { Logic.run(dry_run: true, only: "Opportunity") }.then { Logic.last_summary }
+    capture_io { Logic.run(dry_run: true, only: "Opportunity") }
 
-    assert_operator summary[:headings_fixed], :>=, 1
+    assert_operator Logic.last_summary[:headings_fixed], :>=, 1
     assert_equal "##Description\n\nBody", opp.reload.description, "dry-run must not write"
-    assert_equal original_updated_at.to_i, opp.updated_at.to_i
+    assert_equal original.to_i, opp.updated_at.to_i
   end
 
-  test "apply writes the fix and bumps updated_at" do
-    opp = FactoryBot.create(:opportunity, description: "##Description\n\nBody")
+  test "apply writes the fix, strips a trailing sequence, and bumps updated_at" do
+    opp = FactoryBot.create(:opportunity, description: "##Overview##\n\nBody")
     opp.update_columns(updated_at: 2.days.ago)
     stale = opp.reload.updated_at
 
     capture_io { Logic.run(dry_run: false, only: "Opportunity") }
 
     opp.reload
-    assert_equal "## Description\n\nBody", opp.description
+    assert_equal "## Overview\n\nBody", opp.description
     assert_operator opp.updated_at, :>, stale, "updated_at should be bumped to bust caches"
   end
 
@@ -171,6 +202,19 @@ class MarkdownHeadingFixTest < ActiveSupport::TestCase
 
     opp.reload
     assert_equal "## Already fine", opp.description
-    assert_equal stale.to_i, opp.updated_at.to_i, "untouched record keeps its updated_at"
+    assert_equal stale.to_i, opp.updated_at.to_i
+  end
+
+  test "run exercises the skip, glued and summary output branches" do
+    long_line = "##" + ("z" * 200)
+    FactoryBot.create(:opportunity, description: "#Tech#\n\n#{long_line}")
+
+    out, = capture_io { Logic.run(dry_run: true, only: "Opportunity") }
+
+    assert_match(/too long/, out)
+    assert_match(/single '#'/, out)
+    assert_match(/Summary/, out)
+    assert_operator Logic.last_summary[:skipped], :>=, 1
+    assert_operator Logic.last_summary[:glued], :>=, 1
   end
 end
