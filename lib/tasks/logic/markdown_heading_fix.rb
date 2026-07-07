@@ -1,12 +1,9 @@
-# Backfill fix for Markdown headings authored without the space after the `#`s
-# (e.g. `##Description` -> `## Description`) and/or with a decorative closing
-# sequence of `#`s (e.g. `## Week 5##` -> `## Week 5`). Under the CommonMark spec
-# used by MdHelper#render_markdown, `##Description` is not a heading at all (it
-# renders as literal text), and a closing `##` not preceded by a space renders
-# literally too. See lib/tasks/markdown.rake for the runnable task.
+# Backfill fix for Markdown headings that render wrong under the CommonMark spec
+# used by MdHelper#render_markdown: a missing space after the `#`s (`##Description`
+# is literal text, not a heading) and a glued closing sequence (`## Week 5##` shows
+# the trailing `##` literally). See lib/tasks/markdown.rake for the runnable task.
 class Tasks::Logic::MarkdownHeadingFix
-  # Cap on cleaned heading-text length: guards against turning a long paragraph
-  # that merely starts with `#` into a heading. Overridable per-run.
+  # Guards against turning a long paragraph that merely starts with `#` into a heading.
   MAX_HEADING_LEN = 133
 
   # A fenced code block opener/closer: up to 3 leading spaces then 3+ ` or ~.
