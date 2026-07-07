@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_01_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_07_120000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -828,10 +828,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_01_120000) do
     t.string "email", default: "", null: false
     t.string "encrypted_password", default: "", null: false
     t.string "first_name"
-    t.text "google_access_token"
-    t.string "google_calendar_id"
-    t.text "google_refresh_token"
-    t.datetime "google_token_expires_at"
     t.string "last_name"
     t.datetime "last_sign_in_at", precision: nil
     t.string "last_sign_in_ip"

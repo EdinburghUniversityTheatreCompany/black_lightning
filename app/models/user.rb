@@ -20,9 +20,6 @@
 #  email                   :string(255)      default(""), not null
 #  encrypted_password      :string(255)      default(""), not null
 #  first_name              :string(255)
-#  google_access_token     :text(65535)
-#  google_refresh_token    :text(65535)
-#  google_token_expires_at :datetime
 #  last_name               :string(255)
 #  last_sign_in_at         :datetime
 #  last_sign_in_ip         :string(255)
@@ -40,7 +37,6 @@
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
 #  associate_id            :string(255)
-#  google_calendar_id      :string(255)
 #  student_id              :string(255)
 #
 # Indexes
@@ -72,9 +68,6 @@ class User < ApplicationRecord
   validates :associate_id, length: { maximum: 255 }
   validates :calendar_token, length: { maximum: 255 }
   validates :calendar_email, length: { maximum: 255 }
-  validates :google_access_token, length: { maximum: 65535 }
-  validates :google_refresh_token, length: { maximum: 65535 }
-  validates :google_calendar_id, length: { maximum: 255 }
   validates :profile_completion_salt, length: { maximum: 255 }
   before_save :unify_numbers
   before_save :ensure_calendar_token

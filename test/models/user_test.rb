@@ -128,6 +128,16 @@ class Admin::UserTest < ActiveSupport::TestCase
     assert user.valid?
   end
 
+  test "existing user validates and saves without the orphan google columns" do
+    # Regression: dev/test carried orphan google_* columns (never migrated to
+    # production), and length validations on them crashed admin/users#update in
+    # production with `undefined method 'google_access_token'`. The columns are
+    # dropped now; validating/saving a user must not reference them.
+    @user.first_name = "Regression"
+    assert @user.valid?, @user.errors.full_messages.to_sentence
+    assert @user.save
+  end
+
   # Debt
   test "debt causing and upcoming maintenance debts" do
     debt_causing_debt =      FactoryBot.create(:maintenance_debt,         user: @user)
