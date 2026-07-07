@@ -34,35 +34,6 @@
   margin-bottom: 0;
 }
 
-/* Give rendered markdown a proper heading ramp. Two gaps make this necessary:
-   Tailwind Typography's `prose` only styles h1–h4 (h4 at body size) and skips
-   h5/h6 entirely, and a global bootstrap-compat rule squashes every h3 to body
-   size. Scoped to `.markdown-body` so page chrome elsewhere is untouched. */
-.markdown-body :is(h3, h4, h5, h6) {
-  font-weight: 600;
-}
-
-.markdown-body h3 {
-  font-size: 1.25rem;
-}
-
-.markdown-body h4 {
-  font-size: 1.125rem;
-}
-
-.markdown-body h5 {
-  font-size: 1rem;
-}
-
-.markdown-body h6 {
-  font-size: 0.875rem;
-}
-
-.markdown-body :is(h4, h5, h6) {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-}
-
 .captioned-image {
   max-width: 192px;
   font-size: smaller;
