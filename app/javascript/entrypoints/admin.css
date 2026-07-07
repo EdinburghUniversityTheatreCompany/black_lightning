@@ -29,7 +29,7 @@ select.simple-select2 {
 
 /* Heading styles — Tailwind resets headings; restore sensible defaults */
 h3 {
-  @apply text-base font-semibold text-gray-700 mb-2;
+  @apply text-xl font-semibold text-gray-700 mb-2;
 }
 
 /* Admin breadcrumb link color (lives outside <main>) */
