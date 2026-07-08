@@ -1,6 +1,6 @@
 <div class="py-3">
   <div class="flex items-start justify-between gap-2">
-    <h4 class="text-base font-semibold mb-0">
+    <h4 class="<%= detailed ? "text-base font-semibold" : "!text-base !font-semibold" %> mb-0">
       <% if heading_url %>
         <%= link_to heading, heading_url, class: "hover:underline" %>
       <% else %>
