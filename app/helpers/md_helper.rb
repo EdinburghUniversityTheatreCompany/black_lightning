@@ -44,30 +44,39 @@ module MdHelper
   def apply_ial(html)
     doc = Nokogiri::HTML::DocumentFragment.parse(html)
 
-    # Pass 1: inline IAL at end of element text, e.g. ## Heading { .class }
-    # When the text before { } is blank and the previous sibling is an element
-    # (e.g. [link](url){ .class }), apply to that sibling instead of the parent.
+    # Pass 1: IAL at the end of a block's text.
     doc.css("p, h1, h2, h3, h4, h5, h6, li, blockquote, td, th").each do |node|
       last = node.children.last
       next unless last&.text?
-      if (m = last.content.match(IAL_INLINE_PATTERN))
-        target = if m[1].blank? && last.previous_sibling&.element?
-          last.previous_sibling
-        else
-          node
-        end
-        apply_ial_tokens(target, m[2])
+      next unless (m = last.content.match(IAL_INLINE_PATTERN))
+
+      prev = last.previous_sibling
+      if m[1].present?
+        # "## Heading { .class }" — attributes on this block.
+        apply_ial_tokens(node, m[2])
         last.content = m[1]
+      elsif prev&.element? && prev.name != "br"
+        # "[link](url){ .class }" — attributes on the trailing inline element.
+        apply_ial_tokens(prev, m[2])
+        last.content = m[1]
+      elsif prev&.name == "br"
+        # "paragraph text\n{: .class }" — soft break then a block IAL for this
+        # paragraph. Drop the break and apply to the paragraph itself.
+        prev.remove
+        apply_ial_tokens(node, m[2])
+        last.content = ""
       end
+      # else: the block is nothing but the IAL — left for Pass 2 below.
     end
 
-    # Pass 2: block IAL as a standalone paragraph, e.g. paragraph\n\n{ .class }
+    # Pass 2: a block whose only content is an IAL styles the PRECEDING block,
+    # e.g. `paragraph\n\n{ .class }` or `# Heading\n{:.class}`.
     doc.css("p").each do |node|
-      if (m = node.text.strip.match(IAL_BLOCK_PATTERN))
-        prev = node.previous_element
-        apply_ial_tokens(prev, m[1]) if prev
-        node.remove
-      end
+      next unless (m = node.text.strip.match(IAL_BLOCK_PATTERN))
+
+      prev = node.previous_element
+      apply_ial_tokens(prev, m[1]) if prev
+      node.remove
     end
 
     doc.to_html

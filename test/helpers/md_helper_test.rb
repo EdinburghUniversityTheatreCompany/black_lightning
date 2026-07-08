@@ -126,4 +126,24 @@ class MdHelperTest < ActionView::TestCase
     assert_match(/<img[^>]*class="rounded img-fluid"[^>]*>/, result)
     assert_not_includes result, "{ .rounded .img-fluid }"
   end
+
+  test "IAL block syntax attaches to the preceding paragraph, not an empty element" do
+    result = render_markdown("Important notice\n\n{ .alert }")
+    assert_match(%r{<p[^>]*class="[^"]*\balert\b[^"]*"[^>]*>Important notice</p>}, result,
+                 "the class must land on the paragraph, not a stray empty element")
+    assert_no_match(%r{<p[^>]*class="[^"]*alert[^"]*"[^>]*></p>}, result, "no empty classed paragraph")
+  end
+
+  test "kramdown colon block IAL after a heading applies to the heading" do
+    result = render_markdown("# NSDF\n{:.alert .alert-info}")
+    assert_match(%r{<h1[^>]*class="[^"]*alert-info[^"]*"}, result)
+    assert_not_includes result, "{:.alert .alert-info}"
+    assert_not_includes result, "{:.alert"
+  end
+
+  test "block IAL on the line right after a paragraph (soft break) applies to it" do
+    result = render_markdown("A short notice\n{:.alert .alert-info}")
+    assert_match(%r{<p[^>]*class="[^"]*\balert\b[^"]*"[^>]*>A short notice</p>}, result)
+    assert_not_includes result, "{:.alert"
+  end
 end
