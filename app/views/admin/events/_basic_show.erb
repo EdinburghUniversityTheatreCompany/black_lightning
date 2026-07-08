@@ -1,8 +1,8 @@
 <%# locals: (event:, extra_fields: {}) %>
 
-<% # I cannot guarantee that all of these if's are properly tested (all cases being hit), so be careful when modifying %>
+<%# I cannot guarantee that all of these if's are properly tested (all cases being hit), so be careful when modifying %>
 
-<% # Note: If you update the ransack search form, this has some things with q that need to be changed. %>
+<%# Note: If you update the ransack search form, this has some things with q that need to be changed. %>
 
 <%= content_for :publicity_and_members do %>
   <div class="grid grid-cols-12">
@@ -21,8 +21,8 @@
 
 <% fields = {
   slug:           event.slug,
-  'ID' =>         (event.id if can?(:manage, event)),
-  'SparkSeat Slug' => (event.spark_seat_slug if event.spark_seat_slug.present?),
+  'ID' =>         (can?(:manage, event) ? event.id : nil),
+  'SparkSeat Slug' => (event.spark_seat_slug.presence),
   tagline:        event.tagline.presence || 'No tagline',
   'Date(s)' =>    event.date_range(true),
   venue:          event.venue.present? ? link_to(event.venue.name, admin_events_url('q[venue_id_eq]' => event.venue.id)) : 'No Venue specified',
@@ -43,7 +43,12 @@
   video_links:    { type: 'content', content: render('shared/video_link_gallery', video_links: event.video_links.accessible_by(current_ability, :show)) },
 } %>
 
-<% # Proposal %>
+<%# Members-only text: show a muted note instead of the unfilled default template %>
+<% unless event.members_only_text_customised? %>
+  <% fields[:members_only_text] = { type: 'content', content: content_tag(:em, 'Not filled in yet.', class: 'text-muted') } %>
+<% end %>
+
+<%# Proposal %>
 <% if event.proposal.present? && can?(:view, event.proposal) %>
   <% fields[:proposal] = get_link(event.proposal, :show, link_target: admin_proposals_proposal_path(event.proposal)) %>
 <% end %>
@@ -52,7 +57,7 @@
 
 <% content_for :extra_show_actions do %>
   <%= view_page_on_main_site_button if event.is_public %>
-  <%= get_link event, :edit, link_text: "Bulk Import Team", link_target: new_admin_show_show_crew_import_path(event)%>
+  <%= get_link event, :edit, link_text: "Bulk Import Team", link_target: new_admin_show_show_crew_import_path(event) %>
 <% end %>
 
 <%= render('shared/pages/show', object: event, fields: fields) %>

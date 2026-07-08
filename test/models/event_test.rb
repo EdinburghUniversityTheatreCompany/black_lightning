@@ -51,6 +51,20 @@ class EventTest < ActionView::TestCase
     assert_equal [ [ @event.name, @event.id ] ], Event.selection_collection
   end
 
+  test "members_only_text_customised? distinguishes the unfilled template from real content" do
+    event = Event.new
+    event.members_only_text = "<!-- members-only-template — delete this line and write your notes -->\n\n#### About the show\n_prompt_"
+    assert_not event.members_only_text_customised?, "the unfilled default template is not customised"
+
+    event.members_only_text = "Our real post-show writeup"
+    assert event.members_only_text_customised?
+
+    event.members_only_text = ""
+    assert_not event.members_only_text_customised?
+    event.members_only_text = nil
+    assert_not event.members_only_text_customised?
+  end
+
   test "this_academic_year" do
     this_year_show = FactoryBot.create(:show, start_date: Date.current)
     old_show = FactoryBot.create(:show, start_date: @event.start_date.advance(years: -3))

@@ -60,6 +60,12 @@
 #  fk_rails_...  (proposal_id => admin_proposals_proposals.id)
 #
 class Event < ApplicationRecord
+  # Stable token identifying the unfilled members-only-text template so the show
+  # page can skip rendering it. The template carries it in a self-documenting HTML
+  # comment (`<!-- members-only-template — delete this line… -->`); only this token
+  # is the contract, so the human instruction after it can be reworded freely.
+  MEMBERS_ONLY_TEMPLATE_MARKER = "<!-- members-only-template"
+
   # Length validations enforcing database column limits
   validates :name, length: { maximum: 255 }
   validates :tagline, length: { maximum: 255 }
@@ -264,6 +270,11 @@ class Event < ApplicationRecord
     editable_block = Admin::EditableBlock.find_by(name: "Event Members-Only Text Default")
 
     self.members_only_text = editable_block.present? ? editable_block.content : ""
+  end
+
+  # True once an author has replaced the default template with real content.
+  def members_only_text_customised?
+    members_only_text.present? && members_only_text.exclude?(MEMBERS_ONLY_TEMPLATE_MARKER)
   end
 
   def as_json(options = {})
