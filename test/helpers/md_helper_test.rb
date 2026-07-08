@@ -146,4 +146,23 @@ class MdHelperTest < ActionView::TestCase
     assert_match(%r{<p[^>]*class="[^"]*\balert\b[^"]*"[^>]*>A short notice</p>}, result)
     assert_not_includes result, "{:.alert"
   end
+
+  test "IAL supports kramdown style attribute combined with a class" do
+    result = render_markdown("Big centred title\n{:style=\"font-size:150%;font-weight:bold\" .center}")
+    assert_match(/<p[^>]*style="[^"]*font-size:\s*150%[^"]*"/, result)
+    assert_match(/<p[^>]*class="[^"]*\bcenter\b[^"]*"/, result)
+    assert_not_includes result, "{:style="
+  end
+
+  test "IAL supports an inline style attribute" do
+    result = render_markdown("Indented { style=\"padding-left: 1.4em\" }")
+    assert_match(%r{<p[^>]*style="[^"]*padding-left:\s*1.4em[^"]*"[^>]*>Indented</p>}, result)
+    assert_not_includes result, "{ style="
+  end
+
+  test "a malformed attribute list is left as raw text, not applied" do
+    result = render_markdown("{:.style=\"width: 350px\";\"}")
+    assert_no_match(/<[^>]+\swidth=/, result, "malformed IAL must not set a width attribute")
+    assert_includes result, "width"
+  end
 end

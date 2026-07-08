@@ -3,8 +3,14 @@ require "commonmarker"
 module MdHelper
   MARKDOWN_OPTIONS = ActionView::Template::Handlers::Markdown::OPTIONS
 
-  IAL_INLINE_PATTERN = /\A(.*?)\s*\{\s*:?\s*((?:[.#][\w-]+\s*)+)\}\s*\z/m
-  IAL_BLOCK_PATTERN  = /\A\{\s*:?\s*((?:[.#][\w-]+\s*)+)\}\z/
+  # A single IAL token: a `.class`, an `#id`, or a `key="value"` attribute (the
+  # kramdown attribute syntax, e.g. `style="font-size:150%"`). Quotes may be the
+  # curly variants because smart-punctuation rewrites straight quotes first.
+  DQUOTE = '"“”'
+  SQUOTE = "'‘’"
+  IAL_TOKEN = /[.#][\w-]+|[\w-]+\s*=\s*[#{DQUOTE}][^#{DQUOTE}]*[#{DQUOTE}]|[\w-]+\s*=\s*[#{SQUOTE}][^#{SQUOTE}]*[#{SQUOTE}]/
+  IAL_INLINE_PATTERN = /\A(.*?)\s*\{\s*:?\s*((?:#{IAL_TOKEN}\s*)+)\}\s*\z/m
+  IAL_BLOCK_PATTERN  = /\A\{\s*:?\s*((?:#{IAL_TOKEN}\s*)+)\}\z/
 
   def render_markdown(md)
     return "" if md.blank?
@@ -83,12 +89,14 @@ module MdHelper
   end
 
   def apply_ial_tokens(element, tokens)
-    tokens.scan(/([.#])([\w-]+)/).each do |type, name|
-      if type == "."
-        existing = element["class"].to_s.split
-        element["class"] = (existing + [ name ]).uniq.join(" ")
-      else
-        element["id"] = name
+    tokens.scan(IAL_TOKEN).each do |token|
+      case token
+      when /\A\.(.+)\z/
+        element["class"] = (element["class"].to_s.split + [ $1 ]).uniq.join(" ")
+      when /\A#(.+)\z/
+        element["id"] = $1
+      when /\A([\w-]+)\s*=\s*[#{DQUOTE}]([^#{DQUOTE}]*)[#{DQUOTE}]\z/, /\A([\w-]+)\s*=\s*[#{SQUOTE}]([^#{SQUOTE}]*)[#{SQUOTE}]\z/
+        element[$1] = $2
       end
     end
   end

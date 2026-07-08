@@ -34,6 +34,19 @@
   margin-bottom: 0;
 }
 
+/* Alignment classes used by kramdown IALs in content, e.g. `{:.center}`. */
+.markdown-body .center {
+  text-align: center;
+}
+
+.markdown-body .left {
+  text-align: left;
+}
+
+.markdown-body .right {
+  text-align: right;
+}
+
 .captioned-image {
   max-width: 192px;
   font-size: smaller;
