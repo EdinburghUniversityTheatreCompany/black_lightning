@@ -21,7 +21,7 @@ module Reimbursements
       def initialize(config:, token: nil, http: nil, sleeper: nil)
         @config = config
         @token = token || Settings.airtable_pat
-        @http = http || method(:net_http_call)
+        @http = http || HttpTransport
         @sleeper = sleeper || ->(seconds) { sleep(seconds) }
       end
 
@@ -78,16 +78,6 @@ module Reimbursements
                           "(#{status}): #{response_body.to_s.truncate(200)}", status: status)
         end
         JSON.parse(response_body)
-      end
-
-      def net_http_call(http_method, uri, headers, body)
-        response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
-                                   open_timeout: 10, read_timeout: 30) do |http|
-          request = Net::HTTP.const_get(http_method.to_s.capitalize).new(uri, headers)
-          request.body = body if body
-          http.request(request)
-        end
-        [ response.code.to_i, response.body ]
       end
     end
   end

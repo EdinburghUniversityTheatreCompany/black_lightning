@@ -26,7 +26,7 @@ module Reimbursements
 
     def initialize(api_key: nil, http: nil, sleeper: nil)
       @api_key = api_key || Settings.gemini_api_key
-      @http = http || method(:net_http_call)
+      @http = http || HttpTransport
       @sleeper = sleeper || ->(seconds) { sleep(seconds) }
     end
 
@@ -163,16 +163,6 @@ module Reimbursements
       Date.parse(value.to_s)
     rescue Date::Error
       nil
-    end
-
-    def net_http_call(http_method, uri, headers, body)
-      response = Net::HTTP.start(uri.host, uri.port, use_ssl: true,
-                                 open_timeout: 10, read_timeout: 60) do |http|
-        request = Net::HTTP.const_get(http_method.to_s.capitalize).new(uri, headers)
-        request.body = body if body
-        http.request(request)
-      end
-      [ response.code.to_i, response.body ]
     end
   end
 end
