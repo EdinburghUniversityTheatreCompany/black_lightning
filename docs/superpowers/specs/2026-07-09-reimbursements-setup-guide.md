@@ -73,18 +73,32 @@ bedlam-bacs' so either can be revoked independently:
 Reuse the bedlam-bacs `GEMINI_API_KEY`, or mint a fresh one in Google AI Studio if you
 want separate quota/revocation.
 
-## 6. Hand the values over
+## 6. Hand the values over — Rails credentials
 
-Environment variables the app expects (dev: `.env` in the worktree / fnox; prod: Kamal
-secrets):
+Black Lightning keeps secrets in per-environment encrypted credentials (no dotenv).
+Add the block below to **both** environments:
 
-| Variable | Value from |
-|---|---|
-| `REIMBURSEMENTS_AZURE_TENANT_ID` | step 2.3 (Directory ID) |
-| `REIMBURSEMENTS_AZURE_CLIENT_ID` | step 2.3 (Client ID) |
-| `REIMBURSEMENTS_AZURE_CLIENT_SECRET` | step 2.2 |
-| `REIMBURSEMENTS_AIRTABLE_PAT` | step 4 |
-| `GEMINI_API_KEY` | step 5 |
+```bash
+cd ~/Stack/Programmeren/BlackLightning
+bin/rails credentials:edit --environment development
+bin/rails credentials:edit --environment production
+```
+
+```yaml
+reimbursements:
+  azure_tenant_id: "..."            # step 2.3 (Directory ID)
+  azure_client_id: "..."            # step 2.3 (Client ID)
+  azure_client_secret: "..."        # step 2.2
+  azure_secret_expires_on: "2028-07-09"  # expiry you picked in step 2.2 — drives the IT-subcommittee warning email
+  airtable_pat: "..."               # step 4
+  gemini_api_key: "..."             # step 5
+  alert_email: "..."                # IT subcommittee address for secret-expiry / auth-failure alerts
+```
+
+`REIMBURSEMENTS_*` environment variables with matching names override credentials if
+you ever want to inject via Kamal env instead. A daily job warns `alert_email` from 30
+days before `azure_secret_expires_on`, and a Graph "invalid client secret" auth failure
+alerts immediately — so rotation shouldn't ever be a surprise.
 
 The mailbox address and all Airtable base/table/field IDs are configuration, not
 secrets — they live in Rails credentials (field IDs copied from bedlam-bacs'

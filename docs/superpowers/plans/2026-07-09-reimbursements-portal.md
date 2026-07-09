@@ -17,7 +17,8 @@
 - Required fields stay required in portal forms: budget, type, amount, amount excl VAT, description, ≥1 receipt, payment reference. VAT missing on receipt = soft block (acknowledge checkbox), never hard.
 - Cost centre config carries EUSA code: `F40` Fringe now, `BED` termtime later.
 - Email-in reply = link to the expense in the portal only, no inline summary.
-- Secrets via ENV (`REIMBURSEMENTS_AZURE_TENANT_ID`, `REIMBURSEMENTS_AZURE_CLIENT_ID`, `REIMBURSEMENTS_AZURE_CLIENT_SECRET`, `REIMBURSEMENTS_AIRTABLE_PAT`, `GEMINI_API_KEY`). Airtable base/table/field IDs in shared Rails credentials under `reimbursements_airtable`.
+- Secrets live in **per-environment Rails credentials** under `reimbursements:` (`azure_tenant_id`, `azure_client_id`, `azure_client_secret`, `azure_secret_expires_on`, `airtable_pat`, `gemini_api_key`, `alert_email`) — BL has no dotenv; this matches the existing `mailsender` pattern. Matching `REIMBURSEMENTS_*` ENV vars override credentials when set (Kamal flexibility). Access only via `Reimbursements::Settings`. Airtable base/table/field IDs likewise in per-env credentials under `reimbursements_airtable` (dev + production; test env uses injected configs).
+- **Entra secret expiry (Mick, 2026-07-09):** warn the IT subcommittee before the client secret expires — daily check job emails `alert_email` + Honeybadger from 30 days out (using `azure_secret_expires_on`), and Graph `invalid_client` auth failures trigger an immediate (once-per-day deduped) alert.
 - BL conventions: Tailwind v4, `btn_classes`/`ButtonComponent.classes_for` (never Bootstrap classes), ViewComponents need a preview, i18n'd validation messages (assert `errors[:field].present?`, not literals), hk pre-commit runs rubocop/herb/tests — commit code+test together.
 - All new Ruby namespaced `Reimbursements::`; services in `app/services/reimbursements/`, POROs in `app/models/reimbursements/`.
 
@@ -190,6 +191,20 @@
 
 - [ ] Failing tests (scoping: other person's expense 404; non-pending 404; update writes) → implement → green → commit `feat(reimbursements): edit pending expenses`.
 
+### Task 11b: Settings + secret-expiry alerting
+
+**Files:**
+- Create: `app/services/reimbursements/settings.rb`, `app/jobs/reimbursements/credentials_check_job.rb`, `app/mailers/reimbursements_mailer.rb` (+ views `secret_expiry_warning`, `auth_failure`)
+- Modify: `config/recurring.yml` (daily 8am credentials check)
+- Test: `test/services/reimbursements/settings_test.rb`, `test/jobs/reimbursements/credentials_check_job_test.rb`, mailer test
+
+**Interfaces:**
+- `Settings.azure_tenant_id` etc. — each reads `ENV["REIMBURSEMENTS_<KEY>"]` first, then `Rails.application.credentials.dig(:reimbursements, :<key>)`. Also `Settings.azure_secret_expires_on` (Date|nil), `Settings.alert_email`, `Settings.configured?(:mailbox)` guards.
+- `CredentialsCheckJob#perform`: if expiry date present and `<= 30.days.from_now` → `ReimbursementsMailer.secret_expiry_warning` to alert_email + Honeybadger event (context: days remaining). Nothing otherwise.
+- `ReimbursementsMailer.auth_failure(detail)` — used by MailboxPollJob when MailboxClient raises `AuthError` (Graph `invalid_client`/AADSTS7000222), deduped to once/day via `Rails.cache.fetch("reimbursements/auth-failure-alerted", expires_in: 1.day)`.
+
+- [ ] Tests → implement → green → commit `feat(reimbursements): settings + entra secret expiry alerts`.
+
 ### Task 12: Graph mailbox client
 
 **Files:**
@@ -197,7 +212,7 @@
 - Test: `test/services/reimbursements/mailbox_client_test.rb`
 
 **Interfaces:**
-- Produces: `MailboxClient.new(mailbox:, tenant_id: ENV[...], client_id: ENV[...], client_secret: ENV[...], http: nil, clock: -> { Time.current })`:
+- Produces: `MailboxClient.new(mailbox:, settings: Reimbursements::Settings, http: nil, clock: -> { Time.current })`:
   - `#unread_messages` → array of `Message` structs (`id, from_address, subject, body_text, has_attachments`)
   - `#attachments(message_id)` → `[{filename:, content_type:, bytes:}]` (fileAttachment contentBytes base64-decoded; skips inline/non-file)
   - `#reply(message_id, html:)`, `#mark_read_and_move(message_id, folder)` (folder :processed/:rejected; `#ensure_folders!` creates them if missing, memoized folder ids)
