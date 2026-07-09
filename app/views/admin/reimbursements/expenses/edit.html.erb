@@ -1,19 +1,15 @@
-<h1>Edit Expense</h1>
-
-<p class="text-gray-600">
+<p class="mb-3 text-gray-600">
   You can edit this claim while it's still waiting for review. Once the finance team
   picks it up, contact <%= mail_to "finance@bedlamfringe.co.uk" %> for changes.
 </p>
 
 <% if @expense.receipts.any? %>
-  <div class="mb-3 rounded border border-gray-200 p-3 text-sm">
+  <%= render AlertComponent.new(type: :info) do %>
     <span class="font-medium">Attached receipts:</span>
     <%= @expense.receipts.map(&:filename).join(", ") %>
-  </div>
+  <% end %>
 <% end %>
 
-<div class="max-w-2xl">
-  <%= render "form", form: @form, budgets: @budgets,
-        url: admin_reimbursements_expense_path(@expense.record_id), method: :patch,
-        submit_label: "Save changes" %>
-</div>
+<%= render "form", form: @form, budgets: @budgets,
+      url: admin_reimbursements_expense_path(@expense.record_id), method: :patch,
+      submit_label: "Save changes" %>

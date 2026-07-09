@@ -1,11 +1,7 @@
-<h1>New Expense</h1>
-
-<p class="text-gray-600">
+<p class="mb-3 text-gray-600">
   Upload your receipt and we'll prefill the claim — check it, pick a budget, submit.
   The finance team reviews every claim before it's paid.
 </p>
 
-<div class="max-w-2xl">
-  <%= render "form", form: @form, budgets: @budgets,
-        url: admin_reimbursements_expenses_path, method: :post, submit_label: "Submit expense" %>
-</div>
+<%= render "form", form: @form, budgets: @budgets,
+      url: admin_reimbursements_expenses_path, method: :post, submit_label: "Submit expense" %>
