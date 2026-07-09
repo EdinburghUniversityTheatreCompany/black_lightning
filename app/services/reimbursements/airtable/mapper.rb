@@ -27,7 +27,8 @@ module Reimbursements
           record_id: record.fetch("id"),
           name: fields[fid(:budgets, :name)].to_s,
           nominal_code: fields[fid(:budgets, :nominal_code)].to_s,
-          active: fields[fid(:budgets, :active)].present?
+          active: fields[fid(:budgets, :active)].present?,
+          budget_type: fields[fid(:budgets, :budget_type)] || "Expense"
         )
       end
 
