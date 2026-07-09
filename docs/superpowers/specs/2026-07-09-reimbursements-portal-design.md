@@ -78,8 +78,8 @@ reimbursements@bedlamfringe.co.uk (M365 shared mailbox)
    - Payment-reference guidance in the prompt mirrors the form copy: prefer an invoice-specified reference, else invoice number, else `<merchant/purpose> <surname>` truncated to 18 chars.
    - Never raises to callers: errors return an "extraction unavailable" result and the form simply starts blank.
 
-6. **Portal UI** (`app/controllers/reimbursements/…`, ViewComponents, Turbo, Tailwind — BL conventions)
-   - Routes under `/reimbursements`, behind `authenticate_user!`. Any signed-in member may use it; data is scoped to their linked People record. No new Rolify role.
+6. **Portal UI** (`app/controllers/admin/reimbursements/…`, ViewComponents, Turbo, Tailwind — BL conventions)
+   - **(Amended 2026-07-09, Mick):** routes under `/admin/reimbursements` as part of the members' backend (`Admin::Reimbursements::BaseController < AdminController`), gated by the permission-grid entry `access`/`reimbursements` (a symbol subject like `:backend`) and linked from the admin sidebar's Finance category. Grant the permission to whichever role producers hold. Data is scoped to the member's own linked People record.
    - **My expenses**: status badges, amounts, budget, rejection reason, AI comment, receipt filenames. Expenses created via email-in with gaps get a "needs completion" banner. Manual refresh button.
    - **New expense** (receipt-first): upload receipt(s) (ActiveStorage direct upload) → Turbo-updated prefilled form ← Extractor result → user reviews/edits → submit.
    - **Edit** own expense **only while Pending** (completes email-in drafts, fixes mistakes). No cancel/delete — copy says contact finance@.

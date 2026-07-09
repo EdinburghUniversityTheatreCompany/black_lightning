@@ -1,11 +1,13 @@
 require "test_helper"
 
-module Reimbursements
+module Admin
+  module Reimbursements
   class ExpensesControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
     setup do
-      @user = users(:user)
+      grant_member_role_reimbursements_access
+      @user = users(:member)
       @store, @client = build_fake_store(
         expenses: [ airtable_expense_record, airtable_expense_record(id: "recExp2", payee_id: "recPerOther", description: "Someone else's") ],
         people: [ airtable_person_record(email: @user.email), airtable_person_record(id: "recPerOther", email: "other@example.com") ],
@@ -15,13 +17,29 @@ module Reimbursements
     end
 
     teardown do
-      BaseController.store_builder = -> { Store.new }
-      BaseController.extractor_builder = -> { Extractor.new }
+      BaseController.store_builder = -> { ::Reimbursements::Store.new }
+      BaseController.extractor_builder = -> { ::Reimbursements::Extractor.new }
+    end
+
+    # A dedicated role, so users holding only member/committee stay denied.
+    def grant_member_role_reimbursements_access
+      producer = Role.create!(name: "Producer")
+      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
+      users(:member).add_role("Producer")
+      users(:member_with_phone_number).add_role("Producer")
     end
 
     test "requires sign-in" do
       get :index
       assert_redirected_to new_user_session_path
+    end
+
+    test "denies members without the reimbursements permission" do
+      sign_in users(:committee)
+
+      get :index
+
+      assert_response :forbidden
     end
 
     test "shows only the current user's expenses" do
@@ -51,7 +69,7 @@ module Reimbursements
       assert_equal 1, @client.list_calls[:expenses]
 
       get :index, params: { refresh: 1 }
-      assert_redirected_to reimbursements_expenses_path
+      assert_redirected_to admin_reimbursements_expenses_path
 
       get :index
       assert_equal 2, @client.list_calls[:expenses]
@@ -66,7 +84,7 @@ module Reimbursements
     end
 
     test "shows an empty state for users with no expenses" do
-      other = users(:member)
+      other = users(:member_with_phone_number)
       sign_in other
 
       get :index
@@ -103,7 +121,7 @@ module Reimbursements
 
       post :create, params: { reimbursements_expense_form: valid_form_params }
 
-      assert_redirected_to reimbursements_expenses_path
+      assert_redirected_to admin_reimbursements_expenses_path
       table, fields = @client.created.sole
       assert_equal :expenses, table
       f = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
@@ -132,13 +150,13 @@ module Reimbursements
       assert_empty @client.created
 
       post :create, params: { reimbursements_expense_form: params.merge(vat_acknowledged: "1", receipts: [ receipt_upload ]) }
-      assert_redirected_to reimbursements_expenses_path
+      assert_redirected_to admin_reimbursements_expenses_path
       assert_equal 1, @client.created.size
     end
 
     test "extract returns the extraction as json" do
       sign_in @user
-      extraction = Extractor::Extraction.new(
+      extraction = ::Reimbursements::Extractor::Extraction.new(
         merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("2.08"),
         vat_itemised: true, suggested_description: "Props",
         suggested_budget_record_id: "recBud1", suggested_payment_reference: "PROPS"
@@ -157,7 +175,7 @@ module Reimbursements
 
     test "extract reports failure as ok false" do
       sign_in @user
-      BaseController.extractor_builder = -> { FakeExtractor.new(Extractor::Extraction.new(error: "no key")) }
+      BaseController.extractor_builder = -> { FakeExtractor.new(::Reimbursements::Extractor::Extraction.new(error: "no key")) }
 
       post :extract, params: { receipts: [ receipt_upload ] }
 
@@ -204,7 +222,7 @@ module Reimbursements
       patch :update, params: { id: "recExp1",
                                reimbursements_expense_form: valid_form_params.except(:receipts).merge(description: "Even more fake blood") }
 
-      assert_redirected_to reimbursements_expenses_path
+      assert_redirected_to admin_reimbursements_expenses_path
       _table, record_id, fields = @client.updated.sole
       assert_equal "recExp1", record_id
       assert_equal "Even more fake blood",
@@ -234,5 +252,6 @@ module Reimbursements
         @extraction
       end
     end
+  end
   end
 end

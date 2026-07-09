@@ -1,8 +1,8 @@
 <div class="flex flex-wrap items-center justify-between gap-2">
   <h1 class="mb-0">My Reimbursements</h1>
   <div class="flex items-center gap-2">
-    <%= link_to "Refresh", reimbursements_expenses_path(refresh: 1), class: btn_classes(:secondary, :sm) %>
-    <%= link_to "New expense", new_reimbursements_expense_path, class: btn_classes(:primary) %>
+    <%= link_to "Refresh", admin_reimbursements_expenses_path(refresh: 1), class: btn_classes(:secondary, :sm) %>
+    <%= link_to "New expense", new_admin_reimbursements_expense_path, class: btn_classes(:primary) %>
   </div>
 </div>
 
@@ -16,13 +16,13 @@
   <div class="my-3 rounded border border-warning/40 bg-warning/10 p-3">
     We don't have your bank details yet — you can submit expenses, but they can't be
     approved until you
-    <%= link_to "add your payment details", edit_reimbursements_payment_details_path, class: "font-medium underline" %>.
+    <%= link_to "add your payment details", edit_admin_reimbursements_payment_details_path, class: "font-medium underline" %>.
   </div>
 <% end %>
 
 <% if @expenses.empty? %>
   <div class="my-5 rounded border border-gray-200 p-5 text-center text-gray-600">
-    No expenses yet. <%= link_to "Submit your first one", new_reimbursements_expense_path, class: "font-medium underline" %> —
+    No expenses yet. <%= link_to "Submit your first one", new_admin_reimbursements_expense_path, class: "font-medium underline" %> —
     upload the receipt and we'll fill in most of the form for you.
   </div>
 <% else %>
@@ -57,7 +57,7 @@
               <%= expense.amount ? number_to_currency(expense.amount, unit: "£") : "—" %>
             </div>
             <% if expense.editable? %>
-              <%= link_to "Edit", edit_reimbursements_expense_path(expense.record_id), class: btn_classes(:secondary, :sm) %>
+              <%= link_to "Edit", edit_admin_reimbursements_expense_path(expense.record_id), class: btn_classes(:secondary, :sm) %>
             <% end %>
           </div>
         </div>

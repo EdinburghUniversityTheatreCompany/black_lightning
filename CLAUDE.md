@@ -165,9 +165,13 @@ The permission grid auto-discovers models via `ApplicationRecord.descendants` in
 
 ## Reimbursements portal
 
-Producer-facing expense portal under `/reimbursements` (any signed-in member). **Data
-lives in Airtable, not ActiveRecord** — the same base the bedlam-bacs operator app
-(sibling repo) reviews and pays from. Spec + plan in `docs/superpowers/specs|plans/`.
+Producer-facing expense portal under `/admin/reimbursements`
+(`Admin::Reimbursements::BaseController < AdminController`), gated by the grid
+permission `access`/`reimbursements` (a symbol subject like `:backend`; listed in
+`Admin::PermissionsController`'s miscellaneous permissions) and linked from the admin
+sidebar's Finance category. **Data lives in Airtable, not ActiveRecord** — the same
+base the bedlam-bacs operator app (sibling repo) reviews and pays from. Spec + plan in
+`docs/superpowers/specs|plans/`.
 
 - **Everything goes through `Reimbursements::Store`** (`app/services/reimbursements/`), a
   Solid-Cache-fronted repository over `Reimbursements::Airtable::Client`. The Airtable

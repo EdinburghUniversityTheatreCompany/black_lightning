@@ -14,6 +14,6 @@
 
 <div class="max-w-2xl">
   <%= render "form", form: @form, budgets: @budgets,
-        url: reimbursements_expense_path(@expense.record_id), method: :patch,
+        url: admin_reimbursements_expense_path(@expense.record_id), method: :patch,
         submit_label: "Save changes" %>
 </div>

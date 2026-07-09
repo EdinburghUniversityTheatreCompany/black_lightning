@@ -126,7 +126,7 @@ module Reimbursements
 
       assert_equal 1, @client.uploads.size
       reply_html = @mailbox.replies.sole.last
-      assert_includes reply_html, "/reimbursements/expenses/recNew1/edit"
+      assert_includes reply_html, "/admin/reimbursements/expenses/recNew1/edit"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 

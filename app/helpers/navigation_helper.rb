@@ -51,6 +51,12 @@ module NavigationHelper
     children << { title: "Debt Checker", path: new_admin_debt_checker_path, fa_icon: "fa-magnifying-glass-dollar" }  if can? :check_debt, Admin::Debt
     navbar_categories << { title: "Staffing & Debt", children: children, fa_icon: "fa-person" }
 
+    # Finance
+    children = []
+    children << { title: "Reimbursements", path: admin_reimbursements_root_path, fa_icon: "fa-file-invoice" }              if can? :access, :reimbursements
+    children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
+    navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
+
     # Opportunities
     children = []
     children << { title: "Opportunities", path: admin_opportunities_path, fa_icon: "fa-lightbulb" }                                    if can? :index, Opportunity

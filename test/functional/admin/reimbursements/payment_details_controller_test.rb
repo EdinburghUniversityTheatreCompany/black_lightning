@@ -1,18 +1,23 @@
 require "test_helper"
 
-module Reimbursements
+module Admin
+  module Reimbursements
   class PaymentDetailsControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
     setup do
-      @user = users(:user)
+      producer = Role.create!(name: "Producer")
+      producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
+      users(:member).add_role("Producer")
+      users(:member_with_phone_number).add_role("Producer")
+      @user = users(:member)
       @store, @client = build_fake_store(people: [ airtable_person_record(email: @user.email) ])
       BaseController.store_builder = -> { @store }
       sign_in @user
     end
 
     teardown do
-      BaseController.store_builder = -> { Store.new }
+      BaseController.store_builder = -> { ::Reimbursements::Store.new }
     end
 
     test "edit prefills from the linked person" do
@@ -28,7 +33,7 @@ module Reimbursements
         }
       }
 
-      assert_redirected_to reimbursements_expenses_path
+      assert_redirected_to admin_reimbursements_expenses_path
       table, record_id, fields = @client.updated.sole
       assert_equal :people, table
       assert_equal "recPer1", record_id
@@ -37,7 +42,7 @@ module Reimbursements
     end
 
     test "update creates the people record for unmatched users" do
-      other = users(:member)
+      other = users(:member_with_phone_number)
       sign_in other
 
       patch :update, params: {
@@ -46,7 +51,7 @@ module Reimbursements
         }
       }
 
-      assert_redirected_to reimbursements_expenses_path
+      assert_redirected_to admin_reimbursements_expenses_path
       assert_equal 1, @client.created.size
       assert_equal "recNew1", other.reload.airtable_person_id
     end
@@ -59,5 +64,6 @@ module Reimbursements
       assert_response :unprocessable_entity
       assert_empty @client.updated
     end
+  end
   end
 end

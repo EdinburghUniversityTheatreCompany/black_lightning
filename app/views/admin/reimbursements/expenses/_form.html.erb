@@ -4,7 +4,7 @@
 <%= simple_form_for form, url: url, method: method,
       html: { multipart: true,
               data: { controller: "reimbursements-receipt",
-                      reimbursements_receipt_extract_url_value: extract_reimbursements_expenses_path } } do |f| %>
+                      reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path } } do |f| %>
 
   <div class="mb-4 rounded border border-gray-200 p-3">
     <label class="font-medium" for="reimbursements_expense_form_receipts">
@@ -85,6 +85,6 @@
 
   <div class="mt-3 flex items-center gap-2">
     <%= f.submit submit_label, class: btn_classes(:primary) %>
-    <%= link_to "Cancel", reimbursements_expenses_path, class: btn_classes(:secondary) %>
+    <%= link_to "Cancel", admin_reimbursements_expenses_path, class: btn_classes(:secondary) %>
   </div>
 <% end %>
