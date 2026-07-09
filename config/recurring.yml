@@ -22,3 +22,8 @@ reimbursements_credentials_check:
   class: Reimbursements::CredentialsCheckJob
   queue: default
   schedule: at 8am every day
+
+reimbursements_mailbox_poll:
+  class: Reimbursements::MailboxPollJob
+  queue: default
+  schedule: every 5 minutes
