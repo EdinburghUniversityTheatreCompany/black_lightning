@@ -17,9 +17,11 @@
   <%= render('shared/pages/form', f: f) do %>
     <div class="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
       <p class="mb-2 text-sm text-gray-600">
-        Upload the receipt first — we'll read it and prefill the form for you.
-        PDF or photo, max 5&nbsp;MB. Make sure it shows VAT where possible.
-        <%= "(Receipts are already attached — only add files to append.)" unless form.require_receipts? %>
+        Upload the receipt first and we'll read it and prefill the form for you.
+        PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
+        have to deduct the full amount from your budget instead of the ex-VAT amount,
+        so a VAT receipt is in your own interest.
+        <%= "(Receipts are already attached. Only add files here to append more.)" unless form.require_receipts? %>
       </p>
       <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: form.require_receipts?,
             input_html: { multiple: true,
@@ -43,11 +45,12 @@
     <div data-reimbursements-receipt-target="vatWarning"
          class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
-        This receipt doesn't itemise VAT, so the <strong>full amount</strong> counts against
-        your budget — with a VAT receipt only the ex-VAT amount would.
+        This receipt doesn't itemise VAT, so we have to deduct the
+        <strong>full amount</strong> from your budget. With a VAT receipt we'd only
+        deduct the ex-VAT amount, so it's worth asking the seller for one.
       </p>
       <%= f.input :vat_acknowledged, as: :boolean,
-            label: "I understand — submit anyway (and I'll ask for a VAT receipt next time it's possible)" %>
+            label: "I understand, submit anyway (I'll ask for a VAT receipt next time it's possible)" %>
     </div>
     <%= f.hidden_field :vat_itemised, data: { reimbursements_receipt_target: "vatItemised" } %>
 

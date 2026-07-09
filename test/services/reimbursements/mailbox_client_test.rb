@@ -60,8 +60,8 @@ module Reimbursements
 
       attachments = client.attachments("msg1")
 
-      assert_equal [ "receipt.pdf", "pasted-receipt.png" ], attachments.map { |a| a[:filename] },
-                   "large pasted-in-body images count as receipts; tiny signature logos don't"
+      assert_equal [ "receipt.pdf", "logo.png", "pasted-receipt.png" ], attachments.map { |a| a[:filename] },
+                   "all file attachments and inline images count; only attached items are skipped"
       assert_equal "PDF", attachments.first[:bytes]
     end
 

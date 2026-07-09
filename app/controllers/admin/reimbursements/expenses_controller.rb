@@ -33,7 +33,7 @@ module Admin
         expense = store.create_expense!(@form.create_attrs(person.record_id))
         attach_receipts(expense.record_id)
         redirect_to admin_reimbursements_expenses_path,
-                    notice: "Expense submitted — you'll see status updates here."
+                    notice: "Expense submitted. You'll see status updates here."
       end
 
       def edit

@@ -74,9 +74,17 @@ module Reimbursements
         payment_reference: payment_reference.to_s.strip,
         expense_type: expense_type,
         payee_name_override: payee_name_override.presence,
-        sort_code_override: sort_code_override.presence,
-        account_number_override: account_number_override.presence
+        sort_code_override: formatted_sort_code_override,
+        account_number_override: account_number_override.presence&.gsub(/\s/, "")
       }
+    end
+
+    # Sort codes are stored dashed ("80-22-60"), matching the payee registry.
+    def formatted_sort_code_override
+      digits = sort_code_override.to_s.gsub(/[-\s]/, "")
+      return sort_code_override.presence if digits.length != 6
+
+      digits.scan(/\d{2}/).join("-")
     end
 
     def self.from_expense(expense)
@@ -109,7 +117,7 @@ module Reimbursements
       errors.add(:amount, "must be a positive amount.") if amount_decimal.nil? || amount_decimal <= 0
 
       if amount_excl_vat_decimal.nil?
-        errors.add(:amount_excl_vat, "must be filled in — copy it from the receipt, or use the " \
+        errors.add(:amount_excl_vat, "must be filled in. Copy it from the receipt, or use the " \
                                      "total if no VAT is shown.")
       elsif amount_decimal.present? && amount_excl_vat_decimal > amount_decimal
         errors.add(:amount_excl_vat, "can't be more than the total amount.")
@@ -117,7 +125,7 @@ module Reimbursements
     end
 
     def receipts_valid
-      errors.add(:receipts, "— please attach at least one receipt or invoice.") if require_receipts? && receipts.empty?
+      errors.add(:receipts, "are required. Please attach at least one receipt or invoice.") if require_receipts? && receipts.empty?
 
       receipts.each do |file|
         unless ALLOWED_RECEIPT_TYPES.include?(file.content_type)
@@ -140,10 +148,11 @@ module Reimbursements
       return unless vat_missing?
       return if ActiveModel::Type::Boolean.new.cast(vat_acknowledged)
 
-      errors.add(:vat_acknowledged, "— this receipt doesn't seem to itemise VAT, so the FULL amount " \
-                                    "counts against your budget (with a VAT receipt only the ex-VAT " \
-                                    "amount would). Tick the box to submit anyway, or ask the seller " \
-                                    "for a VAT receipt/invoice first.")
+      errors.add(:vat_acknowledged, "is required here: this receipt doesn't seem to itemise VAT, " \
+                                    "so we have to deduct the FULL amount from your budget (with " \
+                                    "a VAT receipt we'd only deduct the ex-VAT amount). Tick the " \
+                                    "box to submit anyway, or ask the seller for a VAT receipt " \
+                                    "first: it's in your own interest.")
     end
   end
 end

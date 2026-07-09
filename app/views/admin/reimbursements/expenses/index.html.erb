@@ -1,12 +1,12 @@
 <p class="mb-3 text-gray-600">
-  Expenses you submit are reviewed by the finance team, batched to EUSA, and paid into
-  your bank account. You can also email a receipt to
+  Submit your expenses here. The finance team reviews every claim, batches it to EUSA,
+  and EUSA pays it into your bank account. You can also just email a receipt to
   <%= mail_to Reimbursements::CostCentre.default.mailbox %> and finish the claim here.
 </p>
 
 <% if current_person.nil? || !current_person.bank_details? %>
   <%= render AlertComponent.new(type: :warning) do %>
-    We don't have your bank details yet — you can submit expenses, but they can't be
+    We don't have your bank details yet. You can submit expenses, but they can't be
     approved until you
     <%= link_to "add your payment details", edit_admin_reimbursements_payment_details_path, class: "font-medium underline" %>.
   <% end %>
@@ -24,7 +24,7 @@
   <%= render CardComponent.new(title: @title) do %>
     <div class="py-4 text-center text-gray-600">
       No expenses yet.
-      <%= link_to "Submit your first one", new_admin_reimbursements_expense_path, class: "font-medium underline" %> —
+      <%= link_to "Submit your first one", new_admin_reimbursements_expense_path, class: "font-medium underline" %>:
       upload the receipt and we'll fill in most of the form for you.
     </div>
   <% end %>

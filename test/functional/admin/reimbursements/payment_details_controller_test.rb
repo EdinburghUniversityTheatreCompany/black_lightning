@@ -37,7 +37,8 @@ module Admin
       table, record_id, fields = @client.updated.sole
       assert_equal :people, table
       assert_equal "recPer1", record_id
-      assert_equal "802260", fields[ReimbursementsTestHelpers::FIELD_IDS[:people][:sort_code]]
+      assert_equal "80-22-60", fields[ReimbursementsTestHelpers::FIELD_IDS[:people][:sort_code]],
+                   "sort codes are stored in the conventional dashed form"
       assert_equal "12345678", fields[ReimbursementsTestHelpers::FIELD_IDS[:people][:account_number]]
     end
 

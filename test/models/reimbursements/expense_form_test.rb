@@ -93,5 +93,11 @@ module Reimbursements
       assert_equal BigDecimal("12.50"), attrs[:amount]
       assert_nil attrs[:payee_name_override]
     end
+
+    test "override bank details are formatted for storage" do
+      attrs = build_form(sort_code_override: "112233", account_number_override: "1234 5678").update_attrs
+      assert_equal "11-22-33", attrs[:sort_code_override]
+      assert_equal "12345678", attrs[:account_number_override]
+    end
   end
 end

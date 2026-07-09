@@ -15,6 +15,7 @@ module Reimbursements
     queue_as :default
 
     AUTH_ALERT_CACHE_KEY = "reimbursements/auth-failure-alerted".freeze
+    SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
 
     # Injection seams for tests (no mocking library in this suite).
     class_attribute :mailbox_builder, default: -> { MailboxClient.new }
@@ -60,7 +61,7 @@ module Reimbursements
 
     # Always fetch — Graph reports hasAttachments: false for messages whose
     # only image is pasted inline, which is a perfectly normal way to send a
-    # receipt (MailboxClient applies a size gate to inline images).
+    # receipt. All attachments and inline images count (Mick, 2026-07-09).
     def usable_receipts(message)
       mailbox.attachments(message.id).select do |attachment|
         ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(attachment[:content_type]) &&
@@ -137,34 +138,39 @@ module Reimbursements
 
     def unknown_sender_html
       <<~HTML
-        <p>Thanks for your email — but this address isn't in our submitter list, so we
-        couldn't link your receipt to an account.</p>
-        <p>If you're part of Bedlam Fringe, either email from the address you registered
-        with, or submit directly through the portal:
+        <p>Hi,</p>
+        <p>Thanks for your email! Unfortunately this address isn't in our submitter list,
+        so we couldn't link your receipt to an account.</p>
+        <p>If you're part of Bedlam Fringe, email from the address you registered with,
+        or submit directly through the portal:
         <a href="#{portal_url}">#{portal_url}</a>.</p>
         <p>Questions? Contact finance@bedlamfringe.co.uk.</p>
-        <p>— Bedlam Fringe finance (automated)</p>
+        <p>#{SIGN_OFF}</p>
       HTML
     end
 
     def missing_receipt_html
       <<~HTML
-        <p>Thanks — we found your account, but there was no usable receipt attached.</p>
-        <p>Please resend with the receipt or invoice attached as a PDF or photo
-        (JPEG/PNG/WEBP, up to 5&nbsp;MB), or submit through the portal:
-        <a href="#{portal_url}">#{portal_url}</a>.</p>
-        <p>— Bedlam Fringe finance (automated)</p>
+        <p>Hi,</p>
+        <p>Thanks for your email! We found your account, but there was no usable receipt
+        attached.</p>
+        <p>Please resend with the receipt or invoice as a PDF or photo (JPEG/PNG/WEBP, up
+        to 5&nbsp;MB). Attaching or pasting the photo into the email both work. Or submit
+        through the portal instead: <a href="#{portal_url}">#{portal_url}</a>.</p>
+        <p>#{SIGN_OFF}</p>
       HTML
     end
 
     def created_html(expense)
       url = edit_url(expense)
       <<~HTML
-        <p>Thanks — we've started an expense claim from your receipt.</p>
-        <p><strong>Please check and complete it here:</strong>
-        <a href="#{url}">#{url}</a> — especially the budget and payment reference.</p>
-        <p>It goes to the finance team for review once you've confirmed the details.</p>
-        <p>— Bedlam Fringe finance (automated)</p>
+        <p>Hi,</p>
+        <p>Thanks for your receipt! We've started an expense claim from it.</p>
+        <p><strong>Please check and complete the claim here:</strong>
+        <a href="#{url}">#{url}</a>. Double-check the budget and the payment reference.</p>
+        <p>Once you've confirmed the details, the claim goes to the finance team for
+        review.</p>
+        <p>#{SIGN_OFF}</p>
       HTML
     end
   end

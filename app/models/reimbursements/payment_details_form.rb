@@ -16,6 +16,15 @@ module Reimbursements
       sort_code.to_s.gsub(/[-\s]/, "")
     end
 
+    # Stored in Airtable in the conventional dashed form, e.g. "80-22-60"
+    # (bedlam-bacs' modulus check strips the dashes itself).
+    def formatted_sort_code
+      digits = normalized_sort_code
+      return sort_code if digits.length != 6
+
+      digits.scan(/\d{2}/).join("-")
+    end
+
     def normalized_account_number
       account_number.to_s.gsub(/\s/, "")
     end

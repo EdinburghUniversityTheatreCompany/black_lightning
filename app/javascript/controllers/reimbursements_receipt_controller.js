@@ -32,9 +32,9 @@ export default class extends Controller {
       if (!extraction.ok) throw new Error(extraction.error || "extraction failed")
 
       this.#fill(extraction)
-      this.#setStatus("Prefilled from your receipt — please check everything before submitting.")
+      this.#setStatus("Prefilled from your receipt. Please check everything before submitting.")
     } catch {
-      this.#setStatus("Couldn't read the receipt automatically — please fill in the form manually.")
+      this.#setStatus("We couldn't read the receipt automatically, so please fill in the form yourself.")
     }
   }
 
