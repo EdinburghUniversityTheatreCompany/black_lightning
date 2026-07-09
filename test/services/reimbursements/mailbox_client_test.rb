@@ -49,15 +49,19 @@ module Reimbursements
         { "@odata.type" => "#microsoft.graph.fileAttachment", "name" => "receipt.pdf",
           "contentType" => "application/pdf", "contentBytes" => Base64.strict_encode64("PDF") },
         { "@odata.type" => "#microsoft.graph.fileAttachment", "name" => "logo.png",
-          "contentType" => "image/png", "isInline" => true,
+          "contentType" => "image/png", "isInline" => true, "size" => 4_096,
           "contentBytes" => Base64.strict_encode64("PNG") },
+        { "@odata.type" => "#microsoft.graph.fileAttachment", "name" => "pasted-receipt.png",
+          "contentType" => "image/png", "isInline" => true, "size" => 350_000,
+          "contentBytes" => Base64.strict_encode64("BIGPNG") },
         { "@odata.type" => "#microsoft.graph.itemAttachment", "name" => "fwd" }
       ]
       client, = build_client([ token_response, [ 200, { value: value }.to_json ] ])
 
       attachments = client.attachments("msg1")
 
-      assert_equal [ "receipt.pdf" ], attachments.map { |a| a[:filename] }
+      assert_equal [ "receipt.pdf", "pasted-receipt.png" ], attachments.map { |a| a[:filename] },
+                   "large pasted-in-body images count as receipts; tiny signature logos don't"
       assert_equal "PDF", attachments.first[:bytes]
     end
 

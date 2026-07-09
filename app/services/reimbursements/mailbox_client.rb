@@ -43,12 +43,18 @@ module Reimbursements
       end
     end
 
-    # Real file attachments only (skips inline images and attached items).
+    # Signature logos/banners are inline AND tiny; a pasted receipt photo is
+    # inline and large. The size gate keeps the first out and the second in.
+    INLINE_IMAGE_MIN_BYTES = 100.kilobytes
+
+    # File attachments, plus pasted-into-the-body images over the size gate
+    # (skips attached items and small inline images like signature logos).
     def attachments(message_id)
       response = request(:get, "/users/#{@mailbox}/messages/#{message_id}/attachments")
       response.fetch("value").filter_map do |attachment|
         next unless attachment["@odata.type"] == "#microsoft.graph.fileAttachment"
-        next if attachment["isInline"] || attachment["contentBytes"].blank?
+        next if attachment["contentBytes"].blank?
+        next if attachment["isInline"] && !large_inline_image?(attachment)
 
         { filename: attachment["name"].to_s,
           content_type: attachment["contentType"].to_s,
@@ -72,6 +78,11 @@ module Reimbursements
     end
 
     private
+
+    def large_inline_image?(attachment)
+      attachment["contentType"].to_s.start_with?("image/") &&
+        attachment["size"].to_i >= INLINE_IMAGE_MIN_BYTES
+    end
 
     def folder_id(key)
       @folder_ids[key] ||= find_or_create_folder(FOLDERS.fetch(key))

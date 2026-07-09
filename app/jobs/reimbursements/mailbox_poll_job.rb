@@ -58,9 +58,10 @@ module Reimbursements
       # Leave the message unread; the next poll cycle retries it.
     end
 
+    # Always fetch — Graph reports hasAttachments: false for messages whose
+    # only image is pasted inline, which is a perfectly normal way to send a
+    # receipt (MailboxClient applies a size gate to inline images).
     def usable_receipts(message)
-      return [] unless message.has_attachments
-
       mailbox.attachments(message.id).select do |attachment|
         ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(attachment[:content_type]) &&
           attachment[:bytes].bytesize <= ExpenseForm::MAX_RECEIPT_BYTES

@@ -110,6 +110,20 @@ module Reimbursements
       assert_empty @client.created
     end
 
+    test "processes a pasted-in-body receipt even when graph reports hasAttachments false" do
+      # Graph quirk: inline-only messages often carry hasAttachments: false,
+      # so the job must always fetch instead of trusting the flag.
+      pasted = { filename: "pasted-receipt.png", content_type: "image/png", bytes: "BIGPNG" }
+      setup_job(messages: [ inbound_message(has_attachments: false) ],
+                attachments: { "msg1" => [ pasted ] })
+
+      MailboxPollJob.perform_now
+
+      assert_equal 1, @client.created.size
+      assert_equal 1, @client.uploads.size
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
+
     test "known sender with a receipt gets a pending expense and a portal link" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
 
