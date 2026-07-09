@@ -8,6 +8,8 @@ module Reimbursements
     TYPE_INVOICE = "Invoice".freeze
     TYPE_FROM_EUSA = "From EUSA (utility, staff cost, etc)".freeze
     TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE, TYPE_FROM_EUSA ].freeze
+    # "From EUSA" is internal bookkeeping; submitters only pick between these.
+    SUBMITTER_TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE ].freeze
 
     attr_reader :record_id, :auto_number, :person, :amount, :amount_excl_vat, :budget,
                 :description, :receipts, :status, :expense_type, :payee_name_override,

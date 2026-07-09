@@ -33,7 +33,8 @@
     </div>
 
     <%= f.input :expense_type, label: "Type",
-          collection: Reimbursements::Expense::TYPES, include_blank: false %>
+          collection: Reimbursements::Expense::SUBMITTER_TYPES, include_blank: false,
+          hint: "Reimbursement pays you back; Invoice pays a bill (possibly straight to a third party)." %>
 
     <%= f.input :amount, label: "Amount (£, incl. VAT)",
           hint: "What actually left your account, or the invoice total.", required: true,

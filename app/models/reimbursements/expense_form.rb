@@ -20,7 +20,7 @@ module Reimbursements
                   :vat_itemised, :vat_acknowledged
     attr_writer :receipts, :require_receipts
 
-    validates :expense_type, inclusion: { in: Expense::TYPES }
+    validates :expense_type, inclusion: { in: Expense::SUBMITTER_TYPES }
     validates :budget_record_id, :description, :payment_reference, presence: true
     validates :payment_reference, length: { maximum: REFERENCE_LIMIT }
     validate :amounts_valid

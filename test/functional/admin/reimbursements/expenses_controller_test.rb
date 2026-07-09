@@ -183,6 +183,18 @@ module Admin
       assert_not response.parsed_body["ok"]
     end
 
+    test "edit refetches once when the cached list is stale (email-in link)" do
+      sign_in @user
+      get :index # warms the expense cache without the email-in expense
+
+      @client.list_records(:expenses) << airtable_expense_record(id: "recExpMail", description: "Emailed taxi receipt")
+
+      get :edit, params: { id: "recExpMail" }
+
+      assert_response :success
+      assert_includes response.body, "Emailed taxi receipt"
+    end
+
     test "edit renders the prefilled form for an own pending expense" do
       sign_in @user
 
