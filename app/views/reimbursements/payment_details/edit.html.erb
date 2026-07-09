@@ -1,0 +1,20 @@
+<h1>My Payment Details</h1>
+
+<p class="text-gray-600">
+  EUSA pays reimbursements by bank transfer, so we need the account you want paying
+  into. These details are stored in the finance team's payee registry and are only
+  visible to them.
+</p>
+
+<div class="max-w-lg">
+  <%= simple_form_for @form, url: reimbursements_payment_details_path, method: :patch do |f| %>
+    <%= f.input :name, label: "Account holder name", hint: "As it appears on your bank account." %>
+    <%= f.input :sort_code, label: "Sort code", placeholder: "80-22-60" %>
+    <%= f.input :account_number, label: "Account number", placeholder: "12345678" %>
+
+    <div class="mt-3 flex items-center gap-2">
+      <%= f.submit "Save details", class: btn_classes(:primary) %>
+      <%= link_to "Cancel", reimbursements_expenses_path, class: btn_classes(:secondary) %>
+    </div>
+  <% end %>
+</div>
