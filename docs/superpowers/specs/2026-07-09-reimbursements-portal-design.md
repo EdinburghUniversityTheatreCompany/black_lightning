@@ -70,7 +70,7 @@ reimbursements@bedlamfringe.co.uk (M365 shared mailbox)
      - **Expenses** (full list, one global key): TTL 10 min; filtered per person in Ruby, so one API call serves every portal visitor per window; busted on any portal write; manual "Refresh" button busts on demand.
    - Budget math: a submission = ~2–3 calls (create + attachment upload(s)); a poll cycle with no new mail = 0 Airtable calls.
 
-4. **Cost-centre config** (`Reimbursements::CostCentre`) — small frozen config with one entry ("Fringe 2026" → this base + mailbox + portal copy). Termtime later = one more entry, not a rewrite.
+4. **Cost-centre config** (`Reimbursements::CostCentre`) — small frozen config with one entry ("Fringe 2026" → this base + mailbox + portal copy). Each entry carries its **EUSA cost-centre abbreviation** (`F40` for Fringe; `BED` for termtime later). Termtime later = one more entry, not a rewrite.
 
 5. **`Reimbursements::Extractor`** (Gemini)
    - `gemini-2.5-flash` via the Gemini REST API (`GEMINI_API_KEY` env — same key bedlam-bacs uses), multimodal input (PDF/JPEG/PNG/WEBP receipt bytes), **structured JSON output**:
@@ -95,7 +95,7 @@ reimbursements@bedlamfringe.co.uk (M365 shared mailbox)
    - **Graph client** (`app/services/reimbursements/graph_client.rb`): app-only client-credentials token (`AZURE_TENANT_ID` / new app registration client id+secret), list unread messages in the shared mailbox, download attachments, send replies from the same address, move messages to `Processed` / `Rejected` folders. Idempotency: only unread + moved-after-processing; a processed message is never re-read.
    - **Unknown sender** (no People match, cached lookup) → reply: address not recognised; register/submit via the portal link or contact finance@. Move to `Rejected`.
    - **Known sender, no usable attachment** → reply asking for the receipt as a PDF/photo attachment. Move to `Rejected`.
-   - **Known sender + attachment(s)** → Extractor over attachments (+ subject/body as context) → create **one Pending expense per email** with everything confidently extracted (amount, amount excl VAT if itemised, description from subject/merchant, suggested budget if confident, suggested payment reference); blanks where unsure → attach receipts → reply summarising what was captured with an edit link ("please check budget and payment reference in the portal") → move to `Processed`.
+   - **Known sender + attachment(s)** → Extractor over attachments (+ subject/body as context) → create **one Pending expense per email** with everything confidently extracted (amount, amount excl VAT if itemised, description from subject/merchant, suggested budget if confident, suggested payment reference); blanks where unsure → attach receipts → reply with a link to view/complete the expense in the portal (no inline summary — the portal page is the summary) → move to `Processed`.
    - Failures (Graph/Airtable/Gemini down): job logs + Honeybadger; message stays unread and is retried next cycle; replies are sent at most once per message (reply happens immediately before the move, and the move is the commit point).
 
 ### One Rails migration
