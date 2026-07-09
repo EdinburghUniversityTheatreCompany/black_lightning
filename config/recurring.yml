@@ -17,3 +17,8 @@ opportunity_digest:
   class: OpportunityDigestJob
   queue: default
   schedule: at 9am every day
+
+reimbursements_credentials_check:
+  class: Reimbursements::CredentialsCheckJob
+  queue: default
+  schedule: at 8am every day

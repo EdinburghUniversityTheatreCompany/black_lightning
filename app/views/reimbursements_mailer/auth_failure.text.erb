@@ -1,0 +1,13 @@
+The reimbursements mailbox poll job can't authenticate against Microsoft Graph.
+
+Detail: <%= @detail %>
+
+Most likely the Entra client secret has expired or been revoked. Receipt emails are
+NOT being processed until this is fixed (they stay unread and will be picked up once
+authentication works again).
+
+Rotate the secret: entra.microsoft.com -> App registrations ->
+"BlackLightning Reimbursements Mailbox" -> Certificates & secrets, then update the
+Rails production credentials and redeploy.
+
+This alert is sent at most once per day.
