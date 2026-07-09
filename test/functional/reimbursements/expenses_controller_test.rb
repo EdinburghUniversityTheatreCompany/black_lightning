@@ -165,6 +165,65 @@ module Reimbursements
       assert_not response.parsed_body["ok"]
     end
 
+    test "edit renders the prefilled form for an own pending expense" do
+      sign_in @user
+
+      get :edit, params: { id: "recExp1" }
+
+      assert_response :success
+      assert_includes response.body, "Fake blood"
+      assert_includes response.body, "receipt.pdf"
+    end
+
+    test "edit 404s for another person's expense" do
+      sign_in @user
+
+      get :edit, params: { id: "recExp2" }
+
+      assert_response :not_found
+    end
+
+    test "edit 404s for a non-pending expense" do
+      approved = airtable_expense_record(id: "recExp3", status: "Approved")
+      @store, @client = build_fake_store(
+        expenses: [ approved ],
+        people: [ airtable_person_record(email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
+      sign_in @user
+
+      get :edit, params: { id: "recExp3" }
+
+      assert_response :not_found
+    end
+
+    test "update writes changed fields without requiring a new receipt" do
+      sign_in @user
+
+      patch :update, params: { id: "recExp1",
+                               reimbursements_expense_form: valid_form_params.except(:receipts).merge(description: "Even more fake blood") }
+
+      assert_redirected_to reimbursements_expenses_path
+      _table, record_id, fields = @client.updated.sole
+      assert_equal "recExp1", record_id
+      assert_equal "Even more fake blood",
+                   fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:description]]
+      assert_not fields.key?(ReimbursementsTestHelpers::FIELD_IDS[:expenses][:status]),
+                 "update must not touch the status"
+      assert_empty @client.uploads
+    end
+
+    test "update rejects invalid input without writing" do
+      sign_in @user
+
+      patch :update, params: { id: "recExp1",
+                               reimbursements_expense_form: valid_form_params.except(:receipts).merge(amount: "") }
+
+      assert_response :unprocessable_entity
+      assert_empty @client.updated
+    end
+
     # Returns a canned extraction regardless of input.
     class FakeExtractor
       def initialize(extraction)

@@ -35,6 +35,28 @@ module Reimbursements
                   notice: "Expense submitted — you'll see status updates here."
     end
 
+    def edit
+      @expense = find_own_editable_expense!(params[:id])
+      @title = "Edit Expense"
+      @form = ExpenseForm.from_expense(@expense)
+      @budgets = store.active_budgets
+    end
+
+    def update
+      @expense = find_own_editable_expense!(params[:id])
+      @form = ExpenseForm.new(expense_form_params.merge(require_receipts: false))
+      unless @form.valid?
+        @title = "Edit Expense"
+        @budgets = store.active_budgets
+        render :edit, status: :unprocessable_entity
+        return
+      end
+
+      store.update_expense!(@expense.record_id, @form.update_attrs)
+      attach_receipts(@expense.record_id)
+      redirect_to reimbursements_expenses_path, notice: "Expense updated."
+    end
+
     # Receipt-first prefill: the form posts the receipt(s) here before
     # submission; extraction failures return ok: false and the form stays
     # manual (never a blocker).
@@ -46,6 +68,17 @@ module Reimbursements
     end
 
     private
+
+    # Submitters may only touch their own expenses, and only while Pending
+    # (once review picks an expense up it's the finance team's).
+    def find_own_editable_expense!(record_id)
+      expense = store.find_expense(record_id)
+      unless expense && current_person && expense.person&.record_id == current_person.record_id &&
+             expense.editable?
+        raise ActiveRecord::RecordNotFound
+      end
+      expense
+    end
 
     def expense_form_params
       params.require(:reimbursements_expense_form)
