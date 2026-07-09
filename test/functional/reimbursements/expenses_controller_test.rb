@@ -74,5 +74,106 @@ module Reimbursements
       assert_response :success
       assert_includes response.body, "No expenses yet"
     end
+
+    def receipt_upload
+      fixture_file_upload("reimbursements_receipt.pdf", "application/pdf")
+    end
+
+    def valid_form_params
+      {
+        expense_type: "Reimbursement", amount: "12.50", amount_excl_vat: "10.42",
+        budget_record_id: "recBud1", description: "Fake blood",
+        payment_reference: "PROPS PAT", vat_itemised: "true",
+        receipts: [ receipt_upload ]
+      }
+    end
+
+    test "new renders the receipt-first form" do
+      sign_in @user
+
+      get :new
+
+      assert_response :success
+      assert_includes response.body, "reimbursements-receipt"
+      assert_includes response.body, "Props"
+    end
+
+    test "create writes a pending expense with receipts and redirects" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: valid_form_params }
+
+      assert_redirected_to reimbursements_expenses_path
+      table, fields = @client.created.sole
+      assert_equal :expenses, table
+      f = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
+      assert_equal "Pending", fields[f[:status]]
+      assert_equal [ "recPer1" ], fields[f[:payee]]
+      assert_equal [ "recBud1" ], fields[f[:budget]]
+      assert_in_delta 12.5, fields[f[:amount]]
+      assert_equal 1, @client.uploads.size
+    end
+
+    test "create without a receipt re-renders and writes nothing" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: valid_form_params.except(:receipts) }
+
+      assert_response :unprocessable_entity
+      assert_empty @client.created
+    end
+
+    test "create without vat acknowledgement soft-blocks when vat not itemised" do
+      sign_in @user
+      params = valid_form_params.merge(vat_itemised: "false", amount_excl_vat: "12.50")
+
+      post :create, params: { reimbursements_expense_form: params }
+      assert_response :unprocessable_entity
+      assert_empty @client.created
+
+      post :create, params: { reimbursements_expense_form: params.merge(vat_acknowledged: "1", receipts: [ receipt_upload ]) }
+      assert_redirected_to reimbursements_expenses_path
+      assert_equal 1, @client.created.size
+    end
+
+    test "extract returns the extraction as json" do
+      sign_in @user
+      extraction = Extractor::Extraction.new(
+        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("2.08"),
+        vat_itemised: true, suggested_description: "Props",
+        suggested_budget_record_id: "recBud1", suggested_payment_reference: "PROPS"
+      )
+      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
+
+      post :extract, params: { receipts: [ receipt_upload ] }
+
+      assert_response :success
+      body = response.parsed_body
+      assert body["ok"]
+      assert_equal "12.5", body["total_amount"]
+      assert_equal "10.42", body["amount_excl_vat"]
+      assert_equal "recBud1", body["suggested_budget_record_id"]
+    end
+
+    test "extract reports failure as ok false" do
+      sign_in @user
+      BaseController.extractor_builder = -> { FakeExtractor.new(Extractor::Extraction.new(error: "no key")) }
+
+      post :extract, params: { receipts: [ receipt_upload ] }
+
+      assert_response :success
+      assert_not response.parsed_body["ok"]
+    end
+
+    # Returns a canned extraction regardless of input.
+    class FakeExtractor
+      def initialize(extraction)
+        @extraction = extraction
+      end
+
+      def extract(**)
+        @extraction
+      end
+    end
   end
 end
