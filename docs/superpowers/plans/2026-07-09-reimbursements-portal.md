@@ -1,5 +1,11 @@
 # Reimbursements Portal Implementation Plan
 
+> **STATUS (2026-07-09):** Tasks 1–13 implemented and committed on
+> `reimbursements-portal` (full suite green: 1851 runs, 0 failures, +105 new tests).
+> Remaining before merge: Mick's manual setup (mailbox, Entra app, fnox secrets — see
+> the setup guide), visual check + real-Airtable E2E with `bin/dev` in this worktree,
+> and Mick's explicit merge approval.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Producer-facing reimbursements portal (my-expenses + AI receipt-first submission + email-in receipts) inside Black Lightning, backed by the existing Airtable base.

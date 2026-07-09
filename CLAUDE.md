@@ -163,6 +163,35 @@ Models carry `# == Schema Information` blocks maintained by **`annotaterb`** (re
 
 The permission grid auto-discovers models via `ApplicationRecord.descendants` in `Admin::PermissionsController#set_models_and_roles`. A new top-level model appears in the grid automatically; a nested child model managed only through its parent (like `OpportunityRole`, `MarketingCreatives::CategoryInfo`) should be added to the exclusion list there.
 
+## Reimbursements portal
+
+Producer-facing expense portal under `/reimbursements` (any signed-in member). **Data
+lives in Airtable, not ActiveRecord** — the same base the bedlam-bacs operator app
+(sibling repo) reviews and pays from. Spec + plan in `docs/superpowers/specs|plans/`.
+
+- **Everything goes through `Reimbursements::Store`** (`app/services/reimbursements/`), a
+  Solid-Cache-fronted repository over `Reimbursements::Airtable::Client`. The Airtable
+  workspace is on the **free plan (~1,000 API calls/month, shared with bedlam-bacs)**:
+  never call the client directly; a warm-cache page view must cost 0 API calls. Writes
+  bust their cache key. All Airtable access is by field ID (in per-env credentials under
+  `reimbursements_airtable`).
+- **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
+  the *development* credentials are publicly readable, so no secret values there), then
+  per-env credentials `reimbursements:` (production only).
+- **AI prefill** (`Reimbursements::Extractor`, Gemini 2.5 Flash): never blocks — 5
+  attempts with 1/2/4/8s backoff on transient errors, then callers proceed without
+  prefill. The VAT soft-block in `ExpenseForm` requires an acknowledgement checkbox when
+  the receipt doesn't itemise VAT; it must never become a hard block.
+- **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the
+  shared mailbox via `MailboxClient` (Graph app-only auth, scoped by an
+  ApplicationAccessPolicy). Reply-then-move is the commit point; unread = will retry.
+  `CredentialsCheckJob` (daily) + `AuthError` alerts warn `alert_email` (IT
+  subcommittee) before/when the Entra client secret dies.
+- **Tests**: injected fakes (`test/support/reimbursements_test_helpers.rb` — FakeHttp,
+  FakeAirtableClient, `build_fake_store`) via `class_attribute` builder seams on
+  `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test helper
+  `message` — it collides with Minitest's internal `message(msg, ending)`.
+
 ## Opportunities
 
 An `Opportunity` is a posting (a "project"): it `belongs_to :company` (optional) and `has_many :roles` (`OpportunityRole`, a position + `category` enum). It carries `project`/`author`, `compensation_type`/`experience_level` enums, an `apply_url`, and `email_visibility`/`contact_email`. `title` is optional — `display_title` (and `to_label`) fall back to "Company: Project", enforced by the `has_display_title` validation.
