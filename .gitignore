@@ -81,3 +81,6 @@ stats.html
 .claude
 # Git worktrees for isolated feature work
 .worktrees/
+
+# fnox secret references (public repo — collaborators may not use fnox)
+fnox.toml
