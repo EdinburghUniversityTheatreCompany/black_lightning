@@ -65,6 +65,17 @@ ChaosRails::Application.routes.draw do
   get  "calendar/:token/staffing.ics", to: "calendars#staffing",        as: :staffing_calendar,        format: false
   post "calendar/regenerate_token",    to: "calendars#regenerate_token", as: :regenerate_calendar_token
 
+  # Producer-facing reimbursements portal (Airtable-backed, no local models).
+  namespace :reimbursements do
+    root to: "expenses#index"
+    resources :expenses, only: %i[index new create edit update] do
+      collection do
+        post :extract
+      end
+    end
+    resource :payment_details, only: %i[edit update]
+  end
+
   namespace :admin do
     get "", to: "dashboard#index"
 

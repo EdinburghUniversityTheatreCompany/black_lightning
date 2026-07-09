@@ -4,41 +4,8 @@ module Reimbursements
   class StoreTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # Fake Airtable client counting calls per table, compatible with Client's interface.
-    class FakeClient
-      attr_reader :list_calls, :created, :updated, :uploads
-
-      def initialize(records_by_table)
-        @records_by_table = records_by_table
-        @list_calls = Hash.new(0)
-        @created = []
-        @updated = []
-        @uploads = []
-      end
-
-      def list_records(table)
-        @list_calls[table] += 1
-        @records_by_table.fetch(table, [])
-      end
-
-      def create_record(table, fields)
-        @created << [ table, fields ]
-        { "id" => "recNew#{@created.size}", "fields" => fields }
-      end
-
-      def update_record(table, record_id, fields)
-        @updated << [ table, record_id, fields ]
-        { "id" => record_id, "fields" => fields }
-      end
-
-      def upload_attachment(record_id, **kwargs)
-        @uploads << [ record_id, kwargs ]
-        { "id" => record_id }
-      end
-    end
-
     def build_store(expenses: nil, people: nil, budgets: nil)
-      records = {
+      build_fake_store(
         expenses: expenses || [ airtable_expense_record ],
         people: people || [ airtable_person_record ],
         budgets: budgets || [
@@ -48,11 +15,7 @@ module Reimbursements
             r["fields"][FIELD_IDS[:budgets][:budget_type]] = "Income"
           end
         ]
-      }
-      client = FakeClient.new(records)
-      store = Store.new(client: client, config: reimbursements_test_config,
-                        cache: ActiveSupport::Cache::MemoryStore.new)
-      [ store, client ]
+      )
     end
 
     test "warm cache reads cost zero client calls" do

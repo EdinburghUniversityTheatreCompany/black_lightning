@@ -71,6 +71,48 @@ module ReimbursementsTestHelpers
     { "id" => id, "fields" => fields }
   end
 
+  # Fake Airtable client counting calls per table, interface-compatible with
+  # Reimbursements::Airtable::Client. Records writes for assertions.
+  class FakeAirtableClient
+    attr_reader :list_calls, :created, :updated, :uploads
+
+    def initialize(records_by_table)
+      @records_by_table = records_by_table
+      @list_calls = Hash.new(0)
+      @created = []
+      @updated = []
+      @uploads = []
+    end
+
+    def list_records(table)
+      @list_calls[table] += 1
+      @records_by_table.fetch(table, [])
+    end
+
+    def create_record(table, fields)
+      @created << [ table, fields ]
+      { "id" => "recNew#{@created.size}", "fields" => fields }
+    end
+
+    def update_record(table, record_id, fields)
+      @updated << [ table, record_id, fields ]
+      { "id" => record_id, "fields" => fields }
+    end
+
+    def upload_attachment(record_id, **kwargs)
+      @uploads << [ record_id, kwargs ]
+      { "id" => record_id }
+    end
+  end
+
+  # Builds a Store on a FakeAirtableClient + MemoryStore cache. Returns [store, client].
+  def build_fake_store(expenses: [], people: [], budgets: [])
+    client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets)
+    store = Reimbursements::Store.new(client: client, config: reimbursements_test_config,
+                                      cache: ActiveSupport::Cache::MemoryStore.new)
+    [ store, client ]
+  end
+
   # Fake transport compatible with the reimbursements HTTP clients:
   # responds with queued [status, body] pairs and records every request.
   class FakeHttp
