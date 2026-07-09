@@ -36,6 +36,7 @@
 #  username                :string(255)
 #  created_at              :datetime         not null
 #  updated_at              :datetime         not null
+#  airtable_person_id      :string(255)
 #  associate_id            :string(255)
 #  student_id              :string(255)
 #
