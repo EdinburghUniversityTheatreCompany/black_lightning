@@ -71,6 +71,23 @@ module Reimbursements
       assert_equal 2, client.list_calls[:expenses], "expense cache must be busted by the write"
     end
 
+    test "remove_receipt! rewrites the survivors and busts the expense cache" do
+      two_receipts = [
+        { "id" => "att1", "filename" => "old.pdf", "url" => "https://x", "size" => 1, "type" => "application/pdf" },
+        { "id" => "att2", "filename" => "new.pdf", "url" => "https://y", "size" => 1, "type" => "application/pdf" }
+      ]
+      store, client = build_store(expenses: [ airtable_expense_record(receipts: two_receipts) ])
+
+      store.expenses
+      store.remove_receipt!("recExp1", "att1")
+      store.expenses
+
+      _table, record_id, fields = client.updated.sole
+      assert_equal "recExp1", record_id
+      assert_equal [ { "id" => "att2" } ], fields[FIELD_IDS[:expenses][:receipt]]
+      assert_equal 2, client.list_calls[:expenses], "expense cache must be busted by the removal"
+    end
+
     test "attach_receipt! uploads and busts the expense cache" do
       store, client = build_store
 

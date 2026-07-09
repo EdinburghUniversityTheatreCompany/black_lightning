@@ -82,6 +82,18 @@ module Reimbursements
       bust_expenses!
     end
 
+    # Rewrites the attachment field with the survivors (how Airtable removes
+    # a single attachment; bedlam-bacs does the same).
+    def remove_receipt!(expense_record_id, attachment_id)
+      expense = find_expense(expense_record_id)
+      raise Airtable::Error.new("expense #{expense_record_id} not found", status: 404) if expense.nil?
+
+      survivors = expense.receipts.reject { |receipt| receipt.attachment_id == attachment_id }
+      @client.update_record(:expenses, expense_record_id,
+                            @config.fid(:expenses, :receipt) => survivors.map { |r| { "id" => r.attachment_id } })
+      bust_expenses!
+    end
+
     def create_person!(name:, email:)
       record = @client.create_record(:people, @mapper.person_fields(name: name, email: email))
       @cache.delete(PEOPLE_KEY)

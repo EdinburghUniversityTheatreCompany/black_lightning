@@ -99,7 +99,9 @@ module Reimbursements
             filename: attachment["filename"].to_s,
             url: attachment["url"].to_s,
             size_bytes: attachment["size"].to_i,
-            content_type: attachment["type"].to_s
+            content_type: attachment["type"].to_s,
+            thumbnail_url: attachment.dig("thumbnails", "large", "url") ||
+                           attachment.dig("thumbnails", "small", "url")
           )
         end
       end

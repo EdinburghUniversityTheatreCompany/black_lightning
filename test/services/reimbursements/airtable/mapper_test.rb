@@ -40,6 +40,7 @@ module Reimbursements
         assert_equal "Pending", expense.status
         assert_equal 1, expense.receipts.size
         assert_equal "receipt.pdf", expense.receipts.first.filename
+        assert_equal "https://airtable/thumb-large", expense.receipts.first.thumbnail_url
       end
 
       test "tolerates missing budget, payee and amounts" do

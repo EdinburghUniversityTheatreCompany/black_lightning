@@ -4,9 +4,36 @@
 </p>
 
 <% if @expense.receipts.any? %>
-  <%= render AlertComponent.new(type: :info) do %>
-    <span class="font-medium">Attached receipts:</span>
-    <%= @expense.receipts.map(&:filename).join(", ") %>
+  <%= render CardComponent.new(title: "Attached receipts") do %>
+    <div class="flex flex-wrap gap-3">
+      <% @expense.receipts.each do |receipt| %>
+        <div class="w-40 rounded border border-gray-200 p-2 text-center">
+          <%= link_to receipt.url, target: "_blank", rel: "noopener", class: "block" do %>
+            <% if receipt.thumbnail_url.present? %>
+              <%= image_tag receipt.thumbnail_url, alt: receipt.filename,
+                    class: "mx-auto mb-1 h-24 w-full rounded object-contain bg-gray-50" %>
+            <% else %>
+              <span class="mb-1 flex h-24 items-center justify-center rounded bg-gray-50 text-gray-400">
+                <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
+              </span>
+            <% end %>
+            <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
+          <% end %>
+          <% if @expense.receipts.size > 1 %>
+            <%= button_to "Remove",
+                  admin_reimbursements_expense_receipt_path(@expense.record_id, receipt.attachment_id),
+                  method: :delete, class: "#{btn_classes(:danger, :sm)} mt-2",
+                  form: { data: { controller: "confirm", action: "submit->confirm#confirm",
+                                  confirm_message_value: "Remove #{receipt.filename} from this expense?" } } %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+    <% if @expense.receipts.size == 1 %>
+      <p class="mt-2 mb-0 text-sm text-gray-500">
+        To replace the receipt, add the new file below first, then remove this one.
+      </p>
+    <% end %>
   <% end %>
 <% end %>
 

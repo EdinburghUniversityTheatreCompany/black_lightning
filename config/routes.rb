@@ -75,6 +75,7 @@ ChaosRails::Application.routes.draw do
         collection do
           post :extract
         end
+        resources :receipts, only: :destroy
       end
       resource :payment_details, only: %i[edit update]
     end

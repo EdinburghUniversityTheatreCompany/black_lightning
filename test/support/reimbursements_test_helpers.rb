@@ -63,7 +63,8 @@ module ReimbursementsTestHelpers
       f[:status] => attrs.fetch(:status, "Pending"),
       f[:payment_reference] => attrs.fetch(:payment_reference, "PROPS PAT"),
       f[:receipt] => attrs.fetch(:receipts, [
-        { "id" => "att1", "filename" => "receipt.pdf", "url" => "https://airtable/signed", "size" => 1234, "type" => "application/pdf" }
+        { "id" => "att1", "filename" => "receipt.pdf", "url" => "https://airtable/signed", "size" => 1234, "type" => "application/pdf",
+          "thumbnails" => { "large" => { "url" => "https://airtable/thumb-large" } } }
       ])
     }
     fields.delete_if { |_, v| v.nil? || v == [] }
