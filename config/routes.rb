@@ -70,7 +70,7 @@ ChaosRails::Application.routes.draw do
 
     # Producer-facing reimbursements portal (Airtable-backed, no local models).
     namespace :reimbursements do
-      root to: "expenses#index"
+      root to: redirect("/admin/reimbursements/expenses")
       resources :expenses, only: %i[index new create edit update] do
         collection do
           post :extract

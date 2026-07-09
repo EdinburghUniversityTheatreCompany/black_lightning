@@ -121,7 +121,7 @@ module Reimbursements
     end
 
     def portal_url
-      Rails.application.routes.url_helpers.admin_reimbursements_root_url(default_url_options)
+      Rails.application.routes.url_helpers.admin_reimbursements_expenses_url(default_url_options)
     end
 
     def edit_url(expense)

@@ -21,7 +21,7 @@
         PDF or photo, max 5&nbsp;MB. Make sure it shows VAT where possible.
         <%= "(Receipts are already attached — only add files to append.)" unless form.require_receipts? %>
       </p>
-      <%= f.input :receipts, as: :file, label: "Receipt / invoice",
+      <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: form.require_receipts?,
             input_html: { multiple: true,
                           accept: Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(","),
                           data: { reimbursements_receipt_target: "files",
@@ -34,10 +34,10 @@
           collection: Reimbursements::Expense::TYPES, include_blank: false %>
 
     <%= f.input :amount, label: "Amount (£, incl. VAT)",
-          hint: "What actually left your account, or the invoice total.",
+          hint: "What actually left your account, or the invoice total.", required: true,
           input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amount" } } %>
     <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)",
-          hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.",
+          hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
           input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amountExclVat" } } %>
 
     <div data-reimbursements-receipt-target="vatWarning"
