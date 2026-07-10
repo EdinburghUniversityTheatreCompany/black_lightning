@@ -14,8 +14,7 @@
       "useBundler": true,
       "env": {
         "RUBY_DEBUG_OPEN": "true",
-        "RUBY_DEBUG_NONSTOP": "true",
-        "PORT": "3000"
+        "RUBY_DEBUG_NONSTOP": "true"
       },
       "useTerminal": true,
       // Bit hacky, but ensures that we actually attach to the server.
