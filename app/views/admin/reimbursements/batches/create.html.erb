@@ -1,0 +1,59 @@
+<% if @result.success %>
+  <%= render AlertComponent.new(type: :success) do %>
+    Batch processed: <%= @result.expense_count %> <%= "expense".pluralize(@result.expense_count) %>,
+    £<%= format("%.2f", @result.total_amount) %>.
+  <% end %>
+<% else %>
+  <%= render AlertComponent.new(type: :danger) do %>
+    The batch could not be processed — no expenses were marked Submitted. See the errors below.
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Result") do %>
+  <div class="flex flex-wrap gap-6 mb-4">
+    <div>
+      <div class="text-2xl font-semibold"><%= @result.receipts_uploaded %></div>
+      <div class="text-sm text-gray-600">Receipts uploaded</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @result.producer_notifications_sent %></div>
+      <div class="text-sm text-gray-600">Producer notifications</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @result.errors.size %></div>
+      <div class="text-sm text-gray-600">Errors</div>
+    </div>
+  </div>
+
+  <% if @result.eusa_draft_web_link.present? %>
+    <p class="mb-2">
+      <%= link_to "Open EUSA draft in Outlook", @result.eusa_draft_web_link,
+                  class: btn_classes(:primary, :sm), target: "_blank", rel: "noopener" %>
+      <span class="text-sm text-gray-600">review, then send it manually.</span>
+    </p>
+  <% end %>
+
+  <% if @result.bacs_sharepoint_url.present? %>
+    <p class="mb-2 text-sm">
+      BACS xlsx on SharePoint:
+      <%= link_to @result.bacs_sharepoint_url, @result.bacs_sharepoint_url,
+                  class: "text-info underline", target: "_blank", rel: "noopener" %>
+    </p>
+  <% end %>
+
+  <% if @result.errors.any? %>
+    <div class="mt-3">
+      <p class="text-sm font-medium">Errors</p>
+      <ul class="list-disc list-inside text-sm text-danger">
+        <% @result.errors.each do |error| %>
+          <li><%= error %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+<% end %>
+
+<p class="mt-4">
+  <%= link_to "Back to Build Batch", new_admin_reimbursements_batch_path, class: btn_classes(:secondary, :sm) %>
+  <%= link_to "Batch history", admin_reimbursements_batches_path, class: btn_classes(:secondary, :sm) %>
+</p>

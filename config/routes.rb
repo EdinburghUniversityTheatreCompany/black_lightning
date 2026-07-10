@@ -93,6 +93,11 @@ ChaosRails::Application.routes.draw do
         post :preview
         post :apply
       end
+
+      # Finance-team Build Batch (new/create) + History (index/show/reopen).
+      resources :batches, only: %i[index show new create] do
+        member { post :reopen }
+      end
     end
 
     # Mount MissionControl Jobs

@@ -121,7 +121,7 @@ module ReimbursementsTestHelpers
   # Fake Airtable client counting calls per table, interface-compatible with
   # Reimbursements::Airtable::Client. Records writes for assertions.
   class FakeAirtableClient
-    attr_reader :list_calls, :get_calls, :created, :updated, :uploads
+    attr_reader :list_calls, :get_calls, :created, :updated, :uploads, :deleted
     attr_accessor :fail_uploads
 
     def initialize(records_by_table)
@@ -131,6 +131,7 @@ module ReimbursementsTestHelpers
       @created = []
       @updated = []
       @uploads = []
+      @deleted = []
     end
 
     def list_records(table)
@@ -161,12 +162,18 @@ module ReimbursementsTestHelpers
       @uploads << [ record_id, kwargs ]
       { "id" => record_id }
     end
+
+    def delete_record(table, record_id)
+      @deleted << [ table, record_id ]
+      @records_by_table.fetch(table, []).reject! { |r| r["id"] == record_id }
+      { "id" => record_id, "deleted" => true }
+    end
   end
 
   # Builds a Store on a FakeAirtableClient + MemoryStore cache. Returns [store, client].
-  def build_fake_store(expenses: [], people: [], budgets: [], eusa_actuals: [])
+  def build_fake_store(expenses: [], people: [], budgets: [], eusa_actuals: [], batches: [])
     client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets,
-                                    eusa_actuals: eusa_actuals)
+                                    eusa_actuals: eusa_actuals, batches: batches)
     store = Reimbursements::Store.new(client: client, config: reimbursements_test_config,
                                       cache: ActiveSupport::Cache::MemoryStore.new)
     [ store, client ]
@@ -196,6 +203,57 @@ module ReimbursementsTestHelpers
       raise @error if @error
 
       Response.new(@content)
+    end
+  end
+
+  # Fake GraphClient for BatchProcessor / Build Batch tests: records drafts,
+  # uploads and downloads, with toggles to make the draft or uploads fail.
+  class FakeGraphClient
+    attr_reader :uploaded, :drafts, :downloads
+    attr_accessor :fail_draft, :fail_uploads
+
+    def initialize
+      @uploaded = []
+      @drafts = []
+      @downloads = []
+    end
+
+    def download(url)
+      @downloads << url
+      "BYTES(#{url})"
+    end
+
+    def upload_to_folder(drive_id:, folder_id:, filename:, content:)
+      raise Reimbursements::GraphAuth::Error, "SharePoint down" if fail_uploads
+
+      @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
+      "https://sp.example/#{folder_id}/#{filename}"
+    end
+
+    def create_draft(mailbox:, to:, subject:, html:, attachments:)
+      raise Reimbursements::GraphAuth::Error, "draft failed" if fail_draft
+
+      @drafts << { mailbox: mailbox, to: to, subject: subject, html: html,
+                   attachments: attachments.map(&:filename) }
+      "https://outlook.example/draft-1"
+    end
+  end
+
+  FakeMailerDelivery = Struct.new(:noop) do
+    def deliver_later = nil
+  end
+
+  # Fake BatchMailer capturing producer_notification calls.
+  class FakeBatchMailer
+    attr_reader :sent
+
+    def initialize
+      @sent = []
+    end
+
+    def producer_notification(**kwargs)
+      @sent << kwargs
+      FakeMailerDelivery.new
     end
   end
 

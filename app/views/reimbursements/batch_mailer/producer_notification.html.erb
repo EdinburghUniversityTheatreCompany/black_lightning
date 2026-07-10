@@ -1,0 +1,42 @@
+<p>Hi <%= @recipient_name %>,</p>
+
+<p>
+  The following <%= "expense".pluralize(@line_items.size) %> you submitted
+  <%= @line_items.size == 1 ? "has" : "have" %> been sent to EUSA finance for payment as part
+  of the <%= @bacs_date.iso8601 %> BACS request:
+</p>
+
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th>Amount</th>
+      <th>Budget</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @line_items.each do |item| %>
+      <tr>
+        <td>&pound;<%= item[:amount] %></td>
+        <td><%= item[:budget_name] %></td>
+        <td><%= item[:description] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+  <tfoot>
+    <tr style="font-weight: bold; background-color: #f0f0f0;">
+      <td>&pound;<%= @total %></td>
+      <td colspan="2">Total</td>
+    </tr>
+  </tfoot>
+</table>
+
+<p>
+  EUSA typically processes BACS payments within a few business days. If you don't
+  receive payment within two weeks, let me know.
+</p>
+
+<p>
+  Best,<br>
+  Bedlam Fringe Finance
+</p>

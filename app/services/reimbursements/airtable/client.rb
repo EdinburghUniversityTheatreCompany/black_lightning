@@ -64,6 +64,12 @@ module Reimbursements
         nil
       end
 
+      # Delete a record (used when reopening a batch for rebuild).
+      def delete_record(table, record_id)
+        uri = URI("#{API_URL}/#{@config.base_id}/#{@config.table_id(table)}/#{record_id}")
+        request(:delete, uri)
+      end
+
       # Uploads receipt bytes straight into an attachment field (≤5 MB per
       # Airtable's content API limit — enforce at the form boundary).
       def upload_attachment(record_id, table:, field:, filename:, content_type:, bytes:)

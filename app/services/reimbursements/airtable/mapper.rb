@@ -143,6 +143,15 @@ module Reimbursements
         end
       end
 
+      # Attribute hash (symbol keys: name, date_sent, sharepoint_backup_url,
+      # eusa_draft_created, producer_notifications_sent, notes) -> field-ID
+      # payload for a Batch write. date_sent is serialised as "YYYY-MM-DD".
+      def batch_fields(attrs)
+        attrs.compact.each_with_object({}) do |(key, value), payload|
+          payload[fid(:batches, key)] = key == :date_sent ? date_string(value) : value
+        end
+      end
+
       private
 
       def fid(table, field)

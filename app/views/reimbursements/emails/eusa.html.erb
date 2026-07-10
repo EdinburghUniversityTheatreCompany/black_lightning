@@ -1,0 +1,38 @@
+<p>Hi <%= eusa_contact_name.presence || "Finance Team" %>,</p>
+
+<p>
+  Please find attached the BACS request from Bedlam Fringe for <%= bacs_date.iso8601 %>,
+  covering <%= expense_count %> <%= "expense".pluralize(expense_count) %> totalling
+  &pound;<%= format("%.2f", total) %>.
+</p>
+
+<p>Individual receipts are also attached, named by date, budget and description.</p>
+
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th>Payee</th>
+      <th>Amount</th>
+      <th>Budget</th>
+      <th>Nominal</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% expenses.each do |expense| %>
+      <tr>
+        <td><%= expense.effective_payee_name %></td>
+        <td>&pound;<%= format("%.2f", expense.amount || 0) %></td>
+        <td><%= expense.budget&.name %></td>
+        <td><%= expense.effective_nominal_code %></td>
+        <td><%= expense.description %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p>
+  All the best,<br>
+  <%= sender_name %><br>
+  Bedlam Fringe
+</p>

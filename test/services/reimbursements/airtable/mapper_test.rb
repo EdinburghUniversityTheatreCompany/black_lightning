@@ -155,6 +155,18 @@ module Reimbursements
         assert_equal "https://sp/a.pdf\nhttps://sp/b.pdf", payload[f[:sharepoint_receipt_urls]]
         assert_equal "2026-05-01T09:00:00Z", payload[f[:ai_checked_at]]
       end
+
+      test "builds a batch field payload keyed by field id with an iso date" do
+        f = FIELD_IDS[:batches]
+        payload = mapper.batch_fields(date_sent: Date.new(2026, 5, 13), notes: "SP: url",
+                                      eusa_draft_created: true, sharepoint_backup_url: "https://sp/x",
+                                      producer_notifications_sent: nil)
+        assert_equal "2026-05-13", payload[f[:date_sent]]
+        assert_equal "SP: url", payload[f[:notes]]
+        assert payload[f[:eusa_draft_created]]
+        assert_equal "https://sp/x", payload[f[:sharepoint_backup_url]]
+        assert_not payload.key?(f[:producer_notifications_sent]), "nil values are dropped"
+      end
     end
   end
 end
