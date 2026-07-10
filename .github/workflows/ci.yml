@@ -306,7 +306,9 @@ jobs:
         run: bundle exec debride --exclude vendor,node_modules,tmp,log .
 
       - name: Duplication (flay — Ruby structural, advisory)
-        run: bundle exec flay . || true # flay exits 0 anyway; surfaces structural clones
+        # flay has no dir --exclude, so scope to source dirs — otherwise it (like debride) scans
+        # the bundler-cache vendor/bundle gems. Non-Rails Ruby repos: adjust the paths. Mirrors hk.
+        run: bundle exec flay app lib || true # flay exits 0 anyway; surfaces structural clones
 
       - name: Performance anti-patterns (fasterer — advisory)
         run: bundle exec fasterer || true
