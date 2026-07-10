@@ -179,6 +179,57 @@ module ReimbursementsTestHelpers
     [ store, client ]
   end
 
+  # Fake GraphClient for BatchProcessor / Build Batch tests: records drafts,
+  # uploads and downloads, with toggles to make the draft or uploads fail.
+  class FakeGraphClient
+    attr_reader :uploaded, :drafts, :downloads
+    attr_accessor :fail_draft, :fail_uploads
+
+    def initialize
+      @uploaded = []
+      @drafts = []
+      @downloads = []
+    end
+
+    def download(url)
+      @downloads << url
+      "BYTES(#{url})"
+    end
+
+    def upload_to_folder(drive_id:, folder_id:, filename:, content:)
+      raise Reimbursements::GraphAuth::Error, "SharePoint down" if fail_uploads
+
+      @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
+      "https://sp.example/#{folder_id}/#{filename}"
+    end
+
+    def create_draft(mailbox:, to:, subject:, html:, attachments:)
+      raise Reimbursements::GraphAuth::Error, "draft failed" if fail_draft
+
+      @drafts << { mailbox: mailbox, to: to, subject: subject, html: html,
+                   attachments: attachments.map(&:filename) }
+      "https://outlook.example/draft-1"
+    end
+  end
+
+  FakeMailerDelivery = Struct.new(:noop) do
+    def deliver_later = nil
+  end
+
+  # Fake BatchMailer capturing producer_notification calls.
+  class FakeBatchMailer
+    attr_reader :sent
+
+    def initialize
+      @sent = []
+    end
+
+    def producer_notification(**kwargs)
+      @sent << kwargs
+      FakeMailerDelivery.new
+    end
+  end
+
   # Fake transport compatible with the reimbursements HTTP clients:
   # responds with queued [status, body] pairs and records every request.
   class FakeHttp

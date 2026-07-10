@@ -1,0 +1,102 @@
+<p class="mb-3 text-gray-600">
+  Every Approved expense goes into one BACS request. The money path uses each expense's
+  <strong>effective</strong> payee and bank details, so an invoice override pays the third party
+  directly (flagged "→ third party" below). Processing creates a <strong>draft</strong> in
+  <%= @cost_centre.send_mailbox %> for you to review and send — nothing is emailed to EUSA
+  automatically.
+</p>
+
+<% if @expenses.empty? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    No approved expenses to batch. Approve some on the Review queue first.
+  <% end %>
+<% else %>
+  <%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)} — £#{format('%.2f', @total)}") do %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-left text-gray-600 border-b border-gray-200">
+          <tr>
+            <th class="py-1 pr-3">#</th>
+            <th class="py-1 pr-3">Payee</th>
+            <th class="py-1 pr-3">Sort code</th>
+            <th class="py-1 pr-3">Account</th>
+            <th class="py-1 pr-3 text-right">Amount</th>
+            <th class="py-1 pr-3">Nominal</th>
+            <th class="py-1 pr-3">Budget</th>
+            <th class="py-1 pr-3">Description</th>
+            <th class="py-1 pr-3 text-right">Receipts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @expenses.each do |expense| %>
+            <tr class="border-b border-gray-100 align-top">
+              <td class="py-1 pr-3"><%= expense.auto_number %></td>
+              <td class="py-1 pr-3">
+                <%= expense.effective_payee_name %>
+                <% if expense.payee_override? %>
+                  <%= render BadgeComponent.new(type: :warning, pill: true).with_content("→ third party") %>
+                <% end %>
+              </td>
+              <td class="py-1 pr-3 font-mono"><%= expense.effective_sort_code %></td>
+              <td class="py-1 pr-3 font-mono"><%= expense.effective_account_number %></td>
+              <td class="py-1 pr-3 text-right">£<%= format("%.2f", expense.amount || 0) %></td>
+              <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
+              <td class="py-1 pr-3"><%= expense.budget&.name %></td>
+              <td class="py-1 pr-3"><%= expense.description %></td>
+              <td class="py-1 pr-3 text-right"><%= expense.receipts.size %></td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <%= render CardComponent.new(title: "EUSA email", html_class: "mt-4") do %>
+    <%= form_with url: admin_reimbursements_batches_path, method: :post, class: "flex flex-col gap-4" do %>
+      <div class="flex flex-wrap gap-4">
+        <div>
+          <%= label_tag :bacs_date, "BACS date", class: "block text-sm font-medium" %>
+          <%= date_field_tag :bacs_date, @bacs_date, class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+        </div>
+        <div>
+          <%= label_tag :eusa_recipient, "EUSA recipient", class: "block text-sm font-medium" %>
+          <%= text_field_tag :eusa_recipient, @eusa_recipient,
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-64" %>
+        </div>
+        <div>
+          <%= label_tag :sender_name, "Your name (signature)", class: "block text-sm font-medium" %>
+          <%= text_field_tag :sender_name, @sender_name,
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-64" %>
+        </div>
+        <div>
+          <span class="block text-sm font-medium">Draft sent from</span>
+          <span class="inline-block px-2 py-1 text-sm text-gray-600"><%= @cost_centre.send_mailbox %></span>
+        </div>
+      </div>
+
+      <div>
+        <%= label_tag :eusa_subject, "Subject", class: "block text-sm font-medium" %>
+        <%= text_field_tag :eusa_subject, @default_email.subject,
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
+      </div>
+
+      <div>
+        <%= label_tag :eusa_body, "Body (HTML)", class: "block text-sm font-medium" %>
+        <%= text_area_tag :eusa_body, @default_email.body_html, rows: 16,
+                          class: "border border-gray-300 rounded px-2 py-1 text-xs font-mono w-full" %>
+      </div>
+
+      <div class="text-sm text-gray-600">
+        Processing will: generate the xlsx, upload it and every receipt to SharePoint, create the EUSA
+        draft (you send it manually), record the batch, mark these expenses Submitted, and email each
+        producer that their expense was submitted.
+      </div>
+
+      <div>
+        <%= submit_tag "Create draft and process batch", class: btn_classes(:primary),
+                       data: { turbo_confirm: "Create the EUSA draft and mark #{@expenses.size} " \
+                                              "#{'expense'.pluralize(@expenses.size)} as Submitted?" } %>
+      </div>
+    <% end %>
+  <% end %>
+<% end %>

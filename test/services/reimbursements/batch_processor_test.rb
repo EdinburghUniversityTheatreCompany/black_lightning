@@ -4,54 +4,6 @@ module Reimbursements
   class BatchProcessorTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    class FakeGraph
-      attr_reader :uploaded, :drafts, :downloads
-      attr_accessor :fail_draft, :fail_uploads
-
-      def initialize
-        @uploaded = []
-        @drafts = []
-        @downloads = []
-      end
-
-      def download(url)
-        @downloads << url
-        "BYTES(#{url})"
-      end
-
-      def upload_to_folder(drive_id:, folder_id:, filename:, content:)
-        raise GraphAuth::Error, "SharePoint down" if @fail_uploads
-
-        @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
-        "https://sp.example/#{folder_id}/#{filename}"
-      end
-
-      def create_draft(mailbox:, to:, subject:, html:, attachments:)
-        raise GraphAuth::Error, "draft failed" if @fail_draft
-
-        @drafts << { mailbox: mailbox, to: to, subject: subject, html: html,
-                     attachments: attachments.map(&:filename) }
-        "https://outlook.example/draft-1"
-      end
-    end
-
-    FakeDelivery = Struct.new(:noop) do
-      def deliver_later = nil
-    end
-
-    class FakeMailer
-      attr_reader :sent
-
-      def initialize
-        @sent = []
-      end
-
-      def producer_notification(**kwargs)
-        @sent << kwargs
-        FakeDelivery.new
-      end
-    end
-
     def configured_cost_centre
       CostCentre.new(key: "fringe", name: "Bedlam Fringe", eusa_code: "F40",
                      receive_mailbox: "in@bedlamfringe.co.uk", send_mailbox: "send@bedlamfringe.co.uk",
@@ -72,8 +24,8 @@ module Reimbursements
         airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 12)
       ]
       store, client = build_fake_store(expenses: expenses, people: people, budgets: budgets)
-      graph = FakeGraph.new
-      mailer = FakeMailer.new
+      graph = FakeGraphClient.new
+      mailer = FakeBatchMailer.new
       processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, mailer: mailer)
       [ processor, store, client, graph, mailer ]
     end

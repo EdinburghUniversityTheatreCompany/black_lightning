@@ -79,6 +79,10 @@ ChaosRails::Application.routes.draw do
       end
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index update]
+      # Finance-team Build Batch (new/create) + History (index/show/reopen).
+      resources :batches, only: %i[index show new create] do
+        member { post :reopen }
+      end
     end
 
     # Mount MissionControl Jobs

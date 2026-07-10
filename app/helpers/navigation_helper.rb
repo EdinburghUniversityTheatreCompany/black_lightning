@@ -58,6 +58,8 @@ module NavigationHelper
     children << { title: "Reimbursements", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
     children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
     children << { title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" } if can? :manage, :reimbursements_finance
+    children << { title: "Build Batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" } if can? :manage, :reimbursements_finance
+    children << { title: "History", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
     # Opportunities
