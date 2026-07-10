@@ -6,9 +6,9 @@ module Reimbursements
   # digits). Ported wholesale from bedlam-bacs `modulus_check.py`.
   #
   # Rule data (`valacdos.txt`, `scsubtab.txt`) comes from Pay.UK under a
-  # click-through licence, so it is vendored (gitignored), not committed. When the
-  # files are absent every check reads OUTSIDE_SPEC — a soft "couldn't verify",
-  # never a hard block.
+  # click-through licence; it is vendored in vendor/pay_uk/ and committed so Kamal
+  # ships it inside the image. When the files are absent every check reads
+  # OUTSIDE_SPEC — a soft "couldn't verify", never a hard block.
   #
   # Exceptions implemented: 1, 3, 4, 5, 6, 7. 14 is recognised but treated as
   # OUTSIDE_SPEC; any other exception falls back to OUTSIDE_SPEC for safety.
