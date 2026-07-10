@@ -118,8 +118,16 @@ module Admin
       get :index
 
       assert_response :success
-      assert_includes response.body, "Valid"
-      assert_includes response.body, "Invalid"
+      # Assert on the BadgeComponent colour classes, not the labels: the labels
+      # (Valid/Invalid/Missing) collide with the fixture person names, so a broken
+      # mapping would still leave the words in the body. The colour classes can
+      # only come from the badge, so they genuinely pin the state mapping:
+      # VALID -> success (green), INVALID -> danger (red), OUTSIDE_SPEC -> warning
+      # (amber). None of the four fixture people are verified, so each colour
+      # comes from exactly one modulus badge.
+      assert_includes response.body, "bg-success/15", "VALID should map to a green badge"
+      assert_includes response.body, "bg-danger/15", "INVALID should map to a red badge"
+      assert_includes response.body, "bg-warning/15", "OUTSIDE_SPEC should map to an amber badge"
       assert_includes response.body, "Outside spec"
       assert_includes response.body, "Missing"
     end
