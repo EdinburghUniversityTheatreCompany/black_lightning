@@ -79,6 +79,82 @@ module Reimbursements
         f = FIELD_IDS[:people]
         assert_equal({ f[:name] => "Pat", f[:email] => "pat@example.com", f[:sort_code] => "112233" }, payload)
       end
+
+      # --- operator field reads ------------------------------------------
+
+      test "maps budget remaining and initial budget" do
+        f = FIELD_IDS[:budgets]
+        record = airtable_budget_record
+        record["fields"][f[:initial_budget]] = 1000.0
+        record["fields"][f[:remaining]] = 250.5
+        budget = mapper.budget(record)
+        assert_equal BigDecimal("1000.0"), budget.initial_budget
+        assert_equal BigDecimal("250.5"), budget.remaining
+      end
+
+      test "maps operator expense fields" do
+        f = FIELD_IDS[:expenses]
+        record = airtable_expense_record(overrides: {
+          f[:nominal_code_override] => "9999",
+          f[:submitted_to_eusa_date] => "2026-05-13",
+          f[:payment_confirmed_date] => "2026-05-20",
+          f[:batch] => [ "recBat1" ],
+          f[:producer_notified] => true,
+          f[:receipts_offloaded] => true,
+          f[:sharepoint_receipt_urls] => "https://sp/a.pdf\nhttps://sp/b.pdf",
+          f[:ai_check_status] => "Pass", f[:ai_comment] => "Looks fine",
+          f[:ai_checked_at] => "2026-05-01T09:00:00Z"
+        })
+        expense = mapper.expense(record, people_by_id: {}, budgets_by_id: {})
+
+        assert_equal "9999", expense.nominal_code_override
+        assert_equal Date.new(2026, 5, 13), expense.submitted_to_eusa_date
+        assert_equal Date.new(2026, 5, 20), expense.payment_confirmed_date
+        assert_equal "recBat1", expense.batch_id
+        assert expense.producer_notified
+        assert expense.receipts_offloaded
+        assert_equal [ "https://sp/a.pdf", "https://sp/b.pdf" ], expense.sharepoint_receipt_urls
+        assert_equal "Pass", expense.ai_check_status
+        assert_equal "Looks fine", expense.ai_comment
+        assert_not_nil expense.ai_checked_at
+      end
+
+      test "maps a batch record" do
+        batch = mapper.batch(airtable_batch_record(eusa_draft_created: true, sharepoint_backup_url: "https://sp/b"))
+        assert_equal "recBat1", batch.record_id
+        assert_equal "BACS 2026-05-13", batch.name
+        assert_equal Date.new(2026, 5, 13), batch.date_sent
+        assert batch.eusa_draft_created
+        assert_equal "https://sp/b", batch.sharepoint_backup_url
+      end
+
+      test "maps a eusa actual record and its dedup key" do
+        actual = mapper.eusa_actual(airtable_eusa_actual_record(linked_expense: [ "recExp1" ]))
+        assert_equal "439999", actual.nominal_code
+        assert_equal "F40", actual.cost_centre
+        assert_equal BigDecimal("123.45"), actual.debit
+        assert_equal [ "recExp1" ], actual.linked_expense_ids
+        assert_equal Date.new(2026, 5, 13), actual.date
+        assert_equal Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", BigDecimal("123.45"), nil),
+          actual.dedup_key
+      end
+
+      # --- operator write transforms -------------------------------------
+
+      test "expense field payload transforms operator write fields" do
+        f = FIELD_IDS[:expenses]
+        payload = mapper.expense_fields(
+          status: "Submitted", batch_id: "recBat9",
+          submitted_to_eusa_date: Date.new(2026, 5, 13),
+          sharepoint_receipt_urls: [ "https://sp/a.pdf", "https://sp/b.pdf" ],
+          ai_checked_at: Time.utc(2026, 5, 1, 9, 0, 0)
+        )
+        assert_equal "Submitted", payload[f[:status]]
+        assert_equal [ "recBat9" ], payload[f[:batch]]
+        assert_equal "2026-05-13", payload[f[:submitted_to_eusa_date]]
+        assert_equal "https://sp/a.pdf\nhttps://sp/b.pdf", payload[f[:sharepoint_receipt_urls]]
+        assert_equal "2026-05-01T09:00:00Z", payload[f[:ai_checked_at]]
+      end
     end
   end
 end

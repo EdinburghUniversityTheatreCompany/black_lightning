@@ -19,18 +19,36 @@ module ReimbursementsTestHelpers
       receipt: "fldExpRcpt", payment_reference: "fldExpRef", status: "fldExpStatus",
       rejection_reason: "fldExpRej", producer_notified: "fldExpNotif",
       submitted_at: "fldExpSubAt", ai_check_status: "fldExpAiSt",
-      ai_comment: "fldExpAiCom", ai_checked_at: "fldExpAiAt"
+      ai_comment: "fldExpAiCom", ai_checked_at: "fldExpAiAt",
+      submitted_to_eusa_date: "fldExpSubEusa", payment_confirmed_date: "fldExpPayConf",
+      batch: "fldExpBatch", receipts_offloaded: "fldExpOffload",
+      sharepoint_receipt_urls: "fldExpSpUrls", rejection_notified: "fldExpRejNotif"
+    },
+    batches: {
+      name: "fldBatName", date_sent: "fldBatDate", bacs_request_file: "fldBatFile",
+      sharepoint_backup_url: "fldBatSpUrl", eusa_draft_created: "fldBatDraft",
+      producer_notifications_sent: "fldBatNotif", notes: "fldBatNotes"
+    },
+    eusa_actuals: {
+      name: "fldActName", nominal_code: "fldActNom", cost_centre: "fldActCC",
+      ref: "fldActRef", date: "fldActDate", period: "fldActPeriod",
+      narrative: "fldActNarr", narrative_1: "fldActNarr1", debit: "fldActDebit",
+      credit: "fldActCredit", net: "fldActNet", linked_expense: "fldActExp",
+      linked_budget: "fldActBud", source_month: "fldActMonth", imported_at: "fldActImp"
     }
   }.freeze
 
   def reimbursements_test_config
     Reimbursements::Airtable::Config.new(
       base_id: "appTestBase",
-      tables: { people: "tblPeople", budgets: "tblBudgets", expenses: "tblExpenses" },
+      tables: {
+        people: "tblPeople", budgets: "tblBudgets", expenses: "tblExpenses",
+        batches: "tblBatches", eusa_actuals: "tblEusaActuals"
+      },
       fields: FIELD_IDS,
       status_options: {
-        pending: "Pending", approved: "Approved", submitted: "Submitted",
-        paid: "Paid", rejected: "Rejected"
+        draft: "Draft", pending: "Pending", approved: "Approved",
+        submitted: "Submitted", paid: "Paid", rejected: "Rejected"
       }
     )
   end
@@ -69,6 +87,34 @@ module ReimbursementsTestHelpers
     }
     fields.delete_if { |_, v| v.nil? || v == [] }
     fields.merge!(overrides)
+    { "id" => id, "fields" => fields }
+  end
+
+  def airtable_batch_record(id: "recBat1", **attrs)
+    f = FIELD_IDS[:batches]
+    fields = {
+      f[:name] => attrs.fetch(:name, "BACS 2026-05-13"),
+      f[:date_sent] => attrs.fetch(:date_sent, "2026-05-13"),
+      f[:sharepoint_backup_url] => attrs.fetch(:sharepoint_backup_url, nil),
+      f[:eusa_draft_created] => attrs.fetch(:eusa_draft_created, nil),
+      f[:producer_notifications_sent] => attrs.fetch(:producer_notifications_sent, nil),
+      f[:notes] => attrs.fetch(:notes, nil)
+    }.compact
+    { "id" => id, "fields" => fields }
+  end
+
+  def airtable_eusa_actual_record(id: "recAct1", **attrs)
+    f = FIELD_IDS[:eusa_actuals]
+    fields = {
+      f[:nominal_code] => attrs.fetch(:nominal_code, "439999"),
+      f[:cost_centre] => attrs.fetch(:cost_centre, "F40"),
+      f[:narrative] => attrs.fetch(:narrative, "Alice Producer"),
+      f[:date] => attrs.fetch(:date, "2026-05-13"),
+      f[:debit] => attrs.fetch(:debit, 123.45),
+      f[:credit] => attrs.fetch(:credit, nil),
+      f[:linked_expense] => attrs.fetch(:linked_expense, nil),
+      f[:source_month] => attrs.fetch(:source_month, "2026-05")
+    }.compact
     { "id" => id, "fields" => fields }
   end
 
