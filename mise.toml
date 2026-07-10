@@ -43,4 +43,4 @@ postinstall = "corepack enable"
 [env]
 # dev-env standard version this repo targets (dev-hooks:dev-env-setup). Do not
 # hand-edit — bump it by running the skill's upgrade path.
-DEV_ENV_VERSION = "19"
+DEV_ENV_VERSION = "21"

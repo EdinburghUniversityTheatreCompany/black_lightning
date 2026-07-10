@@ -18,7 +18,9 @@ services:
     depends_on:
       - mysql
     ports:
-      - "3000:3000"
+      # Host publish tracks $PORT so parallel per-worktree devcontainers don't clash on one host
+      # port (worktree-setup's isolate writes PORT into .devcontainer/.env). Falls back to 3000.
+      - "${PORT:-3000}:${PORT:-3000}"
 
   mysql:
     image: mysql:8
@@ -28,8 +30,9 @@ services:
       MYSQL_ROOT_HOST: "%"
     volumes:
       - mysql-data:/var/lib/mysql
-    ports:
-      - "3307:3306"  # non-standard port avoids clashing with any host MySQL
+    # No host port published: the app reaches MySQL over the compose network (DB_HOST: mysql), and
+    # not publishing keeps parallel per-worktree devcontainers from clashing on the DB host port.
+    # For a host-side DB GUI, forward on demand: `docker compose port mysql 3306`.
 
 volumes:
   mysql-data:
