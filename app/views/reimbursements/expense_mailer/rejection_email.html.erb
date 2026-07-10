@@ -1,0 +1,36 @@
+<p>Hi <%= @payee_name %>,</p>
+
+<p>Unfortunately, your expense submission (#<%= @auto_number %>) has been reviewed and
+<strong>rejected</strong> for the following reason:</p>
+
+<blockquote style="border-left: 4px solid #cc0000; margin: 1em 0; padding: 0.5em 1em; color: #333;">
+  <%= @reason %>
+</blockquote>
+
+<p>The rejected expense was:</p>
+
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif;">
+  <thead style="background-color: #f0f0f0;">
+    <tr>
+      <th>Amount</th>
+      <th>Budget</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>&pound;<%= format("%.2f", @amount) %></td>
+      <td><%= @budget_name %></td>
+      <td><%= @description %></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>If you believe this decision is incorrect, or if you have addressed the reason above,
+please resubmit your expense via the portal. Make sure to include any additional
+information or corrected receipts.</p>
+
+<p>If you have any questions, feel free to get in touch.</p>
+
+<p>Best,<br>
+Bedlam Fringe Finance</p>
