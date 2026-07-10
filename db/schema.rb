@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_10_130000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_10_140000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -640,8 +640,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_130000) do
     t.datetime "created_at", null: false
     t.string "eusa_code", null: false
     t.string "eusa_recipient"
+    t.string "eusa_signature_name"
     t.string "key", null: false
+    t.date "last_nightly_run_on"
     t.string "name", null: false
+    t.string "nightly_run_days", default: "[2,4]", null: false
     t.string "receive_mailbox", null: false
     t.string "send_mailbox", null: false
     t.string "sharepoint_bacs_drive_id"
