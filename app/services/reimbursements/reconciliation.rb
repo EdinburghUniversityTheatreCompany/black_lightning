@@ -92,6 +92,33 @@ module Reimbursements
       [ nominal_code.to_s, narrative.to_s.strip, norm_amount(debit), norm_amount(credit) ]
     end
 
+    AMOUNT_TOLERANCE = BigDecimal("0.01")
+    DATE_WINDOW_DAYS = 14
+
+    # Best matching expense for a debit row: nominal code equal (case-insensitive),
+    # amount within £0.01 (excl-VAT preferred, else gross), and either the
+    # submitted-to-EUSA date or the payment-confirmed date within 14 days of the
+    # row date. Returns the first match, or nil.
+    def match_debit_to_expense(row, expenses)
+      expenses.find do |expense|
+        next false unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
+
+        compare_amount = expense.amount_excl_vat || expense.amount
+        next false if compare_amount.nil? || (compare_amount - row.debit).abs > AMOUNT_TOLERANCE
+
+        candidate_dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact
+        next false if candidate_dates.empty?
+
+        candidate_dates.any? { |date| (date - row.date).abs <= DATE_WINDOW_DAYS }
+      end
+    end
+
+    # Matching income budget for a credit row: nominal code equal
+    # (case-insensitive). No amount/date match needed for income. First match or nil.
+    def match_credit_to_budget(row, budgets)
+      budgets.find { |budget| budget.nominal_code.strip.casecmp?(row.nominal_code.strip) }
+    end
+
     # --- private helpers ---------------------------------------------------
 
     def norm_amount(value)

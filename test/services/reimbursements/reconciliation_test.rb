@@ -217,5 +217,129 @@ module Reimbursements
       assert_equal bd("400.56"), rows[2].credit
       assert_equal bd("-400.56"), rows[2].net
     end
+
+    # --- match_debit_to_expense -------------------------------------------
+
+    def debit_row(nominal_code: "439999", debit: bd("123.45"), row_date: Date.new(2025, 3, 15))
+      Reconciliation::ActualsRow.new(
+        nominal_code: nominal_code, cost_centre: "F40", ref: "BACS001", date: row_date,
+        period: "03", narrative: "Test", narrative_1: "", debit: debit, credit: bd(0), net: debit
+      )
+    end
+
+    def expense(nominal_code: "439999", amount: bd("123.45"), amount_excl_vat: nil,
+                submitted_date: Date.new(2025, 3, 15), payment_confirmed_date: nil)
+      Expense.new(
+        record_id: "recE1", auto_number: 1, status: Status::SUBMITTED,
+        amount: amount, amount_excl_vat: amount_excl_vat,
+        budget: Budget.new(record_id: "recB1", name: "Production", nominal_code: nominal_code),
+        submitted_to_eusa_date: submitted_date, payment_confirmed_date: payment_confirmed_date
+      )
+    end
+
+    test "debit exact match" do
+      exp = expense
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row, [ exp ])
+    end
+
+    test "debit no match on wrong nominal" do
+      assert_nil Reconciliation.match_debit_to_expense(debit_row(nominal_code: "999999"), [ expense ])
+    end
+
+    test "debit no match when amount too different" do
+      assert_nil Reconciliation.match_debit_to_expense(debit_row(debit: bd("200.00")),
+        [ expense(amount: bd("123.45")) ])
+    end
+
+    test "debit matches within a penny" do
+      exp = expense(amount: bd("123.44"))
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("123.45")), [ exp ])
+    end
+
+    test "debit no match just over a penny" do
+      assert_nil Reconciliation.match_debit_to_expense(debit_row(debit: bd("123.45")),
+        [ expense(amount: bd("123.43")) ])
+    end
+
+    test "debit matches when date within 14 days" do
+      exp = expense(submitted_date: Date.new(2025, 3, 1)) # 14 days earlier
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(row_date: Date.new(2025, 3, 15)), [ exp ])
+    end
+
+    test "debit no match when dates 15 days apart" do
+      assert_nil Reconciliation.match_debit_to_expense(
+        debit_row(row_date: Date.new(2025, 3, 15)),
+        [ expense(submitted_date: Date.new(2025, 2, 28)) ]
+      )
+    end
+
+    test "debit uses amount excl vat when present" do
+      exp = expense(amount: bd("120.00"), amount_excl_vat: bd("100.00"))
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("100.00")), [ exp ])
+    end
+
+    test "debit skips expense without any reference date" do
+      no_dates = expense(submitted_date: nil, payment_confirmed_date: nil)
+      assert_nil Reconciliation.match_debit_to_expense(debit_row, [ no_dates ])
+    end
+
+    test "debit nominal match is case-insensitive" do
+      exp = expense(nominal_code: "abc123")
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(nominal_code: "ABC123"), [ exp ])
+    end
+
+    test "debit empty expenses returns nil" do
+      assert_nil Reconciliation.match_debit_to_expense(debit_row, [])
+    end
+
+    test "debit returns the first matching expense" do
+      first = expense
+      assert_same first, Reconciliation.match_debit_to_expense(debit_row, [ first, expense ])
+    end
+
+    test "debit uses payment_confirmed_date when submitted date is too far" do
+      exp = expense(submitted_date: Date.new(2026, 5, 14), payment_confirmed_date: Date.new(2026, 4, 24))
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(row_date: Date.new(2026, 4, 24)), [ exp ])
+    end
+
+    test "debit no match when both dates outside the window" do
+      exp = expense(submitted_date: Date.new(2026, 5, 14), payment_confirmed_date: Date.new(2026, 6, 1))
+      assert_nil Reconciliation.match_debit_to_expense(debit_row(row_date: Date.new(2026, 4, 24)), [ exp ])
+    end
+
+    # --- match_credit_to_budget -------------------------------------------
+
+    def credit_row(nominal_code: "250000")
+      Reconciliation::ActualsRow.new(
+        nominal_code: nominal_code, cost_centre: "F40", ref: "INC001", date: Date.new(2025, 3, 15),
+        period: "03", narrative: "Grant income", narrative_1: "", debit: bd(0),
+        credit: bd("1000.00"), net: bd("-1000.00")
+      )
+    end
+
+    test "credit exact match" do
+      budget = Budget.new(record_id: "recB1", name: "Grant Income", nominal_code: "250000")
+      assert_same budget, Reconciliation.match_credit_to_budget(credit_row, [ budget ])
+    end
+
+    test "credit no match on wrong nominal" do
+      budget = Budget.new(record_id: "recB1", name: "Income", nominal_code: "250000")
+      assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: "999999"), [ budget ])
+    end
+
+    test "credit match is case-insensitive" do
+      budget = Budget.new(record_id: "recB1", name: "Income", nominal_code: "abc123")
+      assert_same budget, Reconciliation.match_credit_to_budget(credit_row(nominal_code: "ABC123"), [ budget ])
+    end
+
+    test "credit empty budgets returns nil" do
+      assert_nil Reconciliation.match_credit_to_budget(credit_row, [])
+    end
+
+    test "credit returns the correct budget among several" do
+      wrong = Budget.new(record_id: "recB1", name: "Wrong", nominal_code: "100000")
+      right = Budget.new(record_id: "recB2", name: "Correct", nominal_code: "250000")
+      assert_same right, Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ wrong, right ])
+    end
   end
 end
