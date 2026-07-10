@@ -41,9 +41,8 @@ module Reimbursements
         records
       end
 
-      # Writes also ask for field-ID-keyed responses — without
-      # returnFieldsByFieldId the response is keyed by field NAME and the
-      # mapper would hydrate blank POROs from it.
+      # returnFieldsByFieldId on writes too: the response is otherwise keyed
+      # by field NAME and the mapper would hydrate blank POROs from it.
       def create_record(table, fields_by_id)
         uri = URI("#{API_URL}/#{@config.base_id}/#{@config.table_id(table)}")
         request(:post, uri, { fields: fields_by_id, typecast: true, returnFieldsByFieldId: true })
@@ -54,8 +53,7 @@ module Reimbursements
         request(:patch, uri, { fields: fields_by_id, typecast: true, returnFieldsByFieldId: true })
       end
 
-      # Fetches one record fresh (1 API call — much cheaper than re-listing
-      # the whole table). Returns nil when Airtable says it doesn't exist.
+      # Single-record fetch (1 API call vs re-listing the table); nil on 404.
       def get_record(table, record_id)
         uri = URI("#{API_URL}/#{@config.base_id}/#{@config.table_id(table)}/#{record_id}")
         uri.query = URI.encode_www_form(returnFieldsByFieldId: "true")
