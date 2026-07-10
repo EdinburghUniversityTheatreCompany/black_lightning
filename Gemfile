@@ -35,7 +35,10 @@ gem "mission_control-jobs"
 
 gem "caxlsx"
 gem "roo"  # For reading xlsx files (membership imports)
+gem "rubyXL" # Fill the EUSA BACS xlsx template in place, preserving styling (reimbursements Build Batch)
 gem "rqrcode"
+
+gem "ruby_llm" # Unified LLM API (Gemini) for reimbursements AI receipt extraction + expense checks
 
 gem "silencer"
 

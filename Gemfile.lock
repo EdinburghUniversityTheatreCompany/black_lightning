@@ -198,6 +198,7 @@ GEM
     erubi (1.13.1)
     et-orbi (1.4.0)
       tzinfo
+    event_stream_parser (1.0.0)
     execjs (2.10.1)
     factory_bot (6.6.0)
       activesupport (>= 6.1.0)
@@ -206,6 +207,16 @@ GEM
       railties (>= 6.1.0)
     faker (3.8.0)
       i18n (>= 1.8.11, < 2)
+    faraday (2.14.3)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
+      logger
+    faraday-multipart (1.2.0)
+      multipart-post (~> 2.0)
+    faraday-net_http (3.4.4)
+      net-http (~> 0.5)
+    faraday-retry (2.4.0)
+      faraday (~> 2.0)
     fasterer (0.11.0)
       ruby_parser (>= 3.19.1)
     ffi (1.17.4-x86_64-linux-gnu)
@@ -307,9 +318,12 @@ GEM
       railties (>= 7.1)
       stimulus-rails
       turbo-rails
+    multipart-post (2.4.1)
     mutex_m (0.3.0)
     mysql2 (0.5.7)
       bigdecimal
+    net-http (0.9.1)
+      uri (>= 0.11.1)
     net-imap (0.6.4.1)
       date
       net-protocol
@@ -503,6 +517,20 @@ GEM
     ruby-vips (2.3.0)
       ffi (~> 1.12)
       logger
+    rubyXL (3.4.38)
+      nokogiri (>= 1.10.8)
+      rubyzip (>= 3.2.2)
+    ruby_llm (1.16.0)
+      base64
+      event_stream_parser (~> 1)
+      faraday (>= 1.10.0)
+      faraday-multipart (>= 1)
+      faraday-net_http (>= 1)
+      faraday-retry (>= 1)
+      marcel (~> 1)
+      ruby_llm-schema (~> 0)
+      zeitwerk (~> 2)
+    ruby_llm-schema (0.4.0)
     ruby_parser (3.22.0)
       racc (~> 1.5)
       sexp_processor (~> 4.16)
@@ -708,6 +736,8 @@ DEPENDENCIES
   rubocop-view_component
   ruby-lsp-rails
   ruby-vips
+  rubyXL
+  ruby_llm
   selenium-webdriver (>= 4.8.2)
   silencer
   simple_form
