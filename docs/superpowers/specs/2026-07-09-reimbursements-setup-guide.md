@@ -49,14 +49,14 @@ New-DistributionGroup -Name "Reimbursements App Access" -Type Security `
 Add-DistributionGroupMember -Identity "Reimbursements App Access" `
   -Member reimbursements@bedlamfringe.co.uk
 
-New-ApplicationAccessPolicy -AppId <CLIENT-ID> `
+New-ApplicationAccessPolicy -AppId b874d491-4edf-4b76-839d-84e534c7f7c0 `
   -PolicyScopeGroupId reimbursements-app-access@bedlamfringe.co.uk `
   -AccessRight RestrictAccess `
   -Description "Reimbursements app may only touch its own mailbox"
 
 # Verify (policy can take ~30-60 min to propagate)
-Test-ApplicationAccessPolicy -Identity reimbursements@bedlamfringe.co.uk -AppId <CLIENT-ID>  # → Granted
-Test-ApplicationAccessPolicy -Identity <your-own-address> -AppId <CLIENT-ID>                 # → Denied
+Test-ApplicationAccessPolicy -Identity reimbursements@bedlamfringe.co.uk -AppId b874d491-4edf-4b76-839d-84e534c7f7c0  # → Granted
+Test-ApplicationAccessPolicy -Identity mick.zijdel@bedlamtheatre.co.uk -AppId b874d491-4edf-4b76-839d-84e534c7f7c0                 # → Denied
 ```
 
 ## 4. Airtable PAT (~2 min)
@@ -89,7 +89,7 @@ reimbursements:
   azure_tenant_id: "..."            # step 2.3 (Directory ID)
   azure_client_id: "..."            # step 2.3 (Client ID)
   azure_client_secret: "..."        # step 2.2
-  azure_secret_expires_on: "2028-07-09"  # expiry you picked in step 2.2 — drives the IT-subcommittee warning email
+  azure_secret_expires_on: "2028-07-01"  # expiry you picked in step 2.2 — drives the IT-subcommittee warning email
   airtable_pat: "..."               # step 4
   gemini_api_key: "..."             # step 5
   alert_email: "..."                # IT subcommittee address for secret-expiry / auth-failure alerts
