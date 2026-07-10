@@ -79,6 +79,14 @@ ChaosRails::Application.routes.draw do
       end
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index update]
+
+      # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
+      get    "review",             to: "review#index",   as: :review
+      patch  "review/:id/save",    to: "review#save",    as: :save_review
+      patch  "review/:id/approve", to: "review#approve", as: :approve_review
+      patch  "review/:id/reject",  to: "review#reject",  as: :reject_review
+      post   "review/:id/receipts",                to: "review#add_receipts",   as: :review_receipts
+      delete "review/:id/receipts/:attachment_id", to: "review#remove_receipt", as: :review_receipt
     end
 
     # Mount MissionControl Jobs

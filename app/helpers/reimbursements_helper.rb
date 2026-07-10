@@ -19,4 +19,18 @@ module ReimbursementsHelper
     spec = MODULUS_BADGE.fetch(result, MODULUS_BADGE[Reimbursements::ModulusCheck::OUTSIDE_SPEC])
     render(BadgeComponent.new(type: spec[:type], pill: true).with_content(spec[:label]))
   end
+
+  # A person-like value carrying an expense's EFFECTIVE bank details (payee
+  # override if set, else the linked person's), so the same modulus badge helper
+  # renders against the details the money will actually be paid to.
+  EffectivePayee = Struct.new(:sort_code, :account_number) do
+    def bank_details?
+      sort_code.present? && account_number.present?
+    end
+  end
+
+  def reimbursements_effective_modulus_badge(expense, checker: Reimbursements::ModulusCheck.default_checker)
+    payee = EffectivePayee.new(expense.effective_sort_code, expense.effective_account_number)
+    reimbursements_modulus_badge(payee, checker: checker)
+  end
 end

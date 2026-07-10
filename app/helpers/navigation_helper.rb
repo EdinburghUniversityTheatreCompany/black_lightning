@@ -57,6 +57,7 @@ module NavigationHelper
     # start_with? active-check doesn't also light up for payment_details.
     children << { title: "Reimbursements", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
     children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
+    children << { title: "Review", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" } if can? :manage, :reimbursements_finance
     children << { title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 

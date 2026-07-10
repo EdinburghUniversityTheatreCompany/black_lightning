@@ -1,0 +1,69 @@
+<p class="mb-3 text-gray-600">
+  Review submitted expenses before they go to EUSA. Each card shows a live modulus
+  check on the details the money will actually be paid to, the AI receipt check, and any
+  duplicate or override warnings. Fix anything that needs attention, then approve or reject.
+</p>
+
+<% pending_total = @pending.sum { |e| e.amount || 0 } %>
+<% approved_total = @approved.sum { |e| e.amount || 0 } %>
+
+<div class="mb-4 flex gap-2 border-b border-gray-200">
+  <% tab_class = ->(active) { active ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600" } %>
+  <%= link_to "Pending (#{@pending.size})", admin_reimbursements_review_path(tab: "pending"),
+              class: tab_class.call(@tab == "pending") %>
+  <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
+              class: tab_class.call(@tab == "approved") %>
+</div>
+
+<% if @tab == "approved" %>
+  <% if @approved.empty? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      No approved expenses yet. Work the Pending tab first.
+    <% end %>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      <%= @approved.size %> approved — total &pound;<%= number_with_precision(approved_total, precision: 2) %>.
+      Ready to submit on the Build Batch page.
+    </p>
+    <% @approved.each do |expense| %>
+      <%= render "expense_card", expense: expense, allow_approve: false, duplicates: nil %>
+    <% end %>
+  <% end %>
+<% else %>
+  <% if @pending.empty? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      No pending expenses.
+    <% end %>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      <%= @pending.size %> pending — total &pound;<%= number_with_precision(pending_total, precision: 2) %>.
+      AI checks run in the background; refresh to see verdicts appear.
+    </p>
+
+    <h2 class="mt-4 mb-2 text-lg font-semibold">Ready to approve (<%= @ready.size %>)</h2>
+    <% if @ready.empty? %>
+      <%= render AlertComponent.new(type: :info) do %>
+        All pending expenses need attention before approving.
+      <% end %>
+    <% else %>
+      <% @ready.each do |expense| %>
+        <%= render "expense_card", expense: expense, allow_approve: true, duplicates: @duplicates[expense.record_id] %>
+      <% end %>
+    <% end %>
+
+    <h2 class="mt-6 mb-2 text-lg font-semibold">Needs attention (<%= @attention.size %>)</h2>
+    <% if @attention.empty? %>
+      <%= render AlertComponent.new(type: :info) do %>
+        None — all pending expenses are ready to approve.
+      <% end %>
+    <% else %>
+      <%= render AlertComponent.new(type: :warning) do %>
+        These have issues to fix before approving: missing excl.-VAT amount, no budget, no
+        receipts, invalid bank details, or over budget.
+      <% end %>
+      <% @attention.each do |expense| %>
+        <%= render "expense_card", expense: expense, allow_approve: true, duplicates: @duplicates[expense.record_id] %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
