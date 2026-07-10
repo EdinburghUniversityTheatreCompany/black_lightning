@@ -1,0 +1,21 @@
+Hi <%= @payee_name %>,
+
+Unfortunately, your expense submission (#<%= @auto_number %>) has been reviewed and
+rejected for the following reason:
+
+  <%= @reason %>
+
+The rejected expense was:
+
+  Amount:      £<%= format("%.2f", @amount) %>
+  Budget:      <%= @budget_name %>
+  Description: <%= @description %>
+
+If you believe this decision is incorrect, or if you have addressed the reason above,
+please resubmit your expense via the portal. Make sure to include any additional
+information or corrected receipts.
+
+If you have any questions, feel free to get in touch.
+
+Best,
+Bedlam Fringe Finance

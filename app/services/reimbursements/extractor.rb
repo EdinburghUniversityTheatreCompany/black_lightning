@@ -3,17 +3,34 @@ module Reimbursements
   # Extracts expense details from receipt files with Gemini so the portal can
   # prefill the submission form (and email-in can fill what it confidently
   # knows). Extraction failing must never block a submission: this class never
-  # raises — transient errors retry with exponential backoff (5 attempts),
-  # then callers get an +ok?: false+ result and proceed without prefill.
+  # raises — RubyLLM owns the network retries/back-off, and anything that still
+  # goes wrong is captured into an +ok?: false+ result so callers proceed
+  # without prefill.
+  #
+  # Backed by Gemini through RubyLLM (the same gem the operator AiChecker uses),
+  # with a validated structured-output schema and multimodal receipt
+  # attachments. +chat_builder+ is the injection seam: tests pass a fake chat so
+  # no real Gemini call is made.
   class Extractor
     MODEL = "gemini-2.5-flash".freeze
-    API_URL = "https://generativelanguage.googleapis.com/v1beta/models/#{MODEL}:generateContent".freeze
+    # Kept for API compatibility with callers that tune retry aggressiveness
+    # (the poll job vs an interactive request); RubyLLM now owns the retry ladder.
     MAX_ATTEMPTS = 5
-    BACKOFF_SECONDS = [ 1, 2, 4, 8 ].freeze
-    RETRYABLE_STATUSES = [ 429, 500, 502, 503, 504 ].freeze
-    TRANSPORT_ERRORS = [ SocketError, Timeout::Error, Errno::ECONNRESET, Errno::ECONNREFUSED,
-                        OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout ].freeze
     REFERENCE_LIMIT = ExpenseForm::REFERENCE_LIMIT
+
+    # Structured output the model must return. Every field is optional: the
+    # model leaves out anything it isn't confident about, and callers pick their
+    # own fallbacks.
+    SCHEMA = RubyLLM::Schema.create do
+      string :merchant, required: false
+      string :purchase_date, required: false
+      number :total_amount, required: false
+      number :vat_amount, required: false
+      boolean :vat_itemised, required: false
+      string :suggested_description, required: false
+      string :suggested_budget_record_id, required: false
+      string :suggested_payment_reference, required: false
+    end
 
     Extraction = Struct.new(:merchant, :purchase_date, :total_amount, :vat_amount,
                             :vat_itemised, :suggested_description,
@@ -32,14 +49,11 @@ module Reimbursements
       end
     end
 
-    # max_attempts: 5 suits the background poll job; interactive callers
-    # (the form's extract endpoint) pass a lower number so a Gemini outage
-    # doesn't pin a Puma worker through the whole retry ladder.
-    def initialize(api_key: nil, http: nil, sleeper: nil, max_attempts: MAX_ATTEMPTS)
-      @api_key = api_key || Settings.gemini_api_key
-      @http = http || HttpTransport
-      @sleeper = sleeper || ->(seconds) { sleep(seconds) }
-      @max_attempts = max_attempts.clamp(1, MAX_ATTEMPTS)
+    # max_attempts is retained for caller compatibility (see MAX_ATTEMPTS).
+    def initialize(api_key: nil, chat_builder: nil, max_attempts: MAX_ATTEMPTS)
+      @api_key = api_key.nil? ? Settings.gemini_api_key : api_key
+      @chat_builder = chat_builder || -> { RubyLLM.chat(model: MODEL) }
+      @max_attempts = max_attempts
     end
 
     # receipts: [{filename:, content_type:, bytes:}], budgets: [Budget],
@@ -48,10 +62,14 @@ module Reimbursements
       return failure("no Gemini API key configured") if @api_key.blank?
       return failure("no receipts provided") if receipts.blank?
 
-      response = post_with_retries(request_body(receipts, budgets, context))
-      return response if response.is_a?(Extraction)
-
-      parse(response, budgets)
+      response = @chat_builder.call
+                             .with_schema(SCHEMA)
+                             .ask(prompt(budgets, context), with: attachments(receipts))
+      parse(response.content, budgets)
+    rescue RubyLLM::Error => e
+      failure("Gemini request failed: #{e.message}")
+    rescue StandardError => e
+      failure("extraction failed: #{e.message}")
     end
 
     private
@@ -60,16 +78,12 @@ module Reimbursements
       Extraction.new(error: message)
     end
 
-    def request_body(receipts, budgets, context)
-      parts = [ { text: prompt(budgets, context) } ]
-      receipts.each do |receipt|
-        parts << { inline_data: { mime_type: receipt[:content_type],
-                                  data: Base64.strict_encode64(receipt[:bytes]) } }
+    # In-memory receipt bytes become RubyLLM attachments; the filename carries
+    # the extension RubyLLM uses to detect the MIME type.
+    def attachments(receipts)
+      receipts.map do |receipt|
+        RubyLLM::Attachment.new(StringIO.new(receipt[:bytes].to_s), filename: receipt[:filename])
       end
-      {
-        contents: [ { parts: parts } ],
-        generationConfig: { response_mime_type: "application/json", response_schema: response_schema }
-      }
     end
 
     def prompt(budgets, context)
@@ -96,53 +110,8 @@ module Reimbursements
       PROMPT
     end
 
-    def response_schema
-      {
-        type: "OBJECT",
-        properties: {
-          merchant: { type: "STRING" },
-          purchase_date: { type: "STRING" },
-          total_amount: { type: "NUMBER" },
-          vat_amount: { type: "NUMBER" },
-          vat_itemised: { type: "BOOLEAN" },
-          suggested_description: { type: "STRING" },
-          suggested_budget_record_id: { type: "STRING" },
-          suggested_payment_reference: { type: "STRING" }
-        }
-      }
-    end
-
-    def post_with_retries(body)
-      uri = URI("#{API_URL}?key=#{@api_key}")
-      headers = { "Content-Type" => "application/json" }
-      json = body.to_json # serialized once — it embeds every receipt as base64
-      last_error = nil
-
-      @max_attempts.times do |attempt|
-        @sleeper.call(BACKOFF_SECONDS[attempt - 1]) if attempt.positive?
-        begin
-          status, response_body = @http.call(:post, uri, headers, json)
-        rescue *TRANSPORT_ERRORS => e
-          last_error = "#{e.class}: #{e.message}"
-          next
-        end
-        return JSON.parse(response_body) if (200..299).cover?(status)
-
-        last_error = "Gemini responded #{status}"
-        break unless RETRYABLE_STATUSES.include?(status)
-      end
-
-      failure(last_error || "Gemini request failed")
-    rescue JSON::ParserError => e
-      failure("unparseable Gemini response: #{e.message}")
-    end
-
-    def parse(response, budgets)
-      text = response.dig("candidates", 0, "content", "parts", 0, "text")
-      return failure("empty Gemini response") if text.blank?
-
-      data = JSON.parse(text)
-      return failure("Gemini returned a non-object payload") unless data.is_a?(Hash)
+    def parse(data, budgets)
+      return failure("Gemini returned no structured data") unless data.is_a?(Hash)
 
       Extraction.new(
         merchant: data["merchant"].presence,
@@ -154,8 +123,6 @@ module Reimbursements
         suggested_budget_record_id: known_budget_id(data["suggested_budget_record_id"], budgets),
         suggested_payment_reference: data["suggested_payment_reference"].to_s.strip.first(REFERENCE_LIMIT).presence
       )
-    rescue JSON::ParserError => e
-      failure("unparseable extraction payload: #{e.message}")
     end
 
     def known_budget_id(record_id, budgets)

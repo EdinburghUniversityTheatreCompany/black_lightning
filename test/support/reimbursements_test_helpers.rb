@@ -172,6 +172,33 @@ module ReimbursementsTestHelpers
     [ store, client ]
   end
 
+  # Fake RubyLLM chat for the Gemini call sites (Extractor, AiChecker): records
+  # the schema, prompt and attachments it was asked with, then returns a canned
+  # structured response (or raises). Mirrors the fluent
+  # RubyLLM.chat.with_schema(...).ask(...) chain.
+  class FakeChat
+    Response = Struct.new(:content)
+    attr_reader :schema, :prompt, :attachments
+
+    def initialize(content: nil, error: nil)
+      @content = content
+      @error = error
+    end
+
+    def with_schema(schema)
+      @schema = schema
+      self
+    end
+
+    def ask(prompt, with: nil)
+      @prompt = prompt
+      @attachments = with
+      raise @error if @error
+
+      Response.new(@content)
+    end
+  end
+
   # Fake transport compatible with the reimbursements HTTP clients:
   # responds with queued [status, body] pairs and records every request.
   class FakeHttp

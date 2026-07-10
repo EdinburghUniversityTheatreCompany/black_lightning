@@ -5,33 +5,30 @@ module Reimbursements
     include ReimbursementsTestHelpers
 
     RECEIPT = { filename: "receipt.pdf", content_type: "application/pdf", bytes: "PDF" }.freeze
+    FakeChat = ReimbursementsTestHelpers::FakeChat
 
     def budgets
       [ Budget.new(record_id: "recBud1", name: "Props", nominal_code: "4000") ]
     end
 
-    def gemini_response(payload)
-      { candidates: [ { content: { parts: [ { text: payload.to_json } ] } } ] }.to_json
+    def build_extractor(content: nil, error: nil)
+      chat = FakeChat.new(content: content, error: error)
+      extractor = Extractor.new(api_key: "gem-test", chat_builder: -> { chat })
+      [ extractor, chat ]
     end
 
-    def build_extractor(responses, sleeps: [])
-      http = FakeHttp.new(responses)
-      extractor = Extractor.new(api_key: "gem-test", http: http, sleeper: ->(s) { sleeps << s })
-      [ extractor, http ]
-    end
-
-    def happy_payload
+    def happy_content
       {
-        merchant: "Edinburgh Bargain Stores", purchase_date: "2026-07-01",
-        total_amount: 12.5, vat_amount: 2.08, vat_itemised: true,
-        suggested_description: "Props for main show",
-        suggested_budget_record_id: "recBud1",
-        suggested_payment_reference: "A VERY LONG REFERENCE INDEED"
+        "merchant" => "Edinburgh Bargain Stores", "purchase_date" => "2026-07-01",
+        "total_amount" => 12.5, "vat_amount" => 2.08, "vat_itemised" => true,
+        "suggested_description" => "Props for main show",
+        "suggested_budget_record_id" => "recBud1",
+        "suggested_payment_reference" => "A VERY LONG REFERENCE INDEED"
       }
     end
 
     test "parses a successful extraction" do
-      extractor, http = build_extractor([ [ 200, gemini_response(happy_payload) ] ])
+      extractor, chat = build_extractor(content: happy_content)
 
       result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
 
@@ -44,12 +41,24 @@ module Reimbursements
       assert_equal "recBud1", result.suggested_budget_record_id
       assert_equal 18, result.suggested_payment_reference.length, "reference must be truncated to 18 chars"
 
-      body = JSON.parse(http.requests.sole.body)
-      assert_equal "application/pdf", body["contents"].first["parts"].last["inline_data"]["mime_type"]
+      # The receipt bytes are handed to RubyLLM as an attachment, PDF detected
+      # from the filename.
+      attachment = chat.attachments.sole
+      assert_instance_of RubyLLM::Attachment, attachment
+      assert_equal "application/pdf", attachment.mime_type
+      assert_same Extractor::SCHEMA, chat.schema
+    end
+
+    test "derives amount_excl_vat only when VAT is itemised" do
+      extractor, = build_extractor(content: happy_content)
+      assert_equal BigDecimal("10.42"), extractor.extract(receipts: [ RECEIPT ], budgets: budgets).amount_excl_vat
+
+      extractor, = build_extractor(content: happy_content.merge("vat_itemised" => false))
+      assert_nil extractor.extract(receipts: [ RECEIPT ], budgets: budgets).amount_excl_vat
     end
 
     test "discards a suggested budget that is not in the provided list" do
-      extractor, = build_extractor([ [ 200, gemini_response(happy_payload.merge(suggested_budget_record_id: "recBogus")) ] ])
+      extractor, = build_extractor(content: happy_content.merge("suggested_budget_record_id" => "recBogus"))
 
       result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
 
@@ -57,75 +66,41 @@ module Reimbursements
       assert_nil result.suggested_budget_record_id
     end
 
-    test "fails gracefully on an unparseable model response" do
-      raw = { candidates: [ { content: { parts: [ { text: "not valid json {" } ] } } ] }.to_json
-      extractor, = build_extractor([ [ 200, raw ] ])
-
-      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
-      assert_not result.ok?
-    end
-
     test "fails gracefully when the model returns a non-object payload" do
-      extractor, = build_extractor([ [ 200, gemini_response("just a string") ] ])
+      extractor, = build_extractor(content: "just a string")
 
       result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
       assert_not result.ok?
     end
 
-    test "fails without calling the api when no key is configured" do
-      result = Extractor.new(api_key: nil, http: FakeHttp.new([])).extract(receipts: [ RECEIPT ], budgets: budgets)
+    test "fails gracefully when the RubyLLM call raises" do
+      extractor, = build_extractor(error: RubyLLM::Error.new(nil, "gemini down"))
+
+      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
+
+      assert_not result.ok?
+      assert_match(/gemini down/, result.error)
+    end
+
+    test "fails without building a chat when no key is configured" do
+      built = false
+      extractor = Extractor.new(api_key: nil, chat_builder: -> { built = true; FakeChat.new })
+
+      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
 
       assert_not result.ok?
       assert_match(/key/i, result.error)
+      assert_not built, "must not build a chat without an API key"
     end
 
-    test "retries transient errors with exponential backoff then succeeds" do
-      sleeps = []
-      extractor, http = build_extractor(
-        [ [ 500, "boom" ], [ 503, "busy" ], [ 200, gemini_response(happy_payload) ] ], sleeps: sleeps
-      )
+    test "fails without building a chat when no receipts are given" do
+      built = false
+      extractor = Extractor.new(api_key: "gem-test", chat_builder: -> { built = true; FakeChat.new })
 
-      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
-
-      assert result.ok?
-      assert_equal [ 1, 2 ], sleeps
-      assert_equal 3, http.requests.size
-    end
-
-    test "gives up after five attempts" do
-      sleeps = []
-      extractor, http = build_extractor(Array.new(5) { [ 500, "boom" ] }, sleeps: sleeps)
-
-      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
+      result = extractor.extract(receipts: [], budgets: budgets)
 
       assert_not result.ok?
-      assert_equal [ 1, 2, 4, 8 ], sleeps
-      assert_equal 5, http.requests.size
-    end
-
-    test "does not retry non-transient client errors" do
-      sleeps = []
-      extractor, http = build_extractor([ [ 400, "bad request" ] ], sleeps: sleeps)
-
-      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
-
-      assert_not result.ok?
-      assert_empty sleeps
-      assert_equal 1, http.requests.size
-    end
-
-    test "retries when the transport raises" do
-      calls = 0
-      http = lambda do |*_args|
-        calls += 1
-        raise SocketError, "dns down" if calls == 1
-
-        [ 200, gemini_response(happy_payload) ]
-      end
-      extractor = Extractor.new(api_key: "gem-test", http: http, sleeper: ->(_s) { })
-
-      assert extractor.extract(receipts: [ RECEIPT ], budgets: budgets).ok?
-      assert_equal 2, calls
+      assert_not built, "must not build a chat with no receipts"
     end
   end
 end

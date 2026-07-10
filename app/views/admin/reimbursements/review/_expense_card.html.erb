@@ -1,0 +1,168 @@
+<%#
+  One editable expense card. Locals:
+  - expense: Reimbursements::Expense
+  - allow_approve: whether to show the Approve button (Pending only)
+  - duplicates: array of possible-duplicate expenses, or nil
+%>
+<% modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
+
+<div class="mb-3 rounded border border-gray-200 p-3">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <span class="font-medium">
+      #<%= expense.auto_number %> — <%= expense.person&.name.presence || "(no payee)" %>
+      <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
+    </span>
+    <span>Amount: <strong>&pound;<%= number_with_precision(expense.amount || 0, precision: 2) %></strong></span>
+    <% if expense.amount_excl_vat.nil? %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Excl. VAT not set") %>
+    <% else %>
+      <span>Excl. VAT: <strong>&pound;<%= number_with_precision(expense.amount_excl_vat, precision: 2) %></strong></span>
+    <% end %>
+    <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
+    <span>Receipts: <%= expense.receipts.size %></span>
+    <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
+  </div>
+
+  <%# --- AI verdict --- %>
+  <% case expense.ai_check_status %>
+  <% when "pass" %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :success) do %>
+      AI check passed<%= " — #{expense.ai_comment}" if expense.ai_comment.present? %>
+    <% end %></div>
+  <% when "fail" %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
+      AI check flagged this — <%= expense.ai_comment.presence || "see the receipt." %>
+    <% end %></div>
+  <% when "error" %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :info) do %>
+      AI check could not run: <%= expense.ai_comment %>
+    <% end %></div>
+  <% end %>
+
+  <%# --- Warnings --- %>
+  <% if expense.payee_override? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
+      Direct payment to <strong><%= expense.effective_payee_name %></strong>
+      (not the submitter <%= expense.person&.name %>) —
+      <%= expense.effective_sort_code.presence || "—" %> /
+      <%= expense.effective_account_number.presence || "—" %>.
+      Confirm these match the invoice before approving.
+    <% end %></div>
+  <% end %>
+
+  <% if modulus == Reimbursements::ModulusCheck::INVALID %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
+      Modulus check failed for the effective sort code + account number. Likely a typo —
+      fix the override or the People record before approving.
+    <% end %></div>
+  <% end %>
+
+  <% unless expense.effective_has_bank_details? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
+      No bank details on file for this payee. Fix the override or the People record.
+    <% end %></div>
+  <% end %>
+
+  <% if expense.budget.nil? || expense.budget.record_id.blank? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
+      No budget linked. Pick one below before approving.
+    <% end %></div>
+  <% end %>
+
+  <% if duplicates.present? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
+      Possible duplicate of
+      <%= duplicates.map { |d| "##{d.auto_number}" }.join(", ") %>
+      — same payee and amount within 30 days. Check this isn't a double-submission.
+    <% end %></div>
+  <% end %>
+
+  <%# --- Edit (Save) --- %>
+  <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab),
+                method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2" do %>
+    <div>
+      <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount, expense.amount, step: 0.01, min: 0, id: "amount_#{expense.record_id}",
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount_excl_vat, expense.amount_excl_vat, step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div class="sm:col-span-2">
+      <%= label_tag "description_#{expense.record_id}", "Description", class: "block text-sm font-medium" %>
+      <%= text_area_tag :description, expense.description, id: "description_#{expense.record_id}", rows: 2,
+                        class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "payment_reference_#{expense.record_id}", "Payment reference", class: "block text-sm font-medium" %>
+      <%= text_field_tag :payment_reference, expense.payment_reference, id: "payment_reference_#{expense.record_id}",
+                         maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: "block text-sm font-medium" %>
+      <% budget_options = @budgets.map { |b| [ b.name, b.record_id ] } %>
+      <% if expense.budget && expense.budget.record_id.present? && budget_options.none? { |_, id| id == expense.budget.record_id } %>
+        <% budget_options.unshift([ expense.budget.name, expense.budget.record_id ]) %>
+      <% end %>
+      <%= select_tag :budget_record_id,
+                     options_for_select(budget_options, expense.budget&.record_id),
+                     include_blank: expense.budget&.record_id.blank?,
+                     id: "budget_record_id_#{expense.record_id}",
+                     class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "nominal_code_override_#{expense.record_id}", "Nominal code override", class: "block text-sm font-medium" %>
+      <%= text_field_tag :nominal_code_override, expense.nominal_code_override, id: "nominal_code_override_#{expense.record_id}",
+                         placeholder: "blank = use budget default",
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= expense.effective_nominal_code.presence || "—" %></p>
+    </div>
+    <div class="sm:col-span-2">
+      <%= submit_tag "Save changes", class: btn_classes(:primary, :sm) %>
+    </div>
+  <% end %>
+
+  <%# --- Receipts --- %>
+  <div class="mt-3">
+    <p class="text-sm font-medium">Receipts</p>
+    <% if expense.receipts.empty? %>
+      <p class="text-xs text-gray-500">None attached.</p>
+    <% else %>
+      <ul class="mt-1 flex flex-col gap-1">
+        <% expense.receipts.each do |receipt| %>
+          <li class="flex items-center gap-2 text-sm">
+            <%= link_to receipt.filename.presence || "receipt", receipt.url, target: "_blank", rel: "noopener",
+                        class: "text-primary underline" %>
+            <%= button_to "Remove",
+                          admin_reimbursements_review_receipt_path(expense.record_id, receipt.attachment_id, tab: @tab),
+                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt from Airtable?" } },
+                          class: "#{btn_classes(:danger, :sm)}" %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab),
+                  method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
+      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*", class: "text-sm" %>
+      <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
+    <% end %>
+  </div>
+
+  <%# --- Approve / Reject --- %>
+  <div class="mt-3 flex flex-wrap items-start gap-2">
+    <% if allow_approve %>
+      <%= button_to "Approve",
+                    admin_reimbursements_approve_review_path(expense.record_id, tab: @tab),
+                    method: :patch, class: btn_classes(:success, :sm) %>
+    <% end %>
+    <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
+                  method: :patch, class: "flex items-center gap-2" do %>
+      <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      <%= submit_tag "Reject", class: btn_classes(:danger, :sm) %>
+    <% end %>
+  </div>
+</div>
