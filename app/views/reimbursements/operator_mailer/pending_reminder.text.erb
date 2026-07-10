@@ -1,0 +1,14 @@
+Hi,
+
+The automated BACS check ran on <%= @run_date %> and found <%= @rows.size %> submission(s)
+waiting for approval for more than <%= @threshold_days %> days. The automated batch only acts
+on approved expenses, so these need approving (or rejecting) on the Review page first.
+
+<% @rows.each do |row| -%>
+- #<%= row[:auto_number] %> <%= row[:payee_name] %> — £<%= row[:amount] %> — waiting <%= row[:age_days] %> day(s)
+<% end -%>
+
+Open the Review page to approve or reject them.
+
+Best,
+Bedlam Fringe BACS (automated)

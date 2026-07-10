@@ -1,0 +1,39 @@
+<p>Hi,</p>
+
+<p>
+  The automated BACS check ran on <strong><%= @run_date %></strong> but
+  <strong>could not automatically submit the batch</strong> — some expenses need
+  attention before proceeding.
+</p>
+
+<p>Please open the Review page and resolve the following:</p>
+
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
+  <thead style="background-color: #f0f0f0;">
+    <tr><th>#</th><th>Payee</th><th>Amount</th><th>Issue</th></tr>
+  </thead>
+  <tbody>
+    <% @issues.each do |issue| %>
+      <tr>
+        <td>#<%= issue[:auto_number] %></td>
+        <td><%= issue[:payee_name] %></td>
+        <td>&pound;<%= issue[:amount] %></td>
+        <td><%= issue[:reason] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<% if @unblocked_count.positive? %>
+  <p>
+    <%= @unblocked_count %> other <%= "expense".pluralize(@unblocked_count) %>
+    <%= @unblocked_count == 1 ? "is" : "are" %> ready and waiting for the above to be resolved.
+  </p>
+<% end %>
+
+<p>
+  Once every issue is resolved, submit the batch manually from Build Batch, or it will be picked
+  up on the next scheduled check<%= @next_run_day ? " (#{@next_run_day})" : "" %>.
+</p>
+
+<p>Best,<br>Bedlam Fringe BACS (automated)</p>

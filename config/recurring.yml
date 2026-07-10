@@ -27,3 +27,10 @@ reimbursements_mailbox_poll:
   class: Reimbursements::MailboxPollJob
   queue: default
   schedule: every 5 minutes
+
+# Fires nightly; the job itself skips cost centres whose run-days don't include
+# today and de-dupes via CostCentre#nightly_due?, so a daily trigger is safe.
+reimbursements_nightly_batch:
+  class: Reimbursements::NightlyBatchJob
+  queue: default
+  schedule: at 9pm every day

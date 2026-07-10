@@ -1,0 +1,40 @@
+<p>Hi,</p>
+
+<p>
+  The automated BACS check ran on <strong><%= @run_date %></strong> and
+  <strong>all <%= @expenses.size %> approved <%= "expense".pluralize(@expenses.size) %> passed</strong>
+  — both the automated readiness checks and the AI receipt review.
+</p>
+
+<p>The EUSA draft email has been created in the send mailbox. Please review and send it:</p>
+
+<% if @draft_link.present? %>
+  <p style="margin: 1.5em 0;">
+    <a href="<%= @draft_link %>" style="background-color: #0078d4; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-family: sans-serif;">Open draft in Outlook</a>
+  </p>
+<% end %>
+
+<p><strong>Batch summary:</strong></p>
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
+  <thead style="background-color: #f0f0f0;">
+    <tr><th>#</th><th>Payee</th><th>Amount</th><th>Budget</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <% @expenses.each do |expense| %>
+      <tr>
+        <td>#<%= expense[:auto_number] %></td>
+        <td><%= expense[:payee_name] %></td>
+        <td>&pound;<%= expense[:amount] %></td>
+        <td><%= expense[:budget_name] %></td>
+        <td><%= expense[:description] %></td>
+      </tr>
+    <% end %>
+  </tbody>
+  <tfoot style="background-color: #f0f0f0; font-weight: bold;">
+    <tr><td colspan="2">Total</td><td>&pound;<%= @total %></td><td colspan="2"></td></tr>
+  </tfoot>
+</table>
+
+<p>Producer notification emails have also been sent to payees.</p>
+
+<p>Best,<br>Bedlam Fringe BACS (automated)</p>

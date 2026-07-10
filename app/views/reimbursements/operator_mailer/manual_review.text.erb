@@ -1,0 +1,16 @@
+Hi,
+
+The automated BACS check ran on <%= @run_date %> but could not automatically submit the batch —
+some expenses need attention before proceeding. Please resolve these on the Review page:
+
+<% @issues.each do |issue| -%>
+- #<%= issue[:auto_number] %> <%= issue[:payee_name] %> — £<%= issue[:amount] %> — <%= issue[:reason] %>
+<% end -%>
+<% if @unblocked_count.positive? %>
+<%= @unblocked_count %> other expense(s) are ready and waiting for the above to be resolved.
+<% end %>
+Once every issue is resolved, submit manually from Build Batch, or it will be picked up on the
+next scheduled check<%= @next_run_day ? " (#{@next_run_day})" : "" %>.
+
+Best,
+Bedlam Fringe BACS (automated)

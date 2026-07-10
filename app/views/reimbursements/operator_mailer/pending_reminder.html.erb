@@ -1,0 +1,30 @@
+<p>Hi,</p>
+
+<p>
+  The automated BACS check ran on <strong><%= @run_date %></strong> and found
+  <%= @rows.size %> <%= "submission".pluralize(@rows.size) %> that
+  <%= @rows.size == 1 ? "has" : "have" %> been <strong>waiting for approval</strong>
+  for more than <%= @threshold_days %> days. The automated batch only acts on
+  <em>approved</em> expenses, so these need someone to approve (or reject) them on the
+  Review page before anything can happen.
+</p>
+
+<table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
+  <thead style="background-color: #f0f0f0;">
+    <tr><th>#</th><th>Payee</th><th>Amount</th><th>Waiting</th></tr>
+  </thead>
+  <tbody>
+    <% @rows.each do |row| %>
+      <tr>
+        <td>#<%= row[:auto_number] %></td>
+        <td><%= row[:payee_name] %></td>
+        <td>&pound;<%= row[:amount] %></td>
+        <td><%= row[:age_days] %> <%= "day".pluralize(row[:age_days]) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p>Open the Review page to approve or reject <%= @rows.size == 1 ? "it" : "them" %>.</p>
+
+<p>Best,<br>Bedlam Fringe BACS (automated)</p>

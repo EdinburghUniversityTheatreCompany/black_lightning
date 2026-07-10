@@ -1,0 +1,20 @@
+Hi,
+
+The automated BACS check ran on <%= @run_date %> and all <%= @expenses.size %> approved expense(s)
+passed — both the automated readiness checks and the AI receipt review.
+
+The EUSA draft email has been created in the send mailbox. Please review and send it.
+<% if @draft_link.present? -%>
+Open the draft: <%= @draft_link %>
+<% end -%>
+
+Batch summary:
+<% @expenses.each do |expense| -%>
+- #<%= expense[:auto_number] %> <%= expense[:payee_name] %> — £<%= expense[:amount] %> — <%= expense[:budget_name] %> — <%= expense[:description] %>
+<% end -%>
+Total: £<%= @total %>
+
+Producer notification emails have also been sent to payees.
+
+Best,
+Bedlam Fringe BACS (automated)
