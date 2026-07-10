@@ -18,7 +18,7 @@ module Reimbursements
 
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
-    def initialize(mailbox: CostCentre.default.mailbox, settings: Settings, http: nil, clock: nil)
+    def initialize(mailbox: CostCentre.default&.receive_mailbox, settings: Settings, http: nil, clock: nil)
       @mailbox = mailbox
       @settings = settings
       @http = http || HttpTransport

@@ -77,7 +77,7 @@ module Reimbursements
     def automated_sender?(message)
       message.from_address.blank? ||
         message.from_address.match?(AUTOMATED_SENDER) ||
-        message.from_address.casecmp?(CostCentre.default.mailbox)
+        message.from_address.casecmp?(CostCentre.default&.receive_mailbox)
     end
 
     def usable_receipts(message)

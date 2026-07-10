@@ -1,0 +1,8 @@
+# Reimbursements::CostCentre fixtures. Rails infers the class from the
+# reimbursements/ path -> reimbursements_cost_centres table.
+fringe:
+  key: fringe
+  name: Bedlam Fringe 2026
+  eusa_code: F40
+  receive_mailbox: reimbursements@bedlamfringe.co.uk
+  send_mailbox: reimbursements@bedlamfringe.co.uk

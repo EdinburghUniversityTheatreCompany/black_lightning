@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
   Submit your expenses here. The finance team reviews every claim, batches it to EUSA,
   and EUSA pays it into your bank account. You can also just email a receipt to
-  <%= mail_to Reimbursements::CostCentre.default.mailbox %> and finish the claim here.
+  <%= mail_to Reimbursements::CostCentre.default&.receive_mailbox %> and finish the claim here.
 </p>
 
 <% if current_person.nil? || !current_person.bank_details? %>
