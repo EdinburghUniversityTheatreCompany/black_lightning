@@ -1,4 +1,4 @@
-<%# locals: (form:, budgets:, url:, method:, submit_label:) %>
+<%# locals: (form:, budgets:, url:, method:, submit_label:, show_receipt_input: true) %>
 <%# Receipt-first expense form. The Stimulus controller posts the receipt to
     the extract endpoint and prefills the fields; everything still works with
     JavaScript disabled (plain manual form). %>
@@ -21,22 +21,23 @@
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>
-    <div class="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
-      <p class="mb-2 text-sm text-gray-600">
-        Upload the receipt first and we'll read it and prefill the form for you.
-        PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
-        have to deduct the full amount from your budget instead of the ex-VAT amount,
-        so a VAT receipt is in your own interest.
-        <%= "(Receipts are already attached. Only add files here to append more.)" unless form.require_receipts? %>
-      </p>
-      <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: form.require_receipts?,
-            input_html: { multiple: true,
-                          accept: Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(","),
-                          data: { reimbursements_receipt_target: "files",
-                                  action: "change->reimbursements-receipt#extract" } } %>
-      <p class="mt-1 text-sm text-gray-600" aria-live="polite"
-         data-reimbursements-receipt-target="status"></p>
-    </div>
+    <% if show_receipt_input %>
+      <div class="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
+        <p class="mb-2 text-sm text-gray-600">
+          Upload the receipt first and we'll read it and prefill the form for you.
+          PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
+          have to deduct the full amount from your budget instead of the ex-VAT amount,
+          so a VAT receipt is in your own interest.
+        </p>
+        <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: true,
+              input_html: { multiple: true,
+                            accept: Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(","),
+                            data: { reimbursements_receipt_target: "files",
+                                    action: "change->reimbursements-receipt#extract" } } %>
+        <p class="mt-1 text-sm text-gray-600" aria-live="polite"
+           data-reimbursements-receipt-target="status"></p>
+      </div>
+    <% end %>
 
     <%= f.input :expense_type, label: "Type",
           collection: Reimbursements::Expense::SUBMITTER_TYPES, include_blank: false,

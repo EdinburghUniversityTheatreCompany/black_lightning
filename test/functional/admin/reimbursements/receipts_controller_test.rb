@@ -61,6 +61,53 @@ module Admin
         assert_response :not_found
         assert_empty @client.updated
       end
+
+      test "destroy as turbo stream replaces the gallery" do
+        delete :destroy, params: { expense_id: "recExp1", id: "att1" }, format: :turbo_stream
+
+        assert_response :success
+        assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
+        # The fake echoes the id-only rewrite, so assert on ids: the survivor
+        # renders, the removed receipt doesn't.
+        assert_includes response.body, "receipts/att2"
+        assert_not_includes response.body, "receipts/att1"
+      end
+
+      def receipt_upload(content_type = "application/pdf")
+        fixture_file_upload("reimbursements_receipt.pdf", content_type)
+      end
+
+      test "create attaches uploads and streams the gallery back" do
+        post :create, params: { expense_id: "recExp1", receipts: [ receipt_upload ] },
+                      format: :turbo_stream
+
+        assert_response :success
+        assert_equal 1, @client.uploads.size
+        assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
+      end
+
+      test "create rejects unusable files with an inline error" do
+        post :create, params: { expense_id: "recExp1", receipts: [ receipt_upload("application/zip") ] },
+                      format: :turbo_stream
+
+        assert_response :success
+        assert_empty @client.uploads
+        assert_includes response.body, "must be a PDF or a photo"
+      end
+
+      test "create falls back to a redirect for html" do
+        post :create, params: { expense_id: "recExp1", receipts: [ receipt_upload ] }
+
+        assert_redirected_to edit_admin_reimbursements_expense_path("recExp1")
+        assert_equal 1, @client.uploads.size
+      end
+
+      test "create 404s for another person's expense" do
+        post :create, params: { expense_id: "recExpOther", receipts: [ receipt_upload ] }
+
+        assert_response :not_found
+        assert_empty @client.uploads
+      end
     end
   end
 end

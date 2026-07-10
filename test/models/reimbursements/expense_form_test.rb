@@ -67,9 +67,15 @@ module Reimbursements
       assert build_form.valid?
     end
 
-    test "receipts optional only when require_receipts is off (edit)" do
-      form = build_form(receipts: [], require_receipts: false)
+    test "on edit, the expense's existing receipts satisfy the requirement" do
+      form = build_form(receipts: [], require_receipts: false, expense_receipt_count: 1)
       assert form.valid?, form.errors.full_messages.to_sentence
+    end
+
+    test "on edit, submitting a receipt-less expense points at the gallery" do
+      form = build_form(receipts: [], require_receipts: false, expense_receipt_count: 0)
+      assert_not form.valid?
+      assert_includes form.errors[:base].sole, "receipts section"
     end
 
     test "rejects disallowed receipt types" do

@@ -98,13 +98,13 @@ module Reimbursements
     # Airtable removes an attachment by rewriting the field with the
     # survivors. Works from a FRESH fetch of the record (never the cached
     # list) so receipts attached elsewhere moments ago can't be wiped, and
-    # refuses to leave the expense receipt-less.
+    # refuses to leave a non-draft receipt-less (drafts don't require one).
     def remove_receipt!(expense_record_id, attachment_id)
       expense = fetch_expense(expense_record_id)
       raise Airtable::Error.new("expense #{expense_record_id} not found", status: 404) if expense.nil?
 
       survivors = expense.receipts.reject { |receipt| receipt.attachment_id == attachment_id }
-      raise LastReceiptError if survivors.empty? && expense.receipts.any?
+      raise LastReceiptError if survivors.empty? && expense.receipts.any? && !expense.draft?
 
       @client.update_record(:expenses, expense_record_id,
                             @config.fid(:expenses, :receipt) => survivors.map { |r| { "id" => r.attachment_id } })

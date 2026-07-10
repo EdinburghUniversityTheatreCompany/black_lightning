@@ -96,6 +96,15 @@ module Reimbursements
       assert_empty client.updated
     end
 
+    test "remove_receipt! allows removing a draft's last receipt" do
+      store, client = build_store(expenses: [ airtable_expense_record(status: "Draft") ])
+
+      store.remove_receipt!("recExp1", "att1")
+
+      _table, _record_id, fields = client.updated.sole
+      assert_equal [], fields[FIELD_IDS[:expenses][:receipt]]
+    end
+
     test "create_expense! busts the expense cache" do
       store, client = build_store
 

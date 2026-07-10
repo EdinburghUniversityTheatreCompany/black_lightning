@@ -104,7 +104,9 @@ module ReimbursementsTestHelpers
 
     def update_record(table, record_id, fields)
       @updated << [ table, record_id, fields ]
-      { "id" => record_id, "fields" => fields }
+      record = @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
+      record["fields"] = record["fields"].merge(fields) if record
+      record || { "id" => record_id, "fields" => fields }
     end
 
     def upload_attachment(record_id, **kwargs)

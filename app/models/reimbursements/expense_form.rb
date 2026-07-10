@@ -20,7 +20,8 @@ module Reimbursements
     attr_accessor :expense_type, :amount, :amount_excl_vat, :budget_record_id,
                   :description, :payment_reference, :payee_name_override,
                   :sort_code_override, :account_number_override,
-                  :vat_itemised, :vat_acknowledged, :save_as_draft
+                  :vat_itemised, :vat_acknowledged, :save_as_draft,
+                  :expense_receipt_count
     attr_writer :receipts, :require_receipts
 
     validates :expense_type, inclusion: { in: Expense::SUBMITTER_TYPES }
@@ -141,15 +142,22 @@ module Reimbursements
     end
 
     def receipts_valid
-      if require_receipts? && !draft? && receipts.empty?
-        errors.add(:receipts, "are required. Please attach at least one receipt or invoice.")
-      end
-
       receipts.each do |file|
         unless ALLOWED_RECEIPT_TYPES.include?(file.content_type)
           errors.add(:receipts, "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP).")
         end
         errors.add(:receipts, "#{file.original_filename} must be 5 MB or smaller.") if file.size > MAX_RECEIPT_BYTES
+      end
+
+      return if draft? || receipts.any? || expense_receipt_count.to_i.positive?
+
+      if require_receipts?
+        # Create: the form has its own file input to hang the error on.
+        errors.add(:receipts, "are required. Please attach at least one receipt or invoice.")
+      else
+        # Edit: uploads live in the receipts gallery, not the form.
+        errors.add(:base, "This claim needs at least one receipt. Add one in the " \
+                          "receipts section above, then submit.")
       end
     end
 

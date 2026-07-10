@@ -3,40 +3,29 @@
   picks it up, contact <%= mail_to "finance@bedlamfringe.co.uk" %> for changes.
 </p>
 
-<% if @expense.receipts.any? %>
-  <%= render CardComponent.new(title: "Attached receipts") do %>
-    <div class="flex flex-wrap gap-3">
-      <% @expense.receipts.each do |receipt| %>
-        <div class="w-40 rounded border border-gray-200 p-2 text-center">
-          <%= link_to receipt.url, target: "_blank", rel: "noopener", class: "block" do %>
-            <% if receipt.thumbnail_url.present? %>
-              <%= image_tag receipt.thumbnail_url, alt: receipt.filename,
-                    class: "mx-auto mb-1 h-24 w-full rounded object-contain bg-gray-50" %>
-            <% else %>
-              <span class="mb-1 flex h-24 items-center justify-center rounded bg-gray-50 text-gray-400">
-                <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
-              </span>
-            <% end %>
-            <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
-          <% end %>
-          <% if @expense.receipts.size > 1 %>
-            <%= button_to "Remove",
-                  admin_reimbursements_expense_receipt_path(@expense.record_id, receipt.attachment_id),
-                  method: :delete, class: "#{btn_classes(:danger, :sm)} mt-2",
-                  form: { data: { controller: "confirm", action: "submit->confirm#confirm",
-                                  confirm_message_value: "Remove #{receipt.filename} from this expense?" } } %>
-          <% end %>
-        </div>
-      <% end %>
+<div data-controller="receipts-upload"
+     data-receipts-upload-url-value="<%= admin_reimbursements_expense_receipts_path(@expense.record_id) %>">
+  <%= render CardComponent.new(title: "Receipts") do %>
+    <div class="dropzone dropzone-default mb-3 p-4 text-center"
+         data-action="dragover->receipts-upload#dragover dragleave->receipts-upload#dragleave drop->receipts-upload#drop">
+      <input type="file" multiple class="hidden" tabindex="-1" aria-hidden="true"
+             accept="<%= Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(',') %>"
+             data-receipts-upload-target="input"
+             data-action="change->receipts-upload#inputChanged">
+      <div class="dropzone-msg dz-message text-gray-600">
+        <h3 class="dropzone-msg-title">
+          Drag a receipt here, or
+          <button type="button" class="font-medium underline" data-action="receipts-upload#pick">browse for a file</button>
+        </h3>
+        <span class="dropzone-msg-desc text-sm">PDF or photo, max 5&nbsp;MB. It's added straight away.</span>
+      </div>
     </div>
-    <% if @expense.receipts.size == 1 %>
-      <p class="mt-2 mb-0 text-sm text-gray-500">
-        To replace the receipt, add the new file below first, then remove this one.
-      </p>
-    <% end %>
+    <p class="mb-2 text-sm text-gray-600" aria-live="polite" data-receipts-upload-target="status"></p>
+
+    <%= render "receipts_gallery", expense: @expense %>
   <% end %>
-<% end %>
+</div>
 
 <%= render "form", form: @form, budgets: @budgets,
       url: admin_reimbursements_expense_path(@expense.record_id), method: :patch,
-      submit_label: "Save changes" %>
+      submit_label: "Save changes", show_receipt_input: false %>
