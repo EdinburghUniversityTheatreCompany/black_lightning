@@ -154,5 +154,65 @@ module Reimbursements
       assert_equal 1, client.updated.size
       assert_equal 2, client.list_calls[:people]
     end
+
+    # --- Batches -----------------------------------------------------------
+
+    test "batches are cached and mapped" do
+      store, client = build_fake_store(batches: [ airtable_batch_record ])
+
+      3.times { store.batches }
+
+      assert_equal 1, client.list_calls[:batches]
+      assert_equal "BACS 2026-05-13", store.batches.sole.name
+      assert_equal Date.new(2026, 5, 13), store.find_batch("recBat1").date_sent
+    end
+
+    test "create_batch! writes date + notes and busts the batch cache" do
+      store, client = build_fake_store(batches: [])
+
+      store.batches
+      batch = store.create_batch!(date_sent: Date.new(2026, 5, 13), notes: "SP: url")
+      store.batches
+
+      table, fields = client.created.sole
+      assert_equal :batches, table
+      assert_equal "2026-05-13", fields[FIELD_IDS[:batches][:date_sent]]
+      assert_equal "SP: url", fields[FIELD_IDS[:batches][:notes]]
+      assert_equal batch.record_id, store.batches.first&.record_id.presence || batch.record_id
+      assert_equal 2, client.list_calls[:batches], "create must bust the batch cache"
+    end
+
+    test "update_batch! and delete_batch! bust the cache" do
+      store, client = build_fake_store(batches: [ airtable_batch_record ])
+
+      store.batches
+      store.update_batch!("recBat1", eusa_draft_created: true)
+      store.delete_batch!("recBat1")
+
+      assert fields_of(client.updated.sole)[FIELD_IDS[:batches][:eusa_draft_created]]
+      assert_equal [ [ :batches, "recBat1" ] ], client.deleted
+    end
+
+    test "revert_expense_to_approved! clears the batch link, dates and offload flags" do
+      submitted = airtable_expense_record(
+        id: "recExp1", status: "Submitted",
+        overrides: { FIELD_IDS[:expenses][:batch] => [ "recBat1" ],
+                     FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-13" }
+      )
+      store, client = build_store(expenses: [ submitted ])
+
+      store.revert_expense_to_approved!("recExp1")
+
+      _table, record_id, fields = client.updated.sole
+      assert_equal "recExp1", record_id
+      assert_equal "Approved", fields[FIELD_IDS[:expenses][:status]]
+      assert_equal [], fields[FIELD_IDS[:expenses][:batch]], "batch link cleared with an empty array"
+      assert_nil fields[FIELD_IDS[:expenses][:submitted_to_eusa_date]]
+      refute fields[FIELD_IDS[:expenses][:receipts_offloaded]]
+    end
+
+    def fields_of(update_tuple)
+      update_tuple.last
+    end
   end
 end

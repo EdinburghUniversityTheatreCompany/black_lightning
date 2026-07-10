@@ -17,6 +17,8 @@ module Reimbursements
     PEOPLE_TTL = 1.hour
     BUDGETS_KEY = "reimbursements/budgets".freeze
     BUDGETS_TTL = 1.hour
+    BATCHES_KEY = "reimbursements/batches".freeze
+    BATCHES_TTL = 1.hour
     BACKUP_TTL = 7.days
 
     # Raised instead of rewriting an expense's attachment field to empty.
@@ -111,6 +113,46 @@ module Reimbursements
       bust_expenses!
     end
 
+    # Reverts a submitted expense to Approved, unlinking it from its batch:
+    # clears the batch link, the submitted date, and the receipt-offload
+    # bookkeeping so it re-enters Build Batch cleanly. Deliberately leaves
+    # +producer_notified+ untouched so a rebuild won't re-email the producer.
+    # Ported from bedlam-bacs revert_expense_to_approved. Nil/empty clears are
+    # sent explicitly (they bypass expense_fields' nil-compaction).
+    def revert_expense_to_approved!(record_id)
+      fields = @mapper.expense_fields(status: Status::APPROVED, receipts_offloaded: false,
+                                      sharepoint_receipt_urls: "")
+      fields[@config.fid(:expenses, :batch)] = [] # empty list clears the linked-record field
+      fields[@config.fid(:expenses, :submitted_to_eusa_date)] = nil
+      @client.update_record(:expenses, record_id, fields)
+      bust_expenses!
+    end
+
+    def batches
+      @batches ||= fetch_list(BATCHES_KEY, BATCHES_TTL, :batches).map { |r| @mapper.batch(r) }
+    end
+
+    def find_batch(record_id)
+      batches.find { |b| b.record_id == record_id }
+    end
+
+    def create_batch!(attrs)
+      record = @client.create_record(:batches, @mapper.batch_fields(attrs))
+      bust_batches!
+      @mapper.batch(record)
+    end
+
+    def update_batch!(record_id, attrs)
+      record = @client.update_record(:batches, record_id, @mapper.batch_fields(attrs))
+      bust_batches!
+      @mapper.batch(record)
+    end
+
+    def delete_batch!(record_id)
+      @client.delete_record(:batches, record_id)
+      bust_batches!
+    end
+
     def create_person!(name:, email:)
       record = @client.create_record(:people, @mapper.person_fields(name: name, email: email))
       bust_people!
@@ -134,6 +176,11 @@ module Reimbursements
     def bust_people!
       @people = nil
       @cache.delete(PEOPLE_KEY)
+    end
+
+    def bust_batches!
+      @batches = nil
+      @cache.delete(BATCHES_KEY)
     end
 
     def people_by_id

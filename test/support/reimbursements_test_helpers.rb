@@ -121,7 +121,7 @@ module ReimbursementsTestHelpers
   # Fake Airtable client counting calls per table, interface-compatible with
   # Reimbursements::Airtable::Client. Records writes for assertions.
   class FakeAirtableClient
-    attr_reader :list_calls, :get_calls, :created, :updated, :uploads
+    attr_reader :list_calls, :get_calls, :created, :updated, :uploads, :deleted
     attr_accessor :fail_uploads
 
     def initialize(records_by_table)
@@ -131,6 +131,7 @@ module ReimbursementsTestHelpers
       @created = []
       @updated = []
       @uploads = []
+      @deleted = []
     end
 
     def list_records(table)
@@ -161,11 +162,18 @@ module ReimbursementsTestHelpers
       @uploads << [ record_id, kwargs ]
       { "id" => record_id }
     end
+
+    def delete_record(table, record_id)
+      @deleted << [ table, record_id ]
+      @records_by_table.fetch(table, []).reject! { |r| r["id"] == record_id }
+      { "id" => record_id, "deleted" => true }
+    end
   end
 
   # Builds a Store on a FakeAirtableClient + MemoryStore cache. Returns [store, client].
-  def build_fake_store(expenses: [], people: [], budgets: [])
-    client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets)
+  def build_fake_store(expenses: [], people: [], budgets: [], batches: [])
+    client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets,
+                                    batches: batches)
     store = Reimbursements::Store.new(client: client, config: reimbursements_test_config,
                                       cache: ActiveSupport::Cache::MemoryStore.new)
     [ store, client ]
