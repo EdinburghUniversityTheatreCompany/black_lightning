@@ -44,7 +44,12 @@ module Admin
 
       def update
         @expense = find_own_editable_expense!(params[:id])
-        @form = ::Reimbursements::ExpenseForm.new(expense_form_params.merge(require_receipts: false))
+        # Editing doesn't force a re-upload, EXCEPT when the expense has no
+        # receipts yet (e.g. a bare draft) — submitting must not produce a
+        # receipt-less Pending expense.
+        @form = ::Reimbursements::ExpenseForm.new(
+          expense_form_params.merge(require_receipts: @expense.receipts.empty?)
+        )
         unless @form.valid?
           @title = "Edit Expense"
           @budgets = store.active_budgets

@@ -277,6 +277,27 @@ module Admin
       assert_empty @client.uploads
     end
 
+    test "submitting a receipt-less draft demands a receipt" do
+      bare_draft = airtable_expense_record(id: "recDraft", status: "Draft", receipts: nil)
+      bare_draft["fields"].delete(ReimbursementsTestHelpers::FIELD_IDS[:expenses][:receipt])
+      @store, @client = build_fake_store(
+        expenses: [ bare_draft ],
+        people: [ airtable_person_record(email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
+      sign_in @user
+
+      patch :update, params: { id: "recDraft",
+                               reimbursements_expense_form: valid_form_params.except(:receipts) }
+      assert_response :unprocessable_entity
+      assert_empty @client.updated
+
+      patch :update, params: { id: "recDraft", reimbursements_expense_form: valid_form_params }
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_equal 1, @client.uploads.size
+    end
+
     test "update rejects invalid input without writing" do
       sign_in @user
 
