@@ -66,7 +66,9 @@ module Reimbursements
       @store, @client = build_fake_store(people: [ airtable_person_record ],
                                          budgets: [ airtable_budget_record ])
       @mailbox = FakeMailbox.new(messages: messages, attachments: attachments)
-      MailboxPollJob.mailbox_builder = -> { @mailbox }
+      # One cost centre (the fringe fixture); the builder receives it and returns
+      # the fake mailbox for it. The multi-cost-centre test overrides this.
+      MailboxPollJob.mailbox_builder = ->(_cost_centre) { @mailbox }
       MailboxPollJob.store_builder = -> { @store }
       MailboxPollJob.extractor_builder = -> { FakeExtractor.new(extraction || happy_extraction) }
     end
@@ -74,7 +76,8 @@ module Reimbursements
     teardown do
       %w[REIMBURSEMENTS_AZURE_TENANT_ID REIMBURSEMENTS_AZURE_CLIENT_ID
          REIMBURSEMENTS_AZURE_CLIENT_SECRET].each { |key| ENV.delete(key) }
-      MailboxPollJob.mailbox_builder = -> { MailboxClient.new }
+      MailboxPollJob.mailbox_builder =
+        ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
       MailboxPollJob.store_builder = -> { Store.new }
       MailboxPollJob.extractor_builder = -> { Extractor.new }
       Rails.cache.delete(MailboxPollJob::AUTH_ALERT_CACHE_KEY)
@@ -197,6 +200,44 @@ module Reimbursements
       moved_ids = @mailbox.moves.map(&:first)
       assert_includes moved_ids, "msg1"
       assert_not_includes moved_ids, "msgBoom"
+    end
+
+    test "polls each cost centre on its own receive mailbox" do
+      termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+        receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
+
+      setup_job(messages: [])
+      fringe_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgFringe") ],
+                                       attachments: { "msgFringe" => [ PDF_ATTACHMENT ] })
+      termtime_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgTerm") ],
+                                         attachments: { "msgTerm" => [ PDF_ATTACHMENT ] })
+      by_mailbox = { "reimbursements@bedlamfringe.co.uk" => fringe_mailbox,
+                     "termtime@bedlamtheatre.co.uk" => termtime_mailbox }
+      polled = []
+      MailboxPollJob.mailbox_builder = lambda do |cost_centre|
+        polled << cost_centre.receive_mailbox
+        by_mailbox.fetch(cost_centre.receive_mailbox)
+      end
+
+      MailboxPollJob.perform_now
+
+      assert_includes polled, "reimbursements@bedlamfringe.co.uk"
+      assert_includes polled, termtime.receive_mailbox
+      assert_equal [ [ "msgFringe", :processed ] ], fringe_mailbox.moves
+      assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves
+      assert_equal 2, @client.created.size, "an expense is drafted from each cost centre's inbox"
+    end
+
+    test "a sender matching the cost centre's own receive mailbox is treated as automated" do
+      own = CostCentre.default.receive_mailbox
+      setup_job(messages: [ inbound_message(id: "msgLoop", from: own) ],
+                attachments: { "msgLoop" => [ PDF_ATTACHMENT ] })
+
+      MailboxPollJob.perform_now
+
+      assert_empty @mailbox.replies, "no reply to a message from our own mailbox (loop guard)"
+      assert_equal [ [ "msgLoop", :rejected ] ], @mailbox.moves
+      assert_empty @client.created
     end
 
     test "auth failure alerts the IT subcommittee once per day" do

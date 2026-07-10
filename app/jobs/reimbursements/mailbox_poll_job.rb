@@ -23,26 +23,37 @@ module Reimbursements
     SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
     AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
 
-    # Injection seams for tests (no mocking library in this suite).
-    class_attribute :mailbox_builder, default: -> { MailboxClient.new }
+    # Injection seams for tests (no mocking library in this suite). The mailbox
+    # builder takes the cost centre so each is polled on its OWN receive mailbox.
+    class_attribute :mailbox_builder,
+                    default: ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
     class_attribute :store_builder, default: -> { Store.new }
     class_attribute :extractor_builder, default: -> { Extractor.new }
 
+    # Every cost centre has its own receive mailbox (Fringe today, termtime next),
+    # so poll each in turn. The People registry is shared across the base, so
+    # sender lookups still work regardless of which mailbox a receipt arrived on.
     def perform
       unless Settings.mailbox_configured?
         Rails.logger.info("Reimbursements mailbox poll skipped: Graph credentials not configured")
         return
       end
 
-      mailbox.unread_messages.each { |message| process(message) }
+      CostCentre.all.each { |cost_centre| poll_cost_centre(cost_centre) }
     rescue MailboxClient::AuthError => e
       alert_auth_failure(e)
     end
 
     private
 
+    def poll_cost_centre(cost_centre)
+      @current_cost_centre = cost_centre
+      @mailbox = mailbox_builder.call(cost_centre)
+      @mailbox.unread_messages.each { |message| process(message) }
+    end
+
     def mailbox
-      @mailbox ||= mailbox_builder.call
+      @mailbox
     end
 
     def store
@@ -77,7 +88,7 @@ module Reimbursements
     def automated_sender?(message)
       message.from_address.blank? ||
         message.from_address.match?(AUTOMATED_SENDER) ||
-        message.from_address.casecmp?(CostCentre.default&.receive_mailbox)
+        message.from_address.casecmp?(@current_cost_centre&.receive_mailbox)
     end
 
     def usable_receipts(message)
