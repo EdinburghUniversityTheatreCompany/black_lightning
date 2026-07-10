@@ -98,6 +98,9 @@ ChaosRails::Application.routes.draw do
       resources :batches, only: %i[index show new create] do
         member { post :reopen }
       end
+
+      # Per-cost-centre operational settings (Phase F): picker -> edit/update.
+      resources :settings, only: %i[index edit update], param: :key
     end
 
     # Mount MissionControl Jobs

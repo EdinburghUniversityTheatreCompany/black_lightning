@@ -1,0 +1,24 @@
+<p class="mb-3 text-gray-600">
+  Operational settings per cost centre: the mailboxes it receives receipts on and sends the EUSA
+  request from, the EUSA recipient and signature, which days the nightly auto-submit runs, and where
+  receipts and the BACS request file are filed in SharePoint. Pick a cost centre to edit its settings.
+</p>
+
+<%= render CardComponent.new(title: "#{@cost_centres.size} #{'cost centre'.pluralize(@cost_centres.size)}") do %>
+  <div class="flex flex-col gap-2">
+    <% @cost_centres.each do |cost_centre| %>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-1 rounded border border-gray-200 px-3 py-2">
+        <span class="font-medium min-w-40"><%= cost_centre.name %></span>
+        <span class="text-gray-600 font-mono text-sm"><%= cost_centre.eusa_code %></span>
+        <span class="text-gray-600 grow text-sm"><%= cost_centre.receive_mailbox %></span>
+        <% if cost_centre.sharepoint_configured? %>
+          <%= render BadgeComponent.new(type: :success, pill: true).with_content("SharePoint set") %>
+        <% else %>
+          <%= render BadgeComponent.new(type: :warning, pill: true).with_content("SharePoint incomplete") %>
+        <% end %>
+        <%= link_to "Edit", edit_admin_reimbursements_setting_path(cost_centre.key),
+                    class: btn_classes(:primary, :sm) %>
+      </div>
+    <% end %>
+  </div>
+<% end %>

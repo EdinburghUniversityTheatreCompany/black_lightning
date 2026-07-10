@@ -1,0 +1,64 @@
+<p class="mb-3">
+  <%= link_to "← All cost centres", admin_reimbursements_settings_path, class: "text-sm text-blue-700 hover:underline" %>
+</p>
+
+<%= render CardComponent.new(title: "#{@cost_centre.name} (#{@cost_centre.eusa_code})") do %>
+  <%= form_with model: @cost_centre, scope: :cost_centre,
+                url: admin_reimbursements_setting_path(@cost_centre.key), method: :patch,
+                class: "flex flex-col gap-4" do |f| %>
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= f.label :receive_mailbox, "Receive mailbox (email-in)", class: "block text-sm font-medium" %>
+        <%= f.text_field :receive_mailbox, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+      <div>
+        <%= f.label :send_mailbox, "Send-from mailbox (drafts)", class: "block text-sm font-medium" %>
+        <%= f.text_field :send_mailbox, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= f.label :eusa_recipient, "EUSA recipient", class: "block text-sm font-medium" %>
+        <%= f.text_field :eusa_recipient, placeholder: ::Reimbursements::CostCentre::DEFAULT_EUSA_RECIPIENT,
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+      <div>
+        <%= f.label :eusa_signature_name, "EUSA email signature name", class: "block text-sm font-medium" %>
+        <%= f.text_field :eusa_signature_name, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+    </div>
+
+    <div>
+      <span class="block text-sm font-medium mb-1">Nightly auto-submit runs on</span>
+      <div class="flex flex-wrap gap-x-4 gap-y-1">
+        <% Date::DAYNAMES.each_with_index do |day_name, wday| %>
+          <label class="inline-flex items-center gap-1 text-sm">
+            <%= check_box_tag "cost_centre[nightly_run_days][]", wday,
+                              @cost_centre.nightly_run_days.include?(wday),
+                              id: "nightly_run_day_#{wday}" %>
+            <%= day_name %>
+          </label>
+        <% end %>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Leave all unchecked to never auto-submit for this cost centre.</p>
+    </div>
+
+    <div>
+      <%= f.submit "Save settings", class: btn_classes(:primary) %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "SharePoint destinations", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    Where the nightly and Build Batch upload renamed receipts and the BACS request xlsx. Browse to a
+    folder and choose it; the drive and folder are stored so uploads land in the same place every time.
+  </p>
+  <%= render "folder_picker", purpose: "receipts", label: "Receipts folder",
+             folder: @cost_centre.receipts_folder %>
+  <div class="mt-4">
+    <%= render "folder_picker", purpose: "bacs", label: "BACS request folder",
+               folder: @cost_centre.bacs_folder %>
+  </div>
+<% end %>

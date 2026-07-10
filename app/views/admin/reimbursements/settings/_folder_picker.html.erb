@@ -1,0 +1,103 @@
+<%# Server-rendered SharePoint folder picker for one destination (receipts/bacs). %>
+<%# Navigation state travels in GET params; "Use this folder" PATCHes update. %>
+<div class="rounded border border-gray-200 p-3">
+  <div class="flex flex-wrap items-center gap-3">
+    <span class="font-medium"><%= label %></span>
+    <% if folder %>
+      <%= render BadgeComponent.new(type: :success, pill: true).with_content("Configured") %>
+      <span class="text-xs text-gray-500 font-mono"><%= folder.drive_id.truncate(20) %> / <%= folder.folder_id.truncate(16) %></span>
+    <% else %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Not set") %>
+    <% end %>
+    <% unless @picker == purpose %>
+      <%= link_to (folder ? "Change folder" : "Browse"),
+                  edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose),
+                  class: btn_classes(:secondary, :sm) %>
+    <% end %>
+  </div>
+
+  <% if @picker == purpose %>
+    <div class="mt-3 border-t border-gray-100 pt-3 flex flex-col gap-3">
+      <%= link_to "Close picker", edit_admin_reimbursements_setting_path(@cost_centre.key),
+                  class: "text-sm text-blue-700 hover:underline" %>
+
+      <%# Step 1: pick a site %>
+      <%= form_with url: edit_admin_reimbursements_setting_path(@cost_centre.key), method: :get,
+                    class: "flex flex-wrap items-end gap-2" do %>
+        <%= hidden_field_tag :picker, purpose %>
+        <div>
+          <%= label_tag :q, "Search SharePoint sites", class: "block text-sm font-medium" %>
+          <%= text_field_tag :q, params[:q], class: "border border-gray-300 rounded px-2 py-1 text-sm w-64" %>
+        </div>
+        <%= submit_tag "Search sites", class: btn_classes(:secondary, :sm) %>
+      <% end %>
+
+      <% if @sites.present? %>
+        <div>
+          <p class="text-sm font-medium">Sites</p>
+          <div class="flex flex-col gap-1">
+            <% @sites.each do |site| %>
+              <%= link_to "→ #{site.name}",
+                          edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: site.id),
+                          class: "text-sm text-blue-700 hover:underline" %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Step 2: pick a drive (document library) %>
+      <% if @drives.present? %>
+        <div>
+          <p class="text-sm font-medium">Libraries</p>
+          <div class="flex flex-col gap-1">
+            <% @drives.each do |drive| %>
+              <%= link_to "→ #{drive.name}",
+                          edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: @site_id, drive_id: drive.id),
+                          class: "text-sm text-blue-700 hover:underline" %>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%# Step 3: navigate folders and choose one %>
+      <% if @drive_id.present? %>
+        <div>
+          <p class="text-sm">
+            <span class="font-medium">Folder:</span>
+            <%= @path.any? ? @path.map { |seg| seg[:name] }.join(" / ") : "(root)" %>
+          </p>
+          <% if @path.any? %>
+            <% parent = @path[0..-2] %>
+            <%= link_to "↑ Up one level",
+                        edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: @site_id,
+                          drive_id: @drive_id, path_ids: parent.map { |s| s[:id] }, path_names: parent.map { |s| s[:name] }),
+                        class: "text-sm text-blue-700 hover:underline" %>
+          <% end %>
+
+          <div class="flex flex-col gap-1 mt-1">
+            <% Array(@items).select(&:folder).each do |item| %>
+              <%= link_to "📁 #{item.name}",
+                          edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: @site_id,
+                            drive_id: @drive_id,
+                            path_ids: @path.map { |s| s[:id] } + [ item.id ],
+                            path_names: @path.map { |s| s[:name] } + [ item.name ]),
+                          class: "text-sm text-blue-700 hover:underline" %>
+            <% end %>
+            <% if Array(@items).none?(&:folder) %>
+              <span class="text-sm text-gray-500">No sub-folders here.</span>
+            <% end %>
+          </div>
+
+          <% if @path.any? %>
+            <%= form_with url: admin_reimbursements_setting_path(@cost_centre.key), method: :patch, class: "mt-2" do %>
+              <%= hidden_field_tag :folder_purpose, purpose %>
+              <%= hidden_field_tag :drive_id, @drive_id %>
+              <%= hidden_field_tag :folder_id, @path.last[:id] %>
+              <%= submit_tag "Use “#{@path.last[:name]}”", class: btn_classes(:primary, :sm) %>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
