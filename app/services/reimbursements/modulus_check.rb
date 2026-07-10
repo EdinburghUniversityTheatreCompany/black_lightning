@@ -20,6 +20,26 @@ module Reimbursements
     # Recognised exception codes. 14 is recognised but always OUTSIDE_SPEC (below).
     SUPPORTED_EXCEPTIONS = [ 0, 1, 3, 4, 5, 6, 7, 14 ].freeze
 
+    # Location of the vendored Pay.UK rule files (gitignored; see
+    # vendor/pay_uk/README.md).
+    VALACDOS_PATH = -> { Rails.root.join("vendor/pay_uk/valacdos.txt") }
+    SCSUBTAB_PATH = -> { Rails.root.join("vendor/pay_uk/scsubtab.txt") }
+
+    module_function
+
+    # A process-wide checker built from the vendored rule files, loaded once.
+    # Missing files yield an empty rule set, so every check reads OUTSIDE_SPEC
+    # rather than raising (never a hard block on a receipt review).
+    def default_checker
+      @default_checker ||= Checker.from_files(VALACDOS_PATH.call, SCSUBTAB_PATH.call)
+    end
+
+    # Drops the memoized checker so the next call reloads the rule files. Test
+    # seam; not used in production.
+    def reset_default_checker!
+      @default_checker = nil
+    end
+
     ##
     # One line from valacdos.txt: a sort-code range, a method, 14 weights
     # (6 for the sort code + 8 for the account number) and an exception code.

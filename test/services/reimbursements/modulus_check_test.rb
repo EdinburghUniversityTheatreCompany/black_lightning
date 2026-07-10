@@ -156,5 +156,32 @@ module Reimbursements
       rule = BASIC_MOD11.with(exception: 7)
       assert_equal ModulusCheck::VALID, checker([ rule ]).check("010001", "00000030")
     end
+
+    # --- default_checker (vendored rule files) -----------------------------
+
+    test "checker built from missing files reads OUTSIDE_SPEC, never raises" do
+      absent = ModulusCheck::Checker.from_files("/no/such/valacdos.txt", "/no/such/scsubtab.txt")
+      assert_equal ModulusCheck::OUTSIDE_SPEC, absent.check("089999", "66374958")
+    end
+
+    test "default_checker on real vendored files validates the Pay.UK spec vector" do
+      valacdos = ModulusCheck::VALACDOS_PATH.call
+      unless File.exist?(valacdos)
+        skip "vendored Pay.UK rule files absent (#{valacdos}); see vendor/pay_uk/README.md"
+      end
+
+      ModulusCheck.reset_default_checker!
+      # Canonical Pay.UK test vector #1: sort 08-99-99, account 66374958 -> valid.
+      assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("089999", "66374958")
+    ensure
+      ModulusCheck.reset_default_checker!
+    end
+
+    test "default_checker is memoized across calls" do
+      ModulusCheck.reset_default_checker!
+      assert_same ModulusCheck.default_checker, ModulusCheck.default_checker
+    ensure
+      ModulusCheck.reset_default_checker!
+    end
   end
 end

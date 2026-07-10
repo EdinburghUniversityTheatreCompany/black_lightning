@@ -84,3 +84,7 @@ stats.html
 
 # fnox secret references (public repo — collaborators may not use fnox)
 fnox.toml
+
+# Pay.UK modulus rules data (click-through licence — do not commit the data
+# files; see vendor/pay_uk/README.md for how to obtain them).
+vendor/pay_uk/*.txt
