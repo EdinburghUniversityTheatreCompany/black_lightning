@@ -214,5 +214,18 @@ module Reimbursements
     ensure
       ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL")
     end
+
+    test "with no operator recipients the batch still runs, records, and doesn't crash" do
+      # Strip the finance role set up above so operator_emails resolves to []
+      # (and no ENV override), the same as a fresh install with nobody granted.
+      Admin::Permission.where(action: "manage", subject_class: "reimbursements_finance").destroy_all
+      stock_store([ approved_expense ])
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      assert_equal 1, @processor.calls.size, "the batch is still submitted"
+      assert_empty FakeOperatorMailer.calls, "no recipients -> the email send is skipped"
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
   end
 end
