@@ -13,5 +13,15 @@ module Reimbursements
       @content_type = content_type
       @thumbnail_url = thumbnail_url
     end
+
+    def image?
+      content_type.to_s.start_with?("image/")
+    end
+
+    # Airtable generates thumbnails asynchronously, so a just-uploaded image
+    # has none yet; previewing the full file bridges the gap.
+    def preview_url
+      thumbnail_url.presence || (url if image?)
+    end
   end
 end

@@ -51,5 +51,19 @@ module Reimbursements
     test "person may be nil" do
       assert_nil build_expense(person: nil).person
     end
+
+    test "attachment previews fall back to the full image while airtable's thumbnail is pending" do
+      fresh_image = Attachment.new(attachment_id: "att1", filename: "r.png", url: "https://full",
+                                   content_type: "image/png")
+      thumbed = Attachment.new(attachment_id: "att2", filename: "r.png", url: "https://full",
+                               content_type: "image/png", thumbnail_url: "https://thumb")
+      pdf = Attachment.new(attachment_id: "att3", filename: "r.pdf", url: "https://full",
+                           content_type: "application/pdf")
+
+      assert_equal "https://full", fresh_image.preview_url
+      assert_equal "https://thumb", thumbed.preview_url
+      assert_nil pdf.preview_url
+      assert_not pdf.image?
+    end
   end
 end

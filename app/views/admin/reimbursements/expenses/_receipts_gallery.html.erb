@@ -11,29 +11,31 @@
       No receipts attached<%= expense.draft? ? " yet — a draft can wait, but the claim needs one before you submit it." : "." %>
     </p>
   <% else %>
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+    <div class="flex flex-wrap gap-3">
       <% expense.receipts.each do |receipt| %>
-        <div class="rounded border border-gray-200 p-2 text-center">
-          <% if receipt.thumbnail_url.present? %>
+        <div class="relative w-40 rounded border border-gray-200 p-2 text-center">
+          <button type="button"
+                  class="absolute right-1 top-1 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full bg-danger/15 text-danger transition-colors hover:bg-danger/40"
+                  aria-label="Remove <%= receipt.filename %>"
+                  data-action="receipts-upload#remove"
+                  data-url="<%= admin_reimbursements_expense_receipt_path(expense.record_id, receipt.attachment_id) %>"
+                  data-filename="<%= receipt.filename %>">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+          <% if receipt.image? %>
             <%= link_to receipt.url, data: { fancybox: "receipts", title: receipt.filename }, class: "block" do %>
-              <%= image_tag receipt.thumbnail_url, alt: receipt.filename,
-                    class: "mx-auto mb-1 h-24 w-full rounded object-contain bg-gray-50" %>
+              <%= image_tag receipt.preview_url, alt: receipt.filename,
+                    class: "mx-auto mb-1 h-40 w-full rounded object-contain bg-gray-50" %>
               <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
             <% end %>
           <% else %>
             <%= link_to receipt.url, target: "_blank", rel: "noopener", class: "block" do %>
-              <span class="mb-1 flex h-24 items-center justify-center rounded bg-gray-50 text-gray-400">
+              <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
                 <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
               </span>
               <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
             <% end %>
           <% end %>
-          <button type="button" class="<%= btn_classes(:danger, :sm) %> mt-2"
-                  data-action="receipts-upload#remove"
-                  data-url="<%= admin_reimbursements_expense_receipt_path(expense.record_id, receipt.attachment_id) %>"
-                  data-filename="<%= receipt.filename %>">
-            Remove
-          </button>
         </div>
       <% end %>
     </div>
