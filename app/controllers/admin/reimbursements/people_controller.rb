@@ -9,10 +9,7 @@ module Admin
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`),
     # distinct from the producer portal's `:access, :reimbursements`.
-    class PeopleController < BaseController
-      skip_before_action :authorize_reimbursements!
-      before_action :authorize_finance!
-
+    class PeopleController < FinanceController
       # Injection seam for tests: the modulus checker (loaded from the vendored
       # Pay.UK rule files in production; a fake in functional tests so badge
       # states don't depend on gitignored data being present).
@@ -34,10 +31,6 @@ module Admin
       end
 
       private
-
-      def authorize_finance!
-        authorize! :manage, :reimbursements_finance
-      end
 
       def modulus_checker
         @modulus_checker ||= checker_builder.call
