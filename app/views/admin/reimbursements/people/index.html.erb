@@ -1,0 +1,77 @@
+<p class="mb-3 text-gray-600">
+  The finance team's payee registry. Edit a person's bank details (every change is
+  recorded in their notes) and mark them verified once their details are confirmed.
+  The badge shows a live UK modulus check — it catches typos, not fraud.
+</p>
+
+<% if @duplicates.any? %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    <p class="font-medium mb-1">Duplicate name or email detected — please review:</p>
+    <ul class="list-disc list-inside">
+      <% @duplicates.each do |person| %>
+        <li>
+          <strong><%= person.name.presence || "(no name)" %></strong>
+          (<%= person.email.presence || "no email" %>)
+        </li>
+      <% end %>
+    </ul>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "#{@people.size} #{'person'.pluralize(@people.size)}") do %>
+  <% if @people.empty? %>
+    <p class="py-4 text-center text-gray-600">No people found in the registry.</p>
+  <% else %>
+    <div class="flex flex-col gap-2">
+      <% @people.each do |person| %>
+        <details class="rounded border border-gray-200">
+          <summary class="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 cursor-pointer">
+            <span class="font-medium min-w-40"><%= person.name.presence || "—" %></span>
+            <span class="text-gray-600 grow"><%= person.email.presence || "—" %></span>
+            <%= reimbursements_modulus_badge(person, checker: modulus_checker) %>
+            <% if person.verified %>
+              <%= render BadgeComponent.new(type: :success, pill: true).with_content("Verified") %>
+            <% else %>
+              <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Unverified") %>
+            <% end %>
+          </summary>
+
+          <div class="border-t border-gray-200 px-3 py-3">
+            <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
+                          class: "flex flex-wrap items-end gap-3" do %>
+              <div>
+                <%= label_tag "sort_code_#{person.record_id}", "Sort code", class: "block text-sm font-medium" %>
+                <%= text_field_tag :sort_code, person.sort_code, id: "sort_code_#{person.record_id}",
+                                   placeholder: "80-22-60",
+                                   class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+              </div>
+              <div>
+                <%= label_tag "account_number_#{person.record_id}", "Account number", class: "block text-sm font-medium" %>
+                <%= text_field_tag :account_number, person.account_number, id: "account_number_#{person.record_id}",
+                                   placeholder: "12345678",
+                                   class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+              </div>
+              <%= submit_tag "Save bank details", class: btn_classes(:primary, :sm) %>
+            <% end %>
+
+            <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
+                          class: "mt-3" do %>
+              <%= hidden_field_tag :verify, "1" %>
+              <%= submit_tag "Mark as verified",
+                             disabled: !person.bank_details?,
+                             title: person.bank_details? ? nil : "Only available when bank details are present",
+                             class: "#{btn_classes(:secondary, :sm)} disabled:opacity-50 disabled:cursor-not-allowed" %>
+            <% end %>
+
+            <% if person.notes.present? %>
+              <div class="mt-3">
+                <p class="text-sm font-medium">Notes</p>
+                <pre class="mt-1 whitespace-pre-wrap text-xs text-gray-600"><%= person.notes %></pre>
+              </div>
+            <% end %>
+          </div>
+        </details>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

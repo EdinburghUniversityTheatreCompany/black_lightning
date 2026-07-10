@@ -78,6 +78,7 @@ ChaosRails::Application.routes.draw do
         resources :receipts, only: %i[create destroy]
       end
       resource :payment_details, only: %i[edit update]
+      resources :people, only: %i[index update]
     end
 
     # Mount MissionControl Jobs
