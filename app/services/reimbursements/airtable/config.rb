@@ -33,14 +33,6 @@ module Reimbursements
       def fid(table, field)
         @data.fetch(:fields).fetch(table).fetch(field)
       end
-
-      def status_label(status)
-        @data.fetch(:status_options).fetch(status)
-      end
-
-      def field_name(table, field_id)
-        @data.fetch(:fields).fetch(table).key(field_id)
-      end
     end
   end
 end

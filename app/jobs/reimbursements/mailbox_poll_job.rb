@@ -1,21 +1,27 @@
 module Reimbursements
   ##
   # Polls the shared reimbursements mailbox (every 5 minutes via Solid Queue)
-  # and turns receipt emails into Pending expenses:
+  # and turns receipt emails into DRAFT expenses the sender then completes
+  # and submits in the portal:
   #
   # - unknown sender            -> "address not recognised" reply, Rejected folder
+  # - automated sender          -> no reply (loop guard), Rejected folder
   # - no usable attachment      -> "please attach the receipt" reply, Rejected folder
-  # - known sender + attachment -> Gemini-extracted Pending expense (blanks
+  # - known sender + attachment -> Gemini-extracted Draft expense (blanks
   #   where unsure), receipts attached, reply with a portal link, Processed
   #
-  # A message is only moved out of the inbox after its reply is sent (the move
-  # is the commit point), so failures leave it unread for the next cycle.
+  # Failure handling: before the expense exists, a message is simply left
+  # unread and retried next cycle. After the expense exists, the message is
+  # ALWAYS moved to Processed (even when attaching/replying failed) so a
+  # transient error can't mint a duplicate expense every 5 minutes.
   # Graph credential failures alert the IT subcommittee, deduped to once/day.
   class MailboxPollJob < ApplicationJob
     queue_as :default
+    limits_concurrency key: "reimbursements_mailbox_poll" # overlapping runs would double-process unread mail
 
     AUTH_ALERT_CACHE_KEY = "reimbursements/auth-failure-alerted".freeze
     SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
+    AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
 
     # Injection seams for tests (no mocking library in this suite).
     class_attribute :mailbox_builder, default: -> { MailboxClient.new }
@@ -43,7 +49,13 @@ module Reimbursements
       @store ||= store_builder.call
     end
 
+    def extractor
+      @extractor ||= extractor_builder.call
+    end
+
     def process(message)
+      return handle_automated_sender(message) if automated_sender?(message)
+
       person = store.person_by_email(message.from_address)
       return handle_unknown_sender(message) if person.nil?
 
@@ -59,14 +71,27 @@ module Reimbursements
       # Leave the message unread; the next poll cycle retries it.
     end
 
-    # Always fetch — Graph reports hasAttachments: false for messages whose
-    # only image is pasted inline, which is a perfectly normal way to send a
-    # receipt. All attachments and inline images count (Mick, 2026-07-09).
+    # Bounces (NDRs), out-of-office replies and other automated mail must
+    # never get a reply — the reply would bounce again and ping-pong with the
+    # remote MTA every poll cycle.
+    def automated_sender?(message)
+      message.from_address.blank? ||
+        message.from_address.match?(AUTOMATED_SENDER) ||
+        message.from_address.casecmp?(CostCentre.default.mailbox)
+    end
+
     def usable_receipts(message)
+      # Always fetch — Graph reports hasAttachments: false for messages whose
+      # only image is pasted inline, which is a perfectly normal way to send
+      # a receipt. All attachments and inline images count as receipts.
       mailbox.attachments(message.id).select do |attachment|
         ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(attachment[:content_type]) &&
           attachment[:bytes].bytesize <= ExpenseForm::MAX_RECEIPT_BYTES
       end
+    end
+
+    def handle_automated_sender(message)
+      mailbox.mark_read_and_move(message.id, :rejected)
     end
 
     def handle_unknown_sender(message)
@@ -80,35 +105,42 @@ module Reimbursements
     end
 
     def create_expense(message, person, receipts)
-      extraction = extractor_builder.call.extract(
+      extraction = extractor.extract(
         receipts: receipts,
         budgets: store.active_budgets,
         context: "Email subject: #{message.subject}\n\n#{message.body_text}"
       )
 
       expense = store.create_expense!(expense_attrs(message, person, extraction))
-      receipts.each do |receipt|
-        store.attach_receipt!(expense.record_id, filename: receipt[:filename],
-                                                 content_type: receipt[:content_type],
-                                                 bytes: receipt[:bytes])
+      begin
+        receipts.each do |receipt|
+          store.attach_receipt!(expense.record_id, filename: receipt[:filename],
+                                                   content_type: receipt[:content_type],
+                                                   bytes: receipt[:bytes])
+        end
+        mailbox.reply(message.id, html: created_html(expense))
+      rescue MailboxClient::AuthError
+        raise
+      rescue => e
+        # The expense exists: retrying the whole message would duplicate it,
+        # so log loudly and still move the message out of the inbox.
+        Rails.logger.error("Reimbursements post-create step failed for #{message.id}: #{e.message}")
+        Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id })
       end
-      mailbox.reply(message.id, html: created_html(expense))
       mailbox.mark_read_and_move(message.id, :processed)
     end
 
-    # Everything the extraction confidently knows, blanks elsewhere — the
-    # reply asks the submitter to complete the claim in the portal. Extraction
-    # failing entirely still creates the expense (receipt + subject only).
+    # Everything the extraction confidently knows, blanks elsewhere. The
+    # expense lands as a DRAFT: the reply asks the sender to complete and
+    # submit it in the portal, so review only ever sees confirmed claims.
+    # Extraction failing entirely still creates the draft (receipt + subject).
     def expense_attrs(message, person, extraction)
-      excl_vat = if extraction.vat_itemised && extraction.total_amount && extraction.vat_amount
-        extraction.total_amount - extraction.vat_amount
-      end
       {
         person_record_id: person.record_id,
-        status: Status::PENDING,
+        status: Status::DRAFT,
         description: extraction.suggested_description || message.subject.presence,
         amount: extraction.total_amount,
-        amount_excl_vat: excl_vat,
+        amount_excl_vat: extraction.amount_excl_vat,
         budget_record_id: extraction.suggested_budget_record_id,
         payment_reference: extraction.suggested_payment_reference
       }.compact
@@ -165,11 +197,10 @@ module Reimbursements
       url = edit_url(expense)
       <<~HTML
         <p>Hi,</p>
-        <p>Thanks for your receipt! We've started an expense claim from it.</p>
-        <p><strong>Please check and complete the claim here:</strong>
+        <p>Thanks for your receipt! We've saved it as a draft expense claim.</p>
+        <p><strong>Please check, complete, and submit the claim here:</strong>
         <a href="#{url}">#{url}</a>. Double-check the budget and the payment reference.</p>
-        <p>Once you've confirmed the details, the claim goes to the finance team for
-        review.</p>
+        <p>The finance team won't see the claim until you submit it.</p>
         <p>#{SIGN_OFF}</p>
       HTML
     end

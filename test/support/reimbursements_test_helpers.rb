@@ -75,11 +75,13 @@ module ReimbursementsTestHelpers
   # Fake Airtable client counting calls per table, interface-compatible with
   # Reimbursements::Airtable::Client. Records writes for assertions.
   class FakeAirtableClient
-    attr_reader :list_calls, :created, :updated, :uploads
+    attr_reader :list_calls, :get_calls, :created, :updated, :uploads
+    attr_accessor :fail_uploads
 
     def initialize(records_by_table)
       @records_by_table = records_by_table
       @list_calls = Hash.new(0)
+      @get_calls = []
       @created = []
       @updated = []
       @uploads = []
@@ -88,6 +90,11 @@ module ReimbursementsTestHelpers
     def list_records(table)
       @list_calls[table] += 1
       @records_by_table.fetch(table, [])
+    end
+
+    def get_record(table, record_id)
+      @get_calls << [ table, record_id ]
+      @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
     end
 
     def create_record(table, fields)
@@ -101,6 +108,8 @@ module ReimbursementsTestHelpers
     end
 
     def upload_attachment(record_id, **kwargs)
+      raise Reimbursements::Airtable::Error.new("upload failed", status: 500) if fail_uploads
+
       @uploads << [ record_id, kwargs ]
       { "id" => record_id }
     end

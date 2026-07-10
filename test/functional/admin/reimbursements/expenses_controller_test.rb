@@ -132,6 +132,39 @@ module Admin
       assert_equal 1, @client.uploads.size
     end
 
+    test "create as draft accepts gaps and writes Draft status" do
+      sign_in @user
+
+      post :create, params: { reimbursements_expense_form: {
+        save_as_draft: "1", description: "Half-finished", receipts: [ receipt_upload ]
+      } }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      _table, fields = @client.created.sole
+      assert_equal "Draft", fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:status]]
+    end
+
+    test "create degrades to a flash when the receipt upload fails" do
+      sign_in @user
+      @client.fail_uploads = true
+
+      post :create, params: { reimbursements_expense_form: valid_form_params }
+
+      assert_equal 1, @client.created.size
+      assert_redirected_to edit_admin_reimbursements_expense_path("recNew1")
+      assert_match(/uploading the receipt failed/, flash[:alert])
+    end
+
+    test "extract rejects unusable files without calling gemini" do
+      sign_in @user
+      BaseController.extractor_builder = -> { raise "extractor must not be built" }
+
+      post :extract, params: { receipts: [ fixture_file_upload("reimbursements_receipt.pdf", "application/zip") ] }
+
+      assert_response :success
+      assert_not response.parsed_body["ok"]
+    end
+
     test "create without a receipt re-renders and writes nothing" do
       sign_in @user
 
@@ -239,8 +272,8 @@ module Admin
       assert_equal "recExp1", record_id
       assert_equal "Even more fake blood",
                    fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:description]]
-      assert_not fields.key?(ReimbursementsTestHelpers::FIELD_IDS[:expenses][:status]),
-                 "update must not touch the status"
+      assert_equal "Pending", fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:status]],
+                   "a full (non-draft) save submits the expense"
       assert_empty @client.uploads
     end
 

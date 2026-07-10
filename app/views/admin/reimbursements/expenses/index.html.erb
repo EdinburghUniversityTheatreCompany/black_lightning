@@ -46,7 +46,7 @@
            description,
            expense.budget ? expense.budget.name : content_tag(:span, "No budget yet", class: "text-gray-500"),
            expense.amount ? number_to_currency(expense.amount, unit: "£") : "—",
-           expense.submitted_at ? expense.submitted_at.to_date.to_fs(:rfc822) : "",
+           expense.submitted_at ? l(expense.submitted_at.to_date, format: :short) : "",
            expense.receipts.size,
            (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id), class: btn_classes(:secondary, :sm)) if expense.editable?)
          ]

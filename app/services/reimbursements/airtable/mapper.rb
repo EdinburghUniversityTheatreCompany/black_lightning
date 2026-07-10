@@ -50,9 +50,7 @@ module Reimbursements
           account_number_override: fields[fid(:expenses, :account_number_override)].to_s,
           payment_reference: fields[fid(:expenses, :payment_reference)].to_s,
           rejection_reason: fields[fid(:expenses, :rejection_reason)].to_s,
-          submitted_at: time(fields[fid(:expenses, :submitted_at)]),
-          ai_check_status: fields[fid(:expenses, :ai_check_status)].to_s,
-          ai_comment: fields[fid(:expenses, :ai_comment)].to_s
+          submitted_at: time(fields[fid(:expenses, :submitted_at)])
         )
       end
 

@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { getMetaValue } from "../helpers"
 
 // Receipt-first expense form: when files are picked, posts them to the
 // extract endpoint and prefills the form fields from the AI's reading.
@@ -23,7 +24,7 @@ export default class extends Controller {
     try {
       const response = await fetch(this.extractUrlValue, {
         method: "POST",
-        headers: { "X-CSRF-Token": this.#csrfToken(), "Accept": "application/json" },
+        headers: { "X-CSRF-Token": getMetaValue("csrf-token"), "Accept": "application/json" },
         body,
         credentials: "same-origin"
       })
@@ -66,9 +67,5 @@ export default class extends Controller {
 
   #setStatus(message) {
     this.statusTarget.textContent = message
-  }
-
-  #csrfToken() {
-    return document.querySelector('meta[name="csrf-token"]')?.content
   }
 }

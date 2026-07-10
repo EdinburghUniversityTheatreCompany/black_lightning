@@ -9,7 +9,6 @@ module Reimbursements
     test "valid with dashed sort code, formats consistently for storage" do
       form = build_form
       assert form.valid?
-      assert_equal "802260", form.normalized_sort_code
       assert_equal "80-22-60", form.formatted_sort_code
       assert_equal "80-22-60", build_form(sort_code: "802260").formatted_sort_code
       assert_equal "80-22-60", build_form(sort_code: "80 22 60").formatted_sort_code

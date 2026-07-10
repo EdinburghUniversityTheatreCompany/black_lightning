@@ -13,7 +13,7 @@ module Reimbursements
     RETRYABLE_STATUSES = [ 429, 500, 502, 503, 504 ].freeze
     TRANSPORT_ERRORS = [ SocketError, Timeout::Error, Errno::ECONNRESET, Errno::ECONNREFUSED,
                         OpenSSL::SSL::SSLError, Net::OpenTimeout, Net::ReadTimeout ].freeze
-    REFERENCE_LIMIT = 18 # EUSA truncates BACS references beyond 18 chars
+    REFERENCE_LIMIT = ExpenseForm::REFERENCE_LIMIT
 
     Extraction = Struct.new(:merchant, :purchase_date, :total_amount, :vat_amount,
                             :vat_itemised, :suggested_description,
@@ -22,12 +22,24 @@ module Reimbursements
       def ok?
         error.nil?
       end
+
+      # The amount that actually leaves the submitter's budget. Only derived
+      # when the receipt itemises VAT; callers pick their own fallback.
+      def amount_excl_vat
+        return nil unless vat_itemised && total_amount && vat_amount
+
+        total_amount - vat_amount
+      end
     end
 
-    def initialize(api_key: nil, http: nil, sleeper: nil)
+    # max_attempts: 5 suits the background poll job; interactive callers
+    # (the form's extract endpoint) pass a lower number so a Gemini outage
+    # doesn't pin a Puma worker through the whole retry ladder.
+    def initialize(api_key: nil, http: nil, sleeper: nil, max_attempts: MAX_ATTEMPTS)
       @api_key = api_key || Settings.gemini_api_key
       @http = http || HttpTransport
       @sleeper = sleeper || ->(seconds) { sleep(seconds) }
+      @max_attempts = max_attempts.clamp(1, MAX_ATTEMPTS)
     end
 
     # receipts: [{filename:, content_type:, bytes:}], budgets: [Budget],
@@ -103,12 +115,13 @@ module Reimbursements
     def post_with_retries(body)
       uri = URI("#{API_URL}?key=#{@api_key}")
       headers = { "Content-Type" => "application/json" }
+      json = body.to_json # serialized once — it embeds every receipt as base64
       last_error = nil
 
-      MAX_ATTEMPTS.times do |attempt|
+      @max_attempts.times do |attempt|
         @sleeper.call(BACKOFF_SECONDS[attempt - 1]) if attempt.positive?
         begin
-          status, response_body = @http.call(:post, uri, headers, body.to_json)
+          status, response_body = @http.call(:post, uri, headers, json)
         rescue *TRANSPORT_ERRORS => e
           last_error = "#{e.class}: #{e.message}"
           next

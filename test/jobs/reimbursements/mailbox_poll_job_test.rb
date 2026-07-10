@@ -45,9 +45,9 @@ module Reimbursements
 
     PDF_ATTACHMENT = { filename: "receipt.pdf", content_type: "application/pdf", bytes: "PDF" }.freeze
 
-    def inbound_message(id: "msg1", from: "pat@example.com", subject: "Taxi receipt", has_attachments: true)
+    def inbound_message(id: "msg1", from: "pat@example.com", subject: "Taxi receipt")
       MailboxClient::Message.new(id: id, from_address: from, subject: subject,
-                                 body_text: "receipt attached", has_attachments: has_attachments)
+                                 body_text: "receipt attached")
     end
 
     def happy_extraction
@@ -101,7 +101,7 @@ module Reimbursements
     end
 
     test "known sender without usable attachments is asked for the receipt" do
-      setup_job(messages: [ inbound_message(has_attachments: false) ])
+      setup_job(messages: [ inbound_message ])
 
       MailboxPollJob.perform_now
 
@@ -110,12 +110,19 @@ module Reimbursements
       assert_empty @client.created
     end
 
-    test "processes a pasted-in-body receipt even when graph reports hasAttachments false" do
-      # Graph quirk: inline-only messages often carry hasAttachments: false,
-      # so the job must always fetch instead of trusting the flag.
+    test "automated senders get no reply (mail-loop guard)" do
+      setup_job(messages: [ inbound_message(id: "msgNdr", from: "mailer-daemon@example.com"),
+                            inbound_message(id: "msgNoReply", from: "no-reply@shop.example") ])
+
+      MailboxPollJob.perform_now
+
+      assert_empty @mailbox.replies
+      assert_equal [ [ "msgNdr", :rejected ], [ "msgNoReply", :rejected ] ], @mailbox.moves
+    end
+
+    test "processes a pasted-in-body receipt (inline image)" do
       pasted = { filename: "pasted-receipt.png", content_type: "image/png", bytes: "BIGPNG" }
-      setup_job(messages: [ inbound_message(has_attachments: false) ],
-                attachments: { "msg1" => [ pasted ] })
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ pasted ] })
 
       MailboxPollJob.perform_now
 
@@ -124,14 +131,14 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    test "known sender with a receipt gets a pending expense and a portal link" do
+    test "known sender with a receipt gets a draft expense and a portal link" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
 
       MailboxPollJob.perform_now
 
       _table, fields = @client.created.sole
       f = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
-      assert_equal "Pending", fields[f[:status]]
+      assert_equal "Draft", fields[f[:status]]
       assert_equal [ "recPer1" ], fields[f[:payee]]
       assert_equal [ "recBud1" ], fields[f[:budget]]
       assert_in_delta 18.0, fields[f[:amount]]
@@ -141,7 +148,19 @@ module Reimbursements
       assert_equal 1, @client.uploads.size
       reply_html = @mailbox.replies.sole.last
       assert_includes reply_html, "/admin/reimbursements/expenses/recNew1/edit"
+      assert_includes reply_html, "won't see the claim until you submit"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
+
+    test "a post-create failure still moves the message (no duplicate minting)" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      @client.fail_uploads = true
+
+      MailboxPollJob.perform_now
+
+      assert_equal 1, @client.created.size
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves,
+                   "message must leave the inbox once the expense exists"
     end
 
     test "extraction failure still creates the expense with subject and receipt only" do

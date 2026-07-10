@@ -18,6 +18,12 @@ module Reimbursements
       [ 200, { value: messages }.to_json ]
     end
 
+    setup do
+      # Folder ids are cached in Rails.cache across job runs; tests must not
+      # leak them into each other (the test cache is a FileStore).
+      Rails.cache.delete_matched("reimbursements/graph-folder/*")
+    end
+
     def build_client(responses)
       http = FakeHttp.new(responses)
       client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
@@ -26,8 +32,7 @@ module Reimbursements
     end
 
     test "fetches a token once and lists unread messages" do
-      raw = { id: "msg1", subject: "Receipt", bodyPreview: "see attached",
-              hasAttachments: true, from: { emailAddress: { address: "PAT@Example.com" } } }
+      raw = { id: "msg1", subject: "Receipt", bodyPreview: "see attached", from: { emailAddress: { address: "PAT@Example.com" } } }
       client, http = build_client([ token_response, messages_response([ raw ]),
                                     messages_response([]) ])
 
@@ -36,7 +41,6 @@ module Reimbursements
 
       assert_equal 1, messages.size
       assert_equal "pat@example.com", messages.first.from_address
-      assert messages.first.has_attachments
 
       token_requests = http.requests.count { |r| r.uri.include?("login.microsoftonline.com") }
       assert_equal 1, token_requests, "token must be cached between calls"

@@ -1,8 +1,10 @@
 module Reimbursements
   ##
-  # Expense status labels, mirroring the Airtable single-select exactly
-  # (bedlam-bacs owns the state machine; the portal only ever writes Pending).
+  # Expense status labels, mirroring the Airtable single-select exactly.
+  # The portal writes Draft and Pending (submitting a draft promotes it);
+  # bedlam-bacs owns the rest of the state machine and ignores Drafts.
   module Status
+    DRAFT = "Draft".freeze
     PENDING = "Pending".freeze
     APPROVED = "Approved".freeze
     SUBMITTED = "Submitted".freeze
@@ -10,6 +12,7 @@ module Reimbursements
     REJECTED = "Rejected".freeze
 
     BADGE_VARIANTS = {
+      DRAFT => :secondary,
       PENDING => :warning,
       APPROVED => :info,
       SUBMITTED => :primary,

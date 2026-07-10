@@ -16,8 +16,7 @@ module Reimbursements
     # IT subcommittee by the poll job rather than retried blindly.
     class AuthError < Error; end
 
-    Message = Struct.new(:id, :from_address, :subject, :body_text, :has_attachments,
-                         keyword_init: true)
+    Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
     def initialize(mailbox: CostCentre.default.mailbox, settings: Settings, http: nil, clock: nil)
       @mailbox = mailbox
@@ -30,15 +29,14 @@ module Reimbursements
     def unread_messages
       response = request(:get, "/users/#{@mailbox}/mailFolders/inbox/messages",
                          params: { "$filter" => "isRead eq false",
-                                   "$select" => "id,subject,from,bodyPreview,hasAttachments",
+                                   "$select" => "id,subject,from,bodyPreview",
                                    "$top" => PAGE_SIZE })
       response.fetch("value").map do |raw|
         Message.new(
           id: raw["id"],
           from_address: raw.dig("from", "emailAddress", "address").to_s.downcase,
           subject: raw["subject"].to_s,
-          body_text: raw["bodyPreview"].to_s,
-          has_attachments: raw["hasAttachments"].present?
+          body_text: raw["bodyPreview"].to_s
         )
       end
     end
@@ -75,8 +73,13 @@ module Reimbursements
 
     private
 
+    # Folder ids never change once created, so they're cached across job runs
+    # (a fresh client per run would otherwise re-query Graph each cycle).
     def folder_id(key)
-      @folder_ids[key] ||= find_or_create_folder(FOLDERS.fetch(key))
+      @folder_ids[key] ||= Rails.cache.fetch("reimbursements/graph-folder/#{@mailbox}/#{key}",
+                                             expires_in: 12.hours) do
+        find_or_create_folder(FOLDERS.fetch(key))
+      end
     end
 
     def find_or_create_folder(name)

@@ -60,6 +60,42 @@ module Reimbursements
       assert_equal [ "Props" ], store.active_budgets.map(&:name)
     end
 
+    test "find_expense! fetches a single record fresh on a cache miss" do
+      store, client = build_store
+
+      store.expenses # warm + memoize without recExpNew
+      @late = airtable_expense_record(id: "recExpNew", description: "Late arrival")
+      client.list_records(:expenses) << @late
+
+      expense = store.find_expense!("recExpNew")
+
+      assert_equal "Late arrival", expense.description
+      assert_equal [ [ :expenses, "recExpNew" ] ], client.get_calls,
+                   "must use the single-record endpoint, not a full re-list"
+      assert_nil store.find_expense!("recMissing")
+    end
+
+    test "serves the backup copy when airtable is down" do
+      store, client = build_store
+      store.expenses # fills cache + backup
+
+      cache = store.instance_variable_get(:@cache)
+      cache.delete(Store::EXPENSES_KEY)
+      client.define_singleton_method(:list_records) do |_table|
+        raise Reimbursements::Airtable::Error.new("down", status: 503)
+      end
+      fresh_store = Store.new(client: client, config: reimbursements_test_config, cache: cache)
+
+      assert_equal [ "recExp1" ], fresh_store.expenses.map(&:record_id)
+    end
+
+    test "remove_receipt! refuses to strip the last receipt" do
+      store, client = build_store
+
+      assert_raises(Store::LastReceiptError) { store.remove_receipt!("recExp1", "att1") }
+      assert_empty client.updated
+    end
+
     test "create_expense! busts the expense cache" do
       store, client = build_store
 

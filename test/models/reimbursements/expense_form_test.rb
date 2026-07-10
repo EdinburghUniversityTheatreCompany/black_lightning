@@ -91,7 +91,28 @@ module Reimbursements
       assert_equal "recPer1", attrs[:person_record_id]
       assert_equal Status::PENDING, attrs[:status]
       assert_equal BigDecimal("12.50"), attrs[:amount]
-      assert_nil attrs[:payee_name_override]
+      assert_equal "", attrs[:payee_name_override], "blank overrides write empty strings so clearing them clears Airtable"
+    end
+
+    test "save_as_draft relaxes presence rules and writes Draft status" do
+      form = ExpenseForm.new(save_as_draft: "1", receipts: [ upload ])
+      assert form.valid?, form.errors.full_messages.to_sentence
+      assert_equal Status::DRAFT, form.update_attrs[:status]
+
+      submitted = ExpenseForm.new(receipts: [ upload ])
+      assert_not submitted.valid?
+    end
+
+    test "draft still rejects malformed values that are present" do
+      assert_not ExpenseForm.new(save_as_draft: "1", amount: "-5").valid?
+      assert_not ExpenseForm.new(save_as_draft: "1", sort_code_override: "80-2").valid?
+    end
+
+    test "parses a comma decimal separator without a 100x blowup" do
+      form = build_form(amount: "12,50", amount_excl_vat: "10,42")
+      assert form.valid?, form.errors.full_messages.to_sentence
+      assert_equal BigDecimal("12.50"), form.amount_decimal
+      assert_equal BigDecimal("10.42"), form.amount_excl_vat_decimal
     end
 
     test "override bank details are formatted for storage" do

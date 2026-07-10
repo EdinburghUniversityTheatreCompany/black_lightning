@@ -12,35 +12,26 @@ module Reimbursements
     validate :sort_code_format
     validate :account_number_format
 
-    def normalized_sort_code
-      sort_code.to_s.gsub(/[-\s]/, "")
-    end
-
-    # Stored in Airtable in the conventional dashed form, e.g. "80-22-60"
-    # (bedlam-bacs' modulus check strips the dashes itself).
     def formatted_sort_code
-      digits = normalized_sort_code
-      return sort_code if digits.length != 6
-
-      digits.scan(/\d{2}/).join("-")
+      BankDetails.format_sort_code(sort_code)
     end
 
     def normalized_account_number
-      account_number.to_s.gsub(/\s/, "")
+      BankDetails.normalize_account_number(account_number)
     end
 
     private
 
     def sort_code_format
-      return if sort_code.blank? || normalized_sort_code.match?(/\A\d{6}\z/)
+      return if sort_code.blank? || BankDetails.valid_sort_code?(sort_code)
 
-      errors.add(:sort_code, "must be 6 digits, e.g. 80-22-60.")
+      errors.add(:sort_code, BankDetails::SORT_CODE_HINT)
     end
 
     def account_number_format
-      return if account_number.blank? || normalized_account_number.match?(/\A\d{8}\z/)
+      return if account_number.blank? || BankDetails.valid_account_number?(account_number)
 
-      errors.add(:account_number, "must be 8 digits.")
+      errors.add(:account_number, BankDetails::ACCOUNT_NUMBER_HINT)
     end
   end
 end

@@ -10,8 +10,14 @@
   <% content_for :override_card_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
       <%= f.button :submit, submit_label, class: btn_classes(:primary) %>
+      <%= f.button :submit, "Save as draft", class: btn_classes(:secondary),
+            name: "reimbursements_expense_form[save_as_draft]", value: "1",
+            formnovalidate: true %>
       <%= link_to "Cancel", admin_reimbursements_expenses_path, class: btn_classes(:secondary) %>
     </div>
+    <p class="mt-2 mb-0 text-sm text-gray-500">
+      Drafts are only visible to you. The finance team sees the claim once you submit it.
+    </p>
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>

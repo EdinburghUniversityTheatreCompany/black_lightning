@@ -36,8 +36,18 @@ module Reimbursements
         assert_equal "recNew", record["id"]
         body = JSON.parse(http.requests.first.body)
         assert body["typecast"]
+        assert body["returnFieldsByFieldId"], "write responses must be field-ID-keyed for the mapper"
         assert_in_delta 12.5, body["fields"]["fldExpAmt"]
         assert_equal "post", http.requests.first.method.to_s
+      end
+
+      test "gets a single record and returns nil on 404" do
+        client, http = build_client([ [ 200, { id: "recExp1", fields: {} }.to_json ],
+                                      [ 404, "{}" ] ])
+
+        assert_equal "recExp1", client.get_record(:expenses, "recExp1")["id"]
+        assert_includes http.requests.first.uri, "returnFieldsByFieldId=true"
+        assert_nil client.get_record(:expenses, "recGone")
       end
 
       test "updates a record via patch" do
