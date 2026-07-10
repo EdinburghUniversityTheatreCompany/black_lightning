@@ -79,6 +79,10 @@ ChaosRails::Application.routes.draw do
       end
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index update]
+      resource :reconciliation, only: %i[show], controller: "reconcile" do
+        post :preview
+        post :apply
+      end
     end
 
     # Mount MissionControl Jobs

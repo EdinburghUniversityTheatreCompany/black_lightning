@@ -1,0 +1,32 @@
+<%= render AlertComponent.new(type: :success) do %>
+  Reconciliation complete for <strong><%= @source_month %></strong>.
+<% end %>
+
+<%= render CardComponent.new(title: "Summary") do %>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+    <div>
+      <div class="text-2xl font-semibold"><%= @expenses_paid %></div>
+      <div class="text-sm text-gray-600">Expenses marked Paid</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @credits_linked %></div>
+      <div class="text-sm text-gray-600">Credit rows linked to budgets</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @unmatched_saved %></div>
+      <div class="text-sm text-gray-600">Unmatched rows saved</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @skipped_count %></div>
+      <div class="text-sm text-gray-600">Already-imported rows skipped</div>
+    </div>
+  </div>
+<% end %>
+
+<p class="mt-2 text-sm text-gray-600">
+  Producers whose expenses were marked Paid have been emailed a "you've been paid" note.
+</p>
+
+<div class="mt-4">
+  <%= link_to "Reconcile another month", admin_reimbursements_reconciliation_path, class: btn_classes(:secondary) %>
+</div>

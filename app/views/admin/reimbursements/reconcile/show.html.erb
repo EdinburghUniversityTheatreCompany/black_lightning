@@ -1,0 +1,36 @@
+<p class="mb-3 text-gray-600">
+  Import the monthly EUSA actuals sheet and reconcile it against submitted expenses
+  and income budgets. Copy the actuals rows from Excel or the email and paste them
+  below — both the legacy format (Nominal, Cost Centre, Ref, …) and the Sage export
+  (AccountNumber, …, GoodsValueInBaseCurrency) are accepted; the header identifies
+  the columns automatically.
+</p>
+
+<% if flash[:alert].present? %>
+  <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Step 1 — Paste actuals data") do %>
+  <%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post do %>
+    <div class="flex flex-col gap-3">
+      <div>
+        <%= label_tag :pasted_text, "Actuals data (tab- or comma-separated, include the header row)",
+                      class: "block text-sm font-medium mb-1" %>
+        <%= text_area_tag :pasted_text, @pasted_text, rows: 10,
+                          placeholder: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet",
+                          class: "w-full border border-gray-300 rounded px-2 py-1 font-mono text-xs" %>
+      </div>
+      <div>
+        <%= label_tag :source_month, "Source month (YYYY-MM)", class: "block text-sm font-medium mb-1" %>
+        <%= text_field_tag :source_month, @source_month, placeholder: "2026-05",
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+        <p class="text-xs text-gray-600 mt-1">
+          The month these actuals are from. Used to skip rows already imported for this month.
+        </p>
+      </div>
+      <div>
+        <%= submit_tag "Parse and match", class: btn_classes(:primary) %>
+      </div>
+    </div>
+  <% end %>
+<% end %>

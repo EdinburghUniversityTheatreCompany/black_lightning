@@ -1,0 +1,139 @@
+<p class="mb-3 text-gray-600">
+  Review the matches below. Debits are matched to Submitted or Paid expenses; credits to
+  income budgets. When you're happy, apply the reconciliation to save everything to Airtable,
+  mark the matched expenses Paid, and email the producers.
+</p>
+
+<% if @skipped_rows.any? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    <%= pluralize(@skipped_rows.size, "row") %> already imported for <strong><%= @source_month %></strong>
+    <%= @skipped_rows.size == 1 ? "was" : "were" %> skipped.
+  <% end %>
+<% else %>
+  <%= render AlertComponent.new(type: :info) do %>
+    No already-imported rows found for <strong><%= @source_month %></strong> — all rows are new.
+  <% end %>
+<% end %>
+
+<% if @new_rows.empty? %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    All rows are already imported — nothing new to reconcile.
+  <% end %>
+<% else %>
+  <%= render CardComponent.new(title: "Matched expenses (#{@matched_debits.size})") do %>
+    <% if @matched_debits.any? %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-gray-200">
+              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Date</th>
+              <th class="py-1 pr-3">Narrative</th><th class="py-1 pr-3 text-right">Debit</th>
+              <th class="py-1 pr-3">Expense #</th><th class="py-1 pr-3">Payee</th>
+              <th class="py-1 text-right">Expense amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @matched_debits.each do |row, expense| %>
+              <tr class="border-b border-gray-100">
+                <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+                <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
+                <td class="py-1 pr-3"><%= row.narrative %></td>
+                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.debit, unit: "£") %></td>
+                <td class="py-1 pr-3">#<%= expense.auto_number %></td>
+                <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
+                <td class="py-1 text-right"><%= number_to_currency(expense.amount_excl_vat || expense.amount || 0, unit: "£") %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="py-2 text-gray-600">No debit rows matched any submitted expense.</p>
+    <% end %>
+  <% end %>
+
+  <%= render CardComponent.new(title: "Matched income budgets (#{@matched_credits.size})") do %>
+    <% if @matched_credits.any? %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-gray-200">
+              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Date</th>
+              <th class="py-1 pr-3">Narrative</th><th class="py-1 pr-3 text-right">Credit</th>
+              <th class="py-1">Budget</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @matched_credits.each do |row, budget| %>
+              <tr class="border-b border-gray-100">
+                <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+                <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
+                <td class="py-1 pr-3"><%= row.narrative %></td>
+                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.credit, unit: "£") %></td>
+                <td class="py-1"><%= budget.name %></td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="py-2 text-gray-600">No credit rows matched any income budget.</p>
+    <% end %>
+  <% end %>
+
+  <%= render CardComponent.new(title: "Unmatched rows (#{@unmatched_rows.size})") do %>
+    <% if @unmatched_rows.any? %>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left border-b border-gray-200">
+              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Date</th>
+              <th class="py-1 pr-3">Narrative</th><th class="py-1 pr-3 text-right">Debit</th>
+              <th class="py-1 pr-3 text-right">Credit</th><th class="py-1">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @unmatched_rows.each do |row| %>
+              <tr class="border-b border-gray-100">
+                <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+                <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
+                <td class="py-1 pr-3"><%= row.narrative %></td>
+                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.debit, unit: "£") if row.debit.positive? %></td>
+                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.credit, unit: "£") if row.credit.positive? %></td>
+                <td class="py-1 text-gray-600">
+                  <%= if row.debit.positive?
+                        "No matching submitted expense"
+                      elsif row.credit.positive?
+                        "No matching income budget"
+                      else
+                        "Zero debit and credit"
+                      end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% else %>
+      <p class="py-2 text-success">All rows matched.</p>
+    <% end %>
+  <% end %>
+
+  <%= render CardComponent.new(title: "Step 3 — Apply reconciliation") do %>
+    <p class="mb-3 text-gray-600">
+      Source month: <strong><%= @source_month %></strong>. Applying will create the EUSA Actuals
+      records, mark the <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email
+      those producers.
+    </p>
+    <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
+      <%= hidden_field_tag :pasted_text, params[:pasted_text] %>
+      <%= hidden_field_tag :source_month, @source_month %>
+      <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
+                     data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mt-4">
+  <%= link_to "← Start over", admin_reimbursements_reconciliation_path, class: "text-sm text-gray-600 underline" %>
+</div>
