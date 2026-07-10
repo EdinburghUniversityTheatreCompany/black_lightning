@@ -164,8 +164,9 @@ module ReimbursementsTestHelpers
   end
 
   # Builds a Store on a FakeAirtableClient + MemoryStore cache. Returns [store, client].
-  def build_fake_store(expenses: [], people: [], budgets: [])
-    client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets)
+  def build_fake_store(expenses: [], people: [], budgets: [], eusa_actuals: [])
+    client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets,
+                                    eusa_actuals: eusa_actuals)
     store = Reimbursements::Store.new(client: client, config: reimbursements_test_config,
                                       cache: ActiveSupport::Cache::MemoryStore.new)
     [ store, client ]

@@ -154,5 +154,52 @@ module Reimbursements
       assert_equal 1, client.updated.size
       assert_equal 2, client.list_calls[:people]
     end
+
+    # --- EUSA Actuals -----------------------------------------------------
+
+    test "actuals_for_month filters imported rows to that source month" do
+      may = airtable_eusa_actual_record(id: "recActMay", source_month: "2026-05")
+      apr = airtable_eusa_actual_record(id: "recActApr", source_month: "2026-04")
+      store, = build_fake_store(eusa_actuals: [ may, apr ])
+
+      assert_equal [ "recActMay" ], store.actuals_for_month("2026-05").map(&:record_id)
+      assert_empty store.actuals_for_month("2026-01")
+    end
+
+    test "create_actual! writes a mapped row and busts the actuals cache" do
+      store, client = build_fake_store(eusa_actuals: [ airtable_eusa_actual_record ])
+
+      store.actuals_for_month("2026-05")
+      actual = store.create_actual!(nominal_code: "439999", narrative: "Alice Producer",
+                                    date: Date.new(2026, 5, 13), debit: BigDecimal("123.45"),
+                                    source_month: "2026-05", imported_at: Time.utc(2026, 5, 14, 9))
+      store.actuals_for_month("2026-05")
+
+      table, fields = client.created.sole
+      assert_equal :eusa_actuals, table
+      assert_equal 123.45, fields[FIELD_IDS[:eusa_actuals][:debit]]
+      assert_equal "2026-05-13", fields[FIELD_IDS[:eusa_actuals][:date]]
+      assert_equal "2026-05-14T09:00:00Z", fields[FIELD_IDS[:eusa_actuals][:imported_at]]
+      assert_equal "439999", actual.nominal_code
+      assert_equal 2, client.list_calls[:eusa_actuals], "create must bust the actuals cache"
+    end
+
+    test "link_actual_to_expense! writes an expense link" do
+      store, client = build_fake_store
+      store.link_actual_to_expense!("recAct1", "recExp1")
+
+      table, record_id, fields = client.updated.sole
+      assert_equal :eusa_actuals, table
+      assert_equal "recAct1", record_id
+      assert_equal [ "recExp1" ], fields[FIELD_IDS[:eusa_actuals][:linked_expense]]
+    end
+
+    test "link_actual_to_budget! writes a budget link" do
+      store, client = build_fake_store
+      store.link_actual_to_budget!("recAct1", "recBud3")
+
+      _table, _record_id, fields = client.updated.sole
+      assert_equal [ "recBud3" ], fields[FIELD_IDS[:eusa_actuals][:linked_budget]]
+    end
   end
 end

@@ -127,6 +127,22 @@ module Reimbursements
         attrs.compact.transform_keys { |key| fid(:people, key) }
       end
 
+      # Attribute hash (symbol keys) -> EUSA Actuals field-ID payload. Nil values
+      # are dropped. Linked expense/budget are Airtable links ([record_id]); the
+      # date lands as YYYY-MM-DD, amounts as floats, imported_at as ISO 8601.
+      def eusa_actual_fields(attrs)
+        attrs.compact.each_with_object({}) do |(key, value), payload|
+          case key
+          when :linked_expense_ids then payload[fid(:eusa_actuals, :linked_expense)] = Array(value)
+          when :linked_budget_ids then payload[fid(:eusa_actuals, :linked_budget)] = Array(value)
+          when :date then payload[fid(:eusa_actuals, :date)] = date_string(value)
+          when :debit, :credit, :net then payload[fid(:eusa_actuals, key)] = value.to_f
+          when :imported_at then payload[fid(:eusa_actuals, :imported_at)] = time_string(value)
+          else payload[fid(:eusa_actuals, key)] = value
+          end
+        end
+      end
+
       private
 
       def fid(table, field)

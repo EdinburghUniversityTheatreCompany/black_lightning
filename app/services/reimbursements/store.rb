@@ -17,6 +17,8 @@ module Reimbursements
     PEOPLE_TTL = 1.hour
     BUDGETS_KEY = "reimbursements/budgets".freeze
     BUDGETS_TTL = 1.hour
+    EUSA_ACTUALS_KEY = "reimbursements/eusa_actuals".freeze
+    EUSA_ACTUALS_TTL = 10.minutes
     BACKUP_TTL = 7.days
 
     # Raised instead of rewriting an expense's attachment field to empty.
@@ -129,7 +131,46 @@ module Reimbursements
     end
     alias refresh_expenses! bust_expenses!
 
+    # --- EUSA Actuals (reconciliation) ------------------------------------
+
+    # Every EUSA Actuals row already imported, mapped to POROs.
+    def eusa_actuals
+      @eusa_actuals ||= fetch_list(EUSA_ACTUALS_KEY, EUSA_ACTUALS_TTL, :eusa_actuals)
+                        .map { |r| @mapper.eusa_actual(r) }
+    end
+
+    # Actuals imported for a given source month (YYYY-MM), used to dedup a
+    # freshly-pasted export against what's already in Airtable.
+    def actuals_for_month(source_month)
+      eusa_actuals.select { |a| a.source_month == source_month }
+    end
+
+    def create_actual!(attrs)
+      record = @client.create_record(:eusa_actuals, @mapper.eusa_actual_fields(attrs))
+      bust_eusa_actuals!
+      @mapper.eusa_actual(record)
+    end
+
+    def link_actual_to_expense!(actual_id, expense_id)
+      record = @client.update_record(:eusa_actuals, actual_id,
+                                     @mapper.eusa_actual_fields(linked_expense_ids: [ expense_id ]))
+      bust_eusa_actuals!
+      @mapper.eusa_actual(record)
+    end
+
+    def link_actual_to_budget!(actual_id, budget_id)
+      record = @client.update_record(:eusa_actuals, actual_id,
+                                     @mapper.eusa_actual_fields(linked_budget_ids: [ budget_id ]))
+      bust_eusa_actuals!
+      @mapper.eusa_actual(record)
+    end
+
     private
+
+    def bust_eusa_actuals!
+      @eusa_actuals = nil
+      @cache.delete(EUSA_ACTUALS_KEY)
+    end
 
     def bust_people!
       @people = nil
