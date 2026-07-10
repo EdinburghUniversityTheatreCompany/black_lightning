@@ -52,6 +52,53 @@ module Reimbursements
       assert_nil build_expense(person: nil).person
     end
 
+    # --- effective payee (the money path) ---------------------------------
+
+    test "effective payee falls back to the linked person when no override" do
+      expense = build_expense(
+        person: Person.new(record_id: "recP", name: "Pat", email: "p@x", sort_code: "80-22-60",
+                           account_number: "12345678")
+      )
+      assert_equal "Pat", expense.effective_payee_name
+      assert_equal "80-22-60", expense.effective_sort_code
+      assert_equal "12345678", expense.effective_account_number
+      assert expense.effective_has_bank_details?
+    end
+
+    test "override wins over the linked person for the effective payee" do
+      expense = build_expense(
+        person: Person.new(record_id: "recP", name: "Pat", email: "p@x", sort_code: "80-22-60",
+                           account_number: "12345678"),
+        payee_name_override: "Stage Supplies Ltd",
+        sort_code_override: "11-22-33",
+        account_number_override: "87654321"
+      )
+      assert_equal "Stage Supplies Ltd", expense.effective_payee_name
+      assert_equal "11-22-33", expense.effective_sort_code
+      assert_equal "87654321", expense.effective_account_number
+    end
+
+    test "effective payee tolerates a nil person" do
+      expense = build_expense(person: nil)
+      assert_equal "", expense.effective_payee_name
+      assert_equal "", expense.effective_sort_code
+      assert_not expense.effective_has_bank_details?
+    end
+
+    test "effective has bank details is false when only one of sort/account is present" do
+      expense = build_expense(
+        person: Person.new(record_id: "recP", name: "Pat", email: "p@x", sort_code: "80-22-60",
+                           account_number: "")
+      )
+      assert_not expense.effective_has_bank_details?
+    end
+
+    test "effective nominal code uses the override then the budget" do
+      assert_equal "4000", build_expense.effective_nominal_code
+      assert_equal "9999", build_expense(nominal_code_override: "9999").effective_nominal_code
+      assert_equal "", build_expense(budget: nil).effective_nominal_code
+    end
+
     test "attachment previews fall back to the full image while airtable's thumbnail is pending" do
       fresh_image = Attachment.new(attachment_id: "att1", filename: "r.png", url: "https://full",
                                    content_type: "image/png")
