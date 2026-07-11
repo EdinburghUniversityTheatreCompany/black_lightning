@@ -1,0 +1,16 @@
+<p class="mb-3 text-gray-600">
+  Find any expense to edit — whatever its status, including ones already sent to EUSA or
+  paid. Search by its number (the # on the card, e.g. 42) or its Airtable record id.
+  Pending and Approved expenses are also editable straight from the
+  <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
+</p>
+
+<%= form_with url: find_admin_reimbursements_expense_edits_path, method: :get,
+              class: "flex flex-wrap items-end gap-2" do %>
+  <div>
+    <%= label_tag :q, "Expense number or record id", class: "block text-sm font-medium" %>
+    <%= text_field_tag :q, params[:q], placeholder: "e.g. 42",
+                       class: "w-64 border border-gray-300 rounded px-2 py-1 text-sm" %>
+  </div>
+  <%= submit_tag "Find", class: btn_classes(:primary, :sm) %>
+<% end %>
