@@ -419,6 +419,62 @@ semesters.
 
 ---
 
+## Round 3 additions (2026-07-11)
+
+A third pass over the corners rounds 1-2 didn't reach: `lib/**`, `app/middleware/**`,
+`app/inputs/**`, the duplicate-detection/caching models, attachment/ActiveStorage access
+control, the remaining public/front controllers, all remaining Stimulus controllers, and
+`config/environments`. **These areas are largely clean** — attachment access control is
+properly enforced (`authorize!(:show, @attachment)`), the `inputs` and `MalformedRequestHandler`
+middleware are sound, and most of `lib/tasks` is one-off `:nocov` import code. 8 new
+(mostly low) findings; **no new high-severity issues** — the review is converging.
+
+| # | Severity | Axis | Area | Finding |
+|---|----------|------|------|---------|
+| R3-1 | Medium | correctness | Controllers | `attachments#file` Content-Disposition omits `filename=` → downloads get the wrong name; and a blob-less attachment `return`s a bare string → MissingTemplate 500 ✓ |
+| R3-2 | Medium | correctness | Models | `User#mark_not_duplicate` doesn't invalidate the pair's `CachedDuplicate` row → dismissed duplicate reappears on every reload until the 4am job ✓ |
+| R3-3 | Low | security | Middleware | `CloudflareIpSanitizer#from_cloudflare?` uses spoofable `request.ip` (runs before `RemoteIp`) instead of the TCP peer |
+| R3-4 | Low | security | Config | `config.hosts` (host authorization) is commented out in `production.rb` → Host-header attacks unmitigated (mailer URLs are pinned, so limited) |
+| R3-5 | Low | correctness | Jobs | `RefreshFuzzyBothDuplicatesJob` buckets by surname's first letter, so a typo in that first char (`Smith`/`Zmith`) is never compared (false negative — defeats the bucket's purpose) |
+| R3-6 | Low | correctness | lib | `lib/tasks/logic/techie.rb:9` guard uses `Raise(...)` (not a method) and `row.includes(';')` (Array has no `includes`); the semicolon check is also logically wrong |
+| R3-7 | Low | correctness | Config | `doorkeeper.rb` declares `resource_owner_authenticator` twice; the first block is silently overridden dead code |
+| R3-8 | Low | correctness | Routes | `GET /users/current` routes to a non-existent `UsersController#current` → `ActionNotFound` 404; dead, unreferenced route |
+
+### R3-1. `attachments#file` malformed Content-Disposition + blob-less 500 ✓
+**`app/controllers/attachments_controller.rb:23`** (and `:16`) · correctness · Medium
+
+Line 23: `"#{disposition}; #{@attachment.file.filename}"` produces `inline; report.pdf`
+instead of `inline; filename="report.pdf"` — browsers ignore the bare token and fall back to
+the URL slug when saving, so downloads lose the intended name (value is also unquoted). Line
+16: `return "There is no file attached" unless @attachment.file.attached?` returns a bare
+string with no `render`, so an attachment whose blob is missing falls through to a
+`MissingTemplate` 500. Access control itself is fine (`authorize!(:show, @attachment)`,
+line 14). **Fix:** `ActionDispatch::Http::ContentDisposition.format(disposition:, filename:
+@attachment.file.filename.to_s)`; render a proper 404/message for the missing-blob case.
+
+### R3-2. `mark_not_duplicate` doesn't invalidate the cache ✓
+**`app/models/user.rb:753`** · correctness · Medium
+
+`mark_not_duplicate` only appends to `not_duplicate_user_ids`; it never deletes the matching
+`CachedDuplicate` row. `Admin::DuplicatesController#load_cached_duplicates`
+(`duplicates_controller.rb:35`) reads `CachedDuplicate` directly and — unlike
+`RefreshFuzzyBothDuplicatesJob#check_group` — does **not** filter `marked_not_duplicate?`
+pairs. The turbo_stream only removes the row from the current DOM, so after a full reload the
+dismissed pair is listed again until the 4am job reruns. The merge/absorb path (`user.rb:681`)
+*does* destroy the rows — the invalidation is just inconsistently applied. **Fix:** destroy the
+pair's `CachedDuplicate` rows in `mark_not_duplicate` (or filter `marked_not_duplicate?` in
+`load_cached_duplicates`).
+
+### R3 low-severity items
+- **R3-3** `app/middleware/cloudflare_ip_sanitizer.rb:24` (security) — inserted before `ActionDispatch::RemoteIp` (`application.rb:46`), so `from_cloudflare?`→`request.ip` is computed from attacker-controlled `X-Forwarded-For`/`CLIENT_IP` headers: it trusts a spoofable header to decide whether to distrust a spoofable header. Fails mostly safe (hence low). Use `env['REMOTE_ADDR']` / configure Cloudflare ranges as `trusted_proxies`.
+- **R3-4** `config/environments/production.rb:96` (security) — the `config.hosts` block is commented out, so production accepts any `Host` header. The main vector (reset-link poisoning) is blocked because mailer URLs are pinned in `application.rb` and origin-check is on, but any absolute URL built from `request.host` (or Host-keyed cache) is poisonable. Set `config.hosts` with a `/up` exclusion.
+- **R3-5** `app/jobs/refresh_fuzzy_both_duplicates_job.rb:16` (correctness) — bucketing on `last_name&.first&.upcase` means a surname whose first character differs (typo/transliteration) is never fuzzy-compared, defeating the "both names fuzzy" bucket. Different axis from R2-10 (cost/memory). Bucket on Soundex/metaphone or compare adjacent buckets.
+- **R3-6** `lib/tasks/logic/techie.rb:9` (correctness) — `Raise(ArgumentError, …)` is not a method (→ `NoMethodError`), `row.includes(';')` should be `include?`, and a semicolon-delimited file is a single CSV field so `row` never contains `';'`. Feeding such a file silently proceeds with `child = nil` or crashes with the wrong error.
+- **R3-7** `config/initializers/doorkeeper.rb:11` (correctness) — `resource_owner_authenticator` is declared twice; Doorkeeper keeps only the last, so the first block is dead and misleading (a future edit to it would have no effect). Delete the first block.
+- **R3-8** `config/routes.rb:45` (correctness) — `get "current", to: "users#current"` targets an action that doesn't exist (UsersController defines only `show`/`consent`); `/users/current` raises `ActionNotFound` (404). Dead, unreferenced route — remove or implement.
+
+---
+
 ## Cross-cutting themes
 
 1. **Public attack surface + `html_safe`.** The opportunity submission flow is anonymous, and
@@ -440,8 +496,14 @@ semesters.
 - Findings marked **✓ verified** were re-read against source during this review and the failure
   mode confirmed by hand. Verified: #1, #2, #3, #4, #5, #7, #9, #10, #13; R2-1, R2-2, R2-3, R2-4.
 - **Review rounds:** Round 1 = models/auth, controllers, services/jobs/mailers, views, JS/config
-  (5 domain passes). Round 2 = data/money layer, admin-controller/route/job breadth, and the
-  quality axes app-wide (3 passes, 14 new findings). Each round dedups against this file.
+  (5 domain passes, incl. the 4 high-severity items). Round 2 = data/money layer,
+  admin-controller/route/job breadth, quality axes app-wide (3 passes, 14 new, 0 high).
+  Round 3 = lib/middleware/inputs, dup-detection/caching, attachment security, remaining public
+  controllers + Stimulus + env config (2 passes, 8 new, 0 high). Verified round 3: R3-1, R3-2.
+  Each round dedups against this file. **Convergence:** new findings fell from many (incl. 4 high)
+  → 14 (0 high, mostly efficiency) → 8 (0 high, mostly low); rounds 2-3 surfaced no new
+  high-severity issues and reported the money layer, attachment access control, middleware, and
+  inputs as clean. The remaining backlog is low-severity cleanup.
 - Nothing was changed. This is a report; each item names its file:line, axis, and a suggested fix.
 - No live suite was run (the test DB — `docker start /mysql8` — was not started for this
   read-only pass); the correctness findings are reasoned from source, not reproduced via tests.
