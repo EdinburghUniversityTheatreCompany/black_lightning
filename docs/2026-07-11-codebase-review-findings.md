@@ -326,6 +326,99 @@ Grouped by area. These are worth fixing opportunistically or batching.
 
 ---
 
+## Round 2 additions (2026-07-11)
+
+A second pass targeting angles round 1 sampled only lightly: the data/money layer
+(migrations, schema, ransackable audit, finance math), the breadth of `admin/**`
+controllers + routes + jobs + mailers, and the quality axes (reuse/efficiency/dead-code)
+across the whole app. The money/debt layer largely held up — BigDecimal is used
+consistently, and the deliberate `nil`-prepended reallocation IN-lists are correct.
+14 genuinely-new findings (deduped against round 1); none change the round-1 top four.
+
+| # | Severity | Axis | Area | Finding |
+|---|----------|------|------|---------|
+| R2-1 | Medium | correctness | Jobs | `DailyMaintenanceJob` is monolithic under `retry_on StandardError` → a late-step failure re-emails every new debtor / expiring-opp creator (up to 5–10×) ✓ |
+| R2-2 | Medium | correctness | Schema | `marketing_creatives_profiles.url` (the routing key) has a non-unique index → TOCTOU duplicate slugs, one profile unreachable ✓ |
+| R2-3 | Medium | reuse | Helpers | `label_helper.rb` `BADGE_CLASS_MAP` duplicates `BadgeComponent::STYLES` (second source of truth for badge styling) ✓ |
+| R2-4 | Medium | efficiency | Views | Dashboard "pending opportunities" relation is queried 3× per load (index badge + widget `any?` + widget `count`) ✓ |
+| R2-5 | Medium | efficiency | Views | `_committee_staffing_widget` nested N+1 over every committee member + polymorphic `staffable` (evaluated twice) |
+| R2-6 | Low | security | Controllers | `membership_imports#confirm` trusts an arbitrary `merge_<id>` user id from the posted action string (same class as show_crew_imports) |
+| R2-7 | Low | correctness | Jobs | `MassMailJob` is not idempotent — a mid-loop failure re-enqueues the mass mail to already-processed members on retry |
+| R2-8 | Low | correctness | Models | `admin/maintenance_debt.rb:49` ransackable whitelists association names `user`/`show` as attributes → `q[show_eq]=1` 500s (same class as staffing_debt:38) |
+| R2-9 | Low | correctness | Schema | `admin_staffing_debts` (and maintenance_debts) have no DB-level FKs → orphaned `user_id` → nil `debt.user` → `NoMethodError` in callbacks |
+| R2-10 | Low | efficiency | Jobs | `RefreshFuzzyBothDuplicatesJob` loads `User.all.to_a` and lumps all blank-last-name users into one O(n²) fuzzy-compare bucket |
+| R2-11 | Low | efficiency | Helpers | `shared_debt_helper.rb:30` materialises all member ids into a giant `WHERE user_id IN (...)` on every debt index; use a subquery |
+| R2-12 | Low | efficiency | Views | `_staffings_widget` fires 2 COUNT queries per row (10 extra queries); preload `staffing_jobs` and count in Ruby |
+| R2-13 | Low | efficiency | Views | `_opportunities_widget:26,28` calls `.count` on an already-loaded relation; use `.size` |
+| R2-14 | Low | efficiency | Controllers | `GenericController#return_random` `pluck(:id).sample` loads all matching ids into Ruby plus a redundant `present?` check; use DB-side random |
+
+### R2-1. `DailyMaintenanceJob` retry storm re-emails debtors ✓
+**`app/jobs/daily_maintenance_job.rb:4`** · correctness · Medium
+
+`perform` runs 8 sequential steps in one job. `ApplicationJob` applies `retry_on
+StandardError (5×)` and `retry_on Net::SMTP* (10×)` to the **whole** job. A failure in a
+*late* step (`send_test_email` line 77, `honeybadger_checkin`) re-runs `perform` from the
+top, re-executing `notify_debtors`. `new_debtors = debtors - User.in_debt(yesterday)`
+(`lib/tasks/logic/debt.rb:24`) is guarded only by yesterday's debt state, **not** by
+notification history (only `long_time_debtors` uses `notified_since`), so the same set is
+re-derived and re-mailed each retry; `notify_expiring_opportunities` likewise re-sends.
+Distinct from round-1 #12 (which is about `DebtNotification` *rows* at the mailer level).
+**Fix:** decompose into separate idempotent jobs, and guard `new_debtors` by notification
+history.
+
+### R2-2. `marketing_creatives_profiles.url` missing unique index ✓
+**`db/schema.rb:467`**, **`app/models/marketing_creatives/profile.rb:32`** · correctness · Medium
+
+`Profile` uses `acts_as_url :name`, exposes `url` via `to_param`, and is loaded with
+`find_by: :url`, with only an app-level `validates :url, uniqueness`. The schema index is
+**non-unique** (contrast `companies.slug`, `db/schema.rb:302`, which is `unique: true`). Two
+concurrent signups with the same name both derive slug `foo`, both pass the read-before-write
+check, and both insert `url='foo'`; `find_by(url: 'foo')` then resolves ambiguously and one
+profile becomes unreachable. Round-1's profile item (#low, case-sensitivity) is a different
+angle. **Fix:** add a unique index on `marketing_creatives_profiles.url` and rescue
+`RecordNotUnique` in create.
+
+### R2-3. `BADGE_CLASS_MAP` duplicates `BadgeComponent` ✓
+**`app/helpers/label_helper.rb:112`** · reuse · Medium
+
+`BADGE_CLASS_MAP` (lines 112-125) hard-codes the same 8 class mappings
+(`bg-success → "bg-success/15 text-success"`, …) and `generate_label` re-implements the
+same `rounded-full`/`float-right` toggles already authoritative in
+`app/components/badge_component.rb` (`STYLES` + `style_classes`, lines 2-23). Two copies
+drift independently — the exact anti-pattern CLAUDE.md forbids for buttons. **Fix:** render
+`BadgeComponent` from `generate_label`/`proposal_labels` and delete `BADGE_CLASS_MAP`.
+
+### R2-4. Dashboard pending-opportunities queried three times ✓
+**`app/views/admin/dashboard/index.html.erb:12`**, **`_opportunities_widget.html.erb:3,5,8`** · efficiency · Medium
+
+The index header computes `Opportunity.where(approved: false).where("expiry_date > ?",
+Date.current).count`; the widget then rebuilds the identical relation and evaluates it again
+via `pending.any?` and `pending.count` — 3 near-identical COUNT/EXISTS queries per render.
+**Fix:** compute the relation/count once (controller or memoized helper) and pass it in.
+
+### R2-5. `_committee_staffing_widget` nested N+1
+**`app/views/admin/dashboard/_committee_staffing_widget.html.erb:13`** · efficiency · Medium
+
+`Role.where(name: "Committee").first.users` loads all committee members with no preloading;
+per member `person.staffing_jobs.where(name: "Committee Rep")` is evaluated **twice** (lines
+13 and 15), and each `.select { |j| j.staffable.start_time… }` lazily loads the polymorphic
+`staffable` per job. Cost grows unbounded with committee size × jobs. **Fix:** preload
+(`includes(staffing_jobs: :staffable)`), filter in Ruby/SQL, reuse the loaded set for both
+semesters.
+
+### R2 low-severity items
+- **R2-6** `app/controllers/admin/membership_imports_controller.rb:119` (security) — `process_item` matches `merge_<id>` and does `User.find_by(id: $1)` then grafts the import row's email/student_id/associate_id and `:member` onto that user, without checking the id was one of the fuzzy candidates from `#preview`. A tampered form can corrupt any account. Validate against the presented candidate ids.
+- **R2-7** `app/jobs/mass_mail_job.rb:10` (correctness) — `recipients.each { … deliver_later }` over all members; a mid-loop failure + `retry_on StandardError` re-runs `perform` from the start, re-enqueuing already-processed recipients (duplicate mass mail). Track sent recipients / enqueue the fan-out idempotently.
+- **R2-8** `app/models/admin/maintenance_debt.rb:49` (correctness) — `ransackable_attributes` includes `user`/`show` (associations, not columns); `q[show_eq]=1` emits `WHERE show = 1` → `StatementInvalid` 500. Same class as round-1's `staffing_debt.rb:38`. Drop them (they work via `ransackable_associations`).
+- **R2-9** `db/schema.rb:176` (correctness) — `admin_staffing_debts` has no FKs on `user_id`/`show_id`/`admin_staffing_job_id` (and maintenance_debts lacks user/show FKs). An orphaned `user_id` makes required `debt.user` nil → `NoMethodError` in `associate_with_staffing_job`. `dependent: :restrict_with_error` covers the normal path but not direct SQL / legacy data. Add the constraints or document the gap.
+- **R2-10** `app/jobs/refresh_fuzzy_both_duplicates_job.rb:16` (efficiency) — `User.all.to_a.group_by { |u| u.last_name&.first&.upcase || 'Z' }` holds the whole table in memory and buckets every blank-last-name user under `'Z'`, then runs `combination(2)` fuzzy matching on that bucket. Exclude blank names and use `find_each`.
+- **R2-11** `app/helpers/admin/shared_debt_helper.rb:30` (efficiency) — `debts.where(user: Role.find_by(name: :member).users.ids)` inlines all member ids as an `IN (...)` list per index load; use `where(user_id: …users.select(:id))` (subquery).
+- **R2-12** `app/views/admin/dashboard/_staffings_widget.html.erb:11` (efficiency) — 2 COUNT queries per row (`staffing_jobs.count` + `filled_jobs`) × 5 rows = 10 queries; preload and count in Ruby.
+- **R2-13** `app/views/admin/dashboard/_opportunities_widget.html.erb:26` (efficiency) — `.count` on an already-materialised relation issues fresh COUNTs; use `.size`.
+- **R2-14** `app/controllers/generic_controller.rb:335` (efficiency) — `random_resources.present?` then `random_resources.pluck(:id).sample` loads all ids into Ruby to pick one; use a DB-side random single-row select.
+
+---
+
 ## Cross-cutting themes
 
 1. **Public attack surface + `html_safe`.** The opportunity submission flow is anonymous, and
@@ -345,7 +438,10 @@ Grouped by area. These are worth fixing opportunistically or batching.
 
 ## Method notes
 - Findings marked **✓ verified** were re-read against source during this review and the failure
-  mode confirmed by hand. Verified: #1, #2, #3, #4, #5, #7, #9, #10, #13.
+  mode confirmed by hand. Verified: #1, #2, #3, #4, #5, #7, #9, #10, #13; R2-1, R2-2, R2-3, R2-4.
+- **Review rounds:** Round 1 = models/auth, controllers, services/jobs/mailers, views, JS/config
+  (5 domain passes). Round 2 = data/money layer, admin-controller/route/job breadth, and the
+  quality axes app-wide (3 passes, 14 new findings). Each round dedups against this file.
 - Nothing was changed. This is a report; each item names its file:line, axis, and a suggested fix.
 - No live suite was run (the test DB — `docker start /mysql8` — was not started for this
   read-only pass); the correctness findings are reasoned from source, not reproduced via tests.
