@@ -7,6 +7,13 @@ module Admin
     # Airtable (via the cache-fronted Store), not ActiveRecord, and every
     # action is scoped to the member's own linked People record.
     class BaseController < AdminController
+      # Raised when the expense is the member's own but review has since picked
+      # it up, so it's no longer editable (a race against an Edit link on a
+      # stale list). Subclasses RecordNotFound so callers that don't
+      # distinguish (the receipts turbo actions) still degrade to a 404, while
+      # the producer expenses controller can rescue it for a friendly redirect.
+      ExpenseNoLongerEditable = Class.new(ActiveRecord::RecordNotFound)
+
       before_action :authorize_reimbursements!
 
       # Injection seams for functional tests (this suite has no mocking library).
@@ -46,10 +53,11 @@ module Admin
       # an email-in link for an expense created by the poll job.
       def find_own_editable_expense!(record_id)
         expense = store.find_expense!(record_id)
-        unless expense && current_person && expense.person&.record_id == current_person.record_id &&
-               expense.editable?
+        unless expense && current_person && expense.person&.record_id == current_person.record_id
           raise ActiveRecord::RecordNotFound
         end
+        raise ExpenseNoLongerEditable unless expense.editable?
+
         expense
       end
     end
