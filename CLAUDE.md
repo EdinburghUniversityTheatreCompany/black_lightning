@@ -24,6 +24,11 @@ JavaScript that is only used on specific pages should go into the `app/assets` f
 
 Stylesheets also live in `app/javascript/styles` so they can be handled by Vite.
 
+Third-party CSS/JS vendored verbatim (not authored by us, not meant to go through Tailwind/PostCSS)
+goes in `vendor/assets/{stylesheets,javascripts}` instead of `app/assets` — Propshaft auto-registers
+that directory too, and it's already excluded from jscpd/duplication scanning via the blanket
+`**/vendor/**` glob in `.jscpd.json`, so no per-file exclusion entry is needed.
+
 ## Maintain Documentation
 
 If you learn something about the project that would be useful context for other agents looking at the codebase, add it to this file at the end of your to do list.

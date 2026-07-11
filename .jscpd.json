@@ -14,7 +14,6 @@
     "**/db/structure.sql",
     "**/app/assets/builds/**",
     "**/bin/**",
-    "**/app/javascript/styles/swalCustomTheme.scss",
-    "**/app/assets/stylesheets/pretix-widget.css"
+    "**/app/javascript/styles/swalCustomTheme.scss"
   ]
 }

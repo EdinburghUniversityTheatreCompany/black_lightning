@@ -1,3 +1,7 @@
+/* Vendored from https://eutc.azureedge.net/styles/pretix-widget.css (dead CDN, retired
+   2026), via a Wayback Machine snapshot dated 2026-01-11. Not authored by this repo —
+   to refresh, re-fetch pretix's current hosted widget CSS and replace this file. */
+
 .pretix-widget-hidden {
     display: none
 }
