@@ -1,0 +1,63 @@
+<p class="mb-3 text-gray-600">
+  The EUSA Actuals ledger imported during reconciliation. Each row shows its nominal
+  code, EUSA period, transaction date, narrative and debit/credit, plus whether it's
+  been linked to an expense or an income budget. Read-only — imports happen on the
+  <%= link_to "Reconcile", admin_reimbursements_reconciliation_path, class: "underline" %> page.
+</p>
+
+<% if @periods.any? %>
+  <%= render CardComponent.new(title: "Filter") do %>
+    <%= form_with url: admin_reimbursements_actuals_path, method: :get, class: "flex flex-wrap items-end gap-3" do %>
+      <div>
+        <%= label_tag :period, "EUSA period", class: "block text-sm font-medium mb-1" %>
+        <%= select_tag :period,
+                       options_for_select([ [ "All periods", "" ] ] + @periods.map { |p| [ p, p ] }, @period),
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      </div>
+      <%= submit_tag "Apply filter", class: btn_classes(:secondary, :sm) %>
+      <% if @period.present? %>
+        <%= link_to "Clear", admin_reimbursements_actuals_path, class: "text-sm text-gray-600 underline" %>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "#{@actuals.size} #{'actual'.pluralize(@actuals.size)}#{" — period #{@period}" if @period.present?}") do %>
+  <% if @actuals.empty? %>
+    <p class="py-4 text-center text-gray-600">No EUSA Actuals imported yet.</p>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left border-b border-gray-200">
+            <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Period</th>
+            <th class="py-1 pr-3">Date</th><th class="py-1 pr-3">Narrative</th>
+            <th class="py-1 pr-3 text-right">Debit</th><th class="py-1 pr-3 text-right">Credit</th>
+            <th class="py-1">Linked to</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @actuals.each do |actual| %>
+            <tr class="border-b border-gray-100">
+              <td class="py-1 pr-3 font-mono"><%= actual.nominal_code.presence || "—" %></td>
+              <td class="py-1 pr-3 font-mono"><%= actual.period.presence || "—" %></td>
+              <td class="py-1 pr-3"><%= actual.date&.strftime("%d/%m/%Y") || "—" %></td>
+              <td class="py-1 pr-3"><%= actual.narrative.presence || "—" %></td>
+              <td class="py-1 pr-3 text-right"><%= number_to_currency(actual.debit, unit: "£") if actual.debit&.positive? %></td>
+              <td class="py-1 pr-3 text-right"><%= number_to_currency(actual.credit, unit: "£") if actual.credit&.positive? %></td>
+              <td class="py-1">
+                <% if actual.linked_expense_ids.any? %>
+                  <%= render BadgeComponent.new(type: :primary, pill: true).with_content("Expense") %>
+                <% elsif actual.linked_budget_ids.any? %>
+                  <%= render BadgeComponent.new(type: :info, pill: true).with_content("Budget") %>
+                <% else %>
+                  <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Unlinked") %>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>

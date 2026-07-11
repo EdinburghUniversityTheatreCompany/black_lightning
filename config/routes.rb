@@ -94,6 +94,9 @@ ChaosRails::Application.routes.draw do
         post :apply
       end
 
+      # Read-only browser over the imported EUSA Actuals ledger.
+      resources :actuals, only: %i[index]
+
       # Finance-team Build Batch (new/create) + History (index/show/reopen).
       resources :batches, only: %i[index show new create] do
         member { post :reopen }
