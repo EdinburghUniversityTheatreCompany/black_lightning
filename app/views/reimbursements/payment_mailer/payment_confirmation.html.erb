@@ -1,14 +1,14 @@
 <p>Hi <%= @person.name.presence || "there" %>,</p>
 
 <p>
-  Good news — EUSA has paid <%= @expenses.size == 1 ? "your expense" : "your expenses" %>.
+  Good news: EUSA has paid <%= @expenses.size == 1 ? "your expense" : "your expenses" %>.
   The money should reach your account shortly, if it hasn't already.
 </p>
 
 <ul>
   <% @expenses.each do |expense| %>
     <li>
-      <%= expense.description.presence || "Expense ##{expense.auto_number}" %> —
+      <%= expense.description.presence || "Expense ##{expense.auto_number}" %>:
       <%= number_to_currency(expense.amount || 0, unit: "£") %>
     </li>
   <% end %>
@@ -16,4 +16,4 @@
 
 <p>Thanks for your patience, and thanks for everything you do for Bedlam Fringe.</p>
 
-<p>— The Bedlam Fringe finance team</p>
+<p>The Bedlam Fringe finance team</p>

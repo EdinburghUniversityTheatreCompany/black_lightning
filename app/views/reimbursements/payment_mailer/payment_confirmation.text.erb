@@ -1,6 +1,6 @@
 Hi <%= @person.name.presence || "there" %>,
 
-Good news — EUSA has paid <%= @expenses.size == 1 ? "your expense" : "your expenses" %>.
+Good news: EUSA has paid <%= @expenses.size == 1 ? "your expense" : "your expenses" %>.
 The money should reach your account shortly, if it hasn't already.
 
 <% @expenses.each do |expense| -%>
@@ -9,4 +9,4 @@ The money should reach your account shortly, if it hasn't already.
 
 Thanks for your patience, and thanks for everything you do for Bedlam Fringe.
 
-— The Bedlam Fringe finance team
+The Bedlam Fringe finance team
