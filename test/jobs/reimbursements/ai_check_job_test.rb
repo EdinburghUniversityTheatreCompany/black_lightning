@@ -3,6 +3,7 @@ require "test_helper"
 module Reimbursements
   class AiCheckJobTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
+    include Turbo::Broadcastable::TestHelper
 
     # AiChecker stand-in returning a canned verdict and recording what it checked.
     class FakeChecker
@@ -49,6 +50,21 @@ module Reimbursements
       assert_equal "Amount mismatch.", fields[FIELD_IDS[:expenses][:ai_comment]]
       assert fields[FIELD_IDS[:expenses][:ai_checked_at]].present?
       assert_equal [ [ "recExp1", @store.active_budgets ] ], checker.checked
+    end
+
+    test "broadcasts a live turbo-stream replace of the AI verdict when the check finishes" do
+      setup_store(expenses: [ airtable_expense_record(id: "recExp1") ])
+      AiCheckJob.checker_builder = -> { FakeChecker.new(verdict(status: "pass", comment: "Looks fine.")) }
+
+      streams = capture_turbo_stream_broadcasts "reimbursements_review_ai" do
+        AiCheckJob.perform_now("recExp1")
+      end
+
+      replace = streams.sole
+      assert_equal "replace", replace["action"]
+      assert_equal "ai_verdict_recExp1", replace["target"]
+      # The replacement carries the rendered verdict partial (the pass badge).
+      assert_includes replace.to_html, "AI: Pass"
     end
 
     test "skips an expense that already has a verdict" do
