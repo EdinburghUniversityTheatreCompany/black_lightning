@@ -168,7 +168,8 @@
                     method: :patch, class: btn_classes(:success, :sm) %>
     <% end %>
     <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
-                  method: :patch, class: "flex items-center gap-2" do %>
+                  method: :patch, class: "flex items-center gap-2",
+                  data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
       <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
                          class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
       <%= submit_tag "Reject", class: btn_classes(:danger, :sm) %>

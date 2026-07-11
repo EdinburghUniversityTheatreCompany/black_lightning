@@ -290,6 +290,19 @@ module Admin
 
       # --- Reject ----------------------------------------------------------
 
+      test "the reject form asks for confirmation before emailing the producer" do
+        expense = pending_expense(id: "recRej", auto_number: 42, payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "form[action=?][data-turbo-confirm*=?]",
+                      admin_reimbursements_reject_review_path("recRej", tab: "pending"),
+                      "Reject #42 and email the producer"
+      end
+
       test "reject requires a reason" do
         expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")
         rebuild_store(expenses: [ expense ])
