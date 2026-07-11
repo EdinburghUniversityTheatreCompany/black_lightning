@@ -1,7 +1,7 @@
 <%# locals: (event:) -%>
 
 <% content_for :head do %>
-   <link rel="stylesheet" type="text/css" href="https://eutc.azureedge.net/styles/pretix-widget.css">
+   <%= stylesheet_link_tag "pretix-widget" %>
    <script type="text/javascript" src="https://tickets.bedlamtheatre.co.uk/widget/v1.en.js" async></script><%# herb:disable html-require-script-nonce %>
 <% end %>
 
