@@ -1,0 +1,96 @@
+<% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
+
+<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+  The manual Microsoft 365 / Azure steps the app can't do itself. You only need these when
+  <strong>adding a new reimbursement mailbox or a new cost centre</strong> — day-to-day use needs none of
+  this. Sections are collapsed; open the one you need. The Entra app is
+  <code>BlackLightning Reimbursements Mailbox</code> (App ID <code>b874d491-4edf-4b76-839d-84e534c7f7c0</code>).
+  Full one-time setup lives in <code>docs/superpowers/specs/2026-07-09-reimbursements-setup-guide.md</code>.
+</p>
+
+<%= render CollapsibleSectionComponent.new(title: "➕ Adding a new reimbursement mailbox", html_class: "mb-3") do %>
+  <div class="text-sm text-gray-700 dark:text-gray-300">
+    <p>
+      Each cost centre has its own <strong>receive</strong> mailbox (email-in) and <strong>send</strong>
+      mailbox (Build Batch drafts from it), set on its
+      <%= link_to "Settings", admin_reimbursements_settings_path, class: "underline" %> page. The Graph app can
+      only touch mailboxes inside the <code>Reimbursements App Access</code> security group — so
+      <strong>setting a mailbox in Settings is not enough</strong>. If it isn't in that group, every Graph call
+      for it (poll / draft / send) fails with <strong>403 AccessDenied</strong> and that cost centre's email-in
+      + batch drafting silently break.
+    </p>
+    <p class="mt-2">In Exchange Online PowerShell:</p>
+    <pre class="<%= code_class %>"><code>Connect-ExchangeOnline
+# 1. Create the shared mailbox in the M365 admin center (Teams &amp; groups -&gt;Shared mailboxes).
+# 2. Add it to the group the ApplicationAccessPolicy already scopes to:
+Add-DistributionGroupMember -Identity "Reimbursements App Access" `
+  -Member NEW-MAILBOX@bedlamfringe.co.uk
+# 3. Verify (policy propagation can take ~30-60 min):
+Test-ApplicationAccessPolicy -Identity NEW-MAILBOX@bedlamfringe.co.uk `
+  -AppId b874d491-4edf-4b76-839d-84e534c7f7c0   # -&gt;Granted</code></pre>
+    <p class="mt-2">
+      No new access policy is needed — one policy scopes the app to the whole group; you just add members.
+      <br><strong>⚠️ Address already in use?</strong> If M365 says the SMTP proxy address is taken, find what
+      holds it with <code>Get-Recipient -Filter "EmailAddresses -eq 'smtp:THE-ADDRESS'"</code>, then remove that
+      proxy address or pick another.
+    </p>
+  </div>
+<% end %>
+
+<%= render CollapsibleSectionComponent.new(title: "🗂️ Scoping the app to a SharePoint site", html_class: "mb-3") do %>
+  <div class="text-sm text-gray-700 dark:text-gray-300">
+    <p>
+      The app uses <code>Sites.Selected</code> (least-privilege), so it only reaches SharePoint sites you
+      explicitly grant it — the Bedlam Fringe and Business Manager sites. When you point a cost centre's
+      SharePoint folders at a <strong>new</strong> site, grant the app write access via Microsoft Graph
+      (easiest in <a class="underline" href="https://developer.microsoft.com/graph/graph-explorer">Graph Explorer</a>, signed in as an admin):
+    </p>
+    <pre class="<%= code_class %>"><code># 1. Get the site id:
+GET https://graph.microsoft.com/v1.0/sites/TENANT.sharepoint.com:/sites/SiteName
+#    -&gt;copy "id"  (TENANT.sharepoint.com,&lt;guid&gt;,&lt;guid&gt;)
+
+# 2. Grant THIS app write access to THAT site only:
+POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
+{
+  "roles": ["write"],
+  "grantedToIdentities": [
+    { "application": { "id": "b874d491-4edf-4b76-839d-84e534c7f7c0",
+                       "displayName": "BlackLightning Reimbursements Mailbox" } }
+  ]
+}</code></pre>
+    <p class="mt-2">
+      Review/revoke later with <code>GET</code> / <code>DELETE /sites/SITE-ID/permissions</code>. Without this
+      grant, uploads for that site 403. Do <strong>not</strong> add tenant-wide <code>Sites.ReadWrite.All</code>.
+    </p>
+  </div>
+<% end %>
+
+<%= render CollapsibleSectionComponent.new(title: "✉️ Where operator & producer emails send from", html_class: "mb-3") do %>
+  <div class="text-sm text-gray-700 dark:text-gray-300">
+    <p>
+      Rejection / "you've been paid" / batch producer-notification / nightly operator emails currently go via
+      BlackLightning's ActionMailer (MailerSend) and send from
+      <code>website-noreply@notify.bedlamtheatre.co.uk</code> — <strong>not</strong> a Bedlam Fringe address.
+      To send them as <code>@bedlamfringe.co.uk</code>:
+    </p>
+    <ul class="mt-2 list-disc pl-5">
+      <li><strong>Recommended:</strong> switch these mailers to Graph send from the cost centre's send mailbox
+        (the Build Batch infra already does this) — genuinely sends as the mailbox, lands in Sent Items, no DNS
+        work. (A code change — ask the dev team.)</li>
+      <li><strong>Or:</strong> verify <code>bedlamfringe.co.uk</code> as a sending domain in MailerSend (add its
+        SPF/DKIM DNS records) and set the mailers' from-address.</li>
+    </ul>
+    <p class="mt-2">The EUSA batch email is unaffected — it's a Graph draft in the send mailbox, so it already
+      goes out from <code>@bedlamfringe.co.uk</code> once finance sends it.</p>
+  </div>
+<% end %>
+
+<%= render CollapsibleSectionComponent.new(title: "🔐 Entra app Graph permissions", html_class: "mb-3") do %>
+  <div class="text-sm text-gray-700 dark:text-gray-300">
+    <p>On the <code>BlackLightning Reimbursements Mailbox</code> app, add these Application permissions and grant admin consent:</p>
+    <ul class="mt-2 list-disc pl-5">
+      <li><code>Mail.ReadWrite</code> + <code>Mail.Send</code> — poll / draft / send from the shared mailboxes.</li>
+      <li><code>Sites.Selected</code> — SharePoint, granted per-site as above (not tenant-wide).</li>
+    </ul>
+  </div>
+<% end %>

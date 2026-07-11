@@ -62,6 +62,7 @@ module NavigationHelper
     children << { title: "Build Batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" } if can? :manage, :reimbursements_finance
     children << { title: "History", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" } if can? :manage, :reimbursements_finance
     children << { title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced" } if can? :manage, :reimbursements_finance
+    children << { title: "Setup guide", path: admin_reimbursements_help_path, fa_icon: "fa-circle-question" } if can? :manage, :reimbursements_finance
     children << { title: "Settings", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 

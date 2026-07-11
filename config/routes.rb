@@ -101,6 +101,9 @@ ChaosRails::Application.routes.draw do
 
       # Per-cost-centre operational settings (Phase F): picker -> edit/update.
       resources :settings, only: %i[index edit update], param: :key
+
+      # In-app setup & scaling runbook (Azure/mailbox/SharePoint manual steps).
+      get "help", to: "help#show", as: :help
     end
 
     # Mount MissionControl Jobs
