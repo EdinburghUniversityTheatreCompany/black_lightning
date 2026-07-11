@@ -58,6 +58,11 @@ module Admin
         @expense = find_expense!
         @title = "Edit ##{@expense.auto_number}"
         @budgets = store.active_budgets
+        # Reasons the expense needs attention (over-budget needs the full budget
+        # set, keyed by record id; modulus_checker is a helper_method).
+        @budget_by_id = store.budgets.index_by(&:record_id)
+        @attention_reasons =
+          ::Reimbursements::ReviewSupport.needs_attention_reasons(@expense, @budget_by_id, modulus_checker)
       end
 
       def update

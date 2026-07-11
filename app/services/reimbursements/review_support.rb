@@ -16,23 +16,47 @@ module Reimbursements
       budget_name.to_s.gsub(BACS_SAFE_PATTERN, "")[0, BACS_MAX_LEN].to_s.strip
     end
 
-    # True if an expense has issues to resolve before approving: missing/zero
-    # ex-VAT amount, no linked budget, no receipts, no effective bank details, an
-    # INVALID modulus result (OUTSIDE_SPEC is acceptable), or would exceed its
-    # budget's remaining. +budget_by_id+ maps record_id => Budget (for the
-    # over-budget check); +modulus_checker+ responds to #check(sort, account).
+    # True if an expense has issues to resolve before approving. Thin wrapper over
+    # +needs_attention_reasons+ so the flag and its explanation never drift apart.
     def needs_attention(expense, budget_by_id, modulus_checker)
-      return true if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
-      return true if expense.budget.nil? || expense.budget.record_id.blank?
-      return true if expense.receipts.empty?
-      return true unless expense.effective_has_bank_details?
+      needs_attention_reasons(expense, budget_by_id, modulus_checker).any?
+    end
 
-      modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
-      return true if modulus == ModulusCheck::INVALID
+    # Human labels for each check an expense fails before it's ready to approve,
+    # in a stable order: missing/zero ex-VAT amount, no linked budget, no receipt
+    # (a SharePoint-offloaded receipt counts as present — same logic as
+    # +Expense#missing_completion_fields+), no effective bank details, an INVALID
+    # modulus result (OUTSIDE_SPEC is acceptable; skipped entirely when there are
+    # no bank details to check), or over the budget's remaining. An empty array
+    # means the expense is clean. +budget_by_id+ maps record_id => Budget (for the
+    # over-budget check); +modulus_checker+ responds to #check(sort, account).
+    def needs_attention_reasons(expense, budget_by_id, modulus_checker)
+      reasons = []
+      reasons << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+      reasons << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
+      reasons << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
+
+      if expense.effective_has_bank_details?
+        modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
+        reasons << "failed the bank modulus check" if modulus == ModulusCheck::INVALID
+      else
+        reasons << "no bank details"
+      end
+
+      reasons << "over budget" if over_budget?(expense, budget_by_id)
+      reasons
+    end
+
+    # Would this expense's ex-VAT amount exceed the loaded budget's remaining?
+    # Guards each optional value so it composes with the other (independent)
+    # checks in +needs_attention_reasons+ without blowing up on a nil.
+    def over_budget?(expense, budget_by_id)
+      return false if expense.amount_excl_vat.nil? || expense.budget&.record_id.blank?
 
       budget = budget_by_id[expense.budget.record_id]
       !budget.nil? && !budget.remaining.nil? && expense.amount_excl_vat > budget.remaining
     end
+    private_class_method :over_budget?
 
     # Map each expense's record_id to other expenses that look like duplicates:
     # same linked person, same gross amount, submitted within +window_days+.
