@@ -33,4 +33,17 @@ module ReimbursementsHelper
     payee = EffectivePayee.new(expense.effective_sort_code, expense.effective_account_number)
     reimbursements_modulus_badge(payee, checker: checker)
   end
+
+  # A GBP amount for the Budgets screens, or an em dash when not loaded (nil).
+  def budget_money(amount)
+    return "—" if amount.nil?
+
+    number_to_currency(amount, unit: "£")
+  end
+
+  # Comma-joined owner names for a budget, resolving its owner_ids against a
+  # {record_id => Person} lookup. Unknown ids are skipped.
+  def budget_owner_names(budget, people_by_id)
+    budget.owner_ids.filter_map { |id| people_by_id[id]&.name.presence }.join(", ")
+  end
 end

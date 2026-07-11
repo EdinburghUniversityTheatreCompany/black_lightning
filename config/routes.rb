@@ -80,6 +80,12 @@ ChaosRails::Application.routes.draw do
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index update]
 
+      # Finance-team budget management: financials overview + edit + a forecast
+      # (projected-spend) log appended per budget.
+      resources :budgets, only: %i[index edit update] do
+        member { post :forecast }
+      end
+
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
       patch  "review/:id/save",    to: "review#save",    as: :save_review
