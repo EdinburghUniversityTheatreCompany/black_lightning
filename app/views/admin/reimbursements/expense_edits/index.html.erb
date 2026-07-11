@@ -77,11 +77,13 @@
               <td class="py-1 pr-3 whitespace-nowrap"><%= expense.submitted_at&.strftime("%d/%m/%Y") || "—" %></td>
               <td class="py-1 pr-3">
                 <div class="flex flex-wrap gap-1">
-                  <% if ::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) %>
-                    <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention") %>
+                  <% reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>
+                  <% if reasons.any? %>
+                    <%= content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
+                                    class: "cursor-help", title: "Needs attention: #{reasons.to_sentence}") %>
                   <% end %>
                   <% if expense.ai_check_status.present? %>
-                    <%= render BadgeComponent.new(type: :info, pill: true).with_content("AI: #{expense.ai_check_status}") %>
+                    <%= reimbursements_ai_badge(expense) %>
                   <% end %>
                 </div>
               </td>

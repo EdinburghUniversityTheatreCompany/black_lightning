@@ -97,6 +97,14 @@ module Reimbursements
       missing_completion_fields.any?
     end
 
+    # How many receipts this expense has, honouring offloaded receipts: the
+    # attached files if any, otherwise the count of SharePoint URLs stored when
+    # the files were offloaded during batch processing (same present-or-offloaded
+    # logic as +missing_completion_fields+).
+    def receipt_count
+      receipts.any? ? receipts.size : sharepoint_receipt_urls.size
+    end
+
     def payee_override?
       payee_name_override.present? || sort_code_override.present? ||
         account_number_override.present?

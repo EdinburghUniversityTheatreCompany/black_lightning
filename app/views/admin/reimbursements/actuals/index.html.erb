@@ -47,7 +47,10 @@
               <td class="py-1 pr-3 text-right"><%= number_to_currency(actual.credit, unit: "£") if actual.credit&.positive? %></td>
               <td class="py-1">
                 <% if actual.linked_expense_ids.any? %>
-                  <%= render BadgeComponent.new(type: :primary, pill: true).with_content("Expense") %>
+                  <%= link_to edit_admin_reimbursements_expense_edit_path(actual.linked_expense_ids.first),
+                              class: "no-underline" do %>
+                    <%= render BadgeComponent.new(type: :primary, pill: true).with_content("Expense") %>
+                  <% end %>
                 <% elsif actual.linked_budget_ids.any? %>
                   <%= render BadgeComponent.new(type: :info, pill: true).with_content("Budget") %>
                 <% else %>

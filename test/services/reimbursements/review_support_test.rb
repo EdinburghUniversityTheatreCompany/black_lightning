@@ -148,6 +148,78 @@ module Reimbursements
       assert_equal [ [ "12-34-56", "00000000" ] ], checker.calls
     end
 
+    # --- needs_attention_reasons ------------------------------------------
+
+    test "a clean expense has no attention reasons" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
+      assert_empty ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker)
+    end
+
+    test "reasons name a missing ex-VAT amount" do
+      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: nil, receipts: [ receipt ])
+      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker), "no ex-VAT amount"
+    end
+
+    test "reasons name a missing budget" do
+      exp = expense(payee: valid_payee, budget: nil, receipts: [ receipt ])
+      assert_includes ReviewSupport.needs_attention_reasons(exp, {}, valid_checker), "no budget"
+    end
+
+    test "reasons name a missing receipt" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [])
+      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker), "no receipt"
+    end
+
+    test "an offloaded SharePoint receipt is not flagged as missing" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [],
+        sharepoint_receipt_urls: [ "https://sp/receipt.pdf" ])
+      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker)
+      assert_not_includes reasons, "no receipt"
+      assert_empty reasons
+    end
+
+    test "reasons name missing bank details and skip the modulus check" do
+      exp = expense(payee: payee_without_bank, budget: budget, receipts: [ receipt ])
+      checker = valid_checker
+      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, checker)
+      assert_includes reasons, "no bank details"
+      assert_not_includes reasons, "failed the bank modulus check"
+      assert_empty checker.calls
+    end
+
+    test "reasons name a failed modulus check" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
+      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::INVALID))
+      assert_includes reasons, "failed the bank modulus check"
+    end
+
+    test "an outside-spec modulus is not named a failure" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
+      reasons = ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, FakeChecker.new(ModulusCheck::OUTSIDE_SPEC))
+      assert_not_includes reasons, "failed the bank modulus check"
+    end
+
+    test "reasons name an over-budget expense" do
+      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("600.00"), receipts: [ receipt ])
+      assert_includes ReviewSupport.needs_attention_reasons(exp, { "recBudget1" => budget }, valid_checker), "over budget"
+    end
+
+    test "reasons collect every failing check at once" do
+      exp = expense(payee: payee_without_bank, budget: nil, amount_excl_vat: nil, receipts: [])
+      reasons = ReviewSupport.needs_attention_reasons(exp, {}, valid_checker)
+      assert_includes reasons, "no ex-VAT amount"
+      assert_includes reasons, "no budget"
+      assert_includes reasons, "no receipt"
+      assert_includes reasons, "no bank details"
+    end
+
+    test "needs_attention is true exactly when there are reasons" do
+      clean = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
+      assert_not ReviewSupport.needs_attention(clean, { "recBudget1" => budget }, valid_checker)
+      dirty = expense(payee: valid_payee, budget: budget, receipts: [])
+      assert ReviewSupport.needs_attention(dirty, { "recBudget1" => budget }, valid_checker)
+    end
+
     # --- auto_payment_reference -------------------------------------------
 
     test "normal budget name returned as-is" do

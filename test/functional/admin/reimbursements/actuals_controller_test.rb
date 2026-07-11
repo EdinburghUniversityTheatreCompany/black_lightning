@@ -87,6 +87,14 @@ module Admin
       assert_includes response.body, "Unlinked"
     end
 
+    test "links an expense-linked actual to its finance edit page" do
+      sign_in @user
+      get :index
+
+      assert_response :success
+      assert_includes response.body, edit_admin_reimbursements_expense_edit_path("recExp1")
+    end
+
     test "filters by period" do
       sign_in @user
       get :index, params: { period: "04" }

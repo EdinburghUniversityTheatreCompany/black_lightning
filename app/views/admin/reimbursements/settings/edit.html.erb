@@ -17,15 +17,33 @@
       </div>
     </div>
 
+    <% app_id = "b874d491-4edf-4b76-839d-84e534c7f7c0" %>
+    <% grant_mailboxes = [ @cost_centre.receive_mailbox, @cost_centre.send_mailbox ].map(&:presence).compact.uniq %>
+    <% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
     <%= render CollapsibleSectionComponent.new(
-          title: "⚠️ Adding a new mailbox or SharePoint site needs an Azure change too",
+          title: "⚠️ Microsoft access for this cost centre",
           variant: :warning, html_class: "my-1") do %>
-      <p class="text-sm text-gray-700">
-        A mailbox only works once it's added to the <code>Reimbursements App Access</code> group in Exchange
-        Online, and a new SharePoint site needs a <code>Sites.Selected</code> write grant, or Graph
-        returns 403 and email-in / drafting / uploads silently fail. See the
-        <%= link_to "setup and scaling guide", admin_reimbursements_help_path, class: "underline" %> for the exact commands.
-      </p>
+      <div class="text-sm text-gray-700">
+        <p>
+          Setting a mailbox above is <strong>not enough</strong>: the Graph app can only touch mailboxes inside
+          the <code>Reimbursements App Access</code> group in Exchange Online. Until you run the commands below,
+          every Graph call for
+          <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "this mailbox" : "these mailboxes" %>
+          (poll / draft / send) fails with <strong>403 AccessDenied</strong> and this cost centre's email-in and
+          batch drafting silently break. Run these in Exchange Online PowerShell
+          (<code>Connect-ExchangeOnline</code> first); policy propagation can take ~30-60 min:
+        </p>
+        <% grant_mailboxes.each do |mailbox| %>
+          <pre class="<%= code_class %>"><code>Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member <%= mailbox %>
+Test-ApplicationAccessPolicy -Identity <%= mailbox %> -AppId <%= app_id %></code></pre>
+        <% end %>
+        <p class="mt-3">
+          <strong>SharePoint:</strong> a new SharePoint site also needs a one-off <code>Sites.Selected</code>
+          write grant (we don't store the site hostname here, so it can't be pre-filled). See the
+          <%= link_to "setup and scaling guide", admin_reimbursements_help_path, class: "underline" %>
+          for the per-site grant plus the full Graph-permissions and email-from reference.
+        </p>
+      </div>
     <% end %>
 
     <div class="flex flex-wrap gap-4">
