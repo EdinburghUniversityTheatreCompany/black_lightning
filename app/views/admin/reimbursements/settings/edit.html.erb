@@ -72,30 +72,32 @@ Test-ApplicationAccessPolicy -Identity <%= mailbox %> -AppId <%= app_id %></code
           <p>
             The app uses least-privilege <code>Sites.Selected</code>: it reaches only the sites you grant it.
             After setting the <strong>SharePoint site URL</strong> above, grant this app <code>write</code> on
-            that site (once per site). These are <strong>Microsoft Graph</strong> calls, not Exchange cmdlets, so
-            run them in <strong>Graph PowerShell</strong>, signed in as a SharePoint admin:
+            that site (once per site). The easiest way is <strong>Graph Explorer</strong>
+            (<a class="underline" href="https://aka.ms/ge">aka.ms/ge</a>, a web tool), signed in as a SharePoint
+            admin. These are Microsoft Graph calls, <strong>not PowerShell</strong>:
           </p>
           <% site_path = @cost_centre.sharepoint_graph_site_path %>
-          <pre class="<%= code_class %>"><code># Needs the Microsoft.Graph module: Install-Module Microsoft.Graph
-Connect-MgGraph -Scopes "Sites.FullControl.All"
+          <pre class="<%= code_class %>"><code># 1. Get the site id:
+GET https://graph.microsoft.com/v1.0/sites/<%= site_path || "TENANT.sharepoint.com:/sites/SiteName" %>
+#    -&gt; copy "id" from the response
 
-# Look up the site, then grant THIS app write on THAT site only:
-$site = Invoke-MgGraphRequest -Method GET `
-  -Uri "https://graph.microsoft.com/v1.0/sites/<%= site_path || "TENANT.sharepoint.com:/sites/SiteName" %>"
-Invoke-MgGraphRequest -Method POST `
-  -Uri "https://graph.microsoft.com/v1.0/sites/$($site.id)/permissions" `
-  -Body @{
-    roles = @("write")
-    grantedToIdentities = @(
-      @{ application = @{ id = "<%= app_id %>"; displayName = "BlackLightning Reimbursements Mailbox" } }
-    )
-  }</code></pre>
+# 2. Grant THIS app write on THAT site only:
+POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
+{
+  "roles": ["write"],
+  "grantedToIdentities": [
+    { "application": { "id": "<%= app_id %>",
+                       "displayName": "BlackLightning Reimbursements Mailbox" } }
+  ]
+}</code></pre>
           <p class="text-xs text-gray-500">
-            List or revoke later against the same <code>/sites/&lt;id&gt;/permissions</code> endpoint (or use
-            <a class="underline" href="https://developer.microsoft.com/graph/graph-explorer">Graph Explorer</a>
-            for the raw calls). Without the grant, uploads and the folder picker for this site fail with
-            <strong>403</strong>. Don't fall back to tenant-wide <code>Sites.ReadWrite.All</code> /
-            <code>Files.ReadWrite.All</code>.
+            Prefer PowerShell? Run the same with <code>Connect-MgGraph -Scopes "Sites.FullControl.All"</code>
+            then <code>Invoke-MgGraphRequest</code>, but in a <strong>fresh window</strong>: the Exchange Online
+            module from the mailbox step clashes with Microsoft.Graph in one session (the
+            <code>Method not found: WithLogging</code> error). List or revoke later against the same
+            <code>/sites/&lt;id&gt;/permissions</code> endpoint. Without the grant, uploads and the folder picker
+            for this site fail with <strong>403</strong>. Don't fall back to tenant-wide
+            <code>Sites.ReadWrite.All</code> / <code>Files.ReadWrite.All</code>.
           </p>
         </div>
 
