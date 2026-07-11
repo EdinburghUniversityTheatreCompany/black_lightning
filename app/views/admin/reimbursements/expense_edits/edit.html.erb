@@ -14,9 +14,24 @@
     </span>
     <span>Amount: <strong>&pound;<%= number_with_precision(@expense.amount || 0, precision: 2) %></strong></span>
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(@expense, checker: modulus_checker) %></span>
-    <span>Receipts: <%= @expense.receipts.size %></span>
+    <span>Receipts: <%= @expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(@expense.status), pill: true).with_content(@expense.status) %>
+    <% if @expense.ai_check_status.present? %>
+      <%= reimbursements_ai_badge(@expense) %>
+    <% end %>
   </div>
+
+  <%# --- Why this needs attention --- %>
+  <% if @attention_reasons.any? %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
+      <p class="font-medium">This expense needs attention before it's ready to pay:</p>
+      <ul class="mt-1 list-disc pl-5">
+        <% @attention_reasons.each do |reason| %>
+          <li><%= reason %></li>
+        <% end %>
+      </ul>
+    <% end %></div>
+  <% end %>
 
   <%# --- Already-processed note (Submitted / Paid) --- %>
   <% if @expense.status == Reimbursements::Status::SUBMITTED %>

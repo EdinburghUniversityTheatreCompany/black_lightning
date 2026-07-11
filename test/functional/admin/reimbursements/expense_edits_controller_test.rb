@@ -13,6 +13,19 @@ module Admin
 
       EXP = FIELD_IDS[:expenses]
       EDITABLE_STATUSES = %w[Pending Approved Submitted Paid].freeze
+      MC = ::Reimbursements::ModulusCheck
+
+      # Modulus verdict keyed by account number, so tests don't depend on the
+      # gitignored Pay.UK rule files.
+      class FakeChecker
+        def initialize(by_account = {})
+          @by_account = by_account
+        end
+
+        def check(_sort_code, account_number)
+          @by_account.fetch(account_number, MC::OUTSIDE_SPEC)
+        end
+      end
 
       setup do
         grant_finance_permission(users(:member))
@@ -21,10 +34,14 @@ module Admin
         @person = airtable_person_record(id: "recPer1", name: "Pat Producer", email: "pat@example.com",
                                          sort_code: "08-99-99", account_number: "66374958")
         @budget = airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000")
+
+        @checker = FakeChecker.new("66374958" => MC::VALID)
+        ExpenseEditsController.checker_builder = -> { @checker }
       end
 
       teardown do
         BaseController.store_builder = -> { ::Reimbursements::Store.new }
+        ExpenseEditsController.checker_builder = -> { MC.default_checker }
       end
 
       def expense_at(status, id: "recExp1", **attrs)
@@ -166,6 +183,58 @@ module Admin
         assert_includes response.body, "Stage nails"
         assert_not_includes response.body, "Velvet cloak"
         assert_not_includes response.body, "Fake blood"
+      end
+
+      # --- Needs-attention reasons tooltip + AI badge ----------------------
+
+      test "index flags a needs-attention expense with a reasons tooltip" do
+        rebuild_store(expenses: [ expense_at("Pending", receipts: []) ])
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "cursor-help"
+        assert_includes response.body, "Needs attention: no receipt"
+      end
+
+      test "index does not flag a clean expense" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        get :index
+
+        # The filter checkbox says "Needs attention only"; the row tooltip (with a
+        # colon + reasons) is what must be absent for a clean expense.
+        assert_not_includes response.body, "Needs attention:"
+      end
+
+      test "index shows a colour-coded AI badge for a checked expense" do
+        rebuild_store(expenses: [ expense_at("Pending", overrides: { EXP[:ai_check_status] => "pass" }) ])
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "AI: Pass"
+        assert_includes response.body, "text-success"
+      end
+
+      test "edit lists the reasons an expense needs attention" do
+        rebuild_store(expenses: [ expense_at("Pending", receipts: []) ])
+        sign_in @user
+
+        get :edit, params: { id: "recExp1" }
+
+        assert_match(/needs attention before it's ready to pay/i, response.body)
+        assert_includes response.body, "no receipt"
+      end
+
+      test "edit shows no attention list for a clean expense" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        get :edit, params: { id: "recExp1" }
+
+        assert_no_match(/needs attention before it's ready to pay/i, response.body)
       end
 
       # --- Edit renders at every status ------------------------------------

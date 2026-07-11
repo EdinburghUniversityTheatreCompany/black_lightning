@@ -19,8 +19,16 @@
       <span>Excl. VAT: <strong>&pound;<%= number_with_precision(expense.amount_excl_vat, precision: 2) %></strong></span>
     <% end %>
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
-    <span>Receipts: <%= expense.receipts.size %></span>
+    <span>Receipts: <%= expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
+    <% if expense.ai_check_status.present? %>
+      <%= reimbursements_ai_badge(expense) %>
+    <% end %>
+    <% attention_reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>
+    <% if attention_reasons.any? %>
+      <%= content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
+                      class: "cursor-help", title: "Needs attention: #{attention_reasons.to_sentence}") %>
+    <% end %>
   </div>
 
   <%# --- AI verdict --- %>
