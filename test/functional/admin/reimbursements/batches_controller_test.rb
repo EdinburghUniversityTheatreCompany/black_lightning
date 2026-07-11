@@ -24,6 +24,13 @@ module Admin
 
       teardown do
         Admin::Reimbursements::BaseController.store_builder = -> { ::Reimbursements::Store.new }
+        Admin::Reimbursements::BatchesController.graph_builder = -> { ::Reimbursements::GraphClient.new }
+      end
+
+      def use_graph
+        @graph = FakeGraphClient.new
+        Admin::Reimbursements::BatchesController.graph_builder = -> { @graph }
+        @graph
       end
 
       def use_store(expenses: [], people: [], budgets: [], batches: [])
@@ -128,6 +135,37 @@ module Admin
         assert_redirected_to admin_reimbursements_batches_path
         assert(@client.updated.any? { |_, _, fields| fields[EXP_FIDS[:status]] == "Approved" })
         assert_equal [ [ :batches, "recBat1" ] ], @client.deleted
+      end
+
+      test "reopen deletes the stale EUSA draft via Graph using the send mailbox and stored id" do
+        use_store(batches: [ airtable_batch_record(draft_message_id: "AAMkdraft==") ],
+                  expenses: [ linked_expense(status: "Submitted") ])
+        graph = use_graph
+        sign_in @user
+
+        post :reopen, params: { id: "recBat1" }
+
+        assert_redirected_to admin_reimbursements_batches_path
+        deleted = graph.deleted_messages.sole
+        assert_equal "AAMkdraft==", deleted[:message_id]
+        assert_equal ::Reimbursements::CostCentre.default.send_mailbox, deleted[:mailbox]
+        assert_match(/draft.*deleted/i, flash[:notice])
+      end
+
+      test "reopen still succeeds when deleting the stale draft fails" do
+        use_store(batches: [ airtable_batch_record(draft_message_id: "AAMkdraft==") ],
+                  expenses: [ linked_expense(status: "Submitted") ])
+        graph = use_graph
+        graph.fail_delete_message = true
+        sign_in @user
+
+        post :reopen, params: { id: "recBat1" }
+
+        # The revert + batch delete still happen; only a fallback warning is added.
+        assert_redirected_to admin_reimbursements_batches_path
+        assert(@client.updated.any? { |_, _, fields| fields[EXP_FIDS[:status]] == "Approved" })
+        assert_equal [ [ :batches, "recBat1" ] ], @client.deleted
+        assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
       end
 
       test "reopen is blocked when any linked expense is already Paid" do

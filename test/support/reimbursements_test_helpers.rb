@@ -34,6 +34,7 @@ module ReimbursementsTestHelpers
     batches: {
       name: "fldBatName", date_sent: "fldBatDate", bacs_request_file: "fldBatFile",
       sharepoint_backup_url: "fldBatSpUrl", eusa_draft_created: "fldBatDraft",
+      draft_message_id: "fldBatchDraftMsgId",
       producer_notifications_sent: "fldBatNotif", notes: "fldBatNotes"
     },
     eusa_actuals: {
@@ -150,6 +151,7 @@ module ReimbursementsTestHelpers
       f[:date_sent] => attrs.fetch(:date_sent, "2026-05-13"),
       f[:sharepoint_backup_url] => attrs.fetch(:sharepoint_backup_url, nil),
       f[:eusa_draft_created] => attrs.fetch(:eusa_draft_created, nil),
+      f[:draft_message_id] => attrs.fetch(:draft_message_id, nil),
       f[:producer_notifications_sent] => attrs.fetch(:producer_notifications_sent, nil),
       f[:notes] => attrs.fetch(:notes, nil)
     }.compact
@@ -299,8 +301,8 @@ module ReimbursementsTestHelpers
   # drafts, sent mail, uploads and downloads, with toggles to make the draft,
   # a send, or uploads fail.
   class FakeGraphClient
-    attr_reader :uploaded, :drafts, :downloads, :send_mails
-    attr_accessor :fail_draft, :fail_uploads, :fail_send
+    attr_reader :uploaded, :drafts, :downloads, :send_mails, :deleted_messages
+    attr_accessor :fail_draft, :fail_uploads, :fail_send, :fail_delete_message
     # Recipients (email strings) whose send should raise, standing in for a
     # Graph outage that hits some payees but not others.
     attr_accessor :fail_send_to
@@ -310,6 +312,7 @@ module ReimbursementsTestHelpers
       @drafts = []
       @downloads = []
       @send_mails = []
+      @deleted_messages = []
       @fail_send_to = []
     end
 
@@ -330,7 +333,15 @@ module ReimbursementsTestHelpers
 
       @drafts << { mailbox: mailbox, to: to, subject: subject, html: html,
                    attachments: attachments.map(&:filename) }
-      "https://outlook.example/draft-1"
+      Reimbursements::GraphClient::Draft.new(id: "msg-#{@drafts.size}",
+                                             web_link: "https://outlook.example/draft-1")
+    end
+
+    def delete_message(mailbox:, message_id:)
+      raise Reimbursements::GraphAuth::Error, "delete failed" if fail_delete_message
+
+      @deleted_messages << { mailbox: mailbox, message_id: message_id }
+      nil
     end
 
     def send_mail(mailbox:, to:, subject:, html:)

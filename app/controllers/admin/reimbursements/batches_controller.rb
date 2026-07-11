@@ -21,6 +21,10 @@ module Admin
     class BatchesController < FinanceController
       before_action :require_cost_centre, only: %i[new create]
 
+      # Injection seam for tests (this suite has no mocking library): the Graph
+      # client used to delete a reopened batch's stale EUSA draft.
+      class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
+
       def index
         @title = "Batch history"
         @batches = store.batches.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse
@@ -72,13 +76,36 @@ module Admin
 
         linked.each { |expense| store.revert_expense_to_approved!(expense.record_id) }
         store.delete_batch!(batch.record_id)
-        redirect_to admin_reimbursements_batches_path,
-                    notice: "Reverted #{linked.size} #{'expense'.pluralize(linked.size)} to Approved and " \
-                            "removed the batch. The old EUSA draft in Outlook is now outdated — delete it " \
-                            "manually before sending the rebuilt one."
+
+        reverted = "Reverted #{linked.size} #{'expense'.pluralize(linked.size)} to Approved and removed the batch."
+        redirect_to admin_reimbursements_batches_path, **draft_cleanup_flash(batch, reverted)
       end
 
       private
+
+      # Delete the stale EUSA draft this batch created, then build the reopen
+      # flash. The revert + batch delete have already happened and must stand, so
+      # a Graph failure is rescued (best-effort): the reopen still succeeds, with
+      # a warning telling the operator to delete the draft by hand. Falls back to
+      # the same manual warning when the batch has no stored draft id.
+      def draft_cleanup_flash(batch, reverted)
+        if batch.draft_message_id.present?
+          begin
+            graph_builder.call.delete_message(mailbox: draft_mailbox, message_id: batch.draft_message_id)
+            return { notice: "#{reverted} The old EUSA draft in Outlook has been deleted." }
+          rescue StandardError => e
+            Rails.logger.error("Reopen: failed to delete EUSA draft #{batch.draft_message_id} — #{e.message}")
+            Honeybadger.notify(e, context: { source: "reimbursements_reopen_draft_delete", batch: batch.record_id })
+          end
+        end
+
+        { notice: reverted,
+          alert: "Delete the old EUSA draft in Outlook manually before sending the rebuilt one." }
+      end
+
+      def draft_mailbox
+        ::Reimbursements::CostCentre.default&.send_mailbox
+      end
 
       def require_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.default

@@ -38,15 +38,20 @@ module Reimbursements
     Drive = Struct.new(:id, :name, keyword_init: true)
     Item = Struct.new(:id, :name, :folder, :web_url, keyword_init: true)
 
+    # A created draft: its message +id+ (stored on the Batch so a reopen can
+    # delete the stale draft) and its +web_link+ (opened in Outlook to review + send).
+    Draft = Struct.new(:id, :web_link, keyword_init: true)
+
     def initialize(settings: Settings, http: nil, clock: nil)
       @settings = settings
       @http = http || HttpTransport
       @clock = clock || -> { Time.current }
     end
 
-    # Create a draft in the shared mailbox and return its webLink (open in
-    # Outlook on the web to review, then send manually). Small attachments are
-    # inlined; large ones stream via an upload session after the draft exists.
+    # Create a draft in the shared mailbox and return a Draft (its message id +
+    # webLink — open in Outlook on the web to review, then send manually). Small
+    # attachments are inlined; large ones stream via an upload session after the
+    # draft exists.
     def create_draft(mailbox:, to:, subject:, html:, attachments: [], cc: [])
       inline, large = Array(attachments).partition { |a| a.content.to_s.bytesize < INLINE_ATTACHMENT_LIMIT }
 
@@ -61,7 +66,14 @@ module Reimbursements
       draft = graph_request(:post, "/users/#{mailbox}/messages", body: payload)
       message_id = draft.fetch("id")
       large.each { |a| upload_large_attachment(mailbox, message_id, a) }
-      draft["webLink"].to_s
+      Draft.new(id: message_id, web_link: draft["webLink"].to_s)
+    end
+
+    # Delete a message from a mailbox — used to clean up the stale EUSA draft
+    # when a batch is reopened for rebuild. Graph replies 204 (no body).
+    def delete_message(mailbox:, message_id:)
+      graph_request(:delete, "/users/#{mailbox}/messages/#{message_id}")
+      nil
     end
 
     # Send an email immediately from the mailbox (Notifier uses this for the

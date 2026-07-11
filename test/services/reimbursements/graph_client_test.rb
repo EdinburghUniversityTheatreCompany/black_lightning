@@ -23,18 +23,19 @@ module Reimbursements
       GraphClient::Attachment.new(filename: name, content: bytes, content_type: "application/pdf")
     end
 
-    test "create_draft inlines small attachments and returns the webLink" do
+    test "create_draft inlines small attachments and returns the draft id + webLink" do
       client, http = build_client([
         token_response,
         [ 201, { id: "msg-1", webLink: "https://outlook.example/msg-1" }.to_json ]
       ])
 
-      link = client.create_draft(mailbox: "send@bedlamfringe.co.uk",
-                                 to: [ "  finance@eusa.ed.ac.uk ", "" ],
-                                 subject: "BACS", html: "<p>hi</p>",
-                                 attachments: [ attachment("PDFBYTES", name: "bacs.xlsx") ])
+      draft = client.create_draft(mailbox: "send@bedlamfringe.co.uk",
+                                  to: [ "  finance@eusa.ed.ac.uk ", "" ],
+                                  subject: "BACS", html: "<p>hi</p>",
+                                  attachments: [ attachment("PDFBYTES", name: "bacs.xlsx") ])
 
-      assert_equal "https://outlook.example/msg-1", link
+      assert_equal "msg-1", draft.id
+      assert_equal "https://outlook.example/msg-1", draft.web_link
       post = http.requests.last
       assert_includes post.uri, "/users/send@bedlamfringe.co.uk/messages"
       body = JSON.parse(post.body)
@@ -61,6 +62,16 @@ module Reimbursements
       assert_equal "put", chunk.method.to_s
       assert_includes chunk.uri, "upload.example/session"
       assert_nil chunk.headers["Authorization"], "chunk PUT uses the pre-authenticated session url"
+    end
+
+    test "delete_message issues a DELETE to the mailbox message" do
+      client, http = build_client([ token_response, [ 204, "" ] ])
+
+      client.delete_message(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
+
+      del = http.requests.last
+      assert_equal "delete", del.method.to_s
+      assert_includes del.uri, "/users/send@bedlamfringe.co.uk/messages/msg-1"
     end
 
     test "send_mail posts sendMail with saveToSentItems" do
