@@ -141,6 +141,21 @@ module Reimbursements
       assert_equal 1, client.created.count { |table, _| table == :batches }
     end
 
+    test "a payee whose notification send fails is not stamped producer_notified" do
+      processor, store, client, graph = build_scenario
+      graph.fail_send_to = [ "alice@example.com" ] # Bob's send still succeeds
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert(result.errors.any? { |e| e.include?("Producer notification failed for alice@example.com") })
+      # Only Bob was emailed and only Bob is stamped notified — Alice, whose send
+      # failed, stays un-notified so a rebuild re-notifies her.
+      assert_equal [ "bob@example.com" ], graph.send_mails.map { |m| m[:to] }.flatten
+      notified_ids = client.updated.select { |_, _, f| f[FIELD_IDS[:expenses][:producer_notified]] }.map { |_, id, _| id }
+      assert_equal [ "recExpB" ], notified_ids
+    end
+
     test "custom EUSA subject and body override the composed default" do
       processor, store, _client, graph = build_scenario
 

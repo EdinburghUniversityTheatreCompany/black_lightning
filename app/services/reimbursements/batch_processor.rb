@@ -186,17 +186,21 @@ module Reimbursements
     # Producer notifications go via Graph (Notifier#producer_notification), one
     # per payee, keyed off the LINKED person's email (not the effective override
     # — that only steers the money). Anyone already notified for this batch is
-    # skipped. A send failure is collected into result.errors, never raised.
+    # skipped. A send failure is collected into result.errors, never raised —
+    # and only the payees whose send actually succeeded are stamped
+    # producer_notified, so a rebuild re-notifies anyone the send missed.
     def notify_producers(result, to_notify, bacs_date)
       grouped = to_notify.group_by { |expense| expense.person&.email.to_s.strip }
                          .reject { |email, _| email.blank? }
 
-      grouped.each do |email, items|
-        deliver_producer_email(result, email, items, bacs_date)
+      sent_emails = grouped.filter_map do |email, items|
+        email if deliver_producer_email(result, email, items, bacs_date)
       end
-      mark_notified(result, to_notify, grouped.keys)
+      mark_notified(result, to_notify, sent_emails)
     end
 
+    # Returns true when the send succeeded (so the caller can stamp the payee),
+    # false when it failed (collected into result.errors, never raised).
     def deliver_producer_email(result, email, items, bacs_date)
       line_items = items.map do |expense|
         { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
@@ -207,8 +211,10 @@ module Reimbursements
         line_items: line_items, bacs_date: bacs_date, total: format("%.2f", total(items))
       )
       result.producer_notifications_sent += 1
+      true
     rescue StandardError => e
       result.errors << "Producer notification failed for #{email}: #{e.message}"
+      false
     end
 
     def mark_notified(result, to_notify, notified_emails)

@@ -270,12 +270,16 @@ module ReimbursementsTestHelpers
   class FakeGraphClient
     attr_reader :uploaded, :drafts, :downloads, :send_mails
     attr_accessor :fail_draft, :fail_uploads, :fail_send
+    # Recipients (email strings) whose send should raise, standing in for a
+    # Graph outage that hits some payees but not others.
+    attr_accessor :fail_send_to
 
     def initialize
       @uploaded = []
       @drafts = []
       @downloads = []
       @send_mails = []
+      @fail_send_to = []
     end
 
     def download(url)
@@ -300,6 +304,9 @@ module ReimbursementsTestHelpers
 
     def send_mail(mailbox:, to:, subject:, html:)
       raise Reimbursements::GraphAuth::Error, "send failed" if fail_send
+      if (Array(to) & Array(fail_send_to)).any?
+        raise Reimbursements::GraphAuth::Error, "send failed for #{to.inspect}"
+      end
 
       @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html }
       nil
