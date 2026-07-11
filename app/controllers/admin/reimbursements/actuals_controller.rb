@@ -15,7 +15,8 @@ module Admin
         actuals = actuals.select { |a| a.period == @period } if @period.present?
         # Newest first: imported rows carry an imported_at; fall back to the
         # transaction date so hand-imported/legacy rows still sort sensibly.
-        @actuals = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
+        sorted = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
+        @actuals = Kaminari.paginate_array(sorted).page(params[:page]).per(50)
       end
     end
   end

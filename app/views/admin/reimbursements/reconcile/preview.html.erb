@@ -41,12 +41,12 @@
               <tr class="border-b border-gray-100">
                 <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
                 <td class="py-1 pr-3 font-mono"><%= row.period %></td>
-                <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
+                <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
-                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.debit, unit: "£") %></td>
+                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) %></td>
                 <td class="py-1 pr-3">#<%= expense.auto_number %></td>
                 <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
-                <td class="py-1 text-right"><%= number_to_currency(expense.amount_excl_vat || expense.amount || 0, unit: "£") %></td>
+                <td class="py-1 text-right"><%= reimbursements_money(expense.amount_excl_vat || expense.amount || 0) %></td>
               </tr>
             <% end %>
           </tbody>
@@ -74,9 +74,9 @@
               <tr class="border-b border-gray-100">
                 <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
                 <td class="py-1 pr-3 font-mono"><%= row.period %></td>
-                <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
+                <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
-                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.credit, unit: "£") %></td>
+                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) %></td>
                 <td class="py-1"><%= budget.name %></td>
               </tr>
             <% end %>
@@ -105,10 +105,10 @@
               <tr class="border-b border-gray-100">
                 <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
                 <td class="py-1 pr-3 font-mono"><%= row.period %></td>
-                <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
+                <td class="py-1 pr-3"><%= reimbursements_date(row.date) %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
-                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.debit, unit: "£") if row.debit.positive? %></td>
-                <td class="py-1 pr-3 text-right"><%= number_to_currency(row.credit, unit: "£") if row.credit.positive? %></td>
+                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.debit) if row.debit.positive? %></td>
+                <td class="py-1 pr-3 text-right"><%= reimbursements_money(row.credit) if row.credit.positive? %></td>
                 <td class="py-1 text-gray-600">
                   <%= if row.debit.positive?
                         "No matching submitted expense"

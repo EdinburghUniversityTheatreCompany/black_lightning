@@ -5,7 +5,7 @@
 <%= render CardComponent.new(title: @batch.name.presence || @batch.record_id) do %>
   <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
     <dt class="font-medium">Date sent</dt>
-    <dd><%= @batch.date_sent&.iso8601 || "—" %></dd>
+    <dd><%= reimbursements_date(@batch.date_sent) %></dd>
     <dt class="font-medium">EUSA draft created</dt>
     <dd><%= @batch.eusa_draft_created ? "yes" : "no" %></dd>
     <dt class="font-medium">Producers notified</dt>
@@ -47,7 +47,7 @@
             <tr class="border-b border-gray-100 align-top">
               <td class="py-1 pr-3"><%= expense.auto_number %></td>
               <td class="py-1 pr-3"><%= expense.effective_payee_name %></td>
-              <td class="py-1 pr-3 text-right">£<%= format("%.2f", expense.amount || 0) %></td>
+              <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
               <td class="py-1 pr-3"><%= expense.budget&.name %></td>
               <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
               <td class="py-1 pr-3">

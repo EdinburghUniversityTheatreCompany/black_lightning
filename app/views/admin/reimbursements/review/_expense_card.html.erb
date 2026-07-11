@@ -12,11 +12,11 @@
       #<%= expense.auto_number %> — <%= expense.person&.name.presence || "(no payee)" %>
       <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
     </span>
-    <span>Amount: <strong>&pound;<%= number_with_precision(expense.amount || 0, precision: 2) %></strong></span>
+    <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong></span>
     <% if expense.amount_excl_vat.nil? %>
       <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Excl. VAT not set") %>
     <% else %>
-      <span>Excl. VAT: <strong>&pound;<%= number_with_precision(expense.amount_excl_vat, precision: 2) %></strong></span>
+      <span>Excl. VAT: <strong><%= reimbursements_money(expense.amount_excl_vat) %></strong></span>
     <% end %>
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= expense.receipt_count %></span>
@@ -52,8 +52,8 @@
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Direct payment to <strong><%= expense.effective_payee_name %></strong>
       (not the submitter <%= expense.person&.name %>), paying
-      <%= expense.effective_sort_code.presence || "—" %> /
-      <%= expense.effective_account_number.presence || "—" %>.
+      <%= expense.effective_sort_code.presence || "-" %> /
+      <%= expense.effective_account_number.presence || "-" %>.
       Confirm these match the invoice before approving.
     <% end %></div>
   <% end %>
@@ -126,7 +126,7 @@
       <%= text_field_tag :nominal_code_override, expense.nominal_code_override, id: "nominal_code_override_#{expense.record_id}",
                          placeholder: "blank = use budget default",
                          class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
-      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= expense.effective_nominal_code.presence || "—" %></p>
+      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= expense.effective_nominal_code.presence || "-" %></p>
     </div>
     <div class="sm:col-span-2">
       <%= submit_tag "Save changes", class: btn_classes(:primary, :sm) %>

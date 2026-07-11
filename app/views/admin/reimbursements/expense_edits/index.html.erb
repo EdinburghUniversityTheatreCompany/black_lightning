@@ -37,64 +37,47 @@
   <% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)}") do %>
-  <% if @expenses.empty? %>
+<p class="mb-2 text-sm text-gray-600"><%= pluralize(@expenses.total_count, "expense") %></p>
+
+<% if @expenses.total_count.zero? %>
+  <%= render CardComponent.new(title: @title) do %>
     <p class="py-4 text-center text-gray-600">No expenses match these filters.</p>
-  <% else %>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="text-left border-b border-gray-200">
-            <th class="py-1 pr-3">#</th><th class="py-1 pr-3">Status</th>
-            <th class="py-1 pr-3">Payee</th><th class="py-1 pr-3">Budget</th>
-            <th class="py-1 pr-3 text-right">Amount</th><th class="py-1 pr-3">Description</th>
-            <th class="py-1 pr-3">Submitted</th><th class="py-1 pr-3">Flags</th>
-            <th class="py-1"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <% @expenses.each do |expense| %>
-            <tr class="border-b border-gray-100">
-              <td class="py-1 pr-3 font-mono">
-                <%= link_to "##{expense.auto_number}", edit_admin_reimbursements_expense_edit_path(expense.record_id),
-                            class: "text-primary underline" %>
-              </td>
-              <td class="py-1 pr-3">
-                <%= render BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
-                                         .with_content(expense.status) %>
-              </td>
-              <td class="py-1 pr-3"><%= expense.effective_payee_name.presence || "—" %></td>
-              <td class="py-1 pr-3"><%= expense.budget&.name.presence || "—" %></td>
-              <td class="py-1 pr-3 text-right whitespace-nowrap">
-                <%= expense.amount ? number_to_currency(expense.amount, unit: "£") : "—" %>
-                <% if expense.amount_excl_vat.present? && expense.amount_excl_vat.positive? %>
-                  <span class="block text-xs text-gray-500">
-                    <%= number_to_currency(expense.amount_excl_vat, unit: "£") %> ex&nbsp;VAT
-                  </span>
-                <% end %>
-              </td>
-              <td class="py-1 pr-3"><%= truncate(expense.description.to_s, length: 60) %></td>
-              <td class="py-1 pr-3 whitespace-nowrap"><%= expense.submitted_at&.strftime("%d/%m/%Y") || "—" %></td>
-              <td class="py-1 pr-3">
-                <div class="flex flex-wrap gap-1">
-                  <% reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>
-                  <% if reasons.any? %>
-                    <%= content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
-                                    class: "cursor-help", title: "Needs attention: #{reasons.to_sentence}") %>
-                  <% end %>
-                  <% if expense.ai_check_status.present? %>
-                    <%= reimbursements_ai_badge(expense) %>
-                  <% end %>
-                </div>
-              </td>
-              <td class="py-1">
-                <%= link_to "Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id),
-                            class: btn_classes(:secondary, :sm) %>
-              </td>
-            </tr>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
   <% end %>
+<% else %>
+  <% headers = [ "#", "Status", "Payee", "Budget", "Amount", "Description", "Submitted", "Flags", "" ] %>
+  <% field_sets = @expenses.map do |expense|
+       number = link_to("##{expense.auto_number}", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                        class: "text-primary underline font-mono")
+       status = render(BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
+                                     .with_content(expense.status))
+       amount = safe_join([
+         content_tag(:span, reimbursements_money(expense.amount), class: "whitespace-nowrap"),
+         (content_tag(:span, "#{reimbursements_money(expense.amount_excl_vat)} ex VAT", class: "block text-xs text-gray-500") \
+            if expense.amount_excl_vat.present? && expense.amount_excl_vat.positive?)
+       ].compact)
+       reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
+       flags = content_tag(:div, class: "flex flex-wrap gap-1") do
+         safe_join([
+           (content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
+                        class: "cursor-help", title: "Needs attention: #{reasons.to_sentence}") if reasons.any?),
+           (reimbursements_ai_badge(expense) if expense.ai_check_status.present?)
+         ].compact, " ")
+       end
+       edit = link_to("Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id), class: btn_classes(:secondary, :sm))
+       {
+         fields: [
+           expense, number, status,
+           expense.effective_payee_name.presence || "-",
+           expense.budget&.name.presence || "-",
+           amount,
+           truncate(expense.description.to_s, length: 60),
+           content_tag(:span, reimbursements_date(expense.submitted_at), class: "whitespace-nowrap"),
+           flags, edit
+         ]
+       }
+     end %>
+  <%= render "shared/pages/index_results",
+        resources: @expenses, resource_class: ::Reimbursements::Expense,
+        headers: headers, field_sets: field_sets,
+        include_edit_button: false, include_link_to_item: false, include_pagination: true %>
 <% end %>
