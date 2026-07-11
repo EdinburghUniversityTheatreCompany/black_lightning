@@ -91,12 +91,15 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
   ]
 }</code></pre>
           <p class="text-xs text-gray-500">
-            Prefer PowerShell? Run the same with <code>Connect-MgGraph -Scopes "Sites.FullControl.All"</code>
-            then <code>Invoke-MgGraphRequest</code>, but in a <strong>fresh window</strong>: the Exchange Online
-            module from the mailbox step clashes with Microsoft.Graph in one session (the
-            <code>Method not found: WithLogging</code> error). List or revoke later against the same
-            <code>/sites/&lt;id&gt;/permissions</code> endpoint. Without the grant, uploads and the folder picker
-            for this site fail with <strong>403</strong>. Don't fall back to tenant-wide
+            The <code>POST</code> needs the <code>Sites.FullControl.All</code> delegated permission for your
+            session (not for the app). If Graph Explorer says permissions are missing, open its
+            <strong>Modify permissions</strong> tab, consent to <code>Sites.FullControl.All</code> as an admin,
+            then re-run. Prefer PowerShell? Run the same with
+            <code>Connect-MgGraph -Scopes "Sites.FullControl.All"</code> then <code>Invoke-MgGraphRequest</code>,
+            but in a <strong>fresh window</strong>: the Exchange Online module from the mailbox step clashes with
+            Microsoft.Graph in one session (the <code>Method not found: WithLogging</code> error). List or revoke
+            later against the same <code>/sites/&lt;id&gt;/permissions</code> endpoint. Without the grant, uploads
+            and the folder picker for this site fail with <strong>403</strong>. Don't fall back to tenant-wide
             <code>Sites.ReadWrite.All</code> / <code>Files.ReadWrite.All</code>.
           </p>
         </div>
