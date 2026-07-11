@@ -8,9 +8,9 @@ module Reimbursements
   # It mirrors EusaEmailComposer's render pattern: each message renders an ERB
   # template to an HTML string via ApplicationController.render (layout: false,
   # so it runs outside a request — from a controller action, BatchProcessor, or
-  # the nightly job) and hands it to +send_mail+. The templates keep the copy
-  # the retired ActionMailer views used; assigns pass the same instance
-  # variables those templates already reference.
+  # the nightly job) and hands it to +send_mail+. The templates (app/views/reimbursements/emails) keep the copy the
+  # retired ActionMailer views used; assigns pass the same instance variables
+  # those templates already reference.
   #
   # +mailbox+ is the sending cost centre's send_mailbox. Callers thread the
   # relevant cost centre's mailbox (CostCentre.default today). The IT/credential
@@ -27,7 +27,7 @@ module Reimbursements
       send_email(
         to: to,
         subject: "Your Bedlam expense ##{auto_number} was not approved",
-        template: "reimbursements/expense_mailer/rejection_email",
+        template: "reimbursements/emails/rejection",
         assigns: { payee_name: payee_name, auto_number: auto_number, amount: amount,
                    budget_name: budget_name, description: description, reason: reason }
       )
@@ -39,7 +39,7 @@ module Reimbursements
       send_email(
         to: to,
         subject: "EUSA has paid your expense#{'s' if count > 1}",
-        template: "reimbursements/payment_mailer/payment_confirmation",
+        template: "reimbursements/emails/payment_confirmation",
         assigns: { person: person, expenses: Array(expenses) }
       )
     end
@@ -50,7 +50,7 @@ module Reimbursements
       send_email(
         to: to,
         subject: "[Bedlam Fringe] #{count} #{'expense'.pluralize(count)} submitted for payment",
-        template: "reimbursements/batch_mailer/producer_notification",
+        template: "reimbursements/emails/producer_notification",
         assigns: { recipient_name: recipient_name, line_items: line_items,
                    bacs_date: bacs_date, total: total }
       )
@@ -63,7 +63,7 @@ module Reimbursements
         to: recipients,
         subject: "[Bedlam BACS] #{count} #{'submission'.pluralize(count)} awaiting approval " \
                  "— #{Date.current.iso8601}",
-        template: "reimbursements/operator_mailer/pending_reminder",
+        template: "reimbursements/emails/pending_reminder",
         assigns: { rows: rows, run_date: run_date, threshold_days: threshold_days }
       )
     end
@@ -75,7 +75,7 @@ module Reimbursements
         to: recipients,
         subject: "[Bedlam BACS] Manual review needed — #{count} #{'issue'.pluralize(count)} " \
                  "— #{Date.current.iso8601}",
-        template: "reimbursements/operator_mailer/manual_review",
+        template: "reimbursements/emails/manual_review",
         assigns: { issues: issues, unblocked_count: unblocked_count, run_date: run_date,
                    next_run_day: next_run_day }
       )
@@ -88,7 +88,7 @@ module Reimbursements
         to: recipients,
         subject: "[Bedlam BACS] Draft ready — #{count} #{'expense'.pluralize(count)} " \
                  "— #{Date.current.iso8601}",
-        template: "reimbursements/operator_mailer/batch_ready",
+        template: "reimbursements/emails/batch_ready",
         assigns: { expenses: expenses, total: total, draft_link: draft_link, run_date: run_date }
       )
     end
@@ -98,7 +98,7 @@ module Reimbursements
       send_email(
         to: recipients,
         subject: "[Bedlam BACS] Batch processing FAILED — #{Date.current.iso8601}",
-        template: "reimbursements/operator_mailer/failure",
+        template: "reimbursements/emails/failure",
         assigns: { error_text: error_text, run_date: run_date }
       )
     end
