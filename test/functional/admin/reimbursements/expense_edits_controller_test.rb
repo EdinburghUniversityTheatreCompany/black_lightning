@@ -55,6 +55,12 @@ module Admin
         ]
       end
 
+      def image_receipt
+        { "id" => "attImg", "filename" => "receipt.jpg", "url" => "https://airtable/img.jpg",
+          "size" => 100, "type" => "image/jpeg",
+          "thumbnails" => { "large" => { "url" => "https://airtable/thumb.jpg" } } }
+      end
+
       def rebuild_store(expenses:)
         @store, @client = build_fake_store(expenses: expenses, people: [ @person ], budgets: [ @budget ])
         BaseController.store_builder = -> { @store }
@@ -365,6 +371,42 @@ module Admin
       end
 
       # --- Receipts --------------------------------------------------------
+
+      test "edit renders an image receipt as a fancybox thumbnail keyed to the expense" do
+        rebuild_store(expenses: [ expense_at("Approved", receipts: [ image_receipt ]) ])
+        sign_in @user
+
+        get :edit, params: { id: "recExp1" }
+
+        assert_includes response.body, 'data-controller="fancybox"'
+        assert_includes response.body, 'data-fancybox="receipts-recExp1"'
+        # The lightbox link opens the full image; the thumbnail previews it.
+        assert_includes response.body, "https://airtable/img.jpg"
+        assert_includes response.body, "https://airtable/thumb.jpg"
+      end
+
+      test "edit renders a PDF receipt as a new-tab link, not a broken image" do
+        rebuild_store(expenses: [ expense_at("Approved", receipts: two_receipts) ])
+        sign_in @user
+
+        get :edit, params: { id: "recExp1" }
+
+        assert_includes response.body, 'target="_blank"'
+        assert_includes response.body, "fa-file-lines"
+        # A PDF must never be wired to fancybox as an inline image.
+        assert_no_match(/<img[^>]+https:\/\/airtable\/a/, response.body)
+      end
+
+      test "edit keeps the finance Remove button and Attach form" do
+        rebuild_store(expenses: [ expense_at("Approved", receipts: two_receipts) ])
+        sign_in @user
+
+        get :edit, params: { id: "recExp1" }
+
+        assert_includes response.body, ">Remove</button>"
+        assert_includes response.body,
+                        admin_reimbursements_expense_edit_receipts_path("recExp1")
+      end
 
       test "remove_receipt drops a receipt and redirects to edit" do
         rebuild_store(expenses: [ expense_at("Approved", receipts: two_receipts) ])
