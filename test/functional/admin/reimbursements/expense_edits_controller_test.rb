@@ -360,6 +360,30 @@ module Admin
         assert_not fields.key?(EXP[:amount_excl_vat])
       end
 
+      test "update rejects a negative amount, re-renders edit 422, writes nothing" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "-5", amount_excl_vat: "35.00",
+                                 description: "x", budget_record_id: "recBud1" }
+
+        assert_response :unprocessable_content
+        assert_match(/valid amount/i, response.body)
+        assert_empty @client.updated
+      end
+
+      test "update rejects a non-numeric amount, re-renders edit 422, writes nothing" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "abc", amount_excl_vat: "35.00",
+                                 description: "x", budget_record_id: "recBud1" }
+
+        assert_response :unprocessable_content
+        assert_match(/valid amount/i, response.body)
+        assert_empty @client.updated
+      end
+
       # --- Already-sent / already-paid note --------------------------------
 
       test "shows an already-sent-to-EUSA note for a Submitted expense" do

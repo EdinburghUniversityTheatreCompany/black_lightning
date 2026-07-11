@@ -46,6 +46,14 @@ module Admin
 
       def save
         expense = find_expense!
+        error = ::Reimbursements::AmountValidation.error_for(
+          amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
+        )
+        if error
+          redirect_to_review(alert: error)
+          return
+        end
+
         store.update_expense!(expense.record_id, save_attrs)
         redirect_to_review(notice: "Saved changes to ##{expense.auto_number}.")
       end
