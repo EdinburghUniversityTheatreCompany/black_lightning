@@ -153,7 +153,8 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
     confirm the Microsoft grants worked before relying on email-in or Build Batch.
   </p>
   <%= button_to "Run access check", test_access_admin_reimbursements_setting_path(@cost_centre.key),
-                method: :post, class: btn_classes(:secondary, :sm) %>
+                method: :post, class: btn_classes(:secondary, :sm),
+                data: { turbo_submits_with: "Testing…" } %>
   <div id="access_check_results">
     <%= render "access_checks", checks: @access_checks %>
   </div>

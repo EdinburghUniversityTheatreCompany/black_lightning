@@ -299,6 +299,14 @@ module Admin
         assert_includes response.body, "Reimbursements App Access"             # remediation hint
       end
 
+      test "the access-check button shows a testing state while it runs" do
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, 'data-turbo-submits-with="Testing'
+      end
+
       test "access check answers a turbo stream that updates the results in place" do
         sign_in @user
 
