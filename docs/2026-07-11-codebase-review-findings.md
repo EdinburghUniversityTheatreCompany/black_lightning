@@ -24,7 +24,7 @@ before fixing.
 | 1 | **High** | security | Controllers | `POST /markdown/upload` is fully anonymous — arbitrary S3 attachment writes + IDOR ✓ |
 | 2 | **High** | security | Views | Stored XSS on the opportunity show page via public-submitted `role.note` / `department_name` / `submitter_name` ✓ |
 | 3 | **High** | correctness | Models | Debt conversion uses `create` (not `create!`) inside a txn → debt silently written off ✓ |
-| 4 | **High** | correctness | Jobs | Mailbox poll move is outside the dedup rescue → duplicate draft expense every 5 min ✓ |
+| 4 | **High** | correctness | Jobs | Mailbox poll move is outside the dedup rescue → duplicate draft expense every 5 min ✓ _(acknowledged — fix already planned)_ |
 | 5 | Medium | security | Controllers | `dashboard#widget` has no env guard and reflects `params` into `html_safe` (reflected XSS) ✓ |
 | 6 | Medium | security | Config | CSP allows `unsafe-inline` + `unsafe-eval` in production, negating XSS protection |
 | 7 | Medium | security | Controllers | Public `get_involved#opportunities` Ransack omits `auth_object` ✓ |
@@ -103,7 +103,7 @@ off with **no replacement debt created** (debt evasion / data loss). Reached fro
 **Fix:** use `create!` so a failure rolls back the whole transaction.
 
 ### 4. Mailbox poll can mint a duplicate expense every 5 minutes ✓
-**`app/jobs/reimbursements/mailbox_poll_job.rb:130`** · correctness
+**`app/jobs/reimbursements/mailbox_poll_job.rb:130`** · correctness · _acknowledged by maintainer — fix already planned, not re-flagged in later rounds_
 
 `create_expense` calls `store.create_expense!` then wraps attach+reply in a
 `begin/rescue`, but the committing `mailbox.mark_read_and_move(message.id, :processed)`
