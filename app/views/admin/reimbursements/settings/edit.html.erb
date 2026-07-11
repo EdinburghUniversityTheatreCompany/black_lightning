@@ -20,7 +20,7 @@
     <%= render CollapsibleSectionComponent.new(
           title: "⚠️ Adding a new mailbox or SharePoint site needs an Azure change too",
           variant: :warning, html_class: "my-1") do %>
-      <p class="text-sm text-gray-700 dark:text-gray-300">
+      <p class="text-sm text-gray-700">
         A mailbox only works once it's added to the <code>Reimbursements App Access</code> group in Exchange
         Online, and a new SharePoint site needs a <code>Sites.Selected</code> write grant, or Graph
         returns 403 and email-in / drafting / uploads silently fail. See the

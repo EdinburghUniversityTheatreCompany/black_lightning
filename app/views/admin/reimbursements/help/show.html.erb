@@ -1,6 +1,6 @@
 <% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
 
-<p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+<p class="text-sm text-gray-600 mb-4">
   The manual Microsoft 365 / Azure steps the app can't do itself. You only need these when
   <strong>adding a new reimbursement mailbox or a new cost centre</strong>. Day-to-day use needs none of
   this. Sections are collapsed; open the one you need. The Entra app is
@@ -9,7 +9,7 @@
 </p>
 
 <%= render CollapsibleSectionComponent.new(title: "➕ Adding a new reimbursement mailbox", html_class: "mb-3") do %>
-  <div class="text-sm text-gray-700 dark:text-gray-300">
+  <div class="text-sm text-gray-700">
     <p>
       Each cost centre has its own <strong>receive</strong> mailbox (email-in) and <strong>send</strong>
       mailbox (Build Batch drafts from it), set on its
@@ -38,7 +38,7 @@ Test-ApplicationAccessPolicy -Identity NEW-MAILBOX@bedlamfringe.co.uk `
 <% end %>
 
 <%= render CollapsibleSectionComponent.new(title: "🗂️ Scoping the app to a SharePoint site", html_class: "mb-3") do %>
-  <div class="text-sm text-gray-700 dark:text-gray-300">
+  <div class="text-sm text-gray-700">
     <p>
       The app uses <code>Sites.Selected</code> (least-privilege), so it only reaches SharePoint sites you
       explicitly grant it: the Bedlam Fringe and Business Manager sites. When you point a cost centre's
@@ -66,7 +66,7 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
 <% end %>
 
 <%= render CollapsibleSectionComponent.new(title: "✉️ Where operator & producer emails send from", html_class: "mb-3") do %>
-  <div class="text-sm text-gray-700 dark:text-gray-300">
+  <div class="text-sm text-gray-700">
     <p>
       Rejection / "you've been paid" / batch producer-notification / nightly operator emails currently go via
       BlackLightning's ActionMailer (MailerSend) and send from
@@ -86,7 +86,7 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
 <% end %>
 
 <%= render CollapsibleSectionComponent.new(title: "🔐 Entra app Graph permissions", html_class: "mb-3") do %>
-  <div class="text-sm text-gray-700 dark:text-gray-300">
+  <div class="text-sm text-gray-700">
     <p>On the <code>BlackLightning Reimbursements Mailbox</code> app, add these Application permissions and grant admin consent:</p>
     <ul class="mt-2 list-disc pl-5">
       <li><code>Mail.ReadWrite</code> + <code>Mail.Send</code>: poll / draft / send from the shared mailboxes.</li>
