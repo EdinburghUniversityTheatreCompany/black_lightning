@@ -26,8 +26,8 @@
     <% end %>
     <% attention_reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>
     <% if attention_reasons.any? %>
-      <%= content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
-                      class: "cursor-help", title: "Needs attention: #{attention_reasons.to_sentence}") %>
+      <%= reimbursements_reasons_popover(reasons: attention_reasons, key: "review-#{expense.record_id}",
+                                         label: "Needs attention", heading: "Needs attention:") %>
     <% end %>
   </div>
 

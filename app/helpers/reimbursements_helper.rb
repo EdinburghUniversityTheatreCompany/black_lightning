@@ -90,4 +90,43 @@ module ReimbursementsHelper
   def budget_owner_names(budget, people_by_id)
     budget.owner_ids.filter_map { |id| people_by_id[id]&.name.presence }.join(", ")
   end
+
+  # An accessible popover listing the reasons an expense needs attention /
+  # completion. Replaces the old `title=` tooltip (invisible to keyboard and
+  # screen-reader users) with a focusable <button> badge that carries
+  # aria-expanded + aria-controls and toggles a Popper-positioned panel of
+  # reasons (see popover_controller.js). Used on the Review card, the finance
+  # expenses table and the producer's own expenses table so all three surface
+  # the same reasons the same accessible way.
+  #
+  # +reasons+ the list of reason strings; +key+ a unique seed for the panel id
+  # (an expense record_id); +label+ the badge text; +heading+ the panel heading.
+  def reimbursements_reasons_popover(reasons:, key:, label:, heading:, badge_type: :warning)
+    return "".html_safe if reasons.blank?
+
+    panel_id = "reasons-#{key}"
+    badge = BadgeComponent::STYLES.fetch(badge_type, BadgeComponent::STYLES[:secondary])
+
+    trigger = content_tag(:button, type: "button",
+                          class: "inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 " \
+                                 "text-xs font-medium #{badge}",
+                          data: { popover_target: "trigger", action: "popover#toggle" },
+                          aria: { expanded: "false", controls: panel_id, haspopup: "true" }) do
+      safe_join([ label, content_tag(:span, "▾", aria: { hidden: "true" }) ], " ")
+    end
+
+    panel = content_tag(:div, id: panel_id,
+                        class: "hidden z-50 max-w-xs rounded border border-gray-200 bg-white p-2 " \
+                               "text-xs text-gray-700 shadow-lg",
+                        data: { popover_target: "panel" }) do
+      safe_join([
+        content_tag(:p, heading, class: "font-medium"),
+        content_tag(:ul, safe_join(reasons.map { |reason| content_tag(:li, reason) }),
+                    class: "mt-1 list-disc pl-4")
+      ])
+    end
+
+    content_tag(:span, safe_join([ trigger, panel ]),
+                class: "relative inline-block", data: { controller: "popover" })
+  end
 end
