@@ -164,5 +164,8 @@
                          class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
       <%= submit_tag "Reject", class: btn_classes(:danger, :sm) %>
     <% end %>
+    <%# Full finance edit (any status, incl. payee overrides). %>
+    <%= link_to "Edit (any status)", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                class: btn_classes(:secondary, :sm) %>
   </div>
 </div>

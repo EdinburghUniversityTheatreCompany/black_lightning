@@ -1,0 +1,145 @@
+<% modulus = modulus_checker.check(@expense.effective_sort_code, @expense.effective_account_number) %>
+
+<p class="mb-3 text-gray-600">
+  Finance edit for a single expense at any status. Changes save straight to Airtable.
+  <%= link_to "Back to the lookup", find_admin_reimbursements_expense_edits_path, class: "text-primary underline" %>
+  or the <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
+</p>
+
+<%= render CardComponent.new do %>
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <span class="font-medium">
+      #<%= @expense.auto_number %> — <%= @expense.person&.name.presence || "(no payee)" %>
+      <span class="text-gray-500">(<%= @expense.person&.email.presence || "no email" %>)</span>
+    </span>
+    <span>Amount: <strong>&pound;<%= number_with_precision(@expense.amount || 0, precision: 2) %></strong></span>
+    <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(@expense, checker: modulus_checker) %></span>
+    <span>Receipts: <%= @expense.receipts.size %></span>
+    <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(@expense.status), pill: true).with_content(@expense.status) %>
+  </div>
+
+  <%# --- Already-processed note (Submitted / Paid) --- %>
+  <% if @expense.status == Reimbursements::Status::SUBMITTED %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
+      This expense has <strong>already been sent to EUSA</strong> — edits here won't change what
+      EUSA has already processed. Update it only to keep our records straight, then follow up with
+      EUSA directly if the payment itself needs to change.
+    <% end %></div>
+  <% elsif @expense.status == Reimbursements::Status::PAID %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
+      This expense has <strong>already been paid</strong> — edits here won't change what EUSA has
+      already processed. Update it only to keep our records straight.
+    <% end %></div>
+  <% end %>
+
+  <% if @expense.payee_override? %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :info) do %>
+      Direct payment to <strong><%= @expense.effective_payee_name %></strong>
+      (not the submitter <%= @expense.person&.name %>) —
+      <%= @expense.effective_sort_code.presence || "—" %> /
+      <%= @expense.effective_account_number.presence || "—" %>.
+    <% end %></div>
+  <% end %>
+
+  <% if modulus == Reimbursements::ModulusCheck::INVALID %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :danger) do %>
+      Modulus check failed for the effective sort code + account number. Likely a typo.
+    <% end %></div>
+  <% end %>
+
+  <%# --- Edit form --- %>
+  <%= form_with url: admin_reimbursements_expense_edit_path(@expense.record_id),
+                method: :patch, class: "mt-4 grid gap-3 sm:grid-cols-2" do %>
+    <div>
+      <%= label_tag :amount, "Amount (GBP)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount, @expense.amount, step: 0.01, min: 0,
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :amount_excl_vat, "Amount excl. VAT (GBP)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount_excl_vat, @expense.amount_excl_vat, step: 0.01, min: 0,
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div class="sm:col-span-2">
+      <%= label_tag :description, "Description", class: "block text-sm font-medium" %>
+      <%= text_area_tag :description, @expense.description, rows: 2,
+                        class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :payment_reference, "Payment reference", class: "block text-sm font-medium" %>
+      <%= text_field_tag :payment_reference, @expense.payment_reference,
+                         maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :budget_record_id, "Budget", class: "block text-sm font-medium" %>
+      <% budget_options = @budgets.map { |b| [ b.name, b.record_id ] } %>
+      <% if @expense.budget && @expense.budget.record_id.present? && budget_options.none? { |_, id| id == @expense.budget.record_id } %>
+        <% budget_options.unshift([ @expense.budget.name, @expense.budget.record_id ]) %>
+      <% end %>
+      <%= select_tag :budget_record_id,
+                     options_for_select(budget_options, @expense.budget&.record_id),
+                     include_blank: @expense.budget&.record_id.blank?,
+                     class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :nominal_code_override, "Nominal code override", class: "block text-sm font-medium" %>
+      <%= text_field_tag :nominal_code_override, @expense.nominal_code_override,
+                         placeholder: "blank = use budget default",
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= @expense.effective_nominal_code.presence || "—" %></p>
+    </div>
+
+    <div class="sm:col-span-2 mt-1 border-t border-gray-200 pt-2">
+      <p class="text-sm font-medium">Payee overrides (pay a third party directly)</p>
+      <p class="text-xs text-gray-500">Leave blank to pay the submitter's own People-record details.</p>
+    </div>
+    <div>
+      <%= label_tag :payee_name_override, "Payee name override", class: "block text-sm font-medium" %>
+      <%= text_field_tag :payee_name_override, @expense.payee_name_override,
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div>
+        <%= label_tag :sort_code_override, "Sort code override", class: "block text-sm font-medium" %>
+        <%= text_field_tag :sort_code_override, @expense.sort_code_override, placeholder: "00-00-00",
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+      </div>
+      <div>
+        <%= label_tag :account_number_override, "Account no. override", class: "block text-sm font-medium" %>
+        <%= text_field_tag :account_number_override, @expense.account_number_override, placeholder: "8 digits",
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+      </div>
+    </div>
+
+    <div class="sm:col-span-2">
+      <%= submit_tag "Save changes", class: btn_classes(:primary, :sm) %>
+    </div>
+  <% end %>
+
+  <%# --- Receipts --- %>
+  <div class="mt-4 border-t border-gray-200 pt-3">
+    <p class="text-sm font-medium">Receipts</p>
+    <% if @expense.receipts.empty? %>
+      <p class="text-xs text-gray-500">None attached.</p>
+    <% else %>
+      <ul class="mt-1 flex flex-col gap-1">
+        <% @expense.receipts.each do |receipt| %>
+          <li class="flex items-center gap-2 text-sm">
+            <%= link_to receipt.filename.presence || "receipt", receipt.url, target: "_blank", rel: "noopener",
+                        class: "text-primary underline" %>
+            <%= button_to "Remove",
+                          admin_reimbursements_expense_edit_receipt_path(@expense.record_id, receipt.attachment_id),
+                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt from Airtable?" } },
+                          class: btn_classes(:danger, :sm) %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <%= form_with url: admin_reimbursements_expense_edit_receipts_path(@expense.record_id),
+                  method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
+      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*", class: "text-sm" %>
+      <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
+    <% end %>
+  </div>
+<% end %>
