@@ -115,27 +115,51 @@ module Reimbursements
       end
     end
 
-    # --- Exception 5: two-rule OR logic -----------------------------------
+    # --- Exception 5: Pay.UK spec vectors (VocaLink spec §2.2.2.5) ---------
+    # Exception 5 is NOT "either check passes". Both the MOD11 first check and the
+    # DBLAL second check must pass, and each uses a checkdigit comparison rather
+    # than a plain zero remainder: the MOD11 check compares g (account[6]) against
+    # 11-remainder, the DBLAL check compares h (account[7]) against 10-remainder.
+    # The real 938000-938696 weights zero out the checkdigit positions.
+    EX5_MOD11 = ModulusCheck::Rule.new(sort_from: 938_000, sort_to: 938_696, algorithm: "MOD11",
+      weights: [ 7, 6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2, 0, 0 ], exception: 5)
+    EX5_DBLAL = ModulusCheck::Rule.new(sort_from: 938_000, sort_to: 938_696, algorithm: "DBLAL",
+      weights: [ 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 0 ], exception: 5)
 
-    test "exception 5 valid when only the first rule passes" do
-      rule1 = BASIC_MOD11.with(exception: 5)
-      rule2 = ModulusCheck::Rule.new(sort_from: 10_000, sort_to: 19_999, algorithm: "MOD11",
-        weights: [ 0, 0, 0, 0, 0, 0, 7, 6, 5, 4, 3, 2, 1, 0 ], exception: 0)
-      assert_equal ModulusCheck::VALID, checker([ rule1, rule2 ]).check("010001", "00000030")
+    def ex5_checker(substitutions = {})
+      checker([ EX5_MOD11, EX5_DBLAL ], substitutions)
     end
 
-    test "exception 5 invalid when neither rule passes" do
-      rule1 = BASIC_MOD11.with(exception: 5)
-      rule2 = ModulusCheck::Rule.new(sort_from: 10_000, sort_to: 19_999, algorithm: "MOD11",
-        weights: [ 0, 0, 0, 0, 0, 0, 7, 6, 5, 4, 3, 2, 1, 0 ], exception: 0)
-      assert_equal ModulusCheck::INVALID, checker([ rule1, rule2 ]).check("010001", "00000040")
+    # Spec test case 14: both checks pass, no substitution.
+    test "exception 5 spec vector: 938611 / 07806039 is valid" do
+      assert_equal ModulusCheck::VALID, ex5_checker.check("938611", "07806039")
     end
 
-    test "exception 5 valid when only the second rule passes" do
-      rule1 = BASIC_MOD11.with(exception: 5)
-      rule2 = ModulusCheck::Rule.new(sort_from: 10_000, sort_to: 19_999, algorithm: "MOD11",
-        weights: [ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 ], exception: 0)
-      assert_equal ModulusCheck::VALID, checker([ rule1, rule2 ]).check("010001", "00000040")
+    # Spec test case 16: both checks produce a remainder of 0 (g=0, h=0) and pass.
+    test "exception 5 spec vector: 938063 / 55065200 is valid" do
+      assert_equal ModulusCheck::VALID, ex5_checker.check("938063", "55065200")
+    end
+
+    # Spec test case 23: first checkdigit correct but second incorrect -> INVALID.
+    # This is the case the old "either check passes" logic got WRONG (it would have
+    # returned valid because the first check passes).
+    test "exception 5 spec vector: 938063 / 15764273 is invalid (both checks required)" do
+      assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15764273")
+    end
+
+    # Spec test case 24: first checkdigit incorrect, second correct -> INVALID.
+    test "exception 5 spec vector: 938063 / 15764264 is invalid" do
+      assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15764264")
+    end
+
+    # Spec test case 25: first check gives a remainder of 1 -> INVALID.
+    test "exception 5 spec vector: 938063 / 15763217 is invalid (remainder 1)" do
+      assert_equal ModulusCheck::INVALID, ex5_checker.check("938063", "15763217")
+    end
+
+    # Spec test case 15: valid only after sort-code substitution (938600 -> 938611).
+    test "exception 5 spec vector: 938600 / 42368003 is valid with substitution" do
+      assert_equal ModulusCheck::VALID, ex5_checker(938_600 => 938_611).check("938600", "42368003")
     end
 
     test "two rules without exception 5 still require both to pass" do
@@ -173,6 +197,12 @@ module Reimbursements
       ModulusCheck.reset_default_checker!
       # Canonical Pay.UK test vector #1: sort 08-99-99, account 66374958 -> valid.
       assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("089999", "66374958")
+      # Exception 5 end-to-end on the real rule + substitution files (spec cases
+      # 14, 15 and 23): both checks must pass, so 15764273 (first passes, second
+      # fails) is invalid — the OR bug would have called it valid.
+      assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("938611", "07806039")
+      assert_equal ModulusCheck::VALID, ModulusCheck.default_checker.check("938600", "42368003")
+      assert_equal ModulusCheck::INVALID, ModulusCheck.default_checker.check("938063", "15764273")
     ensure
       ModulusCheck.reset_default_checker!
     end

@@ -82,11 +82,12 @@ module Reimbursements
 
         results = applicable.map { |rule| apply_rule(rule, sort_clean, account_clean) }
 
-        # Exception 5 with two rules: VALID if EITHER passes (OR, not AND).
-        if applicable.length == 2 && applicable.any? { |rule| rule.exception == 5 }
-          return results.any? ? VALID : INVALID
-        end
-
+        # A sorting code with two weighting rows must pass BOTH checks, unless an
+        # exception says otherwise. Pay.UK spec §2.2.2.5 does NOT relax this for
+        # exception 5 (unlike exceptions 10/11 and 12/13, which are "either check"):
+        # both the MOD11 and DBLAL checks must pass, each via the exception-5
+        # checkdigit comparison in #apply_rule. (Spec test case 23: first check
+        # passes, second fails -> INVALID.)
         results.all? ? VALID : INVALID
       end
 
@@ -122,7 +123,8 @@ module Reimbursements
           # If account digit c (account[2]) is 6 or 9, the rule doesn't apply (passes).
           return true if [ 6, 9 ].include?(account_digits[2])
         end
-        # Exceptions 1, 4, 5 are handled in the totalling step / in #check.
+        # Exceptions 1 and 4 are handled in the totalling step / after it below;
+        # exception 5 has its own checkdigit comparison, also below.
 
         case rule.algorithm
         when "DBLAL"
@@ -141,10 +143,39 @@ module Reimbursements
           return false # unknown method
         end
 
+        # Exception 5 (Pay.UK spec §2.2.2.5): the checkdigit is compared against
+        # (modulus - remainder), not a plain zero remainder. The first (MOD11)
+        # check uses digit g = account[6]; the second (DBLAL) check uses digit
+        # h = account[7]. The weighting zeroes out the checkdigit position so it
+        # does not contribute to the sum.
+        return exception5_pass?(rule.algorithm, remainder, account_digits) if rule.exception == 5
+
         # Exception 4: pass if the remainder equals the last two account digits.
         return remainder == account_number[6, 2].to_i if rule.exception == 4
 
         remainder.zero?
+      end
+
+      # Checkdigit comparison for exception 5. MOD11 (first check): remainder 0
+      # passes only when g is 0; remainder 1 always fails; otherwise valid when
+      # 11 - remainder == g. DBLAL (second check): remainder 0 passes only when h
+      # is 0; otherwise valid when 10 - remainder == h.
+      def exception5_pass?(algorithm, remainder, account_digits)
+        case algorithm
+        when "MOD11"
+          g = account_digits[6]
+          return g.zero? if remainder.zero?
+          return false if remainder == 1
+
+          (11 - remainder) == g
+        when "DBLAL"
+          h = account_digits[7]
+          return h.zero? if remainder.zero?
+
+          (10 - remainder) == h
+        else
+          false
+        end
       end
     end
 
