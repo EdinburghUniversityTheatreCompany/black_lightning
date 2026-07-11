@@ -124,7 +124,10 @@ module Reimbursements
     def norm_amount(value)
       return "0.0" if value.nil? || value == ""
 
-      Float(value).to_s
+      # BigDecimal (not Float) so the key is exact at every magnitude — a
+      # float round-trip collapses distinct large amounts onto one key.
+      # BigDecimal("0") renders "0.0", matching the nil/"" branch above.
+      BigDecimal(value.to_s).to_s("F")
     rescue ArgumentError, TypeError
       "0.0"
     end
