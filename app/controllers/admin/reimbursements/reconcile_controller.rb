@@ -110,8 +110,16 @@ module Admin
       # Match debits to Submitted/Paid expenses (each claimed at most once) and
       # credits to income budgets. Returns [matched_debits, matched_credits,
       # unmatched] where matched_* are [row, expense|budget] pairs.
+      #
+      # Expenses already reconciled are excluded so a later or overlapping EUSA
+      # export can never re-match, re-pay, or re-email a producer for an expense
+      # that's already been paid — the per-period dedup only catches an identical
+      # row, so a row that differs slightly would otherwise slip through.
       def build_matches(rows)
-        remaining = store.expenses.select { |e| matchable_statuses.include?(e.status) }
+        reconciled_ids = reconciled_expense_ids
+        remaining = store.expenses.select do |e|
+          matchable_statuses.include?(e.status) && !already_reconciled?(e, reconciled_ids)
+        end
         income_budgets = store.budgets.select(&:income?)
 
         matched_debits = []
@@ -140,6 +148,19 @@ module Admin
 
       def matchable_statuses
         [ ::Reimbursements::Status::SUBMITTED, ::Reimbursements::Status::PAID ]
+      end
+
+      # Record ids of every expense already linked to an imported EUSA actual —
+      # the durable, cross-paste signal that an expense has been reconciled.
+      def reconciled_expense_ids
+        store.eusa_actuals.flat_map(&:linked_expense_ids).to_set
+      end
+
+      # An expense counts as already reconciled if an imported actual links to it
+      # or a payment has been confirmed against it — either means "already paid",
+      # so it must not be matched (and paid + emailed) a second time.
+      def already_reconciled?(expense, reconciled_ids)
+        reconciled_ids.include?(expense.record_id) || expense.payment_confirmed_date.present?
       end
 
       def apply_reconciliation(matched_debits, matched_credits, unmatched)

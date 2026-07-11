@@ -271,6 +271,39 @@ module Admin
       assert_equal 1, assigns(:expenses_paid)
     end
 
+    test "an already-reconciled expense is not re-matched or re-emailed by a later paste" do
+      # recExp1 was already paid in an earlier period and linked to an imported
+      # actual. A later/overlapping export carries a near-identical row (same
+      # nominal/amount, matching date, but a slightly different narrative) so the
+      # per-period dedup does NOT skip it. The re-pay guard must exclude the
+      # already-linked expense so it can't be re-matched, re-paid, or re-emailed.
+      paid = airtable_expense_record(
+        id: "recExp1", payee_id: "recPer1", budget_id: "recBud1",
+        amount: 123.45, amount_excl_vat: 123.45,
+        overrides: {
+          FIELD_IDS[:expenses][:status] => "Paid",
+          FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-10"
+        }
+      )
+      linked_actual = airtable_eusa_actual_record(
+        id: "recActLinked", nominal_code: "439999", period: "02",
+        narrative: "Alice Producer OLD", debit: 123.45, linked_expense: [ "recExp1" ]
+      )
+      rebuild_store(expenses: [ paid ], eusa_actuals: [ linked_actual ])
+      sign_in @user
+
+      post :apply, params: {
+        pasted_text: "#{HEADER}\n#{debit_row(narrative: 'Alice Producer NEW')}"
+      }
+
+      assert_response :success
+      assert_empty @graph.send_mails, "must not re-email a producer for an already-reconciled expense"
+      assert_equal 0, assigns(:expenses_paid)
+      assert_equal 1, assigns(:unmatched_saved)
+      # The expense itself is left untouched — no second flip-to-Paid write.
+      assert_empty @client.updated.select { |t, id, _f| t == :expenses && id == "recExp1" }
+    end
+
     test "apply redirects when the pasted text is missing" do
       sign_in @user
       post :apply, params: { pasted_text: "" }
