@@ -33,6 +33,10 @@ module Reimbursements
     COL_DESCRIPTION = 7
     # Excel's builtin text number format.
     TEXT_FORMAT = "@".freeze
+    # Leading characters that make Excel (and CSV re-importers) treat a text cell
+    # as a formula. Submitter-controlled text starting with one of these is a
+    # spreadsheet formula-injection vector, so it is neutralised (see #sanitize).
+    FORMULA_TRIGGERS = [ "=", "+", "-", "@", "\t", "\r", "\n" ].freeze
 
     DEFAULT_TEMPLATE_PATH =
       Rails.root.join("lib/reimbursements/templates/EUSA_BACS_template.xlsx").freeze
@@ -67,15 +71,29 @@ module Reimbursements
     private
 
     def write_row(sheet, row_index, row)
-      sheet.add_cell(row_index, COL_PAYEE, row.payee_name.to_s)
+      # payee_name / payment_reference / description are free text the submitter
+      # controls (incl. Invoice overrides), so they are formula-sanitised. The
+      # numeric amount and the forced-text bank fields below are not free text and
+      # keep their exact value (leading zeros, dashes, negative amounts intact).
+      sheet.add_cell(row_index, COL_PAYEE, sanitize(row.payee_name))
       # rubyXL serialises a Float cleanly; the template's currency format renders it.
       sheet.add_cell(row_index, COL_AMOUNT, row.amount.to_f)
       text_cell(sheet, row_index, COL_SORT_CODE, row.sort_code)
       text_cell(sheet, row_index, COL_ACCOUNT_NUMBER, row.account_number)
       text_cell(sheet, row_index, COL_NOMINAL_CODE, row.nominal_code)
       sheet.add_cell(row_index, COL_COST_CENTRE, row.cost_centre.presence || "F40")
-      sheet.add_cell(row_index, COL_PAYMENT_REFERENCE, row.payment_reference.to_s)
-      sheet.add_cell(row_index, COL_DESCRIPTION, row.description.to_s)
+      sheet.add_cell(row_index, COL_PAYMENT_REFERENCE, sanitize(row.payment_reference))
+      sheet.add_cell(row_index, COL_DESCRIPTION, sanitize(row.description))
+    end
+
+    # Prefix a single quote when a submitter-controlled value begins with a
+    # formula trigger, so Excel renders it as literal text instead of executing
+    # it. Ordinary values (and empty ones) pass through untouched.
+    def sanitize(value)
+      text = value.to_s
+      return text unless text.start_with?(*FORMULA_TRIGGERS)
+
+      "'#{text}"
     end
 
     # A cell written as literal text so leading zeros / dashes are preserved.

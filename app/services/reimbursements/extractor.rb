@@ -106,8 +106,23 @@ module Reimbursements
         - suggested_payment_reference: max #{REFERENCE_LIMIT} characters. If the
           receipt is an invoice specifying a payment reference, use that; otherwise
           use the invoice number; otherwise a short "<merchant or purpose>" label.
-        #{context.present? ? "\nContext from the submitter:\n#{context}" : ''}
+        #{context_block(context)}
       PROMPT
+    end
+
+    # Submitter-supplied context (email subject/body) is untrusted free text, so
+    # it is fenced and labelled as data — never trust it as instructions. See
+    # PromptSafety.
+    def context_block(context)
+      return "" if context.blank?
+
+      <<~BLOCK.chomp
+
+        #{PromptSafety::UNTRUSTED_PREAMBLE}
+
+        Context from the submitter:
+        #{PromptSafety.fence(context, label: 'submitter context')}
+      BLOCK
     end
 
     def parse(data, budgets)
