@@ -36,6 +36,21 @@ module Reimbursements
       assert build_expense(description: "").needs_completion?
     end
 
+    test "missing_completion_fields names each absent required field" do
+      assert_empty build_expense.missing_completion_fields
+      assert_includes build_expense(amount_excl_vat: nil).missing_completion_fields, "the amount excluding VAT"
+      assert_includes build_expense(payment_reference: "").missing_completion_fields, "a payment reference"
+      assert_includes build_expense(receipts: []).missing_completion_fields, "a receipt"
+      assert_includes build_expense(budget: nil).missing_completion_fields, "a budget"
+      assert_equal 2, build_expense(amount_excl_vat: nil, receipts: []).missing_completion_fields.size
+    end
+
+    test "a SharePoint-offloaded receipt counts as present" do
+      offloaded = build_expense(receipts: [], sharepoint_receipt_urls: [ "https://sp/receipt.pdf" ])
+      assert_not_includes offloaded.missing_completion_fields, "a receipt"
+      assert_not offloaded.needs_completion?
+    end
+
     test "payee override detection" do
       assert_not build_expense.payee_override?
       assert build_expense(payee_name_override: "Stage Supplies Ltd").payee_override?

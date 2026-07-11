@@ -33,7 +33,8 @@
   <% field_sets = @expenses.map do |expense|
        status = safe_join([
          render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status)).with_content(expense.status)),
-         (render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs completion")) if expense.needs_completion?)
+         (content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs completion")),
+                      class: "cursor-help", title: "Still needs: #{expense.missing_completion_fields.to_sentence}") if expense.needs_completion?)
        ].compact, " ")
        description = safe_join([
          expense.description.presence || content_tag(:span, "(no description yet)", class: "text-gray-500"),

@@ -74,11 +74,27 @@ module Reimbursements
       (draft? || pending?) && Expense::SUBMITTER_TYPES.include?(expense_type)
     end
 
-    # True when an email-in (or otherwise incomplete) submission is missing
-    # fields the portal form requires, so the index can nudge the submitter.
+    # Human labels for the required fields still missing on an incomplete
+    # (usually email-in) submission, so the UI can tell the submitter exactly
+    # what to add rather than a bare "needs completion".
+    def missing_completion_fields
+      missing = []
+      missing << "a budget" if budget.nil?
+      missing << "the amount" if amount.blank?
+      missing << "the amount excluding VAT" if amount_excl_vat.blank?
+      missing << "a description" if description.blank?
+      missing << "a payment reference" if payment_reference.blank?
+      # A receipt counts as present if a file is attached OR a SharePoint URL was
+      # stored when it was offloaded during batch processing (which clears the
+      # Airtable attachment).
+      missing << "a receipt" if receipts.empty? && sharepoint_receipt_urls.blank?
+      missing
+    end
+
+    # True when the submission is missing fields the portal form requires, so the
+    # index can nudge the submitter.
     def needs_completion?
-      budget.nil? || amount.blank? || amount_excl_vat.blank? ||
-        description.blank? || payment_reference.blank? || receipts.empty?
+      missing_completion_fields.any?
     end
 
     def payee_override?
