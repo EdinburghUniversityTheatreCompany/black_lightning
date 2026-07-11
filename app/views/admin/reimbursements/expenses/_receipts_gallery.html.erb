@@ -8,7 +8,7 @@
 
   <% if expense.receipts.empty? %>
     <p class="mb-0 text-sm text-gray-500">
-      No receipts attached<%= expense.draft? ? " yet — a draft can wait, but the claim needs one before you submit it." : "." %>
+      No receipts attached<%= expense.draft? ? " yet. A draft can wait, but the claim needs one before you submit it." : "." %>
     </p>
   <% else %>
     <div class="flex flex-wrap gap-3">

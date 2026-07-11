@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
   The EUSA Actuals ledger imported during reconciliation. Each row shows its nominal
   code, EUSA period, transaction date, narrative and debit/credit, plus whether it's
-  been linked to an expense or an income budget. Read-only — imports happen on the
+  been linked to an expense or an income budget. Read-only; imports happen on the
   <%= link_to "Reconcile", admin_reimbursements_reconciliation_path, class: "underline" %> page.
 </p>
 
@@ -22,7 +22,7 @@
   <% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "#{@actuals.size} #{'actual'.pluralize(@actuals.size)}#{" — period #{@period}" if @period.present?}") do %>
+<%= render CardComponent.new(title: "#{@actuals.size} #{'actual'.pluralize(@actuals.size)}#{" (period #{@period})" if @period.present?}") do %>
   <% if @actuals.empty? %>
     <p class="py-4 text-center text-gray-600">No EUSA Actuals imported yet.</p>
   <% else %>

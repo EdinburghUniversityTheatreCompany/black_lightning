@@ -1,6 +1,6 @@
 <p class="mb-3 text-gray-600">
   Past BACS submissions, most recent first. Reopening a batch reverts its expenses to Approved and
-  deletes the batch so you can add or remove expenses and rebuild it — producers already notified
+  deletes the batch so you can add or remove expenses and rebuild it. Producers already notified
   won't be emailed again. A batch with any Paid expense can't be reopened.
 </p>
 
@@ -33,7 +33,7 @@
         <div class="mt-2">
           <% if has_paid %>
             <p class="text-sm text-warning">
-              Has Paid expenses — reconciled payments can't be reverted, so this batch can't be reopened.
+              Has Paid expenses: reconciled payments can't be reverted, so this batch can't be reopened.
             </p>
           <% elsif expenses.any? %>
             <%= form_with url: reopen_admin_reimbursements_batch_path(batch.record_id), method: :post do %>

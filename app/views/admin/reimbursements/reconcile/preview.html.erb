@@ -14,13 +14,13 @@
   <% end %>
 <% else %>
   <%= render AlertComponent.new(type: :info) do %>
-    No already-imported rows found for these periods — all rows are new.
+    No already-imported rows found for these periods. All rows are new.
   <% end %>
 <% end %>
 
 <% if @new_rows.empty? %>
   <%= render AlertComponent.new(type: :warning) do %>
-    All rows are already imported — nothing new to reconcile.
+    All rows are already imported, nothing new to reconcile.
   <% end %>
 <% else %>
   <%= render CardComponent.new(title: "Matched expenses (#{@matched_debits.size})") do %>
@@ -128,7 +128,7 @@
     <% end %>
   <% end %>
 
-  <%= render CardComponent.new(title: "Step 3 — Apply reconciliation") do %>
+  <%= render CardComponent.new(title: "Step 3: Apply reconciliation") do %>
     <p class="mb-3 text-gray-600">
       Applying will create the EUSA Actuals records, mark the
       <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.

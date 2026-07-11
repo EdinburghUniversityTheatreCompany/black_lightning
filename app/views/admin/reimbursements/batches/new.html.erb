@@ -2,7 +2,7 @@
   Every Approved expense goes into one BACS request. The money path uses each expense's
   <strong>effective</strong> payee and bank details, so an invoice override pays the third party
   directly (flagged "→ third party" below). Processing creates a <strong>draft</strong> in
-  <%= @cost_centre.send_mailbox %> for you to review and send — nothing is emailed to EUSA
+  <%= @cost_centre.send_mailbox %> for you to review and send. Nothing is emailed to EUSA
   automatically.
 </p>
 
@@ -11,7 +11,7 @@
     No approved expenses to batch. Approve some on the Review queue first.
   <% end %>
 <% else %>
-  <%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)} — £#{format('%.2f', @total)}") do %>
+  <%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)} (£#{format('%.2f', @total)})") do %>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="text-left text-gray-600 border-b border-gray-200">

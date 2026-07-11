@@ -1,12 +1,12 @@
 <p class="mb-3 text-gray-600">
   The finance team's payee registry. Edit a person's bank details (every change is
   recorded in their notes) and mark them verified once their details are confirmed.
-  The badge shows a live UK modulus check — it catches typos, not fraud.
+  The badge shows a live UK modulus check: it catches typos, not fraud.
 </p>
 
 <% if @duplicates.any? %>
   <%= render AlertComponent.new(type: :warning) do %>
-    <p class="font-medium mb-1">Duplicate name or email detected — please review:</p>
+    <p class="font-medium mb-1">Duplicate name or email detected, please review:</p>
     <ul class="list-disc list-inside">
       <% @duplicates.each do |person| %>
         <li>

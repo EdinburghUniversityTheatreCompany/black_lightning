@@ -22,7 +22,7 @@
     <% end %>
   <% else %>
     <p class="mb-3 text-gray-600">
-      <%= @approved.size %> approved — total &pound;<%= number_with_precision(approved_total, precision: 2) %>.
+      <%= @approved.size %> approved, total &pound;<%= number_with_precision(approved_total, precision: 2) %>.
       Ready to submit on the Build Batch page.
     </p>
     <% @approved.each do |expense| %>
@@ -36,7 +36,7 @@
     <% end %>
   <% else %>
     <p class="mb-3 text-gray-600">
-      <%= @pending.size %> pending — total &pound;<%= number_with_precision(pending_total, precision: 2) %>.
+      <%= @pending.size %> pending, total &pound;<%= number_with_precision(pending_total, precision: 2) %>.
       AI checks run in the background; refresh to see verdicts appear.
     </p>
 
@@ -54,7 +54,7 @@
     <h2 class="mt-6 mb-2 text-lg font-semibold">Needs attention (<%= @attention.size %>)</h2>
     <% if @attention.empty? %>
       <%= render AlertComponent.new(type: :info) do %>
-        None — all pending expenses are ready to approve.
+        None: all pending expenses are ready to approve.
       <% end %>
     <% else %>
       <%= render AlertComponent.new(type: :warning) do %>

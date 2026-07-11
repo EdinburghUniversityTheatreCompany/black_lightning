@@ -22,7 +22,7 @@
           variant: :warning, html_class: "my-1") do %>
       <p class="text-sm text-gray-700 dark:text-gray-300">
         A mailbox only works once it's added to the <code>Reimbursements App Access</code> group in Exchange
-        Online, and a new SharePoint site needs a <code>Sites.Selected</code> write grant — otherwise Graph
+        Online, and a new SharePoint site needs a <code>Sites.Selected</code> write grant, or Graph
         returns 403 and email-in / drafting / uploads silently fail. See the
         <%= link_to "setup and scaling guide", admin_reimbursements_help_path, class: "underline" %> for the exact commands.
       </p>

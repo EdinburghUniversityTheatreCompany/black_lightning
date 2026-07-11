@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
   Import the monthly EUSA actuals sheet and reconcile it against submitted expenses
   and income budgets. Copy the actuals rows from Excel or the email and paste them
-  below — both the legacy format (Nominal, Cost Centre, Ref, …) and the Sage export
+  below. Both the legacy format (Nominal, Cost Centre, Ref, …) and the Sage export
   (AccountNumber, …, GoodsValueInBaseCurrency) are accepted; the header identifies
   the columns automatically.
 </p>
@@ -10,7 +10,7 @@
   <%= render AlertComponent.new(type: :danger) do %><%= flash[:alert] %><% end %>
 <% end %>
 
-<%= render CardComponent.new(title: "Step 1 — Paste actuals data") do %>
+<%= render CardComponent.new(title: "Step 1: Paste actuals data") do %>
   <%= form_with url: preview_admin_reimbursements_reconciliation_path, method: :post do %>
     <div class="flex flex-col gap-3">
       <div>
@@ -22,7 +22,7 @@
       </div>
       <p class="text-xs text-gray-600">
         Each row's EUSA period (P1–P12) is read from the pasted data and used to skip rows
-        already imported for that period — no need to enter a month.
+        already imported for that period, so there's no need to enter a month.
       </p>
       <div>
         <%= submit_tag "Parse and match", class: btn_classes(:primary) %>

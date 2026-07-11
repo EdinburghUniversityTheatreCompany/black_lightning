@@ -21,13 +21,13 @@
   <%# --- Already-processed note (Submitted / Paid) --- %>
   <% if @expense.status == Reimbursements::Status::SUBMITTED %>
     <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
-      This expense has <strong>already been sent to EUSA</strong> — edits here won't change what
+      This expense has <strong>already been sent to EUSA</strong>. Edits here won't change what
       EUSA has already processed. Update it only to keep our records straight, then follow up with
       EUSA directly if the payment itself needs to change.
     <% end %></div>
   <% elsif @expense.status == Reimbursements::Status::PAID %>
     <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
-      This expense has <strong>already been paid</strong> — edits here won't change what EUSA has
+      This expense has <strong>already been paid</strong>. Edits here won't change what EUSA has
       already processed. Update it only to keep our records straight.
     <% end %></div>
   <% end %>
@@ -35,7 +35,7 @@
   <% if @expense.payee_override? %>
     <div class="mt-3"><%= render AlertComponent.new(type: :info) do %>
       Direct payment to <strong><%= @expense.effective_payee_name %></strong>
-      (not the submitter <%= @expense.person&.name %>) —
+      (not the submitter <%= @expense.person&.name %>), paying
       <%= @expense.effective_sort_code.presence || "—" %> /
       <%= @expense.effective_account_number.presence || "—" %>.
     <% end %></div>

@@ -27,11 +27,11 @@
   <% case expense.ai_check_status %>
   <% when "pass" %>
     <div class="mt-2"><%= render AlertComponent.new(type: :success) do %>
-      AI check passed<%= " — #{expense.ai_comment}" if expense.ai_comment.present? %>
+      AI check passed<%= ": #{expense.ai_comment}" if expense.ai_comment.present? %>
     <% end %></div>
   <% when "fail" %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
-      AI check flagged this — <%= expense.ai_comment.presence || "see the receipt." %>
+      AI check flagged this: <%= expense.ai_comment.presence || "see the receipt." %>
     <% end %></div>
   <% when "error" %>
     <div class="mt-2"><%= render AlertComponent.new(type: :info) do %>
@@ -43,7 +43,7 @@
   <% if expense.payee_override? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Direct payment to <strong><%= expense.effective_payee_name %></strong>
-      (not the submitter <%= expense.person&.name %>) —
+      (not the submitter <%= expense.person&.name %>), paying
       <%= expense.effective_sort_code.presence || "—" %> /
       <%= expense.effective_account_number.presence || "—" %>.
       Confirm these match the invoice before approving.
@@ -52,7 +52,7 @@
 
   <% if modulus == Reimbursements::ModulusCheck::INVALID %>
     <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
-      Modulus check failed for the effective sort code + account number. Likely a typo —
+      Modulus check failed for the effective sort code + account number. Likely a typo:
       fix the override or the People record before approving.
     <% end %></div>
   <% end %>
@@ -72,8 +72,8 @@
   <% if duplicates.present? %>
     <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
       Possible duplicate of
-      <%= duplicates.map { |d| "##{d.auto_number}" }.join(", ") %>
-      — same payee and amount within 30 days. Check this isn't a double-submission.
+      <%= duplicates.map { |d| "##{d.auto_number}" }.join(", ") %>:
+      same payee and amount within 30 days. Check this isn't a double-submission.
     <% end %></div>
   <% end %>
 
