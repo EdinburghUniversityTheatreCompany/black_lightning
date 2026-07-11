@@ -1,3 +1,5 @@
+<%= turbo_stream_from "reimbursements_review_ai" %>
+
 <p class="mb-3 text-gray-600">
   Review submitted expenses before they go to EUSA. Each card shows a live modulus
   check on the details the money will actually be paid to, the AI receipt check, and any
@@ -37,7 +39,7 @@
   <% else %>
     <p class="mb-3 text-gray-600">
       <%= @pending.size %> pending, total <%= reimbursements_money(pending_total) %>.
-      AI checks run in the background; refresh to see verdicts appear.
+      AI checks run in the background and each verdict appears on its card automatically.
     </p>
 
     <h2 class="mt-4 mb-2 text-lg font-semibold">Ready to approve (<%= @ready.size %>)</h2>

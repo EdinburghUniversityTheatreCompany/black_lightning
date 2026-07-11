@@ -58,8 +58,8 @@
        reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
        flags = content_tag(:div, class: "flex flex-wrap gap-1") do
          safe_join([
-           (content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
-                        class: "cursor-help", title: "Needs attention: #{reasons.to_sentence}") if reasons.any?),
+           (reimbursements_reasons_popover(reasons: reasons, key: "edits-#{expense.record_id}",
+                                           label: "Needs attention", heading: "Needs attention:") if reasons.any?),
            (reimbursements_ai_badge(expense) if expense.ai_check_status.present?)
          ].compact, " ")
        end

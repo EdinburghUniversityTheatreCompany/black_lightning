@@ -1,0 +1,31 @@
+<%#
+  One expense's AI-check verdict — the pill badge plus the pass/fail/error
+  explanation — wrapped in a stable-id element. AiCheckJob broadcasts a Turbo
+  Stream replace to this id when the check finishes, so the verdict appears live
+  on the Review page with no reload (see turbo_stream_from in review/index).
+  While the check is still running the region shows a quiet placeholder, which
+  also gives the broadcast a target to replace. Local: expense.
+%>
+<div id="ai_verdict_<%= expense.record_id %>" class="mt-2">
+  <% if expense.ai_check_status.present? %>
+    <div class="flex flex-col gap-2">
+      <div><%= reimbursements_ai_badge(expense) %></div>
+      <% case expense.ai_check_status %>
+      <% when "pass" %>
+        <%= render AlertComponent.new(type: :success) do %>
+          AI check passed<%= ": #{expense.ai_comment}" if expense.ai_comment.present? %>
+        <% end %>
+      <% when "fail" %>
+        <%= render AlertComponent.new(type: :warning) do %>
+          AI check flagged this: <%= expense.ai_comment.presence || "see the receipt." %>
+        <% end %>
+      <% when "error" %>
+        <%= render AlertComponent.new(type: :info) do %>
+          AI check could not run: <%= expense.ai_comment %>
+        <% end %>
+      <% end %>
+    </div>
+  <% else %>
+    <p class="text-xs text-gray-500">AI check running… the verdict will appear here automatically.</p>
+  <% end %>
+</div>

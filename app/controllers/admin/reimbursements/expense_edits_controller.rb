@@ -57,18 +57,21 @@ module Admin
       end
 
       def edit
-        @expense = find_expense!
-        @title = "Edit ##{@expense.auto_number}"
-        @budgets = store.active_budgets
-        # Reasons the expense needs attention (over-budget needs the full budget
-        # set, keyed by record id; modulus_checker is a helper_method).
-        @budget_by_id = store.budgets.index_by(&:record_id)
-        @attention_reasons =
-          ::Reimbursements::ReviewSupport.needs_attention_reasons(@expense, @budget_by_id, modulus_checker)
+        load_edit(find_expense!)
       end
 
       def update
         expense = find_expense!
+        error = ::Reimbursements::AmountValidation.error_for(
+          amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
+        )
+        if error
+          load_edit(expense)
+          flash.now[:alert] = error
+          render :edit, status: :unprocessable_content
+          return
+        end
+
         store.update_expense!(expense.record_id, update_attrs)
         redirect_to_edit(expense, notice: "Saved changes to ##{expense.auto_number}.")
       end
@@ -104,6 +107,19 @@ module Admin
       end
 
       private
+
+      # Set the instance vars the edit view needs, shared by #edit and the
+      # invalid-#update re-render. Reasons the expense needs attention need the
+      # full budget set keyed by record id (over-budget check); modulus_checker
+      # is a helper_method.
+      def load_edit(expense)
+        @expense = expense
+        @title = "Edit ##{expense.auto_number}"
+        @budgets = store.active_budgets
+        @budget_by_id = store.budgets.index_by(&:record_id)
+        @attention_reasons =
+          ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
+      end
 
       def modulus_checker
         @modulus_checker ||= checker_builder.call

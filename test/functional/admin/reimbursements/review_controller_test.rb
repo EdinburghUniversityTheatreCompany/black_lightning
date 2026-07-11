@@ -210,6 +210,45 @@ module Admin
         assert_not fields.key?(EXP[:amount_excl_vat])
       end
 
+      test "save rejects a negative amount and writes nothing" do
+        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :save, params: { id: "recEdit", amount: "-5", amount_excl_vat: "16.67",
+                               description: "x", budget_record_id: "recBud1" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/valid amount/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "save rejects a non-numeric amount and writes nothing" do
+        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :save, params: { id: "recEdit", amount: "abc", amount_excl_vat: "16.67",
+                               description: "x", budget_record_id: "recBud1" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/valid amount/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "save rejects a negative excl-VAT amount and writes nothing" do
+        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "-1",
+                               description: "x", budget_record_id: "recBud1" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/excl. VAT/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
       # --- Approve ---------------------------------------------------------
 
       test "approve auto-fills a payment reference when blank and marks approved" do
@@ -250,6 +289,19 @@ module Admin
       end
 
       # --- Reject ----------------------------------------------------------
+
+      test "the reject form asks for confirmation before emailing the producer" do
+        expense = pending_expense(id: "recRej", auto_number: 42, payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "form[action=?][data-turbo-confirm*=?]",
+                      admin_reimbursements_reject_review_path("recRej", tab: "pending"),
+                      "Reject #42 and email the producer"
+      end
 
       test "reject requires a reason" do
         expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")

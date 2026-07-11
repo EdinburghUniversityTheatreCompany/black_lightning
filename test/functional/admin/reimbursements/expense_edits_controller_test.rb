@@ -255,14 +255,19 @@ module Admin
 
       # --- Needs-attention reasons tooltip + AI badge ----------------------
 
-      test "index flags a needs-attention expense with a reasons tooltip" do
+      test "index flags a needs-attention expense with an accessible reasons popover" do
         rebuild_store(expenses: [ expense_at("Pending", receipts: []) ])
         sign_in @user
 
         get :index
 
-        assert_includes response.body, "cursor-help"
-        assert_includes response.body, "Needs attention: no receipt"
+        # A focusable <button> trigger wired to the popover controller, carrying
+        # the aria attributes a title= tooltip never had, and the reasons render.
+        assert_select "[data-controller='popover']" do
+          assert_select "button[aria-expanded='false'][aria-controls='reasons-edits-recExp1']",
+                        text: /Needs attention/
+          assert_select "#reasons-edits-recExp1 li", text: "no receipt"
+        end
       end
 
       test "index does not flag a clean expense" do
@@ -353,6 +358,30 @@ module Admin
 
         _table, _id, fields = @client.updated.sole
         assert_not fields.key?(EXP[:amount_excl_vat])
+      end
+
+      test "update rejects a negative amount, re-renders edit 422, writes nothing" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "-5", amount_excl_vat: "35.00",
+                                 description: "x", budget_record_id: "recBud1" }
+
+        assert_response :unprocessable_content
+        assert_match(/valid amount/i, response.body)
+        assert_empty @client.updated
+      end
+
+      test "update rejects a non-numeric amount, re-renders edit 422, writes nothing" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "abc", amount_excl_vat: "35.00",
+                                 description: "x", budget_record_id: "recBud1" }
+
+        assert_response :unprocessable_content
+        assert_match(/valid amount/i, response.body)
+        assert_empty @client.updated
       end
 
       # --- Already-sent / already-paid note --------------------------------

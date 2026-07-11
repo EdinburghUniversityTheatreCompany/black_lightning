@@ -21,31 +21,15 @@
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
-    <% if expense.ai_check_status.present? %>
-      <%= reimbursements_ai_badge(expense) %>
-    <% end %>
     <% attention_reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>
     <% if attention_reasons.any? %>
-      <%= content_tag(:span, render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention")),
-                      class: "cursor-help", title: "Needs attention: #{attention_reasons.to_sentence}") %>
+      <%= reimbursements_reasons_popover(reasons: attention_reasons, key: "review-#{expense.record_id}",
+                                         label: "Needs attention", heading: "Needs attention:") %>
     <% end %>
   </div>
 
-  <%# --- AI verdict --- %>
-  <% case expense.ai_check_status %>
-  <% when "pass" %>
-    <div class="mt-2"><%= render AlertComponent.new(type: :success) do %>
-      AI check passed<%= ": #{expense.ai_comment}" if expense.ai_comment.present? %>
-    <% end %></div>
-  <% when "fail" %>
-    <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
-      AI check flagged this: <%= expense.ai_comment.presence || "see the receipt." %>
-    <% end %></div>
-  <% when "error" %>
-    <div class="mt-2"><%= render AlertComponent.new(type: :info) do %>
-      AI check could not run: <%= expense.ai_comment %>
-    <% end %></div>
-  <% end %>
+  <%# --- AI verdict (updates live via Turbo Stream; see AiCheckJob) --- %>
+  <%= render "ai_verdict", expense: expense %>
 
   <%# --- Warnings --- %>
   <% if expense.payee_override? %>
@@ -168,7 +152,8 @@
                     method: :patch, class: btn_classes(:success, :sm) %>
     <% end %>
     <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
-                  method: :patch, class: "flex items-center gap-2" do %>
+                  method: :patch, class: "flex items-center gap-2",
+                  data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
       <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
                          class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
       <%= submit_tag "Reject", class: btn_classes(:danger, :sm) %>
