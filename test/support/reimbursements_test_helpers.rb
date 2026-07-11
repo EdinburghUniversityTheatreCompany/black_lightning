@@ -264,16 +264,18 @@ module ReimbursementsTestHelpers
     end
   end
 
-  # Fake GraphClient for BatchProcessor / Build Batch tests: records drafts,
-  # uploads and downloads, with toggles to make the draft or uploads fail.
+  # Fake GraphClient for BatchProcessor / Build Batch / Notifier tests: records
+  # drafts, sent mail, uploads and downloads, with toggles to make the draft,
+  # a send, or uploads fail.
   class FakeGraphClient
-    attr_reader :uploaded, :drafts, :downloads
-    attr_accessor :fail_draft, :fail_uploads
+    attr_reader :uploaded, :drafts, :downloads, :send_mails
+    attr_accessor :fail_draft, :fail_uploads, :fail_send
 
     def initialize
       @uploaded = []
       @drafts = []
       @downloads = []
+      @send_mails = []
     end
 
     def download(url)
@@ -294,6 +296,13 @@ module ReimbursementsTestHelpers
       @drafts << { mailbox: mailbox, to: to, subject: subject, html: html,
                    attachments: attachments.map(&:filename) }
       "https://outlook.example/draft-1"
+    end
+
+    def send_mail(mailbox:, to:, subject:, html:)
+      raise Reimbursements::GraphAuth::Error, "send failed" if fail_send
+
+      @send_mails << { mailbox: mailbox, to: to, subject: subject, html: html }
+      nil
     end
   end
 
