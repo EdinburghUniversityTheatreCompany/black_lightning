@@ -60,6 +60,67 @@ module Reimbursements
       assert_equal [ "Props" ], store.active_budgets.map(&:name)
     end
 
+    test "update_budget! writes intended fields with owner links and busts the cache" do
+      store, client = build_store
+
+      store.budgets
+      budget = store.update_budget!("recBud1", name: "Props revised", nominal_code: "4100",
+                                    notes: "Careful", initial_budget: BigDecimal("2500"),
+                                    budget_type: "Expense", active: true,
+                                    owner_ids: [ "recPer1", "recPer2" ])
+      store.budgets
+
+      table, record_id, fields = client.updated.sole
+      assert_equal :budgets, table
+      assert_equal "recBud1", record_id
+      assert_equal "Props revised", fields[FIELD_IDS[:budgets][:name]]
+      assert_equal "4100", fields[FIELD_IDS[:budgets][:nominal_code]]
+      assert_equal "Careful", fields[FIELD_IDS[:budgets][:notes]]
+      assert_in_delta 2500.0, fields[FIELD_IDS[:budgets][:initial_budget]]
+      assert_equal [ "recPer1", "recPer2" ], fields[FIELD_IDS[:budgets][:owner]]
+      assert_equal "Props revised", budget.name
+      assert_equal 2, client.list_calls[:budgets], "update must bust the budgets cache"
+    end
+
+    # --- Budget forecasts --------------------------------------------------
+
+    test "budget_forecasts lists a budget's forecasts newest first" do
+      may = airtable_budget_forecast_record(id: "recFcMay", budget_id: "recBud1", date: "2026-05-01")
+      jun = airtable_budget_forecast_record(id: "recFcJun", budget_id: "recBud1", date: "2026-06-01")
+      other = airtable_budget_forecast_record(id: "recFcOther", budget_id: "recBud2", date: "2026-07-01")
+      store, client = build_fake_store(budgets: [ airtable_budget_record ],
+                                       budget_forecasts: [ may, jun, other ])
+
+      forecasts = store.budget_forecasts("recBud1")
+
+      assert_equal %w[recFcJun recFcMay], forecasts.map(&:record_id)
+      assert_empty store.budget_forecasts(nil)
+      assert_equal 1, client.list_calls[:budget_forecasts], "forecasts list is cached"
+    end
+
+    test "create_forecast! creates a linked record and busts budget + forecast caches" do
+      existing = airtable_budget_forecast_record(id: "recFc1", budget_id: "recBud1")
+      store, client = build_fake_store(budgets: [ airtable_budget_record ],
+                                       budget_forecasts: [ existing ])
+
+      store.budgets
+      store.budget_forecasts("recBud1")
+      forecast = store.create_forecast!(budget_id: "recBud1", amount: BigDecimal("750"),
+                                        date: Date.new(2026, 6, 1), reason: "Revised up")
+      store.budgets
+      store.budget_forecasts("recBud1")
+
+      table, fields = client.created.sole
+      assert_equal :budget_forecasts, table
+      assert_equal [ "recBud1" ], fields[FIELD_IDS[:budget_forecasts][:budget]]
+      assert_in_delta 750.0, fields[FIELD_IDS[:budget_forecasts][:amount]]
+      assert_equal "2026-06-01", fields[FIELD_IDS[:budget_forecasts][:date]]
+      assert_equal "Revised up", fields[FIELD_IDS[:budget_forecasts][:reason]]
+      assert_equal BigDecimal("750"), forecast.amount
+      assert_equal 2, client.list_calls[:budgets], "create must bust the budgets cache"
+      assert_equal 2, client.list_calls[:budget_forecasts], "create must bust the forecasts cache"
+    end
+
     test "find_expense! fetches a single record fresh on a cache miss" do
       store, client = build_store
 
