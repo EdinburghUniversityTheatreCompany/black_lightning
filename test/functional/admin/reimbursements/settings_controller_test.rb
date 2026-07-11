@@ -98,6 +98,28 @@ module Admin
         assert_includes response.body, "Nightly auto-submit runs on"
       end
 
+      test "edit shows the Exchange grant command filled in with this mailbox" do
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "Microsoft access for this cost centre"
+        assert_includes response.body,
+          %(Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member #{@cost_centre.receive_mailbox})
+        assert_includes response.body,
+          "Test-ApplicationAccessPolicy -Identity #{@cost_centre.receive_mailbox} -AppId b874d491-4edf-4b76-839d-84e534c7f7c0"
+      end
+
+      test "edit shows a separate grant block when the send mailbox differs" do
+        @cost_centre.update!(send_mailbox: "outbox@bedlamfringe.co.uk")
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "-Member #{@cost_centre.receive_mailbox}"
+        assert_includes response.body, "-Member outbox@bedlamfringe.co.uk"
+      end
+
       test "edit 404s for an unknown cost centre" do
         sign_in @user
         get :edit, params: { key: "nope" }
