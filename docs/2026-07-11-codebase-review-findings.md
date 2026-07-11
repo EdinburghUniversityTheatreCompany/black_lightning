@@ -290,7 +290,7 @@ Grouped by area. These are worth fixing opportunistically or batching.
 - **`admin/users_controller.rb:168`** — `permitted_params` mutates `params` in place and runs a bcrypt `valid_password?` as a side effect during authorization; make it pure.
 - **`generic_controller.rb:380`** — `upload_dropzone` permits `access_level` from raw params (self-acknowledged in the comment): a user with update access can set arbitrary picture `access_level`/tag ids. Authorize `Picture` creation and validate `access_level`.
 - **`admin/show_crew_imports_controller.rb:83`** — fuzzy-bucket confirm trusts an arbitrary user id from the posted action string (`link_<id>`) without checking it was a presented candidate.
-- **`profile_completions_controller.rb:26`** — completion token is not invalidated after use; a leaked link remains a login-as-user vector via the token branch. Consume/rotate on completion.
+- ~~**`profile_completions_controller.rb:26`** — completion token is not invalidated after use; a leaked link remains a login-as-user vector.~~ **RETRACTED (round 4, verified false positive):** `complete_profile!` (`user.rb:916`) rotates `profile_completion_salt`, which is part of the token's `signed_id` purpose (`user.rb:920` + `find_signed` at `user.rb:163`), so an old link fails verification after completion (and tokens already expire in 7 days). The token *is* effectively consumed.
 - **`generic_events_controller.rb:11`** — `show` discards the already-authorized record and re-runs `find` with `includes` (redundant query per event show).
 - **`admin/staffings_controller.rb:243`** — `sign_up`/`sign_up_confirm` skip authorize and gate only via a view helper's `user.can?`, bypassing `check_authorization`. Call `authorize!` explicitly.
 - **`admin/membership_controller.rb:16`** — invalid `render :json, {…}` syntax in the card-not-activated branch (currently under `:nocov:`).
@@ -475,6 +475,53 @@ pair's `CachedDuplicate` rows in `mark_not_duplicate` (or filter `marked_not_dup
 
 ---
 
+## Round 4 additions (2026-07-11) — convergence check
+
+A final high-bar pass (medium+ only): a fresh adversarial re-scan of the top-risk surfaces,
+plus the last un-cited material (proposals subsystem, remaining models, reimbursements POROs,
+test red flags). **The loop has converged** — 1 new medium finding, 1 retraction, and a
+clean-bill audit of the highest-risk surfaces.
+
+| # | Severity | Axis | Area | Finding |
+|---|----------|------|------|---------|
+| R4-1 | Medium | correctness | Controllers | Proposal→show `convert` is unguarded/repeatable → a second click silently creates a duplicate `Show` (+ dup team members, ambiguous `has_one :event`) ✓ |
+
+### R4-1. Repeatable proposal→show conversion creates duplicate Shows ✓
+**`app/controllers/admin/proposals/proposals_controller.rb:176`**, **`app/models/admin/proposals/proposal.rb:109`** · correctness · Medium
+
+`convert_to_show` guards only `unless successful?` — it never checks `event.present?` (the
+`has_one :event`) and doesn't record a "converted" state. The slug-collision loop appends
+`-2`/`-3`, so a repeat call does **not** error; it inserts a second `Show` with the same
+`proposal_id` and re-copies the team members, after which `@proposal.event` resolves
+ambiguously. The Convert button (`proposals/show.html.erb:14`) is gated on
+`@proposal.successful?`, which stays true after conversion, so a second click (or
+double-submit) triggers it. Existing tests only cover single conversion. **Fix:** `raise
+ArgumentError if event.present?` in `convert_to_show` (or add a `converted` status), and
+hide the button once `@proposal.event` exists.
+
+### Confirmed-clean audit (adversarial re-scan → no new medium+ findings)
+The re-scan verified these high-risk surfaces are sound (or already covered), which is itself
+a useful result:
+- **Auth**: every `skip_authorization_check` controller does an explicit `authorize!`/token
+  check or was already flagged. `DevAuthController` is gated to `Rails.env.local?`. The
+  `MissionControl::Jobs` engine at `/admin/jobs` is protected by `Admin::JobsController`'s
+  `authenticate_user!` + `authorize!(:manage, :jobs)`. `can :manage, :all` is inside the
+  Admin-role branch only.
+- **Injection**: no user-input string-interpolated SQL; every `constantize`/`send`/`public_send`
+  is allow-listed or hardcoded.
+- **XSS**: `layouts/_alert_div.erb:11` renders flash via `to_json.html_safe` inside `<script>`,
+  but flash is session-scoped and Rails 8.1's `escape_html_entities_in_json` prevents
+  `</script>` breakout. Remaining `html_safe` sites are admin/committee-authored or already
+  flagged (#2 and the two position items).
+- **Mass assignment**: `role_ids`, `creator_id`, `submitter_*` are gated on admin/manage;
+  `get_involved` never permits `approved`/`creator_id`; reimbursements params are field-scoped.
+- **Tokens/session**: `calendar_token` is `has_secure_token`; profile-completion uses a
+  salt-rotated `find_signed` (see the R4 retraction above); reset/session go through Devise.
+- **Reimbursements**: every mutating action is ownership-scoped via
+  `find_own_editable_expense!` / `current_person`; the money layer uses BigDecimal throughout.
+
+---
+
 ## Cross-cutting themes
 
 1. **Public attack surface + `html_safe`.** The opportunity submission flow is anonymous, and
@@ -500,10 +547,14 @@ pair's `CachedDuplicate` rows in `mark_not_duplicate` (or filter `marked_not_dup
   admin-controller/route/job breadth, quality axes app-wide (3 passes, 14 new, 0 high).
   Round 3 = lib/middleware/inputs, dup-detection/caching, attachment security, remaining public
   controllers + Stimulus + env config (2 passes, 8 new, 0 high). Verified round 3: R3-1, R3-2.
-  Each round dedups against this file. **Convergence:** new findings fell from many (incl. 4 high)
-  → 14 (0 high, mostly efficiency) → 8 (0 high, mostly low); rounds 2-3 surfaced no new
-  high-severity issues and reported the money layer, attachment access control, middleware, and
-  inputs as clean. The remaining backlog is low-severity cleanup.
+  Round 4 = high-bar convergence check: adversarial re-scan of top-risk surfaces + last un-cited
+  material (2 passes, 1 new medium, 1 retraction). Verified round 4: R4-1.
+  Each round dedups against this file. **Convergence reached:** new findings fell from many
+  (incl. 4 high) → 14 (0 high, mostly efficiency) → 8 (0 high, mostly low) → 1 (0 high). Rounds
+  2-4 surfaced no new high-severity issues; the money layer, attachment access control, auth
+  surfaces, injection surfaces, middleware, and inputs were audited clean, and one round-1 low
+  finding was retracted as a verified false positive. Further rounds would only surface
+  low-severity cleanup — the review is considered complete.
 - Nothing was changed. This is a report; each item names its file:line, axis, and a suggested fix.
 - No live suite was run (the test DB — `docker start /mysql8` — was not started for this
   read-only pass); the correctness findings are reasoned from source, not reproduced via tests.
