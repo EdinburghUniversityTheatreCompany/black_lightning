@@ -5,18 +5,24 @@ module Reimbursements
     include ReimbursementsTestHelpers
 
     # Interface-compatible stand-in for MailboxClient recording replies/moves.
+    # Models the real idempotency guarantee: mark_read hides the message from
+    # unread_messages, so a message read once is never re-processed even if the
+    # (best-effort) move fails. Toggles let a step fail like Graph would.
     class FakeMailbox
-      attr_reader :replies, :moves
+      attr_reader :replies, :moves, :reads
+      attr_accessor :fail_mark_read, :fail_move
 
       def initialize(messages: [], attachments: {})
         @messages = messages
         @attachments = attachments
         @replies = []
         @moves = []
+        @reads = []
+        @read_ids = []
       end
 
       def unread_messages
-        @messages
+        @messages.reject { |message| @read_ids.include?(message.id) }
       end
 
       def attachments(message_id)
@@ -27,8 +33,22 @@ module Reimbursements
         @replies << [ message_id, html ]
       end
 
-      def mark_read_and_move(message_id, folder)
+      def mark_read(message_id)
+        raise MailboxClient::Error, "isRead patch failed" if fail_mark_read
+
+        @read_ids << message_id
+        @reads << message_id
+      end
+
+      def move(message_id, folder)
+        raise MailboxClient::Error, "move failed" if fail_move
+
         @moves << [ message_id, folder ]
+      end
+
+      def mark_read_and_move(message_id, folder)
+        mark_read(message_id)
+        move(message_id, folder)
       end
     end
 
@@ -56,6 +76,18 @@ module Reimbursements
         vat_itemised: true, suggested_description: "Taxi to venue",
         suggested_budget_record_id: "recBud1", suggested_payment_reference: "CITYCABS PAT"
       )
+    end
+
+    # No mocking library in this suite: swap Honeybadger.notify for a recorder
+    # for the duration of the block, then restore the original method.
+    def capture_honeybadger_notices
+      notices = []
+      original = Honeybadger.method(:notify)
+      Honeybadger.define_singleton_method(:notify) { |error, **opts| notices << [ error, opts ] }
+      yield
+      notices
+    ensure
+      Honeybadger.define_singleton_method(:notify, original)
     end
 
     def setup_job(messages:, attachments: {}, extraction: nil)
@@ -164,6 +196,42 @@ module Reimbursements
       assert_equal 1, @client.created.size
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves,
                    "message must leave the inbox once the expense exists"
+    end
+
+    test "a move failure after marking read does not re-create on the next poll" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      @mailbox.fail_move = true
+
+      MailboxPollJob.perform_now
+      MailboxPollJob.perform_now
+
+      assert_equal 1, @client.created.size, "a read message must not be re-processed into a duplicate"
+      assert_includes @mailbox.reads, "msg1", "marking read is the idempotency step and must happen"
+      assert_empty @mailbox.moves, "the move failed, but the message is already read so it is safe"
+    end
+
+    test "a failed isRead after creating the expense is surfaced, not swallowed" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      @mailbox.fail_mark_read = true
+
+      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
+
+      assert_equal 1, @client.created.size
+      assert_equal 1, notified.size, "the isRead failure must reach Honeybadger"
+      assert notified.first.last.dig(:context, :duplicate_risk),
+             "a possible duplicate must be flagged so an operator can check"
+      assert_empty @mailbox.moves
+    end
+
+    test "an attachment with nil bytes is skipped, not crashed on" do
+      nil_bytes = { filename: "broken.pdf", content_type: "application/pdf", bytes: nil }
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ nil_bytes ] })
+
+      assert_nothing_raised { MailboxPollJob.perform_now }
+
+      assert_empty @client.created, "a broken attachment must not mint an expense"
+      assert_match(/no usable receipt/, @mailbox.replies.first.last)
+      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
 
     test "extraction failure still creates the expense with subject and receipt only" do

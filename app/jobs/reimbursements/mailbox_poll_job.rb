@@ -12,8 +12,12 @@ module Reimbursements
   #
   # Failure handling: before the expense exists, a message is simply left
   # unread and retried next cycle. After the expense exists, the message is
-  # ALWAYS moved to Processed (even when attaching/replying failed) so a
-  # transient error can't mint a duplicate expense every 5 minutes.
+  # marked READ as the guaranteed idempotency step (unread_messages filters on
+  # unread, so a read message is never re-fetched) before the best-effort
+  # attach/reply/move — so a transient error there can't mint a duplicate
+  # expense every 5 minutes. If the mark-read step itself fails after the
+  # expense was created, that's the one duplicate-risk case, so it's flagged to
+  # Honeybadger rather than silently swallowed.
   # Graph credential failures alert the IT subcommittee, deduped to once/day.
   class MailboxPollJob < ApplicationJob
     queue_as :default
@@ -96,8 +100,12 @@ module Reimbursements
       # only image is pasted inline, which is a perfectly normal way to send
       # a receipt. All attachments and inline images count as receipts.
       mailbox.attachments(message.id).select do |attachment|
-        ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(attachment[:content_type]) &&
-          attachment[:bytes].bytesize <= ExpenseForm::MAX_RECEIPT_BYTES
+        bytes = attachment[:bytes]
+        # Guard nil/empty bytes: a bad attachment must not raise here (it would
+        # leave the message unread and reprocessed forever), just be skipped.
+        bytes.present? &&
+          ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(attachment[:content_type]) &&
+          bytes.bytesize <= ExpenseForm::MAX_RECEIPT_BYTES
       end
     end
 
@@ -123,22 +131,57 @@ module Reimbursements
       )
 
       expense = store.create_expense!(expense_attrs(message, person, extraction))
-      begin
+      finalise_created(message, expense, receipts)
+    end
+
+    # The expense now exists, so the message must never be re-processed. Mark it
+    # read first — the guaranteed idempotency step (unread_messages filters on
+    # unread) — then do the best-effort attach/reply/move. A failure of the
+    # mark-read step is the one path that risks a duplicate next cycle, so it is
+    # surfaced loudly rather than swallowed.
+    def finalise_created(message, expense, receipts)
+      mark_read_or_flag_duplicate(message, expense) or return
+
+      best_effort(message, expense, "receipt attach/reply") do
         receipts.each do |receipt|
           store.attach_receipt!(expense.record_id, filename: receipt[:filename],
                                                    content_type: receipt[:content_type],
                                                    bytes: receipt[:bytes])
         end
         mailbox.reply(message.id, html: created_html(expense))
-      rescue MailboxClient::AuthError
-        raise
-      rescue => e
-        # The expense exists: retrying the whole message would duplicate it,
-        # so log loudly and still move the message out of the inbox.
-        Rails.logger.error("Reimbursements post-create step failed for #{message.id}: #{e.message}")
-        Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id })
       end
-      mailbox.mark_read_and_move(message.id, :processed)
+      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) }
+    end
+
+    # Marks the message read. Returns true on success. On failure the expense
+    # already exists but the message is still unread, so the next poll may mint
+    # a duplicate: flag it (duplicate_risk) so an operator can check, and skip
+    # the follow-up (a still-unread message shouldn't be replied to / moved).
+    def mark_read_or_flag_duplicate(message, expense)
+      mailbox.mark_read(message.id)
+      true
+    rescue MailboxClient::AuthError
+      raise
+    rescue => e
+      Rails.logger.error("Reimbursements could not mark message #{message.id} read after " \
+                         "creating expense #{expense.record_id}; it may be re-processed into a " \
+                         "duplicate: #{e.message}")
+      Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id,
+                                       duplicate_risk: true })
+      false
+    end
+
+    # Runs a follow-up step that happens after the expense exists and the
+    # message is already read: any failure is logged + reported but never
+    # re-raised (the message is safe), except AuthError which aborts the poll to
+    # alert on credentials.
+    def best_effort(message, expense, description)
+      yield
+    rescue MailboxClient::AuthError
+      raise
+    rescue => e
+      Rails.logger.error("Reimbursements #{description} failed for #{message.id}: #{e.message}")
+      Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id })
     end
 
     # Everything the extraction confidently knows, blanks elsewhere. The
