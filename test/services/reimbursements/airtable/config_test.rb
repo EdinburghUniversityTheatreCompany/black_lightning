@@ -21,9 +21,13 @@ module Reimbursements
         assert_equal "fldAmt", config.fid(:expenses, :amount)
       end
 
-      test "raises KeyError for unknown tables and fields" do
+      test "raises KeyError for an unknown table" do
         assert_raises(KeyError) { config.table_id(:batches) }
-        assert_raises(KeyError) { config.fid(:expenses, :nope) }
+      end
+
+      test "returns nil for an unknown field so lagging credentials degrade, not 500" do
+        assert_nil config.fid(:expenses, :nope)
+        assert_nil config.fid(:nonexistent_table, :whatever)
       end
 
       test "from_credentials raises a clear error when credentials are missing" do

@@ -45,12 +45,19 @@ module Reimbursements
       # by field NAME and the mapper would hydrate blank POROs from it.
       def create_record(table, fields_by_id)
         uri = URI("#{API_URL}/#{@config.base_id}/#{@config.table_id(table)}")
-        request(:post, uri, { fields: fields_by_id, typecast: true, returnFieldsByFieldId: true })
+        request(:post, uri, { fields: known_fields(fields_by_id), typecast: true, returnFieldsByFieldId: true })
       end
 
       def update_record(table, record_id, fields_by_id)
         uri = URI("#{API_URL}/#{@config.base_id}/#{@config.table_id(table)}/#{record_id}")
-        request(:patch, uri, { fields: fields_by_id, typecast: true, returnFieldsByFieldId: true })
+        request(:patch, uri, { fields: known_fields(fields_by_id), typecast: true, returnFieldsByFieldId: true })
+      end
+
+      # Drop any nil-keyed entry — a field whose id isn't in this environment's
+      # credentials (Config#fid returned nil) — so a lagging config never sends
+      # a malformed write rather than just omitting the unknown field.
+      def known_fields(fields_by_id)
+        fields_by_id.reject { |field_id, _| field_id.nil? }
       end
 
       # Single-record fetch (1 API call vs re-listing the table); nil on 404.
