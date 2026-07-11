@@ -179,6 +179,10 @@ module ReimbursementsTestHelpers
   class FakeAirtableClient
     attr_reader :list_calls, :get_calls, :created, :updated, :uploads, :deleted
     attr_accessor :fail_uploads
+    # Make every create_record for these tables raise, standing in for an
+    # Airtable write outage (e.g. the Batch-record write failing after the EUSA
+    # draft was already created — the orphan-draft path).
+    attr_accessor :fail_create_tables
 
     def initialize(records_by_table)
       @records_by_table = records_by_table
@@ -188,6 +192,7 @@ module ReimbursementsTestHelpers
       @updated = []
       @uploads = []
       @deleted = []
+      @fail_create_tables = []
     end
 
     def list_records(table)
@@ -201,6 +206,10 @@ module ReimbursementsTestHelpers
     end
 
     def create_record(table, fields)
+      if Array(@fail_create_tables).include?(table)
+        raise Reimbursements::Airtable::Error.new("create failed for #{table}", status: 500)
+      end
+
       @created << [ table, fields ]
       { "id" => "recNew#{@created.size}", "fields" => fields }
     end
@@ -261,6 +270,28 @@ module ReimbursementsTestHelpers
       raise @error if @error
 
       Response.new(@content)
+    end
+  end
+
+  # Stand-in for BatchProcessor in the job tests (nightly + interactive build):
+  # records each process(**kwargs) call and returns a canned Result.
+  # +success: false+ drives the failure path.
+  class FakeBatchProcessor
+    Result = Struct.new(:success, :eusa_draft_web_link, :total_amount, :bacs_date, :errors,
+                        keyword_init: true)
+    attr_reader :calls
+
+    def initialize(success: true, errors: [])
+      @success = success
+      @errors = errors
+      @calls = []
+    end
+
+    def process(**kwargs)
+      @calls << kwargs
+      Result.new(success: @success, eusa_draft_web_link: "https://outlook.example/draft-1",
+                 total_amount: kwargs[:expenses].sum { |e| e.amount || 0 },
+                 bacs_date: kwargs[:bacs_date], errors: @errors)
     end
   end
 

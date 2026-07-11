@@ -4,6 +4,7 @@ module Admin
   module Reimbursements
     class BatchesControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
+      include ActiveJob::TestHelper
 
       BATCH_FIDS = FIELD_IDS[:batches]
       EXP_FIDS = FIELD_IDS[:expenses]
@@ -19,14 +20,10 @@ module Admin
           sharepoint_receipts_drive_id: "drvR", sharepoint_receipts_folder_id: "fldR",
           sharepoint_bacs_drive_id: "drvB", sharepoint_bacs_folder_id: "fldB"
         )
-
-        @graph = FakeGraphClient.new
-        BatchesController.graph_builder = -> { @graph }
       end
 
       teardown do
         Admin::Reimbursements::BaseController.store_builder = -> { ::Reimbursements::Store.new }
-        BatchesController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
       def use_store(expenses: [], people: [], budgets: [], batches: [])
@@ -80,19 +77,20 @@ module Admin
 
       # --- Build Batch (create) ---------------------------------------------
 
-      test "create processes the batch, submits expenses and shows the draft link" do
+      test "create enqueues a background build (serialised per cost centre) and redirects to History" do
         one_approved
         sign_in @user
 
-        post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "finance@eusa.ed.ac.uk",
-                                sender_name: "Fringe Finance" }
+        assert_enqueued_with(job: ::Reimbursements::BuildBatchJob) do
+          post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "finance@eusa.ed.ac.uk",
+                                  sender_name: "Fringe Finance" }
+        end
 
-        assert_response :success
-        assert_includes response.body, "https://outlook.example/draft-1"
-        assert_equal 1, @graph.drafts.size
-        assert_equal 1, @client.created.count { |table, _| table == :batches }
-        submitted = @client.updated.count { |_, _, fields| fields[EXP_FIDS[:status]] == "Submitted" }
-        assert_equal 1, submitted
+        assert_redirected_to admin_reimbursements_batches_path
+        assert_match(/building/i, flash[:notice])
+        # Nothing is processed inline in the request: no batch, no submit.
+        assert_equal 0, @client.created.count { |table, _| table == :batches }
+        assert_equal 0, @client.updated.count { |_, _, fields| fields[EXP_FIDS[:status]] == "Submitted" }
       end
 
       # --- History (index / show) -------------------------------------------

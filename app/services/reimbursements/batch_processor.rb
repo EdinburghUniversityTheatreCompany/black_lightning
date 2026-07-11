@@ -15,11 +15,23 @@ module Reimbursements
   # so a rebuild is clean. Steps after the draft are best-effort: their failures
   # are collected into Result#errors but don't undo a valid submission.
   #
-  # It's long and API-heavy, so it's built to run from a Solid Queue job; today
-  # Build Batch runs it inline for immediate operator feedback (the draft link).
+  # ORPHAN-DRAFT GUARD: once the draft exists a rebuild must never create a
+  # SECOND draft on the same expenses. So every post-draft step is contained
+  # here (never re-raised past the draft), the Batch-record write is retried,
+  # and if it still can't be written the expenses are marked Submitted anyway —
+  # leaving the Approved queue so a rebuild finds nothing to re-draft — while a
+  # loud error naming the live draft link is surfaced for manual repair.
+  #
+  # It's long and API-heavy, so it's built to run from a Solid Queue job
+  # (BuildBatchJob for interactive Build Batch, NightlyBatchJob for the nightly).
   class BatchProcessor
     XLSX_CONTENT_TYPE =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
+
+    # How many times to retry the Batch-record write before giving up and
+    # falling back to the orphan-draft guard. Retries are immediate: a transient
+    # Airtable blip clears, and we must not sit on a live draft.
+    CREATE_BATCH_ATTEMPTS = 3
 
     # The outcome handed back to the UI.
     Result = Struct.new(:success, :bacs_date, :batch_id, :expense_count, :total_amount,
@@ -66,8 +78,16 @@ module Reimbursements
         return fail_with(result, "EUSA draft creation failed: #{e.message}")
       end
 
+      # ORPHAN-DRAFT GUARD — the draft is live and money will move once the
+      # operator sends it. If the Batch write can't be recovered, still mark the
+      # expenses Submitted so they leave the Approved queue (a rebuild can't
+      # re-draft them) and surface the orphan draft loudly for manual repair.
       batch = create_batch(result)
-      return result if batch.nil?
+      if batch.nil?
+        mark_submitted(result, expenses, nil, urls_by_expense)
+        result.errors.unshift(orphan_draft_message(result))
+        return result
+      end
 
       mark_submitted(result, expenses, batch, urls_by_expense)
       notify_producers(result, expenses.reject(&:producer_notified), bacs_date)
@@ -162,25 +182,43 @@ module Reimbursements
       GraphClient::Attachment.new(filename: filename, content: bytes, content_type: XLSX_CONTENT_TYPE)
     end
 
+    # Writes the Batch record, retrying transient failures — the draft is
+    # already live, so we must recover rather than sit on it. Returns nil only
+    # when every attempt failed (the caller then invokes the orphan-draft guard).
     def create_batch(result)
-      batch = @store.create_batch!(date_sent: result.bacs_date,
-                                   notes: "BACS SharePoint: #{result.bacs_sharepoint_url}")
-      result.batch_id = batch.record_id
-      flag_batch(result, batch, :eusa_draft_created, sharepoint_backup_url: result.bacs_sharepoint_url)
-      batch
-    rescue StandardError => e
-      fail_with(result, "Failed to create batch record: #{e.message}")
-      nil
+      attempts = 0
+      begin
+        attempts += 1
+        batch = @store.create_batch!(date_sent: result.bacs_date,
+                                     notes: "BACS SharePoint: #{result.bacs_sharepoint_url}")
+        result.batch_id = batch.record_id
+        flag_batch(result, batch, :eusa_draft_created, sharepoint_backup_url: result.bacs_sharepoint_url)
+        batch
+      rescue StandardError => e
+        retry if attempts < CREATE_BATCH_ATTEMPTS
+        fail_with(result, "Failed to create batch record after #{attempts} attempts: #{e.message}")
+        nil
+      end
     end
 
+    # +batch+ is nil on the orphan-draft path; batch_id: nil is dropped by the
+    # mapper so the batch link is simply left unset (the expense still leaves the
+    # Approved queue, which is what stops a rebuild re-drafting it).
     def mark_submitted(result, expenses, batch, urls_by_expense)
+      batch_id = batch&.record_id
       expenses.each do |expense|
-        @store.update_expense!(expense.record_id, status: Status::SUBMITTED, batch_id: batch.record_id,
+        @store.update_expense!(expense.record_id, status: Status::SUBMITTED, batch_id: batch_id,
                                submitted_to_eusa_date: result.bacs_date, receipts_offloaded: true,
                                sharepoint_receipt_urls: urls_by_expense.fetch(expense.record_id, []))
       rescue StandardError => e
         result.errors << "Failed to mark expense #{expense.auto_number} as Submitted: #{e.message}"
       end
+    end
+
+    def orphan_draft_message(result)
+      "ORPHAN DRAFT: the EUSA draft was created (#{result.eusa_draft_web_link}) but the batch record " \
+        "could not be saved. The expenses were marked Submitted to stop a rebuild creating a SECOND " \
+        "draft — send THIS existing draft and repair the batch record manually. DO NOT rebuild."
     end
 
     # Producer notifications go via Graph (Notifier#producer_notification), one

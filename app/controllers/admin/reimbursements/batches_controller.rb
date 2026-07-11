@@ -6,20 +6,19 @@ module Admin
     #
     # * new / create — preview every Approved expense via its EFFECTIVE payee
     #   (flagging "→ third party" overrides), set the BACS date / EUSA recipient
-    #   / signature and edit the EUSA email, then run BatchProcessor: it creates
-    #   the draft in the cost centre's send mailbox, offloads receipts + the
-    #   xlsx to SharePoint, records the Batch and marks the expenses Submitted.
+    #   / signature and edit the EUSA email, then enqueue BuildBatchJob, which
+    #   creates the draft in the cost centre's send mailbox, offloads receipts +
+    #   the xlsx to SharePoint, records the Batch and marks the expenses Submitted.
     # * index / show — past batches with per-batch totals and links.
     # * reopen — revert a batch's expenses to Approved and delete it so it can be
     #   rebuilt; blocked if any expense is already Paid (reconciled).
     #
-    # Build Batch runs the processor inline so the operator immediately sees the
-    # draft link + metrics; it's structured as a service so the nightly job
-    # (Phase F) can run the same flow in the background.
+    # Build Batch runs in the BACKGROUND (BuildBatchJob): the processor is
+    # API-heavy (SharePoint uploads + Graph draft) and can exceed the request
+    # timeout, and a concurrency lock on the cost centre stops a double-click
+    # double-submitting. The operator is redirected to History and emailed the
+    # draft link when it's ready.
     class BatchesController < FinanceController
-      # Injection seam for tests: the app-only Graph client (drafts + SharePoint).
-      class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
-
       before_action :require_cost_centre, only: %i[new create]
 
       def index
@@ -45,17 +44,22 @@ module Admin
         @default_email = compose_default_email(@bacs_date, @sender_name)
       end
 
+      # Enqueue the build (BuildBatchJob serialises per cost centre, so a
+      # double-click can't double-submit) and send the operator to History; the
+      # draft link lands there and in their inbox when the background run finishes.
       def create
-        @result = ::Reimbursements::BatchProcessor
-                  .new(store: store, graph: graph, cost_centre: @cost_centre)
-                  .process(
-                    expenses: approved_expenses,
-                    bacs_date: parsed_bacs_date,
-                    sender_name: params[:sender_name].presence || default_sender,
-                    eusa_recipient: params[:eusa_recipient].presence || @cost_centre.eusa_recipient_or_default,
-                    eusa_subject: params[:eusa_subject],
-                    eusa_body_html: params[:eusa_body]
-                  )
+        ::Reimbursements::BuildBatchJob.perform_later(
+          cost_centre_key: @cost_centre.key,
+          bacs_date: parsed_bacs_date.iso8601,
+          sender_name: params[:sender_name].presence || default_sender,
+          eusa_recipient: params[:eusa_recipient].presence || @cost_centre.eusa_recipient_or_default,
+          eusa_subject: params[:eusa_subject].presence,
+          eusa_body_html: params[:eusa_body].presence,
+          operator_emails: Array(current_user.try(:email)).compact_blank
+        )
+        redirect_to admin_reimbursements_batches_path,
+                    notice: "Batch is building for #{@cost_centre.name}. Its EUSA draft link will appear " \
+                            "here and be emailed to you when ready — don't rebuild it in the meantime."
       end
 
       def reopen
@@ -75,10 +79,6 @@ module Admin
       end
 
       private
-
-      def graph
-        @graph ||= graph_builder.call
-      end
 
       def require_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.default
