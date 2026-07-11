@@ -21,6 +21,8 @@ module Reimbursements
     EUSA_ACTUALS_TTL = 10.minutes
     BATCHES_KEY = "reimbursements/batches".freeze
     BATCHES_TTL = 1.hour
+    BUDGET_FORECASTS_KEY = "reimbursements/budget_forecasts".freeze
+    BUDGET_FORECASTS_TTL = 10.minutes
     BACKUP_TTL = 7.days
 
     # Raised instead of rewriting an expense's attachment field to empty.
@@ -79,6 +81,42 @@ module Reimbursements
     # Budgets a submitter may charge an expense to.
     def active_budgets
       budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
+    end
+
+    def find_budget(record_id)
+      budgets.find { |b| b.record_id == record_id }
+    end
+
+    # Finance edit of a budget (name, nominal code, notes, initial budget,
+    # budget type, visible-to-submitters, owner links). Busts the budgets cache
+    # so the next read reflects the change.
+    def update_budget!(record_id, attrs)
+      record = @client.update_record(:budgets, record_id, @mapper.budget_fields(attrs))
+      bust_budgets!
+      @mapper.budget(record)
+    end
+
+    # A budget's forecast history (versioned projected-spend updates), newest
+    # date first.
+    def budget_forecasts(budget_id)
+      return [] if budget_id.blank?
+
+      all_budget_forecasts.select { |f| f.budget_id == budget_id }
+                          .sort_by { |f| f.date || Date.new(0) }
+                          .reverse
+    end
+
+    # Appends a projected-spend update to a budget. Busts the forecasts cache
+    # and the budgets cache — the latter because the Budgets table rolls the
+    # latest forecast up into +current_forecast+.
+    def create_forecast!(budget_id:, amount:, date:, reason:)
+      record = @client.create_record(
+        :budget_forecasts,
+        @mapper.budget_forecast_fields(budget_id: budget_id, amount: amount, date: date, reason: reason)
+      )
+      bust_budget_forecasts!
+      bust_budgets!
+      @mapper.budget_forecast(record)
     end
 
     def create_expense!(attrs)
@@ -223,6 +261,23 @@ module Reimbursements
     def bust_batches!
       @batches = nil
       @cache.delete(BATCHES_KEY)
+    end
+
+    def bust_budgets!
+      @budgets = nil
+      @budgets_by_id = nil
+      @cache.delete(BUDGETS_KEY)
+    end
+
+    def bust_budget_forecasts!
+      @all_budget_forecasts = nil
+      @cache.delete(BUDGET_FORECASTS_KEY)
+    end
+
+    def all_budget_forecasts
+      @all_budget_forecasts ||=
+        fetch_list(BUDGET_FORECASTS_KEY, BUDGET_FORECASTS_TTL, :budget_forecasts)
+        .map { |r| @mapper.budget_forecast(r) }
     end
 
     def people_by_id

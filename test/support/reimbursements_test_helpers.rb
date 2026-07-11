@@ -8,7 +8,14 @@ module ReimbursementsTestHelpers
     },
     budgets: {
       name: "fldBudName", nominal_code: "fldBudNom", active: "fldBudActive",
-      initial_budget: "fldBudInit", remaining: "fldBudRem", budget_type: "fldBudType"
+      initial_budget: "fldBudInit", remaining: "fldBudRem", budget_type: "fldBudType",
+      owner: "fldBudOwner", notes: "fldBudNotes", current_forecast: "fldBudFcast",
+      committed_amount: "fldBudCommit", total_paid: "fldBudPaid", variance: "fldBudVar",
+      budget_forecasts: "fldBudFcastLink"
+    },
+    budget_forecasts: {
+      name: "fldFcName", budget: "fldFcBudget", amount: "fldFcAmount",
+      date: "fldFcDate", reason: "fldFcReason"
     },
     expenses: {
       auto_number: "fldExpNum", payee: "fldExpPayee", type: "fldExpType",
@@ -65,7 +72,8 @@ module ReimbursementsTestHelpers
       base_id: "appTestBase",
       tables: {
         people: "tblPeople", budgets: "tblBudgets", expenses: "tblExpenses",
-        batches: "tblBatches", eusa_actuals: "tblEusaActuals"
+        batches: "tblBatches", eusa_actuals: "tblEusaActuals",
+        budget_forecasts: "tblBudgetForecasts"
       },
       fields: FIELD_IDS,
       status_options: {
@@ -85,10 +93,33 @@ module ReimbursementsTestHelpers
     { "id" => id, "fields" => fields }
   end
 
-  def airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000", active: true)
+  def airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000", active: true,
+                             initial_budget: nil, budget_type: nil, remaining: nil,
+                             owner_ids: nil, notes: nil, current_forecast: nil,
+                             committed_amount: nil, total_paid: nil, variance: nil,
+                             budget_forecast_ids: nil)
     f = FIELD_IDS[:budgets]
-    { "id" => id,
-      "fields" => { f[:name] => name, f[:nominal_code] => nominal_code, f[:active] => active }.compact }
+    fields = {
+      f[:name] => name, f[:nominal_code] => nominal_code, f[:active] => active,
+      f[:initial_budget] => initial_budget, f[:budget_type] => budget_type,
+      f[:remaining] => remaining, f[:owner] => owner_ids, f[:notes] => notes,
+      f[:current_forecast] => current_forecast, f[:committed_amount] => committed_amount,
+      f[:total_paid] => total_paid, f[:variance] => variance,
+      f[:budget_forecasts] => budget_forecast_ids
+    }.compact
+    { "id" => id, "fields" => fields }
+  end
+
+  def airtable_budget_forecast_record(id: "recFc1", **attrs)
+    f = FIELD_IDS[:budget_forecasts]
+    fields = {
+      f[:name] => attrs.fetch(:name, "Props forecast"),
+      f[:budget] => Array(attrs.fetch(:budget_id, "recBud1")),
+      f[:amount] => attrs.fetch(:amount, 500.0),
+      f[:date] => attrs.fetch(:date, "2026-05-01"),
+      f[:reason] => attrs.fetch(:reason, "Initial projection")
+    }.compact
+    { "id" => id, "fields" => fields }
   end
 
   def airtable_expense_record(id: "recExp1", overrides: {}, **attrs)
@@ -196,9 +227,11 @@ module ReimbursementsTestHelpers
   end
 
   # Builds a Store on a FakeAirtableClient + MemoryStore cache. Returns [store, client].
-  def build_fake_store(expenses: [], people: [], budgets: [], eusa_actuals: [], batches: [])
+  def build_fake_store(expenses: [], people: [], budgets: [], eusa_actuals: [], batches: [],
+                       budget_forecasts: [])
     client = FakeAirtableClient.new(expenses: expenses, people: people, budgets: budgets,
-                                    eusa_actuals: eusa_actuals, batches: batches)
+                                    eusa_actuals: eusa_actuals, batches: batches,
+                                    budget_forecasts: budget_forecasts)
     store = Reimbursements::Store.new(client: client, config: reimbursements_test_config,
                                       cache: ActiveSupport::Cache::MemoryStore.new)
     [ store, client ]

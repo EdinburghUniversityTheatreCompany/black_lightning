@@ -92,6 +92,73 @@ module Reimbursements
         assert_equal BigDecimal("250.5"), budget.remaining
       end
 
+      test "maps budget owner, notes and rollup financials" do
+        f = FIELD_IDS[:budgets]
+        record = airtable_budget_record(
+          owner_ids: [ "recPer1", "recPer2" ], notes: "Watch this one",
+          current_forecast: 1200.0, committed_amount: 300.25,
+          total_paid: 150.0, variance: -50.5, budget_forecast_ids: [ "recFc1" ]
+        )
+        budget = mapper.budget(record)
+
+        assert_equal [ "recPer1", "recPer2" ], budget.owner_ids
+        assert_equal "Watch this one", budget.notes
+        assert_equal BigDecimal("1200.0"), budget.current_forecast
+        assert_equal BigDecimal("300.25"), budget.committed_amount
+        assert_equal BigDecimal("150.0"), budget.total_paid
+        assert_equal BigDecimal("-50.5"), budget.variance
+      end
+
+      test "budget owner and financials default gracefully when absent" do
+        budget = mapper.budget(airtable_budget_record)
+        assert_equal [], budget.owner_ids
+        assert_equal "", budget.notes
+        assert_nil budget.current_forecast
+        assert_nil budget.variance
+      end
+
+      test "maps a budget forecast record" do
+        forecast = mapper.budget_forecast(
+          airtable_budget_forecast_record(budget_id: "recBud1", amount: 500.0,
+                                          date: "2026-05-01", reason: "Initial projection",
+                                          name: "Props #1")
+        )
+        assert_equal "recFc1", forecast.record_id
+        assert_equal "recBud1", forecast.budget_id
+        assert_equal BigDecimal("500.0"), forecast.amount
+        assert_equal Date.new(2026, 5, 1), forecast.date
+        assert_equal "Initial projection", forecast.reason
+        assert_equal "Props #1", forecast.name
+      end
+
+      test "builds a budget field payload keyed by field id" do
+        f = FIELD_IDS[:budgets]
+        payload = mapper.budget_fields(
+          name: "Set", nominal_code: "4100", notes: "n", initial_budget: BigDecimal("2500.00"),
+          budget_type: "Expense", active: true, owner_ids: [ "recPer1" ], remaining: nil
+        )
+        assert_equal "Set", payload[f[:name]]
+        assert_equal "4100", payload[f[:nominal_code]]
+        assert_equal "n", payload[f[:notes]]
+        assert_in_delta 2500.0, payload[f[:initial_budget]]
+        assert_equal "Expense", payload[f[:budget_type]]
+        assert payload[f[:active]]
+        assert_equal [ "recPer1" ], payload[f[:owner]]
+        assert_not payload.key?(f[:remaining]), "nil attrs must be omitted"
+      end
+
+      test "builds a budget forecast field payload with link, float and iso date" do
+        f = FIELD_IDS[:budget_forecasts]
+        payload = mapper.budget_forecast_fields(
+          budget_id: "recBud9", amount: BigDecimal("750.00"),
+          date: Date.new(2026, 6, 1), reason: "Revised up"
+        )
+        assert_equal [ "recBud9" ], payload[f[:budget]]
+        assert_in_delta 750.0, payload[f[:amount]]
+        assert_equal "2026-06-01", payload[f[:date]]
+        assert_equal "Revised up", payload[f[:reason]]
+      end
+
       test "maps operator expense fields" do
         f = FIELD_IDS[:expenses]
         record = airtable_expense_record(overrides: {
