@@ -81,6 +81,20 @@ module Reimbursements
       )
     end
 
+    # Operator: the Approved queue is clean and ready to batch. The nightly no
+    # longer auto-builds, so this just prompts the operator to open Build Batch —
+    # there's no draft link (nothing has been submitted yet).
+    def approved_ready(recipients:, expenses:, total:, run_date:)
+      count = expenses.size
+      send_email(
+        to: recipients,
+        subject: "[Bedlam BACS] #{count} #{'expense'.pluralize(count)} ready to batch " \
+                 "— #{Date.current.iso8601}",
+        template: "reimbursements/emails/approved_ready",
+        assigns: { expenses: expenses, total: total, run_date: run_date }
+      )
+    end
+
     # Operator: the EUSA draft was created and awaits review + send.
     def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:)
       count = expenses.size

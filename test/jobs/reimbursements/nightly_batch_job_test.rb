@@ -16,7 +16,11 @@ module Reimbursements
       def check(_sort, _account) = MC::VALID
     end
 
-    FakeProcessor = ReimbursementsTestHelpers::FakeBatchProcessor
+    # A store whose expenses read raises, standing in for an Airtable outage —
+    # drives the nightly's top-level rescue (handle_failure).
+    class BoomStore
+      def expenses = raise(StandardError, "airtable down")
+    end
 
     # Records the operator alerts the job sends through the Graph notifier, plus
     # the mailbox it was built for. +fail+ makes every send raise, standing in
@@ -39,7 +43,7 @@ module Reimbursements
 
       def pending_reminder(**k) = record(:pending_reminder, k)
       def manual_review(**k) = record(:manual_review, k)
-      def batch_ready(**k) = record(:batch_ready, k)
+      def approved_ready(**k) = record(:approved_ready, k)
       def failure(**k) = record(:failure, k)
     end
 
@@ -65,10 +69,8 @@ module Reimbursements
     end
 
     setup do
-      @processor = FakeProcessor.new
       @notifier = FakeNotifier.new
       NightlyBatchJob.checker_builder = -> { FakeChecker.new }
-      NightlyBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       NightlyBatchJob.graph_builder = -> { Object.new }
       # Capture the mailbox the notifier is built for so a test can assert the
       # operator alerts send from the cost centre's send mailbox.
@@ -86,8 +88,6 @@ module Reimbursements
     teardown do
       NightlyBatchJob.store_builder = -> { Store.new }
       NightlyBatchJob.checker_builder = -> { ModulusCheck.default_checker }
-      NightlyBatchJob.processor_builder =
-        ->(store:, graph:, cost_centre:) { BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre) }
       NightlyBatchJob.graph_builder = -> { GraphClient.new }
       NightlyBatchJob.notifier_builder = ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
     end
@@ -104,7 +104,6 @@ module Reimbursements
 
       NightlyBatchJob.perform_now(today: WEDNESDAY)
 
-      assert_empty @processor.calls
       assert_empty @notifier.calls
       assert_equal Date.new(2026, 7, 7), CostCentre.default.reload.last_nightly_run_on
     end
@@ -141,7 +140,7 @@ module Reimbursements
       review = mailer_calls(:manual_review).sole.last
       assert_equal 1, review[:issues].size
       assert_match(/amount mismatch/, review[:issues].first[:reason])
-      assert_empty @processor.calls, "must not build a batch when an expense needs attention"
+      assert_empty mailer_calls(:approved_ready), "no ready alert when an expense needs attention"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -152,20 +151,24 @@ module Reimbursements
 
       review = mailer_calls(:manual_review).sole.last
       assert_match(/not yet run/, review[:issues].first[:reason])
-      assert_empty @processor.calls
+      assert_empty mailer_calls(:approved_ready)
     end
 
-    # --- Branch 4: all clean -> batch + operator email --------------------
+    # --- Branch 4: all clean -> ready-to-batch alert (nothing submitted) ---
 
-    test "all-clean approved expenses run the batch and email the draft link" do
+    test "all-clean approved expenses email a ready-to-batch alert and submit nothing" do
       stock_store([ approved_expense ])
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_equal 1, @processor.calls.size
-      ready = mailer_calls(:batch_ready).sole.last
-      assert_equal "https://outlook.example/draft-1", ready[:draft_link]
+      ready = mailer_calls(:approved_ready).sole.last
+      assert_equal 1, ready[:expenses].size
+      assert_equal "12.50", ready[:total]
+      assert_not ready.key?(:draft_link), "the nightly no longer builds a draft"
       assert_empty mailer_calls(:manual_review)
+      assert_empty mailer_calls(:batch_ready), "no draft, so no draft-ready alert"
+      # Nothing is submitted: the store sees no expense writes.
+      assert_empty @client.updated, "the nightly must not submit or mutate expenses"
       # The alert is sent through a notifier built for the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
@@ -177,15 +180,14 @@ module Reimbursements
 
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
-      # The batch still ran and the run is recorded despite the alert send failing.
-      assert_equal 1, @processor.calls.size
+      # The run is still recorded despite the alert send failing, and no failure
+      # email is sent from the surrounding rescue.
+      assert_empty mailer_calls(:failure)
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
-    test "a failed batch emails failure and does not record the run (so it retries)" do
-      @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
-      NightlyBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
-      stock_store([ approved_expense ])
+    test "an error raised mid-run emails failure and does not record the run (so it retries)" do
+      NightlyBatchJob.store_builder = -> { BoomStore.new }
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -195,12 +197,11 @@ module Reimbursements
 
     # --- Dry run -----------------------------------------------------------
 
-    test "dry run logs decisions without sending email, batching, or recording" do
+    test "dry run logs decisions without sending email or recording" do
       stock_store([ approved_expense, pending_expense(days_ago: 5) ])
 
       NightlyBatchJob.perform_now(dry_run: true, today: THURSDAY)
 
-      assert_empty @processor.calls
       assert_empty @notifier.calls
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
@@ -212,7 +213,7 @@ module Reimbursements
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_includes mailer_calls(:batch_ready).sole.last[:recipients], users(:member).email
+      assert_includes mailer_calls(:approved_ready).sole.last[:recipients], users(:member).email
     end
 
     test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the recipient list" do
@@ -221,12 +222,12 @@ module Reimbursements
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
-      assert_equal [ "shared-finance@bedlamfringe.co.uk" ], mailer_calls(:batch_ready).sole.last[:recipients]
+      assert_equal [ "shared-finance@bedlamfringe.co.uk" ], mailer_calls(:approved_ready).sole.last[:recipients]
     ensure
       ENV.delete("REIMBURSEMENTS_OPERATOR_EMAIL")
     end
 
-    test "with no operator recipients the batch still runs, records, and doesn't crash" do
+    test "with no operator recipients the run still records and doesn't crash" do
       # Strip the finance role set up above so operator_emails resolves to []
       # (and no ENV override), the same as a fresh install with nobody granted.
       Admin::Permission.where(action: "manage", subject_class: "reimbursements_finance").destroy_all
@@ -234,7 +235,6 @@ module Reimbursements
 
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
-      assert_equal 1, @processor.calls.size, "the batch is still submitted"
       assert_empty @notifier.calls, "no recipients -> the email send is skipped"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
