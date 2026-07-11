@@ -32,8 +32,10 @@ module Admin
       private
 
       def load_registry
-        @people = store.people
-        @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(@people)
+        people = store.people
+        # Duplicate detection runs over the WHOLE registry, not just one page.
+        @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(people)
+        @people = Kaminari.paginate_array(people).page(params[:page]).per(50)
       end
 
       def modulus_checker

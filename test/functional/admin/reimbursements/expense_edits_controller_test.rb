@@ -191,6 +191,68 @@ module Admin
         assert_not_includes response.body, "Fake blood"
       end
 
+      # --- Pagination (50 per page, filters carry across pages) ------------
+
+      # Build `count` Pending expenses, newest first by submitted_at so the
+      # ordering (and therefore which slice lands on which page) is deterministic.
+      def rebuild_paged_store(count)
+        expenses = (1..count).map do |n|
+          expense_at("Pending", id: "recExp#{n}", auto_number: n,
+                     description: "Expense number #{n}",
+                     overrides: { EXP[:submitted_at] => "2026-05-#{format('%02d', (n % 28) + 1)}T00:00:00.000Z" })
+        end
+        @store, @client = build_fake_store(expenses: expenses, people: [ @person ], budgets: [ @budget ])
+        BaseController.store_builder = -> { @store }
+      end
+
+      test "index pages the list at 50 per page" do
+        rebuild_paged_store(60)
+        sign_in @user
+
+        get :index
+        page1_rows = response.body.scan(/Expense number \d+/).uniq.size
+        assert_equal 50, page1_rows, "first page should show 50 of 60 expenses"
+        assert_includes response.body, "60 expenses"
+      end
+
+      test "index page 2 returns the next slice, not page 1's rows" do
+        rebuild_paged_store(60)
+        sign_in @user
+
+        get :index
+        page1 = response.body.scan(/Expense number \d+/).uniq
+
+        get :index, params: { page: 2 }
+        page2 = response.body.scan(/Expense number \d+/).uniq
+
+        assert_equal 10, page2.size, "second page should show the remaining 10 expenses"
+        assert_empty(page1 & page2, "page 2 must not repeat any page 1 rows")
+      end
+
+      test "a status filter and a page combine (filter carries onto page 2)" do
+        # 60 Pending + 20 Paid; filtering to Pending leaves 60 (two pages), so
+        # page 2 holds the Pending remainder and never leaks a Paid expense.
+        pending = (1..60).map do |n|
+          expense_at("Pending", id: "recP#{n}", auto_number: n, description: "Pending row #{n}",
+                     overrides: { EXP[:submitted_at] => "2026-05-#{format('%02d', (n % 28) + 1)}T00:00:00.000Z" })
+        end
+        paid = (1..20).map do |n|
+          expense_at("Paid", id: "recQ#{n}", auto_number: 100 + n, description: "Paid row #{n}")
+        end
+        @store, @client = build_fake_store(expenses: pending + paid, people: [ @person ], budgets: [ @budget ])
+        BaseController.store_builder = -> { @store }
+        sign_in @user
+
+        get :index, params: { status: "Pending", page: 2 }
+
+        assert_response :success
+        assert_includes response.body, "60 expenses"
+        assert_equal 10, response.body.scan(/Pending row \d+/).uniq.size, "page 2 should show the last 10 Pending rows"
+        assert_equal 0, response.body.scan(/Paid row \d+/).size, "a Paid expense must never appear under the Pending filter"
+        # The Pending filter must survive onto the pager links.
+        assert_match(/[?&]status=Pending/, response.body)
+      end
+
       # --- Needs-attention reasons tooltip + AI badge ----------------------
 
       test "index flags a needs-attention expense with a reasons tooltip" do

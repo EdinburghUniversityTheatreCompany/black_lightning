@@ -37,7 +37,9 @@ module Admin
         @query = params[:q].to_s.strip
         @attention_only = params[:attention] == "1"
 
-        @expenses = filtered_expenses
+        # Paginate the filtered set in Ruby (Airtable free plan — the whole list
+        # is cached and filtered in-process, so we page the array, not a query).
+        @expenses = Kaminari.paginate_array(filtered_expenses).page(params[:page]).per(50)
       end
 
       # Lookup: resolve a typed auto-number or record id to its edit page.

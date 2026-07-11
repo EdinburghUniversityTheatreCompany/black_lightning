@@ -19,7 +19,8 @@ module Admin
 
       def index
         @title = "Reimbursements Budgets"
-        @budgets = store.budgets.sort_by { |budget| budget.name.to_s.downcase }
+        sorted = store.budgets.sort_by { |budget| budget.name.to_s.downcase }
+        @budgets = Kaminari.paginate_array(sorted).page(params[:page]).per(50)
         @people_by_id = store.people.index_by(&:record_id)
       end
 
