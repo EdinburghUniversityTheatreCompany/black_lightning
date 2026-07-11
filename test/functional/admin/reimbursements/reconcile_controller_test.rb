@@ -30,10 +30,18 @@ module Admin
       )
 
       rebuild_store
+
+      # "You've been paid" emails now go through the Graph notifier; inject a real
+      # Notifier over a recording FakeGraphClient so tests assert the send.
+      @graph = FakeGraphClient.new
+      ReconcileController.notifier_builder =
+        ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox, graph: @graph) }
     end
 
     teardown do
       BaseController.store_builder = -> { ::Reimbursements::Store.new }
+      ReconcileController.notifier_builder =
+        ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
     end
 
     def rebuild_store(expenses: nil, people: nil, budgets: nil, eusa_actuals: [])
@@ -192,9 +200,12 @@ module Admin
     test "apply creates actuals, links them, flips the expense to Paid, and emails" do
       sign_in @user
 
-      assert_emails 1 do
-        post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-      end
+      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      mail = @graph.send_mails.sole
+      assert_equal "reimbursements@bedlamfringe.co.uk", mail[:mailbox]
+      assert_equal [ "alice@example.com" ], mail[:to]
+      assert_match(/EUSA has paid/, mail[:subject])
 
       assert_response :success
       # One EUSA Actuals row created, then linked to the expense.
@@ -212,10 +223,9 @@ module Admin
     test "apply links a matched credit to its budget without emailing" do
       sign_in @user
 
-      assert_no_emails do
-        post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
-      end
+      post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
 
+      assert_empty @graph.send_mails
       assert_response :success
       budget_link = @client.updated.find { |t, _id, f| t == :eusa_actuals }
       assert_equal [ "recBudInc" ], budget_link.last[FIELD_IDS[:eusa_actuals][:linked_budget]]
@@ -225,12 +235,11 @@ module Admin
     test "apply saves an unmatched row and marks no expense Paid" do
       sign_in @user
 
-      assert_no_emails do
-        post :apply, params: {
-          pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
-        }
-      end
+      post :apply, params: {
+        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
+      }
 
+      assert_empty @graph.send_mails
       assert_response :success
       assert_equal 1, assigns(:unmatched_saved)
       assert_equal 0, assigns(:expenses_paid)
@@ -242,11 +251,23 @@ module Admin
       rebuild_store(people: [ no_email ])
       sign_in @user
 
-      assert_no_emails do
-        post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
-      end
+      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_empty @graph.send_mails
+      assert_response :success
+      assert_equal 1, assigns(:expenses_paid)
+    end
+
+    test "a Graph send failure does not break the reconciliation" do
+      @graph.fail_send = true
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
 
       assert_response :success
+      # The expense is still marked Paid even though the notification send failed.
+      paid_update = @client.updated.find { |t, id, _f| t == :expenses && id == "recExp1" }
+      assert_equal "Paid", paid_update.last[FIELD_IDS[:expenses][:status]]
       assert_equal 1, assigns(:expenses_paid)
     end
 

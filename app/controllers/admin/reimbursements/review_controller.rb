@@ -18,6 +18,11 @@ module Admin
       # rule files in production; a fake in functional tests).
       class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
 
+      # Injection seam for tests: the Graph-backed email notifier, sending the
+      # rejection email from the cost centre's send mailbox.
+      class_attribute :notifier_builder,
+                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+
       helper_method :modulus_checker
 
       def index
@@ -115,6 +120,10 @@ module Admin
         @modulus_checker ||= checker_builder.call
       end
 
+      def notifier
+        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
+      end
+
       def find_expense!
         expense = store.find_expense!(params[:id])
         raise ActiveRecord::RecordNotFound if expense.nil?
@@ -143,20 +152,28 @@ module Admin
         attrs
       end
 
+      # Send the rejection via Graph (from the cost centre's send mailbox), but
+      # never let a send failure block the rejection itself: a failed send just
+      # returns false so the caller leaves rejection_notified unstamped and the
+      # operator follows up.
       def notify_rejection(expense, reason)
         email = expense.person&.email
         return false if email.blank?
 
-        ::Reimbursements::ExpenseMailer.rejection_email(
-          email: email,
+        notifier.rejection(
+          to: email,
           payee_name: expense.person.name,
           auto_number: expense.auto_number,
           amount: expense.amount.to_f,
           budget_name: expense.budget&.name.to_s,
           description: expense.description.to_s,
           reason: reason
-        ).deliver_later
+        )
         true
+      rescue StandardError => e
+        Rails.logger.error("Reimbursements: rejection email failed for ##{expense.auto_number} — #{e.message}")
+        Honeybadger.notify(e, context: { source: "reimbursements_rejection_email", expense: expense.auto_number })
+        false
       end
 
       def redirect_to_review(flash)

@@ -90,3 +90,18 @@ We don't use `acts_as_chat`/`acts_as_message` (the Extractor and AiChecker call
 `RubyLLM.chat` directly), so the warning is pure noise from the gem's Rails engine.
 Investigate silencing it (config flag or a targeted `ActiveSupport::Deprecation`
 filter) so test/boot output stays clean. Harmless; not gating.
+
+---
+
+## BatchProcessor stamps `producer_notified` even when the notification send fails (ext-graphmail)
+
+`BatchProcessor#notify_producers` keys `mark_notified` off `grouped.keys` (every
+payee it *attempted*), not the payees whose email actually sent. So if
+`Notifier#producer_notification` (Graph `send_mail`) raises for a payee, the
+error is collected into `Result#errors` (good), but the expense is still stamped
+`producer_notified: true` — meaning a rebuild won't re-notify that producer even
+though they were never emailed. This latent behaviour predates the Graph switch
+(the old ActionMailer path stamped after `deliver_later`, which could also fail
+later in the job), but it's more visible now that the send is synchronous.
+Consider stamping only the payees whose send succeeded (track sent emails in
+`deliver_producer_email` and pass that set to `mark_notified`). Not gating.

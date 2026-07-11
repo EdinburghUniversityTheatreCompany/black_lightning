@@ -37,7 +37,10 @@ module Reimbursements
                     default: ->(store:, graph:, cost_centre:) {
                       BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre)
                     }
-    class_attribute :mailer, default: OperatorMailer
+    # Operator alerts send through Graph (Notifier#send_mail) from the cost
+    # centre's send mailbox, so they land in its Sent Items.
+    class_attribute :notifier_builder,
+                    default: ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
 
     def perform(dry_run: false, today: Date.current)
       CostCentre.all.each { |cost_centre| run_for(cost_centre, dry_run: dry_run, today: today) }
@@ -90,7 +93,10 @@ module Reimbursements
       Rails.logger.info("Nightly: #{rows.size} stale pending for #{cost_centre.key}")
       return if dry_run
 
-      deliver { |to| mailer.pending_reminder(recipients: to, rows: rows, run_date: run_date(today), threshold_days: PENDING_REMINDER_DAYS) }
+      notify(cost_centre) do |emailer, to|
+        emailer.pending_reminder(recipients: to, rows: rows, run_date: run_date(today),
+                                 threshold_days: PENDING_REMINDER_DAYS)
+      end
     end
 
     def pending_age_days(expense, today)
@@ -154,9 +160,9 @@ module Reimbursements
       Rails.logger.info("Nightly: #{issues.size} issue(s), #{unblocked_count} clean for #{cost_centre.key}")
       return if dry_run
 
-      deliver do |to|
-        mailer.manual_review(recipients: to, issues: issues, unblocked_count: unblocked_count,
-                             run_date: run_date(today), next_run_day: next_run_day(cost_centre, today))
+      notify(cost_centre) do |emailer, to|
+        emailer.manual_review(recipients: to, issues: issues, unblocked_count: unblocked_count,
+                              run_date: run_date(today), next_run_day: next_run_day(cost_centre, today))
       end
       cost_centre.record_nightly_run!(today)
     end
@@ -184,9 +190,9 @@ module Reimbursements
           amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
           description: expense.description.to_s }
       end
-      deliver do |to|
-        mailer.batch_ready(recipients: to, expenses: rows, total: format("%.2f", result.total_amount || 0),
-                           draft_link: result.eusa_draft_web_link, run_date: run_date(today))
+      notify(cost_centre) do |emailer, to|
+        emailer.batch_ready(recipients: to, expenses: rows, total: format("%.2f", result.total_amount || 0),
+                            draft_link: result.eusa_draft_web_link, run_date: run_date(today))
       end
       cost_centre.record_nightly_run!(today)
     end
@@ -197,7 +203,7 @@ module Reimbursements
       error_text = Array(result.errors).join("\n")
       Rails.logger.error("Nightly: batch failed for #{cost_centre.key} — #{error_text}")
       Honeybadger.notify("Nightly batch failed", context: { cost_centre: cost_centre.key, errors: result.errors })
-      deliver { |to| mailer.failure(recipients: to, error_text: error_text, run_date: run_date(today)) }
+      notify(cost_centre) { |emailer, to| emailer.failure(recipients: to, error_text: error_text, run_date: run_date(today)) }
     end
 
     def handle_failure(cost_centre, error, today, dry_run)
@@ -205,7 +211,7 @@ module Reimbursements
       Honeybadger.notify(error, context: { source: "reimbursements_nightly_batch", cost_centre: cost_centre.key })
       return if dry_run
 
-      deliver { |to| mailer.failure(recipients: to, error_text: error.message, run_date: run_date(today)) }
+      notify(cost_centre) { |emailer, to| emailer.failure(recipients: to, error_text: error.message, run_date: run_date(today)) }
     end
 
     # --- Helpers -----------------------------------------------------------
@@ -214,13 +220,23 @@ module Reimbursements
       processor_builder.call(store: store, graph: graph_builder.call, cost_centre: cost_centre)
     end
 
-    def deliver
+    # Send an operator alert through Graph from the cost centre's send mailbox.
+    # A Graph failure must never break the nightly run (or trip the surrounding
+    # rescue into sending a spurious failure email), so it's rescued + logged.
+    def notify(cost_centre)
       recipients = operator_emails
       if recipients.empty?
         Rails.logger.warn("Nightly: no operator recipients configured — email skipped")
         return
       end
-      yield(recipients).deliver_later
+      yield(notifier(cost_centre), recipients)
+    rescue StandardError => e
+      Rails.logger.error("Nightly: operator email failed for #{cost_centre.key} — #{e.message}")
+      Honeybadger.notify(e, context: { source: "reimbursements_nightly_email", cost_centre: cost_centre.key })
+    end
+
+    def notifier(cost_centre)
+      notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph_builder.call)
     end
 
     # The finance operators: users granted the finance permission via the grid,

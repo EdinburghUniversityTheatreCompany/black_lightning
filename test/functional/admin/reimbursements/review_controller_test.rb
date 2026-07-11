@@ -35,11 +35,20 @@ module Admin
 
         @checker = FakeChecker.new("66374958" => MC::VALID)
         ReviewController.checker_builder = -> { @checker }
+
+        # Rejection emails now go through the Graph notifier; inject a real
+        # Notifier over a recording FakeGraphClient so tests assert the send
+        # (mailbox / recipient / subject / body) rather than an enqueued mailer.
+        @graph = FakeGraphClient.new
+        ReviewController.notifier_builder =
+          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox, graph: @graph) }
       end
 
       teardown do
         BaseController.store_builder = -> { ::Reimbursements::Store.new }
         ReviewController.checker_builder = -> { MC.default_checker }
+        ReviewController.notifier_builder =
+          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
       end
 
       def pending_expense(id:, **attrs)
@@ -226,22 +235,26 @@ module Admin
 
         assert_match(/reason is required/, flash[:alert])
         assert_empty @client.updated
-        assert_enqueued_emails 0
+        assert_empty @graph.send_mails
       end
 
-      test "reject stamps the reason and notified time and queues the rejection email" do
+      test "reject stamps the reason and notified time and sends the rejection via Graph" do
         expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")
         rebuild_store(expenses: [ expense ])
         sign_in @user
 
-        assert_enqueued_emails 1 do
-          patch :reject, params: { id: "recRej", rejection_reason: "Missing receipt" }
-        end
+        patch :reject, params: { id: "recRej", rejection_reason: "Missing receipt" }
 
         _table, _id, fields = @client.updated.sole
         assert_equal "Rejected", fields[EXP[:status]]
         assert_equal "Missing receipt", fields[EXP[:rejection_reason]]
         assert fields[EXP[:rejection_notified]].present?
+
+        mail = @graph.send_mails.sole
+        assert_equal "reimbursements@bedlamfringe.co.uk", mail[:mailbox]
+        assert_equal [ "pat@example.com" ], mail[:to]
+        assert_match(/not approved/, mail[:subject])
+        assert_match "Missing receipt", mail[:html]
       end
 
       test "reject without a payee email still rejects but does not stamp notified or email" do
@@ -256,7 +269,21 @@ module Admin
         _table, _id, fields = @client.updated.sole
         assert_equal "Rejected", fields[EXP[:status]]
         assert_not fields.key?(EXP[:rejection_notified])
-        assert_enqueued_emails 0
+        assert_empty @graph.send_mails
+      end
+
+      test "a Graph send failure still rejects the expense but leaves it unnotified" do
+        expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        @graph.fail_send = true
+        sign_in @user
+
+        patch :reject, params: { id: "recRej", rejection_reason: "Missing receipt" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        _table, _id, fields = @client.updated.sole
+        assert_equal "Rejected", fields[EXP[:status]]
+        assert_not fields.key?(EXP[:rejection_notified]), "a failed send must not claim notified"
       end
 
       test "acting on an unknown expense 404s" do

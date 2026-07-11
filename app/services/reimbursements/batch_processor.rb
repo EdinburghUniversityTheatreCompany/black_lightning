@@ -26,13 +26,15 @@ module Reimbursements
                         :eusa_draft_web_link, :bacs_sharepoint_url, :producer_notifications_sent,
                         :receipts_uploaded, :errors, keyword_init: true)
 
-    def initialize(store:, graph:, cost_centre:, xlsx: nil, composer: nil, mailer: nil)
+    def initialize(store:, graph:, cost_centre:, xlsx: nil, composer: nil, notifier: nil)
       @store = store
       @graph = graph
       @cost_centre = cost_centre
       @xlsx = xlsx || BacsXlsx.new
       @composer = composer || EusaEmailComposer.new
-      @mailer = mailer || BatchMailer
+      # Producer notifications send through Graph from the cost centre's send
+      # mailbox (same client as the EUSA draft), so they land in its Sent Items.
+      @notifier = notifier || Notifier.new(mailbox: cost_centre.send_mailbox, graph: graph)
     end
 
     def process(expenses:, bacs_date:, sender_name:, eusa_recipient:,
@@ -181,9 +183,10 @@ module Reimbursements
       end
     end
 
-    # Producer notifications go via ActionMailer (deliver_later), one per payee,
-    # keyed off the LINKED person's email (not the effective override — that only
-    # steers the money). Anyone already notified for this batch is skipped.
+    # Producer notifications go via Graph (Notifier#producer_notification), one
+    # per payee, keyed off the LINKED person's email (not the effective override
+    # — that only steers the money). Anyone already notified for this batch is
+    # skipped. A send failure is collected into result.errors, never raised.
     def notify_producers(result, to_notify, bacs_date)
       grouped = to_notify.group_by { |expense| expense.person&.email.to_s.strip }
                          .reject { |email, _| email.blank? }
@@ -199,10 +202,10 @@ module Reimbursements
         { amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
           description: expense.description.to_s }
       end
-      @mailer.producer_notification(
-        recipient_email: email, recipient_name: items.first.person&.name.to_s,
+      @notifier.producer_notification(
+        to: email, recipient_name: items.first.person&.name.to_s,
         line_items: line_items, bacs_date: bacs_date, total: format("%.2f", total(items))
-      ).deliver_later
+      )
       result.producer_notifications_sent += 1
     rescue StandardError => e
       result.errors << "Producer notification failed for #{email}: #{e.message}"

@@ -33,21 +33,29 @@ module Reimbursements
       end
     end
 
-    class FakeOperatorMailer
-      Delivery = Struct.new(:noop) { def deliver_later = nil }
-      class << self
-        attr_accessor :calls
+    # Records the operator alerts the job sends through the Graph notifier, plus
+    # the mailbox it was built for. +fail+ makes every send raise, standing in
+    # for a Graph outage.
+    class FakeNotifier
+      attr_reader :calls, :mailbox
 
-        def record(name, kwargs)
-          (self.calls ||= []) << [ name, kwargs ]
-          Delivery.new
-        end
-
-        def pending_reminder(**k) = record(:pending_reminder, k)
-        def manual_review(**k) = record(:manual_review, k)
-        def batch_ready(**k) = record(:batch_ready, k)
-        def failure(**k) = record(:failure, k)
+      def initialize(mailbox: nil, fail: false)
+        @mailbox = mailbox
+        @fail = fail
+        @calls = []
       end
+
+      def record(name, kwargs)
+        raise Reimbursements::GraphAuth::Error, "graph down" if @fail
+
+        @calls << [ name, kwargs ]
+        nil
+      end
+
+      def pending_reminder(**k) = record(:pending_reminder, k)
+      def manual_review(**k) = record(:manual_review, k)
+      def batch_ready(**k) = record(:batch_ready, k)
+      def failure(**k) = record(:failure, k)
     end
 
     def payee(**attrs)
@@ -73,11 +81,16 @@ module Reimbursements
 
     setup do
       @processor = FakeProcessor.new
-      FakeOperatorMailer.calls = []
+      @notifier = FakeNotifier.new
       NightlyBatchJob.checker_builder = -> { FakeChecker.new }
       NightlyBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       NightlyBatchJob.graph_builder = -> { Object.new }
-      NightlyBatchJob.mailer = FakeOperatorMailer
+      # Capture the mailbox the notifier is built for so a test can assert the
+      # operator alerts send from the cost centre's send mailbox.
+      NightlyBatchJob.notifier_builder = lambda do |mailbox:, graph:|
+        @notifier.instance_variable_set(:@mailbox, mailbox)
+        @notifier
+      end
 
       # Operator recipients: a user holding the finance permission.
       finance = Role.create!(name: "Business Manager")
@@ -91,10 +104,10 @@ module Reimbursements
       NightlyBatchJob.processor_builder =
         ->(store:, graph:, cost_centre:) { BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre) }
       NightlyBatchJob.graph_builder = -> { GraphClient.new }
-      NightlyBatchJob.mailer = OperatorMailer
+      NightlyBatchJob.notifier_builder = ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
     end
 
-    def mailer_calls(name) = FakeOperatorMailer.calls.select { |call| call.first == name }
+    def mailer_calls(name) = @notifier.calls.select { |call| call.first == name }
 
     # --- Branch 1: not a run-day ------------------------------------------
 
@@ -107,7 +120,7 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: WEDNESDAY)
 
       assert_empty @processor.calls
-      assert_empty FakeOperatorMailer.calls
+      assert_empty @notifier.calls
       assert_equal Date.new(2026, 7, 7), CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -168,6 +181,19 @@ module Reimbursements
       ready = mailer_calls(:batch_ready).sole.last
       assert_equal "https://outlook.example/draft-1", ready[:draft_link]
       assert_empty mailer_calls(:manual_review)
+      # The alert is sent through a notifier built for the cost centre's send mailbox.
+      assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
+      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a Graph email failure doesn't break the run or trip a spurious failure email" do
+      @notifier = FakeNotifier.new(fail: true)
+      stock_store([ approved_expense ])
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      # The batch still ran and the run is recorded despite the alert send failing.
+      assert_equal 1, @processor.calls.size
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -190,7 +216,7 @@ module Reimbursements
       NightlyBatchJob.perform_now(dry_run: true, today: THURSDAY)
 
       assert_empty @processor.calls
-      assert_empty FakeOperatorMailer.calls
+      assert_empty @notifier.calls
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 
@@ -224,7 +250,7 @@ module Reimbursements
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
       assert_equal 1, @processor.calls.size, "the batch is still submitted"
-      assert_empty FakeOperatorMailer.calls, "no recipients -> the email send is skipped"
+      assert_empty @notifier.calls, "no recipients -> the email send is skipped"
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
   end

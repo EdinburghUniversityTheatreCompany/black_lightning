@@ -25,9 +25,11 @@ module Reimbursements
       ]
       store, client = build_fake_store(expenses: expenses, people: people, budgets: budgets)
       graph = FakeGraphClient.new
-      mailer = FakeBatchMailer.new
-      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre, mailer: mailer)
-      [ processor, store, client, graph, mailer ]
+      # The default Notifier sends producer notifications through this same
+      # FakeGraphClient (recorded in graph.send_mails), exercising the real
+      # producer template render.
+      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre)
+      [ processor, store, client, graph ]
     end
 
     def run_batch(processor, store)
@@ -36,7 +38,7 @@ module Reimbursements
     end
 
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
-      processor, store, client, graph, mailer = build_scenario
+      processor, store, client, graph = build_scenario
 
       result = run_batch(processor, store)
 
@@ -61,16 +63,23 @@ module Reimbursements
         assert fields[FIELD_IDS[:expenses][:receipts_offloaded]]
       end
 
-      # One producer email per payee, and each expense stamped producer_notified.
-      assert_equal 2, mailer.sent.size
+      # One producer email per payee, sent via Graph from the send mailbox, and
+      # each expense stamped producer_notified.
+      assert_equal 2, graph.send_mails.size
       assert_equal 2, result.producer_notifications_sent
+      graph.send_mails.each do |mail|
+        assert_equal "send@bedlamfringe.co.uk", mail[:mailbox]
+        assert_includes mail[:subject], "submitted for payment"
+      end
+      assert_equal [ "alice@example.com", "bob@example.com" ],
+                   graph.send_mails.map { |mail| mail[:to] }.flatten.sort
       notified = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:producer_notified]] }
       assert_equal 2, notified
       assert_equal 2, result.receipts_uploaded, "one receipt per expense; the xlsx isn't counted here"
     end
 
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do
-      processor, store, client, graph, mailer = build_scenario
+      processor, store, client, graph = build_scenario
       graph.fail_draft = true
 
       result = run_batch(processor, store)
@@ -80,7 +89,7 @@ module Reimbursements
       assert_equal 0, client.created.count { |table, _| table == :batches }, "no batch when draft fails"
       submitted = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
       assert_equal 0, submitted, "expenses must stay Approved when the draft fails"
-      assert_empty mailer.sent, "producers must not be notified when the draft fails"
+      assert_empty graph.send_mails, "producers must not be notified when the draft fails"
     end
 
     test "refuses to process when SharePoint folders are not configured" do
@@ -109,13 +118,27 @@ module Reimbursements
                                         auto_number: 11,
                                         overrides: { FIELD_IDS[:expenses][:producer_notified] => true })
       fresh = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 12)
-      processor, store, _client, _graph, mailer = build_scenario(expenses: [ already, fresh ])
+      processor, store, _client, graph = build_scenario(expenses: [ already, fresh ])
 
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert_equal 1, mailer.sent.size, "only the not-yet-notified producer is emailed"
-      assert_equal "bob@example.com", mailer.sent.sole[:recipient_email]
+      assert_equal 1, graph.send_mails.size, "only the not-yet-notified producer is emailed"
+      assert_equal [ "bob@example.com" ], graph.send_mails.sole[:to]
+    end
+
+    test "a producer notification Graph failure is collected but doesn't fail the batch" do
+      processor, store, client, graph = build_scenario
+      graph.fail_send = true # the draft (create_draft) still succeeds; only sends fail
+
+      result = run_batch(processor, store)
+
+      assert result.success, "the batch (draft + submit) still succeeds when a notification send fails"
+      assert_empty graph.send_mails
+      assert_equal 0, result.producer_notifications_sent
+      assert(result.errors.any? { |e| e.include?("Producer notification failed") })
+      # The EUSA draft and the expense submissions still happened.
+      assert_equal 1, client.created.count { |table, _| table == :batches }
     end
 
     test "custom EUSA subject and body override the composed default" do

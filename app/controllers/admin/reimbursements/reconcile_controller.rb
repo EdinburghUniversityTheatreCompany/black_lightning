@@ -21,6 +21,11 @@ module Admin
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ReconcileController < FinanceController
+      # Injection seam for tests: the Graph-backed email notifier, sending the
+      # "you've been paid" email from the cost centre's send mailbox.
+      class_attribute :notifier_builder,
+                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+
       def show
         @title = "Reconcile EUSA actuals"
       end
@@ -159,17 +164,26 @@ module Admin
       # One "you've been paid" email per producer, covering all of their newly
       # paid expenses. Producers with no linked person or no email are skipped.
       #
-      # Delivered now, not enqueued: the mailer's arguments are Airtable POROs
-      # (Person/Expense), which ActiveJob can't serialize for a background job.
-      # Apply is already a synchronous, API-heavy operator action, so sending
-      # inline here is consistent and keeps the flow simple.
+      # Sent through Graph (from the cost centre's send mailbox), inline: Apply is
+      # already a synchronous, API-heavy operator action. A send failure for one
+      # producer is rescued + logged so it never breaks the reconciliation or the
+      # remaining producers' emails.
       def notify_paid_producers(matched_debits)
         matched_debits.group_by { |_row, expense| expense.person }.each do |person, pairs|
           next if person.nil? || person.email.blank?
 
           expenses = pairs.map { |_row, expense| expense }
-          ::Reimbursements::PaymentMailer.payment_confirmation(person, expenses).deliver_now
+          begin
+            notifier.payment_confirmation(to: person.email, person: person, expenses: expenses)
+          rescue StandardError => e
+            Rails.logger.error("Reimbursements: payment email failed for #{person.email} — #{e.message}")
+            Honeybadger.notify(e, context: { source: "reimbursements_payment_email", payee: person.email })
+          end
         end
+      end
+
+      def notifier
+        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
       end
 
       # The EUSA period (from the row) is now the scoping key, so source_month is
