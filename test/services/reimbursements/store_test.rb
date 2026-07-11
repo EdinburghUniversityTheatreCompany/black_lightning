@@ -157,23 +157,23 @@ module Reimbursements
 
     # --- EUSA Actuals -----------------------------------------------------
 
-    test "actuals_for_month filters imported rows to that source month" do
-      may = airtable_eusa_actual_record(id: "recActMay", source_month: "2026-05")
-      apr = airtable_eusa_actual_record(id: "recActApr", source_month: "2026-04")
-      store, = build_fake_store(eusa_actuals: [ may, apr ])
+    test "actuals_for_period filters imported rows to that EUSA period" do
+      p3 = airtable_eusa_actual_record(id: "recActP3", period: "03")
+      p4 = airtable_eusa_actual_record(id: "recActP4", period: "04")
+      store, = build_fake_store(eusa_actuals: [ p3, p4 ])
 
-      assert_equal [ "recActMay" ], store.actuals_for_month("2026-05").map(&:record_id)
-      assert_empty store.actuals_for_month("2026-01")
+      assert_equal [ "recActP3" ], store.actuals_for_period("03").map(&:record_id)
+      assert_empty store.actuals_for_period("01")
     end
 
     test "create_actual! writes a mapped row and busts the actuals cache" do
-      store, client = build_fake_store(eusa_actuals: [ airtable_eusa_actual_record ])
+      store, client = build_fake_store(eusa_actuals: [ airtable_eusa_actual_record(period: "03") ])
 
-      store.actuals_for_month("2026-05")
+      store.actuals_for_period("03")
       actual = store.create_actual!(nominal_code: "439999", narrative: "Alice Producer",
                                     date: Date.new(2026, 5, 13), debit: BigDecimal("123.45"),
-                                    source_month: "2026-05", imported_at: Time.utc(2026, 5, 14, 9))
-      store.actuals_for_month("2026-05")
+                                    period: "03", imported_at: Time.utc(2026, 5, 14, 9))
+      store.actuals_for_period("03")
 
       table, fields = client.created.sole
       assert_equal :eusa_actuals, table

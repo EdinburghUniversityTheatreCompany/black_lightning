@@ -20,14 +20,10 @@
                           placeholder: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet",
                           class: "w-full border border-gray-300 rounded px-2 py-1 font-mono text-xs" %>
       </div>
-      <div>
-        <%= label_tag :source_month, "Source month (YYYY-MM)", class: "block text-sm font-medium mb-1" %>
-        <%= text_field_tag :source_month, @source_month, placeholder: "2026-05",
-                           class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
-        <p class="text-xs text-gray-600 mt-1">
-          The month these actuals are from. Used to skip rows already imported for this month.
-        </p>
-      </div>
+      <p class="text-xs text-gray-600">
+        Each row's EUSA period (P1–P12) is read from the pasted data and used to skip rows
+        already imported for that period — no need to enter a month.
+      </p>
       <div>
         <%= submit_tag "Parse and match", class: btn_classes(:primary) %>
       </div>

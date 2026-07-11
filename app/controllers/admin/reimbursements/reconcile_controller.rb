@@ -4,9 +4,10 @@ module Admin
     # EUSA actuals reconciliation for the finance team. Ports bedlam-bacs
     # `pages/6_Reconcile.py`: a three-step wizard.
     #
-    #   1. show    — paste the monthly EUSA actuals export + a source month.
+    #   1. show    — paste the monthly EUSA actuals export.
     #   2. preview — parse (legacy/Sage auto-detect), dedup against rows already
-    #                imported for that month, and match debits to Submitted/Paid
+    #                imported for the same EUSA period (P1..P12, taken per row
+    #                from the export), and match debits to Submitted/Paid
     #                expenses and credits to income budgets.
     #   3. apply   — create EUSA Actuals records, link them to the matched
     #                expense/budget, mark matched expenses Paid, and email the
@@ -15,11 +16,11 @@ module Admin
     # The wizard is stateless: preview/apply re-parse the pasted text carried in
     # the form (the parse + match functions are pure), so nothing is stashed in
     # the session and the dedup on apply always re-checks a fresh actuals list.
+    # Dedup keys off each row's own EUSA period, so a single paste spanning more
+    # than one period is deduped period-by-period rather than as one block.
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ReconcileController < FinanceController
-      SOURCE_MONTH_FORMAT = /\A\d{4}-\d{2}\z/
-
       def show
         @title = "Reconcile EUSA actuals"
       end
@@ -27,9 +28,7 @@ module Admin
       def preview
         @title = "Reconcile EUSA actuals"
         @pasted_text = params[:pasted_text].to_s
-        @source_month = params[:source_month].to_s.strip
 
-        return render :show unless valid_source_month?
         return render :show if @pasted_text.strip.empty?
 
         parsed = parse_rows(@pasted_text)
@@ -40,16 +39,15 @@ module Admin
           return render :show
         end
 
-        @new_rows, @skipped_rows = dedup(parsed, @source_month)
+        @new_rows, @skipped_rows = dedup(parsed)
         @matched_debits, @matched_credits, @unmatched_rows = build_matches(@new_rows)
         render :preview
       end
 
       def apply
-        @source_month = params[:source_month].to_s.strip
         pasted_text = params[:pasted_text].to_s
 
-        unless valid_source_month? && pasted_text.strip.present?
+        unless pasted_text.strip.present?
           redirect_to admin_reimbursements_reconciliation_path,
                       alert: "Nothing to apply — start again from the paste step."
           return
@@ -62,7 +60,7 @@ module Admin
           return
         end
 
-        new_rows, @skipped_count = dedup(parsed, @source_month).then { |new_r, skipped| [ new_r, skipped.size ] }
+        new_rows, @skipped_count = dedup(parsed).then { |new_r, skipped| [ new_r, skipped.size ] }
         matched_debits, matched_credits, unmatched = build_matches(new_rows)
 
         apply_reconciliation(matched_debits, matched_credits, unmatched)
@@ -76,15 +74,6 @@ module Admin
 
       private
 
-      def valid_source_month?
-        if @source_month.match?(SOURCE_MONTH_FORMAT)
-          true
-        else
-          flash.now[:alert] = "Source month must be in YYYY-MM format (e.g. 2026-05)."
-          false
-        end
-      end
-
       def parse_rows(text)
         ::Reimbursements::Reconciliation.parse_actuals_rows(text, cost_centre_code: cost_centre_code)
       rescue ArgumentError => e
@@ -96,15 +85,20 @@ module Admin
         ::Reimbursements::CostCentre.default&.eusa_code || "F40"
       end
 
-      # Split freshly-parsed rows into [new, already-imported] using the dedup key
-      # against the actuals already stored for this source month.
-      def dedup(rows, source_month)
-        existing = store.actuals_for_month(source_month).map(&:dedup_key).to_set
+      # Split freshly-parsed rows into [new, already-imported] using the dedup
+      # key against the actuals already stored for the *same* EUSA period. Each
+      # row is checked against its own period's imported rows, so a paste that
+      # spans several periods dedups each period independently. The per-period
+      # existing-key sets are memoised so a period is only fetched once.
+      def dedup(rows)
+        existing_by_period = Hash.new do |cache, period|
+          cache[period] = store.actuals_for_period(period).map(&:dedup_key).to_set
+        end
         rows.partition do |row|
           key = ::Reimbursements::Reconciliation.actuals_row_dedup_key(
             row.nominal_code, row.narrative, row.debit, row.credit
           )
-          !existing.include?(key)
+          !existing_by_period[row.period].include?(key)
         end
       end
 
@@ -178,12 +172,14 @@ module Admin
         end
       end
 
+      # The EUSA period (from the row) is now the scoping key, so source_month is
+      # no longer written — the Airtable field is simply left blank.
       def actuals_attrs(row, imported_at)
         {
           nominal_code: row.nominal_code, cost_centre: row.cost_centre, ref: row.ref,
           date: row.date, period: row.period, narrative: row.narrative,
           narrative_1: row.narrative_1, debit: row.debit, credit: row.credit, net: row.net,
-          source_month: @source_month, imported_at: imported_at
+          imported_at: imported_at
         }
       end
     end

@@ -181,10 +181,11 @@ module Reimbursements
                         .map { |r| @mapper.eusa_actual(r) }
     end
 
-    # Actuals imported for a given source month (YYYY-MM), used to dedup a
-    # freshly-pasted export against what's already in Airtable.
-    def actuals_for_month(source_month)
-      eusa_actuals.select { |a| a.source_month == source_month }
+    # Actuals imported for a given EUSA period (P1..P12, stored as the raw
+    # period string from the export), used to dedup a freshly-pasted export
+    # against what's already in Airtable for that period.
+    def actuals_for_period(period)
+      eusa_actuals.select { |a| a.period == period }
     end
 
     def create_actual!(attrs)
