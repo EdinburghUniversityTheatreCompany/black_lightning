@@ -60,6 +60,42 @@ module Reimbursements
       assert_equal "PAYEE:", sheet.sheet_data[0][0].value
     end
 
+    test "neutralises formula-injection in submitter text cells so Excel won't execute them" do
+      malicious = Row.new(
+        payee_name: "=HYPERLINK(\"http://evil\",\"click\")", amount: 5.0,
+        sort_code: "08-99-99", account_number: "00123456", nominal_code: "439999",
+        description: "@SUM(A1:A9)", payment_reference: "-2+3", cost_centre: "F40"
+      )
+      first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
+
+      # A leading apostrophe forces the cell to literal text, so =, @, +, - values
+      # can never be interpreted as a formula by Excel / on CSV export.
+      assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", first[0].value
+      assert_equal "'@SUM(A1:A9)", first[7].value
+      assert_equal "'-2+3", first[6].value
+    end
+
+    test "leaves ordinary text cells and forced-text bank fields unprefixed" do
+      first = parsed(BacsXlsx.new.generate(rows)).sheet_data[2]
+
+      assert_equal "Alice Producer", first[0].value
+      assert_equal "Fake blood", first[7].value
+      assert_equal "PROPS ALICE", first[6].value
+      # Forced-text bank fields keep their leading zeros/dashes and are never prefixed.
+      assert_equal "08-99-99", first[2].value
+      assert_equal "00123456", first[3].value
+      assert_equal "439999", first[4].value
+    end
+
+    test "a negative amount stays a numeric cell, never quote-prefixed" do
+      refund = Row.new(payee_name: "Refund Payee", amount: -12.5, sort_code: "08-99-99",
+                       account_number: "00123456", nominal_code: "439999",
+                       description: "Refund", payment_reference: "REF", cost_centre: "F40")
+      cell = parsed(BacsXlsx.new.generate([ refund ])).sheet_data[2][1]
+
+      assert_in_delta(-12.5, cell.value, 0.001)
+    end
+
     test "raises when the template file is missing" do
       assert_raises(BacsXlsx::TemplateError) do
         BacsXlsx.new(template_path: Rails.root.join("lib/reimbursements/templates/nope.xlsx"))
