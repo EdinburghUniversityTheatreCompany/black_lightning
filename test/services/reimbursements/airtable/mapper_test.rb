@@ -195,6 +195,15 @@ module Reimbursements
         assert_equal "https://sp/b", batch.sharepoint_backup_url
       end
 
+      test "batch draft_message_id round-trips through read and write" do
+        f = FIELD_IDS[:batches]
+        record = airtable_batch_record(draft_message_id: "AAMkAGdraft==")
+        assert_equal "AAMkAGdraft==", mapper.batch(record).draft_message_id
+
+        payload = mapper.batch_fields(draft_message_id: "AAMkAGdraft==")
+        assert_equal "AAMkAGdraft==", payload[f[:draft_message_id]]
+      end
+
       test "maps a eusa actual record and its dedup key" do
         actual = mapper.eusa_actual(airtable_eusa_actual_record(linked_expense: [ "recExp1" ]))
         assert_equal "439999", actual.nominal_code

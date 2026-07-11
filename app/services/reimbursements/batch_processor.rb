@@ -35,8 +35,8 @@ module Reimbursements
 
     # The outcome handed back to the UI.
     Result = Struct.new(:success, :bacs_date, :batch_id, :expense_count, :total_amount,
-                        :eusa_draft_web_link, :bacs_sharepoint_url, :producer_notifications_sent,
-                        :receipts_uploaded, :errors, keyword_init: true)
+                        :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
+                        :producer_notifications_sent, :receipts_uploaded, :errors, keyword_init: true)
 
     def initialize(store:, graph:, cost_centre:, xlsx: nil, composer: nil, notifier: nil)
       @store = store
@@ -70,10 +70,12 @@ module Reimbursements
 
       # CARDINAL RULE — a failed draft leaves every expense Approved.
       begin
-        result.eusa_draft_web_link = @graph.create_draft(
+        draft = @graph.create_draft(
           mailbox: @cost_centre.send_mailbox, to: [ eusa_recipient ],
           subject: subject, html: body_html, attachments: attachments
         )
+        result.eusa_draft_web_link = draft.web_link
+        result.eusa_draft_message_id = draft.id
       rescue StandardError => e
         return fail_with(result, "EUSA draft creation failed: #{e.message}")
       end
@@ -104,7 +106,7 @@ module Reimbursements
     def new_result(expenses, bacs_date)
       Result.new(success: false, bacs_date: bacs_date, batch_id: nil,
                  expense_count: expenses.size, total_amount: total(expenses),
-                 eusa_draft_web_link: "", bacs_sharepoint_url: "",
+                 eusa_draft_web_link: "", eusa_draft_message_id: "", bacs_sharepoint_url: "",
                  producer_notifications_sent: 0, receipts_uploaded: 0, errors: [])
     end
 
@@ -192,7 +194,10 @@ module Reimbursements
         batch = @store.create_batch!(date_sent: result.bacs_date,
                                      notes: "BACS SharePoint: #{result.bacs_sharepoint_url}")
         result.batch_id = batch.record_id
-        flag_batch(result, batch, :eusa_draft_created, sharepoint_backup_url: result.bacs_sharepoint_url)
+        # Store the EUSA draft's message id so a reopen can delete the stale draft.
+        flag_batch(result, batch, :eusa_draft_created,
+                   sharepoint_backup_url: result.bacs_sharepoint_url,
+                   draft_message_id: result.eusa_draft_message_id)
         batch
       rescue StandardError => e
         retry if attempts < CREATE_BATCH_ATTEMPTS

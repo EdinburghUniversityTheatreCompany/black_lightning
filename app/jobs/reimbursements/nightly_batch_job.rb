@@ -12,31 +12,28 @@ module Reimbursements
   #      AI verdict (fail / error / unchecked / pass-with-note all count as an
   #      issue). Any issue -> email the operator a manual-review breakdown and
   #      STOP (no batch this run).
-  #   3. all clean -> run BatchProcessor and email the operator the draft link.
+  #   3. all clean -> email the operator a "ready to batch" alert listing the
+  #      approved expenses + total. The nightly NO LONGER auto-builds or drafts:
+  #      Build Batch is operator-initiated, so nothing is submitted here.
   # Failures go to Honeybadger + a failure email.
   #
   # Operator recipients: the users holding the finance permission
   # (`:manage, :reimbursements_finance`), overridable with the
   # REIMBURSEMENTS_OPERATOR_EMAIL env var. See #operator_emails.
   #
-  # A +dry_run+ logs the same decisions without sending email, submitting a
-  # batch, or recording the run — so it can be triggered safely to preview.
+  # A +dry_run+ logs the same decisions without sending email or recording the
+  # run — so it can be triggered safely to preview.
   class NightlyBatchJob < ApplicationJob
     queue_as :default
     limits_concurrency key: "reimbursements_nightly_batch"
 
     # A Pending submission awaiting approval longer than this gets a reminder.
     PENDING_REMINDER_DAYS = 3
-    SENDER_NAME = "Bedlam Fringe Finance (automated)".freeze
 
     # Injection seams for tests (no mocking library in this suite).
     class_attribute :store_builder, default: -> { Store.new }
     class_attribute :graph_builder, default: -> { GraphClient.new }
     class_attribute :checker_builder, default: -> { ModulusCheck.default_checker }
-    class_attribute :processor_builder,
-                    default: ->(store:, graph:, cost_centre:) {
-                      BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre)
-                    }
     # Operator alerts send through Graph (Notifier#send_mail) from the cost
     # centre's send mailbox, so they land in its Sent Items.
     class_attribute :notifier_builder,
@@ -65,6 +62,13 @@ module Reimbursements
       expenses = store.expenses
       remind_stale_pending(cost_centre, expenses.select(&:pending?), today: today, dry_run: dry_run)
 
+      # TODO(mysql): scope Approved expenses per cost centre via budget->cost_centre.
+      # Expenses carry no cost-centre link yet, so the Approved queue is global; if
+      # every due cost centre triaged + alerted on it they'd all fire on the same
+      # expenses. Until the link exists, only the primary/default cost centre acts
+      # on the Approved set. Advisory-only — the nightly submits nothing now.
+      return finish_no_work(cost_centre, today, dry_run) unless cost_centre == default_cost_centre
+
       approved = expenses.select { |expense| expense.status == Status::APPROVED }
       return finish_no_work(cost_centre, today, dry_run) if approved.empty?
 
@@ -72,10 +76,14 @@ module Reimbursements
       if issues.any?
         handle_issues(cost_centre, issues, clean.size, today, dry_run)
       else
-        run_batch(cost_centre, approved, today, dry_run)
+        alert_ready(cost_centre, approved, today, dry_run)
       end
     rescue StandardError => e
       handle_failure(cost_centre, e, today, dry_run)
+    end
+
+    def default_cost_centre
+      @default_cost_centre ||= CostCentre.default
     end
 
     # --- Stale pending reminder -------------------------------------------
@@ -167,43 +175,28 @@ module Reimbursements
       cost_centre.record_nightly_run!(today)
     end
 
-    def run_batch(cost_centre, approved, today, dry_run)
+    # The Approved queue is clean: alert the operator that N expenses are ready
+    # to batch (they open Build Batch to create the draft). The nightly submits
+    # nothing — no BatchProcessor, no draft — so there's no draft link here.
+    def alert_ready(cost_centre, approved, today, dry_run)
+      total = approved.sum { |expense| expense.amount || 0 }
       if dry_run
-        total = approved.sum { |expense| expense.amount || 0 }
-        Rails.logger.info("Nightly [DRY RUN]: would submit #{approved.size} expense(s) " \
-                          "totalling £#{format('%.2f', total)} for #{cost_centre.key}")
+        Rails.logger.info("Nightly [DRY RUN]: would alert #{approved.size} approved expense(s) " \
+                          "totalling £#{format('%.2f', total)} ready to batch for #{cost_centre.key}")
         return
       end
 
-      result = processor(cost_centre).process(
-        expenses: approved, bacs_date: today, sender_name: SENDER_NAME,
-        eusa_recipient: cost_centre.eusa_recipient_or_default,
-        eusa_contact_name: cost_centre.eusa_signature_name.to_s
-      )
-      result.success ? batch_succeeded(cost_centre, approved, result, today) : batch_failed(cost_centre, result, today)
-    end
-
-    def batch_succeeded(cost_centre, approved, result, today)
-      Rails.logger.info("Nightly: batch drafted for #{cost_centre.key} — #{result.eusa_draft_web_link}")
+      Rails.logger.info("Nightly: #{approved.size} approved expense(s) ready to batch for #{cost_centre.key}")
       rows = approved.map do |expense|
         { auto_number: expense.auto_number, payee_name: expense.effective_payee_name,
           amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
           description: expense.description.to_s }
       end
       notify(cost_centre) do |emailer, to|
-        emailer.batch_ready(recipients: to, expenses: rows, total: format("%.2f", result.total_amount || 0),
-                            draft_link: result.eusa_draft_web_link, run_date: run_date(today))
+        emailer.approved_ready(recipients: to, expenses: rows, total: format("%.2f", total),
+                               run_date: run_date(today))
       end
       cost_centre.record_nightly_run!(today)
-    end
-
-    # A failed batch (draft not created) leaves expenses Approved, so DON'T
-    # record the run — the next trigger retries once the cause is fixed.
-    def batch_failed(cost_centre, result, today)
-      error_text = Array(result.errors).join("\n")
-      Rails.logger.error("Nightly: batch failed for #{cost_centre.key} — #{error_text}")
-      Honeybadger.notify("Nightly batch failed", context: { cost_centre: cost_centre.key, errors: result.errors })
-      notify(cost_centre) { |emailer, to| emailer.failure(recipients: to, error_text: error_text, run_date: run_date(today)) }
     end
 
     def handle_failure(cost_centre, error, today, dry_run)
@@ -215,10 +208,6 @@ module Reimbursements
     end
 
     # --- Helpers -----------------------------------------------------------
-
-    def processor(cost_centre)
-      processor_builder.call(store: store, graph: graph_builder.call, cost_centre: cost_centre)
-    end
 
     # Send an operator alert through Graph from the cost centre's send mailbox.
     # A Graph failure must never break the nightly run (or trip the surrounding

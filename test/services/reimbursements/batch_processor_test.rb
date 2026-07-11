@@ -56,6 +56,11 @@ module Reimbursements
 
       # Batch record created and both expenses flipped to Submitted + linked.
       assert_equal 1, client.created.count { |table, _| table == :batches }
+      # The EUSA draft's message id is stored on the batch (so a reopen can
+      # delete the stale draft).
+      draft_field = FIELD_IDS[:batches][:draft_message_id]
+      batch_write = client.updated.find { |table, _, fields| table == :batches && fields.key?(draft_field) }
+      assert_equal "msg-1", batch_write.last[draft_field]
       submitted = client.updated.select { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
       assert_equal 2, submitted.size
       submitted.each do |_, _, fields|

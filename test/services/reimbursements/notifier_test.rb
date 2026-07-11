@@ -73,19 +73,26 @@ module Reimbursements
                              next_run_day: "Tuesday 14 July",
                              issues: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
                                          reason: "AI review: amount mismatch" } ])
+      notifier.approved_ready(recipients: recipients, total: "40.00", run_date: "9 July 2026",
+                              expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
+                                            budget_name: "Props", description: "Paint" } ])
       notifier.batch_ready(recipients: recipients, total: "52.50", run_date: "9 July 2026",
                            draft_link: "https://outlook.example/draft-1",
                            expenses: [ { auto_number: 3, payee_name: "Sam", amount: "40.00",
                                          budget_name: "Props", description: "Paint" } ])
       notifier.failure(recipients: recipients, error_text: "SharePoint down", run_date: "9 July 2026")
 
-      reminder, review, ready, failure = graph.send_mails
+      reminder, review, approved, ready, failure = graph.send_mails
       assert_equal recipients, reminder[:to]
       assert_match(/awaiting approval/, reminder[:subject])
       assert_match "5 day", reminder[:html]
       assert_match(/Manual review needed/, review[:subject])
       assert_match "amount mismatch", review[:html]
       assert_match "Tuesday 14 July", review[:html]
+      # The ready-to-batch alert prompts Build Batch and carries NO draft link.
+      assert_match(/ready to batch/, approved[:subject])
+      assert_match "Build Batch", approved[:html]
+      assert_no_match(/outlook\.example/, approved[:html])
       assert_match(/Draft ready/, ready[:subject])
       assert_match "https://outlook.example/draft-1", ready[:html]
       assert_match(/FAILED/, failure[:subject])
