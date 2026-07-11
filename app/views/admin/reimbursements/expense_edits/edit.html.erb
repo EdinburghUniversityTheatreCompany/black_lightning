@@ -135,14 +135,16 @@
   <%# --- Receipts --- %>
   <div class="mt-4 border-t border-gray-200 pt-3">
     <p class="text-sm font-medium">Receipts</p>
-    <% if @expense.receipts.empty? %>
-      <p class="text-xs text-gray-500">None attached.</p>
-    <% else %>
-      <ul class="mt-1 flex flex-col gap-1">
+    <div class="mt-1">
+      <%= render "admin/reimbursements/shared/receipts_lightbox",
+                 receipts: @expense.receipts, group: "receipts-#{@expense.record_id}" %>
+    </div>
+    <%# Finance can still detach individual receipts and attach new ones. %>
+    <% if @expense.receipts.any? %>
+      <ul class="mt-2 flex flex-col gap-1">
         <% @expense.receipts.each do |receipt| %>
           <li class="flex items-center gap-2 text-sm">
-            <%= link_to receipt.filename.presence || "receipt", receipt.url, target: "_blank", rel: "noopener",
-                        class: "text-primary underline" %>
+            <span class="truncate text-gray-600"><%= receipt.filename.presence || "receipt" %></span>
             <%= button_to "Remove",
                           admin_reimbursements_expense_edit_receipt_path(@expense.record_id, receipt.attachment_id),
                           method: :delete, form: { data: { turbo_confirm: "Remove this receipt from Airtable?" } },

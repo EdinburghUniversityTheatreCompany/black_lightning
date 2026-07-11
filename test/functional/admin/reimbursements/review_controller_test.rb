@@ -66,6 +66,12 @@ module Admin
         BaseController.store_builder = -> { @store }
       end
 
+      def image_receipt(tag)
+        { "id" => "attImg#{tag}", "filename" => "receipt#{tag}.jpg",
+          "url" => "https://airtable/img#{tag}.jpg", "size" => 100, "type" => "image/jpeg",
+          "thumbnails" => { "large" => { "url" => "https://airtable/thumb#{tag}.jpg" } } }
+      end
+
       # --- Auth gating -----------------------------------------------------
 
       test "requires sign-in" do
@@ -125,6 +131,24 @@ module Admin
         assert_response :success
         assert_includes response.body, "Direct payment to"
         assert_includes response.body, "Acme Lighting Ltd"
+      end
+
+      test "renders receipts as a read-only fancybox gallery keyed per expense" do
+        a = pending_expense(id: "recImgA", payment_reference: "PROPS PAT", receipts: [ image_receipt("A") ])
+        b = pending_expense(id: "recImgB", payment_reference: "PROPS PAT", receipts: [ image_receipt("B") ])
+        rebuild_store(expenses: [ a, b ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, 'data-controller="fancybox"'
+        # Each card gets its own fancybox group so the lightbox pages within one expense.
+        assert_includes response.body, 'data-fancybox="receipts-recImgA"'
+        assert_includes response.body, 'data-fancybox="receipts-recImgB"'
+        assert_includes response.body, "https://airtable/imgA.jpg"
+        # Read-only: no inline receipt Remove control on the review card.
+        assert_no_match(/Remove this receipt/, response.body)
       end
 
       test "renders a duplicate-submission warning" do
