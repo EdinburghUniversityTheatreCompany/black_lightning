@@ -50,6 +50,16 @@ module Reimbursements
         Reconciliation.actuals_row_dedup_key("439999", "Bob Producer", bd(0), bd(0))
     end
 
+    test "dedup key preserves amounts beyond float precision" do
+      # Two amounts a penny apart both collapse to the same Float, so a
+      # float-normalised key would wrongly treat them as the same imported row
+      # (and silently skip the second). A BigDecimal key keeps them distinct.
+      big = BigDecimal("9999999999999999.99")
+      penny_less = BigDecimal("9999999999999999.98")
+      refute_equal Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", big, bd(0)),
+        Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", penny_less, bd(0))
+    end
+
     test "dedup key is four strings" do
       key = Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", bd("123.45"), nil)
       assert_equal 4, key.length
