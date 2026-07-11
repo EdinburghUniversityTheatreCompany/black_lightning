@@ -20,13 +20,16 @@ module Admin
       # Injection seam for tests: the app-only Graph client (SharePoint browse).
       class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
 
-      before_action :set_cost_centre, only: %i[edit update]
+      before_action :set_cost_centre, only: %i[edit update test_access]
 
       # Which CostCentre columns each SharePoint destination writes.
       FOLDER_COLUMNS = {
         "receipts" => { drive: :sharepoint_receipts_drive_id, folder: :sharepoint_receipts_folder_id },
         "bacs" => { drive: :sharepoint_bacs_drive_id, folder: :sharepoint_bacs_folder_id }
       }.freeze
+
+      # One row of the "Run access check" results.
+      Check = Struct.new(:label, :status, :detail, keyword_init: true)
 
       def index
         @title = "Reimbursements Settings"
@@ -40,6 +43,19 @@ module Admin
 
       def update
         params[:folder_purpose].present? ? save_folder : save_settings
+      end
+
+      # Probe this cost centre's mailboxes and SharePoint destinations with the
+      # app's own credentials, so the business manager can confirm the Microsoft
+      # grants worked before relying on email-in or Build Batch. Renders the edit
+      # page with a per-check pass/fail list.
+      def test_access
+        @title = "Settings — #{@cost_centre.name}"
+        @access_checks = run_access_checks
+        respond_to do |format|
+          format.turbo_stream
+          format.html { render :edit }
+        end
       end
 
       private
@@ -95,6 +111,47 @@ module Admin
 
         @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
         redirect_to edit_path, notice: "#{params[:folder_purpose].humanize} folder saved."
+      end
+
+      # --- Microsoft access check -------------------------------------------
+
+      def run_access_checks
+        mailboxes = [ @cost_centre.receive_mailbox, @cost_centre.send_mailbox ].map(&:presence).compact.uniq
+        mailboxes.map { |mailbox| mailbox_check(mailbox) } + [ site_check ] + folder_checks
+      end
+
+      def mailbox_check(mailbox)
+        graph.check_mailbox(mailbox)
+        Check.new(label: "Mailbox #{mailbox}", status: :ok, detail: "Reachable (it's in the app-access group).")
+      rescue StandardError => e
+        Check.new(label: "Mailbox #{mailbox}", status: :fail,
+                  detail: "#{e.message}. Add it to the Reimbursements App Access group (commands below).")
+      end
+
+      def site_check
+        return Check.new(label: "SharePoint site", status: :skip, detail: "No site URL set yet.") if
+          @cost_centre.sharepoint_site_url.blank?
+
+        site = graph.get_site(@cost_centre.sharepoint_site_url)
+        graph.list_drives(site.id)
+        Check.new(label: "SharePoint site (#{site.name})", status: :ok, detail: "Granted and reachable.")
+      rescue StandardError => e
+        Check.new(label: "SharePoint site", status: :fail,
+                  detail: "#{e.message}. Grant the app write on this site (Sites.Selected, command below).")
+      end
+
+      def folder_checks
+        FOLDER_COLUMNS.map do |purpose, columns|
+          drive = @cost_centre.public_send(columns[:drive])
+          folder = @cost_centre.public_send(columns[:folder])
+          next Check.new(label: "#{purpose.humanize} folder", status: :skip, detail: "Not chosen yet.") if
+            drive.blank? || folder.blank?
+
+          graph.list_folder_contents(drive_id: drive, item_id: folder)
+          Check.new(label: "#{purpose.humanize} folder", status: :ok, detail: "Reachable.")
+        rescue StandardError => e
+          Check.new(label: "#{purpose.humanize} folder", status: :fail, detail: e.message)
+        end
       end
 
       # --- Graph-backed folder picker ---------------------------------------

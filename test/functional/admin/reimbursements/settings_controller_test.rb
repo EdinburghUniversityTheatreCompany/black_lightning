@@ -12,11 +12,20 @@ module Admin
       Item = Struct.new(:id, :name, :folder, :web_url, keyword_init: true)
 
       class FakeGraph
-        attr_reader :folder_calls, :site_calls
+        attr_reader :folder_calls, :site_calls, :mailbox_calls
 
-        def initialize
+        def initialize(mailbox_ok: true)
           @folder_calls = []
           @site_calls = []
+          @mailbox_calls = []
+          @mailbox_ok = mailbox_ok
+        end
+
+        def check_mailbox(address)
+          @mailbox_calls << address
+          raise ::Reimbursements::GraphAuth::AuthError, "Graph rejected the token (403)" unless @mailbox_ok
+
+          true
         end
 
         def get_site(site_url)
@@ -247,6 +256,63 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         assert_match(/Pick a folder/, flash[:alert])
         assert_nil @cost_centre.reload.sharepoint_bacs_folder_id
+      end
+
+      # --- Access check ------------------------------------------------------
+
+      test "access check reports reachable mailboxes, site and folders" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance",
+                             sharepoint_receipts_drive_id: "drv", sharepoint_receipts_folder_id: "fld",
+                             sharepoint_bacs_drive_id: "drv2", sharepoint_bacs_folder_id: "fld2")
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "Mailbox #{@cost_centre.receive_mailbox}"
+        assert_includes response.body, "Granted and reachable"                 # SharePoint site OK
+        assert_includes response.body, "Reachable."                            # folders OK
+        assert_includes @graph.mailbox_calls, @cost_centre.receive_mailbox
+        assert_equal [ "https://sp.sharepoint.com/sites/Finance" ], @graph.site_calls
+        assert_equal [ [ "drv", "fld" ], [ "drv2", "fld2" ] ], @graph.folder_calls
+      end
+
+      test "access check skips a SharePoint site that isn't configured yet" do
+        @cost_centre.update!(sharepoint_site_url: nil)
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "No site URL set yet"
+        assert_empty @graph.site_calls
+      end
+
+      test "access check flags a mailbox the app can't reach" do
+        SettingsController.graph_builder = -> { FakeGraph.new(mailbox_ok: false) }
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "403"
+        assert_includes response.body, "Reimbursements App Access"             # remediation hint
+      end
+
+      test "access check answers a turbo stream that updates the results in place" do
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }, as: :turbo_stream
+
+        assert_response :success
+        assert_includes response.media_type, "turbo-stream"
+        assert_includes response.body, "access_check_results"
+      end
+
+      test "test_access denies members without the finance permission" do
+        sign_in users(:committee)
+        post :test_access, params: { key: @cost_centre.key }
+        assert_response :forbidden
       end
     end
   end

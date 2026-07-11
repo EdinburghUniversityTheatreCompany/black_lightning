@@ -147,6 +147,18 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
   <% end %>
 <% end %>
 
+<%= render CardComponent.new(title: "Check Microsoft access", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-2">
+    Probe this cost centre's mailboxes and SharePoint site with the app's own credentials, so you can
+    confirm the Microsoft grants worked before relying on email-in or Build Batch.
+  </p>
+  <%= button_to "Run access check", test_access_admin_reimbursements_setting_path(@cost_centre.key),
+                method: :post, class: btn_classes(:secondary, :sm) %>
+  <div id="access_check_results">
+    <%= render "access_checks", checks: @access_checks %>
+  </div>
+<% end %>
+
 <%= render CardComponent.new(title: "SharePoint destinations", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-3">
     Where the nightly and Build Batch upload renamed receipts and the BACS request xlsx. Browse to a

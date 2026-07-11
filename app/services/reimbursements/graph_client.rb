@@ -100,6 +100,16 @@ module Reimbursements
       body
     end
 
+    # A light read probe confirming the app can reach a mailbox, i.e. it sits in
+    # the Exchange ApplicationAccessPolicy group that scopes Mail.* for this app.
+    # Returns true on success; raises (403 etc.) so the Settings access-check turns
+    # it into a failed row with the Graph message. Same group gates send + poll, so
+    # this read is a fair proxy for "email-in and batch drafting will work".
+    def check_mailbox(address)
+      graph_request(:get, "/users/#{address}/mailFolders/inbox", params: { "$select" => "id" })
+      true
+    end
+
     # --- SharePoint browse (Settings folder picker, Phase F) ---------------
 
     # Resolve a SharePoint site by its browser URL (e.g.

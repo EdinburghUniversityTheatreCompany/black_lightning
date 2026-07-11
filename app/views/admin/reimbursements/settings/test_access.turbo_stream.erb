@@ -1,0 +1,3 @@
+<%= turbo_stream.update "access_check_results" do %>
+  <%= render "access_checks", checks: @access_checks %>
+<% end %>

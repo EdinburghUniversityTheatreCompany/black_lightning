@@ -142,5 +142,26 @@ module Reimbursements
       # Sites.Selected can't search, so the site is addressed by server-relative path.
       assert_includes http.requests.last.uri, "/sites/tenant.sharepoint.com:/sites/Finance"
     end
+
+    test "check_mailbox probes the mailbox inbox and returns true" do
+      client, http = build_client([
+        token_response,
+        [ 200, { id: "inbox" }.to_json ]
+      ])
+
+      assert client.check_mailbox("reimbursements@bedlamfringe.co.uk")
+      probe = http.requests.last
+      assert_equal "get", probe.method.to_s
+      assert_includes probe.uri, "/users/reimbursements@bedlamfringe.co.uk/mailFolders/inbox"
+    end
+
+    test "check_mailbox raises when the app can't reach the mailbox" do
+      client, = build_client([
+        token_response,
+        [ 403, { error: { code: "ErrorAccessDenied", message: "Access is denied." } }.to_json ]
+      ])
+
+      assert_raises(GraphAuth::AuthError) { client.check_mailbox("locked@bedlamfringe.co.uk") }
+    end
   end
 end

@@ -55,6 +55,15 @@ module ReimbursementsHelper
     render(BadgeComponent.new(type: type, pill: true).with_content("AI: #{label}"))
   end
 
+  # Pill badge for one Settings access-check row: OK green, FAIL red, SKIP grey
+  # (not configured, so nothing to test).
+  ACCESS_CHECK_BADGE = { ok: :success, fail: :danger, skip: :secondary }.freeze
+
+  def reimbursements_access_check_badge(status)
+    type = ACCESS_CHECK_BADGE.fetch(status, :secondary)
+    render(BadgeComponent.new(type: type, pill: true).with_content(status.to_s.upcase))
+  end
+
   # A GBP amount for the Budgets screens, or an em dash when not loaded (nil).
   def budget_money(amount)
     return "—" if amount.nil?
