@@ -23,6 +23,23 @@ module Admin
 
       helper_method :modulus_checker
 
+      # All expenses as a filterable/searchable table, newest first, each row
+      # opening the edit page above. The finance team's primary way in — the
+      # old +find+ lookup is now just the search box on this page.
+      def index
+        @title = "Expenses"
+        @statuses = ::Reimbursements::Status.all
+        @budgets = store.budgets.sort_by { |b| b.name.to_s }
+        @budget_by_id = store.budgets.index_by(&:record_id)
+
+        @status_filter = params[:status].to_s.strip
+        @budget_filter = params[:budget].to_s.strip
+        @query = params[:q].to_s.strip
+        @attention_only = params[:attention] == "1"
+
+        @expenses = filtered_expenses
+      end
+
       # Lookup: resolve a typed auto-number or record id to its edit page.
       def find
         @title = "Find an Expense"
@@ -83,6 +100,43 @@ module Admin
 
       def modulus_checker
         @modulus_checker ||= checker_builder.call
+      end
+
+      # All expenses, newest first, narrowed by the status/budget/attention
+      # filters and the free-text search. Filtering happens in Ruby over the one
+      # cached list (Airtable free plan — no per-filter API calls).
+      def filtered_expenses
+        result = store.expenses.sort_by { |e| e.submitted_at || Time.zone.at(0) }.reverse
+        result = result.select { |e| e.status == @status_filter } if @status_filter.present?
+        result = result.select { |e| e.budget&.record_id == @budget_filter } if @budget_filter.present?
+        if @attention_only
+          result = result.select do |e|
+            ::Reimbursements::ReviewSupport.needs_attention(e, @budget_by_id, modulus_checker)
+          end
+        end
+        result = result.select { |e| matches_query?(e, @query) } if @query.present?
+        result
+      end
+
+      # Case-insensitive substring over description, effective payee name and
+      # payment reference; an exact match on the visible auto-number; or a
+      # numeric match on the gross amount.
+      def matches_query?(expense, query)
+        needle = query.downcase
+        return true if expense.description.to_s.downcase.include?(needle)
+        return true if expense.effective_payee_name.to_s.downcase.include?(needle)
+        return true if expense.payment_reference.to_s.downcase.include?(needle)
+        return true if expense.auto_number.to_s == query.sub(/\A#/, "")
+
+        amount_matches?(expense.amount, query)
+      end
+
+      def amount_matches?(amount, query)
+        return false if amount.nil?
+
+        Float(query.delete("£, ")) == amount.to_f
+      rescue ArgumentError
+        false
       end
 
       def find_expense!

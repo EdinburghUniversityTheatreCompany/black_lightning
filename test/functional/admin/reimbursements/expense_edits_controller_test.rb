@@ -62,6 +62,112 @@ module Admin
         assert_response :forbidden
       end
 
+      # --- Index: all-expenses table with filters + search ----------------
+
+      # A store with two budgets and two payees across three statuses, so the
+      # filter/search tests can prove narrowing (and exclusion).
+      def rebuild_multi_store
+        person2 = airtable_person_record(id: "recPer2", name: "Sam Stagehand", email: "sam@example.com",
+                                         sort_code: "20-00-00", account_number: "12345678")
+        budget2 = airtable_budget_record(id: "recBud2", name: "Costumes", nominal_code: "4100")
+        expenses = [
+          expense_at("Pending",  id: "recExp1", auto_number: 1, description: "Fake blood",
+                                  payment_reference: "PROPS PAT", budget_id: "recBud1", payee_id: "recPer1"),
+          expense_at("Approved", id: "recExp2", auto_number: 2, description: "Velvet cloak",
+                                  payment_reference: "COSTUMES SAM", budget_id: "recBud2",
+                                  payee_id: "recPer2", amount: 99.0),
+          expense_at("Paid",     id: "recExp3", auto_number: 3, description: "Stage nails",
+                                  payment_reference: "PROPS PAT", budget_id: "recBud1",
+                                  payee_id: "recPer1", amount: 5.0)
+        ]
+        @store, @client = build_fake_store(expenses: expenses, people: [ @person, person2 ],
+                                           budgets: [ @budget, budget2 ])
+        BaseController.store_builder = -> { @store }
+      end
+
+      test "index requires the finance permission (producer access alone is forbidden)" do
+        other = users(:member_with_phone_number)
+        grant_producer_permission(other)
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in other
+
+        get :index
+
+        assert_response :forbidden
+      end
+
+      test "index lists every expense with a link to edit each" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Fake blood"
+        assert_includes response.body, "Velvet cloak"
+        assert_includes response.body, "Stage nails"
+        assert_includes response.body, edit_admin_reimbursements_expense_edit_path("recExp1")
+        assert_includes response.body, edit_admin_reimbursements_expense_edit_path("recExp2")
+        assert_includes response.body, edit_admin_reimbursements_expense_edit_path("recExp3")
+      end
+
+      test "index status filter narrows to a single status" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { status: "Paid" }
+
+        assert_response :success
+        assert_includes response.body, "Stage nails"
+        assert_not_includes response.body, "Fake blood"
+        assert_not_includes response.body, "Velvet cloak"
+      end
+
+      test "index budget filter narrows to a single budget" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { budget: "recBud2" }
+
+        assert_response :success
+        assert_includes response.body, "Velvet cloak"
+        assert_not_includes response.body, "Fake blood"
+        assert_not_includes response.body, "Stage nails"
+      end
+
+      test "index search matches a description substring and excludes non-matches" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { q: "velvet" }
+
+        assert_response :success
+        assert_includes response.body, "Velvet cloak"
+        assert_not_includes response.body, "Fake blood"
+        assert_not_includes response.body, "Stage nails"
+      end
+
+      test "index search matches the effective payee name" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { q: "stagehand" }
+
+        assert_includes response.body, "Velvet cloak"
+        assert_not_includes response.body, "Fake blood"
+      end
+
+      test "index search matches an exact auto-number" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { q: "3" }
+
+        assert_includes response.body, "Stage nails"
+        assert_not_includes response.body, "Velvet cloak"
+        assert_not_includes response.body, "Fake blood"
+      end
+
       # --- Edit renders at every status ------------------------------------
 
       EDITABLE_STATUSES.each do |status|

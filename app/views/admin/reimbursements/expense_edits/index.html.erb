@@ -1,0 +1,98 @@
+<p class="mb-3 text-gray-600">
+  Every expense the finance team can see, whatever its status. Filter by status or budget,
+  or search by description, payee, payment reference, amount or number, then open any one to
+  edit it (at any status, including ones already sent to EUSA or paid). Pending and Approved
+  expenses are also editable from the
+  <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
+</p>
+
+<%= render CardComponent.new(title: "Filter & search") do %>
+  <%= form_with url: admin_reimbursements_expense_edits_path, method: :get,
+                class: "flex flex-wrap items-end gap-3" do %>
+    <div>
+      <%= label_tag :status, "Status", class: "block text-sm font-medium mb-1" %>
+      <%= select_tag :status,
+                     options_for_select([ [ "All statuses", "" ] ] + @statuses.map { |s| [ s, s ] }, @status_filter),
+                     class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :budget, "Budget", class: "block text-sm font-medium mb-1" %>
+      <%= select_tag :budget,
+                     options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.name, b.record_id ] }, @budget_filter),
+                     class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :q, "Search", class: "block text-sm font-medium mb-1" %>
+      <%= text_field_tag :q, @query, placeholder: "description, payee, ref, £, or #",
+                         class: "w-64 border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <label class="flex items-center gap-2 text-sm">
+      <%= check_box_tag :attention, "1", @attention_only %>
+      Needs attention only
+    </label>
+    <%= submit_tag "Apply", class: btn_classes(:secondary, :sm) %>
+    <% if @status_filter.present? || @budget_filter.present? || @query.present? || @attention_only %>
+      <%= link_to "Clear", admin_reimbursements_expense_edits_path, class: "text-sm text-gray-600 underline" %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)}") do %>
+  <% if @expenses.empty? %>
+    <p class="py-4 text-center text-gray-600">No expenses match these filters.</p>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left border-b border-gray-200">
+            <th class="py-1 pr-3">#</th><th class="py-1 pr-3">Status</th>
+            <th class="py-1 pr-3">Payee</th><th class="py-1 pr-3">Budget</th>
+            <th class="py-1 pr-3 text-right">Amount</th><th class="py-1 pr-3">Description</th>
+            <th class="py-1 pr-3">Submitted</th><th class="py-1 pr-3">Flags</th>
+            <th class="py-1"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @expenses.each do |expense| %>
+            <tr class="border-b border-gray-100">
+              <td class="py-1 pr-3 font-mono">
+                <%= link_to "##{expense.auto_number}", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                            class: "text-primary underline" %>
+              </td>
+              <td class="py-1 pr-3">
+                <%= render BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
+                                         .with_content(expense.status) %>
+              </td>
+              <td class="py-1 pr-3"><%= expense.effective_payee_name.presence || "—" %></td>
+              <td class="py-1 pr-3"><%= expense.budget&.name.presence || "—" %></td>
+              <td class="py-1 pr-3 text-right whitespace-nowrap">
+                <%= expense.amount ? number_to_currency(expense.amount, unit: "£") : "—" %>
+                <% if expense.amount_excl_vat.present? && expense.amount_excl_vat.positive? %>
+                  <span class="block text-xs text-gray-500">
+                    <%= number_to_currency(expense.amount_excl_vat, unit: "£") %> ex&nbsp;VAT
+                  </span>
+                <% end %>
+              </td>
+              <td class="py-1 pr-3"><%= truncate(expense.description.to_s, length: 60) %></td>
+              <td class="py-1 pr-3 whitespace-nowrap"><%= expense.submitted_at&.strftime("%d/%m/%Y") || "—" %></td>
+              <td class="py-1 pr-3">
+                <div class="flex flex-wrap gap-1">
+                  <% if ::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) %>
+                    <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Needs attention") %>
+                  <% end %>
+                  <% if expense.ai_check_status.present? %>
+                    <%= render BadgeComponent.new(type: :info, pill: true).with_content("AI: #{expense.ai_check_status}") %>
+                  <% end %>
+                </div>
+              </td>
+              <td class="py-1">
+                <%= link_to "Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                            class: btn_classes(:secondary, :sm) %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>
