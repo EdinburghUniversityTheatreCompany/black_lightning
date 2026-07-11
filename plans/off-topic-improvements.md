@@ -90,3 +90,9 @@ We don't use `acts_as_chat`/`acts_as_message` (the Extractor and AiChecker call
 `RubyLLM.chat` directly), so the warning is pure noise from the gem's Rails engine.
 Investigate silencing it (config flag or a targeted `ActiveSupport::Deprecation`
 filter) so test/boot output stays clean. Harmless; not gating.
+
+## Multiple financial years (before MySQL cutover)
+Expenses/budgets/actuals currently have no financial-year concept. Decide how to scope
+each year (Fringe 2026 vs 2027 …) before the MySQL cutover — likely a `financial_year`
+on budgets (and/or a per-year Airtable base today). Affects Reconcile (period is P1-P12
+within a year), Budgets/Forecasts, and the eventual MySQL schema. — Mick, 2026-07-11
