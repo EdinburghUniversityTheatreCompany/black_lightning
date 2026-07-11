@@ -10,10 +10,13 @@ module Reimbursements
   #
   # Azure app-registration permissions required (application permissions, admin
   # consent — a MANUAL setup step, see the reimbursements setup guide):
-  #   * Mail.Send            — send the EUSA draft / producer notifications
-  #   * Mail.ReadWrite       — create the EUSA draft in the send mailbox
-  #   * Files.ReadWrite.All  — upload receipts + BACS xlsx to SharePoint
-  #   * Sites.ReadWrite.All  — browse sites/drives/folders for the picker
+  #   * Mail.Send       — send the EUSA draft / producer notifications
+  #   * Mail.ReadWrite  — create the EUSA draft in the send mailbox
+  #   * Sites.Selected  — SharePoint, granted write per-site (least-privilege):
+  #                       upload receipts + BACS xlsx and browse a granted site's
+  #                       drives/folders. Cannot search/enumerate sites, so the
+  #                       Settings picker addresses each cost centre's configured
+  #                       site by URL (see #get_site).
   class GraphClient
     include GraphAuth
 
@@ -99,11 +102,16 @@ module Reimbursements
 
     # --- SharePoint browse (Settings folder picker, Phase F) ---------------
 
-    def list_sites(search: "*")
-      graph_request(:get, "/sites", params: { search: search }).fetch("value", []).map do |site|
-        Site.new(id: site["id"], name: site["displayName"].presence || site["name"].to_s,
-                 web_url: site["webUrl"].to_s)
-      end
+    # Resolve a SharePoint site by its browser URL (e.g.
+    # "https://tenant.sharepoint.com/sites/Finance") to its Graph Site + id, using
+    # the server-relative path form Graph accepts for Sites.Selected apps. Such an
+    # app can address a site it's been granted by path but can't search across the
+    # tenant, so the Settings picker starts from each cost centre's configured URL.
+    def get_site(site_url)
+      uri = URI(site_url.to_s.strip)
+      site = graph_request(:get, "/sites/#{uri.host}:#{uri.path.to_s.chomp('/')}")
+      Site.new(id: site["id"], name: site["displayName"].presence || site["name"].to_s,
+               web_url: site["webUrl"].to_s)
     end
 
     def list_drives(site_id)

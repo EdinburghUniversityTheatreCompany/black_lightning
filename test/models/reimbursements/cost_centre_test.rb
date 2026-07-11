@@ -13,6 +13,18 @@ module Reimbursements
       assert_equal "reimbursements@bedlamfringe.co.uk", fringe.send_mailbox
     end
 
+    test "sharepoint_graph_site_path converts the site URL to Graph's path form" do
+      cost_centre = CostCentre.default
+      cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance/"
+      assert_equal "tenant.sharepoint.com:/sites/Finance", cost_centre.sharepoint_graph_site_path
+    end
+
+    test "sharepoint_graph_site_path is nil without a valid site URL" do
+      cost_centre = CostCentre.default
+      assert_nil cost_centre.tap { |c| c.sharepoint_site_url = nil }.sharepoint_graph_site_path
+      assert_nil cost_centre.tap { |c| c.sharepoint_site_url = "not a url" }.sharepoint_graph_site_path
+    end
+
     test "requires key, name, eusa_code and both mailboxes" do
       cost_centre = CostCentre.new
       assert_not cost_centre.valid?

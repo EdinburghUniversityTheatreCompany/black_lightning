@@ -70,7 +70,8 @@ module Admin
 
       def settings_params
         permitted = params.require(:cost_centre).permit(
-          :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_signature_name
+          :receive_mailbox, :send_mailbox, :eusa_recipient, :eusa_signature_name,
+          :sharepoint_site_url
         )
         permitted[:nightly_run_days] = normalized_run_days
         permitted
@@ -98,18 +99,27 @@ module Admin
 
       # --- Graph-backed folder picker ---------------------------------------
 
+      # Under Sites.Selected the app can't search sites, so the picker starts from
+      # the cost centre's configured site URL (resolved to a Graph site), then
+      # lists that site's drives and folders. Without a site URL there's nothing
+      # to browse — the view prompts to set one first.
       def setup_folder_picker
         @picker = params[:picker]
         @path = browse_path
-        @site_id = params[:site_id].presence
         @drive_id = params[:drive_id].presence
+
+        if @cost_centre.sharepoint_site_url.blank?
+          @site_missing = true
+          return
+        end
+
+        @site = graph.get_site(@cost_centre.sharepoint_site_url)
+        @site_id = @site.id
 
         if @drive_id
           @items = graph.list_folder_contents(drive_id: @drive_id, item_id: @path.last&.dig(:id))
-        elsif @site_id
-          @drives = graph.list_drives(@site_id)
         else
-          @sites = graph.list_sites(search: params[:q].presence || "*")
+          @drives = graph.list_drives(@site_id)
         end
       rescue StandardError => e
         flash.now[:alert] = "SharePoint browse failed: #{e.message}"

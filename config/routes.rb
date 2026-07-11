@@ -119,10 +119,9 @@ ChaosRails::Application.routes.draw do
       end
 
       # Per-cost-centre operational settings (Phase F): picker -> edit/update.
+      # (The Azure/mailbox/SharePoint manual-setup runbook lives inline on the
+      # per-cost-centre Settings edit page, filled with that cost centre's values.)
       resources :settings, only: %i[index edit update], param: :key
-
-      # In-app setup & scaling runbook (Azure/mailbox/SharePoint manual steps).
-      get "help", to: "help#show", as: :help
     end
 
     # Mount MissionControl Jobs

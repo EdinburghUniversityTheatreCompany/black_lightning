@@ -12,14 +12,16 @@ module Admin
       Item = Struct.new(:id, :name, :folder, :web_url, keyword_init: true)
 
       class FakeGraph
-        attr_reader :folder_calls
+        attr_reader :folder_calls, :site_calls
 
         def initialize
           @folder_calls = []
+          @site_calls = []
         end
 
-        def list_sites(search:)
-          [ Site.new(id: "site-1", name: "Finance Site (#{search})", web_url: "https://sp/finance") ]
+        def get_site(site_url)
+          @site_calls << site_url
+          Site.new(id: "site-1", name: "Finance Site", web_url: site_url)
         end
 
         def list_drives(site_id)
@@ -120,6 +122,17 @@ module Admin
         assert_includes response.body, "-Member outbox@bedlamfringe.co.uk"
       end
 
+      test "edit shows the SharePoint Sites.Selected grant with the site path filled in" do
+        @cost_centre.update!(sharepoint_site_url: "https://tenant.sharepoint.com/sites/Finance")
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "Sites.Selected"
+        assert_includes response.body, "sites/tenant.sharepoint.com:/sites/Finance"
+        assert_includes response.body, "/permissions"
+      end
+
       test "edit 404s for an unknown cost centre" do
         sign_in @user
         get :edit, params: { key: "nope" }
@@ -146,6 +159,18 @@ module Admin
         assert_equal [ 1, 3, 5 ], @cost_centre.nightly_run_days
       end
 
+      test "update saves the SharePoint site URL" do
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, cost_centre: {
+          receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
+          sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe"
+        } }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_equal "https://tenant.sharepoint.com/sites/Fringe", @cost_centre.reload.sharepoint_site_url
+      end
+
       test "update with no run-days checked clears the schedule" do
         @cost_centre.update!(nightly_run_days: [ 2, 4 ])
         sign_in @user
@@ -170,17 +195,31 @@ module Admin
 
       # --- Folder picker -----------------------------------------------------
 
-      test "picker lists SharePoint sites" do
+      test "picker browses the cost centre's configured site and lists its libraries" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
         sign_in @user
-        get :edit, params: { key: @cost_centre.key, picker: "receipts", q: "finance" }
+        get :edit, params: { key: @cost_centre.key, picker: "receipts" }
 
         assert_response :success
-        assert_includes response.body, "Finance Site (finance)"
+        assert_includes response.body, "Finance Site"                            # site resolved by URL
+        assert_includes response.body, "Documents"                               # its library listed
+        assert_equal [ "https://sp.sharepoint.com/sites/Finance" ], @graph.site_calls
+      end
+
+      test "picker prompts to set a site URL when none is configured" do
+        @cost_centre.update!(sharepoint_site_url: nil)
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key, picker: "receipts" }
+
+        assert_response :success
+        assert_includes response.body, "only reaches the site you've granted it"
+        assert_empty @graph.site_calls
       end
 
       test "picker lists folder contents once a drive is chosen" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
         sign_in @user
-        get :edit, params: { key: @cost_centre.key, picker: "bacs", site_id: "site-1", drive_id: "drive-1" }
+        get :edit, params: { key: @cost_centre.key, picker: "bacs", drive_id: "drive-1" }
 
         assert_response :success
         assert_includes response.body, "BACS"

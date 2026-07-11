@@ -13,6 +13,7 @@
 #  nightly_run_days              :string(255)      default([2, 4]), not null
 #  receive_mailbox               :string(255)      not null
 #  send_mailbox                  :string(255)      not null
+#  sharepoint_site_url           :string(255)
 #  created_at                    :datetime         not null
 #  updated_at                    :datetime         not null
 #  sharepoint_bacs_drive_id      :string(255)
@@ -71,6 +72,22 @@ module Reimbursements
     # Build Batch needs both SharePoint destinations before it can offload files.
     def sharepoint_configured?
       receipts_folder.present? && bacs_folder.present?
+    end
+
+    # The Graph addressing form of the configured SharePoint site
+    # ("tenant.sharepoint.com:/sites/Finance"), or nil if no site URL is set or
+    # it doesn't parse. Used to browse the site (Sites.Selected can't search, so
+    # it addresses a granted site by path) and to fill the per-site grant command
+    # on the Settings page.
+    def sharepoint_graph_site_path
+      return nil if sharepoint_site_url.blank?
+
+      uri = URI.parse(sharepoint_site_url.strip)
+      return nil if uri.host.blank?
+
+      "#{uri.host}:#{uri.path.to_s.chomp('/')}"
+    rescue URI::InvalidURIError
+      nil
     end
 
     def eusa_recipient_or_default

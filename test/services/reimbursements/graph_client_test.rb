@@ -127,5 +127,20 @@ module Reimbursements
       assert_equal [ true, false ], items.map(&:folder)
       assert_equal %w[Receipts note.txt], items.map(&:name)
     end
+
+    test "get_site resolves a site URL to its Graph id via the path form" do
+      client, http = build_client([
+        token_response,
+        [ 200, { id: "tenant,guid1,guid2", displayName: "Finance",
+                 webUrl: "https://tenant.sharepoint.com/sites/Finance" }.to_json ]
+      ])
+
+      site = client.get_site("https://tenant.sharepoint.com/sites/Finance")
+
+      assert_equal "tenant,guid1,guid2", site.id
+      assert_equal "Finance", site.name
+      # Sites.Selected can't search, so the site is addressed by server-relative path.
+      assert_includes http.requests.last.uri, "/sites/tenant.sharepoint.com:/sites/Finance"
+    end
   end
 end

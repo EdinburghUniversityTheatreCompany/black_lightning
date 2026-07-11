@@ -17,32 +17,90 @@
       </div>
     </div>
 
+    <div>
+      <%= f.label :sharepoint_site_url, "SharePoint site URL", class: "block text-sm font-medium" %>
+      <%= f.text_field :sharepoint_site_url, placeholder: "https://tenant.sharepoint.com/sites/Finance",
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xl" %>
+      <p class="text-xs text-gray-500 mt-1">
+        The site holding this cost centre's receipts + BACS folders. The app is granted <code>write</code> on
+        just this site (Sites.Selected) and the folder picker below browses it — grant command in the setup
+        section.
+      </p>
+    </div>
+
     <% app_id = "b874d491-4edf-4b76-839d-84e534c7f7c0" %>
     <% grant_mailboxes = [ @cost_centre.receive_mailbox, @cost_centre.send_mailbox ].map(&:presence).compact.uniq %>
     <% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
     <%= render CollapsibleSectionComponent.new(
           title: "⚠️ Microsoft access for this cost centre",
           variant: :warning, html_class: "my-1") do %>
-      <div class="text-sm text-gray-700">
+      <div class="flex flex-col gap-3 text-sm text-gray-700">
         <p>
-          Setting a mailbox above is <strong>not enough</strong>: the Graph app can only touch mailboxes inside
-          the <code>Reimbursements App Access</code> group in Exchange Online. Until you run the commands below,
-          every Graph call for
-          <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "this mailbox" : "these mailboxes" %>
-          (poll / draft / send) fails with <strong>403 AccessDenied</strong> and this cost centre's email-in and
-          batch drafting silently break. Run these in Exchange Online PowerShell
-          (<code>Connect-ExchangeOnline</code> first); policy propagation can take ~30-60 min:
+          The manual Microsoft 365 steps the app can't do itself — needed only when
+          <strong>first setting up this cost centre's mailboxes</strong>. Day-to-day use needs none of it.
+          The Entra app (<code>BlackLightning Reimbursements Mailbox</code>, App ID <code><%= app_id %></code>)
+          already exists with admin-consented Graph permissions; you just wire up the mailboxes below.
         </p>
-        <% grant_mailboxes.each do |mailbox| %>
-          <pre class="<%= code_class %>"><code>Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member <%= mailbox %>
+
+        <div>
+          <p class="font-medium">Authorise this cost centre's mailbox<%= "es" unless @cost_centre.receive_mailbox == @cost_centre.send_mailbox %></p>
+          <p>
+            Setting a mailbox above is <strong>not enough</strong>: the Graph app can only touch mailboxes inside
+            the <code>Reimbursements App Access</code> group in Exchange Online. Until
+            <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "it's" : "they're" %> in that group,
+            every Graph call (poll / draft / send) fails with <strong>403 AccessDenied</strong> and this cost
+            centre's email-in and batch drafting silently break. Run these in Exchange Online PowerShell
+            (<code>Connect-ExchangeOnline</code> first); policy propagation can take ~30-60 min:
+          </p>
+          <% grant_mailboxes.each do |mailbox| %>
+            <pre class="<%= code_class %>"><code># Create the shared mailbox first (M365 admin center &rarr; Teams &amp; groups &rarr; Shared mailboxes), then:
+Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member <%= mailbox %>
 Test-ApplicationAccessPolicy -Identity <%= mailbox %> -AppId <%= app_id %></code></pre>
-        <% end %>
-        <p class="mt-3">
-          <strong>SharePoint:</strong> a new SharePoint site also needs a one-off <code>Sites.Selected</code>
-          write grant (we don't store the site hostname here, so it can't be pre-filled). See the
-          <%= link_to "setup and scaling guide", admin_reimbursements_help_path, class: "underline" %>
-          for the per-site grant plus the full Graph-permissions and email-from reference.
-        </p>
+          <% end %>
+          <p class="text-xs text-gray-500">
+            One policy scopes the app to the whole group — no new access policy per mailbox, just add members.
+            <strong>Address already in use?</strong> Find what holds the SMTP proxy with
+            <code>Get-Recipient -Filter "EmailAddresses -eq 'smtp:THE-ADDRESS'"</code>, then free it or pick another.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-medium">Grant this app write access to the SharePoint site</p>
+          <p>
+            The app uses least-privilege <code>Sites.Selected</code>: it reaches only sites you explicitly grant.
+            After setting the <strong>SharePoint site URL</strong> above, grant this app <code>write</code> on that
+            site (once per site) in
+            <a class="underline" href="https://developer.microsoft.com/graph/graph-explorer">Graph Explorer</a>,
+            signed in as an admin:
+          </p>
+          <% site_path = @cost_centre.sharepoint_graph_site_path %>
+          <pre class="<%= code_class %>"><code># 1. Get the site id:
+GET https://graph.microsoft.com/v1.0/sites/<%= site_path || "TENANT.sharepoint.com:/sites/SiteName" %>
+#    -&gt; copy "id" from the response
+
+# 2. Grant THIS app write on THAT site only:
+POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
+{
+  "roles": ["write"],
+  "grantedToIdentities": [
+    { "application": { "id": "<%= app_id %>",
+                       "displayName": "BlackLightning Reimbursements Mailbox" } }
+  ]
+}</code></pre>
+          <p class="text-xs text-gray-500">
+            Review or revoke later with <code>GET</code> / <code>DELETE /sites/SITE-ID/permissions</code>. Without
+            the grant, uploads and the folder picker for this site fail with <strong>403</strong>. Don't add
+            tenant-wide <code>Sites.ReadWrite.All</code> / <code>Files.ReadWrite.All</code>.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-medium">Graph permissions on the Entra app (already granted)</p>
+          <ul class="list-disc pl-5">
+            <li><code>Mail.ReadWrite</code> + <code>Mail.Send</code> — poll / draft / send, scoped to the group above.</li>
+            <li><code>Sites.Selected</code> — SharePoint, granted <code>write</code> per-site (above), not tenant-wide.</li>
+          </ul>
+        </div>
       </div>
     <% end %>
 

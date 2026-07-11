@@ -21,28 +21,18 @@
       <%= link_to "Close picker", edit_admin_reimbursements_setting_path(@cost_centre.key),
                   class: "text-sm text-blue-700 hover:underline" %>
 
-      <%# Step 1: pick a site %>
-      <%= form_with url: edit_admin_reimbursements_setting_path(@cost_centre.key), method: :get,
-                    class: "flex flex-wrap items-end gap-2" do %>
-        <%= hidden_field_tag :picker, purpose %>
-        <div>
-          <%= label_tag :q, "Search SharePoint sites", class: "block text-sm font-medium" %>
-          <%= text_field_tag :q, params[:q], class: "border border-gray-300 rounded px-2 py-1 text-sm w-64" %>
-        </div>
-        <%= submit_tag "Search sites", class: btn_classes(:secondary, :sm) %>
-      <% end %>
-
-      <% if @sites.present? %>
-        <div>
-          <p class="text-sm font-medium">Sites</p>
-          <div class="flex flex-col gap-1">
-            <% @sites.each do |site| %>
-              <%= link_to "→ #{site.name}",
-                          edit_admin_reimbursements_setting_path(@cost_centre.key, picker: purpose, site_id: site.id),
-                          class: "text-sm text-blue-700 hover:underline" %>
-            <% end %>
-          </div>
-        </div>
+      <%# Step 1: the site is the cost centre's configured SharePoint site
+          (Sites.Selected can't search, so there's no site search here). %>
+      <% if @site_missing %>
+        <p class="text-sm text-gray-700">
+          Set this cost centre's <strong>SharePoint site URL</strong> above and save before browsing —
+          under least-privilege <code>Sites.Selected</code> the app only reaches the site you've granted it.
+        </p>
+      <% elsif @site %>
+        <p class="text-sm">
+          <span class="font-medium">Site:</span> <%= @site.name %>
+          <span class="text-gray-500">(<%= @cost_centre.sharepoint_site_url %>)</span>
+        </p>
       <% end %>
 
       <%# Step 2: pick a drive (document library) %>
