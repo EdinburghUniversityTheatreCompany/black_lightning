@@ -61,8 +61,8 @@ module Reimbursements
       draft["webLink"].to_s
     end
 
-    # Send an email immediately (producer notifications go via ActionMailer, but
-    # this is here for the "you've been paid" / nightly paths). No attachments.
+    # Send an email immediately from the mailbox (Notifier uses this for the
+    # rejection / "you've been paid" / producer / operator emails). No attachments.
     def send_mail(mailbox:, to:, subject:, html:)
       graph_request(:post, "/users/#{mailbox}/sendMail",
                     body: { message: { subject: subject,
