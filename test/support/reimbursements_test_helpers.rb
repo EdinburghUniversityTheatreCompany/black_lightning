@@ -306,24 +306,6 @@ module ReimbursementsTestHelpers
     end
   end
 
-  FakeMailerDelivery = Struct.new(:noop) do
-    def deliver_later = nil
-  end
-
-  # Fake BatchMailer capturing producer_notification calls.
-  class FakeBatchMailer
-    attr_reader :sent
-
-    def initialize
-      @sent = []
-    end
-
-    def producer_notification(**kwargs)
-      @sent << kwargs
-      FakeMailerDelivery.new
-    end
-  end
-
   # Fake transport compatible with the reimbursements HTTP clients:
   # responds with queued [status, body] pairs and records every request.
   class FakeHttp
