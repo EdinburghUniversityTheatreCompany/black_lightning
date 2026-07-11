@@ -133,7 +133,7 @@ module Admin
         assert_includes response.body, "Acme Lighting Ltd"
       end
 
-      test "renders receipts as a read-only fancybox gallery keyed per expense" do
+      test "renders receipts in a fancybox gallery keyed per expense, still managed inline" do
         a = pending_expense(id: "recImgA", payment_reference: "PROPS PAT", receipts: [ image_receipt("A") ])
         b = pending_expense(id: "recImgB", payment_reference: "PROPS PAT", receipts: [ image_receipt("B") ])
         rebuild_store(expenses: [ a, b ])
@@ -147,8 +147,9 @@ module Admin
         assert_includes response.body, 'data-fancybox="receipts-recImgA"'
         assert_includes response.body, 'data-fancybox="receipts-recImgB"'
         assert_includes response.body, "https://airtable/imgA.jpg"
-        # Read-only: no inline receipt Remove control on the review card.
-        assert_no_match(/Remove this receipt/, response.body)
+        # Reviewers can still attach/detach receipts inline (per-tab review routes).
+        assert_match(/Remove this receipt/, response.body)
+        assert_includes response.body, admin_reimbursements_review_receipts_path("recImgA", tab: "pending")
       end
 
       test "renders a duplicate-submission warning" do
