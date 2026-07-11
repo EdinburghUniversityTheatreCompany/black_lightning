@@ -19,8 +19,7 @@ module Admin
 
       def index
         @title = "Reimbursements People"
-        @people = store.people
-        @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(@people)
+        load_registry
       end
 
       def update
@@ -31,6 +30,11 @@ module Admin
       end
 
       private
+
+      def load_registry
+        @people = store.people
+        @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(@people)
+      end
 
       def modulus_checker
         @modulus_checker ||= checker_builder.call
@@ -52,9 +56,11 @@ module Admin
         account_number = params[:account_number].to_s
 
         unless valid_bank_details?(sort_code, account_number)
-          redirect_to admin_reimbursements_people_path,
-                      alert: "Sort code #{::Reimbursements::BankDetails::SORT_CODE_HINT} " \
-                             "Account number #{::Reimbursements::BankDetails::ACCOUNT_NUMBER_HINT}"
+          render_bank_details_error(
+            sort_code, account_number,
+            "Sort code #{::Reimbursements::BankDetails::SORT_CODE_HINT} " \
+            "Account number #{::Reimbursements::BankDetails::ACCOUNT_NUMBER_HINT}"
+          )
           return
         end
 
@@ -72,6 +78,20 @@ module Admin
                              notes: appended_notes(formatted_sort, normalized_account))
         redirect_to admin_reimbursements_people_path,
                     notice: "Bank details saved for #{@person.name}."
+      end
+
+      # Re-render the registry with this person's edit section expanded, the
+      # operator's typed (invalid) values still in the fields, and the error
+      # shown inline — rather than redirecting, which would collapse the
+      # <details> and discard what they typed.
+      def render_bank_details_error(sort_code, account_number, message)
+        @title = "Reimbursements People"
+        load_registry
+        @edit_person_id = @person.record_id
+        @edit_sort_code = sort_code
+        @edit_account_number = account_number
+        @edit_error = message
+        render :index, status: :unprocessable_entity
       end
 
       def valid_bank_details?(sort_code, account_number)

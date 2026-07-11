@@ -5,6 +5,8 @@ module Admin
     # AI-prefilled submission (with save-as-draft), and editing while an
     # expense is still a draft or pending.
     class ExpensesController < BaseController
+      rescue_from ExpenseNoLongerEditable, with: :expense_no_longer_editable
+
       def index
         if params[:refresh].present?
           store.refresh_expenses!
@@ -82,6 +84,13 @@ module Admin
       end
 
       private
+
+      # A producer followed a stale Edit link for a claim the finance team has
+      # since picked up. Refuse the edit, but explain it rather than a bare 404.
+      def expense_no_longer_editable
+        redirect_to admin_reimbursements_expenses_path,
+                    alert: "That claim is now with the finance team and can't be edited."
+      end
 
       def created_notice
         if @form.draft?

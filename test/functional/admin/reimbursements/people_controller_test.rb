@@ -173,14 +173,21 @@ module Admin
       assert_empty @client.updated
     end
 
-    test "invalid bank details are rejected without a write" do
+    test "invalid bank details re-render the form without a write, preserving the typed values" do
       sign_in @user
 
       patch :update, params: { id: "recMissing", sort_code: "08", account_number: "1" }
 
-      assert_redirected_to admin_reimbursements_people_path
-      assert_match(/Sort code/, flash[:alert])
+      # Re-render (not redirect) so the operator's typed values and the open
+      # edit section survive the validation failure.
+      assert_response :unprocessable_entity
       assert_empty @client.updated
+      assert_match(/Sort code/, response.body)
+      # This person's edit section stays expanded with the typed values intact.
+      assert_select "details[open] input#sort_code_recMissing[value=?]", "08"
+      assert_select "details[open] input#account_number_recMissing[value=?]", "1"
+      # Other people's sections stay collapsed.
+      assert_select "details[open] input#sort_code_recValid", false
     end
 
     # --- Update: mark verified --------------------------------------------

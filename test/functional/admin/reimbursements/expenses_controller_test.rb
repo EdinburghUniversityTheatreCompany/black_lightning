@@ -246,7 +246,10 @@ module Admin
       assert_response :not_found
     end
 
-    test "edit 404s for a non-pending expense" do
+    # A race: the producer follows an Edit link on a stale list for their own
+    # claim that review has since picked up. Fail gracefully (friendly flash
+    # redirect) rather than showing a bare 404.
+    def rebuild_store_with_own_non_editable_expense
       approved = airtable_expense_record(id: "recExp3", status: "Approved")
       @store, @client = build_fake_store(
         expenses: [ approved ],
@@ -254,11 +257,28 @@ module Admin
         budgets: [ airtable_budget_record ]
       )
       BaseController.store_builder = -> { @store }
+    end
+
+    test "edit redirects with a flash when an own claim is no longer editable" do
+      rebuild_store_with_own_non_editable_expense
       sign_in @user
 
       get :edit, params: { id: "recExp3" }
 
-      assert_response :not_found
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/finance team/, flash[:alert])
+    end
+
+    test "update redirects with a flash when an own claim is no longer editable" do
+      rebuild_store_with_own_non_editable_expense
+      sign_in @user
+
+      patch :update, params: { id: "recExp3",
+                               reimbursements_expense_form: valid_form_params.except(:receipts) }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/finance team/, flash[:alert])
+      assert_empty @client.updated
     end
 
     test "update writes changed fields without requiring a new receipt" do
