@@ -30,7 +30,25 @@ module Reimbursements
           active: fields[fid(:budgets, :active)].present?,
           budget_type: fields[fid(:budgets, :budget_type)] || "Expense",
           initial_budget: decimal(fields[fid(:budgets, :initial_budget)]),
-          remaining: decimal(fields[fid(:budgets, :remaining)])
+          remaining: decimal(fields[fid(:budgets, :remaining)]),
+          owner_ids: Array(fields[fid(:budgets, :owner)]),
+          notes: fields[fid(:budgets, :notes)].to_s,
+          current_forecast: decimal(fields[fid(:budgets, :current_forecast)]),
+          committed_amount: decimal(fields[fid(:budgets, :committed_amount)]),
+          total_paid: decimal(fields[fid(:budgets, :total_paid)]),
+          variance: decimal(fields[fid(:budgets, :variance)])
+        )
+      end
+
+      def budget_forecast(record)
+        fields = record.fetch("fields", {})
+        BudgetForecast.new(
+          record_id: record.fetch("id"),
+          budget_id: Array(fields[fid(:budget_forecasts, :budget)]).first,
+          amount: decimal(fields[fid(:budget_forecasts, :amount)]),
+          date: date(fields[fid(:budget_forecasts, :date)]),
+          reason: fields[fid(:budget_forecasts, :reason)].to_s,
+          name: fields[fid(:budget_forecasts, :name)].to_s
         )
       end
 
@@ -149,6 +167,36 @@ module Reimbursements
       def batch_fields(attrs)
         attrs.compact.each_with_object({}) do |(key, value), payload|
           payload[fid(:batches, key)] = key == :date_sent ? date_string(value) : value
+        end
+      end
+
+      # Attribute hash (symbol keys: name, nominal_code, notes, initial_budget,
+      # budget_type, active, owner_ids) -> Budgets field-ID payload. Nil values
+      # are dropped. initial_budget lands as a float; owner_ids is an Airtable
+      # link ([record_id, ...]). Rollups/formulas are read-only and never
+      # written here.
+      def budget_fields(attrs)
+        attrs.compact.each_with_object({}) do |(key, value), payload|
+          case key
+          when :owner_ids then payload[fid(:budgets, :owner)] = Array(value)
+          when :initial_budget then payload[fid(:budgets, :initial_budget)] = value.to_f
+          else payload[fid(:budgets, key)] = value
+          end
+        end
+      end
+
+      # Attribute hash (symbol keys: budget_id, amount, date, reason) -> Budget
+      # Forecasts field-ID payload. Nil values are dropped. budget_id is an
+      # Airtable link ([record_id]); amount lands as a float, date as
+      # "YYYY-MM-DD".
+      def budget_forecast_fields(attrs)
+        attrs.compact.each_with_object({}) do |(key, value), payload|
+          case key
+          when :budget_id then payload[fid(:budget_forecasts, :budget)] = Array(value)
+          when :amount then payload[fid(:budget_forecasts, :amount)] = value.to_f
+          when :date then payload[fid(:budget_forecasts, :date)] = date_string(value)
+          else payload[fid(:budget_forecasts, key)] = value
+          end
         end
       end
 
