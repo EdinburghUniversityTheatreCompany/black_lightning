@@ -9,7 +9,7 @@
   <% @expenses.each do |expense| %>
     <li>
       <%= expense.description.presence || "Expense ##{expense.auto_number}" %>:
-      <%= number_to_currency(expense.amount || 0, unit: "£") %>
+      <%= reimbursements_money(expense.amount || 0) %>
     </li>
   <% end %>
 </ul>

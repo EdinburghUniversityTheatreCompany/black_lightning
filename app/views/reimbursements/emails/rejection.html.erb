@@ -19,7 +19,7 @@
   </thead>
   <tbody>
     <tr>
-      <td>&pound;<%= format("%.2f", @amount) %></td>
+      <td><%= reimbursements_money(@amount) %></td>
       <td><%= @budget_name %></td>
       <td><%= @description %></td>
     </tr>

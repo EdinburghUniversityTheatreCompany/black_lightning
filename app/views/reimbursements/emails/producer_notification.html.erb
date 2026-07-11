@@ -3,7 +3,7 @@
 <p>
   The following <%= "expense".pluralize(@line_items.size) %> you submitted
   <%= @line_items.size == 1 ? "has" : "have" %> been sent to EUSA finance for payment as part
-  of the <%= @bacs_date.iso8601 %> BACS request:
+  of the <%= reimbursements_date(@bacs_date) %> BACS request:
 </p>
 
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif;">
@@ -17,7 +17,7 @@
   <tbody>
     <% @line_items.each do |item| %>
       <tr>
-        <td>&pound;<%= item[:amount] %></td>
+        <td><%= reimbursements_money(item[:amount]) %></td>
         <td><%= item[:budget_name] %></td>
         <td><%= item[:description] %></td>
       </tr>
@@ -25,7 +25,7 @@
   </tbody>
   <tfoot>
     <tr style="font-weight: bold; background-color: #f0f0f0;">
-      <td>&pound;<%= @total %></td>
+      <td><%= reimbursements_money(@total) %></td>
       <td colspan="2">Total</td>
     </tr>
   </tfoot>

@@ -22,14 +22,14 @@
       <tr>
         <td>#<%= expense[:auto_number] %></td>
         <td><%= expense[:payee_name] %></td>
-        <td>&pound;<%= expense[:amount] %></td>
+        <td><%= reimbursements_money(expense[:amount]) %></td>
         <td><%= expense[:budget_name] %></td>
         <td><%= expense[:description] %></td>
       </tr>
     <% end %>
   </tbody>
   <tfoot style="background-color: #f0f0f0; font-weight: bold;">
-    <tr><td colspan="2">Total</td><td>&pound;<%= @total %></td><td colspan="2"></td></tr>
+    <tr><td colspan="2">Total</td><td><%= reimbursements_money(@total) %></td><td colspan="2"></td></tr>
   </tfoot>
 </table>
 

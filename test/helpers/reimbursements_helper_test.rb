@@ -35,4 +35,33 @@ class ReimbursementsHelperTest < ActionView::TestCase
     assert_includes html, "text-gray-700"
     assert_includes html, "Unchecked"
   end
+
+  test "reimbursements_date formats a Date as ISO 8601" do
+    assert_equal "2026-07-11", reimbursements_date(Date.new(2026, 7, 11))
+  end
+
+  test "reimbursements_date takes the date part of a Time" do
+    assert_equal "2026-07-11", reimbursements_date(Time.utc(2026, 7, 11, 9, 30))
+  end
+
+  test "reimbursements_date renders nil and blank as a dash" do
+    assert_equal "-", reimbursements_date(nil)
+    assert_equal "-", reimbursements_date("")
+  end
+
+  test "reimbursements_money formats a value as GBP with 2dp" do
+    assert_equal "£12.50", reimbursements_money(12.5)
+  end
+
+  test "reimbursements_money renders zero as £0.00, not a dash" do
+    assert_equal "£0.00", reimbursements_money(0)
+  end
+
+  test "reimbursements_money renders nil as a dash" do
+    assert_equal "-", reimbursements_money(nil)
+  end
+
+  test "reimbursements_money accepts a pre-formatted numeric string (emails)" do
+    assert_equal "£1,234.50", reimbursements_money("1234.50")
+  end
 end

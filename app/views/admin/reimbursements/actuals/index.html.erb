@@ -39,12 +39,12 @@
         <tbody>
           <% @actuals.each do |actual| %>
             <tr class="border-b border-gray-100">
-              <td class="py-1 pr-3 font-mono"><%= actual.nominal_code.presence || "—" %></td>
-              <td class="py-1 pr-3 font-mono"><%= actual.period.presence || "—" %></td>
-              <td class="py-1 pr-3"><%= actual.date&.strftime("%d/%m/%Y") || "—" %></td>
-              <td class="py-1 pr-3"><%= actual.narrative.presence || "—" %></td>
-              <td class="py-1 pr-3 text-right"><%= number_to_currency(actual.debit, unit: "£") if actual.debit&.positive? %></td>
-              <td class="py-1 pr-3 text-right"><%= number_to_currency(actual.credit, unit: "£") if actual.credit&.positive? %></td>
+              <td class="py-1 pr-3 font-mono"><%= actual.nominal_code.presence || "-" %></td>
+              <td class="py-1 pr-3 font-mono"><%= actual.period.presence || "-" %></td>
+              <td class="py-1 pr-3"><%= reimbursements_date(actual.date) %></td>
+              <td class="py-1 pr-3"><%= actual.narrative.presence || "-" %></td>
+              <td class="py-1 pr-3 text-right"><%= reimbursements_money(actual.debit) if actual.debit&.positive? %></td>
+              <td class="py-1 pr-3 text-right"><%= reimbursements_money(actual.credit) if actual.credit&.positive? %></td>
               <td class="py-1">
                 <% if actual.linked_expense_ids.any? %>
                   <%= link_to edit_admin_reimbursements_expense_edit_path(actual.linked_expense_ids.first),

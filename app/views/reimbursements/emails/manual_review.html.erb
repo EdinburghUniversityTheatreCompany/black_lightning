@@ -17,7 +17,7 @@
       <tr>
         <td>#<%= issue[:auto_number] %></td>
         <td><%= issue[:payee_name] %></td>
-        <td>&pound;<%= issue[:amount] %></td>
+        <td><%= reimbursements_money(issue[:amount]) %></td>
         <td><%= issue[:reason] %></td>
       </tr>
     <% end %>

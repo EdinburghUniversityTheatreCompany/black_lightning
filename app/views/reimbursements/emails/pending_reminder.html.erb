@@ -18,7 +18,7 @@
       <tr>
         <td>#<%= row[:auto_number] %></td>
         <td><%= row[:payee_name] %></td>
-        <td>&pound;<%= row[:amount] %></td>
+        <td><%= reimbursements_money(row[:amount]) %></td>
         <td><%= row[:age_days] %> <%= "day".pluralize(row[:age_days]) %></td>
       </tr>
     <% end %>

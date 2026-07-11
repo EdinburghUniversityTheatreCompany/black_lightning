@@ -63,18 +63,18 @@
                 <%= render BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
                                          .with_content(expense.status) %>
               </td>
-              <td class="py-1 pr-3"><%= expense.effective_payee_name.presence || "—" %></td>
-              <td class="py-1 pr-3"><%= expense.budget&.name.presence || "—" %></td>
+              <td class="py-1 pr-3"><%= expense.effective_payee_name.presence || "-" %></td>
+              <td class="py-1 pr-3"><%= expense.budget&.name.presence || "-" %></td>
               <td class="py-1 pr-3 text-right whitespace-nowrap">
-                <%= expense.amount ? number_to_currency(expense.amount, unit: "£") : "—" %>
+                <%= reimbursements_money(expense.amount) %>
                 <% if expense.amount_excl_vat.present? && expense.amount_excl_vat.positive? %>
                   <span class="block text-xs text-gray-500">
-                    <%= number_to_currency(expense.amount_excl_vat, unit: "£") %> ex&nbsp;VAT
+                    <%= reimbursements_money(expense.amount_excl_vat) %> ex&nbsp;VAT
                   </span>
                 <% end %>
               </td>
               <td class="py-1 pr-3"><%= truncate(expense.description.to_s, length: 60) %></td>
-              <td class="py-1 pr-3 whitespace-nowrap"><%= expense.submitted_at&.strftime("%d/%m/%Y") || "—" %></td>
+              <td class="py-1 pr-3 whitespace-nowrap"><%= reimbursements_date(expense.submitted_at) %></td>
               <td class="py-1 pr-3">
                 <div class="flex flex-wrap gap-1">
                   <% reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>

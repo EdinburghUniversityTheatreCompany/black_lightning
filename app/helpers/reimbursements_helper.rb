@@ -64,9 +64,23 @@ module ReimbursementsHelper
     render(BadgeComponent.new(type: type, pill: true).with_content(status.to_s.upcase))
   end
 
-  # A GBP amount for the Budgets screens, or an em dash when not loaded (nil).
-  def budget_money(amount)
-    return "—" if amount.nil?
+  # The one date format for the whole reimbursements section: ISO 8601
+  # (YYYY-MM-DD), or "-" when nil/blank. Accepts a Date or Time (the date part
+  # is taken). Use this everywhere a reimbursements date is shown so the ~6
+  # ad-hoc strftime/iso8601/localize formats never drift apart again.
+  def reimbursements_date(value)
+    return "-" if value.blank?
+
+    value.strftime("%Y-%m-%d")
+  end
+
+  # The one money format for the whole reimbursements section: a GBP amount as
+  # "£12.50" (2dp, thousands-separated), or "-" when nil. Accepts a numeric or a
+  # numeric string (some emails pre-format their amounts). Consolidates the old
+  # budget_money helper and the ad-hoc number_to_currency / number_with_precision
+  # / "£%.2f" call sites, so nil renders "-" (not "£0.00", not "—") everywhere.
+  def reimbursements_money(amount)
+    return "-" if amount.nil?
 
     number_to_currency(amount, unit: "£")
   end

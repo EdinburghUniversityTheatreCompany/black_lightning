@@ -11,7 +11,7 @@
     No approved expenses to batch. Approve some on the Review queue first.
   <% end %>
 <% else %>
-  <%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)} (£#{format('%.2f', @total)})") do %>
+  <%= render CardComponent.new(title: "#{@expenses.size} #{'expense'.pluralize(@expenses.size)} (#{reimbursements_money(@total)})") do %>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="text-left text-gray-600 border-b border-gray-200">
@@ -39,7 +39,7 @@
               </td>
               <td class="py-1 pr-3 font-mono"><%= expense.effective_sort_code %></td>
               <td class="py-1 pr-3 font-mono"><%= expense.effective_account_number %></td>
-              <td class="py-1 pr-3 text-right">£<%= format("%.2f", expense.amount || 0) %></td>
+              <td class="py-1 pr-3 text-right"><%= reimbursements_money(expense.amount) %></td>
               <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
               <td class="py-1 pr-3"><%= expense.budget&.name %></td>
               <td class="py-1 pr-3"><%= expense.description %></td>
