@@ -62,12 +62,27 @@ module Reimbursements
       nil
     end
 
-    # The commit point for a processed message: replies happen before this,
-    # so a crash in between re-processes (never silently drops) the email.
-    def mark_read_and_move(message_id, folder)
+    # The idempotency commit point: unread_messages filters on isRead eq false,
+    # so once a message is read the next poll won't re-fetch (and re-process)
+    # it. Kept separate from +move+ so a move failure never leaves it unread.
+    def mark_read(message_id)
       graph_request(:patch, "/users/#{@mailbox}/messages/#{message_id}", body: { isRead: true })
+      nil
+    end
+
+    # Files the message under Processed/Rejected. Best-effort tidy-up: it runs
+    # after +mark_read+, so a failure here can't cause reprocessing.
+    def move(message_id, folder)
       graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/move",
               body: { destinationId: folder_id(folder) })
+      nil
+    end
+
+    # Convenience for the reject paths (no expense created, so a failure just
+    # retries next cycle): mark read first, then move.
+    def mark_read_and_move(message_id, folder)
+      mark_read(message_id)
+      move(message_id, folder)
       nil
     end
 
