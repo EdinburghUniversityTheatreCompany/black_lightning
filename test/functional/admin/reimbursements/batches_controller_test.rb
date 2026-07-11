@@ -100,6 +100,30 @@ module Admin
         assert_equal 0, @client.updated.count { |_, _, fields| fields[EXP_FIDS[:status]] == "Submitted" }
       end
 
+      test "create with a malformed BACS date re-renders new with an error and enqueues nothing" do
+        one_approved
+        sign_in @user
+
+        assert_no_enqueued_jobs do
+          post :create, params: { bacs_date: "not-a-date", eusa_recipient: "finance@eusa.ed.ac.uk" }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/valid BACS date/i, response.body)
+      end
+
+      test "create with a blank BACS date re-renders new with an error and enqueues nothing" do
+        one_approved
+        sign_in @user
+
+        assert_no_enqueued_jobs do
+          post :create, params: { bacs_date: "", eusa_recipient: "finance@eusa.ed.ac.uk" }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/valid BACS date/i, response.body)
+      end
+
       # --- History (index / show) -------------------------------------------
 
       test "index lists past batches with their totals" do

@@ -39,22 +39,27 @@ module Admin
       end
 
       def new
-        @title = "Build batch"
-        @expenses = approved_expenses
-        @total = total(@expenses)
-        @bacs_date = Date.current
-        @sender_name = default_sender
-        @eusa_recipient = @cost_centre.eusa_recipient_or_default
-        @default_email = compose_default_email(@bacs_date, @sender_name)
+        assign_new_form
       end
 
       # Enqueue the build (BuildBatchJob serialises per cost centre, so a
       # double-click can't double-submit) and send the operator to History; the
       # draft link lands there and in their inbox when the background run finishes.
+      #
+      # The BACS date is validated BEFORE enqueuing: a blank/malformed date must
+      # not silently fall back to today (a wrong payment date), so re-render the
+      # form with an error and enqueue nothing.
       def create
+        bacs_date = parse_bacs_date(params[:bacs_date])
+        if bacs_date.nil?
+          assign_new_form
+          flash.now[:alert] = "Enter a valid BACS date (YYYY-MM-DD) before building the batch."
+          return render :new, status: :unprocessable_entity
+        end
+
         ::Reimbursements::BuildBatchJob.perform_later(
           cost_centre_key: @cost_centre.key,
-          bacs_date: parsed_bacs_date.iso8601,
+          bacs_date: bacs_date.iso8601,
           sender_name: params[:sender_name].presence || default_sender,
           eusa_recipient: params[:eusa_recipient].presence || @cost_centre.eusa_recipient_or_default,
           eusa_subject: params[:eusa_subject].presence,
@@ -82,6 +87,16 @@ module Admin
       end
 
       private
+
+      def assign_new_form
+        @title = "Build batch"
+        @expenses = approved_expenses
+        @total = total(@expenses)
+        @bacs_date = Date.current
+        @sender_name = default_sender
+        @eusa_recipient = @cost_centre.eusa_recipient_or_default
+        @default_email = compose_default_email(@bacs_date, @sender_name)
+      end
 
       # Delete the stale EUSA draft this batch created, then build the reopen
       # flash. The revert + batch delete have already happened and must stand, so
@@ -128,10 +143,12 @@ module Admin
         expenses.sum { |expense| expense.amount || 0 }
       end
 
-      def parsed_bacs_date
-        Date.parse(params[:bacs_date].to_s)
-      rescue ArgumentError
-        Date.current
+      # Parse the submitted BACS date, or nil if it's blank/malformed — the
+      # caller re-renders the form rather than silently defaulting to today.
+      def parse_bacs_date(value)
+        Date.parse(value.to_s)
+      rescue ArgumentError, TypeError
+        nil
       end
 
       def default_sender
