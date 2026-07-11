@@ -17,6 +17,14 @@
       </div>
     </div>
 
+    <%= render AlertComponent.new(type: :warning) do %>
+      <span class="font-medium">Adding a new mailbox or SharePoint site needs an Azure change too.</span>
+      A mailbox only works once it's added to the <code>Reimbursements App Access</code> group in
+      Exchange Online, and a new SharePoint site needs a <code>Sites.Selected</code> write grant —
+      otherwise Graph returns 403 and email-in / drafting / uploads silently fail. See the
+      reimbursements setup guide (§9–10) for the exact commands.
+    <% end %>
+
     <div class="flex flex-wrap gap-4">
       <div>
         <%= f.label :eusa_recipient, "EUSA recipient", class: "block text-sm font-medium" %>
