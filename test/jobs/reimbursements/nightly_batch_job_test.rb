@@ -16,22 +16,7 @@ module Reimbursements
       def check(_sort, _account) = MC::VALID
     end
 
-    class FakeProcessor
-      Result = Struct.new(:success, :eusa_draft_web_link, :total_amount, :errors, keyword_init: true)
-      attr_reader :calls
-
-      def initialize(success: true, errors: [])
-        @success = success
-        @errors = errors
-        @calls = []
-      end
-
-      def process(**kwargs)
-        @calls << kwargs
-        Result.new(success: @success, eusa_draft_web_link: "https://outlook.example/draft-1",
-                   total_amount: kwargs[:expenses].sum { |e| e.amount || 0 }, errors: @errors)
-      end
-    end
+    FakeProcessor = ReimbursementsTestHelpers::FakeBatchProcessor
 
     # Records the operator alerts the job sends through the Graph notifier, plus
     # the mailbox it was built for. +fail+ makes every send raise, standing in
