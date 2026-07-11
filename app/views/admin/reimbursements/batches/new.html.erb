@@ -43,7 +43,7 @@
               <td class="py-1 pr-3"><%= expense.effective_nominal_code %></td>
               <td class="py-1 pr-3"><%= expense.budget&.name %></td>
               <td class="py-1 pr-3"><%= expense.description %></td>
-              <td class="py-1 pr-3 text-right"><%= expense.receipts.size %></td>
+              <td class="py-1 pr-3 text-right"><%= expense.receipt_count %></td>
             </tr>
           <% end %>
         </tbody>

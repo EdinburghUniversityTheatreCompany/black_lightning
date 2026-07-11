@@ -51,6 +51,25 @@ module Reimbursements
       assert_not offloaded.needs_completion?
     end
 
+    test "receipt_count counts attached files when present" do
+      two = build_expense(receipts: [
+        Attachment.new(attachment_id: "att1", filename: "a.pdf", url: "https://x", size_bytes: 1),
+        Attachment.new(attachment_id: "att2", filename: "b.pdf", url: "https://y", size_bytes: 2)
+      ], sharepoint_receipt_urls: [ "https://sp/one.pdf" ])
+      # Attached files win over the SharePoint URLs when both are present.
+      assert_equal 2, two.receipt_count
+    end
+
+    test "receipt_count falls back to SharePoint URLs when no files are attached" do
+      offloaded = build_expense(receipts: [],
+        sharepoint_receipt_urls: [ "https://sp/a.pdf", "https://sp/b.pdf" ])
+      assert_equal 2, offloaded.receipt_count
+    end
+
+    test "receipt_count is zero with neither files nor SharePoint URLs" do
+      assert_equal 0, build_expense(receipts: [], sharepoint_receipt_urls: []).receipt_count
+    end
+
     test "payee override detection" do
       assert_not build_expense.payee_override?
       assert build_expense(payee_name_override: "Stage Supplies Ltd").payee_override?
