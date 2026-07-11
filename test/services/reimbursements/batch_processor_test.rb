@@ -92,6 +92,53 @@ module Reimbursements
       assert_empty graph.send_mails, "producers must not be notified when the draft fails"
     end
 
+    test "orphan-draft guard: batch write fails after the draft — no double draft on rebuild" do
+      processor, store, client, graph = build_scenario
+      client.fail_create_tables = [ :batches ] # the draft succeeds; only the Batch write fails
+
+      result = run_batch(processor, store)
+
+      # The draft is live, so the run is NOT a clean failure: it surfaces the
+      # orphan loudly (naming the draft link) rather than pretending nothing ran.
+      assert_not result.success
+      assert_equal 1, graph.drafts.size, "the EUSA draft was created"
+      assert(result.errors.any? { |e| e.include?("ORPHAN DRAFT") && e.include?(result.eusa_draft_web_link) })
+      assert_equal 0, client.created.count { |table, _| table == :batches }, "no batch record was written"
+
+      # The expenses were marked Submitted anyway, so they leave the Approved
+      # queue — nothing for a rebuild to re-draft.
+      submitted = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
+      assert_equal 2, submitted
+      approved_now = store.expenses.select { |e| e.status == Status::APPROVED }
+      assert_empty approved_now, "no expense stays Approved with a live draft"
+
+      # Rebuild: the operator's approved set is now empty, so a second process
+      # makes NO second draft — the guarantee that prevents a duplicate payment.
+      rebuild = processor.process(expenses: approved_now, bacs_date: Date.new(2026, 5, 13),
+                                  sender_name: "F", eusa_recipient: "finance@eusa.ed.ac.uk")
+      assert_not rebuild.success
+      assert_equal 1, graph.drafts.size, "no SECOND draft on rebuild"
+    end
+
+    test "a transient batch-write failure is retried and the batch still records" do
+      processor, store, client, _graph = build_scenario
+      # Fail the first Batch write, then let the retry through.
+      calls = 0
+      client.define_singleton_method(:create_record) do |table, fields|
+        if table == :batches
+          calls += 1
+          raise Reimbursements::Airtable::Error.new("blip", status: 500) if calls == 1
+        end
+        @created << [ table, fields ]
+        { "id" => "recNew#{@created.size}", "fields" => fields }
+      end
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_equal 1, client.created.count { |table, _| table == :batches }, "the retry recorded the batch"
+    end
+
     test "refuses to process when SharePoint folders are not configured" do
       cost_centre = configured_cost_centre
       cost_centre.sharepoint_receipts_drive_id = nil
