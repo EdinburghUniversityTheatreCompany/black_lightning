@@ -46,12 +46,13 @@ module Admin
       BaseController.store_builder = -> { @store }
     end
 
-    def debit_row(nominal: "439999", date: "13/05/2026", narrative: "Alice Producer", debit: "123.45")
-      "#{nominal}\tF40\tBACS001\t#{date}\t03\t#{narrative}\tShow\t#{debit}\t\t#{debit}"
+    def debit_row(nominal: "439999", date: "13/05/2026", period: "03", narrative: "Alice Producer",
+                  debit: "123.45")
+      "#{nominal}\tF40\tBACS001\t#{date}\t#{period}\t#{narrative}\tShow\t#{debit}\t\t#{debit}"
     end
 
-    def credit_row(nominal: "250000", narrative: "Box office", credit: "500.00")
-      "#{nominal}\tF40\tBACS002\t13/05/2026\t03\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
+    def credit_row(nominal: "250000", period: "03", narrative: "Box office", credit: "500.00")
+      "#{nominal}\tF40\tBACS002\t13/05/2026\t#{period}\t#{narrative}\tTickets\t\t#{credit}\t-#{credit}"
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -74,7 +75,7 @@ module Admin
       other.add_role("Producer")
       sign_in other
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}", source_month: "2026-05" }
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
 
       assert_response :forbidden
     end
@@ -91,17 +92,9 @@ module Admin
 
     # --- Step 2: preview / parse + dedup + match ---------------------------
 
-    test "preview rejects a malformed source month" do
-      sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}", source_month: "May" }
-
-      assert_response :success
-      assert_includes response.body, "YYYY-MM"
-    end
-
     test "preview matches a debit row to a submitted expense" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}", source_month: "2026-05" }
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
 
       assert_response :success
       assert_equal 1, assigns(:matched_debits).size
@@ -113,7 +106,7 @@ module Admin
 
     test "preview matches a credit row to an income budget" do
       sign_in @user
-      post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}", source_month: "2026-05" }
+      post :preview, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
 
       assert_response :success
       assert_equal 1, assigns(:matched_credits).size
@@ -124,7 +117,7 @@ module Admin
     test "preview surfaces an unmatched debit when nothing matches" do
       sign_in @user
       post :preview, params: {
-        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}", source_month: "2026-05"
+        pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
       }
 
       assert_response :success
@@ -132,25 +125,62 @@ module Admin
       assert_equal 1, assigns(:unmatched_rows).size
     end
 
-    test "preview skips rows already imported for the month" do
+    test "preview skips rows already imported for the same period" do
       existing = airtable_eusa_actual_record(
-        id: "recActDup", nominal_code: "439999", narrative: "Alice Producer",
-        debit: 123.45, source_month: "2026-05"
+        id: "recActDup", nominal_code: "439999", period: "03", narrative: "Alice Producer",
+        debit: 123.45
       )
       rebuild_store(eusa_actuals: [ existing ])
       sign_in @user
 
-      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}", source_month: "2026-05" }
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(period: '03')}" }
 
       assert_response :success
       assert_equal 1, assigns(:skipped_rows).size
       assert_empty assigns(:new_rows)
     end
 
+    test "preview re-imports a matching row when it was imported under a different period" do
+      # Same nominal/narrative/amount, but the imported copy is in period 02, so
+      # the pasted period-03 row is new (dedup is scoped per EUSA period).
+      existing = airtable_eusa_actual_record(
+        id: "recActP2", nominal_code: "439999", period: "02", narrative: "Alice Producer",
+        debit: 123.45
+      )
+      rebuild_store(eusa_actuals: [ existing ])
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row(period: '03')}" }
+
+      assert_response :success
+      assert_empty assigns(:skipped_rows)
+      assert_equal 1, assigns(:new_rows).size
+    end
+
+    test "a single paste dedups each period independently" do
+      # Period 03 already imported; period 04 is not. Re-pasting both keeps only
+      # the period-04 row.
+      existing = airtable_eusa_actual_record(
+        id: "recActP3", nominal_code: "439999", period: "03", narrative: "Alice Producer",
+        debit: 123.45
+      )
+      rebuild_store(eusa_actuals: [ existing ])
+      sign_in @user
+
+      two_rows = "#{HEADER}\n#{debit_row(period: '03')}\n#{debit_row(period: '04')}"
+      post :preview, params: { pasted_text: two_rows }
+
+      assert_response :success
+      assert_equal 1, assigns(:skipped_rows).size
+      assert_equal "03", assigns(:skipped_rows).first.period
+      assert_equal 1, assigns(:new_rows).size
+      assert_equal "04", assigns(:new_rows).first.period
+    end
+
     test "one expense is claimed by at most one debit row" do
       sign_in @user
       two_rows = "#{HEADER}\n#{debit_row}\n#{debit_row(date: '14/05/2026')}"
-      post :preview, params: { pasted_text: two_rows, source_month: "2026-05" }
+      post :preview, params: { pasted_text: two_rows }
 
       assert_response :success
       assert_equal 1, assigns(:matched_debits).size
@@ -163,7 +193,7 @@ module Admin
       sign_in @user
 
       assert_emails 1 do
-        post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}", source_month: "2026-05" }
+        post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
       end
 
       assert_response :success
@@ -183,7 +213,7 @@ module Admin
       sign_in @user
 
       assert_no_emails do
-        post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}", source_month: "2026-05" }
+        post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
       end
 
       assert_response :success
@@ -197,7 +227,7 @@ module Admin
 
       assert_no_emails do
         post :apply, params: {
-          pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}", source_month: "2026-05"
+          pasted_text: "#{HEADER}\n#{debit_row(nominal: '999999')}"
         }
       end
 
@@ -213,7 +243,7 @@ module Admin
       sign_in @user
 
       assert_no_emails do
-        post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}", source_month: "2026-05" }
+        post :apply, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
       end
 
       assert_response :success
@@ -222,7 +252,7 @@ module Admin
 
     test "apply redirects when the pasted text is missing" do
       sign_in @user
-      post :apply, params: { pasted_text: "", source_month: "2026-05" }
+      post :apply, params: { pasted_text: "" }
 
       assert_redirected_to admin_reimbursements_reconciliation_path
     end

@@ -108,11 +108,14 @@ module ReimbursementsTestHelpers
     fields = {
       f[:nominal_code] => attrs.fetch(:nominal_code, "439999"),
       f[:cost_centre] => attrs.fetch(:cost_centre, "F40"),
+      f[:period] => attrs.fetch(:period, nil),
       f[:narrative] => attrs.fetch(:narrative, "Alice Producer"),
       f[:date] => attrs.fetch(:date, "2026-05-13"),
       f[:debit] => attrs.fetch(:debit, 123.45),
       f[:credit] => attrs.fetch(:credit, nil),
       f[:linked_expense] => attrs.fetch(:linked_expense, nil),
+      f[:linked_budget] => attrs.fetch(:linked_budget, nil),
+      f[:imported_at] => attrs.fetch(:imported_at, nil),
       f[:source_month] => attrs.fetch(:source_month, "2026-05")
     }.compact
     { "id" => id, "fields" => fields }

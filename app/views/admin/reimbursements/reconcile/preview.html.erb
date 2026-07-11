@@ -6,12 +6,15 @@
 
 <% if @skipped_rows.any? %>
   <%= render AlertComponent.new(type: :info) do %>
-    <%= pluralize(@skipped_rows.size, "row") %> already imported for <strong><%= @source_month %></strong>
+    <%= pluralize(@skipped_rows.size, "row") %>
+    <%= @skipped_rows.size == 1 ? "was" : "were" %> already imported for
+    <%= "period".pluralize(@skipped_rows.map(&:period).uniq.size) %>
+    <strong><%= @skipped_rows.map(&:period).uniq.sort.join(", ") %></strong> and
     <%= @skipped_rows.size == 1 ? "was" : "were" %> skipped.
   <% end %>
 <% else %>
   <%= render AlertComponent.new(type: :info) do %>
-    No already-imported rows found for <strong><%= @source_month %></strong> — all rows are new.
+    No already-imported rows found for these periods — all rows are new.
   <% end %>
 <% end %>
 
@@ -26,7 +29,8 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left border-b border-gray-200">
-              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Date</th>
+              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Period</th>
+              <th class="py-1 pr-3">Date</th>
               <th class="py-1 pr-3">Narrative</th><th class="py-1 pr-3 text-right">Debit</th>
               <th class="py-1 pr-3">Expense #</th><th class="py-1 pr-3">Payee</th>
               <th class="py-1 text-right">Expense amount</th>
@@ -36,6 +40,7 @@
             <% @matched_debits.each do |row, expense| %>
               <tr class="border-b border-gray-100">
                 <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+                <td class="py-1 pr-3 font-mono"><%= row.period %></td>
                 <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
                 <td class="py-1 pr-3 text-right"><%= number_to_currency(row.debit, unit: "£") %></td>
@@ -58,7 +63,8 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left border-b border-gray-200">
-              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Date</th>
+              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Period</th>
+              <th class="py-1 pr-3">Date</th>
               <th class="py-1 pr-3">Narrative</th><th class="py-1 pr-3 text-right">Credit</th>
               <th class="py-1">Budget</th>
             </tr>
@@ -67,6 +73,7 @@
             <% @matched_credits.each do |row, budget| %>
               <tr class="border-b border-gray-100">
                 <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+                <td class="py-1 pr-3 font-mono"><%= row.period %></td>
                 <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
                 <td class="py-1 pr-3 text-right"><%= number_to_currency(row.credit, unit: "£") %></td>
@@ -87,7 +94,8 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="text-left border-b border-gray-200">
-              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Date</th>
+              <th class="py-1 pr-3">Nominal</th><th class="py-1 pr-3">Period</th>
+              <th class="py-1 pr-3">Date</th>
               <th class="py-1 pr-3">Narrative</th><th class="py-1 pr-3 text-right">Debit</th>
               <th class="py-1 pr-3 text-right">Credit</th><th class="py-1">Reason</th>
             </tr>
@@ -96,6 +104,7 @@
             <% @unmatched_rows.each do |row| %>
               <tr class="border-b border-gray-100">
                 <td class="py-1 pr-3 font-mono"><%= row.nominal_code %></td>
+                <td class="py-1 pr-3 font-mono"><%= row.period %></td>
                 <td class="py-1 pr-3"><%= row.date.strftime("%d/%m/%Y") %></td>
                 <td class="py-1 pr-3"><%= row.narrative %></td>
                 <td class="py-1 pr-3 text-right"><%= number_to_currency(row.debit, unit: "£") if row.debit.positive? %></td>
@@ -121,13 +130,11 @@
 
   <%= render CardComponent.new(title: "Step 3 — Apply reconciliation") do %>
     <p class="mb-3 text-gray-600">
-      Source month: <strong><%= @source_month %></strong>. Applying will create the EUSA Actuals
-      records, mark the <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email
-      those producers.
+      Applying will create the EUSA Actuals records, mark the
+      <%= pluralize(@matched_debits.size, "matched expense") %> Paid, and email those producers.
     </p>
     <%= form_with url: apply_admin_reimbursements_reconciliation_path, method: :post do %>
       <%= hidden_field_tag :pasted_text, params[:pasted_text] %>
-      <%= hidden_field_tag :source_month, @source_month %>
       <%= submit_tag "Apply reconciliation", class: btn_classes(:primary),
                      data: { turbo_confirm: "Apply this reconciliation? This marks matched expenses Paid and emails producers." } %>
     <% end %>
