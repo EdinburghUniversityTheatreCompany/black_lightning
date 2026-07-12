@@ -88,6 +88,10 @@ ChaosRails::Application.routes.draw do
 
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
+      # Bulk actions over the ticked Pending expenses (static paths, declared
+      # before the :id member routes so they never get swallowed by them).
+      patch  "review/bulk_approve", to: "review#bulk_approve", as: :bulk_approve_review
+      patch  "review/bulk_reject",  to: "review#bulk_reject",  as: :bulk_reject_review
       patch  "review/:id/save",    to: "review#save",    as: :save_review
       patch  "review/:id/approve", to: "review#approve", as: :approve_review
       patch  "review/:id/reject",  to: "review#reject",  as: :reject_review

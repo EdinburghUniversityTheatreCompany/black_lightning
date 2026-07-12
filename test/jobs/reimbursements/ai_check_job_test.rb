@@ -4,6 +4,7 @@ module Reimbursements
   class AiCheckJobTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
     include Turbo::Broadcastable::TestHelper
+    include ActiveJob::TestHelper
 
     # AiChecker stand-in returning a canned verdict and recording what it checked.
     class FakeChecker
@@ -76,6 +77,25 @@ module Reimbursements
       AiCheckJob.perform_now("recExp1")
 
       assert_empty @client.updated
+    end
+
+    # Opening Review twice enqueues a second check for the same expense before
+    # the first has written a verdict. Per-expense concurrency limiting serialises
+    # the two runs, so by the time the second runs the first has written the
+    # verdict and it no-ops — at most one Gemini call per expense.
+    test "duplicate enqueues for the same expense trigger at most one Gemini check" do
+      setup_store(expenses: [ airtable_expense_record(id: "recExp1") ])
+      checker = FakeChecker.new(verdict(status: "pass", comment: "Looks fine."))
+      AiCheckJob.checker_builder = -> { checker }
+
+      perform_enqueued_jobs do
+        AiCheckJob.perform_later("recExp1")
+        AiCheckJob.perform_later("recExp1")
+      end
+
+      assert_equal [ "recExp1" ], checker.checked.map(&:first),
+                   "the second serialised run must see the written verdict and no-op"
+      assert_equal 1, @client.updated.size
     end
 
     test "does nothing when the expense is gone" do

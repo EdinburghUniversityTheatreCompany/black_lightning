@@ -177,6 +177,104 @@ module Admin
         assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
       end
 
+      # --- Bulk actions ----------------------------------------------------
+
+      test "the pending tab exposes bulk-select checkboxes and a bulk toolbar" do
+        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ a ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-controller~=?]", "bulk-review"
+        assert_select "input[data-bulk-review-target=selectAll]"
+        assert_select "form#bulk-review-form[action=?]",
+                      admin_reimbursements_bulk_approve_review_path(tab: "pending")
+        assert_select "input[type=checkbox][name=?][value=?][form=bulk-review-form]",
+                      "expense_ids[]", "recBulkA"
+        assert_select "input[data-bulk-review-target=rejectButton][data-turbo-confirm*=?]",
+                      "email each producer"
+      end
+
+      test "bulk approve advances every selected pending expense" do
+        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
+        b = pending_expense(id: "recBulkB", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ a, b ])
+        sign_in @user
+
+        patch :bulk_approve, params: { expense_ids: %w[recBulkA recBulkB] }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        statuses = @client.updated.map { |_t, id, f| [ id, f[EXP[:status]] ] }.sort
+        assert_equal [ [ "recBulkA", "Approved" ], [ "recBulkB", "Approved" ] ], statuses
+        assert_match(/2 approved/, flash[:notice])
+      end
+
+      test "bulk approve skips an expense that lacks bank details" do
+        ok = pending_expense(id: "recBulkOk", payment_reference: "PROPS PAT")
+        no_bank = pending_expense(id: "recBulkNB", payee_id: "recPer2", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ ok, no_bank ])
+        sign_in @user
+
+        patch :bulk_approve, params: { expense_ids: %w[recBulkOk recBulkNB] }
+
+        updated_ids = @client.updated.map { |_t, id, _f| id }
+        assert_equal [ "recBulkOk" ], updated_ids
+        assert_match(/1 approved/, flash[:notice])
+        assert_match(/1 skipped \(no bank details\)/, flash[:notice])
+      end
+
+      test "bulk approve with nothing selected writes nothing and reports it" do
+        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ a ])
+        sign_in @user
+
+        patch :bulk_approve, params: { expense_ids: [] }
+
+        assert_match(/Select at least one/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "bulk reject rejects each selected expense and emails each producer" do
+        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
+        b = pending_expense(id: "recBulkB", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ a, b ])
+        sign_in @user
+
+        patch :bulk_reject, params: { expense_ids: %w[recBulkA recBulkB], rejection_reason: "Duplicate batch" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        rejected = @client.updated.select { |_t, _id, f| f[EXP[:status]] == "Rejected" }
+        assert_equal 2, rejected.size
+        rejected.each { |_t, _id, f| assert_equal "Duplicate batch", f[EXP[:rejection_reason]] }
+        assert_equal 2, @graph.send_mails.size
+        assert_match(/2 rejected/, flash[:notice])
+      end
+
+      test "bulk reject requires a reason and writes nothing" do
+        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ a ])
+        sign_in @user
+
+        patch :bulk_reject, params: { expense_ids: %w[recBulkA], rejection_reason: "  " }
+
+        assert_match(/reason is required/, flash[:alert])
+        assert_empty @client.updated
+        assert_empty @graph.send_mails
+      end
+
+      test "bulk actions ignore a stale selection of a non-pending expense" do
+        approved = pending_expense(id: "recAppr").tap { |r| r["fields"][EXP[:status]] = "Approved" }
+        rebuild_store(expenses: [ approved ])
+        sign_in @user
+
+        patch :bulk_approve, params: { expense_ids: %w[recAppr] }
+
+        assert_empty @client.updated
+        assert_match(/Select at least one/, flash[:alert])
+      end
+
       # --- Save ------------------------------------------------------------
 
       test "save writes the edited fields" do

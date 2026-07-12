@@ -60,18 +60,11 @@ module Admin
 
       def approve
         expense = find_expense!
-        unless expense.effective_has_bank_details?
+        if approve_expense(expense) == :skipped_no_bank
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without bank details.")
-          return
+        else
+          redirect_to_review(notice: "Approved ##{expense.auto_number}.")
         end
-
-        attrs = { status: ::Reimbursements::Status::APPROVED }
-        if expense.payment_reference.to_s.strip.empty? && expense.budget
-          reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.name)
-          attrs[:payment_reference] = reference if reference.present?
-        end
-        store.update_expense!(expense.record_id, attrs)
-        redirect_to_review(notice: "Approved ##{expense.auto_number}.")
       end
 
       def reject
@@ -82,14 +75,32 @@ module Admin
           return
         end
 
-        attrs = { status: ::Reimbursements::Status::REJECTED, rejection_reason: reason }
-        # Notify the payee, but never block the rejection on it. A missing email
-        # is skipped gracefully (no stamp) so the operator knows to follow up.
-        if notify_rejection(expense, reason)
-          attrs[:rejection_notified] = Time.current
-        end
-        store.update_expense!(expense.record_id, attrs)
+        reject_expense(expense, reason)
         redirect_to_review(notice: "Rejected ##{expense.auto_number}.")
+      end
+
+      # Approve every selected Pending expense in one go, reusing the single
+      # approve path per item (same bank-details block + BACS-reference auto-fill).
+      # Reports a per-item summary in the flash.
+      def bulk_approve
+        expenses = selected_pending_expenses
+        return redirect_to_review(alert: "Select at least one expense to approve.") if expenses.empty?
+
+        approved, skipped = expenses.partition { |e| approve_expense(e) == :approved }
+        redirect_to_review(notice: bulk_approve_summary(approved.size, skipped.size))
+      end
+
+      # Reject every selected Pending expense with one shared reason, reusing the
+      # single reject path per item (each producer is emailed via Graph).
+      def bulk_reject
+        reason = params[:rejection_reason].to_s.strip
+        return redirect_to_review(alert: "A rejection reason is required.") if reason.blank?
+
+        expenses = selected_pending_expenses
+        return redirect_to_review(alert: "Select at least one expense to reject.") if expenses.empty?
+
+        emailed = expenses.count { |e| reject_expense(e, reason) }
+        redirect_to_review(notice: bulk_reject_summary(expenses.size, emailed))
       end
 
       def add_receipts
@@ -123,6 +134,54 @@ module Admin
       end
 
       private
+
+      # Approve one expense (shared by #approve and #bulk_approve). Blocks an
+      # expense with no effective bank details (returns :skipped_no_bank) and
+      # auto-fills a BACS-safe payment reference when blank. Returns :approved on
+      # success.
+      def approve_expense(expense)
+        return :skipped_no_bank unless expense.effective_has_bank_details?
+
+        attrs = { status: ::Reimbursements::Status::APPROVED }
+        if expense.payment_reference.to_s.strip.empty? && expense.budget
+          reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.name)
+          attrs[:payment_reference] = reference if reference.present?
+        end
+        store.update_expense!(expense.record_id, attrs)
+        :approved
+      end
+
+      # Reject one expense with a reason (shared by #reject and #bulk_reject).
+      # Notifies the payee, but never blocks the rejection on the send: a missing
+      # email or a Graph failure is skipped gracefully (no stamp) so the operator
+      # follows up. Returns true when the producer was emailed.
+      def reject_expense(expense, reason)
+        attrs = { status: ::Reimbursements::Status::REJECTED, rejection_reason: reason }
+        notified = notify_rejection(expense, reason)
+        attrs[:rejection_notified] = Time.current if notified
+        store.update_expense!(expense.record_id, attrs)
+        notified
+      end
+
+      # The Pending expenses ticked in the bulk toolbar. Filtering to Pending
+      # (never trusting the posted ids alone) keeps a stale selection from acting
+      # on an already-approved/rejected expense.
+      def selected_pending_expenses
+        ids = Array(params[:expense_ids]).compact_blank
+        return [] if ids.empty?
+
+        store.expenses.select { |e| e.pending? && ids.include?(e.record_id) }
+      end
+
+      def bulk_approve_summary(approved, skipped)
+        parts = [ "#{approved} approved" ]
+        parts << "#{skipped} skipped (no bank details)" if skipped.positive?
+        "#{parts.join(', ')}."
+      end
+
+      def bulk_reject_summary(rejected, emailed)
+        "#{rejected} rejected, #{emailed} producer#{'s' unless emailed == 1} emailed."
+      end
 
       def modulus_checker
         @modulus_checker ||= checker_builder.call
