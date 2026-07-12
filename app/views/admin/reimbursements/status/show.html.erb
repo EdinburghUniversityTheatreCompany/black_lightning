@@ -1,0 +1,35 @@
+<p class="mb-3 text-gray-600">
+  The health of the external services the reimbursements flows depend on. The last nightly-run
+  date per cost centre is a plain database read and always shown; the live service probes run
+  only when you press <strong>Run checks</strong>, so an idle visit doesn't use Airtable quota
+  or wait on Microsoft.
+</p>
+
+<%= render CardComponent.new(title: "Last nightly run") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    When the nightly auto-submit last completed for each cost centre. A blank date means it has
+    not run yet (or the schedule is off).
+  </p>
+  <ul class="flex flex-col gap-2">
+    <% @cost_centres.each do |cost_centre| %>
+      <li class="flex items-center gap-2 text-sm">
+        <%= render(BadgeComponent.new(type: cost_centre.last_nightly_run_on ? :info : :secondary, pill: true)
+                                 .with_content(cost_centre.last_nightly_run_on ? reimbursements_date(cost_centre.last_nightly_run_on) : "Never")) %>
+        <span><strong><%= cost_centre.name %></strong></span>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
+
+<%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-2">
+    Probe Airtable, Microsoft Graph and Gemini with the app's own credentials. Each is checked
+    independently, so one failure never hides the others.
+  </p>
+  <%= button_to "Run checks", admin_reimbursements_run_status_checks_path,
+                method: :post, class: btn_classes(:secondary, :sm),
+                data: { turbo_submits_with: "Checking…" } %>
+  <div id="integration_check_results">
+    <%= render "checks", checks: @checks %>
+  </div>
+<% end %>

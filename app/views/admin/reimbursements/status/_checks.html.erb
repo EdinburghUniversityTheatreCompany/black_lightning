@@ -1,0 +1,12 @@
+<%# locals: (checks:) %>
+<%# One OK/fail/skip row per integration probe (nil/empty renders nothing). %>
+<% if checks.present? %>
+  <ul class="mt-3 flex flex-col gap-2">
+    <% checks.each do |check| %>
+      <li class="flex items-start gap-2 text-sm">
+        <%= reimbursements_access_check_badge(check.status) %>
+        <span><strong><%= check.label %></strong>: <%= check.detail %></span>
+      </li>
+    <% end %>
+  </ul>
+<% end %>
