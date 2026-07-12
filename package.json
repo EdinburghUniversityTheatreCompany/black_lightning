@@ -18,7 +18,7 @@
     "@stimulus-components/rails-nested-form": "^5.0.0",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.20",
-    "@tailwindcss/vite": "^4.3.1",
+    "@tailwindcss/vite": "^4.3.2",
     "channels": "^0.0.4",
     "cytoscape": "^3.34.0",
     "cytoscape-fcose": "^2.2.0",
