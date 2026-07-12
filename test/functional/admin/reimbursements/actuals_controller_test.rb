@@ -111,6 +111,59 @@ module Admin
       assert_equal %w[03 04], assigns(:periods)
     end
 
+    # --- CSV export --------------------------------------------------------
+
+    test "index CSV export answers a text/csv download named for today" do
+      sign_in @user
+      get :index, format: :csv
+
+      assert_response :success
+      assert_includes response.media_type, "text/csv"
+      assert_match(/attachment/, response.headers["Content-Disposition"])
+      assert_match(/reimbursements-actuals-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+    end
+
+    test "index CSV export has a header row and one data row per actual" do
+      # Load the linked expense + budget so the CSV resolves their references.
+      expense = airtable_expense_record(id: "recExp1", auto_number: 42, description: "Fake blood")
+      budget = airtable_budget_record(id: "recBud1", name: "Props")
+      @store, @client = build_fake_store(
+        eusa_actuals: [ @linked_expense, @linked_budget, @unlinked ],
+        expenses: [ expense ], budgets: [ budget ]
+      )
+      BaseController.store_builder = -> { @store }
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body)
+      assert_equal [ "Date", "Type", "Description", "Amount", "Budget", "Linked expense", "Period" ], rows.first
+      assert_equal 4, rows.size, "header + three actuals"
+
+      # The expense-linked debit row resolves the expense's auto-number.
+      exp_row = rows.find { |r| r[2] == "Alice Producer" }
+      assert_equal %w[2026-05-13 Debit], exp_row.values_at(0, 1)
+      assert_equal "123.45", exp_row[3]
+      assert_equal "42", exp_row[5]
+      assert_equal "03", exp_row[6]
+
+      # The budget-linked credit row resolves the budget name.
+      bud_row = rows.find { |r| r[2] == "Box office" }
+      assert_equal "Credit", bud_row[1]
+      assert_equal "500.0", bud_row[3]
+      assert_equal "Props", bud_row[4]
+    end
+
+    test "index CSV export carries the period filter, exporting only that period" do
+      sign_in @user
+      get :index, params: { period: "04" }, format: :csv
+
+      rows = CSV.parse(response.body)
+      assert_equal 2, rows.size, "header + the single period-04 actual"
+      assert_includes response.body, "Sundry"
+      assert_not_includes response.body, "Alice Producer"
+    end
+
     test "renders an empty state when nothing has been imported" do
       rebuild_store(eusa_actuals: [])
       sign_in @user
