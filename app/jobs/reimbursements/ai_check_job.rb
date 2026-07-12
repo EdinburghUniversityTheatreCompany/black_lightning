@@ -9,6 +9,13 @@ module Reimbursements
   class AiCheckJob < ApplicationJob
     queue_as :default
 
+    # Serialise checks per expense (mirrors BuildBatchJob/NightlyBatchJob's
+    # money-safety pattern): opening Review twice enqueues a second check for the
+    # same expense before the first has written a verdict. Keying concurrency on
+    # the record id makes the second run wait for the first, so it sees the
+    # verdict already written and no-ops — no duplicate Gemini call.
+    limits_concurrency to: 1, key: ->(record_id) { "reimbursements_ai_check_#{record_id}" }
+
     class_attribute :store_builder, default: -> { Store.new }
     class_attribute :checker_builder, default: -> { AiChecker.new }
 
