@@ -3,11 +3,20 @@
   - expense: Reimbursements::Expense
   - allow_approve: whether to show the Approve button (Pending only)
   - duplicates: array of possible-duplicate expenses, or nil
+  - selectable: whether to show the bulk-select checkbox (Pending only; default false)
 %>
 <% modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
+<% selectable = local_assigns.fetch(:selectable, false) %>
 
 <div class="mb-3 rounded border border-gray-200 p-3">
   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <% if selectable %>
+      <%= check_box_tag "expense_ids[]", expense.record_id, false,
+                        id: "select_#{expense.record_id}", form: "bulk-review-form",
+                        "aria-label": "Select ##{expense.auto_number} for bulk actions",
+                        data: { bulk_review_target: "checkbox", action: "bulk-review#refresh" },
+                        class: "h-4 w-4" %>
+    <% end %>
     <span class="font-medium">
       #<%= expense.auto_number %> — <%= expense.person&.name.presence || "(no payee)" %>
       <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
