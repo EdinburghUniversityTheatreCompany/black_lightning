@@ -91,8 +91,9 @@ We don't use `acts_as_chat`/`acts_as_message` (the Extractor and AiChecker call
 Investigate silencing it (config flag or a targeted `ActiveSupport::Deprecation`
 filter) so test/boot output stays clean. Harmless; not gating.
 
-## Multiple financial years (before MySQL cutover)
-Expenses/budgets/actuals currently have no financial-year concept. Decide how to scope
-each year (Fringe 2026 vs 2027 …) before the MySQL cutover — likely a `financial_year`
-on budgets (and/or a per-year Airtable base today). Affects Reconcile (period is P1-P12
-within a year), Budgets/Forecasts, and the eventual MySQL schema. — Mick, 2026-07-11
+## Multiple financial years — PLANNED (post-MySQL)
+Now designed: a year-selector model (one active year + look-back), landing at the MySQL
+cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-roadmap.md`
+(financial_year FK on budgets/expenses/actuals, EUSA codes stay on CostCentre with a thin
+per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
+per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
