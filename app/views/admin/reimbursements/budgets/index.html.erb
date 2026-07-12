@@ -19,6 +19,8 @@
          content_tag(:span, budget.name.presence || "-", class: "font-medium"),
          (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?)
        ].compact)
+       owners = budget_owner_names(budget, @people_by_id).presence ||
+                render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
        visible = if budget.active
                    render(BadgeComponent.new(type: :success, pill: true).with_content("Visible"))
                  else
@@ -35,7 +37,7 @@
            reimbursements_money(budget.total_paid),
            reimbursements_money(budget.remaining),
            content_tag(:span, reimbursements_money(budget.variance), class: variance_class),
-           budget_owner_names(budget, @people_by_id).presence || "-",
+           owners,
            edit
          ]
        }

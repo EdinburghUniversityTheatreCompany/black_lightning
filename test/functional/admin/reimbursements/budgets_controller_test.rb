@@ -79,6 +79,30 @@ module Admin
         assert_includes response.body, "250"
       end
 
+      test "flags a budget that has no owner" do
+        sign_in @user
+        ownerless = airtable_budget_record(id: "recBud3", name: "Unowned category")
+        @store, @client = build_fake_store(budgets: [ ownerless ], people: [ @alice ])
+        BaseController.store_builder = -> { @store }
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "No owner"
+      end
+
+      test "does not flag a budget that has an owner" do
+        sign_in @user
+        @store, @client = build_fake_store(budgets: [ @props ], people: [ @alice ])
+        BaseController.store_builder = -> { @store }
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Alice Owner"
+        assert_not_includes response.body, "No owner"
+      end
+
       # --- Edit --------------------------------------------------------------
 
       test "edit shows the owner multi-select and forecast history" do
