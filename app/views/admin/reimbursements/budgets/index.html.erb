@@ -15,10 +15,14 @@
   <% headers = [ "Budget", "Type", "Visible", "Initial", "Current forecast", "Committed",
                  "Total paid", "Remaining", "Variance", "Owners", "" ] %>
   <% field_sets = @budgets.map do |budget|
+       over_budget_flag = if budget.over_budget?
+                            render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
+                          end
        name = safe_join([
          content_tag(:span, budget.name.presence || "-", class: "font-medium"),
-         (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?)
-       ].compact)
+         (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
+         over_budget_flag
+       ].compact, " ")
        owners = budget_owner_names(budget, @people_by_id).presence ||
                 render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
        visible = if budget.active

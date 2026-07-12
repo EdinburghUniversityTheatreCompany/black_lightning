@@ -103,6 +103,41 @@ module Admin
         assert_not_includes response.body, "No owner"
       end
 
+      # --- Budget health -----------------------------------------------------
+
+      test "surfaces health figures and an over-budget flag for an over-budget budget" do
+        sign_in @user
+        overspent = airtable_budget_record(id: "recBud4", name: "Overspent set",
+                                           initial_budget: 1000.0, remaining: -250.0,
+                                           current_forecast: 1300.0, committed_amount: 1200.0,
+                                           total_paid: 1250.0, variance: -300.0,
+                                           owner_ids: [ "recPer1" ])
+        @store, @client = build_fake_store(budgets: [ overspent ], people: [ @alice ])
+        BaseController.store_builder = -> { @store }
+
+        get :index
+
+        assert_response :success
+        # Over-budget indicator surfaces.
+        assert_includes response.body, "Over budget"
+        # The health figures (initial, committed, total paid, remaining) all render.
+        assert_includes response.body, "1,000"
+        assert_includes response.body, "1,200"
+        assert_includes response.body, "1,250"
+        assert_includes response.body, "250"
+      end
+
+      test "does not flag an in-budget budget as over budget" do
+        sign_in @user
+        @store, @client = build_fake_store(budgets: [ @props ], people: [ @alice ])
+        BaseController.store_builder = -> { @store }
+
+        get :index
+
+        assert_response :success
+        assert_not_includes response.body, "Over budget"
+      end
+
       # --- Edit --------------------------------------------------------------
 
       test "edit shows the owner multi-select and forecast history" do

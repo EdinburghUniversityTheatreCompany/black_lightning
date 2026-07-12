@@ -35,5 +35,17 @@ module Reimbursements
     def income?
       budget_type == "Income"
     end
+
+    # True when this expense budget has overspent: a negative remaining, or
+    # committed/paid past the initial figure. Nil rollups mean "not loaded", so
+    # they never trigger the flag. Income budgets are never "over budget".
+    def over_budget?
+      return false if income?
+      return true if remaining && remaining.negative?
+      return true if initial_budget && committed_amount && committed_amount > initial_budget
+      return true if initial_budget && total_paid && total_paid > initial_budget
+
+      false
+    end
   end
 end
