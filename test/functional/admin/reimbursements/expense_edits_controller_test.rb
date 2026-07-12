@@ -191,6 +191,77 @@ module Admin
         assert_not_includes response.body, "Fake blood"
       end
 
+      # --- CSV export --------------------------------------------------------
+
+      test "index CSV export answers a text/csv download named for today" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, format: :csv
+
+        assert_response :success
+        assert_includes response.media_type, "text/csv"
+        assert_match(/attachment/, response.headers["Content-Disposition"])
+        assert_match(/reimbursements-expenses-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+      end
+
+      test "index CSV export has a header row and one data row per expense" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
+                       "Description", "Payment reference", "Submitted", "Needs attention" ], rows.first
+        assert_equal 4, rows.size, "header + three expenses"
+        # A concrete data row: the Paid "Stage nails" expense to Pat, £5.00, Props.
+        stage = rows.find { |r| r[6] == "Stage nails" }
+        assert_equal %w[3 Paid], stage.values_at(0, 1)
+        assert_equal "Pat Producer", stage[2]
+        assert_equal "Props", stage[3]
+        assert_equal "5.0", stage[4]
+      end
+
+      test "index CSV export carries the on-screen filter, exporting only the filtered set" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { status: "Paid" }, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal 2, rows.size, "header + the single Paid expense"
+        assert_includes response.body, "Stage nails"
+        assert_not_includes response.body, "Fake blood"
+        assert_not_includes response.body, "Velvet cloak"
+      end
+
+      test "index CSV export lists the full filtered set, not just the first page" do
+        rebuild_paged_store(60)
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal 61, rows.size, "header + all 60 expenses (pagination is display-only)"
+      end
+
+      test "index CSV export joins the needs-attention reasons" do
+        # An expense with no ex-VAT amount and no budget flags two reasons.
+        flagged = expense_at("Pending", id: "recExpFlag", auto_number: 7, description: "Flagged item",
+                             amount_excl_vat: nil, budget_id: nil)
+        @store, @client = build_fake_store(expenses: [ flagged ], people: [ @person ], budgets: [ @budget ])
+        BaseController.store_builder = -> { @store }
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        reasons = rows.find { |r| r[6] == "Flagged item" }.last
+        assert_includes reasons, "no ex-VAT amount"
+        assert_includes reasons, "no budget"
+      end
+
       # --- Pagination (50 per page, filters carry across pages) ------------
 
       # Build `count` Pending expenses, newest first by submitted_at so the

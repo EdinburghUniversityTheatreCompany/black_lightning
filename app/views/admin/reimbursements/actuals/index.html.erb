@@ -22,9 +22,14 @@
   <% end %>
 <% end %>
 
-<p class="mb-2 text-sm text-gray-600">
-  <%= pluralize(@actuals.total_count, "actual") %><%= " (period #{@period})" if @period.present? %>
-</p>
+<div class="mb-2 flex items-center justify-between gap-3">
+  <p class="text-sm text-gray-600">
+    <%= pluralize(@actuals.total_count, "actual") %><%= " (period #{@period})" if @period.present? %>
+  </p>
+  <%= link_to "Download CSV",
+              admin_reimbursements_actuals_path(request.query_parameters.merge(format: :csv)),
+              class: btn_classes(:secondary, :sm) %>
+</div>
 
 <% if @actuals.total_count.zero? %>
   <%= render CardComponent.new(title: @title) do %>

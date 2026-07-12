@@ -122,6 +122,17 @@ module Reimbursements
       true
     end
 
+    # A minimal reachability probe for the integration status dashboard: acquire
+    # an app-only Graph token. Confirms the Azure app credentials are valid and
+    # login.microsoftonline.com is reachable, without touching any mailbox or
+    # site (that per-resource access is the Settings access-check's job). Returns
+    # true; raises (AuthError/Error) so the dashboard turns a failure into a
+    # failed row carrying the message.
+    def check_reachable
+      graph_token
+      true
+    end
+
     # --- SharePoint browse (Settings folder picker, Phase F) ---------------
 
     # Resolve a SharePoint site by its browser URL (e.g.

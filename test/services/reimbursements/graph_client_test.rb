@@ -174,5 +174,20 @@ module Reimbursements
 
       assert_raises(GraphAuth::AuthError) { client.check_mailbox("locked@bedlamfringe.co.uk") }
     end
+
+    test "check_reachable acquires a token and returns true without touching a resource" do
+      client, http = build_client([ token_response ])
+
+      assert client.check_reachable
+      # Only the token request was made — no per-resource Graph call.
+      assert_equal 1, http.requests.size
+      assert_includes http.requests.last.uri, "oauth2/v2.0/token"
+    end
+
+    test "check_reachable raises when the token request is rejected" do
+      client, = build_client([ [ 401, { error: "invalid_client" }.to_json ] ])
+
+      assert_raises(GraphAuth::AuthError) { client.check_reachable }
+    end
   end
 end

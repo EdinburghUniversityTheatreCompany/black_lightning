@@ -117,6 +117,11 @@ ChaosRails::Application.routes.draw do
       # Read-only browser over the imported EUSA Actuals ledger.
       resources :actuals, only: %i[index]
 
+      # Integration health dashboard: a page (#show) with an on-demand "Run
+      # checks" POST (#run) that probes Airtable / Graph / Gemini.
+      get  "status",     to: "status#show", as: :status
+      post "status/run", to: "status#run",  as: :run_status_checks
+
       # Finance-team Build Batch (new/create) + History (index/show/reopen).
       resources :batches, only: %i[index show new create] do
         member { post :reopen }

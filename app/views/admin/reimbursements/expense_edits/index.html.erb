@@ -37,7 +37,12 @@
   <% end %>
 <% end %>
 
-<p class="mb-2 text-sm text-gray-600"><%= pluralize(@expenses.total_count, "expense") %></p>
+<div class="mb-2 flex items-center justify-between gap-3">
+  <p class="text-sm text-gray-600"><%= pluralize(@expenses.total_count, "expense") %></p>
+  <%= link_to "Download CSV",
+              admin_reimbursements_expense_edits_path(request.query_parameters.merge(format: :csv)),
+              class: btn_classes(:secondary, :sm) %>
+</div>
 
 <% if @expenses.total_count.zero? %>
   <%= render CardComponent.new(title: @title) do %>
