@@ -1,6 +1,43 @@
 # Builders for reimbursements tests: a fully-populated Airtable test config,
 # canned Airtable record hashes, and a fake HTTP transport that records requests.
 module ReimbursementsTestHelpers
+  # The complete set of Airtable field ids the app code resolves through
+  # +Config#fid+ (per table). This is the source of truth for "fields the app
+  # needs": the schema-drift guard (schema_drift_test.rb) and the
+  # +reimbursements:verify_airtable_schema+ rake task iterate it and assert each
+  # one resolves against a config, so a renamed/removed Airtable column can't
+  # degrade to blank data silently (fid now returns nil rather than raising).
+  #
+  # Keep it in sync with the code: the guard's "list stays in sync" test scans
+  # the mapper/store/client source for every literal fid(:table, :field) call and
+  # fails if one isn't listed here. Write-only fields that never appear as a
+  # literal pair (they flow through a writer's dynamic key) are marked below.
+  EXPECTED_AIRTABLE_FIELDS = {
+    people: %i[name email sort_code account_number verified notes],
+    budgets: %i[
+      name nominal_code active budget_type initial_budget remaining owner notes
+      current_forecast committed_amount total_paid variance
+    ],
+    budget_forecasts: %i[name budget amount date reason],
+    expenses: %i[
+      auto_number payee type payee_name_override sort_code_override
+      account_number_override amount amount_excl_vat budget nominal_code_override
+      description receipt payment_reference status rejection_reason
+      producer_notified submitted_at ai_check_status ai_comment ai_checked_at
+      submitted_to_eusa_date payment_confirmed_date batch receipts_offloaded
+      sharepoint_receipt_urls
+      rejection_notified
+    ], # rejection_notified is write-only (review reject flow) — no literal fid pair
+    batches: %i[
+      name date_sent sharepoint_backup_url eusa_draft_created draft_message_id
+      producer_notifications_sent notes
+    ],
+    eusa_actuals: %i[
+      nominal_code cost_centre ref date period narrative narrative_1 debit credit
+      net linked_expense linked_budget source_month imported_at
+    ]
+  }.freeze
+
   FIELD_IDS = {
     people: {
       name: "fldPplName", email: "fldPplEmail", sort_code: "fldPplSort",
@@ -66,6 +103,19 @@ module ReimbursementsTestHelpers
     end
     user.add_role("Producer")
     role
+  end
+
+  # Assert every EXPECTED_AIRTABLE_FIELDS entry resolves (non-nil) against
+  # +config+, reporting the full list of missing table/field pairs in one go so a
+  # schema drift surfaces every gap at once rather than one failure per run.
+  def assert_airtable_fields_resolve(config, expected: EXPECTED_AIRTABLE_FIELDS)
+    missing = expected.flat_map do |table, fields|
+      fields.filter_map { |field| "#{table}.#{field}" if config.fid(table, field).nil? }
+    end
+    assert_empty missing,
+                 "Airtable schema drift: these fields the app needs did not resolve " \
+                 "in the config (renamed/removed column, or credentials lag the code): " \
+                 "#{missing.join(', ')}"
   end
 
   def reimbursements_test_config
