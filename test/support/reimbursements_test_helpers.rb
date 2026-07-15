@@ -235,6 +235,10 @@ module ReimbursementsTestHelpers
     # Airtable write outage (e.g. the Batch-record write failing after the EUSA
     # draft was already created — the orphan-draft path).
     attr_accessor :fail_create_tables
+    # Make every update_record for these tables raise, standing in for an
+    # Airtable write outage on an existing record (e.g. mark_submitted's
+    # per-expense status write failing after the EUSA draft already exists).
+    attr_accessor :fail_update_tables
 
     def initialize(records_by_table)
       @records_by_table = records_by_table
@@ -245,6 +249,7 @@ module ReimbursementsTestHelpers
       @uploads = []
       @deleted = []
       @fail_create_tables = []
+      @fail_update_tables = []
     end
 
     def list_records(table)
@@ -267,6 +272,10 @@ module ReimbursementsTestHelpers
     end
 
     def update_record(table, record_id, fields)
+      if Array(@fail_update_tables).include?(table)
+        raise Reimbursements::Airtable::Error.new("update failed for #{table}", status: 500)
+      end
+
       @updated << [ table, record_id, fields ]
       record = @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
       record["fields"] = record["fields"].merge(fields) if record
@@ -356,6 +365,10 @@ module ReimbursementsTestHelpers
     # Recipients (email strings) whose send should raise, standing in for a
     # Graph outage that hits some payees but not others.
     attr_accessor :fail_send_to
+    # Filenames whose upload_to_folder call should raise, standing in for one
+    # receipt failing to back up to SharePoint while the rest of the batch
+    # (including other receipts and the BACS xlsx itself) succeeds.
+    attr_accessor :fail_upload_for
 
     def initialize
       @uploaded = []
@@ -364,6 +377,7 @@ module ReimbursementsTestHelpers
       @send_mails = []
       @deleted_messages = []
       @fail_send_to = []
+      @fail_upload_for = []
     end
 
     def download(url)
@@ -373,6 +387,7 @@ module ReimbursementsTestHelpers
 
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
       raise Reimbursements::GraphAuth::Error, "SharePoint down" if fail_uploads
+      raise Reimbursements::GraphAuth::Error, "SharePoint down for #{filename}" if Array(fail_upload_for).include?(filename)
 
       @uploaded << { drive_id: drive_id, folder_id: folder_id, filename: filename, size: content.bytesize }
       "https://sp.example/#{folder_id}/#{filename}"

@@ -95,15 +95,20 @@ module Reimbursements
       )
     end
 
-    # Operator: the EUSA draft was created and awaits review + send.
-    def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:)
+    # Operator: the EUSA draft was created and awaits review + send. +errors+
+    # carries any best-effort step failures (SharePoint upload, producer
+    # notification, batch flags) — the draft itself is still valid and ready to
+    # send, but the template must not claim those steps all succeeded when
+    # +errors+ is non-empty.
+    def batch_ready(recipients:, expenses:, total:, draft_link:, run_date:, errors: [])
       count = expenses.size
       send_email(
         to: recipients,
         subject: "[Bedlam BACS] Draft ready — #{count} #{'expense'.pluralize(count)} " \
                  "— #{Date.current.iso8601}",
         template: "reimbursements/emails/batch_ready",
-        assigns: { expenses: expenses, total: total, draft_link: draft_link, run_date: run_date }
+        assigns: { expenses: expenses, total: total, draft_link: draft_link, run_date: run_date,
+                   errors: errors }
       )
     end
 

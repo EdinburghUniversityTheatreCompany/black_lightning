@@ -37,6 +37,21 @@ module Reimbursements
                         sender_name: "Fringe Finance", eusa_recipient: "finance@eusa.ed.ac.uk")
     end
 
+    # Overrides +client+'s update_record to raise for calls matching the given
+    # predicate, otherwise performing the client's normal write-through — the
+    # shared body for tests that need one specific write to fail amid others
+    # that must still succeed.
+    def fail_update_record_when(client, &predicate)
+      client.define_singleton_method(:update_record) do |table, record_id, fields|
+        raise Reimbursements::Airtable::Error.new("blip", status: 500) if predicate.call(table, record_id, fields)
+
+        @updated << [ table, record_id, fields ]
+        record = @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
+        record["fields"] = record["fields"].merge(fields) if record
+        record || { "id" => record_id, "fields" => fields }
+      end
+    end
+
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
       processor, store, client, graph = build_scenario
 
@@ -117,12 +132,85 @@ module Reimbursements
       approved_now = store.expenses.select { |e| e.status == Status::APPROVED }
       assert_empty approved_now, "no expense stays Approved with a live draft"
 
+      # Producers are still notified on the orphan-draft path — the expense IS
+      # Submitted and the payee's money IS on its way, orphan Batch record or not.
+      assert_equal 2, graph.send_mails.size
+      assert_equal 2, result.producer_notifications_sent
+
       # Rebuild: the operator's approved set is now empty, so a second process
       # makes NO second draft — the guarantee that prevents a duplicate payment.
       rebuild = processor.process(expenses: approved_now, bacs_date: Date.new(2026, 5, 13),
                                   sender_name: "F", eusa_recipient: "finance@eusa.ed.ac.uk")
       assert_not rebuild.success
       assert_equal 1, graph.drafts.size, "no SECOND draft on rebuild"
+    end
+
+    test "a mark_submitted write failure is a double-draft risk, not swallowed as success" do
+      processor, store, client, graph = build_scenario
+      fail_update_record_when(client) { |_table, record_id, _fields| record_id == "recExpA" }
+
+      result = run_batch(processor, store)
+
+      assert_not result.success, "one expense couldn't be marked Submitted — must not report success"
+      assert_equal 1, graph.drafts.size, "the EUSA draft was still created and is live"
+      assert(result.errors.any? { |e| e.include?("DOUBLE-DRAFT RISK") && e.include?("11") },
+             result.errors.inspect)
+
+      # recExpB still made it through cleanly; recExpA is the one that failed.
+      assert_equal [ "recExpB" ], store.expenses.select { |e| e.status == Status::SUBMITTED }.map(&:record_id)
+      assert_equal [ "recExpA" ], store.expenses.select { |e| e.status == Status::APPROVED }.map(&:record_id)
+
+      # recExpA's payee (Alice) must not be notified — mark_submitted excluded
+      # her expense, so notify_producers never saw it.
+      assert_equal [ "bob@example.com" ], graph.send_mails.map { |mail| mail[:to] }.flatten
+    end
+
+    test "receipts_offloaded is only stamped true when the receipt upload actually succeeded" do
+      processor, store, client, graph = build_scenario
+      graph.fail_uploads = true # every SharePoint upload (BACS xlsx + every receipt) fails
+
+      result = run_batch(processor, store)
+
+      assert result.success, "the draft + submission still succeed; SharePoint uploads are best-effort"
+      assert(result.errors.any? { |e| e.include?("SharePoint upload failed") })
+      offload_field = FIELD_IDS[:expenses][:receipts_offloaded]
+      submitted_writes = client.updated.select { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
+      assert_equal 2, submitted_writes.size
+      submitted_writes.each do |_, _, fields|
+        assert_not fields[offload_field], "receipts_offloaded must not be true when the upload failed"
+      end
+    end
+
+    test "producer_notifications_sent flag is only set when at least one send succeeded" do
+      processor, store, client, graph = build_scenario
+      graph.fail_send = true # the draft succeeds; every producer send fails
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_equal 0, result.producer_notifications_sent
+      notif_field = FIELD_IDS[:batches][:producer_notifications_sent]
+      batch_writes = client.updated.select { |table, _, fields| table == :batches && fields.key?(notif_field) }
+      assert_empty batch_writes, "must not claim notifications were sent when every send failed"
+    end
+
+    test "a transient producer_notified write failure is retried, matching create_batch!" do
+      processor, store, client, graph = build_scenario
+      calls = 0
+      field = FIELD_IDS[:expenses][:producer_notified]
+      fail_update_record_when(client) do |table, _record_id, fields|
+        next false unless table == :expenses && fields.key?(field)
+
+        calls += 1
+        calls == 1
+      end
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_equal 2, graph.send_mails.size, "both producers were actually emailed"
+      notified = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:producer_notified]] }
+      assert_equal 2, notified, "the retry recorded the stamp that failed on the first attempt"
     end
 
     test "a transient batch-write failure is retried and the batch still records" do

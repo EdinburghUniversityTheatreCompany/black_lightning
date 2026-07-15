@@ -93,7 +93,8 @@ module Reimbursements
       if result.success
         emailer.batch_ready(recipients: recipients, expenses: notification_rows(approved),
                             total: format("%.2f", result.total_amount || 0),
-                            draft_link: result.eusa_draft_web_link, run_date: run_date(result.bacs_date))
+                            draft_link: result.eusa_draft_web_link, run_date: run_date(result.bacs_date),
+                            errors: result.errors)
       else
         emailer.failure(recipients: recipients, error_text: Array(result.errors).join("\n"),
                         run_date: run_date(result.bacs_date))

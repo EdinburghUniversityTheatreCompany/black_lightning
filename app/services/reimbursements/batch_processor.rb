@@ -12,8 +12,15 @@ module Reimbursements
   #
   # THE CARDINAL RULE: expenses are never marked Submitted unless the EUSA draft
   # was created — a failed draft returns early with the expenses still Approved,
-  # so a rebuild is clean. Steps after the draft are best-effort: their failures
-  # are collected into Result#errors but don't undo a valid submission.
+  # so a rebuild is clean. Steps after the draft are best-effort — SharePoint
+  # uploads, producer emails, Batch-record flags — and their failures are
+  # collected into Result#errors without undoing a valid submission.
+  #
+  # The one exception is mark_submitted itself: an expense whose Submitted
+  # write fails is left in the SAME double-draft danger the orphan-draft guard
+  # below exists to prevent (already in the live draft, but not yet flipped out
+  # of the Approved queue), so #success reflects whether EVERY expense actually
+  # made it to Submitted, not merely whether the draft was created.
   #
   # ORPHAN-DRAFT GUARD: once the draft exists a rebuild must never create a
   # SECOND draft on the same expenses. So every post-draft step is contained
@@ -28,10 +35,10 @@ module Reimbursements
     XLSX_CONTENT_TYPE =
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".freeze
 
-    # How many times to retry the Batch-record write before giving up and
-    # falling back to the orphan-draft guard. Retries are immediate: a transient
-    # Airtable blip clears, and we must not sit on a live draft.
-    CREATE_BATCH_ATTEMPTS = 3
+    # How many times to retry a post-draft Airtable write (the Batch record, or
+    # a producer_notified stamp) before giving up. Retries are immediate: a
+    # transient Airtable blip clears, and we must not sit on a live draft.
+    WRITE_RETRY_ATTEMPTS = 3
 
     # The outcome handed back to the UI.
     Result = Struct.new(:success, :bacs_date, :batch_id, :expense_count, :total_amount,
@@ -86,16 +93,25 @@ module Reimbursements
       # re-draft them) and surface the orphan draft loudly for manual repair.
       batch = create_batch(result)
       if batch.nil?
-        mark_submitted(result, expenses, nil, urls_by_expense)
+        submitted = mark_submitted(result, expenses, nil, urls_by_expense)
+        notify_producers(result, submitted.reject(&:producer_notified), bacs_date)
         result.errors.unshift(orphan_draft_message(result))
         return result
       end
 
-      mark_submitted(result, expenses, batch, urls_by_expense)
-      notify_producers(result, expenses.reject(&:producer_notified), bacs_date)
-      flag_batch(result, batch, :producer_notifications_sent)
+      submitted = mark_submitted(result, expenses, batch, urls_by_expense)
+      notify_producers(result, submitted.reject(&:producer_notified), bacs_date)
+      flag_batch(result, batch, :producer_notifications_sent) if result.producer_notifications_sent.positive?
 
-      result.success = true
+      # Every OTHER post-draft step (SharePoint uploads, producer emails, the
+      # Batch-record flags) is genuinely best-effort: their failure is real but
+      # doesn't put the batch in an inconsistent, double-draft-risking state, so
+      # it's collected into result.errors without flipping success. A
+      # mark_submitted failure is different — that expense is still Approved
+      # despite being in the live draft, the same double-draft risk the
+      # orphan-draft guard exists to prevent — so success reflects whether
+      # EVERY expense actually made it to Submitted.
+      result.success = (submitted.size == expenses.size)
       result
     rescue StandardError => e
       fail_with(result, e.message)
@@ -200,7 +216,7 @@ module Reimbursements
                    draft_message_id: result.eusa_draft_message_id)
         batch
       rescue StandardError => e
-        retry if attempts < CREATE_BATCH_ATTEMPTS
+        retry if attempts < WRITE_RETRY_ATTEMPTS
         fail_with(result, "Failed to create batch record after #{attempts} attempts: #{e.message}")
         nil
       end
@@ -209,15 +225,35 @@ module Reimbursements
     # +batch+ is nil on the orphan-draft path; batch_id: nil is dropped by the
     # mapper so the batch link is simply left unset (the expense still leaves the
     # Approved queue, which is what stops a rebuild re-drafting it).
+    #
+    # Returns the subset of +expenses+ actually confirmed Submitted, so callers
+    # (producer notification) only act on expenses that genuinely made it —
+    # never on one whose write below failed.
     def mark_submitted(result, expenses, batch, urls_by_expense)
       batch_id = batch&.record_id
-      expenses.each do |expense|
+      expenses.select do |expense|
+        urls = urls_by_expense.fetch(expense.record_id, [])
         @store.update_expense!(expense.record_id, status: Status::SUBMITTED, batch_id: batch_id,
-                               submitted_to_eusa_date: result.bacs_date, receipts_offloaded: true,
-                               sharepoint_receipt_urls: urls_by_expense.fetch(expense.record_id, []))
+                               submitted_to_eusa_date: result.bacs_date,
+                               receipts_offloaded: receipts_offloaded?(expense, urls),
+                               sharepoint_receipt_urls: urls)
+        true
       rescue StandardError => e
-        result.errors << "Failed to mark expense #{expense.auto_number} as Submitted: #{e.message}"
+        result.errors << "SUBMIT FAILED — DOUBLE-DRAFT RISK: could not mark expense " \
+          "#{expense.auto_number} as Submitted even though it is included in the live EUSA " \
+          "draft (#{result.eusa_draft_web_link}). Fix this expense's status manually before " \
+          "rebuilding, or it will be drafted a second time: #{e.message}"
+        false
       end
+    end
+
+    # Only true when every receipt this expense actually had was successfully
+    # uploaded to SharePoint — an expense with no receipts has nothing to
+    # offload (trivially true), but a partial or total upload failure must not
+    # be reported as offloaded, or an operator could delete the only copy of a
+    # receipt that was never actually backed up.
+    def receipts_offloaded?(expense, uploaded_urls)
+      expense.receipts.size == uploaded_urls.size
     end
 
     def orphan_draft_message(result)
@@ -264,10 +300,15 @@ module Reimbursements
       to_notify.each do |expense|
         next unless notified_emails.include?(expense.person&.email.to_s.strip)
 
+        attempts = 0
         begin
+          attempts += 1
           @store.update_expense!(expense.record_id, producer_notified: true)
         rescue StandardError => e
-          result.errors << "Failed to mark producer_notified on #{expense.auto_number}: #{e.message}"
+          retry if attempts < WRITE_RETRY_ATTEMPTS
+          result.errors << "Failed to mark producer_notified on #{expense.auto_number} after " \
+            "#{attempts} attempts — their notification email was already sent, so a rebuild " \
+            "risks emailing them twice: #{e.message}"
         end
       end
     end

@@ -35,6 +35,19 @@
   </tfoot>
 </table>
 
-<p>Producer notification emails have also been sent to payees.</p>
+<% if @errors.blank? %>
+  <p>Producer notification emails have also been sent to payees.</p>
+<% else %>
+  <div>
+    <p><strong>Note:</strong> the EUSA draft above is valid and ready to send, but one or more
+    other steps hit a problem — please check before assuming everything else completed
+    (e.g. a producer notification email, a SharePoint receipt backup, or a batch flag):</p>
+    <ul>
+      <% @errors.each do |error| %>
+        <li><%= error %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
 
 <p>Best,<br>Bedlam Fringe BACS (automated)</p>
