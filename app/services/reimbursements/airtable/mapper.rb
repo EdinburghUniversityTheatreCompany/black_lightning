@@ -80,7 +80,8 @@ module Reimbursements
           sharepoint_receipt_urls: multiline(fields[fid(:expenses, :sharepoint_receipt_urls)]),
           ai_check_status: fields[fid(:expenses, :ai_check_status)].to_s,
           ai_comment: fields[fid(:expenses, :ai_comment)].to_s,
-          ai_checked_at: time(fields[fid(:expenses, :ai_checked_at)])
+          ai_checked_at: time(fields[fid(:expenses, :ai_checked_at)]),
+          rejection_notified: time(fields[fid(:expenses, :rejection_notified)])
         )
       end
 

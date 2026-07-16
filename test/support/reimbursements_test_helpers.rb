@@ -27,7 +27,7 @@ module ReimbursementsTestHelpers
       submitted_to_eusa_date payment_confirmed_date batch receipts_offloaded
       sharepoint_receipt_urls
       rejection_notified
-    ], # rejection_notified is write-only (review reject flow) — no literal fid pair
+    ],
     batches: %i[
       name date_sent sharepoint_backup_url eusa_draft_created draft_message_id
       producer_notifications_sent notes

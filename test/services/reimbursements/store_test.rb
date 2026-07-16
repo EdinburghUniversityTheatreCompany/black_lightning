@@ -38,6 +38,23 @@ module Reimbursements
       assert_equal "Props", expense.budget.name
     end
 
+    test "rejection_notified round-trips from Airtable, not just written" do
+      notified_at = airtable_expense_record(
+        overrides: { FIELD_IDS[:expenses][:rejection_notified] => "2026-07-09T12:00:00Z" }
+      )
+      store, = build_store(expenses: [ notified_at ])
+
+      expense = store.expenses.sole
+
+      assert_equal Time.zone.parse("2026-07-09T12:00:00Z"), expense.rejection_notified
+    end
+
+    test "rejection_notified is nil when the expense was never rejected" do
+      store, = build_store
+
+      assert_nil store.expenses.sole.rejection_notified
+    end
+
     test "expenses_for filters to one person and tolerates unlinked expenses" do
       orphan = airtable_expense_record(id: "recExp2", payee_id: nil)
       store, = build_store(expenses: [ airtable_expense_record, orphan ])

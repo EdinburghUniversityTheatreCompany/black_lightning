@@ -121,6 +121,13 @@ module Reimbursements
       assert_includes cc.errors.attribute_names, :nightly_run_days
     end
 
+    test "nightly_run_days rejects an empty list — clearing every day would silently disable the nightly" do
+      cc = CostCentre.new(key: "empty", name: "Empty", eusa_code: "E1",
+        receive_mailbox: "a@b.co", send_mailbox: "a@b.co", nightly_run_days: [])
+      assert_not cc.valid?
+      assert_includes cc.errors.attribute_names, :nightly_run_days
+    end
+
     test "nightly_run_today? checks the configured run-days by Ruby wday" do
       cc = CostCentre.new(nightly_run_days: [ 2, 4 ]) # Tue, Thu
       assert cc.nightly_run_today?(Date.new(2026, 7, 7)),  "2026-07-07 is a Tuesday"

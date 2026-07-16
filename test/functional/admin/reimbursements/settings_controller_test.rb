@@ -185,16 +185,19 @@ module Admin
       test "update saves the SharePoint site URL" do
         sign_in @user
 
+        # A real form always resubmits its currently-checked day boxes
+        # regardless of which other field changed.
         patch :update, params: { key: @cost_centre.key, cost_centre: {
           receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co",
-          sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe"
+          sharepoint_site_url: "https://tenant.sharepoint.com/sites/Fringe",
+          nightly_run_days: @cost_centre.nightly_run_days
         } }
 
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         assert_equal "https://tenant.sharepoint.com/sites/Fringe", @cost_centre.reload.sharepoint_site_url
       end
 
-      test "update with no run-days checked clears the schedule" do
+      test "update with no run-days checked is rejected, not saved as an empty schedule" do
         @cost_centre.update!(nightly_run_days: [ 2, 4 ])
         sign_in @user
 
@@ -202,7 +205,10 @@ module Admin
           receive_mailbox: "in@fringe.co", send_mailbox: "out@fringe.co"
         } }
 
-        assert_equal [], @cost_centre.reload.nightly_run_days
+        assert_response :unprocessable_entity
+        assert_includes response.body, "must include at least one weekday"
+        assert_equal [ 2, 4 ], @cost_centre.reload.nightly_run_days,
+                     "clearing every run-day would silently disable the nightly for this cost centre"
       end
 
       test "update rejects a blank required mailbox without saving" do

@@ -167,8 +167,8 @@ module Reimbursements
 
     def nightly_run_days_are_weekday_numbers
       days = nightly_run_days
-      unless days.is_a?(Array) && days.all? { |d| d.is_a?(Integer) && d.between?(0, 6) }
-        errors.add(:nightly_run_days, "must be a list of weekday numbers (0=Sun..6=Sat)")
+      unless days.is_a?(Array) && days.present? && days.all? { |d| d.is_a?(Integer) && d.between?(0, 6) }
+        errors.add(:nightly_run_days, "must include at least one weekday number (0=Sun..6=Sat)")
       end
     end
   end

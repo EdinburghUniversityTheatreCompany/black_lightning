@@ -17,7 +17,7 @@ module Reimbursements
                 :payment_reference, :rejection_reason, :submitted_at,
                 :submitted_to_eusa_date, :payment_confirmed_date, :batch_id,
                 :producer_notified, :receipts_offloaded, :sharepoint_receipt_urls,
-                :ai_check_status, :ai_comment, :ai_checked_at
+                :ai_check_status, :ai_comment, :ai_checked_at, :rejection_notified
 
     # The trailing keyword args are operator-side fields the portal never set;
     # they default empty/nil so the portal's Mapper.expense keeps working
@@ -30,7 +30,7 @@ module Reimbursements
                    submitted_at: nil, submitted_to_eusa_date: nil, payment_confirmed_date: nil,
                    batch_id: nil, producer_notified: false, receipts_offloaded: false,
                    sharepoint_receipt_urls: [], ai_check_status: "", ai_comment: "",
-                   ai_checked_at: nil)
+                   ai_checked_at: nil, rejection_notified: nil)
       @record_id = record_id
       @status = status
       @auto_number = auto_number
@@ -57,6 +57,7 @@ module Reimbursements
       @ai_check_status = ai_check_status
       @ai_comment = ai_comment
       @ai_checked_at = ai_checked_at
+      @rejection_notified = rejection_notified
     end
 
     def pending?
