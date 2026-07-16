@@ -38,5 +38,23 @@ module Reimbursements
     test "a non-numeric excl VAT is rejected" do
       assert_match(/excl. VAT/i, error(amount: "20.00", amount_excl_vat: "abc"))
     end
+
+    # Kernel#Float alone accepts "0x1A" as hex (26.0) and "1e10" as scientific
+    # notation, but String#to_f — used by the actual write path,
+    # Mapper#expense_fields — parses either as 0.0/1.0, silently disagreeing
+    # with whatever this validator just approved. Rejecting anything that
+    # isn't a plain decimal number closes that gap at the source rather than
+    # trying to keep two separate parsers in sync.
+    test "a hex-looking amount is rejected, not silently accepted as if parsed by Float()" do
+      assert_match(/valid amount/i, error(amount: "0x1A"))
+    end
+
+    test "a hex-looking excl VAT is rejected the same way" do
+      assert_match(/excl. VAT/i, error(amount: "20.00", amount_excl_vat: "0x1A"))
+    end
+
+    test "scientific notation is rejected, not silently truncated by to_f" do
+      assert_match(/valid amount/i, error(amount: "1e10"))
+    end
   end
 end

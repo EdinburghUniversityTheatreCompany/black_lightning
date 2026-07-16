@@ -354,6 +354,19 @@ module Admin
         assert_empty @client.updated
       end
 
+      test "save rejects an excl-VAT amount greater than the total and writes nothing" do
+        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "25.00",
+                               description: "x", budget_record_id: "recBud1" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/can't be more than the total/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
       # --- Approve ---------------------------------------------------------
 
       test "approve auto-fills a payment reference when blank and marks approved" do

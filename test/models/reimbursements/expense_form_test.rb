@@ -86,10 +86,24 @@ module Reimbursements
     end
 
     test "validates override formats only when present" do
-      assert build_form(payee_name_override: "Stage Supplies Ltd").valid?
-      assert_not build_form(sort_code_override: "80-2").valid?
-      assert_not build_form(account_number_override: "123").valid?
-      assert build_form(sort_code_override: "80-22-60", account_number_override: "12345678").valid?
+      all_three = { payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
+                   account_number_override: "12345678" }
+      assert build_form(**all_three).valid?
+      assert_not build_form(**all_three.merge(sort_code_override: "80-2")).valid?
+      assert_not build_form(**all_three.merge(account_number_override: "123")).valid?
+    end
+
+    test "requires all three overrides together, not just one or two (prevents a spliced payee)" do
+      partial = build_form(payee_name_override: "Stage Supplies Ltd")
+      assert_not partial.valid?
+      assert_includes partial.errors[:base].join, "fill in all three"
+
+      assert_not build_form(sort_code_override: "80-22-60", account_number_override: "12345678").valid?
+
+      assert build_form(payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
+                        account_number_override: "12345678").valid?
+      # Blank on all three (the common case: no override at all) is still fine.
+      assert build_form.valid?
     end
 
     test "create_attrs carries person, pending status and normalized values" do

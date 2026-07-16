@@ -233,12 +233,19 @@ module Admin
         attrs
       end
 
-      # Only validates when an override is actually present — a blank
+      # Only validates a field's format when it's actually present — a blank
       # override means "no override, fall back to the payee's own bank
       # details," same as ExpenseForm#overrides_valid. Unlike every other
       # bank-detail write path in this diff, this finance-only "Edit (any
       # status)" form previously wrote raw params with zero format check.
+      #
+      # Also requires the three override fields to be all-or-nothing: setting
+      # only a sort code (or only an account number) would splice a third
+      # party's partial bank details onto the payee's own remaining fields —
+      # an internally-inconsistent pair that still passes each field's own
+      # format check in isolation.
       def bank_detail_override_error
+        payee_name = params[:payee_name_override].to_s
         sort_code = params[:sort_code_override].to_s
         account_number = params[:account_number_override].to_s
 
@@ -247,6 +254,12 @@ module Admin
         end
         if account_number.present? && !::Reimbursements::BankDetails.valid_account_number?(account_number)
           return "Account number override #{::Reimbursements::BankDetails::ACCOUNT_NUMBER_HINT}"
+        end
+
+        overrides = [ payee_name, sort_code, account_number ]
+        if overrides.any?(&:present?) && !overrides.all?(&:present?)
+          return "To pay a third party, fill in all three overrides: payee name, sort code, " \
+                 "and account number — not just one or two."
         end
 
         nil

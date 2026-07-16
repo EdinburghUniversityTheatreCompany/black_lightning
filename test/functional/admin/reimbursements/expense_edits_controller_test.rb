@@ -495,6 +495,31 @@ module Admin
         assert_equal "", fields[EXP[:account_number_override]]
       end
 
+      test "update rejects a partial bank-detail override (splicing a third party's details)" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "20.00", amount_excl_vat: "20.00",
+                                 description: "x", budget_record_id: "recBud1",
+                                 sort_code_override: "20-00-00", account_number_override: "" }
+
+        assert_response :unprocessable_content
+        assert_match(/fill in all three/i, response.body)
+        assert_empty @client.updated
+      end
+
+      test "update rejects an excl-VAT amount greater than the total" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "20.00", amount_excl_vat: "25.00",
+                                 description: "x", budget_record_id: "recBud1" }
+
+        assert_response :unprocessable_content
+        assert_match(/can't be more than the total/i, response.body)
+        assert_empty @client.updated
+      end
+
       # --- Already-sent / already-paid note --------------------------------
 
       test "shows an already-sent-to-EUSA note for a Submitted expense" do

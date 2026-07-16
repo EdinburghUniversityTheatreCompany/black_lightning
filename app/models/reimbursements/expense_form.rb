@@ -168,6 +168,16 @@ module Reimbursements
       if account_number_override.present? && !BankDetails.valid_account_number?(account_number_override)
         errors.add(:account_number_override, BankDetails::ACCOUNT_NUMBER_HINT)
       end
+
+      # All-or-nothing: setting only one or two of the three fields would
+      # splice a third party's partial bank details onto the submitter's own
+      # remaining fields — an internally-inconsistent pair that still passes
+      # each field's own format check above.
+      overrides = [ payee_name_override, sort_code_override, account_number_override ]
+      return unless overrides.any?(&:present?) && !overrides.all?(&:present?)
+
+      errors.add(:base, "To pay a third party, fill in all three: payee name, sort code, " \
+                        "and account number — not just one or two.")
     end
 
     def vat_soft_block
