@@ -339,3 +339,28 @@ without stopping to ask — logged here for review in a batch rather than blocki
 
 - **Tier 4 (security hardening) is now complete** except for #29's deferred SPF/DKIM/DMARC half.
   Continuing to Tier 5 (cost-centre data-model gap) next.
+
+## Tier 5 (cost-centre data-model gap)
+
+- **#41 (BuildBatchJob has no cost-centre scoping), #80 (remind_stale_pending runs
+  cost-centre-unscoped), #118 (reconciliation matchers never check cost_centre), #214 (reopen's
+  stale-draft cleanup hardcodes the default mailbox) — ALL FOUR DEFERRED, not fixed. This is a hard
+  blocker, not a scope judgment call**: every one of these needs `Expense`/`Budget`/`Batch` to carry
+  a cost-centre link, but those three models are Airtable-backed records, not ActiveRecord — adding
+  a field to them means adding an actual column/link field to the real Airtable base's Expenses/
+  Budgets/Batches tables via Airtable's own UI or admin API, then wiring the resulting field id into
+  `Reimbursements::Airtable::Config`/`FIELD_IDS`. I have no credentials or access to modify the
+  production (or even a shared dev) Airtable base's schema from this environment, and inventing a
+  placeholder field id would silently break in production the moment this ships (a field id that
+  doesn't exist just resolves to `nil`, per the existing schema-drift-guard design — this would fail
+  the same way an accidentally-renamed field does, just introduced deliberately instead of by
+  drift). This needs a human with Airtable admin access to add the field first; I've left all four
+  findings unfixed rather than build against a field id that can't exist yet. **This is the one
+  Tier in the plan I can't execute autonomously — flag when you're ready to add the Airtable field
+  and I can wire up all four fixes in one pass.**
+
+- **#117 (CostCentre#eusa_code/receive_mailbox/send_mailbox have no uniqueness validation)**: fixed
+  — this one IS self-contained (`CostCentre` is a normal ActiveRecord model in the app's own MySQL
+  DB, unlike Expense/Budget/Batch). Added `uniqueness: true` for `eusa_code`, case-insensitive
+  uniqueness for both mailboxes (matching how email addresses are already treated elsewhere in this
+  diff, e.g. `MailboxClient` downcasing `from_address`).

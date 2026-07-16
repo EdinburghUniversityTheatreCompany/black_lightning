@@ -50,6 +50,13 @@ module Reimbursements
 
     validates :key, presence: true, uniqueness: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
+    # Prevents a duplicate-mailbox/code misconfiguration once a second cost
+    # centre is seeded — e.g. two rows accidentally sharing one receive
+    # mailbox would make MailboxPollJob attribute every email-in receipt to
+    # whichever cost centre happens to be polled first.
+    validates :eusa_code, uniqueness: true
+    validates :receive_mailbox, uniqueness: { case_sensitive: false }
+    validates :send_mailbox, uniqueness: { case_sensitive: false }
     validate :nightly_run_days_are_weekday_numbers
 
     # The primary cost centre (Fringe today). Multi-cost-centre flows iterate

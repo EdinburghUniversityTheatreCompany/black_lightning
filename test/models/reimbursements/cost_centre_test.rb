@@ -42,6 +42,27 @@ module Reimbursements
       assert_includes duplicate.errors.attribute_names, :key
     end
 
+    test "eusa_code is unique" do
+      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "F40",
+        receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co")
+      assert_not duplicate.valid?
+      assert_includes duplicate.errors.attribute_names, :eusa_code
+    end
+
+    test "receive_mailbox is unique, case-insensitively" do
+      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
+        receive_mailbox: "REIMBURSEMENTS@bedlamfringe.co.uk", send_mailbox: "termtime-out@b.co")
+      assert_not duplicate.valid?
+      assert_includes duplicate.errors.attribute_names, :receive_mailbox
+    end
+
+    test "send_mailbox is unique, case-insensitively" do
+      duplicate = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
+        receive_mailbox: "termtime-in@b.co", send_mailbox: "REIMBURSEMENTS@bedlamfringe.co.uk")
+      assert_not duplicate.valid?
+      assert_includes duplicate.errors.attribute_names, :send_mailbox
+    end
+
     test "sharepoint_configured? is false until both drive/folder pairs are set" do
       cost_centre = CostCentre.new(sharepoint_receipts_drive_id: "d", sharepoint_receipts_folder_id: "f")
       assert_not cost_centre.sharepoint_configured?, "needs the BACS folder too"
