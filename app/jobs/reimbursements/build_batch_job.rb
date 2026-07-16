@@ -19,7 +19,7 @@ module Reimbursements
   # #batch_ready, as the nightly does); a failed build emails Notifier#failure.
   # The controller enqueues this and redirects to History with a "building…"
   # flash — the operator watches History / their inbox, not a spinning request.
-  class BuildBatchJob < ApplicationJob
+  class BuildBatchJob < Reimbursements::ApplicationJob
     queue_as :default
 
     # Serialise builds per cost centre: a double-click (or a rapid rebuild) can't
@@ -38,7 +38,6 @@ module Reimbursements
     SENDER_FALLBACK = "Bedlam Fringe Finance".freeze
 
     # Injection seams for tests (mirrors NightlyBatchJob; no mocking library).
-    class_attribute :store_builder, default: -> { Store.new }
     class_attribute :graph_builder, default: -> { GraphClient.new }
     class_attribute :processor_builder,
                     default: ->(store:, graph:, cost_centre:) {
@@ -76,10 +75,6 @@ module Reimbursements
     end
 
     private
-
-    def store
-      @store ||= store_builder.call
-    end
 
     # Memoized like +store+: graph_builder.call is invoked at two separate call
     # sites in a single run (the processor and the notifier), and each call
@@ -123,8 +118,8 @@ module Reimbursements
       Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre.key} — #{e.message}")
       GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
     rescue StandardError => e
-      Rails.logger.error("Build batch: operator email failed for #{cost_centre.key} — #{e.message}")
-      Honeybadger.notify(e, context: { source: "reimbursements_build_batch_email", cost_centre: cost_centre.key })
+      log_and_notify("Build batch: operator email failed for #{cost_centre.key} — #{e.message}", e,
+                     context: { source: "reimbursements_build_batch_email", cost_centre: cost_centre.key })
     end
 
     def notification_rows(expenses)

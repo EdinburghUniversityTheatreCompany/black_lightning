@@ -431,3 +431,40 @@ without stopping to ask — logged here for review in a batch rather than blocki
   hiding in that duplication — and test-double dedup) are larger, higher-regression-risk refactors
   (changing shared view partials touches rendered HTML across many pages) — left for a dedicated
   follow-up pass rather than folding into this session's already-large diff.
+
+## Tier 7 continued — job seams + log/Honeybadger boilerplate
+
+- **#44 (`store_builder`/`store`, up to 4 copies)**: hoisted onto a new `Reimbursements::ApplicationJob
+  < ::ApplicationJob` base class, inherited by `MailboxPollJob`/`NightlyBatchJob`/`BuildBatchJob`/
+  `AiCheckJob` (the four that actually shared it — `CredentialsCheckJob` never touched the store, so
+  left it on plain `ApplicationJob` rather than an unjustified change). `AiCheckJob#perform` also
+  switched from a local `store = store_builder.call` variable to the inherited memoized `store`
+  method, for consistency with the other three. `graph_builder`/`notifier_builder` were deliberately
+  NOT hoisted onto this job base — they're each shared by only 2 of the 5 jobs (not all 4+), and
+  BuildBatchJob/NightlyBatchJob's own per-job memoization there already has its own Tier-3 rationale
+  (OAuth-token reuse per run) documented in place.
+
+- **#52 + #190 (log + Honeybadger boilerplate, 10 sites across 6 files, both jobs and controllers)**:
+  extracted into `Reimbursements::ErrorReporting#log_and_notify(message, error, context:)`
+  (`app/services/reimbursements/error_reporting.rb`, alongside `GraphAuth` — the closest existing
+  precedent in this codebase for a module mixed into more than one layer), included into both
+  `Reimbursements::ApplicationJob` and `FinanceController`. Deliberately did NOT touch the
+  `GraphAuth::AuthError` rescue clauses that call `GraphAuthAlert.notify` instead (Tier 3's #222
+  fix) — those are a distinct, more specific escalation path, not the generic pattern this
+  consolidates.
+- **Caught a real bug via the full-suite run, not the per-file runs**: `FinanceController`
+  (`Admin::Reimbursements::FinanceController`) is in a DIFFERENT namespace than
+  `::Reimbursements::ErrorReporting` — `Admin::Reimbursements` and top-level `Reimbursements` only
+  share a name segment, they are not the same module. A bare `include ErrorReporting` inside
+  `FinanceController` raised `NameError: uninitialized constant
+  Admin::Reimbursements::FinanceController::ErrorReporting` the moment any controller test loaded
+  it (212 errors on the first full-suite run after adding it). Fixed with the explicit
+  `include ::Reimbursements::ErrorReporting` the rest of this file already used for every other
+  cross-namespace reference (`::Reimbursements::ModulusCheck`, etc.) — I'd simply missed doing the
+  same for this one new line. `Reimbursements::ApplicationJob`'s own `include ErrorReporting` needed
+  no such qualification, since that class genuinely lives inside the `Reimbursements` module.
+  Reinforces why the full suite (not just the touched controller's own test file) has to run before
+  every commit — a per-file run of, say, `settings_controller_test.rb` alone would have caught this
+  too (every FinanceController subclass loads the same file), but this was still the first time the
+  full suite ran after the change, and it caught it immediately as intended.
+- Pure refactor otherwise: full suite run count unchanged (733) before and after, all green.

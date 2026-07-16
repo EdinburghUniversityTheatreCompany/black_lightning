@@ -9,7 +9,7 @@ module Reimbursements
   # underlying problem clears.
   #
   # +store_builder+ / +checker_builder+ are the injection seams for tests.
-  class AiCheckJob < ApplicationJob
+  class AiCheckJob < Reimbursements::ApplicationJob
     queue_as :default
 
     # Serialise checks per expense (mirrors BuildBatchJob/NightlyBatchJob's
@@ -28,11 +28,9 @@ module Reimbursements
     limits_concurrency to: 1, duration: 10.minutes,
                         key: ->(record_id) { "reimbursements_ai_check_#{record_id}" }
 
-    class_attribute :store_builder, default: -> { Store.new }
     class_attribute :checker_builder, default: -> { AiChecker.new }
 
     def perform(expense_record_id)
-      store = store_builder.call
       expense = store.find_expense!(expense_record_id)
       # ai_checked? (not merely ai_check_status.present?) is deliberate: an
       # "error" verdict means the checker itself couldn't run (a transient

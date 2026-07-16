@@ -210,8 +210,8 @@ module Admin
       end
 
       def report_reconciliation_row_failure(subject, error)
-        Rails.logger.error("Reimbursements: reconciliation row failed for #{subject} — #{error.message}")
-        Honeybadger.notify(error, context: { source: "reimbursements_reconciliation_apply", subject: subject })
+        log_and_notify("Reimbursements: reconciliation row failed for #{subject} — #{error.message}", error,
+                       context: { source: "reimbursements_reconciliation_apply", subject: subject })
         (@reconciliation_errors ||= []) << "#{subject}: #{error.message}"
       end
 
@@ -230,8 +230,8 @@ module Admin
           begin
             notifier.payment_confirmation(to: person.email, person: person, expenses: expenses)
           rescue StandardError => e
-            Rails.logger.error("Reimbursements: payment email failed for #{person.email} — #{e.message}")
-            Honeybadger.notify(e, context: { source: "reimbursements_payment_email", payee: person.email })
+            log_and_notify("Reimbursements: payment email failed for #{person.email} — #{e.message}", e,
+                           context: { source: "reimbursements_payment_email", payee: person.email })
           end
         end
       end

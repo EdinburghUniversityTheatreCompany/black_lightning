@@ -255,8 +255,8 @@ module Admin
         )
         true
       rescue StandardError => e
-        Rails.logger.error("Reimbursements: rejection email failed for ##{expense.auto_number} — #{e.message}")
-        Honeybadger.notify(e, context: { source: "reimbursements_rejection_email", expense: expense.auto_number })
+        log_and_notify("Reimbursements: rejection email failed for ##{expense.auto_number} — #{e.message}", e,
+                       context: { source: "reimbursements_rejection_email", expense: expense.auto_number })
         false
       end
 

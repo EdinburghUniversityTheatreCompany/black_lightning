@@ -6,6 +6,8 @@ module Admin
     # (`:manage, :reimbursements_finance`) instead of the producer portal's
     # `:access, :reimbursements`, so a plain submitter can't reach them.
     class FinanceController < BaseController
+      include ::Reimbursements::ErrorReporting
+
       skip_before_action :authorize_reimbursements!
       before_action :authorize_finance!
 

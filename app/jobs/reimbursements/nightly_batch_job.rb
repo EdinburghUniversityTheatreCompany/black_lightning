@@ -23,7 +23,7 @@ module Reimbursements
   #
   # A +dry_run+ logs the same decisions without sending email or recording the
   # run — so it can be triggered safely to preview.
-  class NightlyBatchJob < ApplicationJob
+  class NightlyBatchJob < Reimbursements::ApplicationJob
     queue_as :default
     # duration: set well above the default 3-minute lock TTL — this triages
     # every Approved expense across every cost centre plus its AI verdicts and
@@ -36,7 +36,6 @@ module Reimbursements
     PENDING_REMINDER_DAYS = 3
 
     # Injection seams for tests (no mocking library in this suite).
-    class_attribute :store_builder, default: -> { Store.new }
     class_attribute :graph_builder, default: -> { GraphClient.new }
     class_attribute :checker_builder, default: -> { ModulusCheck.default_checker }
     # Operator alerts send through Graph (Notifier#send_mail) from the cost
@@ -49,10 +48,6 @@ module Reimbursements
     end
 
     private
-
-    def store
-      @store ||= store_builder.call
-    end
 
     def modulus_checker
       @modulus_checker ||= checker_builder.call
@@ -214,8 +209,8 @@ module Reimbursements
     end
 
     def handle_failure(cost_centre, error, today, dry_run)
-      Rails.logger.error("Nightly: #{cost_centre.key} raised #{error.class}: #{error.message}")
-      Honeybadger.notify(error, context: { source: "reimbursements_nightly_batch", cost_centre: cost_centre.key })
+      log_and_notify("Nightly: #{cost_centre.key} raised #{error.class}: #{error.message}", error,
+                     context: { source: "reimbursements_nightly_batch", cost_centre: cost_centre.key })
       return if dry_run
 
       notify(cost_centre) { |emailer, to| emailer.failure(recipients: to, error_text: error.message, run_date: run_date(today)) }
@@ -247,8 +242,8 @@ module Reimbursements
       GraphAuthAlert.notify(e, source: "reimbursements_nightly_batch")
       false
     rescue StandardError => e
-      Rails.logger.error("Nightly: operator email failed for #{cost_centre.key} — #{e.message}")
-      Honeybadger.notify(e, context: { source: "reimbursements_nightly_email", cost_centre: cost_centre.key })
+      log_and_notify("Nightly: operator email failed for #{cost_centre.key} — #{e.message}", e,
+                     context: { source: "reimbursements_nightly_email", cost_centre: cost_centre.key })
       false
     end
 
@@ -259,9 +254,10 @@ module Reimbursements
     def record_run(cost_centre, today)
       cost_centre.record_nightly_run!(today)
     rescue StandardError => e
-      Rails.logger.error("Nightly: failed to record the run for #{cost_centre.key} after a " \
-                         "successful alert: #{e.message}")
-      Honeybadger.notify(e, context: { source: "reimbursements_nightly_record_run", cost_centre: cost_centre.key })
+      log_and_notify(
+        "Nightly: failed to record the run for #{cost_centre.key} after a successful alert: #{e.message}", e,
+        context: { source: "reimbursements_nightly_record_run", cost_centre: cost_centre.key }
+      )
     end
 
     def notifier(cost_centre)

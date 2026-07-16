@@ -108,8 +108,8 @@ module Admin
             graph.delete_message(mailbox: draft_mailbox, message_id: batch.draft_message_id)
             return { notice: "#{reverted} The old EUSA draft in Outlook has been deleted." }
           rescue StandardError => e
-            Rails.logger.error("Reopen: failed to delete EUSA draft #{batch.draft_message_id} — #{e.message}")
-            Honeybadger.notify(e, context: { source: "reimbursements_reopen_draft_delete", batch: batch.record_id })
+            log_and_notify("Reopen: failed to delete EUSA draft #{batch.draft_message_id} — #{e.message}", e,
+                           context: { source: "reimbursements_reopen_draft_delete", batch: batch.record_id })
           end
         end
 

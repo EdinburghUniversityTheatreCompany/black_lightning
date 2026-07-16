@@ -19,7 +19,7 @@ module Reimbursements
   # expense was created, that's the one duplicate-risk case, so it's flagged to
   # Honeybadger rather than silently swallowed.
   # Graph credential failures alert the IT subcommittee, deduped to once/day.
-  class MailboxPollJob < ApplicationJob
+  class MailboxPollJob < Reimbursements::ApplicationJob
     queue_as :default
     # duration: set well above the default 3-minute lock TTL — a poll runs
     # Gemini extraction per new message across every cost centre's mailbox,
@@ -41,7 +41,6 @@ module Reimbursements
     # builder takes the cost centre so each is polled on its OWN receive mailbox.
     class_attribute :mailbox_builder,
                     default: ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
-    class_attribute :store_builder, default: -> { Store.new }
     class_attribute :extractor_builder, default: -> { Extractor.new }
 
     # Every cost centre has its own receive mailbox (Fringe today, termtime next),
@@ -70,8 +69,8 @@ module Reimbursements
     rescue MailboxClient::AuthError
       raise
     rescue => e
-      Rails.logger.error("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}")
-      Honeybadger.notify(e, context: { source: "reimbursements_mailbox_poll", cost_centre: cost_centre.key })
+      log_and_notify("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}", e,
+                     context: { source: "reimbursements_mailbox_poll", cost_centre: cost_centre.key })
     end
 
     def poll_cost_centre(cost_centre)
@@ -82,10 +81,6 @@ module Reimbursements
 
     def mailbox
       @mailbox
-    end
-
-    def store
-      @store ||= store_builder.call
     end
 
     def extractor
@@ -106,8 +101,8 @@ module Reimbursements
     rescue MailboxClient::AuthError
       raise
     rescue => e
-      Rails.logger.error("Reimbursements poll failed for message #{message.id}: #{e.message}")
-      Honeybadger.notify(e, context: { message_id: message.id, from: message.from_address })
+      log_and_notify("Reimbursements poll failed for message #{message.id}: #{e.message}", e,
+                     context: { message_id: message.id, from: message.from_address })
       # Leave the message unread; the next poll cycle retries it.
     end
 
@@ -223,11 +218,11 @@ module Reimbursements
     rescue MailboxClient::AuthError
       raise
     rescue => e
-      Rails.logger.error("Reimbursements could not mark message #{message.id} read after " \
-                         "creating expense #{expense.record_id}; it may be re-processed into a " \
-                         "duplicate: #{e.message}")
-      Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id,
-                                       duplicate_risk: true })
+      log_and_notify(
+        "Reimbursements could not mark message #{message.id} read after creating expense " \
+        "#{expense.record_id}; it may be re-processed into a duplicate: #{e.message}", e,
+        context: { message_id: message.id, expense_record_id: expense.record_id, duplicate_risk: true }
+      )
       false
     end
 
@@ -242,8 +237,8 @@ module Reimbursements
     rescue MailboxClient::AuthError
       raise
     rescue => e
-      Rails.logger.error("Reimbursements #{description} failed for #{message.id}: #{e.message}")
-      Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id })
+      log_and_notify("Reimbursements #{description} failed for #{message.id}: #{e.message}", e,
+                     context: { message_id: message.id, expense_record_id: expense.record_id })
       false
     end
 
