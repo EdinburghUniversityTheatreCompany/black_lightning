@@ -39,6 +39,14 @@ module Reimbursements
       assert_match(/excl. VAT/i, error(amount: "20.00", amount_excl_vat: "abc"))
     end
 
+    test "an excl VAT greater than the total amount is rejected" do
+      assert_match(/can't be more than the total/i, error(amount: "20.00", amount_excl_vat: "25.00"))
+    end
+
+    test "an excl VAT equal to the total amount is valid" do
+      assert_nil error(amount: "20.00", amount_excl_vat: "20.00")
+    end
+
     # Kernel#Float alone accepts "0x1A" as hex (26.0) and "1e10" as scientific
     # notation, but String#to_f — used by the actual write path,
     # Mapper#expense_fields — parses either as 0.0/1.0, silently disagreeing

@@ -36,6 +36,14 @@ module Reimbursements
       assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01-23-4X", "12345678")
     end
 
+    test "a tab or newline is not a documented separator either, and must also fail normalization" do
+      # \s (rather than a literal space) would also strip tabs/newlines --
+      # a real risk for a value pasted from a spreadsheet cell -- silently
+      # reducing to a clean-looking digit string that shouldn't pass.
+      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01\t23\t45", "12345678")
+      assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("01\n23\n45", "12345678")
+    end
+
     test "short sort code returns invalid" do
       assert_equal ModulusCheck::INVALID, checker([ BASIC_MOD11 ]).check("12345", "12345678")
     end

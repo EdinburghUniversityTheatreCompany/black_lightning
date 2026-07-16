@@ -131,7 +131,11 @@ module Reimbursements
       end
 
       def self.strip_separators(value)
-        cleaned = value.to_s.gsub(/[\-\s]/, "")
+        # A literal space only — \s would also match tab/newline/CR, which
+        # aren't documented separators either and would defeat the whole
+        # point of this method (a tab pasted from a spreadsheet cell must
+        # not silently reduce to a clean-looking digit string).
+        cleaned = value.to_s.gsub(/[\- ]/, "")
         cleaned.match?(/\A\d+\z/) ? cleaned : nil
       end
       private_class_method :strip_separators
