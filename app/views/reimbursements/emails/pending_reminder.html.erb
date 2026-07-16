@@ -11,7 +11,9 @@
 
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
   <thead style="background-color: #f0f0f0;">
-    <tr><th>#</th><th>Payee</th><th>Amount</th><th>Waiting</th></tr>
+    <tr>
+      <th scope="col">#</th><th scope="col">Payee</th><th scope="col">Amount</th><th scope="col">Waiting</th>
+    </tr>
   </thead>
   <tbody>
     <% @rows.each do |row| %>

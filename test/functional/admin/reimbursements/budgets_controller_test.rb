@@ -151,6 +151,11 @@ module Admin
         assert_includes response.body, "Alice Owner"
         assert_includes response.body, "Bob Owner"
         assert_includes response.body, "Initial projection"
+        # select_tag "owner_ids[]" renders id="owner_ids_" (Rails strips the []
+        # into a trailing underscore) — the label must point at that exact id,
+        # not the naive "owner_ids" a bare label_tag(:owner_ids, ...) would produce.
+        assert_select "label[for=owner_ids_]"
+        assert_select "select#owner_ids_[multiple]"
       end
 
       test "editing an unknown budget 404s" do

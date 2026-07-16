@@ -155,7 +155,7 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
   <%= button_to "Run access check", test_access_admin_reimbursements_setting_path(@cost_centre.key),
                 method: :post, class: btn_classes(:secondary, :sm),
                 data: { turbo_submits_with: "Testing…" } %>
-  <div id="access_check_results">
+  <div id="access_check_results" aria-live="polite">
     <%= render "access_checks", checks: @access_checks %>
   </div>
 <% end %>

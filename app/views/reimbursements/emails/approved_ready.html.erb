@@ -15,7 +15,10 @@
 <p><strong>Ready to batch:</strong></p>
 <table border="1" cellspacing="0" cellpadding="4" style="border-collapse: collapse; font-family: sans-serif; margin-bottom: 1em;">
   <thead style="background-color: #f0f0f0;">
-    <tr><th>#</th><th>Payee</th><th>Amount</th><th>Budget</th><th>Description</th></tr>
+    <tr>
+      <th scope="col">#</th><th scope="col">Payee</th><th scope="col">Amount</th>
+      <th scope="col">Budget</th><th scope="col">Description</th>
+    </tr>
   </thead>
   <tbody>
     <% @expenses.each do |expense| %>

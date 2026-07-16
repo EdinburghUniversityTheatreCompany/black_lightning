@@ -482,3 +482,27 @@ without stopping to ask — logged here for review in a batch rather than blocki
   meant only for the 4 consolidated jobs would silently also apply here, with no diff to review it
   against. Fixed by making `CredentialsCheckJob < ::ApplicationJob` explicit (fully top-level
   qualified) with a comment explaining why, restoring the original, intended inheritance.
+
+## Tier 8 (accessibility sweep) — first batch
+
+- **#10 + #26 (missing `aria-live`)**: added `aria-live="polite"` to `_ai_verdict.html.erb`'s
+  wrapper div (the AiCheckJob Turbo Stream replace target) and `settings/edit.html.erb`'s
+  `#access_check_results` div. No visible rendering change (confirmed — an ARIA attribute has no
+  visual effect), so no vischeck was run for these two; herb-lint + the existing controller test
+  suites covering these pages are the verification.
+- **#16 + #48 + #96 + #216 (missing `scope="col"`)**: added to every `<th>` across the 7 email
+  templates (#16) plus `batches/new.html.erb`, `batches/show.html.erb`, `reconcile/preview.html.erb`
+  (#48), and `budgets/edit.html.erb`'s forecast-log table (#96/#216) — one consistent pattern,
+  applied everywhere it recurs per the plan's own instruction.
+- **#34 (label `for` mismatch, Owners multi-select)**: verified live via `bin/rails runner` that
+  `select_tag "owner_ids[]"` really does render `id="owner_ids_"` (Rails strips `[]` into a
+  trailing underscore) before fixing — `label_tag :owner_ids` was pointing at a nonexistent
+  `owner_ids` id. Fixed to `label_tag "owner_ids_"`. Added a regression test
+  (`assert_select "label[for=owner_ids_]"` + `assert_select "select#owner_ids_[multiple]"`) since
+  this is a genuine behavioral fix (label-click-to-focus, screen-reader association), not a
+  no-op attribute addition.
+- Rode along with #34 in the same file/edit: wired the "Ctrl/Cmd-click to select more than one"
+  hint text to the select via `aria-describedby` (the same fix #153 asks for elsewhere) — cheap to
+  do at the same time since I was already touching this exact label/select pair.
+- Verified: `bundle exec herb lint` clean on all 13 touched files, full relevant controller/mailer
+  test suites green, jscpd clean.
