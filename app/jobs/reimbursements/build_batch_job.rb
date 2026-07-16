@@ -66,6 +66,13 @@ module Reimbursements
         eusa_subject: eusa_subject, eusa_body_html: eusa_body_html
       )
       notify(cost_centre, result, approved, operator_emails)
+    rescue GraphAuth::AuthError => e
+      # Unlike an ordinary Graph outage, a credential failure means every
+      # further Graph call (including the operator notifier itself) would
+      # fail identically — escalate straight to the IT subcommittee instead of
+      # attempting a doomed operator email.
+      Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre_key} — #{e.message}")
+      GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
     end
 
     private
@@ -112,6 +119,9 @@ module Reimbursements
         emailer.failure(recipients: recipients, error_text: Array(result.errors).join("\n"),
                         run_date: run_date(result.bacs_date))
       end
+    rescue GraphAuth::AuthError => e
+      Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre.key} — #{e.message}")
+      GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
     rescue StandardError => e
       Rails.logger.error("Build batch: operator email failed for #{cost_centre.key} — #{e.message}")
       Honeybadger.notify(e, context: { source: "reimbursements_build_batch_email", cost_centre: cost_centre.key })

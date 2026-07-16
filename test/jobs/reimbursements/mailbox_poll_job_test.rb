@@ -100,7 +100,7 @@ module Reimbursements
         ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
       MailboxPollJob.store_builder = -> { Store.new }
       MailboxPollJob.extractor_builder = -> { Extractor.new }
-      Rails.cache.delete(MailboxPollJob::AUTH_ALERT_CACHE_KEY)
+      Rails.cache.delete(GraphAuthAlert::CACHE_KEY)
     end
 
     test "skips entirely when graph credentials are not configured" do

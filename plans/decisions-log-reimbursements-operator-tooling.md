@@ -181,3 +181,61 @@ without stopping to ask — logged here for review in a batch rather than blocki
   `CostCentre.all.each` has exactly one iteration with only one cost centre configured, so
   `mailbox_builder.call` only runs once per poll cycle right now regardless. Left for a follow-up
   alongside Tier 5's other same-caveat cost-centre findings (#41/#80/#117).
+
+- **#65 + #142 + #187 (nightly-run "send and record aren't atomic")**: fixed #65 and #187
+  directly. `notify` now returns true (sent, or deliberately skipped because no operator
+  recipients are configured — a config gap, not a delivery failure) or false (a send was attempted
+  and failed); `handle_issues`/`alert_ready` only call `record_nightly_run!` when `notify` returned
+  true, so a genuinely failed alert is retried the next due day instead of being silently recorded
+  as handled and lost forever. `record_nightly_run!` is now called through a `record_run` wrapper
+  that rescues its own failure (a DB blip) so it can't propagate into `run_for`'s outer rescue and
+  trigger a spurious second "FAILED" email on top of an alert that already sent successfully. Did
+  **not** separately fix #142 (a crash between a successful send and `record_run`'s commit still
+  re-sends the identical alert next day) — same reasoning as the already-deferred #141: the residual
+  window is now a single local DB write with no I/O of its own following a successful external call,
+  genuinely narrow, and the alert in question is an internal operator nudge (not a payment), so a
+  rare duplicate is a low-severity nuisance rather than a money-safety issue.
+
+- **#168 (remind_stale_pending has no dedup key of its own) — reviewed, no fix needed.** Unlike
+  #203, this path is DELIBERATELY meant to nag daily until the stale item is resolved (re-evaluated
+  fresh each due day from current data), and it already only fires once per due day via the same
+  `nightly_due?` gate every other outcome uses — adding a persisted "already reminded" dedup would
+  actively work against the daily-nag design, not fix a bug. Left as-is.
+
+- **#203 (CredentialsCheckJob has no dedup on the daily secret-expiry warning)**: fixed with the
+  same `Rails.cache`-backed once-daily dedup `MailboxPollJob#alert_auth_failure` already uses —
+  guards against Solid Queue's recurring-task catch-up enqueueing more than one run for the same
+  day, or an operator manually re-triggering the job, either of which would otherwise resend the
+  identical warning same-day.
+
+- **#222 (only MailboxPollJob escalates GraphAuth::AuthError to IT)**: extracted the escalation
+  logic MailboxPollJob already had into a new shared `Reimbursements::GraphAuthAlert.notify(error,
+  source:)` (one shared dedup cache key across all three jobs — a credential failure hit by more
+  than one job in the same cycle now sends a single email, not one per job) and wired it into both
+  `NightlyBatchJob#notify` and `BuildBatchJob#notify`/`#perform` (the latter needed a rescue at both
+  the notify step AND the outer `perform` body, since `BatchProcessor#process`'s own SharePoint/
+  Graph-draft calls can raise `AuthError` before `notify` is ever reached). On an auth failure,
+  these jobs now skip the (equally doomed) operator email entirely rather than attempting it.
+
+- Fixing #222 surfaced a real jscpd duplication: adding the same `fail_with:` parameter to both
+  jobs' near-identical test `FakeNotifier` doubles tipped them over the zero-duplication gate —
+  consolidated both into one shared `ReimbursementsTestHelpers::FakeNotifier` (covering the union of
+  methods both jobs' real `Notifier` calls: `pending_reminder`/`manual_review`/`approved_ready`/
+  `batch_ready`/`failure`). This happens to close Tier 7's already-planned #46 finding as a
+  byproduct, not something separately scheduled here.
+
+- **Housekeeping note**: discovered mid-tier that my own manual `bash scripts/run-jscpd.sh <file
+  list>` sanity checks between edits were silent no-ops all session — the script's positional arg
+  is a jscpd `-f <formats>` filter (e.g. `ruby,erb,...`), not a file list, so passing file paths
+  there ran `jscpd . -f "<first file path>"`, matched zero files, and always trivially reported "0
+  clones." The REAL gate (hk's pre-commit step, invoked correctly via `git commit` every time this
+  session) was never affected and did catch real duplication (e.g. this exact FakeNotifier case,
+  and the two "fail_update_record_when helper" cases earlier in the session) — so no already-made
+  commit is unverified. Going forward this session, the correct manual invocation is
+  `bash scripts/run-jscpd.sh ruby,erb,javascript,typescript,css,scss,sass,vue` (whole-repo scan, no
+  file-path arguments).
+
+- **Tier 3 (job reliability & idempotency) is now complete.** Every finding in its four groups
+  (mailbox poll, concurrency/timing, nightly-run alerting, token/client reuse) is either fixed,
+  deliberately deferred with reasoning (#4, #207, #142), or reviewed and found not to need a change
+  (#168, #12 pre-existing). Continuing to Tier 4 (security hardening) next.

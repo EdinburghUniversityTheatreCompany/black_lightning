@@ -28,7 +28,6 @@ module Reimbursements
     # double-processing unread mail.
     limits_concurrency key: "reimbursements_mailbox_poll", duration: 15.minutes
 
-    AUTH_ALERT_CACHE_KEY = "reimbursements/auth-failure-alerted".freeze
     SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
     AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
 
@@ -230,11 +229,7 @@ module Reimbursements
     end
 
     def alert_auth_failure(error)
-      Honeybadger.notify(error, context: { source: "reimbursements_mailbox_poll" })
-      Rails.cache.fetch(AUTH_ALERT_CACHE_KEY, expires_in: 1.day) do
-        ReimbursementsMailer.auth_failure(error.message).deliver_now
-        true
-      end
+      GraphAuthAlert.notify(error, source: "reimbursements_mailbox_poll")
     end
 
     def portal_url

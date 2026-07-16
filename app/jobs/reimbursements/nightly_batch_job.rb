@@ -182,11 +182,11 @@ module Reimbursements
       Rails.logger.info("Nightly: #{issues.size} issue(s), #{unblocked_count} clean for #{cost_centre.key}")
       return if dry_run
 
-      notify(cost_centre) do |emailer, to|
+      sent = notify(cost_centre) do |emailer, to|
         emailer.manual_review(recipients: to, issues: issues, unblocked_count: unblocked_count,
                               run_date: run_date(today), next_run_day: next_run_day(cost_centre, today))
       end
-      cost_centre.record_nightly_run!(today)
+      record_run(cost_centre, today) if sent
     end
 
     # The Approved queue is clean: alert the operator that N expenses are ready
@@ -206,11 +206,11 @@ module Reimbursements
           amount: format("%.2f", expense.amount || 0), budget_name: expense.budget&.name.to_s,
           description: expense.description.to_s }
       end
-      notify(cost_centre) do |emailer, to|
+      sent = notify(cost_centre) do |emailer, to|
         emailer.approved_ready(recipients: to, expenses: rows, total: format("%.2f", total),
                                run_date: run_date(today))
       end
-      cost_centre.record_nightly_run!(today)
+      record_run(cost_centre, today) if sent
     end
 
     def handle_failure(cost_centre, error, today, dry_run)
@@ -226,16 +226,42 @@ module Reimbursements
     # Send an operator alert through Graph from the cost centre's send mailbox.
     # A Graph failure must never break the nightly run (or trip the surrounding
     # rescue into sending a spurious failure email), so it's rescued + logged.
+    #
+    # Returns true when the alert was actually sent (or deliberately skipped —
+    # no operator recipients configured is a config gap, not a delivery
+    # failure, and must not block the run from being recorded), false when a
+    # send was attempted and failed. Callers that also call record_run must
+    # gate that call on this return value: recording a run whose alert
+    # silently failed to send would lose that alert forever, since
+    # nightly_due? would then treat the run-day as already handled.
     def notify(cost_centre)
       recipients = operator_emails
       if recipients.empty?
         Rails.logger.warn("Nightly: no operator recipients configured — email skipped")
-        return
+        return true
       end
       yield(notifier(cost_centre), recipients)
+      true
+    rescue GraphAuth::AuthError => e
+      Rails.logger.error("Nightly: Graph authentication failing for #{cost_centre.key} — #{e.message}")
+      GraphAuthAlert.notify(e, source: "reimbursements_nightly_batch")
+      false
     rescue StandardError => e
       Rails.logger.error("Nightly: operator email failed for #{cost_centre.key} — #{e.message}")
       Honeybadger.notify(e, context: { source: "reimbursements_nightly_email", cost_centre: cost_centre.key })
+      false
+    end
+
+    # Record a completed run-day, but never let a failure here (a DB blip)
+    # propagate into run_for's outer rescue — the alert this run-day's outcome
+    # already sent successfully would otherwise get followed by a spurious
+    # "FAILED" email on top of a real success.
+    def record_run(cost_centre, today)
+      cost_centre.record_nightly_run!(today)
+    rescue StandardError => e
+      Rails.logger.error("Nightly: failed to record the run for #{cost_centre.key} after a " \
+                         "successful alert: #{e.message}")
+      Honeybadger.notify(e, context: { source: "reimbursements_nightly_record_run", cost_centre: cost_centre.key })
     end
 
     def notifier(cost_centre)

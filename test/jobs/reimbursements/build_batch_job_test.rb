@@ -9,28 +9,7 @@ module Reimbursements
     OPERATOR = [ "operator@bedlamfringe.co.uk" ].freeze
 
     FakeProcessor = ReimbursementsTestHelpers::FakeBatchProcessor
-
-    # Records the operator alerts sent through the Graph notifier plus the
-    # mailbox it was built for. +fail+ makes every send raise (a Graph outage).
-    class FakeNotifier
-      attr_reader :calls, :mailbox
-
-      def initialize(mailbox: nil, fail: false)
-        @mailbox = mailbox
-        @fail = fail
-        @calls = []
-      end
-
-      def record(name, kwargs)
-        raise Reimbursements::GraphAuth::Error, "graph down" if @fail
-
-        @calls << [ name, kwargs ]
-        nil
-      end
-
-      def batch_ready(**k) = record(:batch_ready, k)
-      def failure(**k) = record(:failure, k)
-    end
+    FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
 
     def payee(**attrs)
       airtable_person_record(sort_code: "08-99-99", account_number: "66374958", **attrs)
@@ -131,6 +110,36 @@ module Reimbursements
       assert_empty alerts(:batch_ready)
       failure = alerts(:failure).sole.last
       assert_match(/EUSA draft creation failed/, failure[:error_text])
+    end
+
+    test "a Graph credential failure notifying the operator escalates to IT, not a doomed retry" do
+      @notifier = FakeNotifier.new(fail: true, fail_with: Reimbursements::GraphAuth::AuthError)
+      stock_store([ approved_expense ])
+
+      assert_emails 1 do
+        assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args) }
+      end
+
+      assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
+      assert_empty alerts(:failure), "an auth failure must not also attempt the (equally doomed) failure email"
+    ensure
+      Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
+    end
+
+    test "a Graph credential failure inside the batch build itself also escalates to IT" do
+      @processor = FakeProcessor.new
+      @processor.define_singleton_method(:process) { |**| raise Reimbursements::GraphAuth::AuthError, "token expired" }
+      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+      stock_store([ approved_expense ])
+
+      assert_emails 1 do
+        assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args) }
+      end
+
+      assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
+      assert_empty @notifier.calls, "no operator email is attempted once Graph auth itself is broken"
+    ensure
+      Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
 
     test "an unknown cost centre is a safe no-op" do

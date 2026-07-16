@@ -22,30 +22,7 @@ module Reimbursements
       def expenses = raise(StandardError, "airtable down")
     end
 
-    # Records the operator alerts the job sends through the Graph notifier, plus
-    # the mailbox it was built for. +fail+ makes every send raise, standing in
-    # for a Graph outage.
-    class FakeNotifier
-      attr_reader :calls, :mailbox
-
-      def initialize(mailbox: nil, fail: false)
-        @mailbox = mailbox
-        @fail = fail
-        @calls = []
-      end
-
-      def record(name, kwargs)
-        raise Reimbursements::GraphAuth::Error, "graph down" if @fail
-
-        @calls << [ name, kwargs ]
-        nil
-      end
-
-      def pending_reminder(**k) = record(:pending_reminder, k)
-      def manual_review(**k) = record(:manual_review, k)
-      def approved_ready(**k) = record(:approved_ready, k)
-      def failure(**k) = record(:failure, k)
-    end
+    FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
 
     def payee(**attrs)
       airtable_person_record(sort_code: "08-99-99", account_number: "66374958", **attrs)
@@ -188,16 +165,34 @@ module Reimbursements
                    "both notify calls in this run must share one GraphClient (one OAuth token fetch)"
     end
 
-    test "a Graph email failure doesn't break the run or trip a spurious failure email" do
+    test "a Graph email failure does not record the run, so the alert is retried, not lost" do
       @notifier = FakeNotifier.new(fail: true)
       stock_store([ approved_expense ])
 
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
-      # The run is still recorded despite the alert send failing, and no failure
-      # email is sent from the surrounding rescue.
+      # notify() swallows the Graph error internally, so run_for's outer rescue
+      # never fires (no spurious failure email) — but the alert genuinely never
+      # reached the operator, so the run must NOT be recorded: recording it here
+      # would make nightly_due? treat this run-day as handled, silently losing
+      # the alert forever instead of retrying it the next time the job runs.
       assert_empty mailer_calls(:failure)
-      assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+      assert_nil CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a Graph credential failure escalates to the IT subcommittee, not an ordinary error email" do
+      @notifier = FakeNotifier.new(fail: true, fail_with: Reimbursements::GraphAuth::AuthError)
+      stock_store([ approved_expense ])
+
+      assert_emails 1 do
+        assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
+      end
+
+      assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
+      assert_empty mailer_calls(:failure), "an auth failure must not also trip the ordinary failure email"
+      assert_nil CostCentre.default.reload.last_nightly_run_on
+    ensure
+      Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
 
     test "an error raised mid-run emails failure and does not record the run (so it retries)" do
@@ -207,6 +202,23 @@ module Reimbursements
 
       assert_equal 1, mailer_calls(:failure).size
       assert_nil CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a DB failure recording the run after a successful alert doesn't trip a spurious failure email" do
+      stock_store([ approved_expense ])
+      original = CostCentre.instance_method(:record_nightly_run!)
+      CostCentre.define_method(:record_nightly_run!) { |*| raise "DB blip" }
+
+      notified = capture_honeybadger_notices { NightlyBatchJob.perform_now(today: THURSDAY) }
+
+      # The approved-ready alert genuinely sent — the outer rescue must not
+      # additionally fire and send a false "FAILED" email on top of that real
+      # success just because the follow-up record write failed.
+      assert_equal 1, mailer_calls(:approved_ready).size
+      assert_empty mailer_calls(:failure)
+      assert_equal 1, notified.size, "the record-write failure must still be reported"
+    ensure
+      CostCentre.define_method(:record_nightly_run!, original)
     end
 
     # --- Dry run -----------------------------------------------------------

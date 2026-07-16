@@ -383,6 +383,35 @@ module ReimbursementsTestHelpers
     end
   end
 
+  # Records the operator alerts the job sends through the Graph notifier, plus
+  # the mailbox it was built for — a shared stand-in for Notifier across
+  # NightlyBatchJob/BuildBatchJob tests. +fail+ makes every send raise
+  # +fail_with+ (a plain Graph outage by default; pass
+  # Reimbursements::GraphAuth::AuthError to drive the IT-escalation path).
+  class FakeNotifier
+    attr_reader :calls, :mailbox
+
+    def initialize(mailbox: nil, fail: false, fail_with: Reimbursements::GraphAuth::Error)
+      @mailbox = mailbox
+      @fail = fail
+      @fail_with = fail_with
+      @calls = []
+    end
+
+    def record(name, kwargs)
+      raise @fail_with, "graph down" if @fail
+
+      @calls << [ name, kwargs ]
+      nil
+    end
+
+    def pending_reminder(**k) = record(:pending_reminder, k)
+    def manual_review(**k) = record(:manual_review, k)
+    def approved_ready(**k) = record(:approved_ready, k)
+    def batch_ready(**k) = record(:batch_ready, k)
+    def failure(**k) = record(:failure, k)
+  end
+
   # Fake GraphClient for BatchProcessor / Build Batch / Notifier tests: records
   # drafts, sent mail, uploads and downloads, with toggles to make the draft,
   # a send, or uploads fail.
