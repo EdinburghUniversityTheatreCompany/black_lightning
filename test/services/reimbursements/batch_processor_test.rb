@@ -150,6 +150,23 @@ module Reimbursements
       assert_equal [ "bob@example.com" ], graph.send_mails.map { |mail| mail[:to] }.flatten
     end
 
+    test "a transient mark_submitted write failure is retried, matching create_batch! and mark_notified" do
+      processor, store, client, graph = build_scenario
+      calls = 0
+      fail_update_record_when(client) do |table, record_id, fields|
+        next false unless table == :expenses && record_id == "recExpA" && fields[FIELD_IDS[:expenses][:status]] == "Submitted"
+
+        calls += 1
+        calls == 1
+      end
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_equal %w[recExpA recExpB].sort, store.expenses.select { |e| e.status == Status::SUBMITTED }.map(&:record_id).sort
+      assert_equal 2, graph.send_mails.size, "both producers were actually emailed"
+    end
+
     test "receipts_offloaded is only stamped true when the receipt upload actually succeeded" do
       processor, store, client, graph = build_scenario
       graph.fail_uploads = true # every SharePoint upload (BACS xlsx + every receipt) fails
@@ -177,6 +194,24 @@ module Reimbursements
       notif_field = FIELD_IDS[:batches][:producer_notifications_sent]
       batch_writes = client.updated.select { |table, _, fields| table == :batches && fields.key?(notif_field) }
       assert_empty batch_writes, "must not claim notifications were sent when every send failed"
+    end
+
+    test "producer_notifications_sent flag is set when there was nothing left to notify" do
+      already = airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved",
+                                        auto_number: 11,
+                                        overrides: { FIELD_IDS[:expenses][:producer_notified] => true })
+      also_already = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved",
+                                             auto_number: 12,
+                                             overrides: { FIELD_IDS[:expenses][:producer_notified] => true })
+      processor, store, client, graph = build_scenario(expenses: [ already, also_already ])
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_empty graph.send_mails, "both producers were already notified before this build"
+      notif_field = FIELD_IDS[:batches][:producer_notifications_sent]
+      batch_write = client.updated.find { |table, _id, fields| table == :batches && fields.key?(notif_field) }
+      assert batch_write.last[notif_field], "nothing outstanding to notify still counts as complete"
     end
 
     test "a transient producer_notified write failure is retried, matching create_batch!" do

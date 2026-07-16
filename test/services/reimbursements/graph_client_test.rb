@@ -74,6 +74,33 @@ module Reimbursements
       assert_includes del.uri, "/users/send@bedlamfringe.co.uk/messages/msg-1"
     end
 
+    test "draft_message? returns true for a message Graph still reports as an unsent draft" do
+      client, http = build_client([ token_response, [ 200, { isDraft: true }.to_json ] ])
+
+      assert client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
+      get = http.requests.last
+      assert_equal "get", get.method.to_s
+      assert_includes get.uri, "/users/send@bedlamfringe.co.uk/messages/msg-1"
+    end
+
+    test "draft_message? returns false when Graph reports the message is no longer a draft" do
+      client, = build_client([ token_response, [ 200, { isDraft: false }.to_json ] ])
+
+      assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
+    end
+
+    test "draft_message? returns false (not confirmed) on a 404 — the message was deleted or moved" do
+      client, = build_client([ token_response, [ 404, { error: { message: "not found" } }.to_json ] ])
+
+      assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
+    end
+
+    test "draft_message? returns false (not confirmed) on a raw transport failure, not just a Graph error" do
+      client, = build_client([ token_response, Net::OpenTimeout.new("execution expired") ])
+
+      assert_not client.draft_message?(mailbox: "send@bedlamfringe.co.uk", message_id: "msg-1")
+    end
+
     test "send_mail posts sendMail with saveToSentItems" do
       client, http = build_client([ token_response, [ 202, "" ] ])
 

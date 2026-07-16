@@ -68,12 +68,13 @@ module Admin
         new_rows, @skipped_count = dedup(parsed).then { |new_r, skipped| [ new_r, skipped.size ] }
         matched_debits, matched_credits, unmatched = build_matches(new_rows)
 
-        committed_debits = apply_reconciliation(matched_debits, matched_credits, unmatched)
+        committed_debits, committed_credits, committed_unmatched =
+          apply_reconciliation(matched_debits, matched_credits, unmatched)
         notify_paid_producers(committed_debits)
 
         @expenses_paid = committed_debits.size
-        @credits_linked = matched_credits.size
-        @unmatched_saved = unmatched.size
+        @credits_linked = committed_credits.size
+        @unmatched_saved = committed_unmatched.size
         render :apply
       end
 
@@ -171,16 +172,18 @@ module Admin
       # and since apply is idempotent-by-design (already_reconciled? excludes
       # anything already linked), a retry could never re-send those emails —
       # they'd be lost permanently even though rows 1..k-1 were genuinely paid.
-      # Returns the [row, expense] pairs actually committed, for the caller to
-      # notify.
+      # Returns [committed_debits, committed_credits, committed_unmatched] —
+      # each the subset that actually made it through, so the caller's summary
+      # counts (and the producer-notification list) never claim more happened
+      # than really did.
       def apply_reconciliation(matched_debits, matched_credits, unmatched)
         imported_at = Time.current
 
         committed_debits = matched_debits.select { |row, expense| apply_debit_row(row, expense, imported_at) }
-        matched_credits.each { |row, budget| apply_credit_row(row, budget, imported_at) }
-        unmatched.each { |row| apply_unmatched_row(row, imported_at) }
+        committed_credits = matched_credits.select { |row, budget| apply_credit_row(row, budget, imported_at) }
+        committed_unmatched = unmatched.select { |row| apply_unmatched_row(row, imported_at) }
 
-        committed_debits
+        [ committed_debits, committed_credits, committed_unmatched ]
       end
 
       def apply_debit_row(row, expense, imported_at)
@@ -197,14 +200,18 @@ module Admin
       def apply_credit_row(row, budget, imported_at)
         actual = store.create_actual!(actuals_attrs(row, imported_at))
         store.link_actual_to_budget!(actual.record_id, budget.record_id)
+        true
       rescue StandardError => e
         report_reconciliation_row_failure("budget #{budget.name}", e)
+        false
       end
 
       def apply_unmatched_row(row, imported_at)
         store.create_actual!(actuals_attrs(row, imported_at))
+        true
       rescue StandardError => e
         report_reconciliation_row_failure("an unmatched row", e)
+        false
       end
 
       def report_reconciliation_row_failure(subject, error)

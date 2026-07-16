@@ -458,7 +458,12 @@ module ReimbursementsTestHelpers
 
     def call(http_method, uri, headers, body)
       @requests << Request.new(http_method, uri.to_s, headers, body)
-      @responses.shift || raise("FakeHttp exhausted after #{@requests.size} requests")
+      response = @responses.shift || raise("FakeHttp exhausted after #{@requests.size} requests")
+      # A queued Exception simulates a transport-level failure (timeout, DNS,
+      # TLS) rather than an ordinary HTTP response.
+      raise response if response.is_a?(Exception)
+
+      response
     end
   end
 end

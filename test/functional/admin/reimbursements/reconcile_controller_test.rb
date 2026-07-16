@@ -335,6 +335,18 @@ module Admin
       assert_match(/hit a problem/i, response.body)
     end
 
+    test "a failed credit row is not counted in credits_linked" do
+      linked_field = FIELD_IDS[:eusa_actuals][:linked_budget]
+      fail_update_record_when(@client) { |table, _record_id, fields| table == :eusa_actuals && fields.key?(linked_field) }
+      sign_in @user
+
+      post :apply, params: { pasted_text: "#{HEADER}\n#{credit_row}" }
+
+      assert_response :success
+      assert_equal 0, assigns(:credits_linked), "a row whose link write failed must not count as linked"
+      assert_match(/budget Ticket income.*blip/i, assigns(:reconciliation_errors).sole)
+    end
+
     test "apply redirects when the pasted text is missing" do
       sign_in @user
       post :apply, params: { pasted_text: "" }

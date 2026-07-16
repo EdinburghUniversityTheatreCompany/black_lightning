@@ -195,6 +195,18 @@ base the bedlam-bacs operator app (sibling repo) reviews and pays from. Spec + p
   FakeAirtableClient, `build_fake_store`) via `class_attribute` builder seams on
   `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test helper
   `message` — it collides with Minitest's internal `message(msg, ending)`.
+- **BACS batch invariants** (`Reimbursements::BatchProcessor`): the vendored xlsx
+  template (`lib/reimbursements/templates/EUSA_BACS_template.xlsx`) caps a batch at
+  `BacsXlsx::MAX_ROWS` (200) data rows — its GRAND TOTAL formula and the Authorisation
+  Form's cross-sheet total only cover that range, so a bigger batch raises `TemplateError`
+  rather than silently corrupting the total. `BatchProcessor#process`'s `result.success`
+  reflects whether *every* expense actually reached `Submitted` (not just whether the EUSA
+  draft was created) — a `mark_submitted` failure is the one exception to "post-draft steps
+  are best-effort," since it leaves that expense in the same double-draft danger the
+  orphan-draft guard exists to prevent. `BatchesController#reopen` won't revert/delete a
+  batch unless Graph positively confirms the stored draft is still unsent — a batch whose
+  draft was already sent by hand in Outlook must never be silently rebuilt into a second
+  live submission.
 
 ## Opportunities
 

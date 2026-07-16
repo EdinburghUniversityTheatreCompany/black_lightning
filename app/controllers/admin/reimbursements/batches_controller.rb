@@ -107,7 +107,7 @@ module Admin
       def draft_cleanup_flash(batch, reverted)
         if batch.draft_message_id.present?
           begin
-            graph_builder.call.delete_message(mailbox: draft_mailbox, message_id: batch.draft_message_id)
+            graph.delete_message(mailbox: draft_mailbox, message_id: batch.draft_message_id)
             return { notice: "#{reverted} The old EUSA draft in Outlook has been deleted." }
           rescue StandardError => e
             Rails.logger.error("Reopen: failed to delete EUSA draft #{batch.draft_message_id} — #{e.message}")
@@ -130,7 +130,14 @@ module Admin
       # only way to tell is asking Graph whether the stored message id is
       # still an unsent draft right now.
       def confirmed_still_draft?(batch)
-        graph_builder.call.draft_message?(mailbox: draft_mailbox, message_id: batch.draft_message_id)
+        graph.draft_message?(mailbox: draft_mailbox, message_id: batch.draft_message_id)
+      end
+
+      # Memoized so a single reopen request (which calls both #confirmed_still_draft?
+      # and #draft_cleanup_flash) shares one client and one Entra OAuth token
+      # fetch instead of two.
+      def graph
+        @graph ||= graph_builder.call
       end
 
       def blocked_by_unconfirmed_draft

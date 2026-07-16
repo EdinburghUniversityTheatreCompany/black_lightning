@@ -89,13 +89,12 @@ module Admin
           redirect_to_review(alert: "A rejection reason is required.")
           return
         end
-        unless expense.pending? || expense.approved?
-          redirect_to_review(alert: "##{expense.auto_number} can no longer be rejected (already #{expense.status}).")
-          return
-        end
 
-        reject_expense(expense, reason)
-        redirect_to_review(notice: "Rejected ##{expense.auto_number}.")
+        if reject_expense(expense, reason) == :skipped_wrong_status
+          redirect_to_review(alert: "##{expense.auto_number} can no longer be rejected (already #{expense.status}).")
+        else
+          redirect_to_review(notice: "Rejected ##{expense.auto_number}.")
+        end
       end
 
       # Approve every selected Pending expense in one go, reusing the single
@@ -118,7 +117,7 @@ module Admin
         expenses = selected_pending_expenses
         return redirect_to_review(alert: "Select at least one expense to reject.") if expenses.empty?
 
-        emailed = expenses.count { |e| reject_expense(e, reason) }
+        emailed = expenses.count { |e| reject_expense(e, reason) == true }
         redirect_to_review(notice: bulk_reject_summary(expenses.size, emailed))
       end
 
@@ -183,10 +182,19 @@ module Admin
       end
 
       # Reject one expense with a reason (shared by #reject and #bulk_reject).
-      # Notifies the payee, but never blocks the rejection on the send: a missing
-      # email or a Graph failure is skipped gracefully (no stamp) so the operator
-      # follows up. Returns true when the producer was emailed.
+      # Blocks a stale/raced rejection against an expense that's no longer
+      # Pending or Approved (:skipped_wrong_status) — the guard lives here,
+      # not just in #reject, so any future caller gets the same protection
+      # #approve_expense already gives #approve/#bulk_approve, rather than
+      # depending on the caller to pre-filter (bulk_reject's own filter to
+      # Pending only happens to make this unreachable there today). Otherwise
+      # notifies the payee, but never blocks the rejection on the send: a
+      # missing email or a Graph failure is skipped gracefully (no stamp) so
+      # the operator follows up. Returns true when the producer was emailed,
+      # false when it wasn't (rejected either way).
       def reject_expense(expense, reason)
+        return :skipped_wrong_status unless expense.pending? || expense.approved?
+
         attrs = { status: ::Reimbursements::Status::REJECTED, rejection_reason: reason }
         notified = notify_rejection(expense, reason)
         attrs[:rejection_notified] = Time.current if notified

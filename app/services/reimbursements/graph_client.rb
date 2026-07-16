@@ -86,7 +86,11 @@ module Reimbursements
     def draft_message?(mailbox:, message_id:)
       message = graph_request(:get, "/users/#{mailbox}/messages/#{message_id}", params: { "$select" => "isDraft" })
       message["isDraft"] == true
-    rescue GraphAuth::Error
+    rescue StandardError
+      # Not just GraphAuth::Error: a genuine network-level outage (timeout,
+      # DNS failure, TLS error) raises a raw transport exception that never
+      # reaches graph_request's own status check, and must fail closed here
+      # exactly like a 404/permissions error would.
       false
     end
 

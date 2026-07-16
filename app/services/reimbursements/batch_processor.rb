@@ -89,19 +89,20 @@ module Reimbursements
 
       # ORPHAN-DRAFT GUARD — the draft is live and money will move once the
       # operator sends it. If the Batch write can't be recovered, still mark the
-      # expenses Submitted so they leave the Approved queue (a rebuild can't
-      # re-draft them) and surface the orphan draft loudly for manual repair.
+      # expenses Submitted (mark_submitted below doesn't require a batch — a nil
+      # batch_id is simply dropped by the mapper) so they leave the Approved
+      # queue (a rebuild can't re-draft them), still attempt producer
+      # notifications, and surface the orphan draft loudly for manual repair.
       batch = create_batch(result)
+      submitted = mark_submitted(result, expenses, batch, urls_by_expense)
+      notifications_complete = notify_producers(result, submitted.reject(&:producer_notified), bacs_date)
+
       if batch.nil?
-        submitted = mark_submitted(result, expenses, nil, urls_by_expense)
-        notify_producers(result, submitted.reject(&:producer_notified), bacs_date)
         result.errors.unshift(orphan_draft_message(result))
         return result
       end
 
-      submitted = mark_submitted(result, expenses, batch, urls_by_expense)
-      notify_producers(result, submitted.reject(&:producer_notified), bacs_date)
-      flag_batch(result, batch, :producer_notifications_sent) if result.producer_notifications_sent.positive?
+      flag_batch(result, batch, :producer_notifications_sent) if notifications_complete
 
       # Every OTHER post-draft step (SharePoint uploads, producer emails, the
       # Batch-record flags) is genuinely best-effort: their failure is real but
@@ -210,21 +211,18 @@ module Reimbursements
     # only when every attempt failed (the caller then invokes the orphan-draft
     # guard).
     def create_batch(result)
-      attempts = 0
-      begin
-        attempts += 1
-        batch = (attempts > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
+      batch = with_write_retry do |attempt|
+        (attempt > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
           @store.create_batch!(date_sent: result.bacs_date,
                                notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
                                eusa_draft_created: true, sharepoint_backup_url: result.bacs_sharepoint_url,
                                draft_message_id: result.eusa_draft_message_id)
-        result.batch_id = batch.record_id
-        batch
-      rescue StandardError => e
-        retry if attempts < WRITE_RETRY_ATTEMPTS
-        fail_with(result, "Failed to create batch record after #{attempts} attempts: #{e.message}")
-        nil
       end
+      result.batch_id = batch.record_id
+      batch
+    rescue StandardError => e
+      fail_with(result, "Failed to create batch record after #{WRITE_RETRY_ATTEMPTS} attempts: #{e.message}")
+      nil
     end
 
     # +batch+ is nil on the orphan-draft path; batch_id: nil is dropped by the
@@ -238,16 +236,18 @@ module Reimbursements
       batch_id = batch&.record_id
       expenses.select do |expense|
         urls = urls_by_expense.fetch(expense.record_id, [])
-        @store.update_expense!(expense.record_id, status: Status::SUBMITTED, batch_id: batch_id,
-                               submitted_to_eusa_date: result.bacs_date,
-                               receipts_offloaded: receipts_offloaded?(expense, urls),
-                               sharepoint_receipt_urls: urls)
+        with_write_retry do
+          @store.update_expense!(expense.record_id, status: Status::SUBMITTED, batch_id: batch_id,
+                                 submitted_to_eusa_date: result.bacs_date,
+                                 receipts_offloaded: receipts_offloaded?(expense, urls),
+                                 sharepoint_receipt_urls: urls)
+        end
         true
       rescue StandardError => e
         result.errors << "SUBMIT FAILED — DOUBLE-DRAFT RISK: could not mark expense " \
-          "#{expense.auto_number} as Submitted even though it is included in the live EUSA " \
-          "draft (#{result.eusa_draft_web_link}). Fix this expense's status manually before " \
-          "rebuilding, or it will be drafted a second time: #{e.message}"
+          "#{expense.auto_number} as Submitted after #{WRITE_RETRY_ATTEMPTS} attempts, even though " \
+          "it is included in the live EUSA draft (#{result.eusa_draft_web_link}). Fix this " \
+          "expense's status manually before rebuilding, or it will be drafted a second time: #{e.message}"
         false
       end
     end
@@ -273,14 +273,22 @@ module Reimbursements
     # skipped. A send failure is collected into result.errors, never raised —
     # and only the payees whose send actually succeeded are stamped
     # producer_notified, so a rebuild re-notifies anyone the send missed.
+    #
+    # Returns whether notification is COMPLETE — true when there was nothing
+    # left to notify (everyone already notified, or no one with a real email),
+    # or every payee's send succeeded — so the caller only flags the batch's
+    # producer_notifications_sent when that's actually accurate, not merely
+    # when at least one send happened to succeed.
     def notify_producers(result, to_notify, bacs_date)
       grouped = to_notify.group_by { |expense| expense.person&.email.to_s.strip }
                          .reject { |email, _| email.blank? }
+      return true if grouped.empty?
 
       sent_emails = grouped.filter_map do |email, items|
         email if deliver_producer_email(result, email, items, bacs_date)
       end
       mark_notified(result, to_notify, sent_emails)
+      sent_emails.size == grouped.size
     end
 
     # Returns true when the send succeeded (so the caller can stamp the payee),
@@ -305,16 +313,11 @@ module Reimbursements
       to_notify.each do |expense|
         next unless notified_emails.include?(expense.person&.email.to_s.strip)
 
-        attempts = 0
-        begin
-          attempts += 1
-          @store.update_expense!(expense.record_id, producer_notified: true)
-        rescue StandardError => e
-          retry if attempts < WRITE_RETRY_ATTEMPTS
-          result.errors << "Failed to mark producer_notified on #{expense.auto_number} after " \
-            "#{attempts} attempts — their notification email was already sent, so a rebuild " \
-            "risks emailing them twice: #{e.message}"
-        end
+        with_write_retry { @store.update_expense!(expense.record_id, producer_notified: true) }
+      rescue StandardError => e
+        result.errors << "Failed to mark producer_notified on #{expense.auto_number} after " \
+          "#{WRITE_RETRY_ATTEMPTS} attempts — their notification email was already sent, so a " \
+          "rebuild risks emailing them twice: #{e.message}"
       end
     end
 
@@ -322,6 +325,22 @@ module Reimbursements
       @store.update_batch!(batch.record_id, { flag => true }.merge(extra))
     rescue StandardError => e
       result.errors << "Failed to flag batch #{flag}: #{e.message}"
+    end
+
+    # Retries a post-draft write up to WRITE_RETRY_ATTEMPTS times, immediately
+    # (no backoff — the point is to shed a transient blip fast, not compound a
+    # real outage). Yields the current attempt number (1-based) in case the
+    # caller needs to change behavior on a retry (create_batch's dedup lookup).
+    # Re-raises once attempts are exhausted, for the caller to turn into a
+    # result.errors message.
+    def with_write_retry
+      attempts = 0
+      begin
+        attempts += 1
+        yield attempts
+      rescue StandardError
+        attempts < WRITE_RETRY_ATTEMPTS ? retry : raise
+      end
     end
   end
 end
