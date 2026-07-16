@@ -271,6 +271,7 @@ module Reimbursements
       return [ override ] if override
 
       Admin::Permission.where(action: "manage", subject_class: "reimbursements_finance")
+                       .includes(roles: :users)
                        .flat_map(&:roles).flat_map(&:users).uniq
                        .map(&:email).compact_blank
     end
