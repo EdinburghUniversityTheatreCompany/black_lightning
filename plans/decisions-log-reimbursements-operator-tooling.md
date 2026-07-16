@@ -88,5 +88,19 @@ without stopping to ask — logged here for review in a batch rather than blocki
   that a "review the diff before moving on" pass caught something a same-session author missed —
   worth keeping that habit for the remaining tiers.
 
-- **#1 through #225 (Tier 0 + Tier 1) are now complete.** Continuing to Tier 2 (the zero-sentinel
-  amount bug) next.
+- **#1 through #225 (Tier 0 + Tier 1) are now complete.**
+
+## Tier 2 (zero-sentinel amount bug)
+
+- Fixed all four sites (#61, #131, #205, #211) plus the lower-risk fifth instance in
+  `ExpensesController`'s AI-extraction prefill the same finding flagged as worth doing alongside.
+  Rode `#133` (an amount sanity ceiling, `MAX_AMOUNT = 100_000`) along in the same commit per the
+  plan's explicit "cheap to add at the same time" note.
+- A review pass found the fix correct at all sites with no false-positive risk (verified `amount`
+  is always `positive` per `AmountValidation`'s own contract, so a real zero gross amount can't
+  legitimately occur) and confirmed no existing caller plausibly needs an amount anywhere near the
+  new ceiling. One gap found and fixed: the `ExpensesController` site was missing a regression test
+  the other three each got (commit d771a616).
+- Tier 0, 1, and 2 — everything money-safety-critical (double-payment risk, bank-detail/amount
+  validation correctness) — are now complete and each independently reviewed. Continuing to Tier 3
+  (job reliability & idempotency) next.
