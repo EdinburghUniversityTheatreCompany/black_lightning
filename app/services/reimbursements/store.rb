@@ -126,7 +126,15 @@ module Reimbursements
     end
 
     def update_expense!(record_id, attrs)
-      record = @client.update_record(:expenses, record_id, @mapper.expense_fields(attrs))
+      fields = @mapper.expense_fields(attrs)
+      # expense_fields' attrs.compact drops a nil/blank budget_record_id (a
+      # blank submission on the finance edit forms, meaning "clear the
+      # budget") before it ever reaches the mapper's case statement — so an
+      # explicit clear here is the only way the link field is actually
+      # removable, not just settable, once set (same pattern
+      # revert_expense_to_approved! already uses for the batch link).
+      fields[@config.fid(:expenses, :budget)] = [] if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
+      record = @client.update_record(:expenses, record_id, fields)
       bust_expenses!
       map_single_expense(record)
     end

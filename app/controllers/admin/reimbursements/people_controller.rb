@@ -49,6 +49,18 @@ module Admin
           return
         end
 
+        # bank_details? is pure presence — it says nothing about whether the
+        # sort code/account number are actually mathematically consistent.
+        # Gate on the same modulus check the page's own live badge renders
+        # right next to this button, so "Verified" can't contradict what the
+        # operator can see on the same screen.
+        if modulus_checker.check(@person.sort_code, @person.account_number) == ::Reimbursements::ModulusCheck::INVALID
+          redirect_to admin_reimbursements_people_path,
+                      alert: "#{@person.name}'s bank details fail the modulus check — fix them " \
+                             "before marking as verified."
+          return
+        end
+
         store.update_person!(@person.record_id, verified: true)
         redirect_to admin_reimbursements_people_path, notice: "#{@person.name} marked as verified."
       end
@@ -77,6 +89,11 @@ module Admin
         store.update_person!(@person.record_id,
                              sort_code: formatted_sort,
                              account_number: normalized_account,
+                             # The "Verified" badge is a trust signal that's only ever meaningful
+                             # for the bank details it was checked against — a correction (typo
+                             # fix, bank switch) must not leave a stale "Verified" claim standing
+                             # over details nobody has actually re-checked.
+                             verified: false,
                              notes: appended_notes(formatted_sort, normalized_account))
         redirect_to admin_reimbursements_people_path,
                     notice: "Bank details saved for #{@person.name}."

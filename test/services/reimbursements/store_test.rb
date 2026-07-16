@@ -331,6 +331,28 @@ module Reimbursements
       refute fields[FIELD_IDS[:expenses][:receipts_offloaded]]
     end
 
+    test "update_expense! actually clears the budget link on a blank budget_record_id" do
+      linked = airtable_expense_record(id: "recExp1", budget_id: "recBud1", status: "Pending")
+      store, client = build_store(expenses: [ linked ])
+
+      store.update_expense!("recExp1", budget_record_id: nil, description: "still editable")
+
+      _table, record_id, fields = client.updated.sole
+      assert_equal "recExp1", record_id
+      assert_equal [], fields[FIELD_IDS[:expenses][:budget]], "budget link must be explicitly cleared, not omitted"
+      assert_equal "still editable", fields[FIELD_IDS[:expenses][:description]]
+    end
+
+    test "update_expense! doesn't touch the budget link when budget_record_id isn't in attrs at all" do
+      linked = airtable_expense_record(id: "recExp1", budget_id: "recBud1", status: "Pending")
+      store, client = build_store(expenses: [ linked ])
+
+      store.update_expense!("recExp1", description: "unrelated edit")
+
+      _table, _record_id, fields = client.updated.sole
+      assert_not fields.key?(FIELD_IDS[:expenses][:budget]), "must not touch the budget link unless asked to"
+    end
+
     def fields_of(update_tuple)
       update_tuple.last
     end

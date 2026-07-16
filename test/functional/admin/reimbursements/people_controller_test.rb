@@ -214,6 +214,44 @@ module Admin
       assert_empty @client.updated
     end
 
+    test "cannot verify a person whose bank details fail the modulus check" do
+      sign_in @user
+
+      patch :update, params: { id: "recInvalid", verify: "1" }
+
+      assert_redirected_to admin_reimbursements_people_path
+      assert_match(/fail the modulus check/, flash[:alert])
+      assert_empty @client.updated
+    end
+
+    test "can verify a person whose bank details are outside spec (advisory, not a hard block)" do
+      sign_in @user
+
+      patch :update, params: { id: "recOutside", verify: "1" }
+
+      assert_redirected_to admin_reimbursements_people_path
+      table, record_id, fields = @client.updated.sole
+      assert_equal :people, table
+      assert_equal "recOutside", record_id
+      assert fields[FIELD_IDS[:people][:verified]]
+    end
+
+    test "editing bank details resets verified to false" do
+      verified_person = airtable_person_record(id: "recVerified", name: "Vera Verified",
+                                                email: "vera@example.com", sort_code: "08-99-99",
+                                                account_number: "66374958", verified: true)
+      rebuild_store(people: [ verified_person ])
+      sign_in @user
+
+      patch :update, params: { id: "recVerified", sort_code: "20-20-20", account_number: "50502366" }
+
+      assert_redirected_to admin_reimbursements_people_path
+      _table, _record_id, fields = @client.updated.sole
+      assert fields.key?(FIELD_IDS[:people][:verified]), "verified must be explicitly written, not just omitted"
+      assert_not fields[FIELD_IDS[:people][:verified]],
+                 "a bank-detail correction must not leave a stale Verified badge standing"
+    end
+
     test "updating an unknown person 404s" do
       sign_in @user
 
