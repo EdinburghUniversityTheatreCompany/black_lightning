@@ -107,7 +107,8 @@ module Admin
       end
 
       def bank_details_changed?(formatted_sort, normalized_account)
-        formatted_sort != @person.sort_code ||
+        ::Reimbursements::BankDetails.normalize_sort_code(formatted_sort) !=
+          ::Reimbursements::BankDetails.normalize_sort_code(@person.sort_code) ||
           normalized_account != ::Reimbursements::BankDetails.normalize_account_number(@person.account_number)
       end
 

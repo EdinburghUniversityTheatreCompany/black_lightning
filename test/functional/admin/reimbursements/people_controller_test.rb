@@ -173,6 +173,23 @@ module Admin
       assert_empty @client.updated
     end
 
+    test "a differently-formatted but identical sort code isn't treated as a change" do
+      # A record edited directly in Airtable could store the sort code without
+      # dashes ("089999") — the same digits as the canonical "08-99-99" this
+      # form always submits. bank_details_changed? must normalise both sides
+      # the same way the account-number check right beside it already does.
+      rebuild_store(people: [ airtable_person_record(id: "recValid", name: "Valid Vic",
+                                                     email: "vic@example.com", sort_code: "089999",
+                                                     account_number: "66374958") ])
+      sign_in @user
+
+      patch :update, params: { id: "recValid", sort_code: "08-99-99", account_number: "66374958" }
+
+      assert_redirected_to admin_reimbursements_people_path
+      assert_equal "No changes to save.", flash[:notice]
+      assert_empty @client.updated
+    end
+
     test "invalid bank details re-render the form without a write, preserving the typed values" do
       sign_in @user
 
