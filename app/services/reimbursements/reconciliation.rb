@@ -99,22 +99,27 @@ module Reimbursements
     # amount within £0.01 (excl-VAT preferred, else gross), and either the
     # submitted-to-EUSA date or the payment-confirmed date within 14 days of the
     # row date. Returns the first match, or nil.
+    # Two same-amount, same-nominal-code expenses submitted around the same
+    # time are otherwise indistinguishable, so among every candidate that
+    # matches, the one whose date is CLOSEST to the row's date wins — not
+    # just whichever happens to come first in +expenses+ — narrowing (though
+    # not eliminating) which specific record a genuine tie gets attributed to.
     def match_debit_to_expense(row, expenses)
-      expenses.find do |expense|
-        next false unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
+      candidates = expenses.filter_map do |expense|
+        next unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
 
         # A zero amount_excl_vat is the documented "not yet known" sentinel,
         # not a genuine zero — || alone doesn't fall back to the gross amount
         # for it, since 0/BigDecimal("0") are truthy in Ruby.
         excl_vat = expense.amount_excl_vat
         compare_amount = excl_vat.nil? || excl_vat.zero? ? expense.amount : excl_vat
-        next false if compare_amount.nil? || (compare_amount - row.debit).abs > AMOUNT_TOLERANCE
+        next if compare_amount.nil? || (compare_amount - row.debit).abs > AMOUNT_TOLERANCE
 
         candidate_dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact
-        next false if candidate_dates.empty?
-
-        candidate_dates.any? { |date| (date - row.date).abs <= DATE_WINDOW_DAYS }
+        closest = candidate_dates.map { |date| (date - row.date).abs }.select { |diff| diff <= DATE_WINDOW_DAYS }.min
+        [ expense, closest ] if closest
       end
+      candidates.min_by { |(_expense, distance)| distance }&.first
     end
 
     # Matching income budget for a credit row: nominal code equal
@@ -130,8 +135,12 @@ module Reimbursements
 
       # BigDecimal (not Float) so the key is exact at every magnitude — a
       # float round-trip collapses distinct large amounts onto one key.
-      # BigDecimal("0") renders "0.0", matching the nil/"" branch above.
-      BigDecimal(value.to_s).to_s("F")
+      # BigDecimal("0") renders "0.0", matching the nil/"" branch above — but
+      # BigDecimal("-0.00") renders "-0.0", so a negative-zero value (an
+      # Airtable formula or manual entry that preserves the sign) must be
+      # normalised to the same key as an ordinary zero.
+      amount = BigDecimal(value.to_s)
+      amount.zero? ? "0.0" : amount.to_s("F")
     rescue ArgumentError, TypeError
       "0.0"
     end
@@ -192,7 +201,7 @@ module Reimbursements
     def parse_british_date(value)
       value = value.to_s.strip
       parts = value.split("/")
-      if parts.length == 3
+      if parts.length == 3 && parts[2].match?(/\A\d{4}\z/)
         begin
           return Date.new(Integer(parts[2], 10), Integer(parts[1], 10), Integer(parts[0], 10))
         rescue ArgumentError # includes Date::Error; fall through to ISO

@@ -20,6 +20,11 @@ module Reimbursements
         Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", nil, nil)
     end
 
+    test "negative zero matches an ordinary (positive) zero" do
+      assert_equal Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", bd(0), bd(0)),
+        Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", bd("-0.00"), bd("-0.00"))
+    end
+
     test "zero decimal matches an empty-string field" do
       assert_equal Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", bd(0), bd("123.45")),
         Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", "", 123.45)
@@ -147,6 +152,12 @@ module Reimbursements
       row_text = "439999\tF40\tBACS001\t2024-12-01\t12\tNarr\tNarr1\t50.00\t\t50.00"
       rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
       assert_equal Date.new(2024, 12, 1), rows.first.date
+    end
+
+    test "a DD/MM/YY (2-digit year) date raises rather than silently landing in year 89" do
+      row_text = "439999\tF40\tBACS001\t15/03/89\t12\tNarr\tNarr1\t50.00\t\t50.00"
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
+      assert_match(/Cannot parse date/, error.message)
     end
 
     test "raises a clear error for a genuinely unparseable date" do
@@ -339,9 +350,25 @@ module Reimbursements
       assert_nil Reconciliation.match_debit_to_expense(debit_row, [])
     end
 
-    test "debit returns the first matching expense" do
+    test "debit returns the first matching expense when candidates tie exactly" do
       first = expense
       assert_same first, Reconciliation.match_debit_to_expense(debit_row, [ first, expense ])
+    end
+
+    test "debit prefers the candidate with the CLOSEST date, not just the first in the list" do
+      # Two same-nominal-code, same-amount expenses submitted around the same
+      # time are otherwise indistinguishable — picking whichever happens to
+      # come first would risk swapping which one this payment is attributed
+      # to. The row's date is 2025-03-15; the second candidate is a much
+      # closer match (same day) than the first (10 days off), so it must win
+      # even though it's listed second.
+      farther = expense(submitted_date: Date.new(2025, 3, 5))
+      closer = expense(submitted_date: Date.new(2025, 3, 15))
+
+      matched = Reconciliation.match_debit_to_expense(debit_row(row_date: Date.new(2025, 3, 15)),
+                                                       [ farther, closer ])
+
+      assert_same closer, matched
     end
 
     test "debit uses payment_confirmed_date when submitted date is too far" do
