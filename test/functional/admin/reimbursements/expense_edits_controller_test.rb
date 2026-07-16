@@ -637,6 +637,26 @@ module Admin
         assert_match(/no expense/i, response.body)
       end
 
+      test "find never hits Airtable live for a query that isn't shaped like a record id" do
+        rebuild_store(expenses: [ expense_at("Paid", id: "recExp1", auto_number: 42) ])
+        sign_in @user
+
+        get :find, params: { q: "42" }
+
+        assert_empty @client.get_calls, "an auto-number search must never cost a live Airtable call"
+      end
+
+      test "find degrades to no-match, not a 500, when a live record-id fetch fails" do
+        rebuild_store(expenses: [])
+        @client.fail_get_tables = [ :expenses ]
+        sign_in @user
+
+        assert_nothing_raised { get :find, params: { q: "recSomething" } }
+
+        assert_response :success
+        assert_match(/no expense/i, response.body)
+      end
+
       test "editing an unknown expense 404s" do
         rebuild_store(expenses: [])
         sign_in @user

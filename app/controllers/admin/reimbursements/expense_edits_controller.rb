@@ -186,11 +186,23 @@ module Admin
       end
 
       # Match on Airtable record id first, then on the visible auto-number.
+      # Only a query shaped like a record id (Airtable ids always start
+      # "rec") is worth a live fetch for — anything else (an auto-number, a
+      # name) can never resolve by id and would otherwise burn an Airtable
+      # API call for nothing on every ordinary search. A non-404 failure from
+      # that live fetch (a malformed-but-"rec"-shaped query, or a transient
+      # Airtable error) degrades to "no match" rather than a 500.
       def lookup_expense(query)
-        by_id = store.find_expense!(query)
+        by_id = query.start_with?("rec") ? live_find_expense(query) : store.find_expense(query)
         return by_id if by_id
 
         store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
+      end
+
+      def live_find_expense(record_id)
+        store.find_expense!(record_id)
+      rescue ::Reimbursements::Airtable::Error
+        nil
       end
 
       def update_attrs

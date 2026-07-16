@@ -251,6 +251,11 @@ module ReimbursementsTestHelpers
     # Airtable write outage on an existing record (e.g. mark_submitted's
     # per-expense status write failing after the EUSA draft already exists).
     attr_accessor :fail_update_tables
+    # Make every get_record for these tables raise a non-404 Error, standing
+    # in for a genuine Airtable outage on a single-record fetch — the real
+    # client only swallows a 404; anything else re-raises, which this fake
+    # otherwise can't reproduce (it just returns nil on any non-match).
+    attr_accessor :fail_get_tables
 
     def initialize(records_by_table)
       @records_by_table = records_by_table
@@ -262,6 +267,7 @@ module ReimbursementsTestHelpers
       @deleted = []
       @fail_create_tables = []
       @fail_update_tables = []
+      @fail_get_tables = []
     end
 
     def list_records(table)
@@ -271,6 +277,10 @@ module ReimbursementsTestHelpers
 
     def get_record(table, record_id)
       @get_calls << [ table, record_id ]
+      if Array(@fail_get_tables).include?(table)
+        raise Reimbursements::Airtable::Error.new("get failed for #{table}", status: 500)
+      end
+
       @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
     end
 
