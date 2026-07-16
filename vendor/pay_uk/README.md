@@ -8,6 +8,8 @@ consistency):
   14 weights, exception code).
 - `scsubtab.txt`: the sort-code substitution table.
 
+**Currently-vendored copy downloaded:** 2026-07-10.
+
 ## These files ARE committed
 
 They're committed to the repo so Kamal ships them inside the Docker image (a

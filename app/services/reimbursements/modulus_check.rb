@@ -20,8 +20,8 @@ module Reimbursements
     # Recognised exception codes. 14 is recognised but always OUTSIDE_SPEC (below).
     SUPPORTED_EXCEPTIONS = [ 0, 1, 3, 4, 5, 6, 7, 14 ].freeze
 
-    # Location of the vendored Pay.UK rule files (gitignored; see
-    # vendor/pay_uk/README.md).
+    # Location of the vendored Pay.UK rule files (committed, so Kamal ships
+    # them; see vendor/pay_uk/README.md).
     VALACDOS_PATH = -> { Rails.root.join("vendor/pay_uk/valacdos.txt") }
     SCSUBTAB_PATH = -> { Rails.root.join("vendor/pay_uk/scsubtab.txt") }
 
