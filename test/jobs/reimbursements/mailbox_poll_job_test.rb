@@ -47,8 +47,8 @@ module Reimbursements
       end
 
       def mark_read_and_move(message_id, folder)
-        mark_read(message_id)
         move(message_id, folder)
+        mark_read(message_id)
       end
     end
 
@@ -135,6 +135,20 @@ module Reimbursements
       assert_empty @client.created
     end
 
+    test "a move failure on the reject path leaves the message unread for retry, not stuck unfiled" do
+      # mark_read_and_move moves BEFORE marking read specifically so a move
+      # failure here (no expense created on this path) leaves the message
+      # unread and safe to retry, rather than marked-read-but-never-filed.
+      setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
+      @mailbox.fail_move = true
+
+      capture_honeybadger_notices { MailboxPollJob.perform_now }
+
+      assert_equal 1, @mailbox.replies.size, "the reply is sent before the move is even attempted"
+      assert_empty @mailbox.reads, "must not be marked read when the move failed"
+      assert_equal [ "msg1" ], @mailbox.unread_messages.map(&:id), "still eligible for retry next cycle"
+    end
+
     test "known sender without usable attachments is asked for the receipt" do
       setup_job(messages: [ inbound_message ])
 
@@ -187,15 +201,35 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    test "a post-create failure still moves the message (no duplicate minting)" do
+    test "an attach failure still marks read and replies (no duplicate minting), but withholds the move" do
+      # The move to Processed is gated on attach succeeding: a partially-
+      # attached draft stays visible in the Inbox as a signal something needs
+      # manual follow-up, rather than being filed away looking identical to a
+      # fully successful run. The reply must still go out — the submitter is
+      # waiting on their portal link regardless of the attach outcome.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
       @client.fail_uploads = true
 
-      MailboxPollJob.perform_now
+      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
 
       assert_equal 1, @client.created.size
+      assert_includes @mailbox.reads, "msg1", "marked read regardless, so it's never reprocessed"
+      assert_equal 1, @mailbox.replies.size, "the submitter must still get their portal link"
+      assert_empty @mailbox.moves, "a partially-attached draft stays in the Inbox, not filed away"
+      assert_equal 1, notified.size, "the attach failure must reach Honeybadger"
+    end
+
+    test "a reply failure does not prevent the receipt attach or block the move" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      @mailbox.define_singleton_method(:reply) { |*| raise MailboxClient::Error, "reply failed" }
+
+      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
+
+      assert_equal 1, @client.created.size
+      assert_equal 1, @client.uploads.size, "the attach must not be skipped just because the reply will fail"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves,
-                   "message must leave the inbox once the expense exists"
+                   "attach succeeded, so the move must still happen despite the reply failing"
+      assert_equal 1, notified.size
     end
 
     test "a move failure after marking read does not re-create on the next poll" do
@@ -294,6 +328,30 @@ module Reimbursements
       assert_equal [ [ "msgFringe", :processed ] ], fringe_mailbox.moves
       assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves
       assert_equal 2, @client.created.size, "an expense is drafted from each cost centre's inbox"
+    end
+
+    test "a generic failure polling one cost centre's mailbox doesn't stop the others being polled" do
+      termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+        receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
+
+      setup_job(messages: [])
+      broken_mailbox = Object.new.tap do |m|
+        def m.unread_messages
+          raise Reimbursements::MailboxClient::Error, "Graph 503"
+        end
+      end
+      termtime_mailbox = FakeMailbox.new(messages: [ inbound_message(id: "msgTerm") ],
+                                         attachments: { "msgTerm" => [ PDF_ATTACHMENT ] })
+      by_mailbox = { "reimbursements@bedlamfringe.co.uk" => broken_mailbox,
+                     "termtime@bedlamtheatre.co.uk" => termtime_mailbox }
+      MailboxPollJob.mailbox_builder = ->(cost_centre) { by_mailbox.fetch(cost_centre.receive_mailbox) }
+
+      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
+
+      assert_equal 1, notified.size, "the broken cost centre's failure is still reported"
+      assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves,
+                   "the other cost centre must still be polled despite the first one's failure"
+      assert_equal 1, @client.created.size
     end
 
     test "a sender matching the cost centre's own receive mailbox is treated as automated" do

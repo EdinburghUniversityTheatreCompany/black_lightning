@@ -32,8 +32,9 @@ module Reimbursements
              description: "A more suitable budget category name, if the chosen one looks wrong"
     end
 
-    def initialize(chat_builder: nil)
+    def initialize(chat_builder: nil, http: nil)
       @chat_builder = chat_builder || -> { RubyLLM.chat(model: MODEL) }
+      @http = http || HttpTransport
     end
 
     # expense: a Reimbursements::Expense; budgets: [Budget] shown to the model so
@@ -43,7 +44,7 @@ module Reimbursements
 
       response = @chat_builder.call
                              .with_schema(SCHEMA)
-                             .ask(prompt(expense, budgets), with: expense.receipts.map(&:url))
+                             .ask(prompt(expense, budgets), with: attachments(expense.receipts))
       verdict(response.content)
     rescue RubyLLM::Error => e
       error_result("Gemini request failed: #{e.message}")
@@ -52,6 +53,23 @@ module Reimbursements
     end
 
     private
+
+    # Airtable's attachment URL is a short-lived signed URL that can expire
+    # before Gemini would get around to fetching it (the same reason
+    # BatchProcessor/Extractor never hand a bare Airtable URL to a remote
+    # fetcher). Download the bytes ourselves right before the check instead.
+    def attachments(receipts)
+      receipts.map do |receipt|
+        RubyLLM::Attachment.new(StringIO.new(download(receipt.url)), filename: receipt.filename)
+      end
+    end
+
+    def download(url)
+      status, body = @http.call(:get, URI(url), {}, nil)
+      raise "receipt download failed (#{status})" unless (200..299).cover?(status)
+
+      body
+    end
 
     def verdict(data)
       data = {} unless data.is_a?(Hash)

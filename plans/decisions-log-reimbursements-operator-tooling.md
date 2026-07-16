@@ -104,3 +104,32 @@ without stopping to ask — logged here for review in a batch rather than blocki
 - Tier 0, 1, and 2 — everything money-safety-critical (double-payment risk, bank-detail/amount
   validation correctness) — are now complete and each independently reviewed. Continuing to Tier 3
   (job reliability & idempotency) next.
+
+## Tier 3 (mailbox poll + AI-check reliability)
+
+- **#4 (no idempotency key tying a created expense to its source message) — DEFERRED, not
+  fixed.** Same class as the already-deferred #141: the real fix needs a new durable field (e.g.
+  a `source_message_id` on the Expense record) plus retry-detection logic, which is a schema
+  change, not a contained bug fix. The window this protects against is already narrow after the
+  #84/#85 fixes below: `mark_read` is called immediately after `create_expense!` succeeds and is
+  itself the guaranteed idempotency step (a message is never re-fetched once read), so the
+  remaining exposure is only a crash between `create_expense!` returning and `mark_read` running —
+  already surfaced loudly to Honeybadger with `duplicate_risk: true` rather than silently risking
+  a duplicate. Left for a deliberate follow-up alongside #141 rather than rushing a schema change.
+
+- Fixed together in one commit: **#39** (per-cost-centre poll loop had no isolation — a
+  `poll_cost_centre_safely` wrapper now rescues+reports per cost centre so one mailbox's Graph
+  outage can't stop the others being polled that cycle), **#84** (`mark_read_and_move` reordered
+  to move-then-mark_read, so a move failure on the reject path — no expense created yet — leaves
+  the message unread and safely retried, instead of the reverse order which could silently strand
+  a read-but-unfiled message forever), and **#85** (`finalise_created` now runs attach and reply as
+  separate best-effort steps, with the move-to-Processed gated on attach succeeding — an attach
+  failure no longer swallows the reply the submitter is waiting on, and a partially-attached draft
+  stays visible in the Inbox as a manual-follow-up signal rather than being filed away looking
+  identical to a full success).
+
+- **#183 (AiChecker sent the raw, short-lived Airtable attachment URL straight to Gemini)**: fixed
+  by downloading the receipt bytes ourselves (new `http:` injection seam, defaulting to the shared
+  `HttpTransport`) and building `RubyLLM::Attachment`s from them, mirroring the pattern `Extractor`
+  and `BatchProcessor` already use instead of ever handing a remote fetcher a signed Airtable URL
+  that might expire before it's fetched.

@@ -43,12 +43,26 @@ module Reimbursements
         return
       end
 
-      CostCentre.all.each { |cost_centre| poll_cost_centre(cost_centre) }
+      CostCentre.all.each { |cost_centre| poll_cost_centre_safely(cost_centre) }
     rescue MailboxClient::AuthError => e
       alert_auth_failure(e)
     end
 
     private
+
+    # A generic (non-auth) failure listing one cost centre's unread messages
+    # — a Graph 5xx, a timeout — must not abort polling every OTHER cost
+    # centre's mailbox for the rest of this cycle; only AuthError re-raises,
+    # since that's genuinely global (the same Entra credential every cost
+    # centre's mailbox client shares) and must still reach the IT alert path.
+    def poll_cost_centre_safely(cost_centre)
+      poll_cost_centre(cost_centre)
+    rescue MailboxClient::AuthError
+      raise
+    rescue => e
+      Rails.logger.error("Reimbursements mailbox poll failed for #{cost_centre.key}: #{e.message}")
+      Honeybadger.notify(e, context: { source: "reimbursements_mailbox_poll", cost_centre: cost_centre.key })
+    end
 
     def poll_cost_centre(cost_centre)
       @current_cost_centre = cost_centre
@@ -139,18 +153,25 @@ module Reimbursements
     # unread) — then do the best-effort attach/reply/move. A failure of the
     # mark-read step is the one path that risks a duplicate next cycle, so it is
     # surfaced loudly rather than swallowed.
+    #
+    # Attach and reply are separate best-effort steps (not one combined block)
+    # so an attach failure partway through a multi-receipt message can't skip
+    # the reply the sender is waiting on. The move to Processed is gated on
+    # attach succeeding: a partially-attached draft stays visible in the
+    # Inbox as a signal something needs manual follow-up, rather than looking
+    # identical to a fully successful run once filed away.
     def finalise_created(message, expense, receipts)
       mark_read_or_flag_duplicate(message, expense) or return
 
-      best_effort(message, expense, "receipt attach/reply") do
+      attached = best_effort(message, expense, "receipt attach") do
         receipts.each do |receipt|
           store.attach_receipt!(expense.record_id, filename: receipt[:filename],
                                                    content_type: receipt[:content_type],
                                                    bytes: receipt[:bytes])
         end
-        mailbox.reply(message.id, html: created_html(expense))
       end
-      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) }
+      best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
+      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
     end
 
     # Marks the message read. Returns true on success. On failure the expense
@@ -174,14 +195,17 @@ module Reimbursements
     # Runs a follow-up step that happens after the expense exists and the
     # message is already read: any failure is logged + reported but never
     # re-raised (the message is safe), except AuthError which aborts the poll to
-    # alert on credentials.
+    # alert on credentials. Returns true on success, false on a swallowed
+    # failure, so a caller can gate a later step on this one's success.
     def best_effort(message, expense, description)
       yield
+      true
     rescue MailboxClient::AuthError
       raise
     rescue => e
       Rails.logger.error("Reimbursements #{description} failed for #{message.id}: #{e.message}")
       Honeybadger.notify(e, context: { message_id: message.id, expense_record_id: expense.record_id })
+      false
     end
 
     # Everything the extraction confidently knows, blanks elsewhere. The

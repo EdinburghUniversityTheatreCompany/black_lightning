@@ -79,32 +79,35 @@ module Reimbursements
       assert_equal "<p>Thanks!</p>", JSON.parse(request.body)["comment"]
     end
 
-    test "mark_read_and_move marks read then moves to an existing folder" do
+    test "mark_read_and_move moves to an existing folder, then marks read" do
+      # Moves first: a move failure must leave the message unread (safe to
+      # retry — no expense exists yet on this reject path), not the reverse,
+      # which would leave a read-but-unfiled message stuck forever.
       client, http = build_client([
         token_response,
-        [ 200, "" ],                                                # PATCH isRead
         [ 200, { value: [ { id: "fld-processed" } ] }.to_json ],    # folder lookup
-        [ 201, { id: "moved" }.to_json ]                            # move
+        [ 201, { id: "moved" }.to_json ],                           # move
+        [ 200, "" ]                                                # PATCH isRead
       ])
 
       client.mark_read_and_move("msg1", :processed)
 
-      patch, lookup, move = http.requests.last(3)
-      assert_equal "patch", patch.method.to_s
-      assert JSON.parse(patch.body)["isRead"]
+      lookup, move, patch = http.requests.last(3)
       assert_includes lookup.uri, "mailFolders"
       assert_equal "fld-processed", JSON.parse(move.body)["destinationId"]
+      assert_equal "patch", patch.method.to_s
+      assert JSON.parse(patch.body)["isRead"]
     end
 
     test "creates the folder when missing and memoizes its id" do
       client, http = build_client([
         token_response,
-        [ 200, "" ],
         [ 200, { value: [] }.to_json ],                 # lookup: missing
         [ 201, { id: "fld-new" }.to_json ],             # create folder
         [ 201, { id: "moved" }.to_json ],               # move
-        [ 200, "" ],
-        [ 201, { id: "moved2" }.to_json ]               # second move reuses folder id
+        [ 200, "" ],                                    # PATCH isRead
+        [ 201, { id: "moved2" }.to_json ],              # second move reuses folder id
+        [ 200, "" ]                                     # second PATCH isRead
       ])
 
       client.mark_read_and_move("msg1", :rejected)

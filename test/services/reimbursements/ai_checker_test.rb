@@ -27,13 +27,14 @@ module Reimbursements
       Expense.new(**defaults.merge(attrs))
     end
 
-    def build(content: nil, error: nil)
+    def build(content: nil, error: nil, http_responses: [ [ 200, "PDF-BYTES" ] ])
       chat = FakeChat.new(content: content, error: error)
-      [ AiChecker.new(chat_builder: -> { chat }), chat ]
+      http = ReimbursementsTestHelpers::FakeHttp.new(http_responses)
+      [ AiChecker.new(chat_builder: -> { chat }, http: http), chat, http ]
     end
 
     test "a passing verdict maps to status pass with its comment" do
-      checker, chat = build(content: { "status" => "pass", "comment" => "Looks fine." })
+      checker, chat, http = build(content: { "status" => "pass", "comment" => "Looks fine." })
 
       result = checker.check(expense, [ budget ])
 
@@ -41,7 +42,19 @@ module Reimbursements
       assert_equal "Looks fine.", result.comment
       assert_kind_of Time, result.checked_at
       assert_same AiChecker::SCHEMA, chat.schema
-      assert_equal [ "https://airtable/signed/receipt.pdf" ], chat.attachments
+      assert_equal 1, chat.attachments.size
+      assert_equal "receipt.pdf", chat.attachments.first.filename
+      assert_equal "https://airtable/signed/receipt.pdf", http.requests.first.uri,
+                   "downloads the receipt bytes itself rather than handing Gemini the signed URL directly"
+    end
+
+    test "a receipt download failure is captured as an error verdict, not raised" do
+      checker, = build(http_responses: [ [ 404, "not found" ] ])
+
+      result = checker.check(expense, [ budget ])
+
+      assert_equal "error", result.status
+      assert_match(/receipt download failed/, result.comment)
     end
 
     test "a failing verdict maps to status fail" do

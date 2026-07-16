@@ -79,10 +79,14 @@ module Reimbursements
     end
 
     # Convenience for the reject paths (no expense created, so a failure just
-    # retries next cycle): mark read first, then move.
+    # retries next cycle). Moves first, then marks read — a move failure
+    # leaves the message unread (retried next cycle, genuinely safe here:
+    # no expense exists yet), rather than the reverse order, which would
+    # leave a read-but-unfiled message silently stuck in the Inbox forever
+    # (unread_messages would never fetch it again to retry the move).
     def mark_read_and_move(message_id, folder)
-      mark_read(message_id)
       move(message_id, folder)
+      mark_read(message_id)
       nil
     end
 
