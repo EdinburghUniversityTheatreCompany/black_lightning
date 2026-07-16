@@ -133,6 +133,53 @@ module Admin
       assert_equal 1, assigns(:unmatched_rows).size
     end
 
+    test "preview re-renders show with an alert on a malformed paste (missing header columns)" do
+      sign_in @user
+      bad_header = "Nominal\tCost Centre\tRef\tDate\tNarrative\tNarrative 1\tDebit\tCredit\tNet" # no Period
+      post :preview, params: { pasted_text: "#{bad_header}\n#{debit_row}" }
+
+      assert_response :success
+      assert_includes response.body, "Could not parse actuals"
+    end
+
+    test "preview alerts when the paste has only a header row, no data" do
+      sign_in @user
+      post :preview, params: { pasted_text: HEADER }
+
+      assert_response :success
+      assert_includes response.body, "No data rows found"
+    end
+
+    test "apply redirects with an alert on a malformed paste" do
+      sign_in @user
+      bad_header = "Nominal\tCost Centre\tRef\tDate\tNarrative\tNarrative 1\tDebit\tCredit\tNet" # no Period
+      post :apply, params: { pasted_text: "#{bad_header}\n#{debit_row}" }
+
+      assert_redirected_to admin_reimbursements_reconciliation_path
+      assert_match(/Could not parse the actuals/, flash[:alert])
+      assert_empty @client.created
+    end
+
+    test "an expense with a payment_confirmed_date but no linked actual is excluded from matching" do
+      already_paid = airtable_expense_record(
+        id: "recExp1", payee_id: "recPer1", budget_id: "recBud1",
+        amount: 123.45, amount_excl_vat: 123.45,
+        overrides: {
+          FIELD_IDS[:expenses][:status] => "Submitted",
+          FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-10",
+          FIELD_IDS[:expenses][:payment_confirmed_date] => "2026-05-01"
+        }
+      )
+      rebuild_store(expenses: [ already_paid ]) # no eusa_actuals linked
+      sign_in @user
+
+      post :preview, params: { pasted_text: "#{HEADER}\n#{debit_row}" }
+
+      assert_response :success
+      assert_empty assigns(:matched_debits), "already-paid-by-another-route expenses must not be re-matched"
+      assert_equal 1, assigns(:unmatched_rows).size
+    end
+
     test "preview skips rows already imported for the same period" do
       existing = airtable_eusa_actual_record(
         id: "recActDup", nominal_code: "439999", period: "03", narrative: "Alice Producer",

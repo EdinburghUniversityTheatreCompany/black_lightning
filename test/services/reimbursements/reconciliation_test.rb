@@ -126,6 +126,35 @@ module Reimbursements
       assert_match(/columns/, error.message)
     end
 
+    test "raises when the header is missing a required column" do
+      header = "Nominal\tCost Centre\tRef\tDate\tNarrative\tNarrative 1\tDebit\tCredit\tNet" # no Period
+      error = assert_raises(ArgumentError) do
+        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\tNarr\tNarr1\t50.00\t\t50.00")
+      end
+      assert_match(/missing required columns/i, error.message)
+      assert_match(/period/i, error.message)
+    end
+
+    test "raises when the header has no amount columns at all (no GoodsValue, no Debit/Credit/Net)" do
+      header = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative"
+      error = assert_raises(ArgumentError) do
+        Reconciliation.parse_actuals_rows("#{header}\n439999\tF40\tBACS001\t01/12/2024\t12\tNarr")
+      end
+      assert_match(/GoodsValue column or Debit.Credit.Net/i, error.message)
+    end
+
+    test "parses an ISO 8601 date when the DD/MM/YYYY parse doesn't apply" do
+      row_text = "439999\tF40\tBACS001\t2024-12-01\t12\tNarr\tNarr1\t50.00\t\t50.00"
+      rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}")
+      assert_equal Date.new(2024, 12, 1), rows.first.date
+    end
+
+    test "raises a clear error for a genuinely unparseable date" do
+      row_text = "439999\tF40\tBACS001\tnot-a-date\t12\tNarr\tNarr1\t50.00\t\t50.00"
+      error = assert_raises(ArgumentError) { Reconciliation.parse_actuals_rows("#{HEADER}\n#{row_text}") }
+      assert_match(/Cannot parse date/, error.message)
+    end
+
     test "multiple rows parsed correctly" do
       row2 = "250000\tF40\tINC001\t20/03/2025\t03\tGrant\t\t\t500.00\t-500.00"
       rows = Reconciliation.parse_actuals_rows("#{HEADER}\n#{SAMPLE_ROW}\n#{row2}")

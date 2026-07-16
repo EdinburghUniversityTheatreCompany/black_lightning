@@ -669,8 +669,22 @@ without stopping to ask — logged here for review in a batch rather than blocki
   a `£`-prefixed, comma-bearing query, and a non-numeric/non-matching query proving the
   `rescue ArgumentError -> false` path degrades cleanly instead of raising.
 
+## Tier 9 — fourth batch (reconcile gaps)
+
+- **#159** (`Reconciliation#validate_col_map`'s two raise branches): added — a header missing a
+  required column, and a header with no amount columns at all (neither GoodsValue nor Debit/
+  Credit/Net).
+- **#160** (`Reconciliation#parse_british_date`'s ISO-8601 fallback + final raise): added — every
+  prior test only supplied DD/MM/YYYY dates.
+- **#68** (`reconcile_controller.rb#parse_rows`'s rescue + header-only-paste branches, untested at
+  the controller level even though the underlying parser is unit-tested directly): added for both
+  `preview` and `apply`.
+- **#165** (`already_reconciled?`'s second disjunct, `payment_confirmed_date.present?` independent
+  of a linked `EusaActual`): added — an expense marked paid via a different route (no linked
+  actual at all) must still be excluded from matching, not just one with an existing link.
+
 ## Tier 9 status
 
-The remaining items (reconcile gaps #68/#159/#160/#165, batch_processor/store gaps #67/#155/#162,
-nightly_batch_job gaps #97/#157/#158, mailbox_poll_job gaps #99/#163, and ~11 small misc items
-#7/#8/#9/#17/#24/#25/#156/#166/#177/#223/#229) are not yet done — continuing.
+The remaining items (batch_processor/store gaps #67/#155/#162, nightly_batch_job gaps #97/#157/
+#158, mailbox_poll_job gaps #99/#163, and ~11 small misc items #7/#8/#9/#17/#24/#25/#156/#166/
+#177/#223/#229) are not yet done — continuing.
