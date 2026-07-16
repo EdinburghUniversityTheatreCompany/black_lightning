@@ -588,3 +588,33 @@ without stopping to ask — logged here for review in a batch rather than blocki
   clicked the "Needs attention" popover trigger and confirmed it still opens/closes correctly
   (`[expanded]` toggled, panel content appeared, screenshot matches house style), and confirmed
   `document.querySelectorAll('[aria-haspopup]').length === 0` on the live page.
+
+## Tier 8 final batch — remaining hint text, structural gaps, email document structure
+
+- **#170 + #181 (remaining hint-text-not-wired instances)**: same `aria-describedby` fix as #153,
+  applied to `settings/edit.html.erb`'s SharePoint-site-URL hint and `reconcile/show.html.erb`'s
+  EUSA-period hint.
+- **#54 (day-checkbox group needs fieldset/legend)**: converted the plain `<div>`/`<span>` wrapper
+  to `<fieldset>`/`<legend>` in `settings/edit.html.erb`. Verified visually that Tailwind's
+  Preflight reset already neutralizes the browser-default fieldset border/padding — no visual
+  change, confirmed via screenshot rather than assumed.
+- **#136 (tab switcher has no role/aria-current)**: the "Pending"/"Approved" links are full page
+  navigations (a different `tab:` query param), not a client-side JS toggle — giving them
+  `role="tab"`/`role="tablist"` would claim arrow-key-navigable widget behavior they don't have,
+  the same kind of role/pattern mismatch #195 already flagged elsewhere in this diff. Used
+  `aria-current="page"` instead (the correct WAI-ARIA pattern for "which of these navigation links
+  is current"), wrapped in `<nav aria-label="Review status">`. Added a regression test.
+- **#128 (email templates ship with no document structure)**: rather than reusing the app's shared
+  `layout: "mailer"` (a fully Bedlam-branded marketing template — social icons, unsubscribe
+  copy — the wrong tone for a plain "batch failed" finance notice), added a new, deliberately bare
+  `reimbursements_mailer` layout (`<!DOCTYPE>`, `<head>`, `<meta charset>`, `<title>` from the
+  email's subject, an MSO-conditional font style) and wired it into `Notifier#send_email` only.
+  **Did not** touch `EusaEmailComposer` — its rendered HTML populates an editable `<textarea>` on
+  the Build Batch page for the operator to hand-edit before sending; wrapping it in a full document
+  would clutter that textarea with boilerplate the operator never asked to see and risk them
+  breaking the structure while editing. Added a regression test asserting the DOCTYPE/meta/title
+  are present in the rendered output.
+- **Tier 8 (accessibility sweep) is now complete** except for #62 (deferred, logged above with
+  reasoning). Every other finding in the plan's seven pattern groups is fixed and verified — via
+  herb-lint, the full test suite, and live `playwright-cli`/screenshot checks against real pages
+  for every visually-meaningful change.

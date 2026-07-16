@@ -99,6 +99,20 @@ module Reimbursements
       assert_match "SharePoint down", failure[:html]
     end
 
+    test "the rendered email is a complete HTML document, not a bare fragment" do
+      notifier, graph = build
+
+      notifier.rejection(to: "pat@example.com", payee_name: "Pat Producer", auto_number: 7,
+                         amount: 12.5, budget_name: "Props", description: "Fake blood",
+                         reason: "Missing VAT breakdown.")
+
+      html = graph.send_mails.sole[:html]
+      assert_match(/\A<!DOCTYPE html>/, html)
+      assert_includes html, "<html"
+      assert_includes html, '<meta charset="utf-8">'
+      assert_includes html, "<title>Your Bedlam expense #7 was not approved</title>"
+    end
+
     test "a Graph send failure propagates so callers can rescue it" do
       notifier, graph = build
       graph.fail_send = true

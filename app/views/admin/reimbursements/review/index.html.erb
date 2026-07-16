@@ -9,13 +9,17 @@
 <% pending_total = @pending.sum { |e| e.amount || 0 } %>
 <% approved_total = @approved.sum { |e| e.amount || 0 } %>
 
-<div class="mb-4 flex gap-2 border-b border-gray-200">
+<%# Each link is a full page navigation (a different tab: query param), not a
+    client-side toggle — role="tab"/"tablist" would claim arrow-key-navigable
+    widget behavior these plain links don't have. aria-current="page" is the
+    correct pattern for "which of these navigation links is the current one". %>
+<nav aria-label="Review status" class="mb-4 flex gap-2 border-b border-gray-200">
   <% tab_class = ->(active) { active ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600" } %>
   <%= link_to "Pending (#{@pending.size})", admin_reimbursements_review_path(tab: "pending"),
-              class: tab_class.call(@tab == "pending") %>
+              "aria-current": (@tab == "pending" ? "page" : nil), class: tab_class.call(@tab == "pending") %>
   <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
-              class: tab_class.call(@tab == "approved") %>
-</div>
+              "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
+</nav>
 
 <% if @tab == "approved" %>
   <% if @approved.empty? %>

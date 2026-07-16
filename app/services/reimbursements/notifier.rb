@@ -6,11 +6,14 @@ module Reimbursements
   # ActionMailer / MailerSend from the generic website-noreply address.
   #
   # It mirrors EusaEmailComposer's render pattern: each message renders an ERB
-  # template to an HTML string via ApplicationController.render (layout: false,
-  # so it runs outside a request — from a controller action, BatchProcessor, or
-  # the nightly job) and hands it to +send_mail+. The templates (app/views/reimbursements/emails) keep the copy the
-  # retired ActionMailer views used; assigns pass the same instance variables
-  # those templates already reference.
+  # template to an HTML string via ApplicationController.render (running outside
+  # a request — from a controller action, BatchProcessor, or the nightly job),
+  # wrapped in the "reimbursements_mailer" layout (its own minimal <!DOCTYPE>/
+  # <head>/<title> wrapper — deliberately not the app's shared, fully-branded
+  # mail layout, whose marketing tone doesn't fit a plain finance notice) and
+  # hands the result to +send_mail+. The templates (app/views/reimbursements/emails)
+  # keep the copy the retired ActionMailer views used; assigns pass the same
+  # instance variables those templates already reference.
   #
   # +mailbox+ is the sending cost centre's send_mailbox. Callers thread the
   # relevant cost centre's mailbox (CostCentre.default today). The IT/credential
@@ -125,7 +128,8 @@ module Reimbursements
     private
 
     def send_email(to:, subject:, template:, assigns:)
-      html = ApplicationController.render(template: template, layout: false, assigns: assigns.stringify_keys)
+      html = ApplicationController.render(template: template, layout: "reimbursements_mailer",
+                                          assigns: assigns.merge(subject: subject).stringify_keys)
       @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html)
     end
   end

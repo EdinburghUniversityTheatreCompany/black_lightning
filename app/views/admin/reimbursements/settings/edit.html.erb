@@ -22,8 +22,9 @@
     <div>
       <%= f.label :sharepoint_site_url, "SharePoint site URL", class: "block text-sm font-medium" %>
       <%= f.text_field :sharepoint_site_url, placeholder: "https://tenant.sharepoint.com/sites/Finance",
+                       "aria-describedby": "sharepoint_site_url_hint",
                        class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xl" %>
-      <p class="text-xs text-gray-500 mt-1">
+      <p id="sharepoint_site_url_hint" class="text-xs text-gray-500 mt-1">
         The site holding this cost centre's receipts + BACS folders. The app is granted <code>write</code> on
         just this site (Sites.Selected), and the folder picker below browses it. The grant command is in the
         setup section.
@@ -128,8 +129,8 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
       </div>
     </div>
 
-    <div>
-      <span class="block text-sm font-medium mb-1">Nightly auto-submit runs on</span>
+    <fieldset>
+      <legend class="block text-sm font-medium mb-1">Nightly auto-submit runs on</legend>
       <div class="flex flex-wrap gap-x-4 gap-y-1">
         <% Date::DAYNAMES.each_with_index do |day_name, wday| %>
           <label class="inline-flex items-center gap-1 text-sm">
@@ -141,7 +142,7 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
         <% end %>
       </div>
       <p class="text-xs text-gray-500 mt-1">Leave all unchecked to never auto-submit for this cost centre.</p>
-    </div>
+    </fieldset>
 
     <div>
       <%= f.submit "Save settings", class: btn_classes(:primary) %>

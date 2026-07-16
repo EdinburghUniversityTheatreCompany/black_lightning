@@ -18,9 +18,10 @@
                       class: "block text-sm font-medium mb-1" %>
         <%= text_area_tag :pasted_text, @pasted_text, rows: 10,
                           placeholder: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet",
+                          "aria-describedby": "pasted_text_hint",
                           class: "w-full border border-gray-300 rounded px-2 py-1 font-mono text-xs" %>
       </div>
-      <p class="text-xs text-gray-600">
+      <p id="pasted_text_hint" class="text-xs text-gray-600">
         Each row's EUSA period (P1–P12) is read from the pasted data and used to skip rows
         already imported for that period, so there's no need to enter a month.
       </p>

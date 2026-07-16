@@ -119,6 +119,16 @@ module Admin
         assert_equal %w[recAppr], assigns(:approved).map(&:record_id)
       end
 
+      test "the current tab is marked aria-current, the other is not" do
+        rebuild_store(expenses: [ pending_expense(id: "recReady", payment_reference: "PROPS PAT") ])
+        sign_in @user
+
+        get :index, params: { tab: "approved" }
+
+        assert_select "a[aria-current=page]", text: /Approved/
+        assert_select "a[aria-current=page]", text: /Pending/, count: 0
+      end
+
       test "renders the payee-override warning" do
         overridden = pending_expense(id: "recOvr", payment_reference: "PROPS PAT", overrides: {
           EXP[:payee_name_override] => "Acme Lighting Ltd",
