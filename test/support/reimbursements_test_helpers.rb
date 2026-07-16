@@ -417,7 +417,7 @@ module ReimbursementsTestHelpers
   # a send, or uploads fail.
   class FakeGraphClient
     attr_reader :uploaded, :drafts, :downloads, :send_mails, :deleted_messages
-    attr_accessor :fail_draft, :fail_uploads, :fail_send, :fail_delete_message
+    attr_accessor :fail_draft, :fail_uploads, :fail_send, :fail_delete_message, :fail_download
     # Recipients (email strings) whose send should raise, standing in for a
     # Graph outage that hits some payees but not others.
     attr_accessor :fail_send_to
@@ -446,6 +446,8 @@ module ReimbursementsTestHelpers
     end
 
     def download(url)
+      raise Reimbursements::GraphAuth::Error, "receipt download failed for #{url}" if fail_download
+
       @downloads << url
       "BYTES(#{url})"
     end

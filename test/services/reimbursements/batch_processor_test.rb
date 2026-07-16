@@ -183,6 +183,65 @@ module Reimbursements
       end
     end
 
+    test "a BACS-xlsx SharePoint upload failure doesn't block sending to EUSA or the receipt uploads" do
+      processor, store, _client, graph = build_scenario
+      bacs_filename = "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
+      graph.fail_upload_for = [ bacs_filename ]
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert(result.errors.any? { |e| e.include?("BACS file SharePoint upload failed") })
+      assert_equal "", result.bacs_sharepoint_url
+      assert_equal 1, graph.drafts.size, "the EUSA draft still goes out"
+      uploaded_filenames = graph.uploaded.map { |u| u[:filename] }
+      assert_not_includes uploaded_filenames, bacs_filename
+      assert_equal 2, uploaded_filenames.size, "both receipts still uploaded independently of the xlsx failure"
+    end
+
+    test "a single failed receipt upload doesn't corrupt the URL map for that expense or affect others" do
+      receipts = [
+        { "id" => "att1", "filename" => "receipt1.pdf", "url" => "https://airtable/one",
+          "size" => 1000, "type" => "application/pdf" },
+        { "id" => "att2", "filename" => "receipt2.pdf", "url" => "https://airtable/two",
+          "size" => 2000, "type" => "application/pdf" }
+      ]
+      multi = airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved",
+                                      auto_number: 11, receipts: receipts)
+      single = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 12)
+      processor, store, client, graph = build_scenario(expenses: [ multi, single ])
+
+      failing_filename = FilenameSanitizer.build_receipt_filename(
+        bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
+        original_filename: "receipt2.pdf", index: 2
+      )
+      succeeding_filename = FilenameSanitizer.build_receipt_filename(
+        bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
+        original_filename: "receipt1.pdf", index: 1
+      )
+      graph.fail_upload_for = [ failing_filename ]
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert(result.errors.any? { |e| e.include?("Receipt upload failed for #{failing_filename}") })
+
+      _table, _id, fields_a = client.updated.find do |table, id, fields|
+        table == :expenses && id == "recExpA" && fields[FIELD_IDS[:expenses][:status]] == "Submitted"
+      end
+      urls_a = fields_a[FIELD_IDS[:expenses][:sharepoint_receipt_urls]]
+      assert_equal "https://sp.example/fldR/#{succeeding_filename}", urls_a,
+                   "only the successful upload's URL is recorded — no nil/phantom entry for the failed one"
+      assert_not fields_a[FIELD_IDS[:expenses][:receipts_offloaded]],
+                 "2 receipts but only 1 uploaded — must not be reported as offloaded"
+
+      _table, _id, fields_b = client.updated.find do |table, id, fields|
+        table == :expenses && id == "recExpB" && fields[FIELD_IDS[:expenses][:status]] == "Submitted"
+      end
+      assert fields_b[FIELD_IDS[:expenses][:receipts_offloaded]],
+             "the other expense's single receipt uploaded fine and must be unaffected"
+    end
+
     test "producer_notifications_sent flag is only set when at least one send succeeded" do
       processor, store, client, graph = build_scenario
       graph.fail_send = true # the draft succeeds; every producer send fails
@@ -290,6 +349,23 @@ module Reimbursements
       assert_not result.success
       assert(result.errors.any? { |e| e.include?("SharePoint folders not configured") })
       assert_empty graph.drafts
+    end
+
+    test "a receipt-download failure fails the batch cleanly with no draft created" do
+      # collect_receipts runs before create_draft (the CARDINAL RULE boundary).
+      # process's method-level rescue catches the download error and reports
+      # it as a normal failed Result — nothing has happened yet, so this is
+      # safe: no draft, no batch, no Submitted status change.
+      processor, store, client, graph = build_scenario
+      graph.fail_download = true
+
+      result = run_batch(processor, store)
+
+      assert_not result.success
+      assert(result.errors.any? { |e| e.include?("receipt download failed") })
+      assert_empty graph.drafts
+      assert_empty client.created
+      assert_empty client.updated
     end
 
     test "an empty batch reports an error and touches nothing" do

@@ -317,7 +317,8 @@ module Reimbursements
       submitted = airtable_expense_record(
         id: "recExp1", status: "Submitted",
         overrides: { FIELD_IDS[:expenses][:batch] => [ "recBat1" ],
-                     FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-13" }
+                     FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-13",
+                     FIELD_IDS[:expenses][:producer_notified] => true }
       )
       store, client = build_store(expenses: [ submitted ])
 
@@ -329,6 +330,10 @@ module Reimbursements
       assert_equal [], fields[FIELD_IDS[:expenses][:batch]], "batch link cleared with an empty array"
       assert_nil fields[FIELD_IDS[:expenses][:submitted_to_eusa_date]]
       refute fields[FIELD_IDS[:expenses][:receipts_offloaded]]
+      # Deliberately untouched (per the method's own doc comment) — a reopen +
+      # rebuild must not re-email a producer who was already notified.
+      assert_not fields.key?(FIELD_IDS[:expenses][:producer_notified]),
+                 "producer_notified must not be part of this write at all"
     end
 
     test "update_expense! actually clears the budget link on a blank budget_record_id" do
