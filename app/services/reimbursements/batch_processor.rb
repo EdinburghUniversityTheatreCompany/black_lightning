@@ -45,7 +45,7 @@ module Reimbursements
                         :eusa_draft_web_link, :eusa_draft_message_id, :bacs_sharepoint_url,
                         :producer_notifications_sent, :receipts_uploaded, :errors, keyword_init: true)
 
-    def initialize(store:, graph:, cost_centre:, xlsx: nil, composer: nil, notifier: nil)
+    def initialize(store:, graph:, cost_centre:, xlsx: nil, composer: nil, notifier: nil, sleeper: nil)
       @store = store
       @graph = graph
       @cost_centre = cost_centre
@@ -54,6 +54,7 @@ module Reimbursements
       # Producer notifications send through Graph from the cost centre's send
       # mailbox (same client as the EUSA draft), so they land in its Sent Items.
       @notifier = notifier || Notifier.new(mailbox: cost_centre.send_mailbox, graph: graph)
+      @sleeper = sleeper || ->(seconds) { sleep(seconds) }
     end
 
     def process(expenses:, bacs_date:, sender_name:, eusa_recipient:,
@@ -339,7 +340,13 @@ module Reimbursements
         attempts += 1
         yield attempts
       rescue StandardError
-        attempts < WRITE_RETRY_ATTEMPTS ? retry : raise
+        raise unless attempts < WRITE_RETRY_ATTEMPTS
+
+        # A short, immediate-but-increasing back-off so a genuine Airtable
+        # outage isn't hammered by 3 retries with zero delay between them —
+        # this runs from a background job, so a brief sleep costs nothing.
+        @sleeper.call(attempts)
+        retry
       end
     end
   end

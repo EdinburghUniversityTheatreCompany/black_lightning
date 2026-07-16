@@ -28,7 +28,10 @@ module Reimbursements
       # The default Notifier sends producer notifications through this same
       # FakeGraphClient (recorded in graph.send_mails), exercising the real
       # producer template render.
-      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre)
+      # A no-op sleeper: retry back-off is real in production but must not
+      # slow down every retry test in this file.
+      processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre,
+                                     sleeper: ->(_seconds) { })
       [ processor, store, client, graph ]
     end
 
