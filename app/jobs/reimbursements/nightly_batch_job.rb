@@ -25,7 +25,12 @@ module Reimbursements
   # run — so it can be triggered safely to preview.
   class NightlyBatchJob < ApplicationJob
     queue_as :default
-    limits_concurrency key: "reimbursements_nightly_batch"
+    # duration: set well above the default 3-minute lock TTL — this triages
+    # every Approved expense across every cost centre plus its AI verdicts and
+    # sends operator emails, plausibly exceeding 3 minutes; a lock expiring
+    # mid-run would let Solid Queue's sweep allow a concurrent second run past
+    # the single-flight guarantee this concurrency key exists to enforce.
+    limits_concurrency key: "reimbursements_nightly_batch", duration: 30.minutes
 
     # A Pending submission awaiting approval longer than this gets a reminder.
     PENDING_REMINDER_DAYS = 3
@@ -51,6 +56,15 @@ module Reimbursements
 
     def modulus_checker
       @modulus_checker ||= checker_builder.call
+    end
+
+    # Memoized like +store+: notify(cost_centre) can run once per due cost
+    # centre in a single job execution, and each call would otherwise mint a
+    # brand-new GraphClient — and a brand-new OAuth token fetch — of its own,
+    # even though the app-only Graph credential is the same across cost
+    # centres.
+    def graph
+      @graph ||= graph_builder.call
     end
 
     def run_for(cost_centre, dry_run:, today:)
@@ -225,7 +239,7 @@ module Reimbursements
     end
 
     def notifier(cost_centre)
-      notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph_builder.call)
+      notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph)
     end
 
     # The finance operators: users granted the finance permission via the grid,

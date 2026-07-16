@@ -105,5 +105,37 @@ module Reimbursements
       assert_nothing_raised { AiCheckJob.perform_now("recGone") }
       assert_empty @client.updated
     end
+
+    # An "error" verdict means the checker itself couldn't run (a transient
+    # Gemini blip, no API key) — not a real pass/fail — so it must NOT count
+    # as "already checked", or a transient outage would permanently lock the
+    # expense out of ever being rechecked.
+    test "rechecks an expense stuck on a previous error verdict" do
+      errored = airtable_expense_record(id: "recExp1",
+                                        overrides: { FIELD_IDS[:expenses][:ai_check_status] => "error" })
+      setup_store(expenses: [ errored ])
+      checker = FakeChecker.new(verdict(status: "pass", comment: "Looks fine now."))
+      AiCheckJob.checker_builder = -> { checker }
+
+      AiCheckJob.perform_now("recExp1")
+
+      assert_equal [ "recExp1" ], checker.checked.map(&:first)
+      _table, _record_id, fields = @client.updated.sole
+      assert_equal "pass", fields[FIELD_IDS[:expenses][:ai_check_status]]
+    end
+
+    test "a broadcast failure is swallowed, not raised — the verdict is already durably written" do
+      setup_store(expenses: [ airtable_expense_record(id: "recExp1") ])
+      AiCheckJob.checker_builder = -> { FakeChecker.new(verdict(status: "pass")) }
+      original_broadcast = Turbo::StreamsChannel.method(:broadcast_replace_to)
+      Turbo::StreamsChannel.define_singleton_method(:broadcast_replace_to) { |*| raise "redis unavailable" }
+
+      notified = capture_honeybadger_notices { AiCheckJob.perform_now("recExp1") }
+
+      assert_equal 1, @client.updated.size, "the verdict must still be written despite the broadcast failing"
+      assert_equal 1, notified.size, "the broadcast failure must still be reported"
+    ensure
+      Turbo::StreamsChannel.define_singleton_method(:broadcast_replace_to, original_broadcast)
+    end
   end
 end

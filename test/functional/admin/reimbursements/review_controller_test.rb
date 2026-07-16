@@ -184,6 +184,17 @@ module Admin
         assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
       end
 
+      test "re-kicks an AI check for an expense stuck on an error verdict" do
+        errored = pending_expense(id: "recErrored", payment_reference: "PROPS PAT",
+                                  overrides: { EXP[:ai_check_status] => "error" })
+        rebuild_store(expenses: [ errored ])
+        sign_in @user
+
+        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ "recErrored" ]) do
+          get :index
+        end
+      end
+
       # --- Bulk actions ----------------------------------------------------
 
       test "the pending tab exposes bulk-select checkboxes and a bulk toolbar" do

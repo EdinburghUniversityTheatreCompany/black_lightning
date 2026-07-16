@@ -113,6 +113,14 @@ module Reimbursements
       receipts.any? ? receipts.size : sharepoint_receipt_urls.size
     end
 
+    # True only for a genuine pass/fail verdict — "error" means the checker
+    # itself couldn't run (e.g. a transient Gemini outage), so it must NOT
+    # count as "already checked": that would permanently lock the expense out
+    # of ever being (re)checked once the outage clears.
+    def ai_checked?
+      %w[pass fail].include?(ai_check_status)
+    end
+
     def payee_override?
       payee_name_override.present? || sort_code_override.present? ||
         account_number_override.present?

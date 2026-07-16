@@ -24,8 +24,13 @@ module Reimbursements
 
     # Serialise builds per cost centre: a double-click (or a rapid rebuild) can't
     # run two BatchProcessor#process calls at once, so it can't create two drafts
-    # / two batches / mark Submitted twice.
-    limits_concurrency to: 1, key: ->(*args) {
+    # / two batches / mark Submitted twice. duration: is set well above the
+    # default 3-minute lock TTL — BatchProcessor#process does per-expense
+    # SharePoint uploads and a Graph draft create across a batch that can run to
+    # 200 rows, plausibly exceeding 3 minutes on its own; a lock expiring
+    # mid-run would let a concurrent second build past the single-flight
+    # guarantee this concurrency key exists to enforce.
+    limits_concurrency to: 1, duration: 30.minutes, key: ->(*args) {
       params = args.last.is_a?(Hash) ? args.last : {}
       "reimbursements_build_batch_#{params[:cost_centre_key]}"
     }
@@ -69,8 +74,16 @@ module Reimbursements
       @store ||= store_builder.call
     end
 
+    # Memoized like +store+: graph_builder.call is invoked at two separate call
+    # sites in a single run (the processor and the notifier), and each call
+    # would otherwise mint a brand-new GraphClient — and a brand-new OAuth
+    # token fetch — of its own.
+    def graph
+      @graph ||= graph_builder.call
+    end
+
     def processor(cost_centre)
-      processor_builder.call(store: store, graph: graph_builder.call, cost_centre: cost_centre)
+      processor_builder.call(store: store, graph: graph, cost_centre: cost_centre)
     end
 
     def parse_date(value)
@@ -89,7 +102,7 @@ module Reimbursements
         return
       end
 
-      emailer = notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph_builder.call)
+      emailer = notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph)
       if result.success
         emailer.batch_ready(recipients: recipients, expenses: notification_rows(approved),
                             total: format("%.2f", result.total_amount || 0),

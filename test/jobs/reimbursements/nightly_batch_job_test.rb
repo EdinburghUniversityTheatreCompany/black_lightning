@@ -174,6 +174,20 @@ module Reimbursements
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
     end
 
+    test "builds the graph client once per run even when both the pending reminder and the " \
+         "approved-ready alert fire" do
+      stock_store([ pending_expense(days_ago: 5), approved_expense ])
+      graph_builds = 0
+      NightlyBatchJob.graph_builder = -> { graph_builds += 1; Object.new }
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal 1, mailer_calls(:pending_reminder).size
+      assert_equal 1, mailer_calls(:approved_ready).size
+      assert_equal 1, graph_builds,
+                   "both notify calls in this run must share one GraphClient (one OAuth token fetch)"
+    end
+
     test "a Graph email failure doesn't break the run or trip a spurious failure email" do
       @notifier = FakeNotifier.new(fail: true)
       stock_store([ approved_expense ])

@@ -133,3 +133,51 @@ without stopping to ask — logged here for review in a batch rather than blocki
   `HttpTransport`) and building `RubyLLM::Attachment`s from them, mirroring the pattern `Extractor`
   and `BatchProcessor` already use instead of ever handing a remote fetcher a signed Airtable URL
   that might expire before it's fetched.
+
+- **#12 (no concurrency guard on AiCheckJob)** was already fixed on this branch before this
+  session's plan existed (commit `6d21f3c5`, dated before this execution plan was written) — no
+  action needed, confirmed still in place.
+
+- **#40 + #208 (AiChecker never raises, so a transient Gemini blip becomes a permanent lockout)**
+  and **#75 (the idempotency guard also defeats retry of the Turbo broadcast)**: fixed all three
+  together, same root cause — the guard conflated "a verdict was written" with "the expense was
+  actually checked." Added `Expense#ai_checked?` (true only for a genuine `pass`/`fail` verdict,
+  false for `error`) and used it in both `AiCheckJob`'s own idempotency guard and
+  `ReviewController#kick_ai_checks`, so an expense stuck on `error` gets automatically rechecked
+  the next time Review loads rather than being locked out forever. For #75, wrapped
+  `broadcast_verdict` in its own rescue: a broadcast failure is a live-UI nicety failing, not a
+  correctness issue (the next page load renders the true status straight from the store anyway),
+  so it's logged + reported rather than allowed to trigger a job retry that the (now-correct)
+  idempotency guard would just no-op on. Did **not** change `AiChecker` itself to raise on
+  failure — its "never raises" contract is deliberate (its own doc comment: "so the Review queue
+  keeps working") and is relied on elsewhere; reworking that felt like a bigger, riskier change
+  than this finding needed.
+
+- **#5 (three `limits_concurrency` calls default to a 3-minute lock TTL)**: added an explicit
+  `duration:` to all four reimbursements jobs with a concurrency guard (the three the finding
+  named, plus `AiCheckJob`'s guard for the same reason — RubyLLM's 120s `request_timeout` plus its
+  own retries can plausibly exceed 3 minutes on a single Gemini call too). Sized generously rather
+  than trying to derive an exact worst-case: 30 minutes for the batch jobs (per-expense SharePoint
+  uploads + a Graph draft, up to a 200-row batch), 15 minutes for the mailbox poll, 10 minutes for
+  the single-expense AI check.
+
+- **#194 (GraphClient token not memoized per job run)**: fixed by memoizing `graph_builder.call`
+  itself (`@graph ||=`) in `BuildBatchJob` and `NightlyBatchJob`, mirroring the `@store ||=`
+  pattern both jobs already use — each job calls `graph_builder.call` at two-plus call sites per
+  run (processor + notifier; reminder notify + issue/ready notify), each previously minting a
+  fresh `GraphClient` and a fresh OAuth token fetch. Added a regression test per job proving the
+  builder fires only once even when multiple call sites fire in one run (confirmed this already
+  happens today with a single cost centre — not just a dormant multi-cost-centre concern).
+
+- **#207 (mailbox poll's per-cost-centre MailboxClient token not memoized) — DEFERRED, not
+  fixed.** Unlike #194, `MailboxClient` legitimately needs a fresh instance per cost centre (each
+  wraps a different `receive_mailbox`), so instance-level memoization doesn't apply here — the
+  real fix needs the OAuth token itself shared across instances (e.g. a `Rails.cache`-backed token
+  cache in `GraphAuth`, mirroring the existing per-mailbox folder-id cache). That's a real change
+  to shared auth plumbing, and would need cache-reset handling added to every test file building a
+  real `MailboxClient`/`GraphClient` (mirroring the existing `Rails.cache.delete_matched
+  ("reimbursements/graph-folder/*")` pattern already needed for folder ids) — bigger than the
+  "cheap, do opportunistically" framing this finding started with. Also genuinely dormant today:
+  `CostCentre.all.each` has exactly one iteration with only one cost centre configured, so
+  `mailbox_builder.call` only runs once per poll cycle right now regardless. Left for a follow-up
+  alongside Tier 5's other same-caveat cost-centre findings (#41/#80/#117).

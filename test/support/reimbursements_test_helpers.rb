@@ -83,6 +83,18 @@ module ReimbursementsTestHelpers
     }
   }.freeze
 
+  # No mocking library in this suite: swap Honeybadger.notify for a recorder
+  # for the duration of the block, then restore the original method.
+  def capture_honeybadger_notices
+    notices = []
+    original = Honeybadger.method(:notify)
+    Honeybadger.define_singleton_method(:notify) { |error, **opts| notices << [ error, opts ] }
+    yield
+    notices
+  ensure
+    Honeybadger.define_singleton_method(:notify, original)
+  end
+
   # Grants the finance grid permission (:manage, :reimbursements_finance) to a
   # user via the Business Manager role — the gate for every finance operator
   # controller (Review, People, ExpenseEdits, …).

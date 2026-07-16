@@ -90,6 +90,17 @@ module Reimbursements
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
     end
 
+    test "builds the graph client once per run, not once per call site" do
+      stock_store([ approved_expense ])
+      graph_builds = 0
+      BuildBatchJob.graph_builder = -> { graph_builds += 1; Object.new }
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert_equal 1, graph_builds,
+                   "the processor and the notifier must share one GraphClient (one OAuth token fetch), not one each"
+    end
+
     test "passes the operator's edited subject and body through to the processor" do
       stock_store([ approved_expense ])
 

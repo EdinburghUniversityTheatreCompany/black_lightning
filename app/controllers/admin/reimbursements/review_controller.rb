@@ -237,8 +237,12 @@ module Admin
         expense
       end
 
+      # ai_checked? (not ai_check_status.present?) so an "error" verdict — the
+      # checker itself couldn't run, not a real pass/fail — gets retried the
+      # next time Review loads, rather than being stuck forever the moment a
+      # transient Gemini outage clears.
       def kick_ai_checks(expenses)
-        expenses.reject { |e| e.ai_check_status.present? }.each do |expense|
+        expenses.reject(&:ai_checked?).each do |expense|
           ::Reimbursements::AiCheckJob.perform_later(expense.record_id)
         end
       end

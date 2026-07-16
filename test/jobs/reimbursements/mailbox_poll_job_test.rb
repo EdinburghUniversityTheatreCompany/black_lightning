@@ -78,18 +78,6 @@ module Reimbursements
       )
     end
 
-    # No mocking library in this suite: swap Honeybadger.notify for a recorder
-    # for the duration of the block, then restore the original method.
-    def capture_honeybadger_notices
-      notices = []
-      original = Honeybadger.method(:notify)
-      Honeybadger.define_singleton_method(:notify) { |error, **opts| notices << [ error, opts ] }
-      yield
-      notices
-    ensure
-      Honeybadger.define_singleton_method(:notify, original)
-    end
-
     def setup_job(messages:, attachments: {}, extraction: nil)
       ENV["REIMBURSEMENTS_AZURE_TENANT_ID"] = "t"
       ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "c"

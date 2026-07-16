@@ -21,7 +21,12 @@ module Reimbursements
   # Graph credential failures alert the IT subcommittee, deduped to once/day.
   class MailboxPollJob < ApplicationJob
     queue_as :default
-    limits_concurrency key: "reimbursements_mailbox_poll" # overlapping runs would double-process unread mail
+    # duration: set well above the default 3-minute lock TTL — a poll runs
+    # Gemini extraction per new message across every cost centre's mailbox,
+    # plausibly exceeding 3 minutes; a lock expiring mid-run would let a
+    # concurrent second run past the single-flight guarantee that prevents
+    # double-processing unread mail.
+    limits_concurrency key: "reimbursements_mailbox_poll", duration: 15.minutes
 
     AUTH_ALERT_CACHE_KEY = "reimbursements/auth-failure-alerted".freeze
     SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
