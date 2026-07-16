@@ -809,3 +809,80 @@ without stopping to ask — logged here for review in a batch rather than blocki
 Tier 9 is now complete — all ~30 test-coverage-backfill findings resolved (several turned out
 already covered or dead code by the time they were checked, logged above and in earlier batches).
 Moving to Tier 10 (low-priority/cosmetic).
+
+## Tier 10 — low-priority / cosmetic (10 commits: 10 fixed, 9 deliberately deferred)
+
+Fixed, each as its own atomic commit:
+
+- **#196** (`Reconciliation.norm_amount` treats `BigDecimal("-0.00")` as distinct from zero):
+  `.zero?` check added so a negative-zero Airtable value normalises to the same dedup key as an
+  ordinary zero.
+- **#120** (`parse_british_date`'s DD/MM/YYYY branch accepts a 2-digit year, e.g. "15/03/89"
+  silently becomes year 89): added a 4-digit year guard so it falls through to the ISO/raise path
+  instead.
+- **#21** (`match_debit_to_expense` picks the first `Array#find` hit among equally-matching
+  candidates): now picks the candidate with the closest date. No funds are misdirected either
+  way (the finding says so itself) — this only narrows which specific record a genuine tie gets
+  attributed to.
+- **#94** (`list_drives`/`list_folder_contents` don't follow `@odata.nextLink`): added a shared
+  `paginated` helper both now use.
+- **#93** (5 operator-alert subjects stamp `Date.current.iso8601` instead of the `run_date:` every
+  one already receives correctly in the body): switched all 5 to `run_date`.
+- **#22** (`operator_emails`'s `flat_map(&:roles).flat_map(&:users)` N+1): added
+  `.includes(roles: :users)`. Negligible impact today (tiny tables, nightly-only) but free to fix.
+- **#23** (`create_batch`'s retry has no backoff, compounding load during a genuine outage): added
+  a short back-off via an injectable `sleeper:` (defaults to real `sleep`, stubbed to a no-op in
+  `build_scenario` so it doesn't slow down every retry test in the file).
+- **#112** (`expense_edits_controller#lookup_expense` uses cache-only `find_expense` instead of
+  `find_expense!`, the one by-id lookup not following the pattern every other call site uses):
+  switched to `find_expense!`.
+- **#51** (`people_controller#bank_details_changed?` compares the freshly-formatted sort code
+  directly against the raw stored value with no normalisation, unlike the account-number check
+  right beside it): normalised both sides. A record whose stored sort code lacks the canonical
+  dashes (e.g. hand-edited in Airtable) was being flagged as "changed" on every save, needlessly
+  resetting `verified` and appending a spurious audit note.
+- **#115** (`mail_to CostCentre.default&.receive_mailbox` renders a content-less, href-less `<a>`
+  when no cost centre exists yet): guarded with `.present?`, verified via `vischeck` against the
+  real dev server (the mailto link renders correctly with a configured cost centre; the fallback
+  branch can't be screenshotted live since this dev DB always has one, but the guard logic is
+  straightforward).
+- **#174 + #57**: fixed the stale "gitignored" comment in `modulus_check.rb` (contradicted the
+  file's own top comment and `vendor/pay_uk/README.md`, both correct) and added a version/date
+  stamp to the README (2026-07-10, taken from `git log --follow` on `valacdos.txt` rather than
+  guessed).
+- **#198** (`resources :expense_edits, param: :id` — `:id` is already Rails' default): dropped the
+  no-op option. Confirmed via `bin/rails routes` that the generated routes are byte-identical.
+
+Deliberately left as-is (per Tier 10's own framing — "safe to leave for whenever"), with reasoning:
+
+- **#130** (`reimbursements_date` hardcodes `"%Y-%m-%d"` instead of the admin app's `l(date,
+  format: :short)` convention, which is `"%-d %b"` — no year at all): the method's own doc comment
+  explicitly defends ISO-8601 as a deliberate consolidation of ~6 previously-scattered ad-hoc
+  formats specifically *for this finance section*, and `:short`'s year-less format is arguably
+  worse for a payments/BACS context than the inconsistency the finding flags. Not a bug — a
+  documented, intentional divergence. Left alone rather than blindly matching the rest of the app,
+  mirroring the plan's own precedent at Tier 6's `#151` (declining a "fix" that contradicts an
+  already-documented deliberate choice).
+- **#139** (`credentials_check_job.rb`'s `deliver_now` has no rescue) — the ordering half of this
+  finding (`deliver_now` before `Honeybadger.event`) was already fixed earlier this session
+  (reordered so the dedup key survives a Honeybadger exception). The "no rescue" half is already
+  covered by the base `ApplicationJob`'s blanket `retry_on StandardError, wait: ..., attempts: 5`
+  — a `deliver_now` failure already retries with backoff and surfaces in the Jobs dashboard on
+  exhaustion. Adding a local rescue here would suppress that retry rather than improve on it.
+- **#173** (`database.yml`'s `WORKTREE_DB_SUFFIX` allegedly duplicates an established
+  `.worktree-isolate.conf` convention) — **the finding's premise doesn't hold**: no
+  `.worktree-isolate.conf` exists anywhere in this repo's history (confirmed via `git log --all`
+  and a filesystem search) — see also [[parallel-worktree-dev-server-ports]] in global memory,
+  which independently notes this repo has no such file. `WORKTREE_DB_SUFFIX` is the *only*
+  per-worktree DB isolation mechanism here, not a second one. No action needed.
+- **#27, #55, #56, #186**: routing/architecture consistency notes (a `target="_blank"` link
+  missing a new-window warning — explicitly flagged as pre-existing and not a regression;
+  PATCH-action overloading via a hidden param; raw string routes vs. the `resources ... member`
+  DSL; `resource :reconciliation` vs. `ReconcileController`'s name). All are real but purely
+  stylistic, and every one has a wide blast radius (route helpers, redirect targets, and view call
+  sites all over the section) for zero functional gain — left as documented notes rather than
+  risking a drive-by rename/restructure this deep into an already-large diff.
+- **#188, #191**: Gemfile dependency notes for whoever next reaches for an HTTP client or xlsx
+  library in this codebase — not bugs, nothing to fix now.
+
+**Tier 10 is now complete. The full 229-finding execution plan (Tiers 0-10) is done.**
