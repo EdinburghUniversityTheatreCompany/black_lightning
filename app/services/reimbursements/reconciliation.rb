@@ -103,7 +103,11 @@ module Reimbursements
       expenses.find do |expense|
         next false unless expense.effective_nominal_code.strip.casecmp?(row.nominal_code.strip)
 
-        compare_amount = expense.amount_excl_vat || expense.amount
+        # A zero amount_excl_vat is the documented "not yet known" sentinel,
+        # not a genuine zero — || alone doesn't fall back to the gross amount
+        # for it, since 0/BigDecimal("0") are truthy in Ruby.
+        excl_vat = expense.amount_excl_vat
+        compare_amount = excl_vat.nil? || excl_vat.zero? ? expense.amount : excl_vat
         next false if compare_amount.nil? || (compare_amount - row.debit).abs > AMOUNT_TOLERANCE
 
         candidate_dates = [ expense.submitted_to_eusa_date, expense.payment_confirmed_date ].compact

@@ -20,6 +20,12 @@ module Reimbursements
     # since the two only disagree on inputs this format already excludes.
     DECIMAL_FORMAT = /\A-?\d+(\.\d+)?\z/
 
+    # A generous sanity ceiling — no real Bedlam Fringe expense claim is ever
+    # going to be six figures. Catches a fat-finger typo (an extra digit, a
+    # missing decimal point) that would otherwise sail all the way through to
+    # a live BACS payment request with no other server-side backstop.
+    MAX_AMOUNT = 100_000
+
     module_function
 
     # A human-readable error string when the amounts are invalid, else nil.
@@ -43,7 +49,10 @@ module Reimbursements
 
     def positive_number?(raw)
       value = raw.to_s.strip
-      value.match?(DECIMAL_FORMAT) && Float(value).positive?
+      return false unless value.match?(DECIMAL_FORMAT)
+
+      parsed = Float(value)
+      parsed.positive? && parsed <= MAX_AMOUNT
     rescue ArgumentError, TypeError
       false
     end

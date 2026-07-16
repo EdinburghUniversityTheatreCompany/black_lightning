@@ -84,8 +84,12 @@ module Reimbursements
     def missing_completion_fields
       missing = []
       missing << "a budget" if budget.nil?
-      missing << "the amount" if amount.blank?
-      missing << "the amount excluding VAT" if amount_excl_vat.blank?
+      # amount.blank?/amount_excl_vat.blank? alone would miss a zero-valued
+      # amount — 0/BigDecimal("0") are truthy in Ruby, so .blank? is false for
+      # them, even though a documented zero here means "not yet known," the
+      # same sentinel needs_attention_reasons already special-cases.
+      missing << "the amount" if amount.blank? || amount.zero?
+      missing << "the amount excluding VAT" if amount_excl_vat.blank? || amount_excl_vat.zero?
       missing << "a description" if description.blank?
       missing << "a payment reference" if payment_reference.blank?
       # A receipt counts as present if a file is attached OR a SharePoint URL was

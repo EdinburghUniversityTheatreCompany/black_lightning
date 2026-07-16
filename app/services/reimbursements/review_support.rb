@@ -23,15 +23,17 @@ module Reimbursements
     end
 
     # Human labels for each check an expense fails before it's ready to approve,
-    # in a stable order: missing/zero ex-VAT amount, no linked budget, no receipt
-    # (a SharePoint-offloaded receipt counts as present — same logic as
-    # +Expense#missing_completion_fields+), no effective bank details, an INVALID
-    # modulus result (OUTSIDE_SPEC is acceptable; skipped entirely when there are
-    # no bank details to check), or over the budget's remaining. An empty array
-    # means the expense is clean. +budget_by_id+ maps record_id => Budget (for the
-    # over-budget check); +modulus_checker+ responds to #check(sort, account).
+    # in a stable order: missing/zero gross or ex-VAT amount, no linked budget,
+    # no receipt (a SharePoint-offloaded receipt counts as present — same
+    # logic as +Expense#missing_completion_fields+), no effective bank
+    # details, an INVALID modulus result (OUTSIDE_SPEC is acceptable; skipped
+    # entirely when there are no bank details to check), or over the budget's
+    # remaining. An empty array means the expense is clean. +budget_by_id+
+    # maps record_id => Budget (for the over-budget check); +modulus_checker+
+    # responds to #check(sort, account).
     def needs_attention_reasons(expense, budget_by_id, modulus_checker)
       reasons = []
+      reasons << "no amount" if expense.amount.nil? || expense.amount.zero?
       reasons << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
       reasons << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
       reasons << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?

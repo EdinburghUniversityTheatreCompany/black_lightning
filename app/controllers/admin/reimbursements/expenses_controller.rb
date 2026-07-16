@@ -135,7 +135,8 @@ module Admin
       def extraction_json(extraction)
         return { ok: false, error: extraction.error } unless extraction.ok?
 
-        excl_vat = extraction.amount_excl_vat || extraction.total_amount
+        raw_excl_vat = extraction.amount_excl_vat
+        excl_vat = raw_excl_vat.nil? || raw_excl_vat.zero? ? extraction.total_amount : raw_excl_vat
         {
           ok: true,
           merchant: extraction.merchant,

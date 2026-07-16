@@ -288,6 +288,14 @@ module Reimbursements
       assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("100.00")), [ exp ])
     end
 
+    test "debit falls back to gross amount when amount_excl_vat is the zero not-yet-known sentinel" do
+      # 0/BigDecimal("0") are truthy in Ruby, so a plain || wouldn't fall back
+      # to the gross amount here — it would compare against a hard zero and
+      # never match any real debit row.
+      exp = expense(amount: bd("120.00"), amount_excl_vat: bd("0"))
+      assert_same exp, Reconciliation.match_debit_to_expense(debit_row(debit: bd("120.00")), [ exp ])
+    end
+
     test "debit skips expense without any reference date" do
       no_dates = expense(submitted_date: nil, payment_confirmed_date: nil)
       assert_nil Reconciliation.match_debit_to_expense(debit_row, [ no_dates ])

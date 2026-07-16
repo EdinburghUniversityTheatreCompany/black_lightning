@@ -45,6 +45,12 @@ module Reimbursements
       assert_equal 2, build_expense(amount_excl_vat: nil, receipts: []).missing_completion_fields.size
     end
 
+    test "a zero amount or amount_excl_vat is treated the same as blank (0 is truthy in Ruby)" do
+      assert_includes build_expense(amount: BigDecimal("0")).missing_completion_fields, "the amount"
+      assert_includes build_expense(amount_excl_vat: BigDecimal("0")).missing_completion_fields,
+                      "the amount excluding VAT"
+    end
+
     test "a SharePoint-offloaded receipt counts as present" do
       offloaded = build_expense(receipts: [], sharepoint_receipt_urls: [ "https://sp/receipt.pdf" ])
       assert_not_includes offloaded.missing_completion_fields, "a receipt"

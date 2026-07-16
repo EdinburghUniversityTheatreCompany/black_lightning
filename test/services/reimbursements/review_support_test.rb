@@ -50,6 +50,18 @@ module Reimbursements
       FakeChecker.new(ModulusCheck::VALID)
     end
 
+    # --- needs_attention: gross amount -------------------------------------
+
+    test "nil gross amount needs attention" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ], amount: nil)
+      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
+    end
+
+    test "zero gross amount needs attention" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ], amount: BigDecimal("0"))
+      assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
+    end
+
     # --- needs_attention: amount_excl_vat ---------------------------------
 
     test "nil ex-VAT amount needs attention" do

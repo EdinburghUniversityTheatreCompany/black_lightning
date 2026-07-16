@@ -64,5 +64,17 @@ module Reimbursements
     test "scientific notation is rejected, not silently truncated by to_f" do
       assert_match(/valid amount/i, error(amount: "1e10"))
     end
+
+    test "an amount far beyond any real claim is rejected as a fat-finger typo" do
+      assert_match(/valid amount/i, error(amount: "999999999.00"))
+    end
+
+    test "an amount right at the ceiling is accepted" do
+      assert_nil error(amount: AmountValidation::MAX_AMOUNT.to_s)
+    end
+
+    test "an excl VAT far beyond any real claim is rejected the same way" do
+      assert_match(/excl. VAT/i, error(amount: "20.00", amount_excl_vat: "999999999.00"))
+    end
   end
 end
