@@ -14,17 +14,6 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class ReviewController < FinanceController
-      # Injection seam for tests: the modulus checker (from the vendored Pay.UK
-      # rule files in production; a fake in functional tests).
-      class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
-
-      # Injection seam for tests: the Graph-backed email notifier, sending the
-      # rejection email from the cost centre's send mailbox.
-      class_attribute :notifier_builder,
-                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
-
-      helper_method :modulus_checker
-
       def index
         @title = "Review Expenses"
         @tab = params[:tab] == "approved" ? "approved" : "pending"
@@ -220,21 +209,6 @@ module Admin
 
       def bulk_reject_summary(rejected, emailed)
         "#{rejected} rejected, #{emailed} producer#{'s' unless emailed == 1} emailed."
-      end
-
-      def modulus_checker
-        @modulus_checker ||= checker_builder.call
-      end
-
-      def notifier
-        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
-      end
-
-      def find_expense!
-        expense = store.find_expense!(params[:id])
-        raise ActiveRecord::RecordNotFound if expense.nil?
-
-        expense
       end
 
       # ai_checked? (not ai_check_status.present?) so an "error" verdict — the

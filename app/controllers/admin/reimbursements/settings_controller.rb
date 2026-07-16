@@ -17,9 +17,6 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class SettingsController < FinanceController
-      # Injection seam for tests: the app-only Graph client (SharePoint browse).
-      class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
-
       before_action :set_cost_centre, only: %i[edit update test_access]
 
       # Which CostCentre columns each SharePoint destination writes.
@@ -62,10 +59,6 @@ module Admin
 
       def set_cost_centre
         @cost_centre = ::Reimbursements::CostCentre.find_by!(key: params[:key])
-      end
-
-      def graph
-        @graph ||= graph_builder.call
       end
 
       def edit_path

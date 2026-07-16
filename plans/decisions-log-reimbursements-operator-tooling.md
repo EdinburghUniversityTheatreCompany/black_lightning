@@ -402,3 +402,32 @@ without stopping to ask — logged here for review in a batch rather than blocki
   duplication cleanup) next — though most of it is mechanical refactor work with no user-facing
   behavior change; will scan it and decide whether it's worth doing in this pass or better left as
   a dedicated follow-up given the size of the diff already accumulated this session.
+
+- **Independent review of the Tier 5+6 diff** (`git diff d2bc6ffa..3a0e225f`) found no bugs across
+  all 7 checked angles (owner_ids_error input correctness, attrs-vs-params ordering, CostCentre
+  self-uniqueness on resave — verified live, not just inferred — case-insensitive mailbox
+  uniqueness, `URI::MailTo::EMAIL_REGEXP` strictness against real EUSA-style addresses, the
+  batches_controller param-name consistency between validation and the enqueue call, and test
+  fidelity). Clean pass, no follow-up needed.
+
+## Tier 7 (consolidation / duplication cleanup) — controller seams onto FinanceController
+
+- **19c (`checker_builder`/`modulus_checker`, 3 copies) + 19d (`notifier_builder`/`notifier`, 2
+  copies) + 19e (`graph_builder`, 3 copies — 2 controllers + one already-separate job) + 19f
+  (`find_expense!`, 2 copies) + #219 (generalized 19f into `find_or_404`, covering `find_expense!`,
+  `find_budget`, `find_batch`, `find_person` — 8 call sites total once budgets/batches/people are
+  included) + #215 (pagination one-liner, 4 copies)**: all six hoisted onto `FinanceController` in
+  one pass, exactly as the plan's suggested PR boundary describes. `find_expense!` is kept as a
+  thin `find_or_404(:find_expense!)` wrapper specifically so the 9 existing bare `find_expense!`
+  call sites in `ReviewController`/`ExpenseEditsController` needed zero changes — only the
+  duplicate private-method bodies were removed. Pure refactor, no behavior change: the full
+  reimbursements suite has the exact same run count (733) before and after, all green.
+- Did not touch `BuildBatchJob`/`NightlyBatchJob`'s own `graph_builder` (a job concern, already
+  fixed for OAuth-token reuse in Tier 3's #194) — 19e's "3 copies" count includes that job alongside
+  the two controllers; only the two controller copies were in scope for this controller-base
+  consolidation.
+- The remaining Tier 7 items (view/email partial dedup, service-layer dedup — especially #185/#224
+  which flags the date/decimal-parse copies have already silently diverged, i.e. there's a real bug
+  hiding in that duplication — and test-double dedup) are larger, higher-regression-risk refactors
+  (changing shared view partials touches rendered HTML across many pages) — left for a dedicated
+  follow-up pass rather than folding into this session's already-large diff.

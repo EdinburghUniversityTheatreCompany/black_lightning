@@ -19,12 +19,6 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class ExpenseEditsController < FinanceController
-      # Injection seam for tests: the modulus checker (from the vendored Pay.UK
-      # rule files in production; a fake in functional tests).
-      class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
-
-      helper_method :modulus_checker
-
       # All expenses as a filterable/searchable table, newest first, each row
       # opening the edit page above. The finance team's primary way in — the
       # old +find+ lookup is now just the search box on this page.
@@ -43,7 +37,7 @@ module Admin
         respond_to do |format|
           # Paginate the filtered set in Ruby (Airtable free plan — the whole
           # list is cached and filtered in-process, so we page the array).
-          format.html { @expenses = Kaminari.paginate_array(filtered).page(params[:page]).per(50) }
+          format.html { @expenses = paginate(filtered) }
           # Export the FULL filtered set (the on-screen filters carry through the
           # query string) — pagination is display-only, so the CSV isn't paged.
           format.csv do
@@ -132,10 +126,6 @@ module Admin
           ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
       end
 
-      def modulus_checker
-        @modulus_checker ||= checker_builder.call
-      end
-
       # All expenses, newest first, narrowed by the status/budget/attention
       # filters and the free-text search. Filtering happens in Ruby over the one
       # cached list (Airtable free plan — no per-filter API calls).
@@ -193,13 +183,6 @@ module Admin
         Float(query.delete("£, ")) == amount.to_f
       rescue ArgumentError
         false
-      end
-
-      def find_expense!
-        expense = store.find_expense!(params[:id])
-        raise ActiveRecord::RecordNotFound if expense.nil?
-
-        expense
       end
 
       # Match on Airtable record id first, then on the visible auto-number.

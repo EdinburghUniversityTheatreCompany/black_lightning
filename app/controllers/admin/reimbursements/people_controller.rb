@@ -10,21 +10,13 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`),
     # distinct from the producer portal's `:access, :reimbursements`.
     class PeopleController < FinanceController
-      # Injection seam for tests: the modulus checker (loaded from the vendored
-      # Pay.UK rule files in production; a fake in functional tests so badge
-      # states don't depend on gitignored data being present).
-      class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
-
-      helper_method :modulus_checker
-
       def index
         @title = "Reimbursements People"
         load_registry
       end
 
       def update
-        @person = store.find_person(params[:id])
-        raise ActiveRecord::RecordNotFound if @person.nil?
+        @person = find_or_404(:find_person)
 
         params[:verify].present? ? mark_verified : save_bank_details
       end
@@ -35,11 +27,7 @@ module Admin
         people = store.people
         # Duplicate detection runs over the WHOLE registry, not just one page.
         @duplicates = ::Reimbursements::PeopleSupport.find_duplicate_people(people)
-        @people = Kaminari.paginate_array(people).page(params[:page]).per(50)
-      end
-
-      def modulus_checker
-        @modulus_checker ||= checker_builder.call
+        @people = paginate(people)
       end
 
       def mark_verified

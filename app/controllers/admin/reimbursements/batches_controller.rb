@@ -21,10 +21,6 @@ module Admin
     class BatchesController < FinanceController
       before_action :require_cost_centre, only: %i[new create]
 
-      # Injection seam for tests (this suite has no mocking library): the Graph
-      # client used to delete a reopened batch's stale EUSA draft.
-      class_attribute :graph_builder, default: -> { ::Reimbursements::GraphClient.new }
-
       def index
         @title = "Batch history"
         @batches = store.batches.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse
@@ -32,9 +28,7 @@ module Admin
       end
 
       def show
-        @batch = store.find_batch(params[:id])
-        raise ActiveRecord::RecordNotFound if @batch.nil?
-
+        @batch = find_or_404(:find_batch)
         @expenses = processed_expenses.select { |expense| expense.batch_id == @batch.record_id }
       end
 
@@ -78,9 +72,7 @@ module Admin
       end
 
       def reopen
-        batch = store.find_batch(params[:id])
-        raise ActiveRecord::RecordNotFound if batch.nil?
-
+        batch = find_or_404(:find_batch)
         linked = processed_expenses.select { |expense| expense.batch_id == batch.record_id }
         paid = linked.select { |expense| expense.status == ::Reimbursements::Status::PAID }
         return blocked_by_paid(paid) if paid.any?
@@ -137,13 +129,6 @@ module Admin
       # still an unsent draft right now.
       def confirmed_still_draft?(batch)
         graph.draft_message?(mailbox: draft_mailbox, message_id: batch.draft_message_id)
-      end
-
-      # Memoized so a single reopen request (which calls both #confirmed_still_draft?
-      # and #draft_cleanup_flash) shares one client and one Entra OAuth token
-      # fetch instead of two.
-      def graph
-        @graph ||= graph_builder.call
       end
 
       def blocked_by_unconfirmed_draft

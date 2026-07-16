@@ -19,7 +19,7 @@ module Admin
         # transaction date so hand-imported/legacy rows still sort sensibly.
         sorted = actuals.sort_by { |a| a.imported_at || a.date&.to_time || Time.zone.at(0) }.reverse
         respond_to do |format|
-          format.html { @actuals = Kaminari.paginate_array(sorted).page(params[:page]).per(50) }
+          format.html { @actuals = paginate(sorted) }
           # Export the FULL filtered set (the period filter carries through the
           # query string) — pagination is display-only, so the CSV isn't paged.
           format.csv do

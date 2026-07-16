@@ -20,7 +20,7 @@ module Admin
       def index
         @title = "Reimbursements Budgets"
         sorted = store.budgets.sort_by { |budget| budget.name.to_s.downcase }
-        @budgets = Kaminari.paginate_array(sorted).page(params[:page]).per(50)
+        @budgets = paginate(sorted)
         @people_by_id = store.people.index_by(&:record_id)
       end
 
@@ -57,8 +57,7 @@ module Admin
       private
 
       def set_budget
-        @budget = store.find_budget(params[:id])
-        raise ActiveRecord::RecordNotFound if @budget.nil?
+        @budget = find_or_404(:find_budget)
       end
 
       def edit_path

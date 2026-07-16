@@ -21,11 +21,6 @@ module Admin
     #
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`).
     class ReconcileController < FinanceController
-      # Injection seam for tests: the Graph-backed email notifier, sending the
-      # "you've been paid" email from the cost centre's send mailbox.
-      class_attribute :notifier_builder,
-                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
-
       def show
         @title = "Reconcile EUSA actuals"
       end
@@ -239,10 +234,6 @@ module Admin
             Honeybadger.notify(e, context: { source: "reimbursements_payment_email", payee: person.email })
           end
         end
-      end
-
-      def notifier
-        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
       end
 
       # The EUSA period (from the row) is now the scoping key, so source_month is
