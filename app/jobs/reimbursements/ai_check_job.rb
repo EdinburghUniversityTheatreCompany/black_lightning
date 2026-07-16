@@ -52,6 +52,11 @@ module Reimbursements
 
     private
 
+    # Push the finished verdict onto the Review page live: replace the expense's
+    # ai_verdict_<id> region (rendered on load as a "running…" placeholder) with
+    # the badge + pass/fail/error explanation. The Review index subscribes via
+    # turbo_stream_from "reimbursements_review_ai".
+    #
     # The verdict is already durably written by the time this runs; a failure
     # here is a live-UI nicety failing, not a checked-or-not correctness issue
     # (the next page load renders the true status straight from the store
@@ -59,23 +64,15 @@ module Reimbursements
     # would just re-run a completed check for nothing, since the idempotency
     # guard above would then skip the actual check on retry anyway.
     def broadcast_verdict(expense)
-      broadcast_verdict!(expense)
-    rescue StandardError => e
-      Rails.logger.error("Reimbursements AI-verdict broadcast failed for #{expense.record_id}: #{e.message}")
-      Honeybadger.notify(e, context: { expense_record_id: expense.record_id })
-    end
-
-    # Push the finished verdict onto the Review page live: replace the expense's
-    # ai_verdict_<id> region (rendered on load as a "running…" placeholder) with
-    # the badge + pass/fail/error explanation. The Review index subscribes via
-    # turbo_stream_from "reimbursements_review_ai".
-    def broadcast_verdict!(expense)
       Turbo::StreamsChannel.broadcast_replace_to(
         "reimbursements_review_ai",
         target: "ai_verdict_#{expense.record_id}",
         partial: "admin/reimbursements/review/ai_verdict",
         locals: { expense: expense }
       )
+    rescue StandardError => e
+      log_and_notify("Reimbursements AI-verdict broadcast failed for #{expense.record_id}: #{e.message}", e,
+                     context: { expense_record_id: expense.record_id })
     end
   end
 end
