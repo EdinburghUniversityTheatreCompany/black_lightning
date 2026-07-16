@@ -229,6 +229,20 @@ module Reimbursements
       assert_equal %w[Receipts note.txt], items.map(&:name)
     end
 
+    test "list_folder_contents follows @odata.nextLink instead of truncating to the first page" do
+      client, http = build_client([
+        token_response,
+        [ 200, { value: [ { "id" => "1", "name" => "a.pdf", "webUrl" => "u1" } ],
+                "@odata.nextLink" => "https://graph.microsoft.com/v1.0/next-page" }.to_json ],
+        [ 200, { value: [ { "id" => "2", "name" => "b.pdf", "webUrl" => "u2" } ] }.to_json ]
+      ])
+
+      items = client.list_folder_contents(drive_id: "drv")
+
+      assert_equal %w[a.pdf b.pdf], items.map(&:name)
+      assert_includes http.requests.last.uri, "next-page"
+    end
+
     test "get_site resolves a site URL to its Graph id via the path form" do
       client, http = build_client([
         token_response,
@@ -262,6 +276,20 @@ module Reimbursements
       client, = build_client([ token_response, [ 200, {}.to_json ] ])
 
       assert_empty client.list_drives("site-1")
+    end
+
+    test "list_drives follows @odata.nextLink instead of truncating to the first page" do
+      client, http = build_client([
+        token_response,
+        [ 200, { value: [ { "id" => "drv1", "name" => "Documents" } ],
+                "@odata.nextLink" => "https://graph.microsoft.com/v1.0/next-page" }.to_json ],
+        [ 200, { value: [ { "id" => "drv2", "name" => "Shared" } ] }.to_json ]
+      ])
+
+      drives = client.list_drives("site-1")
+
+      assert_equal %w[drv1 drv2], drives.map(&:id)
+      assert_includes http.requests.last.uri, "next-page"
     end
 
     test "check_mailbox probes the mailbox inbox and returns true" do

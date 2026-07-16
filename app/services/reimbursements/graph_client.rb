@@ -166,20 +166,34 @@ module Reimbursements
     end
 
     def list_drives(site_id)
-      graph_request(:get, "/sites/#{site_id}/drives").fetch("value", []).map do |drive|
+      paginated(:get, "/sites/#{site_id}/drives").map do |drive|
         Drive.new(id: drive["id"], name: drive["name"].presence || "Documents")
       end
     end
 
     def list_folder_contents(drive_id:, item_id: nil)
       path = item_id ? "/drives/#{drive_id}/items/#{item_id}/children" : "/drives/#{drive_id}/root/children"
-      graph_request(:get, path).fetch("value", []).map do |item|
+      paginated(:get, path).map do |item|
         Item.new(id: item["id"], name: item["name"].to_s, folder: item.key?("folder"),
                  web_url: item["webUrl"].to_s)
       end
     end
 
     private
+
+    # Follows Graph's @odata.nextLink so a site/drive with more items than fit
+    # in one page (folders, drives) isn't silently truncated to the first page.
+    def paginated(http_method, path)
+      items = []
+      next_link = path
+      loop do
+        page = graph_request(http_method, next_link)
+        items.concat(page.fetch("value", []))
+        next_link = page["@odata.nextLink"]
+        break if next_link.blank?
+      end
+      items
+    end
 
     # Airtable's free-text email fields carry stray whitespace; an un-stripped
     # address is rejected by Graph as an invalid recipient. Ported from
