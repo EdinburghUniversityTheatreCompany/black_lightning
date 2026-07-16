@@ -56,5 +56,37 @@ without stopping to ask — logged here for review in a batch rather than blocki
   Widening the shared helper's signature felt like a bigger, riskier ripple than the fix warranted.
   Kept advisory (not a hard block on `approve`) for the same false-positive reasoning as #126 above.
 
-- **#1 (BACS spreadsheet 32-row overflow)** — not yet reached this session, continuing after this
-  log entry.
+- **#1 (BACS spreadsheet 32-row overflow)**: fixed — extended the vendored template to 200 data
+  rows (verified end-to-end via real generated spreadsheets before replacing the file: GRAND TOTAL
+  formula, the Authorisation Form's cross-sheet total, and cell styling all round-trip correctly),
+  and `BacsXlsx#generate` now raises a clear `TemplateError` above that cap instead of corrupting
+  the total. Chose 200 as a round, generous number rather than trying to derive an exact "real"
+  cap from usage data — flag if you want a different number.
+
+## Tier 1 (modulus-check + amount/bank-detail validation correctness)
+
+- **#202 (9-digit account numbers)**: implemented the actual Pay.UK §2.1.2 Santander/A&L
+  transform (substitute the sort code's last digit with the account's first, check the remaining
+  8) rather than the weaker "just degrade to OUTSIDE_SPEC" alternative the finding also offered —
+  it's a well-specified, real bank format worth actually supporting. Did **not** attempt the
+  related "10-digit accounts need per-institution first-vs-last-8-digit handling" gap the same
+  finding flagged as lower-confidence — that needs real per-bank spec data I don't have verified
+  access to re-derive, so it's left as-is (already matching the ported bedlam-bacs behavior).
+
+- **#164/#3 (amount-parsing divergence)**: fixed at the root (a stricter decimal-format regex in
+  `AmountValidation`, so a value that passes validation can never diverge from what the write path's
+  `to_f` produces) rather than also touching `Mapper#expense_fields`'s `to_f` calls — `Mapper`'s
+  `to_f` is shared by several unrelated models (Budget, EusaActual), so changing its parsing
+  strategy felt like a bigger, riskier ripple than the finding needed. Left the controllers'
+  own `.to_f` re-derivation of `amount_excl_vat` untouched too, for the same reason — with the
+  regex fix, anything that reaches that line is already guaranteed to parse identically either way.
+
+- **A self-review of this Tier 1 diff caught one real bug in my own fix**: `strip_separators` used
+  `\s` (regex whitespace class — matches tab/newline/CR too) instead of a literal space, which
+  would have let a tab-containing value slip through the exact strictness the fix was adding.
+  Fixed in a follow-up commit (7211750d) with a regression test. Noting this here as a reminder
+  that a "review the diff before moving on" pass caught something a same-session author missed —
+  worth keeping that habit for the remaining tiers.
+
+- **#1 through #225 (Tier 0 + Tier 1) are now complete.** Continuing to Tier 2 (the zero-sentinel
+  amount bug) next.
