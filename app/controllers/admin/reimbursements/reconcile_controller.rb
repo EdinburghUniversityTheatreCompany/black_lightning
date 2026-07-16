@@ -182,30 +182,35 @@ module Admin
       end
 
       def apply_debit_row(row, expense, imported_at)
-        actual = store.create_actual!(actuals_attrs(row, imported_at))
-        store.link_actual_to_expense!(actual.record_id, expense.record_id)
-        store.update_expense!(expense.record_id, status: ::Reimbursements::Status::PAID,
-                              payment_confirmed_date: row.date)
-        true
-      rescue StandardError => e
-        report_reconciliation_row_failure("expense ##{expense.auto_number}", e)
-        false
+        with_row_rescue("expense ##{expense.auto_number}") do
+          actual = store.create_actual!(actuals_attrs(row, imported_at))
+          store.link_actual_to_expense!(actual.record_id, expense.record_id)
+          store.update_expense!(expense.record_id, status: ::Reimbursements::Status::PAID,
+                                payment_confirmed_date: row.date)
+        end
       end
 
       def apply_credit_row(row, budget, imported_at)
-        actual = store.create_actual!(actuals_attrs(row, imported_at))
-        store.link_actual_to_budget!(actual.record_id, budget.record_id)
-        true
-      rescue StandardError => e
-        report_reconciliation_row_failure("budget #{budget.name}", e)
-        false
+        with_row_rescue("budget #{budget.name}") do
+          actual = store.create_actual!(actuals_attrs(row, imported_at))
+          store.link_actual_to_budget!(actual.record_id, budget.record_id)
+        end
       end
 
       def apply_unmatched_row(row, imported_at)
-        store.create_actual!(actuals_attrs(row, imported_at))
+        with_row_rescue("an unmatched row") do
+          store.create_actual!(actuals_attrs(row, imported_at))
+        end
+      end
+
+      # Runs the block, returning true; a raised StandardError is reported and
+      # converted to false so one row's failure can't abort the whole paste
+      # (see apply_reconciliation's comment above for why this matters).
+      def with_row_rescue(subject)
+        yield
         true
       rescue StandardError => e
-        report_reconciliation_row_failure("an unmatched row", e)
+        report_reconciliation_row_failure(subject, e)
         false
       end
 
