@@ -101,6 +101,7 @@ module Reimbursements
       MailboxPollJob.store_builder = -> { Store.new }
       MailboxPollJob.extractor_builder = -> { Extractor.new }
       Rails.cache.delete(GraphAuthAlert::CACHE_KEY)
+      Rails.cache.delete_matched("reimbursements/mailbox-sender-count/*")
     end
 
     test "skips entirely when graph credentials are not configured" do
@@ -352,6 +353,29 @@ module Reimbursements
       assert_empty @mailbox.replies, "no reply to a message from our own mailbox (loop guard)"
       assert_equal [ [ "msgLoop", :rejected ] ], @mailbox.moves
       assert_empty @client.created
+    end
+
+    test "a known sender well under the daily message cap is unaffected" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+
+      MailboxPollJob.perform_now
+
+      assert_equal 1, @client.created.size
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
+
+    test "a known sender over the daily message cap is rejected, not silently drafted forever" do
+      key = "reimbursements/mailbox-sender-count/pat@example.com/#{Date.current}"
+      Rails.cache.write(key, MailboxPollJob::MAX_MESSAGES_PER_SENDER_PER_DAY, expires_in: 1.day)
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+
+      MailboxPollJob.perform_now
+
+      assert_empty @client.created, "a compromised/spoofed sender must not mint unbounded drafts"
+      assert_match(/unusually high number/, @mailbox.replies.sole.last)
+      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+    ensure
+      Rails.cache.delete(key)
     end
 
     test "auth failure alerts the IT subcommittee once per day" do

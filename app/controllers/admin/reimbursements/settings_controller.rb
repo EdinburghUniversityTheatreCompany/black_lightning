@@ -109,8 +109,33 @@ module Admin
           return redirect_to(edit_path, alert: "Pick a folder before saving.")
         end
 
+        unless verified_folder?(params[:drive_id], params[:folder_id])
+          return redirect_to(edit_path, alert: "That folder could not be verified against SharePoint " \
+                                               "— please pick it again.")
+        end
+
         @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
         redirect_to edit_path, notice: "#{params[:folder_purpose].humanize} folder saved."
+      end
+
+      # drive_id/folder_id arrive as hidden form fields the browse flow
+      # populated, but hidden fields are still client-controllable — a
+      # tampered value must not be trusted outright, since this setting is
+      # exactly where bank-detail-bearing BACS files get uploaded. Re-verify
+      # against Graph: the drive genuinely belongs to this cost centre's own
+      # configured SharePoint site, and the folder genuinely exists as a real
+      # folder within it (a nonexistent/wrong-type item 404s from Graph).
+      def verified_folder?(drive_id, folder_id)
+        return false if @cost_centre.sharepoint_site_url.blank?
+
+        site = graph.get_site(@cost_centre.sharepoint_site_url)
+        return false unless graph.list_drives(site.id).any? { |drive| drive.id == drive_id }
+
+        graph.list_folder_contents(drive_id: drive_id, item_id: folder_id)
+        true
+      rescue StandardError => e
+        Rails.logger.warn("Reimbursements folder verification failed for #{@cost_centre.key}: #{e.message}")
+        false
       end
 
       # --- Microsoft access check -------------------------------------------

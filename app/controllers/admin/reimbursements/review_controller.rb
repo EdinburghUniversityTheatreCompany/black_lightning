@@ -124,8 +124,8 @@ module Admin
       def add_receipts
         expense = find_expense!
         files = Array(params[:receipts]).compact_blank.select do |file|
-          ::Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(file.content_type) &&
-            file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
+          file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
+            ::Reimbursements::ReceiptContentType.allowed_upload?(file)
         end
         if files.empty?
           redirect_to_review(alert: "No usable receipt files (PDF or image, under the size limit).")

@@ -159,7 +159,11 @@ module Admin
       sign_in @user
       BaseController.extractor_builder = -> { raise "extractor must not be built" }
 
-      post :extract, params: { receipts: [ fixture_file_upload("reimbursements_receipt.pdf", "application/zip") ] }
+      # An executable disguised with a .pdf filename and declared content_type:
+      # content-type filtering is based on the actual bytes (Marcel), not the
+      # declared/filename-implied type, so a mismatched-but-real PDF must NOT
+      # be what's used here to prove rejection.
+      post :extract, params: { receipts: [ fixture_file_upload("disguised_executable.pdf", "application/pdf") ] }
 
       assert_response :success
       assert_not response.parsed_body["ok"]

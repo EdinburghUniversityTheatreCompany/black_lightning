@@ -30,7 +30,7 @@ module Admin
         return [ "No files received." ] if files.empty?
 
         files.filter_map do |file|
-          if !::Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(file.content_type)
+          if !::Reimbursements::ReceiptContentType.allowed_upload?(file)
             "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP)."
           elsif file.size > ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
             "#{file.original_filename} must be 5 MB or smaller."

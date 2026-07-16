@@ -262,3 +262,61 @@ without stopping to ask — logged here for review in a batch rather than blocki
     narrow race, not a money-safety or data-integrity issue. Class doc + concurrency comment
     updated to state this precisely instead of implying an unconditional "no duplicate Gemini call"
     guarantee.
+
+## Tier 4 (security hardening)
+
+- **#150 (bank details missing from filter_parameter_logging)**: fixed — added `:sort_code`,
+  `:account_number` to the allow-list (partial matching also covers the `_override` variants).
+  One-line fix, done regardless per the plan's own note.
+
+- **#111 (fence-forgery regex only matches ASCII dashes)**: fixed — `PromptSafety::FENCE_LOOKALIKE`
+  now matches a set of dash-like Unicode homoglyphs (em/en dash, fullwidth hyphen, box-drawing bar,
+  etc.), not just `-`. Verified the regression test actually catches the bug by reverting the fix
+  and confirming the Unicode-dash test (and only that one) failed.
+
+- **#108 (payee name unfenced in the AI-check prompt)**: fixed — wrapped in `PromptSafety.fence`
+  like every other untrusted field in the same prompt.
+
+- **#59 (receipt image/PDF itself has no prompt-injection defense)**: fixed at the shared
+  `PromptSafety::UNTRUSTED_PREAMBLE` level (both `Extractor` and `AiChecker` interpolate it), adding
+  an explicit paragraph telling the model the attached receipt is equally untrusted and any
+  instruction-like text visible in the image is data to flag, not a command to obey. A receipt
+  image can't be wrapped in a text fence, so this is a standing instruction rather than a fence.
+
+- **#66 (no magic-byte verification on receipt uploads)**: fixed with a new shared
+  `Reimbursements::ReceiptContentType` (Marcel-based sniffing, mirroring the pattern the app's
+  `Attachment` model already uses) wired into all six receipt-intake call sites: `ExpenseForm`,
+  `ExpensesController#extract`, `ExpenseEditsController#add_receipts`,
+  `ReviewController#add_receipts`, `ReceiptsController#attach_uploads`, and
+  `MailboxPollJob#usable_receipts`. Did **not** do the Tier-7-flagged dedup of the near-identical
+  `add_receipts`/`attach_uploads` blocks themselves — same fix applied at each site's existing
+  content_type check, consistent with keeping this a contained security fix rather than a
+  refactor. Three existing tests asserted the OLD (declared-type-only) behavior using a real PDF
+  fixture mislabeled with a wrong Content-Type header — that's no longer a meaningful "bad file"
+  scenario once actual bytes are trusted over the label, so those tests were rewritten against a
+  new `disguised_executable.pdf` fixture (real executable magic bytes, `.pdf` filename, PDF
+  declared type) that represents the actual attack this finding cares about.
+
+- **#95 (SharePoint drive_id/folder_id never re-verified before saving)**: fixed —
+  `SettingsController#save_folder` now re-verifies a submitted drive_id against
+  `graph.list_drives` for the cost centre's own configured site, and the folder_id by confirming
+  `graph.list_folder_contents` resolves it (a wrong/nonexistent item 404s), before persisting.
+  Refuses with a flash message rather than silently accepting a tampered hidden-field value.
+
+- **#29 (inbound email producer-attribution has no throttle, no SPF/DKIM/DMARC check)**: split the
+  finding's two halves. **Fixed**: a per-sender daily message cap (`MAX_MESSAGES_PER_SENDER_PER_DAY
+  = 30`, a `Rails.cache`-backed counter) in `MailboxPollJob`, so a compromised/spoofed known-sender
+  address can't mint unbounded Draft expenses under a real payee's identity or starve other
+  senders out of a poll cycle's page size — over-limit senders get a reply pointing at the portal
+  and are moved to Rejected, same pattern as the other reject paths. **Deferred, not fixed**:
+  SPF/DKIM/DMARC verification via Graph's `internetMessageHeaders`/`Authentication-Results` header.
+  This needs (a) requesting a new field in the Graph `$select`, (b) a parser for a
+  vendor-specific, loosely-standardized header format I have no real captured samples to verify
+  against, and (c) a design decision about what to actually do on a failed check (hard-reject vs.
+  flag-for-extra-scrutiny) — a genuinely bigger, riskier change to build and verify blind (unlike
+  the other Tier 4 fixes, which are all self-contained and fully covered by fake-based tests) than
+  this pass warranted. Flag if you want this done as a dedicated follow-up with real Graph header
+  samples to test against.
+
+- **Tier 4 (security hardening) is now complete** except for #29's deferred SPF/DKIM/DMARC half.
+  Continuing to Tier 5 (cost-centre data-model gap) next.

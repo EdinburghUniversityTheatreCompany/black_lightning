@@ -236,14 +236,15 @@ module Admin
       end
 
       test "using a folder stores its drive and folder ids" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
         sign_in @user
 
         patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
-                                 drive_id: "drive-1", folder_id: "folder-A" }
+                                 drive_id: "drive-site-1", folder_id: "folder-A" }
 
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         @cost_centre.reload
-        assert_equal "drive-1", @cost_centre.sharepoint_receipts_drive_id
+        assert_equal "drive-site-1", @cost_centre.sharepoint_receipts_drive_id
         assert_equal "folder-A", @cost_centre.sharepoint_receipts_folder_id
       end
 
@@ -256,6 +257,47 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
         assert_match(/Pick a folder/, flash[:alert])
         assert_nil @cost_centre.reload.sharepoint_bacs_folder_id
+      end
+
+      # A save_folder POST's drive_id/folder_id come from hidden form fields —
+      # still client-controllable — and this is exactly where bank-detail-
+      # bearing BACS files get uploaded, so a tampered value must be re-verified
+      # against Graph rather than trusted outright.
+      test "a drive_id that doesn't belong to the cost centre's own site is refused, not trusted outright" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
+                                 drive_id: "some-unrelated-drive", folder_id: "folder-A" }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_match(/could not be verified/, flash[:alert])
+        assert_nil @cost_centre.reload.sharepoint_receipts_drive_id
+      end
+
+      test "a folder_id that doesn't resolve under the verified drive is refused" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @graph.define_singleton_method(:list_folder_contents) do |**|
+          raise ::Reimbursements::GraphAuth::Error, "not found (404)"
+        end
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
+                                 drive_id: "drive-site-1", folder_id: "bogus" }
+
+        assert_redirected_to edit_admin_reimbursements_setting_path(@cost_centre.key)
+        assert_match(/could not be verified/, flash[:alert])
+        assert_nil @cost_centre.reload.sharepoint_receipts_drive_id
+      end
+
+      test "no configured SharePoint site refuses any folder save" do
+        sign_in @user
+
+        patch :update, params: { key: @cost_centre.key, folder_purpose: "receipts",
+                                 drive_id: "drive-site-1", folder_id: "folder-A" }
+
+        assert_match(/could not be verified/, flash[:alert])
+        assert_nil @cost_centre.reload.sharepoint_receipts_drive_id
       end
 
       # --- Access check ------------------------------------------------------

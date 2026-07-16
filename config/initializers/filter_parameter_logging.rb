@@ -4,5 +4,9 @@
 # Use this to limit dissemination of sensitive information.
 # See the ActiveSupport::ParameterFilter documentation for supported notations and behaviors.
 Rails.application.config.filter_parameters += [
-  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc
+  :passw, :email, :secret, :token, :_key, :crypt, :salt, :certificate, :otp, :ssn, :cvv, :cvc,
+  # Bank details submitted as raw params by the reimbursements portal
+  # (PeopleController#save_bank_details, ExpenseEditsController#update_attrs) —
+  # partial matching also covers sort_code_override/account_number_override.
+  :sort_code, :account_number
 ]

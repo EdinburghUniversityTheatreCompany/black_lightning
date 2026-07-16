@@ -87,7 +87,13 @@ module Admin
       end
 
       test "create rejects unusable files with an inline error" do
-        post :create, params: { expense_id: "recExp1", receipts: [ receipt_upload("application/zip") ] },
+        # An executable disguised with a .pdf filename and declared content_type:
+        # content-type filtering is based on the actual bytes (Marcel), not the
+        # declared/filename-implied type, so a mismatched-but-real PDF won't do
+        # here to prove rejection.
+        disguised = fixture_file_upload("disguised_executable.pdf", "application/pdf")
+
+        post :create, params: { expense_id: "recExp1", receipts: [ disguised ] },
                       format: :turbo_stream
 
         assert_response :success

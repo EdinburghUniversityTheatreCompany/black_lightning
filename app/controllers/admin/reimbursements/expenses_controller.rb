@@ -70,8 +70,8 @@ module Admin
       # endpoint base64s them into RAM for Gemini.
       def extract
         files = Array(params[:receipts]).compact_blank.select do |file|
-          ::Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(file.content_type) &&
-            file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
+          file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
+            ::Reimbursements::ReceiptContentType.allowed_upload?(file)
         end
         if files.empty?
           render json: { ok: false, error: "no usable receipt files" }

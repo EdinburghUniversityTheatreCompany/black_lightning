@@ -30,6 +30,12 @@ module Reimbursements
 
     SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
     AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
+    # A compromised/spoofed sender address could otherwise mint an unbounded
+    # number of Draft expenses under a real payee's identity, or simply starve
+    # other senders' messages out of a poll cycle's PAGE_SIZE page. Capped
+    # generously above any plausible legitimate daily volume — this is a
+    # defence against abuse, not a limit any real submitter should ever hit.
+    MAX_MESSAGES_PER_SENDER_PER_DAY = 30
 
     # Injection seams for tests (no mocking library in this suite). The mailbox
     # builder takes the cost centre so each is polled on its OWN receive mailbox.
@@ -91,6 +97,7 @@ module Reimbursements
 
       person = store.person_by_email(message.from_address)
       return handle_unknown_sender(message) if person.nil?
+      return handle_rate_limited_sender(message) if sender_over_daily_limit?(message)
 
       receipts = usable_receipts(message)
       return handle_missing_receipt(message) if receipts.empty?
@@ -102,6 +109,11 @@ module Reimbursements
       Rails.logger.error("Reimbursements poll failed for message #{message.id}: #{e.message}")
       Honeybadger.notify(e, context: { message_id: message.id, from: message.from_address })
       # Leave the message unread; the next poll cycle retries it.
+    end
+
+    def sender_over_daily_limit?(message)
+      key = "reimbursements/mailbox-sender-count/#{message.from_address}/#{Date.current}"
+      Rails.cache.increment(key, 1, expires_in: 1.day).to_i > MAX_MESSAGES_PER_SENDER_PER_DAY
     end
 
     # Bounces (NDRs), out-of-office replies and other automated mail must
@@ -121,9 +133,13 @@ module Reimbursements
         bytes = attachment[:bytes]
         # Guard nil/empty bytes: a bad attachment must not raise here (it would
         # leave the message unread and reprocessed forever), just be skipped.
+        # Content type is verified against the actual bytes (Marcel), not the
+        # sender-declared type alone — an email attachment's declared type is
+        # exactly as spoofable as a browser upload's.
         bytes.present? &&
-          ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(attachment[:content_type]) &&
-          bytes.bytesize <= ExpenseForm::MAX_RECEIPT_BYTES
+          bytes.bytesize <= ExpenseForm::MAX_RECEIPT_BYTES &&
+          ReceiptContentType.allowed?(bytes: bytes, filename: attachment[:filename],
+                                      declared_type: attachment[:content_type])
       end
     end
 
@@ -138,6 +154,13 @@ module Reimbursements
 
     def handle_missing_receipt(message)
       mailbox.reply(message.id, html: missing_receipt_html)
+      mailbox.mark_read_and_move(message.id, :rejected)
+    end
+
+    def handle_rate_limited_sender(message)
+      Rails.logger.warn("Reimbursements mailbox: #{message.from_address} exceeded the daily " \
+                        "message limit — message #{message.id} rejected")
+      mailbox.reply(message.id, html: rate_limited_html)
       mailbox.mark_read_and_move(message.id, :rejected)
     end
 
@@ -267,6 +290,17 @@ module Reimbursements
         <p>Please resend with the receipt or invoice as a PDF or photo (JPEG/PNG/WEBP, up
         to 5&nbsp;MB). Attaching or pasting the photo into the email both work. Or submit
         through the portal instead: <a href="#{portal_url}">#{portal_url}</a>.</p>
+        <p>#{SIGN_OFF}</p>
+      HTML
+    end
+
+    def rate_limited_html
+      <<~HTML
+        <p>Hi,</p>
+        <p>Thanks for your email! We've received an unusually high number of receipts from
+        this address today, so this one hasn't been processed automatically.</p>
+        <p>Please submit it through the portal instead: <a href="#{portal_url}">#{portal_url}</a>,
+        or contact finance@bedlamfringe.co.uk if this doesn't look right.</p>
         <p>#{SIGN_OFF}</p>
       HTML
     end

@@ -96,7 +96,8 @@ module Reimbursements
         #{PromptSafety::UNTRUSTED_PREAMBLE}
 
         Submitted details:
-        - Payee: #{expense.person&.name.presence || '(unknown)'}
+        - Payee:
+        #{PromptSafety.fence(expense.person&.name.presence || '(unknown)', label: 'payee name')}
         - Amount (incl. VAT): £#{expense.amount}
         - Amount (excl. VAT): £#{expense.amount_excl_vat || 'unknown'}
         - Budget category:

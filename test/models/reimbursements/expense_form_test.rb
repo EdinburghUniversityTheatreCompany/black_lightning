@@ -79,8 +79,12 @@ module Reimbursements
     end
 
     test "rejects disallowed receipt types" do
+      # An executable disguised with a .pdf filename and a declared PDF
+      # content_type: content-type validation is now based on the actual
+      # bytes (Marcel), not the declared/filename-implied type alone, so this
+      # must be caught by what the file really is.
       bad = Rack::Test::UploadedFile.new(
-        Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf"), "application/zip"
+        Rails.root.join("test/fixtures/files/disguised_executable.pdf"), "application/pdf"
       )
       assert_not build_form(receipts: [ bad ]).valid?
     end
