@@ -1,3 +1,6 @@
+<%# Same Turbo Frame as show/apply — see show.html.erb for why the wizard
+    renders inside a frame. %>
+<%= turbo_frame_tag "reconcile" do %>
 <p class="mb-3 text-gray-600">
   Review the matches below. Debits are matched to Submitted or Paid expenses; credits to
   income budgets. When you're happy, apply the reconciliation to save everything to Airtable,
@@ -144,3 +147,4 @@
 <div class="mt-4">
   <%= link_to "← Start over", admin_reimbursements_reconciliation_path, class: "text-sm text-gray-600 underline" %>
 </div>
+<% end %>

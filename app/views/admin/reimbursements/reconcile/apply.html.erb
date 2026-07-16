@@ -1,3 +1,6 @@
+<%# Same Turbo Frame as show/preview — see show.html.erb for why the wizard
+    renders inside a frame. %>
+<%= turbo_frame_tag "reconcile" do %>
 <% if @reconciliation_errors.present? %>
   <%= render AlertComponent.new(type: :warning) do %>
     <p>Reconciliation finished, but <%= @reconciliation_errors.size %>
@@ -43,3 +46,4 @@
 <div class="mt-4">
   <%= link_to "Reconcile another month", admin_reimbursements_reconciliation_path, class: btn_classes(:secondary) %>
 </div>
+<% end %>

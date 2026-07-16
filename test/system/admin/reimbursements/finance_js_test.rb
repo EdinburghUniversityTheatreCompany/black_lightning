@@ -103,6 +103,30 @@ module Admin
         assert_no_selector ".fancybox__container"
       end
 
+      # (d) The Reconcile wizard's forms render their next step directly (the
+      # stateless wizard re-POSTs the full paste, so it can't redirect). That
+      # only works inside a Turbo Frame — outside one, Turbo Drive silently
+      # discards a non-redirect form response and the button does nothing,
+      # which is exactly the regression this guards against.
+      test "reconcile Parse and match actually advances the wizard in a real browser" do
+        rebuild_store(expenses: [])
+
+        visit admin_reimbursements_reconciliation_path
+
+        # Error path: garbage renders the parse error in place.
+        fill_in "Actuals data (tab- or comma-separated, include the header row)", with: "not parseable"
+        click_on "Parse and match"
+        assert_text "Could not parse actuals", wait: 5
+
+        # Happy path: a valid row advances to the Step 2/3 preview.
+        fill_in "Actuals data (tab- or comma-separated, include the header row)",
+                with: "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet\n" \
+                      "439999\tF40\tBACS001\t15/03/2026\t03\tSystem Test Row\t\t123.45\t\t123.45"
+        click_on "Parse and match"
+        assert_text "Step 3: Apply reconciliation", wait: 5
+        assert_text "Unmatched rows (1)"
+      end
+
       # (c) The Review page subscribes to the live AI-verdict Turbo Stream.
       test "the Review page renders the AI-verdict Turbo Stream subscription" do
         # ai_check_status present so the page doesn't kick a background AI job.

@@ -1,3 +1,10 @@
+<%# The whole wizard lives in one Turbo Frame: preview/apply POST back the full
+    pasted text and render their step directly (the wizard is stateless, so a
+    redirect can't carry the paste). Outside a frame Turbo Drive REJECTS
+    non-redirect form responses and silently discards them — the buttons would
+    do nothing. Inside the frame, direct renders are valid and turbo_confirm
+    still works. %>
+<%= turbo_frame_tag "reconcile" do %>
 <p class="mb-3 text-gray-600">
   Import the monthly EUSA actuals sheet and reconcile it against submitted expenses
   and income budgets. Copy the actuals rows from Excel or the email and paste them
@@ -30,4 +37,5 @@
       </div>
     </div>
   <% end %>
+<% end %>
 <% end %>
