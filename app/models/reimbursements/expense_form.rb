@@ -143,10 +143,14 @@ module Reimbursements
 
     def receipts_valid
       receipts.each do |file|
-        unless ReceiptContentType.allowed_upload?(file)
+        # Size checked first, before ReceiptContentType reads the whole file
+        # into memory to sniff it — an oversized file should never pay that
+        # cost just to be rejected for size anyway.
+        if file.size > MAX_RECEIPT_BYTES
+          errors.add(:receipts, "#{file.original_filename} must be 5 MB or smaller.")
+        elsif !ReceiptContentType.allowed_upload?(file)
           errors.add(:receipts, "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP).")
         end
-        errors.add(:receipts, "#{file.original_filename} must be 5 MB or smaller.") if file.size > MAX_RECEIPT_BYTES
       end
 
       return if draft? || receipts.any? || expense_receipt_count.to_i.positive?

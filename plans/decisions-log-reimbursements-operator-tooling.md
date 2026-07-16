@@ -318,5 +318,24 @@ without stopping to ask — logged here for review in a batch rather than blocki
   this pass warranted. Flag if you want this done as a dedicated follow-up with real Graph header
   samples to test against.
 
+- **Independent review of the Tier 4 diff** (`git diff fc9aca50..8986c0ac`) found two real bugs,
+  both fixed:
+  - **Rate-limit retry inflation**: `sender_over_daily_limit?` incremented the per-sender counter
+    on every `process(message)` call, but a message left unread by a downstream failure (e.g. an
+    Airtable blip inside `create_expense!`) gets reprocessed every subsequent poll cycle until it
+    succeeds — inflating one real email into many against the sender's tally, and risking a
+    legitimate sender getting rate-limited for a transient failure that was never theirs. Fixed by
+    caching the count a given message id was first seen at (`Rails.cache.fetch` keyed on
+    `message.id`), so a retried message is only ever counted once. Verified by reverting the fix
+    and confirming a new regression test (3 retries → count of 3 instead of 1) failed exactly as
+    predicted.
+  - **Inconsistent size-vs-content-type check ordering**: three of the five migrated `#66` call
+    sites were reordered to check file size before the (now full-file-reading) content-type sniff,
+    but `ExpenseForm#receipts_valid` and `ReceiptsController#attach_uploads` were left checking
+    content-type first — meaning an oversized upload still gets fully read into memory before ever
+    being rejected for size. Reordered both to match the other three sites. Added a regression test
+    for `ExpenseForm` using a fake file object whose `.read` raises, proving the oversized branch
+    never reaches the sniff at all.
+
 - **Tier 4 (security hardening) is now complete** except for #29's deferred SPF/DKIM/DMARC half.
   Continuing to Tier 5 (cost-centre data-model gap) next.

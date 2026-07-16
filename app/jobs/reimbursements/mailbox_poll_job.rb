@@ -111,9 +111,21 @@ module Reimbursements
       # Leave the message unread; the next poll cycle retries it.
     end
 
+    # A message left unread because a LATER step failed (e.g. an Airtable
+    # blip inside create_expense, caught by the rescue below) is reprocessed
+    # by every subsequent poll cycle until it succeeds. Counting it again on
+    # each retry would inflate one real email into many against the sender's
+    # tally, potentially rate-limiting a legitimate sender for a transient
+    # failure that was never their fault. Cache the count this message was
+    # first seen at, keyed by message id, so a retried message is only ever
+    # counted once no matter how many cycles it takes to actually process.
     def sender_over_daily_limit?(message)
-      key = "reimbursements/mailbox-sender-count/#{message.from_address}/#{Date.current}"
-      Rails.cache.increment(key, 1, expires_in: 1.day).to_i > MAX_MESSAGES_PER_SENDER_PER_DAY
+      count_key = "reimbursements/mailbox-sender-count/#{message.from_address}/#{Date.current}"
+      counted_key = "reimbursements/mailbox-sender-counted/#{message.id}"
+      count = Rails.cache.fetch(counted_key, expires_in: 1.day) do
+        Rails.cache.increment(count_key, 1, expires_in: 1.day)
+      end
+      count.to_i > MAX_MESSAGES_PER_SENDER_PER_DAY
     end
 
     # Bounces (NDRs), out-of-office replies and other automated mail must

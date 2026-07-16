@@ -89,6 +89,19 @@ module Reimbursements
       assert_not build_form(receipts: [ bad ]).valid?
     end
 
+    test "an oversized file is rejected by size without being read for content-type sniffing" do
+      oversized = Object.new
+      def oversized.size = ExpenseForm::MAX_RECEIPT_BYTES + 1
+      def oversized.original_filename = "huge.pdf"
+      def oversized.content_type = "application/pdf"
+      def oversized.read = raise("must not read an oversized file just to sniff its type")
+
+      form = build_form(receipts: [ oversized ])
+
+      assert_not form.valid?
+      assert_includes form.errors[:receipts], "huge.pdf must be 5 MB or smaller."
+    end
+
     test "validates override formats only when present" do
       all_three = { payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
                    account_number_override: "12345678" }

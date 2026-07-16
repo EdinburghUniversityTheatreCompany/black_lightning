@@ -102,6 +102,7 @@ module Reimbursements
       MailboxPollJob.extractor_builder = -> { Extractor.new }
       Rails.cache.delete(GraphAuthAlert::CACHE_KEY)
       Rails.cache.delete_matched("reimbursements/mailbox-sender-count/*")
+      Rails.cache.delete_matched("reimbursements/mailbox-sender-counted/*")
     end
 
     test "skips entirely when graph credentials are not configured" do
@@ -291,6 +292,20 @@ module Reimbursements
       moved_ids = @mailbox.moves.map(&:first)
       assert_includes moved_ids, "msg1"
       assert_not_includes moved_ids, "msgBoom"
+    end
+
+    test "a message retried across poll cycles after a downstream failure counts once toward the sender's daily limit" do
+      # A message left unread by a downstream failure (an Airtable blip, not a
+      # sender problem) gets reprocessed every cycle until it succeeds — that
+      # must not inflate one real email into many against the sender's tally,
+      # or a transient outage could get a legitimate sender rate-limited.
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      @store.define_singleton_method(:create_expense!) { |*| raise Airtable::Error.new("boom", status: 500) }
+
+      3.times { MailboxPollJob.perform_now }
+
+      count_key = "reimbursements/mailbox-sender-count/pat@example.com/#{Date.current}"
+      assert_equal 1, Rails.cache.read(count_key)
     end
 
     test "polls each cost centre on its own receive mailbox" do
