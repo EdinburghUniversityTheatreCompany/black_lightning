@@ -638,6 +638,23 @@ without stopping to ask — logged here for review in a batch rather than blocki
   to hand-wire `can?`/`cannot?` delegating to `current_ability` since a bare `ActionView::TestCase`
   doesn't get CanCanCan's controller-only Railtie wiring, mirroring the existing
   `link_helper_test.rb`'s `current_ability` pattern.
-- The remaining Tier 9 items (batches/budgets controller gaps, review/expense_edits gaps, reconcile
-  gaps, batch_processor/store gaps, nightly_batch_job/mailbox_poll_job gaps, and ~11 small misc
-  items) are not yet done — continuing.
+## Tier 9 — second batch (batches/budgets/actuals controller gaps)
+
+- **#98** (`build_batch_job.rb#parse_date`'s malformed-input fallback to `Date.current`): added,
+  using `travel_to` to make the fallback's "today" deterministic.
+- **#100** (`budgets_controller.rb#parse_decimal`/`#parse_date`'s `rescue` branches): the existing
+  test only covered a *blank* value, which short-circuits before the rescue is ever reached — added
+  malformed-but-non-blank cases for both.
+- **#101** (`batches_controller.rb#require_cost_centre`): added a test destroying every `CostCentre`
+  row before `new`, confirming the "no cost centre configured" redirect.
+- **#103** (`batches_controller.rb#show`/`#reopen` `RecordNotFound` guards): added for both — the
+  app's `ApplicationController` has its own `rescue_from ActiveRecord::RecordNotFound, with:
+  :report_404`, so these render a 404 response rather than raising all the way out; the tests
+  assert `assert_response :not_found`, not `assert_raises` (my first attempt, which was wrong).
+- **#143** (`budgets_controller_test.rb`/`actuals_controller_test.rb` never exercise pagination):
+  added page-1/page-2 tests for both, mirroring `expense_edits_controller_test.rb`'s existing
+  three-test pattern for the identical `paginate` helper.
+- The remaining Tier 9 items (review/expense_edits gaps #102/#104/#138, reconcile gaps #68/#159/
+  #160/#165, batch_processor/store gaps #67/#155/#162, nightly_batch_job gaps #97/#157/#158,
+  mailbox_poll_job gaps #99/#163, and ~11 small misc items #7/#8/#9/#17/#24/#25/#156/#166/#177/
+  #223/#229) are not yet done — continuing.

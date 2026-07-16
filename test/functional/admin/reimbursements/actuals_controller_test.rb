@@ -77,6 +77,39 @@ module Admin
       assert_includes response.body, "Sundry"
     end
 
+    # Newest-imported first with 50/page; distinct imported_at timestamps make
+    # which row lands on which page deterministic.
+    def rebuild_paged_store(count)
+      actuals = (1..count).map do |n|
+        airtable_eusa_actual_record(id: "recAct#{n}", narrative: "Row #{format('%03d', n)}",
+                                    imported_at: format("2026-06-%02dT00:00:00Z", (n % 28) + 1))
+      end
+      rebuild_store(eusa_actuals: actuals)
+    end
+
+    test "index pages the list at 50 per page" do
+      rebuild_paged_store(60)
+      sign_in @user
+
+      get :index
+
+      assert_equal 50, assigns(:actuals).size
+    end
+
+    test "index page 2 returns the remaining slice, not page 1's rows" do
+      rebuild_paged_store(60)
+      sign_in @user
+
+      get :index
+      page1 = assigns(:actuals).map(&:record_id)
+
+      get :index, params: { page: 2 }
+      page2 = assigns(:actuals).map(&:record_id)
+
+      assert_equal 10, page2.size
+      assert_empty(page1 & page2, "page 2 must not repeat any page 1 rows")
+    end
+
     test "shows the linked-to state per row" do
       sign_in @user
       get :index

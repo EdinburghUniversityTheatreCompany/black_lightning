@@ -82,6 +82,16 @@ module Admin
         assert_includes response.body, "Bedlam Fringe BACS Request", "default EUSA subject is prefilled"
       end
 
+      test "new redirects with an alert when no cost centre is configured" do
+        ::Reimbursements::CostCentre.destroy_all
+        sign_in @user
+
+        get :new
+
+        assert_redirected_to admin_reimbursements_batches_path
+        assert_match(/No cost centre configured/, flash[:alert])
+      end
+
       # --- Build Batch (create) ---------------------------------------------
 
       test "create enqueues a background build (serialised per cost centre) and redirects to History" do
@@ -171,7 +181,25 @@ module Admin
         assert_includes response.body, "Submitted"
       end
 
+      test "show 404s for an unknown batch id" do
+        use_store(batches: [], expenses: [])
+        sign_in @user
+
+        get :show, params: { id: "recGone" }
+
+        assert_response :not_found
+      end
+
       # --- Reopen ------------------------------------------------------------
+
+      test "reopen 404s for an unknown batch id" do
+        use_store(batches: [], expenses: [])
+        sign_in @user
+
+        post :reopen, params: { id: "recGone" }
+
+        assert_response :not_found
+      end
 
       test "reopen reverts the linked expenses and deletes the batch" do
         # No stored draft id (the default) — nothing to confirm either way, so

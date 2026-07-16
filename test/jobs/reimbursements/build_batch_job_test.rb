@@ -69,6 +69,16 @@ module Reimbursements
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
     end
 
+    test "a malformed bacs_date falls back to today rather than raising" do
+      stock_store([ approved_expense ])
+
+      travel_to Time.zone.local(2026, 5, 20) do
+        BuildBatchJob.perform_now(**enqueue_args(bacs_date: "not-a-date"))
+      end
+
+      assert_equal Date.new(2026, 5, 20), @processor.calls.sole[:bacs_date]
+    end
+
     test "builds the graph client once per run, not once per call site" do
       stock_store([ approved_expense ])
       graph_builds = 0

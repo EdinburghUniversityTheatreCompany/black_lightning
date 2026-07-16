@@ -79,6 +79,35 @@ module Admin
         assert_includes response.body, "250"
       end
 
+      # Alphabetically-named so page 1 (A-Z sorted, 50 per page) is deterministic.
+      def rebuild_paged_store(count)
+        budgets = (1..count).map { |n| airtable_budget_record(id: "recBud#{n}", name: format("Budget %03d", n)) }
+        @store, @client = build_fake_store(budgets: budgets, people: [ @alice, @bob ])
+        BaseController.store_builder = -> { @store }
+      end
+
+      test "index pages the list at 50 per page" do
+        rebuild_paged_store(60)
+        sign_in @user
+
+        get :index
+
+        assert_equal 50, assigns(:budgets).size
+        assert_includes response.body, "Budget 001"
+        assert_not_includes response.body, "Budget 051"
+      end
+
+      test "index page 2 returns the remaining slice, not page 1's rows" do
+        rebuild_paged_store(60)
+        sign_in @user
+
+        get :index, params: { page: 2 }
+
+        assert_equal 10, assigns(:budgets).size
+        assert_includes response.body, "Budget 051"
+        assert_not_includes response.body, "Budget 001"
+      end
+
       test "flags a budget that has no owner" do
         sign_in @user
         ownerless = airtable_budget_record(id: "recBud3", name: "Unowned category")
@@ -272,6 +301,26 @@ module Admin
         sign_in @user
 
         post :forecast, params: { id: "recBud1", amount: "", date: "2026-06-01" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/valid amount and date/i, flash[:alert])
+        assert_empty @client.created
+      end
+
+      test "a forecast with a malformed (non-blank) amount is rejected without a write" do
+        sign_in @user
+
+        post :forecast, params: { id: "recBud1", amount: "not-a-number", date: "2026-06-01" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/valid amount and date/i, flash[:alert])
+        assert_empty @client.created
+      end
+
+      test "a forecast with a malformed (non-blank) date is rejected without a write" do
+        sign_in @user
+
+        post :forecast, params: { id: "recBud1", amount: "750.50", date: "not-a-date" }
 
         assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
         assert_match(/valid amount and date/i, flash[:alert])
