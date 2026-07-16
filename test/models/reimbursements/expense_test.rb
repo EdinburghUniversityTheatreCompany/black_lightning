@@ -24,6 +24,11 @@ module Reimbursements
       assert_not build_expense(status: Status::REJECTED).editable?
     end
 
+    test "an internal 'From EUSA' entry is never editable via the producer portal, even while pending" do
+      assert_not build_expense(expense_type: Expense::TYPE_FROM_EUSA).editable?
+      assert_not build_expense(expense_type: Expense::TYPE_FROM_EUSA, status: Status::DRAFT).editable?
+    end
+
     test "complete expense does not need completion" do
       assert_not build_expense.needs_completion?
     end

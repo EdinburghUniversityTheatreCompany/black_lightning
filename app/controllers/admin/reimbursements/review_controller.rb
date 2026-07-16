@@ -162,7 +162,9 @@ module Admin
         return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
 
         attrs = { status: ::Reimbursements::Status::APPROVED }
-        if expense.payment_reference.to_s.strip.empty? && expense.budget
+        # expense.budget is already guaranteed present here (the :skipped_no_budget
+        # guard above returns early otherwise), so no nil-budget re-check is needed.
+        if expense.payment_reference.to_s.strip.empty?
           reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.name)
           attrs[:payment_reference] = reference if reference.present?
         end

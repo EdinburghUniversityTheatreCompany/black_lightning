@@ -191,6 +191,29 @@ module Admin
         assert_not_includes response.body, "Fake blood"
       end
 
+      test "index search matches a numeric amount, stripping a £ prefix and commas" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { q: "£99.00" }
+
+        assert_includes response.body, "Velvet cloak"
+        assert_not_includes response.body, "Stage nails"
+        assert_not_includes response.body, "Fake blood"
+      end
+
+      test "index search with a non-numeric, non-matching query returns no rows without raising" do
+        rebuild_multi_store
+        sign_in @user
+
+        get :index, params: { q: "not a number and no substring match" }
+
+        assert_response :success
+        assert_not_includes response.body, "Velvet cloak"
+        assert_not_includes response.body, "Stage nails"
+        assert_not_includes response.body, "Fake blood"
+      end
+
       # --- CSV export --------------------------------------------------------
 
       test "index CSV export answers a text/csv download named for today" do

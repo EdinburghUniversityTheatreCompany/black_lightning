@@ -654,7 +654,23 @@ without stopping to ask — logged here for review in a batch rather than blocki
 - **#143** (`budgets_controller_test.rb`/`actuals_controller_test.rb` never exercise pagination):
   added page-1/page-2 tests for both, mirroring `expense_edits_controller_test.rb`'s existing
   three-test pattern for the identical `paginate` helper.
-- The remaining Tier 9 items (review/expense_edits gaps #102/#104/#138, reconcile gaps #68/#159/
-  #160/#165, batch_processor/store gaps #67/#155/#162, nightly_batch_job gaps #97/#157/#158,
-  mailbox_poll_job gaps #99/#163, and ~11 small misc items #7/#8/#9/#17/#24/#25/#156/#166/#177/
-  #223/#229) are not yet done — continuing.
+## Tier 9 — third batch (review/expense_edits gaps)
+
+- **#138** (`Expense#editable?`'s `SUBMITTER_TYPES` half): added — a "From EUSA" internal
+  bookkeeping entry must never be portal-editable even while nominally Draft/Pending.
+- **#102** (`review_controller.rb#approve`'s nil-budget arm of `payment_reference.blank? &&
+  expense.budget`) — **not a test gap by the time I looked, it's dead code left over from my own
+  earlier fix.** `approve_expense` already has a `return :skipped_no_budget if expense.budget.nil?`
+  guard (added in this session's Tier 0, #126) *before* the line the finding flags, so
+  `expense.budget` is provably non-nil by the time `&& expense.budget` runs — the "false" arm the
+  finding wants tested is unreachable. Removed the now-redundant condition instead of writing a
+  test for a branch that can't execute, with a comment explaining why.
+- **#104** (`expense_edits_controller.rb`'s numeric-amount search branch): added a search test with
+  a `£`-prefixed, comma-bearing query, and a non-numeric/non-matching query proving the
+  `rescue ArgumentError -> false` path degrades cleanly instead of raising.
+
+## Tier 9 status
+
+The remaining items (reconcile gaps #68/#159/#160/#165, batch_processor/store gaps #67/#155/#162,
+nightly_batch_job gaps #97/#157/#158, mailbox_poll_job gaps #99/#163, and ~11 small misc items
+#7/#8/#9/#17/#24/#25/#156/#166/#177/#223/#229) are not yet done — continuing.
