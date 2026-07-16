@@ -337,10 +337,7 @@ module ReimbursementsTestHelpers
     client.define_singleton_method(:update_record) do |table, record_id, fields|
       raise Reimbursements::Airtable::Error.new("blip", status: 500) if predicate.call(table, record_id, fields)
 
-      @updated << [ table, record_id, fields ]
-      record = @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
-      record["fields"] = record["fields"].merge(fields) if record
-      record || { "id" => record_id, "fields" => fields }
+      super(table, record_id, fields)
     end
   end
 
