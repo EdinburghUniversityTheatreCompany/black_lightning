@@ -131,6 +131,27 @@ module Reimbursements
       assert_empty mailer_calls(:approved_ready)
     end
 
+    test "an AI-check error counts as an issue" do
+      stock_store([ approved_expense(ai_status: "error") ])
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      review = mailer_calls(:manual_review).sole.last
+      assert_match(/AI check error/, review[:issues].first[:reason])
+      assert_empty mailer_calls(:approved_ready)
+    end
+
+    test "an AI pass with an informational note still blocks headless auto-submit" do
+      stock_store([ approved_expense(ai_status: "pass", **{ F[:ai_comment] => "unusual amount for this budget" }) ])
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      review = mailer_calls(:manual_review).sole.last
+      assert_equal 1, review[:issues].size
+      assert_match(/unusual amount for this budget/, review[:issues].first[:reason])
+      assert_empty mailer_calls(:approved_ready), "a pass with a note must still stop the headless path"
+    end
+
     # --- Branch 4: all clean -> ready-to-batch alert (nothing submitted) ---
 
     test "all-clean approved expenses email a ready-to-batch alert and submit nothing" do
@@ -149,6 +170,24 @@ module Reimbursements
       # The alert is sent through a notifier built for the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a second, non-default cost centre never re-triages the (cost-centre-unscoped) Approved queue" do
+      # Expenses carry no cost-centre link yet (see the TODO(mysql) in run_for),
+      # so without this guard a second due cost centre would re-triage the same
+      # global Approved set and double-send the operator alert. It still
+      # records its own nightly run (finish_no_work), just with no email.
+      second = CostCentre.create!(key: "extra", name: "Second Society", eusa_code: "X99",
+                                  receive_mailbox: "in@second.co.uk", send_mailbox: "send@second.co.uk")
+      assert_not_equal CostCentre.default, second
+      stock_store([ approved_expense ])
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      assert_equal 1, mailer_calls(:approved_ready).size, "only the default cost centre's alert fires"
+      assert_empty mailer_calls(:manual_review)
+      assert_equal THURSDAY, second.reload.last_nightly_run_on,
+                   "the second cost centre still records its own nightly run"
     end
 
     test "builds the graph client once per run even when both the pending reminder and the " \
@@ -201,6 +240,15 @@ module Reimbursements
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       assert_equal 1, mailer_calls(:failure).size
+      assert_nil CostCentre.default.reload.last_nightly_run_on
+    end
+
+    test "a preview run never sends a real failure email, even when the run itself raises" do
+      NightlyBatchJob.store_builder = -> { BoomStore.new }
+
+      assert_nothing_raised { NightlyBatchJob.perform_now(dry_run: true, today: THURSDAY) }
+
+      assert_empty mailer_calls(:failure), "dry_run must still log-and-notify Honeybadger, but never email"
       assert_nil CostCentre.default.reload.last_nightly_run_on
     end
 

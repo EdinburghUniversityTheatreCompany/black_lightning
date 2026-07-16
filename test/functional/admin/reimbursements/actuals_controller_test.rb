@@ -77,6 +77,23 @@ module Admin
       assert_includes response.body, "Sundry"
     end
 
+    test "a legacy row with no imported_at sorts by its transaction date instead" do
+      recent_import = airtable_eusa_actual_record(id: "recActNew", narrative: "Recent import",
+                                                   date: "2020-01-01", imported_at: "2026-07-01T00:00:00Z")
+      legacy = airtable_eusa_actual_record(id: "recActLegacy", narrative: "Legacy row",
+                                           date: "2026-06-15", imported_at: nil)
+      old_import = airtable_eusa_actual_record(id: "recActOld", narrative: "Old import",
+                                               date: "2026-01-01", imported_at: "2020-01-01T00:00:00Z")
+      rebuild_store(eusa_actuals: [ old_import, legacy, recent_import ])
+      sign_in @user
+
+      assert_nothing_raised { get :index }
+
+      assert_response :success
+      assert_equal %w[recActNew recActLegacy recActOld], assigns(:actuals).map(&:record_id),
+                   "the legacy row's transaction date fallback slots it between the two imported rows"
+    end
+
     # Newest-imported first with 50/page; distinct imported_at timestamps make
     # which row lands on which page deterministic.
     def rebuild_paged_store(count)

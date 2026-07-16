@@ -43,6 +43,7 @@ module Reimbursements
 
     test "missing_completion_fields names each absent required field" do
       assert_empty build_expense.missing_completion_fields
+      assert_includes build_expense(amount: nil).missing_completion_fields, "the amount"
       assert_includes build_expense(amount_excl_vat: nil).missing_completion_fields, "the amount excluding VAT"
       assert_includes build_expense(payment_reference: "").missing_completion_fields, "a payment reference"
       assert_includes build_expense(receipts: []).missing_completion_fields, "a receipt"

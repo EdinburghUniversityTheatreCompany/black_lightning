@@ -391,6 +391,36 @@ module Reimbursements
       assert_equal [ "bob@example.com" ], graph.send_mails.sole[:to]
     end
 
+    test "several expenses for the same payee are grouped into one notification email" do
+      alice1 = airtable_expense_record(id: "recExpA1", payee_id: "recAlice", status: "Approved",
+                                       auto_number: 11, amount: 12.50, description: "Fake blood")
+      alice2 = airtable_expense_record(id: "recExpA2", payee_id: "recAlice", status: "Approved",
+                                       auto_number: 12, amount: 7.50, description: "Face paint")
+      bob = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 13)
+      processor, store, client, graph = build_scenario(expenses: [ alice1, alice2, bob ])
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_equal 2, graph.send_mails.size, "one email per payee, not per expense"
+      assert_equal 2, result.producer_notifications_sent, "counted per notification sent, not per expense"
+
+      alice_mail = graph.send_mails.find { |mail| Array(mail[:to]) == [ "alice@example.com" ] }
+      assert_includes alice_mail[:subject], "2 expenses submitted for payment"
+      assert_includes alice_mail[:html], "Fake blood"
+      assert_includes alice_mail[:html], "Face paint"
+      assert_includes alice_mail[:html], "£20.00", "the total sums both of Alice's expenses"
+
+      bob_mail = graph.send_mails.find { |mail| Array(mail[:to]) == [ "bob@example.com" ] }
+      assert_includes bob_mail[:subject], "1 expense submitted for payment"
+
+      alice_notified = client.updated.count do |table, id, fields|
+        table == :expenses && %w[recExpA1 recExpA2].include?(id) &&
+          fields[FIELD_IDS[:expenses][:producer_notified]]
+      end
+      assert_equal 2, alice_notified, "both of Alice's expenses are stamped, not just one per notification"
+    end
+
     test "a producer notification Graph failure is collected but doesn't fail the batch" do
       processor, store, client, graph = build_scenario
       graph.fail_send = true # the draft (create_draft) still succeeds; only sends fail

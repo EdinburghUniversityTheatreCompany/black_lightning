@@ -683,8 +683,76 @@ without stopping to ask — logged here for review in a batch rather than blocki
   of a linked `EusaActual`): added — an expense marked paid via a different route (no linked
   actual at all) must still be excluded from matching, not just one with an existing link.
 
+## Tier 9 — fifth batch (batch_processor/store gaps)
+
+- **#67** (`FakeGraphClient` had no `fail_download` toggle, making a receipt-download failure
+  inside `collect_receipts` structurally impossible to exercise): added the toggle, and a test
+  that flips it and runs a full batch. **My first draft of this test wrongly assumed the failure
+  would propagate as a raised `GraphAuth::Error`** — I reasoned that since `collect_receipts` runs
+  before the "CARDINAL RULE" draft-creation boundary and has no local rescue, an exception there
+  would bubble straight out of `process`. It doesn't: `process` has a *method-level*
+  `rescue StandardError => e; fail_with(result, e.message)` wrapping its entire body (not just the
+  explicit `begin/rescue` around `create_draft`), so the download failure is caught there too and
+  reported as an ordinary failed `Result` (`success: false`, error message set) — not an exception.
+  Confirmed via a scratch debug test before fixing the real one. Rewrote the test to assert
+  `result.success` is false and nothing was committed, matching what the finding's suggested fix
+  actually asked for ("fails the batch cleanly with no draft created" — it never said "raises").
+- **#155** (`store.rb#revert_expense_to_approved!`'s undocumented-but-commented `producer_notified`
+  invariant): added `refute fields.key?(...)` to the existing revert test, after first seeding the
+  fixture's `producer_notified` as `true` so the assertion is meaningful (proving the field is
+  never part of the write payload at all, not coincidentally absent).
+- **#162** (SharePoint `fail_uploads` failure paths never exercised for the BACS-xlsx upload
+  specifically, or shown not to corrupt the URL map on a partial receipt-upload failure): added
+  two tests. One isolates a BACS-xlsx-only upload failure via `fail_upload_for` (the existing
+  `fail_uploads`-everything test already covered the "success stays true" guarantee in aggregate,
+  but never in isolation, and never checked the receipt uploads still happen independently). The
+  other gives one expense two receipts, fails only the second upload, and asserts the recorded
+  `sharepoint_receipt_urls` field holds *only* the successful URL — discovered along the way that
+  this field is a newline-joined string (`Mapper#expense_fields`'s `Array(value).join("\n")`), not
+  an array, so a single successful URL renders as that bare URL string, not a one-element array —
+  fixed the assertion to match once observed via a failing test run.
+
+## Tier 9 — sixth batch (nightly_batch_job / mailbox_poll_job gaps, plus #163's cross-file bundle)
+
+- **#97** (`nightly_batch_job.rb#ai_reasons`'s untested `"error"` and `"pass"`-with-comment
+  branches): added both — the second one is the load-bearing "a pass with an informational note
+  still blocks headless auto-submit" guarantee the code comment calls out.
+- **#157** (`batches_controller.rb#draft_cleanup_flash`'s no-draft-id fallback flash content) —
+  **already resolved, not a gap by the time I checked.** The existing "reopen reverts and deletes
+  the batch" test already has `assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])`
+  — confirmed via `git log -p` this assertion predates this batch of work. No change needed.
+- **#158** (`nightly_batch_job_test.rb` never creates a second `CostCentre`, so the `unless
+  cost_centre == default_cost_centre` guard from #80 has zero coverage): added a test creating a
+  second cost centre (auto-created after fixtures load, so it always sorts after the `fringe`
+  fixture by id) with a global Approved expense present, confirming only the default cost centre's
+  alert fires while the second still records its own nightly run via `finish_no_work`.
+- **#99** (`mailbox_poll_job.rb#usable_receipts`'s content-type allow-list and 5MB cutoff never
+  driven by any test — only the nil-bytes guard was): added an oversized-attachment test and a
+  disallowed-content-type test, both mirroring the existing nil-bytes test's "no usable receipt"
+  reply + rejected-move assertions.
+- **#163** (eight further minor test-coverage gaps bundled as one finding): worked through all
+  eight — `expense_test.rb#missing_completion_fields`'s untested gross-`amount`-blank branch
+  (added, alongside the already-covered `amount_excl_vat`-blank and both-zero cases);
+  `actuals_controller.rb`'s `imported_at`-missing sort fallback (added a 3-row test with a legacy
+  no-`imported_at` row whose date deliberately sorts *between* two imported rows, so the assertion
+  only passes if the fallback genuinely runs); `nightly_batch_job.rb`'s `dry_run: true` never
+  combined with a real mid-run exception (added, confirming a preview run still never emails a
+  failure even when the run itself raises); `mailbox_poll_job.rb#automated_sender?`'s blank
+  `from_address` branch (added); `graph_client.rb#download`'s non-2xx branch (added — distinct from
+  #67, which was about the *fake's* missing failure toggle, not the real client's error path);
+  `graph_client.rb#upload_in_chunks`'s multi-chunk case (the existing "≥4MB" test used content
+  exactly at `SIMPLE_UPLOAD_LIMIT`, one chunk; added a genuinely-over-one-chunk-size file forcing 2
+  PUTs, asserting both `Content-Range` headers and chunk sizes); `ai_checker.rb`/`extractor.rb`'s
+  generic `rescue StandardError` — **`ai_checker.rb`'s was already covered** ("a receipt download
+  failure is captured as an error verdict" already exercises the plain-`RuntimeError` path, not
+  just the `RubyLLM::Error` one checked by a separate test), but `extractor.rb` genuinely had none
+  (added, using the `FakeChat`'s `error:` param with a bare `StandardError` instead of
+  `RubyLLM::Error`); `batch_processor.rb#notify_producers`'s multi-expense-per-payee grouping
+  (added — two expenses for the same payee, asserting exactly one email is sent covering both line
+  items with the correctly-summed total, `producer_notifications_sent` counts the group not the
+  expense count, and both expenses get `producer_notified` stamped).
+
 ## Tier 9 status
 
-The remaining items (batch_processor/store gaps #67/#155/#162, nightly_batch_job gaps #97/#157/
-#158, mailbox_poll_job gaps #99/#163, and ~11 small misc items #7/#8/#9/#17/#24/#25/#156/#166/
-#177/#223/#229) are not yet done — continuing.
+Remaining: ~11 small misc items (#7, #8, #9, #17, #24, #25, #156, #166, #177, #223, #229) — not
+yet done, continuing.

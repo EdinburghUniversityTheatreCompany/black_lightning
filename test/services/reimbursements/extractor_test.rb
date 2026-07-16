@@ -95,6 +95,15 @@ module Reimbursements
       assert_match(/gemini down/, result.error)
     end
 
+    test "fails gracefully on a generic error, not just a RubyLLM one" do
+      extractor, = build_extractor(error: StandardError.new("network timeout"))
+
+      result = extractor.extract(receipts: [ RECEIPT ], budgets: budgets)
+
+      assert_not result.ok?
+      assert_match(/network timeout/, result.error)
+    end
+
     test "fails without building a chat when no key is configured" do
       built = false
       extractor = Extractor.new(api_key: nil, chat_builder: -> { built = true; FakeChat.new })

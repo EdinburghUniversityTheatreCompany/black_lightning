@@ -159,6 +159,15 @@ module Reimbursements
       assert_equal [ [ "msgNdr", :rejected ], [ "msgNoReply", :rejected ] ], @mailbox.moves
     end
 
+    test "a message with a blank from-address is treated as automated, not crashed on" do
+      setup_job(messages: [ inbound_message(id: "msgBlank", from: "") ])
+
+      assert_nothing_raised { MailboxPollJob.perform_now }
+
+      assert_empty @mailbox.replies
+      assert_equal [ [ "msgBlank", :rejected ] ], @mailbox.moves
+    end
+
     test "processes a pasted-in-body receipt (inline image)" do
       pasted = { filename: "pasted-receipt.png", content_type: "image/png", bytes: "BIGPNG" }
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ pasted ] })
@@ -254,6 +263,29 @@ module Reimbursements
       assert_nothing_raised { MailboxPollJob.perform_now }
 
       assert_empty @client.created, "a broken attachment must not mint an expense"
+      assert_match(/no usable receipt/, @mailbox.replies.first.last)
+      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+    end
+
+    test "an attachment over the 5MB receipt limit is skipped, not attached" do
+      oversized = { filename: "receipt.pdf", content_type: "application/pdf",
+                   bytes: "a" * (ExpenseForm::MAX_RECEIPT_BYTES + 1) }
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ oversized ] })
+
+      MailboxPollJob.perform_now
+
+      assert_empty @client.created, "an oversized attachment must not mint an expense"
+      assert_match(/no usable receipt/, @mailbox.replies.first.last)
+      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+    end
+
+    test "an attachment whose content isn't an allowed receipt type is skipped" do
+      not_a_receipt = { filename: "notes.txt", content_type: "text/plain", bytes: "just some plain text notes" }
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ not_a_receipt ] })
+
+      MailboxPollJob.perform_now
+
+      assert_empty @client.created, "a disallowed content type must not mint an expense"
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end

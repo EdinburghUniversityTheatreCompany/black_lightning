@@ -174,6 +174,35 @@ module Reimbursements
       assert_nil http.requests.sole.headers["Authorization"]
     end
 
+    test "download raises on a non-2xx status from the signed URL" do
+      client, = build_client([ [ 404, "not found" ] ])
+
+      error = assert_raises(GraphAuth::Error) { client.download("https://airtable.example/expired") }
+      assert_includes error.message, "404"
+    end
+
+    test "upload_to_folder's chunked path issues one PUT per chunk for a genuinely multi-chunk file" do
+      big = "x" * (GraphClient::UPLOAD_CHUNK_SIZE + 1)
+      client, http = build_client([
+        token_response,
+        [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
+        [ 202, "" ],                                                     # chunk 1 PUT (not yet complete)
+        [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk 2 PUT (final)
+      ])
+
+      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "big.pdf", content: big)
+
+      assert_equal "https://sp.example/receipts/big.pdf", url
+      chunk_puts = http.requests.select { |r| r.method.to_s == "put" && r.uri.include?("upload.example/session") }
+      assert_equal 2, chunk_puts.size, "a file just over one chunk size must issue exactly 2 chunk PUTs"
+      assert_equal GraphClient::UPLOAD_CHUNK_SIZE, chunk_puts.first.body.bytesize
+      assert_equal 1, chunk_puts.last.body.bytesize
+      assert_equal "bytes 0-#{GraphClient::UPLOAD_CHUNK_SIZE - 1}/#{big.bytesize}",
+                   chunk_puts.first.headers["Content-Range"]
+      assert_equal "bytes #{GraphClient::UPLOAD_CHUNK_SIZE}-#{big.bytesize - 1}/#{big.bytesize}",
+                   chunk_puts.last.headers["Content-Range"]
+    end
+
     test "surfaces the Graph error code and message from the body" do
       client, = build_client([
         token_response,
