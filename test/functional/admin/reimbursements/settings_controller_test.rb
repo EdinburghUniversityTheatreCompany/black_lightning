@@ -109,6 +109,13 @@ module Admin
         assert_includes response.body, "Nightly auto-submit runs on"
       end
 
+      test "decorative glyphs are hidden from assistive tech, not part of the link's accessible name" do
+        sign_in @user
+        get :edit, params: { key: @cost_centre.key }
+
+        assert_select "a[href=?] span[aria-hidden=true]", admin_reimbursements_settings_path, text: "←"
+      end
+
       test "edit shows the Exchange grant command filled in with this mailbox" do
         sign_in @user
         get :edit, params: { key: @cost_centre.key }

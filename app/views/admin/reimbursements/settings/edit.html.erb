@@ -1,5 +1,7 @@
 <p class="mb-3">
-  <%= link_to "← All cost centres", admin_reimbursements_settings_path, class: "text-sm text-blue-700 hover:underline" %>
+  <%= link_to admin_reimbursements_settings_path, class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">←</span> All cost centres
+  <% end %>
 </p>
 
 <%= render CardComponent.new(title: "#{@cost_centre.name} (#{@cost_centre.eusa_code})") do %>
@@ -32,7 +34,7 @@
     <% grant_mailboxes = [ @cost_centre.receive_mailbox, @cost_centre.send_mailbox ].map(&:presence).compact.uniq %>
     <% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
     <%= render CollapsibleSectionComponent.new(
-          title: "⚠️ Microsoft access for this cost centre",
+          title: safe_join([ tag.span("⚠️", aria: { hidden: true }), " Microsoft access for this cost centre" ]),
           variant: :warning, html_class: "my-1") do %>
       <div class="flex flex-col gap-3 text-sm text-gray-700">
         <p>

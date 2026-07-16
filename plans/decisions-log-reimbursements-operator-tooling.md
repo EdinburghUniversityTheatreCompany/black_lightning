@@ -535,3 +535,21 @@ without stopping to ask — logged here for review in a batch rather than blocki
 - Verified the disabled-button hint visually via `playwright-cli` (expanded a real no-bank-details
   row): renders as gray `text-xs` text next to the grayed-out button, matching the surrounding
   house style, no layout regressions.
+
+## Tier 8 continued — decorative glyphs (#76, #221)
+
+- Wrapped every decorative Unicode glyph (`←`, `→`, `↑`, `📁`, `⚠️`) in `<span aria-hidden="true">`
+  across `settings/edit.html.erb` and `settings/_folder_picker.html.erb`, converting each from a
+  plain string `link_to` into block form so the glyph could be isolated from the link text.
+- **Verified against real, live SharePoint data** (this dev environment has genuine Graph
+  credentials configured for the Fringe cost centre) via `playwright-cli`, not just a screenshot:
+  drove the actual folder picker — browsed into the real "Documents" library, into a real
+  "Bedlam Fringe 2026" folder, and back up — and read the accessibility snapshot at each step.
+  Confirmed the accessible name of each link excludes the glyph (`link "Documents"`, `link
+  ".Trash-1000"`, `link "Up one level"`) while the visible text still shows it (`text: → Documents`,
+  `text: 📁 .Trash-1000`) — exactly the intended behavior, not just "no visible change" but a
+  positive confirmation the ARIA fix does what it claims against real data. Two console messages
+  seen during this were pre-existing and unrelated (a broken external logo image URL, an unused
+  CSS-preload warning).
+- Added a regression test asserting the "← All cost centres" link's glyph span carries
+  `aria-hidden="true"`.
