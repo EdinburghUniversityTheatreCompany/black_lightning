@@ -2,9 +2,92 @@ require "test_helper"
 
 class ReimbursementsHelperTest < ActionView::TestCase
   Expense = ::Reimbursements::Expense
+  Person = ::Reimbursements::Person
+  Budget = ::Reimbursements::Budget
+  ModulusCheck = ::Reimbursements::ModulusCheck
+
+  class FixedChecker
+    def initialize(result) = @result = result
+    def check(_sort, _account) = @result
+  end
 
   def expense_with(status)
     Expense.new(record_id: "recExp1", status: "Pending", ai_check_status: status)
+  end
+
+  def person_with(sort_code: "08-99-99", account_number: "66374958")
+    Person.new(record_id: "recPer1", name: "Pat Producer", email: "pat@example.com",
+              sort_code: sort_code, account_number: account_number)
+  end
+
+  test "modulus badge renders a neutral 'Missing' badge for a payee with no bank details" do
+    html = reimbursements_modulus_badge(person_with(sort_code: "", account_number: ""))
+    assert_includes html, "Missing"
+    assert_includes html, "text-gray-700"
+  end
+
+  test "modulus badge renders green Valid for a VALID result" do
+    html = reimbursements_modulus_badge(person_with, checker: FixedChecker.new(ModulusCheck::VALID))
+    assert_includes html, "Valid"
+    assert_includes html, "text-success"
+  end
+
+  test "modulus badge renders red Invalid for an INVALID result" do
+    html = reimbursements_modulus_badge(person_with, checker: FixedChecker.new(ModulusCheck::INVALID))
+    assert_includes html, "Invalid"
+    assert_includes html, "text-danger"
+  end
+
+  test "modulus badge renders amber Outside spec for an OUTSIDE_SPEC result" do
+    html = reimbursements_modulus_badge(person_with, checker: FixedChecker.new(ModulusCheck::OUTSIDE_SPEC))
+    assert_includes html, "Outside spec"
+    assert_includes html, "text-warning"
+  end
+
+  test "effective modulus badge checks the expense's EFFECTIVE bank details, not the linked person's" do
+    person = person_with(sort_code: "", account_number: "") # no bank details of their own
+    expense = Expense.new(record_id: "recExp1", status: "Pending", person: person,
+                          sort_code_override: "20-20-20", account_number_override: "50502366")
+
+    html = reimbursements_effective_modulus_badge(expense, checker: FixedChecker.new(ModulusCheck::VALID))
+
+    assert_includes html, "Valid", "the override bank details are present, so this must not fall back to Missing"
+  end
+
+  test "effective modulus badge falls back to Missing when there's no override and no linked person" do
+    expense = Expense.new(record_id: "recExp1", status: "Pending", person: nil)
+
+    html = reimbursements_effective_modulus_badge(expense)
+
+    assert_includes html, "Missing"
+  end
+
+  test "access check badge maps ok/fail/skip to success/danger/secondary" do
+    assert_includes reimbursements_access_check_badge(:ok), "OK"
+    assert_includes reimbursements_access_check_badge(:ok), "text-success"
+    assert_includes reimbursements_access_check_badge(:fail), "FAIL"
+    assert_includes reimbursements_access_check_badge(:fail), "text-danger"
+    assert_includes reimbursements_access_check_badge(:skip), "SKIP"
+    assert_includes reimbursements_access_check_badge(:skip), "text-gray-700"
+  end
+
+  test "access check badge falls back to secondary for an unrecognised status" do
+    html = reimbursements_access_check_badge(:weird)
+    assert_includes html, "WEIRD"
+    assert_includes html, "text-gray-700"
+  end
+
+  test "budget_owner_names comma-joins resolved owner names, skipping unknown ids" do
+    people_by_id = { "recPer1" => person_with, "recPer2" => Person.new(record_id: "recPer2", name: "Alex",
+                                                                       email: "alex@example.com") }
+    budget = Budget.new(record_id: "recBud1", name: "Props", owner_ids: %w[recPer1 recPer2 recGone])
+
+    assert_equal "Pat Producer, Alex", budget_owner_names(budget, people_by_id)
+  end
+
+  test "budget_owner_names returns an empty string when there are no owners" do
+    budget = Budget.new(record_id: "recBud1", name: "Props", owner_ids: [])
+    assert_equal "", budget_owner_names(budget, {})
   end
 
   test "AI badge maps pass to a green success badge" do

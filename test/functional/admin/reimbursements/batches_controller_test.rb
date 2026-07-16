@@ -169,6 +169,7 @@ module Admin
         assert_response :success
         assert_includes response.body, "BACS 2026-05-13"
         assert_includes response.body, "Reopen for rebuild"
+        assert_includes response.body, "£12.50", "the batch's total (its one expense's amount) must render"
       end
 
       test "show renders one batch and its linked expenses" do

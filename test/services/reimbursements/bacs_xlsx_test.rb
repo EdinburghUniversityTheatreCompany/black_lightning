@@ -75,6 +75,19 @@ module Reimbursements
       assert_equal "'-2+3", first[6].value
     end
 
+    test "neutralises the remaining formula triggers: leading +, tab, CR and LF" do
+      [ "+1234", "\tSUM(A1)", "\rSUM(A1)", "\nSUM(A1)" ].each do |value|
+        malicious = Row.new(
+          payee_name: "Alice Producer", amount: 5.0,
+          sort_code: "08-99-99", account_number: "00123456", nominal_code: "439999",
+          description: value, payment_reference: "ok", cost_centre: "F40"
+        )
+        first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
+
+        assert_equal "'#{value}", first[7].value, "#{value.inspect} must be quote-prefixed like the other triggers"
+      end
+    end
+
     test "also neutralises formula-injection in the sort code, account number, and nominal code cells" do
       malicious = Row.new(
         payee_name: "Alice Producer", amount: 5.0,

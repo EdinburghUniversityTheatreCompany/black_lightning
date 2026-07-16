@@ -41,6 +41,26 @@ module Reimbursements
         assert_equal "post", http.requests.first.method.to_s
       end
 
+      test "drops a nil-keyed field before writing, rather than sending a malformed field id" do
+        client, http = build_client([ [ 200, { id: "recNew", fields: {} }.to_json ] ])
+
+        client.create_record(:expenses, { "fldExpAmt" => 12.5, nil => "unmapped, config lagging behind" })
+
+        body = JSON.parse(http.requests.first.body)
+        assert_equal %w[fldExpAmt], body["fields"].keys
+      end
+
+      test "deletes a record via DELETE" do
+        client, http = build_client([ [ 200, { id: "recExp1", deleted: true }.to_json ] ])
+
+        result = client.delete_record(:expenses, "recExp1")
+
+        assert_equal "recExp1", result["id"]
+        request = http.requests.sole
+        assert_equal "delete", request.method.to_s
+        assert_includes request.uri, "recExp1"
+      end
+
       test "gets a single record and returns nil on 404" do
         client, http = build_client([ [ 200, { id: "recExp1", fields: {} }.to_json ],
                                       [ 404, "{}" ] ])

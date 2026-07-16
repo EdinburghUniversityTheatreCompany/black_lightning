@@ -68,6 +68,23 @@ module Admin
         assert_no_selector "#reasons-edits-recExp1"
       end
 
+      # (a2) Clicking anywhere outside the popover closes it too, not just Escape.
+      test "needs-attention popover closes on an outside click" do
+        rebuild_store(expenses: [ airtable_expense_record(id: "recExp1", status: "Pending", receipts: []) ])
+
+        visit admin_reimbursements_expense_edits_path
+
+        trigger = find("button[aria-controls='reasons-edits-recExp1']")
+        trigger.click
+        assert_equal "true", trigger["aria-expanded"]
+        assert_selector "#reasons-edits-recExp1", visible: true
+
+        find("body").click(x: 5, y: 5) # anywhere outside the trigger/panel
+
+        assert_equal "false", trigger["aria-expanded"]
+        assert_no_selector "#reasons-edits-recExp1"
+      end
+
       # (b) The Fancybox lightbox opens on a receipt thumbnail.
       test "clicking a receipt thumbnail opens the Fancybox lightbox" do
         image = { "id" => "attImg", "filename" => "receipt.jpg", "url" => "https://airtable/img.jpg",

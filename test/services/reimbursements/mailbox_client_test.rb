@@ -48,6 +48,28 @@ module Reimbursements
       assert_equal "Bearer tok-1", http.requests[1].headers["Authorization"]
     end
 
+    test "fetches a fresh token once the cached one has expired" do
+      now = Time.zone.local(2026, 7, 9, 12)
+      http = FakeHttp.new([
+        [ 200, { access_token: "tok-1", expires_in: 100 }.to_json ],
+        messages_response([]),
+        [ 200, { access_token: "tok-2", expires_in: 3600 }.to_json ],
+        messages_response([])
+      ])
+      client = MailboxClient.new(mailbox: "reimbursements@example.com", settings: settings,
+                                 http: http, clock: -> { now })
+
+      client.unread_messages
+      now += 200 # well past the first token's 100s expiry
+      client.unread_messages
+
+      token_requests = http.requests.select { |r| r.uri.include?("login.microsoftonline.com") }
+      assert_equal 2, token_requests.size, "an expired token must trigger a refetch, not be reused"
+      list_requests = http.requests.select { |r| r.uri.include?("isRead+eq+false") }
+      assert_equal "Bearer tok-1", list_requests.first.headers["Authorization"]
+      assert_equal "Bearer tok-2", list_requests.last.headers["Authorization"]
+    end
+
     test "attachments decodes file attachments and skips inline/items" do
       value = [
         { "@odata.type" => "#microsoft.graph.fileAttachment", "name" => "receipt.pdf",
@@ -97,6 +119,32 @@ module Reimbursements
       assert_equal "fld-processed", JSON.parse(move.body)["destinationId"]
       assert_equal "patch", patch.method.to_s
       assert JSON.parse(patch.body)["isRead"]
+    end
+
+    test "mark_read patches isRead in isolation (the accept path's separate commit step)" do
+      client, http = build_client([ token_response, [ 200, "" ] ])
+
+      client.mark_read("msg1")
+
+      patch = http.requests.last
+      assert_equal "patch", patch.method.to_s
+      assert_includes patch.uri, "messages/msg1"
+      assert JSON.parse(patch.body)["isRead"]
+    end
+
+    test "move posts to the destination folder in isolation (the accept path's separate commit step)" do
+      client, http = build_client([
+        token_response,
+        [ 200, { value: [ { id: "fld-processed" } ] }.to_json ], # folder lookup
+        [ 201, { id: "moved" }.to_json ]                          # move
+      ])
+
+      client.move("msg1", :processed)
+
+      move = http.requests.last
+      assert_equal "post", move.method.to_s
+      assert_includes move.uri, "messages/msg1/move"
+      assert_equal "fld-processed", JSON.parse(move.body)["destinationId"]
     end
 
     test "creates the folder when missing and memoizes its id" do

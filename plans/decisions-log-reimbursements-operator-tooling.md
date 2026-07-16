@@ -752,7 +752,60 @@ without stopping to ask — logged here for review in a batch rather than blocki
   items with the correctly-summed total, `producer_notifications_sent` counts the group not the
   expense count, and both expenses get `producer_notified` stamped).
 
-## Tier 9 status
+## Tier 9 — seventh batch (the remaining ~11 small misc items) — TIER 9 COMPLETE
 
-Remaining: ~11 small misc items (#7, #8, #9, #17, #24, #25, #156, #166, #177, #223, #229) — not
-yet done, continuing.
+- **#7** (`reimbursements_helper.rb`: 5 of 9 public methods untested): added coverage for the four
+  that were genuinely missing — `reimbursements_modulus_badge` (Missing/Valid/Invalid/Outside
+  spec), `reimbursements_effective_modulus_badge` (checks the expense's EFFECTIVE bank details,
+  not the linked person's own), `reimbursements_access_check_badge` (ok/fail/skip + an unknown
+  fallback), `budget_owner_names` (comma-joins resolved names, skips unknown ids). The fifth,
+  `reimbursements_reasons_popover`, already had full coverage from Tier 8's accessibility work.
+- **#8** (`mailbox_client_test.rb`: `mark_read`/`move` only exercised via the combined
+  `mark_read_and_move`): added standalone tests for both, matching how `MailboxPollJob`'s accept
+  path now calls them as separate commit steps.
+- **#9** (`airtable/client.rb`: `known_fields` nil-key filtering and `delete_record` untested):
+  added both — a nil-keyed field (an unmapped id from a lagging config) must be dropped before
+  the write, not sent as a malformed key.
+- **#17** (`prompt_safety.rb` had no dedicated unit test file) — **already resolved.** A
+  comprehensive `prompt_safety_test.rb` already exists (fence, ASCII + Unicode-homoglyph forgery
+  neutralisation, nil/blank handling, the attachment-preamble wording) — created during this
+  session's Tier 4 security-hardening work. No change needed.
+- **#24** (`graph_auth.rb`: token refetch on expiry never exercised, only "cached across two
+  calls"): added a test with a controllable clock — advances past a short-lived token's expiry
+  between two calls and confirms a second token request fires, with each call using the correct
+  bearer token.
+- **#25** (`budget_forecast.rb`: no dedicated model test file, unlike sibling `Batch`/`EusaActual`):
+  added `budget_forecast_test.rb` covering the constructor's defaults, mirroring the siblings'
+  minimal PORO-attribute pattern.
+- **#156** (`batches_controller_test.rb`'s "index lists past batches with their totals" never
+  actually asserted a total): added the `£12.50` assertion the test's own name promised.
+- **#166** (`Expense` has no reader for `rejection_notified`, so a value `review_controller.rb`
+  writes can never be read back anywhere in the app) — **a genuine code fix, not just a test
+  gap.** Added `rejection_notified` to `Expense`'s `attr_reader`/constructor and to
+  `Mapper#expense`'s read side (mirroring `ai_checked_at`'s timestamp pattern, since the write
+  side stores a real `Time`, not a boolean like `producer_notified`). Removed the now-stale
+  "write-only, no literal fid pair" comment in the test helpers' `EXPECTED_AIRTABLE_FIELDS` list,
+  confirmed via `schema_drift_test.rb` staying green. Added a round-trip test in `store_test.rb`.
+- **#177** (`popover_controller.js`: zero test coverage of any kind) — **mostly already
+  resolved.** `test/system/admin/reimbursements/finance_js_test.rb` already covers open-on-click,
+  `aria-expanded` toggling, and Escape-to-close (added during Tier 8). The one gap — outside-click
+  closing the popover — was genuinely untested, so added a system test for it (a real headless
+  Chrome run, not a stub).
+- **#223** (`bacs_xlsx_test.rb`'s formula-injection test only covers 3 of 7 `FORMULA_TRIGGERS`:
+  `=`, `@`, `-`): added a test covering the remaining four — leading `+`, tab, CR, LF — each
+  individually, confirming every trigger character gets the same quote-prefix neutralisation.
+- **#229** (`settings_controller_test.rb`'s "update with no run-days checked clears the schedule"
+  actively asserts the bug flagged at #193 — `CostCentre#nightly_run_days_are_weekday_numbers`
+  vacuously accepting `[]` — as correct behavior) — **required fixing #193 itself first**, since
+  #229 can't be meaningfully resolved by rewriting the test alone; the underlying validation gap
+  is what makes the test's assertion wrong. Added `days.present?` to the validation (a cost centre
+  can no longer silently disable its own nightly job via an empty run-days list) and rewrote the
+  test to assert the PATCH is now rejected with `unprocessable_entity` and the schedule stays
+  unchanged. Fallout: "update saves the SharePoint site URL" was omitting `nightly_run_days`
+  entirely (simulating a scenario that can't happen in a real browser, where currently-checked
+  boxes always resubmit) — fixed to include the cost centre's current days, matching realistic
+  form submission, rather than weakening the new validation.
+
+Tier 9 is now complete — all ~30 test-coverage-backfill findings resolved (several turned out
+already covered or dead code by the time they were checked, logged above and in earlier batches).
+Moving to Tier 10 (low-priority/cosmetic).
