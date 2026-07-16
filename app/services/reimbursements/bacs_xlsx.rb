@@ -87,10 +87,14 @@ module Reimbursements
     private
 
     def write_row(sheet, row_index, row)
-      # payee_name / payment_reference / description are free text the submitter
-      # controls (incl. Invoice overrides), so they are formula-sanitised. The
-      # numeric amount and the forced-text bank fields below are not free text and
-      # keep their exact value (leading zeros, dashes, negative amounts intact).
+      # payee_name / payment_reference / description are free text the
+      # submitter controls (incl. Invoice overrides), so they are
+      # formula-sanitised. The bank/nominal-code fields below are expected to
+      # already be digits/dashes from a validated source, but they're still
+      # finance-editable overrides (nominal_code_override in particular has
+      # no format validation anywhere) — sanitised too as defense-in-depth,
+      # since this is the one field class that actually steers where BACS
+      # money goes. The numeric amount is the only truly non-text cell.
       sheet.add_cell(row_index, COL_PAYEE, sanitize(row.payee_name))
       # rubyXL serialises a Float cleanly; the template's currency format renders it.
       sheet.add_cell(row_index, COL_AMOUNT, row.amount.to_f)
@@ -112,9 +116,10 @@ module Reimbursements
       "'#{text}"
     end
 
-    # A cell written as literal text so leading zeros / dashes are preserved.
+    # A cell written as literal text so leading zeros / dashes are preserved,
+    # formula-sanitised like the free-text cells above.
     def text_cell(sheet, row_index, column_index, value)
-      cell = sheet.add_cell(row_index, column_index, value.to_s)
+      cell = sheet.add_cell(row_index, column_index, sanitize(value))
       cell.set_number_format(TEXT_FORMAT)
       cell
     end

@@ -75,6 +75,23 @@ module Reimbursements
       assert_equal "'-2+3", first[6].value
     end
 
+    test "also neutralises formula-injection in the sort code, account number, and nominal code cells" do
+      malicious = Row.new(
+        payee_name: "Alice Producer", amount: 5.0,
+        sort_code: "=HYPERLINK(\"http://evil\")", account_number: "@SUM(A1:A9)",
+        nominal_code: "-2+3", description: "ok", payment_reference: "ok", cost_centre: "F40"
+      )
+      first = parsed(BacsXlsx.new.generate([ malicious ])).sheet_data[2]
+
+      assert_equal "'=HYPERLINK(\"http://evil\")", first[2].value
+      assert_equal "'@SUM(A1:A9)", first[3].value
+      assert_equal "'-2+3", first[4].value
+      # Still forced to text format, same as an ordinary bank-detail cell.
+      assert_equal "@", first[2].number_format.format_code
+      assert_equal "@", first[3].number_format.format_code
+      assert_equal "@", first[4].number_format.format_code
+    end
+
     test "leaves ordinary text cells and forced-text bank fields unprefixed" do
       first = parsed(BacsXlsx.new.generate(rows)).sheet_data[2]
 

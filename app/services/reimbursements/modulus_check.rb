@@ -61,10 +61,10 @@ module Reimbursements
 
       # Validate a sort code + account number. Sort code: 6 digits, dashes/spaces
       # allowed. Account number: 6/7/8 digits (padded to 8) or 10 (last 8 kept);
-      # 9-digit inputs are rejected. Returns VALID / INVALID / OUTSIDE_SPEC.
+      # 9 digits is the Pay.UK "nonstandard" Santander/A&L format, handled by
+      # #normalize_pair. Returns VALID / INVALID / OUTSIDE_SPEC.
       def check(sort_code, account_number)
-        sort_clean = self.class.normalize_sort_code(sort_code)
-        account_clean = self.class.normalize_account_number(account_number)
+        sort_clean, account_clean = self.class.normalize_pair(sort_code, account_number)
         return INVALID if sort_clean.empty? || account_clean.empty?
 
         sort_int = sort_clean.to_i
@@ -91,19 +91,50 @@ module Reimbursements
         results.all? ? VALID : INVALID
       end
 
+      # Only dashes/spaces are documented separators — anything else (a stray
+      # letter, a typo) must fail normalization rather than being silently
+      # discarded, or a corrupted value could coincidentally reduce to a
+      # clean, valid-looking digit string and read VALID.
       def self.normalize_sort_code(sort_code)
-        cleaned = sort_code.to_s.gsub(/\D/, "")
-        cleaned.length == 6 ? cleaned : ""
+        cleaned = strip_separators(sort_code)
+        cleaned && cleaned.length == 6 ? cleaned : ""
       end
 
-      # Valid lengths per Pay.UK: 6, 7, 8 (left-padded to 8) or 10 (last 8 kept).
+      # Valid lengths per Pay.UK: 6, 7, 8 (left-padded to 8) or 10 (last 8
+      # kept). A 9-digit input is handled by #normalize_pair instead, since it
+      # also changes the sort code and can't be normalized in isolation.
       def self.normalize_account_number(account_number)
-        cleaned = account_number.to_s.gsub(/\D/, "")
-        return "" unless [ 6, 7, 8, 10 ].include?(cleaned.length)
+        cleaned = strip_separators(account_number)
+        return "" unless cleaned && [ 6, 7, 8, 10 ].include?(cleaned.length)
 
         cleaned = cleaned[2..] if cleaned.length == 10
         cleaned.rjust(8, "0")
       end
+
+      # Normalizes a sort code + account number TOGETHER — needed because a
+      # 9-digit account number (Pay.UK spec §2.1.2 "Nonstandard account
+      # numbers", e.g. Santander / Alliance & Leicester Commercial Bank)
+      # substitutes the sort code's last digit with the account number's own
+      # first digit before only the last 8 digits are checked, rather than
+      # being hard-rejected as INVALID. Returns ["", ""] when either side
+      # can't be normalized at all.
+      def self.normalize_pair(sort_code, account_number)
+        sort_clean = normalize_sort_code(sort_code)
+        account_digits = strip_separators(account_number)
+        return [ "", "" ] if sort_clean.empty? || account_digits.nil?
+
+        if account_digits.length == 9
+          [ sort_clean[0, 5] + account_digits[0], account_digits[1..] ]
+        else
+          [ sort_clean, normalize_account_number(account_number) ]
+        end
+      end
+
+      def self.strip_separators(value)
+        cleaned = value.to_s.gsub(/[\-\s]/, "")
+        cleaned.match?(/\A\d+\z/) ? cleaned : nil
+      end
+      private_class_method :strip_separators
 
       private
 
@@ -114,11 +145,16 @@ module Reimbursements
 
         case rule.exception
         when 6
-          # Foreign-currency accounts: pass if account[0] in 4..8 and account[0]==account[6].
-          return true if (4..8).cover?(account_digits[0]) && account_digits[0] == account_digits[6]
+          # Foreign-currency accounts (Pay.UK spec §2.2.2.6): pass if account[0]
+          # is 4-8 and account digits g (account[6]) and h (account[7]) match —
+          # not account[0] and account[6], a different digit pair entirely.
+          return true if (4..8).cover?(account_digits[0]) && account_digits[6] == account_digits[7]
         when 7
-          # If account digit g (account[6]) is 9, zero the sort-code weights (positions 0-5).
-          weights = [ 0, 0, 0, 0, 0, 0, *weights[6..] ] if account_digits[6] == 9
+          # If account digit g (account[6]) is 9, zero weighting positions u-b
+          # (Pay.UK spec §2.2.2.7): all 6 sort-code weights plus the first 2
+          # account-number weights (positions 0-7 of 14), not just the 6
+          # sort-code weights.
+          weights = [ 0, 0, 0, 0, 0, 0, 0, 0, *weights[8..] ] if account_digits[6] == 9
         when 3
           # If account digit c (account[2]) is 6 or 9, the rule doesn't apply (passes).
           return true if [ 6, 9 ].include?(account_digits[2])

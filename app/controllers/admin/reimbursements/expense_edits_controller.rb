@@ -75,7 +75,7 @@ module Admin
         expense = find_expense!
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        )
+        ) || bank_detail_override_error
         if error
           load_edit(expense)
           flash.now[:alert] = error
@@ -218,14 +218,38 @@ module Admin
           nominal_code_override: params[:nominal_code_override].to_s,
           budget_record_id: params[:budget_record_id].presence,
           payee_name_override: params[:payee_name_override].to_s,
-          sort_code_override: params[:sort_code_override].to_s,
-          account_number_override: params[:account_number_override].to_s
+          # Persist the SAME normalized value #bank_detail_override_error just
+          # validated (dashed sort code, whitespace-stripped account number) —
+          # so what's validated and what later reaches the BACS spreadsheet
+          # are always the identical string, matching ExpenseForm's pattern.
+          sort_code_override: ::Reimbursements::BankDetails.format_sort_code(params[:sort_code_override].to_s),
+          account_number_override:
+            ::Reimbursements::BankDetails.normalize_account_number(params[:account_number_override].to_s)
         }
         # Only write excl-VAT when a positive value is given (0 means "not yet
         # known", leave the field alone), mirroring the Review save.
         excl_vat = params[:amount_excl_vat].to_f
         attrs[:amount_excl_vat] = excl_vat if excl_vat.positive?
         attrs
+      end
+
+      # Only validates when an override is actually present — a blank
+      # override means "no override, fall back to the payee's own bank
+      # details," same as ExpenseForm#overrides_valid. Unlike every other
+      # bank-detail write path in this diff, this finance-only "Edit (any
+      # status)" form previously wrote raw params with zero format check.
+      def bank_detail_override_error
+        sort_code = params[:sort_code_override].to_s
+        account_number = params[:account_number_override].to_s
+
+        if sort_code.present? && !::Reimbursements::BankDetails.valid_sort_code?(sort_code)
+          return "Sort code override #{::Reimbursements::BankDetails::SORT_CODE_HINT}"
+        end
+        if account_number.present? && !::Reimbursements::BankDetails.valid_account_number?(account_number)
+          return "Account number override #{::Reimbursements::BankDetails::ACCOUNT_NUMBER_HINT}"
+        end
+
+        nil
       end
 
       def redirect_to_edit(expense, flash)

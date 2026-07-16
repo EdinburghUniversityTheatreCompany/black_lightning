@@ -455,6 +455,46 @@ module Admin
         assert_empty @client.updated
       end
 
+      test "update rejects a malformed sort code override, re-renders edit 422, writes nothing" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "20.00", amount_excl_vat: "20.00",
+                                 description: "x", budget_record_id: "recBud1",
+                                 sort_code_override: "20-00-0X", account_number_override: "12345678" }
+
+        assert_response :unprocessable_content
+        assert_match(/sort code override/i, response.body)
+        assert_empty @client.updated
+      end
+
+      test "update rejects a malformed account number override, re-renders edit 422, writes nothing" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "20.00", amount_excl_vat: "20.00",
+                                 description: "x", budget_record_id: "recBud1",
+                                 sort_code_override: "20-00-00", account_number_override: "1234" }
+
+        assert_response :unprocessable_content
+        assert_match(/account number override/i, response.body)
+        assert_empty @client.updated
+      end
+
+      test "update allows blank bank-detail overrides (no override, fall back to the payee's own)" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "20.00", amount_excl_vat: "20.00",
+                                 description: "x", budget_record_id: "recBud1",
+                                 sort_code_override: "", account_number_override: "" }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path("recExp1")
+        _table, _id, fields = @client.updated.sole
+        assert_equal "", fields[EXP[:sort_code_override]]
+        assert_equal "", fields[EXP[:account_number_override]]
+      end
+
       # --- Already-sent / already-paid note --------------------------------
 
       test "shows an already-sent-to-EUSA note for a Submitted expense" do
