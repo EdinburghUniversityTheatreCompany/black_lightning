@@ -31,7 +31,12 @@ module Admin
       end
 
       def update
-        store.update_budget!(@budget.record_id, budget_params)
+        attrs = budget_params
+        if (error = budget_validation_error(attrs))
+          return redirect_to(edit_path, alert: error)
+        end
+
+        store.update_budget!(@budget.record_id, attrs)
         redirect_to edit_path, notice: "Budget saved."
       end
 
@@ -58,6 +63,19 @@ module Admin
 
       def edit_path
         edit_admin_reimbursements_budget_path(@budget.record_id)
+      end
+
+      # No validation existed on this write path at all: a blank name/nominal
+      # code or a mangled budget_type param would previously write straight
+      # through to Airtable with no feedback to the operator.
+      def budget_validation_error(attrs)
+        return "Enter a budget name." if attrs[:name].blank?
+        return "Enter a nominal code." if attrs[:nominal_code].blank?
+        unless ::Reimbursements::Budget::TYPES.include?(attrs[:budget_type])
+          return "Choose a valid budget type."
+        end
+
+        owner_ids_error(attrs[:owner_ids])
       end
 
       # Operator-editable budget attributes. Rollups/formulas are never written.

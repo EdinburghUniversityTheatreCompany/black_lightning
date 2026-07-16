@@ -124,6 +124,29 @@ module Admin
         assert_match(/valid BACS date/i, response.body)
       end
 
+      test "create with a malformed EUSA recipient re-renders new with an error and enqueues nothing" do
+        one_approved
+        sign_in @user
+
+        assert_no_enqueued_jobs do
+          post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "not-an-email" }
+        end
+
+        assert_response :unprocessable_entity
+        assert_match(/valid EUSA recipient/i, response.body)
+      end
+
+      test "create with a blank EUSA recipient falls back to the cost centre's default" do
+        one_approved
+        sign_in @user
+
+        assert_enqueued_with(job: ::Reimbursements::BuildBatchJob) do
+          post :create, params: { bacs_date: "2026-05-13", eusa_recipient: "" }
+        end
+
+        assert_redirected_to admin_reimbursements_batches_path
+      end
+
       # --- History (index / show) -------------------------------------------
 
       test "index lists past batches with their totals" do

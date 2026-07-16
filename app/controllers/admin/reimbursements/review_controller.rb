@@ -54,7 +54,7 @@ module Admin
         expense = find_expense!
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        )
+        ) || budget_record_id_error(params[:budget_record_id])
         if error
           redirect_to_review(alert: error)
           return

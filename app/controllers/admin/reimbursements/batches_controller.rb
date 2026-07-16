@@ -57,6 +57,12 @@ module Admin
           return render :new, status: :unprocessable_entity
         end
 
+        if invalid_eusa_recipient?
+          assign_new_form
+          flash.now[:alert] = "Enter a valid EUSA recipient email address before building the batch."
+          return render :new, status: :unprocessable_entity
+        end
+
         ::Reimbursements::BuildBatchJob.perform_later(
           cost_centre_key: @cost_centre.key,
           bacs_date: bacs_date.iso8601,
@@ -175,6 +181,15 @@ module Admin
         Date.parse(value.to_s)
       rescue ArgumentError, TypeError
         nil
+      end
+
+      # The form's EUSA recipient is free text overriding the cost centre's
+      # own (format-validated) configured recipient, passed straight through
+      # as the sole "to" address of the EUSA draft — it gets no format check
+      # of its own otherwise. Blank is fine (falls back to the cost centre's
+      # recipient); only a non-blank, malformed value is rejected.
+      def invalid_eusa_recipient?
+        params[:eusa_recipient].present? && !params[:eusa_recipient].match?(URI::MailTo::EMAIL_REGEXP)
       end
 
       def default_sender

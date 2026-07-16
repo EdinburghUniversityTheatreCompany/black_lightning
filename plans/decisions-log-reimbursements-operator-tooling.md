@@ -364,3 +364,41 @@ without stopping to ask — logged here for review in a batch rather than blocki
   DB, unlike Expense/Budget/Batch). Added `uniqueness: true` for `eusa_code`, case-insensitive
   uniqueness for both mailboxes (matching how email addresses are already treated elsewhere in this
   diff, e.g. `MailboxClient` downcasing `from_address`).
+
+## Tier 6 (data validation completeness)
+
+- **#49 (Budget name/nominal_code presence) + #50 (budget_type inclusion)**: `Budget` is an
+  Airtable-backed PORO like `Expense`, not ActiveRecord, so this couldn't be a model-level
+  `validates` — added inline validation in `BudgetsController#update` (mirroring the existing
+  `forecast` action's own inline-validate-then-redirect-with-alert style, since this controller has
+  no form object). Added `Budget::TYPES = %w[Expense Income]` as the source of truth (previously
+  only inline in the edit view's `select_tag`) and pointed the view at it too.
+
+- **#71 (CostCentre email fields have no format check)**: added `URI::MailTo::EMAIL_REGEXP` format
+  validation to `receive_mailbox`/`send_mailbox` (required) and `eusa_recipient` (optional,
+  `allow_blank: true`) — the same validator `Opportunity`/`User` already use elsewhere in the app.
+  `SettingsController#save_settings` already handled model validation failures gracefully (renders
+  `:edit` with a flash), so no controller change was needed for this one.
+
+- **#86 (Build Batch's free-text EUSA-recipient override has no email-format check)**: added the
+  same format check to `BatchesController#create`, mirroring the existing BACS-date validation
+  pattern exactly (validate before enqueuing; re-render `:new` with a flash on failure). Blank is
+  still allowed (falls back to the cost centre's own, now format-validated, configured recipient).
+
+- **#144 (submitted link-field ids aren't checked to resolve to a real record before writing)**:
+  added `budget_record_id_error`/`owner_ids_error` to the shared `FinanceController` base (using
+  `store.find_budget`/`store.find_person` against the already-cached lists, so this costs zero extra
+  Airtable API calls) and wired them into the three call sites the finding named:
+  `ReviewController#save`, `ExpenseEditsController#update` (both `budget_record_id`), and
+  `BudgetsController#update` (`owner_ids`). Previously a stale/tampered id would reach
+  `Store#update_expense!`/`#update_budget!`'s plain field-hash PATCH and only fail once Airtable's
+  own API rejected the unknown linked-record id — surfacing as an unhandled 500 rather than a
+  flash pointing at what to fix.
+
+- **#151 (nominal_code uniqueness across budgets) skipped per the plan** — budgets intentionally
+  share a nominal code (one code, several per-show budgets), not a bug.
+
+- **Tier 6 (data validation completeness) is now complete.** Continuing to Tier 7 (consolidation/
+  duplication cleanup) next — though most of it is mechanical refactor work with no user-facing
+  behavior change; will scan it and decide whether it's worth doing in this pass or better left as
+  a dedicated follow-up given the size of the diff already accumulated this session.

@@ -63,6 +63,29 @@ module Reimbursements
       assert_includes duplicate.errors.attribute_names, :send_mailbox
     end
 
+    test "rejects a mistyped receive or send mailbox" do
+      cost_centre = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
+        receive_mailbox: "not-an-email", send_mailbox: "termtime-out@b.co")
+      assert_not cost_centre.valid?
+      assert_includes cost_centre.errors.attribute_names, :receive_mailbox
+
+      cost_centre.receive_mailbox = "termtime-in@b.co"
+      cost_centre.send_mailbox = "also not an email"
+      assert_not cost_centre.valid?
+      assert_includes cost_centre.errors.attribute_names, :send_mailbox
+    end
+
+    test "rejects a mistyped eusa_recipient, but blank is still allowed" do
+      cost_centre = CostCentre.new(key: "termtime", name: "Termtime", eusa_code: "BED",
+        receive_mailbox: "termtime-in@b.co", send_mailbox: "termtime-out@b.co",
+        eusa_recipient: "not-an-email")
+      assert_not cost_centre.valid?
+      assert_includes cost_centre.errors.attribute_names, :eusa_recipient
+
+      cost_centre.eusa_recipient = ""
+      assert cost_centre.valid?, cost_centre.errors.full_messages.to_sentence
+    end
+
     test "sharepoint_configured? is false until both drive/folder pairs are set" do
       cost_centre = CostCentre.new(sharepoint_receipts_drive_id: "d", sharepoint_receipts_folder_id: "f")
       assert_not cost_centre.sharepoint_configured?, "needs the BACS folder too"

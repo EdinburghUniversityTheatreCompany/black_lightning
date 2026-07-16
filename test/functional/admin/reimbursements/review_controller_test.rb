@@ -314,6 +314,19 @@ module Admin
         assert_equal "4100", fields[EXP[:nominal_code_override]]
       end
 
+      test "save rejects a budget_record_id that doesn't resolve to a real budget" do
+        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "16.67",
+                               description: "x", payment_reference: "y", budget_record_id: "recBudGone" }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/budget no longer exists/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
       test "save leaves excl VAT untouched when zero is submitted" do
         expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
         rebuild_store(expenses: [ expense ])

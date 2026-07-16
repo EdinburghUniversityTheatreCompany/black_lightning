@@ -57,6 +57,11 @@ module Reimbursements
     validates :eusa_code, uniqueness: true
     validates :receive_mailbox, uniqueness: { case_sensitive: false }
     validates :send_mailbox, uniqueness: { case_sensitive: false }
+    # No format check existed anywhere on this write path — a mistyped
+    # mailbox would silently misconfigure email-in / draft-sending, and
+    # eusa_recipient feeds straight into the BACS draft's "to" address.
+    validates :receive_mailbox, :send_mailbox, format: { with: URI::MailTo::EMAIL_REGEXP }
+    validates :eusa_recipient, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
     validate :nightly_run_days_are_weekday_numbers
 
     # The primary cost centre (Fringe today). Multi-cost-centre flows iterate

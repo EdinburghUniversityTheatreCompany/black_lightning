@@ -2,6 +2,8 @@ module Reimbursements
   ##
   # A budget category in the Airtable Budgets table.
   class Budget
+    TYPES = %w[Expense Income].freeze
+
     attr_reader :record_id, :name, :nominal_code, :active, :budget_type,
                 :initial_budget, :remaining, :owner_ids, :notes,
                 :current_forecast, :committed_amount, :total_paid, :variance

@@ -431,6 +431,18 @@ module Admin
         assert_not fields.key?(EXP[:amount_excl_vat])
       end
 
+      test "update rejects a budget_record_id that doesn't resolve to a real budget" do
+        rebuild_store(expenses: [ expense_at("Pending") ])
+        sign_in @user
+
+        patch :update, params: { id: "recExp1", amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "x", budget_record_id: "recBudGone" }
+
+        assert_response :unprocessable_content
+        assert_match(/budget no longer exists/i, response.body)
+        assert_empty @client.updated
+      end
+
       test "update rejects a negative amount, re-renders edit 422, writes nothing" do
         rebuild_store(expenses: [ expense_at("Pending") ])
         sign_in @user

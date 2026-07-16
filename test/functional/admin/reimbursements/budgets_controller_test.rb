@@ -161,6 +161,50 @@ module Admin
 
       # --- Update ------------------------------------------------------------
 
+      test "a blank name is rejected, not written straight through to Airtable" do
+        sign_in @user
+
+        patch :update, params: { id: "recBud1", name: "  ", nominal_code: "4000",
+                                 budget_type: "Expense" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/Enter a budget name/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "a blank nominal code is rejected" do
+        sign_in @user
+
+        patch :update, params: { id: "recBud1", name: "Props", nominal_code: " ",
+                                 budget_type: "Expense" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/Enter a nominal code/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "a budget_type outside the allowed list is rejected" do
+        sign_in @user
+
+        patch :update, params: { id: "recBud1", name: "Props", nominal_code: "4000",
+                                 budget_type: "Something else entirely" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/Choose a valid budget type/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "an owner_id that doesn't resolve to a real person is rejected" do
+        sign_in @user
+
+        patch :update, params: { id: "recBud1", name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense", owner_ids: [ "recPer1", "recPerGone" ] }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/owners no longer exist/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
       test "update persists edited fields including owners" do
         sign_in @user
 

@@ -19,7 +19,7 @@
       <div>
         <%= label_tag :budget_type, "Type", class: "block text-sm font-medium" %>
         <%= select_tag :budget_type,
-                       options_for_select(%w[Expense Income], @budget.budget_type),
+                       options_for_select(::Reimbursements::Budget::TYPES, @budget.budget_type),
                        class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
       </div>
       <div>

@@ -75,7 +75,7 @@ module Admin
         expense = find_expense!
         error = ::Reimbursements::AmountValidation.error_for(
           amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
-        ) || bank_detail_override_error
+        ) || bank_detail_override_error || budget_record_id_error(params[:budget_record_id])
         if error
           load_edit(expense)
           flash.now[:alert] = error
