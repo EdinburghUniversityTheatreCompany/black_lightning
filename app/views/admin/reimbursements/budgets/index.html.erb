@@ -31,7 +31,8 @@
                    render(BadgeComponent.new(type: :secondary, pill: true).with_content("Hidden"))
                  end
        variance_class = budget.variance && budget.variance.negative? ? "text-red-600" : nil
-       edit = link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id), class: btn_classes(:secondary, :sm))
+       edit = link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),
+                      "aria-label": "Edit #{budget.name}", class: btn_classes(:secondary, :sm))
        {
          fields: [
            budget, name, budget.budget_type, visible,

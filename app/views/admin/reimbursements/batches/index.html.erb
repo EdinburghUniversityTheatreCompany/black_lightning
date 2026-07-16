@@ -27,7 +27,9 @@
           <% if batch.eusa_draft_created %>
             <%= render BadgeComponent.new(type: :success, pill: true).with_content("Draft created") %>
           <% end %>
-          <%= link_to "Detail", admin_reimbursements_batch_path(batch.record_id), class: btn_classes(:secondary, :sm) %>
+          <%= link_to "Detail", admin_reimbursements_batch_path(batch.record_id),
+                      "aria-label": "Detail for batch #{batch.name.presence || batch.record_id}",
+                      class: btn_classes(:secondary, :sm) %>
         </div>
 
         <div class="mt-2">
@@ -38,6 +40,7 @@
           <% elsif expenses.any? %>
             <%= form_with url: reopen_admin_reimbursements_batch_path(batch.record_id), method: :post do %>
               <%= submit_tag "Reopen for rebuild", class: btn_classes(:danger, :sm),
+                             "aria-label": "Reopen batch #{batch.name.presence || batch.record_id} for rebuild",
                              data: { turbo_confirm: "Revert #{expenses.size} #{'expense'.pluralize(expenses.size)} " \
                                                     "to Approved and delete this batch?" } %>
             <% end %>

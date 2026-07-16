@@ -553,3 +553,38 @@ without stopping to ask — logged here for review in a batch rather than blocki
   CSS-preload warning).
 - Added a regression test asserting the "← All cost centres" link's glyph span carries
   `aria-hidden="true"`.
+
+## Tier 8 continued — repeated, context-free accessible names (#116, #169, #180, #220)
+
+- Added record-scoped `aria-label`s to every repeated control the plan's #116 entry named:
+  `_expense_card.html.erb`'s Save changes / Remove-receipt / Approve / Reject / Edit-any-status
+  (scoped by `##{expense.auto_number}`, or the receipt filename for Remove), the same set's
+  single-record echo in `expense_edits/edit.html.erb`, `people/index.html.erb`'s Save-bank-details
+  / Mark-as-verified (scoped by person name), and `batches/index.html.erb`'s Detail / Reopen
+  (scoped by batch name).
+- **#169 + #195 (same helper, same trigger)**: `reimbursements_reasons_popover` gained a
+  `record_label:` param so its trigger's accessible name becomes `"Needs attention for #123"`
+  instead of the bare static label repeated on every row; wired into its three call sites
+  (`expenses/index`, `review/_expense_card`, `expense_edits/index`). While in the same helper,
+  also removed the trigger's `aria-haspopup="true"` (#195) — the panel it controls is a plain
+  disclosure region (static reason text), not a menu, so claiming the "menu" pattern was a role
+  mismatch; `aria-expanded`/`aria-controls` already fully describe a disclosure toggle without it.
+  Added helper-level tests for both (no prior coverage existed for this helper's popover at all).
+- **#180 + #220**: the same record-scoped `aria-label` pattern applied to the four remaining
+  plain `link_to("Edit", ...)` sites (`budgets/index`, `expense_edits/index`, `expenses/index`,
+  `settings/index`).
+- **#62 (popover reparented to `<body>`, breaking AT discoverability) — reviewed, deferred, not
+  fixed.** The reparenting in `popover_controller.js#connect()` is a deliberate, load-bearing
+  workaround for a real CSS containment problem (an `overflow-x-auto` ancestor clipping the
+  Popper-positioned panel) — removing it would likely reintroduce that visual bug. A proper fix
+  (e.g. `position: fixed` without physically moving the DOM node, or `aria-owns` to logically
+  reassociate the reparented panel) is a genuine JS-architecture change I didn't want to risk
+  getting subtly wrong without a way to regression-test the *original* clipping bug it was written
+  to prevent. The panel itself has zero focusable elements (static text only), which narrows the
+  practical impact versus a menu/dialog with interactive content. Left as a follow-up.
+- **Verified live against the Review page** via `playwright-cli`: read the accessibility tree
+  confirming every button now reports the scoped name (`button "Save changes to #29"`, `button
+  "Remove tax_invoice_....pdf from expense #29"`, `button "Needs attention for #31"`, etc.),
+  clicked the "Needs attention" popover trigger and confirmed it still opens/closes correctly
+  (`[expanded]` toggled, panel content appeared, screenshot matches house style), and confirmed
+  `document.querySelectorAll('[aria-haspopup]').length === 0` on the live page.

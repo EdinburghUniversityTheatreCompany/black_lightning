@@ -57,7 +57,8 @@
                                    "aria-describedby": error_id, "aria-invalid": error_id.present?,
                                    class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
               </div>
-              <%= submit_tag "Save bank details", class: btn_classes(:primary, :sm) %>
+              <%= submit_tag "Save bank details", "aria-label": "Save bank details for #{person.name.presence || 'this person'}",
+                             class: btn_classes(:primary, :sm) %>
             <% end %>
 
             <% if error_id %>
@@ -71,6 +72,7 @@
               <%= submit_tag "Mark as verified",
                              disabled: !person.bank_details?,
                              "aria-describedby": verify_hint_id,
+                             "aria-label": "Mark #{person.name.presence || 'this person'} as verified",
                              class: "#{btn_classes(:secondary, :sm)} disabled:opacity-50 disabled:cursor-not-allowed" %>
               <% if verify_hint_id %>
                 <span id="<%= verify_hint_id %>" class="text-xs text-gray-500 ml-1">

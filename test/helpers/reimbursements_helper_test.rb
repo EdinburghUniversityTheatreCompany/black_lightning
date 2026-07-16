@@ -64,4 +64,36 @@ class ReimbursementsHelperTest < ActionView::TestCase
   test "reimbursements_money accepts a pre-formatted numeric string (emails)" do
     assert_equal "£1,234.50", reimbursements_money("1234.50")
   end
+
+  test "reasons_popover is blank when there are no reasons" do
+    assert_equal "", reimbursements_reasons_popover(reasons: [], key: "x", label: "Needs attention",
+                                                     heading: "Needs attention:")
+  end
+
+  test "reasons_popover's accessible name is scoped to the record when record_label is given" do
+    html = reimbursements_reasons_popover(reasons: [ "No budget" ], key: "review-recExp1",
+                                          label: "Needs attention", heading: "Needs attention:",
+                                          record_label: "#123")
+
+    assert_includes html, 'aria-label="Needs attention for #123"'
+    # The visible label text still just reads "Needs attention" (the scoping
+    # is for assistive tech, not a visible change).
+    assert_match(%r{<button[^>]*>\s*Needs attention}, html)
+  end
+
+  test "reasons_popover falls back to the plain label without record_label" do
+    html = reimbursements_reasons_popover(reasons: [ "No budget" ], key: "x",
+                                          label: "Needs attention", heading: "Needs attention:")
+
+    assert_includes html, 'aria-label="Needs attention"'
+  end
+
+  # The panel is a plain disclosure region (static text), not a menu — claiming
+  # aria-haspopup="true" (equivalent to "menu") would be an ARIA role mismatch.
+  test "reasons_popover trigger does not claim a menu popup type" do
+    html = reimbursements_reasons_popover(reasons: [ "No budget" ], key: "x",
+                                          label: "Needs attention", heading: "Needs attention:")
+
+    assert_not_includes html, "aria-haspopup"
+  end
 end

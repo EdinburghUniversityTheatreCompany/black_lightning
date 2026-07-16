@@ -17,7 +17,7 @@
           <%= render BadgeComponent.new(type: :warning, pill: true).with_content("SharePoint incomplete") %>
         <% end %>
         <%= link_to "Edit", edit_admin_reimbursements_setting_path(cost_centre.key),
-                    class: btn_classes(:primary, :sm) %>
+                    "aria-label": "Edit settings for #{cost_centre.name}", class: btn_classes(:primary, :sm) %>
       </div>
     <% end %>
   </div>

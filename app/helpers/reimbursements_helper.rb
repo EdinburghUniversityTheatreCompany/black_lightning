@@ -101,17 +101,27 @@ module ReimbursementsHelper
   #
   # +reasons+ the list of reason strings; +key+ a unique seed for the panel id
   # (an expense record_id); +label+ the badge text; +heading+ the panel heading.
-  def reimbursements_reasons_popover(reasons:, key:, label:, heading:, badge_type: :warning)
+  # +record_label+ scopes the trigger's accessible name to the specific record
+  # it's for (e.g. "#123") — without it, every row on a list page announces the
+  # identical "Needs attention"/"Needs completion" name with no way to tell
+  # which record a screen-reader user is on. Falls back to the static +label+
+  # alone for a single, unambiguous call site.
+  def reimbursements_reasons_popover(reasons:, key:, label:, heading:, badge_type: :warning, record_label: nil)
     return "".html_safe if reasons.blank?
 
     panel_id = "reasons-#{key}"
     badge = BadgeComponent::STYLES.fetch(badge_type, BadgeComponent::STYLES[:secondary])
+    accessible_name = record_label.present? ? "#{label} for #{record_label}" : label
 
     trigger = content_tag(:button, type: "button",
                           class: "inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 " \
                                  "text-xs font-medium #{badge}",
                           data: { popover_target: "trigger", action: "popover#toggle" },
-                          aria: { expanded: "false", controls: panel_id, haspopup: "true" }) do
+                          # No aria-haspopup: this panel is a plain disclosure
+                          # region (static text), not a menu — aria-haspopup
+                          # ="true" would claim the "menu" pattern (arrow-key
+                          # navigable menuitem children) this doesn't have.
+                          aria: { expanded: "false", controls: panel_id, label: accessible_name }) do
       safe_join([ label, content_tag(:span, "▾", aria: { hidden: "true" }) ], " ")
     end
 

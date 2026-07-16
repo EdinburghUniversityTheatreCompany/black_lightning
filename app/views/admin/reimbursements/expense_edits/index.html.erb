@@ -64,11 +64,13 @@
        flags = content_tag(:div, class: "flex flex-wrap gap-1") do
          safe_join([
            (reimbursements_reasons_popover(reasons: reasons, key: "edits-#{expense.record_id}",
-                                           label: "Needs attention", heading: "Needs attention:") if reasons.any?),
+                                           label: "Needs attention", heading: "Needs attention:",
+                                           record_label: "##{expense.auto_number}") if reasons.any?),
            (reimbursements_ai_badge(expense) if expense.ai_check_status.present?)
          ].compact, " ")
        end
-       edit = link_to("Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id), class: btn_classes(:secondary, :sm))
+       edit = link_to("Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                      "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm))
        {
          fields: [
            expense, number, status,

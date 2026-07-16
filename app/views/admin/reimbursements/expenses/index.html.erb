@@ -34,7 +34,8 @@
        status = safe_join([
          render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status)).with_content(expense.status)),
          (reimbursements_reasons_popover(reasons: expense.missing_completion_fields, key: "expense-#{expense.record_id}",
-                                         label: "Needs completion", heading: "Still needs:") if expense.needs_completion?)
+                                         label: "Needs completion", heading: "Still needs:",
+                                         record_label: "##{expense.auto_number}") if expense.needs_completion?)
        ].compact, " ")
        description = safe_join([
          expense.description.presence || content_tag(:span, "(no description yet)", class: "text-gray-500"),
@@ -49,7 +50,8 @@
            reimbursements_money(expense.amount),
            reimbursements_date(expense.submitted_at),
            expense.receipt_count,
-           (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id), class: btn_classes(:secondary, :sm)) if expense.editable?)
+           (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id),
+                    "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm)) if expense.editable?)
          ]
        }
      end %>
