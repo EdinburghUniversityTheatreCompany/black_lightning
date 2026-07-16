@@ -80,10 +80,18 @@ module Reimbursements
 
     # Convenience for the reject paths (no expense created, so a failure just
     # retries next cycle). Moves first, then marks read — a move failure
-    # leaves the message unread (retried next cycle, genuinely safe here:
-    # no expense exists yet), rather than the reverse order, which would
-    # leave a read-but-unfiled message silently stuck in the Inbox forever
-    # (unread_messages would never fetch it again to retry the move).
+    # leaves the message unread (retried next cycle, genuinely safe here: no
+    # expense exists yet), rather than the reverse order, which would leave a
+    # read-but-unfiled message silently stuck in the Inbox forever
+    # (unread_messages would never fetch it again to retry the move). This
+    # ordering has a narrower, symmetric edge case of its own: if the move
+    # succeeds but the follow-up mark_read call fails, the message is now
+    # unread but sitting in Rejected/Processed, invisible to both the normal
+    # Inbox retry path and anyone watching that folder for unread mail.
+    # Accepted trade-off — the failure it fixes (reprocessing risk) is worse
+    # than the one it leaves (a single stray unread message in a folder), and
+    # both require a Graph call to fail in the narrow gap between two
+    # adjacent requests.
     def mark_read_and_move(message_id, folder)
       move(message_id, folder)
       mark_read(message_id)

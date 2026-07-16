@@ -3,7 +3,10 @@ module Reimbursements
   # Runs the AI expense check for one Pending expense and writes the verdict
   # back to Airtable, off the request thread. The Review page enqueues one of
   # these per unchecked Pending expense on load, so the operator isn't blocked
-  # waiting on Gemini. Idempotent: skips an expense that already has a verdict.
+  # waiting on Gemini. Idempotent for a genuine pass/fail verdict: skips an
+  # expense that already has one. An "error" verdict deliberately does NOT
+  # count as checked (see ai_checked? below), so it can be rechecked once the
+  # underlying problem clears.
   #
   # +store_builder+ / +checker_builder+ are the injection seams for tests.
   class AiCheckJob < ApplicationJob
@@ -13,10 +16,15 @@ module Reimbursements
     # money-safety pattern): opening Review twice enqueues a second check for the
     # same expense before the first has written a verdict. Keying concurrency on
     # the record id makes the second run wait for the first, so it sees the
-    # verdict already written and no-ops — no duplicate Gemini call. duration:
-    # set above the default 3-minute lock TTL — RubyLLM's 120s request_timeout
-    # plus its own retry attempts can plausibly exceed 3 minutes on a single
-    # Gemini call.
+    # verdict already written and no-ops — no duplicate Gemini call, PROVIDED the
+    # first run reached a genuine pass/fail verdict. If the first run instead
+    # errored, the guard below intentionally lets the second (now-unblocked) run
+    # proceed rather than no-op, so a transient Gemini blip gets a prompt retry —
+    # the accepted cost is at most one extra Gemini call, bounded to the case
+    # where two enqueues for the same expense race while the first is erroring.
+    # duration: set above the default 3-minute lock TTL — RubyLLM's 120s
+    # request_timeout plus its own retry attempts can plausibly exceed 3 minutes
+    # on a single Gemini call.
     limits_concurrency to: 1, duration: 10.minutes,
                         key: ->(record_id) { "reimbursements_ai_check_#{record_id}" }
 

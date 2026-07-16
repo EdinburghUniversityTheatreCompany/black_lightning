@@ -239,3 +239,26 @@ without stopping to ask — logged here for review in a batch rather than blocki
   (mailbox poll, concurrency/timing, nightly-run alerting, token/client reuse) is either fixed,
   deliberately deferred with reasoning (#4, #207, #142), or reviewed and found not to need a change
   (#168, #12 pre-existing). Continuing to Tier 4 (security hardening) next.
+
+- **Independent review of the full Tier 3 diff** (`git diff f45b7d96..003b2f12`) found one real
+  ordering bug and flagged two accepted trade-offs worth documenting honestly:
+  - **Fixed**: `CredentialsCheckJob#perform` had `Honeybadger.event` inside the `Rails.cache.fetch`
+    dedup block, unlike `GraphAuthAlert`'s established pattern (Honeybadger fires unconditionally,
+    only the email itself is deduped) — if Honeybadger raised after a successful `deliver_now`, the
+    dedup key would never get cached and the retried job would resend the identical warning.
+    Reordered to match `GraphAuthAlert`.
+  - **Documented, not changed**: `MailboxClient#mark_read_and_move`'s move-then-mark_read reorder
+    (the #84 fix) trades the "read-but-unfiled-in-Inbox-forever" failure mode for a narrower
+    symmetric one (move succeeds, mark_read fails → unread-but-filed-in-Rejected/Processed,
+    invisible to both the Inbox retry path and anyone watching that folder). Accepted: both need a
+    Graph call to fail in the same narrow single-request gap, and the fixed failure mode (silent
+    reprocessing risk) was worse than the one left. Comment updated to state this honestly instead
+    of claiming a pure improvement.
+  - **Documented, not changed**: the #208 recheck-on-error fix (`Expense#ai_checked?`) and the #12
+    concurrency guard have a real, narrow interaction — if two enqueues for the same expense race
+    while the first is erroring, the second (unblocked once the first's lock frees) does NOT no-op
+    the way it would for a genuine pass/fail verdict, so it re-runs the check. This is the intended
+    trade-off of allowing a recheck at all; the cost is bounded to one extra Gemini call in a
+    narrow race, not a money-safety or data-integrity issue. Class doc + concurrency comment
+    updated to state this precisely instead of implying an unconditional "no duplicate Gemini call"
+    guarantee.
