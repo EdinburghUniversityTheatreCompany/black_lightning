@@ -304,6 +304,37 @@ module Admin
       assert_empty @client.updated.select { |t, id, _f| t == :expenses && id == "recExp1" }
     end
 
+    test "a mid-batch row failure doesn't abort the rest, and is surfaced instead of hidden" do
+      second_expense = airtable_expense_record(
+        id: "recExp2", payee_id: "recPer1", budget_id: "recBud1",
+        amount: 55.00, amount_excl_vat: 55.00,
+        overrides: {
+          FIELD_IDS[:expenses][:status] => "Submitted",
+          FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-10",
+          FIELD_IDS[:expenses][:nominal_code_override] => "555555"
+        }
+      )
+      rebuild_store(expenses: [ @expense, second_expense ])
+      # recExp2's link write fails (simulating a transient blip after its
+      # Actual record was already created); recExp1's row is untouched.
+      linked_field = FIELD_IDS[:eusa_actuals][:linked_expense]
+      fail_update_record_when(@client) { |table, _record_id, fields| table == :eusa_actuals && fields[linked_field] == [ "recExp2" ] }
+      sign_in @user
+
+      post :apply, params: {
+        pasted_text: "#{HEADER}\n#{debit_row}\n#{debit_row(nominal: '555555', narrative: 'Alice Producer', debit: '55.00')}"
+      }
+
+      assert_response :success
+      # recExp1 committed fully (Paid + emailed); recExp2's failure didn't
+      # abort it, and doesn't leave a silent "all good" report either.
+      assert_equal 1, assigns(:expenses_paid)
+      assert_equal [ "alice@example.com" ], @graph.send_mails.sole[:to]
+      assert_nil @client.updated.find { |t, id, _f| t == :expenses && id == "recExp2" }
+      assert_match(/expense #.*blip/i, assigns(:reconciliation_errors).sole)
+      assert_match(/hit a problem/i, response.body)
+    end
+
     test "apply redirects when the pasted text is missing" do
       sign_in @user
       post :apply, params: { pasted_text: "" }

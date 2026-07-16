@@ -307,6 +307,21 @@ module ReimbursementsTestHelpers
     [ store, client ]
   end
 
+  # Overrides +client+'s update_record to raise for calls matching the given
+  # predicate, otherwise performing the client's normal write-through — the
+  # shared body for tests that need one specific write to fail amid others
+  # that must still succeed.
+  def fail_update_record_when(client, &predicate)
+    client.define_singleton_method(:update_record) do |table, record_id, fields|
+      raise Reimbursements::Airtable::Error.new("blip", status: 500) if predicate.call(table, record_id, fields)
+
+      @updated << [ table, record_id, fields ]
+      record = @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
+      record["fields"] = record["fields"].merge(fields) if record
+      record || { "id" => record_id, "fields" => fields }
+    end
+  end
+
   # Fake RubyLLM chat for the Gemini call sites (Extractor, AiChecker): records
   # the schema, prompt and attachments it was asked with, then returns a canned
   # structured response (or raises). Mirrors the fluent
@@ -369,6 +384,10 @@ module ReimbursementsTestHelpers
     # receipt failing to back up to SharePoint while the rest of the batch
     # (including other receipts and the BACS xlsx itself) succeeds.
     attr_accessor :fail_upload_for
+    # What draft_message? reports — true (the common case: still an unsent
+    # draft) by default; set false to simulate a draft that was already sent,
+    # deleted, or otherwise couldn't be confirmed.
+    attr_accessor :draft_still_exists
 
     def initialize
       @uploaded = []
@@ -378,6 +397,11 @@ module ReimbursementsTestHelpers
       @deleted_messages = []
       @fail_send_to = []
       @fail_upload_for = []
+      @draft_still_exists = true
+    end
+
+    def draft_message?(mailbox:, message_id:)
+      @draft_still_exists
     end
 
     def download(url)

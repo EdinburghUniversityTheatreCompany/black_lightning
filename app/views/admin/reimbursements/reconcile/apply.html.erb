@@ -1,5 +1,18 @@
-<%= render AlertComponent.new(type: :success) do %>
-  Reconciliation complete.
+<% if @reconciliation_errors.present? %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    <p>Reconciliation finished, but <%= @reconciliation_errors.size %>
+      row<%= "s" unless @reconciliation_errors.size == 1 %> hit a problem — everything else below
+      still committed. Check these before assuming the paste is fully applied:</p>
+    <ul class="list-disc list-inside mt-1">
+      <% @reconciliation_errors.each do |error| %>
+        <li><%= error %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% else %>
+  <%= render AlertComponent.new(type: :success) do %>
+    Reconciliation complete.
+  <% end %>
 <% end %>
 
 <%= render CardComponent.new(title: "Summary") do %>

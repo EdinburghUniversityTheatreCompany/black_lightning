@@ -290,6 +290,18 @@ module Reimbursements
       assert_equal 2, client.list_calls[:batches], "create must bust the batch cache"
     end
 
+    test "find_batch_by_draft_message_id looks up live (uncached) and busts the cache" do
+      store, client = build_fake_store(batches: [ airtable_batch_record(draft_message_id: "msg-1") ])
+
+      store.batches # warm the cache
+      found = store.find_batch_by_draft_message_id("msg-1")
+
+      assert_equal "recBat1", found.record_id
+      assert_equal 2, client.list_calls[:batches], "must not trust the already-cached list"
+      assert_nil store.find_batch_by_draft_message_id("no-such-message")
+      assert_nil store.find_batch_by_draft_message_id(nil)
+    end
+
     test "update_batch! and delete_batch! bust the cache" do
       store, client = build_fake_store(batches: [ airtable_batch_record ])
 

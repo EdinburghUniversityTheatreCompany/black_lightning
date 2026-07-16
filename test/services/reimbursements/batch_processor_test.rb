@@ -37,21 +37,6 @@ module Reimbursements
                         sender_name: "Fringe Finance", eusa_recipient: "finance@eusa.ed.ac.uk")
     end
 
-    # Overrides +client+'s update_record to raise for calls matching the given
-    # predicate, otherwise performing the client's normal write-through — the
-    # shared body for tests that need one specific write to fail amid others
-    # that must still succeed.
-    def fail_update_record_when(client, &predicate)
-      client.define_singleton_method(:update_record) do |table, record_id, fields|
-        raise Reimbursements::Airtable::Error.new("blip", status: 500) if predicate.call(table, record_id, fields)
-
-        @updated << [ table, record_id, fields ]
-        record = @records_by_table.fetch(table, []).find { |r| r["id"] == record_id }
-        record["fields"] = record["fields"].merge(fields) if record
-        record || { "id" => record_id, "fields" => fields }
-      end
-    end
-
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
       processor, store, client, graph = build_scenario
 
@@ -71,11 +56,11 @@ module Reimbursements
 
       # Batch record created and both expenses flipped to Submitted + linked.
       assert_equal 1, client.created.count { |table, _| table == :batches }
-      # The EUSA draft's message id is stored on the batch (so a reopen can
-      # delete the stale draft).
+      # The EUSA draft's message id is stored on the batch at creation (so a
+      # reopen can later verify/delete the stale draft).
       draft_field = FIELD_IDS[:batches][:draft_message_id]
-      batch_write = client.updated.find { |table, _, fields| table == :batches && fields.key?(draft_field) }
-      assert_equal "msg-1", batch_write.last[draft_field]
+      _table, batch_fields = client.created.find { |table, fields| table == :batches && fields.key?(draft_field) }
+      assert_equal "msg-1", batch_fields[draft_field]
       submitted = client.updated.select { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
       assert_equal 2, submitted.size
       submitted.each do |_, _, fields|
@@ -230,6 +215,34 @@ module Reimbursements
 
       assert result.success, result.errors.inspect
       assert_equal 1, client.created.count { |table, _| table == :batches }, "the retry recorded the batch"
+    end
+
+    test "a retried create_batch after an ambiguous failure reuses the batch instead of duplicating it" do
+      processor, store, client, graph = build_scenario
+      # Simulate a lost RESPONSE, not a lost request: the create actually
+      # reaches Airtable and the record is really persisted, but the caller
+      # still sees an error on the first attempt (a network read timeout after
+      # the write already committed server-side).
+      calls = 0
+      client.define_singleton_method(:create_record) do |table, fields|
+        calls += 1
+        real = { "id" => "recNew#{@created.size + 1}", "fields" => fields }
+        if table == :batches
+          @created << [ table, fields ]
+          (@records_by_table[:batches] ||= []) << real
+          raise Reimbursements::Airtable::Error.new("response lost", status: 500) if calls == 1
+        else
+          @created << [ table, fields ]
+        end
+        real
+      end
+
+      result = run_batch(processor, store)
+
+      assert result.success, result.errors.inspect
+      assert_equal 1, client.created.count { |table, _| table == :batches },
+                   "no SECOND batch record for the same live draft"
+      assert_equal 1, graph.drafts.size, "still only one EUSA draft"
     end
 
     test "refuses to process when SharePoint folders are not configured" do

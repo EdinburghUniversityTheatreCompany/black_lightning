@@ -78,6 +78,7 @@ module Admin
         linked = processed_expenses.select { |expense| expense.batch_id == batch.record_id }
         paid = linked.select { |expense| expense.status == ::Reimbursements::Status::PAID }
         return blocked_by_paid(paid) if paid.any?
+        return blocked_by_unconfirmed_draft if batch.draft_message_id.present? && !confirmed_still_draft?(batch)
 
         linked.each { |expense| store.revert_expense_to_approved!(expense.record_id) }
         store.delete_batch!(batch.record_id)
@@ -120,6 +121,24 @@ module Admin
 
       def draft_mailbox
         ::Reimbursements::CostCentre.default&.send_mailbox
+      end
+
+      # Reopen must never revert expenses out of a batch whose EUSA draft was
+      # already sent — the whole point of "reopen" is to safely rebuild, and a
+      # sent draft means the money is already committed. This app has no
+      # visibility into the manual "send in Outlook" step by design, so the
+      # only way to tell is asking Graph whether the stored message id is
+      # still an unsent draft right now.
+      def confirmed_still_draft?(batch)
+        graph_builder.call.draft_message?(mailbox: draft_mailbox, message_id: batch.draft_message_id)
+      end
+
+      def blocked_by_unconfirmed_draft
+        redirect_to admin_reimbursements_batches_path,
+                    alert: "Can't reopen: the EUSA draft for this batch could not be confirmed as " \
+                           "still unsent in Outlook (it may already have been sent, or Graph couldn't " \
+                           "be reached). If it was genuinely sent, do not reopen — repair reconciliation " \
+                           "manually instead of rebuilding."
       end
 
       def require_cost_centre

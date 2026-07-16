@@ -176,6 +176,19 @@ module Reimbursements
       batches.find { |b| b.record_id == record_id }
     end
 
+    # Direct, uncached lookup by the batch's stored EUSA draft message id —
+    # used to detect an already-created Batch before retrying a create that
+    # raised ambiguously (the write may have succeeded server-side; only the
+    # response was lost). A stale cached list would defeat the point of this
+    # check, so it bypasses +batches+/+fetch_list+ entirely.
+    def find_batch_by_draft_message_id(message_id)
+      return nil if message_id.blank?
+
+      found = @client.list_records(:batches).map { |r| @mapper.batch(r) }.find { |b| b.draft_message_id == message_id }
+      bust_batches! if found # a reused batch bypassed create_batch!'s own bust
+      found
+    end
+
     def create_batch!(attrs)
       record = @client.create_record(:batches, @mapper.batch_fields(attrs))
       bust_batches!

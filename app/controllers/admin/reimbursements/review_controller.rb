@@ -38,9 +38,15 @@ module Admin
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
         @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
-        # partition: ready first (needs_attention false), attention second.
+        # partition: ready first (needs_attention false, no possible duplicate),
+        # attention second. A possible duplicate is folded in here (not into the
+        # shared needs_attention_reasons, which other callers use for expenses
+        # this per-pending-list duplicate scan was never computed for) so it's
+        # grouped with every other advisory reason instead of being a wholly
+        # separate, easy-to-miss warning box.
         @ready, @attention = @pending.partition do |expense|
-          !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker)
+          !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
+            !@duplicates.key?(expense.record_id)
         end
       end
 
@@ -60,8 +66,17 @@ module Admin
 
       def approve
         expense = find_expense!
-        if approve_expense(expense) == :skipped_no_bank
+        case approve_expense(expense)
+        when :skipped_no_bank
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without bank details.")
+        when :skipped_wrong_status
+          redirect_to_review(alert: "##{expense.auto_number} is no longer Pending — nothing to approve.")
+        when :skipped_no_budget
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a budget linked — " \
+                                    "it would write a blank nominal code EUSA can never reconcile.")
+        when :skipped_no_amount
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without an amount " \
+                                    "excluding VAT — it would never match on reconciliation.")
         else
           redirect_to_review(notice: "Approved ##{expense.auto_number}.")
         end
@@ -72,6 +87,10 @@ module Admin
         reason = params[:rejection_reason].to_s.strip
         if reason.blank?
           redirect_to_review(alert: "A rejection reason is required.")
+          return
+        end
+        unless expense.pending? || expense.approved?
+          redirect_to_review(alert: "##{expense.auto_number} can no longer be rejected (already #{expense.status}).")
           return
         end
 
@@ -135,12 +154,24 @@ module Admin
 
       private
 
-      # Approve one expense (shared by #approve and #bulk_approve). Blocks an
-      # expense with no effective bank details (returns :skipped_no_bank) and
-      # auto-fills a BACS-safe payment reference when blank. Returns :approved on
-      # success.
+      # Approve one expense (shared by #approve and #bulk_approve). Blocks a
+      # stale/raced approval against an expense that's no longer Pending
+      # (:skipped_wrong_status — e.g. a double-click, or a concurrent Build
+      # Batch/reconciliation already advanced it), one with no effective bank
+      # details (:skipped_no_bank), no linked budget (:skipped_no_budget — a
+      # blank budget writes a blank nominal code straight into the BACS
+      # spreadsheet, permanently breaking reconciliation matching), or no
+      # non-zero ex-VAT amount (:skipped_no_amount — the reconciliation
+      # matcher can never match a nil/zero amount, so the expense is paid but
+      # never marked Paid). The other "needs attention" reasons (no receipt,
+      # possible duplicate) stay advisory-only — the operator's own judgement
+      # call, not a correctness guard. Auto-fills a BACS-safe payment
+      # reference when blank. Returns :approved on success.
       def approve_expense(expense)
+        return :skipped_wrong_status unless expense.pending?
         return :skipped_no_bank unless expense.effective_has_bank_details?
+        return :skipped_no_budget if expense.budget.nil?
+        return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
 
         attrs = { status: ::Reimbursements::Status::APPROVED }
         if expense.payment_reference.to_s.strip.empty? && expense.budget
@@ -175,7 +206,7 @@ module Admin
 
       def bulk_approve_summary(approved, skipped)
         parts = [ "#{approved} approved" ]
-        parts << "#{skipped} skipped (no bank details)" if skipped.positive?
+        parts << "#{skipped} skipped (missing bank details, budget, or amount)" if skipped.positive?
         "#{parts.join(', ')}."
       end
 

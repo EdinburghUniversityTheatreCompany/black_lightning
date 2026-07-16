@@ -67,6 +67,10 @@ module Reimbursements
       status == Status::DRAFT
     end
 
+    def approved?
+      status == Status::APPROVED
+    end
+
     # Submitters may only change an expense before review picks it up, and
     # never internal "From EUSA" bookkeeping entries (editing one in the
     # portal would silently rewrite its type to a submitter type).

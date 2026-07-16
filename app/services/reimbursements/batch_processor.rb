@@ -200,20 +200,25 @@ module Reimbursements
       GraphClient::Attachment.new(filename: filename, content: bytes, content_type: XLSX_CONTENT_TYPE)
     end
 
-    # Writes the Batch record, retrying transient failures — the draft is
-    # already live, so we must recover rather than sit on it. Returns nil only
-    # when every attempt failed (the caller then invokes the orphan-draft guard).
+    # Writes the Batch record — including the EUSA draft's message id, so a
+    # later reopen can verify the draft still exists before deleting it —
+    # retrying transient failures since the draft is already live and we must
+    # recover rather than sit on it. Before any retry beyond the first, checks
+    # whether the previous attempt actually reached Airtable despite raising
+    # (a lost response, not a lost request) and reuses that record instead of
+    # creating a second, duplicate Batch for the same live draft. Returns nil
+    # only when every attempt failed (the caller then invokes the orphan-draft
+    # guard).
     def create_batch(result)
       attempts = 0
       begin
         attempts += 1
-        batch = @store.create_batch!(date_sent: result.bacs_date,
-                                     notes: "BACS SharePoint: #{result.bacs_sharepoint_url}")
+        batch = (attempts > 1 && @store.find_batch_by_draft_message_id(result.eusa_draft_message_id)) ||
+          @store.create_batch!(date_sent: result.bacs_date,
+                               notes: "BACS SharePoint: #{result.bacs_sharepoint_url}",
+                               eusa_draft_created: true, sharepoint_backup_url: result.bacs_sharepoint_url,
+                               draft_message_id: result.eusa_draft_message_id)
         result.batch_id = batch.record_id
-        # Store the EUSA draft's message id so a reopen can delete the stale draft.
-        flag_batch(result, batch, :eusa_draft_created,
-                   sharepoint_backup_url: result.bacs_sharepoint_url,
-                   draft_message_id: result.eusa_draft_message_id)
         batch
       rescue StandardError => e
         retry if attempts < WRITE_RETRY_ATTEMPTS

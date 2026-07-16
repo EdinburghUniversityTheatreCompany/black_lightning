@@ -103,8 +103,10 @@ module Admin
       # --- Index: partition, flags, AI kick --------------------------------
 
       test "partitions pending into ready and needs-attention, and lists approved separately" do
-        ready = pending_expense(id: "recReady", payment_reference: "PROPS PAT")
-        attention = pending_expense(id: "recAttn", amount_excl_vat: nil) # missing excl VAT
+        # Distinct amounts so these two don't incidentally look like duplicates
+        # of each other (same payee, no submitted_at — see #find_duplicate_submissions).
+        ready = pending_expense(id: "recReady", amount: 111.0, payment_reference: "PROPS PAT")
+        attention = pending_expense(id: "recAttn", amount: 222.0, amount_excl_vat: nil) # missing excl VAT
         approved = pending_expense(id: "recAppr").tap { |r| r["fields"][EXP[:status]] = "Approved" }
         rebuild_store(expenses: [ ready, attention, approved ])
         sign_in @user
@@ -162,6 +164,11 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Possible duplicate of"
+        # A possible duplicate is otherwise clean (bank details, budget, amount
+        # all fine) but must still land in Attention, not Ready — approving both
+        # in two clicks would double-pay the same claim.
+        assert_equal %w[recDupA recDupB], assigns(:attention).map(&:record_id).sort
+        assert_empty assigns(:ready)
       end
 
       test "kicks an AI check for each unchecked pending expense only" do
@@ -222,7 +229,7 @@ module Admin
         updated_ids = @client.updated.map { |_t, id, _f| id }
         assert_equal [ "recBulkOk" ], updated_ids
         assert_match(/1 approved/, flash[:notice])
-        assert_match(/1 skipped \(no bank details\)/, flash[:notice])
+        assert_match(/1 skipped \(missing bank details, budget, or amount\)/, flash[:notice])
       end
 
       test "bulk approve with nothing selected writes nothing and reports it" do
@@ -386,6 +393,41 @@ module Admin
         assert_empty @client.updated
       end
 
+      test "approve is blocked without a linked budget" do
+        expense = airtable_expense_record(id: "recNoBudget", payee_id: "recPer1", budget_id: nil,
+                                          status: "Pending", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :approve, params: { id: "recNoBudget" }
+
+        assert_match(/without a budget linked/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "approve is blocked without a non-zero excl-VAT amount" do
+        expense = pending_expense(id: "recNoAmount", amount_excl_vat: 0, payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ expense ])
+        sign_in @user
+
+        patch :approve, params: { id: "recNoAmount" }
+
+        assert_match(/without an amount excluding VAT/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "a stale approve against an already-Approved expense is a no-op, not a re-approve" do
+        already = airtable_expense_record(id: "recAlreadyApproved", payee_id: "recPer1",
+                                          budget_id: "recBud1", status: "Approved", auto_number: 9)
+        rebuild_store(expenses: [ already ])
+        sign_in @user
+
+        patch :approve, params: { id: "recAlreadyApproved" }
+
+        assert_match(/no longer Pending/, flash[:alert])
+        assert_empty @client.updated
+      end
+
       # --- Reject ----------------------------------------------------------
 
       test "the reject form asks for confirmation before emailing the producer" do
@@ -459,6 +501,31 @@ module Admin
         _table, _id, fields = @client.updated.sole
         assert_equal "Rejected", fields[EXP[:status]]
         assert_not fields.key?(EXP[:rejection_notified]), "a failed send must not claim notified"
+      end
+
+      test "reject works from the Approved tab too" do
+        approved = airtable_expense_record(id: "recApprovedRej", payee_id: "recPer1", budget_id: "recBud1",
+                                           status: "Approved", auto_number: 9)
+        rebuild_store(expenses: [ approved ])
+        sign_in @user
+
+        patch :reject, params: { id: "recApprovedRej", rejection_reason: "Duplicate claim" }
+
+        _table, _id, fields = @client.updated.sole
+        assert_equal "Rejected", fields[EXP[:status]]
+      end
+
+      test "a stale reject against an already-Submitted expense is refused" do
+        submitted = airtable_expense_record(id: "recSubmittedRej", payee_id: "recPer1", budget_id: "recBud1",
+                                            status: "Submitted", auto_number: 9)
+        rebuild_store(expenses: [ submitted ])
+        sign_in @user
+
+        patch :reject, params: { id: "recSubmittedRej", rejection_reason: "Too late" }
+
+        assert_match(/can no longer be rejected/, flash[:alert])
+        assert_empty @client.updated
+        assert_empty @graph.send_mails
       end
 
       test "acting on an unknown expense 404s" do

@@ -68,10 +68,10 @@ module Admin
         new_rows, @skipped_count = dedup(parsed).then { |new_r, skipped| [ new_r, skipped.size ] }
         matched_debits, matched_credits, unmatched = build_matches(new_rows)
 
-        apply_reconciliation(matched_debits, matched_credits, unmatched)
-        notify_paid_producers(matched_debits)
+        committed_debits = apply_reconciliation(matched_debits, matched_credits, unmatched)
+        notify_paid_producers(committed_debits)
 
-        @expenses_paid = matched_debits.size
+        @expenses_paid = committed_debits.size
         @credits_linked = matched_credits.size
         @unmatched_saved = unmatched.size
         render :apply
@@ -163,23 +163,54 @@ module Admin
         reconciled_ids.include?(expense.record_id) || expense.payment_confirmed_date.present?
       end
 
+      # Each row's write sequence is rescued independently, so one row's
+      # failure can't abort the whole paste — the rest of the batch still
+      # commits, and (critically) notify_paid_producers below still runs for
+      # every row that did commit. Without this, an exception on row k used to
+      # 500 the whole request before any "you've been paid" email went out,
+      # and since apply is idempotent-by-design (already_reconciled? excludes
+      # anything already linked), a retry could never re-send those emails —
+      # they'd be lost permanently even though rows 1..k-1 were genuinely paid.
+      # Returns the [row, expense] pairs actually committed, for the caller to
+      # notify.
       def apply_reconciliation(matched_debits, matched_credits, unmatched)
         imported_at = Time.current
 
-        matched_debits.each do |row, expense|
-          actual = store.create_actual!(actuals_attrs(row, imported_at))
-          store.link_actual_to_expense!(actual.record_id, expense.record_id)
-          store.update_expense!(expense.record_id,
-                                status: ::Reimbursements::Status::PAID,
-                                payment_confirmed_date: row.date)
-        end
+        committed_debits = matched_debits.select { |row, expense| apply_debit_row(row, expense, imported_at) }
+        matched_credits.each { |row, budget| apply_credit_row(row, budget, imported_at) }
+        unmatched.each { |row| apply_unmatched_row(row, imported_at) }
 
-        matched_credits.each do |row, budget|
-          actual = store.create_actual!(actuals_attrs(row, imported_at))
-          store.link_actual_to_budget!(actual.record_id, budget.record_id)
-        end
+        committed_debits
+      end
 
-        unmatched.each { |row| store.create_actual!(actuals_attrs(row, imported_at)) }
+      def apply_debit_row(row, expense, imported_at)
+        actual = store.create_actual!(actuals_attrs(row, imported_at))
+        store.link_actual_to_expense!(actual.record_id, expense.record_id)
+        store.update_expense!(expense.record_id, status: ::Reimbursements::Status::PAID,
+                              payment_confirmed_date: row.date)
+        true
+      rescue StandardError => e
+        report_reconciliation_row_failure("expense ##{expense.auto_number}", e)
+        false
+      end
+
+      def apply_credit_row(row, budget, imported_at)
+        actual = store.create_actual!(actuals_attrs(row, imported_at))
+        store.link_actual_to_budget!(actual.record_id, budget.record_id)
+      rescue StandardError => e
+        report_reconciliation_row_failure("budget #{budget.name}", e)
+      end
+
+      def apply_unmatched_row(row, imported_at)
+        store.create_actual!(actuals_attrs(row, imported_at))
+      rescue StandardError => e
+        report_reconciliation_row_failure("an unmatched row", e)
+      end
+
+      def report_reconciliation_row_failure(subject, error)
+        Rails.logger.error("Reimbursements: reconciliation row failed for #{subject} — #{error.message}")
+        Honeybadger.notify(error, context: { source: "reimbursements_reconciliation_apply", subject: subject })
+        (@reconciliation_errors ||= []) << "#{subject}: #{error.message}"
       end
 
       # One "you've been paid" email per producer, covering all of their newly

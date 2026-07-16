@@ -151,6 +151,8 @@ module Admin
       # --- Reopen ------------------------------------------------------------
 
       test "reopen reverts the linked expenses and deletes the batch" do
+        # No stored draft id (the default) — nothing to confirm either way, so
+        # reopen proceeds and falls back to the manual-deletion warning.
         use_store(batches: [ airtable_batch_record ], expenses: [ linked_expense(status: "Submitted") ])
         sign_in @user
 
@@ -159,6 +161,7 @@ module Admin
         assert_redirected_to admin_reimbursements_batches_path
         assert(@client.updated.any? { |_, _, fields| fields[EXP_FIDS[:status]] == "Approved" })
         assert_equal [ [ :batches, "recBat1" ] ], @client.deleted
+        assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
       end
 
       test "reopen deletes the stale EUSA draft via Graph using the send mailbox and stored id" do
@@ -190,6 +193,22 @@ module Admin
         assert(@client.updated.any? { |_, _, fields| fields[EXP_FIDS[:status]] == "Approved" })
         assert_equal [ [ :batches, "recBat1" ] ], @client.deleted
         assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
+      end
+
+      test "reopen is blocked when the draft can't be confirmed as still unsent" do
+        use_store(batches: [ airtable_batch_record(draft_message_id: "AAMkdraft==") ],
+                  expenses: [ linked_expense(status: "Submitted") ])
+        graph = use_graph
+        graph.draft_still_exists = false # already sent, deleted, or Graph couldn't be reached
+        sign_in @user
+
+        post :reopen, params: { id: "recBat1" }
+
+        assert_redirected_to admin_reimbursements_batches_path
+        assert_match(/could not be confirmed as.*still unsent/i, flash[:alert])
+        assert_empty @client.updated, "must not revert expenses when the draft may already be sent"
+        assert_empty @client.deleted, "must not delete the batch record either"
+        assert_empty graph.deleted_messages, "must never attempt to delete an unconfirmed draft"
       end
 
       test "reopen is blocked when any linked expense is already Paid" do

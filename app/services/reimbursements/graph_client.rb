@@ -76,6 +76,20 @@ module Reimbursements
       nil
     end
 
+    # Verifies a message still exists as an unsent draft — required before a
+    # reopen deletes it, so a batch whose draft was already sent by hand in
+    # Outlook (this app has no visibility into that step by design) is never
+    # mistaken for one still safe to discard. Any failure to confirm — the
+    # message was deleted/sent/moved (a 404), a permissions issue, or a
+    # genuine Graph outage — is treated identically as NOT confirmed, so the
+    # caller refuses to reopen rather than assuming the safe case.
+    def draft_message?(mailbox:, message_id:)
+      message = graph_request(:get, "/users/#{mailbox}/messages/#{message_id}", params: { "$select" => "isDraft" })
+      message["isDraft"] == true
+    rescue GraphAuth::Error
+      false
+    end
+
     # Send an email immediately from the mailbox (Notifier uses this for the
     # rejection / "you've been paid" / producer / operator emails). No attachments.
     def send_mail(mailbox:, to:, subject:, html:)
