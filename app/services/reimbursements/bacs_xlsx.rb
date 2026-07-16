@@ -11,6 +11,11 @@ module Reimbursements
   # row 2; data is written from row 3 (0-based index 2). Sort code, account
   # number and nominal code are forced to TEXT format ("@") so leading zeros and
   # dashes survive — the whole reason we don't build the sheet from scratch.
+  #
+  # The template carries 200 pre-styled data rows (rows 3-202) before the GRAND
+  # TOTAL row, whose SUM formula (and the Authorisation Form's cross-sheet
+  # total) covers exactly that range — #generate refuses a bigger batch rather
+  # than silently dropping rows off the total or overwriting the total row.
   class BacsXlsx
     # One row destined for the BACS spreadsheet. Bank-detail fields stay strings
     # to preserve leading zeros; +amount+ is numeric (the template's currency
@@ -22,6 +27,11 @@ module Reimbursements
     SHEET_NAME = "BREAKDOWN".freeze
     # 0-based: rows 0 (header) and 1 (example) are reserved by the template.
     DATA_START_ROW = 2
+    # The template's GRAND TOTAL row (0-based) sits right after the last data
+    # row; its SUM formula covers exactly this many rows, so a batch bigger
+    # than this either silently drops off the total or overwrites the total
+    # row outright. Split a bigger batch into multiple BACS submissions.
+    MAX_ROWS = 200
     # Columns match the EUSA template, 0-based.
     COL_PAYEE = 0
     COL_AMOUNT = 1
@@ -54,6 +64,12 @@ module Reimbursements
     # uploading to SharePoint. The template is re-read on every call so one
     # instance can produce many workbooks without state bleed.
     def generate(rows)
+      if rows.size > MAX_ROWS
+        raise TemplateError,
+              "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity — " \
+              "split this into multiple submissions."
+      end
+
       workbook = RubyXL::Parser.parse(@template_path.to_s)
       sheet = workbook[SHEET_NAME]
       unless sheet

@@ -101,5 +101,39 @@ module Reimbursements
         BacsXlsx.new(template_path: Rails.root.join("lib/reimbursements/templates/nope.xlsx"))
       end
     end
+
+    def full_batch(count)
+      (1..count).map do |n|
+        Row.new(payee_name: "Payee #{n}", amount: n.to_f, sort_code: "20-20-20",
+               account_number: "50502366", nominal_code: "439999",
+               description: "Expense #{n}", payment_reference: "REF#{n}", cost_centre: "F40")
+      end
+    end
+
+    test "a full 200-row batch fills every data row and the GRAND TOTAL formula covers all of them" do
+      workbook = RubyXL::Parser.parse_buffer(BacsXlsx.new.generate(full_batch(BacsXlsx::MAX_ROWS)))
+      sheet = workbook["BREAKDOWN"]
+
+      first_row = sheet.sheet_data[2]
+      last_row = sheet.sheet_data[2 + BacsXlsx::MAX_ROWS - 1]
+      assert_equal "Payee 1", first_row[0].value
+      assert_equal "Payee 200", last_row[0].value
+
+      total_row = sheet.sheet_data[2 + BacsXlsx::MAX_ROWS]
+      assert_equal "GRAND TOTAL", total_row[0].value
+      assert_equal "SUM(B3:B202)", total_row[1].formula.expression
+
+      written_sum = (2...(2 + BacsXlsx::MAX_ROWS)).sum { |r| sheet.sheet_data[r][1].value }
+      assert_in_delta (1..200).sum, written_sum, 0.001, "every row must fall inside the summed range"
+
+      auth_total = workbook["AUTHORISATION FORM"].sheet_data[10][2]
+      assert_equal "SUM(BREAKDOWN!B3:B202)", auth_total.formula.expression
+    end
+
+    test "refuses a batch bigger than the template's row capacity instead of corrupting the total" do
+      error = assert_raises(BacsXlsx::TemplateError) { BacsXlsx.new.generate(full_batch(BacsXlsx::MAX_ROWS + 1)) }
+
+      assert_match(/201 expenses exceed/, error.message)
+    end
   end
 end
