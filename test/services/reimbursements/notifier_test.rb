@@ -99,6 +99,18 @@ module Reimbursements
       assert_match "SharePoint down", failure[:html]
     end
 
+    test "operator alert subjects reflect run_date, not wall-clock today" do
+      notifier, graph = build
+
+      travel_to Date.new(2026, 7, 11) do
+        notifier.failure(recipients: [ "ops@bedlamfringe.co.uk" ], error_text: "boom",
+                         run_date: "9 July 2026")
+      end
+
+      assert_includes graph.send_mails.sole[:subject], "9 July 2026"
+      assert_not_includes graph.send_mails.sole[:subject], "2026-07-11"
+    end
+
     test "the rendered email is a complete HTML document, not a bare fragment" do
       notifier, graph = build
 

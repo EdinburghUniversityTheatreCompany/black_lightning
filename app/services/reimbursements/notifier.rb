@@ -65,7 +65,7 @@ module Reimbursements
       send_email(
         to: recipients,
         subject: "[Bedlam BACS] #{count} #{'submission'.pluralize(count)} awaiting approval " \
-                 "— #{Date.current.iso8601}",
+                 "— #{run_date}",
         template: "reimbursements/emails/pending_reminder",
         assigns: { rows: rows, run_date: run_date, threshold_days: threshold_days }
       )
@@ -77,7 +77,7 @@ module Reimbursements
       send_email(
         to: recipients,
         subject: "[Bedlam BACS] Manual review needed — #{count} #{'issue'.pluralize(count)} " \
-                 "— #{Date.current.iso8601}",
+                 "— #{run_date}",
         template: "reimbursements/emails/manual_review",
         assigns: { issues: issues, unblocked_count: unblocked_count, run_date: run_date,
                    next_run_day: next_run_day }
@@ -92,7 +92,7 @@ module Reimbursements
       send_email(
         to: recipients,
         subject: "[Bedlam BACS] #{count} #{'expense'.pluralize(count)} ready to batch " \
-                 "— #{Date.current.iso8601}",
+                 "— #{run_date}",
         template: "reimbursements/emails/approved_ready",
         assigns: { expenses: expenses, total: total, run_date: run_date }
       )
@@ -108,7 +108,7 @@ module Reimbursements
       send_email(
         to: recipients,
         subject: "[Bedlam BACS] Draft ready — #{count} #{'expense'.pluralize(count)} " \
-                 "— #{Date.current.iso8601}",
+                 "— #{run_date}",
         template: "reimbursements/emails/batch_ready",
         assigns: { expenses: expenses, total: total, draft_link: draft_link, run_date: run_date,
                    errors: errors }
@@ -119,7 +119,7 @@ module Reimbursements
     def failure(recipients:, error_text:, run_date:)
       send_email(
         to: recipients,
-        subject: "[Bedlam BACS] Batch processing FAILED — #{Date.current.iso8601}",
+        subject: "[Bedlam BACS] Batch processing FAILED — #{run_date}",
         template: "reimbursements/emails/failure",
         assigns: { error_text: error_text, run_date: run_date }
       )
