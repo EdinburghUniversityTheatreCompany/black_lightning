@@ -251,8 +251,7 @@ module Admin
           return "Account number override #{::Reimbursements::BankDetails::ACCOUNT_NUMBER_HINT}"
         end
 
-        overrides = [ payee_name, sort_code, account_number ]
-        if overrides.any?(&:present?) && !overrides.all?(&:present?)
+        if ::Reimbursements::BankDetails.overrides_incomplete?(payee_name, sort_code, account_number)
           return "To pay a third party, fill in all three overrides: payee name, sort code, " \
                  "and account number — not just one or two."
         end
