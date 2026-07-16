@@ -102,7 +102,7 @@ ChaosRails::Application.routes.draw do
       # view + edit an expense at ANY status (incl. Submitted/Paid), reachable
       # from the Review cards and a lookup by auto-number/record id. Distinct
       # from the Pending-only producer path.
-      resources :expense_edits, only: %i[index edit update], param: :id do
+      resources :expense_edits, only: %i[index edit update] do
         get :find, on: :collection
       end
       post   "expense_edits/:id/receipts",                to: "expense_edits#add_receipts",   as: :expense_edit_receipts
