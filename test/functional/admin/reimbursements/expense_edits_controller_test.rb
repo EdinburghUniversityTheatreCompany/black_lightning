@@ -613,6 +613,20 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_expense_edit_path("recExp1")
       end
 
+      test "find resolves a record id via a live fetch even when the cached list is stale" do
+        rebuild_store(expenses: [])
+        sign_in @user
+        # A record created by another process (e.g. the mailbox poll job)
+        # after this store's expenses list was already cached — lookup_expense
+        # must fall back to a live single-record fetch, not just the cache.
+        @store.expenses
+        @client.list_records(:expenses) << expense_at("Submitted", id: "recExpNew", auto_number: 99)
+
+        get :find, params: { q: "recExpNew" }
+
+        assert_redirected_to edit_admin_reimbursements_expense_edit_path("recExpNew")
+      end
+
       test "find with no match flashes and re-renders the lookup" do
         rebuild_store(expenses: [])
         sign_in @user

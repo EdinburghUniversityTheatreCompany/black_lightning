@@ -187,7 +187,7 @@ module Admin
 
       # Match on Airtable record id first, then on the visible auto-number.
       def lookup_expense(query)
-        by_id = store.find_expense(query)
+        by_id = store.find_expense!(query)
         return by_id if by_id
 
         store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
