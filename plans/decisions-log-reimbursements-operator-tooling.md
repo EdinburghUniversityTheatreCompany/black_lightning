@@ -468,3 +468,17 @@ without stopping to ask — logged here for review in a batch rather than blocki
   too (every FinanceController subclass loads the same file), but this was still the first time the
   full suite ran after the change, and it caught it immediately as intended.
 - Pure refactor otherwise: full suite run count unchanged (733) before and after, all green.
+
+- **Independent review of this commit caught a second, subtler instance of the exact same
+  lexical-shadowing hazard the FinanceController fix above already hit — this time silent, no
+  NameError to surface it.** `CredentialsCheckJob < ApplicationJob` has zero diff in the commit (I
+  never touched that file), but its ACTUAL superclass silently changed anyway: Ruby resolves a bare
+  `ApplicationJob` reference via lexical nesting before falling back to the top-level constant, and
+  once `Reimbursements::ApplicationJob` exists, that lexical lookup finds it first for every class
+  in the `Reimbursements` module — including ones the commit never edited. Confirmed via
+  `CredentialsCheckJob.superclass` before/after. Harmless today (the new base class only adds
+  unused `store_builder`/`store` and `ErrorReporting` to a job that touches neither), but a latent
+  hazard: any future `around_perform`/retry-policy addition to `Reimbursements::ApplicationJob`
+  meant only for the 4 consolidated jobs would silently also apply here, with no diff to review it
+  against. Fixed by making `CredentialsCheckJob < ::ApplicationJob` explicit (fully top-level
+  qualified) with a comment explaining why, restoring the original, intended inheritance.

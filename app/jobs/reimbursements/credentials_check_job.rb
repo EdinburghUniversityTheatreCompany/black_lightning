@@ -3,7 +3,12 @@ module Reimbursements
   # Daily check that warns the IT subcommittee (and Honeybadger) from 30 days
   # before the Entra client secret expires, so mailbox processing never dies
   # silently. Sudden auth failures are alerted separately by MailboxPollJob.
-  class CredentialsCheckJob < ApplicationJob
+  # Explicitly ::ApplicationJob (not Reimbursements::ApplicationJob): this job
+  # never touches the store, and a bare `ApplicationJob` here would otherwise
+  # silently resolve to the new job base class via Ruby's lexical constant
+  # lookup (same module nesting) — a real, previously-invisible reparenting
+  # this exact line was added to prevent.
+  class CredentialsCheckJob < ::ApplicationJob
     queue_as :default
 
     WARNING_WINDOW = 30.days
