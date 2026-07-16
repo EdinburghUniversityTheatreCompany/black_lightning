@@ -188,6 +188,11 @@ module Admin
       assert_select "details[open] input#account_number_recMissing[value=?]", "1"
       # Other people's sections stay collapsed.
       assert_select "details[open] input#sort_code_recValid", false
+      # The error is a role="alert" region, wired to both fields via
+      # aria-describedby, and both fields are flagged aria-invalid.
+      assert_select "p[role=alert]#bank_details_error_recMissing"
+      assert_select "input#sort_code_recMissing[aria-describedby=bank_details_error_recMissing][aria-invalid=true]"
+      assert_select "input#account_number_recMissing[aria-describedby=bank_details_error_recMissing][aria-invalid=true]"
     end
 
     # --- Update: mark verified --------------------------------------------

@@ -38,6 +38,7 @@
           </summary>
 
           <div class="border-t border-gray-200 px-3 py-3">
+            <% error_id = "bank_details_error_#{person.record_id}" if editing && @edit_error.present? %>
             <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
                           class: "flex flex-wrap items-end gap-3" do %>
               <div>
@@ -45,6 +46,7 @@
                 <%= text_field_tag :sort_code, editing ? @edit_sort_code : person.sort_code,
                                    id: "sort_code_#{person.record_id}",
                                    placeholder: "80-22-60",
+                                   "aria-describedby": error_id, "aria-invalid": error_id.present?,
                                    class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
               </div>
               <div>
@@ -52,22 +54,29 @@
                 <%= text_field_tag :account_number, editing ? @edit_account_number : person.account_number,
                                    id: "account_number_#{person.record_id}",
                                    placeholder: "12345678",
+                                   "aria-describedby": error_id, "aria-invalid": error_id.present?,
                                    class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
               </div>
               <%= submit_tag "Save bank details", class: btn_classes(:primary, :sm) %>
             <% end %>
 
-            <% if editing && @edit_error.present? %>
-              <p class="mt-2 text-sm text-danger"><%= @edit_error %></p>
+            <% if error_id %>
+              <p id="<%= error_id %>" role="alert" class="mt-2 text-sm text-danger"><%= @edit_error %></p>
             <% end %>
 
             <%= form_with url: admin_reimbursements_person_path(person.record_id), method: :patch,
                           class: "mt-3" do %>
               <%= hidden_field_tag :verify, "1" %>
+              <% verify_hint_id = "verify_hint_#{person.record_id}" unless person.bank_details? %>
               <%= submit_tag "Mark as verified",
                              disabled: !person.bank_details?,
-                             title: person.bank_details? ? nil : "Only available when bank details are present",
+                             "aria-describedby": verify_hint_id,
                              class: "#{btn_classes(:secondary, :sm)} disabled:opacity-50 disabled:cursor-not-allowed" %>
+              <% if verify_hint_id %>
+                <span id="<%= verify_hint_id %>" class="text-xs text-gray-500 ml-1">
+                  Only available when bank details are present
+                </span>
+              <% end %>
             <% end %>
 
             <% if person.notes.present? %>

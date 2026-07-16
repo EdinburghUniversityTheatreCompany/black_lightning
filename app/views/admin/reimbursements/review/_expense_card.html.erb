@@ -148,7 +148,8 @@
     <% end %>
     <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab),
                   method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
-      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*", class: "text-sm" %>
+      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*",
+                         "aria-label": "Attach receipts to expense ##{expense.auto_number}", class: "text-sm" %>
       <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
     <% end %>
   </div>
@@ -164,6 +165,7 @@
                   method: :patch, class: "flex items-center gap-2",
                   data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
       <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
+                         "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
                          class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
       <%= submit_tag "Reject", class: btn_classes(:danger, :sm) %>
     <% end %>

@@ -506,3 +506,32 @@ without stopping to ask — logged here for review in a batch rather than blocki
   do at the same time since I was already touching this exact label/select pair.
 - Verified: `bundle exec herb lint` clean on all 13 touched files, full relevant controller/mailer
   test suites green, jscpd clean.
+
+## Tier 8 continued — labels, hint wiring, disabled-button reason
+
+- **#11 (reject-reason field, no label)** and **#35 (receipt file input, no label)**: both are
+  per-record controls repeated once per expense card on a multi-record page, so a plain
+  `<label for>` would collide across cards (duplicate ids) — used a record-scoped `aria-label`
+  instead (`"Reason for rejecting expense #123"` / `"Attach receipts to expense #123"`), the same
+  approach the plan's #116 entry recommends for exactly this class of control. The single-record
+  `expense_edits/edit.html.erb` copy of the receipt field got a plain static `aria-label` (no
+  scoping needed there).
+- **#47 (bank-details error not wired via aria-describedby/aria-invalid/role=alert) + #70 (disabled
+  button's reason only in a title tooltip)**: fixed in `people/index.html.erb`. The error `<p>` is
+  now `role="alert"` with an id both fields reference via `aria-describedby`, and both get
+  `aria-invalid` when there's an error. The verify button's disabled-reason moved from `title` to a
+  visible sibling `<span>` wired via `aria-describedby`.
+- **Caught a real bug via vischeck, not just herb-lint**: my first pass assigned the `error_id`
+  local variable *inside* the `form_with do...end` block, then referenced it again after the block
+  ended — Ruby block scoping means a variable first assigned inside a block doesn't leak to the
+  surrounding template scope, so the page raised `NameError: undefined local variable or method
+  'error_id'` the moment any row was expanded. herb-lint (a static ERB linter) has no way to catch
+  this — it's a Ruby runtime scoping bug, not a markup error. Caught by `screenshot` +
+  `Read`ing the resulting error-page image per the vischeck skill, before ever touching a browser
+  manually. Fixed by moving the `error_id =` assignment above the `form_with` block. Also
+  strengthened the existing `"invalid bank details re-render the form..."` test with assertions on
+  the new `role=alert`/`aria-describedby`/`aria-invalid` markup, so this exact class of bug is now
+  caught by the test suite too, not just a manual screenshot.
+- Verified the disabled-button hint visually via `playwright-cli` (expanded a real no-bank-details
+  row): renders as gray `text-xs` text next to the grayed-out button, matching the surrounding
+  house style, no layout regressions.

@@ -155,7 +155,8 @@
     <% end %>
     <%= form_with url: admin_reimbursements_expense_edit_receipts_path(@expense.record_id),
                   method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
-      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*", class: "text-sm" %>
+      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*",
+                         "aria-label": "Attach receipts", class: "text-sm" %>
       <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
     <% end %>
   </div>
