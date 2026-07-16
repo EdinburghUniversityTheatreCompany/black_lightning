@@ -618,3 +618,26 @@ without stopping to ask — logged here for review in a batch rather than blocki
   reasoning). Every other finding in the plan's seven pattern groups is fixed and verified — via
   herb-lint, the full test suite, and live `playwright-cli`/screenshot checks against real pages
   for every visually-meaningful change.
+
+## Tier 9 (test-coverage backfill) — first batch
+
+- **#18 + #226 (`graph_client.rb`/`graph_auth.rb`)**: added the missing large-file (`upload_to_folder`'s
+  ≥4MB chunked-session branch) and error-branch (`graph_raw_request`'s AuthError/Error paths, driven
+  through `upload_to_folder`'s small-file PUT — its one call site) coverage.
+- **#105**: added `list_drives` coverage (maps each drive, defaults an unnamed one to "Documents",
+  handles an empty `value` array) — previously only exercised via a hand-rolled stub in
+  `settings_controller_test.rb` that bypassed the real implementation entirely.
+- **#53**: `FakeGraph` in `settings_controller_test.rb` gained `fail_get_site`/`fail_list_drives`/
+  `fail_list_folder_contents` toggles, driving `site_check`, `folder_checks`, and
+  `setup_folder_picker`'s browse-failure rescue down their error paths for the first time.
+- **#114**: added `test/helpers/navigation_helper_test.rb` (didn't exist at all) scoped to the nine
+  Finance-gated sidebar links — confirmed they're absent without the finance permission (the whole
+  "Finance" category is dropped when it has zero visible children, not just individually hidden),
+  all nine appear with it, and the producer-portal permission alone reveals only the two
+  `:access`-gated links (Reimbursements, Payment Details), not the nine `:manage`-gated ones. Needed
+  to hand-wire `can?`/`cannot?` delegating to `current_ability` since a bare `ActionView::TestCase`
+  doesn't get CanCanCan's controller-only Railtie wiring, mirroring the existing
+  `link_helper_test.rb`'s `current_ability` pattern.
+- The remaining Tier 9 items (batches/budgets controller gaps, review/expense_edits gaps, reconcile
+  gaps, batch_processor/store gaps, nightly_batch_job/mailbox_poll_job gaps, and ~11 small misc
+  items) are not yet done — continuing.

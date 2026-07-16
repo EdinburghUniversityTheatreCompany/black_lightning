@@ -13,6 +13,7 @@ module Admin
 
       class FakeGraph
         attr_reader :folder_calls, :site_calls, :mailbox_calls
+        attr_accessor :fail_get_site, :fail_list_drives, :fail_list_folder_contents
 
         def initialize(mailbox_ok: true)
           @folder_calls = []
@@ -30,15 +31,21 @@ module Admin
 
         def get_site(site_url)
           @site_calls << site_url
+          raise ::Reimbursements::GraphAuth::Error, "site not granted (403)" if @fail_get_site
+
           Site.new(id: "site-1", name: "Finance Site", web_url: site_url)
         end
 
         def list_drives(site_id)
+          raise ::Reimbursements::GraphAuth::Error, "drives unreachable (403)" if @fail_list_drives
+
           [ Drive.new(id: "drive-#{site_id}", name: "Documents") ]
         end
 
         def list_folder_contents(drive_id:, item_id: nil)
           @folder_calls << [ drive_id, item_id ]
+          raise ::Reimbursements::GraphAuth::Error, "folder unreachable (403)" if @fail_list_folder_contents
+
           [ Item.new(id: "folder-A", name: "BACS", folder: true, web_url: "https://sp/a"),
             Item.new(id: "file-x", name: "notes.txt", folder: false, web_url: "https://sp/x") ]
         end
@@ -346,6 +353,41 @@ module Admin
         assert_response :success
         assert_includes response.body, "403"
         assert_includes response.body, "Reimbursements App Access"             # remediation hint
+      end
+
+      test "access check flags a SharePoint site the app can't reach" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @graph.fail_get_site = true
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "site not granted (403)"
+        assert_includes response.body, "Grant the app write on this site"
+      end
+
+      test "access check flags a configured folder the app can't reach" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance",
+                             sharepoint_receipts_drive_id: "drv", sharepoint_receipts_folder_id: "fld")
+        @graph.fail_list_folder_contents = true
+        sign_in @user
+
+        post :test_access, params: { key: @cost_centre.key }
+
+        assert_response :success
+        assert_includes response.body, "folder unreachable (403)"
+      end
+
+      test "the folder picker's browse failure re-renders edit with an alert, not a 500" do
+        @cost_centre.update!(sharepoint_site_url: "https://sp.sharepoint.com/sites/Finance")
+        @graph.fail_get_site = true
+        sign_in @user
+
+        get :edit, params: { key: @cost_centre.key, picker: "receipts" }
+
+        assert_response :success
+        assert_includes response.body, "SharePoint browse failed"
       end
 
       test "the access-check button shows a testing state while it runs" do

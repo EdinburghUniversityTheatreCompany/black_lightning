@@ -126,6 +126,40 @@ module Reimbursements
       assert_equal "BYTES", put.body
     end
 
+    test "upload_to_folder streams a >=4MB file via a chunked upload session" do
+      big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
+      client, http = build_client([
+        token_response,
+        [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
+        [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk PUT
+      ])
+
+      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "big.pdf", content: big)
+
+      assert_equal "https://sp.example/receipts/big.pdf", url
+      assert(http.requests.any? { |r| r.uri.include?("createUploadSession") })
+      chunk = http.requests.last
+      assert_equal "put", chunk.method.to_s
+      assert_includes chunk.uri, "upload.example/session"
+      assert_equal big.bytesize, chunk.body.bytesize
+    end
+
+    test "upload_to_folder's small-file PUT raises AuthError on a 401/403 (graph_raw_request)" do
+      client, = build_client([ token_response, [ 403, "forbidden" ] ])
+
+      assert_raises(GraphAuth::AuthError) do
+        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
+      end
+    end
+
+    test "upload_to_folder's small-file PUT raises Error on any other non-2xx (graph_raw_request)" do
+      client, = build_client([ token_response, [ 500, "boom" ] ])
+
+      assert_raises(GraphAuth::Error) do
+        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
+      end
+    end
+
     test "upload_to_folder refuses an empty file" do
       client, = build_client([ token_response ])
       assert_raises(GraphAuth::Error) do
@@ -179,6 +213,26 @@ module Reimbursements
       assert_equal "Finance", site.name
       # Sites.Selected can't search, so the site is addressed by server-relative path.
       assert_includes http.requests.last.uri, "/sites/tenant.sharepoint.com:/sites/Finance"
+    end
+
+    test "list_drives maps each drive, defaulting an unnamed one to Documents" do
+      client, http = build_client([
+        token_response,
+        [ 200, { value: [ { "id" => "drv1", "name" => "Documents" },
+                          { "id" => "drv2" } ] }.to_json ]
+      ])
+
+      drives = client.list_drives("site-1")
+
+      assert_equal %w[drv1 drv2], drives.map(&:id)
+      assert_equal [ "Documents", "Documents" ], drives.map(&:name)
+      assert_includes http.requests.last.uri, "/sites/site-1/drives"
+    end
+
+    test "list_drives returns an empty array when the site has none" do
+      client, = build_client([ token_response, [ 200, {}.to_json ] ])
+
+      assert_empty client.list_drives("site-1")
     end
 
     test "check_mailbox probes the mailbox inbox and returns true" do
