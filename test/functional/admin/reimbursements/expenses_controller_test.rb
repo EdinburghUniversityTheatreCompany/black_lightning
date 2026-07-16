@@ -206,6 +206,27 @@ module Admin
       assert_equal "recBud1", body["suggested_budget_record_id"]
     end
 
+    test "extract falls back to the total when excl-VAT is the zero not-yet-known sentinel" do
+      sign_in @user
+      # vat_itemised with total == vat gives amount_excl_vat a genuine zero
+      # (not nil) -- 0 is truthy in Ruby, so a plain || wouldn't have fallen
+      # back to total_amount here.
+      extraction = ::Reimbursements::Extractor::Extraction.new(
+        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("12.5"),
+        vat_itemised: true, suggested_description: "Props",
+        suggested_budget_record_id: "recBud1", suggested_payment_reference: "PROPS"
+      )
+      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
+
+      post :extract, params: { receipts: [ receipt_upload ] }
+
+      assert_response :success
+      body = response.parsed_body
+      assert body["ok"]
+      assert_equal "12.5", body["total_amount"]
+      assert_equal "12.5", body["amount_excl_vat"]
+    end
+
     test "extract reports failure as ok false" do
       sign_in @user
       BaseController.extractor_builder = -> { FakeExtractor.new(::Reimbursements::Extractor::Extraction.new(error: "no key")) }
