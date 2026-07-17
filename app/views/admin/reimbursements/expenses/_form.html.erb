@@ -14,7 +14,9 @@
               data: { controller: "reimbursements-receipt",
                       action: "turbo:submit-end->reimbursements-receipt#submitEnd",
                       reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path,
-                      reimbursements_receipt_resubmit_value: form.errors.any? } } do |f| %>
+                      reimbursements_receipt_resubmit_value: form.errors.any?,
+                      reimbursements_receipt_large_amount_threshold_value:
+                        Reimbursements::ExpenseForm::LARGE_AMOUNT_THRESHOLD.to_i } } do |f| %>
 
   <% content_for :override_card_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
@@ -78,7 +80,22 @@
 
     <%= f.input :amount, label: "Amount (£, incl. VAT)",
           hint: "What actually left your account, or the invoice total.", required: true,
-          input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amount" } } %>
+          input_html: { inputmode: "decimal",
+                        data: { reimbursements_receipt_target: "amount",
+                                action: "input->reimbursements-receipt#checkAmount" } } %>
+
+    <%# Soft-block a large claim (a mistyped amount would otherwise skew a
+        budget). Shown when the amount is already large or the ack failed;
+        the amount input toggles it live via checkAmount. %>
+    <div data-reimbursements-receipt-target="largeAmountWarning"
+         class="<%= 'hidden' unless form.errors[:large_amount_acknowledged].any? || form.large_amount? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
+      <p class="mb-1 text-sm">
+        That's a large claim. Please double-check the amount is right — a common slip is
+        typing pence as pounds (e.g. 4999 instead of 49.99).
+      </p>
+      <%= f.input :large_amount_acknowledged, as: :boolean,
+            label: "Yes, this amount is correct." %>
+    </div>
     <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)",
           hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
           input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amountExclVat" } } %>

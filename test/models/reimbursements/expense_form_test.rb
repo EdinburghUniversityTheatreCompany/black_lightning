@@ -24,9 +24,28 @@ module Reimbursements
     end
 
     test "parses currency-formatted amounts" do
-      form = build_form(amount: "£1,234.56", amount_excl_vat: "£1,028.80")
+      # Over the large-amount threshold, so it also needs the acknowledgement.
+      form = build_form(amount: "£1,234.56", amount_excl_vat: "£1,028.80", large_amount_acknowledged: "1")
       assert form.valid?, form.errors.full_messages.to_sentence
       assert_equal BigDecimal("1234.56"), form.amount_decimal
+    end
+
+    test "large-amount soft block requires acknowledgement at or above the threshold" do
+      form = build_form(amount: "1000.00", amount_excl_vat: "900.00", vat_itemised: "true")
+      assert_not form.valid?
+      assert form.errors[:large_amount_acknowledged].present?, "£1000 must ask for confirmation"
+
+      acknowledged = build_form(amount: "1000.00", amount_excl_vat: "900.00", vat_itemised: "true",
+                                large_amount_acknowledged: "1")
+      assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
+    end
+
+    test "an ordinary-sized claim needs no large-amount acknowledgement" do
+      assert build_form(amount: "999.99", amount_excl_vat: "900.00").valid?
+    end
+
+    test "a large draft is exempt from the soft block (drafts accept gaps)" do
+      assert build_form(amount: "5000.00", save_as_draft: "1").valid?
     end
 
     test "requires all the airtable form's required fields" do

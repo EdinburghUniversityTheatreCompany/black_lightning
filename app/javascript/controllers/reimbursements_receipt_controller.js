@@ -13,8 +13,9 @@ let stashedFiles = null
 // Extraction failing (or JS being off) leaves a perfectly usable manual form.
 export default class extends Controller {
   static targets = ["files", "status", "amount", "amountExclVat", "budget",
-    "description", "reference", "referenceCounter", "vatItemised", "vatWarning", "reattachNotice"]
-  static values = { extractUrl: String, resubmit: Boolean }
+    "description", "reference", "referenceCounter", "vatItemised", "vatWarning",
+    "reattachNotice", "largeAmountWarning"]
+  static values = { extractUrl: String, resubmit: Boolean, largeAmountThreshold: { type: Number, default: 1000 } }
 
   connect() {
     this.updateCounter()
@@ -76,6 +77,15 @@ export default class extends Controller {
     }
   }
 
+  // Reveal the large-amount confirmation as soon as the amount crosses the
+  // threshold, so the producer isn't surprised by it only at submit time.
+  checkAmount() {
+    if (!this.hasLargeAmountWarningTarget || !this.hasAmountTarget) return
+    const value = parseFloat(this.amountTarget.value.replace(/[£,\s]/g, ""))
+    const large = Number.isFinite(value) && value >= this.largeAmountThresholdValue
+    this.largeAmountWarningTarget.classList.toggle("hidden", !large)
+  }
+
   updateCounter() {
     if (!this.hasReferenceTarget || !this.hasReferenceCounterTarget) return
     const max = this.referenceTarget.maxLength
@@ -94,6 +104,7 @@ export default class extends Controller {
     this.vatItemisedTarget.value = String(extraction.vat_itemised)
     this.vatWarningTarget.classList.toggle("hidden", extraction.vat_itemised !== false)
     this.updateCounter()
+    this.checkAmount()
   }
 
   #setValue(target, value) {

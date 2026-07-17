@@ -133,7 +133,8 @@ module Admin
               .permit(:expense_type, :amount, :amount_excl_vat, :budget_record_id,
                       :description, :payment_reference, :payee_name_override,
                       :sort_code_override, :account_number_override,
-                      :vat_itemised, :vat_acknowledged, :save_as_draft, receipts: [])
+                      :vat_itemised, :vat_acknowledged, :large_amount_acknowledged,
+                      :save_as_draft, receipts: [])
       end
 
       def attach_receipts(record_id)

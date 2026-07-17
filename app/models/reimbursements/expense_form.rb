@@ -21,8 +21,13 @@ module Reimbursements
                   :description, :payment_reference, :payee_name_override,
                   :sort_code_override, :account_number_override,
                   :vat_itemised, :vat_acknowledged, :save_as_draft,
-                  :expense_receipt_count
+                  :large_amount_acknowledged, :expense_receipt_count
     attr_writer :receipts, :require_receipts
+
+    # Above this, submitting asks for a one-tick confirmation — the realistic
+    # error is typing pence as pounds (4999 for 49.99) or a stray digit, which
+    # would otherwise sail into the finance queue and skew a budget.
+    LARGE_AMOUNT_THRESHOLD = BigDecimal("1000")
 
     validates :expense_type, inclusion: { in: Expense::SUBMITTER_TYPES }
     validates :budget_record_id, :description, :payment_reference, presence: true, unless: :draft?
@@ -31,6 +36,7 @@ module Reimbursements
     validate :receipts_valid
     validate :overrides_valid
     validate :vat_soft_block, unless: :draft?
+    validate :large_amount_soft_block, unless: :draft?
 
     def initialize(attributes = {})
       super
@@ -65,6 +71,10 @@ module Reimbursements
 
       amount_decimal.present? && amount_excl_vat_decimal.present? &&
         amount_excl_vat_decimal >= amount_decimal
+    end
+
+    def large_amount?
+      amount_decimal.present? && amount_decimal >= LARGE_AMOUNT_THRESHOLD
     end
 
     # Attributes for Store#create_expense!.
@@ -188,6 +198,15 @@ module Reimbursements
                                     "a VAT receipt we'd only deduct the ex-VAT amount). Tick the " \
                                     "box to submit anyway, or ask the seller for a VAT receipt " \
                                     "first: it's in your own interest.")
+    end
+
+    def large_amount_soft_block
+      return unless large_amount?
+      return if ActiveModel::Type::Boolean.new.cast(large_amount_acknowledged)
+
+      errors.add(:large_amount_acknowledged, "is required for a claim this large. Double-check the " \
+                                             "amount is right (a common slip is typing pence as " \
+                                             "pounds), then tick the box to confirm.")
     end
   end
 end
