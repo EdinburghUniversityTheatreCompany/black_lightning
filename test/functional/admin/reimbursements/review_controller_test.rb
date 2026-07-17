@@ -7,31 +7,17 @@ module Admin
       include ActiveJob::TestHelper
 
       MC = ::Reimbursements::ModulusCheck
-      EXP = FIELD_IDS[:expenses]
 
-      # Modulus verdict keyed by account number, so tests don't depend on the
-      # gitignored Pay.UK rule files.
-      class FakeChecker
-        def initialize(by_account = {})
-          @by_account = by_account
-        end
-
-        def check(_sort_code, account_number)
-          @by_account.fetch(account_number, MC::OUTSIDE_SPEC)
-        end
-      end
+      FakeChecker = ReimbursementsTestHelpers::FakeModulusChecker
 
       setup do
-        Role.create!(name: "Business Manager")
-             .permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
-        users(:member).add_role("Business Manager")
+        grant_finance_permission(users(:member))
         @user = users(:member)
 
-        @person = airtable_person_record(id: "recPer1", name: "Pat Producer", email: "pat@example.com",
-                                         sort_code: "08-99-99", account_number: "66374958")
-        @no_bank_person = airtable_person_record(id: "recPer2", name: "Nora NoBank",
-                                                 email: "nora@example.com")
-        @budget = airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000")
+        @person = create_reimbursements_person(name: "Pat Producer", email: "pat@example.com",
+                                               sort_code: "08-99-99", account_number: "66374958")
+        @no_bank_person = create_reimbursements_person(name: "Nora NoBank", email: "nora@example.com")
+        @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
 
         @checker = FakeChecker.new("66374958" => MC::VALID)
         ReviewController.checker_builder = -> { @checker }
@@ -45,54 +31,37 @@ module Admin
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements::Store.new }
+        BaseController.store_builder = -> { ::Reimbursements.build_store }
         ReviewController.checker_builder = -> { MC.default_checker }
         ReviewController.notifier_builder =
           ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
       end
 
-      def pending_expense(id:, **attrs)
-        airtable_expense_record(id: id, payee_id: attrs.delete(:payee_id) || "recPer1",
-                                budget_id: attrs.delete(:budget_id) || "recBud1",
-                                status: "Pending", **attrs)
+      def pending_expense(person: @person, budget: @budget, **attrs)
+        create_reimbursements_expense(person: person, budget: budget, **attrs)
       end
 
-      def rebuild_store(expenses:, people: nil, budgets: nil)
-        @store, @client = build_fake_store(
-          expenses: expenses,
-          people: people || [ @person, @no_bank_person ],
-          budgets: budgets || [ @budget ]
-        )
-        BaseController.store_builder = -> { @store }
-      end
-
-      def image_receipt(tag)
-        { "id" => "attImg#{tag}", "filename" => "receipt#{tag}.jpg",
-          "url" => "https://airtable/img#{tag}.jpg", "size" => 100, "type" => "image/jpeg",
-          "thumbnails" => { "large" => { "url" => "https://airtable/thumb#{tag}.jpg" } } }
+      def attach_image_receipt(expense, tag)
+        attach_test_receipt(expense, filename: "receipt#{tag}.jpg", content_type: "image/jpeg",
+                            bytes: "JPEG#{tag}")
       end
 
       # --- Auth gating -----------------------------------------------------
 
       test "requires sign-in" do
-        rebuild_store(expenses: [])
         get :index
         assert_redirected_to new_user_session_path
       end
 
       test "denies members without the finance permission" do
-        rebuild_store(expenses: [])
         sign_in users(:committee)
         get :index
         assert_response :forbidden
       end
 
       test "the producer portal permission alone does not grant finance access" do
-        producer = Role.create!(name: "Producer")
-        producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
         other = users(:member_with_phone_number)
-        other.add_role("Producer")
-        rebuild_store(expenses: [])
+        grant_producer_permission(other)
         sign_in other
 
         get :index
@@ -104,23 +73,22 @@ module Admin
 
       test "partitions pending into ready and needs-attention, and lists approved separately" do
         # Distinct amounts so these two don't incidentally look like duplicates
-        # of each other (same payee, no submitted_at — see #find_duplicate_submissions).
-        ready = pending_expense(id: "recReady", amount: 111.0, payment_reference: "PROPS PAT")
-        attention = pending_expense(id: "recAttn", amount: 222.0, amount_excl_vat: nil) # missing excl VAT
-        approved = pending_expense(id: "recAppr").tap { |r| r["fields"][EXP[:status]] = "Approved" }
-        rebuild_store(expenses: [ ready, attention, approved ])
+        # of each other (same payee — see #find_duplicate_submissions).
+        ready = pending_expense(amount: BigDecimal("111"))
+        attention = pending_expense(amount: BigDecimal("222"), amount_excl_vat: nil) # missing excl VAT
+        approved = pending_expense(status: ::Reimbursements::Status::APPROVED)
         sign_in @user
 
         get :index
 
         assert_response :success
-        assert_equal %w[recReady], assigns(:ready).map(&:record_id)
-        assert_equal %w[recAttn], assigns(:attention).map(&:record_id)
-        assert_equal %w[recAppr], assigns(:approved).map(&:record_id)
+        assert_equal [ ready.record_id ], assigns(:ready).map(&:record_id)
+        assert_equal [ attention.record_id ], assigns(:attention).map(&:record_id)
+        assert_equal [ approved.record_id ], assigns(:approved).map(&:record_id)
       end
 
       test "the current tab is marked aria-current, the other is not" do
-        rebuild_store(expenses: [ pending_expense(id: "recReady", payment_reference: "PROPS PAT") ])
+        pending_expense
         sign_in @user
 
         get :index, params: { tab: "approved" }
@@ -130,12 +98,9 @@ module Admin
       end
 
       test "renders the payee-override warning" do
-        overridden = pending_expense(id: "recOvr", payment_reference: "PROPS PAT", overrides: {
-          EXP[:payee_name_override] => "Acme Lighting Ltd",
-          EXP[:sort_code_override] => "20-00-00",
-          EXP[:account_number_override] => "66374958"
-        })
-        rebuild_store(expenses: [ overridden ])
+        pending_expense(payee_name_override: "Acme Lighting Ltd",
+                        sort_code_override: "20-00-00",
+                        account_number_override: "66374958")
         sign_in @user
 
         get :index
@@ -146,9 +111,10 @@ module Admin
       end
 
       test "renders receipts in a fancybox gallery keyed per expense, still managed inline" do
-        a = pending_expense(id: "recImgA", payment_reference: "PROPS PAT", receipts: [ image_receipt("A") ])
-        b = pending_expense(id: "recImgB", payment_reference: "PROPS PAT", receipts: [ image_receipt("B") ])
-        rebuild_store(expenses: [ a, b ])
+        a = pending_expense(receipt: false)
+        b = pending_expense(receipt: false)
+        attach_image_receipt(a, "A")
+        attach_image_receipt(b, "B")
         sign_in @user
 
         get :index
@@ -156,18 +122,17 @@ module Admin
         assert_response :success
         assert_includes response.body, 'data-controller="fancybox"'
         # Each card gets its own fancybox group so the lightbox pages within one expense.
-        assert_includes response.body, 'data-fancybox="receipts-recImgA"'
-        assert_includes response.body, 'data-fancybox="receipts-recImgB"'
-        assert_includes response.body, "https://airtable/imgA.jpg"
+        assert_includes response.body, "data-fancybox=\"receipts-#{a.record_id}\""
+        assert_includes response.body, "data-fancybox=\"receipts-#{b.record_id}\""
+        assert_includes response.body, a.receipts.sole.url
         # Reviewers can still attach/detach receipts inline (per-tab review routes).
         assert_match(/Remove this receipt/, response.body)
-        assert_includes response.body, admin_reimbursements_review_receipts_path("recImgA", tab: "pending")
+        assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "pending")
       end
 
       test "renders a duplicate-submission warning" do
-        first = pending_expense(id: "recDupA", amount: 12.5, payment_reference: "PROPS PAT")
-        second = pending_expense(id: "recDupB", amount: 12.5, payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ first, second ])
+        first = pending_expense(amount: BigDecimal("12.5"))
+        second = pending_expense(amount: BigDecimal("12.5"))
         sign_in @user
 
         get :index
@@ -177,30 +142,27 @@ module Admin
         # A possible duplicate is otherwise clean (bank details, budget, amount
         # all fine) but must still land in Attention, not Ready — approving both
         # in two clicks would double-pay the same claim.
-        assert_equal %w[recDupA recDupB], assigns(:attention).map(&:record_id).sort
+        assert_equal [ first.record_id, second.record_id ].sort,
+                     assigns(:attention).map(&:record_id).sort
         assert_empty assigns(:ready)
       end
 
       test "kicks an AI check for each unchecked pending expense only" do
-        unchecked = pending_expense(id: "recNew", payment_reference: "PROPS PAT")
-        checked = pending_expense(id: "recDone", payment_reference: "PROPS PAT",
-                                  overrides: { EXP[:ai_check_status] => "pass" })
-        rebuild_store(expenses: [ unchecked, checked ])
+        unchecked = pending_expense
+        pending_expense(amount: BigDecimal("99"), ai_check_status: "pass") # already checked
         sign_in @user
 
-        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ "recNew" ]) do
+        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ unchecked.record_id ]) do
           get :index
         end
         assert_enqueued_jobs 1, only: ::Reimbursements::AiCheckJob
       end
 
       test "re-kicks an AI check for an expense stuck on an error verdict" do
-        errored = pending_expense(id: "recErrored", payment_reference: "PROPS PAT",
-                                  overrides: { EXP[:ai_check_status] => "error" })
-        rebuild_store(expenses: [ errored ])
+        errored = pending_expense(ai_check_status: "error")
         sign_in @user
 
-        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ "recErrored" ]) do
+        assert_enqueued_with(job: ::Reimbursements::AiCheckJob, args: [ errored.record_id ]) do
           get :index
         end
       end
@@ -208,8 +170,7 @@ module Admin
       # --- Bulk actions ----------------------------------------------------
 
       test "the pending tab exposes bulk-select checkboxes and a bulk toolbar" do
-        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ a ])
+        a = pending_expense
         sign_in @user
 
         get :index
@@ -220,50 +181,50 @@ module Admin
         assert_select "form#bulk-review-form[action=?]",
                       admin_reimbursements_bulk_approve_review_path(tab: "pending")
         assert_select "input[type=checkbox][name=?][value=?][form=bulk-review-form]",
-                      "expense_ids[]", "recBulkA"
+                      "expense_ids[]", a.record_id
         assert_select "input[data-bulk-review-target=rejectButton][data-turbo-confirm*=?]",
                       "email each producer"
       end
 
       test "a flagged card's Approve confirms with its reasons; a clean card's doesn't" do
-        clean = pending_expense(id: "recClean", payment_reference: "PROPS PAT")
+        clean = pending_expense
         # No receipts -> "no receipt" attention reason (advisory-only, so the
         # server never blocks it — this confirm is the only safety net).
-        flagged = pending_expense(id: "recFlagged", payment_reference: "PROPS PAT", receipts: [])
-        rebuild_store(expenses: [ clean, flagged ])
+        flagged = pending_expense(receipt: false)
         sign_in @user
 
         get :index
 
         assert_response :success
-        flagged_form = css_select("form[action*='#{admin_reimbursements_approve_review_path('recFlagged')}']").first
+        flagged_form = css_select("form[action*='#{admin_reimbursements_approve_review_path(flagged.record_id)}']").first
         assert_includes flagged_form["data-turbo-confirm"], "no receipt"
         assert_includes flagged_form["data-turbo-confirm"], "Approve anyway?"
-        clean_form = css_select("form[action*='#{admin_reimbursements_approve_review_path('recClean')}']").first
+        clean_form = css_select("form[action*='#{admin_reimbursements_approve_review_path(clean.record_id)}']").first
         assert_nil clean_form["data-turbo-confirm"], "clean cards keep one-click approval"
         # The bulk toolbar's flagged-count confirm reads these markers.
-        assert_select "input#select_recFlagged[data-flagged=true]"
-        assert_select "input#select_recClean[data-flagged=false]"
+        assert_select "input#select_#{flagged.record_id}[data-flagged=true]"
+        assert_select "input#select_#{clean.record_id}[data-flagged=false]"
       end
 
       test "a blocking card disables Approve instead of offering a doomed 'anyway'" do
         # No bank details -> blocking (approve_expense refuses it), so the
         # button can never succeed and must be disabled, not a misleading
         # "Approve anyway?".
-        blocked = pending_expense(id: "recBlocked", payee_id: "recPer2", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ blocked ])
+        blocked = pending_expense(person: @no_bank_person)
         sign_in @user
 
         get :index
 
         assert_response :success
         assert_select "button[aria-label*='Approve #'][disabled]"
-        assert_select "form[action*='#{admin_reimbursements_approve_review_path('recBlocked')}']", 0
+        assert_select "form[action*='#{admin_reimbursements_approve_review_path(blocked.record_id)}']", 0
       end
 
       test "approve refuses a budget present but with a blank record id (blank nominal-code guard)" do
         # attention_summary flags this as blocking; approve_expense must agree,
-        # or it would write a blank nominal code into the BACS spreadsheet.
+        # or it would write a blank nominal code into the BACS spreadsheet. A
+        # blank-record_id budget can't exist as a DB row, so serve the Airtable
+        # PORO shape through a DatabaseStore whose writes are recorded.
         blank_budget = ::Reimbursements::Airtable::Budget.new(record_id: "", name: "Ghost", nominal_code: "")
         expense = ::Reimbursements::Airtable::Expense.new(
           record_id: "recBlankBud", auto_number: 5, status: ::Reimbursements::Status::PENDING,
@@ -271,284 +232,277 @@ module Admin
                                                sort_code: "08-99-99", account_number: "66374958"),
           amount: BigDecimal("10"), amount_excl_vat: BigDecimal("8"), budget: blank_budget
         )
-        @store, @client = build_fake_store(expenses: [])
-        @store.define_singleton_method(:find_expense!) { |_id| expense }
-        BaseController.store_builder = -> { @store }
+        store = ::Reimbursements::DatabaseStore.new
+        updates = []
+        store.define_singleton_method(:find_expense!) { |_id| expense }
+        store.define_singleton_method(:update_expense!) { |*args| updates << args }
+        BaseController.store_builder = -> { store }
         sign_in @user
 
         patch :approve, params: { id: "recBlankBud" }
 
-        assert_empty @client.updated, "must not approve an expense with a blank-record_id budget"
+        assert_empty updates, "must not approve an expense with a blank-record_id budget"
         assert_match(/without a budget/i, flash[:alert])
       end
 
       test "bulk approve advances every selected pending expense" do
-        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
-        b = pending_expense(id: "recBulkB", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ a, b ])
+        a = pending_expense
+        b = pending_expense
         sign_in @user
 
-        patch :bulk_approve, params: { expense_ids: %w[recBulkA recBulkB] }
+        patch :bulk_approve, params: { expense_ids: [ a.record_id, b.record_id ] }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
-        statuses = @client.updated.map { |_t, id, f| [ id, f[EXP[:status]] ] }.sort
-        assert_equal [ [ "recBulkA", "Approved" ], [ "recBulkB", "Approved" ] ], statuses
+        assert_equal ::Reimbursements::Status::APPROVED, a.reload.status
+        assert_equal ::Reimbursements::Status::APPROVED, b.reload.status
         assert_match(/2 approved/, flash[:notice])
       end
 
       test "bulk approve skips an expense that lacks bank details" do
-        ok = pending_expense(id: "recBulkOk", payment_reference: "PROPS PAT")
-        no_bank = pending_expense(id: "recBulkNB", payee_id: "recPer2", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ ok, no_bank ])
+        ok = pending_expense
+        no_bank = pending_expense(person: @no_bank_person)
         sign_in @user
 
-        patch :bulk_approve, params: { expense_ids: %w[recBulkOk recBulkNB] }
+        patch :bulk_approve, params: { expense_ids: [ ok.record_id, no_bank.record_id ] }
 
-        updated_ids = @client.updated.map { |_t, id, _f| id }
-        assert_equal [ "recBulkOk" ], updated_ids
+        assert_equal ::Reimbursements::Status::APPROVED, ok.reload.status
+        assert_equal ::Reimbursements::Status::PENDING, no_bank.reload.status
         assert_match(/1 approved/, flash[:notice])
         assert_match(/1 skipped \(missing bank details, budget, or amount\)/, flash[:notice])
       end
 
       test "bulk approve with nothing selected writes nothing and reports it" do
-        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ a ])
+        a = pending_expense
         sign_in @user
 
         patch :bulk_approve, params: { expense_ids: [] }
 
         assert_match(/Select at least one/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, a.reload.status, "nothing was written"
       end
 
       test "bulk reject rejects each selected expense and emails each producer" do
-        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
-        b = pending_expense(id: "recBulkB", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ a, b ])
+        a = pending_expense
+        b = pending_expense
         sign_in @user
 
-        patch :bulk_reject, params: { expense_ids: %w[recBulkA recBulkB], rejection_reason: "Duplicate batch" }
+        patch :bulk_reject, params: { expense_ids: [ a.record_id, b.record_id ],
+                                      rejection_reason: "Duplicate batch" }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
-        rejected = @client.updated.select { |_t, _id, f| f[EXP[:status]] == "Rejected" }
-        assert_equal 2, rejected.size
-        rejected.each { |_t, _id, f| assert_equal "Duplicate batch", f[EXP[:rejection_reason]] }
+        [ a, b ].each do |expense|
+          expense.reload
+          assert_equal ::Reimbursements::Status::REJECTED, expense.status
+          assert_equal "Duplicate batch", expense.rejection_reason
+        end
         assert_equal 2, @graph.send_mails.size
         assert_match(/2 rejected/, flash[:notice])
       end
 
       test "bulk reject requires a reason and writes nothing" do
-        a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ a ])
+        a = pending_expense
         sign_in @user
 
-        patch :bulk_reject, params: { expense_ids: %w[recBulkA], rejection_reason: "  " }
+        patch :bulk_reject, params: { expense_ids: [ a.record_id ], rejection_reason: "  " }
 
         assert_match(/reason is required/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, a.reload.status, "nothing was written"
         assert_empty @graph.send_mails
       end
 
       test "bulk actions ignore a stale selection of a non-pending expense" do
-        approved = pending_expense(id: "recAppr").tap { |r| r["fields"][EXP[:status]] = "Approved" }
-        rebuild_store(expenses: [ approved ])
+        approved = pending_expense(status: ::Reimbursements::Status::APPROVED)
+        untouched = approved.reload.updated_at
         sign_in @user
 
-        patch :bulk_approve, params: { expense_ids: %w[recAppr] }
+        patch :bulk_approve, params: { expense_ids: [ approved.record_id ] }
 
-        assert_empty @client.updated
+        assert_equal untouched, approved.reload.updated_at, "nothing was written"
         assert_match(/Select at least one/, flash[:alert])
       end
 
       # --- Save ------------------------------------------------------------
 
       test "save writes the edited fields" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "16.67",
+        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
                                description: "Updated blood", payment_reference: "NEWREF",
-                               nominal_code_override: "4100", budget_record_id: "recBud1" }
+                               nominal_code_override: "4100", budget_record_id: @budget.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
-        _table, record_id, fields = @client.updated.sole
-        assert_equal "recEdit", record_id
-        assert_equal 20.0, fields[EXP[:amount]]
-        assert_equal 16.67, fields[EXP[:amount_excl_vat]]
-        assert_equal "Updated blood", fields[EXP[:description]]
-        assert_equal "NEWREF", fields[EXP[:payment_reference]]
-        assert_equal "4100", fields[EXP[:nominal_code_override]]
+        expense.reload
+        assert_equal BigDecimal("20"), expense.amount
+        assert_equal BigDecimal("16.67"), expense.amount_excl_vat
+        assert_equal "Updated blood", expense.description
+        assert_equal "NEWREF", expense.payment_reference
+        assert_equal "4100", expense.nominal_code_override
       end
 
       test "save rejects a budget_record_id that doesn't resolve to a real budget" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "16.67",
-                               description: "x", payment_reference: "y", budget_record_id: "recBudGone" }
+        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "16.67",
+                               description: "x", payment_reference: "y", budget_record_id: "999999999" }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/budget no longer exists/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal "Fake blood", expense.reload.description, "nothing was written"
       end
 
       test "save leaves excl VAT untouched when zero is submitted" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "0",
-                               description: "x", payment_reference: "y", budget_record_id: "recBud1" }
+        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "0",
+                               description: "x", payment_reference: "y", budget_record_id: @budget.record_id }
 
-        _table, _id, fields = @client.updated.sole
-        assert_not fields.key?(EXP[:amount_excl_vat])
+        assert_equal BigDecimal("10.42"), expense.reload.amount_excl_vat
       end
 
       test "save rejects a negative amount and writes nothing" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "-5", amount_excl_vat: "16.67",
-                               description: "x", budget_record_id: "recBud1" }
+        patch :save, params: { id: expense.record_id, amount: "-5", amount_excl_vat: "16.67",
+                               description: "x", budget_record_id: @budget.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/valid amount/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
       end
 
       test "save rejects a non-numeric amount and writes nothing" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "abc", amount_excl_vat: "16.67",
-                               description: "x", budget_record_id: "recBud1" }
+        patch :save, params: { id: expense.record_id, amount: "abc", amount_excl_vat: "16.67",
+                               description: "x", budget_record_id: @budget.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/valid amount/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
       end
 
       test "save rejects a negative excl-VAT amount and writes nothing" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "-1",
-                               description: "x", budget_record_id: "recBud1" }
+        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "-1",
+                               description: "x", budget_record_id: @budget.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/excl. VAT/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
       end
 
       test "save rejects an excl-VAT amount greater than the total and writes nothing" do
-        expense = pending_expense(id: "recEdit", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :save, params: { id: "recEdit", amount: "20.00", amount_excl_vat: "25.00",
-                               description: "x", budget_record_id: "recBud1" }
+        patch :save, params: { id: expense.record_id, amount: "20.00", amount_excl_vat: "25.00",
+                               description: "x", budget_record_id: @budget.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/can't be more than the total/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
       end
 
       # --- Approve ---------------------------------------------------------
 
       test "approve auto-fills a payment reference when blank and marks approved" do
-        expense = pending_expense(id: "recApprove", payment_reference: "")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense(payment_reference: "")
         sign_in @user
 
-        patch :approve, params: { id: "recApprove" }
+        patch :approve, params: { id: expense.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Approved", fields[EXP[:status]]
-        assert_equal "Props", fields[EXP[:payment_reference]]
+        expense.reload
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+        assert_equal "Props", expense.payment_reference
       end
 
       test "approve keeps an existing payment reference" do
-        expense = pending_expense(id: "recApprove", payment_reference: "KEEPME")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense(payment_reference: "KEEPME")
         sign_in @user
 
-        patch :approve, params: { id: "recApprove" }
+        patch :approve, params: { id: expense.record_id }
 
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Approved", fields[EXP[:status]]
-        assert_not fields.key?(EXP[:payment_reference])
+        expense.reload
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+        assert_equal "KEEPME", expense.payment_reference
       end
 
       # --- Owner-endorsement gate (Phase E3) -------------------------------
 
-      def owned_budget
-        airtable_budget_record(id: "recBudOwned", name: "Owned", nominal_code: "4100", owner_ids: [ "recOwner" ])
+      def owner_person
+        @owner_person ||= create_reimbursements_person(name: "Olga Owner", email: "olga@example.com",
+                                                       sort_code: "08-99-99", account_number: "66374958")
       end
 
-      # Submitted by recPer1 (who has bank details), charged to a budget owned by
-      # recOwner — so the submitter isn't an owner and the gate applies.
-      def gated_expense(id: "recGated")
-        pending_expense(id: id, payee_id: "recPer1", budget_id: "recBudOwned", payment_reference: "OWNED PAT")
+      def owned_budget
+        @owned_budget ||= create_reimbursements_budget(name: "Owned", nominal_code: "4100",
+                                                       owners: [ owner_person ])
+      end
+
+      # Submitted by @person (who has bank details), charged to a budget owned
+      # by owner_person — so the submitter isn't an owner and the gate applies.
+      def gated_expense
+        @gated_expense ||= pending_expense(budget: owned_budget, payment_reference: "OWNED PAT")
+      end
+
+      def endorse_gated_expense!
+        ::Reimbursements::OwnerEndorsement.create!(
+          expense_record_id: gated_expense.record_id, budget_record_id: owned_budget.record_id,
+          endorsed_by_person_id: owner_person.record_id, endorsed_amount: BigDecimal("12.5"),
+          endorsed_at: Time.current
+        )
       end
 
       test "approve refuses a claim awaiting a budget owner's endorsement" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        gated_expense
         sign_in @user
 
-        patch :approve, params: { id: "recGated" }
+        patch :approve, params: { id: gated_expense.record_id }
 
         assert_match(/needs a budget owner's endorsement/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, gated_expense.reload.status, "nothing was written"
       end
 
       test "approve succeeds once an owner has endorsed the claim" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
-        # gated_expense carries airtable_expense_record's default amount (12.5).
-        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
-                                                   endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
-                                                   endorsed_at: Time.current)
+        # gated_expense carries create_reimbursements_expense's default amount (12.5).
+        endorse_gated_expense!
         sign_in @user
 
-        patch :approve, params: { id: "recGated" }
+        patch :approve, params: { id: gated_expense.record_id }
 
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Approved", fields[EXP[:status]]
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
       end
 
       test "approve auto-bypasses a claim the budget owner submitted themselves" do
-        own = pending_expense(id: "recOwnClaim", payee_id: "recOwner", budget_id: "recBudOwned",
-                              payment_reference: "OWNED")
-        owner_person = airtable_person_record(id: "recOwner", name: "Olga Owner", email: "olga@example.com",
-                                              sort_code: "08-99-99", account_number: "66374958")
-        rebuild_store(expenses: [ own ], people: [ owner_person ], budgets: [ owned_budget ])
+        own = pending_expense(person: owner_person, budget: owned_budget, payment_reference: "OWNED")
         sign_in @user
 
-        patch :approve, params: { id: "recOwnClaim" }
+        patch :approve, params: { id: own.record_id }
 
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Approved", fields[EXP[:status]]
+        assert_equal ::Reimbursements::Status::APPROVED, own.reload.status
       end
 
       test "override_approve records the finance override and approves" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        gated_expense
         sign_in @user
 
         assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 1 do
-          patch :override_approve, params: { id: "recGated" }
+          patch :override_approve, params: { id: gated_expense.record_id }
         end
 
-        endorsement = ::Reimbursements::OwnerEndorsement.for_expense("recGated").first
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first
         assert endorsement.finance_override?
         assert_equal @user.id, endorsement.overridden_by_id
         assert_equal BigDecimal("12.5"), endorsement.endorsed_amount, "override snapshots the amount"
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Approved", fields[EXP[:status]]
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.reload.status
         assert_match(/overridden/i, flash[:notice])
       end
 
@@ -556,177 +510,164 @@ module Admin
         # A gated claim that ALSO lacks bank details: overriding must surface the
         # bank problem and NOT write a gate-satisfying row (else a later plain
         # approve would sail past the owner gate we'd have silently satisfied).
-        no_bank = pending_expense(id: "recGatedNoBank", payee_id: "recPer2", budget_id: "recBudOwned",
+        no_bank = pending_expense(person: @no_bank_person, budget: owned_budget,
                                   payment_reference: "OWNED")
-        rebuild_store(expenses: [ no_bank ], budgets: [ owned_budget ])
         sign_in @user
 
         assert_no_difference -> { ::Reimbursements::OwnerEndorsement.count } do
-          patch :override_approve, params: { id: "recGatedNoBank" }
+          patch :override_approve, params: { id: no_bank.record_id }
         end
         assert_match(/without bank details/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, no_bank.reload.status, "nothing was written"
       end
 
       test "override_approve truncates an over-long note instead of 500ing" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        gated_expense
         sign_in @user
 
         assert_nothing_raised do
-          patch :override_approve, params: { id: "recGated", override_note: "x" * 500 }
+          patch :override_approve, params: { id: gated_expense.record_id, override_note: "x" * 500 }
         end
-        assert_equal 255, ::Reimbursements::OwnerEndorsement.for_expense("recGated").first.note.length
+        assert_equal 255, ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note.length
       end
 
       test "the review queue sorts a gated claim into attention with an override button" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        gated_expense
         sign_in @user
 
         get :index
 
         assert_response :success
-        assert_includes assigns(:attention).map(&:record_id), "recGated"
-        assert_select "form[action=?]", admin_reimbursements_override_approve_review_path("recGated", tab: "pending")
+        assert_includes assigns(:attention).map(&:record_id), gated_expense.record_id
+        assert_select "form[action=?]",
+                      admin_reimbursements_override_approve_review_path(gated_expense.record_id, tab: "pending")
       end
 
       test "bulk approve skips a claim awaiting owner endorsement" do
-        clean = pending_expense(id: "recClean", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ clean, gated_expense ], budgets: [ @budget, owned_budget ])
+        clean = pending_expense
+        gated_expense
         sign_in @user
 
-        patch :bulk_approve, params: { expense_ids: %w[recClean recGated] }
+        patch :bulk_approve, params: { expense_ids: [ clean.record_id, gated_expense.record_id ] }
 
         # Only the clean (ownerless-budget) claim advanced; the gated one skipped.
-        assert_equal 1, @client.updated.size
-        assert_equal "recClean", @client.updated.sole[1]
+        assert_equal ::Reimbursements::Status::APPROVED, clean.reload.status
+        assert_equal ::Reimbursements::Status::PENDING, gated_expense.reload.status
         # ...and the summary names the owner-gate reason, not "missing bank/budget/amount".
         assert_match(/1 approved/, flash[:notice])
         assert_match(/1 awaiting owner sign-off/, flash[:notice])
       end
 
       test "the review card shows who endorsed a covered claim" do
-        owner = airtable_person_record(id: "recOwner", name: "Olga Owner", email: "olga@example.com")
-        rebuild_store(expenses: [ gated_expense ], people: [ @person, @no_bank_person, owner ],
-                      budgets: [ owned_budget ])
-        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
-                                                   endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
-                                                   endorsed_at: Time.current)
+        endorse_gated_expense!
         sign_in @user
 
         get :index
 
-        assert_includes assigns(:ready).map(&:record_id), "recGated", "an endorsed claim is ready, not attention"
+        assert_includes assigns(:ready).map(&:record_id), gated_expense.record_id,
+                        "an endorsed claim is ready, not attention"
         assert_includes response.body, "Endorsed by Olga Owner"
       end
 
       test "editing a covered claim's amount re-opens the gate and says so" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
-        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
-                                                   endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
-                                                   endorsed_at: Time.current)
+        endorse_gated_expense!
         sign_in @user
 
-        patch :save, params: { id: "recGated", amount: "999.00", amount_excl_vat: "999.00",
-                               description: "x", payment_reference: "OWNED PAT", budget_record_id: "recBudOwned" }
+        patch :save, params: { id: gated_expense.record_id, amount: "999.00", amount_excl_vat: "999.00",
+                               description: "x", payment_reference: "OWNED PAT",
+                               budget_record_id: owned_budget.record_id }
 
         assert_match(/needs a fresh owner sign-off/i, flash[:notice])
       end
 
       test "override_approve stores the finance override note" do
-        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        gated_expense
         sign_in @user
 
-        patch :override_approve, params: { id: "recGated", override_note: "Owner has no portal account" }
+        patch :override_approve, params: { id: gated_expense.record_id,
+                                           override_note: "Owner has no portal account" }
 
         assert_equal "Owner has no portal account",
-                     ::Reimbursements::OwnerEndorsement.for_expense("recGated").first.note
+                     ::Reimbursements::OwnerEndorsement.for_expense(gated_expense.record_id).first.note
       end
 
       test "approve is blocked without effective bank details" do
-        expense = pending_expense(id: "recNoBank", payee_id: "recPer2", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense(person: @no_bank_person)
         sign_in @user
 
-        patch :approve, params: { id: "recNoBank" }
+        patch :approve, params: { id: expense.record_id }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/without bank details/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
       end
 
       test "approve is blocked without a linked budget" do
-        expense = airtable_expense_record(id: "recNoBudget", payee_id: "recPer1", budget_id: nil,
-                                          status: "Pending", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense(budget: nil)
         sign_in @user
 
-        patch :approve, params: { id: "recNoBudget" }
+        patch :approve, params: { id: expense.record_id }
 
         assert_match(/without a budget linked/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
       end
 
       test "approve is blocked without a non-zero excl-VAT amount" do
-        expense = pending_expense(id: "recNoAmount", amount_excl_vat: 0, payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense(amount_excl_vat: 0)
         sign_in @user
 
-        patch :approve, params: { id: "recNoAmount" }
+        patch :approve, params: { id: expense.record_id }
 
         assert_match(/without an amount excluding VAT/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
       end
 
       test "a stale approve against an already-Approved expense is a no-op, not a re-approve" do
-        already = airtable_expense_record(id: "recAlreadyApproved", payee_id: "recPer1",
-                                          budget_id: "recBud1", status: "Approved", auto_number: 9)
-        rebuild_store(expenses: [ already ])
+        already = pending_expense(status: ::Reimbursements::Status::APPROVED, auto_number: 9)
+        untouched = already.reload.updated_at
         sign_in @user
 
-        patch :approve, params: { id: "recAlreadyApproved" }
+        patch :approve, params: { id: already.record_id }
 
         assert_match(/no longer Pending/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal untouched, already.reload.updated_at, "nothing was written"
       end
 
       # --- Reject ----------------------------------------------------------
 
       test "the reject form asks for confirmation before emailing the producer" do
-        expense = pending_expense(id: "recRej", auto_number: 42, payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense(auto_number: 42)
         sign_in @user
 
         get :index
 
         assert_response :success
         assert_select "form[action=?][data-turbo-confirm*=?]",
-                      admin_reimbursements_reject_review_path("recRej", tab: "pending"),
+                      admin_reimbursements_reject_review_path(expense.record_id, tab: "pending"),
                       "Reject #42 and email the producer"
       end
 
       test "reject requires a reason" do
-        expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :reject, params: { id: "recRej", rejection_reason: "  " }
+        patch :reject, params: { id: expense.record_id, rejection_reason: "  " }
 
         assert_match(/reason is required/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::PENDING, expense.reload.status, "nothing was written"
         assert_empty @graph.send_mails
       end
 
       test "reject stamps the reason and notified time and sends the rejection via Graph" do
-        expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         sign_in @user
 
-        patch :reject, params: { id: "recRej", rejection_reason: "Missing receipt" }
+        patch :reject, params: { id: expense.record_id, rejection_reason: "Missing receipt" }
 
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Rejected", fields[EXP[:status]]
-        assert_equal "Missing receipt", fields[EXP[:rejection_reason]]
-        assert fields[EXP[:rejection_notified]].present?
+        expense.reload
+        assert_equal ::Reimbursements::Status::REJECTED, expense.status
+        assert_equal "Missing receipt", expense.rejection_reason
+        assert expense.rejection_notified.present?
 
         mail = @graph.send_mails.sole
         assert_equal "reimbursements@bedlamfringe.co.uk", mail[:mailbox]
@@ -736,64 +677,55 @@ module Admin
       end
 
       test "reject without a payee email still rejects but does not stamp notified or email" do
-        expense = pending_expense(id: "recRej", payee_id: "recPer2", payment_reference: "PROPS PAT")
-        # recPer2 (Nora) has no email
-        @person2_no_email = airtable_person_record(id: "recPer2", name: "Nora NoBank", email: "")
-        rebuild_store(expenses: [ expense ], people: [ @person, @person2_no_email ])
+        no_email_person = create_reimbursements_person(name: "Norman NoEmail", email: nil)
+        expense = pending_expense(person: no_email_person)
         sign_in @user
 
-        patch :reject, params: { id: "recRej", rejection_reason: "Bad" }
+        patch :reject, params: { id: expense.record_id, rejection_reason: "Bad" }
 
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Rejected", fields[EXP[:status]]
-        assert_not fields.key?(EXP[:rejection_notified])
+        expense.reload
+        assert_equal ::Reimbursements::Status::REJECTED, expense.status
+        assert_nil expense.rejection_notified
         assert_empty @graph.send_mails
       end
 
       test "a Graph send failure still rejects the expense but leaves it unnotified" do
-        expense = pending_expense(id: "recRej", payment_reference: "PROPS PAT")
-        rebuild_store(expenses: [ expense ])
+        expense = pending_expense
         @graph.fail_send = true
         sign_in @user
 
-        patch :reject, params: { id: "recRej", rejection_reason: "Missing receipt" }
+        patch :reject, params: { id: expense.record_id, rejection_reason: "Missing receipt" }
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Rejected", fields[EXP[:status]]
-        assert_not fields.key?(EXP[:rejection_notified]), "a failed send must not claim notified"
+        expense.reload
+        assert_equal ::Reimbursements::Status::REJECTED, expense.status
+        assert_nil expense.rejection_notified, "a failed send must not claim notified"
       end
 
       test "reject works from the Approved tab too" do
-        approved = airtable_expense_record(id: "recApprovedRej", payee_id: "recPer1", budget_id: "recBud1",
-                                           status: "Approved", auto_number: 9)
-        rebuild_store(expenses: [ approved ])
+        approved = pending_expense(status: ::Reimbursements::Status::APPROVED, auto_number: 9)
         sign_in @user
 
-        patch :reject, params: { id: "recApprovedRej", rejection_reason: "Duplicate claim" }
+        patch :reject, params: { id: approved.record_id, rejection_reason: "Duplicate claim" }
 
-        _table, _id, fields = @client.updated.sole
-        assert_equal "Rejected", fields[EXP[:status]]
+        assert_equal ::Reimbursements::Status::REJECTED, approved.reload.status
       end
 
       test "a stale reject against an already-Submitted expense is refused" do
-        submitted = airtable_expense_record(id: "recSubmittedRej", payee_id: "recPer1", budget_id: "recBud1",
-                                            status: "Submitted", auto_number: 9)
-        rebuild_store(expenses: [ submitted ])
+        submitted = pending_expense(status: ::Reimbursements::Status::SUBMITTED, auto_number: 9)
         sign_in @user
 
-        patch :reject, params: { id: "recSubmittedRej", rejection_reason: "Too late" }
+        patch :reject, params: { id: submitted.record_id, rejection_reason: "Too late" }
 
         assert_match(/can no longer be rejected/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal ::Reimbursements::Status::SUBMITTED, submitted.reload.status, "nothing was written"
         assert_empty @graph.send_mails
       end
 
       test "acting on an unknown expense 404s" do
-        rebuild_store(expenses: [])
         sign_in @user
 
-        patch :approve, params: { id: "recNope" }
+        patch :approve, params: { id: "999999999" }
 
         assert_response :not_found
       end

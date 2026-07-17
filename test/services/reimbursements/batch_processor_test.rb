@@ -4,6 +4,31 @@ module Reimbursements
   class BatchProcessorTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
+    # DatabaseStore with injectable write failures — the DB-era stand-in for
+    # FakeAirtableClient's fail_create_tables / fail_update_record_when.
+    # +ambiguous_batch_create+ models a lost RESPONSE, not a lost request:
+    # the batch really persists but the first call still raises.
+    class FlakyStore < DatabaseStore
+      attr_accessor :fail_batch_creates, :ambiguous_batch_create, :update_failer
+
+      def create_batch!(attrs)
+        @batch_create_calls = (@batch_create_calls || 0) + 1
+        raise "create failed for batches" if fail_batch_creates
+
+        if ambiguous_batch_create && @batch_create_calls == 1
+          super
+          raise "response lost"
+        end
+        super
+      end
+
+      def update_expense!(record_id, attrs)
+        raise "blip" if update_failer&.call(record_id.to_s, attrs)
+
+        super
+      end
+    end
+
     def configured_cost_centre
       CostCentre.new(key: "fringe", name: "Bedlam Fringe", eusa_code: "F40",
                      receive_mailbox: "in@bedlamfringe.co.uk", send_mailbox: "send@bedlamfringe.co.uk",
@@ -12,18 +37,13 @@ module Reimbursements
     end
 
     def build_scenario(cost_centre: configured_cost_centre, expenses: nil)
-      people = [
-        airtable_person_record(id: "recAlice", name: "Alice", email: "alice@example.com",
-                               sort_code: "08-99-99", account_number: "66374958"),
-        airtable_person_record(id: "recBob", name: "Bob", email: "bob@example.com",
-                               sort_code: "20-20-20", account_number: "50502366")
-      ]
-      budgets = [ airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000") ]
-      expenses ||= [
-        airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved", auto_number: 11),
-        airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 12)
-      ]
-      store, client = build_fake_store(expenses: expenses, people: people, budgets: budgets)
+      @alice = create_reimbursements_person(name: "Alice", email: "alice@example.com",
+                                            sort_code: "08-99-99", account_number: "66374958")
+      @bob = create_reimbursements_person(name: "Bob", email: "bob@example.com",
+                                          sort_code: "20-20-20", account_number: "50502366")
+      @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
+      expenses || default_expenses
+      store = FlakyStore.new
       graph = FakeGraphClient.new
       # The default Notifier sends producer notifications through this same
       # FakeGraphClient (recorded in graph.send_mails), exercising the real
@@ -32,7 +52,14 @@ module Reimbursements
       # slow down every retry test in this file.
       processor = BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre,
                                      sleeper: ->(_seconds) { })
-      [ processor, store, client, graph ]
+      [ processor, store, graph ]
+    end
+
+    def default_expenses
+      @expense_a = create_reimbursements_expense(person: @alice, budget: @budget,
+                                                 status: Status::APPROVED, auto_number: 11)
+      @expense_b = create_reimbursements_expense(person: @bob, budget: @budget,
+                                                 status: Status::APPROVED, auto_number: 12)
     end
 
     def run_batch(processor, store)
@@ -41,7 +68,7 @@ module Reimbursements
     end
 
     test "happy path: draft created, batch recorded, expenses submitted, producers notified" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
 
       result = run_batch(processor, store)
 
@@ -57,18 +84,16 @@ module Reimbursements
       assert_equal "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx", xlsx
       assert_equal 3, draft[:attachments].size, "xlsx + one receipt per expense"
 
-      # Batch record created and both expenses flipped to Submitted + linked.
-      assert_equal 1, client.created.count { |table, _| table == :batches }
-      # The EUSA draft's message id is stored on the batch at creation (so a
-      # reopen can later verify/delete the stale draft).
-      draft_field = FIELD_IDS[:batches][:draft_message_id]
-      _table, batch_fields = client.created.find { |table, fields| table == :batches && fields.key?(draft_field) }
-      assert_equal "msg-1", batch_fields[draft_field]
-      submitted = client.updated.select { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
-      assert_equal 2, submitted.size
-      submitted.each do |_, _, fields|
-        assert_equal [ result.batch_id ], fields[FIELD_IDS[:expenses][:batch]]
-        assert fields[FIELD_IDS[:expenses][:receipts_offloaded]]
+      # Batch record created (storing the draft's message id so a reopen can
+      # later verify/delete the stale draft) and both expenses flipped to
+      # Submitted + linked.
+      batch = Batch.sole
+      assert_equal "msg-1", batch.draft_message_id
+      [ @expense_a, @expense_b ].each do |expense|
+        expense.reload
+        assert_equal Status::SUBMITTED, expense.status
+        assert_equal batch.record_id, expense.batch_id
+        assert expense.receipts_offloaded
       end
 
       # One producer email per payee, sent via Graph from the send mailbox, and
@@ -81,28 +106,28 @@ module Reimbursements
       end
       assert_equal [ "alice@example.com", "bob@example.com" ],
                    graph.send_mails.map { |mail| mail[:to] }.flatten.sort
-      notified = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:producer_notified]] }
-      assert_equal 2, notified
+      assert @expense_a.reload.producer_notified
+      assert @expense_b.reload.producer_notified
       assert_equal 2, result.receipts_uploaded, "one receipt per expense; the xlsx isn't counted here"
     end
 
     test "CARDINAL RULE: a failed draft leaves every expense Approved and no batch" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       graph.fail_draft = true
 
       result = run_batch(processor, store)
 
       assert_not result.success
       assert(result.errors.any? { |e| e.include?("EUSA draft creation failed") })
-      assert_equal 0, client.created.count { |table, _| table == :batches }, "no batch when draft fails"
-      submitted = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
-      assert_equal 0, submitted, "expenses must stay Approved when the draft fails"
+      assert_equal 0, Batch.count, "no batch when draft fails"
+      assert_equal Status::APPROVED, @expense_a.reload.status, "expenses must stay Approved when the draft fails"
+      assert_equal Status::APPROVED, @expense_b.reload.status
       assert_empty graph.send_mails, "producers must not be notified when the draft fails"
     end
 
     test "orphan-draft guard: batch write fails after the draft — no double draft on rebuild" do
-      processor, store, client, graph = build_scenario
-      client.fail_create_tables = [ :batches ] # the draft succeeds; only the Batch write fails
+      processor, store, graph = build_scenario
+      store.fail_batch_creates = true # the draft succeeds; only the Batch write fails
 
       result = run_batch(processor, store)
 
@@ -111,12 +136,13 @@ module Reimbursements
       assert_not result.success
       assert_equal 1, graph.drafts.size, "the EUSA draft was created"
       assert(result.errors.any? { |e| e.include?("ORPHAN DRAFT") && e.include?(result.eusa_draft_web_link) })
-      assert_equal 0, client.created.count { |table, _| table == :batches }, "no batch record was written"
+      assert_equal 0, Batch.count, "no batch record was written"
 
       # The expenses were marked Submitted anyway, so they leave the Approved
       # queue — nothing for a rebuild to re-draft.
-      submitted = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
-      assert_equal 2, submitted
+      assert_equal Status::SUBMITTED, @expense_a.reload.status
+      assert_equal Status::SUBMITTED, @expense_b.reload.status
+      store.bust_expenses!
       approved_now = store.expenses.select { |e| e.status == Status::APPROVED }
       assert_empty approved_now, "no expense stays Approved with a live draft"
 
@@ -134,8 +160,8 @@ module Reimbursements
     end
 
     test "a mark_submitted write failure is a double-draft risk, not swallowed as success" do
-      processor, store, client, graph = build_scenario
-      fail_update_record_when(client) { |_table, record_id, _fields| record_id == "recExpA" }
+      processor, store, graph = build_scenario
+      store.update_failer = ->(record_id, _attrs) { record_id == @expense_a.record_id }
 
       result = run_batch(processor, store)
 
@@ -144,20 +170,20 @@ module Reimbursements
       assert(result.errors.any? { |e| e.include?("DOUBLE-DRAFT RISK") && e.include?("11") },
              result.errors.inspect)
 
-      # recExpB still made it through cleanly; recExpA is the one that failed.
-      assert_equal [ "recExpB" ], store.expenses.select { |e| e.status == Status::SUBMITTED }.map(&:record_id)
-      assert_equal [ "recExpA" ], store.expenses.select { |e| e.status == Status::APPROVED }.map(&:record_id)
+      # @expense_b still made it through cleanly; @expense_a is the one that failed.
+      assert_equal Status::SUBMITTED, @expense_b.reload.status
+      assert_equal Status::APPROVED, @expense_a.reload.status
 
-      # recExpA's payee (Alice) must not be notified — mark_submitted excluded
+      # @expense_a's payee (Alice) must not be notified — mark_submitted excluded
       # her expense, so notify_producers never saw it.
       assert_equal [ "bob@example.com" ], graph.send_mails.map { |mail| mail[:to] }.flatten
     end
 
     test "a transient mark_submitted write failure is retried, matching create_batch! and mark_notified" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       calls = 0
-      fail_update_record_when(client) do |table, record_id, fields|
-        next false unless table == :expenses && record_id == "recExpA" && fields[FIELD_IDS[:expenses][:status]] == "Submitted"
+      store.update_failer = lambda do |record_id, attrs|
+        next false unless record_id == @expense_a.record_id && attrs[:status] == Status::SUBMITTED
 
         calls += 1
         calls == 1
@@ -166,28 +192,28 @@ module Reimbursements
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert_equal %w[recExpA recExpB].sort, store.expenses.select { |e| e.status == Status::SUBMITTED }.map(&:record_id).sort
+      assert_equal Status::SUBMITTED, @expense_a.reload.status
+      assert_equal Status::SUBMITTED, @expense_b.reload.status
       assert_equal 2, graph.send_mails.size, "both producers were actually emailed"
     end
 
     test "receipts_offloaded is only stamped true when the receipt upload actually succeeded" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       graph.fail_uploads = true # every SharePoint upload (BACS xlsx + every receipt) fails
 
       result = run_batch(processor, store)
 
       assert result.success, "the draft + submission still succeed; SharePoint uploads are best-effort"
       assert(result.errors.any? { |e| e.include?("SharePoint upload failed") })
-      offload_field = FIELD_IDS[:expenses][:receipts_offloaded]
-      submitted_writes = client.updated.select { |_, _, fields| fields[FIELD_IDS[:expenses][:status]] == "Submitted" }
-      assert_equal 2, submitted_writes.size
-      submitted_writes.each do |_, _, fields|
-        assert_not fields[offload_field], "receipts_offloaded must not be true when the upload failed"
+      [ @expense_a, @expense_b ].each do |expense|
+        expense.reload
+        assert_equal Status::SUBMITTED, expense.status
+        assert_not expense.receipts_offloaded, "receipts_offloaded must not be true when the upload failed"
       end
     end
 
     test "a BACS-xlsx SharePoint upload failure doesn't block sending to EUSA or the receipt uploads" do
-      processor, store, _client, graph = build_scenario
+      processor, store, graph = build_scenario
       bacs_filename = "2026-05-13-bedlam-fringe-BACS-request-F40.xlsx"
       graph.fail_upload_for = [ bacs_filename ]
 
@@ -203,16 +229,13 @@ module Reimbursements
     end
 
     test "a single failed receipt upload doesn't corrupt the URL map for that expense or affect others" do
-      receipts = [
-        { "id" => "att1", "filename" => "receipt1.pdf", "url" => "https://airtable/one",
-          "size" => 1000, "type" => "application/pdf" },
-        { "id" => "att2", "filename" => "receipt2.pdf", "url" => "https://airtable/two",
-          "size" => 2000, "type" => "application/pdf" }
-      ]
-      multi = airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved",
-                                      auto_number: 11, receipts: receipts)
-      single = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 12)
-      processor, store, client, graph = build_scenario(expenses: [ multi, single ])
+      processor, store, graph = build_scenario(expenses: :custom)
+      @multi = create_reimbursements_expense(person: @alice, budget: @budget,
+                                             status: Status::APPROVED, auto_number: 11, receipt: false)
+      attach_test_receipt(@multi, filename: "receipt1.pdf")
+      attach_test_receipt(@multi, filename: "receipt2.pdf")
+      @single = create_reimbursements_expense(person: @bob, budget: @budget,
+                                              status: Status::APPROVED, auto_number: 12)
 
       failing_filename = FilenameSanitizer.build_receipt_filename(
         bacs_date: Date.new(2026, 5, 13), budget_name: "Props", description: "Fake blood",
@@ -229,59 +252,47 @@ module Reimbursements
       assert result.success, result.errors.inspect
       assert(result.errors.any? { |e| e.include?("Receipt upload failed for #{failing_filename}") })
 
-      _table, _id, fields_a = client.updated.find do |table, id, fields|
-        table == :expenses && id == "recExpA" && fields[FIELD_IDS[:expenses][:status]] == "Submitted"
-      end
-      urls_a = fields_a[FIELD_IDS[:expenses][:sharepoint_receipt_urls]]
-      assert_equal "https://sp.example/fldR/#{succeeding_filename}", urls_a,
+      @multi.reload
+      assert_equal [ "https://sp.example/fldR/#{succeeding_filename}" ], @multi.sharepoint_receipt_urls,
                    "only the successful upload's URL is recorded — no nil/phantom entry for the failed one"
-      assert_not fields_a[FIELD_IDS[:expenses][:receipts_offloaded]],
+      assert_not @multi.receipts_offloaded,
                  "2 receipts but only 1 uploaded — must not be reported as offloaded"
 
-      _table, _id, fields_b = client.updated.find do |table, id, fields|
-        table == :expenses && id == "recExpB" && fields[FIELD_IDS[:expenses][:status]] == "Submitted"
-      end
-      assert fields_b[FIELD_IDS[:expenses][:receipts_offloaded]],
+      assert @single.reload.receipts_offloaded,
              "the other expense's single receipt uploaded fine and must be unaffected"
     end
 
     test "producer_notifications_sent flag is only set when at least one send succeeded" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       graph.fail_send = true # the draft succeeds; every producer send fails
 
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
       assert_equal 0, result.producer_notifications_sent
-      notif_field = FIELD_IDS[:batches][:producer_notifications_sent]
-      batch_writes = client.updated.select { |table, _, fields| table == :batches && fields.key?(notif_field) }
-      assert_empty batch_writes, "must not claim notifications were sent when every send failed"
+      assert_not Batch.sole.producer_notifications_sent,
+                 "must not claim notifications were sent when every send failed"
     end
 
     test "producer_notifications_sent flag is set when there was nothing left to notify" do
-      already = airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved",
-                                        auto_number: 11,
-                                        overrides: { FIELD_IDS[:expenses][:producer_notified] => true })
-      also_already = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved",
-                                             auto_number: 12,
-                                             overrides: { FIELD_IDS[:expenses][:producer_notified] => true })
-      processor, store, client, graph = build_scenario(expenses: [ already, also_already ])
+      processor, store, graph = build_scenario(expenses: :custom)
+      create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
+                                    auto_number: 11, producer_notified: true)
+      create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
+                                    auto_number: 12, producer_notified: true)
 
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
       assert_empty graph.send_mails, "both producers were already notified before this build"
-      notif_field = FIELD_IDS[:batches][:producer_notifications_sent]
-      batch_write = client.updated.find { |table, _id, fields| table == :batches && fields.key?(notif_field) }
-      assert batch_write.last[notif_field], "nothing outstanding to notify still counts as complete"
+      assert Batch.sole.producer_notifications_sent, "nothing outstanding to notify still counts as complete"
     end
 
     test "a transient producer_notified write failure is retried, matching create_batch!" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       calls = 0
-      field = FIELD_IDS[:expenses][:producer_notified]
-      fail_update_record_when(client) do |table, _record_id, fields|
-        next false unless table == :expenses && fields.key?(field)
+      store.update_failer = lambda do |_record_id, attrs|
+        next false unless attrs.key?(:producer_notified)
 
         calls += 1
         calls == 1
@@ -291,61 +302,45 @@ module Reimbursements
 
       assert result.success, result.errors.inspect
       assert_equal 2, graph.send_mails.size, "both producers were actually emailed"
-      notified = client.updated.count { |_, _, fields| fields[FIELD_IDS[:expenses][:producer_notified]] }
-      assert_equal 2, notified, "the retry recorded the stamp that failed on the first attempt"
+      assert @expense_a.reload.producer_notified
+      assert @expense_b.reload.producer_notified
     end
 
     test "a transient batch-write failure is retried and the batch still records" do
-      processor, store, client, _graph = build_scenario
-      # Fail the first Batch write, then let the retry through.
+      processor, store, = build_scenario
+      # Fail the first Batch write (nothing persisted), then let the retry through.
       calls = 0
-      client.define_singleton_method(:create_record) do |table, fields|
-        if table == :batches
-          calls += 1
-          raise Reimbursements::Airtable::Error.new("blip", status: 500) if calls == 1
-        end
-        @created << [ table, fields ]
-        { "id" => "recNew#{@created.size}", "fields" => fields }
+      store.define_singleton_method(:create_batch!) do |attrs|
+        calls += 1
+        raise "blip" if calls == 1
+
+        super(attrs)
       end
 
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert_equal 1, client.created.count { |table, _| table == :batches }, "the retry recorded the batch"
+      assert_equal 1, Batch.count, "the retry recorded the batch"
     end
 
     test "a retried create_batch after an ambiguous failure reuses the batch instead of duplicating it" do
-      processor, store, client, graph = build_scenario
-      # Simulate a lost RESPONSE, not a lost request: the create actually
-      # reaches Airtable and the record is really persisted, but the caller
-      # still sees an error on the first attempt (a network read timeout after
-      # the write already committed server-side).
-      calls = 0
-      client.define_singleton_method(:create_record) do |table, fields|
-        calls += 1
-        real = { "id" => "recNew#{@created.size + 1}", "fields" => fields }
-        if table == :batches
-          @created << [ table, fields ]
-          (@records_by_table[:batches] ||= []) << real
-          raise Reimbursements::Airtable::Error.new("response lost", status: 500) if calls == 1
-        else
-          @created << [ table, fields ]
-        end
-        real
-      end
+      processor, store, graph = build_scenario
+      # The create actually persists but the caller still sees an error on the
+      # first attempt (a network read timeout after the write already
+      # committed) — the retry must find and reuse it, not duplicate it.
+      store.ambiguous_batch_create = true
 
       result = run_batch(processor, store)
 
       assert result.success, result.errors.inspect
-      assert_equal 1, client.created.count { |table, _| table == :batches },
-                   "no SECOND batch record for the same live draft"
+      assert_equal 1, Batch.count, "no SECOND batch record for the same live draft"
       assert_equal 1, graph.drafts.size, "still only one EUSA draft"
     end
 
     test "refuses to process when SharePoint folders are not configured" do
       cost_centre = configured_cost_centre
       cost_centre.sharepoint_receipts_drive_id = nil
-      processor, store, _client, graph = build_scenario(cost_centre: cost_centre)
+      processor, store, graph = build_scenario(cost_centre: cost_centre)
 
       result = run_batch(processor, store)
 
@@ -354,21 +349,23 @@ module Reimbursements
       assert_empty graph.drafts
     end
 
-    test "a receipt-download failure fails the batch cleanly with no draft created" do
+    test "a receipt-content failure fails the batch cleanly with no draft created" do
       # collect_receipts runs before create_draft (the CARDINAL RULE boundary).
-      # process's method-level rescue catches the download error and reports
-      # it as a normal failed Result — nothing has happened yet, so this is
-      # safe: no draft, no batch, no Submitted status change.
-      processor, store, client, graph = build_scenario
-      graph.fail_download = true
+      # On this backend receipts come from ActiveStorage blobs, so the outage
+      # is a missing/unreadable blob file; process's method-level rescue
+      # reports it as a normal failed Result — nothing has happened yet, so
+      # this is safe: no draft, no batch, no Submitted status change.
+      processor, store, graph = build_scenario
+      @expense_a.receipt_files.each { |attachment| attachment.blob.service.delete(attachment.blob.key) }
 
       result = run_batch(processor, store)
 
       assert_not result.success
-      assert(result.errors.any? { |e| e.include?("receipt download failed") })
+      assert_not_empty result.errors
       assert_empty graph.drafts
-      assert_empty client.created
-      assert_empty client.updated
+      assert_equal 0, Batch.count
+      assert_equal Status::APPROVED, @expense_a.reload.status
+      assert_equal Status::APPROVED, @expense_b.reload.status
     end
 
     test "an empty batch reports an error and touches nothing" do
@@ -381,11 +378,11 @@ module Reimbursements
     end
 
     test "skips producers already notified for this (reopened) batch" do
-      already = airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved",
-                                        auto_number: 11,
-                                        overrides: { FIELD_IDS[:expenses][:producer_notified] => true })
-      fresh = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 12)
-      processor, store, _client, graph = build_scenario(expenses: [ already, fresh ])
+      processor, store, graph = build_scenario(expenses: :custom)
+      create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
+                                    auto_number: 11, producer_notified: true)
+      create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
+                                    auto_number: 12)
 
       result = run_batch(processor, store)
 
@@ -395,12 +392,15 @@ module Reimbursements
     end
 
     test "several expenses for the same payee are grouped into one notification email" do
-      alice1 = airtable_expense_record(id: "recExpA1", payee_id: "recAlice", status: "Approved",
-                                       auto_number: 11, amount: 12.50, description: "Fake blood")
-      alice2 = airtable_expense_record(id: "recExpA2", payee_id: "recAlice", status: "Approved",
-                                       auto_number: 12, amount: 7.50, description: "Face paint")
-      bob = airtable_expense_record(id: "recExpB", payee_id: "recBob", status: "Approved", auto_number: 13)
-      processor, store, client, graph = build_scenario(expenses: [ alice1, alice2, bob ])
+      processor, store, graph = build_scenario(expenses: :custom)
+      alice1 = create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
+                                             auto_number: 11, amount: BigDecimal("12.50"),
+                                             description: "Fake blood")
+      alice2 = create_reimbursements_expense(person: @alice, budget: @budget, status: Status::APPROVED,
+                                             auto_number: 12, amount: BigDecimal("7.50"),
+                                             description: "Face paint")
+      create_reimbursements_expense(person: @bob, budget: @budget, status: Status::APPROVED,
+                                    auto_number: 13)
 
       result = run_batch(processor, store)
 
@@ -417,15 +417,13 @@ module Reimbursements
       bob_mail = graph.send_mails.find { |mail| Array(mail[:to]) == [ "bob@example.com" ] }
       assert_includes bob_mail[:subject], "1 expense submitted for payment"
 
-      alice_notified = client.updated.count do |table, id, fields|
-        table == :expenses && %w[recExpA1 recExpA2].include?(id) &&
-          fields[FIELD_IDS[:expenses][:producer_notified]]
-      end
-      assert_equal 2, alice_notified, "both of Alice's expenses are stamped, not just one per notification"
+      assert alice1.reload.producer_notified
+      assert alice2.reload.producer_notified,
+             "both of Alice's expenses are stamped, not just one per notification"
     end
 
     test "a producer notification Graph failure is collected but doesn't fail the batch" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       graph.fail_send = true # the draft (create_draft) still succeeds; only sends fail
 
       result = run_batch(processor, store)
@@ -435,11 +433,11 @@ module Reimbursements
       assert_equal 0, result.producer_notifications_sent
       assert(result.errors.any? { |e| e.include?("Producer notification failed") })
       # The EUSA draft and the expense submissions still happened.
-      assert_equal 1, client.created.count { |table, _| table == :batches }
+      assert_equal 1, Batch.count
     end
 
     test "a payee whose notification send fails is not stamped producer_notified" do
-      processor, store, client, graph = build_scenario
+      processor, store, graph = build_scenario
       graph.fail_send_to = [ "alice@example.com" ] # Bob's send still succeeds
 
       result = run_batch(processor, store)
@@ -449,12 +447,12 @@ module Reimbursements
       # Only Bob was emailed and only Bob is stamped notified — Alice, whose send
       # failed, stays un-notified so a rebuild re-notifies her.
       assert_equal [ "bob@example.com" ], graph.send_mails.map { |m| m[:to] }.flatten
-      notified_ids = client.updated.select { |_, _, f| f[FIELD_IDS[:expenses][:producer_notified]] }.map { |_, id, _| id }
-      assert_equal [ "recExpB" ], notified_ids
+      assert @expense_b.reload.producer_notified
+      assert_not @expense_a.reload.producer_notified
     end
 
     test "custom EUSA subject and body override the composed default" do
-      processor, store, _client, graph = build_scenario
+      processor, store, graph = build_scenario
 
       processor.process(expenses: store.expenses, bacs_date: Date.new(2026, 5, 13),
                         sender_name: "F", eusa_recipient: "finance@eusa.ed.ac.uk",

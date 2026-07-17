@@ -297,6 +297,18 @@ module ReimbursementsTestHelpers
     { "id" => id, "fields" => fields }
   end
 
+  # Modulus verdict keyed by account number, so tests don't depend on the
+  # gitignored Pay.UK rule files being present.
+  class FakeModulusChecker
+    def initialize(by_account = {})
+      @by_account = by_account
+    end
+
+    def check(_sort_code, account_number)
+      @by_account.fetch(account_number, ::Reimbursements::ModulusCheck::OUTSIDE_SPEC)
+    end
+  end
+
   # Fake Airtable client counting calls per table, interface-compatible with
   # Reimbursements::Airtable::Client. Records writes for assertions.
   class FakeAirtableClient

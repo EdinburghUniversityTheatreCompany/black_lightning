@@ -74,7 +74,7 @@ module Reimbursements
       Extractor::Extraction.new(
         merchant: "City Cabs", total_amount: BigDecimal("18.00"), vat_amount: BigDecimal("3.00"),
         vat_itemised: true, suggested_description: "Taxi to venue",
-        suggested_budget_record_id: "recBud1", suggested_payment_reference: "CITYCABS PAT"
+        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "CITYCABS PAT"
       )
     end
 
@@ -83,8 +83,9 @@ module Reimbursements
       ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "c"
       ENV["REIMBURSEMENTS_AZURE_CLIENT_SECRET"] = "s"
 
-      @store, @client = build_fake_store(people: [ airtable_person_record ],
-                                         budgets: [ airtable_budget_record ])
+      @person = create_reimbursements_person(name: "Pat Producer", email: "pat@example.com")
+      @budget = create_reimbursements_budget(name: "Props", active: true)
+      @store = DatabaseStore.new
       @mailbox = FakeMailbox.new(messages: messages, attachments: attachments)
       # One cost centre (the fringe fixture); the builder receives it and returns
       # the fake mailbox for it. The multi-cost-centre test overrides this.
@@ -98,7 +99,7 @@ module Reimbursements
          REIMBURSEMENTS_AZURE_CLIENT_SECRET].each { |key| ENV.delete(key) }
       MailboxPollJob.mailbox_builder =
         ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
-      MailboxPollJob.store_builder = -> { Store.new }
+      MailboxPollJob.store_builder = -> { Reimbursements.build_store }
       MailboxPollJob.extractor_builder = -> { Extractor.new }
       Rails.cache.delete(GraphAuthAlert::CACHE_KEY)
       Rails.cache.delete_matched("reimbursements/mailbox-sender-count/*")
@@ -122,7 +123,7 @@ module Reimbursements
       assert_equal 1, @mailbox.replies.size
       assert_match(/isn't in our submitter list/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-      assert_empty @client.created
+      assert_equal 0, Expense.count
     end
 
     test "a move failure on the reject path leaves the message unread for retry, not stuck unfiled" do
@@ -146,7 +147,7 @@ module Reimbursements
 
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
-      assert_empty @client.created
+      assert_equal 0, Expense.count
     end
 
     test "automated senders get no reply (mail-loop guard)" do
@@ -174,8 +175,7 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      assert_equal 1, @client.created.size
-      assert_equal 1, @client.uploads.size
+      assert_equal 1, Expense.sole.receipt_files.count
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
@@ -184,18 +184,17 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      _table, fields = @client.created.sole
-      f = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
-      assert_equal "Draft", fields[f[:status]]
-      assert_equal [ "recPer1" ], fields[f[:payee]]
-      assert_equal [ "recBud1" ], fields[f[:budget]]
-      assert_in_delta 18.0, fields[f[:amount]]
-      assert_in_delta 15.0, fields[f[:amount_excl_vat]]
-      assert_equal "Taxi to venue", fields[f[:description]]
+      expense = Expense.sole
+      assert_equal Status::DRAFT, expense.status
+      assert_equal @person, expense.person
+      assert_equal @budget, expense.budget
+      assert_in_delta 18.0, expense.amount
+      assert_in_delta 15.0, expense.amount_excl_vat
+      assert_equal "Taxi to venue", expense.description
 
-      assert_equal 1, @client.uploads.size
+      assert_equal 1, expense.receipt_files.count
       reply_html = @mailbox.replies.sole.last
-      assert_includes reply_html, "/admin/reimbursements/expenses/recNew1/edit"
+      assert_includes reply_html, "/admin/reimbursements/expenses/#{expense.record_id}/edit"
       assert_includes reply_html, "won't see the claim until you submit"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
@@ -207,11 +206,11 @@ module Reimbursements
       # fully successful run. The reply must still go out — the submitter is
       # waiting on their portal link regardless of the attach outcome.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      @client.fail_uploads = true
+      @store.define_singleton_method(:attach_receipt!) { |*| raise "storage down" }
 
       notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
 
-      assert_equal 1, @client.created.size
+      assert_equal 1, Expense.count
       assert_includes @mailbox.reads, "msg1", "marked read regardless, so it's never reprocessed"
       assert_equal 1, @mailbox.replies.size, "the submitter must still get their portal link"
       assert_empty @mailbox.moves, "a partially-attached draft stays in the Inbox, not filed away"
@@ -224,8 +223,8 @@ module Reimbursements
 
       notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
 
-      assert_equal 1, @client.created.size
-      assert_equal 1, @client.uploads.size, "the attach must not be skipped just because the reply will fail"
+      expense = Expense.sole
+      assert_equal 1, expense.receipt_files.count, "the attach must not be skipped just because the reply will fail"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves,
                    "attach succeeded, so the move must still happen despite the reply failing"
       assert_equal 1, notified.size
@@ -238,7 +237,7 @@ module Reimbursements
       MailboxPollJob.perform_now
       MailboxPollJob.perform_now
 
-      assert_equal 1, @client.created.size, "a read message must not be re-processed into a duplicate"
+      assert_equal 1, Expense.count, "a read message must not be re-processed into a duplicate"
       assert_includes @mailbox.reads, "msg1", "marking read is the idempotency step and must happen"
       assert_empty @mailbox.moves, "the move failed, but the message is already read so it is safe"
     end
@@ -249,7 +248,7 @@ module Reimbursements
 
       notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
 
-      assert_equal 1, @client.created.size
+      assert_equal 1, Expense.count
       assert_equal 1, notified.size, "the isRead failure must reach Honeybadger"
       assert notified.first.last.dig(:context, :duplicate_risk),
              "a possible duplicate must be flagged so an operator can check"
@@ -262,7 +261,7 @@ module Reimbursements
 
       assert_nothing_raised { MailboxPollJob.perform_now }
 
-      assert_empty @client.created, "a broken attachment must not mint an expense"
+      assert_equal 0, Expense.count, "a broken attachment must not mint an expense"
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
@@ -274,7 +273,7 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      assert_empty @client.created, "an oversized attachment must not mint an expense"
+      assert_equal 0, Expense.count, "an oversized attachment must not mint an expense"
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
@@ -285,7 +284,7 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      assert_empty @client.created, "a disallowed content type must not mint an expense"
+      assert_equal 0, Expense.count, "a disallowed content type must not mint an expense"
       assert_match(/no usable receipt/, @mailbox.replies.first.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
@@ -296,11 +295,10 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      _table, fields = @client.created.sole
-      f = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
-      assert_equal "Taxi receipt", fields[f[:description]], "description falls back to the subject"
-      assert_nil fields[f[:amount]]
-      assert_nil fields[f[:budget]]
+      expense = Expense.sole
+      assert_equal "Taxi receipt", expense.description, "description falls back to the subject"
+      assert_nil expense.amount
+      assert_nil expense.budget
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
@@ -313,26 +311,26 @@ module Reimbursements
       calls = 0
       @store.define_singleton_method(:create_expense!) do |attrs|
         calls += 1
-        raise Airtable::Error.new("boom", status: 500) if calls == 1
+        raise "boom" if calls == 1
 
         original.call(attrs)
       end
 
       MailboxPollJob.perform_now
 
-      assert_equal 1, @client.created.size
+      assert_equal 1, Expense.count
       moved_ids = @mailbox.moves.map(&:first)
       assert_includes moved_ids, "msg1"
       assert_not_includes moved_ids, "msgBoom"
     end
 
     test "a message retried across poll cycles after a downstream failure counts once toward the sender's daily limit" do
-      # A message left unread by a downstream failure (an Airtable blip, not a
+      # A message left unread by a downstream failure (a data-layer blip, not a
       # sender problem) gets reprocessed every cycle until it succeeds — that
       # must not inflate one real email into many against the sender's tally,
       # or a transient outage could get a legitimate sender rate-limited.
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      @store.define_singleton_method(:create_expense!) { |*| raise Airtable::Error.new("boom", status: 500) }
+      @store.define_singleton_method(:create_expense!) { |*| raise "boom" }
 
       3.times { MailboxPollJob.perform_now }
 
@@ -363,11 +361,11 @@ module Reimbursements
       assert_includes polled, termtime.receive_mailbox
       assert_equal [ [ "msgFringe", :processed ] ], fringe_mailbox.moves
       assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves
-      assert_equal 2, @client.created.size, "an expense is drafted from each cost centre's inbox"
+      assert_equal 2, Expense.count, "an expense is drafted from each cost centre's inbox"
     end
 
     test "a generic failure polling one cost centre's mailbox doesn't stop the others being polled" do
-      termtime = CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
+      CostCentre.create!(key: "termtime", name: "Bedlam Termtime", eusa_code: "BED",
         receive_mailbox: "termtime@bedlamtheatre.co.uk", send_mailbox: "termtime@bedlamtheatre.co.uk")
 
       setup_job(messages: [])
@@ -387,7 +385,7 @@ module Reimbursements
       assert_equal 1, notified.size, "the broken cost centre's failure is still reported"
       assert_equal [ [ "msgTerm", :processed ] ], termtime_mailbox.moves,
                    "the other cost centre must still be polled despite the first one's failure"
-      assert_equal 1, @client.created.size
+      assert_equal 1, Expense.count
     end
 
     test "a sender matching the cost centre's own receive mailbox is treated as automated" do
@@ -399,7 +397,7 @@ module Reimbursements
 
       assert_empty @mailbox.replies, "no reply to a message from our own mailbox (loop guard)"
       assert_equal [ [ "msgLoop", :rejected ] ], @mailbox.moves
-      assert_empty @client.created
+      assert_equal 0, Expense.count
     end
 
     test "a known sender well under the daily message cap is unaffected" do
@@ -407,7 +405,7 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      assert_equal 1, @client.created.size
+      assert_equal 1, Expense.count
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
@@ -418,7 +416,7 @@ module Reimbursements
 
       MailboxPollJob.perform_now
 
-      assert_empty @client.created, "a compromised/spoofed sender must not mint unbounded drafts"
+      assert_equal 0, Expense.count, "a compromised/spoofed sender must not mint unbounded drafts"
       assert_match(/unusually high number/, @mailbox.replies.sole.last)
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     ensure
@@ -437,44 +435,24 @@ module Reimbursements
       end
       assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
     end
-    # --- Database backend (post-cutover): real idempotency key ------------
 
-    def setup_database_job(messages:, attachments: {})
-      ENV["REIMBURSEMENTS_AZURE_TENANT_ID"] = "t"
-      ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "c"
-      ENV["REIMBURSEMENTS_AZURE_CLIENT_SECRET"] = "s"
+    # --- Idempotency key (source_message_id) -------------------------------
 
-      person = Person.create!(name: "Pat Producer", email: "pat@example.com")
-      budget = Budget.create!(name: "Props", active: true)
-      extraction = Extractor::Extraction.new(
-        merchant: "City Cabs", total_amount: BigDecimal("18.00"), vat_amount: BigDecimal("3.00"),
-        vat_itemised: true, suggested_description: "Taxi to venue",
-        suggested_budget_record_id: budget.record_id, suggested_payment_reference: "CITYCABS PAT"
-      )
-      @mailbox = FakeMailbox.new(messages: messages, attachments: attachments)
-      MailboxPollJob.mailbox_builder = ->(_cost_centre) { @mailbox }
-      MailboxPollJob.store_builder = -> { DatabaseStore.new }
-      MailboxPollJob.extractor_builder = -> { FakeExtractor.new(extraction) }
-      person
-    end
-
-    test "database backend: stamps the source message id on the created draft" do
-      person = setup_database_job(messages: [ inbound_message ],
-                                  attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+    test "stamps the source message id on the created draft" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
 
       MailboxPollJob.perform_now
 
       expense = Expense.find_by!(source_message_id: "msg1")
       assert_equal Status::DRAFT, expense.status
-      assert_equal person, expense.person
+      assert_equal @person, expense.person
       assert_equal 1, expense.receipt_files.count
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    test "database backend: an already-seen message is filed away without a duplicate" do
-      person = setup_database_job(messages: [ inbound_message ],
-                                  attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      Expense.create!(status: Status::DRAFT, person: person, source_message_id: "msg1")
+    test "an already-seen message is filed away without a duplicate" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
 
       assert_no_difference -> { Expense.count } do
         MailboxPollJob.perform_now
