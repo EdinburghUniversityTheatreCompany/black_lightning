@@ -132,6 +132,21 @@ module Admin
         assert_not_includes response.body, "No owner"
       end
 
+      test "does not flag a hidden (overhead) budget for having no owner" do
+        # Hidden overhead lines (payroll, NI, contracts) will never have a
+        # producer owner, so the "No owner" warning is suppressed for them — it
+        # would only drown the signal on the visible budgets that need chasing.
+        sign_in @user
+        hidden = airtable_budget_record(id: "recBud6", name: "Payroll", active: false)
+        @store, @client = build_fake_store(budgets: [ hidden ], people: [ @alice ])
+        BaseController.store_builder = -> { @store }
+
+        get :index
+
+        assert_response :success
+        assert_not_includes response.body, "No owner"
+      end
+
       # --- Budget health -----------------------------------------------------
 
       test "surfaces health figures and an over-budget flag for an over-budget budget" do

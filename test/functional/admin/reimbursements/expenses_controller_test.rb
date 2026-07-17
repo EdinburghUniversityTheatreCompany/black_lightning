@@ -294,8 +294,9 @@ module Admin
       assert_response :success
       assert_includes response.body, "Van hire"
       assert_includes response.body, "Approved"
-      # No edit form and no receipt-remove control on the read-only page.
-      assert_select "form[action=?]", admin_reimbursements_expense_path("recExp3"), 0
+      # No editable expense fields and no receipt-remove control on the
+      # read-only page (both are present on the edit page — this discriminates it).
+      assert_select "input[name='reimbursements_expense_form[amount]']", 0
       assert_select "button[data-action='receipts-upload#remove']", 0
     end
 

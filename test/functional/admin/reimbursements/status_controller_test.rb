@@ -151,6 +151,8 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Graph rejected the token (401)"
+        # Points a non-technical finance user at IT to rotate the server credential.
+        assert_includes response.body, "contact IT"
         # A Graph failure must not hide the other (passing) checks.
         assert_includes response.body, "read 1 budget(s)"
       end

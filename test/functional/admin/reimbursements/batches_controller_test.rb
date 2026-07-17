@@ -208,6 +208,23 @@ module Admin
         assert_includes response.body, "£12.50", "the batch's total (its one expense's amount) must render"
       end
 
+      test "index badges a batch whose EUSA draft is missing vs one that succeeded" do
+        use_store(
+          batches: [
+            airtable_batch_record(id: "recBat1", name: "Good batch", eusa_draft_created: true),
+            airtable_batch_record(id: "recBat2", name: "Broken batch", eusa_draft_created: nil)
+          ],
+          expenses: [], people: [], budgets: []
+        )
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Draft created"
+        assert_includes response.body, "No EUSA draft — needs a look"
+      end
+
       test "show renders one batch and its linked expenses" do
         use_store(batches: [ airtable_batch_record ], expenses: [ linked_expense(status: "Submitted") ])
         sign_in @user
@@ -216,6 +233,21 @@ module Admin
 
         assert_response :success
         assert_includes response.body, "Submitted"
+      end
+
+      test "show badges the draft and producer-notification states, warning on a missing one" do
+        use_store(
+          batches: [ airtable_batch_record(id: "recBat1", eusa_draft_created: true,
+                                           producer_notifications_sent: nil) ],
+          expenses: [ linked_expense(status: "Submitted") ]
+        )
+        sign_in @user
+
+        get :show, params: { id: "recBat1" }
+
+        assert_response :success
+        # EUSA draft succeeded (green "Yes"), producers were NOT notified (amber warning).
+        assert_includes response.body, "No — needs a look"
       end
 
       test "show 404s for an unknown batch id" do
