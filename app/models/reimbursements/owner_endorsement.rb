@@ -37,6 +37,8 @@ module Reimbursements
     belongs_to :overridden_by, class_name: "User", optional: true
 
     validates :expense_record_id, :budget_record_id, :endorsed_at, presence: true
+    # One satisfaction per expense — a friendly error ahead of the unique index.
+    validates :expense_record_id, uniqueness: true
     validate :either_an_owner_or_an_override
 
     # One satisfaction per expense (enforced by a unique index too).
