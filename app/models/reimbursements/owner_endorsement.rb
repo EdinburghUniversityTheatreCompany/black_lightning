@@ -4,6 +4,7 @@
 # Database name: primary
 #
 #  id                    :bigint           not null, primary key
+#  endorsed_amount       :decimal(12, 2)
 #  endorsed_at           :datetime         not null
 #  note                  :string(255)
 #  created_at            :datetime         not null

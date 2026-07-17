@@ -10,9 +10,9 @@ module Reimbursements
       Budget.new(record_id: id, name: "Props", owner_ids: owner_ids)
     end
 
-    def expense(budget:, submitter:, id: "recExp1")
+    def expense(budget:, submitter:, id: "recExp1", amount: BigDecimal("10"))
       Expense.new(record_id: id, auto_number: 1, status: Status::PENDING,
-                  person: submitter, amount: BigDecimal("10"), budget: budget,
+                  person: submitter, amount: amount, budget: budget,
                   description: "x", receipts: [])
     end
 
@@ -44,13 +44,34 @@ module Reimbursements
       assert_not OwnerReview.gate_applies?(exp)
     end
 
-    test "gate_satisfied? is true once an endorsement exists" do
+    test "gate_satisfied? is true once an endorsement covers the current terms" do
       exp = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: person(id: "recPerOther"))
       assert_not OwnerReview.gate_satisfied?(exp)
 
       OwnerEndorsement.create!(expense_record_id: exp.record_id, budget_record_id: "recBud1",
-                               endorsed_by_person_id: "recPer1", endorsed_at: Time.current)
+                               endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
+                               endorsed_at: Time.current)
       assert OwnerReview.gate_satisfied?(exp)
+    end
+
+    test "an endorsement no longer covers the claim once its amount is edited" do
+      # Alice endorses a £10 claim; it's then bumped to £2000. The stale sign-off
+      # must NOT keep clearing the gate for the new, higher amount.
+      OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
+                               endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
+                               endorsed_at: Time.current)
+      edited = expense(budget: budget(owner_ids: [ "recPer1" ]), submitter: person(id: "recPerOther"),
+                       id: "recExp1", amount: BigDecimal("2000"))
+      assert_not OwnerReview.gate_satisfied?(edited)
+    end
+
+    test "an endorsement no longer covers the claim once its budget is reassigned" do
+      OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBudOld",
+                               endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("10"),
+                               endorsed_at: Time.current)
+      moved = expense(budget: budget(id: "recBudNew", owner_ids: [ "recPer1" ]),
+                      submitter: person(id: "recPerOther"), id: "recExp1")
+      assert_not OwnerReview.gate_satisfied?(moved)
     end
 
     test "gate_satisfied? is true for a bypassed expense with no endorsement row" do

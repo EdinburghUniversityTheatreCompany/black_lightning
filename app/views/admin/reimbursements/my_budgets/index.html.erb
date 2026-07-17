@@ -1,7 +1,7 @@
 <p class="mb-3 text-gray-600">
   The budgets you own. When someone claims an expense against one of them, it waits here for
   your sign-off before the finance team pays it. Anyone who owns the budget can endorse, and a
-  claim you submitted yourself is cleared automatically.
+  claim submitted by an owner is cleared automatically.
 </p>
 
 <% if @budgets.empty? %>
@@ -46,10 +46,14 @@
                   <td class="py-2 pr-3"><%= truncate(expense.description.to_s, length: 60) %></td>
                   <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(expense.submitted_at) %></td>
                   <td class="py-2 text-right whitespace-nowrap">
-                    <% if endorsement&.owner_endorsement? %>
+                    <%# Only a sign-off that still COVERS the current amount+budget
+                        counts — a stale one (claim edited since) shows Endorse
+                        again, staying consistent with the finance gate. %>
+                    <% covered = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
+                    <% if covered && endorsement.owner_endorsement? %>
                       <%= render BadgeComponent.new(type: :success, pill: true)
                             .with_content("Endorsed by #{@people_by_id[endorsement.endorsed_by_person_id]&.name || 'an owner'}") %>
-                    <% elsif endorsement&.finance_override? %>
+                    <% elsif covered && endorsement.finance_override? %>
                       <%= render BadgeComponent.new(type: :info, pill: true).with_content("Cleared by finance") %>
                     <% elsif ::Reimbursements::OwnerReview.submitter_owns_budget?(expense) %>
                       <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Submitted by an owner") %>

@@ -509,8 +509,10 @@ module Admin
 
       test "approve succeeds once an owner has endorsed the claim" do
         rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        # gated_expense carries airtable_expense_record's default amount (12.5).
         ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
-                                                   endorsed_by_person_id: "recOwner", endorsed_at: Time.current)
+                                                   endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
+                                                   endorsed_at: Time.current)
         sign_in @user
 
         patch :approve, params: { id: "recGated" }
@@ -544,9 +546,36 @@ module Admin
         endorsement = ::Reimbursements::OwnerEndorsement.for_expense("recGated").first
         assert endorsement.finance_override?
         assert_equal @user.id, endorsement.overridden_by_id
+        assert_equal BigDecimal("12.5"), endorsement.endorsed_amount, "override snapshots the amount"
         _table, _id, fields = @client.updated.sole
         assert_equal "Approved", fields[EXP[:status]]
         assert_match(/overridden/i, flash[:notice])
+      end
+
+      test "override_approve writes no override row and reports the hard block when one remains" do
+        # A gated claim that ALSO lacks bank details: overriding must surface the
+        # bank problem and NOT write a gate-satisfying row (else a later plain
+        # approve would sail past the owner gate we'd have silently satisfied).
+        no_bank = pending_expense(id: "recGatedNoBank", payee_id: "recPer2", budget_id: "recBudOwned",
+                                  payment_reference: "OWNED")
+        rebuild_store(expenses: [ no_bank ], budgets: [ owned_budget ])
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::OwnerEndorsement.count } do
+          patch :override_approve, params: { id: "recGatedNoBank" }
+        end
+        assert_match(/without bank details/, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "override_approve truncates an over-long note instead of 500ing" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        sign_in @user
+
+        assert_nothing_raised do
+          patch :override_approve, params: { id: "recGated", override_note: "x" * 500 }
+        end
+        assert_equal 255, ::Reimbursements::OwnerEndorsement.for_expense("recGated").first.note.length
       end
 
       test "the review queue sorts a gated claim into attention with an override button" do

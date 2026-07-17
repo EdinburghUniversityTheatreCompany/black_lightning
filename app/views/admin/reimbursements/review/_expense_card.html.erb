@@ -204,18 +204,18 @@
                       "aria-label": "Approve ##{expense.auto_number} (blocked: #{attention[:blocking].join(', ')})",
                       class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
       <% elsif owner_gate_unmet %>
-        <%# The owner gate is the only thing blocking (no data problems). Finance
-            can't plain-approve, but CAN override the owner sign-off — recorded as
-            who overrode. Offered here rather than disabled, per the "finance can
-            override" rule for owners who can't act (e.g. no portal account). %>
-        <%= button_to "Approve", "#", method: :patch, disabled: true,
-                      "aria-label": "Approve ##{expense.auto_number} (awaiting owner endorsement)",
-                      class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
+        <%# The owner gate is the only hard block. Finance can't plain-approve,
+            but CAN override the owner sign-off (recorded as who overrode), per
+            the "finance can override" rule for owners who can't act. Only the
+            override button is shown — its label already says it's an approve.
+            The confirm names any advisory flags too, so overriding a flagged
+            claim keeps the same misclick safeguard the normal Approve has. %>
+        <% override_confirm = "No budget owner has endorsed ##{expense.auto_number} yet. Approve on their behalf?"
+           override_confirm += " It is also flagged: #{attention[:advisory].join('; ')}." if attention[:advisory].any? %>
         <%= button_to "Approve (override sign-off)",
                       admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab),
                       method: :patch, "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
-                      form: { data: { turbo_confirm:
-                        "No budget owner has endorsed ##{expense.auto_number} yet. Approve on their behalf?" } },
+                      form: { data: { turbo_confirm: override_confirm } },
                       class: btn_classes(:warning, :sm) %>
       <% else %>
         <%# An advisory-only card gets a confirm NAMING its reasons — approval

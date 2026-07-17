@@ -41,23 +41,35 @@ module Reimbursements
     end
 
     # Is the owner gate satisfied for this expense? Satisfied when the gate
-    # doesn't apply, or an endorsement / finance override row exists.
+    # doesn't apply, or an endorsement / finance override exists FOR THE CURRENT
+    # TERMS (see endorsement_covers?).
     def gate_satisfied?(expense)
       return true unless gate_applies?(expense)
 
-      OwnerEndorsement.for_expense(expense.record_id).exists?
+      endorsement_covers?(OwnerEndorsement.for_expense(expense.record_id).first, expense)
     end
 
     # The record ids (as a Set) of the given expenses whose owner gate is unmet:
-    # the gate applies and no endorsement/override row exists. Batches the
+    # the gate applies and no endorsement covers the current terms. Batches the
     # endorsement lookup into one query to avoid an N+1 across the review queue.
     def unmet_gate_expense_ids(expenses)
       gated = expenses.select { |expense| gate_applies?(expense) }
       return Set.new if gated.empty?
 
-      endorsed = OwnerEndorsement.where(expense_record_id: gated.map(&:record_id))
-                                 .pluck(:expense_record_id).to_set
-      gated.reject { |expense| endorsed.include?(expense.record_id) }.map(&:record_id).to_set
+      by_expense = OwnerEndorsement.where(expense_record_id: gated.map(&:record_id))
+                                   .index_by(&:expense_record_id)
+      gated.reject { |expense| endorsement_covers?(by_expense[expense.record_id], expense) }
+           .map(&:record_id).to_set
+    end
+
+    # Does this endorsement still cover the claim's current material terms? A
+    # sign-off is given for a specific budget and amount; editing either after
+    # the fact re-opens the gate rather than riding on the old approval.
+    def endorsement_covers?(endorsement, expense)
+      return false if endorsement.nil?
+
+      endorsement.budget_record_id == expense.budget&.record_id &&
+        endorsement.endorsed_amount == expense.amount
     end
   end
 end

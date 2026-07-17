@@ -69,13 +69,29 @@ module Admin
       # genuine data problem the override still can't approve past.
       def override_approve
         expense = find_expense!
+        # Only override the owner gate when it's the ONLY thing blocking. If a
+        # hard block (bank/budget/amount/status) remains, report that WITHOUT
+        # writing an override row — otherwise a later plain approve would sail
+        # past a gate we silently satisfied here for an approval that never ran.
+        blocker = approve_blocker(expense)
+        if blocker && blocker != :skipped_awaiting_endorsement
+          redirect_with_approve_result(expense, blocker)
+          return
+        end
+
         if ::Reimbursements::OwnerReview.gate_applies?(expense)
-          ::Reimbursements::OwnerEndorsement.find_or_create_by!(expense_record_id: expense.record_id) do |endorsement|
-            endorsement.budget_record_id = expense.budget.record_id
-            endorsement.overridden_by = current_user
-            endorsement.note = params[:override_note].presence
-            endorsement.endorsed_at = Time.current
-          end
+          # Upsert so a re-override after an edit refreshes the snapshot (see
+          # OwnerReview.endorsement_covers?), rather than riding a stale row.
+          endorsement = ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).first_or_initialize
+          endorsement.assign_attributes(
+            budget_record_id: expense.budget.record_id,
+            endorsed_by_person_id: nil,
+            overridden_by: current_user,
+            note: params[:override_note].to_s.truncate(255).presence,
+            endorsed_amount: expense.amount,
+            endorsed_at: Time.current
+          )
+          endorsement.save!
         end
         result = approve_expense(expense)
         note = result == :approved ? "Approved ##{expense.auto_number} (owner sign-off overridden)." : nil
@@ -192,6 +208,25 @@ module Admin
       # call, not a correctness guard. Auto-fills a BACS-safe payment
       # reference when blank. Returns :approved on success.
       def approve_expense(expense)
+        blocker = approve_blocker(expense)
+        return blocker if blocker
+
+        attrs = { status: ::Reimbursements::Status::APPROVED }
+        # expense.budget is already guaranteed present here (approve_blocker's
+        # :skipped_no_budget guard returns early otherwise), so no nil re-check.
+        if expense.payment_reference.to_s.strip.empty?
+          reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.name)
+          attrs[:payment_reference] = reference if reference.present?
+        end
+        store.update_expense!(expense.record_id, attrs)
+        :approved
+      end
+
+      # The first reason this expense can't be approved, or nil if it can. Pure
+      # (no writes), so override_approve can precheck whether the owner gate is
+      # the SOLE blocker before recording an override — a hard block (bank/
+      # budget/amount) must never write a gate-satisfying override row.
+      def approve_blocker(expense)
         return :skipped_wrong_status unless expense.pending?
         return :skipped_no_bank unless expense.effective_has_bank_details?
         # A present-but-blank-record_id budget would write a blank nominal code
@@ -205,15 +240,7 @@ module Admin
         # finance via override_approve; unmet here means neither has happened.
         return :skipped_awaiting_endorsement unless ::Reimbursements::OwnerReview.gate_satisfied?(expense)
 
-        attrs = { status: ::Reimbursements::Status::APPROVED }
-        # expense.budget is already guaranteed present here (the :skipped_no_budget
-        # guard above returns early otherwise), so no nil-budget re-check is needed.
-        if expense.payment_reference.to_s.strip.empty?
-          reference = ::Reimbursements::ReviewSupport.auto_payment_reference(expense.budget.name)
-          attrs[:payment_reference] = reference if reference.present?
-        end
-        store.update_expense!(expense.record_id, attrs)
-        :approved
+        nil
       end
 
       # Reject one expense with a reason (shared by #reject and #bulk_reject).

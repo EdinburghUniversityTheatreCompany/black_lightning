@@ -76,6 +76,43 @@ module Admin
         assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path("recExp2"), 0
       end
 
+      test "a claim already endorsed (covering the amount) shows who endorsed it, no Endorse button" do
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
+                                                   endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("12.5"),
+                                                   endorsed_at: Time.current)
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Endorsed by Olive Owner"
+        assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path("recExp1"), 0
+      end
+
+      test "a finance-overridden claim shows as cleared by finance" do
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
+                                                   overridden_by: @user, endorsed_amount: BigDecimal("12.5"),
+                                                   endorsed_at: Time.current)
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Cleared by finance"
+      end
+
+      test "a stale endorsement (amount since edited) shows Endorse again, not Endorsed" do
+        # Endorsed at £5, but the claim's actual amount is 12.5 — the sign-off no
+        # longer covers it, so the owner is asked to endorse the current terms.
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
+                                                   endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("5"),
+                                                   endorsed_at: Time.current)
+        sign_in @user
+        get :index
+
+        assert_response :success
+        assert_select "form[action=?]", admin_reimbursements_endorse_my_budget_path("recExp1")
+        assert_not_includes response.body, "Endorsed by"
+      end
+
       test "endorse records the current owner's endorsement" do
         sign_in @user
 
@@ -87,6 +124,7 @@ module Admin
         endorsement = ::Reimbursements::OwnerEndorsement.for_expense("recExp1").first
         assert_equal "recPer1", endorsement.endorsed_by_person_id
         assert_equal "recBud1", endorsement.budget_record_id
+        assert_equal BigDecimal("12.5"), endorsement.endorsed_amount, "snapshots the amount signed off"
         assert endorsement.owner_endorsement?
       end
 

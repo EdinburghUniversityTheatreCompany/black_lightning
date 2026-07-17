@@ -46,8 +46,10 @@ module Reimbursements
     end
 
     test "does not email about a claim the owner already endorsed" do
+      # airtable_expense_record's default amount (12.5) is what @awaiting carries.
       OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
-                               endorsed_by_person_id: "recOwner", endorsed_at: Time.current)
+                               endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
+                               endorsed_at: Time.current)
       use_store(expenses: [ @awaiting ])
 
       assert_no_emails { OwnerEndorsementDigestJob.perform_now }
@@ -70,6 +72,29 @@ module Reimbursements
       assert_not_nil email
       assert_equal [ @owner_user.email ], email.to
       assert_match(/Van hire/, email.body.encoded)
+    end
+
+    test "nudges every account-holding owner of a shared budget (any one can act)" do
+      second_user = users(:admin)
+      second_owner = airtable_person_record(id: "recOwner2", name: "Otto Owner", email: second_user.email)
+      shared = airtable_budget_record(id: "recBud1", name: "Props", owner_ids: %w[recOwner recOwner2])
+      use_store(expenses: [ @awaiting ], people: [ @owner, second_owner, @submitter ], budgets: [ shared ])
+
+      assert_emails(2) { OwnerEndorsementDigestJob.perform_now }
+      recipients = ActionMailer::Base.deliveries.last(2).flat_map(&:to)
+      assert_includes recipients, @owner_user.email
+      assert_includes recipients, second_user.email
+    end
+
+    test "resolves an owner by the stored airtable_person_id link when emails differ" do
+      # The owner's People email doesn't match their portal account's email, but
+      # the durable PersonLink (User#airtable_person_id) still resolves them.
+      @owner_user.update_column(:airtable_person_id, "recOwner")
+      drifted = airtable_person_record(id: "recOwner", name: "Olga", email: "different-people-email@example.com")
+      use_store(expenses: [ @awaiting ], people: [ drifted, @submitter ])
+
+      assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
+      assert_equal [ @owner_user.email ], ActionMailer::Base.deliveries.last.to
     end
   end
 end

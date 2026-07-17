@@ -16,9 +16,14 @@ module Reimbursements
       people_by_id = store.people.index_by(&:record_id)
       expenses_by_owner(awaiting).each do |owner_person_id, expenses|
         person = people_by_id[owner_person_id]
-        next if person.nil? || person.email.blank?
+        next if person.nil?
 
-        user = User.find_by(email: person.email)
+        # Prefer the durable stored link (PersonLink persists User#airtable_person_id);
+        # fall back to email only for an owner who never opened the portal. User
+        # emails are normalised on write while Airtable People emails aren't, so
+        # email-only matching would silently miss a legitimately-linked owner.
+        user = User.find_by(airtable_person_id: owner_person_id)
+        user ||= User.find_by(email: person.email) if person.email.present?
         next if user.nil? # no portal account -> can't endorse; finance override covers them
 
         # deliver_now (not _later): the mail carries Airtable POROs ActiveJob
