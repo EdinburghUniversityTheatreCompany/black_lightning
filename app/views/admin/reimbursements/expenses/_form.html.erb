@@ -113,18 +113,23 @@
     </div>
     <%= f.hidden_field :vat_itemised, data: { reimbursements_receipt_target: "vatItemised" } %>
 
-    <%= f.input :budget_record_id, label: "Budget",
+    <%# Required to SUBMIT but optional for a draft. Show the required star so
+        the star set matches what submit needs (they were unstarred, so a
+        rushed user filled only the starred fields and hit surprise errors),
+        but leave client-side enforcement off (input_html required: false) so
+        the "Save as draft" path and server-side validation keep working. %>
+    <%= f.input :budget_record_id, label: "Budget", required: true,
           collection: budgets.map { |b| [ b.name, b.record_id ] },
           include_blank: "Choose a budget…",
           hint: "Not sure? Pick the closest and mention it in the description.",
-          input_html: { data: { reimbursements_receipt_target: "budget" } } %>
+          input_html: { required: false, data: { reimbursements_receipt_target: "budget" } } %>
 
-    <%= f.input :description, label: "Description", hint: "What's it for?",
-          input_html: { data: { reimbursements_receipt_target: "description" } } %>
+    <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
+          input_html: { required: false, data: { reimbursements_receipt_target: "description" } } %>
 
-    <%= f.input :payment_reference, label: "Payment reference",
+    <%= f.input :payment_reference, label: "Payment reference", required: true,
           hint: "What EUSA puts on the bank transfer. Invoices usually specify one; otherwise the invoice number or a short label.",
-          input_html: { maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
+          input_html: { required: false, maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
                         data: { reimbursements_receipt_target: "reference",
                                 action: "input->reimbursements-receipt#updateCounter" } } %>
     <p class="mb-3 text-sm text-gray-500">
