@@ -51,7 +51,7 @@ module Admin
           endorsed_at: Time.current
         )
         endorsement.save!
-        redirect_to_my_budgets(notice: "Thanks — you've endorsed this claim for the finance team.")
+        redirect_to_my_budgets(notice: "Thanks, you've endorsed this claim for the finance team.")
       rescue ActiveRecord::RecordNotUnique
         # Another owner endorsed a moment ago; the gate is satisfied either way.
         redirect_to_my_budgets(notice: "Already endorsed by another owner.")
@@ -64,7 +64,7 @@ module Admin
         return unless expense
 
         ::Reimbursements::OwnerEndorsement.for_expense(expense.record_id).delete_all
-        redirect_to_my_budgets(notice: "Withdrawn — this claim is back to awaiting sign-off.")
+        redirect_to_my_budgets(notice: "Withdrawn. This claim is back to awaiting sign-off.")
       end
 
       # Reject a claim on an owned budget outright, with a reason emailed to the
@@ -95,7 +95,7 @@ module Admin
           return nil
         end
         unless expense.pending?
-          redirect_to_my_budgets(alert: "##{expense.auto_number} is no longer Pending — nothing to do.")
+          redirect_to_my_budgets(alert: "##{expense.auto_number} is no longer Pending, so there is nothing to do.")
           return nil
         end
         expense

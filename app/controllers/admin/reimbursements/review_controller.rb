@@ -196,13 +196,13 @@ module Admin
         when :skipped_no_bank
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without bank details.")
         when :skipped_wrong_status
-          redirect_to_review(alert: "##{expense.auto_number} is no longer Pending — nothing to approve.")
+          redirect_to_review(alert: "##{expense.auto_number} is no longer Pending, so there is nothing to approve.")
         when :skipped_no_budget
-          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a budget linked — " \
-                                    "it would write a blank nominal code EUSA can never reconcile.")
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a budget linked. " \
+                                    "It would write a blank nominal code EUSA can never reconcile.")
         when :skipped_no_amount
           redirect_to_review(alert: "Can't approve ##{expense.auto_number} without an amount " \
-                                    "excluding VAT — it would never match on reconciliation.")
+                                    "excluding VAT. It would never match on reconciliation.")
         when :skipped_awaiting_endorsement
           redirect_to_review(alert: "##{expense.auto_number} needs a budget owner's endorsement first " \
                                     "(or a finance override).")

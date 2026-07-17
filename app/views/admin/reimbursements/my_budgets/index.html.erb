@@ -12,8 +12,8 @@
   <% end %>
 <% else %>
   <p class="mb-3 text-sm text-gray-600">
-    Check the receipt, then <strong>Endorse</strong> a claim (any owner can — a claim submitted by an
-    owner is auto-approved), or <strong>Reject</strong> it with a reason if it looks wrong.
+    Check the receipt, then <strong>Endorse</strong> a claim (any owner can, and a claim an owner
+    submitted is auto-approved), or <strong>Reject</strong> it with a reason if it looks wrong.
   </p>
 
   <% @budgets.each do |budget| %>
@@ -74,7 +74,7 @@
                 <% else %>
                   <% if endorsement %>
                     <p class="w-full text-sm text-warning">
-                      This claim changed since it was endorsed — please re-check the amount and receipt before endorsing again.
+                      This claim changed since it was endorsed. Re-check the amount and receipt before endorsing again.
                     </p>
                   <% end %>
                   <%= button_to "Endorse",

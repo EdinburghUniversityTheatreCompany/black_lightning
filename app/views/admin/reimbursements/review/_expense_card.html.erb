@@ -72,10 +72,11 @@
       <% if owner_gate_unmet %>
         <p class="text-warning">
           <span class="font-medium">Awaiting a budget owner's endorsement</span>
-          (blocks approval until signed off or overridden)
-          <% if owner_names %>— waiting on <%= owner_names.to_sentence %> to sign off
-            the <%= expense.budget.name %> budget<% end %>.
-          They endorse from My Budgets, or use the finance override below.
+          (blocks approval until signed off or overridden).
+          <% if owner_names %><%= owner_names.to_sentence %>
+            <%= owner_names.one? ? "owns" : "own" %> the <%= expense.budget.name %> budget and
+            can sign off from My Budgets.<% end %>
+          Or use the finance override below.
         </p>
       <% end %>
       <% if attention[:advisory].any? %>
