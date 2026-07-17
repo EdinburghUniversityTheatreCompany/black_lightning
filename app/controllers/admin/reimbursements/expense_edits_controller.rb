@@ -153,7 +153,13 @@ module Admin
         CSV.generate do |csv|
           csv << CSV_HEADERS
           expenses.each do |expense|
-            reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
+            # Match the on-screen table: no attention reasons on non-actionable
+            # (Submitted/Paid/Rejected) rows, so the CSV and table can't disagree.
+            reasons = if ::Reimbursements::ReviewSupport.attention_actionable?(expense)
+              ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
+            else
+              []
+            end
             csv << [
               expense.auto_number, expense.status, expense.effective_payee_name,
               expense.budget&.name, expense.amount, expense.amount_excl_vat,

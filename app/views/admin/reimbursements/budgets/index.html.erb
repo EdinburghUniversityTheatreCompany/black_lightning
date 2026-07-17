@@ -40,6 +40,9 @@
                         elsif budget.variance.positive? then "text-danger"
                         else "text-success"
                         end
+       variance_title = if budget.variance&.positive? then "Forecast is above the initial budget"
+                        elsif budget.variance&.negative? then "Forecast is below the initial budget"
+                        end
        remaining_class = "text-danger font-medium" if budget.remaining&.negative?
        edit = link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),
                       "aria-label": "Edit #{budget.name}", class: btn_classes(:secondary, :sm))
@@ -50,8 +53,9 @@
            reimbursements_money(budget.current_forecast),
            reimbursements_money(budget.committed_amount),
            reimbursements_money(budget.total_paid),
-           content_tag(:span, reimbursements_money(budget.remaining), class: remaining_class),
-           content_tag(:span, reimbursements_money(budget.variance), class: variance_class),
+           content_tag(:span, reimbursements_money(budget.remaining), class: remaining_class,
+                       title: ("Over budget — nothing left to spend" if budget.remaining&.negative?)),
+           content_tag(:span, reimbursements_money(budget.variance), class: variance_class, title: variance_title),
            owners,
            edit
          ]

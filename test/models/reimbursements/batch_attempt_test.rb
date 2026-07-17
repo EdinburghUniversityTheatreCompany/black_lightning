@@ -40,7 +40,7 @@ module Reimbursements
       end
     end
 
-    test "needing_attention includes everything except a clean completion" do
+    test "needing_attention surfaces building/failed/completed-with-warnings, not clean or nothing_to_build" do
       building = build_attempt
       failed = build_attempt(status: "failed", error_messages: "boom")
       noop = build_attempt(status: "nothing_to_build")
@@ -51,9 +51,11 @@ module Reimbursements
 
       assert_includes attention, building
       assert_includes attention, failed
-      assert_includes attention, noop
       assert_includes attention, with_warnings
       assert_not_includes attention, clean
+      # A deduped double-click's no-op is benign and expected — recorded, but
+      # not surfaced as a lingering alert.
+      assert_not_includes attention, noop
     end
   end
 end

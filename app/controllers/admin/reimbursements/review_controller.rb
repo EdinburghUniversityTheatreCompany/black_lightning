@@ -158,7 +158,11 @@ module Admin
       def approve_expense(expense)
         return :skipped_wrong_status unless expense.pending?
         return :skipped_no_bank unless expense.effective_has_bank_details?
-        return :skipped_no_budget if expense.budget.nil?
+        # A present-but-blank-record_id budget would write a blank nominal code
+        # into the BACS spreadsheet just like a nil one — guard both, so this
+        # stays in lockstep with ReviewSupport.attention_summary's "no budget"
+        # blocking reason (the UI promises the two agree).
+        return :skipped_no_budget if expense.budget.nil? || expense.budget.record_id.blank?
         return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
 
         attrs = { status: ::Reimbursements::Status::APPROVED }

@@ -49,11 +49,24 @@ module Reimbursements
                     default: ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
 
     def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:,
-                eusa_subject: nil, eusa_body_html: nil)
-      cost_centre = CostCentre.find_by(key: cost_centre_key)
-      return Rails.logger.warn("Build batch: no cost centre #{cost_centre_key.inspect} — skipping") if cost_centre.nil?
+                eusa_subject: nil, eusa_body_html: nil, attempt_id: nil)
+      # The controller creates the BatchAttempt row at click time and passes
+      # its id, so this run resolves EXACTLY its own row (not "the oldest
+      # building row for this cost centre", which mislabelled History when two
+      # builds raced or a prior job died). A retry re-uses the same id.
+      attempt = attempt_id && BatchAttempt.find_by(id: attempt_id)
 
-      attempt = attempt_for(cost_centre, bacs_date, operator_emails)
+      cost_centre = CostCentre.find_by(key: cost_centre_key)
+      if cost_centre.nil?
+        Rails.logger.warn("Build batch: no cost centre #{cost_centre_key.inspect} — skipping")
+        attempt&.resolve!(status: "failed", error_messages: "Cost centre #{cost_centre_key} no longer exists.")
+        return
+      end
+
+      # A direct perform_now (or a legacy enqueue) with no row: create one so the
+      # build still leaves a History trace.
+      attempt ||= BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
+                                       triggered_by_email: Array(operator_emails).compact_blank.first)
       approved = store.expenses.select { |expense| expense.status == Status::APPROVED }
       if approved.empty?
         Rails.logger.info("Build batch: no approved expenses for #{cost_centre.key} — nothing to build")
@@ -92,16 +105,6 @@ module Reimbursements
 
     def processor(cost_centre)
       processor_builder.call(store: store, graph: graph, cost_centre: cost_centre)
-    end
-
-    # BatchesController#create makes the attempt row at click time (so History
-    # shows the build from the moment it's queued); pick up the oldest
-    # unresolved one. A retry — or a direct perform_now with no controller —
-    # has none, so create one here rather than lose the trace.
-    def attempt_for(cost_centre, bacs_date, operator_emails)
-      BatchAttempt.building.where(cost_centre: cost_centre).order(:created_at).first ||
-        BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
-                             triggered_by_email: Array(operator_emails).compact_blank.first)
     end
 
     def parse_date(value)

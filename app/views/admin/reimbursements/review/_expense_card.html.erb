@@ -185,17 +185,26 @@
   <%# --- Approve / Reject --- %>
   <div class="mt-3 flex flex-wrap items-start gap-2">
     <% if allow_approve %>
-      <%# A flagged card gets a confirm NAMING its reasons — approval commits
-          real money to a BACS batch, and the advisory reasons (over budget,
-          no receipt, possible duplicate) never block server-side, so this
-          dialog is the only thing standing between a misclick and an
-          approved flagged expense. Clean cards keep one-click approval. %>
-      <%= button_to "Approve",
-                    admin_reimbursements_approve_review_path(expense.record_id, tab: @tab),
-                    method: :patch, "aria-label": "Approve ##{expense.auto_number}",
-                    form: attention_reasons.any? ? { data: { turbo_confirm:
-                      "##{expense.auto_number} is flagged: #{attention_reasons.join('; ')}. Approve anyway?" } } : {},
-                    class: btn_classes(:success, :sm) %>
+      <% if attention[:blocking].any? %>
+        <%# Blocking reasons are a hard server-side refusal, so a clickable
+            "Approve anyway?" would only bounce — disable it and let the red
+            badge + inline reasons say why. %>
+        <%= button_to "Approve", "#", method: :patch, disabled: true,
+                      "aria-label": "Approve ##{expense.auto_number} (blocked: #{attention[:blocking].join(', ')})",
+                      class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
+      <% else %>
+        <%# An advisory-only card gets a confirm NAMING its reasons — approval
+            commits real money to a BACS batch and advisory reasons (over
+            budget, no receipt, possible duplicate) don't block server-side, so
+            this dialog is the only thing between a misclick and an approved
+            flagged expense. Clean cards keep one-click approval. %>
+        <%= button_to "Approve",
+                      admin_reimbursements_approve_review_path(expense.record_id, tab: @tab),
+                      method: :patch, "aria-label": "Approve ##{expense.auto_number}",
+                      form: attention[:advisory].any? ? { data: { turbo_confirm:
+                        "##{expense.auto_number} is flagged: #{attention[:advisory].join('; ')}. Approve anyway?" } } : {},
+                      class: btn_classes(:success, :sm) %>
+      <% end %>
     <% end %>
     <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
                   method: :patch, class: "flex items-center gap-2",

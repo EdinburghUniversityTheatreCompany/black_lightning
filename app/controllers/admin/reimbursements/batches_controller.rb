@@ -65,9 +65,9 @@ module Admin
 
         # The attempt row is History's in-app trace of this build — visible
         # from the moment of the click (queued/running), resolved by the job
-        # to completed/failed/nothing_to_build. Without it, a build that dies
-        # before the Airtable Batch record exists is invisible outside email.
-        ::Reimbursements::BatchAttempt.create!(
+        # (by id) to completed/failed/nothing_to_build. Without it, a build that
+        # dies before the Airtable Batch record exists is invisible outside email.
+        attempt = ::Reimbursements::BatchAttempt.create!(
           cost_centre: @cost_centre, bacs_date: bacs_date,
           triggered_by_email: current_user.try(:email)
         )
@@ -78,7 +78,8 @@ module Admin
           eusa_recipient: params[:eusa_recipient].presence || @cost_centre.eusa_recipient_or_default,
           eusa_subject: params[:eusa_subject].presence,
           eusa_body_html: params[:eusa_body].presence,
-          operator_emails: Array(current_user.try(:email)).compact_blank
+          operator_emails: Array(current_user.try(:email)).compact_blank,
+          attempt_id: attempt.id
         )
         redirect_to admin_reimbursements_batches_path,
                     notice: "Batch is building for #{@cost_centre.name}. Its EUSA draft link will appear " \

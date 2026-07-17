@@ -246,6 +246,42 @@ module Admin
         assert_select "input#select_recClean[data-flagged=false]"
       end
 
+      test "a blocking card disables Approve instead of offering a doomed 'anyway'" do
+        # No bank details -> blocking (approve_expense refuses it), so the
+        # button can never succeed and must be disabled, not a misleading
+        # "Approve anyway?".
+        blocked = pending_expense(id: "recBlocked", payee_id: "recPer2", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ blocked ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "button[aria-label*='Approve #'][disabled]"
+        assert_select "form[action*='#{admin_reimbursements_approve_review_path('recBlocked')}']", 0
+      end
+
+      test "approve refuses a budget present but with a blank record id (blank nominal-code guard)" do
+        # attention_summary flags this as blocking; approve_expense must agree,
+        # or it would write a blank nominal code into the BACS spreadsheet.
+        blank_budget = ::Reimbursements::Budget.new(record_id: "", name: "Ghost", nominal_code: "")
+        expense = ::Reimbursements::Expense.new(
+          record_id: "recBlankBud", auto_number: 5, status: ::Reimbursements::Status::PENDING,
+          person: ::Reimbursements::Person.new(record_id: "recPer1", name: "Pat", email: "p@x.co",
+                                               sort_code: "08-99-99", account_number: "66374958"),
+          amount: BigDecimal("10"), amount_excl_vat: BigDecimal("8"), budget: blank_budget
+        )
+        @store, @client = build_fake_store(expenses: [])
+        @store.define_singleton_method(:find_expense!) { |_id| expense }
+        BaseController.store_builder = -> { @store }
+        sign_in @user
+
+        patch :approve, params: { id: "recBlankBud" }
+
+        assert_empty @client.updated, "must not approve an expense with a blank-record_id budget"
+        assert_match(/without a budget/i, flash[:alert])
+      end
+
       test "bulk approve advances every selected pending expense" do
         a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
         b = pending_expense(id: "recBulkB", payment_reference: "PROPS PAT")

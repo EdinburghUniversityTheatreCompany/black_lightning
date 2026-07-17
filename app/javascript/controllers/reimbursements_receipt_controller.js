@@ -81,9 +81,21 @@ export default class extends Controller {
   // threshold, so the producer isn't surprised by it only at submit time.
   checkAmount() {
     if (!this.hasLargeAmountWarningTarget || !this.hasAmountTarget) return
-    const value = parseFloat(this.amountTarget.value.replace(/[£,\s]/g, ""))
+    const value = this.#parseAmount(this.amountTarget.value)
     const large = Number.isFinite(value) && value >= this.largeAmountThresholdValue
     this.largeAmountWarningTarget.classList.toggle("hidden", !large)
+  }
+
+  // Mirror the server's ExpenseForm#parse_decimal: a trailing "," with 1-2
+  // digits and no "." is a decimal comma ("999,99" -> 999.99), otherwise
+  // commas are thousands separators. Without this "999,99" parsed as 99999
+  // and falsely tripped the large-amount warning the server wouldn't require.
+  #parseAmount(raw) {
+    const cleaned = raw.replace(/[£\s]/g, "")
+    const normalised = /,\d{1,2}$/.test(cleaned) && !cleaned.includes(".")
+      ? cleaned.replace(",", ".")
+      : cleaned.replace(/,/g, "")
+    return parseFloat(normalised)
   }
 
   updateCounter() {

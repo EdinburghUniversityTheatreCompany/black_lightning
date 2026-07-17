@@ -163,7 +163,7 @@ module Reimbursements
       attempt = click_time_attempt
       stock_store([ approved_expense ])
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert attempt.reload.completed?
       assert_equal "recBat1", attempt.batch_record_id
@@ -176,7 +176,7 @@ module Reimbursements
       attempt = click_time_attempt
       stock_store([ approved_expense ])
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert attempt.reload.failed?
       assert_includes attempt.error_messages, "EUSA draft creation failed"
@@ -188,7 +188,7 @@ module Reimbursements
       attempt = click_time_attempt
       stock_store([ approved_expense ])
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert attempt.reload.completed?
       assert_includes attempt.error_messages, "SharePoint upload failed"
@@ -198,7 +198,7 @@ module Reimbursements
       attempt = click_time_attempt
       stock_store([]) # nothing Approved
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert attempt.reload.nothing_to_build?
     end
@@ -210,7 +210,7 @@ module Reimbursements
       attempt = click_time_attempt
       stock_store([ approved_expense ])
 
-      BuildBatchJob.perform_now(**enqueue_args)
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
       assert attempt.reload.failed?
       assert_includes attempt.error_messages, "token expired"
@@ -228,6 +228,29 @@ module Reimbursements
       attempt = BatchAttempt.recent_first.first
       assert attempt.completed?
       assert_equal OPERATOR.first, attempt.triggered_by_email
+    end
+
+    test "a cost centre gone between click and run resolves its attempt to failed, not left building" do
+      attempt = click_time_attempt
+      stock_store([ approved_expense ])
+
+      BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "gone", attempt_id: attempt.id))
+
+      assert attempt.reload.failed?, "the row must not linger in 'building' forever"
+      assert_includes attempt.error_messages, "no longer exists"
+    end
+
+    test "resolves exactly its own attempt by id, never a leftover building row from a prior build" do
+      # A prior build died leaving R_old still 'building'. This run must resolve
+      # ITS row (by id), not grab the oldest building row for the cost centre.
+      r_old = click_time_attempt
+      r_mine = click_time_attempt
+      stock_store([ approved_expense ])
+
+      BuildBatchJob.perform_now(**enqueue_args(attempt_id: r_mine.id))
+
+      assert r_mine.reload.completed?, "my row is resolved"
+      assert r_old.reload.building?, "the leftover row is untouched, not mislabelled with my result"
     end
 
     test "an unknown cost centre is a safe no-op" do

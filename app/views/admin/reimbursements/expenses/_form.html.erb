@@ -54,6 +54,7 @@
             hides this. This is the no-JS / no-file-attached fallback. %>
         <% if form.errors.any? %>
           <p class="mb-2 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
+             role="status" aria-live="polite"
              data-reimbursements-receipt-target="reattachNotice">
             Please re-attach your receipt below — check the errors above, then submit again.
           </p>
@@ -87,7 +88,7 @@
     <%# Soft-block a large claim (a mistyped amount would otherwise skew a
         budget). Shown when the amount is already large or the ack failed;
         the amount input toggles it live via checkAmount. %>
-    <div data-reimbursements-receipt-target="largeAmountWarning"
+    <div data-reimbursements-receipt-target="largeAmountWarning" role="status" aria-live="polite"
          class="<%= 'hidden' unless form.errors[:large_amount_acknowledged].any? || form.large_amount? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
         That's a large claim. Please double-check the amount is right — a common slip is
@@ -100,7 +101,7 @@
           hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
           input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amountExclVat" } } %>
 
-    <div data-reimbursements-receipt-target="vatWarning"
+    <div data-reimbursements-receipt-target="vatWarning" role="status" aria-live="polite"
          class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
         This receipt doesn't itemise VAT, so we have to deduct the

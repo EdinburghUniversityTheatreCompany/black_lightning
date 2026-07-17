@@ -45,11 +45,13 @@ module Reimbursements
     validates :status, inclusion: { in: STATUSES }
 
     scope :building, -> { where(status: "building") }
-    # Everything History needs to surface: in-flight builds, failures, no-op
-    # runs, and completed-with-warnings — a cleanly completed attempt is
-    # redundant with the Batch row itself.
+    # What History surfaces as a persistent alert: in-flight builds, failures,
+    # and completed-with-warnings. A cleanly completed attempt is redundant with
+    # the Batch row itself, and "nothing_to_build" is the benign, expected
+    # outcome of a serialised double-click — surfacing it for days would be
+    # pure noise, so it's recorded but not alerted on.
     scope :needing_attention, lambda {
-      where(status: %w[building failed nothing_to_build])
+      where(status: %w[building failed])
         .or(where(status: "completed").where.not(error_messages: [ nil, "" ]))
     }
     scope :recent_first, -> { order(created_at: :desc) }
