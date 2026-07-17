@@ -26,10 +26,13 @@
     Probe Airtable, Microsoft Graph and Gemini with the app's own credentials. Each is checked
     independently, so one failure never hides the others.
   </p>
-  <%= button_to "Run checks", admin_reimbursements_run_status_checks_path,
-                method: :post, class: btn_classes(:secondary, :sm),
-                data: { turbo_submits_with: "Checking…" } %>
-  <div id="integration_check_results">
-    <%= render "checks", checks: @checks %>
+  <div data-controller="busy-dim"
+       data-action="turbo:submit-start->busy-dim#start turbo:submit-end->busy-dim#end">
+    <%= button_to "Run checks", admin_reimbursements_run_status_checks_path,
+                  method: :post, class: btn_classes(:secondary, :sm),
+                  data: { turbo_submits_with: "Checking…" } %>
+    <div id="integration_check_results" data-busy-dim-target="dimmable">
+      <%= render "checks", checks: @checks %>
+    </div>
   </div>
 <% end %>
