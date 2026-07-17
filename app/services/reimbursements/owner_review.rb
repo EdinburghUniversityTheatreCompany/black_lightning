@@ -47,5 +47,17 @@ module Reimbursements
 
       OwnerEndorsement.for_expense(expense.record_id).exists?
     end
+
+    # The record ids (as a Set) of the given expenses whose owner gate is unmet:
+    # the gate applies and no endorsement/override row exists. Batches the
+    # endorsement lookup into one query to avoid an N+1 across the review queue.
+    def unmet_gate_expense_ids(expenses)
+      gated = expenses.select { |expense| gate_applies?(expense) }
+      return Set.new if gated.empty?
+
+      endorsed = OwnerEndorsement.where(expense_record_id: gated.map(&:record_id))
+                                 .pluck(:expense_record_id).to_set
+      gated.reject { |expense| endorsed.include?(expense.record_id) }.map(&:record_id).to_set
+    end
   end
 end

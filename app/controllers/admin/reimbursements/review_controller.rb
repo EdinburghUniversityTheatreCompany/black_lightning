@@ -33,9 +33,14 @@ module Admin
         # this per-pending-list duplicate scan was never computed for) so it's
         # grouped with every other advisory reason instead of being a wholly
         # separate, easy-to-miss warning box.
+        # Which pending expenses still await a budget owner's endorsement (batched
+        # to avoid an N+1). A blocking gate: finance can't approve until an owner
+        # endorses or overrides.
+        @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
         @ready, @attention = @pending.partition do |expense|
           !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
-            !@duplicates.key?(expense.record_id)
+            !@duplicates.key?(expense.record_id) &&
+            !@owner_gate_unmet_ids.include?(expense.record_id)
         end
       end
 
@@ -55,20 +60,29 @@ module Admin
 
       def approve
         expense = find_expense!
-        case approve_expense(expense)
-        when :skipped_no_bank
-          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without bank details.")
-        when :skipped_wrong_status
-          redirect_to_review(alert: "##{expense.auto_number} is no longer Pending — nothing to approve.")
-        when :skipped_no_budget
-          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a budget linked — " \
-                                    "it would write a blank nominal code EUSA can never reconcile.")
-        when :skipped_no_amount
-          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without an amount " \
-                                    "excluding VAT — it would never match on reconciliation.")
-        else
-          redirect_to_review(notice: "Approved ##{expense.auto_number}.")
+        redirect_with_approve_result(expense, approve_expense(expense))
+      end
+
+      # Finance override of the owner-endorsement gate: record who overrode it
+      # (e.g. no owner has a portal account to endorse), then approve. Only the
+      # owner gate can be overridden this way — every other blocking reason is a
+      # genuine data problem the override still can't approve past.
+      def override_approve
+        expense = find_expense!
+        if ::Reimbursements::OwnerReview.gate_applies?(expense)
+          ::Reimbursements::OwnerEndorsement.find_or_create_by!(expense_record_id: expense.record_id) do |endorsement|
+            endorsement.budget_record_id = expense.budget.record_id
+            endorsement.overridden_by = current_user
+            endorsement.note = params[:override_note].presence
+            endorsement.endorsed_at = Time.current
+          end
         end
+        result = approve_expense(expense)
+        note = result == :approved ? "Approved ##{expense.auto_number} (owner sign-off overridden)." : nil
+        redirect_with_approve_result(expense, result, approved_notice: note)
+      rescue ActiveRecord::RecordNotUnique
+        # An owner endorsed a moment ago; the gate is satisfied, so just approve.
+        redirect_with_approve_result(expense, approve_expense(expense))
       end
 
       def reject
@@ -142,6 +156,28 @@ module Admin
 
       private
 
+      # Map an approve_expense result to the redirect + flash, shared by #approve
+      # and #override_approve so their messaging never drifts.
+      def redirect_with_approve_result(expense, result, approved_notice: nil)
+        case result
+        when :skipped_no_bank
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without bank details.")
+        when :skipped_wrong_status
+          redirect_to_review(alert: "##{expense.auto_number} is no longer Pending — nothing to approve.")
+        when :skipped_no_budget
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without a budget linked — " \
+                                    "it would write a blank nominal code EUSA can never reconcile.")
+        when :skipped_no_amount
+          redirect_to_review(alert: "Can't approve ##{expense.auto_number} without an amount " \
+                                    "excluding VAT — it would never match on reconciliation.")
+        when :skipped_awaiting_endorsement
+          redirect_to_review(alert: "##{expense.auto_number} needs a budget owner's endorsement first " \
+                                    "(or a finance override).")
+        else
+          redirect_to_review(notice: approved_notice || "Approved ##{expense.auto_number}.")
+        end
+      end
+
       # Approve one expense (shared by #approve and #bulk_approve). Blocks a
       # stale/raced approval against an expense that's no longer Pending
       # (:skipped_wrong_status — e.g. a double-click, or a concurrent Build
@@ -164,6 +200,10 @@ module Admin
         # blocking reason (the UI promises the two agree).
         return :skipped_no_budget if expense.budget.nil? || expense.budget.record_id.blank?
         return :skipped_no_amount if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+        # A budget owner must sign off before finance approves (any one owner, or
+        # a submitter who owns the budget is auto-bypassed). Overridable by
+        # finance via override_approve; unmet here means neither has happened.
+        return :skipped_awaiting_endorsement unless ::Reimbursements::OwnerReview.gate_satisfied?(expense)
 
         attrs = { status: ::Reimbursements::Status::APPROVED }
         # expense.budget is already guaranteed present here (the :skipped_no_budget

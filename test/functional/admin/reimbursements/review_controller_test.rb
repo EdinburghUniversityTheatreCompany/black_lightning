@@ -485,6 +485,93 @@ module Admin
         assert_not fields.key?(EXP[:payment_reference])
       end
 
+      # --- Owner-endorsement gate (Phase E3) -------------------------------
+
+      def owned_budget
+        airtable_budget_record(id: "recBudOwned", name: "Owned", nominal_code: "4100", owner_ids: [ "recOwner" ])
+      end
+
+      # Submitted by recPer1 (who has bank details), charged to a budget owned by
+      # recOwner — so the submitter isn't an owner and the gate applies.
+      def gated_expense(id: "recGated")
+        pending_expense(id: id, payee_id: "recPer1", budget_id: "recBudOwned", payment_reference: "OWNED PAT")
+      end
+
+      test "approve refuses a claim awaiting a budget owner's endorsement" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        sign_in @user
+
+        patch :approve, params: { id: "recGated" }
+
+        assert_match(/needs a budget owner's endorsement/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "approve succeeds once an owner has endorsed the claim" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
+                                                   endorsed_by_person_id: "recOwner", endorsed_at: Time.current)
+        sign_in @user
+
+        patch :approve, params: { id: "recGated" }
+
+        _table, _id, fields = @client.updated.sole
+        assert_equal "Approved", fields[EXP[:status]]
+      end
+
+      test "approve auto-bypasses a claim the budget owner submitted themselves" do
+        own = pending_expense(id: "recOwnClaim", payee_id: "recOwner", budget_id: "recBudOwned",
+                              payment_reference: "OWNED")
+        owner_person = airtable_person_record(id: "recOwner", name: "Olga Owner", email: "olga@example.com",
+                                              sort_code: "08-99-99", account_number: "66374958")
+        rebuild_store(expenses: [ own ], people: [ owner_person ], budgets: [ owned_budget ])
+        sign_in @user
+
+        patch :approve, params: { id: "recOwnClaim" }
+
+        _table, _id, fields = @client.updated.sole
+        assert_equal "Approved", fields[EXP[:status]]
+      end
+
+      test "override_approve records the finance override and approves" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, 1 do
+          patch :override_approve, params: { id: "recGated" }
+        end
+
+        endorsement = ::Reimbursements::OwnerEndorsement.for_expense("recGated").first
+        assert endorsement.finance_override?
+        assert_equal @user.id, endorsement.overridden_by_id
+        _table, _id, fields = @client.updated.sole
+        assert_equal "Approved", fields[EXP[:status]]
+        assert_match(/overridden/i, flash[:notice])
+      end
+
+      test "the review queue sorts a gated claim into attention with an override button" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes assigns(:attention).map(&:record_id), "recGated"
+        assert_select "form[action=?]", admin_reimbursements_override_approve_review_path("recGated", tab: "pending")
+      end
+
+      test "bulk approve skips a claim awaiting owner endorsement" do
+        clean = pending_expense(id: "recClean", payment_reference: "PROPS PAT")
+        rebuild_store(expenses: [ clean, gated_expense ], budgets: [ @budget, owned_budget ])
+        sign_in @user
+
+        patch :bulk_approve, params: { expense_ids: %w[recClean recGated] }
+
+        # Only the clean (ownerless-budget) claim advanced; the gated one skipped.
+        assert_equal 1, @client.updated.size
+        assert_equal "recClean", @client.updated.sole[1]
+      end
+
       test "approve is blocked without effective bank details" do
         expense = pending_expense(id: "recNoBank", payee_id: "recPer2", payment_reference: "PROPS PAT")
         rebuild_store(expenses: [ expense ])

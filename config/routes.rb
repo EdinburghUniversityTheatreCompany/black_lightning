@@ -104,6 +104,7 @@ ChaosRails::Application.routes.draw do
       patch  "review/bulk_reject",  to: "review#bulk_reject",  as: :bulk_reject_review
       patch  "review/:id/save",    to: "review#save",    as: :save_review
       patch  "review/:id/approve", to: "review#approve", as: :approve_review
+      patch  "review/:id/override_approve", to: "review#override_approve", as: :override_approve_review
       patch  "review/:id/reject",  to: "review#reject",  as: :reject_review
       post   "review/:id/receipts",                to: "review#add_receipts",   as: :review_receipts
       delete "review/:id/receipts/:attachment_id", to: "review#remove_receipt", as: :review_receipt

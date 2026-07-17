@@ -8,6 +8,9 @@
 <% modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
 <% selectable = local_assigns.fetch(:selectable, false) %>
 <% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
+<%# The owner-endorsement gate is a distinct, overridable blocking reason (see
+    OwnerReview) — kept out of ReviewSupport so that stays pure/AR-free. %>
+<% owner_gate_unmet = @owner_gate_unmet_ids&.include?(expense.record_id) %>
 <% attention_reasons = attention[:blocking] + attention[:advisory] %>
 
 <div class="mb-3 rounded border border-gray-200 p-3">
@@ -19,7 +22,7 @@
                         id: "select_#{expense.record_id}", form: "bulk-review-form",
                         "aria-label": "Select ##{expense.auto_number} for bulk actions",
                         data: { bulk_review_target: "checkbox", action: "bulk-review#refresh",
-                                flagged: attention_reasons.any? },
+                                flagged: attention_reasons.any? || owner_gate_unmet },
                         class: "h-4 w-4" %>
     <% end %>
     <span class="font-medium">
@@ -37,6 +40,8 @@
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
     <% if attention[:blocking].any? %>
       <%= render BadgeComponent.new(type: :danger, pill: true).with_content("Can't approve yet") %>
+    <% elsif owner_gate_unmet %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Awaiting owner sign-off") %>
     <% elsif attention[:advisory].any? %>
       <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Check before approving") %>
     <% end %>
@@ -45,12 +50,18 @@
   <%# Reasons inline (not behind a click) so an operator scanning the queue
       reads them at a glance, with blocked (fix-first) clearly separated from
       advisory (approval still proceeds). %>
-  <% if attention[:blocking].any? || attention[:advisory].any? %>
+  <% if attention[:blocking].any? || attention[:advisory].any? || owner_gate_unmet %>
     <div class="mt-2 flex flex-col gap-1 text-sm">
       <% if attention[:blocking].any? %>
         <p class="text-danger">
           <span class="font-medium">Can't approve until fixed:</span>
           <%= attention[:blocking].join(", ") %>.
+        </p>
+      <% end %>
+      <% if owner_gate_unmet %>
+        <p class="text-warning">
+          <span class="font-medium">Awaiting a budget owner's endorsement</span>
+          — an owner signs off from their My Budgets page, or use the finance override below.
         </p>
       <% end %>
       <% if attention[:advisory].any? %>
@@ -192,6 +203,20 @@
         <%= button_to "Approve", "#", method: :patch, disabled: true,
                       "aria-label": "Approve ##{expense.auto_number} (blocked: #{attention[:blocking].join(', ')})",
                       class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
+      <% elsif owner_gate_unmet %>
+        <%# The owner gate is the only thing blocking (no data problems). Finance
+            can't plain-approve, but CAN override the owner sign-off — recorded as
+            who overrode. Offered here rather than disabled, per the "finance can
+            override" rule for owners who can't act (e.g. no portal account). %>
+        <%= button_to "Approve", "#", method: :patch, disabled: true,
+                      "aria-label": "Approve ##{expense.auto_number} (awaiting owner endorsement)",
+                      class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
+        <%= button_to "Approve (override sign-off)",
+                      admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab),
+                      method: :patch, "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
+                      form: { data: { turbo_confirm:
+                        "No budget owner has endorsed ##{expense.auto_number} yet. Approve on their behalf?" } },
+                      class: btn_classes(:warning, :sm) %>
       <% else %>
         <%# An advisory-only card gets a confirm NAMING its reasons — approval
             commits real money to a BACS batch and advisory reasons (over
