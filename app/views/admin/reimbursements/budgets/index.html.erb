@@ -25,8 +25,16 @@
          (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
          over_flag
        ].compact, " ")
+       # "No owner" is a warning only for a live (Visible) budget — Hidden
+       # overhead lines (payroll, NI, contracts) will never have a producer
+       # owner, so flagging them all just drowns the signal on the show
+       # budgets that genuinely need chasing.
        owners = budget_owner_names(budget, @people_by_id).presence ||
-                render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
+                (if budget.active
+                   render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
+                 else
+                   content_tag(:span, "—", class: "text-gray-400")
+                 end)
        visible = if budget.active
                    render(BadgeComponent.new(type: :success, pill: true).with_content("Visible"))
                  else

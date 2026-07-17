@@ -7,9 +7,21 @@
     <dt class="font-medium">Date sent</dt>
     <dd><%= reimbursements_date(@batch.date_sent) %></dd>
     <dt class="font-medium">EUSA draft created</dt>
-    <dd><%= @batch.eusa_draft_created ? "yes" : "no" %></dd>
+    <dd>
+      <% if @batch.eusa_draft_created %>
+        <%= render BadgeComponent.new(type: :success, pill: true).with_content("Yes") %>
+      <% else %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No — needs a look") %>
+      <% end %>
+    </dd>
     <dt class="font-medium">Producers notified</dt>
-    <dd><%= @batch.producer_notifications_sent ? "yes" : "no" %></dd>
+    <dd>
+      <% if @batch.producer_notifications_sent %>
+        <%= render BadgeComponent.new(type: :success, pill: true).with_content("Yes") %>
+      <% else %>
+        <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No — needs a look") %>
+      <% end %>
+    </dd>
     <% if @batch.sharepoint_backup_url.present? %>
       <dt class="font-medium">BACS xlsx</dt>
       <dd><%= link_to @batch.sharepoint_backup_url, @batch.sharepoint_backup_url,

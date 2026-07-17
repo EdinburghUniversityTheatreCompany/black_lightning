@@ -75,6 +75,8 @@
           <span class="text-sm font-medium"><%= reimbursements_money(batch_total) %></span>
           <% if batch.eusa_draft_created %>
             <%= render BadgeComponent.new(type: :success, pill: true).with_content("Draft created") %>
+          <% else %>
+            <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No EUSA draft — needs a look") %>
           <% end %>
           <%= link_to "Detail", admin_reimbursements_batch_path(batch.record_id),
                       "aria-label": "Detail for batch #{batch.name.presence || batch.record_id}",
