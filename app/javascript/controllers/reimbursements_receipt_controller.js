@@ -19,7 +19,24 @@ export default class extends Controller {
 
   connect() {
     this.updateCounter()
+    this.userEdited = new Set()
+    this.#trackUserEdits()
     this.#restoreOrClearStash()
+  }
+
+  // Remember which fields the producer has typed into, so re-running extraction
+  // (they added a second receipt after correcting a field) never clobbers their
+  // work. A real edit fires input (text) or change (select); our own prefill
+  // sets .value directly under the #fill isPrefilling guard, so those writes
+  // are ignored here.
+  #trackUserEdits() {
+    const fields = [this.amountTarget, this.amountExclVatTarget, this.descriptionTarget,
+      this.referenceTarget, this.budgetTarget, this.vatItemisedTarget]
+    for (const field of fields) {
+      const mark = () => { if (!this.isPrefilling) this.userEdited.add(field) }
+      field.addEventListener("input", mark)
+      field.addEventListener("change", mark)
+    }
   }
 
   // Keep a reference to the picked files so a failed submit doesn't lose them.
@@ -106,21 +123,29 @@ export default class extends Controller {
   }
 
   #fill(extraction) {
+    // Guard so the change events our own writes emit aren't mistaken for edits.
+    this.isPrefilling = true
     this.#setValue(this.amountTarget, extraction.total_amount)
     this.#setValue(this.amountExclVatTarget, extraction.amount_excl_vat)
     this.#setValue(this.descriptionTarget, extraction.suggested_description)
     this.#setValue(this.referenceTarget, extraction.suggested_payment_reference)
-    if (extraction.suggested_budget_record_id) {
+    if (extraction.suggested_budget_record_id && !this.userEdited.has(this.budgetTarget)) {
       this.budgetTarget.value = extraction.suggested_budget_record_id
     }
-    this.vatItemisedTarget.value = String(extraction.vat_itemised)
-    this.vatWarningTarget.classList.toggle("hidden", extraction.vat_itemised !== false)
+    if (!this.userEdited.has(this.vatItemisedTarget)) {
+      this.vatItemisedTarget.value = String(extraction.vat_itemised)
+      this.vatWarningTarget.classList.toggle("hidden", extraction.vat_itemised !== false)
+    }
+    this.isPrefilling = false
     this.updateCounter()
     this.checkAmount()
   }
 
+  // Skip a field the producer has already corrected — re-extraction must never
+  // clobber their input.
   #setValue(target, value) {
     if (value === null || value === undefined || value === "") return
+    if (this.userEdited.has(target)) return
     target.value = value
     target.dispatchEvent(new Event("change", { bubbles: true }))
   }
