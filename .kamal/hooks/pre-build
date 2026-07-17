@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# Ensure the local buildx builder uses HOST networking, so image builds always
+# resolve DNS through the host's live resolver.
+#
+# Why this exists:
+#   For a remote registry (we push to Docker Hub) Kamal creates its buildx
+#   builder on the isolated `bridge` network. Docker writes that builder
+#   container's /etc/resolv.conf ONCE, at creation time, from the host's uplink
+#   DNS -- and never refreshes it, not even on restart. When this laptop roams
+#   networks or toggles a VPN, the baked-in nameserver goes stale and the build
+#   fails with e.g.
+#     failed to resolve source metadata for docker.io/docker/dockerfile:1:
+#     ... lookup registry-1.docker.io on 10.140.80.38:53: i/o timeout
+#
+#   Host networking sidesteps it: the builder shares the host network namespace
+#   and resolves via systemd-resolved (127.0.0.53), which always reflects the
+#   network we are currently on. (Kamal itself does this automatically, but only
+#   for a *local* registry -- see Kamal::Commands::Builder::Base#driver_options.)
+#
+# This hook runs before Kamal inspects/creates the builder, so once a
+# host-networked builder of the expected name exists, Kamal reuses it as-is and
+# never falls back to a bridge-networked one. Build cache is preserved: the
+# builder is only (re)created when it is missing or not host-networked.
+
+builder="kamal-local-docker-container"
+
+# Detect on the builder's stored Driver Options rather than the buildkit
+# container's live NetworkMode: buildx creates that container lazily on first
+# build, so it may not exist yet, but the `network=host` driver-opt is recorded
+# on the builder definition from the moment it is created.
+recreate=false
+if ! info="$(docker buildx inspect "$builder" 2>/dev/null)"; then
+  recreate=true
+elif ! printf '%s\n' "$info" | grep -q 'network="host"'; then
+  recreate=true
+fi
+
+if [ "$recreate" = true ]; then
+  echo "pre-build: (re)creating buildx builder '$builder' with host networking (stable DNS across network/VPN changes)..."
+  docker buildx rm "$builder" >/dev/null 2>&1 || true
+  docker buildx create --name "$builder" --driver docker-container --driver-opt network=host >/dev/null 2>&1 \
+    || echo "pre-build: warning: could not create host-networked builder; Kamal will create its own" >&2
+fi
+
+exit 0
