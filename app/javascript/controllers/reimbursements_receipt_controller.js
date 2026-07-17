@@ -1,16 +1,53 @@
 import { Controller } from "@hotwired/stimulus"
 import { getMetaValue } from "../helpers"
 
+// A file input can't be re-populated from markup after a failed submit, so a
+// server 422 re-render would lose the receipt the user picked. Hold it in JS
+// instead — module scope survives Turbo's body swap on a 422 render — and
+// restore it via DataTransfer (the one browser-sanctioned way to set
+// input.files). Cleared on a successful submit or a fresh (non-resubmit) form.
+let stashedFiles = null
+
 // Receipt-first expense form: when files are picked, posts them to the
 // extract endpoint and prefills the form fields from the AI's reading.
 // Extraction failing (or JS being off) leaves a perfectly usable manual form.
 export default class extends Controller {
   static targets = ["files", "status", "amount", "amountExclVat", "budget",
-    "description", "reference", "referenceCounter", "vatItemised", "vatWarning"]
-  static values = { extractUrl: String }
+    "description", "reference", "referenceCounter", "vatItemised", "vatWarning", "reattachNotice"]
+  static values = { extractUrl: String, resubmit: Boolean }
 
   connect() {
     this.updateCounter()
+    this.#restoreOrClearStash()
+  }
+
+  // Keep a reference to the picked files so a failed submit doesn't lose them.
+  stash() {
+    if (this.hasFilesTarget && this.filesTarget.files.length) {
+      stashedFiles = this.filesTarget.files
+    }
+  }
+
+  submitEnd(event) {
+    if (event.detail?.success) stashedFiles = null
+  }
+
+  #restoreOrClearStash() {
+    if (!this.hasFilesTarget) return
+    // A fresh form (not a re-render after a validation error) should start
+    // clean — don't resurrect a file from an abandoned earlier attempt.
+    if (!this.resubmitValue) {
+      stashedFiles = null
+      return
+    }
+    if (!stashedFiles || this.filesTarget.files.length) return
+
+    const data = new DataTransfer()
+    for (const file of stashedFiles) data.items.add(file)
+    this.filesTarget.files = data.files
+    // The file survived, so the "please re-attach" fallback no longer applies.
+    if (this.hasReattachNoticeTarget) this.reattachNoticeTarget.classList.add("hidden")
+    this.#setStatus("Kept the receipt you attached — check the errors above and submit again.")
   }
 
   async extract() {

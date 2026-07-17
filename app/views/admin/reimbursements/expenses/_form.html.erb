@@ -12,7 +12,9 @@
 <%= simple_horizontal_form_for form, url: url, method: method,
       html: { multipart: true,
               data: { controller: "reimbursements-receipt",
-                      reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path } } do |f| %>
+                      action: "turbo:submit-end->reimbursements-receipt#submitEnd",
+                      reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path,
+                      reimbursements_receipt_resubmit_value: form.errors.any? } } do |f| %>
 
   <% content_for :override_card_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
@@ -46,6 +48,14 @@
   <%= render('shared/pages/form', f: f) do %>
     <% if show_receipt_input %>
       <div class="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
+        <%# With JS, the controller re-attaches the file the user picked and
+            hides this. This is the no-JS / no-file-attached fallback. %>
+        <% if form.errors.any? %>
+          <p class="mb-2 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
+             data-reimbursements-receipt-target="reattachNotice">
+            Please re-attach your receipt below — check the errors above, then submit again.
+          </p>
+        <% end %>
         <p class="mb-2 text-sm text-gray-600">
           Upload the receipt first and we'll read it and prefill the form for you.
           PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
@@ -56,7 +66,7 @@
               input_html: { multiple: true,
                             accept: Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(","),
                             data: { reimbursements_receipt_target: "files",
-                                    action: "change->reimbursements-receipt#extract" } } %>
+                                    action: "change->reimbursements-receipt#extract change->reimbursements-receipt#stash" } } %>
         <p class="mt-1 text-sm text-gray-600" aria-live="polite"
            data-reimbursements-receipt-target="status"></p>
       </div>
