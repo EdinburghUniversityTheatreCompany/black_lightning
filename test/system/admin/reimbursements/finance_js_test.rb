@@ -53,19 +53,19 @@ module Admin
 
         visit admin_reimbursements_expense_edits_path
 
-        trigger = find("button[aria-controls='reasons-edits-recExp1']")
+        trigger = find("button[aria-controls='reasons-edits-adv-recExp1']")
         assert_equal "false", trigger["aria-expanded"], "popover starts collapsed"
-        assert_no_selector "#reasons-edits-recExp1" # panel hidden (Capybara ignores hidden by default)
+        assert_no_selector "#reasons-edits-adv-recExp1" # panel hidden (Capybara ignores hidden by default)
 
         trigger.click
         assert_equal "true", trigger["aria-expanded"]
-        assert_selector "#reasons-edits-recExp1", visible: true
-        within("#reasons-edits-recExp1") { assert_text "no receipt" }
+        assert_selector "#reasons-edits-adv-recExp1", visible: true
+        within("#reasons-edits-adv-recExp1") { assert_text "no receipt" }
 
         # Escape closes it and returns focus to the trigger.
         trigger.send_keys(:escape)
         assert_equal "false", trigger["aria-expanded"]
-        assert_no_selector "#reasons-edits-recExp1"
+        assert_no_selector "#reasons-edits-adv-recExp1"
       end
 
       # (a2) Clicking anywhere outside the popover closes it too, not just Escape.
@@ -74,15 +74,15 @@ module Admin
 
         visit admin_reimbursements_expense_edits_path
 
-        trigger = find("button[aria-controls='reasons-edits-recExp1']")
+        trigger = find("button[aria-controls='reasons-edits-adv-recExp1']")
         trigger.click
         assert_equal "true", trigger["aria-expanded"]
-        assert_selector "#reasons-edits-recExp1", visible: true
+        assert_selector "#reasons-edits-adv-recExp1", visible: true
 
         find("body").click(x: 5, y: 5) # anywhere outside the trigger/panel
 
         assert_equal "false", trigger["aria-expanded"]
-        assert_no_selector "#reasons-edits-recExp1"
+        assert_no_selector "#reasons-edits-adv-recExp1"
       end
 
       # (b) The Fancybox lightbox opens on a receipt thumbnail.

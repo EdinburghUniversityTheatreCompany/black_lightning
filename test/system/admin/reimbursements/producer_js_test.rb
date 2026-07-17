@@ -41,8 +41,12 @@ module Admin
                     Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf")
         fill_in "Amount (£, incl. VAT)", with: "10.00"
         fill_in "Amount excl. VAT (£)", with: "8.00"
-        # Budget left blank -> passes HTML5 required, fails server-side, so the
-        # form re-renders (the case where the file would otherwise be lost).
+        # Fill the other HTML5-required fields so Submit reaches the server;
+        # leave only Budget blank (it's star-only client-side but required
+        # server-side), so the submit fails server-side and the form re-renders
+        # -- the case where the attached file would otherwise be lost.
+        fill_in "Description", with: "Fake blood for the show"
+        fill_in "Payment reference", with: "PROPS TEST"
         click_on "Submit expense"
 
         assert_text "Kept the receipt you attached", wait: 5
