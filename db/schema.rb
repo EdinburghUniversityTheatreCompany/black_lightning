@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_09_140000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -636,6 +636,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_140000) do
     t.index ["gallery_type"], name: "index_pictures_on_gallery_type"
   end
 
+  create_table "reimbursements_batch_attempts", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.date "bacs_date"
+    t.string "batch_record_id"
+    t.bigint "cost_centre_id", null: false
+    t.datetime "created_at", null: false
+    t.text "error_messages"
+    t.string "status", default: "building", null: false
+    t.string "triggered_by_email"
+    t.datetime "updated_at", null: false
+    t.index ["cost_centre_id", "status"], name: "idx_on_cost_centre_id_status_4ce6fe61ad"
+    t.index ["cost_centre_id"], name: "index_reimbursements_batch_attempts_on_cost_centre_id"
+  end
+
+  create_table "reimbursements_cost_centres", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "eusa_code", null: false
+    t.string "eusa_recipient"
+    t.string "eusa_signature_name"
+    t.string "key", null: false
+    t.date "last_nightly_run_on"
+    t.string "name", null: false
+    t.string "nightly_run_days", default: "[2,4]", null: false
+    t.string "receive_mailbox", null: false
+    t.string "send_mailbox", null: false
+    t.string "sharepoint_bacs_drive_id"
+    t.string "sharepoint_bacs_folder_id"
+    t.string "sharepoint_receipts_drive_id"
+    t.string "sharepoint_receipts_folder_id"
+    t.string "sharepoint_site_url"
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_reimbursements_cost_centres_on_key", unique: true
+  end
+
+  create_table "reimbursements_owner_endorsements", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "budget_record_id", null: false
+    t.datetime "created_at", null: false
+    t.decimal "endorsed_amount", precision: 12, scale: 2
+    t.datetime "endorsed_at", null: false
+    t.string "endorsed_by_person_id"
+    t.string "expense_record_id", null: false
+    t.string "note"
+    t.integer "overridden_by_id"
+    t.datetime "updated_at", null: false
+    t.index ["expense_record_id"], name: "index_reimbursements_owner_endorsements_on_expense_record_id", unique: true
+    t.index ["overridden_by_id"], name: "index_reimbursements_owner_endorsements_on_overridden_by_id"
+  end
+
   create_table "reviews", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "body", size: :medium
     t.datetime "created_at", precision: nil, null: false
@@ -915,6 +962,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_09_140000) do
   add_foreign_key "opportunities", "companies"
   add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
+  add_foreign_key "reimbursements_batch_attempts", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_owner_endorsements", "users", column: "overridden_by_id"
   add_foreign_key "roles_parents", "roles"
   add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

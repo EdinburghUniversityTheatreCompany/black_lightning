@@ -1,0 +1,76 @@
+<p class="mb-3 text-gray-600">
+  Every budget category from Airtable with its live financials. Initial, current forecast,
+  committed and total paid feed remaining and variance. Those five are Airtable rollups,
+  shown read-only here. Edit a budget to change its name, nominal code, owners, notes,
+  initial figure and whether submitters can see it, or to log a projected-spend update.
+</p>
+
+<p class="mb-2 text-sm text-gray-600"><%= pluralize(@budgets.total_count, "budget") %></p>
+
+<% if @budgets.total_count.zero? %>
+  <%= render CardComponent.new(title: @title) do %>
+    <p class="py-4 text-center text-gray-600">No budgets found.</p>
+  <% end %>
+<% else %>
+  <% headers = [ "Budget", "Type", "Visible", "Initial", "Current forecast", "Committed",
+                 "Total paid", "Remaining", "Variance", "Owners", "" ] %>
+  <% field_sets = @budgets.map do |budget|
+       over_flag = if budget.over_budget?
+                     render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget"))
+                   elsif budget.over_initial_budget?
+                     render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget"))
+                   end
+       name = safe_join([
+         content_tag(:span, budget.name.presence || "-", class: "font-medium"),
+         (content_tag(:span, " · #{budget.nominal_code}", class: "text-gray-500") if budget.nominal_code.present?),
+         over_flag
+       ].compact, " ")
+       # "No owner" is a warning only for a live (Visible) budget — Hidden
+       # overhead lines (payroll, NI, contracts) will never have a producer
+       # owner, so flagging them all just drowns the signal on the show
+       # budgets that genuinely need chasing.
+       owners = budget_owner_names(budget, @people_by_id).presence ||
+                (if budget.active
+                   render(BadgeComponent.new(type: :warning, pill: true).with_content("No owner"))
+                 else
+                   content_tag(:span, "—", class: "text-gray-400")
+                 end)
+       visible = if budget.active
+                   render(BadgeComponent.new(type: :success, pill: true).with_content("Visible"))
+                 else
+                   render(BadgeComponent.new(type: :secondary, pill: true).with_content("Hidden"))
+                 end
+       # Variance = forecast vs initial: POSITIVE means the forecast grew past
+       # the original plan (the concerning direction) -> red; negative means it
+       # shrank (spending less than planned) -> green. Remaining is the money
+       # actually left, so a negative one is red.
+       variance_class = if budget.variance.nil? || budget.variance.zero? then nil
+                        elsif budget.variance.positive? then "text-danger"
+                        else "text-success"
+                        end
+       variance_title = if budget.variance&.positive? then "Forecast is above the initial budget"
+                        elsif budget.variance&.negative? then "Forecast is below the initial budget"
+                        end
+       remaining_class = "text-danger font-medium" if budget.remaining&.negative?
+       edit = link_to("Edit", edit_admin_reimbursements_budget_path(budget.record_id),
+                      "aria-label": "Edit #{budget.name}", class: btn_classes(:secondary, :sm))
+       {
+         fields: [
+           budget, name, budget.budget_type, visible,
+           reimbursements_money(budget.initial_budget),
+           reimbursements_money(budget.current_forecast),
+           reimbursements_money(budget.committed_amount),
+           reimbursements_money(budget.total_paid),
+           content_tag(:span, reimbursements_money(budget.remaining), class: remaining_class,
+                       title: ("Over budget — nothing left to spend" if budget.remaining&.negative?)),
+           content_tag(:span, reimbursements_money(budget.variance), class: variance_class, title: variance_title),
+           owners,
+           edit
+         ]
+       }
+     end %>
+  <%= render "shared/pages/index_results",
+        resources: @budgets, resource_class: ::Reimbursements::Budget,
+        headers: headers, field_sets: field_sets,
+        include_edit_button: false, include_link_to_item: false, include_pagination: true %>
+<% end %>

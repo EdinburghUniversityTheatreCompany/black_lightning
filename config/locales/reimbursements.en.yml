@@ -1,0 +1,23 @@
+# Human-facing attribute names + messages for the reimbursements ActiveModel
+# forms, so validation errors read in the user's terms ("Budget", "Amount
+# excl. VAT") instead of leaking humanized internal attribute names ("Budget
+# record", "Amount excl vat", "Vat acknowledged").
+en:
+  activemodel:
+    # Match the rest of the app's activerecord customisation (errors.en.yml).
+    errors:
+      messages:
+        blank: "must not be blank."
+    attributes:
+      reimbursements/expense_form:
+        budget_record_id: "Budget"
+        amount: "Amount"
+        amount_excl_vat: "Amount excl. VAT"
+        description: "Description"
+        payment_reference: "Payment reference"
+        vat_acknowledged: "VAT acknowledgement"
+        large_amount_acknowledged: "Amount confirmation"
+        payee_name_override: "Payee account name"
+        sort_code_override: "Payee sort code"
+        account_number_override: "Payee account number"
+        receipts: "Receipt"

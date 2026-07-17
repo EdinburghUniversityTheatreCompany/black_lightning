@@ -1,28 +1,64 @@
-<%# locals: (form:, budgets:, url:, method:, submit_label:, show_receipt_input: true) %>
+<%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil) %>
 <%# Receipt-first expense form. The Stimulus controller posts the receipt to
     the extract endpoint and prefills the fields; everything still works with
     JavaScript disabled (plain manual form). %>
+<%# The primary/secondary buttons and the line beneath them adapt to what the
+    submit actually DOES, which depends on the claim's current status:
+      - new / editing a Draft: primary submits to finance, secondary keeps it a
+        private draft.
+      - editing a Pending claim: primary re-saves it in the queue, secondary
+        WITHDRAWS it back to a draft (out of the queue) — so that one confirms. %>
+<% editing_pending = current_status == Reimbursements::Status::PENDING %>
 <%= simple_horizontal_form_for form, url: url, method: method,
       html: { multipart: true,
               data: { controller: "reimbursements-receipt",
-                      reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path } } do |f| %>
+                      action: "turbo:submit-end->reimbursements-receipt#submitEnd",
+                      reimbursements_receipt_extract_url_value: extract_admin_reimbursements_expenses_path,
+                      reimbursements_receipt_resubmit_value: form.errors.any?,
+                      reimbursements_receipt_large_amount_threshold_value:
+                        Reimbursements::ExpenseForm::LARGE_AMOUNT_THRESHOLD.to_i } } do |f| %>
 
   <% content_for :override_card_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
-      <%= f.button :submit, submit_label, class: btn_classes(:primary) %>
-      <%= button_tag "Save as draft", type: :submit, class: btn_classes(:secondary),
-            name: "reimbursements_expense_form[save_as_draft]", value: "1",
-            formnovalidate: true %>
+      <% if editing_pending %>
+        <%= f.button :submit, "Save changes", class: btn_classes(:primary) %>
+        <%= button_tag "Withdraw back to draft", type: :submit, class: btn_classes(:secondary),
+              name: "reimbursements_expense_form[save_as_draft]", value: "1", formnovalidate: true,
+              data: { turbo_confirm: "This takes your claim out of the finance team's queue. " \
+                                     "It won't be reviewed or paid until you submit it again. Continue?" } %>
+      <% else %>
+        <%= f.button :submit, "Submit expense", class: btn_classes(:primary) %>
+        <%= button_tag "Save as draft", type: :submit, class: btn_classes(:secondary),
+              name: "reimbursements_expense_form[save_as_draft]", value: "1", formnovalidate: true %>
+      <% end %>
       <%= link_to "Cancel", admin_reimbursements_expenses_path, class: btn_classes(:secondary) %>
     </div>
     <p class="mt-2 mb-0 text-sm text-gray-500">
-      Drafts are only visible to you. The finance team sees the claim once you submit it.
+      <% if editing_pending %>
+        This claim is with the finance team. <strong>Save changes</strong> keeps it in the review
+        queue; <strong>Withdraw back to draft</strong> takes it out until you submit it again.
+      <% elsif current_status == Reimbursements::Status::DRAFT %>
+        This claim is a draft — only you can see it. <strong>Submit expense</strong> sends it to the
+        finance team for review; <strong>Save as draft</strong> keeps it private.
+      <% else %>
+        <strong>Submit expense</strong> sends it to the finance team for review.
+        <strong>Save as draft</strong> keeps it private to you until you're ready.
+      <% end %>
     </p>
   <% end %>
 
   <%= render('shared/pages/form', f: f) do %>
     <% if show_receipt_input %>
       <div class="mb-4 rounded border border-gray-200 bg-gray-50 p-3">
+        <%# With JS, the controller re-attaches the file the user picked and
+            hides this. This is the no-JS / no-file-attached fallback. %>
+        <% if form.errors.any? %>
+          <p class="mb-2 rounded border border-warning/40 bg-warning/10 p-2 text-sm text-warning"
+             role="status" aria-live="polite"
+             data-reimbursements-receipt-target="reattachNotice">
+            Please re-attach your receipt below — check the errors above, then submit again.
+          </p>
+        <% end %>
         <p class="mb-2 text-sm text-gray-600">
           Upload the receipt first and we'll read it and prefill the form for you.
           PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
@@ -33,7 +69,7 @@
               input_html: { multiple: true,
                             accept: Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(","),
                             data: { reimbursements_receipt_target: "files",
-                                    action: "change->reimbursements-receipt#extract" } } %>
+                                    action: "change->reimbursements-receipt#extract change->reimbursements-receipt#stash" } } %>
         <p class="mt-1 text-sm text-gray-600" aria-live="polite"
            data-reimbursements-receipt-target="status"></p>
       </div>
@@ -45,12 +81,27 @@
 
     <%= f.input :amount, label: "Amount (£, incl. VAT)",
           hint: "What actually left your account, or the invoice total.", required: true,
-          input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amount" } } %>
+          input_html: { inputmode: "decimal",
+                        data: { reimbursements_receipt_target: "amount",
+                                action: "input->reimbursements-receipt#checkAmount" } } %>
+
+    <%# Soft-block a large claim (a mistyped amount would otherwise skew a
+        budget). Shown when the amount is already large or the ack failed;
+        the amount input toggles it live via checkAmount. %>
+    <div data-reimbursements-receipt-target="largeAmountWarning" role="status" aria-live="polite"
+         class="<%= 'hidden' unless form.errors[:large_amount_acknowledged].any? || form.large_amount? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
+      <p class="mb-1 text-sm">
+        That's a large claim. Please double-check the amount is right — a common slip is
+        typing pence as pounds (e.g. 4999 instead of 49.99).
+      </p>
+      <%= f.input :large_amount_acknowledged, as: :boolean,
+            label: "Yes, this amount is correct." %>
+    </div>
     <%= f.input :amount_excl_vat, label: "Amount excl. VAT (£)",
           hint: "From the receipt. Only this comes out of your budget; equal to the total when no VAT is shown.", required: true,
           input_html: { inputmode: "decimal", data: { reimbursements_receipt_target: "amountExclVat" } } %>
 
-    <div data-reimbursements-receipt-target="vatWarning"
+    <div data-reimbursements-receipt-target="vatWarning" role="status" aria-live="polite"
          class="<%= 'hidden' unless form.errors[:vat_acknowledged].any? || form.vat_missing? %> mb-3 rounded border border-warning/40 bg-warning/10 p-3">
       <p class="mb-1 text-sm">
         This receipt doesn't itemise VAT, so we have to deduct the
@@ -62,36 +113,48 @@
     </div>
     <%= f.hidden_field :vat_itemised, data: { reimbursements_receipt_target: "vatItemised" } %>
 
-    <%= f.input :budget_record_id, label: "Budget",
+    <%# Required to SUBMIT but optional for a draft. Show the required star so
+        the star set matches what submit needs (they were unstarred, so a
+        rushed user filled only the starred fields and hit surprise errors),
+        but leave client-side enforcement off (input_html required: false) so
+        the "Save as draft" path and server-side validation keep working. %>
+    <%= f.input :budget_record_id, label: "Budget", required: true,
           collection: budgets.map { |b| [ b.name, b.record_id ] },
           include_blank: "Choose a budget…",
           hint: "Not sure? Pick the closest and mention it in the description.",
-          input_html: { data: { reimbursements_receipt_target: "budget" } } %>
+          input_html: { required: false, data: { reimbursements_receipt_target: "budget" } } %>
 
-    <%= f.input :description, label: "Description", hint: "What's it for?",
-          input_html: { data: { reimbursements_receipt_target: "description" } } %>
+    <%= f.input :description, label: "Description", hint: "What's it for?", required: true,
+          input_html: { required: false, data: { reimbursements_receipt_target: "description" } } %>
 
-    <%= f.input :payment_reference, label: "Payment reference",
+    <%= f.input :payment_reference, label: "Payment reference", required: true,
           hint: "What EUSA puts on the bank transfer. Invoices usually specify one; otherwise the invoice number or a short label.",
-          input_html: { maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
+          input_html: { required: false, maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
                         data: { reimbursements_receipt_target: "reference",
                                 action: "input->reimbursements-receipt#updateCounter" } } %>
     <p class="mb-3 text-sm text-gray-500">
       <span data-reimbursements-receipt-target="referenceCounter"></span>
     </p>
 
-    <% overrides_open = form.payee_name_override.present? || form.errors[:sort_code_override].any? || form.errors[:account_number_override].any? %>
-    <%= tag.details class: "mb-3", open: overrides_open do %>
-      <summary class="cursor-pointer font-medium">Paying an invoice to someone else's account?</summary>
-      <div class="mt-2 rounded border border-gray-200 p-3">
-        <p class="mb-2 text-sm text-gray-600">
-          Fill this out only when EUSA should pay a third party directly (e.g. an invoice).
-          Leave blank to be reimbursed yourself.
-        </p>
-        <%= f.input :payee_name_override, label: "Payee account name" %>
-        <%= f.input :sort_code_override, label: "Payee sort code" %>
-        <%= f.input :account_number_override, label: "Payee account number" %>
-      </div>
-    <% end %>
+    <%# Always shown (not a collapsible): tucked in an accordion, whether a
+        third-party payee was filled in was invisible at a glance — a
+        money-path detail that should be obvious. The heading colours to
+        signal when it's in use. %>
+    <% overrides_filled = form.payee_name_override.present? || form.sort_code_override.present? || form.account_number_override.present? %>
+    <div class="mb-3 rounded border <%= overrides_filled ? 'border-warning/50 bg-warning/5' : 'border-gray-200' %> p-3">
+      <p class="mb-1 font-medium">
+        Pay someone else (optional)
+        <% if overrides_filled %>
+          <%= render BadgeComponent.new(type: :warning, pill: true).with_content("In use") %>
+        <% end %>
+      </p>
+      <p class="mb-2 text-sm text-gray-600">
+        Fill this out only when EUSA should pay a third party directly (e.g. an invoice).
+        Leave all three blank to be reimbursed yourself.
+      </p>
+      <%= f.input :payee_name_override, label: "Payee account name" %>
+      <%= f.input :sort_code_override, label: "Payee sort code" %>
+      <%= f.input :account_number_override, label: "Payee account number" %>
+    </div>
   <% end %>
 <% end %>

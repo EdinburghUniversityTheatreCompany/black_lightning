@@ -1,0 +1,32 @@
+<%#
+  The AI badge plus the pass / fail / error / note explanation for one expense.
+  Shared by the Review card's live-broadcast wrapper (_ai_verdict) and the
+  finance edit page, so the reason an expense was flagged stays visible after
+  it leaves the Review queue (Submitted/Paid), not just a bare red pill.
+  Local: expense.
+%>
+<% if expense.ai_check_status.present? %>
+  <div class="flex flex-col gap-2">
+    <div><%= reimbursements_ai_badge(expense) %></div>
+    <% case expense.ai_check_status %>
+    <% when "pass" %>
+      <% if expense.ai_comment.present? %>
+        <%# A pass WITH a note (often a better-budget suggestion) is easy to
+            scroll past in a plain green box — give it an amber "note" accent. %>
+        <%= render AlertComponent.new(type: :warning) do %>
+          AI note (passed, but worth a look): <%= expense.ai_comment %>
+        <% end %>
+      <% else %>
+        <%= render AlertComponent.new(type: :success) do %>AI check passed.<% end %>
+      <% end %>
+    <% when "fail" %>
+      <%= render AlertComponent.new(type: :warning) do %>
+        AI check flagged this: <%= expense.ai_comment.presence || "see the receipt." %>
+      <% end %>
+    <% when "error" %>
+      <%= render AlertComponent.new(type: :info) do %>
+        AI check could not run: <%= expense.ai_comment %>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

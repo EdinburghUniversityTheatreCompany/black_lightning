@@ -79,6 +79,170 @@ module Reimbursements
         f = FIELD_IDS[:people]
         assert_equal({ f[:name] => "Pat", f[:email] => "pat@example.com", f[:sort_code] => "112233" }, payload)
       end
+
+      # --- operator field reads ------------------------------------------
+
+      test "maps budget remaining and initial budget" do
+        f = FIELD_IDS[:budgets]
+        record = airtable_budget_record
+        record["fields"][f[:initial_budget]] = 1000.0
+        record["fields"][f[:remaining]] = 250.5
+        budget = mapper.budget(record)
+        assert_equal BigDecimal("1000.0"), budget.initial_budget
+        assert_equal BigDecimal("250.5"), budget.remaining
+      end
+
+      test "maps budget owner, notes and rollup financials" do
+        f = FIELD_IDS[:budgets]
+        record = airtable_budget_record(
+          owner_ids: [ "recPer1", "recPer2" ], notes: "Watch this one",
+          current_forecast: 1200.0, committed_amount: 300.25,
+          total_paid: 150.0, variance: -50.5, budget_forecast_ids: [ "recFc1" ]
+        )
+        budget = mapper.budget(record)
+
+        assert_equal [ "recPer1", "recPer2" ], budget.owner_ids
+        assert_equal "Watch this one", budget.notes
+        assert_equal BigDecimal("1200.0"), budget.current_forecast
+        assert_equal BigDecimal("300.25"), budget.committed_amount
+        assert_equal BigDecimal("150.0"), budget.total_paid
+        assert_equal BigDecimal("-50.5"), budget.variance
+      end
+
+      test "budget owner and financials default gracefully when absent" do
+        budget = mapper.budget(airtable_budget_record)
+        assert_equal [], budget.owner_ids
+        assert_equal "", budget.notes
+        assert_nil budget.current_forecast
+        assert_nil budget.variance
+      end
+
+      test "maps a budget forecast record" do
+        forecast = mapper.budget_forecast(
+          airtable_budget_forecast_record(budget_id: "recBud1", amount: 500.0,
+                                          date: "2026-05-01", reason: "Initial projection",
+                                          name: "Props #1")
+        )
+        assert_equal "recFc1", forecast.record_id
+        assert_equal "recBud1", forecast.budget_id
+        assert_equal BigDecimal("500.0"), forecast.amount
+        assert_equal Date.new(2026, 5, 1), forecast.date
+        assert_equal "Initial projection", forecast.reason
+        assert_equal "Props #1", forecast.name
+      end
+
+      test "builds a budget field payload keyed by field id" do
+        f = FIELD_IDS[:budgets]
+        payload = mapper.budget_fields(
+          name: "Set", nominal_code: "4100", notes: "n", initial_budget: BigDecimal("2500.00"),
+          budget_type: "Expense", active: true, owner_ids: [ "recPer1" ], remaining: nil
+        )
+        assert_equal "Set", payload[f[:name]]
+        assert_equal "4100", payload[f[:nominal_code]]
+        assert_equal "n", payload[f[:notes]]
+        assert_in_delta 2500.0, payload[f[:initial_budget]]
+        assert_equal "Expense", payload[f[:budget_type]]
+        assert payload[f[:active]]
+        assert_equal [ "recPer1" ], payload[f[:owner]]
+        assert_not payload.key?(f[:remaining]), "nil attrs must be omitted"
+      end
+
+      test "builds a budget forecast field payload with link, float and iso date" do
+        f = FIELD_IDS[:budget_forecasts]
+        payload = mapper.budget_forecast_fields(
+          budget_id: "recBud9", amount: BigDecimal("750.00"),
+          date: Date.new(2026, 6, 1), reason: "Revised up"
+        )
+        assert_equal [ "recBud9" ], payload[f[:budget]]
+        assert_in_delta 750.0, payload[f[:amount]]
+        assert_equal "2026-06-01", payload[f[:date]]
+        assert_equal "Revised up", payload[f[:reason]]
+      end
+
+      test "maps operator expense fields" do
+        f = FIELD_IDS[:expenses]
+        record = airtable_expense_record(overrides: {
+          f[:nominal_code_override] => "9999",
+          f[:submitted_to_eusa_date] => "2026-05-13",
+          f[:payment_confirmed_date] => "2026-05-20",
+          f[:batch] => [ "recBat1" ],
+          f[:producer_notified] => true,
+          f[:receipts_offloaded] => true,
+          f[:sharepoint_receipt_urls] => "https://sp/a.pdf\nhttps://sp/b.pdf",
+          f[:ai_check_status] => "Pass", f[:ai_comment] => "Looks fine",
+          f[:ai_checked_at] => "2026-05-01T09:00:00Z"
+        })
+        expense = mapper.expense(record, people_by_id: {}, budgets_by_id: {})
+
+        assert_equal "9999", expense.nominal_code_override
+        assert_equal Date.new(2026, 5, 13), expense.submitted_to_eusa_date
+        assert_equal Date.new(2026, 5, 20), expense.payment_confirmed_date
+        assert_equal "recBat1", expense.batch_id
+        assert expense.producer_notified
+        assert expense.receipts_offloaded
+        assert_equal [ "https://sp/a.pdf", "https://sp/b.pdf" ], expense.sharepoint_receipt_urls
+        assert_equal "Pass", expense.ai_check_status
+        assert_equal "Looks fine", expense.ai_comment
+        assert_not_nil expense.ai_checked_at
+      end
+
+      test "maps a batch record" do
+        batch = mapper.batch(airtable_batch_record(eusa_draft_created: true, sharepoint_backup_url: "https://sp/b"))
+        assert_equal "recBat1", batch.record_id
+        assert_equal "BACS 2026-05-13", batch.name
+        assert_equal Date.new(2026, 5, 13), batch.date_sent
+        assert batch.eusa_draft_created
+        assert_equal "https://sp/b", batch.sharepoint_backup_url
+      end
+
+      test "batch draft_message_id round-trips through read and write" do
+        f = FIELD_IDS[:batches]
+        record = airtable_batch_record(draft_message_id: "AAMkAGdraft==")
+        assert_equal "AAMkAGdraft==", mapper.batch(record).draft_message_id
+
+        payload = mapper.batch_fields(draft_message_id: "AAMkAGdraft==")
+        assert_equal "AAMkAGdraft==", payload[f[:draft_message_id]]
+      end
+
+      test "maps a eusa actual record and its dedup key" do
+        actual = mapper.eusa_actual(airtable_eusa_actual_record(linked_expense: [ "recExp1" ]))
+        assert_equal "439999", actual.nominal_code
+        assert_equal "F40", actual.cost_centre
+        assert_equal BigDecimal("123.45"), actual.debit
+        assert_equal [ "recExp1" ], actual.linked_expense_ids
+        assert_equal Date.new(2026, 5, 13), actual.date
+        assert_equal Reconciliation.actuals_row_dedup_key("439999", "Alice Producer", BigDecimal("123.45"), nil),
+          actual.dedup_key
+      end
+
+      # --- operator write transforms -------------------------------------
+
+      test "expense field payload transforms operator write fields" do
+        f = FIELD_IDS[:expenses]
+        payload = mapper.expense_fields(
+          status: "Submitted", batch_id: "recBat9",
+          submitted_to_eusa_date: Date.new(2026, 5, 13),
+          sharepoint_receipt_urls: [ "https://sp/a.pdf", "https://sp/b.pdf" ],
+          ai_checked_at: Time.utc(2026, 5, 1, 9, 0, 0)
+        )
+        assert_equal "Submitted", payload[f[:status]]
+        assert_equal [ "recBat9" ], payload[f[:batch]]
+        assert_equal "2026-05-13", payload[f[:submitted_to_eusa_date]]
+        assert_equal "https://sp/a.pdf\nhttps://sp/b.pdf", payload[f[:sharepoint_receipt_urls]]
+        assert_equal "2026-05-01T09:00:00Z", payload[f[:ai_checked_at]]
+      end
+
+      test "builds a batch field payload keyed by field id with an iso date" do
+        f = FIELD_IDS[:batches]
+        payload = mapper.batch_fields(date_sent: Date.new(2026, 5, 13), notes: "SP: url",
+                                      eusa_draft_created: true, sharepoint_backup_url: "https://sp/x",
+                                      producer_notifications_sent: nil)
+        assert_equal "2026-05-13", payload[f[:date_sent]]
+        assert_equal "SP: url", payload[f[:notes]]
+        assert payload[f[:eusa_draft_created]]
+        assert_equal "https://sp/x", payload[f[:sharepoint_backup_url]]
+        assert_not payload.key?(f[:producer_notifications_sent]), "nil values are dropped"
+      end
     end
   end
 end

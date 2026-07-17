@@ -17,6 +17,12 @@ module Reimbursements
     PEOPLE_TTL = 1.hour
     BUDGETS_KEY = "reimbursements/budgets".freeze
     BUDGETS_TTL = 1.hour
+    EUSA_ACTUALS_KEY = "reimbursements/eusa_actuals".freeze
+    EUSA_ACTUALS_TTL = 10.minutes
+    BATCHES_KEY = "reimbursements/batches".freeze
+    BATCHES_TTL = 1.hour
+    BUDGET_FORECASTS_KEY = "reimbursements/budget_forecasts".freeze
+    BUDGET_FORECASTS_TTL = 10.minutes
     BACKUP_TTL = 7.days
 
     # Raised instead of rewriting an expense's attachment field to empty.
@@ -77,14 +83,86 @@ module Reimbursements
       budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
     end
 
+    def find_budget(record_id)
+      budgets.find { |b| b.record_id == record_id }
+    end
+
+    # Finance edit of a budget (name, nominal code, notes, initial budget,
+    # budget type, visible-to-submitters, owner links). Busts the budgets cache
+    # so the next read reflects the change.
+    def update_budget!(record_id, attrs)
+      record = @client.update_record(:budgets, record_id, @mapper.budget_fields(attrs))
+      bust_budgets!
+      @mapper.budget(record)
+    end
+
+    # A budget's forecast history (versioned projected-spend updates), newest
+    # date first.
+    def budget_forecasts(budget_id)
+      return [] if budget_id.blank?
+
+      all_budget_forecasts.select { |f| f.budget_id == budget_id }
+                          .sort_by { |f| f.date || Date.new(0) }
+                          .reverse
+    end
+
+    # Appends a projected-spend update to a budget. Busts the forecasts cache
+    # and the budgets cache — the latter because the Budgets table rolls the
+    # latest forecast up into +current_forecast+.
+    def create_forecast!(budget_id:, amount:, date:, reason:)
+      record = @client.create_record(
+        :budget_forecasts,
+        @mapper.budget_forecast_fields(budget_id: budget_id, amount: amount, date: date, reason: reason)
+      )
+      bust_budget_forecasts!
+      bust_budgets!
+      @mapper.budget_forecast(record)
+    end
+
+    # Correct a logged forecast in place (a mistyped amount/date/reason). The
+    # budget link is left untouched. Busts both caches, like create — the
+    # Budgets table rolls the latest forecast up into +current_forecast+.
+    def update_forecast!(record_id, amount:, date:, reason:)
+      record = @client.update_record(
+        :budget_forecasts, record_id,
+        @mapper.budget_forecast_fields(amount: amount, date: date, reason: reason)
+      )
+      bust_budget_forecasts!
+      bust_budgets!
+      @mapper.budget_forecast(record)
+    end
+
+    # Remove a forecast logged in error. Busts both caches, since dropping the
+    # latest forecast changes the budget's rolled-up current forecast.
+    def delete_forecast!(record_id)
+      @client.delete_record(:budget_forecasts, record_id)
+      bust_budget_forecasts!
+      bust_budgets!
+    end
+
     def create_expense!(attrs)
       record = @client.create_record(:expenses, @mapper.expense_fields(attrs))
       bust_expenses!
       map_single_expense(record)
     end
 
+    # Hard-delete an expense record. Only used for a producer discarding their
+    # own draft — the caller is responsible for gating on status.
+    def delete_expense!(record_id)
+      @client.delete_record(:expenses, record_id)
+      bust_expenses!
+    end
+
     def update_expense!(record_id, attrs)
-      record = @client.update_record(:expenses, record_id, @mapper.expense_fields(attrs))
+      fields = @mapper.expense_fields(attrs)
+      # expense_fields' attrs.compact drops a nil/blank budget_record_id (a
+      # blank submission on the finance edit forms, meaning "clear the
+      # budget") before it ever reaches the mapper's case statement — so an
+      # explicit clear here is the only way the link field is actually
+      # removable, not just settable, once set (same pattern
+      # revert_expense_to_approved! already uses for the batch link).
+      fields[@config.fid(:expenses, :budget)] = [] if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
+      record = @client.update_record(:expenses, record_id, fields)
       bust_expenses!
       map_single_expense(record)
     end
@@ -111,6 +189,59 @@ module Reimbursements
       bust_expenses!
     end
 
+    # Reverts a submitted expense to Approved, unlinking it from its batch:
+    # clears the batch link, the submitted date, and the receipt-offload
+    # bookkeeping so it re-enters Build Batch cleanly. Deliberately leaves
+    # +producer_notified+ untouched so a rebuild won't re-email the producer.
+    # Ported from bedlam-bacs revert_expense_to_approved. Nil/empty clears are
+    # sent explicitly (they bypass expense_fields' nil-compaction).
+    def revert_expense_to_approved!(record_id)
+      fields = @mapper.expense_fields(status: Status::APPROVED, receipts_offloaded: false,
+                                      sharepoint_receipt_urls: "")
+      fields[@config.fid(:expenses, :batch)] = [] # empty list clears the linked-record field
+      fields[@config.fid(:expenses, :submitted_to_eusa_date)] = nil
+      @client.update_record(:expenses, record_id, fields)
+      bust_expenses!
+    end
+
+    def batches
+      @batches ||= fetch_list(BATCHES_KEY, BATCHES_TTL, :batches).map { |r| @mapper.batch(r) }
+    end
+
+    def find_batch(record_id)
+      batches.find { |b| b.record_id == record_id }
+    end
+
+    # Direct, uncached lookup by the batch's stored EUSA draft message id —
+    # used to detect an already-created Batch before retrying a create that
+    # raised ambiguously (the write may have succeeded server-side; only the
+    # response was lost). A stale cached list would defeat the point of this
+    # check, so it bypasses +batches+/+fetch_list+ entirely.
+    def find_batch_by_draft_message_id(message_id)
+      return nil if message_id.blank?
+
+      found = @client.list_records(:batches).map { |r| @mapper.batch(r) }.find { |b| b.draft_message_id == message_id }
+      bust_batches! if found # a reused batch bypassed create_batch!'s own bust
+      found
+    end
+
+    def create_batch!(attrs)
+      record = @client.create_record(:batches, @mapper.batch_fields(attrs))
+      bust_batches!
+      @mapper.batch(record)
+    end
+
+    def update_batch!(record_id, attrs)
+      record = @client.update_record(:batches, record_id, @mapper.batch_fields(attrs))
+      bust_batches!
+      @mapper.batch(record)
+    end
+
+    def delete_batch!(record_id)
+      @client.delete_record(:batches, record_id)
+      bust_batches!
+    end
+
     def create_person!(name:, email:)
       record = @client.create_record(:people, @mapper.person_fields(name: name, email: email))
       bust_people!
@@ -129,11 +260,73 @@ module Reimbursements
     end
     alias refresh_expenses! bust_expenses!
 
+    # --- EUSA Actuals (reconciliation) ------------------------------------
+
+    # Every EUSA Actuals row already imported, mapped to POROs.
+    def eusa_actuals
+      @eusa_actuals ||= fetch_list(EUSA_ACTUALS_KEY, EUSA_ACTUALS_TTL, :eusa_actuals)
+                        .map { |r| @mapper.eusa_actual(r) }
+    end
+
+    # Actuals imported for a given EUSA period (P1..P12, stored as the raw
+    # period string from the export), used to dedup a freshly-pasted export
+    # against what's already in Airtable for that period.
+    def actuals_for_period(period)
+      eusa_actuals.select { |a| a.period == period }
+    end
+
+    def create_actual!(attrs)
+      record = @client.create_record(:eusa_actuals, @mapper.eusa_actual_fields(attrs))
+      bust_eusa_actuals!
+      @mapper.eusa_actual(record)
+    end
+
+    def link_actual_to_expense!(actual_id, expense_id)
+      record = @client.update_record(:eusa_actuals, actual_id,
+                                     @mapper.eusa_actual_fields(linked_expense_ids: [ expense_id ]))
+      bust_eusa_actuals!
+      @mapper.eusa_actual(record)
+    end
+
+    def link_actual_to_budget!(actual_id, budget_id)
+      record = @client.update_record(:eusa_actuals, actual_id,
+                                     @mapper.eusa_actual_fields(linked_budget_ids: [ budget_id ]))
+      bust_eusa_actuals!
+      @mapper.eusa_actual(record)
+    end
+
     private
+
+    def bust_eusa_actuals!
+      @eusa_actuals = nil
+      @cache.delete(EUSA_ACTUALS_KEY)
+    end
 
     def bust_people!
       @people = nil
       @cache.delete(PEOPLE_KEY)
+    end
+
+    def bust_batches!
+      @batches = nil
+      @cache.delete(BATCHES_KEY)
+    end
+
+    def bust_budgets!
+      @budgets = nil
+      @budgets_by_id = nil
+      @cache.delete(BUDGETS_KEY)
+    end
+
+    def bust_budget_forecasts!
+      @all_budget_forecasts = nil
+      @cache.delete(BUDGET_FORECASTS_KEY)
+    end
+
+    def all_budget_forecasts
+      @all_budget_forecasts ||=
+        fetch_list(BUDGET_FORECASTS_KEY, BUDGET_FORECASTS_TTL, :budget_forecasts)
+        .map { |r| @mapper.budget_forecast(r) }
     end
 
     def people_by_id

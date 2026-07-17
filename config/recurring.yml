@@ -23,7 +23,22 @@ reimbursements_credentials_check:
   queue: default
   schedule: at 8am every day
 
+# Nudges budget owners about pending claims awaiting their sign-off (the
+# owner-endorsement gate). Sent via the website mailer; the job no-ops when
+# nothing awaits, so a daily trigger is safe.
+reimbursements_owner_endorsement_digest:
+  class: Reimbursements::OwnerEndorsementDigestJob
+  queue: default
+  schedule: at 7am every day
+
 reimbursements_mailbox_poll:
   class: Reimbursements::MailboxPollJob
   queue: default
   schedule: every 5 minutes
+
+# Fires nightly; the job itself skips cost centres whose run-days don't include
+# today and de-dupes via CostCentre#nightly_due?, so a daily trigger is safe.
+reimbursements_nightly_batch:
+  class: Reimbursements::NightlyBatchJob
+  queue: default
+  schedule: at 9pm every day

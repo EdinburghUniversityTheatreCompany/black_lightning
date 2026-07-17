@@ -41,6 +41,26 @@ module Reimbursements
         assert_equal "post", http.requests.first.method.to_s
       end
 
+      test "drops a nil-keyed field before writing, rather than sending a malformed field id" do
+        client, http = build_client([ [ 200, { id: "recNew", fields: {} }.to_json ] ])
+
+        client.create_record(:expenses, { "fldExpAmt" => 12.5, nil => "unmapped, config lagging behind" })
+
+        body = JSON.parse(http.requests.first.body)
+        assert_equal %w[fldExpAmt], body["fields"].keys
+      end
+
+      test "deletes a record via DELETE" do
+        client, http = build_client([ [ 200, { id: "recExp1", deleted: true }.to_json ] ])
+
+        result = client.delete_record(:expenses, "recExp1")
+
+        assert_equal "recExp1", result["id"]
+        request = http.requests.sole
+        assert_equal "delete", request.method.to_s
+        assert_includes request.uri, "recExp1"
+      end
+
       test "gets a single record and returns nil on 404" do
         client, http = build_client([ [ 200, { id: "recExp1", fields: {} }.to_json ],
                                       [ 404, "{}" ] ])
@@ -61,13 +81,41 @@ module Reimbursements
         assert JSON.parse(request.body)["typecast"]
       end
 
-      test "retries once after a 429 with the documented 30s wait" do
+      test "retries after a 429 with the documented 30s base wait" do
         sleeps = []
         client, http = build_client([ [ 429, "{}" ], [ 200, { records: [] }.to_json ] ], sleeps: sleeps)
 
         assert_equal [], client.list_records(:people)
         assert_equal [ 30 ], sleeps
         assert_equal 2, http.requests.size
+      end
+
+      test "honours a Retry-After header on a 429" do
+        sleeps = []
+        client, http = build_client([ [ 429, "{}", { "Retry-After" => "5" } ],
+                                      [ 200, { records: [] }.to_json ] ], sleeps: sleeps)
+
+        assert_equal [], client.list_records(:people)
+        assert_equal [ 5 ], sleeps
+        assert_equal 2, http.requests.size
+      end
+
+      test "gives up after exhausting retries on repeated 429s" do
+        sleeps = []
+        client, http = build_client([ [ 429, "{}" ], [ 429, "{}" ], [ 429, "{}" ] ], sleeps: sleeps)
+
+        error = assert_raises(Reimbursements::Airtable::Error) { client.list_records(:people) }
+        assert_equal 429, error.status
+        assert_equal 3, http.requests.size
+        assert_equal [ 30, 60 ], sleeps, "bounded exponential backoff doubling from the 30s base, capped"
+      end
+
+      test "never sleeps on a successful response" do
+        sleeps = []
+        client, = build_client([ [ 200, { records: [] }.to_json ] ], sleeps: sleeps)
+
+        assert_equal [], client.list_records(:people)
+        assert_empty sleeps
       end
 
       test "raises a typed error with status on failure" do

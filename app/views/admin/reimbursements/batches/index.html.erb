@@ -1,0 +1,110 @@
+<p class="mb-3 text-gray-600">
+  Past BACS submissions, most recent first. Reopening a batch reverts its expenses to Approved and
+  deletes the batch so you can add or remove expenses and rebuild it. Producers already notified
+  won't be emailed again. A batch with any Paid expense can't be reopened.
+</p>
+
+<p class="mb-4">
+  <%= link_to "Build a new batch", new_admin_reimbursements_batch_path, class: btn_classes(:primary, :sm) %>
+</p>
+
+<% @batch_attempts.each do |attempt| %>
+  <% if attempt.stale? %>
+    <%= render AlertComponent.new(type: :warning) do %>
+      A batch build for <%= attempt.cost_centre.name %> started
+      <%= time_ago_in_words(attempt.created_at) %> ago and hasn't finished — it has likely
+      failed without reporting back. Check the job queue (or ask IT) before rebuilding.
+    <% end %>
+  <% elsif attempt.building? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      A batch is building for <%= attempt.cost_centre.name %>
+      (started <%= time_ago_in_words(attempt.created_at) %> ago<%= " by #{attempt.triggered_by_email}" if attempt.triggered_by_email.present? %>).
+      Its EUSA draft will appear below when ready — don't rebuild in the meantime.
+    <% end %>
+  <% elsif attempt.failed? %>
+    <%= render AlertComponent.new(type: :danger) do %>
+      <p>
+        The batch build for <%= attempt.cost_centre.name %> on
+        <%= reimbursements_date(attempt.created_at.to_date) %> <strong>failed</strong> —
+        no EUSA draft was created, and the expenses are still Approved. Fix the problem
+        below and rebuild:
+      </p>
+      <ul class="list-disc list-inside mt-1">
+        <% attempt.error_messages.to_s.split("\n").each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% elsif attempt.nothing_to_build? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      The batch build for <%= attempt.cost_centre.name %> on
+      <%= reimbursements_date(attempt.created_at.to_date) %> found no Approved expenses —
+      nothing was built. (A build just before it probably already submitted them.)
+    <% end %>
+  <% elsif attempt.completed? %>
+    <%= render AlertComponent.new(type: :warning) do %>
+      <p>
+        The batch built for <%= attempt.cost_centre.name %> on
+        <%= reimbursements_date(attempt.created_at.to_date) %>, but some follow-up steps
+        failed — the EUSA draft is fine, check these before filing the batch away:
+      </p>
+      <ul class="list-disc list-inside mt-1">
+        <% attempt.error_messages.to_s.split("\n").each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  <% end %>
+<% end %>
+
+<% if @batches.empty? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    No batches yet. Build one from the Build Batch page.
+  <% end %>
+<% else %>
+  <div class="flex flex-col gap-2">
+    <% @batches.each do |batch| %>
+      <% expenses = @expenses_by_batch.fetch(batch.record_id, []) %>
+      <% batch_total = expenses.sum { |expense| expense.amount || 0 } %>
+      <% has_paid = expenses.any? { |expense| expense.status == ::Reimbursements::Status::PAID } %>
+      <%= render CardComponent.new do %>
+        <% sent_date = reimbursements_date(batch.date_sent) %>
+        <%# The batch name defaults to its send date, so showing both reads as a
+           # confusing repeated date. Only show the name when it adds something. %>
+        <% batch_label = batch.name.presence
+           batch_label = nil if batch_label == sent_date %>
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span class="font-medium">Sent <%= sent_date %></span>
+          <span class="text-gray-600 grow"><%= batch_label %></span>
+          <span class="text-sm"><%= expenses.size %> <%= "expense".pluralize(expenses.size) %></span>
+          <span class="text-sm font-medium"><%= reimbursements_money(batch_total) %></span>
+          <% if batch.eusa_draft_created %>
+            <%= render BadgeComponent.new(type: :success, pill: true).with_content("Draft created") %>
+          <% else %>
+            <%= render BadgeComponent.new(type: :warning, pill: true).with_content("No EUSA draft — needs a look") %>
+          <% end %>
+          <%= link_to "Detail", admin_reimbursements_batch_path(batch.record_id),
+                      "aria-label": "Detail for batch #{batch.name.presence || batch.record_id}",
+                      class: btn_classes(:secondary, :sm) %>
+        </div>
+
+        <div class="mt-2">
+          <% if has_paid %>
+            <p class="text-sm text-warning">
+              Has Paid expenses: reconciled payments can't be reverted, so this batch can't be reopened.
+            </p>
+          <% elsif expenses.any? %>
+            <%= form_with url: reopen_admin_reimbursements_batch_path(batch.record_id), method: :post do %>
+              <%= submit_tag "Reopen for rebuild", class: btn_classes(:danger, :sm),
+                             "aria-label": "Reopen batch #{batch.name.presence || batch.record_id} for rebuild",
+                             data: { turbo_confirm: "Revert #{expenses.size} #{'expense'.pluralize(expenses.size)} " \
+                                                    "to Approved and delete this batch?" } %>
+            <% end %>
+          <% else %>
+            <p class="text-sm text-gray-500">No linked expenses to reopen.</p>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

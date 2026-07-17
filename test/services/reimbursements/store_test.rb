@@ -38,6 +38,23 @@ module Reimbursements
       assert_equal "Props", expense.budget.name
     end
 
+    test "rejection_notified round-trips from Airtable, not just written" do
+      notified_at = airtable_expense_record(
+        overrides: { FIELD_IDS[:expenses][:rejection_notified] => "2026-07-09T12:00:00Z" }
+      )
+      store, = build_store(expenses: [ notified_at ])
+
+      expense = store.expenses.sole
+
+      assert_equal Time.zone.parse("2026-07-09T12:00:00Z"), expense.rejection_notified
+    end
+
+    test "rejection_notified is nil when the expense was never rejected" do
+      store, = build_store
+
+      assert_nil store.expenses.sole.rejection_notified
+    end
+
     test "expenses_for filters to one person and tolerates unlinked expenses" do
       orphan = airtable_expense_record(id: "recExp2", payee_id: nil)
       store, = build_store(expenses: [ airtable_expense_record, orphan ])
@@ -58,6 +75,67 @@ module Reimbursements
       store, = build_store
 
       assert_equal [ "Props" ], store.active_budgets.map(&:name)
+    end
+
+    test "update_budget! writes intended fields with owner links and busts the cache" do
+      store, client = build_store
+
+      store.budgets
+      budget = store.update_budget!("recBud1", name: "Props revised", nominal_code: "4100",
+                                    notes: "Careful", initial_budget: BigDecimal("2500"),
+                                    budget_type: "Expense", active: true,
+                                    owner_ids: [ "recPer1", "recPer2" ])
+      store.budgets
+
+      table, record_id, fields = client.updated.sole
+      assert_equal :budgets, table
+      assert_equal "recBud1", record_id
+      assert_equal "Props revised", fields[FIELD_IDS[:budgets][:name]]
+      assert_equal "4100", fields[FIELD_IDS[:budgets][:nominal_code]]
+      assert_equal "Careful", fields[FIELD_IDS[:budgets][:notes]]
+      assert_in_delta 2500.0, fields[FIELD_IDS[:budgets][:initial_budget]]
+      assert_equal [ "recPer1", "recPer2" ], fields[FIELD_IDS[:budgets][:owner]]
+      assert_equal "Props revised", budget.name
+      assert_equal 2, client.list_calls[:budgets], "update must bust the budgets cache"
+    end
+
+    # --- Budget forecasts --------------------------------------------------
+
+    test "budget_forecasts lists a budget's forecasts newest first" do
+      may = airtable_budget_forecast_record(id: "recFcMay", budget_id: "recBud1", date: "2026-05-01")
+      jun = airtable_budget_forecast_record(id: "recFcJun", budget_id: "recBud1", date: "2026-06-01")
+      other = airtable_budget_forecast_record(id: "recFcOther", budget_id: "recBud2", date: "2026-07-01")
+      store, client = build_fake_store(budgets: [ airtable_budget_record ],
+                                       budget_forecasts: [ may, jun, other ])
+
+      forecasts = store.budget_forecasts("recBud1")
+
+      assert_equal %w[recFcJun recFcMay], forecasts.map(&:record_id)
+      assert_empty store.budget_forecasts(nil)
+      assert_equal 1, client.list_calls[:budget_forecasts], "forecasts list is cached"
+    end
+
+    test "create_forecast! creates a linked record and busts budget + forecast caches" do
+      existing = airtable_budget_forecast_record(id: "recFc1", budget_id: "recBud1")
+      store, client = build_fake_store(budgets: [ airtable_budget_record ],
+                                       budget_forecasts: [ existing ])
+
+      store.budgets
+      store.budget_forecasts("recBud1")
+      forecast = store.create_forecast!(budget_id: "recBud1", amount: BigDecimal("750"),
+                                        date: Date.new(2026, 6, 1), reason: "Revised up")
+      store.budgets
+      store.budget_forecasts("recBud1")
+
+      table, fields = client.created.sole
+      assert_equal :budget_forecasts, table
+      assert_equal [ "recBud1" ], fields[FIELD_IDS[:budget_forecasts][:budget]]
+      assert_in_delta 750.0, fields[FIELD_IDS[:budget_forecasts][:amount]]
+      assert_equal "2026-06-01", fields[FIELD_IDS[:budget_forecasts][:date]]
+      assert_equal "Revised up", fields[FIELD_IDS[:budget_forecasts][:reason]]
+      assert_equal BigDecimal("750"), forecast.amount
+      assert_equal 2, client.list_calls[:budgets], "create must bust the budgets cache"
+      assert_equal 2, client.list_calls[:budget_forecasts], "create must bust the forecasts cache"
     end
 
     test "find_expense! fetches a single record fresh on a cache miss" do
@@ -116,6 +194,17 @@ module Reimbursements
       assert_equal 2, client.list_calls[:expenses], "expense cache must be busted by the write"
     end
 
+    test "delete_expense! deletes the record and busts the expense cache" do
+      store, client = build_store
+
+      store.expenses
+      store.delete_expense!("recExp1")
+      store.expenses
+
+      assert_equal [ [ :expenses, "recExp1" ] ], client.deleted
+      assert_equal 2, client.list_calls[:expenses], "expense cache must be busted by the delete"
+    end
+
     test "remove_receipt! rewrites the survivors and busts the expense cache" do
       two_receipts = [
         { "id" => "att1", "filename" => "old.pdf", "url" => "https://x", "size" => 1, "type" => "application/pdf" },
@@ -153,6 +242,152 @@ module Reimbursements
 
       assert_equal 1, client.updated.size
       assert_equal 2, client.list_calls[:people]
+    end
+
+    # --- EUSA Actuals -----------------------------------------------------
+
+    test "actuals_for_period filters imported rows to that EUSA period" do
+      p3 = airtable_eusa_actual_record(id: "recActP3", period: "03")
+      p4 = airtable_eusa_actual_record(id: "recActP4", period: "04")
+      store, = build_fake_store(eusa_actuals: [ p3, p4 ])
+
+      assert_equal [ "recActP3" ], store.actuals_for_period("03").map(&:record_id)
+      assert_empty store.actuals_for_period("01")
+    end
+
+    test "create_actual! writes a mapped row and busts the actuals cache" do
+      store, client = build_fake_store(eusa_actuals: [ airtable_eusa_actual_record(period: "03") ])
+
+      store.actuals_for_period("03")
+      actual = store.create_actual!(nominal_code: "439999", narrative: "Alice Producer",
+                                    date: Date.new(2026, 5, 13), debit: BigDecimal("123.45"),
+                                    period: "03", imported_at: Time.utc(2026, 5, 14, 9))
+      store.actuals_for_period("03")
+
+      table, fields = client.created.sole
+      assert_equal :eusa_actuals, table
+      assert_equal 123.45, fields[FIELD_IDS[:eusa_actuals][:debit]]
+      assert_equal "2026-05-13", fields[FIELD_IDS[:eusa_actuals][:date]]
+      assert_equal "2026-05-14T09:00:00Z", fields[FIELD_IDS[:eusa_actuals][:imported_at]]
+      assert_equal "439999", actual.nominal_code
+      assert_equal 2, client.list_calls[:eusa_actuals], "create must bust the actuals cache"
+    end
+
+    test "link_actual_to_expense! writes an expense link" do
+      store, client = build_fake_store
+      store.link_actual_to_expense!("recAct1", "recExp1")
+
+      table, record_id, fields = client.updated.sole
+      assert_equal :eusa_actuals, table
+      assert_equal "recAct1", record_id
+      assert_equal [ "recExp1" ], fields[FIELD_IDS[:eusa_actuals][:linked_expense]]
+    end
+
+    test "link_actual_to_budget! writes a budget link" do
+      store, client = build_fake_store
+      store.link_actual_to_budget!("recAct1", "recBud3")
+
+      _table, _record_id, fields = client.updated.sole
+      assert_equal [ "recBud3" ], fields[FIELD_IDS[:eusa_actuals][:linked_budget]]
+    end
+
+    # --- Batches -----------------------------------------------------------
+
+    test "batches are cached and mapped" do
+      store, client = build_fake_store(batches: [ airtable_batch_record ])
+
+      3.times { store.batches }
+
+      assert_equal 1, client.list_calls[:batches]
+      assert_equal "BACS 2026-05-13", store.batches.sole.name
+      assert_equal Date.new(2026, 5, 13), store.find_batch("recBat1").date_sent
+    end
+
+    test "create_batch! writes date + notes and busts the batch cache" do
+      store, client = build_fake_store(batches: [])
+
+      store.batches
+      batch = store.create_batch!(date_sent: Date.new(2026, 5, 13), notes: "SP: url")
+      store.batches
+
+      table, fields = client.created.sole
+      assert_equal :batches, table
+      assert_equal "2026-05-13", fields[FIELD_IDS[:batches][:date_sent]]
+      assert_equal "SP: url", fields[FIELD_IDS[:batches][:notes]]
+      assert_equal batch.record_id, store.batches.first&.record_id.presence || batch.record_id
+      assert_equal 2, client.list_calls[:batches], "create must bust the batch cache"
+    end
+
+    test "find_batch_by_draft_message_id looks up live (uncached) and busts the cache" do
+      store, client = build_fake_store(batches: [ airtable_batch_record(draft_message_id: "msg-1") ])
+
+      store.batches # warm the cache
+      found = store.find_batch_by_draft_message_id("msg-1")
+
+      assert_equal "recBat1", found.record_id
+      assert_equal 2, client.list_calls[:batches], "must not trust the already-cached list"
+      assert_nil store.find_batch_by_draft_message_id("no-such-message")
+      assert_nil store.find_batch_by_draft_message_id(nil)
+    end
+
+    test "update_batch! and delete_batch! bust the cache" do
+      store, client = build_fake_store(batches: [ airtable_batch_record ])
+
+      store.batches
+      store.update_batch!("recBat1", eusa_draft_created: true)
+      store.delete_batch!("recBat1")
+
+      assert fields_of(client.updated.sole)[FIELD_IDS[:batches][:eusa_draft_created]]
+      assert_equal [ [ :batches, "recBat1" ] ], client.deleted
+    end
+
+    test "revert_expense_to_approved! clears the batch link, dates and offload flags" do
+      submitted = airtable_expense_record(
+        id: "recExp1", status: "Submitted",
+        overrides: { FIELD_IDS[:expenses][:batch] => [ "recBat1" ],
+                     FIELD_IDS[:expenses][:submitted_to_eusa_date] => "2026-05-13",
+                     FIELD_IDS[:expenses][:producer_notified] => true }
+      )
+      store, client = build_store(expenses: [ submitted ])
+
+      store.revert_expense_to_approved!("recExp1")
+
+      _table, record_id, fields = client.updated.sole
+      assert_equal "recExp1", record_id
+      assert_equal "Approved", fields[FIELD_IDS[:expenses][:status]]
+      assert_equal [], fields[FIELD_IDS[:expenses][:batch]], "batch link cleared with an empty array"
+      assert_nil fields[FIELD_IDS[:expenses][:submitted_to_eusa_date]]
+      refute fields[FIELD_IDS[:expenses][:receipts_offloaded]]
+      # Deliberately untouched (per the method's own doc comment) — a reopen +
+      # rebuild must not re-email a producer who was already notified.
+      assert_not fields.key?(FIELD_IDS[:expenses][:producer_notified]),
+                 "producer_notified must not be part of this write at all"
+    end
+
+    test "update_expense! actually clears the budget link on a blank budget_record_id" do
+      linked = airtable_expense_record(id: "recExp1", budget_id: "recBud1", status: "Pending")
+      store, client = build_store(expenses: [ linked ])
+
+      store.update_expense!("recExp1", budget_record_id: nil, description: "still editable")
+
+      _table, record_id, fields = client.updated.sole
+      assert_equal "recExp1", record_id
+      assert_equal [], fields[FIELD_IDS[:expenses][:budget]], "budget link must be explicitly cleared, not omitted"
+      assert_equal "still editable", fields[FIELD_IDS[:expenses][:description]]
+    end
+
+    test "update_expense! doesn't touch the budget link when budget_record_id isn't in attrs at all" do
+      linked = airtable_expense_record(id: "recExp1", budget_id: "recBud1", status: "Pending")
+      store, client = build_store(expenses: [ linked ])
+
+      store.update_expense!("recExp1", description: "unrelated edit")
+
+      _table, _record_id, fields = client.updated.sole
+      assert_not fields.key?(FIELD_IDS[:expenses][:budget]), "must not touch the budget link unless asked to"
+    end
+
+    def fields_of(update_tuple)
+      update_tuple.last
     end
   end
 end

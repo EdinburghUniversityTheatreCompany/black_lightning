@@ -5,20 +5,20 @@ module Reimbursements
   # mailbox via an ApplicationAccessPolicy. Send and receive go through the
   # same credential, which is why we poll instead of ActionMailbox.
   class MailboxClient
-    GRAPH_URL = "https://graph.microsoft.com/v1.0".freeze
-    TOKEN_URL = "https://login.microsoftonline.com".freeze
+    include GraphAuth
+
     FOLDERS = { processed: "Processed", rejected: "Rejected" }.freeze
     PAGE_SIZE = 20
 
-    class Error < StandardError; end
-
-    # Credential problems (expired/revoked client secret) — surfaced to the
-    # IT subcommittee by the poll job rather than retried blindly.
-    class AuthError < Error; end
+    # The app-only auth + request plumbing (token, request, error surfacing) now
+    # lives in GraphAuth, shared with GraphClient. Keep the historical error
+    # constant names pointing at the shared classes so existing rescues hold.
+    Error = GraphAuth::Error
+    AuthError = GraphAuth::AuthError
 
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
-    def initialize(mailbox: CostCentre.default.mailbox, settings: Settings, http: nil, clock: nil)
+    def initialize(mailbox: CostCentre.default&.receive_mailbox, settings: Settings, http: nil, clock: nil)
       @mailbox = mailbox
       @settings = settings
       @http = http || HttpTransport
@@ -27,7 +27,7 @@ module Reimbursements
     end
 
     def unread_messages
-      response = request(:get, "/users/#{@mailbox}/mailFolders/inbox/messages",
+      response = graph_request(:get, "/users/#{@mailbox}/mailFolders/inbox/messages",
                          params: { "$filter" => "isRead eq false",
                                    "$select" => "id,subject,from,bodyPreview",
                                    "$top" => PAGE_SIZE })
@@ -45,7 +45,7 @@ module Reimbursements
     # (inline) — signature logos are rare enough that reviewers just ignore
     # them. Only attached mail items (forwarded messages) are skipped.
     def attachments(message_id)
-      response = request(:get, "/users/#{@mailbox}/messages/#{message_id}/attachments")
+      response = graph_request(:get, "/users/#{@mailbox}/messages/#{message_id}/attachments")
       response.fetch("value").filter_map do |attachment|
         next unless attachment["@odata.type"] == "#microsoft.graph.fileAttachment"
         next if attachment["contentBytes"].blank?
@@ -57,17 +57,44 @@ module Reimbursements
     end
 
     def reply(message_id, html:)
-      request(:post, "/users/#{@mailbox}/messages/#{message_id}/reply",
+      graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/reply",
               body: { comment: html })
       nil
     end
 
-    # The commit point for a processed message: replies happen before this,
-    # so a crash in between re-processes (never silently drops) the email.
-    def mark_read_and_move(message_id, folder)
-      request(:patch, "/users/#{@mailbox}/messages/#{message_id}", body: { isRead: true })
-      request(:post, "/users/#{@mailbox}/messages/#{message_id}/move",
+    # The idempotency commit point: unread_messages filters on isRead eq false,
+    # so once a message is read the next poll won't re-fetch (and re-process)
+    # it. Kept separate from +move+ so a move failure never leaves it unread.
+    def mark_read(message_id)
+      graph_request(:patch, "/users/#{@mailbox}/messages/#{message_id}", body: { isRead: true })
+      nil
+    end
+
+    # Files the message under Processed/Rejected. Best-effort tidy-up: it runs
+    # after +mark_read+, so a failure here can't cause reprocessing.
+    def move(message_id, folder)
+      graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/move",
               body: { destinationId: folder_id(folder) })
+      nil
+    end
+
+    # Convenience for the reject paths (no expense created, so a failure just
+    # retries next cycle). Moves first, then marks read — a move failure
+    # leaves the message unread (retried next cycle, genuinely safe here: no
+    # expense exists yet), rather than the reverse order, which would leave a
+    # read-but-unfiled message silently stuck in the Inbox forever
+    # (unread_messages would never fetch it again to retry the move). This
+    # ordering has a narrower, symmetric edge case of its own: if the move
+    # succeeds but the follow-up mark_read call fails, the message is now
+    # unread but sitting in Rejected/Processed, invisible to both the normal
+    # Inbox retry path and anyone watching that folder for unread mail.
+    # Accepted trade-off — the failure it fixes (reprocessing risk) is worse
+    # than the one it leaves (a single stray unread message in a folder), and
+    # both require a Graph call to fail in the narrow gap between two
+    # adjacent requests.
+    def mark_read_and_move(message_id, folder)
+      move(message_id, folder)
+      mark_read(message_id)
       nil
     end
 
@@ -83,56 +110,12 @@ module Reimbursements
     end
 
     def find_or_create_folder(name)
-      response = request(:get, "/users/#{@mailbox}/mailFolders",
+      response = graph_request(:get, "/users/#{@mailbox}/mailFolders",
                          params: { "$filter" => "displayName eq '#{name}'" })
       existing = response.fetch("value").first
       return existing.fetch("id") if existing
 
-      request(:post, "/users/#{@mailbox}/mailFolders", body: { displayName: name }).fetch("id")
-    end
-
-    def request(http_method, path, params: nil, body: nil)
-      uri = URI("#{GRAPH_URL}#{path}")
-      uri.query = URI.encode_www_form(params) if params
-      headers = { "Authorization" => "Bearer #{token}", "Content-Type" => "application/json" }
-      status, response_body = @http.call(http_method, uri, headers, body&.to_json)
-
-      raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
-      unless (200..299).cover?(status)
-        raise Error, "Graph #{http_method.to_s.upcase} #{path} failed (#{status}): " \
-                     "#{response_body.to_s.truncate(200)}"
-      end
-
-      response_body.blank? ? {} : JSON.parse(response_body)
-    end
-
-    def token
-      return @token if @token && @token_expires_at.after?(@clock.call + 60)
-
-      fetch_token
-    end
-
-    def fetch_token
-      uri = URI("#{TOKEN_URL}/#{@settings.azure_tenant_id}/oauth2/v2.0/token")
-      form = URI.encode_www_form(
-        client_id: @settings.azure_client_id,
-        client_secret: @settings.azure_client_secret,
-        scope: "https://graph.microsoft.com/.default",
-        grant_type: "client_credentials"
-      )
-      status, response_body = @http.call(:post, uri,
-                                         { "Content-Type" => "application/x-www-form-urlencoded" }, form)
-
-      unless status == 200
-        message = "Graph token request failed (#{status}): #{response_body.to_s.truncate(300)}"
-        raise AuthError, message if [ 400, 401 ].include?(status)
-
-        raise Error, message
-      end
-
-      data = JSON.parse(response_body)
-      @token_expires_at = @clock.call + data.fetch("expires_in", 3600).to_i
-      @token = data.fetch("access_token")
+      graph_request(:post, "/users/#{@mailbox}/mailFolders", body: { displayName: name }).fetch("id")
     end
   end
 end

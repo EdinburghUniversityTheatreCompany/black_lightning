@@ -274,9 +274,11 @@ SimpleForm.setup do |config|
       error_class: "has-error", valid_class: "has-success" do |b|
     b.use :html5
     b.optional :readonly
-    b.wrapper tag: "label", class: adm_label_class do |ba|
-      ba.use :label_text
-    end
+    # :label (not a bare <label> wrapper around :label_text) so the label
+    # carries for="<input id>" and clicking its text toggles the checkbox —
+    # the bare wrapper had no association, so the label was dead app-wide and
+    # the only target was the 16px box (bad on touch, an a11y defect).
+    b.use :label, class: adm_label_class
     b.wrapper :grid_wrapper, tag: "div", class: "#{adm_grid_class} py-1.5" do |wr|
       wr.wrapper :form_check_wrapper, tag: "div", class: "flex items-center gap-2" do |bb|
         bb.use :input, class: "size-4 rounded border-gray-300 accent-primary cursor-pointer shrink-0", error_class: adm_invalid_class, valid_class: adm_valid_class

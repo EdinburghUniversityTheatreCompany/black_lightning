@@ -18,6 +18,7 @@ seed_files = %w[
   content
   media
   debts
+  reimbursements
 ]
 
 seed_files.each do |file|

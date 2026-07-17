@@ -71,13 +71,81 @@ ChaosRails::Application.routes.draw do
     # Producer-facing reimbursements portal (Airtable-backed, no local models).
     namespace :reimbursements do
       root to: redirect("/admin/reimbursements/expenses")
-      resources :expenses, only: %i[index new create edit update] do
+      resources :expenses, only: %i[index new create edit update destroy show] do
         collection do
           post :extract
         end
         resources :receipts, only: %i[create destroy]
       end
       resource :payment_details, only: %i[edit update]
+      resources :people, only: %i[index update]
+
+      # Budget-owner review (Phase E): budgets the signed-in owner is
+      # responsible for, with a blocking endorse action on pending expenses
+      # charged to them. Base access permission, not finance.
+      get    "my_budgets", to: "my_budgets#index", as: :my_budgets
+      post   "my_budgets/:expense_id/endorse", to: "my_budgets#endorse", as: :endorse_my_budget
+      delete "my_budgets/:expense_id/withdraw", to: "my_budgets#withdraw", as: :withdraw_my_budget
+      patch  "my_budgets/:expense_id/reject", to: "my_budgets#reject", as: :reject_my_budget
+
+      # Finance-team budget management: financials overview + edit + a forecast
+      # (projected-spend) log appended per budget.
+      resources :budgets, only: %i[index edit update] do
+        member do
+          post   :forecast
+          patch  :update_forecast
+          delete :delete_forecast
+        end
+      end
+
+      # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
+      get    "review",             to: "review#index",   as: :review
+      # Bulk actions over the ticked Pending expenses (static paths, declared
+      # before the :id member routes so they never get swallowed by them).
+      patch  "review/bulk_approve", to: "review#bulk_approve", as: :bulk_approve_review
+      patch  "review/bulk_reject",  to: "review#bulk_reject",  as: :bulk_reject_review
+      patch  "review/:id/save",    to: "review#save",    as: :save_review
+      patch  "review/:id/approve", to: "review#approve", as: :approve_review
+      patch  "review/:id/override_approve", to: "review#override_approve", as: :override_approve_review
+      patch  "review/:id/reject",  to: "review#reject",  as: :reject_review
+      post   "review/:id/receipts",                to: "review#add_receipts",   as: :review_receipts
+      delete "review/:id/receipts/:attachment_id", to: "review#remove_receipt", as: :review_receipt
+
+      # Finance edit-any-status: an index of ALL expenses (filter + search) plus
+      # view + edit an expense at ANY status (incl. Submitted/Paid), reachable
+      # from the Review cards and a lookup by auto-number/record id. Distinct
+      # from the Pending-only producer path.
+      resources :expense_edits, only: %i[index edit update] do
+        get :find, on: :collection
+      end
+      post   "expense_edits/:id/receipts",                to: "expense_edits#add_receipts",   as: :expense_edit_receipts
+      delete "expense_edits/:id/receipts/:attachment_id", to: "expense_edits#remove_receipt", as: :expense_edit_receipt
+
+      # Reconcile EUSA actuals (Phase D): paste -> preview -> apply.
+      resource :reconciliation, only: %i[show], controller: "reconcile" do
+        post :preview
+        post :apply
+      end
+
+      # Read-only browser over the imported EUSA Actuals ledger.
+      resources :actuals, only: %i[index]
+
+      # Integration health dashboard: a page (#show) with an on-demand "Run
+      # checks" POST (#run) that probes Airtable / Graph / Gemini.
+      get  "status",     to: "status#show", as: :status
+      post "status/run", to: "status#run",  as: :run_status_checks
+
+      # Finance-team Build Batch (new/create) + History (index/show/reopen).
+      resources :batches, only: %i[index show new create] do
+        member { post :reopen }
+      end
+
+      # Per-cost-centre operational settings (Phase F): picker -> edit/update.
+      # (The Azure/mailbox/SharePoint manual-setup runbook lives inline on the
+      # per-cost-centre Settings edit page, filled with that cost centre's values.)
+      resources :settings, only: %i[index edit update], param: :key do
+        member { post :test_access }
+      end
     end
 
     # Mount MissionControl Jobs

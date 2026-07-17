@@ -1,0 +1,102 @@
+<p class="mb-3 text-gray-600">
+  Budgets you own show up here so you can sign off on claims charged to them before finance approves
+  them and EUSA pays.
+  <% if @pending_count.to_i.positive? %>
+    <span class="font-medium"><%= pluralize(@pending_count, "claim") %> awaiting your sign-off.</span>
+  <% end %>
+</p>
+
+<% if @budgets.empty? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    You don't own any budgets yet. A finance administrator sets budget owners on the Budgets page.
+  <% end %>
+<% else %>
+  <p class="mb-3 text-sm text-gray-600">
+    Check the receipt, then <strong>Endorse</strong> a claim (any owner can, and a claim an owner
+    submitted is auto-approved), or <strong>Reject</strong> it with a reason if it looks wrong.
+  </p>
+
+  <% @budgets.each do |budget| %>
+    <% expenses = @expenses_by_budget.fetch(budget.record_id, []) %>
+    <%= render CardComponent.new(title: budget.name.presence || budget.record_id, html_class: "mb-4") do %>
+      <% if budget.remaining %>
+        <p class="mb-3 text-sm text-gray-600">
+          Remaining:
+          <span class="<%= "text-danger font-medium" if budget.remaining.negative? %>">
+            <%= reimbursements_money(budget.remaining) %>
+          </span>
+        </p>
+      <% end %>
+
+      <% if expenses.empty? %>
+        <p class="py-2 text-gray-600">No claims are waiting for your endorsement.</p>
+      <% else %>
+        <div class="flex flex-col gap-3">
+          <% expenses.each do |expense| %>
+            <% endorsement = @endorsements_by_expense[expense.record_id] %>
+            <% covered = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
+            <% auto_bypassed = ::Reimbursements::OwnerReview.submitter_owns_budget?(expense) %>
+            <div class="rounded border border-gray-200 p-3">
+              <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span class="font-medium">#<%= expense.auto_number %> — <%= expense.effective_payee_name %></span>
+                <span><strong><%= reimbursements_money(expense.amount) %></strong></span>
+                <span class="text-sm text-gray-500">Submitted <%= reimbursements_date(expense.submitted_at) %></span>
+              </div>
+
+              <% if expense.description.present? %>
+                <p class="mt-1 text-sm text-gray-700"><%= expense.description %></p>
+              <% end %>
+
+              <div class="mt-2">
+                <p class="text-xs font-medium text-gray-500">Receipt</p>
+                <%= render "admin/reimbursements/shared/receipts_lightbox",
+                           receipts: expense.receipts, group: "my-budgets-#{expense.record_id}" %>
+              </div>
+
+              <div class="mt-3 flex flex-wrap items-start gap-2">
+                <% if covered && endorsement.owner_endorsement? %>
+                  <%= render BadgeComponent.new(type: :success, pill: true)
+                        .with_content("Endorsed by #{@people_by_id[endorsement.endorsed_by_person_id]&.name || 'an owner'}") %>
+                  <%= button_to "Withdraw",
+                        admin_reimbursements_withdraw_my_budget_path(expense.record_id),
+                        method: :delete, class: btn_classes(:secondary, :sm),
+                        "aria-label": "Withdraw your endorsement of ##{expense.auto_number}",
+                        form: { class: "inline-block",
+                                data: { turbo_confirm: "Withdraw your endorsement of ##{expense.auto_number}? Finance won't be able to pay it until it's endorsed again." } } %>
+                <% elsif covered && endorsement.finance_override? %>
+                  <span title="Finance approved this without an owner's endorsement.">
+                    <%= render BadgeComponent.new(type: :info, pill: true).with_content("Cleared by finance") %>
+                  </span>
+                <% elsif auto_bypassed %>
+                  <span title="Submitted by an owner of this budget, so it's cleared automatically.">
+                    <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Submitted by an owner") %>
+                  </span>
+                <% else %>
+                  <% if endorsement %>
+                    <p class="w-full text-sm text-warning">
+                      This claim changed since it was endorsed. Re-check the amount and receipt before endorsing again.
+                    </p>
+                  <% end %>
+                  <%= button_to "Endorse",
+                        admin_reimbursements_endorse_my_budget_path(expense.record_id),
+                        method: :post, class: btn_classes(:success, :sm),
+                        "aria-label": "Endorse claim ##{expense.auto_number} from #{expense.effective_payee_name}",
+                        form: { class: "inline-block",
+                                data: { turbo_confirm: "Endorse ##{expense.auto_number} for #{reimbursements_money(expense.amount)}? Finance can then pay it." } } %>
+                  <%= form_with url: admin_reimbursements_reject_my_budget_path(expense.record_id),
+                                method: :patch, class: "flex items-center gap-2",
+                                data: { turbo_confirm: "Reject ##{expense.auto_number} and email the submitter? This can't be undone." } do %>
+                    <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
+                                       "aria-label": "Reason for rejecting claim ##{expense.auto_number}",
+                                       class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                    <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}", class: btn_classes(:danger, :sm) %>
+                  <% end %>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>

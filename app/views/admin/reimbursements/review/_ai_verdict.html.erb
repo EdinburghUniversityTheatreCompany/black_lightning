@@ -1,0 +1,15 @@
+<%#
+  One expense's AI-check verdict — the pill badge plus the pass/fail/error
+  explanation — wrapped in a stable-id element. AiCheckJob broadcasts a Turbo
+  Stream replace to this id when the check finishes, so the verdict appears live
+  on the Review page with no reload (see turbo_stream_from in review/index).
+  While the check is still running the region shows a quiet placeholder, which
+  also gives the broadcast a target to replace. Local: expense.
+%>
+<div id="ai_verdict_<%= expense.record_id %>" class="mt-2" aria-live="polite">
+  <% if expense.ai_check_status.present? %>
+    <%= render "admin/reimbursements/review/ai_verdict_body", expense: expense %>
+  <% else %>
+    <p class="text-xs text-gray-500">AI check running… the verdict will appear here automatically.</p>
+  <% end %>
+</div>

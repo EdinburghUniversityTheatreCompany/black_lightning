@@ -24,9 +24,28 @@ module Reimbursements
     end
 
     test "parses currency-formatted amounts" do
-      form = build_form(amount: "£1,234.56", amount_excl_vat: "£1,028.80")
+      # Over the large-amount threshold, so it also needs the acknowledgement.
+      form = build_form(amount: "£1,234.56", amount_excl_vat: "£1,028.80", large_amount_acknowledged: "1")
       assert form.valid?, form.errors.full_messages.to_sentence
       assert_equal BigDecimal("1234.56"), form.amount_decimal
+    end
+
+    test "large-amount soft block requires acknowledgement at or above the threshold" do
+      form = build_form(amount: "1000.00", amount_excl_vat: "900.00", vat_itemised: "true")
+      assert_not form.valid?
+      assert form.errors[:large_amount_acknowledged].present?, "£1000 must ask for confirmation"
+
+      acknowledged = build_form(amount: "1000.00", amount_excl_vat: "900.00", vat_itemised: "true",
+                                large_amount_acknowledged: "1")
+      assert acknowledged.valid?, acknowledged.errors.full_messages.to_sentence
+    end
+
+    test "an ordinary-sized claim needs no large-amount acknowledgement" do
+      assert build_form(amount: "999.99", amount_excl_vat: "900.00").valid?
+    end
+
+    test "a large draft is exempt from the soft block (drafts accept gaps)" do
+      assert build_form(amount: "5000.00", save_as_draft: "1").valid?
     end
 
     test "requires all the airtable form's required fields" do
@@ -35,6 +54,16 @@ module Reimbursements
       %i[amount amount_excl_vat budget_record_id description payment_reference receipts].each do |field|
         assert form.errors[field].present?, "expected error on #{field}"
       end
+    end
+
+    test "error messages use human attribute names, not humanized internal ones" do
+      form = ExpenseForm.new
+      form.valid?
+      messages = form.errors.full_messages
+      # "Budget", not "Budget record"; "Amount excl. VAT", not "Amount excl vat".
+      assert messages.any? { |m| m.start_with?("Budget must") }, messages.inspect
+      assert_not messages.any? { |m| m.include?("Budget record") }, "internal attribute name leaked"
+      assert messages.any? { |m| m.start_with?("Amount excl. VAT must") }, messages.inspect
     end
 
     test "rejects non-positive amounts and excl above total" do
@@ -79,17 +108,48 @@ module Reimbursements
     end
 
     test "rejects disallowed receipt types" do
+      # An executable disguised with a .pdf filename and a declared PDF
+      # content_type: content-type validation is now based on the actual
+      # bytes (Marcel), not the declared/filename-implied type alone, so this
+      # must be caught by what the file really is.
       bad = Rack::Test::UploadedFile.new(
-        Rails.root.join("test/fixtures/files/reimbursements_receipt.pdf"), "application/zip"
+        Rails.root.join("test/fixtures/files/disguised_executable.pdf"), "application/pdf"
       )
       assert_not build_form(receipts: [ bad ]).valid?
     end
 
+    test "an oversized file is rejected by size without being read for content-type sniffing" do
+      oversized = Object.new
+      def oversized.size = ExpenseForm::MAX_RECEIPT_BYTES + 1
+      def oversized.original_filename = "huge.pdf"
+      def oversized.content_type = "application/pdf"
+      def oversized.read = raise("must not read an oversized file just to sniff its type")
+
+      form = build_form(receipts: [ oversized ])
+
+      assert_not form.valid?
+      assert_includes form.errors[:receipts], "huge.pdf must be 5 MB or smaller."
+    end
+
     test "validates override formats only when present" do
-      assert build_form(payee_name_override: "Stage Supplies Ltd").valid?
-      assert_not build_form(sort_code_override: "80-2").valid?
-      assert_not build_form(account_number_override: "123").valid?
-      assert build_form(sort_code_override: "80-22-60", account_number_override: "12345678").valid?
+      all_three = { payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
+                   account_number_override: "12345678" }
+      assert build_form(**all_three).valid?
+      assert_not build_form(**all_three.merge(sort_code_override: "80-2")).valid?
+      assert_not build_form(**all_three.merge(account_number_override: "123")).valid?
+    end
+
+    test "requires all three overrides together, not just one or two (prevents a spliced payee)" do
+      partial = build_form(payee_name_override: "Stage Supplies Ltd")
+      assert_not partial.valid?
+      assert_includes partial.errors[:base].join, "fill in all three"
+
+      assert_not build_form(sort_code_override: "80-22-60", account_number_override: "12345678").valid?
+
+      assert build_form(payee_name_override: "Stage Supplies Ltd", sort_code_override: "80-22-60",
+                        account_number_override: "12345678").valid?
+      # Blank on all three (the common case: no override at all) is still fine.
+      assert build_form.valid?
     end
 
     test "create_attrs carries person, pending status and normalized values" do

@@ -31,5 +31,14 @@ module Reimbursements
     def valid_account_number?(value)
       normalize_account_number(value).match?(/\A\d{8}\z/)
     end
+
+    # A payee-name/sort-code/account-number override trio must be all-or-
+    # nothing: setting only one or two would splice a third party's partial
+    # bank details onto the payee's own remaining fields — an internally-
+    # inconsistent pair that still passes each field's own format check.
+    def overrides_incomplete?(payee_name, sort_code, account_number)
+      overrides = [ payee_name, sort_code, account_number ]
+      overrides.any?(&:present?) && !overrides.all?(&:present?)
+    end
   end
 end

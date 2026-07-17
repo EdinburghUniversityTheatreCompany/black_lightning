@@ -30,8 +30,13 @@ module Reimbursements
         @data.fetch(:tables).fetch(table)
       end
 
+      # Field ID for a table/field, or nil if that field isn't configured. Nil
+      # rather than raising so a credentials set that lags the code (a field
+      # added here but not yet in this environment's credentials, or a field
+      # renamed away) degrades to a blank value instead of 500-ing the whole
+      # page. Reads then map to nil; writes drop the nil key (see Client).
       def fid(table, field)
-        @data.fetch(:fields).fetch(table).fetch(field)
+        @data.dig(:fields, table, field)
       end
     end
   end

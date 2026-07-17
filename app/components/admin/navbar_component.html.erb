@@ -20,7 +20,10 @@
       <% end %>
     </div>
 
-    <nav aria-label="Breadcrumb" class="admin-breadcrumb shrink-0">
+    <%# Hidden on narrow screens: the non-shrinking breadcrumb squeezed the
+        page title to a couple of ellipsised characters. The sidebar covers
+        navigation on mobile. %>
+    <nav aria-label="Breadcrumb" class="admin-breadcrumb shrink-0 hidden sm:block">
       <ol class="flex text-sm text-gray-400 gap-1">
         <li><%= helpers.render_breadcrumbs separator: " / " %></li>
       </ol>

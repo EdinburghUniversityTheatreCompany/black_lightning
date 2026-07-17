@@ -1,0 +1,37 @@
+<%# locals: (receipts:, group: "receipts") %>
+<%#
+  Read-only receipts gallery with a fancybox lightbox. Shared by the finance
+  expense-edit page and the Review cards. Image receipts become thumbnails that
+  open in the lightbox; non-images (PDFs) get a file-icon tile that opens in a
+  new tab. Pass a per-expense `group` (e.g. "receipts-recXXX") so each gallery on
+  a page is its own fancybox set and the lightbox only pages within one expense.
+
+  The producer gallery (expenses/_receipts_gallery) layers its own remove/upload
+  controls on top of the same display markup and is kept separate on purpose.
+%>
+<div data-controller="fancybox">
+  <% if receipts.empty? %>
+    <p class="mb-0 text-sm text-gray-500">No receipts attached.</p>
+  <% else %>
+    <div class="flex flex-wrap gap-3">
+      <% receipts.each do |receipt| %>
+        <div class="w-40 rounded border border-gray-200 p-2 text-center">
+          <% if receipt.image? %>
+            <%= link_to receipt.url, data: { fancybox: group, title: receipt.filename }, class: "block" do %>
+              <%= image_tag receipt.preview_url, alt: receipt.filename,
+                    class: "mx-auto mb-1 h-40 w-full rounded object-contain bg-gray-50" %>
+              <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
+            <% end %>
+          <% else %>
+            <%= link_to receipt.url, target: "_blank", rel: "noopener", class: "block" do %>
+              <span class="mb-1 flex h-40 items-center justify-center rounded bg-gray-50 text-gray-400">
+                <i class="fa-solid fa-file-lines fa-2xl" aria-hidden="true"></i>
+              </span>
+              <span class="block truncate text-xs text-gray-600" title="<%= receipt.filename %>"><%= receipt.filename %></span>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>

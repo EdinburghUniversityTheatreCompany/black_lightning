@@ -114,6 +114,12 @@ module Admin
       assert_response :success
       assert_includes response.body, "reimbursements-receipt"
       assert_includes response.body, "Props"
+      # Third-party payee fields are always visible (not tucked in a
+      # collapsible that hid whether they were filled), with no "In use" flag
+      # on a blank form.
+      assert_includes response.body, "Pay someone else"
+      assert_select "input#reimbursements_expense_form_payee_name_override"
+      assert_not_includes response.body, "In use"
     end
 
     test "create writes a pending expense with receipts and redirects" do
@@ -159,7 +165,11 @@ module Admin
       sign_in @user
       BaseController.extractor_builder = -> { raise "extractor must not be built" }
 
-      post :extract, params: { receipts: [ fixture_file_upload("reimbursements_receipt.pdf", "application/zip") ] }
+      # An executable disguised with a .pdf filename and declared content_type:
+      # content-type filtering is based on the actual bytes (Marcel), not the
+      # declared/filename-implied type, so a mismatched-but-real PDF must NOT
+      # be what's used here to prove rejection.
+      post :extract, params: { receipts: [ fixture_file_upload("disguised_executable.pdf", "application/pdf") ] }
 
       assert_response :success
       assert_not response.parsed_body["ok"]
@@ -206,6 +216,27 @@ module Admin
       assert_equal "recBud1", body["suggested_budget_record_id"]
     end
 
+    test "extract falls back to the total when excl-VAT is the zero not-yet-known sentinel" do
+      sign_in @user
+      # vat_itemised with total == vat gives amount_excl_vat a genuine zero
+      # (not nil) -- 0 is truthy in Ruby, so a plain || wouldn't have fallen
+      # back to total_amount here.
+      extraction = ::Reimbursements::Extractor::Extraction.new(
+        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("12.5"),
+        vat_itemised: true, suggested_description: "Props",
+        suggested_budget_record_id: "recBud1", suggested_payment_reference: "PROPS"
+      )
+      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
+
+      post :extract, params: { receipts: [ receipt_upload ] }
+
+      assert_response :success
+      body = response.parsed_body
+      assert body["ok"]
+      assert_equal "12.5", body["total_amount"]
+      assert_equal "12.5", body["amount_excl_vat"]
+    end
+
     test "extract reports failure as ok false" do
       sign_in @user
       BaseController.extractor_builder = -> { FakeExtractor.new(::Reimbursements::Extractor::Extraction.new(error: "no key")) }
@@ -246,8 +277,10 @@ module Admin
       assert_response :not_found
     end
 
-    test "edit 404s for a non-pending expense" do
-      approved = airtable_expense_record(id: "recExp3", status: "Approved")
+    # --- Read-only show (view a claim after the editable window) -----------
+
+    test "show renders an own expense read-only at any status, with no remove control" do
+      approved = airtable_expense_record(id: "recExp3", status: "Approved", description: "Van hire")
       @store, @client = build_fake_store(
         expenses: [ approved ],
         people: [ airtable_person_record(email: @user.email) ],
@@ -256,9 +289,132 @@ module Admin
       BaseController.store_builder = -> { @store }
       sign_in @user
 
-      get :edit, params: { id: "recExp3" }
+      get :show, params: { id: "recExp3" }
+
+      assert_response :success
+      assert_includes response.body, "Van hire"
+      assert_includes response.body, "Approved"
+      # No editable expense fields and no receipt-remove control on the
+      # read-only page (both are present on the edit page — this discriminates it).
+      assert_select "input[name='reimbursements_expense_form[amount]']", 0
+      assert_select "button[data-action='receipts-upload#remove']", 0
+    end
+
+    test "show 404s for another person's expense" do
+      sign_in @user
+
+      get :show, params: { id: "recExp2" }
 
       assert_response :not_found
+    end
+
+    test "the index links each row to its read-only view" do
+      sign_in @user
+
+      get :index
+
+      assert_select "a[href=?]", admin_reimbursements_expense_path("recExp1"), text: "View"
+    end
+
+    # --- Draft/submit boundary: state-aware labels + actions --------------
+
+    def own_draft_store
+      draft = airtable_expense_record(id: "recDraftOwn", status: "Draft")
+      @store, @client = build_fake_store(
+        expenses: [ draft ],
+        people: [ airtable_person_record(email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
+    end
+
+    test "editing a Pending claim labels the primary Save changes and the withdraw button, which confirms" do
+      sign_in @user
+
+      get :edit, params: { id: "recExp1" } # recExp1 is Pending
+
+      assert_select "input[type=submit][value='Save changes']"
+      assert_select "button[name='reimbursements_expense_form[save_as_draft]'][data-turbo-confirm*=?]",
+                    "out of the finance team's queue"
+      assert_includes response.body, "Withdraw back to draft"
+    end
+
+    test "editing a Draft labels the primary Submit expense and offers Delete draft" do
+      own_draft_store
+      sign_in @user
+
+      get :edit, params: { id: "recDraftOwn" }
+
+      assert_select "input[type=submit][value='Submit expense']"
+      # Delete-draft button (a button_to DELETE with a confirm).
+      assert_select "form[action=?][method=post]", admin_reimbursements_expense_path("recDraftOwn") do
+        assert_select "input[name=_method][value=delete]", 1
+      end
+      assert_includes response.body, "Delete draft"
+    end
+
+    test "destroy deletes an own draft" do
+      own_draft_store
+      sign_in @user
+
+      delete :destroy, params: { id: "recDraftOwn" }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/draft deleted/i, flash[:notice])
+      assert_equal [ [ :expenses, "recDraftOwn" ] ], @client.deleted
+    end
+
+    test "destroy refuses a non-draft (Pending) claim" do
+      sign_in @user
+
+      delete :destroy, params: { id: "recExp1" } # Pending
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/only a draft can be deleted/i, flash[:alert])
+      assert_empty @client.deleted
+    end
+
+    test "destroy 404s for another person's draft" do
+      sign_in @user
+
+      delete :destroy, params: { id: "recExp2" }
+
+      assert_response :not_found
+    end
+
+    # A race: the producer follows an Edit link on a stale list for their own
+    # claim that review has since picked up. Fail gracefully (friendly flash
+    # redirect) rather than showing a bare 404.
+    def rebuild_store_with_own_non_editable_expense
+      approved = airtable_expense_record(id: "recExp3", status: "Approved")
+      @store, @client = build_fake_store(
+        expenses: [ approved ],
+        people: [ airtable_person_record(email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
+    end
+
+    test "edit redirects with a flash when an own claim is no longer editable" do
+      rebuild_store_with_own_non_editable_expense
+      sign_in @user
+
+      get :edit, params: { id: "recExp3" }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/finance team/, flash[:warning])
+    end
+
+    test "update redirects with a flash when an own claim is no longer editable" do
+      rebuild_store_with_own_non_editable_expense
+      sign_in @user
+
+      patch :update, params: { id: "recExp3",
+                               reimbursements_expense_form: valid_form_params.except(:receipts) }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/finance team/, flash[:warning])
+      assert_empty @client.updated
     end
 
     test "update writes changed fields without requiring a new receipt" do

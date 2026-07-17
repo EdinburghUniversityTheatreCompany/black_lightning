@@ -1,0 +1,105 @@
+<%= turbo_stream_from "reimbursements_review_ai" %>
+
+<p class="mb-3 text-gray-600">
+  Review submitted expenses before they go to EUSA. Each card shows a live modulus
+  check on the details the money will actually be paid to, the AI receipt check, and any
+  duplicate or override warnings. Fix anything that needs attention, then approve or reject.
+</p>
+
+<% pending_total = @pending.sum { |e| e.amount || 0 } %>
+<% approved_total = @approved.sum { |e| e.amount || 0 } %>
+
+<%# Each link is a full page navigation (a different tab: query param), not a
+    client-side toggle — role="tab"/"tablist" would claim arrow-key-navigable
+    widget behavior these plain links don't have. aria-current="page" is the
+    correct pattern for "which of these navigation links is the current one". %>
+<nav aria-label="Review status" class="mb-4 flex gap-2 border-b border-gray-200">
+  <% tab_class = ->(active) { active ? "border-b-2 border-primary font-medium text-primary px-3 py-2" : "px-3 py-2 text-gray-600" } %>
+  <%= link_to "Pending (#{@pending.size})", admin_reimbursements_review_path(tab: "pending"),
+              "aria-current": (@tab == "pending" ? "page" : nil), class: tab_class.call(@tab == "pending") %>
+  <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
+              "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
+</nav>
+
+<% if @tab == "approved" %>
+  <% if @approved.empty? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      No approved expenses yet. Work the Pending tab first.
+    <% end %>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      <%= @approved.size %> approved, total <%= reimbursements_money(approved_total) %>.
+      Ready to submit on the Build Batch page.
+    </p>
+    <% @approved.each do |expense| %>
+      <%= render "expense_card", expense: expense, allow_approve: false, duplicates: nil %>
+    <% end %>
+  <% end %>
+<% else %>
+  <% if @pending.empty? %>
+    <%= render AlertComponent.new(type: :info) do %>
+      No pending expenses.
+    <% end %>
+  <% else %>
+    <p class="mb-3 text-gray-600">
+      <%= @pending.size %> pending, total <%= reimbursements_money(pending_total) %>.
+      AI checks run in the background and each verdict appears on its card automatically.
+    </p>
+
+    <div data-controller="bulk-review">
+      <%# Bulk toolbar: tick expenses below, then approve or reject them together.
+          The per-card checkboxes are wired to this form via form="bulk-review-form". %>
+      <div class="mb-4 flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-gray-50 p-3">
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <%= check_box_tag "select_all", "1", false,
+                            data: { bulk_review_target: "selectAll", action: "bulk-review#toggleAll" },
+                            class: "h-4 w-4" %>
+          Select all
+        </label>
+        <span class="text-sm text-gray-600" data-bulk-review-target="counter">0 selected</span>
+        <%= form_with url: admin_reimbursements_bulk_approve_review_path(tab: @tab), method: :patch,
+                      id: "bulk-review-form", class: "flex flex-wrap items-center gap-2" do %>
+          <%= text_field_tag :rejection_reason, nil, placeholder: "Reason (required to reject)",
+                             data: { bulk_review_target: "reason" },
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+          <%= submit_tag "Approve selected",
+                         formaction: admin_reimbursements_bulk_approve_review_path(tab: @tab),
+                         data: { bulk_review_target: "approveButton" }, disabled: true,
+                         class: btn_classes(:success, :sm) %>
+          <%= submit_tag "Reject selected",
+                         formaction: admin_reimbursements_bulk_reject_review_path(tab: @tab),
+                         data: { bulk_review_target: "rejectButton", disable_with: false,
+                                 turbo_confirm: "Reject the selected expenses and email each producer?" },
+                         disabled: true, class: btn_classes(:danger, :sm) %>
+        <% end %>
+      </div>
+
+      <h2 class="mt-4 mb-2 text-lg font-semibold">Ready to approve (<%= @ready.size %>)</h2>
+      <% if @ready.empty? %>
+        <%= render AlertComponent.new(type: :info) do %>
+          All pending expenses need attention before approving.
+        <% end %>
+      <% else %>
+        <% @ready.each do |expense| %>
+          <%= render "expense_card", expense: expense, allow_approve: true, selectable: true, duplicates: @duplicates[expense.record_id] %>
+        <% end %>
+      <% end %>
+
+      <h2 class="mt-6 mb-2 text-lg font-semibold">Needs attention (<%= @attention.size %>)</h2>
+      <% if @attention.empty? %>
+        <%= render AlertComponent.new(type: :info) do %>
+          None: all pending expenses are ready to approve.
+        <% end %>
+      <% else %>
+        <%= render AlertComponent.new(type: :warning) do %>
+          These need attention before approving. Either a data problem to fix (missing excl.-VAT
+          amount, no budget, no receipts, invalid bank details, or over budget), or a budget owner's
+          sign-off still awaited (which an owner endorses, or you override).
+        <% end %>
+        <% @attention.each do |expense| %>
+          <%= render "expense_card", expense: expense, allow_approve: true, selectable: true, duplicates: @duplicates[expense.record_id] %>
+        <% end %>
+      <% end %>
+    </div>
+  <% end %>
+<% end %>

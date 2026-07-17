@@ -5,13 +5,15 @@ module Admin
     # AI-prefilled submission (with save-as-draft), and editing while an
     # expense is still a draft or pending.
     class ExpensesController < BaseController
+      rescue_from ExpenseNoLongerEditable, with: :expense_no_longer_editable
+
       def index
         if params[:refresh].present?
           store.refresh_expenses!
           redirect_to admin_reimbursements_expenses_path and return
         end
 
-        @title = "My Reimbursements"
+        @title = "My Claims"
         @expenses = current_person ? store.expenses_for(current_person.record_id) : []
       end
 
@@ -33,6 +35,13 @@ module Admin
         person = person_link.ensure_person!(current_user)
         expense = store.create_expense!(@form.create_attrs(person.record_id))
         redirect_with_attachment_result(expense.record_id, created_notice)
+      end
+
+      # Read-only view of the submitter's own claim at any status — so they can
+      # check what they claimed and re-view their receipt while it's being paid.
+      def show
+        @expense = find_own_expense!(params[:id])
+        @title = "Expense ##{@expense.auto_number}"
       end
 
       def edit
@@ -62,14 +71,29 @@ module Admin
         redirect_with_attachment_result(@expense.record_id, notice)
       end
 
+      # Discard an unsent draft entirely. Only a Draft can be deleted — a
+      # Pending claim is with the finance team, so it's withdrawn (back to
+      # Draft) via the edit form, not destroyed.
+      def destroy
+        @expense = find_own_editable_expense!(params[:id])
+        unless @expense.status == ::Reimbursements::Status::DRAFT
+          redirect_to admin_reimbursements_expenses_path,
+                      alert: "Only a draft can be deleted. Withdraw a submitted claim from its edit page instead."
+          return
+        end
+
+        store.delete_expense!(@expense.record_id)
+        redirect_to admin_reimbursements_expenses_path, notice: "Draft deleted."
+      end
+
       # Receipt-first prefill: the form posts the receipt(s) here before
       # submission; extraction failures return ok: false and the form stays
       # manual (never a blocker). Files are gated here like on submit — this
       # endpoint base64s them into RAM for Gemini.
       def extract
         files = Array(params[:receipts]).compact_blank.select do |file|
-          ::Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(file.content_type) &&
-            file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
+          file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
+            ::Reimbursements::ReceiptContentType.allowed_upload?(file)
         end
         if files.empty?
           render json: { ok: false, error: "no usable receipt files" }
@@ -82,6 +106,16 @@ module Admin
       end
 
       private
+
+      # A producer followed a stale Edit link for a claim the finance team has
+      # since picked up. Refuse the edit, but explain it rather than a bare 404.
+      def expense_no_longer_editable
+        # flash[:warning] (not alert/error) so this expected, not-broken state
+        # renders as a neutral notice, not the alarming red "Oops…" error modal.
+        redirect_to admin_reimbursements_expenses_path,
+                    flash: { warning: "That claim is now with the finance team and can't be edited. " \
+                                      "You can still view it from your expenses list." }
+      end
 
       def created_notice
         if @form.draft?
@@ -109,7 +143,8 @@ module Admin
               .permit(:expense_type, :amount, :amount_excl_vat, :budget_record_id,
                       :description, :payment_reference, :payee_name_override,
                       :sort_code_override, :account_number_override,
-                      :vat_itemised, :vat_acknowledged, :save_as_draft, receipts: [])
+                      :vat_itemised, :vat_acknowledged, :large_amount_acknowledged,
+                      :save_as_draft, receipts: [])
       end
 
       def attach_receipts(record_id)
@@ -126,7 +161,8 @@ module Admin
       def extraction_json(extraction)
         return { ok: false, error: extraction.error } unless extraction.ok?
 
-        excl_vat = extraction.amount_excl_vat || extraction.total_amount
+        raw_excl_vat = extraction.amount_excl_vat
+        excl_vat = raw_excl_vat.nil? || raw_excl_vat.zero? ? extraction.total_amount : raw_excl_vat
         {
           ok: true,
           merchant: extraction.merchant,

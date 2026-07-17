@@ -1,0 +1,49 @@
+<%# Same Turbo Frame as show/preview — see show.html.erb for why the wizard
+    renders inside a frame. %>
+<%= turbo_frame_tag "reconcile" do %>
+<% if @reconciliation_errors.present? %>
+  <%= render AlertComponent.new(type: :warning) do %>
+    <p>Reconciliation finished, but <%= @reconciliation_errors.size %>
+      row<%= "s" unless @reconciliation_errors.size == 1 %> hit a problem — everything else below
+      still committed. Check these before assuming the paste is fully applied:</p>
+    <ul class="list-disc list-inside mt-1">
+      <% @reconciliation_errors.each do |error| %>
+        <li><%= error %></li>
+      <% end %>
+    </ul>
+  <% end %>
+<% else %>
+  <%= render AlertComponent.new(type: :success) do %>
+    Reconciliation complete.
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Summary") do %>
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+    <div>
+      <div class="text-2xl font-semibold"><%= @expenses_paid %></div>
+      <div class="text-sm text-gray-600">Expenses marked Paid</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @credits_linked %></div>
+      <div class="text-sm text-gray-600">Credit rows linked to budgets</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @unmatched_saved %></div>
+      <div class="text-sm text-gray-600">Unmatched rows saved</div>
+    </div>
+    <div>
+      <div class="text-2xl font-semibold"><%= @skipped_count %></div>
+      <div class="text-sm text-gray-600">Already-imported rows skipped</div>
+    </div>
+  </div>
+<% end %>
+
+<p class="mt-2 text-sm text-gray-600">
+  Producers whose expenses were marked Paid have been emailed a "you've been paid" note.
+</p>
+
+<div class="mt-4">
+  <%= link_to "Reconcile another month", admin_reimbursements_reconciliation_path, class: btn_classes(:secondary) %>
+</div>
+<% end %>

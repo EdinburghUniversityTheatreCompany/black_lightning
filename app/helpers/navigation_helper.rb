@@ -51,12 +51,30 @@ module NavigationHelper
     children << { title: "Debt Checker", path: new_admin_debt_checker_path, fa_icon: "fa-magnifying-glass-dollar" }  if can? :check_debt, Admin::Debt
     navbar_categories << { title: "Staffing & Debt", children: children, fa_icon: "fa-person" }
 
-    # Finance
+    # My Reimbursements — the producer/owner-facing surfaces (base access
+    # permission). Kept out of the finance-only "Finance" category so a
+    # producer who isn't on the finance team isn't shown a group called
+    # "Finance" containing only their personal links.
     children = []
     # Points at /expenses (not the namespace root) so the sidebar's
     # start_with? active-check doesn't also light up for payment_details.
-    children << { title: "Reimbursements", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
+    children << { title: "My Claims", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
     children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
+    children << { title: "My Budgets", path: admin_reimbursements_my_budgets_path, fa_icon: "fa-user-check" } if can? :access, :reimbursements
+    navbar_categories << { title: "My Reimbursements", children: children, fa_icon: "fa-receipt" }
+
+    # Finance — the finance-team-only reimbursements tooling.
+    children = []
+    children << { title: "Review", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" } if can? :manage, :reimbursements_finance
+    children << { title: "Expenses", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" } if can? :manage, :reimbursements_finance
+    children << { title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" } if can? :manage, :reimbursements_finance
+    children << { title: "Budgets", path: admin_reimbursements_budgets_path, fa_icon: "fa-sack-dollar" } if can? :manage, :reimbursements_finance
+    children << { title: "Build Batch", path: new_admin_reimbursements_batch_path, fa_icon: "fa-file-export" } if can? :manage, :reimbursements_finance
+    children << { title: "History", path: admin_reimbursements_batches_path, fa_icon: "fa-clock-rotate-left" } if can? :manage, :reimbursements_finance
+    children << { title: "Reconcile", path: admin_reimbursements_reconciliation_path, fa_icon: "fa-scale-balanced" } if can? :manage, :reimbursements_finance
+    children << { title: "EUSA Actuals", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list" } if can? :manage, :reimbursements_finance
+    children << { title: "Integration Status", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse" } if can? :manage, :reimbursements_finance
+    children << { title: "Settings", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
     # Opportunities

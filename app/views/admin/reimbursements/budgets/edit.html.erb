@@ -1,0 +1,184 @@
+<p class="mb-3">
+  <%= link_to "← All budgets", admin_reimbursements_budgets_path, class: "text-sm text-primary underline" %>
+</p>
+
+<%= render CardComponent.new(title: "Edit #{@budget.name.presence || 'budget'}") do %>
+  <%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch,
+                class: "flex flex-col gap-4" do |form| %>
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= label_tag :name, "Name", class: "block text-sm font-medium" %>
+        <%= text_field_tag :name, @budget.name,
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+      <div>
+        <%= label_tag :nominal_code, "Nominal code", class: "block text-sm font-medium" %>
+        <%= text_field_tag :nominal_code, @budget.nominal_code,
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+      </div>
+      <div>
+        <%= label_tag :budget_type, "Type", class: "block text-sm font-medium" %>
+        <%= select_tag :budget_type,
+                       options_for_select(::Reimbursements::Budget::TYPES, @budget.budget_type),
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      </div>
+      <div>
+        <%= label_tag :initial_budget, "Initial budget (£)", class: "block text-sm font-medium" %>
+        <%= number_field_tag :initial_budget, @budget.initial_budget, step: "0.01",
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+      </div>
+    </div>
+
+    <label class="inline-flex items-center gap-2 text-sm">
+      <%= check_box_tag :active, "1", @budget.active %>
+      Visible to submitters
+    </label>
+
+    <fieldset aria-describedby="owner_ids_hint">
+      <legend class="block text-sm font-medium">Owners</legend>
+      <p id="owner_ids_hint" class="text-xs text-gray-500 mb-1">Tick everyone who owns this budget.</p>
+      <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
+          collection_check_boxes emits the empty hidden field itself, so unticking
+          everyone still clears the owners. %>
+      <div class="max-h-48 w-72 overflow-y-auto rounded border border-gray-300 p-2 flex flex-col gap-1">
+        <%= form.collection_check_boxes(:owner_ids, @people, :record_id,
+              ->(person) { person.name.presence || person.email },
+              { checked: @budget.owner_ids }) do |b| %>
+          <%= b.label(class: "flex items-center gap-2 text-sm") { safe_join([ b.check_box, b.text ]) } %>
+        <% end %>
+      </div>
+    </fieldset>
+
+    <div>
+      <%= label_tag :notes, "Notes", class: "block text-sm font-medium" %>
+      <%= text_area_tag :notes, @budget.notes, rows: 3,
+                        class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xl" %>
+    </div>
+
+    <div>
+      <%= submit_tag "Save budget", class: btn_classes(:primary) %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Financials (read-only)", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    Airtable computes these from the expenses and forecasts linked to this budget.
+  </p>
+  <% if @budget.over_budget? %>
+    <p class="mb-3">
+      <%= render(BadgeComponent.new(type: :danger, pill: true).with_content("Over budget")) %>
+    </p>
+  <% elsif @budget.over_initial_budget? %>
+    <p class="mb-3">
+      <%= render(BadgeComponent.new(type: :warning, pill: true).with_content("Over original budget")) %>
+    </p>
+  <% end %>
+  <dl class="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm">
+    <div><dt class="text-gray-500">Current forecast</dt><dd class="font-medium"><%= reimbursements_money(@budget.current_forecast) %></dd></div>
+    <div><dt class="text-gray-500">Committed</dt><dd class="font-medium"><%= reimbursements_money(@budget.committed_amount) %></dd></div>
+    <div><dt class="text-gray-500">Total paid</dt><dd class="font-medium"><%= reimbursements_money(@budget.total_paid) %></dd></div>
+    <div><dt class="text-gray-500">Remaining</dt><dd class="font-medium <%= "text-danger" if @budget.remaining&.negative? %>"><%= reimbursements_money(@budget.remaining) %></dd></div>
+    <div>
+      <dt class="text-gray-500">Variance</dt>
+      <dd class="font-medium <%= "text-danger" if @budget.variance&.positive? %><%= "text-success" if @budget.variance&.negative? %>">
+        <%= reimbursements_money(@budget.variance) %>
+      </dd>
+    </div>
+  </dl>
+<% end %>
+
+<%= render CardComponent.new(title: "Budget forecasts", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    A versioned log of projected-spend updates for this budget. The latest feeds the
+    current forecast above. Add a new one whenever the projection changes.
+  </p>
+
+  <%= form_with url: forecast_admin_reimbursements_budget_path(@budget.record_id), method: :post,
+                class: "flex flex-wrap items-end gap-3 mb-4" do %>
+    <div>
+      <%= label_tag :amount, "Amount (£, excl. VAT)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount, nil, step: "0.01",
+                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+    </div>
+    <div>
+      <%= label_tag :date, "Date", class: "block text-sm font-medium" %>
+      <%= date_field_tag :date, Date.current,
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div class="grow">
+      <%= label_tag :reason, "Reason / notes", class: "block text-sm font-medium" %>
+      <%= text_field_tag :reason, nil,
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
+    </div>
+    <%= submit_tag "Add forecast", class: btn_classes(:primary, :sm) %>
+  <% end %>
+
+  <% if @forecasts.empty? %>
+    <p class="py-2 text-center text-gray-600">No forecasts logged yet.</p>
+  <% else %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-gray-500 border-b border-gray-200">
+            <th scope="col" class="py-2 pr-3">Date</th>
+            <th scope="col" class="py-2 pr-3 text-right">Amount</th>
+            <th scope="col" class="py-2">Reason / notes</th>
+            <th scope="col" class="py-2 text-right"><span class="sr-only">Actions</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @forecasts.each do |forecast| %>
+            <% if forecast.record_id == @editing_forecast_id %>
+              <tr class="border-b border-gray-100 bg-amber-50">
+                <td colspan="4" class="py-2">
+                  <%= form_with url: update_forecast_admin_reimbursements_budget_path(@budget.record_id),
+                                method: :patch, class: "flex flex-wrap items-end gap-3" do %>
+                    <%= hidden_field_tag :forecast_id, forecast.record_id %>
+                    <div>
+                      <%= label_tag "edit_amount_#{forecast.record_id}", "Amount (£, excl. VAT)", class: "block text-xs font-medium" %>
+                      <%= number_field_tag :amount, forecast.amount, step: "0.01", id: "edit_amount_#{forecast.record_id}",
+                                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+                    </div>
+                    <div>
+                      <%= label_tag "edit_date_#{forecast.record_id}", "Date", class: "block text-xs font-medium" %>
+                      <%= date_field_tag :date, forecast.date, id: "edit_date_#{forecast.record_id}",
+                                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                    </div>
+                    <div class="grow">
+                      <%= label_tag "edit_reason_#{forecast.record_id}", "Reason / notes", class: "block text-xs font-medium" %>
+                      <%= text_field_tag :reason, forecast.reason, id: "edit_reason_#{forecast.record_id}",
+                                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
+                    </div>
+                    <%= submit_tag "Save", class: btn_classes(:primary, :sm) %>
+                    <%= link_to "Cancel", edit_admin_reimbursements_budget_path(@budget.record_id), class: btn_classes(:secondary, :sm) %>
+                  <% end %>
+                </td>
+              </tr>
+            <% else %>
+              <tr class="border-b border-gray-100">
+                <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(forecast.date) %></td>
+                <td class="py-2 pr-3 text-right"><%= reimbursements_money(forecast.amount) %></td>
+                <td class="py-2"><%= forecast.reason.presence || "-" %></td>
+                <td class="py-2 text-right whitespace-nowrap">
+                  <%= link_to "Edit",
+                        edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id),
+                        "aria-label": "Edit forecast from #{reimbursements_date(forecast.date)}",
+                        class: btn_classes(:secondary, :sm) %>
+                  <%# inline-block on the button_to FORM (not the inner button) so
+                      Delete sits beside Edit instead of dropping to its own line. %>
+                  <%= button_to "Delete",
+                        delete_forecast_admin_reimbursements_budget_path(@budget.record_id, forecast_id: forecast.record_id),
+                        method: :delete, class: btn_classes(:danger, :sm),
+                        "aria-label": "Delete forecast from #{reimbursements_date(forecast.date)}",
+                        form: { class: "inline-block",
+                                data: { turbo_confirm: "Remove this forecast? This changes the budget's rolled-up current forecast." } } %>
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+<% end %>

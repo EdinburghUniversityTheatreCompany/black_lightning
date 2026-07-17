@@ -1,0 +1,266 @@
+<%#
+  One editable expense card. Locals:
+  - expense: Reimbursements::Expense
+  - allow_approve: whether to show the Approve button (Pending only)
+  - duplicates: array of possible-duplicate expenses, or nil
+  - selectable: whether to show the bulk-select checkbox (Pending only; default false)
+%>
+<% modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
+<% selectable = local_assigns.fetch(:selectable, false) %>
+<% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
+<%# The owner-endorsement gate is a distinct, overridable blocking reason (see
+    OwnerReview) — kept out of ReviewSupport so that stays pure/AR-free. %>
+<% owner_gate_unmet = @owner_gate_unmet_ids&.include?(expense.record_id) %>
+<% endorsement = @endorsements_by_expense&.[](expense.record_id) %>
+<% endorsement_covers = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
+<% owner_names = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id)&.name }.presence %>
+<% attention_reasons = attention[:blocking] + attention[:advisory] %>
+
+<div class="mb-3 rounded border border-gray-200 p-3">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+    <% if selectable %>
+      <%# data-flagged feeds the bulk toolbar's Approve confirm, which warns
+          how many selected cards are flagged before a bulk approval fires. %>
+      <%= check_box_tag "expense_ids[]", expense.record_id, false,
+                        id: "select_#{expense.record_id}", form: "bulk-review-form",
+                        "aria-label": "Select ##{expense.auto_number} for bulk actions",
+                        data: { bulk_review_target: "checkbox", action: "bulk-review#refresh",
+                                flagged: attention_reasons.any? || owner_gate_unmet },
+                        class: "h-4 w-4" %>
+    <% end %>
+    <span class="font-medium">
+      #<%= expense.auto_number %> — <%= expense.person&.name.presence || "(no payee)" %>
+      <span class="text-gray-500">(<%= expense.person&.email.presence || "no email" %>)</span>
+    </span>
+    <span>Amount: <strong><%= reimbursements_money(expense.amount) %></strong></span>
+    <% if expense.amount_excl_vat.nil? %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Excl. VAT not set") %>
+    <% else %>
+      <span>Excl. VAT: <strong><%= reimbursements_money(expense.amount_excl_vat) %></strong></span>
+    <% end %>
+    <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
+    <span>Receipts: <%= expense.receipt_count %></span>
+    <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
+    <% if attention[:blocking].any? %>
+      <%= render BadgeComponent.new(type: :danger, pill: true).with_content("Can't approve yet") %>
+    <% elsif owner_gate_unmet %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Awaiting owner sign-off") %>
+    <% elsif attention[:advisory].any? %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Check before approving") %>
+    <% end %>
+    <%# Positive confirmation the owner gate is met, so finance can see a claim
+        WAS endorsed (and, after an edit re-opens it, that it no longer is). %>
+    <% if endorsement_covers && endorsement.owner_endorsement? %>
+      <%= render BadgeComponent.new(type: :success, pill: true)
+            .with_content("Endorsed by #{@people_by_id&.[](endorsement.endorsed_by_person_id)&.name || 'an owner'}") %>
+    <% elsif endorsement_covers && endorsement.finance_override? %>
+      <%= render BadgeComponent.new(type: :info, pill: true).with_content("Owner sign-off overridden") %>
+    <% end %>
+  </div>
+
+  <%# Reasons inline (not behind a click) so an operator scanning the queue
+      reads them at a glance, with blocked (fix-first) clearly separated from
+      advisory (approval still proceeds). %>
+  <% if attention[:blocking].any? || attention[:advisory].any? || owner_gate_unmet %>
+    <div class="mt-2 flex flex-col gap-1 text-sm">
+      <% if attention[:blocking].any? %>
+        <p class="text-danger">
+          <span class="font-medium">Can't approve until fixed:</span>
+          <%= attention[:blocking].join(", ") %>.
+        </p>
+      <% end %>
+      <% if owner_gate_unmet %>
+        <p class="text-warning">
+          <span class="font-medium">Awaiting a budget owner's endorsement</span>
+          (blocks approval until signed off or overridden).
+          <% if owner_names %><%= owner_names.to_sentence %>
+            <%= owner_names.one? ? "owns" : "own" %> the <%= expense.budget.name %> budget and
+            can sign off from My Budgets.<% end %>
+          Or use the finance override below.
+        </p>
+      <% end %>
+      <% if attention[:advisory].any? %>
+        <p class="text-warning">
+          <span class="font-medium">Check before approving:</span>
+          <%= attention[:advisory].join(", ") %>
+          <span class="text-gray-500">(approval still goes through)</span>.
+        </p>
+      <% end %>
+    </div>
+  <% end %>
+
+  <%# --- AI verdict (updates live via Turbo Stream; see AiCheckJob) --- %>
+  <%= render "ai_verdict", expense: expense %>
+
+  <%# --- Warnings --- %>
+  <% if expense.payee_override? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
+      Direct payment to <strong><%= expense.effective_payee_name %></strong>
+      (not the submitter <%= expense.person&.name %>), paying
+      <%= expense.effective_sort_code.presence || "-" %> /
+      <%= expense.effective_account_number.presence || "-" %>.
+      Confirm these match the invoice before approving.
+    <% end %></div>
+  <% end %>
+
+  <% if modulus == Reimbursements::ModulusCheck::INVALID %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
+      Modulus check failed for the effective sort code + account number. Likely a typo:
+      fix the override or the People record before approving.
+    <% end %></div>
+  <% end %>
+
+  <% unless expense.effective_has_bank_details? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
+      No bank details on file for this payee. Fix the override or the People record.
+    <% end %></div>
+  <% end %>
+
+  <% if expense.budget.nil? || expense.budget.record_id.blank? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :danger) do %>
+      No budget linked. Pick one below before approving.
+    <% end %></div>
+  <% end %>
+
+  <% if duplicates.present? %>
+    <div class="mt-2"><%= render AlertComponent.new(type: :warning) do %>
+      Possible duplicate of
+      <%= duplicates.map { |d| "##{d.auto_number}" }.join(", ") %>:
+      same payee and amount within 30 days. Check this isn't a double-submission.
+    <% end %></div>
+  <% end %>
+
+  <%# --- Edit (Save) --- %>
+  <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab),
+                method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2" do %>
+    <div>
+      <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount, expense.amount, step: 0.01, min: 0, id: "amount_#{expense.record_id}",
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "amount_excl_vat_#{expense.record_id}", "Amount excl. VAT (GBP)", class: "block text-sm font-medium" %>
+      <%= number_field_tag :amount_excl_vat, expense.amount_excl_vat, step: 0.01, min: 0, id: "amount_excl_vat_#{expense.record_id}",
+                           class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div class="sm:col-span-2">
+      <%= label_tag "description_#{expense.record_id}", "Description", class: "block text-sm font-medium" %>
+      <%= text_area_tag :description, expense.description, id: "description_#{expense.record_id}", rows: 2,
+                        class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "payment_reference_#{expense.record_id}", "Payment reference", class: "block text-sm font-medium" %>
+      <%= text_field_tag :payment_reference, expense.payment_reference, id: "payment_reference_#{expense.record_id}",
+                         maxlength: Reimbursements::ExpenseForm::REFERENCE_LIMIT,
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "budget_record_id_#{expense.record_id}", "Budget", class: "block text-sm font-medium" %>
+      <% budget_options = @budgets.map { |b| [ b.name, b.record_id ] } %>
+      <% if expense.budget && expense.budget.record_id.present? && budget_options.none? { |_, id| id == expense.budget.record_id } %>
+        <% budget_options.unshift([ expense.budget.name, expense.budget.record_id ]) %>
+      <% end %>
+      <%= select_tag :budget_record_id,
+                     options_for_select(budget_options, expense.budget&.record_id),
+                     include_blank: expense.budget&.record_id.blank?,
+                     id: "budget_record_id_#{expense.record_id}",
+                     class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag "nominal_code_override_#{expense.record_id}", "Nominal code override", class: "block text-sm font-medium" %>
+      <%= text_field_tag :nominal_code_override, expense.nominal_code_override, id: "nominal_code_override_#{expense.record_id}",
+                         placeholder: "blank = use budget default",
+                         class: "w-full border border-gray-300 rounded px-2 py-1 text-sm" %>
+      <p class="mt-1 text-xs text-gray-500">Effective nominal: <%= expense.effective_nominal_code.presence || "-" %></p>
+    </div>
+    <div class="sm:col-span-2">
+      <%= submit_tag "Save changes", "aria-label": "Save changes to ##{expense.auto_number}",
+                     class: btn_classes(:primary, :sm) %>
+    </div>
+  <% end %>
+
+  <%# --- Receipts (view in the lightbox; attach/detach inline during review) --- %>
+  <div class="mt-3">
+    <p class="text-sm font-medium">Receipts</p>
+    <div class="mt-1">
+      <%= render "admin/reimbursements/shared/receipts_lightbox",
+                 receipts: expense.receipts, group: "receipts-#{expense.record_id}" %>
+    </div>
+    <% if expense.receipts.any? %>
+      <ul class="mt-2 flex flex-col gap-1">
+        <% expense.receipts.each do |receipt| %>
+          <li class="flex items-center gap-2 text-sm">
+            <span class="truncate text-gray-600"><%= receipt.filename.presence || "receipt" %></span>
+            <%= button_to "Remove",
+                          admin_reimbursements_review_receipt_path(expense.record_id, receipt.attachment_id, tab: @tab),
+                          method: :delete, form: { data: { turbo_confirm: "Remove this receipt from Airtable?" } },
+                          "aria-label": "Remove #{receipt.filename.presence || 'receipt'} from expense ##{expense.auto_number}",
+                          class: btn_classes(:danger, :sm) %>
+          </li>
+        <% end %>
+      </ul>
+    <% end %>
+    <%= form_with url: admin_reimbursements_review_receipts_path(expense.record_id, tab: @tab),
+                  method: :post, multipart: true, class: "mt-2 flex items-center gap-2" do %>
+      <%= file_field_tag "receipts[]", multiple: true, accept: "application/pdf,image/*",
+                         "aria-label": "Attach receipts to expense ##{expense.auto_number}", class: "text-sm" %>
+      <%= submit_tag "Attach", class: btn_classes(:secondary, :sm) %>
+    <% end %>
+  </div>
+
+  <%# --- Approve / Reject --- %>
+  <div class="mt-3 flex flex-wrap items-start gap-2">
+    <% if allow_approve %>
+      <% if attention[:blocking].any? %>
+        <%# Blocking reasons are a hard server-side refusal, so a clickable
+            "Approve anyway?" would only bounce — disable it and let the red
+            badge + inline reasons say why. %>
+        <%= button_to "Approve", "#", method: :patch, disabled: true,
+                      "aria-label": "Approve ##{expense.auto_number} (blocked: #{attention[:blocking].join(', ')})",
+                      class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
+      <% elsif owner_gate_unmet %>
+        <%# The owner gate is the only hard block. Finance can't plain-approve,
+            but CAN override the owner sign-off — recorded as who overrode, with
+            an optional reason. The confirm states the consequence and names any
+            advisory flags, so overriding a flagged claim keeps the same misclick
+            safeguard the normal Approve has. Use only when no owner can act. %>
+        <% override_confirm = "Approve ##{expense.auto_number} without an owner's sign-off? " \
+             "This is recorded against your account. Use it only when no owner can sign off (e.g. no portal account)."
+           override_confirm += " It is also flagged: #{attention[:advisory].join('; ')}." if attention[:advisory].any? %>
+        <%= form_with url: admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab),
+                      method: :patch, class: "flex flex-wrap items-center gap-2",
+                      data: { turbo_confirm: override_confirm } do %>
+          <%= text_field_tag :override_note, nil, placeholder: "Reason for override (optional)",
+                             "aria-label": "Reason for overriding the owner sign-off on ##{expense.auto_number}",
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+          <%= submit_tag "Approve (override sign-off)",
+                         "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
+                         class: btn_classes(:warning, :sm) %>
+        <% end %>
+      <% else %>
+        <%# An advisory-only card gets a confirm NAMING its reasons — approval
+            commits real money to a BACS batch and advisory reasons (over
+            budget, no receipt, possible duplicate) don't block server-side, so
+            this dialog is the only thing between a misclick and an approved
+            flagged expense. Clean cards keep one-click approval. %>
+        <%= button_to "Approve",
+                      admin_reimbursements_approve_review_path(expense.record_id, tab: @tab),
+                      method: :patch, "aria-label": "Approve ##{expense.auto_number}",
+                      form: attention[:advisory].any? ? { data: { turbo_confirm:
+                        "##{expense.auto_number} is flagged: #{attention[:advisory].join('; ')}. Approve anyway?" } } : {},
+                      class: btn_classes(:success, :sm) %>
+      <% end %>
+    <% end %>
+    <%= form_with url: admin_reimbursements_reject_review_path(expense.record_id, tab: @tab),
+                  method: :patch, class: "flex items-center gap-2",
+                  data: { turbo_confirm: "Reject ##{expense.auto_number} and email the producer? This can't be undone." } do %>
+      <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
+                         "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+      <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}", class: btn_classes(:danger, :sm) %>
+    <% end %>
+    <%# Full finance edit (any status, incl. payee overrides). %>
+    <%= link_to "Edit (any status)", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                "aria-label": "Edit ##{expense.auto_number} (any status)", class: btn_classes(:secondary, :sm) %>
+  </div>
+</div>

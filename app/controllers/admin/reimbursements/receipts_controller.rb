@@ -30,10 +30,12 @@ module Admin
         return [ "No files received." ] if files.empty?
 
         files.filter_map do |file|
-          if !::Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(file.content_type)
-            "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP)."
-          elsif file.size > ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
+          # Size checked first, before ReceiptContentType reads the whole file
+          # into memory to sniff it.
+          if file.size > ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES
             "#{file.original_filename} must be 5 MB or smaller."
+          elsif !::Reimbursements::ReceiptContentType.allowed_upload?(file)
+            "#{file.original_filename} must be a PDF or a photo (JPEG/PNG/WEBP)."
           else
             store.attach_receipt!(expense.record_id, filename: file.original_filename,
                                                      content_type: file.content_type, bytes: file.read)

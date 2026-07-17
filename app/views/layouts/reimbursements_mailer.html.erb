@@ -1,0 +1,23 @@
+<%# Minimal document wrapper for the reimbursements Notifier emails (sent via
+    Graph, not ActionMailer — see Reimbursements::Notifier#send_email). These
+    are short, plain finance notices; the app's shared shared/mail/_header +
+    _footer layout is a full Bedlam-branded marketing template (social icons,
+    unsubscribe copy) that would be the wrong tone here, so this is its own,
+    deliberately bare layout rather than reusing that one. %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title><%= @subject %></title>
+<!--[if mso]>
+<style type="text/css">
+table, td { font-family: Arial, Helvetica, sans-serif; }
+</style>
+<![endif]-->
+</head>
+<body style="font-family: Arial, Helvetica, sans-serif; margin: 0; padding: 0;">
+<%= yield %>
+</body>
+</html>

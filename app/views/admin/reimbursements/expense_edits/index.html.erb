@@ -1,0 +1,104 @@
+<p class="mb-3 text-gray-600">
+  Every expense the finance team can see, whatever its status. Filter by status or budget,
+  or search by description, payee, payment reference, amount or number, then open any one to
+  edit it (at any status, including ones already sent to EUSA or paid). Pending and Approved
+  expenses are also editable from the
+  <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
+  Know the exact number or record ID?
+  <%= link_to "Jump straight to it", find_admin_reimbursements_expense_edits_path, class: "text-primary underline" %>.
+</p>
+
+<%= render CardComponent.new(title: "Filter & search") do %>
+  <%= form_with url: admin_reimbursements_expense_edits_path, method: :get,
+                class: "flex flex-wrap items-end gap-3" do %>
+    <div>
+      <%= label_tag :status, "Status", class: "block text-sm font-medium mb-1" %>
+      <%= select_tag :status,
+                     options_for_select([ [ "All statuses", "" ] ] + @statuses.map { |s| [ s, s ] }, @status_filter),
+                     class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :budget, "Budget", class: "block text-sm font-medium mb-1" %>
+      <%= select_tag :budget,
+                     options_for_select([ [ "All budgets", "" ] ] + @budgets.map { |b| [ b.name, b.record_id ] }, @budget_filter),
+                     class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <div>
+      <%= label_tag :q, "Search", class: "block text-sm font-medium mb-1" %>
+      <%= text_field_tag :q, @query, placeholder: "description, payee, ref, £, or #",
+                         class: "w-64 border border-gray-300 rounded px-2 py-1 text-sm" %>
+    </div>
+    <label class="flex items-center gap-2 text-sm">
+      <%= check_box_tag :attention, "1", @attention_only %>
+      Needs attention only
+    </label>
+    <%= submit_tag "Apply", class: btn_classes(:secondary, :sm) %>
+    <% if @status_filter.present? || @budget_filter.present? || @query.present? || @attention_only %>
+      <%= link_to "Clear", admin_reimbursements_expense_edits_path, class: "text-sm text-gray-600 underline" %>
+    <% end %>
+  <% end %>
+<% end %>
+
+<div class="mb-2 flex items-center justify-between gap-3">
+  <p class="text-sm text-gray-600"><%= pluralize(@expenses.total_count, "expense") %></p>
+  <%= link_to "Download CSV",
+              admin_reimbursements_expense_edits_path(request.query_parameters.merge(format: :csv)),
+              class: btn_classes(:secondary, :sm) %>
+</div>
+
+<% if @expenses.total_count.zero? %>
+  <%= render CardComponent.new(title: @title) do %>
+    <p class="py-4 text-center text-gray-600">No expenses match these filters.</p>
+  <% end %>
+<% else %>
+  <% headers = [ "#", "Status", "Payee", "Budget", "Amount", "Description", "Submitted", "Flags", "" ] %>
+  <% field_sets = @expenses.map do |expense|
+       number = link_to("##{expense.auto_number}", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                        class: "text-primary underline font-mono")
+       status = render(BadgeComponent.new(type: ::Reimbursements::Status.badge_variant(expense.status), pill: true)
+                                     .with_content(expense.status))
+       amount = safe_join([
+         content_tag(:span, reimbursements_money(expense.amount), class: "whitespace-nowrap"),
+         (content_tag(:span, "#{reimbursements_money(expense.amount_excl_vat)} ex VAT", class: "block text-xs text-gray-500") \
+            if expense.amount_excl_vat.present? && expense.amount_excl_vat.positive?)
+       ].compact)
+       # Suppress the attention flag on non-actionable rows (Submitted/Paid/
+       # Rejected) — the same flag there is just noise that trains the eye to
+       # skip it on the Pending/Approved rows where it matters.
+       attention = if ::Reimbursements::ReviewSupport.attention_actionable?(expense)
+         ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
+       else
+         { blocking: [], advisory: [] }
+       end
+       flags = content_tag(:div, class: "flex flex-wrap gap-1") do
+         safe_join([
+           (reimbursements_reasons_popover(reasons: attention[:blocking], key: "edits-block-#{expense.record_id}",
+                                           label: "Can't approve yet", heading: "Fix before approving:",
+                                           badge_type: :danger,
+                                           record_label: "##{expense.auto_number}") if attention[:blocking].any?),
+           (reimbursements_reasons_popover(reasons: attention[:advisory], key: "edits-adv-#{expense.record_id}",
+                                           label: "Check first", heading: "Check before approving:",
+                                           badge_type: :warning,
+                                           record_label: "##{expense.auto_number}") if attention[:advisory].any?),
+           (reimbursements_ai_badge(expense) if expense.ai_check_status.present?)
+         ].compact, " ")
+       end
+       edit = link_to("Edit", edit_admin_reimbursements_expense_edit_path(expense.record_id),
+                      "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm))
+       {
+         fields: [
+           expense, number, status,
+           expense.effective_payee_name.presence || "-",
+           expense.budget&.name.presence || "-",
+           amount,
+           truncate(expense.description.to_s, length: 60),
+           content_tag(:span, reimbursements_date(expense.submitted_at), class: "whitespace-nowrap"),
+           flags, edit
+         ]
+       }
+     end %>
+  <%= render "shared/pages/index_results",
+        resources: @expenses, resource_class: ::Reimbursements::Expense,
+        headers: headers, field_sets: field_sets,
+        include_edit_button: false, include_link_to_item: false, include_pagination: true %>
+<% end %>

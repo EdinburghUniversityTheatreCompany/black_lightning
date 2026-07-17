@@ -1,7 +1,9 @@
 <p class="mb-3 text-gray-600">
-  Submit your expenses here. The finance team reviews every claim, batches it to EUSA,
-  and EUSA pays it into your bank account. You can also just email a receipt to
-  <%= mail_to Reimbursements::CostCentre.default.mailbox %> and finish the claim here.
+  Submit your expenses here. The finance team reviews every claim, batches it to the
+  Students' Association (EUSA), and EUSA pays it into your bank account.
+  <% if (receive_mailbox = Reimbursements::CostCentre.default&.receive_mailbox).present? %>
+    You can also just email a receipt to <%= mail_to receive_mailbox %> and finish the claim here.
+  <% end %>
 </p>
 
 <% if current_person.nil? || !current_person.bank_details? %>
@@ -10,6 +12,14 @@
     approved until you
     <%= link_to "add your payment details", edit_admin_reimbursements_payment_details_path, class: "font-medium underline" %>.
   <% end %>
+<% else %>
+  <%# Durable, quiet confirmation that details are on file (and which account),
+      so "is my money going to the right place?" is answerable at a glance —
+      last 4 digits only. %>
+  <p class="mb-3 text-sm text-gray-600">
+    Payments go to your account ending <strong><%= current_person.account_number.to_s.last(4) %></strong>.
+    <%= link_to "Change", edit_admin_reimbursements_payment_details_path, class: "underline" %>
+  </p>
 <% end %>
 
 <%= render CardComponent.new(title: "Quick actions") do %>
@@ -29,11 +39,13 @@
     </div>
   <% end %>
 <% else %>
-  <% headers = [ "Status", "Description", "Budget", "Amount", "Submitted", "Receipts", "" ] %>
+  <% headers = [ "Status", "Description", "Budget", "Amount", "Created", "Receipts", "" ] %>
   <% field_sets = @expenses.map do |expense|
        status = safe_join([
-         render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status)).with_content(expense.status)),
-         (render(BadgeComponent.new(type: :warning, pill: true).with_content("Needs completion")) if expense.needs_completion?)
+         reimbursements_producer_status_badge(expense.status),
+         (reimbursements_reasons_popover(reasons: expense.missing_completion_fields, key: "expense-#{expense.record_id}",
+                                         label: "Needs completion", heading: "Still needs:",
+                                         record_label: "##{expense.auto_number}") if expense.needs_completion?)
        ].compact, " ")
        description = safe_join([
          expense.description.presence || content_tag(:span, "(no description yet)", class: "text-gray-500"),
@@ -45,10 +57,15 @@
            status,
            description,
            expense.budget ? expense.budget.name : content_tag(:span, "No budget yet", class: "text-gray-500"),
-           expense.amount ? number_to_currency(expense.amount, unit: "£") : "—",
-           expense.submitted_at ? l(expense.submitted_at.to_date, format: :short) : "",
-           expense.receipts.size,
-           (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id), class: btn_classes(:secondary, :sm)) if expense.editable?)
+           reimbursements_money(expense.amount),
+           reimbursements_date(expense.submitted_at),
+           expense.receipt_count,
+           safe_join([
+             (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id),
+                      "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm)) if expense.editable?),
+             link_to("View", admin_reimbursements_expense_path(expense.record_id),
+                     "aria-label": "View ##{expense.auto_number}", class: btn_classes(:secondary, :sm))
+           ].compact, " ")
          ]
        }
      end %>

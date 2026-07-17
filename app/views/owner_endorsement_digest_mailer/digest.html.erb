@@ -1,0 +1,41 @@
+<p>Dear <%= @user.first_name %>,</p>
+
+<p>
+  The following reimbursement <%= @expenses.one? ? "claim is" : "claims are" %> charged to a budget
+  you own and <%= @expenses.one? ? "needs" : "need" %> your sign-off before the finance team can pay
+  <%= @expenses.one? ? "it" : "them" %>:
+</p>
+
+<table style="border-collapse: collapse; width: 100%;">
+  <thead>
+    <tr>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Claim</th>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Budget</th>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Payee</th>
+      <th style="text-align: right; padding: 8px; border-bottom: 2px solid #dee2e6;">Amount</th>
+      <th style="text-align: left; padding: 8px; border-bottom: 2px solid #dee2e6;">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @expenses.each do |expense| %>
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">#<%= expense.auto_number %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.budget&.name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.effective_payee_name %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6; text-align: right;"><%= number_to_currency(expense.amount, unit: "£") %></td>
+        <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><%= expense.description %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<p><%= link_to "Review and endorse on My Budgets", admin_reimbursements_my_budgets_url %></p>
+
+<p style="color: #6c757d; font-size: 0.9em;">
+  You're getting this because you own the budget. Any one owner can endorse, and each claim clears
+  as soon as one of you does. You'll get this daily until they're all resolved.
+</p>
+
+<p>Regards,</p>
+
+<p>Pineapple</p>

@@ -79,3 +79,28 @@ Pick one and make it consistent:
 Recommended: the plain-text-field route (a hero tagline is short and rarely needs block Markdown),
 which also removes the heavyweight editor from a trivial field. Either way, resolve the
 edit-as-Markdown / render-as-plain contradiction.
+
+---
+
+## RubyLLM legacy `acts_as` deprecation warning on boot (Phase B)
+
+Since introducing `ruby_llm`, every process load prints:
+`RubyLLM's legacy acts_as API is deprecated and will be removed in RubyLLM 2.0.0`.
+We don't use `acts_as_chat`/`acts_as_message` (the Extractor and AiChecker call
+`RubyLLM.chat` directly), so the warning is pure noise from the gem's Rails engine.
+Investigate silencing it (config flag or a targeted `ActiveSupport::Deprecation`
+filter) so test/boot output stays clean. Harmless; not gating.
+
+## Multiple financial years — PLANNED (post-MySQL)
+Now designed: a year-selector model (one active year + look-back), landing at the MySQL
+cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-roadmap.md`
+(financial_year FK on budgets/expenses/actuals, EUSA codes stay on CostCentre with a thin
+per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
+per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
+
+## Reimbursements breadcrumb shows the raw Airtable record id
+
+On a budget (and likely expense/batch) edit page the breadcrumb renders the record id
+humanized — e.g. "Rec X Ko G9m U Fbu Dn5 A" instead of the budget name. The breadcrumb
+crumb for a show/edit resource should use the record's display name (`@budget.name`), not
+`to_param`. Low priority; spotted 2026-07-17 while linking the budget owners checkbox list.

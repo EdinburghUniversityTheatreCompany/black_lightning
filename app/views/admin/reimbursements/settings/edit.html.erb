@@ -1,0 +1,190 @@
+<p class="mb-3">
+  <%= link_to admin_reimbursements_settings_path, class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">←</span> All cost centres
+  <% end %>
+</p>
+
+<%= render CardComponent.new(title: "#{@cost_centre.name} (#{@cost_centre.eusa_code})") do %>
+  <%= form_with model: @cost_centre, scope: :cost_centre,
+                url: admin_reimbursements_setting_path(@cost_centre.key), method: :patch,
+                class: "flex flex-col gap-4" do |f| %>
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= f.label :receive_mailbox, "Receive mailbox (email-in)", class: "block text-sm font-medium" %>
+        <%= f.text_field :receive_mailbox, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+      <div>
+        <%= f.label :send_mailbox, "Send-from mailbox (drafts)", class: "block text-sm font-medium" %>
+        <%= f.text_field :send_mailbox, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+    </div>
+    <p class="text-xs text-gray-500 -mt-2">
+      Changing a mailbox breaks email-in / draft-sending until the new address is added to the
+      "Reimbursements App Access" group (see the Microsoft-access steps below). Run the access
+      check after changing it.
+    </p>
+
+    <div>
+      <%= f.label :sharepoint_site_url, "SharePoint site URL", class: "block text-sm font-medium" %>
+      <%= f.text_field :sharepoint_site_url, placeholder: "https://tenant.sharepoint.com/sites/Finance",
+                       "aria-describedby": "sharepoint_site_url_hint",
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xl" %>
+      <p id="sharepoint_site_url_hint" class="text-xs text-gray-500 mt-1">
+        The site holding this cost centre's receipts + BACS folders. The app is granted <code>write</code> on
+        just this site (Sites.Selected), and the folder picker below browses it. The grant command is in the
+        setup section.
+      </p>
+    </div>
+
+    <% app_id = "b874d491-4edf-4b76-839d-84e534c7f7c0" %>
+    <% grant_mailboxes = [ @cost_centre.receive_mailbox, @cost_centre.send_mailbox ].map(&:presence).compact.uniq %>
+    <% code_class = "mt-2 overflow-x-auto rounded bg-slate-800 p-3 text-xs text-slate-100" %>
+    <%= render CollapsibleSectionComponent.new(
+          title: safe_join([ tag.span("⚠️", aria: { hidden: true }), " Microsoft access for this cost centre" ]),
+          variant: :warning, html_class: "my-1") do %>
+      <div class="flex flex-col gap-3 text-sm text-gray-700">
+        <p class="font-medium">
+          These steps need Microsoft 365 admin permissions (Exchange Online / SharePoint admin) —
+          if that's not you, send this section to IT.
+        </p>
+        <p>
+          The manual Microsoft 365 steps the app can't do itself. You only need these when
+          <strong>first setting up this cost centre's mailboxes</strong>. Day-to-day use needs none of it.
+          The Entra app (<code>BlackLightning Reimbursements Mailbox</code>, App ID <code><%= app_id %></code>)
+          already exists with admin-consented Graph permissions; you just wire up the mailboxes below.
+        </p>
+
+        <div>
+          <p class="font-medium">Authorise this cost centre's mailbox<%= "es" unless @cost_centre.receive_mailbox == @cost_centre.send_mailbox %></p>
+          <p>
+            Setting a mailbox above is <strong>not enough</strong>: the Graph app can only touch mailboxes inside
+            the <code>Reimbursements App Access</code> group in Exchange Online. Until
+            <%= @cost_centre.receive_mailbox == @cost_centre.send_mailbox ? "it's" : "they're" %> in that group,
+            every Graph call (poll / draft / send) fails with <strong>403 AccessDenied</strong> and this cost
+            centre's email-in and batch drafting silently break. Add each mailbox to that group in Exchange
+            Online PowerShell:
+          </p>
+          <pre class="<%= code_class %>"><code># Create each shared mailbox first (M365 admin center &rarr; Teams &amp; groups &rarr; Shared
+# mailboxes), then connect to Exchange Online PowerShell:
+Connect-ExchangeOnline</code></pre>
+          <% grant_mailboxes.each do |mailbox| %>
+            <pre class="<%= code_class %>"><code>Add-DistributionGroupMember -Identity "Reimbursements App Access" -Member <%= mailbox %>
+Test-ApplicationAccessPolicy -Identity <%= mailbox %> -AppId <%= app_id %></code></pre>
+          <% end %>
+          <p class="text-xs text-gray-500">
+            One policy scopes the app to the whole group, so there's no new access policy per mailbox: just
+            add members. Propagation can take ~30-60 min.
+            <strong>Address already in use?</strong> Find what holds the SMTP proxy with
+            <code>Get-Recipient -Filter "EmailAddresses -eq 'smtp:THE-ADDRESS'"</code>, then free it or pick another.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-medium">Grant this app write access to the SharePoint site</p>
+          <p>
+            The app uses least-privilege <code>Sites.Selected</code>: it reaches only the sites you grant it.
+            After setting the <strong>SharePoint site URL</strong> above, grant this app <code>write</code> on
+            that site (once per site). The easiest way is <strong>Graph Explorer</strong>
+            (<a class="underline" href="https://aka.ms/ge">aka.ms/ge</a>, a web tool), signed in as a SharePoint
+            admin. These are Microsoft Graph calls, <strong>not PowerShell</strong>:
+          </p>
+          <% site_path = @cost_centre.sharepoint_graph_site_path %>
+          <pre class="<%= code_class %>"><code># 1. Get the site id:
+GET https://graph.microsoft.com/v1.0/sites/<%= site_path || "TENANT.sharepoint.com:/sites/SiteName" %>
+#    -&gt; copy "id" from the response
+
+# 2. Grant THIS app write on THAT site only:
+POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
+{
+  "roles": ["write"],
+  "grantedToIdentities": [
+    { "application": { "id": "<%= app_id %>",
+                       "displayName": "BlackLightning Reimbursements Mailbox" } }
+  ]
+}</code></pre>
+          <p class="text-xs text-gray-500">
+            The <code>POST</code> needs the <code>Sites.FullControl.All</code> delegated permission for your
+            session (not for the app). If Graph Explorer says permissions are missing, open its
+            <strong>Modify permissions</strong> tab, consent to <code>Sites.FullControl.All</code> as an admin,
+            then re-run. Prefer PowerShell? Run the same with
+            <code>Connect-MgGraph -Scopes "Sites.FullControl.All"</code> then <code>Invoke-MgGraphRequest</code>,
+            but in a <strong>fresh window</strong>: the Exchange Online module from the mailbox step clashes with
+            Microsoft.Graph in one session (the <code>Method not found: WithLogging</code> error). List or revoke
+            later against the same <code>/sites/&lt;id&gt;/permissions</code> endpoint. Without the grant, uploads
+            and the folder picker for this site fail with <strong>403</strong>. Don't fall back to tenant-wide
+            <code>Sites.ReadWrite.All</code> / <code>Files.ReadWrite.All</code>.
+          </p>
+        </div>
+
+        <div>
+          <p class="font-medium">Graph permissions on the Entra app (already granted)</p>
+          <ul class="list-disc pl-5">
+            <li><code>Mail.ReadWrite</code> + <code>Mail.Send</code>: poll / draft / send, scoped to the group above.</li>
+            <li><code>Sites.Selected</code>: SharePoint, granted <code>write</code> per-site (above), not tenant-wide.</li>
+          </ul>
+        </div>
+      </div>
+    <% end %>
+
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= f.label :eusa_recipient, "EUSA recipient", class: "block text-sm font-medium" %>
+        <%= f.text_field :eusa_recipient, placeholder: ::Reimbursements::CostCentre::DEFAULT_EUSA_RECIPIENT,
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+        <p class="text-xs text-gray-500 mt-1">
+          Where the completed BACS request email (with the bank-detail attachments) is sent.
+          Leave blank to use EUSA finance's default address.
+        </p>
+      </div>
+      <div>
+        <%= f.label :eusa_signature_name, "EUSA email signature name", class: "block text-sm font-medium" %>
+        <%= f.text_field :eusa_signature_name, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+    </div>
+
+    <fieldset>
+      <legend class="block text-sm font-medium mb-1">Nightly auto-submit runs on</legend>
+      <div class="flex flex-wrap gap-x-4 gap-y-1">
+        <% Date::DAYNAMES.each_with_index do |day_name, wday| %>
+          <label class="inline-flex items-center gap-1 text-sm">
+            <%= check_box_tag "cost_centre[nightly_run_days][]", wday,
+                              @cost_centre.nightly_run_days.include?(wday),
+                              id: "nightly_run_day_#{wday}" %>
+            <%= day_name %>
+          </label>
+        <% end %>
+      </div>
+      <p class="text-xs text-gray-500 mt-1">Pick at least one day — the nightly can't be turned off by unchecking them all.</p>
+    </fieldset>
+
+    <div>
+      <%= f.submit "Save settings", class: btn_classes(:primary) %>
+    </div>
+  <% end %>
+<% end %>
+
+<%= render CardComponent.new(title: "Check Microsoft access", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-2">
+    Probe this cost centre's mailboxes and SharePoint site with the app's own credentials, so you can
+    confirm the Microsoft grants worked before relying on email-in or Build Batch.
+  </p>
+  <%= button_to "Run access check", test_access_admin_reimbursements_setting_path(@cost_centre.key),
+                method: :post, class: btn_classes(:secondary, :sm),
+                data: { turbo_submits_with: "Testing…" } %>
+  <div id="access_check_results" aria-live="polite">
+    <%= render "access_checks", checks: @access_checks %>
+  </div>
+<% end %>
+
+<%= render CardComponent.new(title: "SharePoint destinations", html_class: "mt-4") do %>
+  <p class="text-sm text-gray-600 mb-3">
+    Where the nightly and Build Batch upload renamed receipts and the BACS request xlsx. Browse to a
+    folder and choose it; the drive and folder are stored so uploads land in the same place every time.
+  </p>
+  <%= render "folder_picker", purpose: "receipts", label: "Receipts folder",
+             folder: @cost_centre.receipts_folder %>
+  <div class="mt-4">
+    <%= render "folder_picker", purpose: "bacs", label: "BACS request folder",
+               folder: @cost_centre.bacs_folder %>
+  </div>
+<% end %>

@@ -1,0 +1,127 @@
+require "rubyXL"
+require "rubyXL/convenience_methods"
+
+module Reimbursements
+  ##
+  # Fills the vendored EUSA BACS request template in place (preserving EUSA's
+  # exact cell styling) with one row per expense, and returns the workbook bytes.
+  # Ported from bedlam-bacs `xlsx_generator.py`, swapping openpyxl for rubyXL.
+  #
+  # The template's BREAKDOWN sheet has a header in row 1 and an F40 example in
+  # row 2; data is written from row 3 (0-based index 2). Sort code, account
+  # number and nominal code are forced to TEXT format ("@") so leading zeros and
+  # dashes survive — the whole reason we don't build the sheet from scratch.
+  #
+  # The template carries 200 pre-styled data rows (rows 3-202) before the GRAND
+  # TOTAL row, whose SUM formula (and the Authorisation Form's cross-sheet
+  # total) covers exactly that range — #generate refuses a bigger batch rather
+  # than silently dropping rows off the total or overwriting the total row.
+  class BacsXlsx
+    # One row destined for the BACS spreadsheet. Bank-detail fields stay strings
+    # to preserve leading zeros; +amount+ is numeric (the template's currency
+    # format applies). Mirrors bedlam-bacs' BacsRow.
+    BacsRow = Struct.new(:payee_name, :amount, :sort_code, :account_number,
+                         :nominal_code, :description, :payment_reference, :cost_centre,
+                         keyword_init: true)
+
+    SHEET_NAME = "BREAKDOWN".freeze
+    # 0-based: rows 0 (header) and 1 (example) are reserved by the template.
+    DATA_START_ROW = 2
+    # The template's GRAND TOTAL row (0-based) sits right after the last data
+    # row; its SUM formula covers exactly this many rows, so a batch bigger
+    # than this either silently drops off the total or overwrites the total
+    # row outright. Split a bigger batch into multiple BACS submissions.
+    MAX_ROWS = 200
+    # Columns match the EUSA template, 0-based.
+    COL_PAYEE = 0
+    COL_AMOUNT = 1
+    COL_SORT_CODE = 2
+    COL_ACCOUNT_NUMBER = 3
+    COL_NOMINAL_CODE = 4
+    COL_COST_CENTRE = 5
+    COL_PAYMENT_REFERENCE = 6
+    COL_DESCRIPTION = 7
+    # Excel's builtin text number format.
+    TEXT_FORMAT = "@".freeze
+    # Leading characters that make Excel (and CSV re-importers) treat a text cell
+    # as a formula. Submitter-controlled text starting with one of these is a
+    # spreadsheet formula-injection vector, so it is neutralised (see #sanitize).
+    FORMULA_TRIGGERS = [ "=", "+", "-", "@", "\t", "\r", "\n" ].freeze
+
+    DEFAULT_TEMPLATE_PATH =
+      Rails.root.join("lib/reimbursements/templates/EUSA_BACS_template.xlsx").freeze
+
+    class TemplateError < StandardError; end
+
+    def initialize(template_path: DEFAULT_TEMPLATE_PATH)
+      @template_path = Pathname(template_path)
+      return if @template_path.exist?
+
+      raise TemplateError, "BACS template not found at #{@template_path}"
+    end
+
+    # Render the spreadsheet as bytes, suitable for attaching to an email or
+    # uploading to SharePoint. The template is re-read on every call so one
+    # instance can produce many workbooks without state bleed.
+    def generate(rows)
+      if rows.size > MAX_ROWS
+        raise TemplateError,
+              "#{rows.size} expenses exceed the BACS template's #{MAX_ROWS}-row capacity — " \
+              "split this into multiple submissions."
+      end
+
+      workbook = RubyXL::Parser.parse(@template_path.to_s)
+      sheet = workbook[SHEET_NAME]
+      unless sheet
+        raise TemplateError,
+              "template has no '#{SHEET_NAME}' sheet (found: #{workbook.worksheets.map(&:sheet_name).inspect})"
+      end
+
+      rows.each_with_index do |row, index|
+        write_row(sheet, DATA_START_ROW + index, row)
+      end
+
+      workbook.stream.string
+    end
+
+    private
+
+    def write_row(sheet, row_index, row)
+      # payee_name / payment_reference / description are free text the
+      # submitter controls (incl. Invoice overrides), so they are
+      # formula-sanitised. The bank/nominal-code fields below are expected to
+      # already be digits/dashes from a validated source, but they're still
+      # finance-editable overrides (nominal_code_override in particular has
+      # no format validation anywhere) — sanitised too as defense-in-depth,
+      # since this is the one field class that actually steers where BACS
+      # money goes. The numeric amount is the only truly non-text cell.
+      sheet.add_cell(row_index, COL_PAYEE, sanitize(row.payee_name))
+      # rubyXL serialises a Float cleanly; the template's currency format renders it.
+      sheet.add_cell(row_index, COL_AMOUNT, row.amount.to_f)
+      text_cell(sheet, row_index, COL_SORT_CODE, row.sort_code)
+      text_cell(sheet, row_index, COL_ACCOUNT_NUMBER, row.account_number)
+      text_cell(sheet, row_index, COL_NOMINAL_CODE, row.nominal_code)
+      sheet.add_cell(row_index, COL_COST_CENTRE, row.cost_centre.presence || "F40")
+      sheet.add_cell(row_index, COL_PAYMENT_REFERENCE, sanitize(row.payment_reference))
+      sheet.add_cell(row_index, COL_DESCRIPTION, sanitize(row.description))
+    end
+
+    # Prefix a single quote when a submitter-controlled value begins with a
+    # formula trigger, so Excel renders it as literal text instead of executing
+    # it. Ordinary values (and empty ones) pass through untouched.
+    def sanitize(value)
+      text = value.to_s
+      return text unless text.start_with?(*FORMULA_TRIGGERS)
+
+      "'#{text}"
+    end
+
+    # A cell written as literal text so leading zeros / dashes are preserved,
+    # formula-sanitised like the free-text cells above.
+    def text_cell(sheet, row_index, column_index, value)
+      cell = sheet.add_cell(row_index, column_index, sanitize(value))
+      cell.set_number_format(TEXT_FORMAT)
+      cell
+    end
+  end
+end
