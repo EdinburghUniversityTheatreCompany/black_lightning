@@ -57,8 +57,8 @@ module Admin
         Check.new(label: "Airtable", status: :ok, detail: "Reachable — read #{count} budget(s).")
       rescue StandardError => e
         Check.new(label: "Airtable", status: :fail,
-                  detail: "#{e.message}. This needs the development team — the Airtable token or " \
-                          "base id (a server credential, not something you can change here).")
+                  detail: "#{e.message}. This needs IT — the Airtable token or base id " \
+                          "(a server credential, not something you can change here).")
       end
 
       # Acquire an app-only Graph token (see GraphClient#check_reachable).
@@ -69,8 +69,8 @@ module Admin
         Check.new(label: "Microsoft Graph", status: :ok, detail: "Reachable — acquired an app token.")
       rescue StandardError => e
         Check.new(label: "Microsoft Graph", status: :fail,
-                  detail: "#{e.message}. The Azure app's client secret may have expired — contact the " \
-                          "development team to rotate it (it's a server credential, not set here).")
+                  detail: "#{e.message}. The Azure app's client secret may have expired — contact IT " \
+                          "to rotate it (it's a server credential, not set here).")
       end
 
       def graph_skip

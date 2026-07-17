@@ -165,9 +165,9 @@ module Admin
         assert_includes response.body, "Airtable unreachable"
         # The page degrades gracefully rather than 500ing.
         assert_includes response.body, "acquired an app token"
-        # The fix message points a non-technical treasurer at the dev team, not
-        # at a "PAT" they can't touch.
-        assert_includes response.body, "development team"
+        # The fix message points a non-technical treasurer at IT, not at a
+        # "PAT" they can't touch.
+        assert_includes response.body, "This needs IT"
       end
 
       test "run skips Gemini when no API key is configured" do
