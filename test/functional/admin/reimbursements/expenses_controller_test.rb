@@ -8,16 +8,16 @@ module Admin
     setup do
       grant_member_role_reimbursements_access
       @user = users(:member)
-      @store, @client = build_fake_store(
-        expenses: [ airtable_expense_record, airtable_expense_record(id: "recExp2", payee_id: "recPerOther", description: "Someone else's") ],
-        people: [ airtable_person_record(email: @user.email), airtable_person_record(id: "recPerOther", email: "other@example.com") ],
-        budgets: [ airtable_budget_record ]
-      )
-      BaseController.store_builder = -> { @store }
+      @person = create_reimbursements_person(email: @user.email)
+      @other_person = create_reimbursements_person(name: "Other Person", email: "other@example.com")
+      @budget = create_reimbursements_budget
+      @expense = create_reimbursements_expense(person: @person, budget: @budget)
+      @other_expense = create_reimbursements_expense(person: @other_person, budget: @budget,
+                                                     description: "Someone else's")
     end
 
     teardown do
-      BaseController.store_builder = -> { ::Reimbursements::Store.new }
+      BaseController.store_builder = -> { ::Reimbursements.build_store }
       BaseController.extractor_builder = -> { ::Reimbursements::Extractor.new }
     end
 
@@ -27,6 +27,21 @@ module Admin
       producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
       users(:member).add_role("Producer")
       users(:member_with_phone_number).add_role("Producer")
+    end
+
+    # Airtable-era cache behaviour (production runs the Airtable backend until
+    # the flip): inject the fake Airtable store. PersonLink on the database
+    # backend can only remember an AR person, so the user is pre-linked and the
+    # fake person reuses the DB person's numeric id as its Airtable record id
+    # (the FK needs a real row).
+    def use_fake_airtable_store
+      @user.update_column(:reimbursements_person_id, @person.id)
+      @store, @client = build_fake_store(
+        expenses: [ airtable_expense_record(payee_id: @person.record_id) ],
+        people: [ airtable_person_record(id: @person.record_id, email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
     end
 
     test "requires sign-in" do
@@ -48,21 +63,22 @@ module Admin
       get :index
 
       assert_response :success
-      assert_equal [ "recExp1" ], assigns(:expenses).map(&:record_id)
+      assert_equal [ @expense.record_id ], assigns(:expenses).map(&:record_id)
       assert_includes response.body, "Fake blood"
       assert_not_includes response.body, "Someone else&#39;s"
     end
 
-    test "links the user to their airtable person by email on first visit" do
+    test "links the user to their payee record by email on first visit" do
       sign_in @user
-      assert_nil @user.airtable_person_id
+      assert_nil @user.reimbursements_person_id
 
       get :index
 
-      assert_equal "recPer1", @user.reload.airtable_person_id
+      assert_equal @person.id, @user.reload.reimbursements_person_id
     end
 
-    test "refresh busts the cache and redirects to a clean url" do
+    test "refresh busts the airtable cache and redirects to a clean url" do
+      use_fake_airtable_store
       sign_in @user
 
       get :index
@@ -100,7 +116,7 @@ module Admin
     def valid_form_params
       {
         expense_type: "Reimbursement", amount: "12.50", amount_excl_vat: "10.42",
-        budget_record_id: "recBud1", description: "Fake blood",
+        budget_record_id: @budget.record_id, description: "Fake blood",
         payment_reference: "PROPS PAT", vat_itemised: "true",
         receipts: [ receipt_upload ]
       }
@@ -125,40 +141,48 @@ module Admin
     test "create writes a pending expense with receipts and redirects" do
       sign_in @user
 
-      post :create, params: { reimbursements_expense_form: valid_form_params }
+      assert_difference "::Reimbursements::Expense.count", 1 do
+        post :create, params: { reimbursements_expense_form: valid_form_params }
+      end
 
       assert_redirected_to admin_reimbursements_expenses_path
-      table, fields = @client.created.sole
-      assert_equal :expenses, table
-      f = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
-      assert_equal "Pending", fields[f[:status]]
-      assert_equal [ "recPer1" ], fields[f[:payee]]
-      assert_equal [ "recBud1" ], fields[f[:budget]]
-      assert_in_delta 12.5, fields[f[:amount]]
-      assert_equal 1, @client.uploads.size
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert_equal "Pending", expense.status
+      assert_equal @person, expense.person
+      assert_equal @budget, expense.budget
+      assert_in_delta 12.5, expense.amount
+      assert_equal 1, expense.receipt_files.count
     end
 
     test "create as draft accepts gaps and writes Draft status" do
       sign_in @user
 
-      post :create, params: { reimbursements_expense_form: {
-        save_as_draft: "1", description: "Half-finished", receipts: [ receipt_upload ]
-      } }
+      assert_difference "::Reimbursements::Expense.count", 1 do
+        post :create, params: { reimbursements_expense_form: {
+          save_as_draft: "1", description: "Half-finished", receipts: [ receipt_upload ]
+        } }
+      end
 
       assert_redirected_to admin_reimbursements_expenses_path
-      _table, fields = @client.created.sole
-      assert_equal "Draft", fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:status]]
+      assert_equal "Draft", ::Reimbursements::Expense.order(:id).last.status
     end
 
     test "create degrades to a flash when the receipt upload fails" do
       sign_in @user
-      @client.fail_uploads = true
+      store = ::Reimbursements::DatabaseStore.new
+      store.define_singleton_method(:attach_receipt!) do |*|
+        raise ::Reimbursements::Airtable::Error.new("upload failed", status: 500)
+      end
+      BaseController.store_builder = -> { store }
 
-      post :create, params: { reimbursements_expense_form: valid_form_params }
+      assert_difference "::Reimbursements::Expense.count", 1 do
+        post :create, params: { reimbursements_expense_form: valid_form_params }
+      end
 
-      assert_equal 1, @client.created.size
-      assert_redirected_to edit_admin_reimbursements_expense_path("recNew1")
+      expense = ::Reimbursements::Expense.order(:id).last
+      assert_redirected_to edit_admin_reimbursements_expense_path(expense.record_id)
       assert_match(/uploading the receipt failed/, flash[:alert])
+      assert_equal 0, expense.receipt_files.count
     end
 
     test "extract rejects unusable files without calling gemini" do
@@ -178,23 +202,26 @@ module Admin
     test "create without a receipt re-renders and writes nothing" do
       sign_in @user
 
-      post :create, params: { reimbursements_expense_form: valid_form_params.except(:receipts) }
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: valid_form_params.except(:receipts) }
+      end
 
       assert_response :unprocessable_entity
-      assert_empty @client.created
     end
 
     test "create without vat acknowledgement soft-blocks when vat not itemised" do
       sign_in @user
       params = valid_form_params.merge(vat_itemised: "false", amount_excl_vat: "12.50")
 
-      post :create, params: { reimbursements_expense_form: params }
+      assert_no_difference "::Reimbursements::Expense.count" do
+        post :create, params: { reimbursements_expense_form: params }
+      end
       assert_response :unprocessable_entity
-      assert_empty @client.created
 
-      post :create, params: { reimbursements_expense_form: params.merge(vat_acknowledged: "1", receipts: [ receipt_upload ]) }
+      assert_difference "::Reimbursements::Expense.count", 1 do
+        post :create, params: { reimbursements_expense_form: params.merge(vat_acknowledged: "1", receipts: [ receipt_upload ]) }
+      end
       assert_redirected_to admin_reimbursements_expenses_path
-      assert_equal 1, @client.created.size
     end
 
     test "extract returns the extraction as json" do
@@ -202,7 +229,7 @@ module Admin
       extraction = ::Reimbursements::Extractor::Extraction.new(
         merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("2.08"),
         vat_itemised: true, suggested_description: "Props",
-        suggested_budget_record_id: "recBud1", suggested_payment_reference: "PROPS"
+        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "PROPS"
       )
       BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
 
@@ -213,7 +240,7 @@ module Admin
       assert body["ok"]
       assert_equal "12.5", body["total_amount"]
       assert_equal "10.42", body["amount_excl_vat"]
-      assert_equal "recBud1", body["suggested_budget_record_id"]
+      assert_equal @budget.record_id, body["suggested_budget_record_id"]
     end
 
     test "extract falls back to the total when excl-VAT is the zero not-yet-known sentinel" do
@@ -224,7 +251,7 @@ module Admin
       extraction = ::Reimbursements::Extractor::Extraction.new(
         merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("12.5"),
         vat_itemised: true, suggested_description: "Props",
-        suggested_budget_record_id: "recBud1", suggested_payment_reference: "PROPS"
+        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "PROPS"
       )
       BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
 
@@ -247,11 +274,14 @@ module Admin
       assert_not response.parsed_body["ok"]
     end
 
-    test "edit refetches once when the cached list is stale (email-in link)" do
+    test "edit refetches once when the cached airtable list is stale (email-in link)" do
+      use_fake_airtable_store
       sign_in @user
       get :index # warms the expense cache without the email-in expense
 
-      @client.list_records(:expenses) << airtable_expense_record(id: "recExpMail", description: "Emailed taxi receipt")
+      @client.list_records(:expenses) << airtable_expense_record(
+        id: "recExpMail", payee_id: @person.record_id, description: "Emailed taxi receipt"
+      )
 
       get :edit, params: { id: "recExpMail" }
 
@@ -262,7 +292,7 @@ module Admin
     test "edit renders the prefilled form for an own pending expense" do
       sign_in @user
 
-      get :edit, params: { id: "recExp1" }
+      get :edit, params: { id: @expense.record_id }
 
       assert_response :success
       assert_includes response.body, "Fake blood"
@@ -272,7 +302,7 @@ module Admin
     test "edit 404s for another person's expense" do
       sign_in @user
 
-      get :edit, params: { id: "recExp2" }
+      get :edit, params: { id: @other_expense.record_id }
 
       assert_response :not_found
     end
@@ -280,16 +310,12 @@ module Admin
     # --- Read-only show (view a claim after the editable window) -----------
 
     test "show renders an own expense read-only at any status, with no remove control" do
-      approved = airtable_expense_record(id: "recExp3", status: "Approved", description: "Van hire")
-      @store, @client = build_fake_store(
-        expenses: [ approved ],
-        people: [ airtable_person_record(email: @user.email) ],
-        budgets: [ airtable_budget_record ]
-      )
-      BaseController.store_builder = -> { @store }
+      approved = create_reimbursements_expense(person: @person, budget: @budget,
+                                               status: ::Reimbursements::Status::APPROVED,
+                                               description: "Van hire")
       sign_in @user
 
-      get :show, params: { id: "recExp3" }
+      get :show, params: { id: approved.record_id }
 
       assert_response :success
       assert_includes response.body, "Van hire"
@@ -303,7 +329,7 @@ module Admin
     test "show 404s for another person's expense" do
       sign_in @user
 
-      get :show, params: { id: "recExp2" }
+      get :show, params: { id: @other_expense.record_id }
 
       assert_response :not_found
     end
@@ -313,25 +339,20 @@ module Admin
 
       get :index
 
-      assert_select "a[href=?]", admin_reimbursements_expense_path("recExp1"), text: "View"
+      assert_select "a[href=?]", admin_reimbursements_expense_path(@expense.record_id), text: "View"
     end
 
     # --- Draft/submit boundary: state-aware labels + actions --------------
 
-    def own_draft_store
-      draft = airtable_expense_record(id: "recDraftOwn", status: "Draft")
-      @store, @client = build_fake_store(
-        expenses: [ draft ],
-        people: [ airtable_person_record(email: @user.email) ],
-        budgets: [ airtable_budget_record ]
-      )
-      BaseController.store_builder = -> { @store }
+    def own_draft(**attrs)
+      create_reimbursements_expense(person: @person, budget: @budget,
+                                    status: ::Reimbursements::Status::DRAFT, **attrs)
     end
 
     test "editing a Pending claim labels the primary Save changes and the withdraw button, which confirms" do
       sign_in @user
 
-      get :edit, params: { id: "recExp1" } # recExp1 is Pending
+      get :edit, params: { id: @expense.record_id } # @expense is Pending
 
       assert_select "input[type=submit][value='Save changes']"
       assert_select "button[name='reimbursements_expense_form[save_as_draft]'][data-turbo-confirm*=?]",
@@ -340,128 +361,117 @@ module Admin
     end
 
     test "editing a Draft labels the primary Submit expense and offers Delete draft" do
-      own_draft_store
+      draft = own_draft
       sign_in @user
 
-      get :edit, params: { id: "recDraftOwn" }
+      get :edit, params: { id: draft.record_id }
 
       assert_select "input[type=submit][value='Submit expense']"
       # Delete-draft button (a button_to DELETE with a confirm).
-      assert_select "form[action=?][method=post]", admin_reimbursements_expense_path("recDraftOwn") do
+      assert_select "form[action=?][method=post]", admin_reimbursements_expense_path(draft.record_id) do
         assert_select "input[name=_method][value=delete]", 1
       end
       assert_includes response.body, "Delete draft"
     end
 
     test "destroy deletes an own draft" do
-      own_draft_store
+      draft = own_draft
       sign_in @user
 
-      delete :destroy, params: { id: "recDraftOwn" }
+      delete :destroy, params: { id: draft.record_id }
 
       assert_redirected_to admin_reimbursements_expenses_path
       assert_match(/draft deleted/i, flash[:notice])
-      assert_equal [ [ :expenses, "recDraftOwn" ] ], @client.deleted
+      assert_not ::Reimbursements::Expense.exists?(draft.id)
     end
 
     test "destroy refuses a non-draft (Pending) claim" do
       sign_in @user
 
-      delete :destroy, params: { id: "recExp1" } # Pending
+      delete :destroy, params: { id: @expense.record_id } # Pending
 
       assert_redirected_to admin_reimbursements_expenses_path
       assert_match(/only a draft can be deleted/i, flash[:alert])
-      assert_empty @client.deleted
+      assert ::Reimbursements::Expense.exists?(@expense.id)
     end
 
     test "destroy 404s for another person's draft" do
       sign_in @user
 
-      delete :destroy, params: { id: "recExp2" }
+      delete :destroy, params: { id: @other_expense.record_id }
 
       assert_response :not_found
+      assert ::Reimbursements::Expense.exists?(@other_expense.id)
     end
 
     # A race: the producer follows an Edit link on a stale list for their own
     # claim that review has since picked up. Fail gracefully (friendly flash
     # redirect) rather than showing a bare 404.
-    def rebuild_store_with_own_non_editable_expense
-      approved = airtable_expense_record(id: "recExp3", status: "Approved")
-      @store, @client = build_fake_store(
-        expenses: [ approved ],
-        people: [ airtable_person_record(email: @user.email) ],
-        budgets: [ airtable_budget_record ]
-      )
-      BaseController.store_builder = -> { @store }
+    def own_non_editable_expense
+      create_reimbursements_expense(person: @person, budget: @budget,
+                                    status: ::Reimbursements::Status::APPROVED,
+                                    description: "Locked claim")
     end
 
     test "edit redirects with a flash when an own claim is no longer editable" do
-      rebuild_store_with_own_non_editable_expense
+      approved = own_non_editable_expense
       sign_in @user
 
-      get :edit, params: { id: "recExp3" }
+      get :edit, params: { id: approved.record_id }
 
       assert_redirected_to admin_reimbursements_expenses_path
       assert_match(/finance team/, flash[:warning])
     end
 
     test "update redirects with a flash when an own claim is no longer editable" do
-      rebuild_store_with_own_non_editable_expense
+      approved = own_non_editable_expense
       sign_in @user
 
-      patch :update, params: { id: "recExp3",
+      patch :update, params: { id: approved.record_id,
                                reimbursements_expense_form: valid_form_params.except(:receipts) }
 
       assert_redirected_to admin_reimbursements_expenses_path
       assert_match(/finance team/, flash[:warning])
-      assert_empty @client.updated
+      assert_equal "Locked claim", approved.reload.description, "nothing was written"
     end
 
     test "update writes changed fields without requiring a new receipt" do
       sign_in @user
 
-      patch :update, params: { id: "recExp1",
+      patch :update, params: { id: @expense.record_id,
                                reimbursements_expense_form: valid_form_params.except(:receipts).merge(description: "Even more fake blood") }
 
       assert_redirected_to admin_reimbursements_expenses_path
-      _table, record_id, fields = @client.updated.sole
-      assert_equal "recExp1", record_id
-      assert_equal "Even more fake blood",
-                   fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:description]]
-      assert_equal "Pending", fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:status]],
-                   "a full (non-draft) save submits the expense"
-      assert_empty @client.uploads
+      @expense.reload
+      assert_equal "Even more fake blood", @expense.description
+      assert_equal "Pending", @expense.status, "a full (non-draft) save submits the expense"
+      assert_equal 1, @expense.receipt_files.count, "no new receipt was uploaded"
     end
 
     test "submitting a receipt-less draft demands a receipt" do
-      bare_draft = airtable_expense_record(id: "recDraft", status: "Draft", receipts: nil)
-      bare_draft["fields"].delete(ReimbursementsTestHelpers::FIELD_IDS[:expenses][:receipt])
-      @store, @client = build_fake_store(
-        expenses: [ bare_draft ],
-        people: [ airtable_person_record(email: @user.email) ],
-        budgets: [ airtable_budget_record ]
-      )
-      BaseController.store_builder = -> { @store }
+      bare_draft = own_draft(description: "Bare draft", receipt: false)
       sign_in @user
 
-      patch :update, params: { id: "recDraft",
+      patch :update, params: { id: bare_draft.record_id,
                                reimbursements_expense_form: valid_form_params.except(:receipts) }
       assert_response :unprocessable_entity
-      assert_empty @client.updated
+      assert_equal "Bare draft", bare_draft.reload.description, "nothing was written"
 
-      patch :update, params: { id: "recDraft", reimbursements_expense_form: valid_form_params }
+      patch :update, params: { id: bare_draft.record_id, reimbursements_expense_form: valid_form_params }
       assert_redirected_to admin_reimbursements_expenses_path
-      assert_equal 1, @client.uploads.size
+      bare_draft.reload
+      assert_equal 1, bare_draft.receipt_files.count
+      assert_equal "Pending", bare_draft.status
     end
 
     test "update rejects invalid input without writing" do
       sign_in @user
 
-      patch :update, params: { id: "recExp1",
+      patch :update, params: { id: @expense.record_id,
                                reimbursements_expense_form: valid_form_params.except(:receipts).merge(amount: "") }
 
       assert_response :unprocessable_entity
-      assert_empty @client.updated
+      assert_in_delta 12.5, @expense.reload.amount, 0.001, "nothing was written"
     end
 
     # Returns a canned extraction regardless of input.
