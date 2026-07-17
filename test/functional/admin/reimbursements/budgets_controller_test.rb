@@ -187,7 +187,7 @@ module Admin
 
       # --- Edit --------------------------------------------------------------
 
-      test "edit shows the owner multi-select and forecast history" do
+      test "edit shows the owner checkboxes and forecast history" do
         sign_in @user
         get :edit, params: { id: "recBud1" }
 
@@ -198,11 +198,12 @@ module Admin
         assert_includes response.body, "Alice Owner"
         assert_includes response.body, "Bob Owner"
         assert_includes response.body, "Initial projection"
-        # select_tag "owner_ids[]" renders id="owner_ids_" (Rails strips the []
-        # into a trailing underscore) — the label must point at that exact id,
-        # not the naive "owner_ids" a bare label_tag(:owner_ids, ...) would produce.
-        assert_select "label[for=owner_ids_]"
-        assert_select "select#owner_ids_[multiple]"
+        # A checkbox per person instead of a Ctrl-click multi-select; the current
+        # owner (Alice) is pre-ticked, the non-owner (Bob) is not.
+        assert_select "fieldset legend", text: "Owners"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=recPer1][checked]"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=recPer2]"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=recPer2][checked]", false
       end
 
       test "editing an unknown budget 404s" do

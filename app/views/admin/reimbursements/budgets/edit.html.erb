@@ -4,7 +4,7 @@
 
 <%= render CardComponent.new(title: "Edit #{@budget.name.presence || 'budget'}") do %>
   <%= form_with url: admin_reimbursements_budget_path(@budget.record_id), method: :patch,
-                class: "flex flex-col gap-4" do %>
+                class: "flex flex-col gap-4" do |form| %>
     <div class="flex flex-wrap gap-4">
       <div>
         <%= label_tag :name, "Name", class: "block text-sm font-medium" %>
@@ -34,16 +34,21 @@
       Visible to submitters
     </label>
 
-    <div>
-      <%= label_tag "owner_ids_", "Owners", class: "block text-sm font-medium" %>
-      <%= select_tag "owner_ids[]",
-                     options_for_select(@people.map { |p| [ p.name.presence || p.email, p.record_id ] },
-                                        @budget.owner_ids),
-                     multiple: true, size: [ @people.size, 6 ].min.clamp(3, 6),
-                     "aria-describedby": "owner_ids_hint",
-                     class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
-      <p id="owner_ids_hint" class="text-xs text-gray-500 mt-1">Ctrl/Cmd-click to select more than one.</p>
-    </div>
+    <fieldset>
+      <legend class="block text-sm font-medium">Owners</legend>
+      <p id="owner_ids_hint" class="text-xs text-gray-500 mb-1">Tick everyone who owns this budget.</p>
+      <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
+          collection_check_boxes emits the empty hidden field itself, so unticking
+          everyone still clears the owners. %>
+      <div class="max-h-48 w-72 overflow-y-auto rounded border border-gray-300 p-2 flex flex-col gap-1"
+           aria-describedby="owner_ids_hint">
+        <%= form.collection_check_boxes(:owner_ids, @people, :record_id,
+              ->(person) { person.name.presence || person.email },
+              { checked: @budget.owner_ids }) do |b| %>
+          <%= b.label(class: "flex items-center gap-2 text-sm") { safe_join([ b.check_box, b.text ]) } %>
+        <% end %>
+      </div>
+    </fieldset>
 
     <div>
       <%= label_tag :notes, "Notes", class: "block text-sm font-medium" %>
