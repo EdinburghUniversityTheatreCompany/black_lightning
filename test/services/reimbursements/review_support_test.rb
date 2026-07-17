@@ -356,5 +356,40 @@ module Reimbursements
       a = dup_expense("recA", valid_payee, amount: "60.00", auto_number: 1, submitted_at: NOW)
       assert_empty ReviewSupport.find_duplicate_submissions([ a ])
     end
+
+    # --- attention_summary: blocking vs advisory --------------------------
+
+    test "attention_summary puts approval-blocking reasons in :blocking, the rest in :advisory" do
+      # No budget + no bank details -> both hard-block approve_expense.
+      # No receipt + over budget -> advisory (approval still proceeds).
+      exp = expense(payee: payee_without_bank, budget: nil, amount_excl_vat: BigDecimal("600.00"),
+                    receipts: [])
+      summary = ReviewSupport.attention_summary(exp, { "recBudget1" => budget }, valid_checker)
+
+      assert_includes summary[:blocking], "no budget"
+      assert_includes summary[:blocking], "no bank details"
+      assert_includes summary[:advisory], "no receipt"
+      # over budget can't be evaluated with a nil budget, so just assert the
+      # split keeps advisory-only reasons out of :blocking.
+      assert_not_includes summary[:blocking], "no receipt"
+    end
+
+    test "an INVALID modulus is advisory, not blocking (approve only checks bank-detail presence)" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ])
+      summary = ReviewSupport.attention_summary(exp, { "recBudget1" => budget },
+                                                FakeChecker.new(ModulusCheck::INVALID))
+
+      assert_includes summary[:advisory], "failed the bank modulus check"
+      assert_empty summary[:blocking]
+    end
+
+    test "attention_actionable? is false once an expense is Submitted, Paid or Rejected" do
+      assert ReviewSupport.attention_actionable?(expense(payee: valid_payee, budget: budget))
+      %w[Submitted Paid Rejected].each do |done|
+        exp = expense(payee: valid_payee, budget: budget)
+        exp.instance_variable_set(:@status, done)
+        assert_not ReviewSupport.attention_actionable?(exp), "#{done} is not actionable"
+      end
+    end
   end
 end

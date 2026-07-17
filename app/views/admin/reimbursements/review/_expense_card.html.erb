@@ -7,7 +7,8 @@
 %>
 <% modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number) %>
 <% selectable = local_assigns.fetch(:selectable, false) %>
-<% attention_reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker) %>
+<% attention = ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker) %>
+<% attention_reasons = attention[:blocking] + attention[:advisory] %>
 
 <div class="mb-3 rounded border border-gray-200 p-3">
   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
@@ -34,12 +35,33 @@
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status), pill: true).with_content(expense.status) %>
-    <% if attention_reasons.any? %>
-      <%= reimbursements_reasons_popover(reasons: attention_reasons, key: "review-#{expense.record_id}",
-                                         label: "Needs attention", heading: "Needs attention:",
-                                         record_label: "##{expense.auto_number}") %>
+    <% if attention[:blocking].any? %>
+      <%= render BadgeComponent.new(type: :danger, pill: true).with_content("Can't approve yet") %>
+    <% elsif attention[:advisory].any? %>
+      <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Check before approving") %>
     <% end %>
   </div>
+
+  <%# Reasons inline (not behind a click) so an operator scanning the queue
+      reads them at a glance, with blocked (fix-first) clearly separated from
+      advisory (approval still proceeds). %>
+  <% if attention[:blocking].any? || attention[:advisory].any? %>
+    <div class="mt-2 flex flex-col gap-1 text-sm">
+      <% if attention[:blocking].any? %>
+        <p class="text-danger">
+          <span class="font-medium">Can't approve until fixed:</span>
+          <%= attention[:blocking].join(", ") %>.
+        </p>
+      <% end %>
+      <% if attention[:advisory].any? %>
+        <p class="text-warning">
+          <span class="font-medium">Check before approving:</span>
+          <%= attention[:advisory].join(", ") %>
+          <span class="text-gray-500">(approval still goes through)</span>.
+        </p>
+      <% end %>
+    </div>
+  <% end %>
 
   <%# --- AI verdict (updates live via Turbo Stream; see AiCheckJob) --- %>
   <%= render "ai_verdict", expense: expense %>

@@ -60,12 +60,24 @@
          (content_tag(:span, "#{reimbursements_money(expense.amount_excl_vat)} ex VAT", class: "block text-xs text-gray-500") \
             if expense.amount_excl_vat.present? && expense.amount_excl_vat.positive?)
        ].compact)
-       reasons = ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
+       # Suppress the attention flag on non-actionable rows (Submitted/Paid/
+       # Rejected) — the same flag there is just noise that trains the eye to
+       # skip it on the Pending/Approved rows where it matters.
+       attention = if ::Reimbursements::ReviewSupport.attention_actionable?(expense)
+         ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
+       else
+         { blocking: [], advisory: [] }
+       end
        flags = content_tag(:div, class: "flex flex-wrap gap-1") do
          safe_join([
-           (reimbursements_reasons_popover(reasons: reasons, key: "edits-#{expense.record_id}",
-                                           label: "Needs attention", heading: "Needs attention:",
-                                           record_label: "##{expense.auto_number}") if reasons.any?),
+           (reimbursements_reasons_popover(reasons: attention[:blocking], key: "edits-block-#{expense.record_id}",
+                                           label: "Can't approve yet", heading: "Fix before approving:",
+                                           badge_type: :danger,
+                                           record_label: "##{expense.auto_number}") if attention[:blocking].any?),
+           (reimbursements_reasons_popover(reasons: attention[:advisory], key: "edits-adv-#{expense.record_id}",
+                                           label: "Check first", heading: "Check before approving:",
+                                           badge_type: :warning,
+                                           record_label: "##{expense.auto_number}") if attention[:advisory].any?),
            (reimbursements_ai_badge(expense) if expense.ai_check_status.present?)
          ].compact, " ")
        end

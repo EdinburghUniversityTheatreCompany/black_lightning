@@ -350,18 +350,41 @@ module Admin
       # --- Needs-attention reasons tooltip + AI badge ----------------------
 
       test "index flags a needs-attention expense with an accessible reasons popover" do
+        # No receipt is an advisory (non-blocking) reason -> the amber "Check
+        # first" popover.
         rebuild_store(expenses: [ expense_at("Pending", receipts: []) ])
         sign_in @user
 
         get :index
 
-        # A focusable <button> trigger wired to the popover controller, carrying
-        # the aria attributes a title= tooltip never had, and the reasons render.
         assert_select "[data-controller='popover']" do
-          assert_select "button[aria-expanded='false'][aria-controls='reasons-edits-recExp1']",
-                        text: /Needs attention/
-          assert_select "#reasons-edits-recExp1 li", text: "no receipt"
+          assert_select "button[aria-expanded='false'][aria-controls='reasons-edits-adv-recExp1']",
+                        text: /Check first/
+          assert_select "#reasons-edits-adv-recExp1 li", text: "no receipt"
         end
+      end
+
+      test "index shows a blocked expense in a distinct danger popover" do
+        # No budget hard-blocks approval -> the red "Can't approve yet" popover,
+        # separate from any advisory one.
+        rebuild_store(expenses: [ expense_at("Pending", budget_id: nil) ])
+        sign_in @user
+
+        get :index
+
+        assert_select "button[aria-controls='reasons-edits-block-recExp1']", text: /Can't approve yet/
+        assert_select "#reasons-edits-block-recExp1 li", text: "no budget"
+      end
+
+      test "index suppresses the attention flag on a non-actionable (Paid) row" do
+        # Paid is done — the same flag there is noise. It must not render even
+        # though the expense would otherwise be flagged (no receipt).
+        rebuild_store(expenses: [ expense_at("Paid", receipts: []) ])
+        sign_in @user
+
+        get :index
+
+        assert_select "[aria-controls^='reasons-edits-']", count: 0
       end
 
       test "index does not flag a clean expense" do
@@ -370,9 +393,7 @@ module Admin
 
         get :index
 
-        # The filter checkbox says "Needs attention only"; the row tooltip (with a
-        # colon + reasons) is what must be absent for a clean expense.
-        assert_not_includes response.body, "Needs attention:"
+        assert_select "[aria-controls^='reasons-edits-']", count: 0
       end
 
       test "index shows a colour-coded AI badge for a checked expense" do
@@ -385,14 +406,18 @@ module Admin
         assert_includes response.body, "text-success"
       end
 
-      test "edit lists the reasons an expense needs attention" do
-        rebuild_store(expenses: [ expense_at("Pending", receipts: []) ])
+      test "edit lists advisory reasons separately from blocking ones" do
+        # No receipt = advisory; no budget = blocking. Both should show, each in
+        # its own section.
+        rebuild_store(expenses: [ expense_at("Pending", receipts: [], budget_id: nil) ])
         sign_in @user
 
         get :edit, params: { id: "recExp1" }
 
-        assert_match(/needs attention before it's ready to pay/i, response.body)
+        assert_match(/can't be approved until these are fixed/i, response.body)
+        assert_match(/worth checking before approving/i, response.body)
         assert_includes response.body, "no receipt"
+        assert_includes response.body, "no budget"
       end
 
       test "edit shows no attention list for a clean expense" do
@@ -401,7 +426,8 @@ module Admin
 
         get :edit, params: { id: "recExp1" }
 
-        assert_no_match(/needs attention before it's ready to pay/i, response.body)
+        assert_no_match(/can't be approved until these are fixed/i, response.body)
+        assert_no_match(/worth checking before approving/i, response.body)
       end
 
       # --- Edit renders at every status ------------------------------------

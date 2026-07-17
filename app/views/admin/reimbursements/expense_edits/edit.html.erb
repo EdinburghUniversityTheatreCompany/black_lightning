@@ -21,12 +21,22 @@
     <% end %>
   </div>
 
-  <%# --- Why this needs attention --- %>
-  <% if @attention_reasons.any? %>
-    <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
-      <p class="font-medium">This expense needs attention before it's ready to pay:</p>
+  <%# --- Why this needs attention (blocked vs advisory) --- %>
+  <% if @attention[:blocking].any? %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :danger) do %>
+      <p class="font-medium">This can't be approved until these are fixed:</p>
       <ul class="mt-1 list-disc pl-5">
-        <% @attention_reasons.each do |reason| %>
+        <% @attention[:blocking].each do |reason| %>
+          <li><%= reason %></li>
+        <% end %>
+      </ul>
+    <% end %></div>
+  <% end %>
+  <% if @attention[:advisory].any? %>
+    <div class="mt-3"><%= render AlertComponent.new(type: :warning) do %>
+      <p class="font-medium">Worth checking before approving (approval still goes through):</p>
+      <ul class="mt-1 list-disc pl-5">
+        <% @attention[:advisory].each do |reason| %>
           <li><%= reason %></li>
         <% end %>
       </ul>

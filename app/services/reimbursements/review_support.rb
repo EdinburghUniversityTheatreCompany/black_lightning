@@ -8,7 +8,20 @@ module Reimbursements
     BACS_MAX_LEN = 18
     DUPLICATE_WINDOW_DAYS = 30
 
+    # Statuses where a needs-attention flag is still actionable: the expense
+    # can yet be approved or paid, so an unfixed issue matters. Once Submitted
+    # (in EUSA's hands), Paid (done), or Rejected (dead), the same flag is just
+    # noise on a non-actionable row — it trains the eye to skip a badge that
+    # matters on the rows that are still live.
+    ATTENTION_STATUSES = [ Status::DRAFT, Status::PENDING, Status::APPROVED ].freeze
+
     module_function
+
+    # Whether a needs-attention flag should be surfaced for this expense at all
+    # (see ATTENTION_STATUSES).
+    def attention_actionable?(expense)
+      ATTENTION_STATUSES.include?(expense.status)
+    end
 
     # A BACS-safe payment reference from a budget name: drop anything that isn't
     # alphanumeric/space/hyphen, cap at 18 chars, then trim.
@@ -22,31 +35,45 @@ module Reimbursements
       needs_attention_reasons(expense, budget_by_id, modulus_checker).any?
     end
 
-    # Human labels for each check an expense fails before it's ready to approve,
-    # in a stable order: missing/zero gross or ex-VAT amount, no linked budget,
-    # no receipt (a SharePoint-offloaded receipt counts as present — same
-    # logic as +Expense#missing_completion_fields+), no effective bank
-    # details, an INVALID modulus result (OUTSIDE_SPEC is acceptable; skipped
-    # entirely when there are no bank details to check), or over the budget's
-    # remaining. An empty array means the expense is clean. +budget_by_id+
-    # maps record_id => Budget (for the over-budget check); +modulus_checker+
-    # responds to #check(sort, account).
-    def needs_attention_reasons(expense, budget_by_id, modulus_checker)
-      reasons = []
-      reasons << "no amount" if expense.amount.nil? || expense.amount.zero?
-      reasons << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
-      reasons << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
-      reasons << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
+    # The needs-attention reasons split into the two categories that matter to
+    # an operator deciding whether to click Approve:
+    #
+    #   :blocking — ReviewController#approve_expense REFUSES the approval
+    #     (no effective bank details, no linked budget, no non-zero ex-VAT
+    #     amount). These MUST be fixed first; this is the single source of
+    #     truth kept in lockstep with approve_expense's own guards.
+    #   :advisory — approval proceeds, but the operator should look first
+    #     (missing/zero gross amount, no receipt, an INVALID modulus result,
+    #     or over the budget's remaining). OUTSIDE_SPEC is acceptable; the
+    #     modulus check is skipped entirely when there are no bank details.
+    #
+    # +budget_by_id+ maps record_id => Budget (for the over-budget check);
+    # +modulus_checker+ responds to #check(sort, account).
+    def attention_summary(expense, budget_by_id, modulus_checker)
+      blocking = []
+      advisory = []
+
+      advisory << "no amount" if expense.amount.nil? || expense.amount.zero?
+      blocking << "no ex-VAT amount" if expense.amount_excl_vat.nil? || expense.amount_excl_vat.zero?
+      blocking << "no budget" if expense.budget.nil? || expense.budget.record_id.blank?
+      advisory << "no receipt" if expense.receipts.empty? && expense.sharepoint_receipt_urls.blank?
 
       if expense.effective_has_bank_details?
         modulus = modulus_checker.check(expense.effective_sort_code, expense.effective_account_number)
-        reasons << "failed the bank modulus check" if modulus == ModulusCheck::INVALID
+        advisory << "failed the bank modulus check" if modulus == ModulusCheck::INVALID
       else
-        reasons << "no bank details"
+        blocking << "no bank details"
       end
 
-      reasons << "over budget" if over_budget?(expense, budget_by_id)
-      reasons
+      advisory << "over budget" if over_budget?(expense, budget_by_id)
+      { blocking: blocking, advisory: advisory }
+    end
+
+    # The flat reason list (blocking first, then advisory) — for the CSV export,
+    # the attention flag, and anywhere the blocked/advisory split isn't shown.
+    def needs_attention_reasons(expense, budget_by_id, modulus_checker)
+      summary = attention_summary(expense, budget_by_id, modulus_checker)
+      summary[:blocking] + summary[:advisory]
     end
 
     # Would this expense's ex-VAT amount exceed the loaded budget's remaining?

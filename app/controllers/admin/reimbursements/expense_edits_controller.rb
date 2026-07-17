@@ -122,8 +122,8 @@ module Admin
         @title = "Edit ##{expense.auto_number}"
         @budgets = store.active_budgets
         @budget_by_id = store.budgets.index_by(&:record_id)
-        @attention_reasons =
-          ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
+        @attention =
+          ::Reimbursements::ReviewSupport.attention_summary(expense, @budget_by_id, modulus_checker)
       end
 
       # All expenses, newest first, narrowed by the status/budget/attention
