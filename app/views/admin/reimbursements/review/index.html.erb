@@ -92,8 +92,9 @@
         <% end %>
       <% else %>
         <%= render AlertComponent.new(type: :warning) do %>
-          These have issues to fix before approving: missing excl.-VAT amount, no budget, no
-          receipts, invalid bank details, or over budget.
+          These need attention before approving — a data problem to fix (missing excl.-VAT amount,
+          no budget, no receipts, invalid bank details, or over budget) or a budget owner's sign-off
+          still awaited (which an owner endorses, or you override).
         <% end %>
         <% @attention.each do |expense| %>
           <%= render "expense_card", expense: expense, allow_approve: true, selectable: true, duplicates: @duplicates[expense.record_id] %>

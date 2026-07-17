@@ -11,6 +11,9 @@
 <%# The owner-endorsement gate is a distinct, overridable blocking reason (see
     OwnerReview) — kept out of ReviewSupport so that stays pure/AR-free. %>
 <% owner_gate_unmet = @owner_gate_unmet_ids&.include?(expense.record_id) %>
+<% endorsement = @endorsements_by_expense&.[](expense.record_id) %>
+<% endorsement_covers = endorsement && ::Reimbursements::OwnerReview.endorsement_covers?(endorsement, expense) %>
+<% owner_names = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id)&.name }.presence %>
 <% attention_reasons = attention[:blocking] + attention[:advisory] %>
 
 <div class="mb-3 rounded border border-gray-200 p-3">
@@ -45,6 +48,14 @@
     <% elsif attention[:advisory].any? %>
       <%= render BadgeComponent.new(type: :warning, pill: true).with_content("Check before approving") %>
     <% end %>
+    <%# Positive confirmation the owner gate is met, so finance can see a claim
+        WAS endorsed (and, after an edit re-opens it, that it no longer is). %>
+    <% if endorsement_covers && endorsement.owner_endorsement? %>
+      <%= render BadgeComponent.new(type: :success, pill: true)
+            .with_content("Endorsed by #{@people_by_id&.[](endorsement.endorsed_by_person_id)&.name || 'an owner'}") %>
+    <% elsif endorsement_covers && endorsement.finance_override? %>
+      <%= render BadgeComponent.new(type: :info, pill: true).with_content("Owner sign-off overridden") %>
+    <% end %>
   </div>
 
   <%# Reasons inline (not behind a click) so an operator scanning the queue
@@ -61,7 +72,10 @@
       <% if owner_gate_unmet %>
         <p class="text-warning">
           <span class="font-medium">Awaiting a budget owner's endorsement</span>
-          — an owner signs off from their My Budgets page, or use the finance override below.
+          (blocks approval until signed off or overridden)
+          <% if owner_names %>— waiting on <%= owner_names.to_sentence %> to sign off
+            the <%= expense.budget.name %> budget<% end %>.
+          They endorse from My Budgets, or use the finance override below.
         </p>
       <% end %>
       <% if attention[:advisory].any? %>
@@ -205,18 +219,23 @@
                       class: "#{btn_classes(:success, :sm)} opacity-50 cursor-not-allowed" %>
       <% elsif owner_gate_unmet %>
         <%# The owner gate is the only hard block. Finance can't plain-approve,
-            but CAN override the owner sign-off (recorded as who overrode), per
-            the "finance can override" rule for owners who can't act. Only the
-            override button is shown — its label already says it's an approve.
-            The confirm names any advisory flags too, so overriding a flagged
-            claim keeps the same misclick safeguard the normal Approve has. %>
-        <% override_confirm = "No budget owner has endorsed ##{expense.auto_number} yet. Approve on their behalf?"
+            but CAN override the owner sign-off — recorded as who overrode, with
+            an optional reason. The confirm states the consequence and names any
+            advisory flags, so overriding a flagged claim keeps the same misclick
+            safeguard the normal Approve has. Use only when no owner can act. %>
+        <% override_confirm = "Approve ##{expense.auto_number} without an owner's sign-off? " \
+             "This is recorded against your account. Use it only when no owner can sign off (e.g. no portal account)."
            override_confirm += " It is also flagged: #{attention[:advisory].join('; ')}." if attention[:advisory].any? %>
-        <%= button_to "Approve (override sign-off)",
-                      admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab),
-                      method: :patch, "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
-                      form: { data: { turbo_confirm: override_confirm } },
-                      class: btn_classes(:warning, :sm) %>
+        <%= form_with url: admin_reimbursements_override_approve_review_path(expense.record_id, tab: @tab),
+                      method: :patch, class: "flex flex-wrap items-center gap-2",
+                      data: { turbo_confirm: override_confirm } do %>
+          <%= text_field_tag :override_note, nil, placeholder: "Reason for override (optional)",
+                             "aria-label": "Reason for overriding the owner sign-off on ##{expense.auto_number}",
+                             class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+          <%= submit_tag "Approve (override sign-off)",
+                         "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
+                         class: btn_classes(:warning, :sm) %>
+        <% end %>
       <% else %>
         <%# An advisory-only card gets a confirm NAMING its reasons — approval
             commits real money to a BACS batch and advisory reasons (over

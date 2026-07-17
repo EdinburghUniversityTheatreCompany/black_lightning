@@ -39,6 +39,11 @@ module Admin
         # to avoid an N+1). A blocking gate: finance can't approve until an owner
         # endorses or overrides.
         @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
+        # For the positive "Endorsed by / Cleared by finance" chip on the card,
+        # and to resolve the endorsing owner's name.
+        @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
+          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
+        @people_by_id = store.people.index_by(&:record_id)
         @ready, @attention = @pending.partition do |expense|
           !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
             !@duplicates.key?(expense.record_id) &&
@@ -56,8 +61,18 @@ module Admin
           return
         end
 
-        store.update_expense!(expense.record_id, save_attrs)
-        redirect_to_review(notice: "Saved changes to ##{expense.auto_number}.")
+        # A covering owner endorsement before the edit means this Save may have
+        # re-opened the gate (if it changed amount/budget) — tell finance so the
+        # claim jumping back to "awaiting sign-off" isn't a surprise. update_expense!
+        # returns the updated claim, so no extra Airtable read.
+        was_endorsed = ::Reimbursements::OwnerReview.gate_applies?(expense) &&
+                       ::Reimbursements::OwnerReview.gate_satisfied?(expense)
+        updated = store.update_expense!(expense.record_id, save_attrs)
+
+        notice = "Saved changes to ##{expense.auto_number}."
+        notice += " Your edit changed the amount or budget, so it needs a fresh owner sign-off." \
+          if was_endorsed && !::Reimbursements::OwnerReview.gate_satisfied?(updated)
+        redirect_to_review(notice: notice)
       end
 
       def approve
@@ -125,8 +140,8 @@ module Admin
         expenses = selected_pending_expenses
         return redirect_to_review(alert: "Select at least one expense to approve.") if expenses.empty?
 
-        approved, skipped = expenses.partition { |e| approve_expense(e) == :approved }
-        redirect_to_review(notice: bulk_approve_summary(approved.size, skipped.size))
+        results = expenses.map { |expense| approve_expense(expense) }
+        redirect_to_review(notice: bulk_approve_summary(results))
       end
 
       # Reject every selected Pending expense with one shared reason, reusing the
@@ -258,9 +273,15 @@ module Admin
         store.expenses.select { |e| e.pending? && ids.include?(e.record_id) }
       end
 
-      def bulk_approve_summary(approved, skipped)
+      # Names the owner-gate skips separately from the data-problem skips so
+      # finance isn't told a gated claim was "missing bank/budget/amount".
+      def bulk_approve_summary(results)
+        approved = results.count(:approved)
+        awaiting = results.count(:skipped_awaiting_endorsement)
+        other = results.count { |r| r != :approved && r != :skipped_awaiting_endorsement }
         parts = [ "#{approved} approved" ]
-        parts << "#{skipped} skipped (missing bank details, budget, or amount)" if skipped.positive?
+        parts << "#{awaiting} awaiting owner sign-off" if awaiting.positive?
+        parts << "#{other} skipped (missing bank details, budget, or amount)" if other.positive?
         "#{parts.join(', ')}."
       end
 

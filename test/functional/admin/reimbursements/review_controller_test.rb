@@ -599,6 +599,47 @@ module Admin
         # Only the clean (ownerless-budget) claim advanced; the gated one skipped.
         assert_equal 1, @client.updated.size
         assert_equal "recClean", @client.updated.sole[1]
+        # ...and the summary names the owner-gate reason, not "missing bank/budget/amount".
+        assert_match(/1 approved/, flash[:notice])
+        assert_match(/1 awaiting owner sign-off/, flash[:notice])
+      end
+
+      test "the review card shows who endorsed a covered claim" do
+        owner = airtable_person_record(id: "recOwner", name: "Olga Owner", email: "olga@example.com")
+        rebuild_store(expenses: [ gated_expense ], people: [ @person, @no_bank_person, owner ],
+                      budgets: [ owned_budget ])
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
+                                                   endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
+                                                   endorsed_at: Time.current)
+        sign_in @user
+
+        get :index
+
+        assert_includes assigns(:ready).map(&:record_id), "recGated", "an endorsed claim is ready, not attention"
+        assert_includes response.body, "Endorsed by Olga Owner"
+      end
+
+      test "editing a covered claim's amount re-opens the gate and says so" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recGated", budget_record_id: "recBudOwned",
+                                                   endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
+                                                   endorsed_at: Time.current)
+        sign_in @user
+
+        patch :save, params: { id: "recGated", amount: "999.00", amount_excl_vat: "999.00",
+                               description: "x", payment_reference: "OWNED PAT", budget_record_id: "recBudOwned" }
+
+        assert_match(/needs a fresh owner sign-off/i, flash[:notice])
+      end
+
+      test "override_approve stores the finance override note" do
+        rebuild_store(expenses: [ gated_expense ], budgets: [ owned_budget ])
+        sign_in @user
+
+        patch :override_approve, params: { id: "recGated", override_note: "Owner has no portal account" }
+
+        assert_equal "Owner has no portal account",
+                     ::Reimbursements::OwnerEndorsement.for_expense("recGated").first.note
       end
 
       test "approve is blocked without effective bank details" do
