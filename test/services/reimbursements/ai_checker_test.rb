@@ -2,6 +2,12 @@ require "test_helper"
 
 module Reimbursements
   class AiCheckerTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Person = Airtable::Person
+    Budget = Airtable::Budget
+    Expense = Airtable::Expense
+
     include ReimbursementsTestHelpers
 
     FakeChat = ReimbursementsTestHelpers::FakeChat

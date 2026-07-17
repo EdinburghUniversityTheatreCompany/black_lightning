@@ -5,6 +5,11 @@ module Reimbursements
   # Ported from bedlam-bacs tests/test_reconciliation.py (parse + dedup half;
   # the match_* fns port alongside the extended Expense/Budget POROs).
   class ReconciliationTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Expense = Airtable::Expense
+    Budget = Airtable::Budget
+
     HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
     SAMPLE_ROW = "439999\tF40\tBACS001\t15/03/2025\t03\tAlice Producer\tSome show\t123.45\t\t123.45".freeze
     SAMPLE_CSV_ROW = "439999,F40,BACS001,15/03/2025,03,Alice Producer,Some show,123.45,,123.45".freeze

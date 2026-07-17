@@ -1,9 +1,9 @@
 require "test_helper"
 
 class ReimbursementsHelperTest < ActionView::TestCase
-  Expense = ::Reimbursements::Expense
-  Person = ::Reimbursements::Person
-  Budget = ::Reimbursements::Budget
+  Expense = ::Reimbursements::Airtable::Expense
+  Person = ::Reimbursements::Airtable::Person
+  Budget = ::Reimbursements::Airtable::Budget
   ModulusCheck = ::Reimbursements::ModulusCheck
 
   class FixedChecker

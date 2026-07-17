@@ -264,10 +264,10 @@ module Admin
       test "approve refuses a budget present but with a blank record id (blank nominal-code guard)" do
         # attention_summary flags this as blocking; approve_expense must agree,
         # or it would write a blank nominal code into the BACS spreadsheet.
-        blank_budget = ::Reimbursements::Budget.new(record_id: "", name: "Ghost", nominal_code: "")
-        expense = ::Reimbursements::Expense.new(
+        blank_budget = ::Reimbursements::Airtable::Budget.new(record_id: "", name: "Ghost", nominal_code: "")
+        expense = ::Reimbursements::Airtable::Expense.new(
           record_id: "recBlankBud", auto_number: 5, status: ::Reimbursements::Status::PENDING,
-          person: ::Reimbursements::Person.new(record_id: "recPer1", name: "Pat", email: "p@x.co",
+          person: ::Reimbursements::Airtable::Person.new(record_id: "recPer1", name: "Pat", email: "p@x.co",
                                                sort_code: "08-99-99", account_number: "66374958"),
           amount: BigDecimal("10"), amount_excl_vat: BigDecimal("8"), budget: blank_budget
         )

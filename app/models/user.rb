@@ -120,6 +120,11 @@ class User < ApplicationRecord
       allow_blank: true
     }
 
+  # The reimbursements payee this account is linked to (MySQL cutover; the
+  # legacy airtable_person_id string is retired with the Airtable layer).
+  belongs_to :reimbursements_person, class_name: "Reimbursements::Person",
+             optional: true, inverse_of: :user
+
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 
   has_one  :membership_card, dependent: :destroy

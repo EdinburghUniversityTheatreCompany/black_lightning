@@ -2,6 +2,10 @@ require "test_helper"
 
 module Reimbursements
   class PersonLinkTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Person = Airtable::Person
+
     # Minimal store fake for link resolution.
     class FakeStore
       attr_reader :created

@@ -1,0 +1,129 @@
+module Reimbursements
+  module Airtable
+    ##
+    # An expense submission from the Airtable Expenses table. PORO boundary type
+    # mirroring bedlam-bacs' dataclass; unlike there, +person+ and +budget+ may be
+    # nil (email-in submissions can arrive with gaps the submitter fills later).
+    class Expense
+      include EffectivePayee
+
+      TYPE_REIMBURSEMENT = "Reimbursement".freeze
+      TYPE_INVOICE = "Invoice".freeze
+      TYPE_FROM_EUSA = "From EUSA (utility, staff cost, etc)".freeze
+      TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE, TYPE_FROM_EUSA ].freeze
+      # "From EUSA" is internal bookkeeping; submitters only pick between these.
+      SUBMITTER_TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE ].freeze
+
+      attr_reader :record_id, :auto_number, :person, :amount, :amount_excl_vat, :budget,
+                  :description, :receipts, :status, :expense_type, :payee_name_override,
+                  :sort_code_override, :account_number_override, :nominal_code_override,
+                  :payment_reference, :rejection_reason, :submitted_at,
+                  :submitted_to_eusa_date, :payment_confirmed_date, :batch_id,
+                  :producer_notified, :receipts_offloaded, :sharepoint_receipt_urls,
+                  :ai_check_status, :ai_comment, :ai_checked_at, :rejection_notified
+
+      # The trailing keyword args are operator-side fields the portal never set;
+      # they default empty/nil so the portal's Mapper.expense keeps working
+      # unchanged until the Mapper is extended to read them.
+      def initialize(record_id:, status:, auto_number: nil, person: nil, amount: nil,
+                     amount_excl_vat: nil, budget: nil, description: "", receipts: [],
+                     expense_type: TYPE_REIMBURSEMENT, payee_name_override: "",
+                     sort_code_override: "", account_number_override: "",
+                     nominal_code_override: "", payment_reference: "", rejection_reason: "",
+                     submitted_at: nil, submitted_to_eusa_date: nil, payment_confirmed_date: nil,
+                     batch_id: nil, producer_notified: false, receipts_offloaded: false,
+                     sharepoint_receipt_urls: [], ai_check_status: "", ai_comment: "",
+                     ai_checked_at: nil, rejection_notified: nil)
+        @record_id = record_id
+        @status = status
+        @auto_number = auto_number
+        @person = person
+        @amount = amount
+        @amount_excl_vat = amount_excl_vat
+        @budget = budget
+        @description = description
+        @receipts = receipts
+        @expense_type = expense_type
+        @payee_name_override = payee_name_override
+        @sort_code_override = sort_code_override
+        @account_number_override = account_number_override
+        @nominal_code_override = nominal_code_override
+        @payment_reference = payment_reference
+        @rejection_reason = rejection_reason
+        @submitted_at = submitted_at
+        @submitted_to_eusa_date = submitted_to_eusa_date
+        @payment_confirmed_date = payment_confirmed_date
+        @batch_id = batch_id
+        @producer_notified = producer_notified
+        @receipts_offloaded = receipts_offloaded
+        @sharepoint_receipt_urls = sharepoint_receipt_urls
+        @ai_check_status = ai_check_status
+        @ai_comment = ai_comment
+        @ai_checked_at = ai_checked_at
+        @rejection_notified = rejection_notified
+      end
+
+      def pending?
+        status == Status::PENDING
+      end
+
+      def draft?
+        status == Status::DRAFT
+      end
+
+      def approved?
+        status == Status::APPROVED
+      end
+
+      # Submitters may only change an expense before review picks it up, and
+      # never internal "From EUSA" bookkeeping entries (editing one in the
+      # portal would silently rewrite its type to a submitter type).
+      def editable?
+        (draft? || pending?) && Expense::SUBMITTER_TYPES.include?(expense_type)
+      end
+
+      # Human labels for the required fields still missing on an incomplete
+      # (usually email-in) submission, so the UI can tell the submitter exactly
+      # what to add rather than a bare "needs completion".
+      def missing_completion_fields
+        missing = []
+        missing << "a budget" if budget.nil?
+        # amount.blank?/amount_excl_vat.blank? alone would miss a zero-valued
+        # amount — 0/BigDecimal("0") are truthy in Ruby, so .blank? is false for
+        # them, even though a documented zero here means "not yet known," the
+        # same sentinel needs_attention_reasons already special-cases.
+        missing << "the amount" if amount.blank? || amount.zero?
+        missing << "the amount excluding VAT" if amount_excl_vat.blank? || amount_excl_vat.zero?
+        missing << "a description" if description.blank?
+        missing << "a payment reference" if payment_reference.blank?
+        # A receipt counts as present if a file is attached OR a SharePoint URL was
+        # stored when it was offloaded during batch processing (which clears the
+        # Airtable attachment).
+        missing << "a receipt" if receipts.empty? && sharepoint_receipt_urls.blank?
+        missing
+      end
+
+      # True when the submission is missing fields the portal form requires, so the
+      # index can nudge the submitter.
+      def needs_completion?
+        missing_completion_fields.any?
+      end
+
+      # How many receipts this expense has, honouring offloaded receipts: the
+      # attached files if any, otherwise the count of SharePoint URLs stored when
+      # the files were offloaded during batch processing (same present-or-offloaded
+      # logic as +missing_completion_fields+).
+      def receipt_count
+        receipts.any? ? receipts.size : sharepoint_receipt_urls.size
+      end
+
+      # True only for a genuine pass/fail verdict — "error" means the checker
+      # itself couldn't run (e.g. a transient Gemini outage), so it must NOT
+      # count as "already checked": that would permanently lock the expense out
+      # of ever being (re)checked once the outage clears.
+      def ai_checked?
+        %w[pass fail].include?(ai_check_status)
+      end
+    end
+  end
+end
