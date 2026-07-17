@@ -2,6 +2,14 @@
  * Bedlam specific styles
 */
 
+/* Keep top-anchored toasts clear of the sticky admin navbar (h-14 = 3.5rem)
+   so a flash never lands on top of the breadcrumb / page title. */
+.swal2-container.swal2-top,
+.swal2-container.swal2-top-start,
+.swal2-container.swal2-top-end {
+  padding-top: 4rem;
+}
+
 .colored-toast.swal2-icon-success {
   background-color: #28a745 !important;
 }
