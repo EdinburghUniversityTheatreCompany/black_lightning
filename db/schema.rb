@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_010000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_020000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -669,6 +669,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_010000) do
     t.index ["key"], name: "index_reimbursements_cost_centres_on_key", unique: true
   end
 
+  create_table "reimbursements_owner_endorsements", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "budget_record_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "endorsed_at", null: false
+    t.string "endorsed_by_person_id"
+    t.string "expense_record_id", null: false
+    t.string "note"
+    t.integer "overridden_by_id"
+    t.datetime "updated_at", null: false
+    t.index ["expense_record_id"], name: "index_reimbursements_owner_endorsements_on_expense_record_id", unique: true
+    t.index ["overridden_by_id"], name: "index_reimbursements_owner_endorsements_on_overridden_by_id"
+  end
+
   create_table "reviews", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.text "body", size: :medium
     t.datetime "created_at", precision: nil, null: false
@@ -949,6 +962,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_010000) do
   add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
   add_foreign_key "reimbursements_batch_attempts", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_owner_endorsements", "users", column: "overridden_by_id"
   add_foreign_key "roles_parents", "roles"
   add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
