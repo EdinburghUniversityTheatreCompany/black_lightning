@@ -1,0 +1,16 @@
+Dear <%= @user.first_name %>,
+
+The following reimbursement <%= @expenses.one? ? "claim is" : "claims are" %> charged to a budget you own and <%= @expenses.one? ? "needs" : "need" %> your sign-off before the finance team can pay <%= @expenses.one? ? "it" : "them" %>:
+
+<% @expenses.each do |expense| %>
+- #<%= expense.auto_number %> — <%= expense.budget&.name %>
+  Payee: <%= expense.effective_payee_name %>
+  Amount: <%= number_to_currency(expense.amount, unit: "£") %>
+  <%= expense.description %>
+
+<% end %>
+Review and endorse on My Budgets: <%= admin_reimbursements_my_budgets_url %>
+
+Regards,
+
+Pineapple
