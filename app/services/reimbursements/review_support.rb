@@ -66,6 +66,7 @@ module Reimbursements
       end
 
       advisory << "over budget" if over_budget?(expense, budget_by_id)
+      advisory << "ex-VAT amount exceeds the gross" if excl_vat_over_gross?(expense)
       { blocking: blocking, advisory: advisory }
     end
 
@@ -86,6 +87,20 @@ module Reimbursements
       !budget.nil? && !budget.remaining.nil? && expense.amount_excl_vat > budget.remaining
     end
     private_class_method :over_budget?
+
+    # The ex-VAT amount can never legitimately exceed the gross (VAT is
+    # non-negative), yet a real Airtable row does exactly this and single-
+    # handedly flips its budget over-budget. Flag it (advisory) so the operator
+    # catches the data-entry error before it distorts the numbers. Both amounts
+    # must be present and non-zero — a 0 sentinel means "not yet known".
+    def excl_vat_over_gross?(expense)
+      excl = expense.amount_excl_vat
+      gross = expense.amount
+      return false if excl.nil? || excl.zero? || gross.nil? || gross.zero?
+
+      excl > gross
+    end
+    private_class_method :excl_vat_over_gross?
 
     # Map each expense's record_id to other expenses that look like duplicates:
     # same linked person, same gross amount, submitted within +window_days+.

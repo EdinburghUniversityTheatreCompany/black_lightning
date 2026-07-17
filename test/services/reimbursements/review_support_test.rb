@@ -107,25 +107,48 @@ module Reimbursements
 
     # --- needs_attention: over budget -------------------------------------
 
+    # Gross tracks the ex-VAT figure so these isolate the over-budget check
+    # (a gross far below the ex-VAT would trip the ex-VAT-over-gross flag instead).
     test "over budget needs attention" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("600.00"), receipts: [ receipt ])
+      exp = expense(payee: valid_payee, budget: budget, amount: BigDecimal("600.00"),
+                    amount_excl_vat: BigDecimal("600.00"), receipts: [ receipt ])
       assert ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
     end
 
     test "exactly at remaining does not trigger" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("500.00"), receipts: [ receipt ])
+      exp = expense(payee: valid_payee, budget: budget, amount: BigDecimal("500.00"),
+                    amount_excl_vat: BigDecimal("500.00"), receipts: [ receipt ])
       assert_not ReviewSupport.needs_attention(exp, { "recBudget1" => budget }, valid_checker)
     end
 
     test "nil remaining does not trigger over-budget" do
       no_remaining = budget(remaining: nil, nominal_code: "439000", record_id: "recBudget2")
-      exp = expense(payee: valid_payee, budget: no_remaining, amount_excl_vat: BigDecimal("9999.00"), receipts: [ receipt ])
+      exp = expense(payee: valid_payee, budget: no_remaining, amount: BigDecimal("9999.00"),
+                    amount_excl_vat: BigDecimal("9999.00"), receipts: [ receipt ])
       assert_not ReviewSupport.needs_attention(exp, { "recBudget2" => no_remaining }, valid_checker)
     end
 
     test "budget not in lookup does not trigger over-budget" do
-      exp = expense(payee: valid_payee, budget: budget, amount_excl_vat: BigDecimal("9999.00"), receipts: [ receipt ])
+      exp = expense(payee: valid_payee, budget: budget, amount: BigDecimal("9999.00"),
+                    amount_excl_vat: BigDecimal("9999.00"), receipts: [ receipt ])
       assert_not ReviewSupport.needs_attention(exp, {}, valid_checker)
+    end
+
+    # --- needs_attention: ex-VAT exceeds gross ----------------------------
+
+    test "ex-VAT amount above the gross is an advisory flag" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ],
+                    amount: BigDecimal("50.00"), amount_excl_vat: BigDecimal("55.00"))
+      summary = ReviewSupport.attention_summary(exp, { "recBudget1" => budget }, valid_checker)
+      assert_empty summary[:blocking]
+      assert_includes summary[:advisory], "ex-VAT amount exceeds the gross"
+    end
+
+    test "ex-VAT equal to the gross does not flag" do
+      exp = expense(payee: valid_payee, budget: budget, receipts: [ receipt ],
+                    amount: BigDecimal("50.00"), amount_excl_vat: BigDecimal("50.00"))
+      summary = ReviewSupport.attention_summary(exp, { "recBudget1" => budget }, valid_checker)
+      assert_not_includes summary[:advisory], "ex-VAT amount exceeds the gross"
     end
 
     # --- needs_attention: missing budget ----------------------------------
