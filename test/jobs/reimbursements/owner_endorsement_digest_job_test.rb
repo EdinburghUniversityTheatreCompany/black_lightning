@@ -8,63 +8,57 @@ module Reimbursements
       # The owning person shares an email with a real portal user, so they can
       # be nudged; the submitter is a different, account-less person.
       @owner_user = users(:member)
-      @owner = airtable_person_record(id: "recOwner", name: "Olga Owner", email: @owner_user.email)
-      @submitter = airtable_person_record(id: "recSub", name: "Sam Sub", email: "sam@example.com")
-      @budget = airtable_budget_record(id: "recBud1", name: "Props", owner_ids: [ "recOwner" ])
-      @awaiting = airtable_expense_record(id: "recExp1", payee_id: "recSub", budget_id: "recBud1",
-                                          status: "Pending", description: "Van hire")
+      @owner = create_reimbursements_person(name: "Olga Owner", email: @owner_user.email)
+      @submitter = create_reimbursements_person(name: "Sam Sub", email: "sam@example.com")
+      @budget = create_reimbursements_budget(name: "Props", owners: [ @owner ])
     end
 
-    teardown { OwnerEndorsementDigestJob.store_builder = -> { Store.new } }
-
-    def use_store(expenses:, people: nil, budgets: nil)
-      store, _client = build_fake_store(
-        expenses: expenses, people: people || [ @owner, @submitter ], budgets: budgets || [ @budget ]
-      )
-      OwnerEndorsementDigestJob.store_builder = -> { store }
+    def awaiting_expense(**attrs)
+      create_reimbursements_expense(person: @submitter, budget: @budget, status: Status::PENDING,
+                                    description: "Van hire", **attrs)
     end
 
     test "emails an owner with a portal account about a pending claim awaiting their sign-off" do
-      use_store(expenses: [ @awaiting ])
+      awaiting_expense
 
       assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
     end
 
     test "sends nothing when no pending claim awaits endorsement" do
-      use_store(expenses: [])
-
       assert_no_emails { OwnerEndorsementDigestJob.perform_now }
     end
 
     test "does not email an owner who has no portal account" do
       # The only owner's email matches no User, so they can't endorse — the
       # finance override covers them and no digest is sent.
-      accountless = airtable_person_record(id: "recOwner", name: "Olga", email: "nouser@example.com")
-      use_store(expenses: [ @awaiting ], people: [ accountless, @submitter ])
+      accountless = create_reimbursements_person(name: "Olga", email: "nouser@example.com")
+      @budget.budget_ownerships.destroy_all
+      @budget.owners << accountless
+      awaiting_expense
 
       assert_no_emails { OwnerEndorsementDigestJob.perform_now }
     end
 
     test "does not email about a claim the owner already endorsed" do
-      # airtable_expense_record's default amount (12.5) is what @awaiting carries.
-      OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
-                               endorsed_by_person_id: "recOwner", endorsed_amount: BigDecimal("12.5"),
+      expense = awaiting_expense
+      OwnerEndorsement.create!(expense_record_id: expense.record_id,
+                               budget_record_id: @budget.record_id,
+                               endorsed_by_person_id: @owner.record_id,
+                               endorsed_amount: BigDecimal("12.5"),
                                endorsed_at: Time.current)
-      use_store(expenses: [ @awaiting ])
 
       assert_no_emails { OwnerEndorsementDigestJob.perform_now }
     end
 
     test "does not email about a claim the owner submitted themselves (auto-bypass)" do
-      own = airtable_expense_record(id: "recExp2", payee_id: "recOwner", budget_id: "recBud1",
-                                    status: "Pending", description: "Owner's own claim")
-      use_store(expenses: [ own ])
+      create_reimbursements_expense(person: @owner, budget: @budget, status: Status::PENDING,
+                                    description: "Owner's own claim")
 
       assert_no_emails { OwnerEndorsementDigestJob.perform_now }
     end
 
     test "the digest renders without error and names the claim" do
-      use_store(expenses: [ @awaiting ])
+      awaiting_expense
 
       assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
 
@@ -76,9 +70,9 @@ module Reimbursements
 
     test "nudges every account-holding owner of a shared budget (any one can act)" do
       second_user = users(:admin)
-      second_owner = airtable_person_record(id: "recOwner2", name: "Otto Owner", email: second_user.email)
-      shared = airtable_budget_record(id: "recBud1", name: "Props", owner_ids: %w[recOwner recOwner2])
-      use_store(expenses: [ @awaiting ], people: [ @owner, second_owner, @submitter ], budgets: [ shared ])
+      second_owner = create_reimbursements_person(name: "Otto Owner", email: second_user.email)
+      @budget.owners << second_owner
+      awaiting_expense
 
       assert_emails(2) { OwnerEndorsementDigestJob.perform_now }
       recipients = ActionMailer::Base.deliveries.last(2).flat_map(&:to)
@@ -86,12 +80,13 @@ module Reimbursements
       assert_includes recipients, second_user.email
     end
 
-    test "resolves an owner by the stored airtable_person_id link when emails differ" do
+    test "resolves an owner by the stored person link when emails differ" do
       # The owner's People email doesn't match their portal account's email, but
-      # the durable PersonLink (User#airtable_person_id) still resolves them.
-      @owner_user.update_column(:airtable_person_id, "recOwner")
-      drifted = airtable_person_record(id: "recOwner", name: "Olga", email: "different-people-email@example.com")
-      use_store(expenses: [ @awaiting ], people: [ drifted, @submitter ])
+      # the durable PersonLink (users.reimbursements_person_id on this backend)
+      # still resolves them.
+      @owner.update!(email: "different-people-email@example.com")
+      @owner_user.update_column(:reimbursements_person_id, @owner.id)
+      awaiting_expense
 
       assert_emails(1) { OwnerEndorsementDigestJob.perform_now }
       assert_equal [ @owner_user.email ], ActionMailer::Base.deliveries.last.to

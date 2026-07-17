@@ -18,11 +18,14 @@ module Reimbursements
         person = people_by_id[owner_person_id]
         next if person.nil?
 
-        # Prefer the durable stored link (PersonLink persists User#airtable_person_id);
-        # fall back to email only for an owner who never opened the portal. User
-        # emails are normalised on write while Airtable People emails aren't, so
-        # email-only matching would silently miss a legitimately-linked owner.
+        # Prefer the durable stored link (PersonLink persists it per backend:
+        # the reimbursements_person FK on database, the airtable_person_id
+        # string on Airtable); fall back to email only for an owner who never
+        # opened the portal. User emails are normalised on write while People
+        # emails aren't, so email-only matching would silently miss a
+        # legitimately-linked owner.
         user = User.find_by(airtable_person_id: owner_person_id)
+        user ||= User.find_by(reimbursements_person_id: owner_person_id) if owner_person_id.match?(/\A\d+\z/)
         user ||= User.find_by(email: person.email) if person.email.present?
         next if user.nil? # no portal account -> can't endorse; finance override covers them
 
