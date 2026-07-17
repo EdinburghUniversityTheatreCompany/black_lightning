@@ -180,4 +180,22 @@ class ReimbursementsHelperTest < ActionView::TestCase
 
     assert_not_includes html, "aria-haspopup"
   end
+
+  test "producer status badge shows the friendly label + a tooltip, not the raw status" do
+    html = reimbursements_producer_status_badge("Submitted")
+    assert_includes html, "Sent to EUSA"
+    assert_not_includes html, ">Submitted<"
+    # The apostrophe is HTML-escaped in the title attribute.
+    assert_includes html, "title=\"Sent to the Students#{ERB::Util.html_escape("'")} Association (EUSA) for payment.\""
+  end
+
+  test "producer status badge keeps the status colour variant" do
+    assert_includes reimbursements_producer_status_badge("Paid"), "text-success"
+    assert_includes reimbursements_producer_status_badge("Rejected"), "text-danger"
+  end
+
+  test "producer status badge falls back to the raw status for an unknown value" do
+    html = reimbursements_producer_status_badge("Weird")
+    assert_includes html, "Weird"
+  end
 end

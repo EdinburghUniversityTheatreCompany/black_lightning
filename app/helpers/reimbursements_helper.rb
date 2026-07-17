@@ -142,4 +142,24 @@ module ReimbursementsHelper
     content_tag(:span, safe_join([ trigger, panel ]),
                 class: "relative inline-block", data: { controller: "popover" })
   end
+
+  # Producer-facing status wording. The Airtable status values answer the
+  # SYSTEM's question ("Submitted" = batched to EUSA); a submitter's question
+  # is "where's my money?", so the portal shows a plainer label with a tooltip.
+  # Finance pages keep the raw status. Status.badge_variant still drives colour.
+  PRODUCER_STATUS = {
+    "Draft" => [ "Draft", "Only you can see this — submit it when you're ready." ],
+    "Pending" => [ "Waiting for review", "With the finance team, waiting to be checked." ],
+    "Approved" => [ "Approved", "Checked and approved — waiting to be sent to EUSA for payment." ],
+    "Submitted" => [ "Sent to EUSA", "Sent to the Students' Association (EUSA) for payment." ],
+    "Paid" => [ "Paid", "Paid into your bank account." ],
+    "Rejected" => [ "Rejected", "Not approved — see the reason on the row." ]
+  }.freeze
+
+  # A status badge with the producer-facing label + an explaining tooltip.
+  def reimbursements_producer_status_badge(status)
+    label, tip = PRODUCER_STATUS.fetch(status, [ status, nil ])
+    render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(status)).with_content(label))
+      .then { |html| tip ? content_tag(:span, html, title: tip, class: "inline-block") : html }
+  end
 end

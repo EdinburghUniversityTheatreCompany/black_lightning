@@ -12,6 +12,14 @@
     approved until you
     <%= link_to "add your payment details", edit_admin_reimbursements_payment_details_path, class: "font-medium underline" %>.
   <% end %>
+<% else %>
+  <%# Durable, quiet confirmation that details are on file (and which account),
+      so "is my money going to the right place?" is answerable at a glance —
+      last 4 digits only. %>
+  <p class="mb-3 text-sm text-gray-600">
+    Payments go to your account ending <strong><%= current_person.account_number.to_s.last(4) %></strong>.
+    <%= link_to "Change", edit_admin_reimbursements_payment_details_path, class: "underline" %>
+  </p>
 <% end %>
 
 <%= render CardComponent.new(title: "Quick actions") do %>
@@ -31,10 +39,10 @@
     </div>
   <% end %>
 <% else %>
-  <% headers = [ "Status", "Description", "Budget", "Amount", "Submitted", "Receipts", "" ] %>
+  <% headers = [ "Status", "Description", "Budget", "Amount", "Created", "Receipts", "" ] %>
   <% field_sets = @expenses.map do |expense|
        status = safe_join([
-         render(BadgeComponent.new(type: Reimbursements::Status.badge_variant(expense.status)).with_content(expense.status)),
+         reimbursements_producer_status_badge(expense.status),
          (reimbursements_reasons_popover(reasons: expense.missing_completion_fields, key: "expense-#{expense.record_id}",
                                          label: "Needs completion", heading: "Still needs:",
                                          record_label: "##{expense.auto_number}") if expense.needs_completion?)
