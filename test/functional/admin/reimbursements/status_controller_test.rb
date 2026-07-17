@@ -53,14 +53,13 @@ module Admin
         @user = users(:member)
         @cost_centre = ::Reimbursements::CostCentre.default
 
-        @budget = airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000")
-        @store, @client = build_fake_store(budgets: [ @budget ])
-        BaseController.store_builder = -> { @store }
+        # One real budget so the backend probe reports "read 1 budget(s)".
+        create_reimbursements_budget(name: "Props", nominal_code: "4000")
         StatusController.graph_builder = -> { FakeGraph.new }
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements::Store.new }
+        BaseController.store_builder = -> { ::Reimbursements.build_store }
         StatusController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
