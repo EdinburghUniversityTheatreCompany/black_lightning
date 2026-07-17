@@ -1,5 +1,5 @@
 <p class="mb-3">
-  <%= link_to "← All budgets", admin_reimbursements_budgets_path, class: "text-sm text-blue-700 hover:underline" %>
+  <%= link_to "← All budgets", admin_reimbursements_budgets_path, class: "text-sm text-primary underline" %>
 </p>
 
 <%= render CardComponent.new(title: "Edit #{@budget.name.presence || 'budget'}") do %>

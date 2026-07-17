@@ -26,6 +26,10 @@ class NavigationHelperTest < ActionView::TestCase
     admin_navbar_items.find { |category| category[:title] == "Finance" }
   end
 
+  def my_reimbursements_category
+    admin_navbar_items.find { |category| category[:title] == "My Reimbursements" }
+  end
+
   test "the nine finance-gated links are hidden without the finance permission" do
     # A category with zero visible children is dropped entirely
     # (navbar_categories.reject! { |c| c[:children].empty? }) — with no
@@ -49,12 +53,14 @@ class NavigationHelperTest < ActionView::TestCase
     grant_producer_permission(@current_user)
     @current_user.instance_variable_set(:@ability, nil)
 
-    titles = finance_category[:children].map { |child| child[:title] }
+    # The finance-only category is dropped entirely for a producer.
+    assert_nil finance_category
 
-    assert_not_includes titles, "Review"
-    assert_not_includes titles, "Settings"
-    # Reimbursements/Payment Details are gated on the separate :access permission instead.
-    assert_includes titles, "Reimbursements"
+    # Their own claim/payment/budget links live in a separate My Reimbursements
+    # category, gated on the base :access permission.
+    titles = my_reimbursements_category[:children].map { |child| child[:title] }
+    assert_includes titles, "My Claims"
     assert_includes titles, "Payment Details"
+    assert_includes titles, "My Budgets"
   end
 end

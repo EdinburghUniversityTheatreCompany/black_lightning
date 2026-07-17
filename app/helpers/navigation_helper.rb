@@ -51,13 +51,20 @@ module NavigationHelper
     children << { title: "Debt Checker", path: new_admin_debt_checker_path, fa_icon: "fa-magnifying-glass-dollar" }  if can? :check_debt, Admin::Debt
     navbar_categories << { title: "Staffing & Debt", children: children, fa_icon: "fa-person" }
 
-    # Finance
+    # My Reimbursements — the producer/owner-facing surfaces (base access
+    # permission). Kept out of the finance-only "Finance" category so a
+    # producer who isn't on the finance team isn't shown a group called
+    # "Finance" containing only their personal links.
     children = []
     # Points at /expenses (not the namespace root) so the sidebar's
     # start_with? active-check doesn't also light up for payment_details.
-    children << { title: "Reimbursements", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
+    children << { title: "My Claims", path: admin_reimbursements_expenses_path, fa_icon: "fa-file-invoice" }          if can? :access, :reimbursements
     children << { title: "Payment Details", path: edit_admin_reimbursements_payment_details_path, fa_icon: "fa-building-columns" } if can? :access, :reimbursements
     children << { title: "My Budgets", path: admin_reimbursements_my_budgets_path, fa_icon: "fa-user-check" } if can? :access, :reimbursements
+    navbar_categories << { title: "My Reimbursements", children: children, fa_icon: "fa-receipt" }
+
+    # Finance — the finance-team-only reimbursements tooling.
+    children = []
     children << { title: "Review", path: admin_reimbursements_review_path, fa_icon: "fa-clipboard-check" } if can? :manage, :reimbursements_finance
     children << { title: "Expenses", path: admin_reimbursements_expense_edits_path, fa_icon: "fa-pen-to-square" } if can? :manage, :reimbursements_finance
     children << { title: "People", path: admin_reimbursements_people_path, fa_icon: "fa-address-book" } if can? :manage, :reimbursements_finance

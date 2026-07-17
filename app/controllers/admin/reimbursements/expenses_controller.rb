@@ -13,7 +13,7 @@ module Admin
           redirect_to admin_reimbursements_expenses_path and return
         end
 
-        @title = "My Reimbursements"
+        @title = "My Claims"
         @expenses = current_person ? store.expenses_for(current_person.record_id) : []
       end
 
