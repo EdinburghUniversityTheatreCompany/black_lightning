@@ -30,7 +30,23 @@ export default class extends Controller {
     const selected = this.selectedCount
     const none = selected === 0
 
-    if (this.hasApproveButtonTarget) this.approveButtonTarget.disabled = none
+    if (this.hasApproveButtonTarget) {
+      this.approveButtonTarget.disabled = none
+      // Approval commits real money to a BACS batch, and "Select all" ticks
+      // flagged (needs-attention) cards indistinguishably from clean ones —
+      // so the confirm carries the flagged count, the only warning between
+      // a blanket select-all and approving a flagged expense.
+      const flagged = this.flaggedSelectedCount
+      const base = `Approve ${selected} expense${selected === 1 ? "" : "s"}?`
+      this.approveButtonTarget.dataset.turboConfirm =
+        flagged === 0
+          ? base
+          : `${base} ${flagged} of them ${
+              flagged === 1 ? "is" : "are"
+            } flagged as needing attention — check the reasons on the card${
+              flagged === 1 ? "" : "s"
+            } before continuing.`
+    }
     if (this.hasRejectButtonTarget) {
       this.rejectButtonTarget.disabled = none
       this.rejectButtonTarget.dataset.turboConfirm = `Reject ${selected} expense${
@@ -49,5 +65,11 @@ export default class extends Controller {
 
   get selectedCount() {
     return this.checkboxTargets.filter((cb) => cb.checked).length
+  }
+
+  get flaggedSelectedCount() {
+    return this.checkboxTargets.filter(
+      (cb) => cb.checked && cb.dataset.flagged === "true",
+    ).length
   }
 }

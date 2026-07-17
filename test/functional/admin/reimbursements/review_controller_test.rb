@@ -225,6 +225,27 @@ module Admin
                       "email each producer"
       end
 
+      test "a flagged card's Approve confirms with its reasons; a clean card's doesn't" do
+        clean = pending_expense(id: "recClean", payment_reference: "PROPS PAT")
+        # No receipts -> "no receipt" attention reason (advisory-only, so the
+        # server never blocks it — this confirm is the only safety net).
+        flagged = pending_expense(id: "recFlagged", payment_reference: "PROPS PAT", receipts: [])
+        rebuild_store(expenses: [ clean, flagged ])
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        flagged_form = css_select("form[action*='#{admin_reimbursements_approve_review_path('recFlagged')}']").first
+        assert_includes flagged_form["data-turbo-confirm"], "no receipt"
+        assert_includes flagged_form["data-turbo-confirm"], "Approve anyway?"
+        clean_form = css_select("form[action*='#{admin_reimbursements_approve_review_path('recClean')}']").first
+        assert_nil clean_form["data-turbo-confirm"], "clean cards keep one-click approval"
+        # The bulk toolbar's flagged-count confirm reads these markers.
+        assert_select "input#select_recFlagged[data-flagged=true]"
+        assert_select "input#select_recClean[data-flagged=false]"
+      end
+
       test "bulk approve advances every selected pending expense" do
         a = pending_expense(id: "recBulkA", payment_reference: "PROPS PAT")
         b = pending_expense(id: "recBulkB", payment_reference: "PROPS PAT")
