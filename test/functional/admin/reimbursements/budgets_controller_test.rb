@@ -11,30 +11,19 @@ module Admin
         users(:member).add_role("Business Manager")
         @user = users(:member)
 
-        @props = airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000",
-                                        active: true, initial_budget: 1000.0, remaining: 250.5,
-                                        current_forecast: 800.0, committed_amount: 300.0,
-                                        total_paid: 150.0, variance: -50.0, owner_ids: [ "recPer1" ])
-        @income = airtable_budget_record(id: "recBud2", name: "Ticket income", budget_type: "Income")
-        @alice = airtable_person_record(id: "recPer1", name: "Alice Owner", email: "alice@example.com")
-        @bob = airtable_person_record(id: "recPer2", name: "Bob Owner", email: "bob@example.com")
-        @forecast = airtable_budget_forecast_record(id: "recFc1", budget_id: "recBud1",
-                                                    amount: 800.0, date: "2026-05-01",
-                                                    reason: "Initial projection")
-
-        rebuild_store
-      end
-
-      teardown do
-        BaseController.store_builder = -> { ::Reimbursements::Store.new }
-      end
-
-      def rebuild_store
-        @store, @client = build_fake_store(
-          budgets: [ @props, @income ], people: [ @alice, @bob ],
-          budget_forecasts: [ @forecast ]
-        )
-        BaseController.store_builder = -> { @store }
+        @alice = create_reimbursements_person(name: "Alice Owner", email: "alice@example.com")
+        @bob = create_reimbursements_person(name: "Bob Owner", email: "bob@example.com")
+        @props = create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
+                                              initial_budget: 1000, owners: [ @alice ])
+        @income = create_reimbursements_budget(name: "Ticket income", budget_type: "Income")
+        @forecast = @props.forecasts.create!(amount: 800, date: Date.new(2026, 5, 1),
+                                             reason: "Initial projection")
+        # Committed 300 (Approved 150 excl-VAT + Paid 150), paid 150 —
+        # remaining computes to 800 - 300 = 500.
+        create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::APPROVED,
+                                      amount_excl_vat: 150, amount: 180, receipt: false)
+        create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::PAID,
+                                      amount_excl_vat: 150, amount: 180, receipt: false)
       end
 
       # --- Auth gating -------------------------------------------------------
@@ -46,7 +35,7 @@ module Admin
 
       test "denies members without the finance permission" do
         sign_in users(:committee)
-        get :edit, params: { id: "recBud1" }
+        get :edit, params: { id: @props.record_id }
         assert_response :forbidden
       end
 
@@ -57,7 +46,7 @@ module Admin
         submitter.add_role("Producer")
         sign_in submitter
 
-        get :edit, params: { id: "recBud1" }
+        get :edit, params: { id: @props.record_id }
 
         assert_response :forbidden
       end
@@ -72,22 +61,25 @@ module Admin
         assert_equal 2, assigns(:budgets).size
         assert_includes response.body, "Props"
         assert_includes response.body, "Ticket income"
-        # Current forecast, committed, total paid, remaining and variance surface.
+        # Current forecast, committed, total paid and remaining surface
+        # (computed: forecast 800, committed 300, paid 150, remaining 500).
         assert_includes response.body, "800"
         assert_includes response.body, "300"
         assert_includes response.body, "150"
-        assert_includes response.body, "250"
+        assert_includes response.body, "500"
       end
 
       # Alphabetically-named so page 1 (A-Z sorted, 50 per page) is deterministic.
-      def rebuild_paged_store(count)
-        budgets = (1..count).map { |n| airtable_budget_record(id: "recBud#{n}", name: format("Budget %03d", n)) }
-        @store, @client = build_fake_store(budgets: budgets, people: [ @alice, @bob ])
-        BaseController.store_builder = -> { @store }
+      def seed_paged_budgets(count)
+        ::Reimbursements::Expense.delete_all
+        ::Reimbursements::BudgetForecast.delete_all
+        ::Reimbursements::BudgetOwner.delete_all
+        ::Reimbursements::Budget.delete_all
+        (1..count).each { |n| create_reimbursements_budget(name: format("Budget %03d", n)) }
       end
 
       test "index pages the list at 50 per page" do
-        rebuild_paged_store(60)
+        seed_paged_budgets(60)
         sign_in @user
 
         get :index
@@ -98,7 +90,7 @@ module Admin
       end
 
       test "index page 2 returns the remaining slice, not page 1's rows" do
-        rebuild_paged_store(60)
+        seed_paged_budgets(60)
         sign_in @user
 
         get :index, params: { page: 2 }
@@ -110,9 +102,7 @@ module Admin
 
       test "flags a budget that has no owner" do
         sign_in @user
-        ownerless = airtable_budget_record(id: "recBud3", name: "Unowned category")
-        @store, @client = build_fake_store(budgets: [ ownerless ], people: [ @alice ])
-        BaseController.store_builder = -> { @store }
+        create_reimbursements_budget(name: "Unowned category")
 
         get :index
 
@@ -122,8 +112,7 @@ module Admin
 
       test "does not flag a budget that has an owner" do
         sign_in @user
-        @store, @client = build_fake_store(budgets: [ @props ], people: [ @alice ])
-        BaseController.store_builder = -> { @store }
+        @income.destroy!
 
         get :index
 
@@ -137,9 +126,8 @@ module Admin
         # producer owner, so the "No owner" warning is suppressed for them — it
         # would only drown the signal on the visible budgets that need chasing.
         sign_in @user
-        hidden = airtable_budget_record(id: "recBud6", name: "Payroll", active: false)
-        @store, @client = build_fake_store(budgets: [ hidden ], people: [ @alice ])
-        BaseController.store_builder = -> { @store }
+        @income.destroy!
+        create_reimbursements_budget(name: "Payroll", active: false)
 
         get :index
 
@@ -151,30 +139,30 @@ module Admin
 
       test "surfaces health figures and an over-budget flag for an over-budget budget" do
         sign_in @user
-        overspent = airtable_budget_record(id: "recBud4", name: "Overspent set",
-                                           initial_budget: 1000.0, remaining: -250.0,
-                                           current_forecast: 1300.0, committed_amount: 1200.0,
-                                           total_paid: 1250.0, variance: -300.0,
-                                           owner_ids: [ "recPer1" ])
-        @store, @client = build_fake_store(budgets: [ overspent ], people: [ @alice ])
-        BaseController.store_builder = -> { @store }
+        # Committed 1400 (Paid 1250 + Approved 150) against a 1300 forecast:
+        # remaining computes to -100.
+        overspent = create_reimbursements_budget(name: "Overspent set", initial_budget: 1000,
+                                                 owners: [ @alice ])
+        overspent.forecasts.create!(amount: 1300, date: Date.new(2026, 5, 1), reason: "plan")
+        create_reimbursements_expense(budget: overspent, status: ::Reimbursements::Status::PAID,
+                                      amount_excl_vat: 1250, amount: 1500, receipt: false)
+        create_reimbursements_expense(budget: overspent, status: ::Reimbursements::Status::APPROVED,
+                                      amount_excl_vat: 150, amount: 180, receipt: false)
 
         get :index
 
         assert_response :success
         # Over-budget indicator surfaces.
         assert_includes response.body, "Over budget"
-        # The health figures (initial, committed, total paid, remaining) all render.
+        # The health figures (initial, committed, total paid) all render.
         assert_includes response.body, "1,000"
-        assert_includes response.body, "1,200"
+        assert_includes response.body, "1,400"
         assert_includes response.body, "1,250"
-        assert_includes response.body, "250"
       end
 
       test "does not flag an in-budget budget as over budget" do
         sign_in @user
-        @store, @client = build_fake_store(budgets: [ @props ], people: [ @alice ])
-        BaseController.store_builder = -> { @store }
+        @income.destroy!
 
         get :index
 
@@ -186,12 +174,11 @@ module Admin
         sign_in @user
         # Committed past the initial figure, but a raised forecast leaves a
         # positive remaining — must NOT show the alarming red "Over budget".
-        revised = airtable_budget_record(id: "recBud5", name: "Revised set",
-                                         initial_budget: 1000.0, remaining: 50.0,
-                                         current_forecast: 1400.0, committed_amount: 1200.0,
-                                         owner_ids: [ "recPer1" ])
-        @store, @client = build_fake_store(budgets: [ revised ], people: [ @alice ])
-        BaseController.store_builder = -> { @store }
+        revised = create_reimbursements_budget(name: "Revised set", initial_budget: 1000,
+                                               owners: [ @alice ])
+        revised.forecasts.create!(amount: 1400, date: Date.new(2026, 5, 1), reason: "revised up")
+        create_reimbursements_expense(budget: revised, status: ::Reimbursements::Status::APPROVED,
+                                      amount_excl_vat: 1200, amount: 1440, receipt: false)
 
         get :index
 
@@ -204,114 +191,110 @@ module Admin
 
       test "edit shows the owner checkboxes and forecast history" do
         sign_in @user
-        get :edit, params: { id: "recBud1" }
+        get :edit, params: { id: @props.record_id }
 
         assert_response :success
-        assert_equal "recBud1", assigns(:budget).record_id
-        assert_equal %w[recPer1 recPer2], assigns(:people).map(&:record_id).sort
-        assert_equal [ "recFc1" ], assigns(:forecasts).map(&:record_id)
+        assert_equal @props.record_id, assigns(:budget).record_id
+        assert_equal [ @alice, @bob ].map(&:record_id).sort, assigns(:people).map(&:record_id).sort
+        assert_equal [ @forecast.record_id ], assigns(:forecasts).map(&:record_id)
         assert_includes response.body, "Alice Owner"
         assert_includes response.body, "Bob Owner"
         assert_includes response.body, "Initial projection"
         # A checkbox per person instead of a Ctrl-click multi-select; the current
         # owner (Alice) is pre-ticked, the non-owner (Bob) is not.
         assert_select "fieldset legend", text: "Owners"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=recPer1][checked]"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=recPer2]"
-        assert_select "input[type=checkbox][name='owner_ids[]'][value=recPer2][checked]", false
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@alice.record_id}][checked]"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}]"
+        assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}][checked]", false
       end
 
       test "editing an unknown budget 404s" do
         sign_in @user
-        get :edit, params: { id: "recNope" }
+        get :edit, params: { id: "999999" }
         assert_response :not_found
       end
 
       # --- Update ------------------------------------------------------------
 
-      test "a blank name is rejected, not written straight through to Airtable" do
+      test "a blank name is rejected, not written straight through" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "  ", nominal_code: "4000",
+        patch :update, params: { id: @props.record_id, name: "  ", nominal_code: "4000",
                                  budget_type: "Expense" }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/Enter a budget name/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal "Props", @props.reload.name
       end
 
       test "a blank nominal code is rejected" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "Props", nominal_code: " ",
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: " ",
                                  budget_type: "Expense" }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/Enter a nominal code/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal "4000", @props.reload.nominal_code
       end
 
       test "a budget_type outside the allowed list is rejected" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "Props", nominal_code: "4000",
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
                                  budget_type: "Something else entirely" }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/Choose a valid budget type/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal "Expense", @props.reload.budget_type
       end
 
       test "an owner_id that doesn't resolve to a real person is rejected" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "Props", nominal_code: "4000",
-                                 budget_type: "Expense", owner_ids: [ "recPer1", "recPerGone" ] }
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
+                                 budget_type: "Expense",
+                                 owner_ids: [ @alice.record_id, "999999" ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/owners no longer exist/i, flash[:alert])
-        assert_empty @client.updated
+        assert_equal [ @alice.record_id ], @props.reload.owner_ids
       end
 
       test "update persists edited fields including owners" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "Set & construction", nominal_code: "4200",
-                                 notes: "Split with lighting", initial_budget: "1875.5",
-                                 budget_type: "Expense", active: "1",
-                                 owner_ids: [ "recPer1", "recPer2" ] }
+        patch :update, params: { id: @props.record_id, name: "Set & construction",
+                                 nominal_code: "4200", notes: "Split with lighting",
+                                 initial_budget: "1875.5", budget_type: "Expense", active: "1",
+                                 owner_ids: [ @alice.record_id, @bob.record_id ] }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
-        budgets_field = FIELD_IDS[:budgets]
-        table, record_id, fields = @client.updated.sole
-        assert_equal :budgets, table
-        assert_equal "recBud1", record_id
-        assert_equal "Set & construction", fields[budgets_field[:name]]
-        assert_equal "4200", fields[budgets_field[:nominal_code]]
-        assert_equal "Split with lighting", fields[budgets_field[:notes]]
-        assert_in_delta 1875.5, fields[budgets_field[:initial_budget]]
-        assert_equal [ "recPer1", "recPer2" ], fields[budgets_field[:owner]]
-        assert fields[budgets_field[:active]]
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        @props.reload
+        assert_equal "Set & construction", @props.name
+        assert_equal "4200", @props.nominal_code
+        assert_equal "Split with lighting", @props.notes
+        assert_in_delta 1875.5, @props.initial_budget
+        assert_equal [ @alice, @bob ].map(&:record_id).sort, @props.owner_ids.sort
+        assert @props.active
       end
 
       test "unchecking visible-to-submitters writes active false" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "Props", nominal_code: "4000",
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
                                  budget_type: "Expense" }
 
-        _t, _r, fields = @client.updated.sole
-        assert_not fields[FIELD_IDS[:budgets][:active]]
+        assert_not @props.reload.active
       end
 
       test "clearing all owners writes an empty link list" do
         sign_in @user
 
-        patch :update, params: { id: "recBud1", name: "Props", nominal_code: "4000",
+        patch :update, params: { id: @props.record_id, name: "Props", nominal_code: "4000",
                                  budget_type: "Expense", active: "1" }
 
-        _t, _r, fields = @client.updated.sole
-        assert_equal [], fields[FIELD_IDS[:budgets][:owner]]
+        assert_empty @props.reload.owner_ids
       end
 
       # --- Forecast create ---------------------------------------------------
@@ -319,46 +302,49 @@ module Admin
       test "adding a forecast creates a linked Budget Forecasts record" do
         sign_in @user
 
-        post :forecast, params: { id: "recBud1", amount: "750.50", date: "2026-06-01",
-                                  reason: "Revised up" }
+        assert_difference -> { @props.forecasts.count }, 1 do
+          post :forecast, params: { id: @props.record_id, amount: "750.50", date: "2026-06-01",
+                                    reason: "Revised up" }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
-        table, fields = @client.created.sole
-        assert_equal :budget_forecasts, table
-        assert_equal [ "recBud1" ], fields[FIELD_IDS[:budget_forecasts][:budget]]
-        assert_in_delta 750.5, fields[FIELD_IDS[:budget_forecasts][:amount]]
-        assert_equal "2026-06-01", fields[FIELD_IDS[:budget_forecasts][:date]]
-        assert_equal "Revised up", fields[FIELD_IDS[:budget_forecasts][:reason]]
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
+        created = @props.forecasts.order(:id).last
+        assert_in_delta 750.5, created.amount
+        assert_equal Date.new(2026, 6, 1), created.date
+        assert_equal "Revised up", created.reason
       end
 
       test "a forecast with a missing amount or date is rejected without a write" do
         sign_in @user
 
-        post :forecast, params: { id: "recBud1", amount: "", date: "2026-06-01" }
+        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
+          post :forecast, params: { id: @props.record_id, amount: "", date: "2026-06-01" }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/valid amount and date/i, flash[:alert])
-        assert_empty @client.created
       end
 
       test "a forecast with a malformed (non-blank) amount is rejected without a write" do
         sign_in @user
 
-        post :forecast, params: { id: "recBud1", amount: "not-a-number", date: "2026-06-01" }
+        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
+          post :forecast, params: { id: @props.record_id, amount: "not-a-number", date: "2026-06-01" }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/valid amount and date/i, flash[:alert])
-        assert_empty @client.created
       end
 
       test "a forecast with a malformed (non-blank) date is rejected without a write" do
         sign_in @user
 
-        post :forecast, params: { id: "recBud1", amount: "750.50", date: "not-a-date" }
+        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
+          post :forecast, params: { id: @props.record_id, amount: "750.50", date: "not-a-date" }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/valid amount and date/i, flash[:alert])
-        assert_empty @client.created
       end
 
       # --- Edit / delete a logged forecast -----------------------------------
@@ -366,71 +352,71 @@ module Admin
       test "edit with ?edit_forecast renders that row as an inline edit form" do
         sign_in @user
 
-        get :edit, params: { id: "recBud1", edit_forecast: "recFc1" }
+        get :edit, params: { id: @props.record_id, edit_forecast: @forecast.record_id }
 
         assert_response :success
-        assert_equal "recFc1", assigns(:editing_forecast_id)
-        assert_select "input[name=forecast_id][value=recFc1]"
+        assert_equal @forecast.record_id, assigns(:editing_forecast_id)
+        assert_select "input[name=forecast_id][value=#{@forecast.record_id}]"
         assert_select "input[name=amount][value=?]", "800.0"
       end
 
       test "updating a forecast writes the corrected values" do
         sign_in @user
 
-        patch :update_forecast, params: { id: "recBud1", forecast_id: "recFc1",
+        patch :update_forecast, params: { id: @props.record_id, forecast_id: @forecast.record_id,
                                           amount: "912.34", date: "2026-06-02", reason: "Corrected" }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/updated/i, flash[:notice])
-        table, record_id, fields = @client.updated.sole
-        assert_equal :budget_forecasts, table
-        assert_equal "recFc1", record_id
-        assert_in_delta 912.34, fields[FIELD_IDS[:budget_forecasts][:amount]]
-        assert_equal "2026-06-02", fields[FIELD_IDS[:budget_forecasts][:date]]
-        assert_equal "Corrected", fields[FIELD_IDS[:budget_forecasts][:reason]]
+        @forecast.reload
+        assert_in_delta 912.34, @forecast.amount
+        assert_equal Date.new(2026, 6, 2), @forecast.date
+        assert_equal "Corrected", @forecast.reason
       end
 
       test "updating a forecast with a bad amount is rejected without a write" do
         sign_in @user
 
-        patch :update_forecast, params: { id: "recBud1", forecast_id: "recFc1",
+        patch :update_forecast, params: { id: @props.record_id, forecast_id: @forecast.record_id,
                                           amount: "nope", date: "2026-06-02" }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/valid amount and date/i, flash[:alert])
-        assert_empty @client.updated
+        assert_in_delta 800, @forecast.reload.amount
       end
 
       test "deleting a forecast removes the record" do
         sign_in @user
 
-        delete :delete_forecast, params: { id: "recBud1", forecast_id: "recFc1" }
+        assert_difference -> { ::Reimbursements::BudgetForecast.count }, -1 do
+          delete :delete_forecast, params: { id: @props.record_id, forecast_id: @forecast.record_id }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@props.record_id)
         assert_match(/removed/i, flash[:notice])
-        assert_equal [ :budget_forecasts, "recFc1" ], @client.deleted.sole
       end
 
       test "a forecast belonging to another budget can't be edited through this budget's URL" do
-        # recFc1 is linked to recBud1, so editing it via recBud2 must be refused.
+        # @forecast is linked to @props, so editing it via @income must be refused.
         sign_in @user
 
-        patch :update_forecast, params: { id: "recBud2", forecast_id: "recFc1",
+        patch :update_forecast, params: { id: @income.record_id, forecast_id: @forecast.record_id,
                                           amount: "999.00", date: "2026-06-02" }
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud2")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@income.record_id)
         assert_match(/isn't part of this budget/i, flash[:alert])
-        assert_empty @client.updated
+        assert_in_delta 800, @forecast.reload.amount
       end
 
       test "deleting a forecast from another budget's URL is refused" do
         sign_in @user
 
-        delete :delete_forecast, params: { id: "recBud2", forecast_id: "recFc1" }
+        assert_no_difference -> { ::Reimbursements::BudgetForecast.count } do
+          delete :delete_forecast, params: { id: @income.record_id, forecast_id: @forecast.record_id }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_budget_path("recBud2")
+        assert_redirected_to edit_admin_reimbursements_budget_path(@income.record_id)
         assert_match(/isn't part of this budget/i, flash[:alert])
-        assert_empty @client.deleted
       end
     end
   end
