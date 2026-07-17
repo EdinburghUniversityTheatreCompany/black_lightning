@@ -132,8 +132,6 @@ module Reimbursements
       )
     end
 
-    # --- Behaviour ported verbatim from the PORO --------------------------
-
     def pending? = status == Status::PENDING
     def draft? = status == Status::DRAFT
     def approved? = status == Status::APPROVED
