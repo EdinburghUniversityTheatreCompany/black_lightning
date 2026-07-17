@@ -13,6 +13,14 @@ module Reimbursements
       define_singleton_method(key) { raw_value(key) }
     end
 
+    # Which data backend Reimbursements.build_store builds: "airtable" (the
+    # live source until the MySQL cutover flip) or "database" (ActiveRecord).
+    # Flipping REIMBURSEMENTS_BACKEND is the cutover switch — and the
+    # rollback: flip it back and the app reads Airtable again.
+    def self.backend
+      raw_value(:backend).presence || "airtable"
+    end
+
     # A Date or nil (never raises on a malformed value).
     def self.azure_secret_expires_on
       raw = raw_value(:azure_secret_expires_on)
