@@ -167,6 +167,24 @@ module Admin
         assert_not_includes response.body, "Over budget"
       end
 
+      test "flags 'Over original budget' (not 'Over budget') when the forecast still covers the overspend" do
+        sign_in @user
+        # Committed past the initial figure, but a raised forecast leaves a
+        # positive remaining — must NOT show the alarming red "Over budget".
+        revised = airtable_budget_record(id: "recBud5", name: "Revised set",
+                                         initial_budget: 1000.0, remaining: 50.0,
+                                         current_forecast: 1400.0, committed_amount: 1200.0,
+                                         owner_ids: [ "recPer1" ])
+        @store, @client = build_fake_store(budgets: [ revised ], people: [ @alice ])
+        BaseController.store_builder = -> { @store }
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Over original budget"
+        assert_not_includes response.body, ">Over budget<"
+      end
+
       # --- Edit --------------------------------------------------------------
 
       test "edit shows the owner multi-select and forecast history" do

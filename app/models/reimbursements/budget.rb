@@ -38,12 +38,23 @@ module Reimbursements
       budget_type == "Income"
     end
 
-    # True when this expense budget has overspent: a negative remaining, or
-    # committed/paid past the initial figure. Nil rollups mean "not loaded", so
-    # they never trigger the flag. Income budgets are never "over budget".
+    # Genuinely overspent: nothing left against the current forecast/plan.
+    # `remaining` is the one figure that unambiguously means "over" (an
+    # Airtable rollup that already folds in forecast, committed and paid), so
+    # the badge keys off it alone — mixing in the initial-figure checks below
+    # produced a red "Over budget" next to a positive Remaining. Nil means
+    # "not loaded"; income budgets are never over budget.
     def over_budget?
       return false if income?
-      return true if remaining && remaining.negative?
+
+      !remaining.nil? && remaining.negative?
+    end
+
+    # A softer state: committed or paid has passed the ORIGINAL initial figure,
+    # but the forecast was revised up to cover it so there's still remaining.
+    # Worth flagging (the plan grew) but not the same alarm as over_budget?.
+    def over_initial_budget?
+      return false if income? || over_budget?
       return true if initial_budget && committed_amount && committed_amount > initial_budget
       return true if initial_budget && total_paid && total_paid > initial_budget
 
