@@ -43,6 +43,10 @@
           title: safe_join([ tag.span("⚠️", aria: { hidden: true }), " Microsoft access for this cost centre" ]),
           variant: :warning, html_class: "my-1") do %>
       <div class="flex flex-col gap-3 text-sm text-gray-700">
+        <p class="font-medium">
+          These steps need Microsoft 365 admin permissions (Exchange Online / SharePoint admin) —
+          if that's not you, send this section to IT.
+        </p>
         <p>
           The manual Microsoft 365 steps the app can't do itself. You only need these when
           <strong>first setting up this cost centre's mailboxes</strong>. Day-to-day use needs none of it.
