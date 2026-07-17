@@ -172,6 +172,14 @@ module Reimbursements
     end
 
     def create_expense(message, person, receipts)
+      # Idempotency backstop (database backend): if a previous cycle created
+      # the expense but died before marking the message read, don't mint a
+      # duplicate — just finish the bookkeeping on the message.
+      if (existing = store.expense_for_source_message(message.id))
+        handle_already_processed(message, existing)
+        return
+      end
+
       extraction = extractor.extract(
         receipts: receipts,
         budgets: store.active_budgets,
@@ -206,6 +214,17 @@ module Reimbursements
       end
       best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
       best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
+    end
+
+    # The expense already exists from an earlier cycle (stamped with this
+    # message's id) — the sender was already replied to when it was created,
+    # so only mark the message read and file it away.
+    def handle_already_processed(message, expense)
+      Rails.logger.info("Reimbursements mailbox: message #{message.id} already created expense " \
+                        "#{expense.record_id}; skipping duplicate")
+      mark_read_or_flag_duplicate(message, expense) or return
+
+      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) }
     end
 
     # Marks the message read. Returns true on success. On failure the expense
@@ -249,6 +268,9 @@ module Reimbursements
     def expense_attrs(message, person, extraction)
       {
         person_record_id: person.record_id,
+        # The idempotency stamp — only the database backend has a column for
+        # it (Airtable's field writer would reject the unknown key).
+        source_message_id: (message.id if store.supports_message_idempotency?),
         status: Status::DRAFT,
         description: extraction.suggested_description || message.subject.presence,
         amount: extraction.total_amount,

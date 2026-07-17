@@ -127,7 +127,8 @@ module Reimbursements
         content_type: file.content_type.to_s,
         thumbnail_url: (helpers.rails_representation_path(
           file.representation(resize_to_limit: [ 512, 512 ]), only_path: true
-        ) if file.representable?)
+        ) if file.representable?),
+        blob: file.blob
       )
     end
 

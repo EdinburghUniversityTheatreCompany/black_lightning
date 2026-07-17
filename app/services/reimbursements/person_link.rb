@@ -1,16 +1,23 @@
 module Reimbursements
   ##
-  # Resolves a Black Lightning user to their Airtable People record (the payee
-  # registry): stored link first, then email match (persisted for next time),
-  # and — on first submission — creates the People record.
+  # Resolves a Black Lightning user to their payee (People) record: stored
+  # link first, then email match (persisted for next time), and — on first
+  # submission — creates the People record.
+  #
+  # The stored link is backend-specific: users.reimbursements_person_id (a
+  # real FK) on the database backend, the legacy users.airtable_person_id
+  # string on the Airtable backend. The importer backfills the FK from the
+  # string at cutover; the string column is retired with the Airtable layer.
   class PersonLink
-    def initialize(store:)
+    def initialize(store:, backend: Settings.backend)
       @store = store
+      @database = backend == "database"
     end
 
     def person_for(user)
-      if user.airtable_person_id.present?
-        person = @store.find_person(user.airtable_person_id)
+      stored = stored_link(user)
+      if stored.present?
+        person = @store.find_person(stored)
         return person if person
       end
 
@@ -31,10 +38,18 @@ module Reimbursements
       person
     end
 
+    def stored_link(user)
+      @database ? user.reimbursements_person_id&.to_s : user.airtable_person_id
+    end
+
     def remember_link(user, person)
       # Link cache only — deliberately skips validations/callbacks so legacy
       # user records that no longer validate can still use the portal.
-      user.update_column(:airtable_person_id, person.record_id) # rubocop:disable Rails/SkipsModelValidations
+      if @database
+        user.update_column(:reimbursements_person_id, person.id) # rubocop:disable Rails/SkipsModelValidations
+      else
+        user.update_column(:airtable_person_id, person.record_id) # rubocop:disable Rails/SkipsModelValidations
+      end
     end
   end
 end

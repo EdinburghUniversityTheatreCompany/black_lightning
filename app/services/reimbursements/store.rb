@@ -185,6 +185,13 @@ module Reimbursements
       found
     end
 
+    # Airtable has no column for the mailbox idempotency key — the poll job's
+    # mark-read-first mitigation carries the duplicate risk until the MySQL
+    # backend takes over (where these answer for real).
+    def supports_message_idempotency? = false
+
+    def expense_for_source_message(_message_id) = nil
+
     def create_batch!(attrs)
       record = @client.create_record(:batches, @mapper.batch_fields(attrs))
       bust_batches!

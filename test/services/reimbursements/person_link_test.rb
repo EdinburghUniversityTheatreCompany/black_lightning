@@ -79,5 +79,35 @@ module Reimbursements
     test "person_for returns nil when unmatched" do
       assert_nil PersonLink.new(store: FakeStore.new([])).person_for(users(:user))
     end
+    # --- Database backend: the stored link is the real FK -----------------
+
+    test "database backend resolves and persists the FK link" do
+      user = users(:user)
+      person = Reimbursements::Person.create!(name: "Pat", email: user.email)
+      link = PersonLink.new(store: DatabaseStore.new, backend: "database")
+
+      assert_equal person.id, link.person_for(user).id
+      assert_equal person.id, user.reload.reimbursements_person_id
+    end
+
+    test "database backend prefers the stored FK over an email match" do
+      user = users(:user)
+      linked = Reimbursements::Person.create!(name: "Linked", email: "other@example.com")
+      Reimbursements::Person.create!(name: "Email Match", email: user.email)
+      user.update_column(:reimbursements_person_id, linked.id)
+
+      link = PersonLink.new(store: DatabaseStore.new, backend: "database")
+      assert_equal linked.id, link.person_for(user).id
+    end
+
+    test "database backend creates the payee on first submission" do
+      user = users(:user)
+      link = PersonLink.new(store: DatabaseStore.new, backend: "database")
+
+      person = link.ensure_person!(user)
+      assert_equal user.email, person.email
+      assert_equal person.id, user.reload.reimbursements_person_id
+      assert_nil user.airtable_person_id
+    end
   end
 end

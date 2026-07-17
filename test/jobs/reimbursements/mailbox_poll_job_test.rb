@@ -437,5 +437,52 @@ module Reimbursements
       end
       assert_match(/authentication is failing/, ActionMailer::Base.deliveries.last.subject)
     end
+    # --- Database backend (post-cutover): real idempotency key ------------
+
+    def setup_database_job(messages:, attachments: {})
+      ENV["REIMBURSEMENTS_AZURE_TENANT_ID"] = "t"
+      ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "c"
+      ENV["REIMBURSEMENTS_AZURE_CLIENT_SECRET"] = "s"
+
+      person = Person.create!(name: "Pat Producer", email: "pat@example.com")
+      budget = Budget.create!(name: "Props", active: true)
+      extraction = Extractor::Extraction.new(
+        merchant: "City Cabs", total_amount: BigDecimal("18.00"), vat_amount: BigDecimal("3.00"),
+        vat_itemised: true, suggested_description: "Taxi to venue",
+        suggested_budget_record_id: budget.record_id, suggested_payment_reference: "CITYCABS PAT"
+      )
+      @mailbox = FakeMailbox.new(messages: messages, attachments: attachments)
+      MailboxPollJob.mailbox_builder = ->(_cost_centre) { @mailbox }
+      MailboxPollJob.store_builder = -> { DatabaseStore.new }
+      MailboxPollJob.extractor_builder = -> { FakeExtractor.new(extraction) }
+      person
+    end
+
+    test "database backend: stamps the source message id on the created draft" do
+      person = setup_database_job(messages: [ inbound_message ],
+                                  attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+
+      MailboxPollJob.perform_now
+
+      expense = Expense.find_by!(source_message_id: "msg1")
+      assert_equal Status::DRAFT, expense.status
+      assert_equal person, expense.person
+      assert_equal 1, expense.receipt_files.count
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
+
+    test "database backend: an already-seen message is filed away without a duplicate" do
+      person = setup_database_job(messages: [ inbound_message ],
+                                  attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      Expense.create!(status: Status::DRAFT, person: person, source_message_id: "msg1")
+
+      assert_no_difference -> { Expense.count } do
+        MailboxPollJob.perform_now
+      end
+
+      assert_empty @mailbox.replies
+      assert_equal [ "msg1" ], @mailbox.reads
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
   end
 end

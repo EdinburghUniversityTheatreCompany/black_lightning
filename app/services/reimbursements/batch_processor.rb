@@ -158,7 +158,7 @@ module Reimbursements
             description: expense.description.to_s, original_filename: receipt.filename, index: index + 1
           )
           GraphClient::Attachment.new(
-            filename: filename, content: @graph.download(receipt.url),
+            filename: filename, content: receipt.bytes || @graph.download(receipt.url),
             content_type: receipt.content_type.presence || "application/octet-stream"
           )
         end

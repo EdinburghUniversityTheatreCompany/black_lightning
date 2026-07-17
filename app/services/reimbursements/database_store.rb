@@ -138,6 +138,17 @@ module Reimbursements
       Batch.find_by(draft_message_id: message_id)
     end
 
+    # Mailbox idempotency (the deferred-robustness fix Airtable couldn't
+    # store): the poll job stamps the Graph message id on the expense it
+    # creates and skips a message it has already seen.
+    def supports_message_idempotency? = true
+
+    def expense_for_source_message(message_id)
+      return nil if message_id.blank?
+
+      Expense.find_by(source_message_id: message_id)
+    end
+
     def create_batch!(attrs)
       batch = Batch.create!(batch_columns(attrs))
       bust_batches!
