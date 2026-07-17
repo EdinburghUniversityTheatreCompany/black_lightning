@@ -56,6 +56,16 @@ module Reimbursements
       end
     end
 
+    test "error messages use human attribute names, not humanized internal ones" do
+      form = ExpenseForm.new
+      form.valid?
+      messages = form.errors.full_messages
+      # "Budget", not "Budget record"; "Amount excl. VAT", not "Amount excl vat".
+      assert messages.any? { |m| m.start_with?("Budget must") }, messages.inspect
+      assert_not messages.any? { |m| m.include?("Budget record") }, "internal attribute name leaked"
+      assert messages.any? { |m| m.start_with?("Amount excl. VAT must") }, messages.inspect
+    end
+
     test "rejects non-positive amounts and excl above total" do
       assert_not build_form(amount: "0").valid?
       assert_not build_form(amount: "-5").valid?
