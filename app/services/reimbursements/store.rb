@@ -125,6 +125,13 @@ module Reimbursements
       map_single_expense(record)
     end
 
+    # Hard-delete an expense record. Only used for a producer discarding their
+    # own draft — the caller is responsible for gating on status.
+    def delete_expense!(record_id)
+      @client.delete_record(:expenses, record_id)
+      bust_expenses!
+    end
+
     def update_expense!(record_id, attrs)
       fields = @mapper.expense_fields(attrs)
       # expense_fields' attrs.compact drops a nil/blank budget_record_id (a

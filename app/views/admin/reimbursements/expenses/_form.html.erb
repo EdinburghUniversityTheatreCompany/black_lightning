@@ -1,7 +1,14 @@
-<%# locals: (form:, budgets:, url:, method:, submit_label:, show_receipt_input: true) %>
+<%# locals: (form:, budgets:, url:, method:, show_receipt_input: true, current_status: nil) %>
 <%# Receipt-first expense form. The Stimulus controller posts the receipt to
     the extract endpoint and prefills the fields; everything still works with
     JavaScript disabled (plain manual form). %>
+<%# The primary/secondary buttons and the line beneath them adapt to what the
+    submit actually DOES, which depends on the claim's current status:
+      - new / editing a Draft: primary submits to finance, secondary keeps it a
+        private draft.
+      - editing a Pending claim: primary re-saves it in the queue, secondary
+        WITHDRAWS it back to a draft (out of the queue) — so that one confirms. %>
+<% editing_pending = current_status == Reimbursements::Status::PENDING %>
 <%= simple_horizontal_form_for form, url: url, method: method,
       html: { multipart: true,
               data: { controller: "reimbursements-receipt",
@@ -9,14 +16,30 @@
 
   <% content_for :override_card_footer do %>
     <div class="form-actions flex flex-wrap items-center gap-2">
-      <%= f.button :submit, submit_label, class: btn_classes(:primary) %>
-      <%= button_tag "Save as draft", type: :submit, class: btn_classes(:secondary),
-            name: "reimbursements_expense_form[save_as_draft]", value: "1",
-            formnovalidate: true %>
+      <% if editing_pending %>
+        <%= f.button :submit, "Save changes", class: btn_classes(:primary) %>
+        <%= button_tag "Withdraw back to draft", type: :submit, class: btn_classes(:secondary),
+              name: "reimbursements_expense_form[save_as_draft]", value: "1", formnovalidate: true,
+              data: { turbo_confirm: "This takes your claim out of the finance team's queue. " \
+                                     "It won't be reviewed or paid until you submit it again. Continue?" } %>
+      <% else %>
+        <%= f.button :submit, "Submit expense", class: btn_classes(:primary) %>
+        <%= button_tag "Save as draft", type: :submit, class: btn_classes(:secondary),
+              name: "reimbursements_expense_form[save_as_draft]", value: "1", formnovalidate: true %>
+      <% end %>
       <%= link_to "Cancel", admin_reimbursements_expenses_path, class: btn_classes(:secondary) %>
     </div>
     <p class="mt-2 mb-0 text-sm text-gray-500">
-      Drafts are only visible to you. The finance team sees the claim once you submit it.
+      <% if editing_pending %>
+        This claim is with the finance team. <strong>Save changes</strong> keeps it in the review
+        queue; <strong>Withdraw back to draft</strong> takes it out until you submit it again.
+      <% elsif current_status == Reimbursements::Status::DRAFT %>
+        This claim is a draft — only you can see it. <strong>Submit expense</strong> sends it to the
+        finance team for review; <strong>Save as draft</strong> keeps it private.
+      <% else %>
+        <strong>Submit expense</strong> sends it to the finance team for review.
+        <strong>Save as draft</strong> keeps it private to you until you're ready.
+      <% end %>
     </p>
   <% end %>
 

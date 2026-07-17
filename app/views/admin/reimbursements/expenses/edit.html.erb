@@ -1,6 +1,10 @@
 <p class="mb-3 text-gray-600">
-  You can edit this claim while it's still waiting for review. Once the finance team
-  picks it up, contact <%= mail_to "finance@bedlamfringe.co.uk" %> for changes.
+  <% if @expense.status == Reimbursements::Status::DRAFT %>
+    This claim is a draft — only you can see it. Finish it and submit it below.
+  <% else %>
+    You can edit this claim while it's still waiting for review. Once the finance team
+    picks it up, contact <%= mail_to "finance@bedlamfringe.co.uk" %> for changes.
+  <% end %>
 </p>
 
 <div data-controller="receipts-upload"
@@ -28,4 +32,15 @@
 
 <%= render "form", form: @form, budgets: @budgets,
       url: admin_reimbursements_expense_path(@expense.record_id), method: :patch,
-      submit_label: "Save changes", show_receipt_input: false %>
+      show_receipt_input: false, current_status: @expense.status %>
+
+<% if @expense.status == Reimbursements::Status::DRAFT %>
+  <div class="mt-4 border-t border-gray-200 pt-3">
+    <%= button_to "Delete draft", admin_reimbursements_expense_path(@expense.record_id),
+          method: :delete, class: btn_classes(:danger, :sm),
+          form: { data: { turbo_confirm: "Delete this draft for good? This can't be undone." } } %>
+    <p class="mt-1 mb-0 text-sm text-gray-500">
+      Discards this unsent draft entirely. Only you ever saw it.
+    </p>
+  </div>
+<% end %>

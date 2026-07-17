@@ -194,6 +194,17 @@ module Reimbursements
       assert_equal 2, client.list_calls[:expenses], "expense cache must be busted by the write"
     end
 
+    test "delete_expense! deletes the record and busts the expense cache" do
+      store, client = build_store
+
+      store.expenses
+      store.delete_expense!("recExp1")
+      store.expenses
+
+      assert_equal [ [ :expenses, "recExp1" ] ], client.deleted
+      assert_equal 2, client.list_calls[:expenses], "expense cache must be busted by the delete"
+    end
+
     test "remove_receipt! rewrites the survivors and busts the expense cache" do
       two_receipts = [
         { "id" => "att1", "filename" => "old.pdf", "url" => "https://x", "size" => 1, "type" => "application/pdf" },

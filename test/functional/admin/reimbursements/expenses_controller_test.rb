@@ -271,6 +271,72 @@ module Admin
       assert_response :not_found
     end
 
+    # --- Draft/submit boundary: state-aware labels + actions --------------
+
+    def own_draft_store
+      draft = airtable_expense_record(id: "recDraftOwn", status: "Draft")
+      @store, @client = build_fake_store(
+        expenses: [ draft ],
+        people: [ airtable_person_record(email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
+    end
+
+    test "editing a Pending claim labels the primary Save changes and the withdraw button, which confirms" do
+      sign_in @user
+
+      get :edit, params: { id: "recExp1" } # recExp1 is Pending
+
+      assert_select "input[type=submit][value='Save changes']"
+      assert_select "button[name='reimbursements_expense_form[save_as_draft]'][data-turbo-confirm*=?]",
+                    "out of the finance team's queue"
+      assert_includes response.body, "Withdraw back to draft"
+    end
+
+    test "editing a Draft labels the primary Submit expense and offers Delete draft" do
+      own_draft_store
+      sign_in @user
+
+      get :edit, params: { id: "recDraftOwn" }
+
+      assert_select "input[type=submit][value='Submit expense']"
+      # Delete-draft button (a button_to DELETE with a confirm).
+      assert_select "form[action=?][method=post]", admin_reimbursements_expense_path("recDraftOwn") do
+        assert_select "input[name=_method][value=delete]", 1
+      end
+      assert_includes response.body, "Delete draft"
+    end
+
+    test "destroy deletes an own draft" do
+      own_draft_store
+      sign_in @user
+
+      delete :destroy, params: { id: "recDraftOwn" }
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/draft deleted/i, flash[:notice])
+      assert_equal [ [ :expenses, "recDraftOwn" ] ], @client.deleted
+    end
+
+    test "destroy refuses a non-draft (Pending) claim" do
+      sign_in @user
+
+      delete :destroy, params: { id: "recExp1" } # Pending
+
+      assert_redirected_to admin_reimbursements_expenses_path
+      assert_match(/only a draft can be deleted/i, flash[:alert])
+      assert_empty @client.deleted
+    end
+
+    test "destroy 404s for another person's draft" do
+      sign_in @user
+
+      delete :destroy, params: { id: "recExp2" }
+
+      assert_response :not_found
+    end
+
     # A race: the producer follows an Edit link on a stale list for their own
     # claim that review has since picked up. Fail gracefully (friendly flash
     # redirect) rather than showing a bare 404.

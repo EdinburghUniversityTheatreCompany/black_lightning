@@ -64,6 +64,21 @@ module Admin
         redirect_with_attachment_result(@expense.record_id, notice)
       end
 
+      # Discard an unsent draft entirely. Only a Draft can be deleted — a
+      # Pending claim is with the finance team, so it's withdrawn (back to
+      # Draft) via the edit form, not destroyed.
+      def destroy
+        @expense = find_own_editable_expense!(params[:id])
+        unless @expense.status == ::Reimbursements::Status::DRAFT
+          redirect_to admin_reimbursements_expenses_path,
+                      alert: "Only a draft can be deleted. Withdraw a submitted claim from its edit page instead."
+          return
+        end
+
+        store.delete_expense!(@expense.record_id)
+        redirect_to admin_reimbursements_expenses_path, notice: "Draft deleted."
+      end
+
       # Receipt-first prefill: the form posts the receipt(s) here before
       # submission; extraction failures return ok: false and the form stays
       # manual (never a blocker). Files are gated here like on submit — this
