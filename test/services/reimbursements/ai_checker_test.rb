@@ -110,6 +110,15 @@ module Reimbursements
       assert_match(/VAT/, chat.prompt)
     end
 
+    test "the prompt gives today's date and British date format so a past receipt isn't called future" do
+      checker, chat = build(content: { "status" => "pass" })
+      checker.check(expense, [])
+
+      assert_includes chat.prompt, "Today's date is #{Date.current.strftime('%-d %B %Y')}"
+      assert_includes chat.prompt, "British format"
+      assert_includes chat.prompt, "10 July 2026"
+    end
+
     test "an ordinary expense prompt does not include the third-party override block" do
       checker, chat = build(content: { "status" => "pass" })
       checker.check(expense, [ budget ])

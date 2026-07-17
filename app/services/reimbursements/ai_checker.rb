@@ -93,6 +93,10 @@ module Reimbursements
       <<~PROMPT.strip
         You are reviewing an expense claim. Check whether the attached receipts match the submitted details.
 
+        Today's date is #{Date.current.strftime('%-d %B %Y')}. Receipt dates are British format, \
+        day/month/year, so "10/07/2026" means 10 July 2026 (not 7 October). Only treat a receipt \
+        date as being in the future if it is genuinely after today's date.
+
         #{PromptSafety::UNTRUSTED_PREAMBLE}
 
         Submitted details:
