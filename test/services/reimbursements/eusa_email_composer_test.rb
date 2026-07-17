@@ -35,5 +35,15 @@ module Reimbursements
       )
       assert_includes email.body_html, "Hi Finance Team,"
     end
+
+    test "strips dev-mode view-annotation comments from the body" do
+      email = EusaEmailComposer.new.compose(
+        expenses: [ expense(payee: "A", amount: "1", budget: "P", nominal: "1", description: "x") ],
+        bacs_date: Date.new(2026, 5, 13), sender_name: "F", eusa_code: "F40"
+      )
+      assert_not_includes email.body_html, "BEGIN app/views",
+                          "Rails view-annotation comments must never reach the EUSA draft"
+      assert_not_includes email.body_html, ".erb -->"
+    end
   end
 end

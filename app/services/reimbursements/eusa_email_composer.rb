@@ -10,6 +10,13 @@ module Reimbursements
   class EusaEmailComposer
     Email = Struct.new(:subject, :body_html, keyword_init: true)
 
+    # Rails' dev-mode view annotations (config.action_view.
+    # annotate_rendered_view_with_filenames) inject "<!-- BEGIN app/views/... -->"
+    # comments that would otherwise land in the operator-editable body — and,
+    # if left, in the real EUSA draft. Strip them defensively regardless of the
+    # setting so the composed body is always clean.
+    ANNOTATION_COMMENT = /<!--\s*(?:BEGIN|END)\s+\S+\.erb\s*-->\n?/
+
     def compose(expenses:, bacs_date:, sender_name:, eusa_code:, eusa_contact_name: "")
       total = expenses.sum { |expense| expense.amount || 0 }
       Email.new(
@@ -20,7 +27,7 @@ module Reimbursements
           locals: { expenses: expenses, bacs_date: bacs_date, total: total,
                     expense_count: expenses.size, sender_name: sender_name,
                     eusa_contact_name: eusa_contact_name }
-        )
+        ).gsub(ANNOTATION_COMMENT, "")
       )
     end
   end

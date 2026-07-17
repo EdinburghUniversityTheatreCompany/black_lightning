@@ -82,8 +82,19 @@ module Reimbursements
     end
 
     # Build Batch needs both SharePoint destinations before it can offload files.
+    # Whether Build Batch can offload files: the drive+folder ids alone locate
+    # the destination (the site URL is only needed to BROWSE for them), so this
+    # is the upload-capability gate BatchProcessor keys off.
     def sharepoint_configured?
       receipts_folder.present? && bacs_folder.present?
+    end
+
+    # Stricter, for the settings "SharePoint set" badge: also requires the site
+    # URL. Without it the browse/verify flow is broken and the stored folder
+    # ids can silently belong to a since-changed site — so an all-green badge
+    # would misrepresent a half-configured (or repointed) setup.
+    def sharepoint_fully_configured?
+      sharepoint_configured? && sharepoint_site_url.present?
     end
 
     # The Graph addressing form of the configured SharePoint site

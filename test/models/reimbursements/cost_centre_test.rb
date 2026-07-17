@@ -97,6 +97,20 @@ module Reimbursements
       assert_equal "f2", cost_centre.bacs_folder.folder_id
     end
 
+    test "sharepoint_fully_configured? also requires the site URL (the badge, not the upload gate)" do
+      cost_centre = CostCentre.new(sharepoint_receipts_drive_id: "d", sharepoint_receipts_folder_id: "f",
+                                   sharepoint_bacs_drive_id: "d2", sharepoint_bacs_folder_id: "f2")
+      # Folders alone let BatchProcessor upload...
+      assert cost_centre.sharepoint_configured?
+      # ...but the "SharePoint set" badge must stay amber without the site URL,
+      # since browse/verify is broken and the folders could be from a since-
+      # changed site.
+      assert_not cost_centre.sharepoint_fully_configured?
+
+      cost_centre.sharepoint_site_url = "https://tenant.sharepoint.com/sites/Finance"
+      assert cost_centre.sharepoint_fully_configured?
+    end
+
     test "eusa_recipient_or_default falls back to EUSA finance" do
       assert_equal "finance@eusa.ed.ac.uk", CostCentre.new.eusa_recipient_or_default
       assert_equal "custom@eusa.ed.ac.uk",

@@ -83,7 +83,10 @@
           </div>
 
           <% if @path.any? %>
-            <%= form_with url: admin_reimbursements_setting_path(@cost_centre.key), method: :patch, class: "mt-2" do %>
+            <% folder = purpose == "receipts" ? @cost_centre.receipts_folder : @cost_centre.bacs_folder %>
+            <%= form_with url: admin_reimbursements_setting_path(@cost_centre.key), method: :patch, class: "mt-2",
+                          data: (folder.present? ? { turbo_confirm: "This replaces the folder already " \
+                            "configured for #{purpose}. New files will upload here instead. Continue?" } : {}) do %>
               <%= hidden_field_tag :folder_purpose, purpose %>
               <%= hidden_field_tag :drive_id, @drive_id %>
               <%= hidden_field_tag :folder_id, @path.last[:id] %>

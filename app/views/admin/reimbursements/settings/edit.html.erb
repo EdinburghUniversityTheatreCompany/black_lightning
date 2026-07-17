@@ -18,6 +18,11 @@
         <%= f.text_field :send_mailbox, class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
       </div>
     </div>
+    <p class="text-xs text-gray-500 -mt-2">
+      Changing a mailbox breaks email-in / draft-sending until the new address is added to the
+      "Reimbursements App Access" group (see the Microsoft-access steps below). Run the access
+      check after changing it.
+    </p>
 
     <div>
       <%= f.label :sharepoint_site_url, "SharePoint site URL", class: "block text-sm font-medium" %>
@@ -122,6 +127,10 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
         <%= f.label :eusa_recipient, "EUSA recipient", class: "block text-sm font-medium" %>
         <%= f.text_field :eusa_recipient, placeholder: ::Reimbursements::CostCentre::DEFAULT_EUSA_RECIPIENT,
                          class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+        <p class="text-xs text-gray-500 mt-1">
+          Where the completed BACS request email (with the bank-detail attachments) is sent.
+          Leave blank to use EUSA finance's default address.
+        </p>
       </div>
       <div>
         <%= f.label :eusa_signature_name, "EUSA email signature name", class: "block text-sm font-medium" %>
@@ -141,7 +150,7 @@ POST https://graph.microsoft.com/v1.0/sites/SITE-ID/permissions
           </label>
         <% end %>
       </div>
-      <p class="text-xs text-gray-500 mt-1">Leave all unchecked to never auto-submit for this cost centre.</p>
+      <p class="text-xs text-gray-500 mt-1">Pick at least one day — the nightly can't be turned off by unchecking them all.</p>
     </fieldset>
 
     <div>

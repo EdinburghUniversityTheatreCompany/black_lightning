@@ -11,7 +11,7 @@
         <span class="font-medium min-w-40"><%= cost_centre.name %></span>
         <span class="text-gray-600 font-mono text-sm"><%= cost_centre.eusa_code %></span>
         <span class="text-gray-600 grow text-sm"><%= cost_centre.receive_mailbox %></span>
-        <% if cost_centre.sharepoint_configured? %>
+        <% if cost_centre.sharepoint_fully_configured? %>
           <%= render BadgeComponent.new(type: :success, pill: true).with_content("SharePoint set") %>
         <% else %>
           <%= render BadgeComponent.new(type: :warning, pill: true).with_content("SharePoint incomplete") %>
