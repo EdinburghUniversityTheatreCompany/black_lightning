@@ -16,10 +16,15 @@
     <span class="flex items-center gap-1">Bank: <%= reimbursements_effective_modulus_badge(@expense, checker: modulus_checker) %></span>
     <span>Receipts: <%= @expense.receipt_count %></span>
     <%= render BadgeComponent.new(type: Reimbursements::Status.badge_variant(@expense.status), pill: true).with_content(@expense.status) %>
-    <% if @expense.ai_check_status.present? %>
-      <%= reimbursements_ai_badge(@expense) %>
-    <% end %>
   </div>
+
+  <%# The AI badge + its explanation (comment) — so a Submitted/Paid expense's
+      "why did AI flag this?" is answerable here, not just on the Review page. %>
+  <% if @expense.ai_check_status.present? %>
+    <div class="mt-3">
+      <%= render "admin/reimbursements/review/ai_verdict_body", expense: @expense %>
+    </div>
+  <% end %>
 
   <%# --- Why this needs attention (blocked vs advisory) --- %>
   <% if @attention[:blocking].any? %>

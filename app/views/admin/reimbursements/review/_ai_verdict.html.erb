@@ -8,23 +8,7 @@
 %>
 <div id="ai_verdict_<%= expense.record_id %>" class="mt-2" aria-live="polite">
   <% if expense.ai_check_status.present? %>
-    <div class="flex flex-col gap-2">
-      <div><%= reimbursements_ai_badge(expense) %></div>
-      <% case expense.ai_check_status %>
-      <% when "pass" %>
-        <%= render AlertComponent.new(type: :success) do %>
-          AI check passed<%= ": #{expense.ai_comment}" if expense.ai_comment.present? %>
-        <% end %>
-      <% when "fail" %>
-        <%= render AlertComponent.new(type: :warning) do %>
-          AI check flagged this: <%= expense.ai_comment.presence || "see the receipt." %>
-        <% end %>
-      <% when "error" %>
-        <%= render AlertComponent.new(type: :info) do %>
-          AI check could not run: <%= expense.ai_comment %>
-        <% end %>
-      <% end %>
-    </div>
+    <%= render "admin/reimbursements/review/ai_verdict_body", expense: expense %>
   <% else %>
     <p class="text-xs text-gray-500">AI check running… the verdict will appear here automatically.</p>
   <% end %>

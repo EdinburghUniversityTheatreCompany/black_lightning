@@ -20,10 +20,11 @@ class ReimbursementsHelperTest < ActionView::TestCase
               sort_code: sort_code, account_number: account_number)
   end
 
-  test "modulus badge renders a neutral 'Missing' badge for a payee with no bank details" do
+  test "modulus badge renders a warning 'Missing' badge for a payee with no bank details" do
+    # Missing blocks approval like INVALID does, so it's a warning, not neutral.
     html = reimbursements_modulus_badge(person_with(sort_code: "", account_number: ""))
     assert_includes html, "Missing"
-    assert_includes html, "text-gray-700"
+    assert_includes html, "text-warning"
   end
 
   test "modulus badge renders green Valid for a VALID result" do

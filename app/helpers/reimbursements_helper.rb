@@ -12,7 +12,10 @@ module ReimbursementsHelper
   # loaded rule set (and tests can inject a fake).
   def reimbursements_modulus_badge(person, checker: Reimbursements::ModulusCheck.default_checker)
     unless person.bank_details?
-      return render(BadgeComponent.new(type: :secondary, pill: true).with_content("Missing"))
+      # Missing bank details block approval just as hard as an INVALID check, so
+      # give it the same warning weight — a neutral grey badge let it hide next
+      # to the routine "Unverified" pill when scanning for who to chase.
+      return render(BadgeComponent.new(type: :warning, pill: true).with_content("Missing"))
     end
 
     result = checker.check(person.sort_code, person.account_number)
