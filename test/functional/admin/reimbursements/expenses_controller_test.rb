@@ -401,7 +401,7 @@ module Admin
       get :edit, params: { id: "recExp3" }
 
       assert_redirected_to admin_reimbursements_expenses_path
-      assert_match(/finance team/, flash[:alert])
+      assert_match(/finance team/, flash[:warning])
     end
 
     test "update redirects with a flash when an own claim is no longer editable" do
@@ -412,7 +412,7 @@ module Admin
                                reimbursements_expense_form: valid_form_params.except(:receipts) }
 
       assert_redirected_to admin_reimbursements_expenses_path
-      assert_match(/finance team/, flash[:alert])
+      assert_match(/finance team/, flash[:warning])
       assert_empty @client.updated
     end
 

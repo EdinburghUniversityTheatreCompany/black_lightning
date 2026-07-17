@@ -110,8 +110,11 @@ module Admin
       # A producer followed a stale Edit link for a claim the finance team has
       # since picked up. Refuse the edit, but explain it rather than a bare 404.
       def expense_no_longer_editable
+        # flash[:warning] (not alert/error) so this expected, not-broken state
+        # renders as a neutral notice, not the alarming red "Oops…" error modal.
         redirect_to admin_reimbursements_expenses_path,
-                    alert: "That claim is now with the finance team and can't be edited."
+                    flash: { warning: "That claim is now with the finance team and can't be edited. " \
+                                      "You can still view it from your expenses list." }
       end
 
       def created_notice
