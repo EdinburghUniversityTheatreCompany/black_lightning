@@ -34,14 +34,13 @@
       Visible to submitters
     </label>
 
-    <fieldset>
+    <fieldset aria-describedby="owner_ids_hint">
       <legend class="block text-sm font-medium">Owners</legend>
       <p id="owner_ids_hint" class="text-xs text-gray-500 mb-1">Tick everyone who owns this budget.</p>
       <%# A checkbox list instead of a native Ctrl/Cmd-click multi-select. Rails'
           collection_check_boxes emits the empty hidden field itself, so unticking
           everyone still clears the owners. %>
-      <div class="max-h-48 w-72 overflow-y-auto rounded border border-gray-300 p-2 flex flex-col gap-1"
-           aria-describedby="owner_ids_hint">
+      <div class="max-h-48 w-72 overflow-y-auto rounded border border-gray-300 p-2 flex flex-col gap-1">
         <%= form.collection_check_boxes(:owner_ids, @people, :record_id,
               ->(person) { person.name.presence || person.email },
               { checked: @budget.owner_ids }) do |b| %>
@@ -166,11 +165,14 @@
                         edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id),
                         "aria-label": "Edit forecast from #{reimbursements_date(forecast.date)}",
                         class: btn_classes(:secondary, :sm) %>
+                  <%# inline-block on the button_to FORM (not the inner button) so
+                      Delete sits beside Edit instead of dropping to its own line. %>
                   <%= button_to "Delete",
                         delete_forecast_admin_reimbursements_budget_path(@budget.record_id, forecast_id: forecast.record_id),
-                        method: :delete, class: "#{btn_classes(:danger, :sm)} inline-block",
+                        method: :delete, class: btn_classes(:danger, :sm),
                         "aria-label": "Delete forecast from #{reimbursements_date(forecast.date)}",
-                        form: { data: { turbo_confirm: "Remove this forecast? This changes the budget's rolled-up current forecast." } } %>
+                        form: { class: "inline-block",
+                                data: { turbo_confirm: "Remove this forecast? This changes the budget's rolled-up current forecast." } } %>
                 </td>
               </tr>
             <% end %>

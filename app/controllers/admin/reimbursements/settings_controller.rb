@@ -115,7 +115,7 @@ module Admin
         end
 
         @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
-        redirect_to edit_path, notice: "#{FOLDER_LABELS.fetch(params[:folder_purpose])} saved."
+        redirect_to edit_path, notice: "#{folder_label(params[:folder_purpose])} saved."
       end
 
       # drive_id/folder_id arrive as hidden form fields the browse flow
@@ -165,9 +165,15 @@ module Admin
                   detail: "#{e.message}. Grant the app write on this site (Sites.Selected, command below).")
       end
 
+      # Human label for a folder purpose, degrading to a humanized key rather
+      # than raising if a future FOLDER_COLUMNS entry lacks a FOLDER_LABELS one.
+      def folder_label(purpose)
+        FOLDER_LABELS.fetch(purpose) { "#{purpose.to_s.humanize} folder" }
+      end
+
       def folder_checks
         FOLDER_COLUMNS.map do |purpose, columns|
-          label = FOLDER_LABELS.fetch(purpose)
+          label = folder_label(purpose)
           drive = @cost_centre.public_send(columns[:drive])
           folder = @cost_centre.public_send(columns[:folder])
           next Check.new(label: label, status: :skip, detail: "Not chosen yet.") if

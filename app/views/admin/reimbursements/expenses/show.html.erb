@@ -28,10 +28,10 @@
     <% end %>
   </dl>
 
-  <div class="mt-3">
+  <dl class="mt-3">
     <dt class="text-sm text-gray-500">Description</dt>
     <dd class="text-sm"><%= @expense.description.presence || "—" %></dd>
-  </div>
+  </dl>
 
   <% if @expense.payee_override? %>
     <div class="mt-3 rounded border border-gray-200 p-3 text-sm">
