@@ -3,6 +3,8 @@
   paid. Search by its number (the # on the card, e.g. 42) or its Airtable record id.
   Pending and Approved expenses are also editable straight from the
   <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
+  To browse or filter the full list instead, use
+  <%= link_to "all expenses", admin_reimbursements_expense_edits_path, class: "text-primary underline" %>.
 </p>
 
 <%= form_with url: find_admin_reimbursements_expense_edits_path, method: :get,

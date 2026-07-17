@@ -4,6 +4,8 @@
   edit it (at any status, including ones already sent to EUSA or paid). Pending and Approved
   expenses are also editable from the
   <%= link_to "Review queue", admin_reimbursements_review_path, class: "text-primary underline" %>.
+  Know the exact number or record ID?
+  <%= link_to "Jump straight to it", find_admin_reimbursements_expense_edits_path, class: "text-primary underline" %>.
 </p>
 
 <%= render CardComponent.new(title: "Filter & search") do %>
