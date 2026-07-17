@@ -345,6 +345,78 @@ module Admin
         assert_match(/valid amount and date/i, flash[:alert])
         assert_empty @client.created
       end
+
+      # --- Edit / delete a logged forecast -----------------------------------
+
+      test "edit with ?edit_forecast renders that row as an inline edit form" do
+        sign_in @user
+
+        get :edit, params: { id: "recBud1", edit_forecast: "recFc1" }
+
+        assert_response :success
+        assert_equal "recFc1", assigns(:editing_forecast_id)
+        assert_select "input[name=forecast_id][value=recFc1]"
+        assert_select "input[name=amount][value=?]", "800.0"
+      end
+
+      test "updating a forecast writes the corrected values" do
+        sign_in @user
+
+        patch :update_forecast, params: { id: "recBud1", forecast_id: "recFc1",
+                                          amount: "912.34", date: "2026-06-02", reason: "Corrected" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/updated/i, flash[:notice])
+        table, record_id, fields = @client.updated.sole
+        assert_equal :budget_forecasts, table
+        assert_equal "recFc1", record_id
+        assert_in_delta 912.34, fields[FIELD_IDS[:budget_forecasts][:amount]]
+        assert_equal "2026-06-02", fields[FIELD_IDS[:budget_forecasts][:date]]
+        assert_equal "Corrected", fields[FIELD_IDS[:budget_forecasts][:reason]]
+      end
+
+      test "updating a forecast with a bad amount is rejected without a write" do
+        sign_in @user
+
+        patch :update_forecast, params: { id: "recBud1", forecast_id: "recFc1",
+                                          amount: "nope", date: "2026-06-02" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/valid amount and date/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "deleting a forecast removes the record" do
+        sign_in @user
+
+        delete :delete_forecast, params: { id: "recBud1", forecast_id: "recFc1" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud1")
+        assert_match(/removed/i, flash[:notice])
+        assert_equal [ :budget_forecasts, "recFc1" ], @client.deleted.sole
+      end
+
+      test "a forecast belonging to another budget can't be edited through this budget's URL" do
+        # recFc1 is linked to recBud1, so editing it via recBud2 must be refused.
+        sign_in @user
+
+        patch :update_forecast, params: { id: "recBud2", forecast_id: "recFc1",
+                                          amount: "999.00", date: "2026-06-02" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud2")
+        assert_match(/isn't part of this budget/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "deleting a forecast from another budget's URL is refused" do
+        sign_in @user
+
+        delete :delete_forecast, params: { id: "recBud2", forecast_id: "recFc1" }
+
+        assert_redirected_to edit_admin_reimbursements_budget_path("recBud2")
+        assert_match(/isn't part of this budget/i, flash[:alert])
+        assert_empty @client.deleted
+      end
     end
   end
 end

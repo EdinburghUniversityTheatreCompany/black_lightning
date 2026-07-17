@@ -119,6 +119,27 @@ module Reimbursements
       @mapper.budget_forecast(record)
     end
 
+    # Correct a logged forecast in place (a mistyped amount/date/reason). The
+    # budget link is left untouched. Busts both caches, like create — the
+    # Budgets table rolls the latest forecast up into +current_forecast+.
+    def update_forecast!(record_id, amount:, date:, reason:)
+      record = @client.update_record(
+        :budget_forecasts, record_id,
+        @mapper.budget_forecast_fields(amount: amount, date: date, reason: reason)
+      )
+      bust_budget_forecasts!
+      bust_budgets!
+      @mapper.budget_forecast(record)
+    end
+
+    # Remove a forecast logged in error. Busts both caches, since dropping the
+    # latest forecast changes the budget's rolled-up current forecast.
+    def delete_forecast!(record_id)
+      @client.delete_record(:budget_forecasts, record_id)
+      bust_budget_forecasts!
+      bust_budgets!
+    end
+
     def create_expense!(attrs)
       record = @client.create_record(:expenses, @mapper.expense_fields(attrs))
       bust_expenses!

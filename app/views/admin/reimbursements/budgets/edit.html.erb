@@ -125,15 +125,55 @@
             <th scope="col" class="py-2 pr-3">Date</th>
             <th scope="col" class="py-2 pr-3 text-right">Amount</th>
             <th scope="col" class="py-2">Reason / notes</th>
+            <th scope="col" class="py-2 text-right"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
         <tbody>
           <% @forecasts.each do |forecast| %>
-            <tr class="border-b border-gray-100">
-              <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(forecast.date) %></td>
-              <td class="py-2 pr-3 text-right"><%= reimbursements_money(forecast.amount) %></td>
-              <td class="py-2"><%= forecast.reason.presence || "-" %></td>
-            </tr>
+            <% if forecast.record_id == @editing_forecast_id %>
+              <tr class="border-b border-gray-100 bg-amber-50">
+                <td colspan="4" class="py-2">
+                  <%= form_with url: update_forecast_admin_reimbursements_budget_path(@budget.record_id),
+                                method: :patch, class: "flex flex-wrap items-end gap-3" do %>
+                    <%= hidden_field_tag :forecast_id, forecast.record_id %>
+                    <div>
+                      <%= label_tag "edit_amount_#{forecast.record_id}", "Amount (£, excl. VAT)", class: "block text-xs font-medium" %>
+                      <%= number_field_tag :amount, forecast.amount, step: "0.01", id: "edit_amount_#{forecast.record_id}",
+                                           class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+                    </div>
+                    <div>
+                      <%= label_tag "edit_date_#{forecast.record_id}", "Date", class: "block text-xs font-medium" %>
+                      <%= date_field_tag :date, forecast.date, id: "edit_date_#{forecast.record_id}",
+                                         class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
+                    </div>
+                    <div class="grow">
+                      <%= label_tag "edit_reason_#{forecast.record_id}", "Reason / notes", class: "block text-xs font-medium" %>
+                      <%= text_field_tag :reason, forecast.reason, id: "edit_reason_#{forecast.record_id}",
+                                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-full" %>
+                    </div>
+                    <%= submit_tag "Save", class: btn_classes(:primary, :sm) %>
+                    <%= link_to "Cancel", edit_admin_reimbursements_budget_path(@budget.record_id), class: btn_classes(:secondary, :sm) %>
+                  <% end %>
+                </td>
+              </tr>
+            <% else %>
+              <tr class="border-b border-gray-100">
+                <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(forecast.date) %></td>
+                <td class="py-2 pr-3 text-right"><%= reimbursements_money(forecast.amount) %></td>
+                <td class="py-2"><%= forecast.reason.presence || "-" %></td>
+                <td class="py-2 text-right whitespace-nowrap">
+                  <%= link_to "Edit",
+                        edit_admin_reimbursements_budget_path(@budget.record_id, edit_forecast: forecast.record_id),
+                        "aria-label": "Edit forecast from #{reimbursements_date(forecast.date)}",
+                        class: btn_classes(:secondary, :sm) %>
+                  <%= button_to "Delete",
+                        delete_forecast_admin_reimbursements_budget_path(@budget.record_id, forecast_id: forecast.record_id),
+                        method: :delete, class: "#{btn_classes(:danger, :sm)} inline-block",
+                        "aria-label": "Delete forecast from #{reimbursements_date(forecast.date)}",
+                        form: { data: { turbo_confirm: "Remove this forecast? This changes the budget's rolled-up current forecast." } } %>
+                </td>
+              </tr>
+            <% end %>
           <% end %>
         </tbody>
       </table>

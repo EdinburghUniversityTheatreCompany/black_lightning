@@ -15,7 +15,7 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class BudgetsController < FinanceController
-      before_action :set_budget, only: %i[edit update forecast]
+      before_action :set_budget, only: %i[edit update forecast update_forecast delete_forecast]
 
       def index
         @title = "Reimbursements Budgets"
@@ -28,6 +28,9 @@ module Admin
         @title = "Budget — #{@budget.name}"
         @people = store.people
         @forecasts = store.budget_forecasts(@budget.record_id)
+        # URL-as-state: ?edit_forecast=<id> renders that one row as an inline
+        # edit form (no JS), so a mistyped forecast can be corrected in place.
+        @editing_forecast_id = params[:edit_forecast].presence
       end
 
       def update
@@ -54,7 +57,40 @@ module Admin
         redirect_to edit_path, notice: "Forecast added."
       end
 
+      # Correct a forecast logged in error. Guarded so only a forecast belonging
+      # to this budget can be edited through this budget's URL.
+      def update_forecast
+        return unless forecast_belongs_to_budget?(params[:forecast_id])
+
+        amount = parse_decimal(params[:amount])
+        date = parse_date(params[:date])
+        if amount.nil? || date.nil?
+          return redirect_to(edit_path, alert: "Enter a valid amount and date for the forecast.")
+        end
+
+        store.update_forecast!(params[:forecast_id], amount: amount, date: date,
+                                                     reason: params[:reason].to_s)
+        redirect_to edit_path, notice: "Forecast updated."
+      end
+
+      # Remove a forecast logged in error, same ownership guard.
+      def delete_forecast
+        return unless forecast_belongs_to_budget?(params[:forecast_id])
+
+        store.delete_forecast!(params[:forecast_id])
+        redirect_to edit_path, notice: "Forecast removed."
+      end
+
       private
+
+      # A forecast id arriving in the URL must actually belong to this budget —
+      # never let one budget's page mutate another budget's forecast log.
+      def forecast_belongs_to_budget?(forecast_id)
+        return true if store.budget_forecasts(@budget.record_id).any? { |f| f.record_id == forecast_id }
+
+        redirect_to edit_path, alert: "That forecast isn't part of this budget."
+        false
+      end
 
       def set_budget
         @budget = find_or_404(:find_budget)

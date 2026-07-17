@@ -83,7 +83,11 @@ ChaosRails::Application.routes.draw do
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
       resources :budgets, only: %i[index edit update] do
-        member { post :forecast }
+        member do
+          post   :forecast
+          patch  :update_forecast
+          delete :delete_forecast
+        end
       end
 
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
