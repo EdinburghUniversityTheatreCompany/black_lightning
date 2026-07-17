@@ -83,8 +83,10 @@ ChaosRails::Application.routes.draw do
       # Budget-owner review (Phase E): budgets the signed-in owner is
       # responsible for, with a blocking endorse action on pending expenses
       # charged to them. Base access permission, not finance.
-      get  "my_budgets", to: "my_budgets#index", as: :my_budgets
-      post "my_budgets/:expense_id/endorse", to: "my_budgets#endorse", as: :endorse_my_budget
+      get    "my_budgets", to: "my_budgets#index", as: :my_budgets
+      post   "my_budgets/:expense_id/endorse", to: "my_budgets#endorse", as: :endorse_my_budget
+      delete "my_budgets/:expense_id/withdraw", to: "my_budgets#withdraw", as: :withdraw_my_budget
+      patch  "my_budgets/:expense_id/reject", to: "my_budgets#reject", as: :reject_my_budget
 
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.

@@ -14,6 +14,8 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class ReviewController < FinanceController
+      include RejectsExpenses
+
       def index
         @title = "Review Expenses"
         @tab = params[:tab] == "approved" ? "approved" : "pending"
@@ -243,26 +245,8 @@ module Admin
         nil
       end
 
-      # Reject one expense with a reason (shared by #reject and #bulk_reject).
-      # Blocks a stale/raced rejection against an expense that's no longer
-      # Pending or Approved (:skipped_wrong_status) — the guard lives here,
-      # not just in #reject, so any future caller gets the same protection
-      # #approve_expense already gives #approve/#bulk_approve, rather than
-      # depending on the caller to pre-filter (bulk_reject's own filter to
-      # Pending only happens to make this unreachable there today). Otherwise
-      # notifies the payee, but never blocks the rejection on the send: a
-      # missing email or a Graph failure is skipped gracefully (no stamp) so
-      # the operator follows up. Returns true when the producer was emailed,
-      # false when it wasn't (rejected either way).
-      def reject_expense(expense, reason)
-        return :skipped_wrong_status unless expense.pending? || expense.approved?
-
-        attrs = { status: ::Reimbursements::Status::REJECTED, rejection_reason: reason }
-        notified = notify_rejection(expense, reason)
-        attrs[:rejection_notified] = Time.current if notified
-        store.update_expense!(expense.record_id, attrs)
-        notified
-      end
+      # reject_expense / notify_rejection now live in the RejectsExpenses concern
+      # (shared with the budget-owner reject path).
 
       # The Pending expenses ticked in the bulk toolbar. Filtering to Pending
       # (never trusting the posted ids alone) keeps a stale selection from acting
@@ -307,30 +291,6 @@ module Admin
         excl_vat = params[:amount_excl_vat].to_f
         attrs[:amount_excl_vat] = excl_vat if excl_vat.positive?
         attrs
-      end
-
-      # Send the rejection via Graph (from the cost centre's send mailbox), but
-      # never let a send failure block the rejection itself: a failed send just
-      # returns false so the caller leaves rejection_notified unstamped and the
-      # operator follows up.
-      def notify_rejection(expense, reason)
-        email = expense.person&.email
-        return false if email.blank?
-
-        notifier.rejection(
-          to: email,
-          payee_name: expense.person.name,
-          auto_number: expense.auto_number,
-          amount: expense.amount.to_f,
-          budget_name: expense.budget&.name.to_s,
-          description: expense.description.to_s,
-          reason: reason
-        )
-        true
-      rescue StandardError => e
-        log_and_notify("Reimbursements: rejection email failed for ##{expense.auto_number} — #{e.message}", e,
-                       context: { source: "reimbursements_rejection_email", expense: expense.auto_number })
-        false
       end
 
       def redirect_to_review(flash)

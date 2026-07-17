@@ -16,12 +16,8 @@ module Admin
       # subclass that shows/validates a bank-detail modulus badge.
       class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
 
-      # Injection seam for tests: the Graph-backed email notifier, sending from
-      # the (single, today) cost centre's send mailbox. Shared by every
-      # subclass that emails the payee/producer directly (not the operator
-      # alerts jobs send, which build their own Notifier per cost centre).
-      class_attribute :notifier_builder,
-                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+      # (notifier_builder / notifier moved to BaseController so a budget owner
+      # rejecting a claim can email the payee the same way finance does.)
 
       # Injection seam for tests: the app-only Graph client (SharePoint browse,
       # deleting a stale EUSA draft). Shared by every subclass that talks to
@@ -44,10 +40,6 @@ module Admin
 
       def modulus_checker
         @modulus_checker ||= checker_builder.call
-      end
-
-      def notifier
-        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
       end
 
       def graph

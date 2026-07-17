@@ -20,10 +20,20 @@ module Admin
       # Interactive extraction retries less than the background poll job.
       class_attribute :store_builder, default: -> { ::Reimbursements::Store.new }
       class_attribute :extractor_builder, default: -> { ::Reimbursements::Extractor.new(max_attempts: 2) }
+      # The Graph-backed email notifier (from the cost centre's send mailbox).
+      # Lives here, not just on FinanceController, because a budget owner
+      # rejecting a claim (MyBudgetsController) emails the payee the same way
+      # the finance Review queue does — see RejectsExpenses.
+      class_attribute :notifier_builder,
+                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
 
       helper_method :current_person
 
       private
+
+      def notifier
+        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
+      end
 
       def authorize_reimbursements!
         authorize! :access, :reimbursements

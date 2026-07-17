@@ -19,10 +19,18 @@ module Admin
         # Pending claim by a non-owner on the owned budget -> awaits endorsement.
         @pending = airtable_expense_record(id: "recExp1", payee_id: "recPerOther", budget_id: "recBud1",
                                            status: "Pending", description: "Van hire")
+        # Reject emails go through the Graph notifier; inject a recording fake.
+        @graph = FakeGraphClient.new
+        MyBudgetsController.notifier_builder =
+          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox, graph: @graph) }
         rebuild_store
       end
 
-      teardown { BaseController.store_builder = -> { ::Reimbursements::Store.new } }
+      teardown do
+        BaseController.store_builder = -> { ::Reimbursements::Store.new }
+        MyBudgetsController.notifier_builder =
+          ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+      end
 
       def rebuild_store(expenses: nil)
         @store, @client = build_fake_store(
@@ -150,7 +158,65 @@ module Admin
           post :endorse, params: { expense_id: "recExp3" }
         end
         assert_redirected_to admin_reimbursements_my_budgets_path
-        assert_match(/only endorse expenses on budgets you own/i, flash[:alert])
+        assert_match(/only act on claims charged to budgets you own/i, flash[:alert])
+      end
+
+      test "withdraw removes the owner's endorsement, re-blocking finance" do
+        ::Reimbursements::OwnerEndorsement.create!(expense_record_id: "recExp1", budget_record_id: "recBud1",
+                                                   endorsed_by_person_id: "recPer1", endorsed_amount: BigDecimal("12.5"),
+                                                   endorsed_at: Time.current)
+        sign_in @user
+
+        assert_difference -> { ::Reimbursements::OwnerEndorsement.count }, -1 do
+          delete :withdraw, params: { expense_id: "recExp1" }
+        end
+        assert_redirected_to admin_reimbursements_my_budgets_path
+        assert_match(/withdrawn/i, flash[:notice])
+      end
+
+      test "reject sets the claim to Rejected with a reason" do
+        sign_in @user
+
+        patch :reject, params: { expense_id: "recExp1", rejection_reason: "Not a real business expense" }
+
+        assert_redirected_to admin_reimbursements_my_budgets_path
+        assert_match(/rejected/i, flash[:notice])
+        _table, record_id, fields = @client.updated.sole
+        assert_equal "recExp1", record_id
+        assert_equal "Rejected", fields[FIELD_IDS[:expenses][:status]]
+        assert_equal "Not a real business expense", fields[FIELD_IDS[:expenses][:rejection_reason]]
+      end
+
+      test "reject without a reason is refused" do
+        sign_in @user
+
+        patch :reject, params: { expense_id: "recExp1", rejection_reason: "  " }
+
+        assert_match(/give a reason/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "reject is refused on a budget the owner does not own" do
+        other = airtable_expense_record(id: "recExp3", payee_id: "recPerOther", budget_id: "recBud2",
+                                        status: "Pending")
+        rebuild_store(expenses: [ @pending, other ])
+        sign_in @user
+
+        patch :reject, params: { expense_id: "recExp3", rejection_reason: "nope" }
+
+        assert_match(/only act on claims charged to budgets you own/i, flash[:alert])
+        assert_empty @client.updated
+      end
+
+      test "withdraw is refused on a claim the owner does not own" do
+        other = airtable_expense_record(id: "recExp3", payee_id: "recPerOther", budget_id: "recBud2",
+                                        status: "Pending")
+        rebuild_store(expenses: [ @pending, other ])
+        sign_in @user
+
+        delete :withdraw, params: { expense_id: "recExp3" }
+
+        assert_match(/only act on claims charged to budgets you own/i, flash[:alert])
       end
     end
   end
