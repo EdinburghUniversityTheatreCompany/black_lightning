@@ -88,8 +88,12 @@ module Reimbursements
     validates :expense_type, inclusion: { in: TYPES }
 
     # Continue the Airtable auto-number sequence for the human-facing
-    # "Expense #N" label (the importer supplies explicit values).
-    before_create -> { self.auto_number ||= (self.class.maximum(:auto_number) || 0) + 1 }
+    # "Expense #N" label, and stamp submitted_at (Airtable's was an
+    # auto-filled created-time field). The importer supplies explicit values.
+    before_create lambda {
+      self.auto_number ||= (self.class.maximum(:auto_number) || 0) + 1
+      self.submitted_at ||= Time.current
+    }
 
     def record_id = id&.to_s
 
