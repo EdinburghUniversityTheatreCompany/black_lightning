@@ -60,8 +60,12 @@
            reimbursements_money(expense.amount),
            reimbursements_date(expense.submitted_at),
            expense.receipt_count,
-           (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id),
-                    "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm)) if expense.editable?)
+           safe_join([
+             (link_to("Edit", edit_admin_reimbursements_expense_path(expense.record_id),
+                      "aria-label": "Edit ##{expense.auto_number}", class: btn_classes(:secondary, :sm)) if expense.editable?),
+             link_to("View", admin_reimbursements_expense_path(expense.record_id),
+                     "aria-label": "View ##{expense.auto_number}", class: btn_classes(:secondary, :sm))
+           ].compact, " ")
          ]
        }
      end %>

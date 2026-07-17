@@ -277,6 +277,44 @@ module Admin
       assert_response :not_found
     end
 
+    # --- Read-only show (view a claim after the editable window) -----------
+
+    test "show renders an own expense read-only at any status, with no remove control" do
+      approved = airtable_expense_record(id: "recExp3", status: "Approved", description: "Van hire")
+      @store, @client = build_fake_store(
+        expenses: [ approved ],
+        people: [ airtable_person_record(email: @user.email) ],
+        budgets: [ airtable_budget_record ]
+      )
+      BaseController.store_builder = -> { @store }
+      sign_in @user
+
+      get :show, params: { id: "recExp3" }
+
+      assert_response :success
+      assert_includes response.body, "Van hire"
+      assert_includes response.body, "Approved"
+      # No edit form and no receipt-remove control on the read-only page.
+      assert_select "form[action=?]", admin_reimbursements_expense_path("recExp3"), 0
+      assert_select "button[data-action='receipts-upload#remove']", 0
+    end
+
+    test "show 404s for another person's expense" do
+      sign_in @user
+
+      get :show, params: { id: "recExp2" }
+
+      assert_response :not_found
+    end
+
+    test "the index links each row to its read-only view" do
+      sign_in @user
+
+      get :index
+
+      assert_select "a[href=?]", admin_reimbursements_expense_path("recExp1"), text: "View"
+    end
+
     # --- Draft/submit boundary: state-aware labels + actions --------------
 
     def own_draft_store

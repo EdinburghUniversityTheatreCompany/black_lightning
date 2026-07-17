@@ -37,6 +37,13 @@ module Admin
         redirect_with_attachment_result(expense.record_id, created_notice)
       end
 
+      # Read-only view of the submitter's own claim at any status — so they can
+      # check what they claimed and re-view their receipt while it's being paid.
+      def show
+        @expense = find_own_expense!(params[:id])
+        @title = "Expense ##{@expense.auto_number}"
+      end
+
       def edit
         @expense = find_own_editable_expense!(params[:id])
         @title = "Edit Expense"

@@ -52,11 +52,20 @@ module Admin
       # team's). find_expense! survives a stale cached list, e.g. following
       # an email-in link for an expense created by the poll job.
       def find_own_editable_expense!(record_id)
+        expense = find_own_expense!(record_id)
+        raise ExpenseNoLongerEditable unless expense.editable?
+
+        expense
+      end
+
+      # The submitter's own expense at ANY status — for the read-only show page,
+      # so a producer can still view a claim (and its receipts) after it's left
+      # the editable window. Ownership is still enforced.
+      def find_own_expense!(record_id)
         expense = store.find_expense!(record_id)
         unless expense && current_person && expense.person&.record_id == current_person.record_id
           raise ActiveRecord::RecordNotFound
         end
-        raise ExpenseNoLongerEditable unless expense.editable?
 
         expense
       end
