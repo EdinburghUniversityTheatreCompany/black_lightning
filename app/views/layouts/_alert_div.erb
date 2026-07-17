@@ -2,16 +2,31 @@
 
 <% hide_alert = false %>
 <% if hide_alert != true %>
-  <%# Standardise flash before rendering, and perform any necessary merges. %>
-  <% standardise_flash %>
+  <%# Pass the flash to the SweetAlert pipeline.
 
-  <%# Get the flash as json, then pass it on to a JavaScript function that renders the flashes. %>
-  <script type="text/javascript">
-    document.addEventListener('turbo:load', function () {
-      flashJson = <%= flash_as_alert_hash.to_h.to_json.html_safe %>;
-      showFlashAlerts(flashJson);
-    }, { once: true });
+      Turbo only fires turbo:load for VISITS (initial load, redirects) — never
+      after rendering a non-redirect form response (a 422 validation re-render),
+      so a turbo:load-only listener made every flash.now error on a failed form
+      save silently invisible, and the never-fired listener lingered on
+      `document` to replay the stale flash on the NEXT navigation. Instead:
+      Turbo re-executes body scripts on every render, so when the bundle is
+      already loaded (any Turbo render, including 422s) show immediately;
+      only the initial full page load — where the module bundle hasn't run
+      yet — needs to wait for turbo:load. data-turbo-temporary keeps the
+      script out of Turbo's snapshot cache so back/forward restores can't
+      replay an old flash. %>
+  <script nonce="<%= request.content_security_policy_nonce %>" data-turbo-temporary>
+    (function () {
+      const flash = <%= flash_alerts_for_script.to_json.html_safe %>;
+      if (Object.keys(flash).length === 0) return;
+
+      if (window.showFlashAlerts) {
+        window.showFlashAlerts(flash);
+      } else {
+        document.addEventListener('turbo:load', function () {
+          window.showFlashAlerts(flash);
+        }, { once: true });
+      }
+    })();
   </script>
-
-  <% flash.discard %>
 <% end %>

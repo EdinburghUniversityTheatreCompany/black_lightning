@@ -127,6 +127,20 @@ module Admin
         assert_text "Unmatched rows (1)"
       end
 
+      # (e) A rejected (422) form save must still SHOW its flash error. Turbo
+      # never fires turbo:load for non-redirect form responses, so the old
+      # turbo:load-only flash listener left these saves failing with zero
+      # visible feedback — the page just redrew silently.
+      test "a rejected settings save shows its validation error" do
+        rebuild_store(expenses: [])
+
+        visit edit_admin_reimbursements_setting_path("fringe")
+        fill_in "Receive mailbox (email-in)", with: "not-an-email"
+        click_on "Save settings"
+
+        assert_selector ".swal2-container", text: "Receive mailbox is invalid", wait: 5
+      end
+
       # (c) The Review page subscribes to the live AI-verdict Turbo Stream.
       test "the Review page renders the AI-verdict Turbo Stream subscription" do
         # ai_check_status present so the page doesn't kick a background AI job.
