@@ -97,3 +97,10 @@ cutover, not on Airtable. Full plan in `docs/reimbursements/mysql-migration-and-
 (financial_year FK on budgets/expenses/actuals, EUSA codes stay on CostCentre with a thin
 per-year join only if they ever rotate, clone-into-next-year). Interim on Airtable: one base
 per year, swap the base id if a new Fringe starts before the cutover. — Mick, 2026-07-12
+
+## Reimbursements breadcrumb shows the raw Airtable record id
+
+On a budget (and likely expense/batch) edit page the breadcrumb renders the record id
+humanized — e.g. "Rec X Ko G9m U Fbu Dn5 A" instead of the budget name. The breadcrumb
+crumb for a show/edit resource should use the record's display name (`@budget.name`), not
+`to_param`. Low priority; spotted 2026-07-17 while linking the budget owners checkbox list.
