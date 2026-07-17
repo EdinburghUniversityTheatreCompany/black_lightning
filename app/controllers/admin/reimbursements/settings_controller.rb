@@ -25,6 +25,13 @@ module Admin
         "bacs" => { drive: :sharepoint_bacs_drive_id, folder: :sharepoint_bacs_folder_id }
       }.freeze
 
+      # Human labels for each destination — matches the folder-picker headings
+      # on the edit page. `humanize` would render "bacs" as "Bacs", not "BACS".
+      FOLDER_LABELS = {
+        "receipts" => "Receipts folder",
+        "bacs" => "BACS request folder"
+      }.freeze
+
       # One row of the "Run access check" results.
       Check = Struct.new(:label, :status, :detail, keyword_init: true)
 
@@ -108,7 +115,7 @@ module Admin
         end
 
         @cost_centre.update!(columns[:drive] => params[:drive_id], columns[:folder] => params[:folder_id])
-        redirect_to edit_path, notice: "#{params[:folder_purpose].humanize} folder saved."
+        redirect_to edit_path, notice: "#{FOLDER_LABELS.fetch(params[:folder_purpose])} saved."
       end
 
       # drive_id/folder_id arrive as hidden form fields the browse flow
@@ -160,15 +167,16 @@ module Admin
 
       def folder_checks
         FOLDER_COLUMNS.map do |purpose, columns|
+          label = FOLDER_LABELS.fetch(purpose)
           drive = @cost_centre.public_send(columns[:drive])
           folder = @cost_centre.public_send(columns[:folder])
-          next Check.new(label: "#{purpose.humanize} folder", status: :skip, detail: "Not chosen yet.") if
+          next Check.new(label: label, status: :skip, detail: "Not chosen yet.") if
             drive.blank? || folder.blank?
 
           graph.list_folder_contents(drive_id: drive, item_id: folder)
-          Check.new(label: "#{purpose.humanize} folder", status: :ok, detail: "Reachable.")
+          Check.new(label: label, status: :ok, detail: "Reachable.")
         rescue StandardError => e
-          Check.new(label: "#{purpose.humanize} folder", status: :fail, detail: e.message)
+          Check.new(label: label, status: :fail, detail: e.message)
         end
       end
 

@@ -334,6 +334,11 @@ module Admin
         assert_includes response.body, "Mailbox #{@cost_centre.receive_mailbox}"
         assert_includes response.body, "Granted and reachable"                 # SharePoint site OK
         assert_includes response.body, "Reachable."                            # folders OK
+        # The BACS folder check labels itself "BACS request folder" (not the
+        # "Bacs folder" that `humanize` would produce), matching the picker heading.
+        assert_includes response.body, "BACS request folder"
+        assert_includes response.body, "Receipts folder"
+        assert_not_includes response.body, "Bacs folder"
         assert_includes @graph.mailbox_calls, @cost_centre.receive_mailbox
         assert_equal [ "https://sp.sharepoint.com/sites/Finance" ], @graph.site_calls
         assert_equal [ [ "drv", "fld" ], [ "drv2", "fld2" ] ], @graph.folder_calls
