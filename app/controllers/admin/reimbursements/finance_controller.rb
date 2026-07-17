@@ -16,9 +16,6 @@ module Admin
       # subclass that shows/validates a bank-detail modulus badge.
       class_attribute :checker_builder, default: -> { ::Reimbursements::ModulusCheck.default_checker }
 
-      # (notifier_builder / notifier moved to BaseController so a budget owner
-      # rejecting a claim can email the payee the same way finance does.)
-
       # Injection seam for tests: the app-only Graph client (SharePoint browse,
       # deleting a stale EUSA draft). Shared by every subclass that talks to
       # Graph directly from the request (not the jobs, which build their own

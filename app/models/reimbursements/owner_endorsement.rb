@@ -42,7 +42,6 @@ module Reimbursements
     validates :expense_record_id, uniqueness: true
     validate :either_an_owner_or_an_override
 
-    # One satisfaction per expense (enforced by a unique index too).
     scope :for_expense, ->(expense_record_id) { where(expense_record_id: expense_record_id) }
 
     def owner_endorsement?

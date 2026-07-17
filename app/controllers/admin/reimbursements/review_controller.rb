@@ -260,9 +260,6 @@ module Admin
         nil
       end
 
-      # reject_expense / notify_rejection now live in the RejectsExpenses concern
-      # (shared with the budget-owner reject path).
-
       # The Pending expenses ticked in the bulk toolbar. Filtering to Pending
       # (never trusting the posted ids alone) keeps a stale selection from acting
       # on an already-approved/rejected expense.
