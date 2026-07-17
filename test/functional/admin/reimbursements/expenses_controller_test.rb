@@ -114,6 +114,12 @@ module Admin
       assert_response :success
       assert_includes response.body, "reimbursements-receipt"
       assert_includes response.body, "Props"
+      # Third-party payee fields are always visible (not tucked in a
+      # collapsible that hid whether they were filled), with no "In use" flag
+      # on a blank form.
+      assert_includes response.body, "Pay someone else"
+      assert_select "input#reimbursements_expense_form_payee_name_override"
+      assert_not_includes response.body, "In use"
     end
 
     test "create writes a pending expense with receipts and redirects" do
