@@ -152,6 +152,84 @@ module Reimbursements
       Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
     end
 
+    # --- BatchAttempt lifecycle: History's in-app trace of each build ------
+
+    def click_time_attempt
+      BatchAttempt.create!(cost_centre: CostCentre.default, bacs_date: Date.new(2026, 5, 13),
+                           triggered_by_email: OPERATOR.first)
+    end
+
+    test "resolves the click-time attempt to completed with the batch id" do
+      attempt = click_time_attempt
+      stock_store([ approved_expense ])
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert attempt.reload.completed?
+      assert_equal "recBat1", attempt.batch_record_id
+      assert_nil attempt.error_messages, "a clean build stores no warnings"
+    end
+
+    test "a failed build resolves the attempt to failed with its errors" do
+      @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
+      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+      attempt = click_time_attempt
+      stock_store([ approved_expense ])
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert attempt.reload.failed?
+      assert_includes attempt.error_messages, "EUSA draft creation failed"
+    end
+
+    test "a successful build with best-effort failures keeps them as warnings on the attempt" do
+      @processor = FakeProcessor.new(success: true, errors: [ "BACS file SharePoint upload failed" ])
+      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+      attempt = click_time_attempt
+      stock_store([ approved_expense ])
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert attempt.reload.completed?
+      assert_includes attempt.error_messages, "SharePoint upload failed"
+    end
+
+    test "no approved expenses resolves the attempt to nothing_to_build" do
+      attempt = click_time_attempt
+      stock_store([]) # nothing Approved
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert attempt.reload.nothing_to_build?
+    end
+
+    test "a Graph credential failure resolves the attempt to failed" do
+      @processor = FakeProcessor.new
+      @processor.define_singleton_method(:process) { |**| raise Reimbursements::GraphAuth::AuthError, "token expired" }
+      BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
+      attempt = click_time_attempt
+      stock_store([ approved_expense ])
+
+      BuildBatchJob.perform_now(**enqueue_args)
+
+      assert attempt.reload.failed?
+      assert_includes attempt.error_messages, "token expired"
+    ensure
+      Rails.cache.delete(Reimbursements::GraphAuthAlert::CACHE_KEY)
+    end
+
+    test "a direct run with no click-time attempt still records one" do
+      stock_store([ approved_expense ])
+
+      assert_difference -> { BatchAttempt.count }, 1 do
+        BuildBatchJob.perform_now(**enqueue_args)
+      end
+
+      attempt = BatchAttempt.recent_first.first
+      assert attempt.completed?
+      assert_equal OPERATOR.first, attempt.triggered_by_email
+    end
+
     test "an unknown cost centre is a safe no-op" do
       stock_store([ approved_expense ])
 

@@ -53,9 +53,11 @@ module Reimbursements
       cost_centre = CostCentre.find_by(key: cost_centre_key)
       return Rails.logger.warn("Build batch: no cost centre #{cost_centre_key.inspect} — skipping") if cost_centre.nil?
 
+      attempt = attempt_for(cost_centre, bacs_date, operator_emails)
       approved = store.expenses.select { |expense| expense.status == Status::APPROVED }
       if approved.empty?
         Rails.logger.info("Build batch: no approved expenses for #{cost_centre.key} — nothing to build")
+        attempt.resolve!(status: "nothing_to_build")
         return
       end
 
@@ -64,6 +66,9 @@ module Reimbursements
         sender_name: sender_name.presence || SENDER_FALLBACK, eusa_recipient: eusa_recipient,
         eusa_subject: eusa_subject, eusa_body_html: eusa_body_html
       )
+      attempt.resolve!(status: result.success ? "completed" : "failed",
+                       error_messages: Array(result.errors).join("\n"),
+                       batch_record_id: result.batch_id)
       notify(cost_centre, result, approved, operator_emails)
     rescue GraphAuth::AuthError => e
       # Unlike an ordinary Graph outage, a credential failure means every
@@ -72,6 +77,7 @@ module Reimbursements
       # attempting a doomed operator email.
       Rails.logger.error("Build batch: Graph authentication failing for #{cost_centre_key} — #{e.message}")
       GraphAuthAlert.notify(e, source: "reimbursements_build_batch")
+      attempt&.resolve!(status: "failed", error_messages: "Microsoft authentication failed: #{e.message}")
     end
 
     private
@@ -86,6 +92,16 @@ module Reimbursements
 
     def processor(cost_centre)
       processor_builder.call(store: store, graph: graph, cost_centre: cost_centre)
+    end
+
+    # BatchesController#create makes the attempt row at click time (so History
+    # shows the build from the moment it's queued); pick up the oldest
+    # unresolved one. A retry — or a direct perform_now with no controller —
+    # has none, so create one here rather than lose the trace.
+    def attempt_for(cost_centre, bacs_date, operator_emails)
+      BatchAttempt.building.where(cost_centre: cost_centre).order(:created_at).first ||
+        BatchAttempt.create!(cost_centre: cost_centre, bacs_date: parse_date(bacs_date),
+                             triggered_by_email: Array(operator_emails).compact_blank.first)
     end
 
     def parse_date(value)

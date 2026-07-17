@@ -108,6 +108,42 @@ module Admin
         # Nothing is processed inline in the request: no batch, no submit.
         assert_equal 0, @client.created.count { |table, _| table == :batches }
         assert_equal 0, @client.updated.count { |_, _, fields| fields[EXP_FIDS[:status]] == "Submitted" }
+        # History's in-app trace exists from the moment of the click.
+        attempt = ::Reimbursements::BatchAttempt.recent_first.first
+        assert attempt.building?
+        assert_equal Date.new(2026, 5, 13), attempt.bacs_date
+        assert_equal @user.email, attempt.triggered_by_email
+      end
+
+      test "index shows an in-flight build and a failed build's errors" do
+        use_store(batches: [], expenses: [])
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                               bacs_date: Date.new(2026, 5, 13))
+        ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
+                                               bacs_date: Date.new(2026, 5, 12), status: "failed",
+                                               error_messages: "EUSA draft creation failed: boom")
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "A batch is building"
+        assert_includes response.body, "failed"
+        assert_includes response.body, "EUSA draft creation failed: boom"
+      end
+
+      test "index flags a stale build that never reported back" do
+        use_store(batches: [], expenses: [])
+        stale = ::Reimbursements::BatchAttempt.create!(
+          cost_centre: ::Reimbursements::CostCentre.default, bacs_date: Date.new(2026, 5, 13)
+        )
+        stale.update_column(:created_at, 2.hours.ago)
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "hasn't finished"
       end
 
       test "create with a malformed BACS date re-renders new with an error and enqueues nothing" do

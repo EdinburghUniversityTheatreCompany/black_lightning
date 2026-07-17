@@ -373,7 +373,7 @@ module ReimbursementsTestHelpers
   # +success: false+ drives the failure path.
   class FakeBatchProcessor
     Result = Struct.new(:success, :eusa_draft_web_link, :total_amount, :bacs_date, :errors,
-                        keyword_init: true)
+                        :batch_id, keyword_init: true)
     attr_reader :calls
 
     def initialize(success: true, errors: [])
@@ -386,7 +386,8 @@ module ReimbursementsTestHelpers
       @calls << kwargs
       Result.new(success: @success, eusa_draft_web_link: "https://outlook.example/draft-1",
                  total_amount: kwargs[:expenses].sum { |e| e.amount || 0 },
-                 bacs_date: kwargs[:bacs_date], errors: @errors)
+                 bacs_date: kwargs[:bacs_date], errors: @errors,
+                 batch_id: @success ? "recBat1" : nil)
     end
   end
 

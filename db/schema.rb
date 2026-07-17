@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_10_150000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_17_010000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -636,6 +636,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_150000) do
     t.index ["gallery_type"], name: "index_pictures_on_gallery_type"
   end
 
+  create_table "reimbursements_batch_attempts", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.date "bacs_date"
+    t.string "batch_record_id"
+    t.bigint "cost_centre_id", null: false
+    t.datetime "created_at", null: false
+    t.text "error_messages"
+    t.string "status", default: "building", null: false
+    t.string "triggered_by_email"
+    t.datetime "updated_at", null: false
+    t.index ["cost_centre_id", "status"], name: "idx_on_cost_centre_id_status_4ce6fe61ad"
+    t.index ["cost_centre_id"], name: "index_reimbursements_batch_attempts_on_cost_centre_id"
+  end
+
   create_table "reimbursements_cost_centres", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "eusa_code", null: false
@@ -935,6 +948,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_150000) do
   add_foreign_key "opportunities", "companies"
   add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
+  add_foreign_key "reimbursements_batch_attempts", "reimbursements_cost_centres", column: "cost_centre_id"
   add_foreign_key "roles_parents", "roles"
   add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
