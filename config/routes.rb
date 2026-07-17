@@ -80,6 +80,12 @@ ChaosRails::Application.routes.draw do
       resource :payment_details, only: %i[edit update]
       resources :people, only: %i[index update]
 
+      # Budget-owner review (Phase E): budgets the signed-in owner is
+      # responsible for, with a blocking endorse action on pending expenses
+      # charged to them. Base access permission, not finance.
+      get  "my_budgets", to: "my_budgets#index", as: :my_budgets
+      post "my_budgets/:expense_id/endorse", to: "my_budgets#endorse", as: :endorse_my_budget
+
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
       resources :budgets, only: %i[index edit update] do

@@ -1,0 +1,72 @@
+<p class="mb-3 text-gray-600">
+  The budgets you own. When someone claims an expense against one of them, it waits here for
+  your sign-off before the finance team pays it. Anyone who owns the budget can endorse, and a
+  claim you submitted yourself is cleared automatically.
+</p>
+
+<% if @budgets.empty? %>
+  <%= render AlertComponent.new(type: :info) do %>
+    You don't own any budgets yet. A finance administrator sets budget owners on the Budgets page.
+  <% end %>
+<% else %>
+  <% @budgets.each do |budget| %>
+    <% expenses = @expenses_by_budget.fetch(budget.record_id, []) %>
+    <%= render CardComponent.new(title: budget.name.presence || budget.record_id, html_class: "mb-4") do %>
+      <% if budget.remaining %>
+        <p class="mb-3 text-sm text-gray-600">
+          Remaining:
+          <span class="<%= "text-danger font-medium" if budget.remaining.negative? %>">
+            <%= reimbursements_money(budget.remaining) %>
+          </span>
+        </p>
+      <% end %>
+
+      <% if expenses.empty? %>
+        <p class="py-2 text-gray-600">No claims are waiting for your endorsement.</p>
+      <% else %>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-left text-gray-500 border-b border-gray-200">
+              <tr>
+                <th scope="col" class="py-1 pr-3">#</th>
+                <th scope="col" class="py-1 pr-3">Payee</th>
+                <th scope="col" class="py-1 pr-3 text-right">Amount</th>
+                <th scope="col" class="py-1 pr-3">Description</th>
+                <th scope="col" class="py-1 pr-3">Submitted</th>
+                <th scope="col" class="py-1 text-right"><span class="sr-only">Endorsement</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <% expenses.each do |expense| %>
+                <% endorsement = @endorsements_by_expense[expense.record_id] %>
+                <tr class="border-b border-gray-100 align-top">
+                  <td class="py-2 pr-3"><%= expense.auto_number %></td>
+                  <td class="py-2 pr-3"><%= expense.effective_payee_name %></td>
+                  <td class="py-2 pr-3 text-right whitespace-nowrap"><%= reimbursements_money(expense.amount) %></td>
+                  <td class="py-2 pr-3"><%= truncate(expense.description.to_s, length: 60) %></td>
+                  <td class="py-2 pr-3 whitespace-nowrap"><%= reimbursements_date(expense.submitted_at) %></td>
+                  <td class="py-2 text-right whitespace-nowrap">
+                    <% if endorsement&.owner_endorsement? %>
+                      <%= render BadgeComponent.new(type: :success, pill: true)
+                            .with_content("Endorsed by #{@people_by_id[endorsement.endorsed_by_person_id]&.name || 'an owner'}") %>
+                    <% elsif endorsement&.finance_override? %>
+                      <%= render BadgeComponent.new(type: :info, pill: true).with_content("Cleared by finance") %>
+                    <% elsif ::Reimbursements::OwnerReview.submitter_owns_budget?(expense) %>
+                      <%= render BadgeComponent.new(type: :secondary, pill: true).with_content("Submitted by an owner") %>
+                    <% else %>
+                      <%= button_to "Endorse",
+                            admin_reimbursements_endorse_my_budget_path(expense.record_id),
+                            method: :post, class: btn_classes(:success, :sm),
+                            "aria-label": "Endorse claim ##{expense.auto_number} from #{expense.effective_payee_name}",
+                            form: { class: "inline-block" } %>
+                    <% end %>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    <% end %>
+  <% end %>
+<% end %>
