@@ -14,13 +14,13 @@ Rails.application.configure do
     # You may need to enable this in production as well depending on your setup.
     # policy.script_src *policy.script_src, :blob if Rails.env.test?
 
-    policy.style_src :self, :unsafe_inline, "https://eutc.azureedge.net", "https://pretix.eu"
+    policy.style_src :self, :unsafe_inline, "https://pretix.eu"
     # Allow @vite/client to hot reload style changes in development
     policy.style_src *policy.style_src, :unsafe_inline if Rails.env.development?
 
     # style-src-elem is enforced separately by browsers for <link> and <style> elements.
     # Needed for the pretix widget stylesheet injected dynamically by pretix_modal_controller.
-    policy.style_src_elem :self, :unsafe_inline, "https://eutc.azureedge.net", "https://pretix.eu"
+    policy.style_src_elem :self, :unsafe_inline, "https://pretix.eu"
 
     policy.frame_src "https://tickets.bedlamtheatre.co.uk", "https://calendar.google.com", "https://accounts.google.com", "https://www.facebook.com", "https://www.youtube-nocookie.com"
     policy.img_src :self, :data, :https
