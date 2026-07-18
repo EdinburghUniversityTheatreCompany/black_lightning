@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_101000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_18_100000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -783,7 +783,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_101000) do
     t.date "submitted_to_eusa_date"
     t.datetime "updated_at", null: false
     t.index ["airtable_record_id"], name: "index_reimbursements_expenses_on_airtable_record_id", unique: true
-    t.index ["auto_number"], name: "index_reimbursements_expenses_on_auto_number"
+    t.index ["auto_number"], name: "index_reimbursements_expenses_on_auto_number", unique: true
     t.index ["batch_id"], name: "index_reimbursements_expenses_on_batch_id"
     t.index ["budget_id"], name: "index_reimbursements_expenses_on_budget_id"
     t.index ["financial_year_id"], name: "index_reimbursements_expenses_on_financial_year_id"

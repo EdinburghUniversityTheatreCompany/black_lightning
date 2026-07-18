@@ -71,9 +71,20 @@ module Reimbursements
       bust_budgets!
     end
 
+    # Retries the auto_number MAX+1 race: two concurrent creates (portal vs
+    # poll job) can pick the same number; the unique index rejects the loser,
+    # which re-reads MAX on the retry. Explicit auto_numbers (the importer)
+    # are never retried — a collision there is real data corruption.
     def create_expense!(attrs)
-      expense = Expense.create!(expense_columns(attrs)
-                                  .reverse_merge(financial_year: FinancialYear.current))
+      attempts = 0
+      begin
+        expense = Expense.create!(expense_columns(attrs)
+                                    .reverse_merge(financial_year: FinancialYear.current))
+      rescue ActiveRecord::RecordNotUnique
+        raise if attrs.key?(:auto_number) || (attempts += 1) >= 3
+
+        retry
+      end
       bust_expenses!
       expense
     end

@@ -38,7 +38,7 @@
 # Indexes
 #
 #  index_reimbursements_expenses_on_airtable_record_id  (airtable_record_id) UNIQUE
-#  index_reimbursements_expenses_on_auto_number         (auto_number)
+#  index_reimbursements_expenses_on_auto_number         (auto_number) UNIQUE
 #  index_reimbursements_expenses_on_batch_id            (batch_id)
 #  index_reimbursements_expenses_on_budget_id           (budget_id)
 #  index_reimbursements_expenses_on_financial_year_id   (financial_year_id)

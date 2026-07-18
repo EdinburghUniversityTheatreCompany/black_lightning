@@ -450,16 +450,36 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    test "an already-seen message is filed away without a duplicate" do
+    test "an already-seen message whose earlier cycle died before the attach is finished, not duplicated" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
-      Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
+      # The earlier cycle created the expense (stamping the message id) but
+      # crashed before attach/reply — the receipt-less draft must not be
+      # filed away receipt-less with the sender never told.
+      orphan = Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
 
       assert_no_difference -> { Expense.count } do
         MailboxPollJob.perform_now
       end
 
-      assert_empty @mailbox.replies
+      assert_equal 1, orphan.reload.receipt_files.count, "the missing receipt is attached on retry"
+      assert_equal 1, @mailbox.replies.size, "the sender finally gets their portal link"
       assert_equal [ "msg1" ], @mailbox.reads
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
+
+    test "an already-seen message whose receipts are already attached is filed away silently" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      done = Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
+      done.receipt_files.attach(io: StringIO.new(PDF_ATTACHMENT[:bytes]),
+                                filename: PDF_ATTACHMENT[:filename],
+                                content_type: PDF_ATTACHMENT[:content_type])
+
+      assert_no_difference -> { Expense.count } do
+        MailboxPollJob.perform_now
+      end
+
+      assert_equal 1, done.reload.receipt_files.count, "no duplicate attach"
+      assert_empty @mailbox.replies, "the earlier cycle already replied — no double email"
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
   end
