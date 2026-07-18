@@ -63,7 +63,9 @@ module Reimbursements
   # person/budget/batch may be nil: email-in submissions arrive with gaps the
   # submitter fills later.
   class Expense < ApplicationRecord
+    include RecordId
     include EffectivePayee
+    include ExpenseSemantics
 
     TYPE_REIMBURSEMENT = "Reimbursement".freeze
     TYPE_INVOICE = "Invoice".freeze
@@ -95,8 +97,6 @@ module Reimbursements
       self.submitted_at ||= Time.current
     }
 
-    def record_id = id&.to_s
-
     # AR's own reader would return the integer FK; the PORO returned the
     # linked batch's record id STRING, compared against batch.record_id in
     # the batches controller. Same for budget_id/person_id below — the Store
@@ -114,7 +114,12 @@ module Reimbursements
     # the blob signed id (opaque, stable enough for remove-receipt round
     # trips); URLs are path-only so no host configuration is needed.
     def receipts
-      receipt_files.map { |file| self.class.wrap_receipt(file) }
+      @receipts ||= receipt_files.map { |file| self.class.wrap_receipt(file) }
+    end
+
+    def reload(*)
+      @receipts = nil
+      super
     end
 
     def self.wrap_receipt(file)
@@ -130,48 +135,6 @@ module Reimbursements
         ) if file.representable?),
         blob: file.blob
       )
-    end
-
-    def pending? = status == Status::PENDING
-    def draft? = status == Status::DRAFT
-    def approved? = status == Status::APPROVED
-
-    # Submitters may only change an expense before review picks it up, and
-    # never internal "From EUSA" bookkeeping entries.
-    def editable?
-      (draft? || pending?) && SUBMITTER_TYPES.include?(expense_type)
-    end
-
-    # Human labels for the required fields still missing on an incomplete
-    # (usually email-in) submission. A documented zero amount means "not yet
-    # known" — .blank? alone would miss it (0 is truthy in Ruby).
-    def missing_completion_fields
-      missing = []
-      missing << "a budget" if budget.nil?
-      missing << "the amount" if amount.blank? || amount.zero?
-      missing << "the amount excluding VAT" if amount_excl_vat.blank? || amount_excl_vat.zero?
-      missing << "a description" if description.blank?
-      missing << "a payment reference" if payment_reference.blank?
-      # A receipt counts as present if a file is attached OR a SharePoint URL
-      # was stored when it was offloaded during batch processing.
-      missing << "a receipt" if receipts.empty? && sharepoint_receipt_urls.blank?
-      missing
-    end
-
-    def needs_completion?
-      missing_completion_fields.any?
-    end
-
-    # Attached files if any, otherwise the count of SharePoint URLs stored
-    # when the files were offloaded during batch processing.
-    def receipt_count
-      receipts.any? ? receipts.size : sharepoint_receipt_urls.size
-    end
-
-    # True only for a genuine pass/fail verdict — "error" means the checker
-    # itself couldn't run and must NOT lock the expense out of a re-check.
-    def ai_checked?
-      %w[pass fail].include?(ai_check_status)
     end
   end
 end

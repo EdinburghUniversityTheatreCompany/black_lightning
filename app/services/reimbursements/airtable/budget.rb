@@ -3,6 +3,8 @@ module Reimbursements
     ##
     # A budget category in the Airtable Budgets table.
     class Budget
+      include BudgetHealth
+
       TYPES = %w[Expense Income].freeze
 
       attr_reader :record_id, :name, :nominal_code, :active, :budget_type,
@@ -33,33 +35,6 @@ module Reimbursements
         @committed_amount = committed_amount
         @total_paid = total_paid
         @variance = variance
-      end
-
-      def income?
-        budget_type == "Income"
-      end
-
-      # Genuinely overspent: nothing left against the current forecast/plan.
-      # `remaining` is the one figure that unambiguously means "over" (an
-      # Airtable rollup that already folds in forecast, committed and paid), so
-      # the badge keys off it alone — mixing in the initial-figure checks below
-      # produced a red "Over budget" next to a positive Remaining. Nil means
-      # "not loaded"; income budgets are never over budget.
-      def over_budget?
-        return false if income?
-
-        !remaining.nil? && remaining.negative?
-      end
-
-      # A softer state: committed or paid has passed the ORIGINAL initial figure,
-      # but the forecast was revised up to cover it so there's still remaining.
-      # Worth flagging (the plan grew) but not the same alarm as over_budget?.
-      def over_initial_budget?
-        return false if income? || over_budget?
-        return true if initial_budget && committed_amount && committed_amount > initial_budget
-        return true if initial_budget && total_paid && total_paid > initial_budget
-
-        false
       end
     end
   end

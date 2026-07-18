@@ -26,6 +26,7 @@ module Reimbursements
   # delegate and preserve the PORO's ""/false defaults for a payee without a
   # PaymentDetails row.
   class Person < ApplicationRecord
+    include RecordId
     has_many :expenses, class_name: "Reimbursements::Expense",
                         dependent: :nullify, inverse_of: :person
     has_one :payment_details, class_name: "Reimbursements::PaymentDetails",
@@ -45,8 +46,6 @@ module Reimbursements
     def email=(value)
       super(value.presence)
     end
-
-    def record_id = id&.to_s
 
     def sort_code = payment_details&.sort_code.to_s
     def account_number = payment_details&.account_number.to_s

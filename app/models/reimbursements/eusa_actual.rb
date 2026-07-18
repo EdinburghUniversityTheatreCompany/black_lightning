@@ -45,12 +45,11 @@ module Reimbursements
   # ActiveRecord replacement for the Airtable-era PORO (now
   # Reimbursements::Airtable::EusaActual).
   class EusaActual < ApplicationRecord
+    include RecordId
     belongs_to :expense, class_name: "Reimbursements::Expense", optional: true,
                          inverse_of: :eusa_actuals
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true
     belongs_to :financial_year, class_name: "Reimbursements::FinancialYear", optional: true
-
-    def record_id = id&.to_s
 
     # The PORO exposed arrays of linked record ids; reconcile only ever links
     # one of each, so these wrap the single FKs to keep the array interface.

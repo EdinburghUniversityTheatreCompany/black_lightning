@@ -26,11 +26,10 @@ module Reimbursements
   # per person today; unique index on person_id). The notes column doubles as
   # the People page's audit trail of verification decisions.
   class PaymentDetails < ApplicationRecord
+    include RecordId
     belongs_to :person, class_name: "Reimbursements::Person", inverse_of: :payment_details
 
     validates :person_id, uniqueness: true
-
-    def record_id = id&.to_s
 
     def bank_details?
       sort_code.present? && account_number.present?

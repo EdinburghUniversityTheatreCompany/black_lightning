@@ -29,6 +29,7 @@ module Reimbursements
   # before the message id was stored have date_sent set — a sent batch
   # necessarily had its draft — so the predicate folds that in.
   class Batch < ApplicationRecord
+    include RecordId
     has_many :expenses, class_name: "Reimbursements::Expense",
                         dependent: :nullify, inverse_of: :batch
 
@@ -37,8 +38,6 @@ module Reimbursements
     # The Airtable "Name" was a formula echoing Date Sent; BatchProcessor
     # never sends a name, so derive it the same way.
     before_validation -> { self.name = date_sent.to_s if name.blank? && date_sent.present? }
-
-    def record_id = id&.to_s
 
     def eusa_draft_created
       draft_message_id.present? || date_sent.present?

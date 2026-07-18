@@ -37,8 +37,8 @@ module Reimbursements
                                     FIELD_IDS[:expenses][:submitted_at] => "2026-05-01T10:00:00.000Z"
                                   }),
           airtable_expense_record(id: "recExp2", payee_id: "recPer2", budget_id: "recBud1",
-                                  amount: 24.0, amount_excl_vat: 20.0, status: "Pending",
-                                  receipts: [])
+                                  auto_number: 2, amount: 24.0, amount_excl_vat: 20.0,
+                                  status: "Pending", receipts: [])
         ],
         eusa_actuals: [
           airtable_eusa_actual_record(id: "recAct1", linked_expense: [ "recExp1" ],

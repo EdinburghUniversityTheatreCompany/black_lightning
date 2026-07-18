@@ -27,11 +27,10 @@ module Reimbursements
   # (date desc) is the budget's current_forecast. ActiveRecord replacement for
   # the Airtable-era PORO (now Reimbursements::Airtable::BudgetForecast).
   class BudgetForecast < ApplicationRecord
+    include RecordId
     belongs_to :budget, class_name: "Reimbursements::Budget", inverse_of: :forecasts
 
     validates :amount, presence: true
-
-    def record_id = id&.to_s
 
     # The PORO exposed the linked budget's record id string (compared against
     # budget.record_id in the Store and views); AR's own reader would return

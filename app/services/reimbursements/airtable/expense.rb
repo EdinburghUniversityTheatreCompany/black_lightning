@@ -6,6 +6,7 @@ module Reimbursements
     # nil (email-in submissions can arrive with gaps the submitter fills later).
     class Expense
       include EffectivePayee
+      include ExpenseSemantics
 
       TYPE_REIMBURSEMENT = "Reimbursement".freeze
       TYPE_INVOICE = "Invoice".freeze
@@ -61,68 +62,6 @@ module Reimbursements
         @ai_comment = ai_comment
         @ai_checked_at = ai_checked_at
         @rejection_notified = rejection_notified
-      end
-
-      def pending?
-        status == Status::PENDING
-      end
-
-      def draft?
-        status == Status::DRAFT
-      end
-
-      def approved?
-        status == Status::APPROVED
-      end
-
-      # Submitters may only change an expense before review picks it up, and
-      # never internal "From EUSA" bookkeeping entries (editing one in the
-      # portal would silently rewrite its type to a submitter type).
-      def editable?
-        (draft? || pending?) && Expense::SUBMITTER_TYPES.include?(expense_type)
-      end
-
-      # Human labels for the required fields still missing on an incomplete
-      # (usually email-in) submission, so the UI can tell the submitter exactly
-      # what to add rather than a bare "needs completion".
-      def missing_completion_fields
-        missing = []
-        missing << "a budget" if budget.nil?
-        # amount.blank?/amount_excl_vat.blank? alone would miss a zero-valued
-        # amount — 0/BigDecimal("0") are truthy in Ruby, so .blank? is false for
-        # them, even though a documented zero here means "not yet known," the
-        # same sentinel needs_attention_reasons already special-cases.
-        missing << "the amount" if amount.blank? || amount.zero?
-        missing << "the amount excluding VAT" if amount_excl_vat.blank? || amount_excl_vat.zero?
-        missing << "a description" if description.blank?
-        missing << "a payment reference" if payment_reference.blank?
-        # A receipt counts as present if a file is attached OR a SharePoint URL was
-        # stored when it was offloaded during batch processing (which clears the
-        # Airtable attachment).
-        missing << "a receipt" if receipts.empty? && sharepoint_receipt_urls.blank?
-        missing
-      end
-
-      # True when the submission is missing fields the portal form requires, so the
-      # index can nudge the submitter.
-      def needs_completion?
-        missing_completion_fields.any?
-      end
-
-      # How many receipts this expense has, honouring offloaded receipts: the
-      # attached files if any, otherwise the count of SharePoint URLs stored when
-      # the files were offloaded during batch processing (same present-or-offloaded
-      # logic as +missing_completion_fields+).
-      def receipt_count
-        receipts.any? ? receipts.size : sharepoint_receipt_urls.size
-      end
-
-      # True only for a genuine pass/fail verdict — "error" means the checker
-      # itself couldn't run (e.g. a transient Gemini outage), so it must NOT
-      # count as "already checked": that would permanently lock the expense out
-      # of ever being (re)checked once the outage clears.
-      def ai_checked?
-        %w[pass fail].include?(ai_check_status)
       end
     end
   end

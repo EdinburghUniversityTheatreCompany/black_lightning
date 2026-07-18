@@ -26,13 +26,13 @@ module Reimbursements
       assert_empty store.expenses_for("")
     end
 
-    test "find_expense! folds a row created after the list was memoized" do
+    test "find_expense reads the row directly, unaffected by a stale memoized list" do
       store.expenses # memoize empty
       expense = Expense.create!(status: Status::PENDING)
 
-      assert_nil store.find_expense(expense.record_id)
-      assert_equal expense.id, store.find_expense!(expense.record_id).id
       assert_equal expense.id, store.find_expense(expense.record_id).id
+      assert_equal expense.id, store.find_expense!(expense.record_id).id
+      assert_nil store.find_expense("999999")
     end
 
     test "person_by_email is case-insensitive and strips" do

@@ -24,7 +24,28 @@ module Reimbursements
     PAYMENT_DETAILS_FIELDS = %i[sort_code account_number verified notes].freeze
 
     def expenses
-      @expenses ||= Expense.includes(:person, :budget, :batch).to_a
+      @expenses ||= Expense.includes(:person, :budget, :batch)
+                           .with_attached_receipt_files.to_a
+    end
+
+    # Single-record reads skip the whole-table memoized list — StoreQueries'
+    # list scan carried the Airtable-era "lists are the only read" constraint
+    # over to a backend with indexes.
+    def find_expense(record_id)
+      Expense.includes(:person, :budget, :batch).find_by(id: record_id)
+    end
+    alias find_expense! find_expense
+
+    def find_person(record_id)
+      Person.includes(:payment_details).find_by(id: record_id)
+    end
+
+    def find_budget(record_id)
+      Budget.includes(:owners, :forecasts).find_by(id: record_id)
+    end
+
+    def find_batch(record_id)
+      Batch.find_by(id: record_id)
     end
 
     def people
@@ -32,7 +53,7 @@ module Reimbursements
     end
 
     def budgets
-      @budgets ||= Budget.includes(:owners, :forecasts).to_a
+      @budgets ||= Budget.includes(:owners, :forecasts, :expenses).to_a
     end
 
     def update_budget!(record_id, attrs)
@@ -40,7 +61,7 @@ module Reimbursements
       attrs = attrs.compact
       owner_ids = attrs.delete(:owner_ids)
       budget.update!(attrs)
-      sync_budget_owners(budget, owner_ids) unless owner_ids.nil?
+      budget.sync_owner_ids!(Array(owner_ids).reject(&:blank?)) unless owner_ids.nil?
       bust_budgets!
       budget
     end
@@ -122,8 +143,7 @@ module Reimbursements
       target = expense.receipt_files.find { |file| file.signed_id == attachment_id }
       return bust_expenses! if target.nil?
 
-      survivors = expense.receipt_files.reject { |file| file.signed_id == attachment_id }
-      raise Store::LastReceiptError if survivors.empty? && expense.receipt_files.any? && !expense.draft?
+      raise Store::LastReceiptError if !expense.draft? && expense.receipt_files.one?
 
       target.purge
       bust_expenses!
@@ -264,22 +284,6 @@ module Reimbursements
 
     def bust_budgets!
       @budgets = nil
-    end
-
-    def fetch_expense(record_id)
-      expense = Expense.find_by(id: record_id)
-      return nil if expense.nil?
-
-      @expenses = ((@expenses || []).reject { |e| e.record_id == expense.record_id } + [ expense ])
-      expense
-    end
-
-    def sync_budget_owners(budget, owner_record_ids)
-      person_ids = Array(owner_record_ids).reject(&:blank?).map(&:to_i)
-      budget.budget_ownerships.where.not(person_id: person_ids).destroy_all
-      (person_ids - budget.budget_ownerships.pluck(:person_id)).each do |person_id|
-        budget.budget_ownerships.create!(person_id: person_id)
-      end
     end
 
     # nil values are dropped (email-in gaps); the sharepoint URL array joins

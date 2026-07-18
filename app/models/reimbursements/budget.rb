@@ -46,6 +46,8 @@ module Reimbursements
   # Each is memoized per instance — one Store lives per request, so a Review
   # render costs one query per figure, not one per card per figure.
   class Budget < ApplicationRecord
+    include RecordId
+    include BudgetHealth
     TYPES = %w[Expense Income].freeze
 
     COMMITTED_STATUSES = [ Status::APPROVED, Status::SUBMITTED, Status::PAID ].freeze
@@ -63,28 +65,52 @@ module Reimbursements
     validates :name, presence: true
     validates :budget_type, inclusion: { in: TYPES }
 
-    def record_id = id&.to_s
-
     # The PORO exposed owner links as an array of People record ids; OwnerReview
     # and the budgets UI compare them against person.record_id strings.
     def owner_ids
       owners.map(&:record_id)
     end
 
-    def income? = budget_type == "Income"
+    # Diff-syncs the owners join table to exactly +person_ids+ (numeric ids)
+    # — the one sync path for the store's budget edit and the importer.
+    def sync_owner_ids!(person_ids)
+      person_ids = person_ids.map(&:to_i)
+      budget_ownerships.where.not(person_id: person_ids).destroy_all
+      (person_ids - budget_ownerships.pluck(:person_id)).each do |person_id|
+        budget_ownerships.create!(person_id: person_id)
+      end
+    end
 
+    # The rollups use the association preload when the store loaded it (the
+    # budgets index would otherwise pay ~3 queries per card), falling back to
+    # SQL for a budget loaded on its own.
     def committed_amount
-      @committed_amount ||= expenses.where(status: COMMITTED_STATUSES).sum(:amount_excl_vat)
+      @committed_amount ||=
+        if expenses.loaded?
+          expenses.select { |e| COMMITTED_STATUSES.include?(e.status) }.sum { |e| e.amount_excl_vat || 0 }
+        else
+          expenses.where(status: COMMITTED_STATUSES).sum(:amount_excl_vat)
+        end
     end
 
     def total_paid
-      @total_paid ||= expenses.where(status: Status::PAID).sum(:amount_excl_vat)
+      @total_paid ||=
+        if expenses.loaded?
+          expenses.select { |e| e.status == Status::PAID }.sum { |e| e.amount_excl_vat || 0 }
+        else
+          expenses.where(status: Status::PAID).sum(:amount_excl_vat)
+        end
     end
 
     def current_forecast
       return @current_forecast if defined?(@current_forecast)
 
-      @current_forecast = forecasts.order(date: :desc, id: :desc).first&.amount
+      @current_forecast =
+        if forecasts.loaded?
+          forecasts.max_by { |f| [ f.date || Date.new(0), f.id ] }&.amount
+        else
+          forecasts.order(date: :desc, id: :desc).first&.amount
+        end
     end
 
     # Nil when no forecast has been logged yet — callers treat nil as "not
@@ -99,25 +125,6 @@ module Reimbursements
       return nil if current_forecast.nil? || initial_budget.nil?
 
       current_forecast - initial_budget
-    end
-
-    # Genuinely overspent: nothing left against the current forecast/plan.
-    # `remaining` already folds in forecast and committed, so the badge keys
-    # off it alone. Income budgets are never over budget.
-    def over_budget?
-      return false if income?
-
-      !remaining.nil? && remaining.negative?
-    end
-
-    # A softer state: committed or paid has passed the ORIGINAL initial figure,
-    # but the forecast was revised up to cover it so there's still remaining.
-    def over_initial_budget?
-      return false if income? || over_budget?
-      return true if initial_budget && committed_amount && committed_amount > initial_budget
-      return true if initial_budget && total_paid && total_paid > initial_budget
-
-      false
     end
   end
 end

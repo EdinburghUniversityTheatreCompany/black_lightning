@@ -13,9 +13,10 @@ module Reimbursements
   # - imports budget forecasts and budget->owner links;
   # - stamps every budget/expense/actual with the financial year and every
   #   budget with the default cost centre;
-  # - REMAPS the MySQL-native tables that key on Airtable string record ids
-  #   (owner_endorsements, batch_attempts, users.airtable_person_id ->
-  #   users.reimbursements_person_id) onto the new numeric ids.
+  # - backfills users.airtable_person_id -> users.reimbursements_person_id;
+  # - on the FINAL pre-flip run only (remap_native_tables: true), remaps the
+  #   MySQL-native tables that key on Airtable string record ids
+  #   (owner_endorsements, batch_attempts) onto the new numeric ids.
   #
   # Fails loudly: verify! checks row counts, an amount+status checksum and
   # receipt presence before the flip is allowed.
@@ -130,10 +131,7 @@ module Reimbursements
       owner_ids = airtable_owner_ids.map do |record_id|
         person_ids.fetch(record_id) { raise ImportError, "Budget #{row.name}: unknown owner #{record_id}" }
       end
-      row.budget_ownerships.where.not(person_id: owner_ids).destroy_all
-      (owner_ids - row.budget_ownerships.pluck(:person_id)).each do |person_id|
-        row.budget_ownerships.create!(person_id: person_id)
-      end
+      row.sync_owner_ids!(owner_ids)
     end
 
     def import_budget_forecasts

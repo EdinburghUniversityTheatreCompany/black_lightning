@@ -23,6 +23,7 @@ module Reimbursements
   # years stay viewable (the year-selector UI is post-cutover work, but the
   # schema and invariant live here from the start).
   class FinancialYear < ApplicationRecord
+    include RecordId
     has_many :budgets, class_name: "Reimbursements::Budget", dependent: :restrict_with_error
     has_many :expenses, class_name: "Reimbursements::Expense", dependent: :restrict_with_error
     has_many :eusa_actuals, class_name: "Reimbursements::EusaActual", dependent: :restrict_with_error
@@ -35,8 +36,6 @@ module Reimbursements
     def self.current
       active.first
     end
-
-    def record_id = id&.to_s
 
     private
 
