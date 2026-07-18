@@ -340,6 +340,16 @@ module Admin
         assert_equal "4100", expense.nominal_code_override
       end
 
+      # A rejected edit must write NOTHING — no field of the record, not just
+      # the one the validation tripped on. Compares every column against the
+      # pre-request copy (updated_at excluded: the seed helper's receipt
+      # attach touches it after the in-memory copy was loaded).
+      def assert_no_write(expense)
+        fresh = ::Reimbursements::Expense.find(expense.id)
+        assert_equal expense.attributes.except("updated_at"), fresh.attributes.except("updated_at"),
+                     "nothing may be written on a rejected edit"
+      end
+
       test "save rejects a budget_record_id that doesn't resolve to a real budget" do
         expense = pending_expense
         sign_in @user
@@ -349,7 +359,7 @@ module Admin
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/budget no longer exists/i, flash[:alert])
-        assert_equal "Fake blood", expense.reload.description, "nothing was written"
+        assert_no_write(expense)
       end
 
       test "save leaves excl VAT untouched when zero is submitted" do
@@ -371,7 +381,7 @@ module Admin
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/valid amount/i, flash[:alert])
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
+        assert_no_write(expense)
       end
 
       test "save rejects a non-numeric amount and writes nothing" do
@@ -383,7 +393,7 @@ module Admin
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/valid amount/i, flash[:alert])
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
+        assert_no_write(expense)
       end
 
       test "save rejects a negative excl-VAT amount and writes nothing" do
@@ -395,7 +405,7 @@ module Admin
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/excl. VAT/i, flash[:alert])
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
+        assert_no_write(expense)
       end
 
       test "save rejects an excl-VAT amount greater than the total and writes nothing" do
@@ -407,7 +417,7 @@ module Admin
 
         assert_redirected_to admin_reimbursements_review_path(tab: nil)
         assert_match(/can't be more than the total/i, flash[:alert])
-        assert_equal BigDecimal("12.5"), expense.reload.amount, "nothing was written"
+        assert_no_write(expense)
       end
 
       # --- Approve ---------------------------------------------------------

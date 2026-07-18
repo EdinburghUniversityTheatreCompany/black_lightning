@@ -358,14 +358,21 @@ module Reimbursements
       processor, store, graph = build_scenario
       @expense_a.receipt_files.each { |attachment| attachment.blob.service.delete(attachment.blob.key) }
 
+      before_a = @expense_a.reload.updated_at
+      before_b = @expense_b.reload.updated_at
+
       result = run_batch(processor, store)
 
       assert_not result.success
       assert_not_empty result.errors
       assert_empty graph.drafts
       assert_equal 0, Batch.count
-      assert_equal Status::APPROVED, @expense_a.reload.status
-      assert_equal Status::APPROVED, @expense_b.reload.status
+      # Nothing at all was written — not just the status: the failure happened
+      # at the receipt-collection boundary, before any bookkeeping.
+      assert_equal before_a, @expense_a.reload.updated_at
+      assert_equal before_b, @expense_b.reload.updated_at
+      assert_equal Status::APPROVED, @expense_a.status
+      assert_equal Status::APPROVED, @expense_b.status
     end
 
     test "an empty batch reports an error and touches nothing" do
