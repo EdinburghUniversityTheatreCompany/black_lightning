@@ -192,6 +192,18 @@ module Reimbursements
 
     def expense_for_source_message(_message_id) = nil
 
+    # PersonLink's stored user->payee link lives in the backend-appropriate
+    # users column; on this backend that's the Airtable record-id string.
+    # update_column deliberately skips validations/callbacks so legacy user
+    # records that no longer validate can still use the portal.
+    def stored_person_link(user)
+      user.airtable_person_id
+    end
+
+    def remember_person_link!(user, person)
+      user.update_column(:airtable_person_id, person.record_id) # rubocop:disable Rails/SkipsModelValidations
+    end
+
     def create_batch!(attrs)
       record = @client.create_record(:batches, @mapper.batch_fields(attrs))
       bust_batches!

@@ -47,11 +47,11 @@ module Reimbursements
       )
     end
 
-    def import!(store:, responses: [ [ 200, RECEIPT_BYTES ] ], label: "Fringe 2026")
+    def import!(store:, responses: [ [ 200, RECEIPT_BYTES ] ], label: "Fringe 2026", remap: false)
       transport = FakeHttp.new(responses)
       io = StringIO.new
       AirtableImporter.new(store: store, transport: transport, io: io,
-                           financial_year_label: label).import!
+                           financial_year_label: label).import!(remap_native_tables: remap)
       [ transport, io ]
     end
 
@@ -120,7 +120,7 @@ module Reimbursements
                                      batch_record_id: "recBat1")
 
       store, = seeded_store
-      import!(store: store)
+      import!(store: store, remap: true)
 
       assert_equal Person.find_by!(airtable_record_id: "recPer1").id,
                    user.reload.reimbursements_person_id
@@ -137,7 +137,7 @@ module Reimbursements
                    attempt.reload.batch_record_id
 
       # Re-running must leave the already-remapped (numeric) ids alone.
-      import!(store: store, responses: [])
+      import!(store: store, responses: [], remap: true)
       assert_equal endorsement.expense_record_id, endorsement.reload.expense_record_id
     end
 
@@ -164,8 +164,41 @@ module Reimbursements
                                endorsed_by_person_id: "recPer1", endorsed_at: Time.current)
       store, = seeded_store
 
-      error = assert_raises(AirtableImporter::ImportError) { import!(store: store) }
+      error = assert_raises(AirtableImporter::ImportError) { import!(store: store, remap: true) }
       assert_match(/recGhost/, error.message)
+    end
+    test "a rehearsal import leaves the endorsement gate untouched (no remap)" do
+      endorsement = OwnerEndorsement.create!(expense_record_id: "recExp1",
+                                             budget_record_id: "recBud1",
+                                             endorsed_by_person_id: "recPer1",
+                                             endorsed_at: Time.current)
+      store, = seeded_store
+
+      import!(store: store) # rehearsal default: remap_native_tables false
+
+      assert_equal "recExp1", endorsement.reload.expense_record_id,
+                   "the live Airtable backend must keep matching these ids until the flip"
+      assert_equal "recPer1", endorsement.endorsed_by_person_id
+    end
+
+    test "unremap! restores the Airtable ids for a rollback flip" do
+      endorsement = OwnerEndorsement.create!(expense_record_id: "recExp1",
+                                             budget_record_id: "recBud1",
+                                             endorsed_by_person_id: "recPer1",
+                                             endorsed_at: Time.current)
+      attempt = BatchAttempt.create!(cost_centre: CostCentre.default, status: "completed",
+                                     batch_record_id: "recBat1")
+      store, = seeded_store
+      import!(store: store, remap: true)
+      assert_match(/\A\d+\z/, endorsement.reload.expense_record_id, "remapped to numeric")
+
+      AirtableImporter.new(store: store, io: StringIO.new).unremap!
+
+      endorsement.reload
+      assert_equal "recExp1", endorsement.expense_record_id
+      assert_equal "recBud1", endorsement.budget_record_id
+      assert_equal "recPer1", endorsement.endorsed_by_person_id
+      assert_equal "recBat1", attempt.reload.batch_record_id
     end
   end
 end

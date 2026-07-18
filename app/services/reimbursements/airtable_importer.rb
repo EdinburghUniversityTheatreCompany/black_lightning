@@ -32,7 +32,15 @@ module Reimbursements
       @financial_year_label = financial_year_label
     end
 
-    def import!
+    # remap_native_tables rewrites the MySQL-native tables that key on
+    # Airtable string ids (owner_endorsements, batch_attempts) to the new
+    # numeric ids. That MUST stay false for rehearsal runs: while
+    # REIMBURSEMENTS_BACKEND is still "airtable", the live endorsement gate
+    # matches those columns against "rec…" ids — a rehearsal remap would make
+    # every endorsed claim read as un-endorsed until the flip. Pass true only
+    # on the final pre-flip run (REMAP=1 on the rake task); unremap! reverses
+    # it if the flip is rolled back.
+    def import!(remap_native_tables: false)
       guard_duplicate_person_emails!
       @year = FinancialYear.find_or_create_by!(label: @financial_year_label) do |y|
         y.active = true unless FinancialYear.active.exists?
@@ -45,10 +53,31 @@ module Reimbursements
       import_expenses
       import_eusa_actuals
       backfill_users
-      remap_owner_endorsements
-      remap_batch_attempts
+      if remap_native_tables
+        remap_owner_endorsements
+        remap_batch_attempts
+      end
       verify!
       @io.puts "Import verified."
+    end
+
+    # Rollback companion to the final import's remap: rewrites the numeric
+    # ids in owner_endorsements/batch_attempts back to their Airtable ids so
+    # the endorsement gate works again on the Airtable backend.
+    def unremap!
+      OwnerEndorsement.find_each do |endorsement|
+        updates = {}
+        unremap_value(endorsement.expense_record_id, expense_airtable_ids) { |v| updates[:expense_record_id] = v }
+        unremap_value(endorsement.budget_record_id, budget_airtable_ids) { |v| updates[:budget_record_id] = v }
+        unremap_value(endorsement.endorsed_by_person_id, person_airtable_ids) { |v| updates[:endorsed_by_person_id] = v }
+        endorsement.update_columns(updates) if updates.any? # rubocop:disable Rails/SkipsModelValidations
+      end
+      BatchAttempt.where.not(batch_record_id: [ nil, "" ]).find_each do |attempt|
+        unremap_value(attempt.batch_record_id, batch_airtable_ids) do |v|
+          attempt.update_columns(batch_record_id: v) # rubocop:disable Rails/SkipsModelValidations
+        end
+      end
+      @io.puts "Native tables unremapped to Airtable ids."
     end
 
     private
@@ -120,6 +149,13 @@ module Reimbursements
 
     def import_batches
       @store.batches.each do |b|
+        # The MySQL Batch derives eusa_draft_created from draft_message_id ||
+        # date_sent; a dated Airtable batch whose flag is genuinely false
+        # would silently read as drafted after import, so surface it.
+        if b.date_sent.present? && !b.eusa_draft_created
+          @io.puts "WARN: batch #{b.record_id} has date_sent but eusa_draft_created=false — " \
+                   "it will read as drafted on MySQL; check it in Airtable"
+        end
         row = Batch.find_or_initialize_by(airtable_record_id: b.record_id)
         row.update!(name: b.name, date_sent: b.date_sent,
                     sharepoint_backup_url: b.sharepoint_backup_url,
@@ -197,6 +233,8 @@ module Reimbursements
       User.where.not(airtable_person_id: [ nil, "" ]).find_each do |user|
         person_id = person_ids[user.airtable_person_id]
         @io.puts "WARN: user #{user.id} airtable_person_id #{user.airtable_person_id} has no Person; clearing" if person_id.nil?
+        next if user.reimbursements_person_id == person_id
+
         user.update_columns(reimbursements_person_id: person_id) # rubocop:disable Rails/SkipsModelValidations
       end
     end
@@ -235,6 +273,21 @@ module Reimbursements
       yield mapped
     end
 
+    # Inverse of remap_value: numeric ids back to Airtable ids. Already-
+    # Airtable (or blank) values pass; a numeric id with no imported row is
+    # left alone with a warning — deleting the reference would lose data.
+    def unremap_value(value, map)
+      return unless value.to_s.match?(/\A\d+\z/)
+
+      mapped = map[value.to_i]
+      if mapped.nil?
+        @io.puts "WARN: no Airtable id for #{value} (row created after the flip?); left as-is"
+        return
+      end
+
+      yield mapped
+    end
+
     def expense_record_ids
       @expense_record_ids ||= Expense.where.not(airtable_record_id: nil)
                                      .pluck(:airtable_record_id, :id)
@@ -253,6 +306,22 @@ module Reimbursements
       @batch_ids ||= Batch.where.not(airtable_record_id: nil).pluck(:airtable_record_id, :id).to_h
     end
 
+    def expense_airtable_ids
+      @expense_airtable_ids ||= Expense.where.not(airtable_record_id: nil).pluck(:id, :airtable_record_id).to_h
+    end
+
+    def person_airtable_ids
+      @person_airtable_ids ||= Person.where.not(airtable_record_id: nil).pluck(:id, :airtable_record_id).to_h
+    end
+
+    def budget_airtable_ids
+      @budget_airtable_ids ||= Budget.where.not(airtable_record_id: nil).pluck(:id, :airtable_record_id).to_h
+    end
+
+    def batch_airtable_ids
+      @batch_airtable_ids ||= Batch.where.not(airtable_record_id: nil).pluck(:id, :airtable_record_id).to_h
+    end
+
     # Row counts, an expenses amount+status checksum and receipt presence
     # must all match before the flip.
     def verify!
@@ -266,10 +335,13 @@ module Reimbursements
       db = checksum(Expense.where.not(airtable_record_id: nil).pluck(:airtable_record_id, :amount, :status))
       raise ImportError, "expense amount/status checksum mismatch" unless air == db
 
+      attached_counts = ActiveStorage::Attachment
+                        .where(record_type: "Reimbursements::Expense", name: "receipt_files")
+                        .group(:record_id).count
       @store.expenses.each do |e|
         next if e.receipts.empty?
 
-        attached = Expense.find_by!(airtable_record_id: e.record_id).receipt_files.count
+        attached = attached_counts.fetch(expense_record_ids.fetch(e.record_id).to_i, 0)
         raise ImportError, "expense #{e.record_id}: #{e.receipts.size} receipts in Airtable, #{attached} attached" if attached < e.receipts.size
       end
     end

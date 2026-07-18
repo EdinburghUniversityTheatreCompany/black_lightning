@@ -27,25 +27,34 @@ env var is the cutover; flipping it back is the rollback.
    auth): `kamal app exec -i --reuse "bin/rails reimbursements:import_airtable"`.
    Optionally `YEAR_LABEL="Fringe 2026"`. Expect `Import verified.` — it fails loudly on
    duplicate People emails (merge them in Airtable and re-run) or any count/checksum
-   mismatch. Costs ~6 Airtable list calls per run.
+   mismatch. Costs ~6 Airtable list calls per run. **Never pass `REMAP=1` on a
+   rehearsal**: it rewrites `owner_endorsements`/`batch_attempts` from Airtable ids to
+   the numeric MySQL ids, and the endorsement gate on the still-live Airtable backend
+   matches the Airtable ids — a rehearsal remap would make every endorsed claim read
+   as un-endorsed until the flip.
 3. **Spot-check in `kamal console`:** `Reimbursements::Expense.count`,
    `Reimbursements::Expense.joins(:receipt_files_attachments).distinct.count`,
    a couple of `Budget` rollups (`committed_amount`, `remaining`) against the Airtable
    base, and `User.where.not(reimbursements_person_id: nil).count`.
 4. **Final import + flip in a quiet moment** (no batch mid-build, poll job idle):
-   re-run the import (cheap, idempotent — picks up rows created since), then set
-   `REIMBURSEMENTS_BACKEND=database` in the deploy env and redeploy/restart. From this
-   moment writes land in MySQL only.
+   re-run the import **with `REMAP=1`** (cheap, idempotent — picks up rows created
+   since, and rewrites `owner_endorsements`/`batch_attempts` onto the numeric ids the
+   MySQL backend matches), then set `REIMBURSEMENTS_BACKEND=database` in the deploy env
+   and redeploy/restart. From this moment writes land in MySQL only.
 5. **Smoke-test the flip:**
    - portal index renders; a test expense submits and appears in
      `Reimbursements::Expense.last` with a receipt attached;
    - budgets screen shows sane figures (committed/paid/forecast/remaining);
    - send a test receipt email → poll creates a draft with `source_message_id` set;
    - Review approves it; log shows zero Airtable calls.
-6. **Rollback (only before meaningful MySQL-only writes):** unset the env var and
-   restart — the app reads Airtable again instantly. Any expenses/receipts created on
-   MySQL during the window must then be re-entered in Airtable by hand, so keep the
-   watch window short and attentive.
+6. **Rollback (only before meaningful MySQL-only writes):** unset the env var, run
+   `bin/rails reimbursements:unremap_native_tables` (restores the Airtable ids in
+   `owner_endorsements`/`batch_attempts` so the endorsement gate matches again), and
+   restart — the app reads Airtable again. Any expenses/receipts created on MySQL
+   during the window must then be re-entered in Airtable by hand, so keep the watch
+   window short and attentive. A user who first linked their portal account during
+   the window keeps working after rollback only if their payee was imported (the DB
+   backend refreshes the legacy Airtable link alongside the FK when it can).
 7. **Afterwards:** run a full cycle (submit → approve → Build Batch → reconcile) on
    MySQL. Once green, make the Airtable base read-only, then raise the cleanup PR:
    delete the Airtable client/config/mapper/POROs + PAT + `Store` (renaming

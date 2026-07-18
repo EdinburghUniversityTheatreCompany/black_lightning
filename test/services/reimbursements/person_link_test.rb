@@ -29,6 +29,14 @@ module Reimbursements
         @people << person
         person
       end
+
+      def stored_person_link(user)
+        user.airtable_person_id
+      end
+
+      def remember_person_link!(user, person)
+        user.update_column(:airtable_person_id, person.record_id) # rubocop:disable Rails/SkipsModelValidations
+      end
     end
 
     def pat(record_id: "recPer1")
@@ -84,7 +92,7 @@ module Reimbursements
     test "database backend resolves and persists the FK link" do
       user = users(:user)
       person = Reimbursements::Person.create!(name: "Pat", email: user.email)
-      link = PersonLink.new(store: DatabaseStore.new, backend: "database")
+      link = PersonLink.new(store: DatabaseStore.new)
 
       assert_equal person.id, link.person_for(user).id
       assert_equal person.id, user.reload.reimbursements_person_id
@@ -96,13 +104,13 @@ module Reimbursements
       Reimbursements::Person.create!(name: "Email Match", email: user.email)
       user.update_column(:reimbursements_person_id, linked.id)
 
-      link = PersonLink.new(store: DatabaseStore.new, backend: "database")
+      link = PersonLink.new(store: DatabaseStore.new)
       assert_equal linked.id, link.person_for(user).id
     end
 
     test "database backend creates the payee on first submission" do
       user = users(:user)
-      link = PersonLink.new(store: DatabaseStore.new, backend: "database")
+      link = PersonLink.new(store: DatabaseStore.new)
 
       person = link.ensure_person!(user)
       assert_equal user.email, person.email

@@ -143,6 +143,22 @@ module Reimbursements
     # creates and skips a message it has already seen.
     def supports_message_idempotency? = true
 
+    # PersonLink's stored user->payee link: the real FK on this backend. The
+    # legacy Airtable link is refreshed alongside it (when the payee was
+    # imported and still carries one) so a rollback flip of
+    # REIMBURSEMENTS_BACKEND still finds the user's People record.
+    # update_columns deliberately skips validations/callbacks so legacy user
+    # records that no longer validate can still use the portal.
+    def stored_person_link(user)
+      user.reimbursements_person_id&.to_s
+    end
+
+    def remember_person_link!(user, person)
+      columns = { reimbursements_person_id: person.id }
+      columns[:airtable_person_id] = person.airtable_record_id if person.airtable_record_id.present?
+      user.update_columns(columns) # rubocop:disable Rails/SkipsModelValidations
+    end
+
     def expense_for_source_message(message_id)
       return nil if message_id.blank?
 
