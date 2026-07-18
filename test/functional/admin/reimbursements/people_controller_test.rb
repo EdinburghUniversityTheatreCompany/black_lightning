@@ -25,42 +25,24 @@ module Admin
       users(:member).add_role("Business Manager")
       @user = users(:member)
 
-      @valid_person = airtable_person_record(id: "recValid", name: "Valid Vic",
-                                             email: "vic@example.com", sort_code: "08-99-99",
-                                             account_number: "66374958")
-      @invalid_person = airtable_person_record(id: "recInvalid", name: "Invalid Ivy",
-                                               email: "ivy@example.com", sort_code: "08-99-99",
-                                               account_number: "66374959")
-      @outside_person = airtable_person_record(id: "recOutside", name: "Outside Ophelia",
-                                               email: "ophelia@example.com", sort_code: "99-99-99",
-                                               account_number: "12345678")
-      @missing_person = airtable_person_record(id: "recMissing", name: "Missing Mo",
-                                               email: "mo@example.com")
+      @valid_person = create_reimbursements_person(name: "Valid Vic", email: "vic@example.com",
+                                                   sort_code: "08-99-99", account_number: "66374958")
+      @invalid_person = create_reimbursements_person(name: "Invalid Ivy", email: "ivy@example.com",
+                                                     sort_code: "08-99-99", account_number: "66374959")
+      @outside_person = create_reimbursements_person(name: "Outside Ophelia", email: "ophelia@example.com",
+                                                     sort_code: "99-99-99", account_number: "12345678")
+      @missing_person = create_reimbursements_person(name: "Missing Mo", email: "mo@example.com")
 
       @checker = FakeChecker.new(
         "66374958" => MC::VALID,
         "66374959" => MC::INVALID,
         "12345678" => MC::OUTSIDE_SPEC
       )
-
-      rebuild_store(people: [ @valid_person, @invalid_person, @outside_person, @missing_person ])
       PeopleController.checker_builder = -> { @checker }
     end
 
     teardown do
-      BaseController.store_builder = -> { ::Reimbursements::Store.new }
       PeopleController.checker_builder = -> { MC.default_checker }
-    end
-
-    def rebuild_store(people:)
-      @store, @client = build_fake_store(people: people)
-      BaseController.store_builder = -> { @store }
-    end
-
-    def person_record_with_notes(id:, notes:, **attrs)
-      record = airtable_person_record(id: id, **attrs)
-      record["fields"][FIELD_IDS[:people][:notes]] = notes
-      record
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -101,15 +83,14 @@ module Admin
     end
 
     test "shows a duplicate banner when a name or email clashes" do
-      dup_a = airtable_person_record(id: "recDupA", name: "Sam Same", email: "sam@example.com")
-      dup_b = airtable_person_record(id: "recDupB", name: "Sam Same", email: "different@example.com")
-      rebuild_store(people: [ dup_a, dup_b, @missing_person ])
+      dup_a = create_reimbursements_person(name: "Sam Same", email: "sam@example.com")
+      dup_b = create_reimbursements_person(name: "Sam Same", email: "different@example.com")
       sign_in @user
 
       get :index
 
       assert_response :success
-      assert_equal %w[recDupA recDupB], assigns(:duplicates).map(&:record_id)
+      assert_equal [ dup_a, dup_b ].map(&:record_id).sort, assigns(:duplicates).map(&:record_id).sort
       assert_includes response.body, "Duplicate name or email detected"
     end
 
@@ -135,81 +116,82 @@ module Admin
     # --- Update: bank details ---------------------------------------------
 
     test "saving bank details writes formatted values and an audit note" do
-      rebuild_store(people: [ @missing_person ])
       sign_in @user
 
-      patch :update, params: { id: "recMissing", sort_code: "089999", account_number: "66374958" }
+      patch :update, params: { id: @missing_person.record_id,
+                               sort_code: "089999", account_number: "66374958" }
 
       assert_redirected_to admin_reimbursements_people_path
-      table, record_id, fields = @client.updated.sole
-      assert_equal :people, table
-      assert_equal "recMissing", record_id
-      assert_equal "08-99-99", fields[FIELD_IDS[:people][:sort_code]]
-      assert_equal "66374958", fields[FIELD_IDS[:people][:account_number]]
-      assert_includes fields[FIELD_IDS[:people][:notes]],
+      details = @missing_person.reload.payment_details
+      assert_equal "08-99-99", details.sort_code
+      assert_equal "66374958", details.account_number
+      assert_includes details.notes,
                       "Bank details updated: sort code 08-99-99, account 66374958"
     end
 
     test "the audit line is appended to existing notes, preserving them" do
-      person = person_record_with_notes(id: "recNotes", notes: "Earlier note.",
-                                        name: "Nora Notes", email: "nora@example.com")
-      rebuild_store(people: [ person ])
+      person = create_reimbursements_person(name: "Nora Notes", email: "nora@example.com",
+                                            notes: "Earlier note.")
       sign_in @user
 
-      patch :update, params: { id: "recNotes", sort_code: "089999", account_number: "66374958" }
+      patch :update, params: { id: person.record_id, sort_code: "089999", account_number: "66374958" }
 
-      notes = @client.updated.sole.last[FIELD_IDS[:people][:notes]]
+      notes = person.reload.payment_details.notes
       assert notes.start_with?("Earlier note.\n[")
       assert_includes notes, "sort code 08-99-99, account 66374958"
     end
 
     test "unchanged bank details are not rewritten" do
       sign_in @user
+      before = @valid_person.payment_details.updated_at
 
-      patch :update, params: { id: "recValid", sort_code: "08-99-99", account_number: "66374958" }
+      patch :update, params: { id: @valid_person.record_id,
+                               sort_code: "08-99-99", account_number: "66374958" }
 
       assert_redirected_to admin_reimbursements_people_path
       assert_equal "No changes to save.", flash[:notice]
-      assert_empty @client.updated
+      assert_equal before, @valid_person.reload.payment_details.updated_at
     end
 
     test "a differently-formatted but identical sort code isn't treated as a change" do
-      # A record edited directly in Airtable could store the sort code without
-      # dashes ("089999") — the same digits as the canonical "08-99-99" this
-      # form always submits. bank_details_changed? must normalise both sides
-      # the same way the account-number check right beside it already does.
-      rebuild_store(people: [ airtable_person_record(id: "recValid", name: "Valid Vic",
-                                                     email: "vic@example.com", sort_code: "089999",
-                                                     account_number: "66374958") ])
+      # A record edited directly could store the sort code without dashes
+      # ("089999") — the same digits as the canonical "08-99-99" this form
+      # always submits. bank_details_changed? must normalise both sides the
+      # same way the account-number check right beside it already does.
+      @valid_person.payment_details.update!(sort_code: "089999")
       sign_in @user
 
-      patch :update, params: { id: "recValid", sort_code: "08-99-99", account_number: "66374958" }
+      patch :update, params: { id: @valid_person.record_id,
+                               sort_code: "08-99-99", account_number: "66374958" }
 
       assert_redirected_to admin_reimbursements_people_path
       assert_equal "No changes to save.", flash[:notice]
-      assert_empty @client.updated
+      assert_equal "089999", @valid_person.reload.payment_details.sort_code,
+                   "the identical-digits submission must not rewrite the record"
     end
 
     test "invalid bank details re-render the form without a write, preserving the typed values" do
       sign_in @user
+      missing_id = @missing_person.record_id
+      valid_id = @valid_person.record_id
 
-      patch :update, params: { id: "recMissing", sort_code: "08", account_number: "1" }
+      patch :update, params: { id: missing_id, sort_code: "08", account_number: "1" }
 
       # Re-render (not redirect) so the operator's typed values and the open
       # edit section survive the validation failure.
       assert_response :unprocessable_entity
-      assert_empty @client.updated
+      assert_nil @missing_person.reload.payment_details
       assert_match(/Sort code/, response.body)
       # This person's edit section stays expanded with the typed values intact.
-      assert_select "details[open] input#sort_code_recMissing[value=?]", "08"
-      assert_select "details[open] input#account_number_recMissing[value=?]", "1"
+      assert_select "details[open] input#sort_code_#{missing_id}[value=?]", "08"
+      assert_select "details[open] input#account_number_#{missing_id}[value=?]", "1"
       # Other people's sections stay collapsed.
-      assert_select "details[open] input#sort_code_recValid", false
+      assert_select "details[open] input#sort_code_#{valid_id}", false
       # The error is a role="alert" region, wired to both fields via
       # aria-describedby, and both fields are flagged aria-invalid.
-      assert_select "p[role=alert]#bank_details_error_recMissing"
-      assert_select "input#sort_code_recMissing[aria-describedby=bank_details_error_recMissing][aria-invalid=true]"
-      assert_select "input#account_number_recMissing[aria-describedby=bank_details_error_recMissing][aria-invalid=true]"
+      assert_select "p[role=alert]#bank_details_error_#{missing_id}"
+      assert_select "input#sort_code_#{missing_id}[aria-describedby=bank_details_error_#{missing_id}][aria-invalid=true]"
+      assert_select "input#account_number_#{missing_id}[aria-describedby=bank_details_error_#{missing_id}][aria-invalid=true]"
     end
 
     # --- Update: mark verified --------------------------------------------
@@ -217,70 +199,61 @@ module Admin
     test "marking verified writes the verified flag" do
       sign_in @user
 
-      patch :update, params: { id: "recValid", verify: "1" }
+      patch :update, params: { id: @valid_person.record_id, verify: "1" }
 
       assert_redirected_to admin_reimbursements_people_path
-      table, record_id, fields = @client.updated.sole
-      assert_equal :people, table
-      assert_equal "recValid", record_id
-      assert fields[FIELD_IDS[:people][:verified]]
+      assert @valid_person.reload.verified?
     end
 
     test "cannot verify a person without bank details" do
       sign_in @user
 
-      patch :update, params: { id: "recMissing", verify: "1" }
+      patch :update, params: { id: @missing_person.record_id, verify: "1" }
 
       assert_redirected_to admin_reimbursements_people_path
       assert_match(/no bank details/, flash[:alert])
-      assert_empty @client.updated
+      assert_not @missing_person.reload.verified?
     end
 
     test "cannot verify a person whose bank details fail the modulus check" do
       sign_in @user
 
-      patch :update, params: { id: "recInvalid", verify: "1" }
+      patch :update, params: { id: @invalid_person.record_id, verify: "1" }
 
       assert_redirected_to admin_reimbursements_people_path
       assert_match(/fail the modulus check/, flash[:alert])
-      assert_empty @client.updated
+      assert_not @invalid_person.reload.verified?
     end
 
     test "can verify a person whose bank details are outside spec (advisory, not a hard block)" do
       sign_in @user
 
-      patch :update, params: { id: "recOutside", verify: "1" }
+      patch :update, params: { id: @outside_person.record_id, verify: "1" }
 
       assert_redirected_to admin_reimbursements_people_path
-      table, record_id, fields = @client.updated.sole
-      assert_equal :people, table
-      assert_equal "recOutside", record_id
-      assert fields[FIELD_IDS[:people][:verified]]
+      assert @outside_person.reload.verified?
     end
 
     test "editing bank details resets verified to false" do
-      verified_person = airtable_person_record(id: "recVerified", name: "Vera Verified",
-                                                email: "vera@example.com", sort_code: "08-99-99",
-                                                account_number: "66374958", verified: true)
-      rebuild_store(people: [ verified_person ])
+      verified_person = create_reimbursements_person(name: "Vera Verified", email: "vera@example.com",
+                                                     sort_code: "08-99-99", account_number: "66374958",
+                                                     verified: true)
       sign_in @user
 
-      patch :update, params: { id: "recVerified", sort_code: "20-20-20", account_number: "50502366" }
+      patch :update, params: { id: verified_person.record_id,
+                               sort_code: "20-20-20", account_number: "50502366" }
 
       assert_redirected_to admin_reimbursements_people_path
-      _table, _record_id, fields = @client.updated.sole
-      assert fields.key?(FIELD_IDS[:people][:verified]), "verified must be explicitly written, not just omitted"
-      assert_not fields[FIELD_IDS[:people][:verified]],
+      assert_not verified_person.reload.verified?,
                  "a bank-detail correction must not leave a stale Verified badge standing"
     end
 
     test "updating an unknown person 404s" do
       sign_in @user
 
-      patch :update, params: { id: "recNope", verify: "1" }
+      patch :update, params: { id: "999999", verify: "1" }
 
       assert_response :not_found
-      assert_empty @client.updated
     end
   end
   end

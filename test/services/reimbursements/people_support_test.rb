@@ -4,6 +4,10 @@ module Reimbursements
   # Ported from bedlam-bacs tests/test_people_helpers.py. Flags People records
   # that share a name or email (case-insensitive) with another record.
   class PeopleSupportTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Person = Airtable::Person
+
     def person(record_id, name, email)
       Person.new(record_id: record_id, name: name, email: email)
     end

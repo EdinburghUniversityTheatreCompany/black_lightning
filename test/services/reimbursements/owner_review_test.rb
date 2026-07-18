@@ -2,6 +2,12 @@ require "test_helper"
 
 module Reimbursements
   class OwnerReviewTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Person = Airtable::Person
+    Budget = Airtable::Budget
+    Expense = Airtable::Expense
+
     def person(id: "recPer1", name: "Alice", email: "alice@example.com")
       Person.new(record_id: id, name: name, email: email)
     end

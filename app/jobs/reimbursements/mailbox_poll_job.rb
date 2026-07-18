@@ -172,6 +172,14 @@ module Reimbursements
     end
 
     def create_expense(message, person, receipts)
+      # Idempotency backstop (database backend): if a previous cycle created
+      # the expense but died before marking the message read, don't mint a
+      # duplicate — just finish the bookkeeping on the message.
+      if (existing = store.expense_for_source_message(message.id))
+        handle_already_processed(message, existing, receipts)
+        return
+      end
+
       extraction = extractor.extract(
         receipts: receipts,
         budgets: store.active_budgets,
@@ -206,6 +214,39 @@ module Reimbursements
       end
       best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
       best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
+    end
+
+    # The expense already exists from an earlier cycle (stamped with this
+    # message's id), but that cycle may have died anywhere after the create —
+    # before the attach, the reply, or the move. Finish whatever is missing:
+    # attach any receipts not yet on the expense, and reply only when we did
+    # (an untouched attach set means the earlier cycle got that far, and its
+    # reply most likely went out — re-replying would double-email the sender).
+    def handle_already_processed(message, expense, receipts)
+      Rails.logger.info("Reimbursements mailbox: message #{message.id} already created expense " \
+                        "#{expense.record_id}; finishing without a duplicate")
+      mark_read_or_flag_duplicate(message, expense) or return
+
+      missing = missing_receipts(expense, receipts)
+      attached = missing.empty? || best_effort(message, expense, "receipt attach") do
+        missing.each do |receipt|
+          store.attach_receipt!(expense.record_id, filename: receipt[:filename],
+                                                   content_type: receipt[:content_type],
+                                                   bytes: receipt[:bytes])
+        end
+      end
+      if missing.any? && attached
+        best_effort(message, expense, "reply") { mailbox.reply(message.id, html: created_html(expense)) }
+      end
+      best_effort(message, expense, "move to Processed") { mailbox.move(message.id, :processed) } if attached
+    end
+
+    # Receipts from the message not yet attached (matched by filename + byte
+    # size, like the importer's re-run skip). Only ever runs on the database
+    # backend, where the expense is an AR record with receipt_files.
+    def missing_receipts(expense, receipts)
+      existing = expense.receipt_files.map { |file| [ file.filename.to_s, file.byte_size ] }
+      receipts.reject { |receipt| existing.include?([ receipt[:filename], receipt[:bytes].bytesize ]) }
     end
 
     # Marks the message read. Returns true on success. On failure the expense
@@ -249,6 +290,9 @@ module Reimbursements
     def expense_attrs(message, person, extraction)
       {
         person_record_id: person.record_id,
+        # The idempotency stamp — only the database backend has a column for
+        # it (Airtable's field writer would reject the unknown key).
+        source_message_id: (message.id if store.supports_message_idempotency?),
         status: Status::DRAFT,
         description: extraction.suggested_description || message.subject.presence,
         amount: extraction.total_amount,

@@ -60,7 +60,8 @@ module Reimbursements
     # fetcher). Download the bytes ourselves right before the check instead.
     def attachments(receipts)
       receipts.map do |receipt|
-        RubyLLM::Attachment.new(StringIO.new(download(receipt.url)), filename: receipt.filename)
+        content = receipt.bytes || download(receipt.url)
+        RubyLLM::Attachment.new(StringIO.new(content), filename: receipt.filename)
       end
     end
 

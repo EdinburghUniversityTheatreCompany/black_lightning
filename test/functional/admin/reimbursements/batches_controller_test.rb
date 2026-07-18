@@ -6,9 +6,6 @@ module Admin
       include ReimbursementsTestHelpers
       include ActiveJob::TestHelper
 
-      BATCH_FIDS = FIELD_IDS[:batches]
-      EXP_FIDS = FIELD_IDS[:expenses]
-
       setup do
         finance = Role.create!(name: "Business Manager")
         finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
@@ -23,7 +20,6 @@ module Admin
       end
 
       teardown do
-        Admin::Reimbursements::BaseController.store_builder = -> { ::Reimbursements::Store.new }
         Admin::Reimbursements::BatchesController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
@@ -33,36 +29,32 @@ module Admin
         @graph
       end
 
-      def use_store(expenses: [], people: [], budgets: [], batches: [])
-        @store, @client = build_fake_store(expenses: expenses, people: people, budgets: budgets,
-                                           batches: batches)
-        Admin::Reimbursements::BaseController.store_builder = -> { @store }
-      end
-
       def one_approved
-        people = [ airtable_person_record(id: "recAlice", name: "Alice Producer", email: "alice@example.com",
-                                          sort_code: "08-99-99", account_number: "66374958") ]
-        budgets = [ airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000") ]
-        expenses = [ airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: "Approved",
-                                             auto_number: 11) ]
-        use_store(expenses: expenses, people: people, budgets: budgets)
+        alice = create_reimbursements_person(name: "Alice Producer", email: "alice@example.com",
+                                             sort_code: "08-99-99", account_number: "66374958")
+        budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
+        create_reimbursements_expense(person: alice, budget: budget, auto_number: 11,
+                                      status: ::Reimbursements::Status::APPROVED)
       end
 
-      def linked_expense(status:)
-        airtable_expense_record(id: "recExpA", payee_id: "recAlice", status: status, auto_number: 11,
-                                overrides: { EXP_FIDS[:batch] => [ "recBat1" ] })
+      # A batch whose one linked expense is in +status+ — mirrors the old
+      # linked_expense fake. The batch derives eusa_draft_created from
+      # date_sent (legacy-sent semantics) unless draft_message_id is given.
+      def batch_with_expense(status:, **batch_attrs)
+        @batch = create_reimbursements_batch(**batch_attrs)
+        @expense = create_reimbursements_expense(person: create_reimbursements_person,
+                                                 batch: @batch, auto_number: 11, status: status)
+        @batch
       end
 
       # --- Auth gating -------------------------------------------------------
 
       test "requires sign-in" do
-        use_store
         get :new
         assert_redirected_to new_user_session_path
       end
 
       test "denies members without the finance permission" do
-        use_store
         sign_in users(:committee)
         get :index
         assert_response :forbidden
@@ -95,7 +87,7 @@ module Admin
       # --- Build Batch (create) ---------------------------------------------
 
       test "create enqueues a background build (serialised per cost centre) and redirects to History" do
-        one_approved
+        expense = one_approved
         sign_in @user
 
         assert_enqueued_with(job: ::Reimbursements::BuildBatchJob) do
@@ -106,8 +98,8 @@ module Admin
         assert_redirected_to admin_reimbursements_batches_path
         assert_match(/building/i, flash[:notice])
         # Nothing is processed inline in the request: no batch, no submit.
-        assert_equal 0, @client.created.count { |table, _| table == :batches }
-        assert_equal 0, @client.updated.count { |_, _, fields| fields[EXP_FIDS[:status]] == "Submitted" }
+        assert_equal 0, ::Reimbursements::Batch.count
+        assert_equal ::Reimbursements::Status::APPROVED, expense.reload.status
         # History's in-app trace exists from the moment of the click.
         attempt = ::Reimbursements::BatchAttempt.recent_first.first
         assert attempt.building?
@@ -116,7 +108,6 @@ module Admin
       end
 
       test "index shows an in-flight build and a failed build's errors" do
-        use_store(batches: [], expenses: [])
         ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
                                                bacs_date: Date.new(2026, 5, 13))
         ::Reimbursements::BatchAttempt.create!(cost_centre: ::Reimbursements::CostCentre.default,
@@ -133,7 +124,6 @@ module Admin
       end
 
       test "index flags a stale build that never reported back" do
-        use_store(batches: [], expenses: [])
         stale = ::Reimbursements::BatchAttempt.create!(
           cost_centre: ::Reimbursements::CostCentre.default, bacs_date: Date.new(2026, 5, 13)
         )
@@ -196,26 +186,23 @@ module Admin
       # --- History (index / show) -------------------------------------------
 
       test "index lists past batches with their totals" do
-        use_store(batches: [ airtable_batch_record ], expenses: [ linked_expense(status: "Submitted") ],
-                  people: [], budgets: [])
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
         sign_in @user
 
         get :index
 
         assert_response :success
-        assert_includes response.body, "BACS 2026-05-13"
+        assert_includes response.body, "2026-05-13"
         assert_includes response.body, "Reopen for rebuild"
         assert_includes response.body, "£12.50", "the batch's total (its one expense's amount) must render"
       end
 
       test "index badges a batch whose EUSA draft is missing vs one that succeeded" do
-        use_store(
-          batches: [
-            airtable_batch_record(id: "recBat1", name: "Good batch", eusa_draft_created: true),
-            airtable_batch_record(id: "recBat2", name: "Broken batch", eusa_draft_created: nil)
-          ],
-          expenses: [], people: [], budgets: []
-        )
+        # Drafted: a stored draft message id. Broken: no id AND no date_sent —
+        # the derived predicate reads that as "no EUSA draft".
+        create_reimbursements_batch(name: "Good batch", date_sent: Date.new(2026, 5, 13),
+                                    draft_message_id: "AAMkGood==")
+        create_reimbursements_batch(name: "Broken batch", date_sent: nil)
         sign_in @user
 
         get :index
@@ -226,24 +213,21 @@ module Admin
       end
 
       test "show renders one batch and its linked expenses" do
-        use_store(batches: [ airtable_batch_record ], expenses: [ linked_expense(status: "Submitted") ])
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
         sign_in @user
 
-        get :show, params: { id: "recBat1" }
+        get :show, params: { id: @batch.record_id }
 
         assert_response :success
         assert_includes response.body, "Submitted"
       end
 
       test "show badges the draft and producer-notification states, warning on a missing one" do
-        use_store(
-          batches: [ airtable_batch_record(id: "recBat1", eusa_draft_created: true,
-                                           producer_notifications_sent: nil) ],
-          expenses: [ linked_expense(status: "Submitted") ]
-        )
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
+                           draft_message_id: "AAMkdraft==", producer_notifications_sent: false)
         sign_in @user
 
-        get :show, params: { id: "recBat1" }
+        get :show, params: { id: @batch.record_id }
 
         assert_response :success
         # EUSA draft succeeded (green "Yes"), producers were NOT notified (amber warning).
@@ -251,10 +235,9 @@ module Admin
       end
 
       test "show 404s for an unknown batch id" do
-        use_store(batches: [], expenses: [])
         sign_in @user
 
-        get :show, params: { id: "recGone" }
+        get :show, params: { id: "999999" }
 
         assert_response :not_found
       end
@@ -262,35 +245,35 @@ module Admin
       # --- Reopen ------------------------------------------------------------
 
       test "reopen 404s for an unknown batch id" do
-        use_store(batches: [], expenses: [])
         sign_in @user
 
-        post :reopen, params: { id: "recGone" }
+        post :reopen, params: { id: "999999" }
 
         assert_response :not_found
       end
 
       test "reopen reverts the linked expenses and deletes the batch" do
-        # No stored draft id (the default) — nothing to confirm either way, so
-        # reopen proceeds and falls back to the manual-deletion warning.
-        use_store(batches: [ airtable_batch_record ], expenses: [ linked_expense(status: "Submitted") ])
+        # No stored draft id — nothing to confirm either way, so reopen
+        # proceeds and falls back to the manual-deletion warning.
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
         sign_in @user
 
-        post :reopen, params: { id: "recBat1" }
+        post :reopen, params: { id: @batch.record_id }
 
         assert_redirected_to admin_reimbursements_batches_path
-        assert(@client.updated.any? { |_, _, fields| fields[EXP_FIDS[:status]] == "Approved" })
-        assert_equal [ [ :batches, "recBat1" ] ], @client.deleted
+        assert_equal ::Reimbursements::Status::APPROVED, @expense.reload.status
+        assert_nil @expense.batch
+        assert_not ::Reimbursements::Batch.exists?(@batch.id)
         assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
       end
 
       test "reopen deletes the stale EUSA draft via Graph using the send mailbox and stored id" do
-        use_store(batches: [ airtable_batch_record(draft_message_id: "AAMkdraft==") ],
-                  expenses: [ linked_expense(status: "Submitted") ])
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
+                           draft_message_id: "AAMkdraft==")
         graph = use_graph
         sign_in @user
 
-        post :reopen, params: { id: "recBat1" }
+        post :reopen, params: { id: @batch.record_id }
 
         assert_redirected_to admin_reimbursements_batches_path
         deleted = graph.deleted_messages.sole
@@ -300,46 +283,47 @@ module Admin
       end
 
       test "reopen still succeeds when deleting the stale draft fails" do
-        use_store(batches: [ airtable_batch_record(draft_message_id: "AAMkdraft==") ],
-                  expenses: [ linked_expense(status: "Submitted") ])
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
+                           draft_message_id: "AAMkdraft==")
         graph = use_graph
         graph.fail_delete_message = true
         sign_in @user
 
-        post :reopen, params: { id: "recBat1" }
+        post :reopen, params: { id: @batch.record_id }
 
         # The revert + batch delete still happen; only a fallback warning is added.
         assert_redirected_to admin_reimbursements_batches_path
-        assert(@client.updated.any? { |_, _, fields| fields[EXP_FIDS[:status]] == "Approved" })
-        assert_equal [ [ :batches, "recBat1" ] ], @client.deleted
+        assert_equal ::Reimbursements::Status::APPROVED, @expense.reload.status
+        assert_not ::Reimbursements::Batch.exists?(@batch.id)
         assert_match(/delete the old EUSA draft.*manually/i, flash[:alert])
       end
 
       test "reopen is blocked when the draft can't be confirmed as still unsent" do
-        use_store(batches: [ airtable_batch_record(draft_message_id: "AAMkdraft==") ],
-                  expenses: [ linked_expense(status: "Submitted") ])
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
+                           draft_message_id: "AAMkdraft==")
         graph = use_graph
         graph.draft_still_exists = false # already sent, deleted, or Graph couldn't be reached
         sign_in @user
 
-        post :reopen, params: { id: "recBat1" }
+        post :reopen, params: { id: @batch.record_id }
 
         assert_redirected_to admin_reimbursements_batches_path
         assert_match(/could not be confirmed as.*still unsent/i, flash[:alert])
-        assert_empty @client.updated, "must not revert expenses when the draft may already be sent"
-        assert_empty @client.deleted, "must not delete the batch record either"
+        assert_equal ::Reimbursements::Status::SUBMITTED, @expense.reload.status,
+                     "must not revert expenses when the draft may already be sent"
+        assert ::Reimbursements::Batch.exists?(@batch.id), "must not delete the batch record either"
         assert_empty graph.deleted_messages, "must never attempt to delete an unconfirmed draft"
       end
 
       test "reopen is blocked when any linked expense is already Paid" do
-        use_store(batches: [ airtable_batch_record ], expenses: [ linked_expense(status: "Paid") ])
+        batch_with_expense(status: ::Reimbursements::Status::PAID)
         sign_in @user
 
-        post :reopen, params: { id: "recBat1" }
+        post :reopen, params: { id: @batch.record_id }
 
         assert_redirected_to admin_reimbursements_batches_path
         assert_match(/already Paid/, flash[:alert])
-        assert_empty @client.deleted
+        assert ::Reimbursements::Batch.exists?(@batch.id)
       end
     end
   end

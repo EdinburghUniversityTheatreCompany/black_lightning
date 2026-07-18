@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_18_100000) do
   create_table "active_storage_attachments", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.bigint "blob_id", null: false
     t.datetime "created_at", precision: nil, null: false
@@ -649,6 +649,60 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
     t.index ["cost_centre_id"], name: "index_reimbursements_batch_attempts_on_cost_centre_id"
   end
 
+  create_table "reimbursements_batches", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "airtable_record_id"
+    t.datetime "created_at", null: false
+    t.date "date_sent"
+    t.string "draft_message_id"
+    t.string "name", default: "", null: false
+    t.text "notes"
+    t.boolean "producer_notifications_sent", default: false, null: false
+    t.text "sharepoint_backup_url"
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_reimbursements_batches_on_airtable_record_id", unique: true
+    t.index ["draft_message_id"], name: "index_reimbursements_batches_on_draft_message_id"
+  end
+
+  create_table "reimbursements_budget_forecasts", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "airtable_record_id"
+    t.decimal "amount", precision: 12, scale: 2
+    t.bigint "budget_id", null: false
+    t.datetime "created_at", null: false
+    t.date "date"
+    t.text "reason"
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_reimbursements_budget_forecasts_on_airtable_record_id", unique: true
+    t.index ["budget_id"], name: "index_reimbursements_budget_forecasts_on_budget_id"
+  end
+
+  create_table "reimbursements_budget_owners", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.bigint "budget_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "person_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["budget_id", "person_id"], name: "index_reimbursements_budget_owners_on_budget_id_and_person_id", unique: true
+    t.index ["budget_id"], name: "index_reimbursements_budget_owners_on_budget_id"
+    t.index ["person_id"], name: "index_reimbursements_budget_owners_on_person_id"
+  end
+
+  create_table "reimbursements_budgets", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "airtable_record_id"
+    t.string "budget_type", default: "Expense", null: false
+    t.bigint "cost_centre_id"
+    t.datetime "created_at", null: false
+    t.bigint "financial_year_id"
+    t.decimal "initial_budget", precision: 12, scale: 2
+    t.string "name", default: "", null: false
+    t.string "nominal_code", default: "", null: false
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_reimbursements_budgets_on_airtable_record_id", unique: true
+    t.index ["cost_centre_id"], name: "index_reimbursements_budgets_on_cost_centre_id"
+    t.index ["financial_year_id"], name: "index_reimbursements_budgets_on_financial_year_id"
+    t.index ["nominal_code"], name: "index_reimbursements_budgets_on_nominal_code"
+  end
+
   create_table "reimbursements_cost_centres", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "eusa_code", null: false
@@ -669,6 +723,86 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
     t.index ["key"], name: "index_reimbursements_cost_centres_on_key", unique: true
   end
 
+  create_table "reimbursements_eusa_actuals", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "airtable_record_id"
+    t.bigint "budget_id"
+    t.string "cost_centre", default: "", null: false
+    t.datetime "created_at", null: false
+    t.decimal "credit", precision: 12, scale: 2
+    t.date "date"
+    t.decimal "debit", precision: 12, scale: 2
+    t.bigint "expense_id"
+    t.bigint "financial_year_id"
+    t.datetime "imported_at"
+    t.text "narrative"
+    t.text "narrative_1"
+    t.decimal "net", precision: 12, scale: 2
+    t.string "nominal_code", default: "", null: false
+    t.string "period"
+    t.string "ref"
+    t.string "source_month", default: "", null: false
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_reimbursements_eusa_actuals_on_airtable_record_id", unique: true
+    t.index ["budget_id"], name: "index_reimbursements_eusa_actuals_on_budget_id"
+    t.index ["expense_id"], name: "index_reimbursements_eusa_actuals_on_expense_id"
+    t.index ["financial_year_id"], name: "index_reimbursements_eusa_actuals_on_financial_year_id"
+    t.index ["nominal_code"], name: "index_reimbursements_eusa_actuals_on_nominal_code"
+    t.index ["period"], name: "index_reimbursements_eusa_actuals_on_period"
+    t.index ["source_month"], name: "index_reimbursements_eusa_actuals_on_source_month"
+  end
+
+  create_table "reimbursements_expenses", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "account_number_override"
+    t.string "ai_check_status", default: "", null: false
+    t.datetime "ai_checked_at"
+    t.text "ai_comment"
+    t.string "airtable_record_id"
+    t.decimal "amount", precision: 12, scale: 2
+    t.decimal "amount_excl_vat", precision: 12, scale: 2
+    t.integer "auto_number"
+    t.bigint "batch_id"
+    t.bigint "budget_id"
+    t.datetime "created_at", null: false
+    t.text "description"
+    t.string "expense_type", default: "Reimbursement", null: false
+    t.bigint "financial_year_id"
+    t.string "nominal_code_override"
+    t.string "payee_name_override"
+    t.date "payment_confirmed_date"
+    t.string "payment_reference"
+    t.bigint "person_id"
+    t.boolean "producer_notified", default: false, null: false
+    t.boolean "receipts_offloaded", default: false, null: false
+    t.datetime "rejection_notified"
+    t.text "rejection_reason"
+    t.text "sharepoint_receipt_urls"
+    t.string "sort_code_override"
+    t.string "source_message_id"
+    t.string "status", default: "Pending", null: false
+    t.datetime "submitted_at"
+    t.date "submitted_to_eusa_date"
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_reimbursements_expenses_on_airtable_record_id", unique: true
+    t.index ["auto_number"], name: "index_reimbursements_expenses_on_auto_number", unique: true
+    t.index ["batch_id"], name: "index_reimbursements_expenses_on_batch_id"
+    t.index ["budget_id"], name: "index_reimbursements_expenses_on_budget_id"
+    t.index ["financial_year_id"], name: "index_reimbursements_expenses_on_financial_year_id"
+    t.index ["person_id"], name: "index_reimbursements_expenses_on_person_id"
+    t.index ["source_message_id"], name: "index_reimbursements_expenses_on_source_message_id", unique: true
+    t.index ["status"], name: "index_reimbursements_expenses_on_status"
+  end
+
+  create_table "reimbursements_financial_years", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.boolean "active", default: false, null: false
+    t.datetime "created_at", null: false
+    t.date "ends_on"
+    t.string "label", null: false
+    t.date "starts_on"
+    t.datetime "updated_at", null: false
+    t.index ["active"], name: "index_reimbursements_financial_years_on_active"
+    t.index ["label"], name: "index_reimbursements_financial_years_on_label", unique: true
+  end
+
   create_table "reimbursements_owner_endorsements", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
     t.string "budget_record_id", null: false
     t.datetime "created_at", null: false
@@ -681,6 +815,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
     t.datetime "updated_at", null: false
     t.index ["expense_record_id"], name: "index_reimbursements_owner_endorsements_on_expense_record_id", unique: true
     t.index ["overridden_by_id"], name: "index_reimbursements_owner_endorsements_on_overridden_by_id"
+  end
+
+  create_table "reimbursements_payment_details", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "account_number", default: "", null: false
+    t.datetime "created_at", null: false
+    t.text "notes"
+    t.bigint "person_id", null: false
+    t.string "sort_code", default: "", null: false
+    t.datetime "updated_at", null: false
+    t.boolean "verified", default: false, null: false
+    t.index ["person_id"], name: "index_reimbursements_payment_details_on_person_id", unique: true
+  end
+
+  create_table "reimbursements_people", charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
+    t.string "airtable_record_id"
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "name", default: "", null: false
+    t.datetime "updated_at", null: false
+    t.index ["airtable_record_id"], name: "index_reimbursements_people_on_airtable_record_id", unique: true
+    t.index ["email"], name: "index_reimbursements_people_on_email", unique: true
   end
 
   create_table "reviews", id: :integer, charset: "utf8mb4", collation: "utf8mb4_unicode_ci", force: :cascade do |t|
@@ -884,6 +1039,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
     t.datetime "profile_completed_at"
     t.string "profile_completion_salt"
     t.boolean "public_profile", default: true
+    t.bigint "reimbursements_person_id"
     t.datetime "remember_created_at", precision: nil
     t.string "remember_token"
     t.datetime "reset_password_sent_at", precision: nil
@@ -897,6 +1053,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["last_name"], name: "index_users_on_last_name"
     t.index ["profile_completed_at"], name: "index_users_on_profile_completed_at"
+    t.index ["reimbursements_person_id"], name: "index_users_on_reimbursements_person_id"
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["student_id"], name: "index_users_on_student_id"
   end
@@ -963,7 +1120,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
   add_foreign_key "opportunity_roles", "departments"
   add_foreign_key "opportunity_roles", "opportunities"
   add_foreign_key "reimbursements_batch_attempts", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_budget_forecasts", "reimbursements_budgets", column: "budget_id"
+  add_foreign_key "reimbursements_budget_owners", "reimbursements_budgets", column: "budget_id"
+  add_foreign_key "reimbursements_budget_owners", "reimbursements_people", column: "person_id"
+  add_foreign_key "reimbursements_budgets", "reimbursements_cost_centres", column: "cost_centre_id"
+  add_foreign_key "reimbursements_budgets", "reimbursements_financial_years", column: "financial_year_id"
+  add_foreign_key "reimbursements_eusa_actuals", "reimbursements_budgets", column: "budget_id"
+  add_foreign_key "reimbursements_eusa_actuals", "reimbursements_expenses", column: "expense_id"
+  add_foreign_key "reimbursements_eusa_actuals", "reimbursements_financial_years", column: "financial_year_id"
+  add_foreign_key "reimbursements_expenses", "reimbursements_batches", column: "batch_id"
+  add_foreign_key "reimbursements_expenses", "reimbursements_budgets", column: "budget_id"
+  add_foreign_key "reimbursements_expenses", "reimbursements_financial_years", column: "financial_year_id"
+  add_foreign_key "reimbursements_expenses", "reimbursements_people", column: "person_id"
   add_foreign_key "reimbursements_owner_endorsements", "users", column: "overridden_by_id"
+  add_foreign_key "reimbursements_payment_details", "reimbursements_people", column: "person_id"
   add_foreign_key "roles_parents", "roles"
   add_foreign_key "roles_parents", "roles", column: "parent_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
@@ -972,4 +1142,5 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_17_030000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "users", "reimbursements_people"
 end

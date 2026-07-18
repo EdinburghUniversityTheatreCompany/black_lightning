@@ -1,51 +1,87 @@
 require "test_helper"
-require "bigdecimal"
 
 module Reimbursements
+  # The computed replacements for the Airtable rollups/formulas, confirmed
+  # against the base schema export: committed/paid sum amount_excl_vat,
+  # current_forecast is the latest forecast, remaining/variance derive from it.
   class BudgetTest < ActiveSupport::TestCase
-    def budget(**attrs)
-      Budget.new(record_id: "recBud1", name: "Props", **attrs)
+    def build_budget(**attrs)
+      Budget.create!(name: "Props", **attrs)
     end
 
-    def bd(value) = BigDecimal(value.to_s)
-
-    test "over_budget? is true only when remaining is negative" do
-      assert budget(remaining: bd("-1")).over_budget?
-      assert_not budget(remaining: bd("0")).over_budget?
-      assert_not budget(remaining: bd("10")).over_budget?
-      assert_not budget(remaining: nil).over_budget?, "nil means not loaded, not over"
+    def add_expense(budget, status:, excl_vat:)
+      Expense.create!(budget: budget, status: status, amount: excl_vat * 1.2r,
+                      amount_excl_vat: excl_vat, description: "x")
     end
 
-    test "over_budget? doesn't fire on committed/paid past initial when remaining is still positive" do
-      # The exact contradiction the split fixes: forecast was raised, so the
-      # money-left figure is positive even though committed passed the initial.
-      b = budget(initial_budget: bd("100"), committed_amount: bd("150"), remaining: bd("20"))
-      assert_not b.over_budget?, "positive remaining must not read as over budget"
-      assert b.over_initial_budget?, "but it IS over the original figure"
+    test "committed_amount sums excl-VAT amounts of Approved, Submitted and Paid" do
+      budget = build_budget
+      add_expense(budget, status: Status::APPROVED, excl_vat: 10)
+      add_expense(budget, status: Status::SUBMITTED, excl_vat: 20)
+      add_expense(budget, status: Status::PAID, excl_vat: 5)
+      add_expense(budget, status: Status::PENDING, excl_vat: 100)
+      add_expense(budget, status: Status::REJECTED, excl_vat: 100)
+
+      assert_equal BigDecimal("35"), budget.committed_amount
+      assert_equal BigDecimal("5"), budget.total_paid
     end
 
-    test "over_initial_budget? never overlaps with over_budget?" do
-      genuinely_over = budget(initial_budget: bd("100"), committed_amount: bd("150"), remaining: bd("-5"))
-      assert genuinely_over.over_budget?
-      assert_not genuinely_over.over_initial_budget?, "the two states are mutually exclusive"
+    test "current_forecast is the latest forecast amount, nil when none" do
+      budget = build_budget
+      assert_nil budget.current_forecast
+      assert_nil budget.remaining
+
+      budget.forecasts.create!(amount: 100, date: Date.new(2026, 5, 1), reason: "initial")
+      budget.forecasts.create!(amount: 150, date: Date.new(2026, 6, 1), reason: "revised")
+      fresh = Budget.find(budget.id)
+      assert_equal BigDecimal("150"), fresh.current_forecast
     end
 
-    test "over_initial_budget? fires on total_paid past initial too" do
-      assert budget(initial_budget: bd("100"), total_paid: bd("120"), remaining: bd("5")).over_initial_budget?
+    test "remaining and variance derive from the current forecast" do
+      budget = build_budget(initial_budget: 120)
+      budget.forecasts.create!(amount: 150, date: Date.new(2026, 6, 1), reason: "revised")
+      add_expense(budget, status: Status::APPROVED, excl_vat: 40)
+
+      fresh = Budget.find(budget.id)
+      assert_equal BigDecimal("110"), fresh.remaining
+      assert_equal BigDecimal("30"), fresh.variance
+      assert_not fresh.over_budget?
     end
 
-    test "an income budget is never over budget or over initial" do
-      b = budget(budget_type: "Income", remaining: bd("-50"),
-                 initial_budget: bd("100"), committed_amount: bd("200"))
-      assert_not b.over_budget?
-      assert_not b.over_initial_budget?
+    test "over_budget? when committed exceeds the forecast; income budgets never" do
+      budget = build_budget
+      budget.forecasts.create!(amount: 10, date: Date.new(2026, 6, 1), reason: "small")
+      add_expense(budget, status: Status::APPROVED, excl_vat: 40)
+      assert Budget.find(budget.id).over_budget?
+
+      income = build_budget(name: "Grant", budget_type: "Income")
+      income.forecasts.create!(amount: 0, date: Date.new(2026, 6, 1), reason: "n/a")
+      assert_not Budget.find(income.id).over_budget?
     end
 
-    test "a healthy budget flags neither state" do
-      b = budget(initial_budget: bd("100"), committed_amount: bd("40"),
-                 total_paid: bd("30"), remaining: bd("60"))
-      assert_not b.over_budget?
-      assert_not b.over_initial_budget?
+    test "over_initial_budget? flags committed past the initial figure" do
+      budget = build_budget(initial_budget: 30)
+      budget.forecasts.create!(amount: 100, date: Date.new(2026, 6, 1), reason: "revised up")
+      add_expense(budget, status: Status::APPROVED, excl_vat: 40)
+
+      fresh = Budget.find(budget.id)
+      assert_not fresh.over_budget?
+      assert fresh.over_initial_budget?
+    end
+
+    test "owner_ids returns People record-id strings via the join table" do
+      budget = build_budget
+      alice = Person.create!(name: "Alice", email: "alice-owner@example.com")
+      bob = Person.create!(name: "Bob", email: "bob-owner@example.com")
+      budget.owners << alice << bob
+
+      assert_equal [ alice.record_id, bob.record_id ].sort, budget.owner_ids.sort
+      assert_kind_of String, budget.owner_ids.first
+    end
+
+    test "income? mirrors the PORO" do
+      assert build_budget(name: "G", budget_type: "Income").income?
+      assert_not build_budget(name: "E").income?
     end
   end
 end

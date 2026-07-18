@@ -2,6 +2,10 @@ require "test_helper"
 
 module Reimbursements
   class ExtractorTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Budget = Airtable::Budget
+
     include ReimbursementsTestHelpers
 
     RECEIPT = { filename: "receipt.pdf", content_type: "application/pdf", bytes: "PDF" }.freeze

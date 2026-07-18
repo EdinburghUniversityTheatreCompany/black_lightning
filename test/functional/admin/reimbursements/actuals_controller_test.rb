@@ -11,31 +11,24 @@ module Admin
       users(:member).add_role("Business Manager")
       @user = users(:member)
 
-      @linked_expense = airtable_eusa_actual_record(
-        id: "recActExp", nominal_code: "439999", period: "03", narrative: "Alice Producer",
-        date: "2026-05-13", debit: 123.45, linked_expense: [ "recExp1" ],
-        imported_at: "2026-05-20T10:00:00Z"
-      )
-      @linked_budget = airtable_eusa_actual_record(
-        id: "recActBud", nominal_code: "250000", period: "03", narrative: "Box office",
-        date: "2026-05-14", debit: nil, credit: 500.0, linked_budget: [ "recBud1" ],
-        imported_at: "2026-05-20T11:00:00Z"
-      )
-      @unlinked = airtable_eusa_actual_record(
-        id: "recActNone", nominal_code: "500000", period: "04", narrative: "Sundry",
-        date: "2026-06-01", debit: 42.0, imported_at: "2026-06-05T09:00:00Z"
-      )
+      @expense = create_reimbursements_expense(auto_number: 42, description: "Fake blood")
+      @budget = create_reimbursements_budget(name: "Props")
 
-      rebuild_store(eusa_actuals: [ @linked_expense, @linked_budget, @unlinked ])
-    end
-
-    teardown do
-      BaseController.store_builder = -> { ::Reimbursements::Store.new }
-    end
-
-    def rebuild_store(eusa_actuals: [])
-      @store, @client = build_fake_store(eusa_actuals: eusa_actuals)
-      BaseController.store_builder = -> { @store }
+      @linked_expense = create_reimbursements_actual(
+        nominal_code: "439999", period: "03", narrative: "Alice Producer",
+        date: Date.new(2026, 5, 13), debit: BigDecimal("123.45"), expense: @expense,
+        imported_at: Time.utc(2026, 5, 20, 10)
+      )
+      @linked_budget = create_reimbursements_actual(
+        nominal_code: "250000", period: "03", narrative: "Box office",
+        date: Date.new(2026, 5, 14), debit: nil, credit: BigDecimal("500.0"), budget: @budget,
+        imported_at: Time.utc(2026, 5, 20, 11)
+      )
+      @unlinked = create_reimbursements_actual(
+        nominal_code: "500000", period: "04", narrative: "Sundry",
+        date: Date.new(2026, 6, 1), debit: BigDecimal("42.0"),
+        imported_at: Time.utc(2026, 6, 5, 9)
+      )
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -71,41 +64,45 @@ module Admin
       get :index
 
       assert_response :success
-      assert_equal %w[recActNone recActBud recActExp], assigns(:actuals).map(&:record_id)
+      assert_equal [ @unlinked, @linked_budget, @linked_expense ].map(&:record_id),
+                   assigns(:actuals).map(&:record_id)
       assert_includes response.body, "Alice Producer"
       assert_includes response.body, "Box office"
       assert_includes response.body, "Sundry"
     end
 
     test "a legacy row with no imported_at sorts by its transaction date instead" do
-      recent_import = airtable_eusa_actual_record(id: "recActNew", narrative: "Recent import",
-                                                   date: "2020-01-01", imported_at: "2026-07-01T00:00:00Z")
-      legacy = airtable_eusa_actual_record(id: "recActLegacy", narrative: "Legacy row",
-                                           date: "2026-06-15", imported_at: nil)
-      old_import = airtable_eusa_actual_record(id: "recActOld", narrative: "Old import",
-                                               date: "2026-01-01", imported_at: "2020-01-01T00:00:00Z")
-      rebuild_store(eusa_actuals: [ old_import, legacy, recent_import ])
+      ::Reimbursements::EusaActual.delete_all
+      recent_import = create_reimbursements_actual(narrative: "Recent import",
+                                                   date: Date.new(2020, 1, 1),
+                                                   imported_at: Time.utc(2026, 7, 1))
+      legacy = create_reimbursements_actual(narrative: "Legacy row",
+                                            date: Date.new(2026, 6, 15), imported_at: nil)
+      old_import = create_reimbursements_actual(narrative: "Old import",
+                                                date: Date.new(2026, 1, 1),
+                                                imported_at: Time.utc(2020, 1, 1))
       sign_in @user
 
       assert_nothing_raised { get :index }
 
       assert_response :success
-      assert_equal %w[recActNew recActLegacy recActOld], assigns(:actuals).map(&:record_id),
+      assert_equal [ recent_import, legacy, old_import ].map(&:record_id),
+                   assigns(:actuals).map(&:record_id),
                    "the legacy row's transaction date fallback slots it between the two imported rows"
     end
 
     # Newest-imported first with 50/page; distinct imported_at timestamps make
     # which row lands on which page deterministic.
-    def rebuild_paged_store(count)
-      actuals = (1..count).map do |n|
-        airtable_eusa_actual_record(id: "recAct#{n}", narrative: "Row #{format('%03d', n)}",
-                                    imported_at: format("2026-06-%02dT00:00:00Z", (n % 28) + 1))
+    def seed_paged_actuals(count)
+      ::Reimbursements::EusaActual.delete_all
+      (1..count).map do |n|
+        create_reimbursements_actual(narrative: "Row #{format('%03d', n)}",
+                                     imported_at: Time.utc(2026, 6, (n % 28) + 1))
       end
-      rebuild_store(eusa_actuals: actuals)
     end
 
     test "index pages the list at 50 per page" do
-      rebuild_paged_store(60)
+      seed_paged_actuals(60)
       sign_in @user
 
       get :index
@@ -114,7 +111,7 @@ module Admin
     end
 
     test "index page 2 returns the remaining slice, not page 1's rows" do
-      rebuild_paged_store(60)
+      seed_paged_actuals(60)
       sign_in @user
 
       get :index
@@ -142,7 +139,7 @@ module Admin
       get :index
 
       assert_response :success
-      assert_includes response.body, edit_admin_reimbursements_expense_edit_path("recExp1")
+      assert_includes response.body, edit_admin_reimbursements_expense_edit_path(@expense.record_id)
     end
 
     test "filters by period" do
@@ -150,7 +147,7 @@ module Admin
       get :index, params: { period: "04" }
 
       assert_response :success
-      assert_equal %w[recActNone], assigns(:actuals).map(&:record_id)
+      assert_equal [ @unlinked.record_id ], assigns(:actuals).map(&:record_id)
     end
 
     test "offers the distinct periods as filter options" do
@@ -174,14 +171,6 @@ module Admin
     end
 
     test "index CSV export has a header row and one data row per actual" do
-      # Load the linked expense + budget so the CSV resolves their references.
-      expense = airtable_expense_record(id: "recExp1", auto_number: 42, description: "Fake blood")
-      budget = airtable_budget_record(id: "recBud1", name: "Props")
-      @store, @client = build_fake_store(
-        eusa_actuals: [ @linked_expense, @linked_budget, @unlinked ],
-        expenses: [ expense ], budgets: [ budget ]
-      )
-      BaseController.store_builder = -> { @store }
       sign_in @user
 
       get :index, format: :csv
@@ -215,7 +204,7 @@ module Admin
     end
 
     test "renders an empty state when nothing has been imported" do
-      rebuild_store(eusa_actuals: [])
+      ::Reimbursements::EusaActual.delete_all
       sign_in @user
       get :index
 

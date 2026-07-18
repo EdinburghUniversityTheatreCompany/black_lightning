@@ -6,6 +6,12 @@ module Reimbursements
   # auto_payment_reference, find_duplicate_submissions). send_rejection_notification
   # ports with the Review UI (it needs Graph/mailer).
   class ReviewSupportTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Person = Airtable::Person
+    Budget = Airtable::Budget
+    Expense = Airtable::Expense
+
     # Records the (sort, account) it was asked to check and returns a preset result.
     class FakeChecker
       attr_reader :calls

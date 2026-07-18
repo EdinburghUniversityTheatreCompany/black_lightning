@@ -24,6 +24,11 @@ end
 require "html_acceptance"
 
 ENV["RAILS_ENV"] = "test"
+# The reimbursements suite exercises the database backend — the post-cutover
+# production default. Tests covering the Airtable-era store build it
+# explicitly with an injected fake client; forcing the env here also keeps a
+# dev shell whose fnox exports REIMBURSEMENTS_* from flipping the backend.
+ENV["REIMBURSEMENTS_BACKEND"] = "database"
 
 require File.expand_path("../../config/environment", __FILE__)
 require "rails/test_help"

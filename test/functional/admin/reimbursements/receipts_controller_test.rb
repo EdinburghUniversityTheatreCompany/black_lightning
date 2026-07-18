@@ -5,72 +5,69 @@ module Admin
     class ReceiptsControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
-      TWO_RECEIPTS = [
-        { "id" => "att1", "filename" => "old.pdf", "url" => "https://x", "size" => 1, "type" => "application/pdf" },
-        { "id" => "att2", "filename" => "new.pdf", "url" => "https://y", "size" => 1, "type" => "application/pdf" }
-      ].freeze
-
       setup do
         producer = Role.create!(name: "Producer")
         producer.permissions << Permission.create(action: "access", subject_class: "reimbursements")
         users(:member).add_role("Producer")
         @user = users(:member)
-        @store, @client = build_fake_store(
-          expenses: [ airtable_expense_record(receipts: TWO_RECEIPTS.map(&:dup)),
-                      airtable_expense_record(id: "recExpOther", payee_id: "recPerOther", receipts: TWO_RECEIPTS.map(&:dup)) ],
-          people: [ airtable_person_record(email: @user.email),
-                    airtable_person_record(id: "recPerOther", email: "other@example.com") ],
-          budgets: [ airtable_budget_record ]
-        )
-        BaseController.store_builder = -> { @store }
+        @person = create_reimbursements_person(email: @user.email)
+        @other_person = create_reimbursements_person(name: "Other Person", email: "other@example.com")
+        @budget = create_reimbursements_budget
+        @expense = expense_with_two_receipts(person: @person)
+        @other_expense = expense_with_two_receipts(person: @other_person)
         sign_in @user
       end
 
-      teardown do
-        BaseController.store_builder = -> { ::Reimbursements::Store.new }
+      def expense_with_two_receipts(person:)
+        expense = create_reimbursements_expense(person: person, budget: @budget, receipt: false)
+        attach_test_receipt(expense, filename: "old.pdf")
+        attach_test_receipt(expense, filename: "new.pdf")
+        expense
+      end
+
+      # The route/param identifier of an attached receipt: the blob signed id
+      # the Attachment wrapper exposes as attachment_id.
+      def receipt_id(expense, filename)
+        expense.receipt_files.reload.find { |file| file.filename.to_s == filename }.signed_id
       end
 
       test "removes a receipt from an own pending expense" do
-        delete :destroy, params: { expense_id: "recExp1", id: "att1" }
+        delete :destroy, params: { expense_id: @expense.record_id, id: receipt_id(@expense, "old.pdf") }
 
-        assert_redirected_to edit_admin_reimbursements_expense_path("recExp1")
-        _table, record_id, fields = @client.updated.sole
-        assert_equal "recExp1", record_id
-        assert_equal [ { "id" => "att2" } ], fields[ReimbursementsTestHelpers::FIELD_IDS[:expenses][:receipt]]
+        assert_redirected_to edit_admin_reimbursements_expense_path(@expense.record_id)
+        assert_equal [ "new.pdf" ], @expense.reload.receipt_files.map { |f| f.filename.to_s }
       end
 
       test "refuses to remove the last receipt" do
-        one_receipt = [ TWO_RECEIPTS.first.dup ]
-        @store, @client = build_fake_store(
-          expenses: [ airtable_expense_record(receipts: one_receipt) ],
-          people: [ airtable_person_record(email: @user.email) ],
-          budgets: [ airtable_budget_record ]
-        )
-        BaseController.store_builder = -> { @store }
+        expense = create_reimbursements_expense(person: @person, budget: @budget) # one receipt.pdf
 
-        delete :destroy, params: { expense_id: "recExp1", id: "att1" }
+        delete :destroy, params: { expense_id: expense.record_id, id: receipt_id(expense, "receipt.pdf") }
 
-        assert_redirected_to edit_admin_reimbursements_expense_path("recExp1")
+        assert_redirected_to edit_admin_reimbursements_expense_path(expense.record_id)
         assert_match(/last receipt/, flash[:alert])
-        assert_empty @client.updated
+        assert_equal 1, expense.reload.receipt_files.count, "the receipt was not removed"
       end
 
       test "404s for another person's expense" do
-        delete :destroy, params: { expense_id: "recExpOther", id: "att1" }
+        delete :destroy, params: { expense_id: @other_expense.record_id,
+                                   id: receipt_id(@other_expense, "old.pdf") }
 
         assert_response :not_found
-        assert_empty @client.updated
+        assert_equal 2, @other_expense.reload.receipt_files.count
       end
 
       test "destroy as turbo stream replaces the gallery" do
-        delete :destroy, params: { expense_id: "recExp1", id: "att1" }, format: :turbo_stream
+        removed_id = receipt_id(@expense, "old.pdf")
+        survivor_id = receipt_id(@expense, "new.pdf")
+
+        delete :destroy, params: { expense_id: @expense.record_id, id: removed_id },
+                         format: :turbo_stream
 
         assert_response :success
         assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
-        # The fake echoes the id-only rewrite, so assert on ids: the survivor
-        # renders, the removed receipt doesn't.
-        assert_includes response.body, "receipts/att2"
-        assert_not_includes response.body, "receipts/att1"
+        # The survivor's remove-control URL renders, the removed receipt's doesn't.
+        assert_includes response.body, "receipts/#{survivor_id}"
+        assert_not_includes response.body, "receipts/#{removed_id}"
       end
 
       def receipt_upload(content_type = "application/pdf")
@@ -78,11 +75,12 @@ module Admin
       end
 
       test "create attaches uploads and streams the gallery back" do
-        post :create, params: { expense_id: "recExp1", receipts: [ receipt_upload ] },
-                      format: :turbo_stream
+        assert_difference -> { @expense.receipt_files.count }, 1 do
+          post :create, params: { expense_id: @expense.record_id, receipts: [ receipt_upload ] },
+                        format: :turbo_stream
+        end
 
         assert_response :success
-        assert_equal 1, @client.uploads.size
         assert_includes response.body, 'turbo-stream action="replace" target="receipts-gallery"'
       end
 
@@ -93,26 +91,29 @@ module Admin
         # here to prove rejection.
         disguised = fixture_file_upload("disguised_executable.pdf", "application/pdf")
 
-        post :create, params: { expense_id: "recExp1", receipts: [ disguised ] },
-                      format: :turbo_stream
+        assert_no_difference -> { @expense.receipt_files.count } do
+          post :create, params: { expense_id: @expense.record_id, receipts: [ disguised ] },
+                        format: :turbo_stream
+        end
 
         assert_response :success
-        assert_empty @client.uploads
         assert_includes response.body, "must be a PDF or a photo"
       end
 
       test "create falls back to a redirect for html" do
-        post :create, params: { expense_id: "recExp1", receipts: [ receipt_upload ] }
+        assert_difference -> { @expense.receipt_files.count }, 1 do
+          post :create, params: { expense_id: @expense.record_id, receipts: [ receipt_upload ] }
+        end
 
-        assert_redirected_to edit_admin_reimbursements_expense_path("recExp1")
-        assert_equal 1, @client.uploads.size
+        assert_redirected_to edit_admin_reimbursements_expense_path(@expense.record_id)
       end
 
       test "create 404s for another person's expense" do
-        post :create, params: { expense_id: "recExpOther", receipts: [ receipt_upload ] }
+        assert_no_difference -> { @other_expense.receipt_files.count } do
+          post :create, params: { expense_id: @other_expense.record_id, receipts: [ receipt_upload ] }
+        end
 
         assert_response :not_found
-        assert_empty @client.uploads
       end
     end
   end

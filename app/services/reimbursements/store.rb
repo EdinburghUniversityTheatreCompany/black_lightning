@@ -11,6 +11,8 @@ module Reimbursements
   # Each list also keeps a long-lived backup copy so an Airtable outage
   # serves day-old data instead of a 500.
   class Store
+    include StoreQueries
+
     EXPENSES_KEY = "reimbursements/expenses".freeze
     EXPENSES_TTL = 10.minutes
     PEOPLE_KEY = "reimbursements/people".freeze
@@ -41,50 +43,12 @@ module Reimbursements
       end
     end
 
-    def expenses_for(person_record_id)
-      return [] if person_record_id.blank?
-
-      expenses.select { |e| e.person&.record_id == person_record_id }
-              .sort_by { |e| e.submitted_at || Time.zone.at(0) }
-              .reverse
-    end
-
-    def find_expense(record_id)
-      expenses.find { |e| e.record_id == record_id }
-    end
-
-    # By-id lookup that survives a stale cached list (e.g. the expense was
-    # created by the poll job in another process): on a miss it fetches the
-    # single record fresh (1 API call) and folds it into this instance.
-    def find_expense!(record_id)
-      find_expense(record_id) || fetch_expense(record_id)
-    end
-
     def people
       @people ||= fetch_list(PEOPLE_KEY, PEOPLE_TTL, :people).map { |r| @mapper.person(r) }
     end
 
-    def person_by_email(email)
-      return nil if email.blank?
-
-      people.find { |p| p.email.strip.casecmp?(email.strip) }
-    end
-
-    def find_person(record_id)
-      people.find { |p| p.record_id == record_id }
-    end
-
     def budgets
       @budgets ||= fetch_list(BUDGETS_KEY, BUDGETS_TTL, :budgets).map { |r| @mapper.budget(r) }
-    end
-
-    # Budgets a submitter may charge an expense to.
-    def active_budgets
-      budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
-    end
-
-    def find_budget(record_id)
-      budgets.find { |b| b.record_id == record_id }
     end
 
     # Finance edit of a budget (name, nominal code, notes, initial budget,
@@ -208,10 +172,6 @@ module Reimbursements
       @batches ||= fetch_list(BATCHES_KEY, BATCHES_TTL, :batches).map { |r| @mapper.batch(r) }
     end
 
-    def find_batch(record_id)
-      batches.find { |b| b.record_id == record_id }
-    end
-
     # Direct, uncached lookup by the batch's stored EUSA draft message id —
     # used to detect an already-created Batch before retrying a create that
     # raised ambiguously (the write may have succeeded server-side; only the
@@ -223,6 +183,25 @@ module Reimbursements
       found = @client.list_records(:batches).map { |r| @mapper.batch(r) }.find { |b| b.draft_message_id == message_id }
       bust_batches! if found # a reused batch bypassed create_batch!'s own bust
       found
+    end
+
+    # Airtable has no column for the mailbox idempotency key — the poll job's
+    # mark-read-first mitigation carries the duplicate risk until the MySQL
+    # backend takes over (where these answer for real).
+    def supports_message_idempotency? = false
+
+    def expense_for_source_message(_message_id) = nil
+
+    # PersonLink's stored user->payee link lives in the backend-appropriate
+    # users column; on this backend that's the Airtable record-id string.
+    # update_column deliberately skips validations/callbacks so legacy user
+    # records that no longer validate can still use the portal.
+    def stored_person_link(user)
+      user.airtable_person_id
+    end
+
+    def remember_person_link!(user, person)
+      user.update_column(:airtable_person_id, person.record_id) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def create_batch!(attrs)
@@ -266,13 +245,6 @@ module Reimbursements
     def eusa_actuals
       @eusa_actuals ||= fetch_list(EUSA_ACTUALS_KEY, EUSA_ACTUALS_TTL, :eusa_actuals)
                         .map { |r| @mapper.eusa_actual(r) }
-    end
-
-    # Actuals imported for a given EUSA period (P1..P12, stored as the raw
-    # period string from the export), used to dedup a freshly-pasted export
-    # against what's already in Airtable for that period.
-    def actuals_for_period(period)
-      eusa_actuals.select { |a| a.period == period }
     end
 
     def create_actual!(attrs)

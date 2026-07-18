@@ -8,7 +8,7 @@ module Reimbursements
   class ApplicationJob < ::ApplicationJob
     include ErrorReporting
 
-    class_attribute :store_builder, default: -> { Store.new }
+    class_attribute :store_builder, default: -> { Reimbursements.build_store }
 
     private
 

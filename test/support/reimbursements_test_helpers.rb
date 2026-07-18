@@ -83,6 +83,65 @@ module ReimbursementsTestHelpers
     }
   }.freeze
 
+  # --- Database-backend seed helpers (post-cutover default) ----------------
+  # AR equivalents of the airtable_*_record builders: create real rows the
+  # DatabaseStore serves. Keyword shapes mirror the old builders so test
+  # bodies port 1:1.
+
+  def create_reimbursements_person(name: "Pat Producer", email: "pat@example.com",
+                                   sort_code: nil, account_number: nil, verified: false,
+                                   notes: nil)
+    person = Reimbursements::Person.create!(name: name, email: email)
+    if sort_code.present? || account_number.present? || verified || notes.present?
+      person.create_payment_details!(sort_code: sort_code.to_s, account_number: account_number.to_s,
+                                     verified: verified, notes: notes)
+    end
+    person
+  end
+
+  def create_reimbursements_budget(name: "Props", nominal_code: "4000", active: true,
+                                   budget_type: "Expense", initial_budget: nil, notes: nil,
+                                   owners: [])
+    budget = Reimbursements::Budget.create!(name: name, nominal_code: nominal_code,
+                                            active: active, budget_type: budget_type,
+                                            initial_budget: initial_budget, notes: notes)
+    Array(owners).each { |person| budget.owners << person }
+    budget
+  end
+
+  def create_reimbursements_expense(person: nil, budget: nil, batch: nil,
+                                    status: Reimbursements::Status::PENDING,
+                                    amount: BigDecimal("12.5"),
+                                    amount_excl_vat: BigDecimal("10.42"),
+                                    description: "Fake blood",
+                                    payment_reference: "PROPS PAT",
+                                    receipt: true, **attrs)
+    expense = Reimbursements::Expense.create!(
+      person: person, budget: budget, batch: batch, status: status, amount: amount,
+      amount_excl_vat: amount_excl_vat, description: description,
+      payment_reference: payment_reference, **attrs
+    )
+    attach_test_receipt(expense) if receipt
+    expense
+  end
+
+  def attach_test_receipt(expense, filename: "receipt.pdf",
+                          content_type: "application/pdf", bytes: "%PDF-1.4 test")
+    expense.receipt_files.attach(io: StringIO.new(bytes), filename: filename,
+                                 content_type: content_type)
+    expense
+  end
+
+  def create_reimbursements_batch(date_sent: Date.new(2026, 5, 13), **attrs)
+    Reimbursements::Batch.create!(date_sent: date_sent, **attrs)
+  end
+
+  def create_reimbursements_actual(nominal_code: "439999", narrative: "Alice Producer",
+                                   debit: BigDecimal("123.45"), **attrs)
+    Reimbursements::EusaActual.create!(nominal_code: nominal_code, narrative: narrative,
+                                       debit: debit, **attrs)
+  end
+
   # No mocking library in this suite: swap Honeybadger.notify for a recorder
   # for the duration of the block, then restore the original method.
   def capture_honeybadger_notices
@@ -236,6 +295,18 @@ module ReimbursementsTestHelpers
       f[:source_month] => attrs.fetch(:source_month, "2026-05")
     }.compact
     { "id" => id, "fields" => fields }
+  end
+
+  # Modulus verdict keyed by account number, so tests don't depend on the
+  # gitignored Pay.UK rule files being present.
+  class FakeModulusChecker
+    def initialize(by_account = {})
+      @by_account = by_account
+    end
+
+    def check(_sort_code, account_number)
+      @by_account.fetch(account_number, ::Reimbursements::ModulusCheck::OUTSIDE_SPEC)
+    end
   end
 
   # Fake Airtable client counting calls per table, interface-compatible with

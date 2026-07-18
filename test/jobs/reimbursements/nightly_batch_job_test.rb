@@ -5,7 +5,6 @@ module Reimbursements
     include ReimbursementsTestHelpers
 
     MC = ModulusCheck
-    F = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
 
     # 2026-07-09 is a Thursday (wday 4); fringe's default run-days are [2, 4],
     # so the nightly is due. 2026-07-08 is a Wednesday (not a run-day).
@@ -16,33 +15,30 @@ module Reimbursements
       def check(_sort, _account) = MC::VALID
     end
 
-    # A store whose expenses read raises, standing in for an Airtable outage —
+    # A store whose expenses read raises, standing in for a data-layer outage —
     # drives the nightly's top-level rescue (handle_failure).
     class BoomStore
-      def expenses = raise(StandardError, "airtable down")
+      def expenses = raise(StandardError, "backend down")
     end
 
     FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
 
-    def payee(**attrs)
-      airtable_person_record(sort_code: "08-99-99", account_number: "66374958", **attrs)
+    def payee
+      @payee ||= create_reimbursements_person(sort_code: "08-99-99", account_number: "66374958")
     end
 
-    def approved_expense(id: "recApp", ai_status: "pass", **overrides)
-      airtable_expense_record(id: id, status: "Approved",
-                              overrides: { F[:ai_check_status] => ai_status }.merge(overrides))
+    def budget
+      @budget ||= create_reimbursements_budget
     end
 
-    def pending_expense(id: "recPend", days_ago: 5)
-      airtable_expense_record(id: id, status: "Pending",
-                              overrides: { F[:submitted_at] => (THURSDAY.to_time(:utc) - days_ago.days).iso8601 })
+    def approved_expense(ai_status: "pass", **attrs)
+      create_reimbursements_expense(person: payee, budget: budget, status: Status::APPROVED,
+                                    ai_check_status: ai_status, **attrs)
     end
 
-    def stock_store(expenses)
-      @store, @client = build_fake_store(
-        people: [ payee ], budgets: [ airtable_budget_record ], expenses: expenses
-      )
-      NightlyBatchJob.store_builder = -> { @store }
+    def pending_expense(days_ago: 5)
+      create_reimbursements_expense(person: payee, budget: budget, status: Status::PENDING,
+                                    submitted_at: THURSDAY.to_time(:utc) - days_ago.days)
     end
 
     setup do
@@ -63,7 +59,7 @@ module Reimbursements
     end
 
     teardown do
-      NightlyBatchJob.store_builder = -> { Store.new }
+      NightlyBatchJob.store_builder = -> { Reimbursements.build_store }
       NightlyBatchJob.checker_builder = -> { ModulusCheck.default_checker }
       NightlyBatchJob.graph_builder = -> { GraphClient.new }
       NightlyBatchJob.notifier_builder = ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
@@ -77,7 +73,7 @@ module Reimbursements
       # The previous run-day (Tue 07-07) is already recorded, so Wednesday has no
       # catch-up pending and the job is not due.
       CostCentre.default.update!(last_nightly_run_on: Date.new(2026, 7, 7))
-      stock_store([ approved_expense ])
+      approved_expense
 
       NightlyBatchJob.perform_now(today: WEDNESDAY)
 
@@ -88,7 +84,7 @@ module Reimbursements
     # --- Branch 2: stale-pending reminder ---------------------------------
 
     test "emails a pending reminder for submissions stuck awaiting approval" do
-      stock_store([ pending_expense(days_ago: 5) ])
+      pending_expense(days_ago: 5)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -100,7 +96,7 @@ module Reimbursements
     end
 
     test "fresh pending submissions do not trigger a reminder" do
-      stock_store([ pending_expense(days_ago: 1) ])
+      pending_expense(days_ago: 1)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -110,7 +106,7 @@ module Reimbursements
     # --- Branch 3: needs-attention -> manual review and STOP --------------
 
     test "an AI-failed approved expense triggers manual review and no batch" do
-      stock_store([ approved_expense(ai_status: "fail", **{ F[:ai_comment] => "amount mismatch" }) ])
+      approved_expense(ai_status: "fail", ai_comment: "amount mismatch")
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -122,7 +118,7 @@ module Reimbursements
     end
 
     test "an unchecked approved expense counts as an issue" do
-      stock_store([ approved_expense(ai_status: "") ])
+      approved_expense(ai_status: "")
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -132,7 +128,7 @@ module Reimbursements
     end
 
     test "an AI-check error counts as an issue" do
-      stock_store([ approved_expense(ai_status: "error") ])
+      approved_expense(ai_status: "error")
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -142,7 +138,7 @@ module Reimbursements
     end
 
     test "an AI pass with an informational note still blocks headless auto-submit" do
-      stock_store([ approved_expense(ai_status: "pass", **{ F[:ai_comment] => "unusual amount for this budget" }) ])
+      approved_expense(ai_status: "pass", ai_comment: "unusual amount for this budget")
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -155,7 +151,7 @@ module Reimbursements
     # --- Branch 4: all clean -> ready-to-batch alert (nothing submitted) ---
 
     test "all-clean approved expenses email a ready-to-batch alert and submit nothing" do
-      stock_store([ approved_expense ])
+      expense = approved_expense
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -165,8 +161,8 @@ module Reimbursements
       assert_not ready.key?(:draft_link), "the nightly no longer builds a draft"
       assert_empty mailer_calls(:manual_review)
       assert_empty mailer_calls(:batch_ready), "no draft, so no draft-ready alert"
-      # Nothing is submitted: the store sees no expense writes.
-      assert_empty @client.updated, "the nightly must not submit or mutate expenses"
+      # Nothing is submitted: the nightly must not mutate expenses.
+      assert_equal Status::APPROVED, expense.reload.status
       # The alert is sent through a notifier built for the cost centre's send mailbox.
       assert_equal CostCentre.default.send_mailbox, @notifier.mailbox
       assert_equal THURSDAY, CostCentre.default.reload.last_nightly_run_on
@@ -180,7 +176,7 @@ module Reimbursements
       second = CostCentre.create!(key: "extra", name: "Second Society", eusa_code: "X99",
                                   receive_mailbox: "in@second.co.uk", send_mailbox: "send@second.co.uk")
       assert_not_equal CostCentre.default, second
-      stock_store([ approved_expense ])
+      approved_expense
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -192,7 +188,8 @@ module Reimbursements
 
     test "builds the graph client once per run even when both the pending reminder and the " \
          "approved-ready alert fire" do
-      stock_store([ pending_expense(days_ago: 5), approved_expense ])
+      pending_expense(days_ago: 5)
+      approved_expense
       graph_builds = 0
       NightlyBatchJob.graph_builder = -> { graph_builds += 1; Object.new }
 
@@ -206,7 +203,7 @@ module Reimbursements
 
     test "a Graph email failure does not record the run, so the alert is retried, not lost" do
       @notifier = FakeNotifier.new(fail: true)
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
@@ -221,7 +218,7 @@ module Reimbursements
 
     test "a Graph credential failure escalates to the IT subcommittee, not an ordinary error email" do
       @notifier = FakeNotifier.new(fail: true, fail_with: Reimbursements::GraphAuth::AuthError)
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_emails 1 do
         assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
@@ -253,7 +250,7 @@ module Reimbursements
     end
 
     test "a DB failure recording the run after a successful alert doesn't trip a spurious failure email" do
-      stock_store([ approved_expense ])
+      approved_expense
       original = CostCentre.instance_method(:record_nightly_run!)
       CostCentre.define_method(:record_nightly_run!) { |*| raise "DB blip" }
 
@@ -272,7 +269,8 @@ module Reimbursements
     # --- Dry run -----------------------------------------------------------
 
     test "dry run logs decisions without sending email or recording" do
-      stock_store([ approved_expense, pending_expense(days_ago: 5) ])
+      approved_expense
+      pending_expense(days_ago: 5)
 
       NightlyBatchJob.perform_now(dry_run: true, today: THURSDAY)
 
@@ -283,7 +281,7 @@ module Reimbursements
     # --- Operator recipients ----------------------------------------------
 
     test "operator emails go to the finance-permission holders" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -292,7 +290,7 @@ module Reimbursements
 
     test "REIMBURSEMENTS_OPERATOR_EMAIL overrides the recipient list" do
       ENV["REIMBURSEMENTS_OPERATOR_EMAIL"] = "shared-finance@bedlamfringe.co.uk"
-      stock_store([ approved_expense ])
+      approved_expense
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
@@ -305,7 +303,7 @@ module Reimbursements
       # Strip the finance role set up above so operator_emails resolves to []
       # (and no ENV override), the same as a fresh install with nobody granted.
       Admin::Permission.where(action: "manage", subject_class: "reimbursements_finance").destroy_all
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_nothing_raised { NightlyBatchJob.perform_now(today: THURSDAY) }
 
