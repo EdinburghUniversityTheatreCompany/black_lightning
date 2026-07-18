@@ -6,49 +6,55 @@
 # Table name: users
 # Database name: primary
 #
-#  id                      :integer          not null, primary key
-#  avatar_content_type     :string(255)
-#  avatar_file_name        :string(255)
-#  avatar_file_size        :integer
-#  avatar_updated_at       :datetime
-#  bio                     :text(16777215)
-#  calendar_email          :string(255)
-#  calendar_token          :string(255)
-#  consented               :date
-#  current_sign_in_at      :datetime
-#  current_sign_in_ip      :string(255)
-#  email                   :string(255)      default(""), not null
-#  encrypted_password      :string(255)      default(""), not null
-#  first_name              :string(255)
-#  last_name               :string(255)
-#  last_sign_in_at         :datetime
-#  last_sign_in_ip         :string(255)
-#  not_duplicate_user_ids  :json
-#  phone_number            :string(255)
-#  profile_completed_at    :datetime
-#  profile_completion_salt :string(255)
-#  public_profile          :boolean          default(TRUE)
-#  remember_created_at     :datetime
-#  remember_token          :string(255)
-#  reset_password_sent_at  :datetime
-#  reset_password_token    :string(255)
-#  sign_in_count           :integer          default(0)
-#  username                :string(255)
-#  created_at              :datetime         not null
-#  updated_at              :datetime         not null
-#  airtable_person_id      :string(255)
-#  associate_id            :string(255)
-#  student_id              :string(255)
+#  id                       :integer          not null, primary key
+#  avatar_content_type      :string(255)
+#  avatar_file_name         :string(255)
+#  avatar_file_size         :integer
+#  avatar_updated_at        :datetime
+#  bio                      :text(16777215)
+#  calendar_email           :string(255)
+#  calendar_token           :string(255)
+#  consented                :date
+#  current_sign_in_at       :datetime
+#  current_sign_in_ip       :string(255)
+#  email                    :string(255)      default(""), not null
+#  encrypted_password       :string(255)      default(""), not null
+#  first_name               :string(255)
+#  last_name                :string(255)
+#  last_sign_in_at          :datetime
+#  last_sign_in_ip          :string(255)
+#  not_duplicate_user_ids   :json
+#  phone_number             :string(255)
+#  profile_completed_at     :datetime
+#  profile_completion_salt  :string(255)
+#  public_profile           :boolean          default(TRUE)
+#  remember_created_at      :datetime
+#  remember_token           :string(255)
+#  reset_password_sent_at   :datetime
+#  reset_password_token     :string(255)
+#  sign_in_count            :integer          default(0)
+#  username                 :string(255)
+#  created_at               :datetime         not null
+#  updated_at               :datetime         not null
+#  airtable_person_id       :string(255)
+#  associate_id             :string(255)
+#  reimbursements_person_id :bigint
+#  student_id               :string(255)
 #
 # Indexes
 #
-#  index_users_on_associate_id          (associate_id)
-#  index_users_on_calendar_token        (calendar_token) UNIQUE
-#  index_users_on_email                 (email) UNIQUE
-#  index_users_on_last_name             (last_name)
-#  index_users_on_profile_completed_at  (profile_completed_at)
-#  index_users_on_reset_password_token  (reset_password_token) UNIQUE
-#  index_users_on_student_id            (student_id)
+#  index_users_on_associate_id              (associate_id)
+#  index_users_on_calendar_token            (calendar_token) UNIQUE
+#  index_users_on_email                     (email) UNIQUE
+#  index_users_on_last_name                 (last_name)
+#  index_users_on_profile_completed_at      (profile_completed_at)
+#  index_users_on_reimbursements_person_id  (reimbursements_person_id)
+#  index_users_on_reset_password_token      (reset_password_token) UNIQUE
+#  index_users_on_student_id                (student_id)
+#
+# Foreign Keys
+#
+#  fk_rails_...  (reimbursements_person_id => reimbursements_people.id)
 #
 class User < ApplicationRecord
   # Length validations enforcing database column limits
@@ -113,6 +119,11 @@ class User < ApplicationRecord
       message: "must be in format ASSOC123456 (ASSOC followed by digits)",
       allow_blank: true
     }
+
+  # The reimbursements payee this account is linked to (MySQL cutover; the
+  # legacy airtable_person_id string is retired with the Airtable layer).
+  belongs_to :reimbursements_person, class_name: "Reimbursements::Person",
+             optional: true, inverse_of: :user
 
   has_one :marketing_creatives_profile, class_name: "MarketingCreatives::Profile", dependent: :restrict_with_error
 

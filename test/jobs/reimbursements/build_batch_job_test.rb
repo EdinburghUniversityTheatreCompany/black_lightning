@@ -4,26 +4,19 @@ module Reimbursements
   class BuildBatchJobTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    F = ReimbursementsTestHelpers::FIELD_IDS[:expenses]
     BACS_DATE = "2026-05-13".freeze
     OPERATOR = [ "operator@bedlamfringe.co.uk" ].freeze
 
     FakeProcessor = ReimbursementsTestHelpers::FakeBatchProcessor
     FakeNotifier = ReimbursementsTestHelpers::FakeNotifier
 
-    def payee(**attrs)
-      airtable_person_record(sort_code: "08-99-99", account_number: "66374958", **attrs)
+    def payee
+      @payee ||= create_reimbursements_person(sort_code: "08-99-99", account_number: "66374958")
     end
 
-    def approved_expense(id: "recApp", **overrides)
-      airtable_expense_record(id: id, status: "Approved", overrides: overrides)
-    end
-
-    def stock_store(expenses)
-      @store, @client = build_fake_store(
-        people: [ payee ], budgets: [ airtable_budget_record ], expenses: expenses
-      )
-      BuildBatchJob.store_builder = -> { @store }
+    def approved_expense(status: Status::APPROVED)
+      create_reimbursements_expense(person: payee, budget: create_reimbursements_budget,
+                                    status: status)
     end
 
     def enqueue_args(**overrides)
@@ -43,7 +36,6 @@ module Reimbursements
     end
 
     teardown do
-      BuildBatchJob.store_builder = -> { Store.new }
       BuildBatchJob.processor_builder =
         ->(store:, graph:, cost_centre:) { BatchProcessor.new(store: store, graph: graph, cost_centre: cost_centre) }
       BuildBatchJob.graph_builder = -> { GraphClient.new }
@@ -53,7 +45,7 @@ module Reimbursements
     def alerts(name) = @notifier.calls.select { |call| call.first == name }
 
     test "runs the batch on the approved expenses and emails the operator the draft link" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args)
 
@@ -70,7 +62,7 @@ module Reimbursements
     end
 
     test "a malformed bacs_date falls back to today rather than raising" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       travel_to Time.zone.local(2026, 5, 20) do
         BuildBatchJob.perform_now(**enqueue_args(bacs_date: "not-a-date"))
@@ -80,7 +72,7 @@ module Reimbursements
     end
 
     test "builds the graph client once per run, not once per call site" do
-      stock_store([ approved_expense ])
+      approved_expense
       graph_builds = 0
       BuildBatchJob.graph_builder = -> { graph_builds += 1; Object.new }
 
@@ -91,7 +83,7 @@ module Reimbursements
     end
 
     test "passes the operator's edited subject and body through to the processor" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(eusa_subject: "Custom subject", eusa_body_html: "<p>hi</p>"))
 
@@ -102,7 +94,7 @@ module Reimbursements
 
     test "no approved expenses: no-op, no processor call, no email (the serialised double-click case)" do
       # A serialised second build finds the expenses already Submitted.
-      stock_store([ approved_expense(**{ F[:status] => "Submitted" }) ])
+      approved_expense(status: Status::SUBMITTED)
 
       BuildBatchJob.perform_now(**enqueue_args)
 
@@ -113,7 +105,7 @@ module Reimbursements
     test "a failed build emails the operator the failure with its errors" do
       @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args)
 
@@ -124,7 +116,7 @@ module Reimbursements
 
     test "a Graph credential failure notifying the operator escalates to IT, not a doomed retry" do
       @notifier = FakeNotifier.new(fail: true, fail_with: Reimbursements::GraphAuth::AuthError)
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_emails 1 do
         assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args) }
@@ -140,7 +132,7 @@ module Reimbursements
       @processor = FakeProcessor.new
       @processor.define_singleton_method(:process) { |**| raise Reimbursements::GraphAuth::AuthError, "token expired" }
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_emails 1 do
         assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args) }
@@ -161,7 +153,7 @@ module Reimbursements
 
     test "resolves the click-time attempt to completed with the batch id" do
       attempt = click_time_attempt
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
@@ -174,7 +166,7 @@ module Reimbursements
       @processor = FakeProcessor.new(success: false, errors: [ "EUSA draft creation failed" ])
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       attempt = click_time_attempt
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
@@ -186,7 +178,7 @@ module Reimbursements
       @processor = FakeProcessor.new(success: true, errors: [ "BACS file SharePoint upload failed" ])
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       attempt = click_time_attempt
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
@@ -196,7 +188,7 @@ module Reimbursements
 
     test "no approved expenses resolves the attempt to nothing_to_build" do
       attempt = click_time_attempt
-      stock_store([]) # nothing Approved
+      # nothing Approved seeded
 
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
@@ -208,7 +200,7 @@ module Reimbursements
       @processor.define_singleton_method(:process) { |**| raise Reimbursements::GraphAuth::AuthError, "token expired" }
       BuildBatchJob.processor_builder = ->(store:, graph:, cost_centre:) { @processor }
       attempt = click_time_attempt
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: attempt.id))
 
@@ -219,7 +211,7 @@ module Reimbursements
     end
 
     test "a direct run with no click-time attempt still records one" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_difference -> { BatchAttempt.count }, 1 do
         BuildBatchJob.perform_now(**enqueue_args)
@@ -232,7 +224,7 @@ module Reimbursements
 
     test "a cost centre gone between click and run resolves its attempt to failed, not left building" do
       attempt = click_time_attempt
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "gone", attempt_id: attempt.id))
 
@@ -245,7 +237,7 @@ module Reimbursements
       # ITS row (by id), not grab the oldest building row for the cost centre.
       r_old = click_time_attempt
       r_mine = click_time_attempt
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(attempt_id: r_mine.id))
 
@@ -254,7 +246,7 @@ module Reimbursements
     end
 
     test "an unknown cost centre is a safe no-op" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(cost_centre_key: "nope"))
 
@@ -263,7 +255,7 @@ module Reimbursements
     end
 
     test "with no operator recipients the batch still runs and the email is skipped" do
-      stock_store([ approved_expense ])
+      approved_expense
 
       BuildBatchJob.perform_now(**enqueue_args(operator_emails: []))
 
@@ -273,7 +265,7 @@ module Reimbursements
 
     test "a Graph email outage doesn't fail the job (the batch already ran)" do
       @notifier = FakeNotifier.new(fail: true)
-      stock_store([ approved_expense ])
+      approved_expense
 
       assert_nothing_raised { BuildBatchJob.perform_now(**enqueue_args) }
 

@@ -18,7 +18,7 @@ module Admin
 
       # Injection seams for functional tests (this suite has no mocking library).
       # Interactive extraction retries less than the background poll job.
-      class_attribute :store_builder, default: -> { ::Reimbursements::Store.new }
+      class_attribute :store_builder, default: -> { ::Reimbursements.build_store }
       class_attribute :extractor_builder, default: -> { ::Reimbursements::Extractor.new(max_attempts: 2) }
       # The Graph-backed email notifier (from the cost centre's send mailbox).
       # Lives here, not just on FinanceController, because a budget owner

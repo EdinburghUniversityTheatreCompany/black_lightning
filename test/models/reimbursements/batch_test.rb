@@ -2,23 +2,16 @@ require "test_helper"
 
 module Reimbursements
   class BatchTest < ActiveSupport::TestCase
-    test "carries batch attributes with sensible defaults" do
-      batch = Batch.new(record_id: "recBatch1", name: "BACS 2026-05-13", date_sent: Date.new(2026, 5, 13))
-      assert_equal "recBatch1", batch.record_id
-      assert_equal "BACS 2026-05-13", batch.name
-      assert_equal Date.new(2026, 5, 13), batch.date_sent
-      assert_equal "", batch.sharepoint_backup_url
-      assert_not batch.eusa_draft_created
-      assert_not batch.producer_notifications_sent
+    test "record_id is the string id" do
+      batch = Batch.create!(name: "BACS 2026-07-01")
+      assert_equal batch.id.to_s, batch.record_id
     end
 
-    test "records draft and notification flags" do
-      batch = Batch.new(record_id: "recBatch1", name: "BACS", eusa_draft_created: true,
-        producer_notifications_sent: true, sharepoint_backup_url: "https://sp/backup", notes: "sent")
-      assert batch.eusa_draft_created
-      assert batch.producer_notifications_sent
-      assert_equal "https://sp/backup", batch.sharepoint_backup_url
-      assert_equal "sent", batch.notes
+    test "eusa_draft_created derives from the draft message id or a sent date" do
+      assert_not Batch.create!(name: "fresh").eusa_draft_created
+      assert Batch.create!(name: "drafted", draft_message_id: "AAMkAG=").eusa_draft_created?
+      # Legacy imported batches predate draft_message_id but were sent.
+      assert Batch.create!(name: "legacy", date_sent: Date.new(2026, 5, 1)).eusa_draft_created
     end
   end
 end

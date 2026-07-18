@@ -2,6 +2,12 @@ require "test_helper"
 
 module Reimbursements
   class AiCheckerTest < ActiveSupport::TestCase
+    # Until the DB-backed test migration, these tests exercise the Airtable
+    # boundary POROs the Mapper builds.
+    Person = Airtable::Person
+    Budget = Airtable::Budget
+    Expense = Airtable::Expense
+
     include ReimbursementsTestHelpers
 
     FakeChat = ReimbursementsTestHelpers::FakeChat
@@ -182,6 +188,22 @@ module Reimbursements
       assert_includes chat.prompt, "Acme Lighting Ltd"
       assert_includes chat.prompt, "20-00-00"
       assert_includes chat.prompt, "12345678"
+    end
+    test "a locally-stored receipt (database backend) is read from its blob, not HTTP" do
+      blob = Struct.new(:content) do
+        def download = content
+      end.new("BLOB-BYTES")
+      local = Attachment.new(attachment_id: "sig1", filename: "receipt.pdf",
+                             url: "/rails/active_storage/blobs/x", content_type: "application/pdf",
+                             blob: blob)
+      checker, chat, http = build(content: { "status" => "pass", "comment" => "ok" },
+                                  http_responses: [])
+
+      result = checker.check(expense(receipts: [ local ]), [ budget ])
+
+      assert_equal "pass", result.status
+      assert_empty http.requests
+      assert_equal "BLOB-BYTES", chat.attachments.first.source.read
     end
   end
 end

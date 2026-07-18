@@ -32,6 +32,15 @@ reference and this doc as the current plan.
 
 ## Phase H: the cutover
 
+> **Status (2026-07-17):** steps 1–4 and 6 are implemented on the
+> `reimbursements-mysql-cutover` branch behind the `REIMBURSEMENTS_BACKEND` switch
+> (default `airtable`; `database` = MySQL). The production flip follows
+> [mysql-cutover-runbook.md](mysql-cutover-runbook.md); step 5 (deleting the Airtable
+> layer) is a separate post-flip cleanup PR. Also shipped there: the mailbox
+> idempotency key (`expenses.source_message_id`), the People email unique index,
+> `budgets.cost_centre_id`, financial_years + FKs, and the
+> `reimbursements_budget_owners` join table (owners are People, not a single FK).
+
 Order is designed so each step is independently shippable and reversible.
 
 1. **ActiveRecord models + migrations.** `Expense`, `Person`, `Budget`, `Batch`, `EusaActual`,

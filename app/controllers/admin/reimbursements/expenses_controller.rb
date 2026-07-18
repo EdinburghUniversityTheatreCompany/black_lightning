@@ -131,7 +131,7 @@ module Admin
       def redirect_with_attachment_result(record_id, notice)
         attach_receipts(record_id)
         redirect_to admin_reimbursements_expenses_path, notice: notice
-      rescue ::Reimbursements::Airtable::Error => e
+      rescue StandardError => e # any backend: Airtable::Error, AR/ActiveStorage failures
         Honeybadger.notify(e, context: { expense_record_id: record_id })
         redirect_to edit_admin_reimbursements_expense_path(record_id),
                     alert: "The expense was saved, but uploading the receipt failed. " \

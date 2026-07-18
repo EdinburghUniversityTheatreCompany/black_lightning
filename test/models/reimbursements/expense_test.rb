@@ -1,162 +1,107 @@
 require "test_helper"
 
 module Reimbursements
+  # The AR Expense must keep the Airtable-era PORO's interface: string ids,
+  # the receipts wrapper, completion checks and the effective money path.
   class ExpenseTest < ActiveSupport::TestCase
-    def build_expense(**overrides)
-      defaults = {
-        record_id: "recExp1",
-        auto_number: 7,
-        person: Person.new(record_id: "recPer1", name: "Pat Producer", email: "pat@example.com"),
-        amount: BigDecimal("12.50"),
-        amount_excl_vat: BigDecimal("10.42"),
-        budget: Budget.new(record_id: "recBud1", name: "Props", nominal_code: "4000"),
-        description: "Fake blood, 2 litres",
-        receipts: [ Attachment.new(attachment_id: "att1", filename: "receipt.pdf", url: "https://x", size_bytes: 100) ],
-        status: Status::PENDING,
-        payment_reference: "PROPS PAT"
-      }
-      Expense.new(**defaults.merge(overrides))
+    def create_expense(**attrs)
+      Expense.create!(status: Status::PENDING, description: "Gaffer tape", **attrs)
     end
 
-    test "editable only while pending" do
-      assert build_expense.editable?
-      assert_not build_expense(status: Status::APPROVED).editable?
-      assert_not build_expense(status: Status::REJECTED).editable?
+    test "record_id and batch_id are opaque strings" do
+      batch = Batch.create!(name: "BACS 2026-07-01")
+      expense = create_expense(batch: batch)
+
+      assert_equal expense.id.to_s, expense.record_id
+      assert_equal batch.record_id, expense.batch_id
+      assert_kind_of String, expense.batch_id
     end
 
-    test "an internal 'From EUSA' entry is never editable via the producer portal, even while pending" do
-      assert_not build_expense(expense_type: Expense::TYPE_FROM_EUSA).editable?
-      assert_not build_expense(expense_type: Expense::TYPE_FROM_EUSA, status: Status::DRAFT).editable?
+    test "auto_number continues the sequence but respects explicit values" do
+      first = create_expense(auto_number: 41)
+      second = create_expense
+      assert_equal 42, second.auto_number
+      assert_equal 41, first.auto_number
     end
 
-    test "complete expense does not need completion" do
-      assert_not build_expense.needs_completion?
+    test "sharepoint_receipt_urls splits the newline column into an array" do
+      expense = create_expense
+      expense.update!(sharepoint_receipt_urls: "https://sp/a.pdf\n https://sp/b.pdf \n\n")
+      assert_equal %w[https://sp/a.pdf https://sp/b.pdf], expense.reload.sharepoint_receipt_urls
+      assert_equal [], create_expense.sharepoint_receipt_urls
     end
 
-    test "needs completion when required fields are missing" do
-      assert build_expense(budget: nil).needs_completion?
-      assert build_expense(payment_reference: "").needs_completion?
-      assert build_expense(amount_excl_vat: nil).needs_completion?
-      assert build_expense(receipts: []).needs_completion?
-      assert build_expense(description: "").needs_completion?
+    test "receipts wraps attached files into Attachment POROs" do
+      expense = create_expense
+      expense.receipt_files.attach(io: StringIO.new("%PDF-1.4 fake"), filename: "receipt.pdf",
+                                   content_type: "application/pdf")
+
+      receipt = expense.receipts.sole
+      assert_kind_of Attachment, receipt
+      assert_equal "receipt.pdf", receipt.filename
+      assert_equal "application/pdf", receipt.content_type
+      assert receipt.attachment_id.present?
+      assert_match %r{/rails/active_storage/blobs/}, receipt.url
+      assert_not receipt.image?
     end
 
-    test "missing_completion_fields names each absent required field" do
-      assert_empty build_expense.missing_completion_fields
-      assert_includes build_expense(amount: nil).missing_completion_fields, "the amount"
-      assert_includes build_expense(amount_excl_vat: nil).missing_completion_fields, "the amount excluding VAT"
-      assert_includes build_expense(payment_reference: "").missing_completion_fields, "a payment reference"
-      assert_includes build_expense(receipts: []).missing_completion_fields, "a receipt"
-      assert_includes build_expense(budget: nil).missing_completion_fields, "a budget"
-      assert_equal 2, build_expense(amount_excl_vat: nil, receipts: []).missing_completion_fields.size
+    test "missing_completion_fields mirrors the PORO, including offloaded receipts" do
+      expense = create_expense
+      missing = expense.missing_completion_fields
+      assert_includes missing, "a budget"
+      assert_includes missing, "the amount"
+      assert_includes missing, "a receipt"
+
+      budget = Budget.create!(name: "Props")
+      expense.update!(budget: budget, amount: 12, amount_excl_vat: 10,
+                      payment_reference: "PROPS1",
+                      sharepoint_receipt_urls: "https://sp/a.pdf")
+      assert_empty expense.reload.missing_completion_fields
+      assert_not expense.needs_completion?
     end
 
-    test "a zero amount or amount_excl_vat is treated the same as blank (0 is truthy in Ruby)" do
-      assert_includes build_expense(amount: BigDecimal("0")).missing_completion_fields, "the amount"
-      assert_includes build_expense(amount_excl_vat: BigDecimal("0")).missing_completion_fields,
-                      "the amount excluding VAT"
+    test "receipt_count honours offloaded receipts" do
+      expense = create_expense(sharepoint_receipt_urls: "https://sp/a.pdf\nhttps://sp/b.pdf")
+      assert_equal 2, expense.receipt_count
     end
 
-    test "a SharePoint-offloaded receipt counts as present" do
-      offloaded = build_expense(receipts: [], sharepoint_receipt_urls: [ "https://sp/receipt.pdf" ])
-      assert_not_includes offloaded.missing_completion_fields, "a receipt"
-      assert_not offloaded.needs_completion?
-    end
+    test "effective payee falls back through PaymentDetails" do
+      person = Person.create!(name: "Pat", email: "payee@example.com")
+      person.create_payment_details!(sort_code: "80-22-60", account_number: "12345678")
+      budget = Budget.create!(name: "Props", nominal_code: "4000")
+      expense = create_expense(person: person, budget: budget)
 
-    test "receipt_count counts attached files when present" do
-      two = build_expense(receipts: [
-        Attachment.new(attachment_id: "att1", filename: "a.pdf", url: "https://x", size_bytes: 1),
-        Attachment.new(attachment_id: "att2", filename: "b.pdf", url: "https://y", size_bytes: 2)
-      ], sharepoint_receipt_urls: [ "https://sp/one.pdf" ])
-      # Attached files win over the SharePoint URLs when both are present.
-      assert_equal 2, two.receipt_count
-    end
-
-    test "receipt_count falls back to SharePoint URLs when no files are attached" do
-      offloaded = build_expense(receipts: [],
-        sharepoint_receipt_urls: [ "https://sp/a.pdf", "https://sp/b.pdf" ])
-      assert_equal 2, offloaded.receipt_count
-    end
-
-    test "receipt_count is zero with neither files nor SharePoint URLs" do
-      assert_equal 0, build_expense(receipts: [], sharepoint_receipt_urls: []).receipt_count
-    end
-
-    test "payee override detection" do
-      assert_not build_expense.payee_override?
-      assert build_expense(payee_name_override: "Stage Supplies Ltd").payee_override?
-      assert build_expense(sort_code_override: "112233").payee_override?
-    end
-
-    test "status badge variants cover all statuses" do
-      Status.all.each do |status|
-        assert_kind_of Symbol, Status.badge_variant(status)
-      end
-    end
-
-    test "person may be nil" do
-      assert_nil build_expense(person: nil).person
-    end
-
-    # --- effective payee (the money path) ---------------------------------
-
-    test "effective payee falls back to the linked person when no override" do
-      expense = build_expense(
-        person: Person.new(record_id: "recP", name: "Pat", email: "p@x", sort_code: "80-22-60",
-                           account_number: "12345678")
-      )
       assert_equal "Pat", expense.effective_payee_name
       assert_equal "80-22-60", expense.effective_sort_code
       assert_equal "12345678", expense.effective_account_number
+      assert_equal "4000", expense.effective_nominal_code
       assert expense.effective_has_bank_details?
-    end
 
-    test "override wins over the linked person for the effective payee" do
-      expense = build_expense(
-        person: Person.new(record_id: "recP", name: "Pat", email: "p@x", sort_code: "80-22-60",
-                           account_number: "12345678"),
-        payee_name_override: "Stage Supplies Ltd",
-        sort_code_override: "11-22-33",
-        account_number_override: "87654321"
-      )
-      assert_equal "Stage Supplies Ltd", expense.effective_payee_name
+      expense.update!(payee_name_override: "Venue Ltd", sort_code_override: "11-22-33",
+                      account_number_override: "87654321", nominal_code_override: "9999")
+      assert expense.payee_override?
+      assert_equal "Venue Ltd", expense.effective_payee_name
       assert_equal "11-22-33", expense.effective_sort_code
       assert_equal "87654321", expense.effective_account_number
+      assert_equal "9999", expense.effective_nominal_code
     end
 
-    test "effective payee tolerates a nil person" do
-      expense = build_expense(person: nil)
-      assert_equal "", expense.effective_payee_name
-      assert_equal "", expense.effective_sort_code
-      assert_not expense.effective_has_bank_details?
+    test "editable? only for submitter types in Draft or Pending" do
+      assert create_expense.editable?
+      assert_not create_expense(status: Status::APPROVED).editable?
+      assert_not create_expense(expense_type: Expense::TYPE_FROM_EUSA).editable?
     end
 
-    test "effective has bank details is false when only one of sort/account is present" do
-      expense = build_expense(
-        person: Person.new(record_id: "recP", name: "Pat", email: "p@x", sort_code: "80-22-60",
-                           account_number: "")
-      )
-      assert_not expense.effective_has_bank_details?
+    test "ai_checked? only for genuine verdicts" do
+      assert create_expense(ai_check_status: "pass").ai_checked?
+      assert create_expense(ai_check_status: "fail").ai_checked?
+      assert_not create_expense(ai_check_status: "error").ai_checked?
+      assert_not create_expense.ai_checked?
     end
 
-    test "effective nominal code uses the override then the budget" do
-      assert_equal "4000", build_expense.effective_nominal_code
-      assert_equal "9999", build_expense(nominal_code_override: "9999").effective_nominal_code
-      assert_equal "", build_expense(budget: nil).effective_nominal_code
-    end
-
-    test "attachment previews fall back to the full image while airtable's thumbnail is pending" do
-      fresh_image = Attachment.new(attachment_id: "att1", filename: "r.png", url: "https://full",
-                                   content_type: "image/png")
-      thumbed = Attachment.new(attachment_id: "att2", filename: "r.png", url: "https://full",
-                               content_type: "image/png", thumbnail_url: "https://thumb")
-      pdf = Attachment.new(attachment_id: "att3", filename: "r.pdf", url: "https://full",
-                           content_type: "application/pdf")
-
-      assert_equal "https://full", fresh_image.preview_url
-      assert_equal "https://thumb", thumbed.preview_url
-      assert_nil pdf.preview_url
-      assert_not pdf.image?
+    test "status and expense_type are validated against the known sets" do
+      assert_raises(ActiveRecord::RecordInvalid) { create_expense(status: "Bogus") }
+      assert_raises(ActiveRecord::RecordInvalid) { create_expense(expense_type: "Bogus") }
     end
   end
 end

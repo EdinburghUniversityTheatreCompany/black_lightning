@@ -11,13 +11,8 @@ module Admin
       users(:member).add_role("Producer")
       users(:member_with_phone_number).add_role("Producer")
       @user = users(:member)
-      @store, @client = build_fake_store(people: [ airtable_person_record(email: @user.email) ])
-      BaseController.store_builder = -> { @store }
+      @person = create_reimbursements_person(email: @user.email)
       sign_in @user
-    end
-
-    teardown do
-      BaseController.store_builder = -> { ::Reimbursements::Store.new }
     end
 
     test "edit prefills from the linked person" do
@@ -26,7 +21,7 @@ module Admin
       assert_includes response.body, "Pat Producer"
     end
 
-    test "update writes normalized details to the people table" do
+    test "update writes normalized details to the payment details record" do
       patch :update, params: {
         reimbursements_payment_details_form: {
           name: "Pat Producer", sort_code: "80-22-60", account_number: "1234 5678"
@@ -34,27 +29,27 @@ module Admin
       }
 
       assert_redirected_to admin_reimbursements_expenses_path
-      table, record_id, fields = @client.updated.sole
-      assert_equal :people, table
-      assert_equal "recPer1", record_id
-      assert_equal "80-22-60", fields[ReimbursementsTestHelpers::FIELD_IDS[:people][:sort_code]],
+      details = @person.reload.payment_details
+      assert_equal "80-22-60", details.sort_code,
                    "sort codes are stored in the conventional dashed form"
-      assert_equal "12345678", fields[ReimbursementsTestHelpers::FIELD_IDS[:people][:account_number]]
+      assert_equal "12345678", details.account_number
     end
 
     test "update creates the people record for unmatched users" do
       other = users(:member_with_phone_number)
       sign_in other
 
-      patch :update, params: {
-        reimbursements_payment_details_form: {
-          name: "Mem Ber", sort_code: "112233", account_number: "12345678"
+      assert_difference -> { ::Reimbursements::Person.count }, 1 do
+        patch :update, params: {
+          reimbursements_payment_details_form: {
+            name: "Mem Ber", sort_code: "112233", account_number: "12345678"
+          }
         }
-      }
+      end
 
       assert_redirected_to admin_reimbursements_expenses_path
-      assert_equal 1, @client.created.size
-      assert_equal "recNew1", other.reload.airtable_person_id
+      created = ::Reimbursements::Person.find_by!(email: other.email)
+      assert_equal created.id, other.reload.reimbursements_person_id
     end
 
     test "invalid input re-renders with errors" do
@@ -63,7 +58,7 @@ module Admin
       }
 
       assert_response :unprocessable_entity
-      assert_empty @client.updated
+      assert_nil @person.reload.payment_details
     end
   end
   end
