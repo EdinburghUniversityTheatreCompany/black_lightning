@@ -45,6 +45,10 @@ env:
     SOLID_QUEUE_IN_PUMA: true
     RACK_TIMEOUT_SERVICE_TIMEOUT: 30
     RACK_TIMEOUT_SERVICE_PAST_WAIT: true
+    # The MySQL cutover switch (see docs/reimbursements/mysql-cutover-runbook.md):
+    # remove this line (+ run reimbursements:unremap_native_tables) to roll back
+    # to the Airtable backend.
+    REIMBURSEMENTS_BACKEND: database
   secret:
     - RAILS_MASTER_KEY
     - MYSQL_ROOT_PASSWORD
