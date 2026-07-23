@@ -126,6 +126,24 @@ module Reimbursements
       assert_equal "BYTES", put.body
     end
 
+    test "upload_to_folder percent-encodes spaces and parens in the filename segment" do
+      client, http = build_client([
+        token_response,
+        [ 201, { webUrl: "https://sp.example/receipts/r.pdf" }.to_json ]
+      ])
+
+      url = client.upload_to_folder(
+        drive_id: "drv", folder_id: "fld",
+        filename: "Photoshoot props (2).jpeg", content: "BYTES"
+      )
+
+      assert_equal "https://sp.example/receipts/r.pdf", url
+      put = http.requests.last
+      assert_includes put.uri.to_s,
+        "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/content",
+        "filename segment percent-encoded, Graph ':/…:/content' delimiters preserved"
+    end
+
     test "upload_to_folder streams a >=4MB file via a chunked upload session" do
       big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
       client, http = build_client([
@@ -142,6 +160,24 @@ module Reimbursements
       assert_equal "put", chunk.method.to_s
       assert_includes chunk.uri, "upload.example/session"
       assert_equal big.bytesize, chunk.body.bytesize
+    end
+
+    test "upload_to_folder percent-encodes the filename in the chunked createUploadSession URL" do
+      big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
+      client, http = build_client([
+        token_response,
+        [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
+        [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk PUT
+      ])
+
+      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld",
+                                    filename: "Photoshoot props (2).jpeg", content: big)
+
+      assert_equal "https://sp.example/receipts/big.pdf", url
+      session = http.requests.find { |r| r.uri.to_s.include?("createUploadSession") }
+      assert_includes session.uri.to_s,
+        "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/createUploadSession",
+        "filename segment percent-encoded in the >=4MB createUploadSession URL too"
     end
 
     test "upload_to_folder's small-file PUT raises AuthError on a 401/403 (graph_raw_request)" do
