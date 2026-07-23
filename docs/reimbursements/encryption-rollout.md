@@ -1,0 +1,115 @@
+# Reimbursements bank-details encryption — production rollout runbook
+
+Companion to [mysql-cutover-runbook.md](mysql-cutover-runbook.md). Track F encrypts the
+payee bank details at rest with **ActiveRecord Encryption** (non-deterministic), so a
+database dump, backup, or replica no longer exposes UK sort codes / account numbers in
+cleartext.
+
+## What ships in the code
+
+- `encrypts :sort_code, :account_number, :notes` on `Reimbursements::PaymentDetails`.
+- `encrypts :sort_code_override, :account_number_override, :payee_name_override` on
+  `Reimbursements::Expense`.
+- `config.active_record.encryption.support_unencrypted_data = true` (all envs, in
+  `config/application.rb`) — during the rollout this lets the app **read** rows that are
+  still plaintext, so nothing breaks between deploy and backfill.
+- `lib/tasks/reimbursements_encrypt_backfill.rake` — re-saves every payee record so its
+  bank details land as ciphertext (`bin/rails reimbursements:encrypt_backfill`).
+- No schema migration is needed: the ciphertext fits the existing `string(255)` / `text`
+  columns.
+
+## Where the keys live, per environment
+
+| Env | Source | Notes |
+|---|---|---|
+| production | `config/credentials/production.yml.enc` under `active_record_encryption:` | Rails' `active_record` railtie reads these automatically. |
+| development | `REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY` / `_DETERMINISTIC_KEY` / `_KEY_DERIVATION_SALT` from ENV (fnox) | Dev credentials are **public** — never put key material in `development.yml.enc`. |
+| test | literal dummy keys in `config/environments/test.rb` | Throwaway, test-only, safe to commit. |
+
+If **no** keys are present the app still boots; encrypted attributes only error on
+read/write, which is acceptable in a dev shell without fnox.
+
+## Rollout sequence (production)
+
+1. **Mint the production key set** (do this locally, once):
+
+   ```
+   bin/rails db:encryption:init
+   ```
+
+   It prints a block like:
+
+   ```
+   active_record_encryption:
+     primary_key: <PLACEHOLDER — 32-char value from db:encryption:init>
+     deterministic_key: <PLACEHOLDER — 32-char value from db:encryption:init>
+     key_derivation_salt: <PLACEHOLDER — 32-char value from db:encryption:init>
+   ```
+
+   > These are **new, real secrets** — do **not** reuse the throwaway keys from the test
+   > env, and do not commit them anywhere except the encrypted production credentials.
+
+2. **Add the keys to production credentials.** Edit the encrypted file and paste the block
+   at the top level (sibling to the other production keys):
+
+   ```
+   EDITOR="code --wait" bin/rails credentials:edit --environment production
+   ```
+
+   Add:
+
+   ```yaml
+   active_record_encryption:
+     primary_key: <paste primary_key>
+     deterministic_key: <paste deterministic_key>
+     key_derivation_salt: <paste key_derivation_salt>
+   ```
+
+   Save; commit the re-encrypted `config/credentials/production.yml.enc` (never the
+   `.key`).
+
+3. **Deploy** with `support_unencrypted_data = true` (already set in the code). At this
+   point new writes encrypt; existing rows stay plaintext and read fine.
+
+4. **Run the backfill** in the deployed image (kamal needs an interactive terminal on this
+   host — SSH password auth):
+
+   ```
+   kamal app exec -i --reuse "bin/rails reimbursements:encrypt_backfill"
+   ```
+
+   It prints per-model processed counts and re-runs idempotently.
+
+5. **Verify** in `kamal console` that a sample row's **raw** column is ciphertext while the
+   model still reads plaintext:
+
+   ```ruby
+   pd = Reimbursements::PaymentDetails.where.not(account_number: "").first
+   pd.account_number                       # => plaintext, e.g. "66374958"
+   ActiveRecord::Base.connection.select_value(
+     "SELECT account_number FROM reimbursements_payment_details WHERE id = #{pd.id}"
+   )                                        # => ciphertext blob, NOT "66374958"
+   ```
+
+   Repeat for `Reimbursements::Expense` (`account_number_override`).
+
+6. **Flip `support_unencrypted_data` off** — a follow-up code change, deployed only once
+   step 5 confirms every row is ciphertext:
+
+   ```ruby
+   # config/application.rb
+   config.active_record.encryption.support_unencrypted_data = false
+   ```
+
+   After this, any lingering plaintext row raises on read, so it must not be flipped until
+   the backfill is verified complete. This is the point where the cleartext-at-rest risk is
+   fully closed.
+
+## Rollback
+
+Encryption is additive and reversible while `support_unencrypted_data = true`: removing the
+`encrypts` declarations would leave already-encrypted rows unreadable, so **do not** revert
+the model change after the backfill. If the keys are lost before backfill, plaintext rows
+still read (support_unencrypted_data). Losing the keys **after** backfill means the
+encrypted bank details cannot be recovered — treat the production credential keys with the
+same care as `master.key`.
