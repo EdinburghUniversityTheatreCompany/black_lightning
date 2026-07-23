@@ -1,8 +1,7 @@
 <p class="mb-3 text-gray-600">
   The health of the external services the reimbursements flows depend on. The last nightly-run
   date per cost centre is a plain database read and always shown; the live service probes run
-  only when you press <strong>Run checks</strong>, so an idle visit doesn't use Airtable quota
-  or wait on Microsoft.
+  only when you press <strong>Run checks</strong>, so an idle visit doesn't wait on Microsoft.
 </p>
 
 <%= render CardComponent.new(title: "Last nightly run") do %>
@@ -23,7 +22,7 @@
 
 <%= render CardComponent.new(title: "Integration checks", html_class: "mt-4") do %>
   <p class="text-sm text-gray-600 mb-2">
-    Probe Airtable, Microsoft Graph and Gemini with the app's own credentials. Each is checked
+    Probe Microsoft Graph and Gemini with the app's own credentials. Each is checked
     independently, so one failure never hides the others.
   </p>
   <div data-controller="busy-dim"

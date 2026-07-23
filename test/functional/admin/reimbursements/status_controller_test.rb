@@ -5,12 +5,12 @@ module Admin
     ##
     # The finance-gated integration status dashboard: a page showing the last
     # nightly-run date per cost centre (a plain DB read, always shown) plus
-    # on-demand OK/fail/skip probes of Airtable, Microsoft Graph and Gemini.
+    # on-demand OK/fail/skip probes of Microsoft Graph and Gemini.
     class StatusControllerTest < ActionController::TestCase
       include ReimbursementsTestHelpers
 
       # Enable the integration secrets Settings reads (env wins over credentials),
-      # restoring the prior values afterwards. Without these Airtable/Graph/Gemini
+      # restoring the prior values afterwards. Without these Graph/Gemini
       # sit at their test-env default of "not configured".
       GRAPH_ENV = {
         "REIMBURSEMENTS_AZURE_TENANT_ID" => "tenant",
@@ -41,25 +41,15 @@ module Admin
         end
       end
 
-      # A Store stand-in whose read raises, standing in for an Airtable outage.
-      class ExplodingStore
-        def budgets
-          raise ::Reimbursements::Airtable::Error.new("Airtable unreachable", status: 500)
-        end
-      end
-
       setup do
         grant_finance_permission(users(:member))
         @user = users(:member)
         @cost_centre = ::Reimbursements::CostCentre.default
 
-        # One real budget so the backend probe reports "read 1 budget(s)".
-        create_reimbursements_budget(name: "Props", nominal_code: "4000")
         StatusController.graph_builder = -> { FakeGraph.new }
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements.build_store }
         StatusController.graph_builder = -> { ::Reimbursements::GraphClient.new }
       end
 
@@ -134,8 +124,6 @@ module Admin
         with_env(GRAPH_ENV.merge(GEMINI_ENV)) { post :run }
 
         assert_response :success
-        assert_includes response.body, "Airtable"
-        assert_includes response.body, "read 1 budget(s)"
         assert_includes response.body, "Microsoft Graph"
         assert_includes response.body, "acquired an app token"
         assert_includes response.body, "Gemini"
@@ -153,22 +141,7 @@ module Admin
         # Points a non-technical finance user at IT to rotate the server credential.
         assert_includes response.body, "contact IT"
         # A Graph failure must not hide the other (passing) checks.
-        assert_includes response.body, "read 1 budget(s)"
-      end
-
-      test "run flags Airtable with the error message when the read raises" do
-        BaseController.store_builder = -> { ExplodingStore.new }
-        sign_in @user
-
-        with_env(GRAPH_ENV.merge(GEMINI_ENV)) { post :run }
-
-        assert_response :success
-        assert_includes response.body, "Airtable unreachable"
-        # The page degrades gracefully rather than 500ing.
-        assert_includes response.body, "acquired an app token"
-        # The fix message points a non-technical treasurer at IT, not at a
-        # "PAT" they can't touch.
-        assert_includes response.body, "This needs IT"
+        assert_includes response.body, "API key configured"
       end
 
       test "run skips Gemini when no API key is configured" do

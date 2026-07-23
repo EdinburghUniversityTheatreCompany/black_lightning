@@ -3,13 +3,13 @@ module Admin
     ##
     # Section-wide health dashboard for the reimbursements integrations, widening
     # the Settings per-cost-centre access-check into one view of the external
-    # services the finance flows depend on: Airtable (the data store), Microsoft
-    # Graph (email drafts + SharePoint) and Gemini (AI expense checking).
+    # services the finance flows depend on: Microsoft Graph (email drafts +
+    # SharePoint) and Gemini (AI expense checking).
     #
     # The live probes are ON-DEMAND (a "Run checks" button POSTs to #run), never
-    # on page load, so an idle visit doesn't burn Airtable free-plan quota or wait
-    # on Microsoft. Each probe is rescued independently so one failing service
-    # never 500s the page — it just renders a failed row with the message.
+    # on page load, so an idle visit doesn't wait on Microsoft. Each probe is
+    # rescued independently so one failing service never 500s the page — it just
+    # renders a failed row with the message.
     #
     # The last-nightly-run date per cost centre is a plain DB read (no external
     # call), so it is always shown, on both #show and #run.
@@ -47,18 +47,7 @@ module Admin
       end
 
       def run_checks
-        [ airtable_check, graph_check, gemini_check ]
-      end
-
-      # A minimal Airtable read through the Store — reaching the budgets list is
-      # enough to prove the PAT + base are good.
-      def airtable_check
-        count = store.budgets.size
-        Check.new(label: "Airtable", status: :ok, detail: "Reachable — read #{count} budget(s).")
-      rescue StandardError => e
-        Check.new(label: "Airtable", status: :fail,
-                  detail: "#{e.message}. This needs IT — the Airtable token or base id " \
-                          "(a server credential, not something you can change here).")
+        [ graph_check, gemini_check ]
       end
 
       # Acquire an app-only Graph token (see GraphClient#check_reachable).
