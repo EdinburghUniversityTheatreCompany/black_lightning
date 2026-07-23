@@ -246,7 +246,7 @@ jobs:
           fetch-depth: 0 # gitleaks git scans the full commit history
 
       - name: Set up mise
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
 
       - name: Scan git history for secrets
         run: mise exec -- gitleaks git --redact --no-banner .
@@ -266,7 +266,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up mise
-        uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
+        uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
 
       - name: Lint workflows (actionlint)
         # -shellcheck= disables actionlint's shellcheck-of-run: pass (run: blocks word-split
