@@ -115,11 +115,27 @@ module Admin
       # Timestamped audit line appended to the person's notes on every bank
       # detail change, mirroring bedlam-bacs `5_People.py` (`_audit_line` /
       # `_append_note`): existing notes are preserved, one line per change.
+      #
+      # The account number is masked to its last 4 digits so the audit trail
+      # never reintroduces a cleartext bank account (the `notes` column is
+      # encrypted at rest, but it's also rendered on the People page, so the
+      # visible copy stays masked). The acting user's name + id is recorded so
+      # bank-detail changes carry per-change actor attribution.
       def appended_notes(sort_code, account_number)
         timestamp = Time.now.utc.strftime("%Y-%m-%d %H:%M UTC")
-        audit_line = "[#{timestamp}] Bank details updated: sort code #{sort_code}, account #{account_number}"
+        actor = "#{current_user.name_or_email} (##{current_user.id})"
+        audit_line = "[#{timestamp}] Bank details updated: sort code #{sort_code}, " \
+                     "account #{mask_account_number(account_number)} by #{actor}"
         existing = @person.notes.to_s
         existing.strip.empty? ? audit_line : "#{existing.rstrip}\n#{audit_line}"
+      end
+
+      # Last 4 digits only, e.g. "66374958" -> "****4958". Short/blank values
+      # (shouldn't reach here — the number is validated first) fall back to
+      # masking whatever is present rather than exposing it.
+      def mask_account_number(account_number)
+        digits = account_number.to_s
+        "****#{digits[-4..] || digits}"
       end
     end
   end
