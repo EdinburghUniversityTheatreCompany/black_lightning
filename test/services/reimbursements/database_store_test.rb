@@ -1,9 +1,9 @@
 require "test_helper"
 
 module Reimbursements
-  # The AR-backed store must honour the Airtable store's public API and
-  # attribute vocabulary exactly — it is swapped in by flipping
-  # REIMBURSEMENTS_BACKEND, with zero caller changes.
+  # The AR-backed store is the single data gateway (built by
+  # Reimbursements.build_store); these lock its public API and attribute
+  # vocabulary.
   class DatabaseStoreTest < ActiveSupport::TestCase
     def store = @store ||= DatabaseStore.new
 
