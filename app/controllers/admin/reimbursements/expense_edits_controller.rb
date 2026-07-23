@@ -97,7 +97,7 @@ module Admin
                                                    content_type: file.content_type, bytes: file.read)
         end
         redirect_to_edit(expense, notice: "Attached #{files.size} receipt(s) to ##{expense.auto_number}.")
-      rescue StandardError => e # any backend: Airtable::Error, AR/ActiveStorage failures
+      rescue StandardError => e # AR/ActiveStorage failures
         redirect_to_edit(expense, alert: "Couldn't attach the receipt: #{e.message}")
       end
 
@@ -105,7 +105,7 @@ module Admin
         expense = find_expense!
         store.remove_receipt!(expense.record_id, params[:attachment_id])
         redirect_to_edit(expense, notice: "Removed a receipt from ##{expense.auto_number}.")
-      rescue ::Reimbursements::Store::LastReceiptError
+      rescue ::Reimbursements::DatabaseStore::LastReceiptError
         redirect_to_edit(expense, alert: "Can't remove the last receipt from a submitted expense.")
       rescue StandardError => e
         redirect_to_edit(expense, alert: "Couldn't remove the receipt: #{e.message}")
@@ -191,24 +191,11 @@ module Admin
         false
       end
 
-      # Match on Airtable record id first, then on the visible auto-number.
-      # Only a query shaped like a record id (Airtable ids always start
-      # "rec") is worth a live fetch for — anything else (an auto-number, a
-      # name) can never resolve by id and would otherwise burn an Airtable
-      # API call for nothing on every ordinary search. A non-404 failure from
-      # that live fetch (a malformed-but-"rec"-shaped query, or a transient
-      # Airtable error) degrades to "no match" rather than a 500.
+      # Match on record id first, then on the visible auto-number. find_expense
+      # coerces a non-numeric query to no match (nil) rather than raising.
       def lookup_expense(query)
-        by_id = query.start_with?("rec") ? live_find_expense(query) : store.find_expense(query)
-        return by_id if by_id
-
-        store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
-      end
-
-      def live_find_expense(record_id)
-        store.find_expense!(record_id)
-      rescue ::Reimbursements::Airtable::Error
-        nil
+        store.find_expense(query) ||
+          store.expenses.find { |e| e.auto_number.to_s == query.sub(/\A#/, "") }
       end
 
       def update_attrs

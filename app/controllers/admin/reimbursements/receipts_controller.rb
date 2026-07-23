@@ -18,7 +18,7 @@ module Admin
 
         store.remove_receipt!(expense.record_id, params[:id])
         respond_with_gallery(expense.record_id, notice: "Receipt removed.")
-      rescue ::Reimbursements::Store::LastReceiptError
+      rescue ::Reimbursements::DatabaseStore::LastReceiptError
         respond_with_gallery(params[:expense_id],
                              upload_errors: [ "You can't remove the last receipt. Add the replacement first, then remove this one." ])
       end

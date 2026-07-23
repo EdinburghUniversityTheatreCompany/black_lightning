@@ -1,21 +1,18 @@
 module Reimbursements
   ##
-  # The ActiveRecord-backed repository — the same frozen public API as the
-  # Airtable-backed Store, selected by Reimbursements.build_store when
-  # REIMBURSEMENTS_BACKEND=database (the MySQL cutover flip). At the post-flip
-  # cleanup this class absorbs the Store name and the Airtable one is deleted.
+  # The ActiveRecord-backed repository — the single data gateway every
+  # controller and job talks to (built by Reimbursements.build_store).
   #
-  # No cache layer: the Solid-Cache read-through existed solely to ration the
-  # Airtable free plan. Lists are memoized per instance (one store per
-  # request/job run) so repeated reads in one render cost one query.
+  # No cache layer: lists are memoized per instance (one store per request/job
+  # run) so repeated reads in one render cost one query.
   #
-  # Writers accept the Store's established attribute vocabulary
+  # Writers accept an established attribute vocabulary
   # (person_record_id/budget_record_id/batch_id strings, arrays for
-  # sharepoint_receipt_urls and linked_*_ids) so no caller changes; nil values
-  # are dropped exactly like the Airtable field writers so email-in
-  # submissions can be created with gaps.
+  # sharepoint_receipt_urls and linked_*_ids); nil values are dropped so
+  # email-in submissions can be created with gaps.
   class DatabaseStore
-    include StoreQueries
+    # Raised instead of removing an expense's last receipt (drafts excepted).
+    class LastReceiptError < StandardError; end
 
     # Attribute-vocabulary translations onto AR columns; everything else in
     # the vocabulary already matches its column name.
@@ -28,9 +25,15 @@ module Reimbursements
                            .with_attached_receipt_files.to_a
     end
 
-    # Single-record reads skip the whole-table memoized list — StoreQueries'
-    # list scan carried the Airtable-era "lists are the only read" constraint
-    # over to a backend with indexes.
+    # A person's expenses, newest submission first.
+    def expenses_for(person_record_id)
+      return [] if person_record_id.blank?
+
+      expenses.select { |e| e.person&.record_id == person_record_id }
+              .sort_by { |e| e.submitted_at || Time.zone.at(0) }
+              .reverse
+    end
+
     def find_expense(record_id)
       Expense.includes(:person, :budget, :batch).find_by(id: record_id)
     end
@@ -38,6 +41,12 @@ module Reimbursements
 
     def find_person(record_id)
       Person.includes(:payment_details).find_by(id: record_id)
+    end
+
+    def person_by_email(email)
+      return nil if email.blank?
+
+      people.find { |p| p.email.to_s.strip.casecmp?(email.strip) }
     end
 
     def find_budget(record_id)
@@ -54,6 +63,11 @@ module Reimbursements
 
     def budgets
       @budgets ||= Budget.includes(:owners, :forecasts, :expenses).to_a
+    end
+
+    # Budgets a submitter may charge an expense to.
+    def active_budgets
+      budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
     end
 
     def update_budget!(record_id, attrs)
@@ -135,15 +149,14 @@ module Reimbursements
       bust_expenses!
     end
 
-    # Refuses to leave a non-draft receipt-less, exactly like the Airtable
-    # store (drafts don't require one). attachment_id is the blob signed id
-    # the Attachment wrapper exposes.
+    # Refuses to leave a non-draft receipt-less (drafts don't require one).
+    # attachment_id is the blob signed id the Attachment wrapper exposes.
     def remove_receipt!(expense_record_id, attachment_id)
       expense = Expense.find(expense_record_id)
       target = expense.receipt_files.find { |file| file.signed_id == attachment_id }
       return bust_expenses! if target.nil?
 
-      raise Store::LastReceiptError if !expense.draft? && expense.receipt_files.one?
+      raise LastReceiptError if !expense.draft? && expense.receipt_files.one?
 
       target.purge
       bust_expenses!
@@ -174,20 +187,15 @@ module Reimbursements
     # creates and skips a message it has already seen.
     def supports_message_idempotency? = true
 
-    # PersonLink's stored user->payee link: the real FK on this backend. The
-    # legacy Airtable link is refreshed alongside it (when the payee was
-    # imported and still carries one) so a rollback flip of
-    # REIMBURSEMENTS_BACKEND still finds the user's People record.
-    # update_columns deliberately skips validations/callbacks so legacy user
+    # PersonLink's stored user->payee link: the real FK on this backend.
+    # update_column deliberately skips validations/callbacks so legacy user
     # records that no longer validate can still use the portal.
     def stored_person_link(user)
       user.reimbursements_person_id&.to_s
     end
 
     def remember_person_link!(user, person)
-      columns = { reimbursements_person_id: person.id }
-      columns[:airtable_person_id] = person.airtable_record_id if person.airtable_record_id.present?
-      user.update_columns(columns) # rubocop:disable Rails/SkipsModelValidations
+      user.update_column(:reimbursements_person_id, person.id) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def expense_for_source_message(message_id)
@@ -247,6 +255,12 @@ module Reimbursements
       @eusa_actuals ||= EusaActual.includes(:expense, :budget).to_a
     end
 
+    # Actuals already imported for a given EUSA period (P1..P12), used to dedup
+    # a freshly-pasted export against what's already stored for that period.
+    def actuals_for_period(period)
+      eusa_actuals.select { |a| a.period == period }
+    end
+
     def create_actual!(attrs)
       actual = EusaActual.create!(actual_columns(attrs)
                                     .reverse_merge(financial_year: FinancialYear.current))
@@ -298,9 +312,9 @@ module Reimbursements
       end
     end
 
-    # eusa_draft_created is derived from draft_message_id/date_sent on MySQL;
-    # BatchProcessor still sends the flag for the Airtable backend, so it is
-    # dropped rather than rejected here.
+    # eusa_draft_created is a derived Batch method (from draft_message_id),
+    # not a column; BatchProcessor still passes the flag through create_batch!,
+    # so it is dropped here rather than raising an unknown-attribute error.
     def batch_columns(attrs)
       attrs.compact.except(:eusa_draft_created)
     end

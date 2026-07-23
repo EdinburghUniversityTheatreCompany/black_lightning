@@ -122,7 +122,7 @@ module Reimbursements
                             content_type: "application/pdf", bytes: "%PDF")
       receipt = expense.reload.receipts.sole
 
-      assert_raises(Store::LastReceiptError) do
+      assert_raises(DatabaseStore::LastReceiptError) do
         store.remove_receipt!(expense.record_id, receipt.attachment_id)
       end
 
