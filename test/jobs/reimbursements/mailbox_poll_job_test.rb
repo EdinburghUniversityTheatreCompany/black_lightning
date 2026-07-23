@@ -115,6 +115,20 @@ module Reimbursements
       assert_empty @mailbox.replies
     end
 
+    test "no-ops without touching the mailbox when outbound is disabled" do
+      setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+
+      MailboxPollJob.perform_now
+
+      assert_empty @mailbox.replies, "outbound disabled -> the mailbox is never polled or replied to"
+      assert_empty @mailbox.moves
+      assert_empty @mailbox.reads
+      assert_equal 0, Expense.count
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
     test "unknown sender gets a not-recognised reply and lands in rejected" do
       setup_job(messages: [ inbound_message(from: "stranger@example.com") ])
 

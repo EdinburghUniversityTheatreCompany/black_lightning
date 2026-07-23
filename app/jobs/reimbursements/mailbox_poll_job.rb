@@ -47,6 +47,10 @@ module Reimbursements
     # so poll each in turn. The People registry is shared across the base, so
     # sender lookups still work regardless of which mailbox a receipt arrived on.
     def perform
+      unless Settings.outbound_enabled?
+        Rails.logger.info("Reimbursements mailbox poll skipped: outbound disabled in #{Rails.env}")
+        return
+      end
       unless Settings.mailbox_configured?
         Rails.logger.info("Reimbursements mailbox poll skipped: Graph credentials not configured")
         return

@@ -30,6 +30,11 @@ ENV["RAILS_ENV"] = "test"
 # dev shell whose fnox exports REIMBURSEMENTS_* from flipping the backend.
 ENV["REIMBURSEMENTS_BACKEND"] = "database"
 
+# Outbound Graph sends/replies are gated to production (Settings.outbound_enabled?).
+# Tests fake the HTTP transport, so opting in here exercises the send/poll logic
+# without any real network call.
+ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = "1"
+
 require File.expand_path("../../config/environment", __FILE__)
 require "rails/test_help"
 

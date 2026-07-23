@@ -21,6 +21,18 @@ module Reimbursements
       raw_value(:backend).presence || "airtable"
     end
 
+    # Whether reimbursements may perform *outbound* Microsoft Graph side effects
+    # — sending mail, replying to / moving mailbox messages, creating EUSA
+    # drafts. Enabled only in production, unless explicitly opted in via
+    # REIMBURSEMENTS_ENABLE_OUTBOUND (e.g. a staging box wired to a throwaway
+    # mailbox, or the test suite which fakes the transport). Read-only Graph
+    # probes (the Settings dashboard reachability checks) are NOT gated by this.
+    def self.outbound_enabled?
+      return true if Rails.env.production?
+
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"].present?
+    end
+
     # A Date or nil (never raises on a malformed value).
     def self.azure_secret_expires_on
       raw = raw_value(:azure_secret_expires_on)

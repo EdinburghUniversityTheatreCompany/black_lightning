@@ -57,6 +57,8 @@ module Reimbursements
     end
 
     def reply(message_id, html:)
+      return nil unless outbound?
+
       graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/reply",
               body: { comment: html })
       nil
@@ -66,6 +68,8 @@ module Reimbursements
     # so once a message is read the next poll won't re-fetch (and re-process)
     # it. Kept separate from +move+ so a move failure never leaves it unread.
     def mark_read(message_id)
+      return nil unless outbound?
+
       graph_request(:patch, "/users/#{@mailbox}/messages/#{message_id}", body: { isRead: true })
       nil
     end
@@ -73,6 +77,8 @@ module Reimbursements
     # Files the message under Processed/Rejected. Best-effort tidy-up: it runs
     # after +mark_read+, so a failure here can't cause reprocessing.
     def move(message_id, folder)
+      return nil unless outbound?
+
       graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/move",
               body: { destinationId: folder_id(folder) })
       nil
@@ -99,6 +105,17 @@ module Reimbursements
     end
 
     private
+
+    # Belt-and-braces guard against outbound mutations (reply / move / mark_read)
+    # in non-production without an explicit opt-in — even if someone drives a
+    # MailboxClient from a dev `rails console` outside the poll job (whose own
+    # guard already covers the recurring path). Reads/probes stay ungated. NB:
+    # deliberately NOT enforced inside GraphAuth#graph_request — find_or_create_folder
+    # does a GET then a POST, and a blanket verb-level block would make the POST
+    # return {} and blow up .fetch("id").
+    def outbound?
+      @settings.outbound_enabled?
+    end
 
     # Folder ids never change once created, so they're cached across job runs
     # (a fresh client per run would otherwise re-query Graph each cycle).
