@@ -111,3 +111,33 @@ crumb for a show/edit resource should use the record's display name (`@budget.na
 - **Post-flip cleanup list additions**: the review card's "Remove this receipt from Airtable?" confirm copy (`app/views/admin/reimbursements/review/_expense_card.html.erb`), and `ExpenseEditsController#lookup_expense`'s `"rec"`-prefix live-fetch special-casing (dead on the DB backend — `DatabaseStore#find_expense!` returns nil instead of raising).
 - **Three hand-maintained bank-fields lists** (importer guard, `DatabaseStore::PAYMENT_DETAILS_FIELDS`, the test seed helper) could derive from one `PaymentDetails::FIELDS` constant.
 - **ExpenseSemantics#receipt_count** still builds Attachment wrappers to count; `receipt_files.size` would be free on the AR side, but the shared module keeps the PORO shape until the POROs die.
+
+## Per-worktree / per-subagent database isolation (dev + test) — spotted 2026-07-23
+
+`config/database.yml` only **half** isolates today:
+- **test:** `bedlam_blacklightning_test<%= ENV.fetch("WORKTREE_DB_SUFFIX", "") %>` — suffix exists
+  but defaults to **empty**, so it only isolates when a worktree explicitly sets
+  `WORKTREE_DB_SUFFIX` *and* provisions its own test DB (schema-load). Nothing sets it
+  automatically.
+- **dev:** the `development:` primary/queue/cache databases are hardcoded with **no suffix**, so
+  every worktree (and every `bin/dev`) shares one dev DB.
+
+Consequence: parallel background **subagents** running `bin/rails test` against the single shared
+test DB truncate each other's fixtures, and parallel dev servers share dev data — which is why the
+current working rule is "serialise agent test runs / go sequential" (see the global memory note
+`hk-stash-vs-background-agents`). That's a workaround, not a fix.
+
+**Improvement — make the DBs subagent-compatible:**
+1. Extend the `WORKTREE_DB_SUFFIX` interpolation to the three `development:` databases too (or a
+   parallel `DEV_DB_SUFFIX`), so a worktree/subagent can run an isolated dev stack.
+2. Auto-provision on worktree creation: a setup step that derives a stable suffix from the
+   worktree/branch name, then **creates the worktree's dev + test DBs by cloning from the current
+   `main` dev DB** (or schema-load + seed if a clone is too heavy), so a fresh worktree comes up
+   with data without manual `db:prepare`.
+3. Do the same for background subagents dispatched in parallel: give each its own suffix + DB so
+   fix-agents can run tests concurrently without the serialise-or-clobber constraint. This is the
+   piece that removes the `hk-stash-vs-background-agents` limitation.
+4. This is exactly what the `dev-hooks:worktree-setup` skill's `.worktree-isolate.conf` mechanism
+   is designed to drive (per-worktree ports + DBs), which isn't configured in this repo yet —
+   wiring it up is likely the cleanest path, plus upstreaming any gaps into that skill. Also update
+   the `parallel-worktree-dev-server-ports` global memory note once done.
