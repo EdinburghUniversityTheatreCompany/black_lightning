@@ -1,9 +1,18 @@
 # Reimbursements MySQL cutover — production runbook
 
+> **Historical (completed 2026-07).** The cutover described below has been executed:
+> production runs on MySQL and the post-flip cleanup **removed the Airtable layer**,
+> including the `REIMBURSEMENTS_BACKEND` switch and the importer/rollback rake tasks
+> (`reimbursements:import_airtable`, `reimbursements:unremap_native_tables`,
+> `reimbursements:verify_airtable_schema`). This document is kept as a record of how the
+> flip was performed; the commands referencing the Airtable tooling no longer exist in
+> the codebase. See the "Done" status in
+> [mysql-migration-and-roadmap.md](mysql-migration-and-roadmap.md).
+
 Companion to [mysql-migration-and-roadmap.md](mysql-migration-and-roadmap.md). The
-`reimbursements-mysql-cutover` branch ships both backends behind one switch:
-`REIMBURSEMENTS_BACKEND` (`airtable` = default today, `database` = MySQL). Flipping the
-env var is the cutover; flipping it back is the rollback.
+`reimbursements-mysql-cutover` branch shipped both backends behind one switch:
+`REIMBURSEMENTS_BACKEND` (`airtable` = default at the time, `database` = MySQL). Flipping the
+env var was the cutover; flipping it back was the rollback.
 
 ## What the branch contains
 

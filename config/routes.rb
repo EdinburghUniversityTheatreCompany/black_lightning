@@ -68,7 +68,7 @@ ChaosRails::Application.routes.draw do
   namespace :admin do
     get "", to: "dashboard#index"
 
-    # Producer-facing reimbursements portal (Airtable-backed, no local models).
+    # Producer-facing reimbursements portal (backed by the reimbursements_* MySQL tables).
     namespace :reimbursements do
       root to: redirect("/admin/reimbursements/expenses")
       resources :expenses, only: %i[index new create edit update destroy show] do
@@ -131,7 +131,7 @@ ChaosRails::Application.routes.draw do
       resources :actuals, only: %i[index]
 
       # Integration health dashboard: a page (#show) with an on-demand "Run
-      # checks" POST (#run) that probes Airtable / Graph / Gemini.
+      # checks" POST (#run) that probes Graph / Gemini.
       get  "status",     to: "status#show", as: :status
       post "status/run", to: "status#run",  as: :run_status_checks
 
