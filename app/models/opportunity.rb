@@ -94,7 +94,7 @@ class Opportunity < ApplicationRecord
   # You might also have to update the opportunities helper.
   # +listable+ is the unordered "publicly visible" set, used as a base for filtering/sorting
   # (e.g. the public listing applies Ransack on top). +active+ adds the internal-first ordering.
-  scope :listable, -> { where("approved = true AND expiry_date > ?", Time.current) }
+  scope :listable, -> { where("approved = true AND expiry_date > ?", Date.current) }
   scope :active, -> { listable.eutc_first }
 
   # EUTC (internal) opportunities first, then by expiry. Orders by a CASE on the opportunities
@@ -122,8 +122,10 @@ class Opportunity < ApplicationRecord
   end
 
   # The expiry date has passed: the posting no longer appears publicly, approved or not.
+  # Compare date-to-date: against Time.current the date coerces to midnight UTC, which in BST
+  # keeps a closed posting "active" between 00:00 and 01:00 local.
   def expired?
-    expiry_date <= Time.current
+    expiry_date <= Date.current
   end
 
   # An opportunity submitted by someone without a user account (a public/external submission).
@@ -146,8 +148,8 @@ class Opportunity < ApplicationRecord
     "#{creator&.name(viewer)}, on behalf of #{submitter_name}#{email}"
   end
 
-  # Immediately expire the posting so it drops out of the public listing. The column is a date,
-  # so today's date already compares as past against Time.current.
+  # Immediately expire the posting so it drops out of the public listing: expired? and listable
+  # both treat an expiry_date of today as already past.
   def close
     update(expiry_date: Date.current)
   end
