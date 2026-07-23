@@ -83,6 +83,36 @@ module ChaosRails
 
     config.start_year = 1871
 
+    # --- Reimbursements bank-details encryption at rest (Track F) ----------
+    # ActiveRecord Encryption protects the payee bank details
+    # (Reimbursements::PaymentDetails + the Expense third-party override trio).
+    # Key material by environment:
+    #   production  -> config/credentials/production.yml.enc under
+    #                  `active_record_encryption:` (Rails' active_record railtie
+    #                  reads those automatically; nothing is wired here).
+    #   development -> REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY /
+    #                  _DETERMINISTIC_KEY / _KEY_DERIVATION_SALT from ENV (fnox).
+    #                  Dev credentials are PUBLIC, so key material must never live
+    #                  in development.yml.enc.
+    #   test        -> literal dummy keys in config/environments/test.rb.
+    # With NO keys present (a dev shell without fnox) the encryption config is
+    # left unset so the app still boots; encrypted attributes then raise only on
+    # read/write, which is acceptable in development.
+    #
+    # support_unencrypted_data stays true during the rollout so existing
+    # plaintext rows keep reading. Flipping it off is a documented production
+    # follow-up — see docs/reimbursements/encryption-rollout.md.
+    config.active_record.encryption.support_unencrypted_data = true
+
+    if Rails.env.development? &&
+       (ar_enc_primary = ENV["REIMBURSEMENTS_AR_ENCRYPTION_PRIMARY_KEY"]).present? &&
+       (ar_enc_deterministic = ENV["REIMBURSEMENTS_AR_ENCRYPTION_DETERMINISTIC_KEY"]).present? &&
+       (ar_enc_salt = ENV["REIMBURSEMENTS_AR_ENCRYPTION_KEY_DERIVATION_SALT"]).present?
+      config.active_record.encryption.primary_key = ar_enc_primary
+      config.active_record.encryption.deterministic_key = ar_enc_deterministic
+      config.active_record.encryption.key_derivation_salt = ar_enc_salt
+    end
+
     # Set image loading to lazy.
     config.action_view.image_loading = "lazy"
 
