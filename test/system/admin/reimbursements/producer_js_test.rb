@@ -3,25 +3,21 @@ require "application_system_test_case"
 module Admin
   module Reimbursements
     # Browser tests for the producer-facing expense form's JS that render/
-    # functional tests can't cover. Airtable is behind an injected fake Store
-    # (the same builder seam the functional tests use).
+    # functional tests can't cover. Data is served by the DatabaseStore from
+    # real seeded rows.
     class ProducerJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
 
       setup do
         grant_producer_permission(users(:member))
-        @store, @client = build_fake_store(
-          people: [ airtable_person_record(email: users(:member).email) ],
-          budgets: [ airtable_budget_record(id: "recBud1", name: "Props") ]
-        )
-        BaseController.store_builder = -> { @store }
+        create_reimbursements_person(email: users(:member).email)
+        create_reimbursements_budget(name: "Props")
         # No Gemini in the browser test; extract just fails softly.
         ExpensesController.extractor_builder = -> { failing_extractor }
         login_as users(:member)
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements::Store.new }
         ExpensesController.extractor_builder = -> { ::Reimbursements::Extractor.new }
       end
 

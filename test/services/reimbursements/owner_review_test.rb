@@ -2,24 +2,33 @@ require "test_helper"
 
 module Reimbursements
   class OwnerReviewTest < ActiveSupport::TestCase
-    # Until the DB-backed test migration, these tests exercise the Airtable
-    # boundary POROs the Mapper builds.
-    Person = Airtable::Person
-    Budget = Airtable::Budget
-    Expense = Airtable::Expense
+    # The pure OwnerReview predicates operate on the AR models' public
+    # interface; built unpersisted with the computed record_id/owner_ids pinned
+    # per-instance to isolate the gate logic (endorsements are real AR rows).
+    Person = Reimbursements::Person
+    Budget = Reimbursements::Budget
+    Expense = Reimbursements::Expense
 
     def person(id: "recPer1", name: "Alice", email: "alice@example.com")
-      Person.new(record_id: id, name: name, email: email)
+      p = Person.new(name: name, email: email)
+      p.define_singleton_method(:record_id) { id }
+      p
     end
 
     def budget(id: "recBud1", owner_ids: [])
-      Budget.new(record_id: id, name: "Props", owner_ids: owner_ids)
+      ids = owner_ids
+      b = Budget.new(name: "Props")
+      b.define_singleton_method(:record_id) { id }
+      b.define_singleton_method(:owner_ids) { ids }
+      b
     end
 
     def expense(budget:, submitter:, id: "recExp1", amount: BigDecimal("10"))
-      Expense.new(record_id: id, auto_number: 1, status: Status::PENDING,
-                  person: submitter, amount: amount, budget: budget,
-                  description: "x", receipts: [])
+      exp = Expense.new(auto_number: 1, status: Status::PENDING,
+                        person: submitter, amount: amount, budget: budget, description: "x")
+      exp.instance_variable_set(:@receipts, [])
+      exp.define_singleton_method(:record_id) { id }
+      exp
     end
 
     test "owned_budgets returns only budgets the person owns" do

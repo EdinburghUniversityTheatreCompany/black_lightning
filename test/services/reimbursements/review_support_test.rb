@@ -6,11 +6,13 @@ module Reimbursements
   # auto_payment_reference, find_duplicate_submissions). send_rejection_notification
   # ports with the Review UI (it needs Graph/mailer).
   class ReviewSupportTest < ActiveSupport::TestCase
-    # Until the DB-backed test migration, these tests exercise the Airtable
-    # boundary POROs the Mapper builds.
-    Person = Airtable::Person
-    Budget = Airtable::Budget
-    Expense = Airtable::Expense
+    # These exercise the pure ReviewSupport predicates. The AR models keep the
+    # POROs' public interface, so they serve as value objects built unpersisted:
+    # the computed record_id/remaining/receipts (derived from the DB in
+    # production) are pinned per-instance to isolate the logic under test.
+    Person = Reimbursements::Person
+    Budget = Reimbursements::Budget
+    Expense = Reimbursements::Expense
 
     # Records the (sort, account) it was asked to check and returns a preset result.
     class FakeChecker
@@ -27,18 +29,30 @@ module Reimbursements
       end
     end
 
+    def build_person(record_id:, name:, email:, sort_code: "", account_number: "")
+      person = Person.new(name: name, email: email)
+      person.build_payment_details(sort_code: sort_code, account_number: account_number)
+      person.define_singleton_method(:record_id) { record_id }
+      person
+    end
+
     def valid_payee
-      Person.new(record_id: "recPerson1", name: "Alice Producer", email: "alice@example.com",
+      build_person(record_id: "recPerson1", name: "Alice Producer", email: "alice@example.com",
         sort_code: "12-34-56", account_number: "12345678")
     end
 
     def payee_without_bank
-      Person.new(record_id: "recPerson2", name: "Bob NoBank", email: "bob@example.com",
+      build_person(record_id: "recPerson2", name: "Bob NoBank", email: "bob@example.com",
         sort_code: "", account_number: "")
     end
 
     def budget(remaining: BigDecimal("500.00"), nominal_code: "439999", record_id: "recBudget1")
-      Budget.new(record_id: record_id, name: "Production", nominal_code: nominal_code, remaining: remaining)
+      remaining_value = remaining
+      rid = record_id
+      b = Budget.new(name: "Production", nominal_code: nominal_code)
+      b.define_singleton_method(:remaining) { remaining_value }
+      b.define_singleton_method(:record_id) { rid }
+      b
     end
 
     def receipt
@@ -47,9 +61,14 @@ module Reimbursements
     end
 
     def expense(payee:, budget:, amount_excl_vat: BigDecimal("50.00"), receipts: [], **extra)
-      Expense.new(record_id: "recExpense1", auto_number: 1, status: Status::PENDING,
+      sharepoint = extra.delete(:sharepoint_receipt_urls)
+      exp = Expense.new(auto_number: 1, status: Status::PENDING,
         person: payee, amount: BigDecimal("60.00"), amount_excl_vat: amount_excl_vat,
-        budget: budget, description: "Test expense", receipts: receipts, **extra)
+        budget: budget, description: "Test expense", **extra)
+      exp.sharepoint_receipt_urls = Array(sharepoint).join("\n") if sharepoint
+      exp.instance_variable_set(:@receipts, receipts)
+      exp.define_singleton_method(:record_id) { "recExpense1" }
+      exp
     end
 
     def valid_checker
@@ -165,7 +184,7 @@ module Reimbursements
     end
 
     test "blank-record-id budget needs attention" do
-      placeholder = Budget.new(record_id: "", name: "(missing budget)", nominal_code: "")
+      placeholder = budget(record_id: "", nominal_code: "")
       exp = expense(payee: valid_payee, budget: placeholder, receipts: [ receipt ])
       assert ReviewSupport.needs_attention(exp, {}, valid_checker)
     end
@@ -322,10 +341,13 @@ module Reimbursements
     NOW = Time.utc(2026, 7, 9)
 
     def dup_expense(record_id, payee, amount:, auto_number:, submitted_at:)
-      Expense.new(record_id: record_id, auto_number: auto_number, status: Status::PENDING,
+      exp = Expense.new(auto_number: auto_number, status: Status::PENDING,
         person: payee, amount: BigDecimal(amount), amount_excl_vat: BigDecimal(amount),
-        budget: Budget.new(record_id: "recBudget1", name: "Production", nominal_code: "439999"),
-        description: "Test expense", receipts: [], submitted_at: submitted_at)
+        budget: budget, description: "Test expense", submitted_at: submitted_at)
+      exp.instance_variable_set(:@receipts, [])
+      rid = record_id
+      exp.define_singleton_method(:record_id) { rid }
+      exp
     end
 
     def pair(payee_a, payee_b, amount_a: "60.00", amount_b: "60.00", gap_days: 0)
@@ -357,7 +379,7 @@ module Reimbursements
     end
 
     test "missing payee record id never matched" do
-      missing = Person.new(record_id: "", name: "(missing payee)", email: "")
+      missing = build_person(record_id: "", name: "(missing payee)", email: "")
       a = dup_expense("recA", missing, amount: "60.00", auto_number: 1, submitted_at: NOW)
       b = dup_expense("recB", missing, amount: "60.00", auto_number: 2, submitted_at: NOW)
       assert_empty ReviewSupport.find_duplicate_submissions([ a, b ])
@@ -416,7 +438,7 @@ module Reimbursements
       assert ReviewSupport.attention_actionable?(expense(payee: valid_payee, budget: budget))
       %w[Submitted Paid Rejected].each do |done|
         exp = expense(payee: valid_payee, budget: budget)
-        exp.instance_variable_set(:@status, done)
+        exp.status = done
         assert_not ReviewSupport.attention_actionable?(exp), "#{done} is not actionable"
       end
     end

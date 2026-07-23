@@ -1,9 +1,9 @@
 require "test_helper"
 
 class ReimbursementsHelperTest < ActionView::TestCase
-  Expense = ::Reimbursements::Airtable::Expense
-  Person = ::Reimbursements::Airtable::Person
-  Budget = ::Reimbursements::Airtable::Budget
+  Expense = ::Reimbursements::Expense
+  Person = ::Reimbursements::Person
+  Budget = ::Reimbursements::Budget
   ModulusCheck = ::Reimbursements::ModulusCheck
 
   class FixedChecker
@@ -12,12 +12,13 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   def expense_with(status)
-    Expense.new(record_id: "recExp1", status: "Pending", ai_check_status: status)
+    Expense.new(status: "Pending", ai_check_status: status)
   end
 
   def person_with(sort_code: "08-99-99", account_number: "66374958")
-    Person.new(record_id: "recPer1", name: "Pat Producer", email: "pat@example.com",
-              sort_code: sort_code, account_number: account_number)
+    person = Person.new(name: "Pat Producer", email: "pat@example.com")
+    person.build_payment_details(sort_code: sort_code, account_number: account_number)
+    person
   end
 
   test "modulus badge renders a warning 'Missing' badge for a payee with no bank details" do
@@ -47,7 +48,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
 
   test "effective modulus badge checks the expense's EFFECTIVE bank details, not the linked person's" do
     person = person_with(sort_code: "", account_number: "") # no bank details of their own
-    expense = Expense.new(record_id: "recExp1", status: "Pending", person: person,
+    expense = Expense.new(status: "Pending", person: person,
                           sort_code_override: "20-20-20", account_number_override: "50502366")
 
     html = reimbursements_effective_modulus_badge(expense, checker: FixedChecker.new(ModulusCheck::VALID))
@@ -56,7 +57,7 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "effective modulus badge falls back to Missing when there's no override and no linked person" do
-    expense = Expense.new(record_id: "recExp1", status: "Pending", person: nil)
+    expense = Expense.new(status: "Pending", person: nil)
 
     html = reimbursements_effective_modulus_badge(expense)
 
@@ -79,15 +80,16 @@ class ReimbursementsHelperTest < ActionView::TestCase
   end
 
   test "budget_owner_names comma-joins resolved owner names, skipping unknown ids" do
-    people_by_id = { "recPer1" => person_with, "recPer2" => Person.new(record_id: "recPer2", name: "Alex",
-                                                                       email: "alex@example.com") }
-    budget = Budget.new(record_id: "recBud1", name: "Props", owner_ids: %w[recPer1 recPer2 recGone])
+    people_by_id = { "1" => person_with, "2" => Person.new(name: "Alex", email: "alex@example.com") }
+    budget = Budget.new(name: "Props")
+    budget.define_singleton_method(:owner_ids) { %w[1 2 99] }
 
     assert_equal "Pat Producer, Alex", budget_owner_names(budget, people_by_id)
   end
 
   test "budget_owner_names returns an empty string when there are no owners" do
-    budget = Budget.new(record_id: "recBud1", name: "Props", owner_ids: [])
+    budget = Budget.new(name: "Props")
+    budget.define_singleton_method(:owner_ids) { [] }
     assert_equal "", budget_owner_names(budget, {})
   end
 

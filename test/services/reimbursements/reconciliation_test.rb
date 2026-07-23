@@ -5,10 +5,10 @@ module Reimbursements
   # Ported from bedlam-bacs tests/test_reconciliation.py (parse + dedup half;
   # the match_* fns port alongside the extended Expense/Budget POROs).
   class ReconciliationTest < ActiveSupport::TestCase
-    # Until the DB-backed test migration, these tests exercise the Airtable
-    # boundary POROs the Mapper builds.
-    Expense = Airtable::Expense
-    Budget = Airtable::Budget
+    # The pure Reconciliation matchers read the AR models' public interface
+    # (effective nominal code, amounts, dates); built unpersisted.
+    Expense = Reimbursements::Expense
+    Budget = Reimbursements::Budget
 
     HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
     SAMPLE_ROW = "439999\tF40\tBACS001\t15/03/2025\t03\tAlice Producer\tSome show\t123.45\t\t123.45".freeze
@@ -285,9 +285,9 @@ module Reimbursements
     def expense(nominal_code: "439999", amount: bd("123.45"), amount_excl_vat: nil,
                 submitted_date: Date.new(2025, 3, 15), payment_confirmed_date: nil)
       Expense.new(
-        record_id: "recE1", auto_number: 1, status: Status::SUBMITTED,
+        auto_number: 1, status: Status::SUBMITTED,
         amount: amount, amount_excl_vat: amount_excl_vat,
-        budget: Budget.new(record_id: "recB1", name: "Production", nominal_code: nominal_code),
+        budget: Budget.new(name: "Production", nominal_code: nominal_code),
         submitted_to_eusa_date: submitted_date, payment_confirmed_date: payment_confirmed_date
       )
     end
@@ -397,17 +397,17 @@ module Reimbursements
     end
 
     test "credit exact match" do
-      budget = Budget.new(record_id: "recB1", name: "Grant Income", nominal_code: "250000")
+      budget = Budget.new(name: "Grant Income", nominal_code: "250000")
       assert_same budget, Reconciliation.match_credit_to_budget(credit_row, [ budget ])
     end
 
     test "credit no match on wrong nominal" do
-      budget = Budget.new(record_id: "recB1", name: "Income", nominal_code: "250000")
+      budget = Budget.new(name: "Income", nominal_code: "250000")
       assert_nil Reconciliation.match_credit_to_budget(credit_row(nominal_code: "999999"), [ budget ])
     end
 
     test "credit match is case-insensitive" do
-      budget = Budget.new(record_id: "recB1", name: "Income", nominal_code: "abc123")
+      budget = Budget.new(name: "Income", nominal_code: "abc123")
       assert_same budget, Reconciliation.match_credit_to_budget(credit_row(nominal_code: "ABC123"), [ budget ])
     end
 
@@ -416,8 +416,8 @@ module Reimbursements
     end
 
     test "credit returns the correct budget among several" do
-      wrong = Budget.new(record_id: "recB1", name: "Wrong", nominal_code: "100000")
-      right = Budget.new(record_id: "recB2", name: "Correct", nominal_code: "250000")
+      wrong = Budget.new(name: "Wrong", nominal_code: "100000")
+      right = Budget.new(name: "Correct", nominal_code: "250000")
       assert_same right, Reconciliation.match_credit_to_budget(credit_row(nominal_code: "250000"), [ wrong, right ])
     end
   end

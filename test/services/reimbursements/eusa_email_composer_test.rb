@@ -2,16 +2,16 @@ require "test_helper"
 
 module Reimbursements
   class EusaEmailComposerTest < ActiveSupport::TestCase
-    # Until the DB-backed test migration, these tests exercise the Airtable
-    # boundary POROs the Mapper builds.
-    Person = Airtable::Person
-    Budget = Airtable::Budget
-    Expense = Airtable::Expense
+    # The composer reads the AR models' public interface (effective payee name,
+    # nominal code, amount, description); built unpersisted.
+    Person = Reimbursements::Person
+    Budget = Reimbursements::Budget
+    Expense = Reimbursements::Expense
 
     def expense(payee:, amount:, budget:, nominal:, description:)
-      person = Person.new(record_id: "p", name: payee, email: "#{payee}@x")
-      budget_obj = Budget.new(record_id: "b", name: budget, nominal_code: nominal)
-      Expense.new(record_id: "e", status: Status::APPROVED, person: person, budget: budget_obj,
+      person = Person.new(name: payee, email: "#{payee}@x")
+      budget_obj = Budget.new(name: budget, nominal_code: nominal)
+      Expense.new(status: Status::APPROVED, person: person, budget: budget_obj,
                   amount: BigDecimal(amount.to_s), description: description)
     end
 

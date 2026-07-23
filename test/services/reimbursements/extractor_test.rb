@@ -2,9 +2,10 @@ require "test_helper"
 
 module Reimbursements
   class ExtractorTest < ActiveSupport::TestCase
-    # Until the DB-backed test migration, these tests exercise the Airtable
-    # boundary POROs the Mapper builds.
-    Budget = Airtable::Budget
+    # The Extractor reads the budgets' public interface (name, nominal_code,
+    # record_id) to build the prompt and match a suggestion; built unpersisted
+    # with record_id pinned.
+    Budget = Reimbursements::Budget
 
     include ReimbursementsTestHelpers
 
@@ -12,7 +13,9 @@ module Reimbursements
     FakeChat = ReimbursementsTestHelpers::FakeChat
 
     def budgets
-      [ Budget.new(record_id: "recBud1", name: "Props", nominal_code: "4000") ]
+      budget = Budget.new(name: "Props", nominal_code: "4000")
+      budget.define_singleton_method(:record_id) { "recBud1" }
+      [ budget ]
     end
 
     def build_extractor(content: nil, error: nil)

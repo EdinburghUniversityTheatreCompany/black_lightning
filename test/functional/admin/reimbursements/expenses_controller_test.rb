@@ -29,21 +29,6 @@ module Admin
       users(:member_with_phone_number).add_role("Producer")
     end
 
-    # Airtable-era cache behaviour (production runs the Airtable backend until
-    # the flip): inject the fake Airtable store. PersonLink on the database
-    # backend can only remember an AR person, so the user is pre-linked and the
-    # fake person reuses the DB person's numeric id as its Airtable record id
-    # (the FK needs a real row).
-    def use_fake_airtable_store
-      @user.update_column(:reimbursements_person_id, @person.id)
-      @store, @client = build_fake_store(
-        expenses: [ airtable_expense_record(payee_id: @person.record_id) ],
-        people: [ airtable_person_record(id: @person.record_id, email: @user.email) ],
-        budgets: [ airtable_budget_record ]
-      )
-      BaseController.store_builder = -> { @store }
-    end
-
     test "requires sign-in" do
       get :index
       assert_redirected_to new_user_session_path
@@ -77,18 +62,12 @@ module Admin
       assert_equal @person.id, @user.reload.reimbursements_person_id
     end
 
-    test "refresh busts the airtable cache and redirects to a clean url" do
-      use_fake_airtable_store
+    test "refresh redirects to a clean url" do
       sign_in @user
 
-      get :index
-      assert_equal 1, @client.list_calls[:expenses]
-
       get :index, params: { refresh: 1 }
-      assert_redirected_to admin_reimbursements_expenses_path
 
-      get :index
-      assert_equal 2, @client.list_calls[:expenses]
+      assert_redirected_to admin_reimbursements_expenses_path
     end
 
     test "prompts for payment details when bank details are missing" do
@@ -171,7 +150,7 @@ module Admin
       sign_in @user
       store = ::Reimbursements::DatabaseStore.new
       store.define_singleton_method(:attach_receipt!) do |*|
-        raise ::Reimbursements::Airtable::Error.new("upload failed", status: 500)
+        raise "upload failed"
       end
       BaseController.store_builder = -> { store }
 
@@ -274,16 +253,14 @@ module Admin
       assert_not response.parsed_body["ok"]
     end
 
-    test "edit refetches once when the cached airtable list is stale (email-in link)" do
-      use_fake_airtable_store
+    test "edit finds an own expense created out-of-band (e.g. the email-in poll job)" do
       sign_in @user
-      get :index # warms the expense cache without the email-in expense
+      get :index # the user's list is warmed without the email-in expense
 
-      @client.list_records(:expenses) << airtable_expense_record(
-        id: "recExpMail", payee_id: @person.record_id, description: "Emailed taxi receipt"
-      )
+      emailed = create_reimbursements_expense(person: @person, budget: @budget,
+                                              description: "Emailed taxi receipt")
 
-      get :edit, params: { id: "recExpMail" }
+      get :edit, params: { id: emailed.record_id }
 
       assert_response :success
       assert_includes response.body, "Emailed taxi receipt"

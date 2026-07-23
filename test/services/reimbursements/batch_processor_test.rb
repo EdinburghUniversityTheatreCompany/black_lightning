@@ -4,8 +4,7 @@ module Reimbursements
   class BatchProcessorTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    # DatabaseStore with injectable write failures — the DB-era stand-in for
-    # FakeAirtableClient's fail_create_tables / fail_update_record_when.
+    # DatabaseStore with injectable write failures.
     # +ambiguous_batch_create+ models a lost RESPONSE, not a lost request:
     # the batch really persists but the first call still raises.
     class FlakyStore < DatabaseStore
