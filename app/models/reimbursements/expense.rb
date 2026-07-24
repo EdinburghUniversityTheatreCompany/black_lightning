@@ -74,8 +74,8 @@ module Reimbursements
     # "From EUSA" is internal bookkeeping; submitters only pick between these.
     SUBMITTER_TYPES = [ TYPE_REIMBURSEMENT, TYPE_INVOICE ].freeze
 
-    # Third-party "pay a supplier directly" bank details, encrypted at rest
-    # (Track F). Non-deterministic (the default) — the money path reads the
+    # Third-party "pay a supplier directly" bank details, encrypted at rest.
+    # Non-deterministic (the default) — the money path reads the
     # decrypted attributes via EffectivePayee; nothing queries by value.
     # support_unencrypted_data (config/application.rb) keeps pre-encryption
     # plaintext rows readable until the backfill runs.

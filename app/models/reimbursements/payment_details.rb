@@ -29,7 +29,7 @@ module Reimbursements
     include RecordId
     belongs_to :person, class_name: "Reimbursements::Person", inverse_of: :payment_details
 
-    # Bank details encrypted at rest (Track F). Non-deterministic (the default):
+    # Bank details encrypted at rest. Non-deterministic (the default):
     # nothing queries these by value — the modulus check and the BACS builder
     # read the decrypted attributes, and uniqueness is on person_id. `notes`
     # is encrypted too because its audit trail can reference bank details.
