@@ -15,6 +15,7 @@ module Reimbursements
     # constant names pointing at the shared classes so existing rescues hold.
     Error = GraphAuth::Error
     AuthError = GraphAuth::AuthError
+    NotFoundError = GraphAuth::NotFoundError
 
     Message = Struct.new(:id, :from_address, :subject, :body_text, keyword_init: true)
 
@@ -62,6 +63,8 @@ module Reimbursements
       graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/reply",
               body: { comment: html })
       nil
+    rescue NotFoundError
+      message_gone(message_id, "reply")
     end
 
     # The idempotency commit point: unread_messages filters on isRead eq false,
@@ -72,6 +75,8 @@ module Reimbursements
 
       graph_request(:patch, "/users/#{@mailbox}/messages/#{message_id}", body: { isRead: true })
       nil
+    rescue NotFoundError
+      message_gone(message_id, "mark_read")
     end
 
     # Files the message under Processed/Rejected. Best-effort tidy-up: it runs
@@ -82,6 +87,8 @@ module Reimbursements
       graph_request(:post, "/users/#{@mailbox}/messages/#{message_id}/move",
               body: { destinationId: folder_id(folder) })
       nil
+    rescue NotFoundError
+      message_gone(message_id, "move")
     end
 
     # Convenience for the reject paths (no expense created, so a failure just
@@ -105,6 +112,18 @@ module Reimbursements
     end
 
     private
+
+    # A mutation (reply / mark_read / move) 404'd because the message no longer
+    # exists — someone handled or deleted it by hand in Outlook between the
+    # poll's listing and this call. There is nothing left to reply to, mark
+    # read, or file, so log for the record and return nil rather than letting a
+    # vanished message alert Honeybadger every poll cycle it's retried.
+    def message_gone(message_id, action)
+      Rails.logger.info(
+        "Reimbursements mailbox: message #{message_id} gone (404) on #{action}; nothing to do"
+      )
+      nil
+    end
 
     # Belt-and-braces guard against outbound mutations (reply / move / mark_read)
     # in non-production without an explicit opt-in — even if someone drives a

@@ -202,5 +202,45 @@ module Reimbursements
 
       assert_raises(MailboxClient::Error) { client.unread_messages }
     end
+
+    # The real Graph error body when a message no longer exists (handled or
+    # deleted by hand in Outlook between the poll's listing and the mutation).
+    ITEM_NOT_FOUND = { error: { code: "ErrorItemNotFound",
+                                message: "The specified object was not found in the store." } }.to_json
+
+    test "a bare graph_request 404 raises NotFoundError (loud, for non-mutation paths)" do
+      # unread_messages is a read path — a 404 here is a real problem and must
+      # still surface. NotFoundError < Error, so existing rescues still catch it.
+      client, = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
+
+      error = assert_raises(GraphAuth::NotFoundError) { client.unread_messages }
+      assert_kind_of MailboxClient::Error, error, "NotFoundError must be a subclass of Error"
+      assert_match(/ErrorItemNotFound/, error.message)
+    end
+
+    test "reply swallows a 404 (message vanished) and returns nil" do
+      client, http = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
+
+      assert_nil client.reply("msg1", html: "<p>hi</p>"), "a vanished message means nothing to reply to"
+      assert_equal "post", http.requests.last.method.to_s, "the reply was still attempted"
+    end
+
+    test "mark_read swallows a 404 (message vanished) and returns nil" do
+      client, http = build_client([ token_response, [ 404, ITEM_NOT_FOUND ] ])
+
+      assert_nil client.mark_read("msg1"), "a vanished message is already effectively read"
+      assert_equal "patch", http.requests.last.method.to_s
+    end
+
+    test "move swallows a 404 (message vanished) and returns nil" do
+      client, http = build_client([
+        token_response,
+        [ 200, { value: [ { id: "fld-processed" } ] }.to_json ], # folder lookup
+        [ 404, ITEM_NOT_FOUND ]                                  # move -> 404
+      ])
+
+      assert_nil client.move("msg1", :processed), "a vanished message has nothing to file"
+      assert_includes http.requests.last.uri, "messages/msg1/move"
+    end
   end
 end

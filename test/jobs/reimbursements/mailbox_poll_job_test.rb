@@ -481,6 +481,50 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
+    # --- Vanished mailbox messages (Graph 404 ErrorItemNotFound) -----------
+
+    # Drives the REAL MailboxClient (not the FakeMailbox) over FakeHttp so the
+    # 404-swallowing added in MailboxClient#mark_read/#move/#reply is exercised
+    # end to end: a message handled/deleted by hand in Outlook between the
+    # poll's listing and the mark_read PATCH used to 404 and alert every cycle.
+    test "a message whose mark_read 404s (vanished from the mailbox) doesn't abort the poll or alert" do
+      setup_job(messages: [])
+      Rails.cache.delete_matched("reimbursements/graph-folder/*")
+
+      def raw_unknown(id, from)
+        { id: id, subject: "Receipt", bodyPreview: "see attached",
+          from: { emailAddress: { address: from } } }
+      end
+      item_not_found = { error: { code: "ErrorItemNotFound",
+                                  message: "The specified object was not found in the store." } }.to_json
+      http = FakeHttp.new([
+        [ 200, { access_token: "tok-1", expires_in: 3600 }.to_json ],                 # token
+        [ 200, { value: [ raw_unknown("msgGone", "stranger1@example.com"),
+                          raw_unknown("msgOk", "stranger2@example.com") ] }.to_json ], # unread list
+        [ 202, "" ],                                                                   # reply msgGone
+        [ 200, { value: [ { id: "fld-rejected" } ] }.to_json ],                        # folder lookup
+        [ 201, { id: "moved" }.to_json ],                                              # move msgGone
+        [ 404, item_not_found ],                                                        # mark_read msgGone -> vanished
+        [ 202, "" ],                                                                   # reply msgOk
+        [ 201, { id: "moved2" }.to_json ],                                             # move msgOk (folder cached)
+        [ 200, "" ]                                                                    # mark_read msgOk
+      ])
+      MailboxPollJob.mailbox_builder = lambda do |cost_centre|
+        MailboxClient.new(mailbox: cost_centre.receive_mailbox, http: http,
+                          clock: -> { Time.zone.local(2026, 7, 9, 12) })
+      end
+
+      notified = capture_honeybadger_notices { MailboxPollJob.perform_now }
+
+      assert_empty notified, "a vanished message (404) must not raise a Honeybadger alert"
+      patched = http.requests.select { |r| r.method.to_s == "patch" }.map(&:uri)
+      assert(patched.any? { |uri| uri.include?("messages/msgOk") },
+             "the poll must continue past the vanished message and mark the next one read")
+      assert_equal 0, Expense.count
+    ensure
+      Rails.cache.delete_matched("reimbursements/graph-folder/*")
+    end
+
     test "an already-seen message whose receipts are already attached is filed away silently" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
       done = Expense.create!(status: Status::DRAFT, person: @person, source_message_id: "msg1")
