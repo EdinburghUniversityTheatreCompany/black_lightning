@@ -48,7 +48,15 @@ module Reimbursements
     NIGHTLY_DEFAULT_DAYS = [ 2, 4 ].freeze
     serialize :nightly_run_days, coder: JSON
 
+    # The +key+ is the URL slug (`param: :key`, `find_by!(key:)`), so it must be
+    # URL-safe. Derive it from the name by default (create form leaves it blank),
+    # and enforce the slug shape whether typed or derived.
+    before_validation :derive_key_from_name
+
     validates :key, presence: true, uniqueness: true
+    validates :key, format: { with: /\A[a-z0-9-]+\z/,
+                              message: "may only contain lowercase letters, numbers and hyphens" },
+                    allow_blank: true
     validates :name, :eusa_code, :receive_mailbox, :send_mailbox, presence: true
     # Prevents a duplicate-mailbox/code misconfiguration once a second cost
     # centre is seeded — e.g. two rows accidentally sharing one receive
@@ -174,6 +182,13 @@ module Reimbursements
       return nil if drive_id.blank? || folder_id.blank?
 
       Folder.new(drive_id: drive_id, folder_id: folder_id)
+    end
+
+    # Auto-fill the URL slug from the name when the operator didn't type one
+    # (the create form's manual "key" field lives in a collapsed Advanced
+    # section). An explicit key is left untouched so it can be overridden.
+    def derive_key_from_name
+      self.key = name.to_s.parameterize if key.blank? && name.present?
     end
 
     def nightly_run_days_are_weekday_numbers

@@ -4,6 +4,10 @@
   receipts and the BACS request file are filed in SharePoint. Pick a cost centre to edit its settings.
 </p>
 
+<p class="mb-3">
+  <%= link_to "New cost centre", new_admin_reimbursements_setting_path, class: btn_classes(:primary, :sm) %>
+</p>
+
 <%= render CardComponent.new(title: "#{@cost_centres.size} #{'cost centre'.pluralize(@cost_centres.size)}") do %>
   <div class="flex flex-col gap-2">
     <% @cost_centres.each do |cost_centre| %>

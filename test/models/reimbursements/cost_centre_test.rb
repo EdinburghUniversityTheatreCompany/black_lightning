@@ -35,6 +35,37 @@ module Reimbursements
       assert_includes cost_centre.errors.attribute_names, :send_mailbox
     end
 
+    test "key auto-derives from the name (parameterized) when left blank" do
+      cc = CostCentre.new(name: "Bedlam Termtime", eusa_code: "BED",
+        receive_mailbox: "tt-in@b.co", send_mailbox: "tt-out@b.co")
+      cc.valid?
+      assert_equal "bedlam-termtime", cc.key
+    end
+
+    test "an explicit key is kept, not overwritten by the name" do
+      cc = CostCentre.new(name: "Bedlam Termtime", key: "tt", eusa_code: "BED",
+        receive_mailbox: "tt-in@b.co", send_mailbox: "tt-out@b.co")
+      cc.valid?
+      assert_equal "tt", cc.key
+    end
+
+    test "rejects a key with spaces or uppercase — it must be a URL slug" do
+      cc = CostCentre.new(name: "X", key: "Bad Key", eusa_code: "BK1",
+        receive_mailbox: "bk-in@b.co", send_mailbox: "bk-out@b.co")
+      assert_not cc.valid?
+      assert_includes cc.errors.attribute_names, :key
+
+      cc.key = "UPPER"
+      assert_not cc.valid?
+      assert_includes cc.errors.attribute_names, :key
+    end
+
+    test "accepts a lowercase-hyphen-digit slug as the key" do
+      cc = CostCentre.new(name: "X", key: "venue-2027", eusa_code: "BK2",
+        receive_mailbox: "bk2-in@b.co", send_mailbox: "bk2-out@b.co")
+      assert cc.valid?, cc.errors.full_messages.to_sentence
+    end
+
     test "key is unique" do
       duplicate = CostCentre.new(key: "fringe", name: "Dup", eusa_code: "F40",
         receive_mailbox: "a@b.co", send_mailbox: "a@b.co")
