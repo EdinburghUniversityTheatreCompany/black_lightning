@@ -108,7 +108,7 @@ module Reimbursements
     def budget_forecasts(budget_id)
       return [] if budget_id.blank?
 
-      BudgetForecast.where(budget_id: budget_id)
+      BudgetForecast.where(budget_id: budget_id).includes(:budget_update)
                     .order(date: :desc, id: :desc).to_a
     end
 
@@ -129,6 +129,32 @@ module Reimbursements
     def delete_forecast!(record_id)
       BudgetForecast.find(record_id).destroy!
       bust_budgets!
+    end
+
+    # Records a multi-budget revision in one gesture: a BudgetUpdate carrying
+    # the shared effective_date + note + author, and one BudgetForecast per
+    # entry linked to it (dated with the shared date, its reason set to the
+    # shared note). +forecasts+ is an array of {budget_id:, amount:} — the
+    # caller drops blank amounts. All-or-nothing: an invalid entry rolls the
+    # whole update back.
+    def create_budget_update!(effective_date:, note:, created_by:, forecasts:)
+      update = nil
+      BudgetUpdate.transaction do
+        update = BudgetUpdate.create!(effective_date: effective_date, note: note,
+                                      created_by: created_by,
+                                      financial_year: FinancialYear.current)
+        forecasts.each do |entry|
+          BudgetForecast.create!(budget_id: entry[:budget_id], amount: entry[:amount],
+                                 date: effective_date, reason: note, budget_update: update)
+        end
+      end
+      bust_budgets!
+      update
+    end
+
+    def budget_updates
+      BudgetUpdate.includes(:created_by, :forecasts)
+                  .order(effective_date: :desc, id: :desc).to_a
     end
 
     # Retries the auto_number MAX+1 race: two concurrent creates (portal vs

@@ -84,7 +84,8 @@ class Admin::PermissionsController < AdminController
 
     @models = (ApplicationRecord.descendants + [ Admin::Debt, Season, Doorkeeper::Application ] - [ MarketingCreatives::CategoryInfo, Admin::Proposals::Proposal, OpportunityRole, Reimbursements::BatchAttempt, Reimbursements::OwnerEndorsement,
                   Reimbursements::Person, Reimbursements::PaymentDetails, Reimbursements::Budget,
-                  Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::Expense,
+                  Reimbursements::BudgetOwner, Reimbursements::BudgetForecast, Reimbursements::BudgetUpdate,
+                  Reimbursements::Expense,
                   Reimbursements::Batch, Reimbursements::EusaActual, Reimbursements::FinancialYear ]).uniq
 
     role_exclude = Admin::Permission::EXCLUDED_ROLES

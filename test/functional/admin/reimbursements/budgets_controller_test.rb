@@ -285,6 +285,20 @@ module Admin
         assert_select "input[type=checkbox][name='owner_ids[]'][value=#{@bob.record_id}][checked]", false
       end
 
+      test "the forecast log flags a forecast that came from a budget update" do
+        sign_in @user
+        store = ::Reimbursements::DatabaseStore.new
+        store.create_budget_update!(effective_date: Date.new(2026, 6, 15), note: "June meeting",
+                                    created_by: @user,
+                                    forecasts: [ { budget_id: @props.record_id, amount: 999 } ])
+
+        get :edit, params: { id: @props.record_id }
+
+        assert_response :success
+        assert_includes response.body, "June meeting"
+        assert_includes response.body, "part of a budget update"
+      end
+
       test "editing an unknown budget 404s" do
         sign_in @user
         get :edit, params: { id: "999999" }

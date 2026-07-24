@@ -101,6 +101,10 @@ ChaosRails::Application.routes.draw do
         end
       end
 
+      # Multi-budget forecast revisions: one shared date + note across several
+      # budgets (e.g. after a budget meeting).
+      resources :budget_updates, only: %i[index new create]
+
       # Finance review queue (Phase B): Pending/Approved tabs + per-expense actions.
       get    "review",             to: "review#index",   as: :review
       # Bulk actions over the ticked Pending expenses (static paths, declared

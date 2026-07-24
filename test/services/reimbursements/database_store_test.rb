@@ -240,5 +240,45 @@ module Reimbursements
       assert_includes unbudgeted.map(&:id), orphan.id
       assert_not_includes unbudgeted.map(&:id), matched.id
     end
+
+    # --- Budget updates (Track G Phase 3) ----------------------------------
+
+    test "create_budget_update! records the shared update and one forecast per entry" do
+      a = Budget.create!(name: "Props", nominal_code: "4000")
+      b = Budget.create!(name: "Travel", nominal_code: "4100")
+      user = users(:member)
+
+      update = store.create_budget_update!(
+        effective_date: Date.new(2026, 6, 1), note: "Budget meeting",
+        created_by: user,
+        forecasts: [ { budget_id: a.record_id, amount: BigDecimal("500") },
+                     { budget_id: b.record_id, amount: BigDecimal("250") } ]
+      )
+
+      assert_equal Date.new(2026, 6, 1), update.effective_date
+      assert_equal "Budget meeting", update.note
+      assert_equal user.id, update.created_by_id
+      assert_equal 2, update.forecasts.count
+      # Each forecast carries the shared date + note and links back to the update.
+      created = BudgetForecast.where(budget_update_id: update.id).order(:budget_id)
+      assert_equal [ BigDecimal("500"), BigDecimal("250") ].sort, created.map(&:amount).sort
+      assert created.all? { |f| f.date == Date.new(2026, 6, 1) && f.reason == "Budget meeting" }
+      # The new forecast becomes each budget's current forecast.
+      assert_equal BigDecimal("500"), Budget.find(a.id).current_forecast
+    end
+
+    test "create_budget_update! rolls back entirely if one forecast is invalid" do
+      a = Budget.create!(name: "Props", nominal_code: "4000")
+
+      assert_no_difference [ -> { BudgetUpdate.count }, -> { BudgetForecast.count } ] do
+        assert_raises(ActiveRecord::RecordInvalid) do
+          store.create_budget_update!(
+            effective_date: Date.new(2026, 6, 1), note: "x", created_by: nil,
+            forecasts: [ { budget_id: a.record_id, amount: BigDecimal("500") },
+                         { budget_id: a.record_id, amount: nil } ] # amount required
+          )
+        end
+      end
+    end
   end
 end
