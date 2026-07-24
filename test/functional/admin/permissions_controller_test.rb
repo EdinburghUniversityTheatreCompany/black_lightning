@@ -10,6 +10,12 @@ class Admin::PermissionsControllerTest < ActionController::TestCase
     assert_response :success
   end
 
+  test "grid excludes Reimbursements::CostCentre like its sibling reimbursements models" do
+    get :grid
+    assert_not_includes assigns(:models), Reimbursements::CostCentre,
+      "CostCentre is managed via the Settings form + finance permission, not the per-model grid"
+  end
+
   test "should update permissions" do
     post :update_grid
     assert_redirected_to admin_permissions_path
