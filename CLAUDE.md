@@ -191,13 +191,24 @@ survive as historical import provenance and are never written. Spec + plan in
 - **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
   the *development* credentials are publicly readable, so no secret values there), then
   per-env credentials `reimbursements:` (production only).
-- **AI prefill** (`Reimbursements::Extractor`, Gemini 2.5 Flash): never blocks — 5
-  attempts with 1/2/4/8s backoff on transient errors, then callers proceed without
-  prefill. The VAT soft-block in `ExpenseForm` requires an acknowledgement checkbox when
-  the receipt doesn't itemise VAT; it must never become a hard block.
+- **AI prefill** (`Reimbursements::Extractor`, Gemini 2.5 Flash): **opt-in per receipt**.
+  Selecting a file no longer auto-scans; the receipt form reveals a consent radio group
+  (`reimbursements_receipt_controller.js`) and only "Yes, reimburse myself" (`mode: self`)
+  or "Yes, invoice" (`mode: invoice`) posts to `ExpensesController#extract`. Self mode
+  returns merchant/amount/description/budget/reference only; **invoice mode additionally
+  returns the payee `payee_name`/`sort_code`/`account_number` printed on the invoice** and
+  prefills the third-party override trio (modulus/all-or-nothing validation unchanged). The
+  controller whitelists `%w[self invoice]` (unknown mode → 422) and strips the bank trio
+  from the JSON in self mode even if the model volunteers it. The disclosure copy states
+  we're on Gemini's free tier (Google may store/human-review). Extraction never blocks —
+  a failed or declined scan leaves a fully usable manual form. The VAT soft-block in
+  `ExpenseForm` stays a soft block.
 - **Email-in**: `Reimbursements::MailboxPollJob` (recurring, every 5 min) polls the
   shared mailbox via `MailboxClient` (Graph app-only auth, scoped by an
-  ApplicationAccessPolicy). Reply-then-move is the commit point; unread = will retry.
+  ApplicationAccessPolicy). It **does not run Gemini extraction** (no submitter is present
+  to consent): every inbound receipt becomes a **blank DRAFT** (subject as the description,
+  amount/budget/reference left blank) plus the "please complete it in the portal" reply.
+  Reply-then-move is the commit point; unread = will retry.
   `CredentialsCheckJob` (daily) + `AuthError` alerts warn `alert_email` (IT
   subcommittee) before/when the Entra client secret dies.
 - **Tests**: seed real rows with the `create_reimbursements_*` helpers

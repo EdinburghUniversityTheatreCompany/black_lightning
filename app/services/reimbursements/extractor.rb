@@ -18,10 +18,11 @@ module Reimbursements
     MAX_ATTEMPTS = 5
     REFERENCE_LIMIT = ExpenseForm::REFERENCE_LIMIT
 
-    # Structured output the model must return. Every field is optional: the
-    # model leaves out anything it isn't confident about, and callers pick their
-    # own fallbacks.
-    SCHEMA = RubyLLM::Schema.create do
+    # The everyday fields, shared by both extraction modes. Every field is
+    # optional: the model leaves out anything it isn't confident about, and
+    # callers pick their own fallbacks. Kept as a proc so the two schemas below
+    # declare them once (jscpd duplication gate is at zero).
+    BASE_FIELDS = lambda do
       string :merchant, required: false
       string :purchase_date, required: false
       number :total_amount, required: false
@@ -32,9 +33,27 @@ module Reimbursements
       string :suggested_payment_reference, required: false
     end
 
+    # Reimburse-myself mode (the default): merchant/amounts/budget only. No bank
+    # details are ever requested — the submitter is paid on their own registered
+    # account.
+    SCHEMA = RubyLLM::Schema.create { instance_exec(&BASE_FIELDS) }
+
+    # Invoice mode: the claim pays a third party on the bank details PRINTED on
+    # the invoice, so the schema additionally returns the payee trio. The model
+    # is told to leave them out unless they actually appear on the document; the
+    # operator/submitter still verifies, and the modulus/all-or-nothing checks
+    # on the override fields are unchanged.
+    INVOICE_SCHEMA = RubyLLM::Schema.create do
+      instance_exec(&BASE_FIELDS)
+      string :payee_name, required: false
+      string :sort_code, required: false
+      string :account_number, required: false
+    end
+
     Extraction = Struct.new(:merchant, :purchase_date, :total_amount, :vat_amount,
                             :vat_itemised, :suggested_description,
                             :suggested_budget_record_id, :suggested_payment_reference,
+                            :payee_name, :sort_code, :account_number,
                             :error, keyword_init: true) do
       def ok?
         error.nil?
@@ -56,16 +75,21 @@ module Reimbursements
       @max_attempts = max_attempts
     end
 
-    # receipts: [{filename:, content_type:, bytes:}], budgets: [Budget],
-    # context: optional free text (e.g. the email subject/body).
-    def extract(receipts:, budgets:, context: nil)
+    # receipts: [{filename:, content_type:, bytes:}], budgets: [Budget].
+    # mode: :self (reimburse the submitter, the default) or :invoice (pay the
+    # bank details printed on the invoice). Only :invoice requests the payee
+    # bank trio; :self never does. Extraction is opt-in per receipt — the
+    # portal only calls this once the submitter has consented (see the receipt
+    # form's consent radios); email-in no longer extracts at all.
+    def extract(receipts:, budgets:, mode: :self)
       return failure("no Gemini API key configured") if @api_key.blank?
       return failure("no receipts provided") if receipts.blank?
 
+      invoice = invoice_mode?(mode)
       response = @chat_builder.call
-                             .with_schema(SCHEMA)
-                             .ask(prompt(budgets, context), with: attachments(receipts))
-      parse(response.content, budgets)
+                             .with_schema(invoice ? INVOICE_SCHEMA : SCHEMA)
+                             .ask(prompt(budgets, invoice), with: attachments(receipts))
+      parse(response.content, budgets, invoice)
     rescue RubyLLM::Error => e
       failure("Gemini request failed: #{e.message}")
     rescue StandardError => e
@@ -78,6 +102,10 @@ module Reimbursements
       Extraction.new(error: message)
     end
 
+    def invoice_mode?(mode)
+      mode.to_s == "invoice"
+    end
+
     # In-memory receipt bytes become RubyLLM attachments; the filename carries
     # the extension RubyLLM uses to detect the MIME type.
     def attachments(receipts)
@@ -86,7 +114,7 @@ module Reimbursements
       end
     end
 
-    def prompt(budgets, context)
+    def prompt(budgets, invoice)
       budget_lines = budgets.map { |b| "- #{b.record_id}: #{b.name}" }.join("\n")
       <<~PROMPT
         You are helping a student theatre producer submit an expense claim from the
@@ -106,29 +134,29 @@ module Reimbursements
         - suggested_payment_reference: max #{REFERENCE_LIMIT} characters. If the
           receipt is an invoice specifying a payment reference, use that; otherwise
           use the invoice number; otherwise a short "<merchant or purpose>" label.
-        #{context_block(context)}
+        #{invoice_block(invoice)}
       PROMPT
     end
 
-    # Submitter-supplied context (email subject/body) is untrusted free text, so
-    # it is fenced and labelled as data — never trust it as instructions. See
-    # PromptSafety.
-    def context_block(context)
-      return "" if context.blank?
+    # Invoice mode also asks for the payee's bank details, but ONLY when they are
+    # actually printed on the invoice — never inferred or guessed. A supplier
+    # invoice usually prints these for a BACS payment; a shop receipt does not.
+    def invoice_block(invoice)
+      return "" unless invoice
 
       <<~BLOCK.chomp
-
-        #{PromptSafety::UNTRUSTED_PREAMBLE}
-
-        Context from the submitter:
-        #{PromptSafety.fence(context, label: 'submitter context')}
+        - payee_name: the account name to pay, only if printed on the invoice.
+        - sort_code: the payee's UK sort code, only if printed on the invoice.
+        - account_number: the payee's account number, only if printed on the invoice.
+        Leave payee_name, sort_code and account_number out entirely unless they are
+        printed on the invoice. Do not guess or infer them.
       BLOCK
     end
 
-    def parse(data, budgets)
+    def parse(data, budgets, invoice)
       return failure("Gemini returned no structured data") unless data.is_a?(Hash)
 
-      Extraction.new(
+      attrs = {
         merchant: data["merchant"].presence,
         purchase_date: date(data["purchase_date"]),
         total_amount: decimal(data["total_amount"]),
@@ -137,7 +165,13 @@ module Reimbursements
         suggested_description: data["suggested_description"].presence,
         suggested_budget_record_id: known_budget_id(data["suggested_budget_record_id"], budgets),
         suggested_payment_reference: data["suggested_payment_reference"].to_s.strip.first(REFERENCE_LIMIT).presence
-      )
+      }
+      if invoice
+        attrs[:payee_name] = data["payee_name"].presence
+        attrs[:sort_code] = data["sort_code"].presence
+        attrs[:account_number] = data["account_number"].presence
+      end
+      Extraction.new(**attrs)
     end
 
     def known_budget_id(record_id, budgets)

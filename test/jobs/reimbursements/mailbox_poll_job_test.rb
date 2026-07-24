@@ -52,17 +52,6 @@ module Reimbursements
       end
     end
 
-    # Extractor stand-in returning a canned extraction.
-    class FakeExtractor
-      def initialize(extraction)
-        @extraction = extraction
-      end
-
-      def extract(**)
-        @extraction
-      end
-    end
-
     PDF_ATTACHMENT = { filename: "receipt.pdf", content_type: "application/pdf", bytes: "PDF" }.freeze
 
     def inbound_message(id: "msg1", from: "pat@example.com", subject: "Taxi receipt")
@@ -70,15 +59,7 @@ module Reimbursements
                                  body_text: "receipt attached")
     end
 
-    def happy_extraction
-      Extractor::Extraction.new(
-        merchant: "City Cabs", total_amount: BigDecimal("18.00"), vat_amount: BigDecimal("3.00"),
-        vat_itemised: true, suggested_description: "Taxi to venue",
-        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "CITYCABS PAT"
-      )
-    end
-
-    def setup_job(messages:, attachments: {}, extraction: nil)
+    def setup_job(messages:, attachments: {})
       ENV["REIMBURSEMENTS_AZURE_TENANT_ID"] = "t"
       ENV["REIMBURSEMENTS_AZURE_CLIENT_ID"] = "c"
       ENV["REIMBURSEMENTS_AZURE_CLIENT_SECRET"] = "s"
@@ -91,7 +72,6 @@ module Reimbursements
       # the fake mailbox for it. The multi-cost-centre test overrides this.
       MailboxPollJob.mailbox_builder = ->(_cost_centre) { @mailbox }
       MailboxPollJob.store_builder = -> { @store }
-      MailboxPollJob.extractor_builder = -> { FakeExtractor.new(extraction || happy_extraction) }
     end
 
     teardown do
@@ -100,7 +80,6 @@ module Reimbursements
       MailboxPollJob.mailbox_builder =
         ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
       MailboxPollJob.store_builder = -> { Reimbursements.build_store }
-      MailboxPollJob.extractor_builder = -> { Extractor.new }
       Rails.cache.delete(GraphAuthAlert::CACHE_KEY)
       Rails.cache.delete_matched("reimbursements/mailbox-sender-count/*")
       Rails.cache.delete_matched("reimbursements/mailbox-sender-counted/*")
@@ -193,7 +172,7 @@ module Reimbursements
       assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
     end
 
-    test "known sender with a receipt gets a draft expense and a portal link" do
+    test "known sender with a receipt gets a blank draft expense and a portal link" do
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
 
       MailboxPollJob.perform_now
@@ -201,10 +180,13 @@ module Reimbursements
       expense = Expense.sole
       assert_equal Status::DRAFT, expense.status
       assert_equal @person, expense.person
-      assert_equal @budget, expense.budget
-      assert_in_delta 18.0, expense.amount
-      assert_in_delta 15.0, expense.amount_excl_vat
-      assert_equal "Taxi to venue", expense.description
+      # Email-in never reads the receipt with Gemini: only the subject seeds the
+      # description; amount/budget/reference are left blank for the portal.
+      assert_equal "Taxi receipt", expense.description, "the subject seeds the description"
+      assert_nil expense.amount, "no extraction: the amount is left for the portal"
+      assert_nil expense.amount_excl_vat
+      assert_nil expense.budget
+      assert_nil expense.payment_reference
 
       assert_equal 1, expense.receipt_files.count
       reply_html = @mailbox.replies.sole.last
@@ -303,17 +285,20 @@ module Reimbursements
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
 
-    test "extraction failure still creates the expense with subject and receipt only" do
-      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] },
-                extraction: Extractor::Extraction.new(error: "gemini down"))
+    test "email-in never sends the receipt to Gemini" do
+      # No submitter is present to consent to the upload, so the poll job must
+      # never build or call the extractor — it just drafts a blank claim. Blow
+      # up if anything reintroduces an extraction call.
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+      calls = 0
+      ::Reimbursements::Extractor.define_singleton_method(:new) { |*| calls += 1; super() }
 
       MailboxPollJob.perform_now
 
-      expense = Expense.sole
-      assert_equal "Taxi receipt", expense.description, "description falls back to the subject"
-      assert_nil expense.amount
-      assert_nil expense.budget
-      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+      assert_equal 0, calls, "the poll job must not instantiate the extractor"
+      assert_equal 1, Expense.count
+    ensure
+      ::Reimbursements::Extractor.singleton_class.send(:remove_method, :new)
     end
 
     test "a failing message is left unread and others still process" do

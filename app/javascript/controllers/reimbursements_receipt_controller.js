@@ -14,19 +14,22 @@ let stashedFiles = null
 // already corrected. Reset on a fresh (non-resubmit) form.
 const editedFieldNames = new Set()
 
-// Receipt-first expense form: when files are picked, posts them to the
-// extract endpoint and prefills the form fields from the AI's reading.
-// Extraction failing (or JS being off) leaves a perfectly usable manual form.
+// Receipt-first expense form. Reading a receipt is opt-in: picking a file
+// reveals a consent choice, and only selecting "self" or "invoice" posts the
+// file to the extract endpoint to prefill the form. "No" (or JS being off)
+// leaves a perfectly usable manual form and sends nothing to Gemini.
 export default class extends Controller {
   static targets = ["files", "status", "amount", "amountExclVat", "budget",
     "description", "reference", "referenceCounter", "vatItemised", "vatWarning",
-    "reattachNotice", "largeAmountWarning"]
+    "reattachNotice", "largeAmountWarning", "consent", "consentOption",
+    "payeeName", "sortCode", "accountNumber"]
   static values = { extractUrl: String, resubmit: Boolean, largeAmountThreshold: { type: Number, default: 1000 } }
 
   connect() {
     this.updateCounter()
     this.#trackUserEdits()
     this.#restoreOrClearStash()
+    this.#refreshConsentVisibility()
   }
 
   // Remember which fields the producer has typed into (by input name), so
@@ -39,6 +42,9 @@ export default class extends Controller {
   #trackUserEdits() {
     const fields = [this.amountTarget, this.amountExclVatTarget, this.descriptionTarget,
       this.referenceTarget, this.budgetTarget]
+    if (this.hasPayeeNameTarget) fields.push(this.payeeNameTarget)
+    if (this.hasSortCodeTarget) fields.push(this.sortCodeTarget)
+    if (this.hasAccountNumberTarget) fields.push(this.accountNumberTarget)
     for (const field of fields) {
       const mark = () => { if (!this.isPrefilling) editedFieldNames.add(field.name) }
       field.addEventListener("input", mark)
@@ -51,6 +57,37 @@ export default class extends Controller {
     if (this.hasFilesTarget && this.filesTarget.files.length) {
       stashedFiles = this.filesTarget.files
     }
+  }
+
+  // A new file was picked (or cleared): reveal (or hide) the consent choice and
+  // clear any earlier pick, so the submitter consciously re-consents for the
+  // new receipt before anything is sent to Gemini.
+  fileChanged() {
+    this.#clearConsent()
+    this.#refreshConsentVisibility()
+  }
+
+  // The submitter picked a scan option. "self"/"invoice" trigger the opt-in
+  // upload (in the chosen mode); "no" sends nothing at all.
+  consentChanged(event) {
+    const mode = event.target.value
+    if (mode === "self" || mode === "invoice") {
+      this.#runExtract(mode)
+    } else {
+      this.#setStatus("No problem, nothing was sent to Google. Fill in the details below yourself.")
+    }
+  }
+
+  // Show the consent choice only once a receipt is attached; hide it otherwise.
+  #refreshConsentVisibility() {
+    if (!this.hasConsentTarget || !this.hasFilesTarget) return
+    const hasFile = this.filesTarget.files.length > 0
+    this.consentTarget.classList.toggle("hidden", !hasFile)
+  }
+
+  #clearConsent() {
+    if (!this.hasConsentOptionTarget) return
+    for (const option of this.consentOptionTargets) option.checked = false
   }
 
   submitEnd(event) {
@@ -74,16 +111,22 @@ export default class extends Controller {
     this.filesTarget.files = data.files
     // The file survived, so the "please re-attach" fallback no longer applies.
     if (this.hasReattachNoticeTarget) this.reattachNoticeTarget.classList.add("hidden")
+    // A file is present again, so offer the consent choice for it once more.
+    this.#refreshConsentVisibility()
     this.#setStatus("Kept the receipt you attached — check the errors above and submit again.")
   }
 
-  async extract() {
+  // Opt-in scan, invoked from the consent radios. mode is "self" (reimburse the
+  // submitter) or "invoice" (also prefill the payee bank details printed on the
+  // invoice). Failure just leaves the manual form usable — never a blocker.
+  async #runExtract(mode) {
     const files = this.filesTarget.files
     if (!files.length) return
 
     this.#setStatus("Reading your receipt…")
     const body = new FormData()
     for (const file of files) body.append("receipts[]", file)
+    body.append("mode", mode)
 
     try {
       const response = await fetch(this.extractUrlValue, {
@@ -144,6 +187,12 @@ export default class extends Controller {
       if (extraction.suggested_budget_record_id && !editedFieldNames.has(this.budgetTarget.name)) {
         this.budgetTarget.value = extraction.suggested_budget_record_id
       }
+      // Invoice-mode only: prefill the third-party payee trio from the bank
+      // details printed on the invoice. Absent in self mode (the keys aren't
+      // even in the JSON), so #setValue no-ops there.
+      if (this.hasPayeeNameTarget) this.#setValue(this.payeeNameTarget, extraction.payee_name)
+      if (this.hasSortCodeTarget) this.#setValue(this.sortCodeTarget, extraction.sort_code)
+      if (this.hasAccountNumberTarget) this.#setValue(this.accountNumberTarget, extraction.account_number)
       // vat_itemised is derived from the receipt (a hidden field, never typed),
       // so always refresh it and its soft-block warning from the latest reading.
       this.vatItemisedTarget.value = String(extraction.vat_itemised)
