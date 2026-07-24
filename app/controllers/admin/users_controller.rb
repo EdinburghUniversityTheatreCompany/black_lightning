@@ -166,22 +166,21 @@ class Admin::UsersController < AdminController
   private
 
   def permitted_params
-    if params[:user][:password].blank?
-      params[:user].delete(:password)
-    elsif @user&.persisted? && @user.valid_password?(params[:user][:password])
-      # If password is the same as current, treat as if blank (only for existing users)
-      params[:user].delete(:password)
-    end
-
-    if params[:user][:password_confirmation].blank?
-      params[:user].delete(:password_confirmation)
-    elsif params[:user][:password].blank? && params[:user][:password_confirmation].present?
-      # If password was removed but confirmation wasn't, remove confirmation too
-      params[:user].delete(:password_confirmation)
-    end
-
     perm_params = %i[email password password_confirmation remember_me first_name last_name
                      phone_number card_number public_profile bio avatar username student_id associate_id calendar_email]
+
+    password = params.dig(:user, :password)
+    password_confirmation = params.dig(:user, :password_confirmation)
+
+    # Don't assign the password when it's blank or (for an existing user) unchanged.
+    # Excluding it from the permit list has the same effect as dropping it — without
+    # mutating the live request params (which must stay intact for form re-renders).
+    drop_password = password.blank? || (@user&.persisted? && @user.valid_password?(password))
+    perm_params.delete(:password) if drop_password
+
+    # Drop the confirmation when it's blank, or whenever the password itself is dropped
+    # (an orphan confirmation would fail Devise's confirmation validation).
+    perm_params.delete(:password_confirmation) if password_confirmation.blank? || drop_password
 
     perm_params.push(role_ids: []) if current_user.has_role?(:admin)
 

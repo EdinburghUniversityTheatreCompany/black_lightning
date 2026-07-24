@@ -2,7 +2,7 @@
 <% search_fields = is_specific_user ? nil : {
   user_full_name_cont:  { slug: 'defaults.user' },
   show_name_cont:       { slug: 'defaults.show_name' },
-  show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean },
+  show_fulfilled:       { slug: 'defaults.show_fulfilled', type: :boolean, checked: @show_fulfilled },
   show_non_members:     { slug: 'defaults.show_non_members', type: :boolean }
 } %>
 

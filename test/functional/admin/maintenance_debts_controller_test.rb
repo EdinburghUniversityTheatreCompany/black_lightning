@@ -67,6 +67,24 @@ class Admin::MaintenanceDebtsControllerTest < ActionController::TestCase
     assert assigns(:is_specific_user)
   end
 
+  # The "Show Fulfilled" checkbox reflects the cookie-remembered state via the
+  # @show_fulfilled ivar, NOT by the controller writing the value back into the
+  # live request params (which it used to do).
+  test "show_fulfilled checkbox reflects the cookie without the controller mutating params" do
+    # Need >= 2 distinct users with debts so the search form (with the checkbox) renders.
+    FactoryBot.create_list(:maintenance_debt, 2)
+
+    cookies["#{Admin::MaintenanceDebt.table_name}_show_fulfilled"] = "true"
+
+    get :index
+    assert_response :success
+
+    assert assigns(:show_fulfilled), "the cookie should drive show_fulfilled = true"
+    assert_select "input[name=?][checked=checked]", "show_fulfilled"
+    assert_not @controller.params.key?("show_fulfilled"),
+      "the controller must not write show_fulfilled back into the request params"
+  end
+
   test "should show admin_maintenance_debt" do
     get :show, params: { id: @maintenance_debt }
     assert_response :success

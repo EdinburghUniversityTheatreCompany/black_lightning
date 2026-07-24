@@ -1,5 +1,10 @@
 <%# locals: (f:, name:, label:, params:) -%>
+<%# `params` is the field-config hash (not the request params). A caller can pass an
+    explicit `checked:` to drive the box from resolved state (e.g. a param-or-cookie
+    value) without the controller writing that value back into the request params.
+    Otherwise fall back to reading the live request param. -%>
+<% checked = params.key?(:checked) ? params[:checked] : (request.params[name.to_sym].to_s == '1') %>
 
 <div class="col">
-    <%= f.input name.to_sym, label: label, input_html: { id: name, checked: request.params[name.to_sym].to_s == '1', name: name }, as: :boolean %>
+    <%= f.input name.to_sym, label: label, input_html: { id: name, checked: checked, name: name }, as: :boolean %>
 </div>

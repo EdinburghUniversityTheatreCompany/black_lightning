@@ -42,10 +42,12 @@ class Admin::MassMailsController < AdminController
   # PUT /admin/mass_mails/1.json
   ##
   def update
-    send = params.delete(:send)
+    # The Send submit button posts a top-level `send` flag (never part of the
+    # permitted mass_mail params). Read it — don't delete it from the request params.
+    send_requested = params[:send].present?
 
     if @mass_mail.update(update_params)
-      if send
+      if send_requested
         send_mail @mass_mail
       else
         flash[:success] = "Mass mail was successfully updated."

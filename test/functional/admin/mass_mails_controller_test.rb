@@ -118,6 +118,20 @@ class Admin::MassMailsControllerTest < ActionController::TestCase
     assert_redirected_to admin_mass_mail_path(assigns(:mass_mail)), "The user was not redirected to the show page. This may indicate that an error occured and it was redirected back to the edit page"
   end
 
+  # Regression guard: update used to `params.delete(:send)` to read the Send-button
+  # flag, mutating the live request params. It must read the flag without deleting it.
+  test "update does not delete the send flag from the request params" do
+    mass_mail = mass_mails(:draft_mass_mail)
+    attributes = FactoryBot.attributes_for(:draft_mass_mail)
+
+    # Blank send => a normal update (no mail sent); the flag must still not be stripped.
+    put :update, params: { id: mass_mail, mass_mail: attributes, send: "" }
+
+    assert_redirected_to admin_mass_mail_path(assigns(:mass_mail))
+    assert @controller.params.key?("send"),
+      "update must not delete the send flag from the live request params"
+  end
+
   test "should not update mass mail that is invalid" do
     mass_mail = mass_mails(:draft_mass_mail)
     attributes = FactoryBot.attributes_for(:draft_mass_mail, subject: "")

@@ -217,6 +217,29 @@ class Admin::UsersControllerTest < ActionController::TestCase
     assert_equal "Updated Name", @user.first_name, "Other fields should still be updated"
   end
 
+  # Regression guard: permitted_params used to delete password keys from the live
+  # request params as a side effect. It must not mutate params — it only decides
+  # which keys are permitted.
+  test "permitted_params does not mutate the request params" do
+    current_password = "password123"
+    @user.update!(password: current_password, password_confirmation: current_password)
+
+    # A password equal to the current one is treated as unchanged (so it is not
+    # re-assigned), but the submitted value must remain in the request params.
+    put :update, params: {
+      id: @user,
+      user: {
+        password: current_password,
+        password_confirmation: current_password,
+        first_name: "Kept"
+      }
+    }
+
+    assert_redirected_to admin_user_path(@user)
+    assert_equal current_password, @controller.params[:user][:password],
+      "permitted_params must not delete keys from the live request params"
+  end
+
   test "get autocomplete list does not work when not signed in" do
     sign_out users(:admin)
 
