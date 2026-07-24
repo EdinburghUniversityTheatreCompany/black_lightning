@@ -53,6 +53,10 @@ module Reimbursements
     # attachments are inlined; large ones stream via an upload session after the
     # draft exists.
     def create_draft(mailbox:, to:, subject:, html:, attachments: [], cc: [])
+      unless @settings.outbound_enabled?
+        Rails.logger.info("Reimbursements create_draft suppressed (outbound disabled): to=#{Array(to).join(',')}")
+        return Draft.new(id: "suppressed-#{SecureRandom.hex(4)}", web_link: "")
+      end
       inline, large = Array(attachments).partition { |a| a.content.to_s.bytesize < INLINE_ATTACHMENT_LIMIT }
 
       payload = {
@@ -97,6 +101,10 @@ module Reimbursements
     # Send an email immediately from the mailbox (Notifier uses this for the
     # rejection / "you've been paid" / producer / operator emails). No attachments.
     def send_mail(mailbox:, to:, subject:, html:)
+      unless @settings.outbound_enabled?
+        Rails.logger.info("Reimbursements send_mail suppressed (outbound disabled): to=#{Array(to).join(',')} subject=#{subject.inspect}")
+        return nil
+      end
       graph_request(:post, "/users/#{mailbox}/sendMail",
                     body: { message: { subject: subject,
                                        body: { contentType: "HTML", content: html },
@@ -109,7 +117,11 @@ module Reimbursements
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)
       raise GraphAuth::Error, "cannot upload empty file: #{filename}" if content.to_s.empty?
 
-      safe_name = filename.to_s.tr("/\\", "__")
+      # Sanitise path separators, then percent-encode the filename segment so
+      # spaces/parens/&c. don't blow up URI() ("bad URI (is not URI?)"). Only the
+      # segment is encoded — Graph's ":/…:/content" addressing delimiters, which
+      # live in the literal format string below, must stay unencoded.
+      safe_name = ERB::Util.url_encode(filename.to_s.tr("/\\", "__"))
       if content.bytesize < SIMPLE_UPLOAD_LIMIT
         url = "#{GraphAuth::GRAPH_URL}/drives/#{drive_id}/items/#{folder_id}:/#{safe_name}:/content"
         graph_raw_request(:put, url, content, content_type: "application/octet-stream")["webUrl"].to_s

@@ -4,7 +4,14 @@ module Reimbursements
   class MailboxClientTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret)
+    # Delegates outbound_enabled? to the real Settings so the reply/move/mark_read
+    # belt-and-braces guards read the same REIMBURSEMENTS_ENABLE_OUTBOUND seam the
+    # suite opts into (test_helper), and a suppression test can delete it.
+    FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
+      def outbound_enabled?
+        Reimbursements::Settings.outbound_enabled?
+      end
+    end
 
     def settings
       FakeSettings.new("tenant-1", "client-1", "secret-1")
@@ -99,6 +106,19 @@ module Reimbursements
       request = http.requests.last
       assert_includes request.uri, "/messages/msg1/reply"
       assert_equal "<p>Thanks!</p>", JSON.parse(request.body)["comment"]
+    end
+
+    test "reply/move/mark_read are suppressed (no Graph mutation) when outbound is disabled" do
+      client, http = build_client([ token_response ])
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+
+      assert_nil client.reply("msg1", html: "<p>hi</p>")
+      assert_nil client.move("msg1", :processed)
+      assert_nil client.mark_read("msg1")
+
+      assert_empty http.requests, "no outbound Graph call (not even a token) when outbound is disabled"
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
     test "mark_read_and_move moves to an existing folder, then marks read" do

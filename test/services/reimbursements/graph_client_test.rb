@@ -4,7 +4,14 @@ module Reimbursements
   class GraphClientTest < ActiveSupport::TestCase
     include ReimbursementsTestHelpers
 
-    FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret)
+    # Delegates outbound_enabled? to the real Settings so the send/draft
+    # suppression guard reads the same REIMBURSEMENTS_ENABLE_OUTBOUND seam the
+    # suite sets (test_helper opts in; a suppression test deletes it).
+    FakeSettings = Struct.new(:azure_tenant_id, :azure_client_id, :azure_client_secret) do
+      def outbound_enabled?
+        Reimbursements::Settings.outbound_enabled?
+      end
+    end
 
     def settings
       FakeSettings.new("tenant-1", "client-1", "secret-1")
@@ -111,6 +118,32 @@ module Reimbursements
       assert JSON.parse(post.body)["saveToSentItems"]
     end
 
+    test "send_mail is suppressed (returns nil, no request) when outbound is disabled" do
+      client, http = build_client([ token_response, [ 202, "" ] ])
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+
+      result = client.send_mail(mailbox: "send@x", to: [ "p@x" ], subject: "Paid", html: "<p>done</p>")
+
+      assert_nil result
+      assert_empty http.requests, "no Graph call (not even a token) when outbound is disabled"
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
+    test "create_draft is suppressed and returns a stub Draft when outbound is disabled" do
+      client, http = build_client([ token_response, [ 201, { id: "msg-1", webLink: "x" }.to_json ] ])
+      original = ENV.delete("REIMBURSEMENTS_ENABLE_OUTBOUND")
+
+      draft = client.create_draft(mailbox: "send@x", to: [ "p@x" ], subject: "s", html: "<p>b</p>",
+                                  attachments: [ attachment("PDF", name: "bacs.xlsx") ])
+
+      assert_match(/\Asuppressed-/, draft.id)
+      assert_equal "", draft.web_link
+      assert_empty http.requests, "no Graph call when outbound is disabled"
+    ensure
+      ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
+    end
+
     test "upload_to_folder does a simple PUT for a small file and returns webUrl" do
       client, http = build_client([
         token_response,
@@ -124,6 +157,24 @@ module Reimbursements
       assert_equal "put", put.method.to_s
       assert_includes put.uri, "/drives/drv/items/fld:/a_b.pdf:/content", "slashes sanitised in filename"
       assert_equal "BYTES", put.body
+    end
+
+    test "upload_to_folder percent-encodes spaces and parens in the filename segment" do
+      client, http = build_client([
+        token_response,
+        [ 201, { webUrl: "https://sp.example/receipts/r.pdf" }.to_json ]
+      ])
+
+      url = client.upload_to_folder(
+        drive_id: "drv", folder_id: "fld",
+        filename: "Photoshoot props (2).jpeg", content: "BYTES"
+      )
+
+      assert_equal "https://sp.example/receipts/r.pdf", url
+      put = http.requests.last
+      assert_includes put.uri.to_s,
+        "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/content",
+        "filename segment percent-encoded, Graph ':/…:/content' delimiters preserved"
     end
 
     test "upload_to_folder streams a >=4MB file via a chunked upload session" do
@@ -142,6 +193,24 @@ module Reimbursements
       assert_equal "put", chunk.method.to_s
       assert_includes chunk.uri, "upload.example/session"
       assert_equal big.bytesize, chunk.body.bytesize
+    end
+
+    test "upload_to_folder percent-encodes the filename in the chunked createUploadSession URL" do
+      big = "x" * GraphClient::SIMPLE_UPLOAD_LIMIT
+      client, http = build_client([
+        token_response,
+        [ 200, { uploadUrl: "https://upload.example/session" }.to_json ], # createUploadSession
+        [ 201, { webUrl: "https://sp.example/receipts/big.pdf" }.to_json ] # chunk PUT
+      ])
+
+      url = client.upload_to_folder(drive_id: "drv", folder_id: "fld",
+                                    filename: "Photoshoot props (2).jpeg", content: big)
+
+      assert_equal "https://sp.example/receipts/big.pdf", url
+      session = http.requests.find { |r| r.uri.to_s.include?("createUploadSession") }
+      assert_includes session.uri.to_s,
+        "/drives/drv/items/fld:/Photoshoot%20props%20%282%29.jpeg:/createUploadSession",
+        "filename segment percent-encoded in the >=4MB createUploadSession URL too"
     end
 
     test "upload_to_folder's small-file PUT raises AuthError on a 401/403 (graph_raw_request)" do
