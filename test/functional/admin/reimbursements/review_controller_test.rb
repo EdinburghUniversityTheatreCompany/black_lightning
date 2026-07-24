@@ -223,15 +223,19 @@ module Admin
       test "approve refuses a budget present but with a blank record id (blank nominal-code guard)" do
         # attention_summary flags this as blocking; approve_expense must agree,
         # or it would write a blank nominal code into the BACS spreadsheet. A
-        # blank-record_id budget can't exist as a DB row, so serve the Airtable
-        # PORO shape through a DatabaseStore whose writes are recorded.
-        blank_budget = ::Reimbursements::Airtable::Budget.new(record_id: "", name: "Ghost", nominal_code: "")
-        expense = ::Reimbursements::Airtable::Expense.new(
-          record_id: "recBlankBud", auto_number: 5, status: ::Reimbursements::Status::PENDING,
-          person: ::Reimbursements::Airtable::Person.new(record_id: "recPer1", name: "Pat", email: "p@x.co",
-                                               sort_code: "08-99-99", account_number: "66374958"),
+        # blank-record_id budget can't exist as a DB row, so build the value
+        # object unpersisted (record_id pinned blank) and serve it through a
+        # DatabaseStore whose writes are recorded.
+        blank_budget = ::Reimbursements::Budget.new(name: "Ghost", nominal_code: "")
+        blank_budget.define_singleton_method(:record_id) { "" }
+        person = ::Reimbursements::Person.new(name: "Pat", email: "p@x.co")
+        person.build_payment_details(sort_code: "08-99-99", account_number: "66374958")
+        expense = ::Reimbursements::Expense.new(
+          auto_number: 5, status: ::Reimbursements::Status::PENDING, person: person,
           amount: BigDecimal("10"), amount_excl_vat: BigDecimal("8"), budget: blank_budget
         )
+        expense.instance_variable_set(:@receipts, [])
+        expense.define_singleton_method(:record_id) { "recBlankBud" }
         store = ::Reimbursements::DatabaseStore.new
         updates = []
         store.define_singleton_method(:find_expense!) { |_id| expense }

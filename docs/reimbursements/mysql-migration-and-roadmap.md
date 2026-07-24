@@ -32,13 +32,16 @@ reference and this doc as the current plan.
 
 ## Phase H: the cutover
 
-> **Status (2026-07-17):** steps 1–4 and 6 are implemented on the
-> `reimbursements-mysql-cutover` branch behind the `REIMBURSEMENTS_BACKEND` switch
-> (default `airtable`; `database` = MySQL). The production flip follows
-> [mysql-cutover-runbook.md](mysql-cutover-runbook.md); step 5 (deleting the Airtable
-> layer) is a separate post-flip cleanup PR. Also shipped there: the mailbox
-> idempotency key (`expenses.source_message_id`), the People email unique index,
-> `budgets.cost_centre_id`, financial_years + FKs, and the
+> **Status (2026-07-24): DONE.** All of Phase H has shipped. The production flip to
+> `REIMBURSEMENTS_BACKEND=database` landed in e1fabb41, and the post-flip cleanup
+> (step 5) then **deleted the Airtable layer entirely**: the `Reimbursements::Airtable::*`
+> POROs, the Solid-Cache-fronted Airtable `Store`, `AirtableImporter` + its rake tasks,
+> the `REIMBURSEMENTS_BACKEND` switch (`build_store` now returns `DatabaseStore`
+> unconditionally), the `airtable_pat` secret, the `FakeAirtableClient`/`build_fake_store`
+> test plumbing, and the Airtable reachability check on the status dashboard. The
+> `airtable_record_id` columns are kept as historical import provenance and are never
+> written. Also shipped: the mailbox idempotency key (`expenses.source_message_id`), the
+> People email unique index, `budgets.cost_centre_id`, financial_years + FKs, and the
 > `reimbursements_budget_owners` join table (owners are People, not a single FK).
 
 Order is designed so each step is independently shippable and reversible.
@@ -60,8 +63,9 @@ Order is designed so each step is independently shippable and reversible.
 4. **Receipts / attachments.** Recommended: migrate Airtable attachments to ActiveStorage; or keep
    SharePoint as the archive and store the URLs. Airtable attachment URLs expire (~2h), so any
    migration must fetch fresh in one pass.
-5. **Remove the Airtable layer.** Drop the PAT (`REIMBURSEMENTS_AIRTABLE_PAT`, via fnox/BWS today),
-   the client, the 429 back-off, and the read-through cache. Remove the free-plan caching rationale.
+5. **Remove the Airtable layer.** ✅ Done (2026-07-24). Dropped the PAT
+   (`REIMBURSEMENTS_AIRTABLE_PAT`), the client, the 429 back-off, the read-through cache, and
+   the free-plan caching rationale, along with the `REIMBURSEMENTS_BACKEND` switch and importer.
 6. **Drop `Batch#eusa_draft_created`** in favour of the already-added `draft_message_id` (a present
    id means the draft exists; nil means it doesn't), removing the redundant boolean.
 

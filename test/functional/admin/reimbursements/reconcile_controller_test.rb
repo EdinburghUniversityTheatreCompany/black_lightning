@@ -7,9 +7,8 @@ module Admin
 
     HEADER = "Nominal\tCost Centre\tRef\tDate\tPeriod\tNarrative\tNarrative 1\tDebit\tCredit\tNet".freeze
 
-    # DatabaseStore whose actual-link writes raise for chosen targets — the
-    # DB-era stand-in for fail_update_record_when: one row's transient write
-    # failure amid others that must still commit.
+    # DatabaseStore whose actual-link writes raise for chosen targets: one
+    # row's transient write failure amid others that must still commit.
     class FlakyLinkStore < ::Reimbursements::DatabaseStore
       attr_accessor :fail_expense_link_ids, :fail_budget_links
 

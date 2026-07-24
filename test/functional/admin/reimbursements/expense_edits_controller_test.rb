@@ -610,31 +610,6 @@ module Admin
         assert_redirected_to edit_admin_reimbursements_expense_edit_path(expense.record_id)
       end
 
-      # Airtable-era cache behaviour (production runs the Airtable backend until
-      # the flip): inject the fake Airtable store to cover the "rec"-shaped
-      # live-fetch code paths the database backend never exercises.
-      def use_fake_airtable_store(expenses: [])
-        @store, @client = build_fake_store(expenses: expenses,
-                                           people: [ airtable_person_record ],
-                                           budgets: [ airtable_budget_record ])
-        BaseController.store_builder = -> { @store }
-      end
-
-      test "find resolves a record id via a live fetch even when the cached list is stale" do
-        use_fake_airtable_store
-        sign_in @user
-        # A record created by another process (e.g. the mailbox poll job)
-        # after this store's expenses list was already cached — lookup_expense
-        # must fall back to a live single-record fetch, not just the cache.
-        @store.expenses
-        @client.list_records(:expenses) << airtable_expense_record(id: "recExpNew", status: "Submitted",
-                                                                   auto_number: 99)
-
-        get :find, params: { q: "recExpNew" }
-
-        assert_redirected_to edit_admin_reimbursements_expense_edit_path("recExpNew")
-      end
-
       test "find with no match flashes and re-renders the lookup" do
         sign_in @user
 
@@ -644,22 +619,10 @@ module Admin
         assert_match(/no expense/i, response.body)
       end
 
-      test "find never hits Airtable live for a query that isn't shaped like a record id" do
-        use_fake_airtable_store(expenses: [ airtable_expense_record(id: "recExp1", status: "Paid",
-                                                                    auto_number: 42) ])
+      test "find degrades to no-match, not a 500, for a non-numeric query" do
         sign_in @user
 
-        get :find, params: { q: "42" }
-
-        assert_empty @client.get_calls, "an auto-number search must never cost a live Airtable call"
-      end
-
-      test "find degrades to no-match, not a 500, when a live record-id fetch fails" do
-        use_fake_airtable_store
-        @client.fail_get_tables = [ :expenses ]
-        sign_in @user
-
-        assert_nothing_raised { get :find, params: { q: "recSomething" } }
+        assert_nothing_raised { get :find, params: { q: "not-an-id" } }
 
         assert_response :success
         assert_match(/no expense/i, response.body)

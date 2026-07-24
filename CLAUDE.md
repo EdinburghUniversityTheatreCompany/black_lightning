@@ -174,23 +174,20 @@ Producer-facing expense portal under `/admin/reimbursements`
 (`Admin::Reimbursements::BaseController < AdminController`), gated by the grid
 permission `access`/`reimbursements` (a symbol subject like `:backend`; listed in
 `Admin::PermissionsController`'s miscellaneous permissions) and linked from the admin
-sidebar's Finance category. **Data backend is switchable mid-cutover** (see
-`docs/reimbursements/mysql-migration-and-roadmap.md` + `mysql-cutover-runbook.md`):
-`REIMBURSEMENTS_BACKEND=airtable` (production default until the flip) reads the shared
-Airtable base; `database` reads the local `reimbursements_*` MySQL tables
-(`Reimbursements::{Expense,Person,Budget,…}` AR models, receipts on ActiveStorage).
-Spec + plan in `docs/superpowers/specs|plans/`.
+sidebar's Finance category. Data lives in the local `reimbursements_*` MySQL tables
+(`Reimbursements::{Expense,Person,Budget,…}` AR models, receipts on ActiveStorage). The
+Airtable backend was retired in the post-flip cleanup — the `REIMBURSEMENTS_BACKEND`
+switch, the `Reimbursements::Airtable::*` POROs, the Solid-Cache-fronted Airtable
+`Store`, and the importer are all gone (see the "Done" note in
+`docs/reimbursements/mysql-migration-and-roadmap.md`). The `airtable_record_id` columns
+survive as historical import provenance and are never written. Spec + plan in
+`docs/superpowers/specs|plans/`.
 
 - **Everything goes through the store built by `Reimbursements.build_store`** — the
-  Airtable-era `Reimbursements::Store` (Solid-Cache-fronted over
-  `Reimbursements::Airtable::Client`) or the AR-backed
-  `Reimbursements::DatabaseStore`; both share one frozen public API (common read
-  filters live in `StoreQueries`). The Airtable workspace is on the **free plan
-  (~1,000 API calls/month, shared with bedlam-bacs)**: never call the client directly;
-  a warm-cache page view must cost 0 API calls. Writes bust their cache key. All
-  Airtable access is by field ID (in per-env credentials under
-  `reimbursements_airtable`). The Airtable boundary POROs live under
-  `Reimbursements::Airtable::*` and die with the post-flip cleanup PR.
+  AR-backed `Reimbursements::DatabaseStore`, the single data gateway with a frozen
+  public API. No cache layer: lists are memoized per instance (one store per
+  request/job run). `DatabaseStore::LastReceiptError` guards removing an expense's last
+  receipt. Never hit AR models directly from controllers/jobs — go through the store.
 - **Secrets** (`Reimbursements::Settings`): `REIMBURSEMENTS_*` ENV first (dev: fnox —
   the *development* credentials are publicly readable, so no secret values there), then
   per-env credentials `reimbursements:` (production only).
@@ -203,15 +200,16 @@ Spec + plan in `docs/superpowers/specs|plans/`.
   ApplicationAccessPolicy). Reply-then-move is the commit point; unread = will retry.
   `CredentialsCheckJob` (daily) + `AuthError` alerts warn `alert_email` (IT
   subcommittee) before/when the Entra client secret dies.
-- **Tests**: run against the **database backend by default** (`test_helper` forces
-  `REIMBURSEMENTS_BACKEND=database`; seed with the `create_reimbursements_*` helpers).
-  External services stay faked (`test/support/reimbursements_test_helpers.rb` — FakeHttp,
-  FakeGraphClient, FakeChat; Airtable-era store tests still inject FakeAirtableClient via
-  `build_fake_store`) through `class_attribute` builder seams on
-  `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test helper
-  `message` — it collides with Minitest's internal `message(msg, ending)`. A dev shell's
-  fnox-exported `REIMBURSEMENTS_*` vars leak real credentials into tests — strip them
-  when running the suite by hand.
+- **Tests**: seed real rows with the `create_reimbursements_*` helpers
+  (`test/support/reimbursements_test_helpers.rb`). Pure-logic unit tests that need a
+  value object without a DB round-trip build an unpersisted AR model and pin the
+  DB-computed readers per-instance (`define_singleton_method(:record_id) { … }`,
+  `instance_variable_set(:@receipts, …)`, `build_payment_details`). External services
+  stay faked (FakeHttp, FakeGraphClient, FakeChat) through `class_attribute` builder
+  seams on `Reimbursements::BaseController` and the jobs. No webmock. Don't name a test
+  helper `message` — it collides with Minitest's internal `message(msg, ending)`. A dev
+  shell's fnox-exported `REIMBURSEMENTS_*` vars leak real credentials into tests — strip
+  them when running the suite by hand.
 - **BACS batch invariants** (`Reimbursements::BatchProcessor`): the vendored xlsx
   template (`lib/reimbursements/templates/EUSA_BACS_template.xlsx`) caps a batch at
   `BacsXlsx::MAX_ROWS` (200) data rows — its GRAND TOTAL formula and the Authorisation

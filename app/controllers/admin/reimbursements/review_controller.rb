@@ -173,7 +173,7 @@ module Admin
                                                    content_type: file.content_type, bytes: file.read)
         end
         redirect_to_review(notice: "Attached #{files.size} receipt(s) to ##{expense.auto_number}.")
-      rescue StandardError => e # any backend: Airtable::Error, AR/ActiveStorage failures
+      rescue StandardError => e # AR/ActiveStorage failures
         redirect_to_review(alert: "Couldn't attach the receipt: #{e.message}")
       end
 
@@ -181,7 +181,7 @@ module Admin
         expense = find_expense!
         store.remove_receipt!(expense.record_id, params[:attachment_id])
         redirect_to_review(notice: "Removed a receipt from ##{expense.auto_number}.")
-      rescue ::Reimbursements::Store::LastReceiptError
+      rescue ::Reimbursements::DatabaseStore::LastReceiptError
         redirect_to_review(alert: "Can't remove the last receipt from a submitted expense.")
       rescue StandardError => e
         redirect_to_review(alert: "Couldn't remove the receipt: #{e.message}")

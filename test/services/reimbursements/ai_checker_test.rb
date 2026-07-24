@@ -2,11 +2,12 @@ require "test_helper"
 
 module Reimbursements
   class AiCheckerTest < ActiveSupport::TestCase
-    # Until the DB-backed test migration, these tests exercise the Airtable
-    # boundary POROs the Mapper builds.
-    Person = Airtable::Person
-    Budget = Airtable::Budget
-    Expense = Airtable::Expense
+    # The pure AiChecker prompt-building operates on the AR models' public
+    # interface; built unpersisted with receipts injected (they come from
+    # ActiveStorage in production).
+    Person = Reimbursements::Person
+    Budget = Reimbursements::Budget
+    Expense = Reimbursements::Expense
 
     include ReimbursementsTestHelpers
 
@@ -17,20 +18,23 @@ module Reimbursements
     end
 
     def person(name: "Pat Producer")
-      Person.new(record_id: "recPer1", name: name, email: "pat@example.com")
+      Person.new(name: name, email: "pat@example.com")
     end
 
     def budget(name: "Props")
-      Budget.new(record_id: "recBud1", name: name, nominal_code: "4000")
+      Budget.new(name: name, nominal_code: "4000")
     end
 
     def expense(**attrs)
+      receipts = attrs.key?(:receipts) ? attrs.delete(:receipts) : [ receipt ]
       defaults = {
-        record_id: "recExp1", status: Status::PENDING, auto_number: 1,
+        status: Status::PENDING, auto_number: 1,
         person: person, amount: BigDecimal("12.50"), amount_excl_vat: BigDecimal("10.42"),
-        budget: budget, description: "Fake blood", receipts: [ receipt ]
+        budget: budget, description: "Fake blood"
       }
-      Expense.new(**defaults.merge(attrs))
+      exp = Expense.new(**defaults.merge(attrs))
+      exp.instance_variable_set(:@receipts, receipts)
+      exp
     end
 
     def build(content: nil, error: nil, http_responses: [ [ 200, "PDF-BYTES" ] ])
@@ -108,7 +112,7 @@ module Reimbursements
 
     test "the prompt lists the supplied budgets and asks about VAT" do
       checker, chat = build(content: { "status" => "pass" })
-      checker.check(expense, [ budget(name: "Props"), Budget.new(record_id: "recBud2", name: "Costumes") ])
+      checker.check(expense, [ budget(name: "Props"), Budget.new(name: "Costumes") ])
 
       assert_includes chat.prompt, "Existing budget categories:"
       assert_includes chat.prompt, "- Props"

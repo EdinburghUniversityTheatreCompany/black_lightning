@@ -7,15 +7,12 @@ module Admin
     # close on Escape), the Fancybox receipts lightbox, and the Review page's
     # live-AI-verdict Turbo Stream subscription.
     #
-    # Data is Airtable-backed, so each test injects a fake Store through the
-    # controllers' store_builder seam (the same seam the functional tests use) and
-    # a fake modulus checker, so nothing hits Airtable or the gitignored Pay.UK
-    # rule files. Capybara serves the app in-process, so setting the class
-    # attributes here is visible to the request thread.
+    # Data is served by the DatabaseStore from real seeded rows; a fake modulus
+    # checker keeps the tests off the gitignored Pay.UK rule files. Capybara
+    # serves the app in-process, so setting the class attributes here is visible
+    # to the request thread.
     class FinanceJsTest < ApplicationSystemTestCase
       include ReimbursementsTestHelpers
-
-      EXP = FIELD_IDS[:expenses]
 
       # Always-VALID modulus verdict, so a fully-detailed payee never trips a
       # "needs attention" bank-details reason and "no receipt" is the only flag.
@@ -27,9 +24,9 @@ module Admin
 
       setup do
         grant_finance_permission(users(:member))
-        @person = airtable_person_record(id: "recPer1", name: "Pat Producer", email: "pat@example.com",
-                                         sort_code: "08-99-99", account_number: "66374958")
-        @budget = airtable_budget_record(id: "recBud1", name: "Props", nominal_code: "4000")
+        @person = create_reimbursements_person(name: "Pat Producer", email: "pat@example.com",
+                                               sort_code: "08-99-99", account_number: "66374958")
+        @budget = create_reimbursements_budget(name: "Props", nominal_code: "4000")
         @checker = FakeChecker.new
         ExpenseEditsController.checker_builder = -> { @checker }
         ReviewController.checker_builder = -> { @checker }
@@ -37,65 +34,65 @@ module Admin
       end
 
       teardown do
-        BaseController.store_builder = -> { ::Reimbursements::Store.new }
         ExpenseEditsController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
         ReviewController.checker_builder = -> { ::Reimbursements::ModulusCheck.default_checker }
       end
 
-      def rebuild_store(expenses:)
-        @store, @client = build_fake_store(expenses: expenses, people: [ @person ], budgets: [ @budget ])
-        BaseController.store_builder = -> { @store }
+      def seed_expense(status:, receipt: true, **attrs)
+        create_reimbursements_expense(person: @person, budget: @budget, status: status,
+                                      receipt: receipt, **attrs)
       end
 
       # (a) The accessible reasons popover on the finance expenses table.
       test "needs-attention popover opens on click and closes on Escape" do
-        rebuild_store(expenses: [ airtable_expense_record(id: "recExp1", status: "Pending", receipts: []) ])
+        expense = seed_expense(status: "Pending", receipt: false)
 
         visit admin_reimbursements_expense_edits_path
 
-        trigger = find("button[aria-controls='reasons-edits-adv-recExp1']")
+        panel = "reasons-edits-adv-#{expense.record_id}"
+        trigger = find("button[aria-controls='#{panel}']")
         assert_equal "false", trigger["aria-expanded"], "popover starts collapsed"
-        assert_no_selector "#reasons-edits-adv-recExp1" # panel hidden (Capybara ignores hidden by default)
+        assert_no_selector "##{panel}" # panel hidden (Capybara ignores hidden by default)
 
         trigger.click
         assert_equal "true", trigger["aria-expanded"]
-        assert_selector "#reasons-edits-adv-recExp1", visible: true
-        within("#reasons-edits-adv-recExp1") { assert_text "no receipt" }
+        assert_selector "##{panel}", visible: true
+        within("##{panel}") { assert_text "no receipt" }
 
         # Escape closes it and returns focus to the trigger.
         trigger.send_keys(:escape)
         assert_equal "false", trigger["aria-expanded"]
-        assert_no_selector "#reasons-edits-adv-recExp1"
+        assert_no_selector "##{panel}"
       end
 
       # (a2) Clicking anywhere outside the popover closes it too, not just Escape.
       test "needs-attention popover closes on an outside click" do
-        rebuild_store(expenses: [ airtable_expense_record(id: "recExp1", status: "Pending", receipts: []) ])
+        expense = seed_expense(status: "Pending", receipt: false)
 
         visit admin_reimbursements_expense_edits_path
 
-        trigger = find("button[aria-controls='reasons-edits-adv-recExp1']")
+        panel = "reasons-edits-adv-#{expense.record_id}"
+        trigger = find("button[aria-controls='#{panel}']")
         trigger.click
         assert_equal "true", trigger["aria-expanded"]
-        assert_selector "#reasons-edits-adv-recExp1", visible: true
+        assert_selector "##{panel}", visible: true
 
         find("body").click(x: 5, y: 5) # anywhere outside the trigger/panel
 
         assert_equal "false", trigger["aria-expanded"]
-        assert_no_selector "#reasons-edits-adv-recExp1"
+        assert_no_selector "##{panel}"
       end
 
       # (b) The Fancybox lightbox opens on a receipt thumbnail.
       test "clicking a receipt thumbnail opens the Fancybox lightbox" do
-        image = { "id" => "attImg", "filename" => "receipt.jpg", "url" => "https://airtable/img.jpg",
-                  "size" => 100, "type" => "image/jpeg",
-                  "thumbnails" => { "large" => { "url" => "https://airtable/thumb.jpg" } } }
-        rebuild_store(expenses: [ airtable_expense_record(id: "recExp1", status: "Approved", receipts: [ image ]) ])
+        expense = seed_expense(status: "Approved", receipt: false)
+        attach_test_receipt(expense, filename: "receipt.jpg", content_type: "image/jpeg",
+                            bytes: "JPEGDATA")
 
-        visit edit_admin_reimbursements_expense_edit_path("recExp1")
+        visit edit_admin_reimbursements_expense_edit_path(expense.record_id)
 
         assert_no_selector ".fancybox__container"
-        find("a[data-fancybox='receipts-recExp1']").click
+        find("a[data-fancybox='receipts-#{expense.record_id}']").click
         assert_selector ".fancybox__container", wait: 5
 
         # Escape dismisses the lightbox.
@@ -109,8 +106,6 @@ module Admin
       # discards a non-redirect form response and the button does nothing,
       # which is exactly the regression this guards against.
       test "reconcile Parse and match actually advances the wizard in a real browser" do
-        rebuild_store(expenses: [])
-
         visit admin_reimbursements_reconciliation_path
 
         # Error path: garbage renders the parse error in place.
@@ -132,8 +127,6 @@ module Admin
       # turbo:load-only flash listener left these saves failing with zero
       # visible feedback — the page just redrew silently.
       test "a rejected settings save shows its validation error" do
-        rebuild_store(expenses: [])
-
         visit edit_admin_reimbursements_setting_path("fringe")
         fill_in "Receive mailbox (email-in)", with: "not-an-email"
         click_on "Save settings"
@@ -144,10 +137,7 @@ module Admin
       # (c) The Review page subscribes to the live AI-verdict Turbo Stream.
       test "the Review page renders the AI-verdict Turbo Stream subscription" do
         # ai_check_status present so the page doesn't kick a background AI job.
-        rebuild_store(expenses: [
-          airtable_expense_record(id: "recExp1", status: "Pending",
-                                  overrides: { EXP[:ai_check_status] => "pass" })
-        ])
+        seed_expense(status: "Pending", receipt: false, ai_check_status: "pass")
 
         visit admin_reimbursements_review_path
 
