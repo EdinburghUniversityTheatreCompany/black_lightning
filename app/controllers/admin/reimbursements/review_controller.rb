@@ -77,6 +77,10 @@ module Admin
 
       def approve
         expense = find_expense!
+        # "Save Changes" in the unsaved-edits dialog: persist the card edits
+        # first, in this same request, and abort the approval if they don't
+        # validate (save_edits_before_decision redirects then returns nil).
+        expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
         redirect_with_approve_result(expense, approve_expense(expense))
       end
 
@@ -86,6 +90,10 @@ module Admin
       # genuine data problem the override still can't approve past.
       def override_approve
         expense = find_expense!
+        # "Save Changes" in the unsaved-edits dialog (see #approve): persist the
+        # card edits first, aborting the override if they don't validate — so no
+        # gate-satisfying override row is written for an approval that never runs.
+        expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
         # Only override the owner gate when it's the ONLY thing blocking. If a
         # hard block (bank/budget/amount/status) remains, report that WITHOUT
         # writing an override row — otherwise a later plain approve would sail
@@ -120,6 +128,9 @@ module Admin
 
       def reject
         expense = find_expense!
+        # "Save Changes" in the unsaved-edits dialog (see #approve): persist the
+        # card edits first, aborting the rejection if they don't validate.
+        expense = save_edits_before_decision(expense) or return if params[:save_changes].present?
         reason = params[:rejection_reason].to_s.strip
         if reason.blank?
           redirect_to_review(alert: "A rejection reason is required.")
@@ -294,6 +305,27 @@ module Admin
         expenses.reject(&:ai_checked?).each do |expense|
           ::Reimbursements::AiCheckJob.perform_later(expense.record_id)
         end
+      end
+
+      # Persist the card's inline edits before a decision (Approve/Reject/
+      # override), for the "Save Changes" branch of the client unsaved-edits
+      # dialog. Mirrors #save's validation exactly: on a validation failure it
+      # redirects with the error and returns nil, so the caller
+      # (`... = save_edits_before_decision(expense) or return`) aborts the
+      # decision — the edits and the decision stand or fall together, never a
+      # silent half-apply. Returns the updated expense on success. With JS off no
+      # save_changes flag is sent, so the decision keeps today's behaviour (the
+      # dialog is progressive enhancement).
+      def save_edits_before_decision(expense)
+        error = ::Reimbursements::AmountValidation.error_for(
+          amount: params[:amount], amount_excl_vat: params[:amount_excl_vat]
+        ) || budget_record_id_error(params[:budget_record_id])
+        if error
+          redirect_to_review(alert: error)
+          return nil
+        end
+
+        store.update_expense!(expense.record_id, save_attrs)
       end
 
       def save_attrs
