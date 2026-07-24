@@ -101,6 +101,32 @@ module Admin
       }
     end
 
+    # A plain (no bank trio) extraction; overrides tune individual fields.
+    def extraction_basic(**overrides)
+      ::Reimbursements::Extractor::Extraction.new(
+        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("2.08"),
+        vat_itemised: true, suggested_description: "Props",
+        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "PROPS", **overrides
+      )
+    end
+
+    # An extraction that carries the payee bank trio, so the self/invoice mode
+    # tests can assert the controller gates those fields on the mode.
+    def extraction_with_bank(**overrides)
+      extraction_basic(merchant: "Acme", total_amount: BigDecimal("120.0"),
+                       vat_amount: BigDecimal("20.0"), suggested_description: "Set timber",
+                       suggested_payment_reference: "INV-1001", payee_name: "Acme Props Ltd",
+                       sort_code: "12-34-56", account_number: "12345678", **overrides)
+    end
+
+    # POST the extract endpoint in a given mode and return the parsed JSON body.
+    def extract_body(extraction, mode:)
+      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
+      post :extract, params: { mode: mode, receipts: [ receipt_upload ] }
+      assert_response :success
+      response.parsed_body
+    end
+
     test "new renders the receipt-first form" do
       sign_in @user
 
@@ -172,9 +198,30 @@ module Admin
       # content-type filtering is based on the actual bytes (Marcel), not the
       # declared/filename-implied type, so a mismatched-but-real PDF must NOT
       # be what's used here to prove rejection.
-      post :extract, params: { receipts: [ fixture_file_upload("disguised_executable.pdf", "application/pdf") ] }
+      post :extract, params: { mode: "self",
+                               receipts: [ fixture_file_upload("disguised_executable.pdf", "application/pdf") ] }
 
       assert_response :success
+      assert_not response.parsed_body["ok"]
+    end
+
+    test "extract rejects an unknown mode with a 422 before touching gemini" do
+      sign_in @user
+      BaseController.extractor_builder = -> { raise "extractor must not be built" }
+
+      post :extract, params: { mode: "steal", receipts: [ receipt_upload ] }
+
+      assert_response :unprocessable_entity
+      assert_not response.parsed_body["ok"]
+    end
+
+    test "extract rejects a missing mode with a 422" do
+      sign_in @user
+      BaseController.extractor_builder = -> { raise "extractor must not be built" }
+
+      post :extract, params: { receipts: [ receipt_upload ] }
+
+      assert_response :unprocessable_entity
       assert_not response.parsed_body["ok"]
     end
 
@@ -205,21 +252,36 @@ module Admin
 
     test "extract returns the extraction as json" do
       sign_in @user
-      extraction = ::Reimbursements::Extractor::Extraction.new(
-        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("2.08"),
-        vat_itemised: true, suggested_description: "Props",
-        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "PROPS"
-      )
-      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
 
-      post :extract, params: { receipts: [ receipt_upload ] }
+      body = extract_body(extraction_basic, mode: "self")
 
-      assert_response :success
-      body = response.parsed_body
       assert body["ok"]
       assert_equal "12.5", body["total_amount"]
       assert_equal "10.42", body["amount_excl_vat"]
       assert_equal @budget.record_id, body["suggested_budget_record_id"]
+    end
+
+    test "extract in self mode never returns bank details, even if the model volunteers them" do
+      sign_in @user
+      # A self-mode scan must not surface payee bank details. The fake extractor
+      # supplies them anyway; the controller must strip them for self mode.
+      body = extract_body(extraction_with_bank, mode: "self")
+
+      assert body["ok"]
+      assert_not body.key?("payee_name"), "self mode must omit the payee name"
+      assert_not body.key?("sort_code"), "self mode must omit the sort code"
+      assert_not body.key?("account_number"), "self mode must omit the account number"
+    end
+
+    test "extract in invoice mode passes the printed bank details through" do
+      sign_in @user
+
+      body = extract_body(extraction_with_bank, mode: "invoice")
+
+      assert body["ok"]
+      assert_equal "Acme Props Ltd", body["payee_name"]
+      assert_equal "12-34-56", body["sort_code"]
+      assert_equal "12345678", body["account_number"]
     end
 
     test "extract falls back to the total when excl-VAT is the zero not-yet-known sentinel" do
@@ -227,17 +289,8 @@ module Admin
       # vat_itemised with total == vat gives amount_excl_vat a genuine zero
       # (not nil) -- 0 is truthy in Ruby, so a plain || wouldn't have fallen
       # back to total_amount here.
-      extraction = ::Reimbursements::Extractor::Extraction.new(
-        merchant: "EBS", total_amount: BigDecimal("12.5"), vat_amount: BigDecimal("12.5"),
-        vat_itemised: true, suggested_description: "Props",
-        suggested_budget_record_id: @budget.record_id, suggested_payment_reference: "PROPS"
-      )
-      BaseController.extractor_builder = -> { FakeExtractor.new(extraction) }
+      body = extract_body(extraction_basic(vat_amount: BigDecimal("12.5")), mode: "self")
 
-      post :extract, params: { receipts: [ receipt_upload ] }
-
-      assert_response :success
-      body = response.parsed_body
       assert body["ok"]
       assert_equal "12.5", body["total_amount"]
       assert_equal "12.5", body["amount_excl_vat"]
@@ -245,12 +298,10 @@ module Admin
 
     test "extract reports failure as ok false" do
       sign_in @user
-      BaseController.extractor_builder = -> { FakeExtractor.new(::Reimbursements::Extractor::Extraction.new(error: "no key")) }
 
-      post :extract, params: { receipts: [ receipt_upload ] }
+      body = extract_body(::Reimbursements::Extractor::Extraction.new(error: "no key"), mode: "self")
 
-      assert_response :success
-      assert_not response.parsed_body["ok"]
+      assert_not body["ok"]
     end
 
     test "edit finds an own expense created out-of-band (e.g. the email-in poll job)" do

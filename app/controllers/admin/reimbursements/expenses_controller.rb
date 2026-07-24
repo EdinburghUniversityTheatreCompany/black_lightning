@@ -86,11 +86,22 @@ module Admin
         redirect_to admin_reimbursements_expenses_path, notice: "Draft deleted."
       end
 
-      # Receipt-first prefill: the form posts the receipt(s) here before
-      # submission; extraction failures return ok: false and the form stays
-      # manual (never a blocker). Files are gated here like on submit — this
-      # endpoint base64s them into RAM for Gemini.
+      # Receipt-first prefill: the form posts the receipt(s) here ONLY after the
+      # submitter has consented via the receipt form's radios, which also pick
+      # the mode. "self" reads a normal receipt to reimburse the submitter;
+      # "invoice" additionally reads the payee bank details printed on the
+      # invoice to prefill the third-party override trio. Extraction failures
+      # return ok: false and the form stays manual (never a blocker). Files are
+      # gated here like on submit — this endpoint reads them into RAM for Gemini.
+      EXTRACT_MODES = %w[self invoice].freeze
+
       def extract
+        mode = params[:mode].to_s
+        unless EXTRACT_MODES.include?(mode)
+          render json: { ok: false, error: "invalid extraction mode" }, status: :unprocessable_entity
+          return
+        end
+
         files = Array(params[:receipts]).compact_blank.select do |file|
           file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
             ::Reimbursements::ReceiptContentType.allowed_upload?(file)
@@ -101,8 +112,8 @@ module Admin
         end
 
         extraction = extractor.extract(receipts: files.map { |f| receipt_payload(f) },
-                                       budgets: store.active_budgets)
-        render json: extraction_json(extraction)
+                                       budgets: store.active_budgets, mode: mode)
+        render json: extraction_json(extraction, mode)
       end
 
       private
@@ -158,12 +169,12 @@ module Admin
         { filename: file.original_filename, content_type: file.content_type, bytes: file.read }
       end
 
-      def extraction_json(extraction)
+      def extraction_json(extraction, mode)
         return { ok: false, error: extraction.error } unless extraction.ok?
 
         raw_excl_vat = extraction.amount_excl_vat
         excl_vat = raw_excl_vat.nil? || raw_excl_vat.zero? ? extraction.total_amount : raw_excl_vat
-        {
+        json = {
           ok: true,
           merchant: extraction.merchant,
           total_amount: extraction.total_amount&.to_s("F"),
@@ -173,6 +184,15 @@ module Admin
           suggested_budget_record_id: extraction.suggested_budget_record_id,
           suggested_payment_reference: extraction.suggested_payment_reference
         }
+        # The payee bank trio is surfaced only for an invoice claim — a
+        # reimburse-myself scan must never return bank details, even if the
+        # model volunteered them.
+        if mode == "invoice"
+          json[:payee_name] = extraction.payee_name
+          json[:sort_code] = extraction.sort_code
+          json[:account_number] = extraction.account_number
+        end
+        json
       end
     end
   end
