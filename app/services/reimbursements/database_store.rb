@@ -62,7 +62,11 @@ module Reimbursements
     end
 
     def budgets
-      @budgets ||= Budget.includes(:owners, :forecasts, :expenses).to_a
+      # eusa_actuals are preloaded both directly (income credits on budget_id)
+      # and through expenses (expense debit legs) so the overview's per-line
+      # EUSA-actual rollup costs no per-budget queries.
+      @budgets ||= Budget.includes(:owners, :forecasts, :eusa_actuals,
+                                   expenses: :eusa_actuals).to_a
     end
 
     # Budgets a submitter may charge an expense to.

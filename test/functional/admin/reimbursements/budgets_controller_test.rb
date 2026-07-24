@@ -69,6 +69,29 @@ module Admin
         assert_includes response.body, "500"
       end
 
+      test "index shows the pipeline, EUSA-actual and expected-outturn columns" do
+        sign_in @user
+        @income.destroy!
+        # Props: forecast 800, committed 300 (Approved 150 + Paid 150).
+        # Add a Pending expense (pipeline) and a reconciled EUSA debit.
+        create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::PENDING,
+                                      amount_excl_vat: 275, amount: 330, receipt: false)
+        paid = @props.expenses.find { |e| e.status == ::Reimbursements::Status::PAID }
+        ::Reimbursements::EusaActual.create!(expense: paid, nominal_code: "4000",
+                                             debit: BigDecimal("161.00"))
+
+        get :index
+
+        assert_response :success
+        assert_includes response.body, "Pipeline"
+        assert_includes response.body, "Paid (portal)"
+        assert_includes response.body, "EUSA actual"
+        assert_includes response.body, "Expected outturn"
+        # Pipeline £275, EUSA actual £161, expected outturn = max(800, 300, 150, 161) = 800.
+        assert_includes response.body, "275"
+        assert_includes response.body, "161"
+      end
+
       # Alphabetically-named so page 1 (A-Z sorted, 50 per page) is deterministic.
       def seed_paged_budgets(count)
         ::Reimbursements::Expense.delete_all
