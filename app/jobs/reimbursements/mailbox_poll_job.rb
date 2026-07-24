@@ -7,8 +7,14 @@ module Reimbursements
   # - unknown sender            -> "address not recognised" reply, Rejected folder
   # - automated sender          -> no reply (loop guard), Rejected folder
   # - no usable attachment      -> "please attach the receipt" reply, Rejected folder
-  # - known sender + attachment -> Gemini-extracted Draft expense (blanks
-  #   where unsure), receipts attached, reply with a portal link, Processed
+  # - known sender + attachment -> blank Draft expense (subject as description,
+  #   everything else left for the portal), receipts attached, reply with a
+  #   portal link, Processed
+  #
+  # Email-in deliberately does NOT read receipts with Gemini: there is no
+  # submitter present to consent to the upload, and the portal already asks
+  # them to complete the draft. So every inbound receipt becomes a blank draft
+  # plus the "please complete it in the portal" reply — the designed fallback.
   #
   # Failure handling: before the expense exists, a message is simply left
   # unread and retried next cycle. After the expense exists, the message is
@@ -21,12 +27,11 @@ module Reimbursements
   # Graph credential failures alert the IT subcommittee, deduped to once/day.
   class MailboxPollJob < Reimbursements::ApplicationJob
     queue_as :default
-    # duration: set well above the default 3-minute lock TTL — a poll runs
-    # Gemini extraction per new message across every cost centre's mailbox,
-    # plausibly exceeding 3 minutes; a lock expiring mid-run would let a
-    # concurrent second run past the single-flight guarantee that prevents
-    # double-processing unread mail.
-    limits_concurrency key: "reimbursements_mailbox_poll", duration: 15.minutes
+    # duration: set above the default 3-minute lock TTL — a poll fetches and
+    # attaches receipts across every cost centre's mailbox, plausibly exceeding
+    # 3 minutes; a lock expiring mid-run would let a concurrent second run past
+    # the single-flight guarantee that prevents double-processing unread mail.
+    limits_concurrency key: "reimbursements_mailbox_poll", duration: 10.minutes
 
     SIGN_OFF = "Bedlam Fringe finance (automated reply)".freeze
     AUTOMATED_SENDER = /mailer-daemon|postmaster|no-?reply|do-?not-?reply/i
@@ -41,7 +46,6 @@ module Reimbursements
     # builder takes the cost centre so each is polled on its OWN receive mailbox.
     class_attribute :mailbox_builder,
                     default: ->(cost_centre) { MailboxClient.new(mailbox: cost_centre.receive_mailbox) }
-    class_attribute :extractor_builder, default: -> { Extractor.new }
 
     # Every cost centre has its own receive mailbox (Fringe today, termtime next),
     # so poll each in turn. The People registry is shared across the base, so
@@ -85,10 +89,6 @@ module Reimbursements
 
     def mailbox
       @mailbox
-    end
-
-    def extractor
-      @extractor ||= extractor_builder.call
     end
 
     def process(message)
@@ -184,13 +184,7 @@ module Reimbursements
         return
       end
 
-      extraction = extractor.extract(
-        receipts: receipts,
-        budgets: store.active_budgets,
-        context: "Email subject: #{message.subject}\n\n#{message.body_text}"
-      )
-
-      expense = store.create_expense!(expense_attrs(message, person, extraction))
+      expense = store.create_expense!(expense_attrs(message, person))
       finalise_created(message, expense, receipts)
     end
 
@@ -287,22 +281,20 @@ module Reimbursements
       false
     end
 
-    # Everything the extraction confidently knows, blanks elsewhere. The
-    # expense lands as a DRAFT: the reply asks the sender to complete and
-    # submit it in the portal, so review only ever sees confirmed claims.
-    # Extraction failing entirely still creates the draft (receipt + subject).
-    def expense_attrs(message, person, extraction)
+    # A blank DRAFT: only the receipt and the email subject (as a starting
+    # description) are known. Email-in no longer reads the receipt with Gemini
+    # (no submitter is present to consent), so the amount, budget and payment
+    # reference are all left for the sender to fill in. The reply asks them to
+    # complete and submit it in the portal, so review only ever sees confirmed
+    # claims.
+    def expense_attrs(message, person)
       {
         person_record_id: person.record_id,
         # The idempotency stamp — only the database backend has a column for
         # it (Airtable's field writer would reject the unknown key).
         source_message_id: (message.id if store.supports_message_idempotency?),
         status: Status::DRAFT,
-        description: extraction.suggested_description || message.subject.presence,
-        amount: extraction.total_amount,
-        amount_excl_vat: extraction.amount_excl_vat,
-        budget_record_id: extraction.suggested_budget_record_id,
-        payment_reference: extraction.suggested_payment_reference
+        description: message.subject.presence
       }.compact
     end
 
