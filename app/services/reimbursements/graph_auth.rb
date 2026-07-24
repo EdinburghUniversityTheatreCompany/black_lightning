@@ -20,6 +20,15 @@ module Reimbursements
     # subcommittee rather than retried blindly.
     class AuthError < Error; end
 
+    # A 404 from Graph (e.g. ErrorItemNotFound). On the mailbox mutation paths
+    # (MailboxClient#reply/#mark_read/#move) this just means the message was
+    # handled or deleted by hand in Outlook between the poll's listing and the
+    # mutation — nothing left to do, so those callers swallow it. Everywhere
+    # else it stays a real failure: NotFoundError < Error, so any existing
+    # `rescue Error` (or the job's generic rescue) still catches it and it
+    # continues to fail loudly.
+    class NotFoundError < Error; end
+
     private
 
     # Issue a Graph request and return the parsed JSON body ({} when empty).
@@ -32,8 +41,9 @@ module Reimbursements
 
       raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
       unless (200..299).cover?(status)
-        raise Error, "Graph #{http_method.to_s.upcase} #{path} failed (#{status}): " \
-                     "#{graph_error_detail(response_body)}"
+        error_class = status == 404 ? NotFoundError : Error
+        raise error_class, "Graph #{http_method.to_s.upcase} #{path} failed (#{status}): " \
+                           "#{graph_error_detail(response_body)}"
       end
 
       response_body.blank? ? {} : JSON.parse(response_body)
@@ -48,8 +58,9 @@ module Reimbursements
 
       raise AuthError, "Graph rejected the token (#{status})" if [ 401, 403 ].include?(status)
       unless (200..299).cover?(status)
-        raise Error, "Graph #{http_method.to_s.upcase} upload failed (#{status}): " \
-                     "#{graph_error_detail(response_body)}"
+        error_class = status == 404 ? NotFoundError : Error
+        raise error_class, "Graph #{http_method.to_s.upcase} upload failed (#{status}): " \
+                           "#{graph_error_detail(response_body)}"
       end
 
       response_body.blank? ? {} : JSON.parse(response_body)

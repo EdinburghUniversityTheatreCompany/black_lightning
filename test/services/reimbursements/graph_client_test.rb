@@ -229,6 +229,17 @@ module Reimbursements
       end
     end
 
+    test "upload_to_folder's small-file PUT raises NotFoundError on a 404, still loud (graph_raw_request)" do
+      # 404s are only swallowed on the mailbox mutation paths (a vanished
+      # message is genuinely nothing to do). A 404 uploading a receipt means a
+      # missing drive/folder — a real error that must fail loudly, not vanish.
+      client, = build_client([ token_response, [ 404, { error: { code: "itemNotFound" } }.to_json ] ])
+
+      assert_raises(GraphAuth::NotFoundError) do
+        client.upload_to_folder(drive_id: "drv", folder_id: "fld", filename: "a.pdf", content: "BYTES")
+      end
+    end
+
     test "upload_to_folder refuses an empty file" do
       client, = build_client([ token_response ])
       assert_raises(GraphAuth::Error) do
