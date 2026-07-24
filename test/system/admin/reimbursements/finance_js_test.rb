@@ -155,6 +155,46 @@ module Admin
         assert_equal "stv-in@example.co", created.receive_mailbox
       end
 
+      # (g) Editing a Review card then hitting Approve must not silently drop the
+      # edit: a dirty Save form pops the three-option confirmation dialog, and
+      # Cancel leaves the page and the edit intact.
+      test "a dirty review card intercepts Approve with the unsaved-edits dialog" do
+        seed_expense(status: "Pending")
+
+        visit admin_reimbursements_review_path
+
+        assert_no_selector "dialog[open]", wait: 1
+        fill_in "Description", with: "Edited in the browser"
+        click_button "Approve", exact: true
+
+        assert_selector "dialog[open]", wait: 5
+        within("dialog[open]") do
+          assert_button "Cancel"
+          assert_button "Save Changes"
+          assert_button "Discard Changes"
+          assert_text(/save the changes before approving/i)
+          click_button "Cancel"
+        end
+
+        # Cancel keeps us on the Review page with the edit still typed in.
+        assert_no_selector "dialog[open]"
+        assert_selector "h1", text: "Review Expenses"
+        assert_field "Description", with: "Edited in the browser"
+      end
+
+      # (g2) A pristine card never shows the unsaved-edits dialog — the decision's
+      # own turbo-confirm (a SweetAlert here) fires as usual.
+      test "a pristine review card skips the dialog and runs the normal confirm" do
+        seed_expense(status: "Pending")
+
+        visit admin_reimbursements_review_path
+
+        click_button "Reject", exact: true
+
+        assert_no_selector "dialog[open]", wait: 1
+        assert_selector ".swal2-container", wait: 5
+      end
+
       # (c) The Review page subscribes to the live AI-verdict Turbo Stream.
       test "the Review page renders the AI-verdict Turbo Stream subscription" do
         # ai_check_status present so the page doesn't kick a background AI job.

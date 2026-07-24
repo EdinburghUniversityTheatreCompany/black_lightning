@@ -743,6 +743,157 @@ module Admin
 
         assert_response :not_found
       end
+
+      # --- Save-then-decide (unsaved-edits dialog, Track J) -----------------
+      # The review card's Save form is separate from the Approve/Reject forms,
+      # so an edit-then-decide used to drop the edits. When the operator picks
+      # "Save Changes" in the client dialog, the decision request carries the
+      # edited fields plus save_changes=1 and the server persists them FIRST, in
+      # the same request, so the decision acts on the saved values.
+
+      test "approve with save_changes persists the edited fields, then approves" do
+        expense = pending_expense(description: "Old", payment_reference: "")
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id, save_changes: "1",
+                                  amount: "20.00", amount_excl_vat: "16.67",
+                                  description: "Edited before approve", payment_reference: "REF1",
+                                  nominal_code_override: "4100", budget_record_id: @budget.record_id }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        expense.reload
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+        assert_equal BigDecimal("20"), expense.amount
+        assert_equal BigDecimal("16.67"), expense.amount_excl_vat
+        assert_equal "Edited before approve", expense.description
+        assert_equal "REF1", expense.payment_reference
+        assert_equal "4100", expense.nominal_code_override
+      end
+
+      test "approve with save_changes aborts the decision when the edit fails validation" do
+        expense = pending_expense(description: "Old")
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id, save_changes: "1",
+                                  amount: "-5", amount_excl_vat: "16.67",
+                                  description: "Should not persist", budget_record_id: @budget.record_id }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/valid amount/i, flash[:alert])
+        expense.reload
+        assert_equal ::Reimbursements::Status::PENDING, expense.status, "decision aborted"
+        assert_equal "Old", expense.description, "no edit persisted on an aborted decision"
+      end
+
+      test "reject with save_changes persists the edited fields, then rejects" do
+        expense = pending_expense(description: "Old")
+        sign_in @user
+
+        patch :reject, params: { id: expense.record_id, save_changes: "1",
+                                 rejection_reason: "Wrong budget",
+                                 amount: "20.00", amount_excl_vat: "16.67",
+                                 description: "Edited before reject", budget_record_id: @budget.record_id }
+
+        expense.reload
+        assert_equal ::Reimbursements::Status::REJECTED, expense.status
+        assert_equal BigDecimal("20"), expense.amount
+        assert_equal "Edited before reject", expense.description
+        assert_equal "Wrong budget", expense.rejection_reason
+      end
+
+      test "reject with save_changes aborts the decision when the edit fails validation" do
+        expense = pending_expense(description: "Old")
+        sign_in @user
+
+        patch :reject, params: { id: expense.record_id, save_changes: "1",
+                                 rejection_reason: "Wrong budget",
+                                 amount: "abc", amount_excl_vat: "16.67",
+                                 description: "Should not persist", budget_record_id: @budget.record_id }
+
+        assert_redirected_to admin_reimbursements_review_path(tab: nil)
+        assert_match(/valid amount/i, flash[:alert])
+        expense.reload
+        assert_equal ::Reimbursements::Status::PENDING, expense.status, "decision aborted"
+        assert_equal "Old", expense.description, "no edit persisted on an aborted decision"
+        assert_empty @graph.send_mails, "no rejection email fired on an aborted decision"
+      end
+
+      test "override_approve with save_changes persists the edited fields, then overrides" do
+        gated_expense
+        sign_in @user
+
+        patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
+                                           amount: "30.00", amount_excl_vat: "25.00",
+                                           description: "Edited before override",
+                                           payment_reference: "OWNED PAT",
+                                           budget_record_id: owned_budget.record_id }
+
+        gated_expense.reload
+        assert_equal ::Reimbursements::Status::APPROVED, gated_expense.status
+        assert_equal BigDecimal("30"), gated_expense.amount
+        assert_equal "Edited before override", gated_expense.description
+      end
+
+      test "override_approve with save_changes aborts the decision when the edit fails validation" do
+        gated_expense
+        sign_in @user
+
+        assert_no_difference -> { ::Reimbursements::OwnerEndorsement.count } do
+          patch :override_approve, params: { id: gated_expense.record_id, save_changes: "1",
+                                             amount: "-5", amount_excl_vat: "1",
+                                             description: "Should not persist",
+                                             budget_record_id: owned_budget.record_id }
+        end
+
+        assert_match(/valid amount/i, flash[:alert])
+        gated_expense.reload
+        assert_equal ::Reimbursements::Status::PENDING, gated_expense.status, "decision aborted"
+        assert_equal "Fake blood", gated_expense.description, "no edit persisted on an aborted decision"
+      end
+
+      test "a plain approve without save_changes still approves without touching the edit fields" do
+        # Backwards-compatibility: the pristine-form path posts no edit params.
+        expense = pending_expense(description: "Original", payment_reference: "KEEP")
+        sign_in @user
+
+        patch :approve, params: { id: expense.record_id }
+
+        expense.reload
+        assert_equal ::Reimbursements::Status::APPROVED, expense.status
+        assert_equal "Original", expense.description, "no save happened without save_changes"
+      end
+
+      # --- Unsaved-edits dialog wiring (rendered markup) -------------------
+
+      test "the review card wires the unsaved-edits guard on its decision controls" do
+        expense = pending_expense
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "div[data-controller~=?]", "review-decision"
+        assert_select "dialog[data-review-decision-target=dialog]"
+        assert_select "form[data-review-decision-target=editForm]"
+        # Approve (button_to) and Reject (submit_tag) both carry the click guard
+        # plus a verb the dialog title reads.
+        assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"
+        assert_select "[data-action*=?][data-decision-verb=rejecting]", "review-decision#guard"
+        # The dialog offers the three locked options.
+        assert_select "dialog button", text: "Cancel"
+        assert_select "dialog button", text: "Save Changes"
+        assert_select "dialog button", text: "Discard Changes"
+      end
+
+      test "the review card wires the guard on the owner-gate override button too" do
+        gated_expense
+        sign_in @user
+
+        get :index
+
+        assert_response :success
+        assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"
+      end
     end
   end
 end

@@ -16,7 +16,11 @@
 <% owner_names = expense.budget&.owner_ids.to_a.filter_map { |id| @people_by_id&.[](id)&.name }.presence %>
 <% attention_reasons = attention[:blocking] + attention[:advisory] %>
 
-<div class="mb-3 rounded border border-gray-200 p-3">
+<%# review-decision guards the Approve/Reject/override buttons against dropping
+    unsaved edits typed into the Save form below (which is a separate <form>). See
+    review_decision_controller.js. Progressive enhancement: with JS off the
+    buttons keep their server default. %>
+<div class="mb-3 rounded border border-gray-200 p-3" data-controller="review-decision">
   <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
     <% if selectable %>
       <%# data-flagged feeds the bulk toolbar's Approve confirm, which warns
@@ -132,7 +136,8 @@
 
   <%# --- Edit (Save) --- %>
   <%= form_with url: admin_reimbursements_save_review_path(expense.record_id, tab: @tab),
-                method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2" do %>
+                method: :patch, class: "mt-3 grid gap-3 sm:grid-cols-2",
+                data: { review_decision_target: "editForm" } do %>
     <div>
       <%= label_tag "amount_#{expense.record_id}", "Amount (GBP)", class: "block text-sm font-medium" %>
       <%= number_field_tag :amount, expense.amount, step: 0.01, min: 0, id: "amount_#{expense.record_id}",
@@ -235,6 +240,7 @@
                              class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
           <%= submit_tag "Approve (override sign-off)",
                          "aria-label": "Approve ##{expense.auto_number}, overriding the owner sign-off",
+                         data: { action: "review-decision#guard", decision_verb: "approving" },
                          class: btn_classes(:warning, :sm) %>
         <% end %>
       <% else %>
@@ -248,6 +254,7 @@
                       method: :patch, "aria-label": "Approve ##{expense.auto_number}",
                       form: attention[:advisory].any? ? { data: { turbo_confirm:
                         "##{expense.auto_number} is flagged: #{attention[:advisory].join('; ')}. Approve anyway?" } } : {},
+                      data: { action: "review-decision#guard", decision_verb: "approving" },
                       class: btn_classes(:success, :sm) %>
       <% end %>
     <% end %>
@@ -257,10 +264,33 @@
       <%= text_field_tag :rejection_reason, nil, placeholder: "Reason for rejection",
                          "aria-label": "Reason for rejecting expense ##{expense.auto_number}",
                          class: "border border-gray-300 rounded px-2 py-1 text-sm" %>
-      <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}", class: btn_classes(:danger, :sm) %>
+      <%= submit_tag "Reject", "aria-label": "Reject ##{expense.auto_number}",
+                     data: { action: "review-decision#guard", decision_verb: "rejecting" },
+                     class: btn_classes(:danger, :sm) %>
     <% end %>
     <%# Full finance edit (any status, incl. payee overrides). %>
     <%= link_to "Edit (any status)", edit_admin_reimbursements_expense_edit_path(expense.record_id),
                 "aria-label": "Edit ##{expense.auto_number} (any status)", class: btn_classes(:secondary, :sm) %>
   </div>
+
+  <%# Unsaved-edits confirmation: shown by review_decision_controller only when
+      the Save form above has unsaved changes and a decision button is clicked.
+      The title text is set from the clicked button's verb (approving/rejecting). %>
+  <dialog data-review-decision-target="dialog"
+          data-action="click->review-decision#backdropClose"
+          class="rounded border border-gray-200 p-0 shadow-lg backdrop:bg-black/40">
+    <div class="max-w-sm p-4">
+      <h2 class="text-base font-medium" data-review-decision-target="title">
+        Do you want to save the changes before continuing?
+      </h2>
+      <p class="mt-2 text-sm text-gray-600">
+        You have unsaved edits on this expense. Save them first, discard them, or go back.
+      </p>
+      <div class="mt-4 flex flex-wrap justify-end gap-2">
+        <button type="button" data-action="review-decision#cancel" class="<%= btn_classes(:secondary, :sm) %>">Cancel</button>
+        <button type="button" data-action="review-decision#discardThenDecide" class="<%= btn_classes(:danger, :sm) %>">Discard Changes</button>
+        <button type="button" data-action="review-decision#saveThenDecide" class="<%= btn_classes(:primary, :sm) %>">Save Changes</button>
+      </div>
+    </div>
+  </dialog>
 </div>
