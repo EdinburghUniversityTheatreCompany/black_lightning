@@ -14,6 +14,9 @@ module Reimbursements
     # Raised instead of removing an expense's last receipt (drafts excepted).
     class LastReceiptError < StandardError; end
 
+    # Bucket label for budgets with a blank nominal code in the overview.
+    NO_CODE_LABEL = "(none)".freeze
+
     # Attribute-vocabulary translations onto AR columns; everything else in
     # the vocabulary already matches its column name.
     EXPENSE_KEY_MAP = { person_record_id: :person_id, budget_record_id: :budget_id }.freeze
@@ -72,6 +75,24 @@ module Reimbursements
     # Budgets a submitter may charge an expense to.
     def active_budgets
       budgets.select { |b| b.active && !b.income? }.sort_by(&:name)
+    end
+
+    # Budgets grouped by nominal code for the overview page, ordered by code
+    # with the blank-code bucket ("(none)") sorted last. Each budget carries its
+    # own memoized rollups (preloaded in #budgets), so the grouped totals cost
+    # no extra queries.
+    def budgets_by_nominal_code
+      budgets.group_by { |b| b.nominal_code.presence || NO_CODE_LABEL }
+             .sort_by { |code, _| [ code == NO_CODE_LABEL ? 1 : 0, code ] }
+             .to_h
+    end
+
+    # EUSA actuals booked against a nominal code with no budget at all — real
+    # spend against a code no one planned for, surfaced separately on the
+    # overview so it isn't lost.
+    def unbudgeted_actuals
+      coded = budgets.map(&:nominal_code).to_set
+      eusa_actuals.reject { |a| coded.include?(a.nominal_code) }
     end
 
     def update_budget!(record_id, attrs)

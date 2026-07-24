@@ -210,6 +210,60 @@ module Admin
         assert_not_includes response.body, ">Over budget<"
       end
 
+      # --- Overview (nominal-code rollup) ------------------------------------
+
+      test "overview requires the finance permission" do
+        sign_in users(:committee)
+        get :overview
+        assert_response :forbidden
+      end
+
+      test "overview groups budgets by nominal code with a per-code subtotal" do
+        sign_in @user
+        # @props is nominal 4000, initial 1000. Add a second 4000 budget and a
+        # 4100 budget so there are two groups.
+        create_reimbursements_budget(name: "Set", nominal_code: "4000", initial_budget: 500)
+        create_reimbursements_budget(name: "Travel", nominal_code: "4100", initial_budget: 200)
+
+        get :overview
+
+        assert_response :success
+        # Both nominal codes head their own group.
+        assert_includes response.body, "4000"
+        assert_includes response.body, "4100"
+        # The 4000 group's initial subtotal is 1000 + 500 = 1500.
+        assert_includes response.body, "1,500"
+        # Grand total initial = 1000 + 500 + 200 = 1700 (Income budget has no initial).
+        assert_includes response.body, "1,700"
+        assert_includes response.body, "Grand total"
+      end
+
+      test "overview lists unbudgeted spend for actuals whose nominal matches no budget" do
+        sign_in @user
+        # 4000 has a budget (@props); 9999 does not.
+        ::Reimbursements::EusaActual.create!(nominal_code: "9999", narrative: "Mystery charge",
+                                             debit: BigDecimal("42.00"))
+        ::Reimbursements::EusaActual.create!(nominal_code: "4000", narrative: "Budgeted",
+                                             debit: BigDecimal("10.00"))
+
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Unbudgeted spend"
+        assert_includes response.body, "Mystery charge"
+        assert_includes response.body, "9999"
+        # The budgeted actual is not in the unbudgeted section.
+        assert_not_includes response.body, "Budgeted"
+      end
+
+      test "overview shows a friendly note when there is no unbudgeted spend" do
+        sign_in @user
+        get :overview
+
+        assert_response :success
+        assert_includes response.body, "Unbudgeted spend"
+      end
+
       # --- Edit --------------------------------------------------------------
 
       test "edit shows the owner checkboxes and forecast history" do

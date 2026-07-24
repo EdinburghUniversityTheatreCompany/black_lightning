@@ -5,6 +5,11 @@
   initial figure and whether submitters can see it, or to log a projected-spend update.
 </p>
 
+<p class="mb-3">
+  <%= link_to "Budget overview", overview_admin_reimbursements_budgets_path,
+        class: btn_classes(:secondary, :sm) %>
+</p>
+
 <p class="mb-2 text-sm text-gray-600"><%= pluralize(@budgets.total_count, "budget") %></p>
 
 <% if @budgets.total_count.zero? %>

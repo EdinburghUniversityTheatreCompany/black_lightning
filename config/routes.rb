@@ -91,6 +91,9 @@ ChaosRails::Application.routes.draw do
       # Finance-team budget management: financials overview + edit + a forecast
       # (projected-spend) log appended per budget.
       resources :budgets, only: %i[index edit update] do
+        collection do
+          get :overview
+        end
         member do
           post   :forecast
           patch  :update_forecast

@@ -213,5 +213,32 @@ module Reimbursements
       store.bust_expenses!
       assert_equal 1, store.expenses.size
     end
+
+    # --- Budget overview grouping (Track G Phase 2) ------------------------
+
+    test "budgets_by_nominal_code groups budgets under their code, sorted, blanks last" do
+      props_a = Budget.create!(name: "Props A", nominal_code: "4000")
+      props_b = Budget.create!(name: "Props B", nominal_code: "4000")
+      travel = Budget.create!(name: "Travel", nominal_code: "4100")
+      uncoded = Budget.create!(name: "Uncoded", nominal_code: "")
+
+      grouped = store.budgets_by_nominal_code
+
+      assert_equal [ "4000", "4100", "(none)" ].sort, grouped.keys.sort
+      assert_equal [ props_a.id, props_b.id ].sort, grouped["4000"].map(&:id).sort
+      assert_equal [ travel.id ], grouped["4100"].map(&:id)
+      assert_equal [ uncoded.id ], grouped["(none)"].map(&:id)
+    end
+
+    test "unbudgeted_actuals are those whose nominal code matches no budget" do
+      Budget.create!(name: "Props", nominal_code: "4000")
+      matched = EusaActual.create!(nominal_code: "4000", narrative: "matched", debit: 10)
+      orphan = EusaActual.create!(nominal_code: "9999", narrative: "no budget", debit: 20)
+
+      unbudgeted = store.unbudgeted_actuals
+
+      assert_includes unbudgeted.map(&:id), orphan.id
+      assert_not_includes unbudgeted.map(&:id), matched.id
+    end
   end
 end
