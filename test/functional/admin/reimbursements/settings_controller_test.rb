@@ -424,6 +424,126 @@ module Admin
         post :test_access, params: { key: @cost_centre.key }
         assert_response :forbidden
       end
+
+      # --- New / Create: cost-centre form ------------------------------------
+
+      test "new renders the create-cost-centre form posting to the collection" do
+        sign_in @user
+        get :new
+
+        assert_response :success
+        assert_select "form[action=?]", admin_reimbursements_settings_path
+        assert_includes response.body, "Advanced"     # the collapsed manual-key section
+      end
+
+      test "new denies members without the finance permission" do
+        sign_in users(:committee)
+        get :new
+        assert_response :forbidden
+      end
+
+      test "create adds a cost centre and redirects to its edit page to finish setup" do
+        sign_in @user
+
+        assert_difference -> { CC.count }, 1 do
+          post :create, params: { cost_centre: {
+            name: "Bedlam Termtime", eusa_code: "BED",
+            receive_mailbox: "termtime-in@example.co", send_mailbox: "termtime-out@example.co"
+          } }
+        end
+
+        created = CC.find_by(eusa_code: "BED")
+        assert_equal "bedlam-termtime", created.key, "key auto-derived from the name"
+        assert_redirected_to edit_admin_reimbursements_setting_path(created.key)
+        assert_match(/mailbox|sharepoint/i, flash[:notice])
+      end
+
+      test "create derives the URL key from the name by default" do
+        sign_in @user
+
+        post :create, params: { cost_centre: {
+          name: "New Venue 2027", eusa_code: "NV7",
+          receive_mailbox: "nv-in@example.co", send_mailbox: "nv-out@example.co"
+        } }
+
+        assert_equal "new-venue-2027", CC.find_by(eusa_code: "NV7").key
+      end
+
+      test "create honours a manual key override from the Advanced section" do
+        sign_in @user
+
+        post :create, params: { cost_centre: {
+          name: "Some Long Name", key: "shortkey", eusa_code: "SLN",
+          receive_mailbox: "sln-in@example.co", send_mailbox: "sln-out@example.co"
+        } }
+
+        assert_equal "shortkey", CC.find_by(eusa_code: "SLN").key
+      end
+
+      test "create rejects a blank name without creating a row" do
+        sign_in @user
+
+        assert_no_difference -> { CC.count } do
+          post :create, params: { cost_centre: {
+            name: "", eusa_code: "NB1",
+            receive_mailbox: "nb-in@example.co", send_mailbox: "nb-out@example.co"
+          } }
+        end
+
+        assert_response :unprocessable_entity
+      end
+
+      test "create rejects a duplicate eusa_code without creating a row" do
+        sign_in @user
+
+        assert_no_difference -> { CC.count } do
+          post :create, params: { cost_centre: {
+            name: "Clashing Code", eusa_code: @cost_centre.eusa_code,
+            receive_mailbox: "cc-in@example.co", send_mailbox: "cc-out@example.co"
+          } }
+        end
+
+        assert_response :unprocessable_entity
+      end
+
+      test "create rejects a malformed mailbox without creating a row" do
+        sign_in @user
+
+        assert_no_difference -> { CC.count } do
+          post :create, params: { cost_centre: {
+            name: "Bad Mailbox", eusa_code: "BM1",
+            receive_mailbox: "not-an-email", send_mailbox: "bm-out@example.co"
+          } }
+        end
+
+        assert_response :unprocessable_entity
+      end
+
+      test "create rejects a manual key with illegal characters without creating a row" do
+        sign_in @user
+
+        assert_no_difference -> { CC.count } do
+          post :create, params: { cost_centre: {
+            name: "Bad Key", key: "Bad Key!", eusa_code: "BK1",
+            receive_mailbox: "bk-in@example.co", send_mailbox: "bk-out@example.co"
+          } }
+        end
+
+        assert_response :unprocessable_entity
+      end
+
+      test "create denies members without the finance permission" do
+        sign_in users(:committee)
+
+        assert_no_difference -> { CC.count } do
+          post :create, params: { cost_centre: {
+            name: "Sneaky", eusa_code: "SNK",
+            receive_mailbox: "snk-in@example.co", send_mailbox: "snk-out@example.co"
+          } }
+        end
+
+        assert_response :forbidden
+      end
     end
   end
 end

@@ -134,6 +134,27 @@ module Admin
         assert_selector ".swal2-container", text: "Receive mailbox is invalid", wait: 5
       end
 
+      # (f) The new-cost-centre form creates a row and lands on its settings
+      # page. Plain fill + submit is safe here — this form has no markdown editor.
+      test "creating a cost centre from the form lands on its settings page" do
+        visit admin_reimbursements_settings_path
+        click_on "New cost centre"
+
+        fill_in "Name", with: "System Test Venue"
+        fill_in "EUSA cost-centre code", with: "STV"
+        fill_in "Receive mailbox (email-in)", with: "stv-in@example.co"
+        fill_in "Send-from mailbox (drafts)", with: "stv-out@example.co"
+        click_on "Create cost centre"
+
+        # Auto-derived slug drives the settings URL we land on.
+        assert_current_path edit_admin_reimbursements_setting_path("system-test-venue"), wait: 5
+        assert_text "System Test Venue"
+
+        created = ::Reimbursements::CostCentre.find_by(eusa_code: "STV")
+        assert_equal "system-test-venue", created.key
+        assert_equal "stv-in@example.co", created.receive_mailbox
+      end
+
       # (c) The Review page subscribes to the live AI-verdict Turbo Stream.
       test "the Review page renders the AI-verdict Turbo Stream subscription" do
         # ai_check_status present so the page doesn't kick a background AI job.

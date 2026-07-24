@@ -143,7 +143,7 @@ ChaosRails::Application.routes.draw do
       # Per-cost-centre operational settings (Phase F): picker -> edit/update.
       # (The Azure/mailbox/SharePoint manual-setup runbook lives inline on the
       # per-cost-centre Settings edit page, filled with that cost centre's values.)
-      resources :settings, only: %i[index edit update], param: :key do
+      resources :settings, only: %i[index new create edit update], param: :key do
         member { post :test_access }
       end
     end

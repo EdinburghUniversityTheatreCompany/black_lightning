@@ -40,6 +40,29 @@ module Admin
         @cost_centres = ::Reimbursements::CostCentre.order(:name)
       end
 
+      # GET /admin/reimbursements/settings/new
+      # Collects only the five required fields for a valid cost centre; the
+      # mailbox-access, EUSA and SharePoint setup live on the edit page, so a new
+      # row redirects straight there to finish configuration.
+      def new
+        @title = "New cost centre"
+        @cost_centre = ::Reimbursements::CostCentre.new
+      end
+
+      # POST /admin/reimbursements/settings
+      def create
+        @cost_centre = ::Reimbursements::CostCentre.new(create_params)
+        if @cost_centre.save
+          redirect_to edit_admin_reimbursements_setting_path(@cost_centre.key),
+                      notice: "Cost centre created. Now configure its mailboxes, EUSA details and " \
+                              "SharePoint destinations below."
+        else
+          @title = "New cost centre"
+          flash.now[:alert] = @cost_centre.errors.full_messages.to_sentence
+          render :new, status: :unprocessable_entity
+        end
+      end
+
       def edit
         @title = "Settings — #{@cost_centre.name}"
         setup_folder_picker if params[:picker].present?
@@ -82,6 +105,15 @@ module Admin
           flash.now[:alert] = @cost_centre.errors.full_messages.to_sentence
           render :edit, status: :unprocessable_entity
         end
+      end
+
+      # The new form collects only the five required fields. `key` is optional —
+      # the model derives it from `name` when blank; the Advanced section lets an
+      # operator override it.
+      def create_params
+        params.require(:cost_centre).permit(
+          :key, :name, :eusa_code, :receive_mailbox, :send_mailbox
+        )
       end
 
       def settings_params

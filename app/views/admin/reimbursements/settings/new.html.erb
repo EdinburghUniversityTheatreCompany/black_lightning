@@ -1,0 +1,70 @@
+<p class="mb-3">
+  <%= link_to admin_reimbursements_settings_path, class: "text-sm text-blue-700 hover:underline" do %>
+    <span aria-hidden="true">←</span> All cost centres
+  <% end %>
+</p>
+
+<%= render CardComponent.new(title: "New cost centre") do %>
+  <p class="mb-4 text-sm text-gray-600">
+    Set the basics for a new cost centre (its name, EUSA code and the two mailboxes it uses).
+    After you create it, you'll land on its settings page to add the EUSA recipient, nightly
+    run-days and SharePoint destinations.
+  </p>
+
+  <%= form_with model: @cost_centre, scope: :cost_centre,
+                url: admin_reimbursements_settings_path,
+                class: "flex flex-col gap-4" do |f| %>
+    <div>
+      <%= f.label :name, "Name", class: "block text-sm font-medium" %>
+      <%= f.text_field :name, placeholder: "e.g. Bedlam Termtime",
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-md" %>
+      <p class="text-xs text-gray-500 mt-1">
+        A human-readable label for this cost centre. The URL slug is generated from it unless you
+        set one yourself under Advanced.
+      </p>
+    </div>
+
+    <div>
+      <%= f.label :eusa_code, "EUSA cost-centre code", class: "block text-sm font-medium" %>
+      <%= f.text_field :eusa_code, placeholder: "e.g. F40",
+                       class: "border border-gray-300 rounded px-2 py-1 text-sm w-40" %>
+      <p class="text-xs text-gray-500 mt-1">
+        The EUSA finance code this cost centre pays against. Must be unique.
+      </p>
+    </div>
+
+    <div class="flex flex-wrap gap-4">
+      <div>
+        <%= f.label :receive_mailbox, "Receive mailbox (email-in)", class: "block text-sm font-medium" %>
+        <%= f.text_field :receive_mailbox,
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+      <div>
+        <%= f.label :send_mailbox, "Send-from mailbox (drafts)", class: "block text-sm font-medium" %>
+        <%= f.text_field :send_mailbox,
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+      </div>
+    </div>
+    <p class="text-xs text-gray-500 -mt-2">
+      Each mailbox must be added to the "Reimbursements App Access" group before email-in and
+      draft-sending will work. The setup steps for that are on the settings page after you create
+      this cost centre.
+    </p>
+
+    <%= render CollapsibleSectionComponent.new(title: "Advanced", html_class: "my-1") do %>
+      <div>
+        <%= f.label :key, "URL key (slug)", class: "block text-sm font-medium" %>
+        <%= f.text_field :key, placeholder: "auto-generated from the name",
+                         class: "border border-gray-300 rounded px-2 py-1 text-sm w-72" %>
+        <p class="text-xs text-gray-500 mt-1">
+          Leave blank to derive it from the name. If you set it, use lowercase letters, numbers and
+          hyphens only (it appears in the settings URL and can't be changed here later).
+        </p>
+      </div>
+    <% end %>
+
+    <div>
+      <%= f.submit "Create cost centre", class: btn_classes(:primary) %>
+    </div>
+  <% end %>
+<% end %>
