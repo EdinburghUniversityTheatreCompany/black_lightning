@@ -174,3 +174,28 @@ owner-facing page, gated by base portal access rather than the finance permissio
 none. `Exports::Budgets` would work as-is for the owned subset, but the columns would need
 a second look first: an owner arguably shouldn't see another line's full rollups, and the
 exporter currently assumes the finance-wide view.
+
+## The encryption backfill task cannot run once `support_unencrypted_data` is off, and says so only in a summary count
+
+`lib/tasks/reimbursements_encrypt_backfill.rake` rescues per row and prints
+`processed 0/1 (1 failed)`, then still finishes with the cheerful "Done. Verify a sample
+row's raw column is ciphertext, then flip …" line and exit status 0. Observed while adding
+the T2 rollout tests: with `config.active_record.encryption.support_unencrypted_data = false`
+the task can no longer *read* a plaintext row, so every row fails and nothing is encrypted —
+the exact state an operator reaches if they flip the flag before backfilling (the order
+`docs/reimbursements/encryption-rollout.md` prescribes, but nothing enforces).
+
+**Fix:** exit non-zero when any row failed, and don't print the "flip the flag" advice on a
+run that had failures. Optionally refuse to run at all when `support_unencrypted_data` is
+already false, naming the flag.
+
+## `PersonLink`'s stale-stored-link branch is unreachable in-app
+
+A real FK (`add_foreign_key "users", "reimbursements_people"`) plus
+`has_one :user, dependent: :nullify` on `Reimbursements::Person` mean a user's
+`reimbursements_person_id` can never dangle through any application path — deleting a payee
+nullifies the FK instead. `PersonLink#person_for`'s fall-through therefore only defends
+against DB-level damage (a restore or maintenance script with `FOREIGN_KEY_CHECKS=0`).
+Worth keeping (its failure mode is a duplicate payee with the wrong bank details), but the
+review's framing of it as an everyday path is wrong. `test/services/reimbursements/person_link_test.rb`
+now covers it by reproducing the orphan with referential integrity disabled, and says why.
