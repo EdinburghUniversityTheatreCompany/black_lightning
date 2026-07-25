@@ -14,6 +14,10 @@ module Reimbursements
     # Raised instead of removing an expense's last receipt (drafts excepted).
     class LastReceiptError < StandardError; end
 
+    # Raised instead of converting a ledger row that stopped being convertible
+    # between the caller's check and the write (see create_expense_for_actual!).
+    class NotConvertibleError < StandardError; end
+
     # Bucket label for budgets with a blank nominal code in the overview.
     NO_CODE_LABEL = "(none)".freeze
 
@@ -335,6 +339,31 @@ module Reimbursements
       actual.update!(budget_id: budget_id)
       bust_eusa_actuals!
       actual
+    end
+
+    # Turns an unlinked debit row into a From-EUSA expense and links the row to
+    # it as ONE unit. Returns the new expense; raises NotConvertibleError if the
+    # row is not (or is no longer) convertible.
+    #
+    # Both halves matter. Creating the expense and linking afterwards as two
+    # writes leaves, on a failure between them, a Paid expense charged to a
+    # budget while the row stays unlinked and keeps offering its "Create
+    # expense" button, so the next click double-counts the same EUSA charge. And
+    # the caller's convertibility check is a read that can go stale (a
+    # double-submitted form, two operators), so it is re-taken here under a row
+    # lock: the second writer blocks until the first commits, then sees the link
+    # and is refused instead of converting the row twice.
+    def create_expense_for_actual!(actual_id, attrs)
+      expense = nil
+      EusaActual.transaction do
+        actual = EusaActual.lock.find(actual_id)
+        raise NotConvertibleError unless actual.convertible_to_expense?
+
+        expense = create_expense!(attrs)
+        link_actual_to_expense!(actual_id, expense.record_id)
+      end
+      bust_eusa_actuals!
+      expense
     end
 
     # Imports both legs of an offsetting pair and cross-links them as ONE unit.

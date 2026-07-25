@@ -58,14 +58,23 @@ module Admin
           return
         end
 
-        expense = store.create_expense!(
+        # One store call, one transaction: a Paid expense with no back-link would
+        # leave the row still offering its "Create expense" button, so the next
+        # click would double-count the same EUSA charge.
+        expense = store.create_expense_for_actual!(
+          @actual.record_id,
           @form.create_attrs(nil).merge(status: ::Reimbursements::Status::PAID,
                                         payment_confirmed_date: @actual.date)
         )
-        store.link_actual_to_expense!(@actual.record_id, expense.record_id)
         redirect_to admin_reimbursements_actuals_path,
                     notice: "Expense ##{expense.auto_number} created from this EUSA row and " \
                             "recorded as already paid."
+      rescue ::Reimbursements::DatabaseStore::NotConvertibleError
+        # The row was converted between this request's check and its write (a
+        # double-submitted form, or another operator).
+        redirect_to admin_reimbursements_actuals_path,
+                    alert: "That row had already been converted to an expense, so nothing was " \
+                           "created a second time."
       end
 
       private

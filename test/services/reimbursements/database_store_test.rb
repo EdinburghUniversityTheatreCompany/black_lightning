@@ -232,6 +232,38 @@ module Reimbursements
       assert store.eusa_actuals.all?(&:offset?), "the memoized list is busted, not stale"
     end
 
+    test "create_expense_for_actual! creates the expense already linked to the row" do
+      actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
+
+      expense = store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+
+      assert_equal [ expense.record_id ], actual.reload.linked_expense_ids
+      assert_not_predicate actual, :convertible_to_expense?
+    end
+
+    # The convertibility guard lives INSIDE the writing transaction, so a caller
+    # whose own check went stale cannot convert the same row twice.
+    test "create_expense_for_actual! refuses a row that is already converted" do
+      actual = store.create_actual!(nominal_code: "4000", narrative: "Room hire", debit: 42)
+      store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+
+      assert_raises(DatabaseStore::NotConvertibleError) do
+        store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+      end
+      assert_equal 1, Expense.count, "the second attempt writes nothing"
+    end
+
+    test "create_expense_for_actual! refuses an offsetting leg" do
+      actual = store.create_actual!(nominal_code: "4000", narrative: "Accrual", debit: 42)
+      counterpart = store.create_actual!(nominal_code: "4000", narrative: "Reversal", credit: 42)
+      store.link_offsetting_pair!(actual.record_id, counterpart.record_id)
+
+      assert_raises(DatabaseStore::NotConvertibleError) do
+        store.create_expense_for_actual!(actual.record_id, status: Status::PAID)
+      end
+      assert_equal 0, Expense.count, "an offsetting leg nets to zero, converting it invents spend"
+    end
+
     test "create_offsetting_pair! imports both legs already cross-linked" do
       legs = store.create_offsetting_pair!(
         { nominal_code: "4000", narrative: "ACCRUAL", debit: 10 },

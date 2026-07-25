@@ -5,6 +5,23 @@ module Admin
   class ActualsControllerTest < ActionController::TestCase
     include ReimbursementsTestHelpers
 
+    # A store whose actual-to-expense link write always fails: the conversion's
+    # second write dying after the expense was created.
+    class UnlinkableStore < ::Reimbursements::DatabaseStore
+      def link_actual_to_expense!(_actual_id, _expense_id)
+        raise "blip"
+      end
+    end
+
+    # A store that hands the controller a STALE row: the copy the before_action
+    # checks still looks unlinked while the stored row has already been
+    # converted. This is what a second click on a double-submitted form sees.
+    class StaleActualStore < ::Reimbursements::DatabaseStore
+      def find_actual(record_id)
+        super&.tap { |actual| actual.expense_id = nil }
+      end
+    end
+
     setup do
       finance = Role.create!(name: "Business Manager")
       finance.permissions << Permission.create(action: "manage", subject_class: "reimbursements_finance")
@@ -29,6 +46,12 @@ module Admin
         date: Date.new(2026, 6, 1), debit: BigDecimal("42.0"),
         imported_at: Time.utc(2026, 6, 5, 9)
       )
+    end
+
+    # store_builder is a class attribute, so a test that swaps in a failing store
+    # must hand the real one back or every later test inherits it.
+    teardown do
+      BaseController.store_builder = -> { ::Reimbursements.build_store }
     end
 
     # --- Auth gating -------------------------------------------------------
@@ -507,6 +530,55 @@ module Admin
       expense = ::Reimbursements::Expense.order(:id).last
       assert_equal BigDecimal("42.0"), expense.amount, "the ledger row is the source of truth"
       assert_equal ::Reimbursements::Expense::TYPE_FROM_EUSA, expense.expense_type
+    end
+
+    # --- Conversion is one unit ---------------------------------------------
+    #
+    # create_expense! and link_actual_to_expense! used to run as two unrescued
+    # writes, and the "already converted" guard is state-based: if the link
+    # failed, a Paid expense existed charged to a budget while the row stayed
+    # unlinked and kept offering a "Create expense" button, so the next click
+    # double-counted the same EUSA charge.
+
+    test "a conversion whose link write fails creates no expense at all" do
+      BaseController.store_builder = -> { UnlinkableStore.new }
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        assert_raises(RuntimeError) do
+          post :create_expense, params: {
+            id: @unlinked.record_id,
+            reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                           description: "Room hire recharge",
+                                           payment_reference: "J000001234" }
+          }
+        end
+      end
+
+      assert_empty @unlinked.reload.linked_expense_ids
+    end
+
+    # The convertibility check has to be re-taken inside the writing
+    # transaction: a second click whose before_action read the row before the
+    # first click committed would otherwise convert it again.
+    test "a conversion racing another one is refused rather than duplicated" do
+      BaseController.store_builder = -> { StaleActualStore.new }
+      ::Reimbursements::EusaActual.find(@unlinked.id).update!(expense: @expense)
+      sign_in @user
+
+      assert_no_difference -> { ::Reimbursements::Expense.count } do
+        post :create_expense, params: {
+          id: @unlinked.record_id,
+          reimbursements_expense_form: { budget_record_id: @budget.record_id,
+                                         description: "Room hire recharge",
+                                         payment_reference: "J000001234" }
+        }
+      end
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/already/i, flash[:alert])
+      assert_equal [ @expense.record_id ], @unlinked.reload.linked_expense_ids,
+                   "the first conversion's link stands"
     end
 
     test "conversion is gated by the finance permission" do
