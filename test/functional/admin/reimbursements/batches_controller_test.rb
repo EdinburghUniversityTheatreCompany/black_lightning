@@ -205,10 +205,7 @@ module Admin
 
         get :index, format: :csv
 
-        assert_response :success
-        assert_includes response.media_type, "text/csv"
-        assert_match(/attachment/, response.headers["Content-Disposition"])
-        assert_match(/reimbursements-batches-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+        assert_csv_download("batches")
       end
 
       test "index CSV export writes one row per batch, summarising its expenses" do

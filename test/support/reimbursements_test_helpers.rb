@@ -59,6 +59,19 @@ module ReimbursementsTestHelpers
                                        debit: debit, **attrs)
   end
 
+  # --- Assertions ----------------------------------------------------------
+
+  # Every finance list's "Download CSV" answers the same shape: a text/csv
+  # attachment named reimbursements-<resource>-<today>.csv. One helper so the
+  # six index actions that offer an export assert it identically.
+  def assert_csv_download(slug)
+    assert_response :success
+    assert_includes response.media_type, "text/csv"
+    disposition = response.headers["Content-Disposition"]
+    assert_match(/attachment/, disposition)
+    assert_match(/reimbursements-#{slug}-\d{4}-\d{2}-\d{2}\.csv/, disposition)
+  end
+
   # No mocking library in this suite: swap Honeybadger.notify for a recorder
   # for the duration of the block, then restore the original method.
   def capture_honeybadger_notices

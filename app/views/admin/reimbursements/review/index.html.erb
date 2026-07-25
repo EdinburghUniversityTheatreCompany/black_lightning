@@ -19,6 +19,13 @@
               "aria-current": (@tab == "pending" ? "page" : nil), class: tab_class.call(@tab == "pending") %>
   <%= link_to "Approved (#{@approved.size})", admin_reimbursements_review_path(tab: "approved"),
               "aria-current": (@tab == "approved" ? "page" : nil), class: tab_class.call(@tab == "approved") %>
+  <span class="ml-auto self-center pb-1">
+    <%# ?tab= already rides along in the query parameters, so the download
+        follows whichever tab is on screen. %>
+    <%= link_to "Download CSV",
+                admin_reimbursements_review_path(request.query_parameters.merge(format: :csv)),
+                title: "The expenses on this tab", class: btn_classes(:secondary, :sm) %>
+  </span>
 </nav>
 
 <% if @tab == "approved" %>

@@ -164,10 +164,7 @@ module Admin
       sign_in @user
       get :index, format: :csv
 
-      assert_response :success
-      assert_includes response.media_type, "text/csv"
-      assert_match(/attachment/, response.headers["Content-Disposition"])
-      assert_match(/reimbursements-actuals-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+      assert_csv_download("actuals")
     end
 
     test "index CSV export has a header row and one data row per actual" do

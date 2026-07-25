@@ -24,30 +24,16 @@ module Admin
         @pending = expenses.select(&:pending?)
         @approved = expenses.select { |e| e.status == ::Reimbursements::Status::APPROVED }
 
-        kick_ai_checks(@pending)
-
-        @budgets = store.active_budgets
-        @budget_by_id = store.budgets.index_by(&:record_id)
-        @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
-        # partition: ready first (needs_attention false, no possible duplicate),
-        # attention second. A possible duplicate is folded in here (not into the
-        # shared needs_attention_reasons, which other callers use for expenses
-        # this per-pending-list duplicate scan was never computed for) so it's
-        # grouped with every other advisory reason instead of being a wholly
-        # separate, easy-to-miss warning box.
-        # Which pending expenses still await a budget owner's endorsement (batched
-        # to avoid an N+1). A blocking gate: finance can't approve until an owner
-        # endorses or overrides.
-        @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
-        # For the positive "Endorsed by / Cleared by finance" chip on the card,
-        # and to resolve the endorsing owner's name.
-        @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
-          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
-        @people_by_id = store.people.index_by(&:record_id)
-        @ready, @attention = @pending.partition do |expense|
-          !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
-            !@duplicates.key?(expense.record_id) &&
-            !@owner_gate_unmet_ids.include?(expense.record_id)
+        respond_to do |format|
+          format.html { load_queue }
+          # The tab on screen is the tab you download. Reuses the Expenses
+          # exporter, so a Review download and an Expenses download describe a
+          # claim identically. A CSV must not kick off AI checks, so it skips
+          # everything #load_queue does.
+          format.csv do
+            send_export ::Reimbursements::Exports::Expenses,
+                        @tab == "approved" ? @approved : @pending
+          end
         end
       end
 
@@ -199,6 +185,37 @@ module Admin
       end
 
       private
+
+      # Everything only the on-screen queue needs: the AI checks kicked off per
+      # unchecked Pending claim, the duplicate scan, the owner-endorsement gate
+      # and the ready/attention partition.
+      def load_queue
+        kick_ai_checks(@pending)
+
+        @budgets = store.active_budgets
+        @budget_by_id = store.budgets.index_by(&:record_id)
+        @duplicates = ::Reimbursements::ReviewSupport.find_duplicate_submissions(@pending)
+        # partition: ready first (needs_attention false, no possible duplicate),
+        # attention second. A possible duplicate is folded in here (not into the
+        # shared needs_attention_reasons, which other callers use for expenses
+        # this per-pending-list duplicate scan was never computed for) so it's
+        # grouped with every other advisory reason instead of being a wholly
+        # separate, easy-to-miss warning box.
+        # Which pending expenses still await a budget owner's endorsement (batched
+        # to avoid an N+1). A blocking gate: finance can't approve until an owner
+        # endorses or overrides.
+        @owner_gate_unmet_ids = ::Reimbursements::OwnerReview.unmet_gate_expense_ids(@pending)
+        # For the positive "Endorsed by / Cleared by finance" chip on the card,
+        # and to resolve the endorsing owner's name.
+        @endorsements_by_expense = ::Reimbursements::OwnerEndorsement
+          .where(expense_record_id: @pending.map(&:record_id)).index_by(&:expense_record_id)
+        @people_by_id = store.people.index_by(&:record_id)
+        @ready, @attention = @pending.partition do |expense|
+          !::Reimbursements::ReviewSupport.needs_attention(expense, @budget_by_id, modulus_checker) &&
+            !@duplicates.key?(expense.record_id) &&
+            !@owner_gate_unmet_ids.include?(expense.record_id)
+        end
+      end
 
       # Map an approve_expense result to the redirect + flash, shared by #approve
       # and #override_approve so their messaging never drifts.
