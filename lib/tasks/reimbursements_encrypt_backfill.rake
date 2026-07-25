@@ -4,12 +4,21 @@ namespace :reimbursements do
   # rows are still plaintext and are only re-encrypted when next saved. This task
   # rewrites every payee record so its bank details land as ciphertext.
   #
-  # `#encrypt` re-encrypts the record's encrypted attributes in place and saves
-  # only if something changed, so the task is idempotent — re-running it after a
-  # partial run (or on an already-encrypted row) is a no-op for that row.
+  # SAFE to re-run, but NOT a no-op. `#encrypt` calls `update_columns` with
+  # freshly built assignments unconditionally — there is no dirty check — and the
+  # encryption is non-deterministic, so every run picks a new IV and rewrites new
+  # ciphertext for EVERY row, already-encrypted rows included. The end state is
+  # correct either way, but the printed "processed N/N" is a count of rows
+  # touched, not of rows newly encrypted: it says nothing about how much was left
+  # to do, so don't read it as progress across a resumed partial run.
   #
-  # Run in production AFTER deploying the encryption keys, and BEFORE flipping
-  # `support_unencrypted_data` off:
+  # `update_columns` also bypasses validations, so the columns must already be
+  # wide enough to hold the ciphertext BEFORE this runs — see
+  # 20260725150000_widen_reimbursements_payee_name_override_for_encryption, which
+  # must be migrated first or a long plaintext payee name is truncated here.
+  #
+  # Run in production AFTER deploying the encryption keys and migrating, and
+  # BEFORE flipping `support_unencrypted_data` off:
   #
   #   RAILS_ENV=production bin/rails reimbursements:encrypt_backfill
   #

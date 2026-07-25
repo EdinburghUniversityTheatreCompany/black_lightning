@@ -154,6 +154,28 @@ module Reimbursements
                       "1000 audit lines must still encrypt inside the TEXT column"
     end
 
+    # S7: the backfill task's comment claimed #encrypt "saves only if something
+    # changed, so the task is idempotent — re-running it ... is a no-op for that
+    # row". It is not: #encrypt calls update_columns with freshly built
+    # assignments unconditionally, and non-deterministic encryption picks a new IV
+    # every time, so each run rewrites every row. Safe to re-run, but not a no-op
+    # — which matters when an operator reads "processed N/N" as progress.
+    test "encrypt rewrites fresh ciphertext on every run rather than no-opping" do
+      expense = create_reimbursements_expense(receipt: false, payee_name_override: "Third Party Ltd",
+                                                              sort_code_override: "20-20-20",
+                                                              account_number_override: "50502366")
+
+      expense.encrypt
+      first = raw_column(Expense, expense.id, "account_number_override")
+      expense.encrypt
+      second = raw_column(Expense, expense.id, "account_number_override")
+
+      assert_not_equal first, second,
+                       "each backfill run writes a fresh IV, so the stored ciphertext changes"
+      assert_equal "50502366", expense.reload.account_number_override,
+                   "the plaintext still round-trips after repeated re-encryption"
+    end
+
     private
 
     def ciphertext_bytesize(plaintext)
