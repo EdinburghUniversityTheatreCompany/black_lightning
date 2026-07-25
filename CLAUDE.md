@@ -233,6 +233,27 @@ survive as historical import provenance and are never written. Spec + plan in
   batch unless Graph positively confirms the stored draft is still unsent — a batch whose
   draft was already sent by hand in Outlook must never be silently rebuilt into a second
   live submission.
+- **EUSA actuals — offsetting pairs + conversion.**
+  `Reconciliation.detect_offsetting_pairs` finds the accrual/reversal legs that cancel out
+  in a pasted export: same absolute amount (exact BigDecimal), opposite sign, same
+  financial year, then **scored** (ref 4, nominal 2, period 1, narrative prefix 1, minus a
+  date-distance penalty) and taken greedily from the strongest, with a floor of 4. The
+  weights are tuned against a real 309-row F40 export — legs are nearly always on the
+  *same* nominal code, refs match only about half the time, and legs straddle months, so
+  nothing can be a hard filter: a genuine claim collides by amount with an unrelated
+  reversal in that data, and only scoring keeps them apart. The preview shows every pair as
+  a **ticked checkbox** (keyed by row *content*, so it survives the stateless wizard's
+  re-parse on apply); unticking hands the legs back to the ordinary matching. Applying
+  imports both legs and stamps each `reconciliation_status: "offset"` + `offset_of_id` at
+  the other — rows are never deleted, finance needs the audit trail.
+  **An offsetting leg is never convertible to an expense** (`EusaActual#convertible_to_expense?`,
+  Mick's call): it nets to zero, so converting it would invent spend. Unlinked *debit* rows
+  can be converted (`ExpenseForm.from_actual` + `ActualsController#new_expense/#create_expense`),
+  created **directly Paid** with `payment_confirmed_date` from the row so they never enter
+  review/batch. `from_actual` sets an `internal` flag that admits `TYPE_FROM_EUSA` and
+  relaxes the receipt/VAT/large-amount blocks; it is deliberately **not** a permitted
+  parameter on the producer form, so a submitter can't pick the internal type to dodge the
+  receipt rule.
 
 ## Opportunities
 
