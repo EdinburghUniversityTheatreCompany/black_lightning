@@ -26,7 +26,7 @@ module Admin
       private
 
       def attach_uploads(expense)
-        files = Array(params[:receipts]).compact_blank
+        files = ::Reimbursements::ReceiptContentType.uploads_from(params[:receipts])
         return [ "No files received." ] if files.empty?
 
         files.filter_map do |file|

@@ -54,8 +54,11 @@ module Reimbursements
       ActiveModel::Type::Boolean.new.cast(@internal)
     end
 
+    # Anything in the receipts param that is not actually an uploaded file is
+    # dropped here rather than reaching #size / #original_filename below (a bare
+    # String answers #size but not #read) — see ReceiptContentType.uploads_from.
     def receipts
-      Array(@receipts).compact_blank
+      ReceiptContentType.uploads_from(@receipts)
     end
 
     # Edit doesn't force a re-upload; create requires at least one receipt.

@@ -44,5 +44,31 @@ module Reimbursements
       assert_not ReceiptContentType.allowed_upload?(file)
       assert_equal EXE_MAGIC, file.read
     end
+
+    # S10: a hand-crafted "receipts[]=something" post sends a String, which has
+    # #size (so it sails past the byte check the intake paths do first) but no
+    # #read, so allowed_upload? raised an unrescued NoMethodError — a 500 any
+    # authenticated producer could trigger. Same for a nested hash or array,
+    # which Rails also happily parses out of a multipart body.
+    test "uploads_from drops receipts params that are not uploaded files" do
+      real = ActionDispatch::Http::UploadedFile.new(tempfile: StringIO.new(PDF_MAGIC),
+                                                    filename: "receipt.pdf",
+                                                    type: "application/pdf")
+
+      assert_equal [ real ], ReceiptContentType.uploads_from([ "not-a-file", real, %w[a b] ])
+      assert_empty ReceiptContentType.uploads_from("not-a-file")
+      assert_empty ReceiptContentType.uploads_from(nil)
+      assert_empty ReceiptContentType.uploads_from([ "", nil ])
+    end
+
+    test "uploaded_file? rejects a String that only looks file-shaped" do
+      assert_not ReceiptContentType.uploaded_file?("receipt.pdf"), "a String answers #size but not #read"
+      assert_not ReceiptContentType.uploaded_file?(StringIO.new(PDF_MAGIC)), "no original_filename"
+      assert_not ReceiptContentType.uploaded_file?({ "tempfile" => "x" }), "a nested hash is not an upload"
+      assert ReceiptContentType.uploaded_file?(
+        ActionDispatch::Http::UploadedFile.new(tempfile: StringIO.new(PDF_MAGIC),
+                                               filename: "receipt.pdf", type: "application/pdf")
+      )
+    end
   end
 end

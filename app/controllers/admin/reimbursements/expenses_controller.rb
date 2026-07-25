@@ -102,7 +102,7 @@ module Admin
           return
         end
 
-        files = Array(params[:receipts]).compact_blank.select do |file|
+        files = ::Reimbursements::ReceiptContentType.uploads_from(params[:receipts]).select do |file|
           file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
             ::Reimbursements::ReceiptContentType.allowed_upload?(file)
         end
