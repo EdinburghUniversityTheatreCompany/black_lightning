@@ -43,10 +43,6 @@ module Reimbursements
     COL_DESCRIPTION = 7
     # Excel's builtin text number format.
     TEXT_FORMAT = "@".freeze
-    # Leading characters that make Excel (and CSV re-importers) treat a text cell
-    # as a formula. Submitter-controlled text starting with one of these is a
-    # spreadsheet formula-injection vector, so it is neutralised (see #sanitize).
-    FORMULA_TRIGGERS = [ "=", "+", "-", "@", "\t", "\r", "\n" ].freeze
 
     DEFAULT_TEMPLATE_PATH =
       Rails.root.join("lib/reimbursements/templates/EUSA_BACS_template.xlsx").freeze
@@ -108,12 +104,10 @@ module Reimbursements
 
     # Prefix a single quote when a submitter-controlled value begins with a
     # formula trigger, so Excel renders it as literal text instead of executing
-    # it. Ordinary values (and empty ones) pass through untouched.
+    # it. Ordinary values (and empty ones) pass through untouched. Shared with
+    # the CSV/workbook exports via CellSanitizer so the rule can't drift.
     def sanitize(value)
-      text = value.to_s
-      return text unless text.start_with?(*FORMULA_TRIGGERS)
-
-      "'#{text}"
+      CellSanitizer.sanitize(value)
     end
 
     # A cell written as literal text so leading zeros / dashes are preserved,
