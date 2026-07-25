@@ -174,3 +174,17 @@ owner-facing page, gated by base portal access rather than the finance permissio
 none. `Exports::Budgets` would work as-is for the owned subset, but the columns would need
 a second look first: an owner arguably shouldn't see another line's full rollups, and the
 exporter currently assumes the finance-wide view.
+
+## The `reconciliation_status` index on eusa_actuals is never used by SQL
+
+`index_reimbursements_eusa_actuals_on_reconciliation_status` (added with the offsetting-pair
+work) has no SQL predicate behind it: every offset filter runs in Ruby over the store's
+memoized full list (`ActualsController#index`, `Budget`'s rollups, `unbudgeted_actuals`), so
+nothing ever plans against it. Left in place deliberately during the 2026-07-25 review fixes:
+dropping it needs a migration on the legacy production DB, which that brief said to pause on,
+and the cost is negligible at this table's size (about 300 rows per financial year).
+
+**Fix (pick one when FY scoping lands):** either drop the index, or keep it and add the
+query-level scopes the deferred financial-year rollups will want anyway
+(`EusaActual.offset` / `.not_offset` used from SQL rather than filtering arrays in Ruby).
+The same review deferred FY scoping for the rollups (finding 9), so the two belong together.
