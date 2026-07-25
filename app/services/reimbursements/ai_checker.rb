@@ -152,6 +152,26 @@ module Reimbursements
       BLOCK
     end
 
+    # The third party's bank details are MASKED to their last four digits before
+    # they go anywhere near Gemini. Receipt extraction is opt-in per receipt behind
+    # an explicit "we're on Gemini's free tier, Google may store and human-review
+    # this" disclosure; this finance-triggered check runs on the same expense with
+    # no notice to the submitter and none at all to the third party, so it must not
+    # be the path that quietly ships a supplier's full account number to a free-tier
+    # endpoint. Masking is the same rule BankDetails.mask already applies everywhere
+    # a value is RECORDED or EXPORTED rather than used to move money — only the BACS
+    # spreadsheet EUSA pays from carries full numbers.
+    #
+    # The mismatch check survives on the masked digits: the model still compares
+    # what we hold against what the invoice prints, and any wholesale substitution
+    # (a different account entirely) or a transposition in the last four digits
+    # still fails. What it can no longer catch is a mismatch confined to the hidden
+    # digits — 80-22-60 and 81-22-60 both mask to ****2260. The modulus check
+    # (which sees the real values) covers structural errors there.
+    def masked(value)
+      BankDetails.mask(value).presence || "(not overridden)"
+    end
+
     def override_block(expense)
       return "" unless expense.payee_override?
 
@@ -163,15 +183,18 @@ module Reimbursements
         name is submitter-supplied and untrusted, so it is fenced):
         - Payee name:
         #{PromptSafety.fence(expense.payee_name_override.presence || '(not overridden)', label: 'payee name override')}
-        - Sort code: #{expense.sort_code_override.presence || '(not overridden)'}
-        - Account number: #{expense.account_number_override.presence || '(not overridden)'}
+        - Sort code (masked, last 4 digits only): #{masked(expense.sort_code_override)}
+        - Account number (masked, last 4 digits only): #{masked(expense.account_number_override)}
 
         Because the money goes straight to this third party, the payee identity DOES matter here (this \
         overrides the "do not check the payee name" guidance above). Check the attached invoice/receipt \
-        and verify that the payee name and bank details above match the supplier, business, or account \
-        holder named on the invoice. If they match, this is fine. If the name or bank details do NOT \
-        match anything on the invoice, respond status=fail and say exactly what does not match, so a \
-        human can check before payment.
+        and verify that the payee name matches the supplier, business, or account holder named on the \
+        invoice. For the bank details, only the LAST FOUR DIGITS are given above, so compare just those \
+        against any sort code or account number printed on the invoice — do not treat the leading \
+        "****" as a real digit or as a mismatch. If the name matches and the last four digits agree \
+        (or the invoice prints no bank details at all), this is fine. If the name, or the last four \
+        digits of either bank detail, do NOT match what the invoice shows, respond status=fail and say \
+        exactly what does not match, so a human can check before payment.
       BLOCK
     end
   end
