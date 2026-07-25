@@ -301,6 +301,23 @@ module Reimbursements
       ::Reimbursements::Extractor.singleton_class.send(:remove_method, :new)
     end
 
+    # Nobody was present to consent, so the claim carries no consent at all —
+    # which is a refusal as far as the finance AI check is concerned. That check
+    # sends the receipt files to Gemini exactly as extraction would, so an
+    # email-in claim must not be checkable either; finance reviews it by hand.
+    test "an email-in claim records no consent, so it is never AI-checked either" do
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ PDF_ATTACHMENT ] })
+
+      MailboxPollJob.perform_now
+
+      expense = Expense.sole
+      assert_nil expense.ai_processing_consent
+      assert_not expense.ai_processing_consented?
+
+      checker = ::Reimbursements::AiChecker.new(chat_builder: -> { raise "must not reach Gemini" })
+      assert checker.check(expense, []).skipped?
+    end
+
     test "a failing message is left unread and others still process" do
       broken = inbound_message(id: "msgBoom")
       fine = inbound_message(id: "msg1")

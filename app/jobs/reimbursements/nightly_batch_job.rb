@@ -158,11 +158,24 @@ module Reimbursements
       when "error"
         [ "AI check error during check" ]
       when "", nil
-        [ "AI check not yet run" ]
+        # Without consent no check is coming (a refusal is final and there is no
+        # override), so don't imply one is still pending. It remains an issue: a
+        # human has to check the claim, exactly as they did before the checker.
+        expense.ai_processing_consented? ? [ "AI check not yet run" ] : [ no_consent_reason(expense) ]
       when "pass"
         expense.ai_comment.present? ? [ "AI note: #{expense.ai_comment}" ] : []
       else
         []
+      end
+    end
+
+    # Neutral phrasing on purpose: declining is a legitimate choice, so the
+    # operator alert must not read as though the claim itself is suspect.
+    def no_consent_reason(expense)
+      if expense.ai_processing_declined?
+        "no AI check: the submitter did not consent to AI processing"
+      else
+        "no AI check: no consent to AI processing recorded (check it by hand)"
       end
     end
 

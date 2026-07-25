@@ -19,10 +19,17 @@
   </div>
 
   <%# The AI badge + its explanation (comment) — so a Submitted/Paid expense's
-      "why did AI flag this?" is answerable here, not just on the Review page. %>
+      "why did AI flag this?" is answerable here, not just on the Review page.
+      With no verdict AND no consent covering the check, say so: otherwise the
+      section simply vanishes and "not checked yet" is indistinguishable from
+      "never will be". %>
   <% if @expense.ai_check_status.present? %>
     <div class="mt-3">
       <%= render "admin/reimbursements/review/ai_verdict_body", expense: @expense %>
+    </div>
+  <% elsif !@expense.ai_processing_consented? %>
+    <div class="mt-3">
+      <%= render "admin/reimbursements/review/ai_not_checked", expense: @expense %>
     </div>
   <% end %>
 

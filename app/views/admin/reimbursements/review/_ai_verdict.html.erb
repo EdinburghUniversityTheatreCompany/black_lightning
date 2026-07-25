@@ -5,11 +5,18 @@
   on the Review page with no reload (see turbo_stream_from in review/index).
   While the check is still running the region shows a quiet placeholder, which
   also gives the broadcast a target to replace. Local: expense.
+
+  A claim whose submitter's consent doesn't cover the check gets neither: no
+  check was enqueued, so promising a verdict that can never arrive would be a
+  lie. It says why instead. An existing verdict still wins — verdicts written
+  before the consent gate shipped are history and stay visible.
 %>
 <div id="ai_verdict_<%= expense.record_id %>" class="mt-2" aria-live="polite">
   <% if expense.ai_check_status.present? %>
     <%= render "admin/reimbursements/review/ai_verdict_body", expense: expense %>
-  <% else %>
+  <% elsif expense.ai_processing_consented? %>
     <p class="text-xs text-gray-500">AI check running… the verdict will appear here automatically.</p>
+  <% else %>
+    <%= render "admin/reimbursements/review/ai_not_checked", expense: expense %>
   <% end %>
 </div>

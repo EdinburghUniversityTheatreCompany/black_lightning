@@ -60,10 +60,10 @@
           </p>
         <% end %>
         <p class="mb-2 text-sm text-gray-600">
-          Upload the receipt or invoice first, then choose below whether you'd like us to
-          read it and prefill the form. PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt
-          if you can: without one we have to deduct the full amount from your budget instead
-          of the ex-VAT amount, so a VAT receipt is in your own interest.
+          Upload the receipt or invoice first, then choose below whether we may read it with
+          AI. PDF or photo, max 5&nbsp;MB. Ask for a VAT receipt if you can: without one we
+          have to deduct the full amount from your budget instead of the ex-VAT amount, so a
+          VAT receipt is in your own interest.
         </p>
         <%= f.input :receipts, as: :file, label: "Receipt / invoice", required: true,
               input_html: { multiple: true,
@@ -71,40 +71,51 @@
                             data: { reimbursements_receipt_target: "files",
                                     action: "change->reimbursements-receipt#fileChanged change->reimbursements-receipt#stash" } } %>
 
-        <%# Consent to the scan. Hidden until a receipt is chosen (JS reveals it);
-            with JavaScript off it stays hidden and the manual form works exactly
-            as before. Selecting "self" or "invoice" is what triggers the upload
-            to Gemini — nothing is sent until the submitter picks one. "No" makes
-            no network call at all. This is NOT a server-validated field: the
-            manual form must always be submittable (never-block invariant). %>
+        <%# ONE consent, covering BOTH AI uses of the receipt: reading it now to
+            prefill this form, and sending it again later so the finance team's AI
+            check can compare it against the claim. That is why the copy says
+            "twice": the check used to run regardless of this answer, which made
+            picking "No" meaningless.
+            Hidden until a receipt is chosen (JS reveals it); with JavaScript off
+            it stays hidden and the manual form works exactly as before. Selecting
+            "self" or "invoice" is what triggers the upload to Gemini: nothing is
+            sent until the submitter picks one, and "No" makes no network call at
+            all. This is NOT a server-validated field: the manual form must always
+            be submittable (never-block invariant), so no answer at all is recorded
+            as "never asked", which blocks the check just like a refusal. %>
         <fieldset class="mt-3 hidden rounded border border-gray-200 bg-white p-3"
                   data-reimbursements-receipt-target="consent">
-          <legend class="px-1 text-sm font-medium">Read the receipt to prefill the form?</legend>
+          <legend class="px-1 text-sm font-medium">Read this receipt with AI?</legend>
           <p class="mb-2 text-sm text-gray-600">
-            Reading the receipt sends it to Google Gemini so it can fill in the form for you.
-            We use Gemini's free tier, which means Google may store what we send and have
-            people review it to improve their products. If your receipt shows anything you'd
-            rather keep private, pick "No" and type the details in yourself.
+            If you say yes, we send the receipt to Google Gemini twice: once now, to read it
+            and fill in this form, and once later, so finance can check your claim against it.
+            We use Gemini's free tier, which means Google may keep a copy and have people look
+            at it.
           </p>
+          <p class="mb-2 text-sm text-gray-600">
+            For most receipts that isn't much of a worry. A till receipt for props or paint is
+            unremarkable. It's worth a moment's thought if the document carries personal
+            details, such as a supplier invoice printed with someone's bank details, an order
+            confirmation showing your home address, or anything medical. If you'd rather not,
+            pick "No" and type the details in yourself. Nothing else about your claim changes.
+          </p>
+          <%# The radio posts with the form (nested under the form object's
+              params), so the answer is recorded on create — a submitter who
+              picks "No" never fires an extract, so the extract POST can't be
+              what records it. Being bound to the form object also means the
+              answer survives a 422 re-render, alongside the file the Stimulus
+              controller restores. %>
           <div class="flex flex-col gap-2">
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" name="receipt_scan_consent" value="self" class="mt-1"
-                     data-reimbursements-receipt-target="consentOption"
-                     data-action="change->reimbursements-receipt#consentChanged">
-              <span>Yes, to be reimbursed to myself</span>
-            </label>
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" name="receipt_scan_consent" value="invoice" class="mt-1"
-                     data-reimbursements-receipt-target="consentOption"
-                     data-action="change->reimbursements-receipt#consentChanged">
-              <span>Yes, as an invoice paid out to the bank details listed on the invoice</span>
-            </label>
-            <label class="flex items-start gap-2 text-sm">
-              <input type="radio" name="receipt_scan_consent" value="no" class="mt-1"
-                     data-reimbursements-receipt-target="consentOption"
-                     data-action="change->reimbursements-receipt#consentChanged">
-              <span>No, I will fill in all the details myself</span>
-            </label>
+            <% [ [ "self", "Yes, to be reimbursed to myself" ],
+                 [ "invoice", "Yes, as an invoice paid out to the bank details listed on the invoice" ],
+                 [ "no", "No, I will fill in all the details myself" ] ].each do |value, label| %>
+              <label class="flex items-start gap-2 text-sm">
+                <%= f.radio_button :receipt_scan_consent, value, class: "mt-1",
+                      data: { reimbursements_receipt_target: "consentOption",
+                              action: "change->reimbursements-receipt#consentChanged" } %>
+                <span><%= label %></span>
+              </label>
+            <% end %>
           </div>
         </fieldset>
 

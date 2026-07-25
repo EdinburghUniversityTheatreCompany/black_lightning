@@ -118,13 +118,39 @@ module Reimbursements
     end
 
     test "an unchecked approved expense counts as an issue" do
-      approved_expense(ai_status: "")
+      # Consented, so a check genuinely is still pending (see the consent cases
+      # below for the claims where one is never coming).
+      approved_expense(ai_status: "", ai_processing_consent: true)
 
       NightlyBatchJob.perform_now(today: THURSDAY)
 
       review = mailer_calls(:manual_review).sole.last
       assert_match(/not yet run/, review[:issues].first[:reason])
       assert_empty mailer_calls(:approved_ready)
+    end
+
+    # A claim the checker is not allowed to run on still needs a human, so it
+    # still counts as an issue — but "AI check not yet run" implies one is coming.
+    # It never is: a refusal is final, and there is no override.
+    test "an unchecked expense whose submitter declined AI processing says so, not 'not yet run'" do
+      approved_expense(ai_status: "", ai_processing_consent: false)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reason = mailer_calls(:manual_review).sole.last[:issues].first[:reason]
+      assert_match(/did not consent/, reason)
+      assert_no_match(/not yet run/, reason)
+      assert_empty mailer_calls(:approved_ready)
+    end
+
+    test "an unchecked expense with no consent recorded says so too" do
+      approved_expense(ai_status: "", ai_processing_consent: nil)
+
+      NightlyBatchJob.perform_now(today: THURSDAY)
+
+      reason = mailer_calls(:manual_review).sole.last[:issues].first[:reason]
+      assert_match(/no consent to AI processing/, reason)
+      assert_no_match(/not yet run/, reason)
     end
 
     test "an AI-check error counts as an issue" do

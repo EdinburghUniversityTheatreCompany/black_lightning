@@ -68,13 +68,16 @@ export default class extends Controller {
   }
 
   // The submitter picked a scan option. "self"/"invoice" trigger the opt-in
-  // upload (in the chosen mode); "no" sends nothing at all.
+  // upload (in the chosen mode); "no" sends nothing at all. "Now or later" is a
+  // promise the server keeps: the answer is saved with the claim, and the finance
+  // AI check refuses to run without it (there is no override).
   consentChanged(event) {
     const mode = event.target.value
     if (mode === "self" || mode === "invoice") {
       this.#runExtract(mode)
     } else {
-      this.#setStatus("No problem, nothing was sent to Google. Fill in the details below yourself.")
+      this.#setStatus("No problem, nothing will be sent to Google, now or later. " +
+        "Fill in the details below yourself.")
     }
   }
 

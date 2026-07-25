@@ -21,8 +21,17 @@ module Reimbursements
                   :description, :payment_reference, :payee_name_override,
                   :sort_code_override, :account_number_override,
                   :vat_itemised, :vat_acknowledged, :save_as_draft,
-                  :large_amount_acknowledged, :expense_receipt_count
+                  :large_amount_acknowledged, :expense_receipt_count,
+                  :receipt_scan_consent
     attr_writer :receipts, :require_receipts, :internal
+
+    # The receipt form's consent radio, as posted: "self" and "invoice" are the
+    # two yes answers (they also pick the extraction mode), "no" is the refusal.
+    # Blank means the question was never answered — with JavaScript off it is
+    # never even shown. Never validated: the manual form must always be
+    # submittable (the never-block invariant).
+    CONSENT_YES = %w[self invoice].freeze
+    CONSENT_NO = "no".freeze
 
     # Above this, submitting asks for a one-tick confirmation — the realistic
     # error is typing pence as pounds (4999 for 49.99) or a stray digit, which
@@ -87,9 +96,25 @@ module Reimbursements
       amount_decimal.present? && amount_decimal >= LARGE_AMOUNT_THRESHOLD
     end
 
-    # Attributes for Store#create_expense!.
+    # One consent, both AI uses of the receipt: reading it to prefill this form,
+    # and sending it again later so the finance AI check can compare it against
+    # the claim. true = consented, false = declined, nil = never answered (both
+    # falsey states block the check; they are kept distinct so the finance UI can
+    # say which it was). An unrecognised value is not consent.
+    def ai_processing_consent
+      value = receipt_scan_consent.to_s
+      return true if CONSENT_YES.include?(value)
+
+      false if value == CONSENT_NO
+    end
+
+    # Attributes for Store#create_expense!. The consent answer is written HERE
+    # rather than in update_attrs because it belongs to the receipt the submitter
+    # was answering about, and the edit form has no receipt input (and so no
+    # radio) — a blank param there must not silently rewrite the answer.
     def create_attrs(person_record_id)
-      update_attrs.merge(person_record_id: person_record_id)
+      update_attrs.merge(person_record_id: person_record_id,
+                         ai_processing_consent: ai_processing_consent)
     end
 
     # Attributes for Store#update_expense!. Overrides are written as empty

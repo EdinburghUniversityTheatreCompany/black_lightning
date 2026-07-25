@@ -19,7 +19,15 @@ module Reimbursements
   class AiChecker
     MODEL = "gemini-2.5-flash".freeze
 
-    Result = Struct.new(:status, :comment, :suggested_budget, :checked_at, keyword_init: true)
+    # Not a verdict: the check never ran because the submitter's consent doesn't
+    # cover it. Deliberately distinct from "error" (the checker tried and
+    # couldn't), because it must never be written to the expense or shown as a
+    # failed check — a declined claim is not a suspicious one.
+    STATUS_SKIPPED = "skipped".freeze
+
+    Result = Struct.new(:status, :comment, :suggested_budget, :checked_at, keyword_init: true) do
+      def skipped? = status == STATUS_SKIPPED
+    end
 
     # Structured verdict the model must return. "error" is never a value the
     # model picks — it's reserved for exceptions captured by #check.
@@ -40,6 +48,14 @@ module Reimbursements
     # expense: a Reimbursements::Expense; budgets: [Budget] shown to the model so
     # a suggested_budget names a real category. Returns a Result; never raises.
     def check(expense, budgets = [])
+      # The privacy gate comes first, before the receipts are even looked at.
+      # ONE consent covers both AI uses of a receipt (prefilling the submission
+      # form and this check), so a submitter who declined has refused this too,
+      # and a claim nobody was ever asked about (pre-existing, or email-in) has
+      # no consent to rely on. The Review page also refuses to enqueue those, but
+      # this check is the gate that holds when the job is run from a console or
+      # by any future caller.
+      return skipped_result unless expense.ai_processing_consented?
       return error_result("No receipts attached — cannot perform AI check.") if expense.receipts.empty?
 
       response = @chat_builder.call
@@ -84,6 +100,15 @@ module Reimbursements
       comment = "#{comment} Suggested budget: #{suggested}".strip if suggested.present?
 
       Result.new(status: status, comment: comment, suggested_budget: suggested, checked_at: Time.current)
+    end
+
+    # Callers must not persist this (AiCheckJob returns early on it): the expense
+    # keeps its blank AI status, and the finance UI explains the absence from the
+    # consent column instead of from a stored pseudo-verdict.
+    def skipped_result
+      Result.new(status: STATUS_SKIPPED,
+                 comment: "The submitter did not consent to AI processing of this receipt.",
+                 suggested_budget: "", checked_at: nil)
     end
 
     def error_result(message)

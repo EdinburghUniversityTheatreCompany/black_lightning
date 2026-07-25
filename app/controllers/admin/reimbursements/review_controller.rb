@@ -318,8 +318,16 @@ module Admin
       # checker itself couldn't run, not a real pass/fail — gets retried the
       # next time Review loads, rather than being stuck forever the moment a
       # transient Gemini outage clears.
+      #
+      # ai_processing_consented? is the privacy gate: the check sends the receipt
+      # FILES to Gemini, exactly as receipt extraction does, so it needs the same
+      # consent — and the receipt form asks for one consent covering both. Without
+      # it (declined, or never asked, which is every pre-existing and every
+      # email-in claim) nothing is enqueued and finance reviews the claim by hand.
+      # AiChecker#check refuses independently, since the job is also reachable
+      # from a console.
       def kick_ai_checks(expenses)
-        expenses.reject(&:ai_checked?).each do |expense|
+        expenses.select { |e| e.ai_processing_consented? && !e.ai_checked? }.each do |expense|
           ::Reimbursements::AiCheckJob.perform_later(expense.record_id)
         end
       end
