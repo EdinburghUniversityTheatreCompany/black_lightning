@@ -109,30 +109,71 @@ module Reimbursements
       assert_equal fresh.total_paid, fresh.paid_portal_amount
     end
 
-    test "eusa_actual_amount sums linked EUSA debits via expenses for an Expense budget" do
+    test "eusa_actual_amount nets linked EUSA debits and credits for an Expense budget" do
       budget = build_budget
       paid = add_expense(budget, status: Status::PAID, excl_vat: 40)
       approved = add_expense(budget, status: Status::APPROVED, excl_vat: 100)
       EusaActual.create!(expense: paid, nominal_code: "4000", debit: BigDecimal("42.50"))
       EusaActual.create!(expense: approved, nominal_code: "4000", debit: BigDecimal("7.50"))
-      # A credit on a linked actual (a refund) does not count toward the debit total.
+      # A credit note linked to the same expense (a refund) reduces what the
+      # line actually cost: 50 - 5 = 45.
       EusaActual.create!(expense: paid, nominal_code: "4000", credit: BigDecimal("5"))
       # An actual on an unrelated expense/budget is ignored.
       other = build_budget(name: "Other")
       EusaActual.create!(expense: add_expense(other, status: Status::PAID, excl_vat: 9),
                          nominal_code: "9999", debit: BigDecimal("99"))
 
-      assert_equal BigDecimal("50"), Budget.find(budget.id).eusa_actual_amount
+      assert_equal BigDecimal("45"), Budget.find(budget.id).eusa_actual_amount
     end
 
-    test "eusa_actual_amount sums direct credit actuals for an Income budget" do
+    test "a supplier refund on an expense budget reduces its EUSA actual" do
+      budget = build_budget
+      paid = add_expense(budget, status: Status::PAID, excl_vat: 900)
+      EusaActual.create!(expense: paid, nominal_code: "4000", debit: BigDecimal("900"))
+      EusaActual.create!(expense: paid, nominal_code: "4000", credit: BigDecimal("300"),
+                         narrative: "Supplier refund")
+
+      fresh = Budget.find(budget.id)
+      assert_equal BigDecimal("600"), fresh.eusa_actual_amount
+      # expected_outturn inherited the overstatement, so it must fall too:
+      # max(projected nil, committed 900, paid 900, eusa 600) = 900, not 1200.
+      assert_equal BigDecimal("900"), fresh.expected_outturn
+    end
+
+    test "a row carrying both a debit and a credit nets on one line" do
+      budget = build_budget
+      paid = add_expense(budget, status: Status::PAID, excl_vat: 100)
+      EusaActual.create!(expense: paid, nominal_code: "4000", debit: BigDecimal("100"),
+                         credit: BigDecimal("40"))
+
+      assert_equal BigDecimal("60"), Budget.find(budget.id).eusa_actual_amount
+    end
+
+    test "eusa_actual_amount ignores offsetting legs linked to an expense" do
+      budget = build_budget
+      paid = add_expense(budget, status: Status::PAID, excl_vat: 4200)
+      accrual = EusaActual.create!(expense: paid, nominal_code: "4000",
+                                   debit: BigDecimal("4200"),
+                                   reconciliation_status: EusaActual::STATUS_OFFSET)
+      # Only the debit leg is linked to the expense; the reversal is not. Netting
+      # alone would still show 4,200 of spend that was reversed, so an offsetting
+      # leg is dropped outright.
+      EusaActual.create!(nominal_code: "4000", credit: BigDecimal("4200"),
+                         reconciliation_status: EusaActual::STATUS_OFFSET,
+                         offset_of_id: accrual.id)
+
+      assert_equal 0, Budget.find(budget.id).eusa_actual_amount
+    end
+
+    test "eusa_actual_amount nets direct credits against debits for an Income budget" do
       income = build_budget(name: "Ticket income", budget_type: "Income")
       EusaActual.create!(budget: income, nominal_code: "8000", credit: BigDecimal("300"))
       EusaActual.create!(budget: income, nominal_code: "8000", credit: BigDecimal("120"))
-      # A debit on an income actual is not part of the credit total.
+      # A debit booked against an income line is income handed back (a refunded
+      # ticket), so it reduces the income: 420 - 10 = 410.
       EusaActual.create!(budget: income, nominal_code: "8000", debit: BigDecimal("10"))
 
-      assert_equal BigDecimal("420"), Budget.find(income.id).eusa_actual_amount
+      assert_equal BigDecimal("410"), Budget.find(income.id).eusa_actual_amount
     end
 
     test "pipeline_amount sums excl-VAT amounts of Pending expenses only" do
