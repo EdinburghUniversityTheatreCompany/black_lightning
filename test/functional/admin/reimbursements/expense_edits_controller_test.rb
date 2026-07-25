@@ -196,16 +196,24 @@ module Admin
 
       # --- CSV export --------------------------------------------------------
 
+      # The combined workbook hangs off the Finance sidebar, which renders on
+      # every finance page — so any of them proves the link is reachable.
+      test "the Finance sidebar links to the combined workbook" do
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "Export Workbook"
+        assert_includes response.body, "/admin/reimbursements/export"
+      end
+
       test "index CSV export answers a text/csv download named for today" do
         seed_multi_expenses
         sign_in @user
 
         get :index, format: :csv
 
-        assert_response :success
-        assert_includes response.media_type, "text/csv"
-        assert_match(/attachment/, response.headers["Content-Disposition"])
-        assert_match(/reimbursements-expenses-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+        assert_csv_download("expenses")
       end
 
       test "index CSV export has a header row and one data row per expense" do
@@ -247,6 +255,19 @@ module Admin
 
         rows = CSV.parse(response.body)
         assert_equal 61, rows.size, "header + all 60 expenses (pagination is display-only)"
+      end
+
+      test "index CSV export neutralises formula-injected submitter text" do
+        # A description a submitter controls entirely: on CSV re-import Excel
+        # would execute a leading "=" as a formula.
+        expense_at("Pending", auto_number: 9, description: "=HYPERLINK(\"http://evil\",\"click\")")
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        injected = rows.find { |r| r[0] == "9" }
+        assert_equal "'=HYPERLINK(\"http://evil\",\"click\")", injected[6]
       end
 
       test "index CSV export joins the needs-attention reasons" do

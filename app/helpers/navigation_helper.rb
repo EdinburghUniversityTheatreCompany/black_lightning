@@ -77,6 +77,7 @@ module NavigationHelper
     children << { title: "EUSA Actuals", path: admin_reimbursements_actuals_path, fa_icon: "fa-table-list" } if can? :manage, :reimbursements_finance
     children << { title: "Integration Status", path: admin_reimbursements_status_path, fa_icon: "fa-heart-pulse" } if can? :manage, :reimbursements_finance
     children << { title: "Settings", path: admin_reimbursements_settings_path, fa_icon: "fa-gear" } if can? :manage, :reimbursements_finance
+    children << { title: "Export Workbook", path: admin_reimbursements_export_path, fa_icon: "fa-file-excel" } if can? :manage, :reimbursements_finance
     navbar_categories << { title: "Finance", children: children, fa_icon: "fa-money-bill-wave" }
 
     # Opportunities

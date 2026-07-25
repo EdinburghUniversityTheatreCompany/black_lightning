@@ -69,16 +69,22 @@ module Admin
         assert_includes response.body, "500"
       end
 
-      test "index shows the pipeline, EUSA-actual and expected-outturn columns" do
-        sign_in @user
-        @income.destroy!
-        # Props: forecast 800, committed 300 (Approved 150 + Paid 150).
-        # Add a Pending expense (pipeline) and a reconciled EUSA debit.
+      # On top of the setup (forecast 800, committed 300 = Approved 150 + Paid
+      # 150), give @props a Pending expense of 275 (pipeline) and a reconciled
+      # EUSA debit of 161 against its Paid expense — so every Track G rollup on
+      # the line has a distinct, recognisable figure.
+      def seed_pipeline_and_eusa_debit
         create_reimbursements_expense(budget: @props, status: ::Reimbursements::Status::PENDING,
                                       amount_excl_vat: 275, amount: 330, receipt: false)
         paid = @props.expenses.find { |e| e.status == ::Reimbursements::Status::PAID }
         ::Reimbursements::EusaActual.create!(expense: paid, nominal_code: "4000",
-                                             debit: BigDecimal("161.00"))
+                                            debit: BigDecimal("161.00"))
+      end
+
+      test "index shows the pipeline, EUSA-actual and expected-outturn columns" do
+        sign_in @user
+        @income.destroy!
+        seed_pipeline_and_eusa_debit
 
         get :index
 
@@ -208,6 +214,82 @@ module Admin
         assert_response :success
         assert_includes response.body, "Over original budget"
         assert_not_includes response.body, ">Over budget<"
+      end
+
+      # --- CSV export --------------------------------------------------------
+
+      test "index CSV export answers a text/csv download named for today" do
+        sign_in @user
+
+        get :index, format: :csv
+
+        assert_csv_download("budgets")
+      end
+
+      test "index CSV export carries every rollup column the table shows" do
+        sign_in @user
+        seed_pipeline_and_eusa_debit
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal [ "Budget", "Nominal code", "Type", "Visible", "Initial", "Current forecast",
+                       "Projected", "Committed", "Pipeline", "Paid (portal)", "EUSA actual",
+                       "Expected outturn", "Remaining", "Variance", "Owners" ], rows.first
+        assert_equal 3, rows.size, "header + two budgets"
+
+        props = rows.find { |r| r[0] == "Props" }
+        assert_equal "4000", props[1]
+        assert_equal %w[Expense Visible], props.values_at(2, 3)
+        assert_equal "1000.0", props[4], "initial"
+        assert_equal "800.0", props[5], "current forecast"
+        assert_equal "800.0", props[6], "projected falls back to initial only without a forecast"
+        assert_equal "300.0", props[7], "committed (Approved 150 + Paid 150)"
+        assert_equal "275.0", props[8], "pipeline (the Pending expense)"
+        assert_equal "150.0", props[9], "paid via the portal"
+        assert_equal "161.0", props[10], "the reconciled EUSA debit"
+        assert_equal "800.0", props[11], "expected outturn = max(800, 300, 150, 161)"
+        assert_equal "500.0", props[12], "remaining = 800 - 300"
+        assert_equal "-200.0", props[13], "variance = 800 - 1000, still a usable number"
+        assert_equal "Alice Owner", props[14]
+      end
+
+      test "index CSV export marks a hidden income budget as such" do
+        sign_in @user
+        @income.update!(active: false)
+
+        get :index, format: :csv
+
+        income = CSV.parse(response.body).find { |r| r[0] == "Ticket income" }
+        assert_equal %w[Income Hidden], income.values_at(2, 3)
+      end
+
+      test "index CSV export lists every budget, not just the first page" do
+        seed_paged_budgets(60)
+        sign_in @user
+
+        get :index, format: :csv
+
+        assert_equal 61, CSV.parse(response.body).size, "header + all 60 budgets"
+      end
+
+      test "index CSV export neutralises a formula-injected budget name" do
+        sign_in @user
+        create_reimbursements_budget(name: "=1+1", nominal_code: "4200")
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_includes rows.map(&:first), "'=1+1"
+      end
+
+      test "index offers a Download CSV link" do
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "Download CSV"
+        assert_includes response.body, "/admin/reimbursements/budgets?format=csv"
       end
 
       # --- Overview (nominal-code rollup) ------------------------------------

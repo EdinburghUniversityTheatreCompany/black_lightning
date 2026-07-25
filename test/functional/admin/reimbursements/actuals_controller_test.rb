@@ -164,10 +164,7 @@ module Admin
       sign_in @user
       get :index, format: :csv
 
-      assert_response :success
-      assert_includes response.media_type, "text/csv"
-      assert_match(/attachment/, response.headers["Content-Disposition"])
-      assert_match(/reimbursements-actuals-\d{4}-\d{2}-\d{2}\.csv/, response.headers["Content-Disposition"])
+      assert_csv_download("actuals")
     end
 
     test "index CSV export has a header row and one data row per actual" do
@@ -191,6 +188,19 @@ module Admin
       assert_equal "Credit", bud_row[1]
       assert_equal "500.0", bud_row[3]
       assert_equal "Props", bud_row[4]
+    end
+
+    test "index CSV export neutralises formula-injected narrative text" do
+      create_reimbursements_actual(nominal_code: "600000", period: "05",
+                                   narrative: "=1+1", date: Date.new(2026, 7, 1),
+                                   debit: BigDecimal("9.99"))
+      sign_in @user
+
+      get :index, format: :csv
+
+      rows = CSV.parse(response.body)
+      injected = rows.find { |r| r[6] == "05" }
+      assert_equal "'=1+1", injected[2]
     end
 
     test "index CSV export carries the period filter, exporting only that period" do

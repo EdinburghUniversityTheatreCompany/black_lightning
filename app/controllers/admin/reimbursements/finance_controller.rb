@@ -58,6 +58,17 @@ module Admin
         Kaminari.paginate_array(collection).page(params[:page]).per(PAGE_SIZE)
       end
 
+      # The one "Download CSV" response behind every finance list's
+      # +format.csv+. Callers pass the FULL filtered set — the on-screen
+      # filters carry through the query string, but pagination is display-only,
+      # so an export is never paged. The exporter owns the columns (and the
+      # filename), so the CSV and the combined workbook's matching sheet can
+      # never drift apart.
+      def send_export(exporter_class, collection)
+        exporter = exporter_class.new(store: store, checker: modulus_checker)
+        send_data exporter.to_csv(collection), type: "text/csv", filename: exporter.filename
+      end
+
       # A submitted Airtable link-field id (budget_record_id, owner_ids) must
       # resolve to a real, known record before writing the link — none of the
       # write paths that touch these link fields validated this before;

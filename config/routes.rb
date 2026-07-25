@@ -137,6 +137,10 @@ ChaosRails::Application.routes.draw do
       # Read-only browser over the imported EUSA Actuals ledger.
       resources :actuals, only: %i[index]
 
+      # One xlsx containing every resource, a sheet each. (Each list also
+      # downloads on its own as CSV, via ?format=csv on its index.)
+      resource :export, only: :show, controller: "exports"
+
       # Integration health dashboard: a page (#show) with an on-demand "Run
       # checks" POST (#run) that probes Graph / Gemini.
       get  "status",     to: "status#show", as: :status

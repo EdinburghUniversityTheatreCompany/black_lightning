@@ -1,5 +1,3 @@
-require "csv"
-
 module Admin
   module Reimbursements
     ##
@@ -40,10 +38,7 @@ module Admin
           format.html { @expenses = paginate(filtered) }
           # Export the FULL filtered set (the on-screen filters carry through the
           # query string) — pagination is display-only, so the CSV isn't paged.
-          format.csv do
-            send_data expenses_csv(filtered), type: "text/csv",
-                                              filename: "reimbursements-expenses-#{Date.current.iso8601}.csv"
-          end
+          format.csv { send_export ::Reimbursements::Exports::Expenses, filtered }
         end
       end
 
@@ -140,34 +135,6 @@ module Admin
         end
         result = result.select { |e| matches_query?(e, @query) } if @query.present?
         result
-      end
-
-      # The filtered expenses as a CSV string: one header row then a row per
-      # expense, using the effective payee (the money path) and the same
-      # needs-attention reasons the table shows. Amounts stay as plain numbers so
-      # the export is spreadsheet-friendly; the submitted date is ISO 8601.
-      CSV_HEADERS = [ "#", "Status", "Payee", "Budget", "Amount", "Amount ex VAT",
-                      "Description", "Payment reference", "Submitted", "Needs attention" ].freeze
-
-      def expenses_csv(expenses)
-        CSV.generate do |csv|
-          csv << CSV_HEADERS
-          expenses.each do |expense|
-            # Match the on-screen table: no attention reasons on non-actionable
-            # (Submitted/Paid/Rejected) rows, so the CSV and table can't disagree.
-            reasons = if ::Reimbursements::ReviewSupport.attention_actionable?(expense)
-              ::Reimbursements::ReviewSupport.needs_attention_reasons(expense, @budget_by_id, modulus_checker)
-            else
-              []
-            end
-            csv << [
-              expense.auto_number, expense.status, expense.effective_payee_name,
-              expense.budget&.name, expense.amount, expense.amount_excl_vat,
-              expense.description, expense.payment_reference,
-              helpers.reimbursements_date(expense.submitted_at), reasons.join("; ")
-            ]
-          end
-        end
       end
 
       # Case-insensitive substring over description, effective payee name and

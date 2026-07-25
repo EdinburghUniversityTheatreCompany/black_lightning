@@ -97,6 +97,56 @@ module Admin
         assert_select "a[aria-current=page]", text: /Pending/, count: 0
       end
 
+      # --- CSV export --------------------------------------------------------
+
+      test "index CSV export answers a text/csv download named for today" do
+        pending_expense
+        sign_in @user
+
+        get :index, format: :csv
+
+        assert_csv_download("expenses")
+      end
+
+      test "index CSV export exports the queue with the shared Expenses columns" do
+        pending_expense(auto_number: 1, description: "Fake blood")
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal ::Reimbursements::Exports::Expenses::HEADERS, rows.first
+        assert_equal 2, rows.size, "header + the one pending expense"
+        assert_equal %w[1 Pending], rows[1].values_at(0, 1)
+        assert_equal "Pat Producer", rows[1][2]
+        assert_equal "Fake blood", rows[1][6]
+      end
+
+      test "index CSV export follows the tab, exporting only that tab's expenses" do
+        pending_expense(auto_number: 1, description: "Still pending")
+        pending_expense(auto_number: 2, description: "Already approved",
+                        status: ::Reimbursements::Status::APPROVED)
+        sign_in @user
+
+        get :index, params: { tab: "approved" }, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal 2, rows.size, "header + the one approved expense"
+        assert_includes response.body, "Already approved"
+        assert_not_includes response.body, "Still pending"
+      end
+
+      test "index offers a Download CSV link carrying the current tab" do
+        pending_expense
+        sign_in @user
+
+        get :index, params: { tab: "approved" }
+
+        assert_includes response.body, "Download CSV"
+        # Rails sorts the query string, so: /review?format=csv&tab=approved
+        assert_includes response.body, "/admin/reimbursements/review?format=csv&amp;tab=approved"
+      end
+
       test "renders the payee-override warning" do
         pending_expense(payee_name_override: "Acme Lighting Ltd",
                         sort_code_override: "20-00-00",

@@ -153,3 +153,24 @@ config hash in place (harmless today only because those configs are built fresh 
 
 **Fix:** `params = params.except(:type, :slug)` (non-bang, splatted keys). Noticed during
 the request-params-mutation audit (the params-no-mutate branch); unrelated to that change.
+
+## Budgets index intro copy still says the financials come "from Airtable"
+
+`app/views/admin/reimbursements/budgets/index.html.erb` opens with "Every budget category
+from Airtable with its live financials … Those five are Airtable rollups, shown read-only
+here." The Airtable backend is gone (Track A) and every figure is now computed in
+`Reimbursements::Budget` from the local tables. The copy is also out of date on the count:
+the table shows nine rollup columns since Track G, not five.
+
+**Fix:** reword to describe the rollups as computed by the portal, and drop the Airtable
+reference. Noticed while adding the Budgets CSV export (Track H); left alone there because
+the Fringe/copy sweep (Track D) owns user-facing prose.
+
+## No export on My Budgets (the owner-facing budget page)
+
+Track H added a "Download CSV" to every finance list (Expenses, Actuals, Budgets, People,
+Batches, Review) and a combined workbook, but `MyBudgetsController#index` — the
+owner-facing page, gated by base portal access rather than the finance permission — has
+none. `Exports::Budgets` would work as-is for the owned subset, but the columns would need
+a second look first: an owner arguably shouldn't see another line's full rollups, and the
+exporter currently assumes the finance-wide view.

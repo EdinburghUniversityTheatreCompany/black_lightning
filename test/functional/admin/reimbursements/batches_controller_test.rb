@@ -197,6 +197,67 @@ module Admin
         assert_includes response.body, "£12.50", "the batch's total (its one expense's amount) must render"
       end
 
+      # --- CSV export --------------------------------------------------------
+
+      test "index CSV export answers a text/csv download named for today" do
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        sign_in @user
+
+        get :index, format: :csv
+
+        assert_csv_download("batches")
+      end
+
+      test "index CSV export writes one row per batch, summarising its expenses" do
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED,
+                           draft_message_id: "msg-1",
+                           sharepoint_backup_url: "https://sp.example/batch")
+        # A second expense on the same batch, so the row summarises rather than
+        # repeating the batch once per expense.
+        create_reimbursements_expense(person: create_reimbursements_person(name: "Sam", email: "sam@example.com"),
+                                      batch: @batch, auto_number: 12,
+                                      status: ::Reimbursements::Status::PAID,
+                                      amount: BigDecimal("20"), amount_excl_vat: BigDecimal("16.67"))
+        sign_in @user
+
+        get :index, format: :csv
+
+        rows = CSV.parse(response.body)
+        assert_equal [ "Date sent", "Name", "Expenses", "Total", "Total ex VAT",
+                       "EUSA draft", "SharePoint backup" ], rows.first
+        assert_equal 2, rows.size, "header + the single batch"
+
+        batch = rows[1]
+        assert_equal "2026-05-13", batch[0]
+        assert_equal "2", batch[2], "two expenses on the batch"
+        assert_equal "32.5", batch[3], "12.50 + 20.00 gross"
+        assert_equal "27.09", batch[4], "10.42 + 16.67 ex VAT"
+        assert_equal "Yes", batch[5]
+        assert_equal "https://sp.example/batch", batch[6]
+      end
+
+      test "index CSV export flags a batch with no EUSA draft" do
+        create_reimbursements_batch(name: "Broken batch", date_sent: nil, draft_message_id: nil)
+        sign_in @user
+
+        get :index, format: :csv
+
+        row = CSV.parse(response.body).find { |r| r[1] == "Broken batch" }
+        assert_nil row[0], "no send date"
+        assert_equal "0", row[2]
+        assert_equal "No", row[5]
+      end
+
+      test "index offers a Download CSV link" do
+        batch_with_expense(status: ::Reimbursements::Status::SUBMITTED)
+        sign_in @user
+
+        get :index
+
+        assert_includes response.body, "Download CSV"
+        assert_includes response.body, "/admin/reimbursements/batches?format=csv"
+      end
+
       test "index badges a batch whose EUSA draft is missing vs one that succeeded" do
         # Drafted: a stored draft message id. Broken: no id AND no date_sent —
         # the derived predicate reads that as "no EUSA draft".

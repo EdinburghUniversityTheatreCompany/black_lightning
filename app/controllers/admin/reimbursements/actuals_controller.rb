@@ -1,5 +1,3 @@
-require "csv"
-
 module Admin
   module Reimbursements
     ##
@@ -22,39 +20,7 @@ module Admin
           format.html { @actuals = paginate(sorted) }
           # Export the FULL filtered set (the period filter carries through the
           # query string) — pagination is display-only, so the CSV isn't paged.
-          format.csv do
-            send_data actuals_csv(sorted), type: "text/csv",
-                                           filename: "reimbursements-actuals-#{Date.current.iso8601}.csv"
-          end
-        end
-      end
-
-      private
-
-      ACTUALS_CSV_HEADERS = [ "Date", "Type", "Description", "Amount", "Budget",
-                              "Linked expense", "Period" ].freeze
-
-      # The (period-filtered) actuals as a CSV string. A row's debit/credit
-      # collapses to a Type + Amount pair; the linked expense/budget references
-      # resolve to the expense's auto-number and the budget's name. Amounts stay
-      # plain numbers so the export is spreadsheet-friendly; the date is ISO 8601.
-      def actuals_csv(actuals)
-        expenses_by_id = store.expenses.index_by(&:record_id)
-        budgets_by_id = store.budgets.index_by(&:record_id)
-        CSV.generate do |csv|
-          csv << ACTUALS_CSV_HEADERS
-          actuals.each do |actual|
-            debit = actual.debit&.positive?
-            csv << [
-              helpers.reimbursements_date(actual.date),
-              debit ? "Debit" : (actual.credit&.positive? ? "Credit" : ""),
-              actual.narrative,
-              debit ? actual.debit : actual.credit,
-              budgets_by_id[actual.linked_budget_ids.first]&.name,
-              expenses_by_id[actual.linked_expense_ids.first]&.auto_number,
-              actual.period
-            ]
-          end
+          format.csv { send_export ::Reimbursements::Exports::Actuals, sorted }
         end
       end
     end

@@ -24,13 +24,11 @@ module Admin
       def index
         @title = "Batch history"
         @batches = store.batches.sort_by { |batch| batch.date_sent || Date.new(0) }.reverse
-        @expenses_by_batch = processed_expenses.group_by(&:batch_id)
-        # In-flight/failed/no-op builds (and completed-with-warnings) from the
-        # last week — a cleanly completed attempt is redundant with its Batch
-        # row, but these have no other in-app trace.
-        @batch_attempts = ::Reimbursements::BatchAttempt.needing_attention
-                                                        .where(created_at: 7.days.ago..)
-                                                        .includes(:cost_centre).recent_first
+        respond_to do |format|
+          format.html { load_history }
+          # One row per batch, summarising its expenses (Exports::Batches).
+          format.csv { send_export ::Reimbursements::Exports::Batches, @batches }
+        end
       end
 
       def show
@@ -167,6 +165,18 @@ module Admin
       end
 
       # Submitted + Paid expenses carry a batch link; these populate History.
+      # The instance vars only the History page itself needs (the CSV gets its
+      # per-batch figures from the exporter).
+      def load_history
+        @expenses_by_batch = processed_expenses.group_by(&:batch_id)
+        # In-flight/failed/no-op builds (and completed-with-warnings) from the
+        # last week — a cleanly completed attempt is redundant with its Batch
+        # row, but these have no other in-app trace.
+        @batch_attempts = ::Reimbursements::BatchAttempt.needing_attention
+                                                        .where(created_at: 7.days.ago..)
+                                                        .includes(:cost_centre).recent_first
+      end
+
       def processed_expenses
         store.expenses.select { |expense| expense.batch_id.present? }
       end
