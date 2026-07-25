@@ -115,7 +115,7 @@ module Reimbursements
     # both require a Graph call to fail in the narrow gap between two
     # adjacent requests.
     #
-    # A 404 on either call now propagates unless the message is confirmed gone
+    # A 404 on either call propagates unless the message is confirmed gone
     # (see swallow_only_if_gone), so a moved-but-present message aborts this pair
     # into MailboxPollJob#process's rescue: logged, reported, and left unread for
     # the next cycle. That is the right outcome here — no expense exists yet, and
@@ -136,12 +136,10 @@ module Reimbursements
     #
     # A 404 alone does not prove the message is gone: Exchange CHANGES a message's
     # id when the message is moved, so the same 404 can mean "still in the mailbox,
-    # still unread, just under a new id". Swallowing that case defeated the whole
-    # loud path this client's callers depend on — MailboxPollJob detects a mark_read
-    # failure only by the raise, so a moved-but-present message meant the draft was
-    # created, mark_read reported success, the reply 404'd so the sender was never
-    # told, the move 404'd, and nothing above logger.info fired: no Honeybadger, no
-    # duplicate_risk flag, the email silently abandoned.
+    # still unread, just under a new id". Swallowing that defeats the loud path
+    # these callers depend on — MailboxPollJob detects a failed mutation only by
+    # the raise, so a moved-but-present message would leave the sender un-replied
+    # and the message un-filed with nothing above logger.info to say so.
     def swallow_only_if_gone(message_id, action, error)
       raise error if message_present?(message_id)
 

@@ -18,9 +18,9 @@ module Reimbursements
         person = people_by_id[owner_person_id]
         next if person.nil?
 
-        # Prefer the durable stored link (PersonLink persists it per backend);
-        # the id's shape says which column can match — numeric ids are the
-        # reimbursements_person FK, "rec…" ids the legacy Airtable string.
+        # Prefer the durable stored link; the id's shape says which column can
+        # match — numeric ids are the reimbursements_person FK, "rec…" ids the
+        # legacy airtable_person_id left over from the import.
         # Fall back to email only for an owner who never opened the portal:
         # User emails are normalised on write while People emails aren't, so
         # email-only matching would silently miss a legitimately-linked owner.
@@ -32,8 +32,9 @@ module Reimbursements
         user ||= User.find_by(email: person.email) if person.email.present?
         next if user.nil? # no portal account -> can't endorse; finance override covers them
 
-        # deliver_now (not _later): the mail carries Airtable POROs ActiveJob
-        # can't serialize as job args, and we're already inside a background job.
+        # deliver_now (not _later): the mail carries a whole expense collection
+        # that isn't worth serializing as job args, and we're already inside a
+        # background job.
         # Isolate each send so one owner's failure doesn't abort the digest (or
         # trigger a whole-job retry that re-mails everyone).
         begin

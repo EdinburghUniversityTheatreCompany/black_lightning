@@ -184,10 +184,10 @@ module Admin
         assert_includes response.body, admin_reimbursements_review_receipts_path(a.record_id, tab: "pending")
       end
 
-      # --- In-page receipt viewer (Track N) --------------------------------
+      # --- In-page receipt viewer ------------------------------------------
 
-      # The queue used to send an operator to a new tab per receipt. Each card now
-      # carries its own viewer pane, closed until a thumbnail is clicked.
+      # Each card carries its own viewer pane, closed until a thumbnail is
+      # clicked, so reviewing a queue never sends the operator to a new tab.
       test "each card renders a receipt strip wired to its own closed viewer pane" do
         a = pending_expense(receipt: false)
         b = pending_expense(receipt: false)
@@ -267,9 +267,9 @@ module Admin
       end
 
       # The consent the receipt form asks for covers this check too, so opening
-      # the queue must not send a declined submitter's receipt to Google. Before
-      # this gate existed, picking "No" was hollow: the check ran anyway the
-      # moment finance opened Review.
+      # the queue must not send a declined submitter's receipt to Google —
+      # otherwise picking "No" is hollow, since Review kicks the checks off
+      # automatically on load.
       test "kicks no AI check for a claim whose submitter declined AI processing" do
         pending_expense(ai_processing_consent: false)
         sign_in @user
@@ -942,12 +942,12 @@ module Admin
         assert_response :not_found
       end
 
-      # --- Save-then-decide (unsaved-edits dialog, Track J) -----------------
-      # The review card's Save form is separate from the Approve/Reject forms,
-      # so an edit-then-decide used to drop the edits. When the operator picks
-      # "Save Changes" in the client dialog, the decision request carries the
-      # edited fields plus save_changes=1 and the server persists them FIRST, in
-      # the same request, so the decision acts on the saved values.
+      # --- Save-then-decide (unsaved-edits dialog) --------------------------
+      # The review card's Save form is separate from the Approve/Reject forms, so
+      # an edit-then-decide would otherwise drop the edits. When the operator
+      # picks "Save Changes" in the client dialog, the decision request carries
+      # the edited fields plus save_changes=1 and the server persists them FIRST,
+      # in the same request, so the decision acts on the saved values.
 
       test "approve with save_changes persists the edited fields, then approves" do
         expense = pending_expense(description: "Old", payment_reference: "")
@@ -1155,7 +1155,7 @@ module Admin
         # plus a verb the dialog title reads.
         assert_select "[data-action*=?][data-decision-verb=approving]", "review-decision#guard"
         assert_select "[data-action*=?][data-decision-verb=rejecting]", "review-decision#guard"
-        # The dialog offers the three locked options.
+        # All three ways out of the dialog.
         assert_select "dialog button", text: "Cancel"
         assert_select "dialog button", text: "Save Changes"
         assert_select "dialog button", text: "Discard Changes"

@@ -1,11 +1,10 @@
 module Reimbursements
   ##
-  # A file attached to an expense. On the Airtable backend +url+ is a signed
-  # URL that expires after ~2 hours — never persist or cache it beyond the
-  # record fetch. On the database backend the wrapper carries the
-  # ActiveStorage +blob+, so consumers that need the content (AiChecker,
-  # BatchProcessor's SharePoint offload) call +bytes+ and fall back to
-  # downloading +url+ only in the Airtable era.
+  # A file attached to an expense: a view-friendly wrapper over the receipt's
+  # ActiveStorage blob. Every URL it exposes is HOST-RELATIVE (built with
+  # only_path), so it is only resolvable from inside the app — anything that
+  # needs the content itself (AiChecker, BatchProcessor's SharePoint offload)
+  # must call +bytes+ rather than hand a URL to a remote fetcher.
   class Attachment
     attr_reader :attachment_id, :filename, :url, :size_bytes, :content_type, :thumbnail_url
 
@@ -22,7 +21,6 @@ module Reimbursements
       @blob = blob
     end
 
-    # The file content when locally stored (database backend), nil otherwise.
     def bytes
       @blob&.download
     end
@@ -35,17 +33,16 @@ module Reimbursements
       content_type.to_s == "application/pdf"
     end
 
-    # Airtable generates thumbnails asynchronously, so a just-uploaded image
-    # has none yet; previewing the full file bridges the gap.
+    # Falls back to the full image when no representation is available, so a
+    # receipt still previews rather than showing nothing.
     def preview_url
       thumbnail_url.presence || (url if image?)
     end
 
     # Whether there is a thumbnail image to draw for this file. ActiveStorage
     # populates thumbnail_url for anything +representable?+, which covers PDFs
-    # (first page, via poppler/mupdf) as well as images, so ask about the
-    # capability rather than the content type: +image?+ only ever meant "has a
-    # thumbnail" in the Airtable era, when nothing else got one.
+    # (first page, via poppler/mupdf) as well as images — so ask about the
+    # capability, not the content type: +image?+ would skip PDF thumbnails.
     def previewable?
       preview_url.present?
     end

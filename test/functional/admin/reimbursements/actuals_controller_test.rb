@@ -216,10 +216,10 @@ module Admin
       assert_equal "Props", bud_row[4]
     end
 
-    # Amount was unsigned, so a naive SUM() over a mixed export added income to
-    # spend, and an offset pair counted twice its value instead of zero. Income
-    # is now negative and both offset legs are labelled, so the column sums to
-    # net spend.
+    # Finance re-imports this file and sums the Amount column. Unsigned, that sum
+    # adds income to spend and counts an offset pair at twice its value instead
+    # of zero; signed (income negative, both offset legs labelled) it is net
+    # spend.
     test "index CSV export signs the amount so income subtracts from spend" do
       sign_in @user
 
@@ -621,11 +621,10 @@ module Admin
 
     # --- Conversion is one unit ---------------------------------------------
     #
-    # create_expense! and link_actual_to_expense! used to run as two unrescued
-    # writes, and the "already converted" guard is state-based: if the link
-    # failed, a Paid expense existed charged to a budget while the row stayed
-    # unlinked and kept offering a "Create expense" button, so the next click
-    # double-counted the same EUSA charge.
+    # The "already converted" guard is state-based, so the expense and its link
+    # must commit together: a Paid expense whose link write failed leaves the row
+    # unlinked and still offering "Create expense", and the next click
+    # double-counts the same EUSA charge.
 
     test "a conversion whose link write fails creates no expense at all" do
       BaseController.store_builder = -> { UnlinkableStore.new }

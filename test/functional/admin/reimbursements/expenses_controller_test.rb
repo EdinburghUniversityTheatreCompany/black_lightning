@@ -144,8 +144,8 @@ module Admin
     end
 
     # The disclosure has to describe BOTH uses of the receipt, because one answer
-    # governs both. It only ever mentioned prefilling, which is how the finance
-    # check came to run on receipts whose submitters had refused.
+    # governs both: a disclosure that mentions only prefilling makes the finance
+    # check run on receipts whose submitters never agreed to that use.
     test "new discloses both AI uses of the receipt and that declining costs nothing" do
       sign_in @user
 
@@ -258,7 +258,7 @@ module Admin
       assert_not response.parsed_body["ok"]
     end
 
-    # S10: a String has #size, so it passed the byte check and then hit
+    # A String has #size, so it clears the byte check and then reaches
     # ReceiptContentType.allowed_upload?'s #read — an unrescued NoMethodError
     # (500) from any authenticated producer who hand-crafts the post.
     test "extract rejects a string receipts param instead of raising" do
@@ -421,7 +421,7 @@ module Admin
       assert_select "button[data-action='receipts-upload#remove']", 0
     end
 
-    # --- In-page receipt viewer (Track N) ---------------------------------
+    # --- In-page receipt viewer -------------------------------------------
     # The producer reads their own receipt in the page, through the same shared
     # partial the Review queue and the finance pages use.
 

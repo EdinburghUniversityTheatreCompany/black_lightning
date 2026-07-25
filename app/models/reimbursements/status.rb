@@ -1,6 +1,6 @@
 module Reimbursements
   ##
-  # Expense status labels, mirroring the Airtable single-select exactly.
+  # Expense status labels, stored as the strings finance reads.
   # The portal writes Draft and Pending (submitting a draft promotes it);
   # bedlam-bacs owns the rest of the state machine and ignores Drafts.
   module Status

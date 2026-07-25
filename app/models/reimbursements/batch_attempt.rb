@@ -24,13 +24,12 @@
 #
 module Reimbursements
   ##
-  # One Build Batch run, from click to outcome. BuildBatchJob is a background
-  # job whose only failure signal used to be an email: History had no in-app
-  # trace of a build that was still running, failed before the Airtable Batch
-  # record existed, or found nothing to build. The controller creates a row the
-  # moment the operator clicks (status "building"); the job resolves it to
-  # completed / failed / nothing_to_build. Airtable's schema isn't ours to
-  # change, so this log lives in MySQL (and survives the planned cutover).
+  # One Build Batch run, from click to outcome. BuildBatchJob runs in the
+  # background, so without this row a build that is still running, failed
+  # before the Batch record existed, or found nothing to build leaves no trace
+  # on History at all — its only failure signal is an email. The controller
+  # creates the row the moment the operator clicks (status "building"); the job
+  # resolves it to completed / failed / nothing_to_build.
   class BatchAttempt < ApplicationRecord
     STATUSES = %w[building completed failed nothing_to_build].freeze
 

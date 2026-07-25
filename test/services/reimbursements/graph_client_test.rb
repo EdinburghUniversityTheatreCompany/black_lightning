@@ -144,12 +144,12 @@ module Reimbursements
       ENV["REIMBURSEMENTS_ENABLE_OUTBOUND"] = original if original
     end
 
-    # S2: Track B delivered "dev can't send mail", not "dev has no outbound Graph
-    # side effects" — and the two ungated calls were the ones carrying bank
-    # details. batch_processor uploads the BACS xlsx (full sort codes and account
-    # numbers) and every receipt BEFORE create_draft, so a dev shell holding fnox
-    # Azure credentials that clicked Build Batch PUT them into PRODUCTION
-    # SharePoint, and reopen could DELETE a real draft out of the live mailbox.
+    # The gate has to be "no outbound Graph SIDE EFFECT", not merely "no outbound
+    # mail": upload and delete are the two calls carrying bank details.
+    # BatchProcessor uploads the BACS xlsx (full sort codes and account numbers)
+    # and every receipt BEFORE create_draft, so an ungated dev shell holding fnox
+    # Azure credentials would PUT them into PRODUCTION SharePoint on a Build
+    # Batch, and reopen could DELETE a real draft out of the live mailbox.
     #
     # These two raise rather than returning a plausible stub, unlike create_draft /
     # send_mail: a suppressed upload that returned "" or a fake URL would be
@@ -336,20 +336,6 @@ module Reimbursements
       assert_raises(GraphAuth::Error) do
         client.upload_to_folder(drive_id: "d", folder_id: "f", filename: "x.pdf", content: "")
       end
-    end
-
-    test "download fetches bytes without a Graph auth header" do
-      client, http = build_client([ [ 200, "RECEIPTBYTES" ] ])
-
-      assert_equal "RECEIPTBYTES", client.download("https://airtable.example/signed")
-      assert_nil http.requests.sole.headers["Authorization"]
-    end
-
-    test "download raises on a non-2xx status from the signed URL" do
-      client, = build_client([ [ 404, "not found" ] ])
-
-      error = assert_raises(GraphAuth::Error) { client.download("https://airtable.example/expired") }
-      assert_includes error.message, "404"
     end
 
     test "upload_to_folder's chunked path issues one PUT per chunk for a genuinely multi-chunk file" do

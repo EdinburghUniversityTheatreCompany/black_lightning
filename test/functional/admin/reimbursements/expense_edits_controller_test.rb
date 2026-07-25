@@ -705,10 +705,9 @@ module Admin
         assert_includes response.body, receipt.preview_url
       end
 
-      # A PDF receipt used to fall through to a generic fa-file-lines icon and a
-      # target="_blank" link, because the gallery asked whether the file was an
-      # image rather than whether it had a preview. ActiveStorage renders a PDF's
-      # first page, so the thumbnail was there all along.
+      # ActiveStorage renders a PDF's first page, so a PDF receipt has a real
+      # thumbnail. Asking whether the file is an image (rather than whether it
+      # has a preview) drops it to a generic document icon instead.
       test "edit renders a PDF receipt as a real first-page preview image" do
         expense = two_receipt_expense
         sign_in @user

@@ -6,9 +6,8 @@ module Reimbursements
   # "12,50" (comma decimal — common for international students; naively
   # stripping the comma would record a 100x amount).
   #
-  # The budget forms used to hand the raw string straight to BigDecimal(), which
-  # raises on both of those formats, and their rescue-to-nil then meant "the
-  # operator left this blank" — so a typed "1,200" was silently dropped.
+  # A bare BigDecimal() raises on both of those formats, so a caller that
+  # rescues to nil reads a typed "1,200" as an empty field.
   #
   # #parse answers nil for anything unreadable. #parse! separates the two cases
   # a caller may need to tell apart: nil for "nothing was typed", an exception

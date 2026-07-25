@@ -65,7 +65,7 @@ Rails.application.configure do
   # Set job adapter for tests
   config.active_job.queue_adapter = :test
 
-  # ActiveRecord Encryption dummy keys for the test suite (Track F). These are
+  # ActiveRecord Encryption dummy keys for the test suite. These are
   # throwaway, test-only key material — safe to commit — so the reimbursements
   # bank-detail encryption roundtrip has deterministic keys without depending on
   # ENV/fnox or credentials. Production/development source their keys elsewhere

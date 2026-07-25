@@ -110,8 +110,8 @@ module Reimbursements
       # Leave the message unread; the next poll cycle retries it.
     end
 
-    # A message left unread because a LATER step failed (e.g. an Airtable
-    # blip inside create_expense, caught by the rescue below) is reprocessed
+    # A message left unread because a LATER step failed (e.g. a write blowing
+    # up inside create_expense, caught by the rescue below) is reprocessed
     # by every subsequent poll cycle until it succeeds. Counting it again on
     # each retry would inflate one real email into many against the sender's
     # tally, potentially rate-limiting a legitimate sender for a transient
@@ -282,7 +282,7 @@ module Reimbursements
     end
 
     # A blank DRAFT: only the receipt and the email subject (as a starting
-    # description) are known. Email-in no longer reads the receipt with Gemini
+    # description) are known. Email-in does not read the receipt with Gemini
     # (no submitter is present to consent), so the amount, budget and payment
     # reference are all left for the sender to fill in. The reply asks them to
     # complete and submit it in the portal, so review only ever sees confirmed
@@ -290,9 +290,9 @@ module Reimbursements
     def expense_attrs(message, person)
       {
         person_record_id: person.record_id,
-        # The idempotency stamp — only the database backend has a column for
-        # it (Airtable's field writer would reject the unknown key).
-        source_message_id: (message.id if store.supports_message_idempotency?),
+        # The idempotency stamp: a later poll finds this expense by message id
+        # instead of creating a second one for the same email.
+        source_message_id: message.id,
         status: Status::DRAFT,
         description: message.subject.presence
       }.compact

@@ -1,11 +1,9 @@
 module Reimbursements
   ##
-  # Expense domain behaviour shared verbatim by the ActiveRecord Expense and
-  # the Airtable-era PORO (Reimbursements::Airtable::Expense), like
-  # EffectivePayee — during the cutover window both backends must answer
-  # these identically. Includers provide status, expense_type, budget,
-  # amount, amount_excl_vat, description, payment_reference, receipts,
-  # sharepoint_receipt_urls and ai_check_status.
+  # Expense domain predicates, split out of the model to keep it readable.
+  # Includers provide status, expense_type, budget, amount, amount_excl_vat,
+  # description, payment_reference, receipts, sharepoint_receipt_urls and
+  # ai_check_status.
   module ExpenseSemantics
     def pending? = status == Status::PENDING
     def draft? = status == Status::DRAFT

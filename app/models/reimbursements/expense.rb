@@ -56,10 +56,8 @@
 #
 module Reimbursements
   ##
-  # An expense submission. ActiveRecord replacement for the Airtable-era PORO
-  # (now Reimbursements::Airtable::Expense), keeping its exact public
-  # interface — predicates, effective_* money-path helpers and the receipts
-  # wrapper — so controllers, views, jobs and BatchProcessor are untouched.
+  # An expense submission: predicates, the effective_* money-path helpers and
+  # the receipts wrapper.
   #
   # person/budget/batch may be nil: email-in submissions arrive with gaps the
   # submitter fills later.
@@ -109,9 +107,9 @@ module Reimbursements
     validates :status, inclusion: { in: Status.all }
     validates :expense_type, inclusion: { in: TYPES }
 
-    # Continue the Airtable auto-number sequence for the human-facing
-    # "Expense #N" label, and stamp submitted_at (Airtable's was an
-    # auto-filled created-time field). The importer supplies explicit values.
+    # auto_number backs the human-facing "Expense #N" label. It continues from
+    # the highest number on record rather than tracking the PK, so the numbers
+    # imported with the historical claims are never handed out twice.
     before_create lambda {
       self.auto_number ||= (self.class.maximum(:auto_number) || 0) + 1
       self.submitted_at ||= Time.current

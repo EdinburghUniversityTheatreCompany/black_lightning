@@ -198,11 +198,11 @@ module ReimbursementsTestHelpers
   end
 
   # Fake GraphClient for BatchProcessor / Build Batch / Notifier tests: records
-  # drafts, sent mail, uploads and downloads, with toggles to make the draft,
-  # a send, or uploads fail.
+  # drafts, sent mail and uploads, with toggles to make the draft, a send, or
+  # uploads fail.
   class FakeGraphClient
-    attr_reader :uploaded, :drafts, :downloads, :send_mails, :deleted_messages
-    attr_accessor :fail_draft, :fail_uploads, :fail_send, :fail_delete_message, :fail_download
+    attr_reader :uploaded, :drafts, :send_mails, :deleted_messages
+    attr_accessor :fail_draft, :fail_uploads, :fail_send, :fail_delete_message
     # Recipients (email strings) whose send should raise, standing in for a
     # Graph outage that hits some payees but not others.
     attr_accessor :fail_send_to
@@ -218,7 +218,6 @@ module ReimbursementsTestHelpers
     def initialize
       @uploaded = []
       @drafts = []
-      @downloads = []
       @send_mails = []
       @deleted_messages = []
       @fail_send_to = []
@@ -228,13 +227,6 @@ module ReimbursementsTestHelpers
 
     def draft_message?(mailbox:, message_id:)
       @draft_still_exists
-    end
-
-    def download(url)
-      raise Reimbursements::GraphAuth::Error, "receipt download failed for #{url}" if fail_download
-
-      @downloads << url
-      "BYTES(#{url})"
     end
 
     def upload_to_folder(drive_id:, folder_id:, filename:, content:)

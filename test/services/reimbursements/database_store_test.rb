@@ -418,7 +418,7 @@ module Reimbursements
       end
     end
 
-    # --- Budget overview grouping (Track G Phase 2) ------------------------
+    # --- Budget overview grouping ------------------------------------------
 
     test "budgets_by_nominal_code groups budgets under their code, sorted, blanks last" do
       props_a = Budget.create!(name: "Props A", nominal_code: "4000")
@@ -519,7 +519,7 @@ module Reimbursements
                    "a correctly-offset accrual pair nets to zero, it is not unplanned spend"
     end
 
-    # --- Budget updates (Track G Phase 3) ----------------------------------
+    # --- Budget updates ----------------------------------------------------
 
     test "create_budget_update! records the shared update and one forecast per entry" do
       a = Budget.create!(name: "Props", nominal_code: "4000")

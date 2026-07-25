@@ -1,8 +1,7 @@
 module Reimbursements
   ##
-  # The effective-payee money path, shared verbatim by the ActiveRecord
-  # Expense and the Airtable-era PORO (Reimbursements::Airtable::Expense) so
-  # both backends compute BACS rows identically during the cutover window.
+  # The effective-payee money path, split out of Expense to keep the BACS-row
+  # rules in one place.
   #
   # For an Invoice the submitter can override payee name + bank details so
   # EUSA pays a third party directly. The BACS row, modulus check and

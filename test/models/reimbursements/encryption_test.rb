@@ -1,7 +1,7 @@
 require "test_helper"
 
 module Reimbursements
-  # Track F: bank details are encrypted at rest. These tests prove the model
+  # Bank details are encrypted at rest. These tests prove the model
   # reads/writes plaintext transparently while the underlying DB column holds
   # ciphertext, so a DB/backup/replica dump never exposes UK bank details.
   class EncryptionTest < ActiveSupport::TestCase
@@ -79,17 +79,16 @@ module Reimbursements
       assert_not_equal "50502366", expense.ciphertext_for(:account_number_override)
     end
 
-    # S1: encryption inflates the stored value (a JSON envelope of base64 IV +
-    # ciphertext + auth tag), so a plaintext that fit varchar(255) before Track F
-    # may not fit afterwards. Measured against the real encryptor: any
-    # low-redundancy plaintext of ~124 characters or more already exceeds 255
-    # bytes once encrypted, and 255 characters lands at ~394. Rails' own
-    # validate_column_size guard checks the DECRYPTED value's length, so it never
-    # caught this; under strict MySQL the save raised ValueTooLong (a 500 on a
-    # path that worked pre-encryption), and under a non-strict server the
-    # ciphertext would be silently truncated into unparseable JSON that
-    # support_unencrypted_data then hands back as "plaintext" — straight onto the
-    # BACS spreadsheet as a payee name.
+    # Encryption inflates the stored value (a JSON envelope of base64 IV +
+    # ciphertext + auth tag), so a plaintext that fits varchar(255) may not fit
+    # once encrypted. Measured against the real encryptor: any low-redundancy
+    # plaintext of ~124 characters or more already exceeds 255 bytes, and 255
+    # characters lands at ~394. Rails' own validate_column_size guard measures
+    # the DECRYPTED length, so it cannot catch this: under strict MySQL the save
+    # raises ValueTooLong, and under a non-strict server the ciphertext is
+    # silently truncated into unparseable JSON that support_unencrypted_data then
+    # hands back as "plaintext" — straight onto the BACS spreadsheet as a payee
+    # name.
     #
     # payee_name_override is the one member of the third-party override trio that
     # carries free text (sort_code_override / account_number_override are format-
@@ -166,12 +165,11 @@ module Reimbursements
                       "1000 audit lines must still encrypt inside the TEXT column"
     end
 
-    # S7: the backfill task's comment claimed #encrypt "saves only if something
-    # changed, so the task is idempotent — re-running it ... is a no-op for that
-    # row". It is not: #encrypt calls update_columns with freshly built
-    # assignments unconditionally, and non-deterministic encryption picks a new IV
-    # every time, so each run rewrites every row. Safe to re-run, but not a no-op
-    # — which matters when an operator reads "processed N/N" as progress.
+    # #encrypt is NOT a no-op on an already-encrypted row: it calls
+    # update_columns with freshly built assignments unconditionally, and
+    # non-deterministic encryption picks a new IV every time, so every run
+    # rewrites every row. Safe to re-run, but "processed N/N" is a count of rows
+    # touched, not of rows newly encrypted.
     test "encrypt rewrites fresh ciphertext on every run rather than no-opping" do
       expense = create_reimbursements_expense(receipt: false, payee_name_override: "Third Party Ltd",
                                                               sort_code_override: "20-20-20",

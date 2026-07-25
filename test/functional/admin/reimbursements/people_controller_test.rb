@@ -149,11 +149,9 @@ module Admin
       assert_includes notes, "sort code ****9999, account ****4958"
     end
 
-    # S6: the line masked the account number but wrote the full sort code, while
-    # Exports::People masks both. The stricter rule wins in both places — a sort
-    # code is not a secret on its own, but the audit trail sits next to the masked
-    # account number on the People page, and the pair is what identifies an
-    # account.
+    # The audit line masks BOTH details, matching Exports::People. A sort code is
+    # not a secret on its own, but the line sits next to the masked account
+    # number on the People page, and the pair is what identifies an account.
     test "the audit line masks both bank details and names the acting user" do
       sign_in @user
 

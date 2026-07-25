@@ -252,14 +252,13 @@ module Reimbursements
       assert_includes http.requests[-2].uri, "messages/msg1/move"
     end
 
-    # --- S4: a 404 does NOT prove the message is gone ------------------------
+    # --- A 404 does NOT prove the message is gone ----------------------------
     #
     # Exchange CHANGES a message's id when the message is moved, so a mutation can
-    # 404 on a message that is still sitting in the mailbox, still unread. The old
-    # blanket swallow turned that into silence: the draft was created, mark_read
-    # reported success, the reply 404'd so the sender was never told their claim
-    # arrived, the move 404'd too, and nothing above logger.info fired — no
-    # Honeybadger, no duplicate_risk flag. The email was silently abandoned.
+    # 404 on a message that is still sitting in the mailbox, still unread. A
+    # blanket swallow turns that into silence: the draft is created, mark_read
+    # reports success, the sender is never told their claim arrived, and nothing
+    # above logger.info fires — no Honeybadger, no duplicate_risk flag.
 
     test "mark_read stays loud when a 404 is contradicted by the message still existing" do
       client, http = build_client([

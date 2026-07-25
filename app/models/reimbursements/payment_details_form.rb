@@ -1,8 +1,8 @@
 module Reimbursements
   ##
   # Form object for a submitter's payee name and UK bank details, written to
-  # their Airtable People record. bedlam-bacs gates approval on these (and
-  # runs the full modulus check there); the portal validates format only.
+  # their People record. bedlam-bacs gates approval on these (and runs the
+  # full modulus check there); the portal validates format only.
   class PaymentDetailsForm
     include ActiveModel::Model
 

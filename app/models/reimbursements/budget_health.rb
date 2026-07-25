@@ -1,10 +1,9 @@
 module Reimbursements
   ##
-  # Budget health flags shared by the ActiveRecord Budget and the
-  # Airtable-era PORO — the over-budget badge logic was re-litigated once
-  # already (a red badge next to a positive Remaining), so both backends must
-  # keep answering it identically. Includers provide budget_type, remaining,
-  # initial_budget, committed_amount and total_paid.
+  # Budget health flags. The over-budget badge logic was got wrong once already
+  # (a red badge next to a positive Remaining), so it lives in one place rather
+  # than being re-derived in the views. Includers provide budget_type,
+  # remaining, initial_budget, committed_amount and total_paid.
   module BudgetHealth
     def income? = budget_type == "Income"
 

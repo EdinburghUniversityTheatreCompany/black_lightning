@@ -1,5 +1,5 @@
 namespace :reimbursements do
-  # One-off backfill for the bank-details-at-rest rollout (Track F). After the
+  # One-off backfill for the bank-details-at-rest rollout. After the
   # `encrypts` declarations ship with `support_unencrypted_data = true`, existing
   # rows are still plaintext and are only re-encrypted when next saved. This task
   # rewrites every payee record so its bank details land as ciphertext.

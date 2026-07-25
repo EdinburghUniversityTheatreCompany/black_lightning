@@ -1,7 +1,7 @@
 module Admin
   module Reimbursements
     ##
-    # A submitter's payee name + bank details (their Airtable People record).
+    # A submitter's payee name + bank details (their People record).
     class PaymentDetailsController < BaseController
       def edit
         @title = "My Payment Details"

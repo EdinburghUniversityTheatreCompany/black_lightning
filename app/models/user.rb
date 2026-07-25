@@ -120,8 +120,8 @@ class User < ApplicationRecord
       allow_blank: true
     }
 
-  # The reimbursements payee this account is linked to (MySQL cutover; the
-  # legacy airtable_person_id string is retired with the Airtable layer).
+  # The reimbursements payee this account is linked to. The legacy
+  # airtable_person_id column is import provenance only and never written.
   belongs_to :reimbursements_person, class_name: "Reimbursements::Person",
              optional: true, inverse_of: :user
 

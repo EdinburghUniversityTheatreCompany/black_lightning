@@ -64,7 +64,7 @@ module Admin
         # The attempt row is History's in-app trace of this build — visible
         # from the moment of the click (queued/running), resolved by the job
         # (by id) to completed/failed/nothing_to_build. Without it, a build that
-        # dies before the Airtable Batch record exists is invisible outside email.
+        # dies before the Batch record exists is invisible outside email.
         attempt = ::Reimbursements::BatchAttempt.create!(
           cost_centre: @cost_centre, bacs_date: bacs_date,
           triggered_by_email: current_user.try(:email)

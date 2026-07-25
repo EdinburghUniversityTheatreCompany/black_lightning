@@ -17,14 +17,12 @@
 #
 module Reimbursements
   ##
-  # A payee (registry of names and emails — not a user account). ActiveRecord
-  # replacement for the Airtable-era PORO (now Reimbursements::Airtable::Person),
-  # keeping its exact public interface so nothing above the Store changes.
+  # A payee (registry of names and emails — not a user account).
   #
   # Bank details are NOT columns here — they live in the one-to-one
-  # PaymentDetails record. The PORO exposed them flat, so the readers below
-  # delegate and preserve the PORO's ""/false defaults for a payee without a
-  # PaymentDetails row.
+  # PaymentDetails record. The readers below delegate to it and answer
+  # ""/false rather than nil for a payee with no PaymentDetails row, so a
+  # caller never has to distinguish "no row" from "row with blanks".
   class Person < ApplicationRecord
     include RecordId
     has_many :expenses, class_name: "Reimbursements::Expense",

@@ -13,8 +13,16 @@ module Reimbursements
 
     FakeChat = ReimbursementsTestHelpers::FakeChat
 
-    def receipt(id: "att1", url: "https://airtable/signed/receipt.pdf")
-      Attachment.new(attachment_id: id, filename: "receipt.pdf", url: url, content_type: "application/pdf")
+    # Stands in for the ActiveStorage blob the Attachment wrapper carries in
+    # production; +bytes+ is all the checker asks of it.
+    FakeBlob = Struct.new(:content) do
+      def download = content.respond_to?(:call) ? content.call : content
+    end
+
+    def receipt(id: "att1", content: "PDF-BYTES")
+      Attachment.new(attachment_id: id, filename: "receipt.pdf",
+                     url: "/rails/active_storage/blobs/#{id}", content_type: "application/pdf",
+                     blob: FakeBlob.new(content))
     end
 
     def person(name: "Pat Producer")
@@ -40,14 +48,13 @@ module Reimbursements
       exp
     end
 
-    def build(content: nil, error: nil, http_responses: [ [ 200, "PDF-BYTES" ] ])
+    def build(content: nil, error: nil)
       chat = FakeChat.new(content: content, error: error)
-      http = ReimbursementsTestHelpers::FakeHttp.new(http_responses)
-      [ AiChecker.new(chat_builder: -> { chat }, http: http), chat, http ]
+      [ AiChecker.new(chat_builder: -> { chat }), chat ]
     end
 
     test "a passing verdict maps to status pass with its comment" do
-      checker, chat, http = build(content: { "status" => "pass", "comment" => "Looks fine." })
+      checker, chat = build(content: { "status" => "pass", "comment" => "Looks fine." })
 
       result = checker.check(expense, [ budget ])
 
@@ -57,17 +64,18 @@ module Reimbursements
       assert_same AiChecker::SCHEMA, chat.schema
       assert_equal 1, chat.attachments.size
       assert_equal "receipt.pdf", chat.attachments.first.filename
-      assert_equal "https://airtable/signed/receipt.pdf", http.requests.first.uri,
-                   "downloads the receipt bytes itself rather than handing Gemini the signed URL directly"
+      assert_equal "PDF-BYTES", chat.attachments.first.source.read,
+                   "hands Gemini the receipt bytes, never the app-authenticated receipt URL"
     end
 
-    test "a receipt download failure is captured as an error verdict, not raised" do
-      checker, = build(http_responses: [ [ 404, "not found" ] ])
+    test "a receipt whose bytes cannot be read is captured as an error verdict, not raised" do
+      checker, = build
+      unreadable = receipt(content: -> { raise "storage unavailable" })
 
-      result = checker.check(expense, [ budget ])
+      result = checker.check(expense(receipts: [ unreadable ]), [ budget ])
 
       assert_equal "error", result.status
-      assert_match(/receipt download failed/, result.comment)
+      assert_match(/storage unavailable/, result.comment)
     end
 
     test "a failing verdict maps to status fail" do
@@ -233,12 +241,12 @@ module Reimbursements
       assert_includes chat.prompt, "Acme Lighting Ltd"
     end
 
-    # S9: the finance-triggered AI check shipped a third party's full sort code and
-    # account number verbatim to the same free-tier Gemini endpoint that receipt
-    # extraction only reaches behind an explicit "Google may store and human-review
-    # this" consent — with no notice to anyone. Mask them to their last four
-    # digits, the same rule BankDetails.mask already applies to the exports and the
-    # People audit trail. The mismatch check survives on the masked digits.
+    # This check reaches the same free-tier Gemini endpoint that receipt
+    # extraction only reaches behind an explicit "Google may store and
+    # human-review this" consent, and it runs with no notice to the third party
+    # at all — so it must never carry their full sort code and account number.
+    # Masked to last-4, the rule BankDetails.mask applies to the exports and the
+    # People audit trail; the mismatch check survives on the masked digits.
     test "a payee override's bank details are masked in the prompt, never sent verbatim" do
       checker, chat = build(content: { "status" => "pass" })
       overridden = expense(payee_name_override: "Acme Lighting Ltd",
@@ -256,21 +264,15 @@ module Reimbursements
       assert_includes chat.prompt, "****0000"
       assert_includes chat.prompt, "****5678"
     end
-    test "a locally-stored receipt (database backend) is read from its blob, not HTTP" do
-      blob = Struct.new(:content) do
-        def download = content
-      end.new("BLOB-BYTES")
-      local = Attachment.new(attachment_id: "sig1", filename: "receipt.pdf",
-                             url: "/rails/active_storage/blobs/x", content_type: "application/pdf",
-                             blob: blob)
-      checker, chat, http = build(content: { "status" => "pass", "comment" => "ok" },
-                                  http_responses: [])
 
-      result = checker.check(expense(receipts: [ local ]), [ budget ])
+    test "every receipt on the expense is sent, each read from its own blob" do
+      checker, chat = build(content: { "status" => "pass", "comment" => "ok" })
+      receipts = [ receipt(id: "a", content: "FIRST"), receipt(id: "b", content: "SECOND") ]
+
+      result = checker.check(expense(receipts: receipts), [ budget ])
 
       assert_equal "pass", result.status
-      assert_empty http.requests
-      assert_equal "BLOB-BYTES", chat.attachments.first.source.read
+      assert_equal %w[FIRST SECOND], chat.attachments.map { |att| att.source.read }
     end
   end
 end

@@ -8,7 +8,7 @@ module Admin
     # only touch their own Draft/Pending expense).
     #
     # Reachable from the Review cards' "Edit (any status)" link and from a
-    # lookup by auto-number or Airtable record id (so a Submitted/Paid expense
+    # lookup by auto-number or record id (so a Submitted/Paid expense
     # that never appears on the Review tabs can still be found). Edits persist
     # through +store.update_expense!+, which is status-agnostic; a Submitted or
     # Paid expense shows a clear note that the edit won't change what EUSA has
@@ -33,8 +33,8 @@ module Admin
 
         filtered = filtered_expenses
         respond_to do |format|
-          # Paginate the filtered set in Ruby (Airtable free plan — the whole
-          # list is cached and filtered in-process, so we page the array).
+          # The whole list is already loaded and filtered in Ruby, so paginate
+          # the array rather than re-querying.
           format.html { @expenses = paginate(filtered) }
           # Export the FULL filtered set (the on-screen filters carry through the
           # query string) — pagination is display-only, so the CSV isn't paged.
@@ -122,8 +122,8 @@ module Admin
       end
 
       # All expenses, newest first, narrowed by the status/budget/attention
-      # filters and the free-text search. Filtering happens in Ruby over the one
-      # cached list (Airtable free plan — no per-filter API calls).
+      # filters and the free-text search. Filtering happens in Ruby over the
+      # store's one memoized list, not as a query per filter.
       def filtered_expenses
         result = store.expenses.sort_by { |e| e.submitted_at || Time.zone.at(0) }.reverse
         result = result.select { |e| e.status == @status_filter } if @status_filter.present?

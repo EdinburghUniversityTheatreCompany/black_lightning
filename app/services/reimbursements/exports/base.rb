@@ -67,11 +67,10 @@ module Reimbursements
 
       # The modulus checker People/Expenses need for their bank-details verdict.
       # Optional at construction (most exporters never touch it, and the finance
-      # controllers inject the real one or a fake), but never nil when READ: the
-      # workbook can legitimately be built as Workbook.new(store:), and a nil
-      # here used to NoMethodError on the first payee with bank details.
-      # Resolved lazily, so an exporter that doesn't need a verdict never loads
-      # the Pay.UK rule files.
+      # controllers inject the real one or a fake) but never nil when READ,
+      # since Workbook.new(store:) legitimately passes none. Resolved lazily, so
+      # an exporter that doesn't need a verdict never loads the Pay.UK rule
+      # files.
       def checker
         @checker ||= ModulusCheck.default_checker
       end

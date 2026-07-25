@@ -113,11 +113,9 @@ module Reimbursements
     #
     # Deliberately linkage-based rather than nominal-code based. Several budgets
     # can share one nominal code, so a per-budget rollup can only ever count
-    # what is actually linked to it; matching on the code instead would hide an
-    # unlinked row behind any budget sharing that code, which is exactly how
-    # real spend used to disappear from this page. (The old code-matching
-    # version also put "" into its exclusion set whenever any budget had a blank
-    # nominal code, silently suppressing every blank-code actual.)
+    # what is actually linked to it; defining this list by code instead would
+    # hide an unlinked row behind any budget sharing that code — which is
+    # precisely the spend this list exists to surface.
     #
     # Sorted by nominal code, then date, so finance can see which budget each
     # row probably belongs to.
@@ -218,7 +216,7 @@ module Reimbursements
       columns = expense_columns(attrs)
       # A blank budget on the finance edit forms means "clear the budget" —
       # nil-compaction would otherwise make the link settable but never
-      # removable (same explicit-clear the Airtable store performs).
+      # removable.
       columns[:budget_id] = nil if attrs.key?(:budget_record_id) && attrs[:budget_record_id].blank?
       expense.update!(columns)
       bust_expenses!
@@ -263,11 +261,6 @@ module Reimbursements
 
       Batch.find_by(draft_message_id: message_id)
     end
-
-    # Mailbox idempotency (the deferred-robustness fix Airtable couldn't
-    # store): the poll job stamps the Graph message id on the expense it
-    # creates and skips a message it has already seen.
-    def supports_message_idempotency? = true
 
     # PersonLink's stored user->payee link: the real FK on this backend.
     # update_column deliberately skips validations/callbacks so legacy user

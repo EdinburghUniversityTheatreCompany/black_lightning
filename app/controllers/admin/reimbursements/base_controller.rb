@@ -3,9 +3,9 @@ module Admin
     ##
     # Producer-facing reimbursements portal, part of the members' backend.
     # Access needs the grid permission "Access the Reimbursements portal"
-    # (`:access, :reimbursements`) on top of backend access. Data lives in
-    # Airtable (via the cache-fronted Store), not ActiveRecord, and every
-    # action is scoped to the member's own linked People record.
+    # (`:access, :reimbursements`) on top of backend access. Data is reached
+    # through the Store, never the AR models directly, and every action is
+    # scoped to the member's own linked People record.
     class BaseController < AdminController
       # Raised when the expense is the member's own but review has since picked
       # it up, so it's no longer editable (a race against an Edit link on a

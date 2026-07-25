@@ -74,9 +74,10 @@
         <%# ONE consent, covering BOTH AI uses of the receipt: reading it now to
             prefill this form, and sending it again later so the finance team's AI
             check can compare it against the claim. Both uses are named in the copy
-            because the check used to run regardless of this answer, which made
-            picking "No" meaningless. It says "again later" rather than "twice"
-            because an errored check is retried on each Review load.
+            because this one answer governs both — a disclosure that mentions only
+            the prefill makes picking "No" meaningless. It says "again later"
+            rather than "twice" because an errored check is retried on each
+            Review load.
             Hidden until a receipt is chosen (JS reveals it); with JavaScript off
             it stays hidden and the manual form works exactly as before. Selecting
             "self" or "invoice" is what triggers the upload to Gemini: nothing is
