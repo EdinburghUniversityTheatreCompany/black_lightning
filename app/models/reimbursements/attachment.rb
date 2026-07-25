@@ -10,7 +10,7 @@ module Reimbursements
     attr_reader :attachment_id, :filename, :url, :size_bytes, :content_type, :thumbnail_url
 
     def initialize(attachment_id:, filename:, url:, size_bytes: 0, content_type: "",
-                   thumbnail_url: nil, inline_url: nil, blob: nil)
+                   thumbnail_url: nil, inline_url: nil, download_url: nil, blob: nil)
       @attachment_id = attachment_id
       @filename = filename
       @url = url
@@ -18,6 +18,7 @@ module Reimbursements
       @content_type = content_type
       @thumbnail_url = thumbnail_url
       @inline_url = inline_url
+      @download_url = download_url
       @blob = blob
     end
 
@@ -65,6 +66,13 @@ module Reimbursements
     # without one.
     def inline_url
       @inline_url.presence || url
+    end
+
+    # The URL that always saves the file rather than displaying it. The HTML
+    # download attribute would not do: browsers ignore it cross-origin, and in
+    # production +url+ redirects to the storage host.
+    def download_url
+      @download_url.presence || url
     end
   end
 end

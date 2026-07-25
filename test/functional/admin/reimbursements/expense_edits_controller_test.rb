@@ -666,24 +666,64 @@ module Admin
         get :edit, params: { id: expense.record_id }
 
         receipt = expense.receipts.sole
-        assert_includes response.body, 'data-controller="fancybox"'
+        assert_includes response.body, 'data-controller="fancybox receipt-viewer"'
         assert_includes response.body, "data-fancybox=\"receipts-#{expense.record_id}\""
         # The lightbox link opens the full image; the thumbnail previews it.
         assert_includes response.body, receipt.url
         assert_includes response.body, receipt.preview_url
       end
 
-      test "edit renders a PDF receipt as a new-tab link, not a broken image" do
+      # A PDF receipt used to fall through to a generic fa-file-lines icon and a
+      # target="_blank" link, because the gallery asked whether the file was an
+      # image rather than whether it had a preview. ActiveStorage renders a PDF's
+      # first page, so the thumbnail was there all along.
+      test "edit renders a PDF receipt as a real first-page preview image" do
         expense = two_receipt_expense
         sign_in @user
 
         get :edit, params: { id: expense.record_id }
 
-        assert_includes response.body, 'target="_blank"'
+        first, second = expense.receipts
+        assert_match(/<img[^>]+src="#{Regexp.escape(first.preview_url)}"/, response.body)
+        assert_match(/<img[^>]+src="#{Regexp.escape(second.preview_url)}"/, response.body)
+        assert_match %r{/rails/active_storage/representations/}, first.preview_url
+      end
+
+      # Request 2: the receipt opens in the page. The only remaining new-tab link
+      # is the explicit "Open in a new tab" fallback inside the viewer pane.
+      test "edit opens a PDF receipt in an in-page frame rather than a new tab" do
+        expense = two_receipt_expense
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        receipt = expense.receipts.first
+        assert_match(/<iframe[^>]+data-src="#{Regexp.escape(receipt.inline_url)}"/, response.body)
+        assert_match(/<iframe[^>]+title="Receipt: a\.pdf"/, response.body)
+        # The thumbnails are buttons, and the only receipt link that still opens a
+        # tab is the explicitly labelled fallback inside the pane.
+        assert_select "button[data-action='receipt-viewer#show']", 2
+        new_tab_links = css_select("a[target=_blank]")
+                        .select { |link| link["href"].to_s.include?("active_storage") }
+        assert_equal 2, new_tab_links.size, "only the per-receipt new-tab fallback may remain"
+        new_tab_links.each { |link| assert_match(/\AOpen [ab]\.pdf in a new tab\z/, link["aria-label"]) }
+      end
+
+      # Sheet music and Office documents are allow-listed uploads that no browser
+      # can render: they must offer a download, never an empty frame.
+      test "edit degrades an unrenderable receipt to a download link" do
+        expense = expense_at("Approved", receipt: false)
+        attach_test_receipt(expense, filename: "score.mscz", content_type: "application/x-musescore",
+                            bytes: "PK")
+        sign_in @user
+
+        get :edit, params: { id: expense.record_id }
+
+        assert_includes response.body, "score.mscz can't be shown in the browser."
+        assert_includes response.body, 'aria-label="Download score.mscz"'
+        assert_no_match(/<iframe/, response.body)
+        # No thumbnail exists, so the strip shows the document icon.
         assert_includes response.body, "fa-file-lines"
-        # A PDF must never be wired to fancybox as an inline image.
-        pdf_url = expense.receipts.first.url
-        assert_no_match(/<img[^>]+#{Regexp.escape(pdf_url)}/, response.body)
       end
 
       test "edit keeps the finance Remove button and Attach form" do

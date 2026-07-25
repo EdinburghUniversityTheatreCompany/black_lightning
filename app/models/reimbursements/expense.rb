@@ -155,6 +155,7 @@ module Reimbursements
         # Proxied (not redirected) and explicitly inline, so the in-page viewer's
         # <img>/<iframe> stays same-origin and renders instead of downloading.
         inline_url: helpers.rails_storage_proxy_path(file, only_path: true, disposition: "inline"),
+        download_url: helpers.rails_blob_path(file, only_path: true, disposition: "attachment"),
         blob: file.blob
       )
     end
