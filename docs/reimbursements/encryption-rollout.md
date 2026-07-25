@@ -15,8 +15,20 @@ cleartext.
   still plaintext, so nothing breaks between deploy and backfill.
 - `lib/tasks/reimbursements_encrypt_backfill.rake` — re-saves every payee record so its
   bank details land as ciphertext (`bin/rails reimbursements:encrypt_backfill`).
-- No schema migration is needed: the ciphertext fits the existing `string(255)` / `text`
-  columns.
+- `config.active_record.encryption.validate_column_size = false` — Rails' auto-injected
+  guard validates the **decrypted** value against the column limit, which is the wrong
+  value (the ciphertext is what has to fit), and it broke `database_consistency` on both
+  encrypted models. Explicit plaintext length validations on the models take its place.
+- **One schema migration IS needed**, contrary to what this doc originally claimed:
+  `20260725150000_widen_reimbursements_payee_name_override_for_encryption` changes
+  `reimbursements_expenses.payee_name_override` from `string(255)` to `text`. AR Encryption
+  stores a JSON envelope of base64 IV + ciphertext + auth tag, so a low-redundancy plaintext
+  of ~124 characters already exceeds 255 bytes and 255 characters lands at ~394 — the pre-
+  encryption column could no longer hold every value it used to. The other encrypted columns
+  were measured and genuinely do fit: `sort_code`, `account_number`,
+  `sort_code_override` and `account_number_override` are format-validated to 6 and 8 digits
+  (~82 bytes encrypted, in `string(255)`), and `notes` is already `text` and compresses.
+  `test/models/reimbursements/encryption_test.rb` pins all three measurements.
 
 ## Where the keys live, per environment
 

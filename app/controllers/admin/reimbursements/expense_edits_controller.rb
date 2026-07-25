@@ -204,6 +204,13 @@ module Admin
         sort_code = params[:sort_code_override].to_s
         account_number = params[:account_number_override].to_s
 
+        # Length first: the model caps this too (so the ciphertext fits its
+        # column), and without a check here an over-long value would reach
+        # store.update_expense! and raise RecordInvalid instead of redirecting
+        # back with a fixable message.
+        if payee_name.length > ::Reimbursements::BankDetails::PAYEE_NAME_MAX_LENGTH
+          return "Payee name override #{::Reimbursements::BankDetails::PAYEE_NAME_HINT}"
+        end
         if sort_code.present? && !::Reimbursements::BankDetails.valid_sort_code?(sort_code)
           return "Sort code override #{::Reimbursements::BankDetails::SORT_CODE_HINT}"
         end

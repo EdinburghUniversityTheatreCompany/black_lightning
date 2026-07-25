@@ -7,6 +7,21 @@ module Reimbursements
     SORT_CODE_HINT = "must be 6 digits, e.g. 80-22-60.".freeze
     ACCOUNT_NUMBER_HINT = "must be 8 digits.".freeze
 
+    # A payee account name is a bank-account holder name, not free prose: BACS
+    # itself carries 18 characters and Faster Payments 140, and the value ends up
+    # in a spreadsheet cell EUSA pays from. 255 keeps the old varchar(255) column
+    # limit as the user-visible rule (so nothing that used to be accepted is
+    # rejected now) while staying far inside the widened TEXT column once
+    # encryption inflates it (255 characters -> ~394 bytes of ciphertext).
+    PAYEE_NAME_MAX_LENGTH = 255
+    PAYEE_NAME_HINT = "must be #{PAYEE_NAME_MAX_LENGTH} characters or fewer.".freeze
+
+    # Sort codes and account numbers are format-validated to 6 and 8 digits on
+    # every write path, so this is only a backstop for direct model writes. It has
+    # to stay well under the ~123-character plaintext that fills a string(255)
+    # column once encrypted.
+    BANK_DIGITS_MAX_LENGTH = 32
+
     module_function
 
     def normalize_sort_code(value)

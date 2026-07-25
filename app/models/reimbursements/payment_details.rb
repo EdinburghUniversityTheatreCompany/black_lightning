@@ -41,6 +41,15 @@ module Reimbursements
 
     validates :person_id, uniqueness: true
 
+    # Column fit: Rails' auto-injected validate_column_size guard is off (it
+    # measures the decrypted value — see config/application.rb), so cap the
+    # plaintext explicitly instead. Both columns are string(255), which holds
+    # ciphertext for roughly 123 characters of plaintext; a formatted UK sort code
+    # or account number is 8. `notes` is TEXT (65535), with headroom for a far
+    # longer audit trail than this app can produce, so it is left uncapped.
+    validates :sort_code, :account_number,
+              length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
+
     def bank_details?
       sort_code.present? && account_number.present?
     end

@@ -14,7 +14,7 @@
 #  description             :text(65535)
 #  expense_type            :string(255)      default("Reimbursement"), not null
 #  nominal_code_override   :string(255)
-#  payee_name_override     :string(255)
+#  payee_name_override     :text(65535)
 #  payment_confirmed_date  :date
 #  payment_reference       :string(255)
 #  producer_notified       :boolean          default(FALSE), not null
@@ -82,6 +82,16 @@ module Reimbursements
     encrypts :sort_code_override
     encrypts :account_number_override
     encrypts :payee_name_override
+
+    # Column fit for the encrypted trio. Rails' own auto-injected
+    # validate_column_size guard is switched off in config/application.rb because
+    # it measures the DECRYPTED value against the column limit — the wrong value
+    # — so these explicit plaintext caps are what actually keeps the ciphertext
+    # inside its column. payee_name_override lives in a TEXT column (widened for
+    # exactly this reason) and the digit fields in string(255).
+    validates :payee_name_override, length: { maximum: BankDetails::PAYEE_NAME_MAX_LENGTH }
+    validates :sort_code_override, :account_number_override,
+              length: { maximum: BankDetails::BANK_DIGITS_MAX_LENGTH }
 
     belongs_to :person, class_name: "Reimbursements::Person", optional: true, inverse_of: :expenses
     belongs_to :budget, class_name: "Reimbursements::Budget", optional: true, inverse_of: :expenses
