@@ -274,6 +274,37 @@ module Reimbursements
       assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
     end
 
+    # Emailing an iPhone photo to the shared mailbox is a likely route in, so
+    # email-in converts too: the draft carries a JPEG, not the HEIC.
+    test "an emailed HEIC photo is converted to a JPEG on the draft" do
+      heic = { filename: "IMG_1234.HEIC", content_type: "image/heic",
+              bytes: File.binread(Rails.root.join("test/fixtures/files/reimbursements_receipt.heic")) }
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ heic ] })
+
+      MailboxPollJob.perform_now
+
+      receipt = Expense.sole.receipt_files.sole
+      assert_equal "image/jpeg", receipt.content_type
+      assert_equal "IMG_1234.jpg", receipt.filename.to_s
+      assert_equal "image/jpeg", Marcel::MimeType.for(StringIO.new(receipt.download))
+      assert_equal [ [ "msg1", :processed ] ], @mailbox.moves
+    end
+
+    # A damaged photo must not raise inside the poll (that would leave the
+    # message unread and reprocessed forever); it just isn't a usable receipt,
+    # so the sender gets the existing "please attach the receipt" reply.
+    test "an emailed HEIC that can't be decoded falls back to the missing-receipt reply" do
+      broken = { filename: "IMG_9.HEIC", content_type: "image/heic",
+                bytes: File.binread(Rails.root.join("test/fixtures/files/truncated_receipt.heic")) }
+      setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ broken ] })
+
+      assert_nothing_raised { MailboxPollJob.perform_now }
+
+      assert_equal 0, Expense.count, "an unreadable photo must not mint an expense"
+      assert_match(/no usable receipt/, @mailbox.replies.first.last)
+      assert_equal [ [ "msg1", :rejected ] ], @mailbox.moves
+    end
+
     test "an attachment whose content isn't an allowed receipt type is skipped" do
       not_a_receipt = { filename: "notes.txt", content_type: "text/plain", bytes: "just some plain text notes" }
       setup_job(messages: [ inbound_message ], attachments: { "msg1" => [ not_a_receipt ] })

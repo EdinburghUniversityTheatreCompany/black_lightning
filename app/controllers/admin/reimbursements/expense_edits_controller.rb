@@ -17,6 +17,8 @@ module Admin
     # Gated by the finance grid permission (`:manage, :reimbursements_finance`)
     # via FinanceController.
     class ExpenseEditsController < FinanceController
+      include AttachesReceipts
+
       # All expenses as a filterable/searchable table, newest first, each row
       # opening the edit page above. The finance team's primary way in — the
       # old +find+ lookup is now just the search box on this page.
@@ -78,20 +80,15 @@ module Admin
 
       def add_receipts
         expense = find_expense!
-        files = ::Reimbursements::ReceiptContentType.uploads_from(params[:receipts]).select do |file|
-          file.size <= ::Reimbursements::ExpenseForm::MAX_RECEIPT_BYTES &&
-            ::Reimbursements::ReceiptContentType.allowed_upload?(file)
-        end
-        if files.empty?
-          redirect_to_edit(expense, alert: "No usable receipt files (PDF or image, under the size limit).")
+        attached, upload_errors = attach_posted_receipts(expense)
+        if attached.zero?
+          redirect_to_edit(expense, alert: upload_errors.presence&.to_sentence ||
+                                           "No usable receipt files (PDF or image, under the size limit).")
           return
         end
 
-        files.each do |file|
-          store.attach_receipt!(expense.record_id, filename: file.original_filename,
-                                                   content_type: file.content_type, bytes: file.read)
-        end
-        redirect_to_edit(expense, notice: "Attached #{files.size} receipt(s) to ##{expense.auto_number}.")
+        redirect_to_edit(expense, notice: "Attached #{attached} receipt(s) to ##{expense.auto_number}.",
+                                  alert: upload_errors.presence&.to_sentence)
       rescue StandardError => e # AR/ActiveStorage failures
         redirect_to_edit(expense, alert: "Couldn't attach the receipt: #{e.message}")
       end

@@ -13,7 +13,7 @@
     <div class="dropzone dropzone-default mb-3 p-4 text-center"
          data-action="dragover->receipts-upload#dragover dragleave->receipts-upload#dragleave drop->receipts-upload#drop">
       <input type="file" multiple class="hidden" tabindex="-1" aria-hidden="true"
-             accept="<%= Reimbursements::ExpenseForm::ALLOWED_RECEIPT_TYPES.join(',') %>"
+             accept="<%= Reimbursements::ExpenseForm::RECEIPT_ACCEPT_ATTRIBUTE %>"
              data-receipts-upload-target="input"
              data-action="change->receipts-upload#inputChanged">
       <div class="dropzone-msg dz-message text-gray-600">

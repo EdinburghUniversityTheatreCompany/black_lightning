@@ -100,6 +100,29 @@ module Admin
         assert_includes response.body, "must be a PDF or a photo"
       end
 
+      # The gallery is the second intake path, so it converts too: a producer
+      # adding an iPhone photo to an existing claim gets a JPEG on the expense.
+      test "create converts a HEIC photo to JPEG on the way in" do
+        post :create, params: { expense_id: @expense.record_id,
+                                receipts: [ fixture_file_upload("reimbursements_receipt.heic", "image/heic") ] },
+                      format: :turbo_stream
+
+        receipt = @expense.receipt_files.reload.last
+        assert_equal "image/jpeg", receipt.content_type
+        assert_equal "reimbursements_receipt.jpg", receipt.filename.to_s
+      end
+
+      test "create reports an unreadable photo inline instead of 500ing" do
+        assert_no_difference -> { @expense.receipt_files.count } do
+          post :create, params: { expense_id: @expense.record_id,
+                                  receipts: [ fixture_file_upload("truncated_receipt.heic", "image/heic") ] },
+                        format: :turbo_stream
+        end
+
+        assert_response :success
+        assert_includes response.body, "couldn&#39;t read truncated_receipt.heic"
+      end
+
       test "create falls back to a redirect for html" do
         assert_difference -> { @expense.receipt_files.count }, 1 do
           post :create, params: { expense_id: @expense.record_id, receipts: [ receipt_upload ] }

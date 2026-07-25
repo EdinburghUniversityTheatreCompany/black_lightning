@@ -12,12 +12,6 @@ module Reimbursements
   module ReceiptContentType
     module_function
 
-    # For an already-in-memory receipt (mailbox poll's decoded Graph
-    # attachment bytes).
-    def allowed?(bytes:, filename:, declared_type:)
-      ExpenseForm::ALLOWED_RECEIPT_TYPES.include?(sniff(bytes: bytes, filename: filename, declared_type: declared_type))
-    end
-
     # The uploads in a `receipts[]` param, with anything that is not actually an
     # uploaded file dropped. Rails parses whatever a multipart body contains, so a
     # hand-crafted post can put a bare String (or a nested array/hash) in there.
@@ -40,16 +34,8 @@ module Reimbursements
       %i[read size original_filename content_type].all? { |message| value.respond_to?(message) }
     end
 
-    # For an ActionDispatch::Http::UploadedFile-like object still to be read.
-    # Rewinds afterward so a caller can still read the full file itself
-    # (attaching it, extracting it) without getting back an empty string from
-    # a pointer left at EOF.
-    def allowed_upload?(file)
-      allowed?(bytes: file.read, filename: file.original_filename, declared_type: file.content_type)
-    ensure
-      file.rewind
-    end
-
+    # The detected type of these bytes. ReceiptIntake decides what to do with
+    # it: store it as it is, convert it (HEIC), or reject it.
     def sniff(bytes:, filename:, declared_type:)
       Marcel::MimeType.for(StringIO.new(bytes.to_s), name: filename.to_s, declared_type: declared_type.to_s)
     end

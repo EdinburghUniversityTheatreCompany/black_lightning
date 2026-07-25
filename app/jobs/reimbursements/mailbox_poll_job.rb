@@ -140,18 +140,31 @@ module Reimbursements
       # Always fetch — Graph reports hasAttachments: false for messages whose
       # only image is pasted inline, which is a perfectly normal way to send
       # a receipt. All attachments and inline images count as receipts.
-      mailbox.attachments(message.id).select do |attachment|
-        bytes = attachment[:bytes]
+      mailbox.attachments(message.id).filter_map do |attachment|
         # Guard nil/empty bytes: a bad attachment must not raise here (it would
         # leave the message unread and reprocessed forever), just be skipped.
-        # Content type is verified against the actual bytes (Marcel), not the
-        # sender-declared type alone — an email attachment's declared type is
-        # exactly as spoofable as a browser upload's.
-        bytes.present? &&
-          bytes.bytesize <= ExpenseForm::MAX_RECEIPT_BYTES &&
-          ReceiptContentType.allowed?(bytes: bytes, filename: attachment[:filename],
-                                      declared_type: attachment[:content_type])
+        next if attachment[:bytes].blank?
+
+        # Size, real content type (Marcel, not the sender-declared type — an
+        # email attachment's declared type is exactly as spoofable as a browser
+        # upload's) and the HEIC-to-JPEG conversion all happen here. People
+        # emailing an iPhone photo to the shared mailbox is a likely route in,
+        # and ReceiptIntake never raises: an unreadable photo is simply not a
+        # usable receipt, so the message falls through to the existing
+        # "please attach the receipt" reply instead of being retried forever.
+        receipt = ReceiptIntake.from_bytes(bytes: attachment[:bytes], filename: attachment[:filename],
+                                           declared_type: attachment[:content_type])
+        next log_unusable(message, attachment, receipt) unless receipt.ok?
+
+        receipt.to_attachment
       end
+    end
+
+    # Returns nil so filter_map drops the attachment.
+    def log_unusable(message, attachment, receipt)
+      Rails.logger.info("Reimbursements mailbox: skipping attachment #{attachment[:filename].inspect} " \
+                        "on message #{message.id}: #{receipt.error}")
+      nil
     end
 
     def handle_automated_sender(message)
@@ -334,8 +347,8 @@ module Reimbursements
         <p>Hi,</p>
         <p>Thanks for your email! We found your account, but there was no usable receipt
         attached.</p>
-        <p>Please resend with the receipt or invoice as a PDF or photo (JPEG/PNG/WEBP, up
-        to 5&nbsp;MB). Attaching or pasting the photo into the email both work. Or submit
+        <p>Please resend with the receipt or invoice as a PDF or photo (JPEG/PNG/WEBP/HEIC,
+        up to 5&nbsp;MB). Attaching or pasting the photo into the email both work. Or submit
         through the portal instead: <a href="#{portal_url}">#{portal_url}</a>.</p>
         <p>#{SIGN_OFF}</p>
       HTML
