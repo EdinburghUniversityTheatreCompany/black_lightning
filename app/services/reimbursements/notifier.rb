@@ -15,13 +15,16 @@ module Reimbursements
   # keep the copy the retired ActionMailer views used; assigns pass the same
   # instance variables those templates already reference.
   #
-  # +mailbox+ is the sending cost centre's send_mailbox. Callers thread the
-  # relevant cost centre's mailbox (CostCentre.default today). The IT/credential
-  # alerts stay on ActionMailer (ReimbursementsMailer): they go to a configured
-  # subcommittee address with no cost-centre mailbox context.
+  # Callers pass the sending +cost_centre+: it supplies the send mailbox AND
+  # every piece of copy that used to be hardcoded "Bedlam Fringe" (subject
+  # prefix, sign-offs, contact address). It is threaded into the template
+  # assigns ONCE here, so no call site has to pass a signature string. The
+  # IT/credential alerts stay on ActionMailer (ReimbursementsMailer): they go
+  # to a configured subcommittee address with no cost-centre mailbox context.
   class Notifier
-    def initialize(mailbox:, graph: nil)
-      @mailbox = mailbox
+    def initialize(cost_centre:, graph: nil)
+      @cost_centre = cost_centre
+      @mailbox = cost_centre&.send_mailbox
       @graph = graph || GraphClient.new
     end
 
@@ -29,7 +32,7 @@ module Reimbursements
     def rejection(to:, payee_name:, auto_number:, amount:, budget_name:, description:, reason:)
       send_email(
         to: to,
-        subject: "Your Bedlam expense ##{auto_number} was not approved",
+        subject: "Your #{@cost_centre.name} expense ##{auto_number} was not approved",
         template: "reimbursements/emails/rejection",
         assigns: { payee_name: payee_name, auto_number: auto_number, amount: amount,
                    budget_name: budget_name, description: description, reason: reason }
@@ -52,7 +55,8 @@ module Reimbursements
       count = line_items.size
       send_email(
         to: to,
-        subject: "[Bedlam Fringe] #{count} #{'expense'.pluralize(count)} submitted for payment",
+        subject: "#{@cost_centre.subject_prefix} #{count} #{'expense'.pluralize(count)} " \
+                 "submitted for payment",
         template: "reimbursements/emails/producer_notification",
         assigns: { recipient_name: recipient_name, line_items: line_items,
                    bacs_date: bacs_date, total: total }
@@ -64,8 +68,8 @@ module Reimbursements
       count = rows.size
       send_email(
         to: recipients,
-        subject: "[Bedlam BACS] #{count} #{'submission'.pluralize(count)} awaiting approval " \
-                 "— #{run_date}",
+        subject: "#{@cost_centre.subject_prefix} #{count} #{'submission'.pluralize(count)} " \
+                 "awaiting approval (#{run_date})",
         template: "reimbursements/emails/pending_reminder",
         assigns: { rows: rows, run_date: run_date, threshold_days: threshold_days }
       )
@@ -76,8 +80,8 @@ module Reimbursements
       count = issues.size
       send_email(
         to: recipients,
-        subject: "[Bedlam BACS] Manual review needed — #{count} #{'issue'.pluralize(count)} " \
-                 "— #{run_date}",
+        subject: "#{@cost_centre.subject_prefix} Manual review needed: #{count} " \
+                 "#{'issue'.pluralize(count)} (#{run_date})",
         template: "reimbursements/emails/manual_review",
         assigns: { issues: issues, unblocked_count: unblocked_count, run_date: run_date,
                    next_run_day: next_run_day }
@@ -91,8 +95,8 @@ module Reimbursements
       count = expenses.size
       send_email(
         to: recipients,
-        subject: "[Bedlam BACS] #{count} #{'expense'.pluralize(count)} ready to batch " \
-                 "— #{run_date}",
+        subject: "#{@cost_centre.subject_prefix} #{count} #{'expense'.pluralize(count)} " \
+                 "ready to batch (#{run_date})",
         template: "reimbursements/emails/approved_ready",
         assigns: { expenses: expenses, total: total, run_date: run_date }
       )
@@ -107,8 +111,8 @@ module Reimbursements
       count = expenses.size
       send_email(
         to: recipients,
-        subject: "[Bedlam BACS] Draft ready — #{count} #{'expense'.pluralize(count)} " \
-                 "— #{run_date}",
+        subject: "#{@cost_centre.subject_prefix} Draft ready: #{count} " \
+                 "#{'expense'.pluralize(count)} (#{run_date})",
         template: "reimbursements/emails/batch_ready",
         assigns: { expenses: expenses, total: total, draft_link: draft_link, run_date: run_date,
                    errors: errors }
@@ -119,7 +123,7 @@ module Reimbursements
     def failure(recipients:, error_text:, run_date:)
       send_email(
         to: recipients,
-        subject: "[Bedlam BACS] Batch processing FAILED — #{run_date}",
+        subject: "#{@cost_centre.subject_prefix} Batch processing FAILED: #{run_date}",
         template: "reimbursements/emails/failure",
         assigns: { error_text: error_text, run_date: run_date }
       )
@@ -127,9 +131,14 @@ module Reimbursements
 
     private
 
+    # Every template gets @cost_centre for free, so its sign-off and contact
+    # details come from the sending cost centre without each caller having to
+    # remember to pass a name through.
     def send_email(to:, subject:, template:, assigns:)
-      html = ApplicationController.render(template: template, layout: "reimbursements_mailer",
-                                          assigns: assigns.merge(subject: subject).stringify_keys)
+      html = ApplicationController.render(
+        template: template, layout: "reimbursements_mailer",
+        assigns: assigns.merge(subject: subject, cost_centre: @cost_centre).stringify_keys
+      )
       @graph.send_mail(mailbox: @mailbox, to: Array(to), subject: subject, html: html)
     end
   end

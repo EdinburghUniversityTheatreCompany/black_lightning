@@ -25,14 +25,14 @@ module Admin
       # rejecting a claim (MyBudgetsController) emails the payee the same way
       # the finance Review queue does — see RejectsExpenses.
       class_attribute :notifier_builder,
-                      default: ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+                      default: ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
 
       helper_method :current_person
 
       private
 
       def notifier
-        @notifier ||= notifier_builder.call(mailbox: ::Reimbursements::CostCentre.default&.send_mailbox)
+        @notifier ||= notifier_builder.call(cost_centre: ::Reimbursements::CostCentre.default)
       end
 
       def authorize_reimbursements!

@@ -76,13 +76,13 @@ module Admin
       # Notifier over a recording FakeGraphClient so tests assert the send.
       @graph = FakeGraphClient.new
       ReconcileController.notifier_builder =
-        ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox, graph: @graph) }
+        ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre, graph: @graph) }
     end
 
     teardown do
       BaseController.store_builder = -> { ::Reimbursements.build_store }
       ReconcileController.notifier_builder =
-        ->(mailbox:) { ::Reimbursements::Notifier.new(mailbox: mailbox) }
+        ->(cost_centre:) { ::Reimbursements::Notifier.new(cost_centre: cost_centre) }
     end
 
     def debit_row(nominal: "439999", date: "13/05/2026", period: "03", narrative: "Alice Producer",

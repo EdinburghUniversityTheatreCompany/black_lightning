@@ -29,4 +29,4 @@
 
 <p>Open the Review page to approve or reject <%= @rows.size == 1 ? "it" : "them" %>.</p>
 
-<p>Best,<br>Bedlam Fringe BACS (automated)</p>
+<p>Best,<br><%= @cost_centre.automated_sign_off %></p>

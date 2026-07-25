@@ -46,7 +46,7 @@ module Reimbursements
     # Operator alerts send through Graph (Notifier) from the cost centre's send
     # mailbox, so they land in its Sent Items — the same as the nightly.
     class_attribute :notifier_builder,
-                    default: ->(mailbox:, graph:) { Notifier.new(mailbox: mailbox, graph: graph) }
+                    default: ->(cost_centre:, graph:) { Notifier.new(cost_centre: cost_centre, graph: graph) }
 
     def perform(cost_centre_key:, bacs_date:, sender_name:, eusa_recipient:, operator_emails:,
                 eusa_subject: nil, eusa_body_html: nil, attempt_id: nil)
@@ -123,7 +123,7 @@ module Reimbursements
         return
       end
 
-      emailer = notifier_builder.call(mailbox: cost_centre.send_mailbox, graph: graph)
+      emailer = notifier_builder.call(cost_centre: cost_centre, graph: graph)
       if result.success
         emailer.batch_ready(recipients: recipients, expenses: notification_rows(approved),
                             total: format("%.2f", result.total_amount || 0),

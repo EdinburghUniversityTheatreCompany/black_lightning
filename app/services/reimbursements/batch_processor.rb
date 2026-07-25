@@ -53,7 +53,7 @@ module Reimbursements
       @composer = composer || EusaEmailComposer.new
       # Producer notifications send through Graph from the cost centre's send
       # mailbox (same client as the EUSA draft), so they land in its Sent Items.
-      @notifier = notifier || Notifier.new(mailbox: cost_centre.send_mailbox, graph: graph)
+      @notifier = notifier || Notifier.new(cost_centre: cost_centre, graph: graph)
       @sleeper = sleeper || ->(seconds) { sleep(seconds) }
     end
 
