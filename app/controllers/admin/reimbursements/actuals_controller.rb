@@ -77,7 +77,32 @@ module Admin
                            "created a second time."
       end
 
+      # Undo a mis-detected offsetting pair. The heuristic proposes pairs and the
+      # operator ticks them, but a wrong tick stamps real spend as noise and
+      # hides it from the ledger view and every rollup, so the way back must not
+      # need a console. Both legs stay on the ledger, they just stop cancelling.
+      def unoffset
+        actual = find_or_404(:find_actual)
+        unless actual.offset?
+          redirect_to actuals_path_with_filters, alert: "That row is not marked as offsetting."
+          return
+        end
+
+        store.unlink_offsetting_pair!(actual.record_id)
+        redirect_to actuals_path_with_filters,
+                    notice: "Both rows of that pair are ordinary ledger rows again, so they count " \
+                            "as real spend or income."
+      end
+
       private
+
+      # The index's own filters, so undoing an offset doesn't throw the operator
+      # back to an unfiltered first page.
+      def actuals_path_with_filters
+        admin_reimbursements_actuals_path(
+          params.permit(:period, :include_offsets).to_h.compact_blank
+        )
+      end
 
       def set_convertible_actual
         @actual = find_or_404(:find_actual)

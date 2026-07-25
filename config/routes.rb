@@ -140,6 +140,9 @@ ChaosRails::Application.routes.draw do
         member do
           get :new_expense
           post :create_expense
+          # Undo a mis-detected offsetting pair: the pairing heuristic can stamp
+          # real spend as noise, and that must not need a console to reverse.
+          post :unoffset
         end
       end
 

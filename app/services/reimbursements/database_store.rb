@@ -384,6 +384,27 @@ module Reimbursements
       legs
     end
 
+    # The way back out of an offset: both legs lose the stamp and the
+    # cross-link and become ordinary ledger rows again. Reachable from either
+    # leg, all-or-nothing, and it deletes nothing.
+    #
+    # The pairing heuristic can be wrong, and being wrong hides real spend from
+    # the ledger view and every rollup, so this has to be reversible without a
+    # console. Any row pointing AT this one is cleared too, so a half-linked row
+    # from an older import can't be left behind.
+    def unlink_offsetting_pair!(actual_id)
+      legs = EusaActual.transaction do
+        actual = EusaActual.lock.find(actual_id)
+        counterparts = EusaActual.lock.where(offset_of_id: actual.id).to_a
+        counterparts << EusaActual.lock.find_by(id: actual.offset_of_id) if actual.offset_of_id
+        [ actual, *counterparts ].compact.uniq.each do |leg|
+          leg.update!(offset_of_id: nil, reconciliation_status: nil)
+        end
+      end
+      bust_eusa_actuals!
+      legs
+    end
+
     # Records that two imported rows cancel each other out (an accrual and its
     # reversal). Both rows survive — finance needs the audit trail — so each leg
     # is stamped "offset" and pointed at the other. All-or-nothing: a half-

@@ -335,6 +335,93 @@ module Admin
       assert_equal 6, CSV.parse(response.body).size, "header + all five rows"
     end
 
+    # --- Undoing an offset --------------------------------------------------
+    #
+    # A false positive in the pairing heuristic stamps real spend as noise,
+    # hiding it from the ledger view and every rollup. There has to be a way
+    # back that doesn't need a console.
+
+    test "unoffset clears the stamp and the cross-link on both legs" do
+      accrual, reversal = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      [ accrual, reversal ].each do |leg|
+        leg.reload
+        assert_not_predicate leg, :offset?
+        assert_nil leg.offset_of_id
+      end
+      assert_equal 2, ::Reimbursements::EusaActual.where(id: [ accrual.id, reversal.id ]).count,
+                   "both rows survive: finance needs the audit trail either way"
+    end
+
+    test "unoffset works from either leg" do
+      accrual, reversal = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: reversal.record_id }
+
+      assert_not_predicate accrual.reload, :offset?
+      assert_not_predicate reversal.reload, :offset?
+    end
+
+    # An un-offset debit row is ordinary spend again, so it can be converted.
+    test "an un-offset debit row becomes convertible again" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id }
+
+      assert_predicate accrual.reload, :convertible_to_expense?
+    end
+
+    test "unoffset keeps the operator's filters" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      post :unoffset, params: { id: accrual.record_id, period: "04", include_offsets: "1" }
+
+      assert_redirected_to admin_reimbursements_actuals_path(period: "04", include_offsets: "1")
+    end
+
+    test "unoffset refuses a row that is not marked offsetting" do
+      sign_in @user
+
+      post :unoffset, params: { id: @unlinked.record_id }
+
+      assert_redirected_to admin_reimbursements_actuals_path
+      assert_match(/not marked/i, flash[:alert])
+    end
+
+    test "unoffset 404s for an unknown row" do
+      sign_in @user
+      post :unoffset, params: { id: "999999" }
+
+      assert_response :not_found
+    end
+
+    test "unoffset is gated by the finance permission" do
+      accrual, = create_offsetting_pair
+      sign_in users(:committee)
+
+      post :unoffset, params: { id: accrual.record_id }
+
+      assert_response :forbidden
+      assert_predicate accrual.reload, :offset?
+    end
+
+    test "an offsetting row offers the undo button" do
+      accrual, = create_offsetting_pair
+      sign_in @user
+
+      get :index, params: { include_offsets: "1" }
+
+      assert_response :success
+      assert_includes response.body, unoffset_admin_reimbursements_actual_path(accrual.record_id)
+    end
+
     # --- Convert an actual into a From-EUSA expense ------------------------
 
     test "an unlinked debit row offers a create-expense button" do

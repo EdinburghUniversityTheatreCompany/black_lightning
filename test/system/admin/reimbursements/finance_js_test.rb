@@ -148,6 +148,34 @@ module Admin
         assert boxes.last.checked?, "unticking one pair must not untick the other"
       end
 
+      # (d3) The way back out of a mis-detected offsetting pair, clicked for
+      # real: the confirm is a SweetAlert dialog (Turbo.config.forms.confirm is
+      # replaced in setup/index.js), so a plain button_to + turbo_confirm has to
+      # survive that indirection inside the results table.
+      test "the Not offsetting button undoes a pair through its confirm dialog" do
+        accrual = create_reimbursements_actual(nominal_code: "331300", period: "04",
+                                               narrative: "Venue hire accrual",
+                                               date: Date.new(2026, 6, 2), debit: BigDecimal("500.0"),
+                                               reconciliation_status: "offset")
+        reversal = create_reimbursements_actual(nominal_code: "331300", period: "05",
+                                                narrative: "Venue hire accrual reversal",
+                                                date: Date.new(2026, 6, 3), debit: nil,
+                                                credit: BigDecimal("500.0"),
+                                                reconciliation_status: "offset", offset_of: accrual)
+        accrual.update!(offset_of: reversal)
+
+        visit admin_reimbursements_actuals_path(include_offsets: "1")
+
+        assert_selector "form[action*='unoffset']", count: 2
+        first("form[action*='unoffset'] button").click
+        within(".swal2-popup") { click_on "Yes" }
+
+        assert_text "ordinary ledger rows again", wait: 5
+        assert_no_selector "form[action*='unoffset']"
+        assert_not accrual.reload.offset?
+        assert_not reversal.reload.offset?
+      end
+
       # (e) A rejected (422) form save must still SHOW its flash error. Turbo
       # never fires turbo:load for non-redirect form responses, so the old
       # turbo:load-only flash listener left these saves failing with zero
